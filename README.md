@@ -1,6 +1,9 @@
 Abstract networking layer
 -------------------------
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/insolar/network)](https://goreportcard.com/report/github.com/insolar/network)
+[![GoDoc](https://godoc.org/github.com/insolar/network?status.svg)](https://godoc.org/github.com/insolar/network)
+
 _This project is still in early development state.
 It is not recommended to use it in production environment._
 
