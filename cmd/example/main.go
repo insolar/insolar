@@ -50,15 +50,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	var bootstrapNodes []*node.Node
-	if *bootstrapAddress != "" {
-		address, err := node.NewAddress(*bootstrapAddress)
-		if err != nil {
-			log.Fatalln("Failed to create bootstrap address:", err.Error())
-		}
-		bootstrapNode := node.NewNode(address)
-		bootstrapNodes = append(bootstrapNodes, bootstrapNode)
-	}
+	bootstrapNodes := getBootstrapNodes(bootstrapAddress)
 
 	configuration := network.NewNetworkConfiguration(
 		createResolver(*stun),
@@ -74,43 +66,65 @@ func main() {
 	if err != nil {
 		log.Fatalln("Failed to create network:", err.Error())
 	}
-	defer func() {
-		errCloseNetwork := configuration.CloseNetwork()
-		if err != nil {
-			log.Println("Failed to close network:", errCloseNetwork)
-		}
-	}()
 
-	ctx, err := network.NewContextBuilder(dhtNetwork).SetDefaultNode().Build()
-	if err != nil {
-		log.Fatalln("Failed to create context:", err.Error())
-	}
+	defer closeNetwork(configuration)
 
-	go func() {
-		errListen := dhtNetwork.Listen()
-		if err != nil {
-			log.Fatalln("Listen failed:", errListen.Error())
-		}
-	}()
+	ctx := createContext(dhtNetwork)
 
-	if len(bootstrapNodes) > 0 {
-		err = dhtNetwork.Bootstrap()
-		if err != nil {
-			log.Fatalln("Failed to bootstrap network", err.Error())
-		}
-	}
+	go listen(dhtNetwork)
+	bootstrap(bootstrapNodes, dhtNetwork)
 
+	handleSignals(configuration)
+
+	repl(dhtNetwork, ctx)
+}
+
+func handleSignals(configuration *network.Configuration) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for range c {
-			errClose := configuration.CloseNetwork()
-			if errClose != nil {
-				log.Println("Failed to close network:", errClose.Error())
-			}
+			closeNetwork(configuration)
 		}
 	}()
+}
 
+func createContext(dhtNetwork *network.DHT) network.Context {
+	ctx, err := network.NewContextBuilder(dhtNetwork).SetDefaultNode().Build()
+	if err != nil {
+		log.Fatalln("Failed to create context:", err.Error())
+	}
+	return ctx
+}
+
+func bootstrap(bootstrapNodes []*node.Node, dhtNetwork *network.DHT) {
+	if len(bootstrapNodes) > 0 {
+		err := dhtNetwork.Bootstrap()
+		if err != nil {
+			log.Fatalln("Failed to bootstrap network", err.Error())
+		}
+	}
+}
+
+func listen(dhtNetwork *network.DHT) {
+	func() {
+		err := dhtNetwork.Listen()
+		if err != nil {
+			log.Fatalln("Listen failed:", err.Error())
+		}
+	}()
+}
+
+func closeNetwork(configuration *network.Configuration) {
+	func() {
+		err := configuration.CloseNetwork()
+		if err != nil {
+			log.Fatalln("Failed to close network:", err.Error())
+		}
+	}()
+}
+
+func repl(dhtNetwork *network.DHT, ctx network.Context) {
 	rl, err := readline.New("> ")
 	if err != nil {
 		panic(err)
@@ -121,7 +135,6 @@ func main() {
 			panic(errRlClose)
 		}
 	}()
-
 	for {
 		line, err := rl.Readline()
 		if err != nil { // io.EOF, readline.ErrInterrupt
@@ -140,6 +153,19 @@ func main() {
 			doRPC(input, dhtNetwork, ctx)
 		}
 	}
+}
+
+func getBootstrapNodes(bootstrapAddress *string) []*node.Node {
+	var bootstrapNodes []*node.Node
+	if *bootstrapAddress != "" {
+		address, err := node.NewAddress(*bootstrapAddress)
+		if err != nil {
+			log.Fatalln("Failed to create bootstrap address:", err.Error())
+		}
+		bootstrapNode := node.NewNode(address)
+		bootstrapNodes = append(bootstrapNodes, bootstrapNode)
+	}
+	return bootstrapNodes
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {

@@ -15,7 +15,7 @@
  */
 
 /*
-This project is an implementation of Kademlia DHT. It is mostly based on original specification but has multiple backward-incompatible changes.
+Package network is an implementation of Kademlia DHT. It is mostly based on original specification but has multiple backward-incompatible changes.
 
 Usage:
 
