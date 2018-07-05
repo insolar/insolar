@@ -1,6 +1,7 @@
 Abstract networking layer
 -------------------------
 
+[![Build Status](https://travis-ci.org/insolar/network.svg?branch=master)](https://travis-ci.org/insolar/network)
 [![Go Report Card](https://goreportcard.com/badge/github.com/insolar/network)](https://goreportcard.com/report/github.com/insolar/network)
 [![GoDoc](https://godoc.org/github.com/insolar/network?status.svg)](https://godoc.org/github.com/insolar/network)
 
