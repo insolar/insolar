@@ -41,7 +41,8 @@ Node is a fundamental part of networking system. Each node has:
 
 ### [Routing](https://godoc.org/github.com/insolar/network/routing)
 It is actually a Kademlia hash table used to store network nodes and calculate distances between them.
-See [XLattice design specification](http://xlattice.sourceforge.net/components/protocol/kademlia/specs.html) for details.
+See [Kademlia whitepaper](https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf) and
+[XLattice design specification](http://xlattice.sourceforge.net/components/protocol/kademlia/specs.html) for details.
 
 
 ### [Message](https://godoc.org/github.com/insolar/network/message)
