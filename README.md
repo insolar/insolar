@@ -1,4 +1,4 @@
-Insolar network
+Insolar – Network
 ===============
 Abstract networking layer
 
