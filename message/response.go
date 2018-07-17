@@ -16,7 +16,10 @@
 
 package message
 
-import "github.com/insolar/network/node"
+import (
+	"github.com/insolar/network/node"
+	"github.com/insolar/network/relay"
+)
 
 // ResponseDataFindNode is data for FindNode response
 type ResponseDataFindNode struct {
@@ -39,4 +42,10 @@ type ResponseDataRPC struct {
 	Success bool
 	Result  []byte
 	Error   string
+}
+
+// ResponseRelay is data for relay request response
+type ResponseRelay struct {
+	Success bool
+	State   relay.State
 }
