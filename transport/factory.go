@@ -18,11 +18,13 @@ package transport
 
 import (
 	"net"
+
+	"github.com/insolar/network/relay"
 )
 
 // Factory allows to create new Transport
 type Factory interface {
-	Create(conn net.PacketConn) (Transport, error)
+	Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error)
 }
 
 type utpTransportFactory struct{}
@@ -33,6 +35,6 @@ func NewUTPTransportFactory() Factory {
 }
 
 // Create creates new Transport
-func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn) (Transport, error) {
-	return NewUTPTransport(conn)
+func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
+	return NewUTPTransport(conn, proxy)
 }
