@@ -37,3 +37,8 @@ type RequestDataRPC struct {
 	Method string
 	Args   [][]byte
 }
+
+//RequestRelay is data for relay request (commands: start/stop relay)
+type RequestRelay struct {
+	Command string
+}
