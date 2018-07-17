@@ -38,6 +38,8 @@ const (
 	TypeFindValue
 	// TypeRPC is message type for RPC method
 	TypeRPC
+	// TypeRelay is message type for request target to be a relay
+	TypeRelay
 )
 
 // RequestID is 64 bit unsigned int request id
@@ -64,6 +66,18 @@ func NewPingMessage(sender, receiver *node.Node) *Message {
 	}
 }
 
+// NewRelayMessage uses for send a command to target node to make it as relay
+func NewRelayMessage(command string, sender, receiver *node.Node) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeRelay,
+		Data: &RequestRelay{
+			Command: command,
+		},
+	}
+}
+
 // IsValid checks if message data is a valid structure for current message type
 func (m *Message) IsValid() (valid bool) {
 	switch m.Type {
@@ -77,6 +91,8 @@ func (m *Message) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestDataStore)
 	case TypeRPC:
 		_, valid = m.Data.(*RequestDataRPC)
+	case TypeRelay:
+		_, valid = m.Data.(*RequestRelay)
 	default:
 		valid = false
 	}
@@ -147,9 +163,11 @@ func init() {
 	gob.Register(&RequestDataFindValue{})
 	gob.Register(&RequestDataStore{})
 	gob.Register(&RequestDataRPC{})
+	gob.Register(&RequestRelay{})
 
 	gob.Register(&ResponseDataFindNode{})
 	gob.Register(&ResponseDataFindValue{})
 	gob.Register(&ResponseDataStore{})
 	gob.Register(&ResponseDataRPC{})
+	gob.Register(&ResponseRelay{})
 }
