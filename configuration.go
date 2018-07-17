@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/network/connection"
 	"github.com/insolar/network/node"
+	"github.com/insolar/network/relay"
 	"github.com/insolar/network/resolver"
 	"github.com/insolar/network/rpc"
 	"github.com/insolar/network/store"
@@ -39,6 +40,8 @@ type Configuration struct {
 
 	network *DHT
 	conn    net.PacketConn
+
+	proxy relay.Proxy
 }
 
 // NewNetworkConfiguration creates new Configuration
@@ -48,6 +51,7 @@ func NewNetworkConfiguration(
 	transportFactory transport.Factory,
 	storeFactory store.Factory,
 	rpcFactory rpc.Factory,
+	proxy relay.Proxy,
 ) *Configuration {
 	return &Configuration{
 		addressResolver:   addressResolver,
@@ -55,6 +59,7 @@ func NewNetworkConfiguration(
 		transportFactory:  transportFactory,
 		storeFactory:      storeFactory,
 		rpcFactory:        rpcFactory,
+		proxy:             proxy,
 	}
 }
 
@@ -86,7 +91,7 @@ func (cfg *Configuration) CreateNetwork(address string, options *Options) (*DHT,
 		return nil, err
 	}
 
-	tp, err := cfg.transportFactory.Create(cfg.conn)
+	tp, err := cfg.transportFactory.Create(cfg.conn, cfg.proxy)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +101,8 @@ func (cfg *Configuration) CreateNetwork(address string, options *Options) (*DHT,
 		origin,
 		tp,
 		cfg.rpcFactory.Create(),
-		options)
+		options,
+		cfg.proxy)
 	if err != nil {
 		return nil, err
 	}
