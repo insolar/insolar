@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/network/connection"
+	"github.com/insolar/network/relay"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +36,7 @@ func TestMemoryStoreFactory_Create(t *testing.T) {
 	assert.NoError(t, err)
 	defer conn.Close()
 
-	transport, err := NewUTPTransportFactory().Create(conn)
+	transport, err := NewUTPTransportFactory().Create(conn, relay.CreateProxy())
 
 	assert.NoError(t, err)
 	assert.Implements(t, (*Transport)(nil), transport)
