@@ -19,7 +19,6 @@ package network
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"math"
 	"sort"
@@ -28,11 +27,11 @@ import (
 
 	"github.com/insolar/network/message"
 	"github.com/insolar/network/node"
+	"github.com/insolar/network/relay"
 	"github.com/insolar/network/routing"
 	"github.com/insolar/network/rpc"
 	"github.com/insolar/network/store"
 	"github.com/insolar/network/transport"
-
 	"github.com/jbenet/go-base58"
 )
 
@@ -46,6 +45,8 @@ type DHT struct {
 	transport transport.Transport
 	store     store.Store
 	rpc       rpc.RPC
+	relay     relay.Relay
+	proxy     relay.Proxy
 }
 
 // Options contains configuration options for the local node
@@ -79,11 +80,13 @@ type Options struct {
 }
 
 // NewDHT initializes a new DHT node.
-func NewDHT(store store.Store, origin *node.Origin, transport transport.Transport, rpc rpc.RPC, options *Options) (dht *DHT, err error) {
+func NewDHT(store store.Store, origin *node.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
 		return nil, err
 	}
+
+	rel := relay.NewRelay()
 
 	dht = &DHT{
 		options:   options,
@@ -92,6 +95,8 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 		transport: transport,
 		tables:    tables,
 		store:     store,
+		relay:     rel,
+		proxy:     proxy,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -221,8 +226,12 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	if routeSet.Len() > 0 && routeSet.FirstNode().ID.Equal(keyBytes) {
 		targetNode = routeSet.FirstNode()
 		exists = true
+	} else if dht.proxy.Count() > 0 {
+		address, _ := node.NewAddress(dht.proxy.GetNextProxyAddress())
+		targetNode = &node.Node{ID: keyBytes, Address: address}
+		return targetNode, true, nil
 	} else {
-		fmt.Println("Node not found in routing table. Iterating through network...")
+		log.Println("Node not found in routing table. Iterating through network...")
 		_, closest, err := dht.iterate(ctx, routing.IterateFindNode, keyBytes, nil)
 		if err != nil {
 			return nil, false, err
@@ -670,19 +679,58 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 			}
 			ht := dht.htFromCtx(ctx)
 
-			messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
+			if ht.Origin.ID.Equal(msg.Receiver.ID) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
+				messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 
-			switch msg.Type {
-			case message.TypeFindNode:
-				dht.processFindNode(ctx, msg, messageBuilder)
-			case message.TypeFindValue:
-				dht.processFindValue(ctx, msg, messageBuilder)
-			case message.TypeStore:
-				dht.processStore(ctx, msg, messageBuilder)
-			case message.TypePing:
-				dht.processPing(ctx, msg, messageBuilder)
-			case message.TypeRPC:
-				dht.processRPC(ctx, msg, messageBuilder)
+				switch msg.Type {
+				case message.TypeFindNode:
+					dht.processFindNode(ctx, msg, messageBuilder)
+				case message.TypeFindValue:
+					dht.processFindValue(ctx, msg, messageBuilder)
+				case message.TypeStore:
+					dht.processStore(ctx, msg, messageBuilder)
+				case message.TypePing:
+					dht.processPing(ctx, msg, messageBuilder)
+				case message.TypeRPC:
+					dht.processRPC(ctx, msg, messageBuilder)
+				case message.TypeRelay:
+					dht.processRelay(ctx, msg, messageBuilder)
+				}
+			} else {
+				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.String())
+				if err != nil {
+					log.Println(err)
+				} else if !exist {
+					log.Printf("Target node addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
+				} else {
+					// need to relay incoming message
+					request := &message.Message{Sender: &node.Node{Address: dht.origin.Address, ID: msg.Sender.ID},
+						Receiver:  &node.Node{ID: msg.Receiver.ID, Address: targetNode.Address},
+						Type:      msg.Type,
+						RequestID: msg.RequestID,
+						Data:      msg.Data}
+					future, err := dht.transport.SendRequest(request)
+					if err != nil {
+						log.Println(err)
+					}
+					select {
+					case rsp := <-future.Result():
+						if rsp == nil {
+							// Channel was closed
+							log.Println("chanel closed unexpectedly")
+						}
+						dht.addNode(ctx, routing.NewRouteNode(rsp.Sender))
+
+						response := rsp.Data.(*message.ResponseDataRPC)
+						if response.Success {
+							log.Println(response.Result)
+						}
+						log.Println(response.Error)
+					case <-time.After(dht.options.MessageTimeout):
+						future.Cancel()
+						log.Println("timeout")
+					}
+				}
 			}
 		case <-stop:
 			return
@@ -760,6 +808,103 @@ func (dht *DHT) processRPC(ctx Context, msg *message.Message, messageBuilder mes
 	}
 }
 
+// Precess relay request
+// TODO: test this func
+func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder message.Builder) {
+	data := msg.Data.(*message.RequestRelay)
+	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
+
+	var success bool
+	var state relay.State
+	var err error
+
+	switch data.Command {
+	case "start":
+		err = dht.relay.AddClient(msg.Sender)
+		success = true
+		state = relay.Started
+	case "stop":
+		err = dht.relay.RemoveClient(msg.Sender)
+		success = true
+		state = relay.Stopped
+	default:
+		success = false
+		state = relay.Unknown
+	}
+
+	if err != nil {
+		success = false
+		state = relay.Error
+	}
+
+	response := &message.ResponseRelay{
+		Success: success,
+		State:   state,
+	}
+
+	err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	if err != nil {
+		log.Println("Failed to send response:", err.Error())
+	}
+}
+
+// RelayRequest sends relay request to target
+// TODO: test this func
+func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
+	targetNode, exist, err := dht.FindNode(ctx, target)
+	if !exist {
+		err = errors.New("target for relay request not found")
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
+	request := message.NewRelayMessage(command, dht.htFromCtx(ctx).Origin, targetNode)
+	future, err := dht.transport.SendRequest(request)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*message.ResponseRelay)
+		dht.handleRelayResponse(response, target)
+
+	case <-time.After(dht.options.MessageTimeout):
+		future.Cancel()
+		err = errors.New("timeout")
+		return err
+	}
+
+	return nil
+}
+
+func (dht *DHT) handleRelayResponse(response *message.ResponseRelay, target string) {
+	if response.Success {
+		switch response.State {
+		case relay.Stopped:
+			// stop use this address as relay
+			dht.proxy.RemoveProxyNode(target)
+		case relay.Started:
+			// start use this address as relay
+			dht.proxy.AddProxyNode(target)
+		default:
+			// unknown state/failed to change state
+			log.Println("unknown response state:")
+		}
+	} else {
+		log.Printf("Unable to execute relay command on %s", target)
+	}
+}
+
 // RemoteProcedureCall calls remote procedure on target node
 func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error) {
 	targetNode, exists, err := dht.FindNode(ctx, target)
@@ -810,7 +955,6 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 		future.Cancel()
 		return nil, errors.New("timeout")
 	}
-
 }
 
 func (dht *DHT) htFromCtx(ctx Context) *routing.HashTable {
