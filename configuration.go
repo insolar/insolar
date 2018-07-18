@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/network/transport"
 )
 
-// Configuration is a helper to initialize network easily
+// Configuration is a helper to initialize network easily.
 type Configuration struct {
 	addressResolver resolver.PublicAddressResolver
 
@@ -41,7 +41,7 @@ type Configuration struct {
 	conn    net.PacketConn
 }
 
-// NewNetworkConfiguration creates new Configuration
+// NewNetworkConfiguration creates new Configuration.
 func NewNetworkConfiguration(
 	addressResolver resolver.PublicAddressResolver,
 	connectionFactory connection.Factory,
@@ -58,7 +58,7 @@ func NewNetworkConfiguration(
 	}
 }
 
-// CreateNetwork creates and returns DHT network with parameters stored in Configuration
+// CreateNetwork creates and returns DHT network with parameters stored in Configuration.
 func (cfg *Configuration) CreateNetwork(address string, options *Options) (*DHT, error) {
 	var err error
 
@@ -104,7 +104,7 @@ func (cfg *Configuration) CreateNetwork(address string, options *Options) (*DHT,
 	return cfg.network, nil
 }
 
-// CloseNetwork stops networking
+// CloseNetwork stops networking.
 func (cfg *Configuration) CloseNetwork() error {
 	cfg.network.Disconnect()
 	return cfg.conn.Close()
