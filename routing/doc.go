@@ -15,6 +15,6 @@
  */
 
 /*
- Package routing implements Kademlia hash tables with XOR distance metrics.
+Package routing implements Kademlia hash tables with XOR distance metrics.
 */
 package routing
