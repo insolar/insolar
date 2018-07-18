@@ -16,6 +16,16 @@
 
 package message
 
+// CommandType - type for commands
+type CommandType int
+
+const (
+	// Start - command start relay
+	Start = CommandType(iota + 1)
+	// Stop - command stop relay
+	Stop
+)
+
 // RequestDataFindNode is data for FindNode request
 type RequestDataFindNode struct {
 	Target []byte
@@ -38,7 +48,7 @@ type RequestDataRPC struct {
 	Args   [][]byte
 }
 
-//RequestRelay is data for relay request (commands: start/stop relay)
+// RequestRelay is data for relay request (commands: start/stop relay)
 type RequestRelay struct {
-	Command string
+	Command CommandType
 }

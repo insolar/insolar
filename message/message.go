@@ -67,7 +67,7 @@ func NewPingMessage(sender, receiver *node.Node) *Message {
 }
 
 // NewRelayMessage uses for send a command to target node to make it as relay
-func NewRelayMessage(command string, sender, receiver *node.Node) *Message {
+func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message {
 	return &Message{
 		Sender:   sender,
 		Receiver: receiver,

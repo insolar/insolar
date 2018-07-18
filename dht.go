@@ -819,11 +819,11 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 	var err error
 
 	switch data.Command {
-	case "start":
+	case message.Start:
 		err = dht.relay.AddClient(msg.Sender)
 		success = true
 		state = relay.Started
-	case "stop":
+	case message.Stop:
 		err = dht.relay.RemoveClient(msg.Sender)
 		success = true
 		state = relay.Stopped
@@ -849,8 +849,8 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 }
 
 // RelayRequest sends relay request to target
-// TODO: test this func
 func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
+	var typedCommand message.CommandType
 	targetNode, exist, err := dht.FindNode(ctx, target)
 	if !exist {
 		err = errors.New("target for relay request not found")
@@ -860,7 +860,16 @@ func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
 		return err
 	}
 
-	request := message.NewRelayMessage(command, dht.htFromCtx(ctx).Origin, targetNode)
+	switch command {
+	case "start":
+		typedCommand = message.Start
+	case "stop":
+		typedCommand = message.Stop
+	default:
+		err = errors.New("unknown command")
+		return err
+	}
+	request := message.NewRelayMessage(typedCommand, dht.htFromCtx(ctx).Origin, targetNode)
 	future, err := dht.transport.SendRequest(request)
 
 	if err != nil {
