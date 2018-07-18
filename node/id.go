@@ -22,18 +22,17 @@ import (
 	"github.com/jbenet/go-base58"
 )
 
-// ID is node id
+// ID is node id.
 type ID []byte
 
-// NewID returns random node id
-// TODO: Should test errors produced here
+// NewID returns random node id.
 func NewID() (ID, error) {
 	result := make([]byte, 20)
 	_, err := random.Read(result)
 	return result, err
 }
 
-// NewIDs returns given number of random node ids
+// NewIDs returns given number of random node ids.
 func NewIDs(num int) ([]ID, error) {
 	result := make([]ID, num)
 
@@ -50,12 +49,12 @@ func NewIDs(num int) ([]ID, error) {
 	return result, nil
 }
 
-// Equal checks if id is equal to another
+// Equal checks if id is equal to another.
 func (id ID) Equal(other ID) bool {
 	return bytes.Equal(id, other)
 }
 
-// String is a base58-encoded string representation of node id
+// String is a base58-encoded string representation of node id.
 func (id ID) String() string {
 	return base58.Encode(id)
 }

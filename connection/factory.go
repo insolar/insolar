@@ -20,12 +20,12 @@ import (
 	"net"
 )
 
-// Factory allows to create new connections
+// Factory allows to create new connections.
 type Factory interface {
 	Create(address string) (net.PacketConn, error)
 }
 
-// NewConnectionFactory returns default UDP connection
+// NewConnectionFactory returns default UDP connection.
 func NewConnectionFactory() Factory {
 	return &udpConnectionFactory{}
 }

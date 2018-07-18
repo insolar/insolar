@@ -14,21 +14,19 @@
  *    limitations under the License.
  */
 
-package store
+/*
+Package rpc allows higher level components to register methods that can be called by other network nodes.
 
-// Factory allows to create new storage.
-type Factory interface {
-	Create() Store
-}
+Usage:
 
-type memoryStoreFactory struct{}
+	r := rpc.NewRPC()
 
-// NewMemoryStoreFactory creates new factory of memory storage.
-func NewMemoryStoreFactory() Factory {
-	return &memoryStoreFactory{}
-}
+	r.RegisterMethod("hello_world", func(sender *node.Node, args [][]byte) ([]byte, error) {
+		fmt.Println("Hello World")
+		return nil, nil
+	})
 
-// Create returns new memory storage.
-func (memoryStoreFactory *memoryStoreFactory) Create() Store {
-	return NewMemoryStore()
-}
+	r.Invoke(&node.Node{}, "hello_world", [][]byte{})
+
+*/
+package rpc

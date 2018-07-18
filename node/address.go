@@ -20,12 +20,12 @@ import (
 	"net"
 )
 
-// Address is node's real network address
+// Address is node's real network address.
 type Address struct {
 	net.UDPAddr
 }
 
-// NewAddress is constructor
+// NewAddress is constructor.
 func NewAddress(address string) (*Address, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
@@ -34,7 +34,7 @@ func NewAddress(address string) (*Address, error) {
 	return &Address{*udpAddr}, nil
 }
 
-// Equal checks if address is equal to another
+// Equal checks if address is equal to another.
 func (address Address) Equal(other Address) bool {
 	return address.IP.Equal(other.IP) && address.Port == other.Port
 }

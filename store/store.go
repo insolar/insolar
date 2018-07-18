@@ -30,7 +30,7 @@ type Store interface {
 	// Retrieve should return the local key/value if it exists.
 	Retrieve(key Key) (data []byte, found bool)
 
-	// Delete should delete a key/value pair from the Store
+	// Delete should delete a key/value pair from the Store.
 	Delete(key Key)
 
 	// GetKeysReadyToReplicate should return the keys of all data to be
@@ -42,7 +42,7 @@ type Store interface {
 	ExpireKeys()
 }
 
-// NewStore creates new memory store
+// NewStore creates new memory store.
 func NewStore() Store {
 	return NewMemoryStore()
 }

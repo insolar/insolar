@@ -14,21 +14,24 @@
  *    limitations under the License.
  */
 
-package store
+/*
+Package resolver provides interface (and default implementation) to retrieve public network address.
 
-// Factory allows to create new storage.
-type Factory interface {
-	Create() Store
-}
+Currently there are two default implementation of resolvers:
 
-type memoryStoreFactory struct{}
+ - Using STUN server
+ - No-op resolver which returns socket listen address
 
-// NewMemoryStoreFactory creates new factory of memory storage.
-func NewMemoryStoreFactory() Factory {
-	return &memoryStoreFactory{}
-}
+Usage:
 
-// Create returns new memory storage.
-func (memoryStoreFactory *memoryStoreFactory) Create() Store {
-	return NewMemoryStore()
-}
+	var conn net.PacketConn
+
+	// get connection anywhere
+
+	r := resolver.NewStunResolver("")  // Using default stun server
+	publicAddr, _ := r.Resolve(conn)
+
+	fmt.Println(publicAddr)
+
+*/
+package resolver

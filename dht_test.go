@@ -106,11 +106,11 @@ func (t *mockTransport) Close() {
 	close(t.msgChan)
 }
 
-func (t *mockTransport) Stopped() chan bool {
+func (t *mockTransport) Stopped() <-chan bool {
 	return t.dc
 }
 
-func (t *mockTransport) Messages() chan *message.Message {
+func (t *mockTransport) Messages() <-chan *message.Message {
 	return t.msgChan
 }
 

@@ -14,21 +14,7 @@
  *    limitations under the License.
  */
 
-package store
-
-// Factory allows to create new storage.
-type Factory interface {
-	Create() Store
-}
-
-type memoryStoreFactory struct{}
-
-// NewMemoryStoreFactory creates new factory of memory storage.
-func NewMemoryStoreFactory() Factory {
-	return &memoryStoreFactory{}
-}
-
-// Create returns new memory storage.
-func (memoryStoreFactory *memoryStoreFactory) Create() Store {
-	return NewMemoryStore()
-}
+/*
+Package routing implements Kademlia hash tables with XOR distance metrics.
+*/
+package routing

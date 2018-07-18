@@ -21,23 +21,23 @@ import (
 	"github.com/insolar/network/relay"
 )
 
-// ResponseDataFindNode is data for FindNode response
+// ResponseDataFindNode is data for FindNode response.
 type ResponseDataFindNode struct {
 	Closest []*node.Node
 }
 
-// ResponseDataFindValue is data for FindValue response
+// ResponseDataFindValue is data for FindValue response.
 type ResponseDataFindValue struct {
 	Closest []*node.Node
 	Value   []byte
 }
 
-// ResponseDataStore is data for Store response
+// ResponseDataStore is data for Store response.
 type ResponseDataStore struct {
 	Success bool
 }
 
-// ResponseDataRPC is data for RPC response
+// ResponseDataRPC is data for RPC response.
 type ResponseDataRPC struct {
 	Success bool
 	Result  []byte

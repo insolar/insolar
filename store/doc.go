@@ -14,21 +14,23 @@
  *    limitations under the License.
  */
 
+/*
+Package store provides interfaces and default in-memory implementation of storage for DHT metadata.
+
+Usage:
+
+	s := newMemoryStore()
+
+	data := []byte("some data")
+	key := NewKey(data)
+
+	replicationTime := time.Now().Add(time.Second * 1337)
+	expirationTime := time.Now().Add(time.Second * 42)
+
+	s.Store(key, data, replicationTime, expirationTime, true)
+
+	s.Retrieve(key)
+
+	s.Delete(key)
+*/
 package store
-
-// Factory allows to create new storage.
-type Factory interface {
-	Create() Store
-}
-
-type memoryStoreFactory struct{}
-
-// NewMemoryStoreFactory creates new factory of memory storage.
-func NewMemoryStoreFactory() Factory {
-	return &memoryStoreFactory{}
-}
-
-// Create returns new memory storage.
-func (memoryStoreFactory *memoryStoreFactory) Create() Store {
-	return NewMemoryStore()
-}

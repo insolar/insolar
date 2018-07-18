@@ -14,21 +14,14 @@
  *    limitations under the License.
  */
 
-package store
+/*
+Package connection encapsulates connection creation process and provides connection factories.
 
-// Factory allows to create new storage.
-type Factory interface {
-	Create() Store
-}
+Usage
 
-type memoryStoreFactory struct{}
+	factory := connection.NewConnectionFactory()
 
-// NewMemoryStoreFactory creates new factory of memory storage.
-func NewMemoryStoreFactory() Factory {
-	return &memoryStoreFactory{}
-}
-
-// Create returns new memory storage.
-func (memoryStoreFactory *memoryStoreFactory) Create() Store {
-	return NewMemoryStore()
-}
+	connection := factory.Create("127.0.0.1:8080")
+	defer connection.close()  // You have to manually close connection
+*/
+package connection

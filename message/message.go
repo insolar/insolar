@@ -28,24 +28,24 @@ import (
 type messageType int
 
 const (
-	// TypePing is message type for ping method
+	// TypePing is message type for ping method.
 	TypePing = messageType(iota + 1)
-	// TypeStore is message type for store method
+	// TypeStore is message type for store method.
 	TypeStore
-	// TypeFindNode is message type for FindNode method
+	// TypeFindNode is message type for FindNode method.
 	TypeFindNode
-	// TypeFindValue is message type for FindValue method
+	// TypeFindValue is message type for FindValue method.
 	TypeFindValue
-	// TypeRPC is message type for RPC method
+	// TypeRPC is message type for RPC method.
 	TypeRPC
 	// TypeRelay is message type for request target to be a relay
 	TypeRelay
 )
 
-// RequestID is 64 bit unsigned int request id
+// RequestID is 64 bit unsigned int request id.
 type RequestID uint64
 
-// Message is DHT message object
+// Message is DHT message object.
 type Message struct {
 	Sender    *node.Node
 	Receiver  *node.Node
@@ -57,7 +57,7 @@ type Message struct {
 	IsResponse bool
 }
 
-// NewPingMessage can be used as a shortcut for creating ping messages instead of message Builder
+// NewPingMessage can be used as a shortcut for creating ping messages instead of message Builder.
 func NewPingMessage(sender, receiver *node.Node) *Message {
 	return &Message{
 		Sender:   sender,
@@ -66,7 +66,7 @@ func NewPingMessage(sender, receiver *node.Node) *Message {
 	}
 }
 
-// NewRelayMessage uses for send a command to target node to make it as relay
+// NewRelayMessage uses for send a command to target node to make it as relay.
 func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message {
 	return &Message{
 		Sender:   sender,
@@ -78,7 +78,7 @@ func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message 
 	}
 }
 
-// IsValid checks if message data is a valid structure for current message type
+// IsValid checks if message data is a valid structure for current message type.
 func (m *Message) IsValid() (valid bool) {
 	switch m.Type {
 	case TypePing:
@@ -100,12 +100,12 @@ func (m *Message) IsValid() (valid bool) {
 	return valid
 }
 
-// IsForMe checks if message is addressed to our node
+// IsForMe checks if message is addressed to our node.
 func (m *Message) IsForMe(origin node.Origin) bool {
 	return origin.Contains(m.Receiver) || m.Type == TypePing && origin.Address.Equal(*m.Receiver.Address)
 }
 
-// SerializeMessage converts message to byte slice
+// SerializeMessage converts message to byte slice.
 func SerializeMessage(q *Message) ([]byte, error) {
 	var msgBuffer bytes.Buffer
 	enc := gob.NewEncoder(&msgBuffer)
@@ -126,7 +126,7 @@ func SerializeMessage(q *Message) ([]byte, error) {
 	return result, nil
 }
 
-// DeserializeMessage reads message from io.Reader
+// DeserializeMessage reads message from io.Reader.
 func DeserializeMessage(conn io.Reader) (*Message, error) {
 	lengthBytes := make([]byte, 8)
 	_, err := conn.Read(lengthBytes)

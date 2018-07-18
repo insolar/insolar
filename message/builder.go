@@ -20,17 +20,18 @@ import (
 	"github.com/insolar/network/node"
 )
 
-// Builder allows lazy building of messages
+// Builder allows lazy building of messages.
+// Each operation returns new copy of a builder.
 type Builder struct {
 	actions []func(message *Message)
 }
 
-// NewBuilder returns empty message builder
+// NewBuilder returns empty message builder.
 func NewBuilder() Builder {
 	return Builder{}
 }
 
-// Build returns configured message
+// Build returns configured message.
 func (cb Builder) Build() (message *Message) {
 	message = &Message{}
 	for _, action := range cb.actions {
@@ -39,7 +40,7 @@ func (cb Builder) Build() (message *Message) {
 	return
 }
 
-// Sender sets message sender
+// Sender sets message sender.
 func (cb Builder) Sender(node *node.Node) Builder {
 	cb.actions = append(cb.actions, func(message *Message) {
 		message.Sender = node
@@ -47,7 +48,7 @@ func (cb Builder) Sender(node *node.Node) Builder {
 	return cb
 }
 
-// Receiver sets message receiver
+// Receiver sets message receiver.
 func (cb Builder) Receiver(node *node.Node) Builder {
 	cb.actions = append(cb.actions, func(message *Message) {
 		message.Receiver = node
@@ -55,7 +56,7 @@ func (cb Builder) Receiver(node *node.Node) Builder {
 	return cb
 }
 
-// Type sets message type
+// Type sets message type.
 func (cb Builder) Type(messageType messageType) Builder {
 	cb.actions = append(cb.actions, func(message *Message) {
 		message.Type = messageType
@@ -63,7 +64,7 @@ func (cb Builder) Type(messageType messageType) Builder {
 	return cb
 }
 
-// Request adds request data to message
+// Request adds request data to message.
 func (cb Builder) Request(request interface{}) Builder {
 	cb.actions = append(cb.actions, func(message *Message) {
 		message.Data = request
@@ -80,7 +81,7 @@ func (cb Builder) Response(response interface{}) Builder {
 	return cb
 }
 
-// Error adds error description to message
+// Error adds error description to message.
 func (cb Builder) Error(err error) Builder {
 	cb.actions = append(cb.actions, func(message *Message) {
 		message.Error = err

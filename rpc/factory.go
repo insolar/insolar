@@ -16,7 +16,7 @@
 
 package rpc
 
-// Factory allows to create new RPC
+// Factory allows to create new RPC.
 type Factory interface {
 	Create() RPC
 }
@@ -25,14 +25,14 @@ type rpcFactory struct {
 	methods map[string]RemoteProcedure
 }
 
-// NewRPCFactory creates new RPC Factory
+// NewRPCFactory creates new RPC Factory.
 func NewRPCFactory(methods map[string]RemoteProcedure) Factory {
 	return &rpcFactory{
 		methods: methods,
 	}
 }
 
-// Create creates and registers new remote procedure
+// Create creates and registers new remote procedure.
 func (rpcFactory *rpcFactory) Create() RPC {
 	newRPC := NewRPC()
 	for name, method := range rpcFactory.methods {

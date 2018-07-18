@@ -14,21 +14,26 @@
  *    limitations under the License.
  */
 
-package store
+/*
 
-// Factory allows to create new storage.
-type Factory interface {
-	Create() Store
-}
+Package node is a fundamental part of networking system. Each node has:
 
-type memoryStoreFactory struct{}
+ - one real network address (IP or any other transport protocol address)
+ - multiple abstract network IDs (either node's own or ones belonging to relayed nodes)
 
-// NewMemoryStoreFactory creates new factory of memory storage.
-func NewMemoryStoreFactory() Factory {
-	return &memoryStoreFactory{}
-}
+Contains structures to describe network entities in code.
 
-// Create returns new memory storage.
-func (memoryStoreFactory *memoryStoreFactory) Create() Store {
-	return NewMemoryStore()
-}
+Usage:
+
+ 	originAddress, err := node.NewAddress(address)
+	if err != nil {
+		...
+	}
+
+	origin, err := node.NewOrigin(nil, originAddress)
+	if err != nil {
+		...
+	}
+
+*/
+package node

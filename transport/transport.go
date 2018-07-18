@@ -20,15 +20,27 @@ import (
 	"github.com/insolar/network/message"
 )
 
-// Transport is an interface for network transport
+// Transport is an interface for network transport.
 type Transport interface {
+
+	// SendRequest sends message to destination. Sequence number is generated automatically.
 	SendRequest(*message.Message) (Future, error)
+
+	// SendResponse sends message for request with passed request id.
 	SendResponse(message.RequestID, *message.Message) error
 
+	// Start starts thread to listen incoming messages.
 	Start() error
+
+	// Stop gracefully stops listening.
 	Stop()
+
+	// Close disposing all transport underlying structures after stop are called.
 	Close()
 
-	Messages() chan *message.Message
-	Stopped() chan bool
+	// Messages returns channel to listen incoming messages.
+	Messages() <-chan *message.Message
+
+	// Stopped returns signal channel to support graceful shutdown.
+	Stopped() <-chan bool
 }

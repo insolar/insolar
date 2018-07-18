@@ -23,14 +23,14 @@ import (
 	"github.com/insolar/network/node"
 )
 
-// RemoteProcedure is remote procedure call function
+// RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(sender *node.Node, args [][]byte) ([]byte, error)
 
-// RPC is remote procedure call module
+// RPC is remote procedure call module.
 type RPC interface {
-	// Invoke is used to actually call remote procedure
+	// Invoke is used to actually call remote procedure.
 	Invoke(sender *node.Node, method string, args [][]byte) ([]byte, error)
-	// RegisterMethod allows to register new function in RPC module
+	// RegisterMethod allows to register new function in RPC module.
 	RegisterMethod(name string, method RemoteProcedure)
 }
 
@@ -38,14 +38,14 @@ type rpc struct {
 	methodTable map[string]RemoteProcedure
 }
 
-// NewRPC creates new RPC module
+// NewRPC creates new RPC module.
 func NewRPC() RPC {
 	return &rpc{
 		methodTable: make(map[string]RemoteProcedure),
 	}
 }
 
-// Invoke calls registered function or returns error
+// Invoke calls registered function or returns error.
 func (rpc *rpc) Invoke(sender *node.Node, methodName string, args [][]byte) (result []byte, err error) {
 	method, exist := rpc.methodTable[methodName]
 	if !exist {
@@ -62,7 +62,7 @@ func (rpc *rpc) Invoke(sender *node.Node, methodName string, args [][]byte) (res
 	return
 }
 
-// RegisterMethod registers new function in RPC module
+// RegisterMethod registers new function in RPC module.
 func (rpc *rpc) RegisterMethod(name string, method RemoteProcedure) {
 	rpc.methodTable[name] = method
 }
