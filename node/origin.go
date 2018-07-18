@@ -16,14 +16,14 @@
 
 package node
 
-// Origin is “self” variant of Node
-// Unlike ordinary node it can have multiple IDs
+// Origin is “self” variant of Node.
+// Unlike ordinary node it can have multiple IDs.
 type Origin struct {
 	IDs     []ID
 	Address *Address
 }
 
-// NewOrigin creates origin node from list of ids and network address
+// NewOrigin creates origin node from list of ids and network address.
 func NewOrigin(ids []ID, address *Address) (*Origin, error) {
 	var err error
 
@@ -50,8 +50,8 @@ func (s *Origin) containsID(id ID) bool {
 	return false
 }
 
-// Contains checks if origin node “contains” network node
-// It checks if node's and origin's addresses match and node's id is in origin's ids list
+// Contains checks if origin node “contains” network node.
+// It checks if node's and origin's addresses match and node's id is in origin's ids list.
 func (s *Origin) Contains(node *Node) bool {
 	return node.Address.Equal(*s.Address) && s.containsID(node.ID)
 }

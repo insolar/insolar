@@ -20,28 +20,28 @@ import (
 	"fmt"
 )
 
-// Node is the over-the-wire representation of a node
+// Node is the over-the-wire representation of a node.
 type Node struct {
-	// requestID is a 20 byte unique identifier
+	// ID is a 20 byte unique identifier.
 	ID ID
 
-	// Address is IP and port
+	// Address is IP and port.
 	Address *Address
 }
 
-// NewNode creates a new Node for bootstrapping
+// NewNode creates a new Node for bootstrapping.
 func NewNode(address *Address) *Node {
 	return &Node{
 		Address: address,
 	}
 }
 
-// String representation of Node
+// String representation of Node.
 func (node Node) String() string {
 	return fmt.Sprintf("%s (%s)", node.ID.String(), node.Address.String())
 }
 
-// Equal checks if node equals to other node (e.g. nodes' IDs and network addresses match)
+// Equal checks if node equals to other node (e.g. nodes' IDs and network addresses match).
 func (node Node) Equal(other Node) bool {
 	return node.ID.Equal(other.ID) && other.Address != nil && node.Address.Equal(*other.Address)
 }
