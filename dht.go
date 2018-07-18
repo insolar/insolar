@@ -226,7 +226,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	if routeSet.Len() > 0 && routeSet.FirstNode().ID.Equal(keyBytes) {
 		targetNode = routeSet.FirstNode()
 		exists = true
-	} else if dht.proxy.Count() > 0 {
+	} else if dht.proxy.ProxyNodesCount() > 0 {
 		address, _ := node.NewAddress(dht.proxy.GetNextProxyAddress())
 		targetNode = &node.Node{ID: keyBytes, Address: address}
 		return targetNode, true, nil

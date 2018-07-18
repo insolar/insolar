@@ -24,8 +24,8 @@ type Proxy interface {
 	RemoveProxyNode(address string)
 	// GetNextProxyAddress returns a next address to send from proxy list.
 	GetNextProxyAddress() string
-	// Count return proxyList length.
-	Count() int
+	// ProxyNodesCount return added proxy count.
+	ProxyNodesCount() int
 }
 
 // Note: thread unsafe!!!
@@ -83,7 +83,7 @@ func (p *proxy) GetNextProxyAddress() string {
 	return p.proxyList[p.iterator-1]
 }
 
-// Count return proxyList length.
-func (p *proxy) Count() int {
+// ProxyNodesCount return added proxy count.
+func (p *proxy) ProxyNodesCount() int {
 	return len(p.proxyList)
 }

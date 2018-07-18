@@ -989,8 +989,8 @@ func TestDHT_RelayRequest(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond * 200)
 
-		assert.Equal(t, 1, dhts[i].relay.Count())
-		assert.Equal(t, true, dhts[index].proxy.Count() > 0)
+		assert.Equal(t, 1, dhts[i].relay.ClientsCount())
+		assert.Equal(t, true, dhts[index].proxy.ProxyNodesCount() > 0)
 	}
 
 	time.Sleep(time.Millisecond * 2000)

@@ -80,7 +80,7 @@ func TestRelay_AddClient(t *testing.T) {
 		relay.AddClient(nodes[i])
 	}
 
-	assert.Equal(t, count, relay.Count())
+	assert.Equal(t, count, relay.ClientsCount())
 }
 
 func TestRelay_RemoveClient(t *testing.T) {
@@ -95,13 +95,13 @@ func TestRelay_RemoveClient(t *testing.T) {
 			assert.Errorf(t, nil, "error: %s", err.Error())
 		}
 	}
-	assert.Equal(t, count, relay.Count())
+	assert.Equal(t, count, relay.ClientsCount())
 
 	for i := range nodes {
 		relay.RemoveClient(nodes[i])
 	}
 
-	assert.Equal(t, 0, relay.Count())
+	assert.Equal(t, 0, relay.ClientsCount())
 }
 
 func TestRelay_NeedToRelay(t *testing.T) {
@@ -115,7 +115,7 @@ func TestRelay_NeedToRelay(t *testing.T) {
 		relay.AddClient(nodes[i])
 	}
 
-	assert.Equal(t, count, relay.Count())
+	assert.Equal(t, count, relay.ClientsCount())
 
 	for i := range nodes {
 		res := relay.NeedToRelay(nodes[i].Address.String())
@@ -144,7 +144,7 @@ func TestRelay_Count(t *testing.T) {
 		relay.AddClient(nodes[i])
 	}
 
-	assert.Equal(t, count, relay.Count())
+	assert.Equal(t, count, relay.ClientsCount())
 }
 
 func TestProxy_AddProxyNode(t *testing.T) {
@@ -156,7 +156,7 @@ func TestProxy_AddProxyNode(t *testing.T) {
 		proxy.AddProxyNode(addresses[i].String())
 	}
 
-	assert.Equal(t, count, proxy.Count())
+	assert.Equal(t, count, proxy.ProxyNodesCount())
 }
 
 func TestProxy_RemoveProxyNode(t *testing.T) {
@@ -168,13 +168,13 @@ func TestProxy_RemoveProxyNode(t *testing.T) {
 		proxy.AddProxyNode(addresses[i].String())
 	}
 
-	assert.Equal(t, count, proxy.Count())
+	assert.Equal(t, count, proxy.ProxyNodesCount())
 
 	for i := range addresses {
 		proxy.RemoveProxyNode(addresses[i].String())
 	}
 
-	assert.Equal(t, 0, proxy.Count())
+	assert.Equal(t, 0, proxy.ProxyNodesCount())
 }
 
 func TestProxy_GetNextProxyAddress(t *testing.T) {
@@ -188,10 +188,10 @@ func TestProxy_GetNextProxyAddress(t *testing.T) {
 		idx[i] = addresses[i].String()
 	}
 
-	assert.Equal(t, count, proxy.Count())
+	assert.Equal(t, count, proxy.ProxyNodesCount())
 	assert.Equal(t, count, len(idx))
 
-	for i := 0; i < proxy.Count(); i++ {
+	for i := 0; i < proxy.ProxyNodesCount(); i++ {
 		assert.Equal(t, idx[i], proxy.GetNextProxyAddress())
 	}
 }
@@ -205,7 +205,7 @@ func TestProxy_Count(t *testing.T) {
 		proxy.AddProxyNode(addresses[i].String())
 	}
 
-	assert.Equal(t, count, proxy.Count())
+	assert.Equal(t, count, proxy.ProxyNodesCount())
 }
 
 func TestCreateProxy(t *testing.T) {

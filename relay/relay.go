@@ -42,8 +42,8 @@ type Relay interface {
 	AddClient(node *node.Node) error
 	// RemoveClient removes client from relay list.
 	RemoveClient(node *node.Node) error
-	// Count - clients count.
-	Count() int
+	// ClientsCount - clients count.
+	ClientsCount() int
 	// NeedToRelay returns true if origin node is proxy for target node.
 	NeedToRelay(targetAddress string) bool
 }
@@ -78,14 +78,14 @@ func (r *relay) RemoveClient(node *node.Node) error {
 	return nil
 }
 
-// Count - clients count.
-func (r *relay) Count() int {
+// ClientsCount - returns clients count.
+func (r *relay) ClientsCount() int {
 	return len(r.clients)
 }
 
 // NeedToRelay returns true if origin node is proxy for target node.
 func (r *relay) NeedToRelay(targetAddress string) bool {
-	for i := 0; i < r.Count(); i++ {
+	for i := 0; i < r.ClientsCount(); i++ {
 		if r.clients[i].Address.String() == targetAddress {
 			return true
 		}
@@ -94,9 +94,9 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 }
 
 func (r *relay) findClient(id node.ID) (int, *node.Node) {
-	for idx, node := range r.clients {
-		if node.ID.Equal(id) {
-			return idx, node
+	for idx, nodeIterator := range r.clients {
+		if nodeIterator.ID.Equal(id) {
+			return idx, nodeIterator
 		}
 	}
 	return -1, nil
