@@ -179,7 +179,7 @@ func (t *utpTransport) getFuture(msg *message.Message) Future {
 
 func (t *utpTransport) sendMessage(msg *message.Message) error {
 	var recvAddress string
-	if t.proxy.Count() > 0 {
+	if t.proxy.ProxyNodesCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()
 	}
 	if len(recvAddress) == 0 {
