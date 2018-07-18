@@ -151,7 +151,6 @@ func repl(dhtNetwork *network.DHT, ctx network.Context) {
 		case "info":
 			doInfo(dhtNetwork, ctx)
 		case "relay":
-			// TODO: test this, add to help
 			doSendRelay(input[2], input[1], dhtNetwork, ctx)
 		default:
 			doRPC(input, dhtNetwork, ctx)
@@ -247,7 +246,8 @@ Options:
 	--help Show this screen.
 	--addr=<ip> Local IP and Port [default: 0.0.0.0]
 	--bootstrap=<ip> Bootstrap IP and Port
-	--stun=<bool> Use STUN protocol for public addr discovery [default: true]`)
+	--stun=<bool> Use STUN protocol for public addr discovery [default: true]
+    --relay=<ip> send relay request`)
 }
 
 func displayInteractiveHelp() {
