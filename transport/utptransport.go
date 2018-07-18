@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/insolar/network/message"
+	"github.com/insolar/network/relay"
 
 	"github.com/anacrolix/utp"
 )
@@ -40,14 +41,16 @@ type utpTransport struct {
 
 	mutex   *sync.RWMutex
 	futures map[message.RequestID]Future
+
+	proxy relay.Proxy
 }
 
 // NewUTPTransport creates utpTransport.
-func NewUTPTransport(conn net.PacketConn) (Transport, error) {
-	return newUTPTransport(conn)
+func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
+	return newUTPTransport(conn, proxy)
 }
 
-func newUTPTransport(conn net.PacketConn) (*utpTransport, error) {
+func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, error) {
 	socket, err := utp.NewSocketFromPacketConn(conn)
 	if err != nil {
 		return nil, err
@@ -64,6 +67,8 @@ func newUTPTransport(conn net.PacketConn) (*utpTransport, error) {
 
 		mutex:   &sync.RWMutex{},
 		futures: make(map[message.RequestID]Future),
+
+		proxy: proxy,
 	}
 
 	return transport, nil
@@ -173,7 +178,14 @@ func (t *utpTransport) getFuture(msg *message.Message) Future {
 }
 
 func (t *utpTransport) sendMessage(msg *message.Message) error {
-	conn, err := t.socketDialTimeout(msg.Receiver.Address.String(), time.Second)
+	var recvAddress string
+	if t.proxy.ProxyNodesCount() > 0 {
+		recvAddress = t.proxy.GetNextProxyAddress()
+	}
+	if len(recvAddress) == 0 {
+		recvAddress = msg.Receiver.Address.String()
+	}
+	conn, err := t.socketDialTimeout(recvAddress, time.Second)
 	if err != nil {
 		return err
 	}

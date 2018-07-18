@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/network"
 	"github.com/insolar/network/connection"
 	"github.com/insolar/network/node"
+	"github.com/insolar/network/relay"
 	"github.com/insolar/network/resolver"
 	"github.com/insolar/network/rpc"
 	"github.com/insolar/network/store"
@@ -51,15 +52,15 @@ func main() {
 	}
 
 	bootstrapNodes := getBootstrapNodes(bootstrapAddress)
+	proxy := relay.NewProxy()
 
 	configuration := network.NewNetworkConfiguration(
 		createResolver(*stun),
 		connection.NewConnectionFactory(),
 		transport.NewUTPTransportFactory(),
 		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{
-			"s": send,
-		}))
+		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{"s": send}),
+		proxy)
 	dhtNetwork, err := configuration.CreateNetwork(*addr, &network.Options{
 		BootstrapNodes: bootstrapNodes,
 	})
@@ -149,6 +150,8 @@ func repl(dhtNetwork *network.DHT, ctx network.Context) {
 			doFindNode(input, dhtNetwork, ctx)
 		case "info":
 			doInfo(dhtNetwork, ctx)
+		case "relay":
+			doSendRelay(input[2], input[1], dhtNetwork, ctx)
 		default:
 			doRPC(input, dhtNetwork, ctx)
 		}
@@ -202,6 +205,13 @@ func doInfo(dhtNetwork *network.DHT, ctx network.Context) {
 	fmt.Println("Known nodes: " + strconv.Itoa(nodes))
 }
 
+func doSendRelay(command, relayAddr string, dhtNetwork *network.DHT, ctx network.Context) {
+	err := dhtNetwork.RelayRequest(ctx, command, relayAddr)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
 func doRPC(input []string, dhtNetwork *network.DHT, ctx network.Context) {
 	if len(input) < 2 || len(input[0]) == 0 || len(input[1]) == 0 {
 		if len(input) > 0 && len(input[0]) > 0 {
@@ -236,7 +246,8 @@ Options:
 	--help Show this screen.
 	--addr=<ip> Local IP and Port [default: 0.0.0.0]
 	--bootstrap=<ip> Bootstrap IP and Port
-	--stun=<bool> Use STUN protocol for public addr discovery [default: true]`)
+	--stun=<bool> Use STUN protocol for public addr discovery [default: true]
+    --relay=<ip> send relay request`)
 }
 
 func displayInteractiveHelp() {

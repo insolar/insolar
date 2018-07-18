@@ -14,27 +14,33 @@
  *    limitations under the License.
  */
 
-package transport
+/*
+Package relay is an implementation of relay mechanism. Proxy contains info about nodes which can relaying messages.
+Relay contains info about nodes of which messages current node have to relay.
 
-import (
-	"net"
+Usage:
+	package relay
 
-	"github.com/insolar/network/relay"
-)
+	relay := NewRelay()
+	relay.AddClient(node)
 
-// Factory allows to create new Transport.
-type Factory interface {
-	Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error)
-}
+	if relay.NeedToRelay(node.Address()) {
+		//relay message
+	}
 
-type utpTransportFactory struct{}
+	relay.RemoveClient(node)
 
-// NewUTPTransportFactory creates new Factory of utpTransport.
-func NewUTPTransportFactory() Factory {
-	return &utpTransportFactory{}
-}
+	//-----------------------------------
 
-// Create creates new Transport.
-func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
-	return NewUTPTransport(conn, proxy)
-}
+	proxy := NewProxy()
+	proxy.AddProxyNode(node.Address())
+
+	if proxy.ProxyNodesCount > 0 {
+		address := proxy.GetNextProxyAddress
+		//send message to next proxy
+	}
+
+	proxy.RemoveProxyNode(node.Address)
+
+*/
+package relay

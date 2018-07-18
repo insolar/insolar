@@ -19,6 +19,7 @@ package network
 import (
 	"bytes"
 	"errors"
+	"log"
 	"math"
 	"strconv"
 	"testing"
@@ -27,6 +28,7 @@ import (
 	"github.com/insolar/network/connection"
 	"github.com/insolar/network/message"
 	"github.com/insolar/network/node"
+	"github.com/insolar/network/relay"
 	"github.com/insolar/network/routing"
 	"github.com/insolar/network/rpc"
 	"github.com/insolar/network/store"
@@ -182,7 +184,7 @@ func realDhtParams(ids []node.ID, address string) (store.Store, *node.Origin, tr
 	addr, _ := node.NewAddress(address)
 	origin, _ := node.NewOrigin(ids, addr)
 	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn)
+	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
@@ -202,7 +204,8 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 			BootstrapNodes: []*node.Node{
 				bootstrapNode,
 			},
-		})
+		},
+			relay.NewProxy())
 		port++
 		dhts = append(dhts, dht)
 		assert.NoError(t, err)
@@ -226,8 +229,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 	time.Sleep(time.Millisecond * 2000)
 
 	for _, dht := range dhts {
-		ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
-		assert.Equal(t, 19, dht.NumNodes(ctx))
+		assert.Equal(t, 19, dht.NumNodes(getDefaultCtx(dht)))
 		dht.Disconnect()
 		<-done
 	}
@@ -240,7 +242,7 @@ func TestBootstrapTwoNodes(t *testing.T) {
 
 	id1, _ := node.NewIDs(1)
 	st, s, tp, r, err := realDhtParams(id1, "127.0.0.1:3000")
-	dht1, _ := NewDHT(st, s, tp, r, &Options{})
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
 	assert.NoError(t, err)
 
 	bootstrapAddr2, _ := node.NewAddress("127.0.0.1:3000")
@@ -252,7 +254,8 @@ func TestBootstrapTwoNodes(t *testing.T) {
 				Address: bootstrapAddr2,
 			},
 		},
-	})
+	},
+		relay.NewProxy())
 
 	assert.NoError(t, err)
 	assert.Equal(t, 0, dht1.NumNodes(getDefaultCtx(dht1)))
@@ -291,7 +294,7 @@ func TestBootstrapThreeNodes(t *testing.T) {
 	id1, _ := node.NewIDs(1)
 	st1, s1, tp1, r1, err := realDhtParams(id1, "127.0.0.1:3000")
 	assert.NoError(t, err)
-	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{})
+	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
 
 	id2, _ := node.NewIDs(1)
 	st2, s2, tp2, r2, err := realDhtParams(id2, "127.0.0.1:3001")
@@ -303,7 +306,8 @@ func TestBootstrapThreeNodes(t *testing.T) {
 				Address: dht1.origin.Address,
 			},
 		},
-	})
+	},
+		relay.NewProxy())
 
 	st3, s3, tp3, r3, err := realDhtParams(nil, "127.0.0.1:3002")
 	assert.NoError(t, err)
@@ -314,7 +318,8 @@ func TestBootstrapThreeNodes(t *testing.T) {
 				Address: dht2.origin.Address,
 			},
 		},
-	})
+	},
+		relay.NewProxy())
 
 	assert.Equal(t, 0, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 0, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -370,7 +375,7 @@ func TestBootstrapNoID(t *testing.T) {
 	id1, _ := node.NewIDs(1)
 	st1, s1, tp1, r1, err := realDhtParams(id1, "0.0.0.0:3000")
 	assert.NoError(t, err)
-	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{})
+	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
 
 	st2, s2, tp2, r2, err := realDhtParams(nil, "0.0.0.0:3001")
 	assert.NoError(t, err)
@@ -380,7 +385,8 @@ func TestBootstrapNoID(t *testing.T) {
 				Address: dht1.origin.Address,
 			},
 		},
-	})
+	},
+		relay.NewProxy())
 
 	assert.Equal(t, 0, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 0, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -421,7 +427,7 @@ func TestReconnect(t *testing.T) {
 		id1, _ := node.NewIDs(1)
 		st1, s1, tp1, r1, err := realDhtParams(id1, "127.0.0.1:3000")
 		assert.NoError(t, err)
-		dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{})
+		dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
 
 		st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:3001")
 		assert.NoError(t, err)
@@ -432,7 +438,8 @@ func TestReconnect(t *testing.T) {
 					Address: dht1.origin.Address,
 				},
 			},
-		})
+		},
+			relay.NewProxy())
 
 		assert.Equal(t, 0, dht1.NumNodes(getDefaultCtx(dht1)))
 
@@ -471,7 +478,7 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 
 	id1, _ := node.NewIDs(1)
 	st1, s1, tp1, r1, _ := realDhtParams(id1, "127.0.0.1:3000")
-	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{})
+	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
 
 	st2, s2, tp2, r2, _ := realDhtParams(nil, "127.0.0.1:3001")
 	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
@@ -481,7 +488,7 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 				Address: dht1.origin.Address,
 			},
 		},
-	})
+	}, relay.NewProxy())
 
 	go func() {
 		err := dht1.Listen()
@@ -533,7 +540,8 @@ func TestNetworkingSendError(t *testing.T) {
 			ID:      getZerodIDWithNthByte(1, byte(255)),
 			Address: bootstrapAddr,
 		}},
-	})
+	},
+		relay.NewProxy())
 	mockTp := tp.(*mockTransport)
 
 	go func() {
@@ -570,7 +578,8 @@ func TestNodeResponseSendError(t *testing.T) {
 			ID:      getZerodIDWithNthByte(1, byte(255)),
 			Address: bootstrapAddr,
 		}},
-	})
+	},
+		relay.NewProxy())
 	mockTp := tp.(*mockTransport)
 
 	queries := 0
@@ -622,7 +631,8 @@ func TestBucketRefresh(t *testing.T) {
 			ID:      getZerodIDWithNthByte(1, byte(255)),
 			Address: bootstrapAddr,
 		}},
-	})
+	},
+		relay.NewProxy())
 	mockTp := tp.(*mockTransport)
 
 	queries := 0
@@ -677,7 +687,8 @@ func TestStoreReplication(t *testing.T) {
 			ID:      getZerodIDWithNthByte(1, byte(255)),
 			Address: bootstrapAddr,
 		}},
-	})
+	},
+		relay.NewProxy())
 	mockTp := tp.(*mockTransport)
 
 	go func() {
@@ -731,7 +742,8 @@ func TestStoreExpiration(t *testing.T) {
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
 		ExpirationTime: time.Second,
-	})
+	},
+		relay.NewProxy())
 
 	go func() {
 		dht.Listen()
@@ -768,7 +780,8 @@ func TestFindNodeAllBuckets(t *testing.T) {
 			ID:      getZerodIDWithNthByte(0, byte(math.Pow(2, 7))),
 			Address: bootstrapAddr,
 		}},
-	})
+	},
+		relay.NewProxy())
 	mockTp := tp.(*mockTransport)
 
 	go func() {
@@ -827,7 +840,8 @@ func TestAddNodeTimeout(t *testing.T) {
 			ID:      getZerodIDWithNthByte(1, byte(255)),
 			Address: bootstrapAddr,
 		}},
-	})
+	},
+		relay.NewProxy())
 	mockTp := tp.(*mockTransport)
 
 	go func() {
@@ -891,7 +905,7 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 	st, s, tp, r, err := realDhtParams([]node.ID{id}, "0.0.0.0:3000")
 	assert.NoError(t, err)
 
-	dht, _ := NewDHT(st, s, tp, r, &Options{})
+	dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
 
 	go func() {
 		dht.Listen()
@@ -917,4 +931,73 @@ func getZerodIDWithNthByte(n int, v byte) node.ID {
 
 func getIDWithValues(b byte) node.ID {
 	return []byte{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b}
+}
+
+func TestDHT_RelayRequest(t *testing.T) {
+	count := 20
+	done := make(chan bool)
+	port := 3000
+	var dhts []*DHT
+	idx := make(map[int]string, count)
+
+	for i := 0; i < count; i++ {
+		id, _ := node.NewIDs(1)
+		idx[i] = id[0].String()
+		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
+		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
+		bootstrapNode := node.NewNode(address)
+		dht, err := NewDHT(st, s, tp, r, &Options{
+			BootstrapNodes: []*node.Node{
+				bootstrapNode,
+			},
+		},
+			relay.NewProxy())
+		port++
+		dhts = append(dhts, dht)
+		assert.NoError(t, err)
+	}
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
+		assert.Equal(t, 0, dht.NumNodes(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, "closed", err.Error())
+			done <- true
+		}(dht)
+		go func(dht *DHT) {
+			err := dht.Bootstrap()
+			assert.NoError(t, err)
+		}(dht)
+		time.Sleep(time.Millisecond * 200)
+	}
+
+	time.Sleep(time.Millisecond * 2000)
+
+	index := 0
+	for i := range dhts {
+		if (i + 1) == count {
+			index = 0
+		} else {
+			index++
+		}
+
+		ctx, _ := NewContextBuilder(dhts[i]).SetDefaultNode().Build()
+		err := dhts[index].RelayRequest(ctx, "start", idx[i])
+		if err != nil {
+			log.Println(err)
+		}
+		time.Sleep(time.Millisecond * 200)
+
+		assert.Equal(t, 1, dhts[i].relay.ClientsCount())
+		assert.Equal(t, true, dhts[index].proxy.ProxyNodesCount() > 0)
+	}
+
+	time.Sleep(time.Millisecond * 2000)
+
+	for _, dht := range dhts {
+		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
+		dht.Disconnect()
+		<-done
+	}
 }
