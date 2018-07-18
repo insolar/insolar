@@ -247,7 +247,8 @@ Options:
 	--help Show this screen.
 	--addr=<ip> Local IP and Port [default: 0.0.0.0]
 	--bootstrap=<ip> Bootstrap IP and Port
-	--stun=<bool> Use STUN protocol for public addr discovery [default: true]`)
+	--stun=<bool> Use STUN protocol for public addr discovery [default: true]
+    --relay=<ip> send relay request`)
 }
 
 func displayInteractiveHelp() {
