@@ -808,8 +808,7 @@ func (dht *DHT) processRPC(ctx Context, msg *message.Message, messageBuilder mes
 	}
 }
 
-// Precess relay request
-// TODO: test this func
+// Precess relay request.
 func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder message.Builder) {
 	data := msg.Data.(*message.RequestRelay)
 	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
@@ -848,7 +847,7 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 	}
 }
 
-// RelayRequest sends relay request to target
+// RelayRequest sends relay request to target.
 func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
 	var typedCommand message.CommandType
 	targetNode, exist, err := dht.FindNode(ctx, target)

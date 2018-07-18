@@ -150,7 +150,7 @@ func TestRelay_Count(t *testing.T) {
 func TestProxy_AddProxyNode(t *testing.T) {
 	count := 20
 	addresses := makeAddresses(count, t)
-	proxy := CreateProxy()
+	proxy := NewProxy()
 
 	for i := range addresses {
 		proxy.AddProxyNode(addresses[i].String())
@@ -162,7 +162,7 @@ func TestProxy_AddProxyNode(t *testing.T) {
 func TestProxy_RemoveProxyNode(t *testing.T) {
 	count := 20
 	addresses := makeAddresses(count, t)
-	proxy := CreateProxy()
+	proxy := NewProxy()
 
 	for i := range addresses {
 		proxy.AddProxyNode(addresses[i].String())
@@ -180,7 +180,7 @@ func TestProxy_RemoveProxyNode(t *testing.T) {
 func TestProxy_GetNextProxyAddress(t *testing.T) {
 	count := 20
 	addresses := makeAddresses(count, t)
-	proxy := CreateProxy()
+	proxy := NewProxy()
 	idx := make(map[int]string, count)
 
 	for i := range addresses {
@@ -199,7 +199,7 @@ func TestProxy_GetNextProxyAddress(t *testing.T) {
 func TestProxy_Count(t *testing.T) {
 	count := 20
 	addresses := makeAddresses(count, t)
-	proxy := CreateProxy()
+	proxy := NewProxy()
 
 	for i := range addresses {
 		proxy.AddProxyNode(addresses[i].String())
@@ -209,7 +209,7 @@ func TestProxy_Count(t *testing.T) {
 }
 
 func TestCreateProxy(t *testing.T) {
-	proxy := CreateProxy()
+	proxy := NewProxy()
 
 	check := true
 

@@ -78,7 +78,7 @@ func TestNewNetworkConfiguration(t *testing.T) {
 		&mockTransportFactoryOk{},
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.CreateProxy(),
+		relay.NewProxy(),
 	)
 
 	expectedCfg := &Configuration{
@@ -87,7 +87,7 @@ func TestNewNetworkConfiguration(t *testing.T) {
 		transportFactory:  &mockTransportFactoryOk{},
 		storeFactory:      store.NewMemoryStoreFactory(),
 		rpcFactory:        rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		proxy:             relay.CreateProxy(),
+		proxy:             relay.NewProxy(),
 	}
 
 	assert.Equal(t, expectedCfg, cfg)
@@ -100,7 +100,7 @@ func TestConfiguration_CreateNetwork(t *testing.T) {
 		&mockTransportFactoryOk{},
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.CreateProxy(),
+		relay.NewProxy(),
 	)
 
 	network, err := cfg.CreateNetwork("127.0.0.1:31337", &Options{})
@@ -117,7 +117,7 @@ func TestConfiguration_CreateNetwork_AlreadyCreated(t *testing.T) {
 		&mockTransportFactoryOk{},
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.CreateProxy(),
+		relay.NewProxy(),
 	)
 
 	dht, err := cfg.CreateNetwork("127.0.0.1:31337", &Options{})
@@ -137,7 +137,7 @@ func TestConfiguration_CreateNetwork_ConnFactoryFail(t *testing.T) {
 		&mockTransportFactoryOk{},
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.CreateProxy(),
+		relay.NewProxy(),
 	)
 
 	_, err := cfg.CreateNetwork("127.0.0.1:31337", &Options{})
@@ -152,7 +152,7 @@ func TestConfiguration_CreateNetwork_ResolverFail(t *testing.T) {
 		&mockTransportFactoryOk{},
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.CreateProxy(),
+		relay.NewProxy(),
 	)
 
 	_, err := cfg.CreateNetwork("127.0.0.1:31337", &Options{})
@@ -167,7 +167,7 @@ func TestConfiguration_CreateNetwork_InvalidAddress(t *testing.T) {
 		&mockTransportFactoryOk{},
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.CreateProxy(),
+		relay.NewProxy(),
 	)
 
 	_, err := cfg.CreateNetwork("127.0.0.1:31337", &Options{})
@@ -182,7 +182,7 @@ func TestConfiguration_CreateNetwork_TransportFactoryFail(t *testing.T) {
 		&mockTransportFactoryFail{},
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.CreateProxy(),
+		relay.NewProxy(),
 	)
 
 	_, err := cfg.CreateNetwork("127.0.0.1:31337", &Options{})

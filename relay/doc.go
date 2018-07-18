@@ -32,7 +32,7 @@ Usage:
 
 	//-----------------------------------
 
-	proxy := CreateProxy()
+	proxy := NewProxy()
 	proxy.AddProxyNode(node.Address())
 
 	if proxy.ProxyNodesCount > 0 {

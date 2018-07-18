@@ -16,7 +16,7 @@
 
 package relay
 
-// Proxy contains proxy addresses
+// Proxy contains proxy addresses.
 type Proxy interface {
 	// AddProxyNode add an address to proxy list.
 	AddProxyNode(address string)
@@ -34,9 +34,12 @@ type proxy struct {
 	iterator  int
 }
 
-// CreateProxy instantiates proxy struct.
-func CreateProxy() Proxy {
-	return &proxy{proxyList: make([]string, 0), iterator: 0}
+// NewProxy instantiates proxy struct.
+func NewProxy() Proxy {
+	return &proxy{
+		proxyList: make([]string, 0),
+		iterator:  0,
+	}
 }
 
 // AddProxyNode add an address to proxy list.

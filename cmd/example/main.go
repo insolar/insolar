@@ -52,7 +52,7 @@ func main() {
 	}
 
 	bootstrapNodes := getBootstrapNodes(bootstrapAddress)
-	proxy := relay.CreateProxy()
+	proxy := relay.NewProxy()
 
 	configuration := network.NewNetworkConfiguration(
 		createResolver(*stun),
