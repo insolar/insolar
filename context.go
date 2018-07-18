@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/network/node"
 )
 
-// Context type is localized for future purposes
+// Context type is localized for future purposes.
 // Network Node can have multiple IDs, but each action must be executed with only one ID.
 // Context is used in all actions to select specific ID to work with.
 type Context context.Context
@@ -35,20 +35,20 @@ const (
 	defaultNodeID = 0
 )
 
-// ContextBuilder allows to lazy configure and build new Context
+// ContextBuilder allows to lazy configure and build new Context.
 type ContextBuilder struct {
 	dht     *DHT
 	actions []func(ctx Context) (Context, error)
 }
 
-// NewContextBuilder creates new ContextBuilder
+// NewContextBuilder creates new ContextBuilder.
 func NewContextBuilder(dht *DHT) ContextBuilder {
 	return ContextBuilder{
 		dht: dht,
 	}
 }
 
-// Build builds and returns new Context
+// Build builds and returns new Context.
 func (cb ContextBuilder) Build() (ctx Context, err error) {
 	ctx = context.Background()
 	for _, action := range cb.actions {
@@ -60,7 +60,7 @@ func (cb ContextBuilder) Build() (ctx Context, err error) {
 	return
 }
 
-// SetNodeByID sets node id in Context
+// SetNodeByID sets node id in Context.
 func (cb ContextBuilder) SetNodeByID(nodeID node.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
 		for index, id := range cb.dht.origin.IDs {
@@ -73,7 +73,7 @@ func (cb ContextBuilder) SetNodeByID(nodeID node.ID) ContextBuilder {
 	return cb
 }
 
-// SetDefaultNode sets first node id in Context
+// SetDefaultNode sets first node id in Context.
 func (cb ContextBuilder) SetDefaultNode() ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
 		return context.WithValue(ctx, ctxTableIndex, defaultNodeID), nil
