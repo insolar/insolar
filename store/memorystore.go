@@ -22,7 +22,7 @@ import (
 )
 
 // memoryStore is a simple in-memory key/value store used for unit testing, and
-// the CLI example
+// the CLI example.
 type memoryStore struct {
 	mutex        *sync.RWMutex
 	data         map[string][]byte
@@ -30,7 +30,7 @@ type memoryStore struct {
 	expireMap    map[string]time.Time
 }
 
-// NewMemoryStore creates new memory store
+// NewMemoryStore creates new memory store.
 func NewMemoryStore() Store {
 	return newMemoryStore()
 }
@@ -58,7 +58,7 @@ func (ms *memoryStore) Store(key Key, data []byte, replication time.Time, expira
 	return nil
 }
 
-// Retrieve will return the local key/value if it exists
+// Retrieve will return the local key/value if it exists.
 func (ms *memoryStore) Retrieve(key Key) ([]byte, bool) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
@@ -67,7 +67,7 @@ func (ms *memoryStore) Retrieve(key Key) ([]byte, bool) {
 	return data, found
 }
 
-// Delete deletes a key/value pair from the memoryStore
+// Delete deletes a key/value pair from the memoryStore.
 func (ms *memoryStore) Delete(key Key) {
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
