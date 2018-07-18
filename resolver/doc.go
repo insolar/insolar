@@ -14,26 +14,24 @@
  *    limitations under the License.
  */
 
-package message
+/*
+Package resolver provides interface (and default implementation) to retrieve public network address.
 
-// RequestDataFindNode is data for FindNode request.
-type RequestDataFindNode struct {
-	Target []byte
-}
+Currently there are two default implementation of resolvers:
 
-// RequestDataFindValue is data for FindValue request.
-type RequestDataFindValue struct {
-	Target []byte
-}
+ - Using STUN server
+ - No-op resolver which returns socket listen address
 
-// RequestDataStore is data for Store request.
-type RequestDataStore struct {
-	Data       []byte
-	Publishing bool // Whether or not we are the original publisher.
-}
+Usage:
 
-// RequestDataRPC is data for RPC request.
-type RequestDataRPC struct {
-	Method string
-	Args   [][]byte
-}
+	var conn net.PacketConn
+
+	// get connection anywhere
+
+	r := resolver.NewStunResolver("")  // Using default stun server
+	publicAddr, _ := r.Resolve(conn)
+
+	fmt.Println(publicAddr)
+
+*/
+package resolver

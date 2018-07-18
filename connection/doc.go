@@ -14,26 +14,14 @@
  *    limitations under the License.
  */
 
-package message
+/*
+Package connection encapsulates connection creation process and provides connection factories.
 
-// RequestDataFindNode is data for FindNode request.
-type RequestDataFindNode struct {
-	Target []byte
-}
+Usage
 
-// RequestDataFindValue is data for FindValue request.
-type RequestDataFindValue struct {
-	Target []byte
-}
+	factory := connection.NewConnectionFactory()
 
-// RequestDataStore is data for Store request.
-type RequestDataStore struct {
-	Data       []byte
-	Publishing bool // Whether or not we are the original publisher.
-}
-
-// RequestDataRPC is data for RPC request.
-type RequestDataRPC struct {
-	Method string
-	Args   [][]byte
-}
+	connection := factory.Create("127.0.0.1:8080")
+	defer connection.close()  // You have to manually close connection
+*/
+package connection

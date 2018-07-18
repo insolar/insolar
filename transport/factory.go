@@ -20,19 +20,19 @@ import (
 	"net"
 )
 
-// Factory allows to create new Transport
+// Factory allows to create new Transport.
 type Factory interface {
 	Create(conn net.PacketConn) (Transport, error)
 }
 
 type utpTransportFactory struct{}
 
-// NewUTPTransportFactory creates new Factory of utpTransport
+// NewUTPTransportFactory creates new Factory of utpTransport.
 func NewUTPTransportFactory() Factory {
 	return &utpTransportFactory{}
 }
 
-// Create creates new Transport
+// Create creates new Transport.
 func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn) (Transport, error) {
 	return NewUTPTransport(conn)
 }

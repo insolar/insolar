@@ -21,19 +21,29 @@ import (
 	"github.com/insolar/network/node"
 )
 
-// Future is network response future
+// Future is network response future.
 type Future interface {
+
+	// ID returns message sequence number.
 	ID() message.RequestID
+
+	// Actor returns the initiator of the message.
 	Actor() *node.Node
+
+	// Request returns origin request.
 	Request() *message.Message
 
+	// Result is a channel to listen for future result.
 	Result() <-chan *message.Message
+
+	// SetResult makes message to appear in result channel.
 	SetResult(*message.Message)
 
+	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()
 }
 
-// CancelCallback is a callback function executed when cancelling Future
+// CancelCallback is a callback function executed when cancelling Future.
 type CancelCallback func(Future)
 
 type future struct {
@@ -44,7 +54,7 @@ type future struct {
 	cancelCallback CancelCallback
 }
 
-// NewFuture creates new Future
+// NewFuture creates new Future.
 func NewFuture(requestID message.RequestID, actor *node.Node, msg *message.Message, cancelCallback CancelCallback) Future {
 	return &future{
 		result:         make(chan *message.Message),
@@ -55,32 +65,32 @@ func NewFuture(requestID message.RequestID, actor *node.Node, msg *message.Messa
 	}
 }
 
-// ID returns RequestID of message
+// ID returns RequestID of message.
 func (future *future) ID() message.RequestID {
 	return future.requestID
 }
 
-// Actor returns Node address that was used to create message
+// Actor returns Node address that was used to create message.
 func (future *future) Actor() *node.Node {
 	return future.actor
 }
 
-// Request returns original request message
+// Request returns original request message.
 func (future *future) Request() *message.Message {
 	return future.request
 }
 
-// Result returns result message channel
+// Result returns result message channel.
 func (future *future) Result() <-chan *message.Message {
 	return future.result
 }
 
-// SetResult write message to the result channel
+// SetResult write message to the result channel.
 func (future *future) SetResult(msg *message.Message) {
 	future.result <- msg
 }
 
-// Cancel allows to cancel Future processing
+// Cancel allows to cancel Future processing.
 func (future *future) Cancel() {
 	close(future.result)
 	future.cancelCallback(future)

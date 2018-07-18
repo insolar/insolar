@@ -14,26 +14,26 @@
  *    limitations under the License.
  */
 
-package message
+/*
 
-// RequestDataFindNode is data for FindNode request.
-type RequestDataFindNode struct {
-	Target []byte
-}
+Package node is a fundamental part of networking system. Each node has:
 
-// RequestDataFindValue is data for FindValue request.
-type RequestDataFindValue struct {
-	Target []byte
-}
+ - one real network address (IP or any other transport protocol address)
+ - multiple abstract network IDs (either node's own or ones belonging to relayed nodes)
 
-// RequestDataStore is data for Store request.
-type RequestDataStore struct {
-	Data       []byte
-	Publishing bool // Whether or not we are the original publisher.
-}
+Contains structures to describe network entities in code.
 
-// RequestDataRPC is data for RPC request.
-type RequestDataRPC struct {
-	Method string
-	Args   [][]byte
-}
+Usage:
+
+ 	originAddress, err := node.NewAddress(address)
+	if err != nil {
+		...
+	}
+
+	origin, err := node.NewOrigin(nil, originAddress)
+	if err != nil {
+		...
+	}
+
+*/
+package node

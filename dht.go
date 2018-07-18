@@ -36,7 +36,7 @@ import (
 	"github.com/jbenet/go-base58"
 )
 
-// DHT represents the state of the local node in the distributed hash table
+// DHT represents the state of the local node in the distributed hash table.
 type DHT struct {
 	tables  []*routing.HashTable
 	options *Options
@@ -48,22 +48,22 @@ type DHT struct {
 	rpc       rpc.RPC
 }
 
-// Options contains configuration options for the local node
+// Options contains configuration options for the local node.
 type Options struct {
 	// The nodes being used to bootstrap the network. Without a bootstrap
 	// node there is no way to connect to the network. NetworkNodes can be
-	// initialized via network.NewNode()
+	// initialized via network.NewNode().
 	BootstrapNodes []*node.Node
 
 	// The time after which a key/value pair expires;
-	// this is a time-to-live (TTL) from the original publication date
+	// this is a time-to-live (TTL) from the original publication date.
 	ExpirationTime time.Duration
 
-	// Seconds after which an otherwise unaccessed bucket must be refreshed
+	// Seconds after which an otherwise unaccessed bucket must be refreshed.
 	RefreshTime time.Duration
 
 	// The interval between Kademlia replication events, when a node is
-	// required to publish its entire database
+	// required to publish its entire database.
 	ReplicateTime time.Duration
 
 	// The time after which the original publisher must
@@ -71,10 +71,10 @@ type Options struct {
 	RepublishTime time.Duration
 
 	// The maximum time to wait for a response from a node before discarding
-	// it from the bucket
+	// it from the bucket.
 	PingTimeout time.Duration
 
-	// The maximum time to wait for a response to any message
+	// The maximum time to wait for a response to any message.
 	MessageTimeout time.Duration
 }
 
@@ -202,7 +202,7 @@ func (dht *DHT) Get(ctx Context, key string) ([]byte, bool, error) {
 	return value, exists, nil
 }
 
-// FindNode returns target node's real network address
+// FindNode returns target node's real network address.
 func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	keyBytes := base58.Decode(key)
 	if len(keyBytes) != routing.MaxContactsInBucket {
@@ -236,19 +236,19 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	return targetNode, exists, nil
 }
 
-// NumNodes returns the total number of nodes stored in the local routing table
+// NumNodes returns the total number of nodes stored in the local routing table.
 func (dht *DHT) NumNodes(ctx Context) int {
 	ht := dht.htFromCtx(ctx)
 	return ht.TotalNodes()
 }
 
-// GetOriginID returns the base58 encoded identifier of the local node
+// GetOriginID returns the base58 encoded identifier of the local node.
 func (dht *DHT) GetOriginID(ctx Context) string {
 	ht := dht.htFromCtx(ctx)
 	return ht.Origin.ID.String()
 }
 
-// Listen begins listening on the socket for incoming Messages
+// Listen begins listening on the socket for incoming Messages.
 func (dht *DHT) Listen() error {
 	start := make(chan bool)
 	stop := make(chan bool)
@@ -760,7 +760,7 @@ func (dht *DHT) processRPC(ctx Context, msg *message.Message, messageBuilder mes
 	}
 }
 
-// RemoteProcedureCall calls remote procedure on target node
+// RemoteProcedureCall calls remote procedure on target node.
 func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error) {
 	targetNode, exists, err := dht.FindNode(ctx, target)
 	ht := dht.htFromCtx(ctx)

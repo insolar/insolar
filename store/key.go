@@ -20,16 +20,16 @@ import (
 	"crypto/sha1"
 )
 
-// Key is storage key. For now it is 20-byte slice
+// Key is storage key. For now it is 20-byte slice.
 type Key []byte
 
-// NewKey creates new key for given data
+// NewKey creates new key for given data.
 func NewKey(data []byte) Key {
 	sum := sha1.Sum(data)
 	return Key(sum[:])
 }
 
-// String is a string representation of key
+// String is a string representation of key.
 func (k Key) String() string {
 	return string(k)
 }

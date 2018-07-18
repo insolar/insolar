@@ -14,26 +14,23 @@
  *    limitations under the License.
  */
 
-package message
+/*
+Package store provides interfaces and default in-memory implementation of storage for DHT metadata.
 
-// RequestDataFindNode is data for FindNode request.
-type RequestDataFindNode struct {
-	Target []byte
-}
+Usage:
 
-// RequestDataFindValue is data for FindValue request.
-type RequestDataFindValue struct {
-	Target []byte
-}
+	s := newMemoryStore()
 
-// RequestDataStore is data for Store request.
-type RequestDataStore struct {
-	Data       []byte
-	Publishing bool // Whether or not we are the original publisher.
-}
+	data := []byte("some data")
+	key := NewKey(data)
 
-// RequestDataRPC is data for RPC request.
-type RequestDataRPC struct {
-	Method string
-	Args   [][]byte
-}
+	replicationTime := time.Now().Add(time.Second * 1337)
+	expirationTime := time.Now().Add(time.Second * 42)
+
+	s.Store(key, data, replicationTime, expirationTime, true)
+
+	s.Retrieve(key)
+
+	s.Delete(key)
+*/
+package store

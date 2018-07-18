@@ -14,26 +14,19 @@
  *    limitations under the License.
  */
 
-package message
+/*
+Package rpc allows higher level components to register methods that can be called by other network nodes.
 
-// RequestDataFindNode is data for FindNode request.
-type RequestDataFindNode struct {
-	Target []byte
-}
+Usage:
 
-// RequestDataFindValue is data for FindValue request.
-type RequestDataFindValue struct {
-	Target []byte
-}
+	r := rpc.NewRPC()
 
-// RequestDataStore is data for Store request.
-type RequestDataStore struct {
-	Data       []byte
-	Publishing bool // Whether or not we are the original publisher.
-}
+	r.RegisterMethod("hello_world", func(sender *node.Node, args [][]byte) ([]byte, error) {
+		fmt.Println("Hello World")
+		return nil, nil
+	})
 
-// RequestDataRPC is data for RPC request.
-type RequestDataRPC struct {
-	Method string
-	Args   [][]byte
-}
+	r.Invoke(&node.Node{}, "hello_world", [][]byte{})
+
+*/
+package rpc

@@ -25,8 +25,8 @@ var random io.Reader = &cryptoReader{}
 
 type cryptoReader struct{}
 
-// Read implements io.Reader interface
-// Can be replaced with mock reader for testing purposes
+// Read implements io.Reader interface.
+// Can be replaced with mock reader for testing purposes.
 func (cr *cryptoReader) Read(b []byte) (n int, err error) {
 	return rand.Read(b)
 }

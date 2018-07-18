@@ -42,7 +42,7 @@ type utpTransport struct {
 	futures map[message.RequestID]Future
 }
 
-// NewUTPTransport creates utpTransport
+// NewUTPTransport creates utpTransport.
 func NewUTPTransport(conn net.PacketConn) (Transport, error) {
 	return newUTPTransport(conn)
 }
@@ -69,7 +69,7 @@ func newUTPTransport(conn net.PacketConn) (*utpTransport, error) {
 	return transport, nil
 }
 
-// SendRequest sends request message and returns future
+// SendRequest sends request message and returns future.
 func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
 	msg.RequestID = t.generateID()
 
@@ -84,14 +84,14 @@ func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
 	return future, nil
 }
 
-// SendResponse sends response message
+// SendResponse sends response message.
 func (t *utpTransport) SendResponse(requestID message.RequestID, msg *message.Message) error {
 	msg.RequestID = requestID
 
 	return t.sendMessage(msg)
 }
 
-// Start starts networking
+// Start starts networking.
 func (t *utpTransport) Start() error {
 	for {
 		conn, err := t.socket.Accept()
@@ -105,7 +105,7 @@ func (t *utpTransport) Start() error {
 	}
 }
 
-// Stop stops networking
+// Stop stops networking.
 func (t *utpTransport) Stop() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -119,7 +119,7 @@ func (t *utpTransport) Stop() {
 	}
 }
 
-// Close closes message channels
+// Close closes message channels.
 func (t *utpTransport) Close() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -128,13 +128,13 @@ func (t *utpTransport) Close() {
 	close(t.disconnectFinished)
 }
 
-// Messages returns incoming messages channel
-func (t *utpTransport) Messages() chan *message.Message {
+// Messages returns incoming messages channel.
+func (t *utpTransport) Messages() <-chan *message.Message {
 	return t.received
 }
 
-// Stopped checks if networking is stopped already
-func (t *utpTransport) Stopped() chan bool {
+// Stopped checks if networking is stopped already.
+func (t *utpTransport) Stopped() <-chan bool {
 	return t.disconnectStarted
 }
 
@@ -228,7 +228,7 @@ func shouldProcessMessage(future Future, msg *message.Message) bool {
 	return !future.Actor().Equal(*msg.Sender) && msg.Type != message.TypePing || msg.Type != future.Request().Type
 }
 
-// AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value
+// AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
 func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 	for {
 		val := atomic.LoadUint64(addr)

@@ -29,38 +29,38 @@ import (
 	"github.com/insolar/network/node"
 )
 
-// IterateType is type of iteration
+// IterateType is type of iteration.
 type IterateType int
 
 const (
-	// IterateStore is iteration type for Store requests
+	// IterateStore is iteration type for Store requests.
 	IterateStore = IterateType(iota)
 
-	// IterateBootstrap is iteration type for Bootstrap requests
+	// IterateBootstrap is iteration type for Bootstrap requests.
 	IterateBootstrap
 
-	// IterateFindNode is iteration type for FindNode requests
+	// IterateFindNode is iteration type for FindNode requests.
 	IterateFindNode
 
-	// IterateFindValue is iteration type for FindValue requests
+	// IterateFindValue is iteration type for FindValue requests.
 	IterateFindValue
 )
 
 const (
-	// ParallelCalls is a small number representing the degree of parallelism in network calls
+	// ParallelCalls is a small number representing the degree of parallelism in network calls.
 	ParallelCalls = 3
 
 	// KeyBitSize is the size in bits of the keys used to identify nodes and store and
-	// retrieve data; in basic Kademlia this is 160, the length of a SHA1
+	// retrieve data; in basic Kademlia this is 160, the length of a SHA1.
 	KeyBitSize = 160
 
-	// MaxContactsInBucket the maximum number of contacts stored in a bucket
+	// MaxContactsInBucket the maximum number of contacts stored in a bucket.
 	MaxContactsInBucket = 20
 )
 
-// HashTable represents the hash-table state
+// HashTable represents the hash-table state.
 type HashTable struct {
-	// The requestID of the local node
+	// The local node.
 	Origin *node.Node
 
 	// Routing table a list of all known nodes in the network
@@ -77,7 +77,7 @@ type HashTable struct {
 	rand *rand.Rand
 }
 
-// NewHashTable creates new HashTable
+// NewHashTable creates new HashTable.
 func NewHashTable(id node.ID, address *node.Address) (*HashTable, error) {
 	if id == nil {
 		return nil, errors.New("id required")
@@ -104,17 +104,17 @@ func NewHashTable(id node.ID, address *node.Address) (*HashTable, error) {
 	return ht, nil
 }
 
-// Lock locks internal table mutex
+// Lock locks internal table mutex.
 func (ht *HashTable) Lock() {
 	ht.mutex.Lock()
 }
 
-// Unlock unlocks internal table mutex
+// Unlock unlocks internal table mutex.
 func (ht *HashTable) Unlock() {
 	ht.mutex.Unlock()
 }
 
-// ResetRefreshTimeForBucket resets refresh timer for given bucket
+// ResetRefreshTimeForBucket resets refresh timer for given bucket.
 func (ht *HashTable) ResetRefreshTimeForBucket(bucket int) {
 	ht.Lock()
 	defer ht.Unlock()
@@ -122,7 +122,7 @@ func (ht *HashTable) ResetRefreshTimeForBucket(bucket int) {
 	ht.refreshMap[bucket] = time.Now()
 }
 
-// GetRefreshTimeForBucket returns Time when given bucket must be refreshed
+// GetRefreshTimeForBucket returns Time when given bucket must be refreshed.
 func (ht *HashTable) GetRefreshTimeForBucket(bucket int) time.Time {
 	ht.Lock()
 	defer ht.Unlock()
@@ -130,7 +130,7 @@ func (ht *HashTable) GetRefreshTimeForBucket(bucket int) time.Time {
 	return ht.refreshMap[bucket]
 }
 
-// MarkNodeAsSeen marks given Node as seen
+// MarkNodeAsSeen marks given Node as seen.
 func (ht *HashTable) MarkNodeAsSeen(node []byte) {
 	ht.Lock()
 	defer ht.Unlock()
@@ -154,7 +154,7 @@ func (ht *HashTable) MarkNodeAsSeen(node []byte) {
 	ht.RoutingTable[index] = bucket
 }
 
-// DoesNodeExistInBucket checks if given Node exists in given bucket
+// DoesNodeExistInBucket checks if given Node exists in given bucket.
 func (ht *HashTable) DoesNodeExistInBucket(bucket int, node []byte) bool {
 	ht.Lock()
 	defer ht.Unlock()
@@ -167,7 +167,7 @@ func (ht *HashTable) DoesNodeExistInBucket(bucket int, node []byte) bool {
 	return false
 }
 
-// GetClosestContacts returns RouteSet with num closest Nodes to target
+// GetClosestContacts returns RouteSet with num closest Nodes to target.
 func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*node.Node) *RouteSet {
 	ht.Lock()
 	defer ht.Unlock()
@@ -234,7 +234,7 @@ func (ht *HashTable) removeNode(ID []byte) { // nolint: deadcode, megacheck
 	ht.RoutingTable[index] = bucket
 }
 
-// GetAllNodesInBucketCloserThan returns all nodes from given bucket that are closer to id then our node
+// GetAllNodesInBucketCloserThan returns all nodes from given bucket that are closer to id then our node.
 func (ht *HashTable) GetAllNodesInBucketCloserThan(bucket int, id []byte) [][]byte {
 	b := ht.RoutingTable[bucket]
 	var nodes [][]byte
@@ -251,7 +251,7 @@ func (ht *HashTable) GetAllNodesInBucketCloserThan(bucket int, id []byte) [][]by
 	return nodes
 }
 
-// GetTotalNodesInBucket returns number of Nodes in bucket
+// GetTotalNodesInBucket returns number of Nodes in bucket.
 func (ht *HashTable) GetTotalNodesInBucket(bucket int) int {
 	ht.Lock()
 	defer ht.Unlock()
@@ -267,7 +267,7 @@ func (ht *HashTable) getDistance(id1, id2 []byte) *big.Int {
 	return ret.SetBytes(dst[:])
 }
 
-// GetRandomIDFromBucket returns random node ID from given bucket
+// GetRandomIDFromBucket returns random node ID from given bucket.
 func (ht *HashTable) GetRandomIDFromBucket(bucket int) []byte {
 	ht.Lock()
 	defer ht.Unlock()
@@ -309,7 +309,7 @@ func (ht *HashTable) GetRandomIDFromBucket(bucket int) []byte {
 	return id
 }
 
-// GetBucketIndexFromDifferingBit returns appropriate bucket number for two node IDs
+// GetBucketIndexFromDifferingBit returns appropriate bucket number for two node IDs.
 func GetBucketIndexFromDifferingBit(id1, id2 []byte) int {
 	// Look at each byte from left to right
 	for j := 0; j < len(id1); j++ {
@@ -331,7 +331,7 @@ func GetBucketIndexFromDifferingBit(id1, id2 []byte) int {
 	return 0
 }
 
-// TotalNodes returns total number of nodes in HashTable
+// TotalNodes returns total number of nodes in HashTable.
 func (ht *HashTable) TotalNodes() int {
 	ht.Lock()
 	defer ht.Unlock()

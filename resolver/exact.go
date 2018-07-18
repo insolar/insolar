@@ -23,7 +23,7 @@ import (
 type exactResolver struct {
 }
 
-// NewExactResolver returns new exact address resolver
+// NewExactResolver returns new no-op resolver.
 func NewExactResolver() PublicAddressResolver {
 	return newExactResolver()
 }
@@ -32,7 +32,7 @@ func newExactResolver() *exactResolver {
 	return &exactResolver{}
 }
 
-// Resolve returns node's current network address
+// Resolve returns node's current network address.
 func (er *exactResolver) Resolve(conn net.PacketConn) (string, error) {
 	return conn.LocalAddr().String(), nil
 }

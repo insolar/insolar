@@ -22,19 +22,19 @@ import (
 
 // RouteNode represents a node in the network locally
 // a separate struct due to the fact that we may want to add some metadata
-// here later such as RTT, or LastSeen time
+// here later such as RTT, or LastSeen time.
 type RouteNode struct {
 	*node.Node
 }
 
-// NewRouteNode creates new RouteNode
+// NewRouteNode creates new RouteNode.
 func NewRouteNode(node *node.Node) *RouteNode {
 	return &RouteNode{
 		Node: node,
 	}
 }
 
-// RouteNodesFrom creates list of RouteNodes from a list of Nodes
+// RouteNodesFrom creates list of RouteNodes from a list of Nodes.
 func RouteNodesFrom(nodes []*node.Node) []*RouteNode {
 	routeNodes := make([]*RouteNode, len(nodes))
 
