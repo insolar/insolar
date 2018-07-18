@@ -808,7 +808,6 @@ func (dht *DHT) processRPC(ctx Context, msg *message.Message, messageBuilder mes
 	}
 }
 
-<<<<<<< HEAD
 // Precess relay request
 // TODO: test this func
 func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder message.Builder) {
@@ -915,10 +914,7 @@ func (dht *DHT) handleRelayResponse(response *message.ResponseRelay, target stri
 	}
 }
 
-// RemoteProcedureCall calls remote procedure on target node
-=======
 // RemoteProcedureCall calls remote procedure on target node.
->>>>>>> cb834a31e59fe0b1455f1d874cb9a09ed24d3ab9
 func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error) {
 	targetNode, exists, err := dht.FindNode(ctx, target)
 	ht := dht.htFromCtx(ctx)
