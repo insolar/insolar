@@ -16,23 +16,23 @@
 
 package message
 
-// RequestDataFindNode is data for FindNode request
+// RequestDataFindNode is data for FindNode request.
 type RequestDataFindNode struct {
 	Target []byte
 }
 
-// RequestDataFindValue is data for FindValue request
+// RequestDataFindValue is data for FindValue request.
 type RequestDataFindValue struct {
 	Target []byte
 }
 
-// RequestDataStore is data for Store request
+// RequestDataStore is data for Store request.
 type RequestDataStore struct {
 	Data       []byte
-	Publishing bool // Whether or not we are the original publisher
+	Publishing bool // Whether or not we are the original publisher.
 }
 
-// RequestDataRPC is data for RPC request
+// RequestDataRPC is data for RPC request.
 type RequestDataRPC struct {
 	Method string
 	Args   [][]byte
