@@ -17,7 +17,7 @@ Overview
 Installation
 ------------
 
-    go get github.com/insolar/network
+    go get github.com/insolar/insolar
 
 
 Contributing
