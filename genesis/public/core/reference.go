@@ -20,11 +20,11 @@ package core
 import (
 	"fmt"
 
-	"github.com/platform/model/class"
-	"github.com/platform/model/domain"
-	"github.com/platform/model/factory"
-	"github.com/platform/model/object"
-	"github.com/platform/model/resolver"
+	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/domain"
+	"github.com/insolar/insolar/genesis/model/factory"
+	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // ReferenceDomainName is a name for reference domain.

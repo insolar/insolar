@@ -20,9 +20,9 @@ package core
 import (
 	"testing"
 
-	"github.com/platform/mock/storage"
-	"github.com/platform/model/domain"
-	"github.com/platform/model/object"
+	"github.com/insolar/insolar/genesis/mock/storage"
+	"github.com/insolar/insolar/genesis/model/domain"
+	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
