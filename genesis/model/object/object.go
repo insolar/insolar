@@ -17,8 +17,8 @@
 package object
 
 import (
-	"github.com/platform/mock/storage"
-	"github.com/platform/model/class"
+	"github.com/insolar/insolar/genesis/mock/storage"
+	"github.com/insolar/insolar/genesis/model/class"
 )
 
 // Object marks that instance has ClassID (string representation of class).

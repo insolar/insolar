@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/platform/model/class"
+	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/stretchr/testify/assert"
 )
 

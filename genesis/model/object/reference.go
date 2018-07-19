@@ -19,7 +19,7 @@ package object
 import (
 	"fmt"
 
-	"github.com/platform/model/class"
+	"github.com/insolar/insolar/genesis/model/class"
 )
 
 // ScopeType represent type of scope for references.
