@@ -20,22 +20,22 @@ for real world application by enterprises.
 
 Key components
 --------------
-### [Transport](https://godoc.org/github.com/insolar/network/transport)
+### [Transport](https://godoc.org/github.com/insolar/insolar/network/host/transport)
 Network transport interface. It allows to abstract our network from physical transport.
 It can either be IP based network or any other kind of message courier (e.g. an industrial message bus). 
 
-### [Node](https://godoc.org/github.com/insolar/network/node)
+### [Node](https://godoc.org/github.com/insolar/insolar/network/host/node)
 Node is a fundamental part of networking system. Each node has:
  - one real network address (IP or any other transport protocol address)
  - multiple abstract network IDs (either node's own or ones belonging to relayed nodes)
 
-### [Routing](https://godoc.org/github.com/insolar/network/routing)
+### [Routing](https://godoc.org/github.com/insolar/insolar/network/host/routing)
 It is actually a Kademlia hash table used to store network nodes and calculate distances between them.
 See [Kademlia whitepaper](https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf) and
 [XLattice design specification](http://xlattice.sourceforge.net/components/protocol/kademlia/specs.html) for details.
 
 
-### [Message](https://godoc.org/github.com/insolar/network/message)
+### [Message](https://godoc.org/github.com/insolar/insolar/network/host/message)
 A set of data transferred by this module between nodes.
  - Request message
  - Response message
@@ -43,7 +43,7 @@ A set of data transferred by this module between nodes.
  Now messages are serialized simply with encoding/gob.
  In future there will be a powerful robust serialization system based on Google's Protocol Buffers.
 
-### [RPC](https://godoc.org/github.com/insolar/network/rpc)
+### [RPC](https://godoc.org/github.com/insolar/insolar/network/host/rpc)
 RPC module allows higher level components to register methods that can be called by other network nodes.
 
 Usage
