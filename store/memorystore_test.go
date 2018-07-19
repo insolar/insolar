@@ -112,7 +112,8 @@ func TestMemoryStore_GetKeysReadyToReplicate(t *testing.T) {
 	keys := s.GetKeysReadyToReplicate()
 
 	assert.Len(t, keys, 2)
-	assert.Equal(t, keys, []Key{key1, key2})
+	assert.Contains(t, keys, key1)
+	assert.Contains(t, keys, key2)
 }
 
 func TestMemoryStore_ExpireKeys(t *testing.T) {
