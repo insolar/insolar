@@ -2,6 +2,10 @@ Insolar – Host Network
 ===============
 Physical networking layer
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar/network/host)](https://goreportcard.com/report/github.com/insolar/insolar/network/host)
+[![GoDoc](https://godoc.org/github.com/insolar/insolar/network/host?status.svg)](https://godoc.org/github.com/insolar/insolar/network/host)
+
+
 Overview
 --------
 
