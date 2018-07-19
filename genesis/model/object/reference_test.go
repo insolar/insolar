@@ -1,0 +1,78 @@
+/*
+ *    Copyright 2018 INS Ecosystem
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package object
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/platform/model/class"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewReference(t *testing.T) {
+	domain := "1"
+	record := "1"
+	ref, err := NewReference(domain, record, GlobalScope)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &Reference{
+		Domain: domain,
+		Record: record,
+		Scope:  GlobalScope,
+	}, ref)
+}
+
+func TestNewReference_Error(t *testing.T) {
+	domain := "1"
+	record := "1"
+	unknownScope := ScopeType(100)
+	ref, err := NewReference(domain, record, unknownScope)
+
+	assert.Equal(t, "unknown scope type: 100", err.Error())
+	assert.Nil(t, ref)
+}
+
+func TestReference_GetReferenceID(t *testing.T) {
+	domain := "1"
+	record := "1"
+	ref, _ := NewReference(domain, record, GlobalScope)
+
+	refID := ref.GetClassID()
+
+	assert.Equal(t, class.ReferenceID, refID)
+}
+
+func TestReference_String(t *testing.T) {
+	domain := "1"
+	record := "1"
+	ref, _ := NewReference(domain, record, GlobalScope)
+
+	stringRef := ref.String()
+
+	assert.Equal(t, fmt.Sprintf("#%s.#%s", domain, record), stringRef)
+}
+
+func TestReference_GetReference(t *testing.T) {
+	domain := "1"
+	record := "1"
+	ref, _ := NewReference(domain, record, GlobalScope)
+
+	refRef := ref.GetReference()
+
+	assert.Equal(t, ref, refRef)
+}
