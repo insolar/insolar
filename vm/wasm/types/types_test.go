@@ -14,31 +14,13 @@
  *    limitations under the License.
  */
 
-package modulereader
+package types
 
 import (
-	"bytes"
 	"testing"
 )
 
-func TestReadVarUint32(t *testing.T) {
-	r := Reader{R: bytes.NewReader([]byte{0x80, 0x7f})}
-	n, err := r.ReadVarUint32()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != uint32(16256) {
-		t.Fatalf("got = %d; want = %d", n, 16256)
-	}
-}
+// Just to make Goland happy
+func TestStub(t *testing.T) {
 
-func TestReadVarint32(t *testing.T) {
-	r := Reader{R: bytes.NewReader([]byte{0xFF, 0x7e})}
-	n, err := r.ReadVarint32()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != int32(-129) {
-		t.Fatalf("got = %d; want = %d", n, -129)
-	}
 }

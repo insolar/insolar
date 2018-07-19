@@ -1,3 +1,4 @@
-# Insolar - VM realizations for executing contracts
+Insolar — Virtual machines for executing contracts
+==================================================
 
- - [wasm](wasm/README.md) - WebaAssembly implementation of smartcontracts
+ - [wasm](wasm/README.md) - WebAssembly implementation of smart contracts

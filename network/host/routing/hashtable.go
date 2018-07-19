@@ -218,22 +218,6 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*
 	return routeSet
 }
 
-func (ht *HashTable) removeNode(ID []byte) { // nolint: deadcode, megacheck
-	ht.Lock()
-	defer ht.Unlock()
-
-	index := GetBucketIndexFromDifferingBit(ht.Origin.ID, ID)
-	bucket := ht.RoutingTable[index]
-
-	for i, v := range bucket {
-		if bytes.Equal(v.ID, ID) {
-			bucket = append(bucket[:i], bucket[i+1:]...)
-		}
-	}
-
-	ht.RoutingTable[index] = bucket
-}
-
 // GetAllNodesInBucketCloserThan returns all nodes from given bucket that are closer to id then our node.
 func (ht *HashTable) GetAllNodesInBucketCloserThan(bucket int, id []byte) [][]byte {
 	b := ht.RoutingTable[bucket]

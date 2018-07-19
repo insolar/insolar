@@ -14,31 +14,15 @@
  *    limitations under the License.
  */
 
-package modulereader
+/*
+Package insolar is the next generation high-performance scalable blockchain platform
+designed with the express purpose to meet an immense business scope.
+The enterprise-grade distributed ledger cloud platform will help to increase
+business velocity, create new revenue streams, and reduce cost and risk by securely
+extending enterprise SaaS and on-premises applications to drive tamper-resistant
+transactions on a trusted business network.
 
-import (
-	"bytes"
-	"testing"
-)
-
-func TestReadVarUint32(t *testing.T) {
-	r := Reader{R: bytes.NewReader([]byte{0x80, 0x7f})}
-	n, err := r.ReadVarUint32()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != uint32(16256) {
-		t.Fatalf("got = %d; want = %d", n, 16256)
-	}
-}
-
-func TestReadVarint32(t *testing.T) {
-	r := Reader{R: bytes.NewReader([]byte{0xFF, 0x7e})}
-	n, err := r.ReadVarint32()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != int32(-129) {
-		t.Fatalf("got = %d; want = %d", n, -129)
-	}
-}
+Insolar supports public and private blockchains and is able to customize
+different blockchains for different applications.
+*/
+package insolar
