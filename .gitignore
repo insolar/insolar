@@ -25,3 +25,8 @@ gen
 
 # Go dep
 vendor
+
+
+# wasm tests
+vm/wasm/test/data/*.wasm
+vm/wasm/test/data/*.wat
