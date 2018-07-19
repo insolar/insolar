@@ -35,6 +35,13 @@ for a range of scenarios and collaborate with other entities on the platform.
 Components
 ----------
 ### [Network](https://github.com/insolar/insolar/tree/master/network/host)
+Kademlia DHT based blockchain network layer.
+ - Support of heterogeneous network topology.
+ - Network routing with a node or node group becoming relays for others nodes.
+ - Ability to limit number of gateways to corporate node group via relays
+   to keep the node group secure.
+
+See [package readme](https://github.com/insolar/insolar/tree/master/network/host) for more details.
 
 
 ### [Ledger](https://github.com/insolar/insolar/tree/master/ledger)
