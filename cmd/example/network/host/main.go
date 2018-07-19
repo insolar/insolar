@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package host
+package main
 
 import (
 	"flag"
