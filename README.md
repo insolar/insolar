@@ -1,6 +1,6 @@
-Insolar – Network
+Insolar
 ===============
-Abstract networking layer
+Blockchain platform
 
 [![Build Status](https://travis-ci.org/insolar/network.svg?branch=master)](https://travis-ci.org/insolar/network)
 [![Go Report Card](https://goreportcard.com/badge/github.com/insolar/network)](https://goreportcard.com/report/github.com/insolar/network)
@@ -25,75 +25,11 @@ for real world application by enterprises.
  - **Ability to limit number of gateways to corporate node group via relays** to keep the node group secure while being
    able to interact with the rest of the network through relays. This feature mitigates the risk of DDoS attacks.
 
-Key components
---------------
-### [Transport](https://godoc.org/github.com/insolar/network/transport)
-Network transport interface. It allows to abstract our network from physical transport.
-It can either be IP based network or any other kind of message courier (e.g. an industrial message bus). 
-
-### [Node](https://godoc.org/github.com/insolar/network/node)
-Node is a fundamental part of networking system. Each node has:
- - one real network address (IP or any other transport protocol address)
- - multiple abstract network IDs (either node's own or ones belonging to relayed nodes)
-
-### [Routing](https://godoc.org/github.com/insolar/network/routing)
-It is actually a Kademlia hash table used to store network nodes and calculate distances between them.
-See [Kademlia whitepaper](https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf) and
-[XLattice design specification](http://xlattice.sourceforge.net/components/protocol/kademlia/specs.html) for details.
-
-
-### [Message](https://godoc.org/github.com/insolar/network/message)
-A set of data transferred by this module between nodes.
- - Request message
- - Response message
- 
- Now messages are serialized simply with encoding/gob.
- In future there will be a powerful robust serialization system based on Google's Protocol Buffers.
-
-### [RPC](https://godoc.org/github.com/insolar/network/rpc)
-RPC module allows higher level components to register methods that can be called by other network nodes.
 
 Installation
 ------------
 
     go get github.com/insolar/network
-
-
-Usage
------
-
-```go
-package main
-
-import (
-	"github.com/insolar/network"
-	"github.com/insolar/network/connection"
-	"github.com/insolar/network/node"
-	"github.com/insolar/network/resolver"
-	"github.com/insolar/network/rpc"
-	"github.com/insolar/network/store"
-	"github.com/insolar/network/transport"
-)
-
-func main() {
-	configuration := network.NewNetworkConfiguration(
-		resolver.NewStunResolver(""),
-		connection.NewConnectionFactory(),
-		transport.NewUTPTransportFactory(),
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}))
-
-	dhtNetwork, err := configuration.CreateNetwork("0.0.0.0:31337", &network.Options{})
-	if err != nil {
-		panic(err)
-	}
-	defer configuration.CloseNetwork()
-
-	dhtNetwork.Listen()
-}
-```
-
-For more detailed usage example see [cmd/example/main.go](cmd/example/main.go)
 
 
 Contributing
