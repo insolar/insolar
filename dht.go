@@ -236,9 +236,11 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 		if err != nil {
 			return nil, false, err
 		}
-		if len(closest) > 0 && closest[0].ID.Equal(keyBytes) {
-			targetNode = closest[0]
-			exists = true
+		for i := range closest {
+			if closest[i].ID.Equal(keyBytes) {
+				targetNode = closest[i]
+				exists = true
+			}
 		}
 	}
 
@@ -851,11 +853,11 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
 	var typedCommand message.CommandType
 	targetNode, exist, err := dht.FindNode(ctx, target)
-	if !exist {
-		err = errors.New("target for relay request not found")
+	if err != nil {
 		return err
 	}
-	if err != nil {
+	if !exist {
+		err = errors.New("target for relay request not found")
 		return err
 	}
 
