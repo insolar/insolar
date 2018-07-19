@@ -48,6 +48,20 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/insolar/network"
+  packages = [
+    "message",
+    "node",
+    "relay",
+    "routing",
+    "rpc",
+    "store",
+    "transport"
+  ]
+  revision = "18276e20cf49fd31871921c5e8d434daaf7d511c"
+
+[[projects]]
   name = "github.com/jbenet/go-base58"
   packages = ["."]
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
@@ -77,6 +91,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cf51483286df0842b7bb06c20ae7f6dc41ac5ef503c7b8b00514c16a76ef435f"
+  inputs-digest = "a5f64f236f2a0012933359d6374d20eab8393d2a35e82a4820ca65963022ae14"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -51,9 +51,9 @@ type DHT struct {
 
 // Options contains configuration options for the local node.
 type Options struct {
-	// The nodes being used to bootstrap the insolar. Without a bootstrap
-	// node there is no way to connect to the insolar. NetworkNodes can be
-	// initialized via insolar.NewNode().
+	// The nodes being used to bootstrap the network. Without a bootstrap
+	// node there is no way to connect to the network. NetworkNodes can be
+	// initialized via network.NewNode().
 	BootstrapNodes []*node.Node
 
 	// The time after which a key/value pair expires;
@@ -166,7 +166,7 @@ func (dht *DHT) getExpirationTime(ctx context.Context, key []byte) time.Time {
 	return time.Now().Add(dur)
 }
 
-// Store stores data on the insolar. This will trigger an iterateStore loop.
+// Store stores data on the network. This will trigger an iterateStore loop.
 // The base58 encoded identifier will be returned if the store is successful.
 func (dht *DHT) Store(ctx Context, data []byte) (id string, err error) {
 	key := store.NewKey(data)
@@ -207,7 +207,7 @@ func (dht *DHT) Get(ctx Context, key string) ([]byte, bool, error) {
 	return value, exists, nil
 }
 
-// FindNode returns target node's real insolar address.
+// FindNode returns target node's real network address.
 func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	keyBytes := base58.Decode(key)
 	if len(keyBytes) != routing.MaxContactsInBucket {
@@ -231,7 +231,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 		targetNode = &node.Node{ID: keyBytes, Address: address}
 		return targetNode, true, nil
 	} else {
-		log.Println("Node not found in routing table. Iterating through insolar...")
+		log.Println("Node not found in routing table. Iterating through network...")
 		_, closest, err := dht.iterate(ctx, routing.IterateFindNode, keyBytes, nil)
 		if err != nil {
 			return nil, false, err
@@ -271,7 +271,7 @@ func (dht *DHT) Listen() error {
 	return dht.transport.Start()
 }
 
-// Bootstrap attempts to bootstrap the insolar using the BootstrapNodes provided
+// Bootstrap attempts to bootstrap the network using the BootstrapNodes provided
 // to the Options struct. This will trigger an iterateBootstrap to the provided
 // BootstrapNodes.
 func (dht *DHT) Bootstrap() error {
@@ -344,17 +344,17 @@ func (dht *DHT) Bootstrap() error {
 	return nil
 }
 
-// Disconnect will trigger a Stop from the insolar.
+// Disconnect will trigger a Stop from the network.
 func (dht *DHT) Disconnect() {
 	dht.transport.Stop()
 }
 
-// Iterate does an iterative search through the insolar. This can be done
+// Iterate does an iterative search through the network. This can be done
 // for multiple reasons. These reasons include:
-//     iterateStore - Used to store new information in the insolar.
-//     iterateFindNode - Used to find node in the insolar given node abstract address.
-//     iterateFindValue - Used to find a value among the insolar given a key.
-//     iterateBootstrap - Used to bootstrap the insolar.
+//     iterateStore - Used to store new information in the network.
+//     iterateFindNode - Used to find node in the network given node abstract address.
+//     iterateFindValue - Used to find a value among the network given a key.
+//     iterateBootstrap - Used to bootstrap the network.
 func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data []byte) (value []byte, closest []*node.Node, err error) {
 	ht := dht.htFromCtx(ctx)
 	routeSet := ht.GetClosestContacts(routing.ParallelCalls, target, []*node.Node{})
@@ -388,55 +388,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		var futures []transport.Future
 		var futuresCount int
 
-		// Next we send Messages to the first (closest) alpha nodes in the
-		// route set and wait for a response
-
-		for i, receiver := range routeSet.Nodes() {
-			// Contact only alpha nodes
-			if i >= routing.ParallelCalls && !queryRest {
-				break
-			}
-
-			// Don't contact nodes already contacted
-			if contacted[string(receiver.ID)] {
-				continue
-			}
-
-			contacted[string(receiver.ID)] = true
-
-			messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(receiver)
-
-			switch t {
-			case routing.IterateBootstrap, routing.IterateFindNode:
-				messageBuilder = messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{
-					Target: target,
-				})
-			case routing.IterateFindValue:
-				messageBuilder = messageBuilder.Type(message.TypeFindValue).Request(&message.RequestDataFindValue{
-					Target: target,
-				})
-			case routing.IterateStore:
-				messageBuilder = messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{
-					Target: target,
-				})
-			default:
-				panic("Unknown iterate type")
-			}
-
-			msg := messageBuilder.Build()
-
-			// Send the async queries and wait for a response
-			res, err := dht.transport.SendRequest(msg)
-			if err != nil {
-				// Node was unreachable for some reason. We will have to remove
-				// it from the route set, but we will keep it in our routing
-				// table in hopes that it might come back online in the f.
-				removeFromRouteSet = append(removeFromRouteSet, msg.Receiver)
-				continue
-			}
-
-			futures = append(futures, res)
-		}
+		dht.sendMessageToAlphaNodes(routeSet, queryRest, t, ht, &contacted, target, &futures, removeFromRouteSet)
 
 		for _, n := range removeFromRouteSet {
 			routeSet.Remove(routing.NewRouteNode(n))
@@ -445,23 +397,24 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		futuresCount = len(futures)
 
 		resultChan := make(chan *message.Message)
-		for _, f := range futures {
-			go func(future transport.Future) {
-				select {
-				case result := <-future.Result():
-					if result == nil {
-						// Channel was closed
-						return
-					}
-					dht.addNode(ctx, routing.NewRouteNode(result.Sender))
-					resultChan <- result
-					return
-				case <-time.After(dht.options.MessageTimeout):
-					future.Cancel()
-					return
-				}
-			}(f)
-		}
+		dht.setUpResultChan(&futures, ctx, resultChan)
+		// for _, f := range futures {
+		// 	go func(future transport.Future) {
+		// 		select {
+		// 		case result := <-future.Result():
+		// 			if result == nil {
+		// 				// Channel was closed
+		// 				return
+		// 			}
+		// 			dht.addNode(ctx, routing.NewRouteNode(result.Sender))
+		// 			resultChan <- result
+		// 			return
+		// 		case <-time.After(dht.options.MessageTimeout):
+		// 			future.Cancel()
+		// 			return
+		// 		}
+		// 	}(f)
+		// }
 
 		var results []*message.Message
 		if futuresCount > 0 {
@@ -515,6 +468,11 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 
 		sort.Sort(routeSet)
 
+		// value, closest, err = dht.iterateIsDone(t, &queryRest, routeSet, data, ht, closestNode)
+		// if queryRest == true {
+		// 	continue
+		// }
+
 		// If closestNode is unchanged then we are done
 		if routeSet.FirstNode().ID.Equal(closestNode.ID) || queryRest {
 			// We are done
@@ -547,6 +505,129 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		} else {
 			closestNode = routeSet.FirstNode()
 		}
+	}
+}
+
+func (dht *DHT) setUpResultChan(futures *[]transport.Future, ctx Context, resultChan chan *message.Message) {
+	for _, f := range *futures {
+		go func(future transport.Future) {
+			select {
+			case result := <-future.Result():
+				if result == nil {
+					// Channel was closed
+					return
+				}
+				dht.addNode(ctx, routing.NewRouteNode(result.Sender))
+				resultChan <- result
+				return
+			case <-time.After(dht.options.MessageTimeout):
+				future.Cancel()
+				return
+			}
+		}(f)
+	}
+}
+
+func (dht *DHT) sendMessageToAlphaNodes(
+	routeSet *routing.RouteSet,
+	queryRest bool,
+	t routing.IterateType,
+	ht *routing.HashTable,
+	contacted *map[string]bool,
+	target []byte,
+	futures *[]transport.Future,
+	removeFromRouteSet []*node.Node) {
+	// Next we send Messages to the first (closest) alpha nodes in the
+	// route set and wait for a response
+
+	for i, receiver := range routeSet.Nodes() {
+		// Contact only alpha nodes
+		if i >= routing.ParallelCalls && !queryRest {
+			break
+		}
+
+		// Don't contact nodes already contacted
+		if (*contacted)[string(receiver.ID)] {
+			continue
+		}
+
+		(*contacted)[string(receiver.ID)] = true
+
+		messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(receiver)
+
+		checkRoutingIterateType(t, &messageBuilder, target)
+
+		msg := messageBuilder.Build()
+
+		// Send the async queries and wait for a response
+		res, err := dht.transport.SendRequest(msg)
+		if err != nil {
+			// Node was unreachable for some reason. We will have to remove
+			// it from the route set, but we will keep it in our routing
+			// table in hopes that it might come back online in the f.
+			removeFromRouteSet = append(removeFromRouteSet, msg.Receiver)
+			continue
+		}
+
+		*futures = append(*futures, res)
+	}
+}
+
+// func (dht *DHT) iterateIsDone(
+// 	t routing.IterateType,
+// 	queryRest *bool,
+// 	routeSet *routing.RouteSet,
+// 	data []byte,
+// 	ht *routing.HashTable,
+// 	closestNode *node.Node) (value []byte, closest []*node.Node, err error) {
+//
+// 	if routeSet.FirstNode().ID.Equal(closestNode.ID) || *queryRest {
+// 		switch t {
+// 		case routing.IterateBootstrap:
+// 			if !*queryRest {
+// 				*queryRest = true
+// 			}
+// 			return nil, routeSet.Nodes(), nil
+// 		case routing.IterateFindNode, routing.IterateFindValue:
+// 			return nil, routeSet.Nodes(), nil
+// 		case routing.IterateStore:
+// 			for i, receiver := range routeSet.Nodes() {
+// 				if i >= routing.MaxContactsInBucket {
+// 					return nil, nil, nil
+// 				}
+//
+// 				msg := message.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(message.TypeStore).Request(
+// 					&message.RequestDataStore{
+// 						Data: data,
+// 					}).Build()
+//
+// 				future, _ := dht.transport.SendRequest(msg)
+// 				// We do not need to handle result of this message
+// 				future.Cancel()
+// 			}
+// 			return nil, nil, nil
+// 		}
+// 	} else {
+// 		closestNode = routeSet.FirstNode()
+// 	}
+// }
+
+func checkRoutingIterateType(t routing.IterateType, messageBuilder *message.Builder, target []byte) {
+	switch t {
+	case routing.IterateBootstrap, routing.IterateFindNode:
+		*messageBuilder = messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{
+			Target: target,
+		})
+	case routing.IterateFindValue:
+		*messageBuilder = messageBuilder.Type(message.TypeFindValue).Request(&message.RequestDataFindValue{
+			Target: target,
+		})
+	case routing.IterateStore:
+		*messageBuilder = messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{
+			Target: target,
+		})
+	default:
+		panic("Unknown iterate type")
 	}
 }
 
