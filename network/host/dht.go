@@ -51,9 +51,9 @@ type DHT struct {
 
 // Options contains configuration options for the local node.
 type Options struct {
-	// The nodes being used to bootstrap the network. Without a bootstrap
-	// node there is no way to connect to the network. NetworkNodes can be
-	// initialized via network.NewNode().
+	// The nodes being used to bootstrap the insolar. Without a bootstrap
+	// node there is no way to connect to the insolar. NetworkNodes can be
+	// initialized via insolar.NewNode().
 	BootstrapNodes []*node.Node
 
 	// The time after which a key/value pair expires;
@@ -166,7 +166,7 @@ func (dht *DHT) getExpirationTime(ctx context.Context, key []byte) time.Time {
 	return time.Now().Add(dur)
 }
 
-// Store stores data on the network. This will trigger an iterateStore loop.
+// Store stores data on the insolar. This will trigger an iterateStore loop.
 // The base58 encoded identifier will be returned if the store is successful.
 func (dht *DHT) Store(ctx Context, data []byte) (id string, err error) {
 	key := store.NewKey(data)
@@ -207,7 +207,7 @@ func (dht *DHT) Get(ctx Context, key string) ([]byte, bool, error) {
 	return value, exists, nil
 }
 
-// FindNode returns target node's real network address.
+// FindNode returns target node's real insolar address.
 func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	keyBytes := base58.Decode(key)
 	if len(keyBytes) != routing.MaxContactsInBucket {
@@ -231,7 +231,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 		targetNode = &node.Node{ID: keyBytes, Address: address}
 		return targetNode, true, nil
 	} else {
-		log.Println("Node not found in routing table. Iterating through network...")
+		log.Println("Node not found in routing table. Iterating through insolar...")
 		_, closest, err := dht.iterate(ctx, routing.IterateFindNode, keyBytes, nil)
 		if err != nil {
 			return nil, false, err
@@ -271,7 +271,7 @@ func (dht *DHT) Listen() error {
 	return dht.transport.Start()
 }
 
-// Bootstrap attempts to bootstrap the network using the BootstrapNodes provided
+// Bootstrap attempts to bootstrap the insolar using the BootstrapNodes provided
 // to the Options struct. This will trigger an iterateBootstrap to the provided
 // BootstrapNodes.
 func (dht *DHT) Bootstrap() error {
@@ -344,17 +344,17 @@ func (dht *DHT) Bootstrap() error {
 	return nil
 }
 
-// Disconnect will trigger a Stop from the network.
+// Disconnect will trigger a Stop from the insolar.
 func (dht *DHT) Disconnect() {
 	dht.transport.Stop()
 }
 
-// Iterate does an iterative search through the network. This can be done
+// Iterate does an iterative search through the insolar. This can be done
 // for multiple reasons. These reasons include:
-//     iterateStore - Used to store new information in the network.
-//     iterateFindNode - Used to find node in the network given node abstract address.
-//     iterateFindValue - Used to find a value among the network given a key.
-//     iterateBootstrap - Used to bootstrap the network.
+//     iterateStore - Used to store new information in the insolar.
+//     iterateFindNode - Used to find node in the insolar given node abstract address.
+//     iterateFindValue - Used to find a value among the insolar given a key.
+//     iterateBootstrap - Used to bootstrap the insolar.
 func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data []byte) (value []byte, closest []*node.Node, err error) {
 	ht := dht.htFromCtx(ctx)
 	routeSet := ht.GetClosestContacts(routing.ParallelCalls, target, []*node.Node{})
@@ -398,23 +398,6 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 
 		resultChan := make(chan *message.Message)
 		dht.setUpResultChan(&futures, ctx, resultChan)
-		// for _, f := range futures {
-		// 	go func(future transport.Future) {
-		// 		select {
-		// 		case result := <-future.Result():
-		// 			if result == nil {
-		// 				// Channel was closed
-		// 				return
-		// 			}
-		// 			dht.addNode(ctx, routing.NewRouteNode(result.Sender))
-		// 			resultChan <- result
-		// 			return
-		// 		case <-time.After(dht.options.MessageTimeout):
-		// 			future.Cancel()
-		// 			return
-		// 		}
-		// 	}(f)
-		// }
 
 		var results []*message.Message
 		if futuresCount > 0 {
