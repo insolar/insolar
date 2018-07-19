@@ -12,12 +12,12 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-### Example user template template
-### Example user template
 
+
+### Example user template
 .DS_Store
 
-# IntelliJ project files
+### IntelliJ project files
 .idea
 *.iml
 out
@@ -26,7 +26,9 @@ gen
 # Go dep
 vendor
 
+# LevelDB storage files
+_db
 
 # wasm tests
-vm/wasm/test/data/*.wasm
+vm/wasm/test/data/!simple!.wasm
 vm/wasm/test/data/*.wat
