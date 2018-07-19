@@ -982,18 +982,15 @@ func TestDHT_RelayRequest(t *testing.T) {
 			index++
 		}
 
-		ctx, _ := NewContextBuilder(dhts[i]).SetDefaultNode().Build()
+		ctx := getDefaultCtx(dhts[i])
 		err := dhts[index].RelayRequest(ctx, "start", idx[i])
 		if err != nil {
 			log.Println(err)
 		}
-		time.Sleep(time.Millisecond * 200)
 
 		assert.Equal(t, 1, dhts[i].relay.ClientsCount())
 		assert.Equal(t, true, dhts[index].proxy.ProxyNodesCount() > 0)
 	}
-
-	time.Sleep(time.Millisecond * 2000)
 
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
