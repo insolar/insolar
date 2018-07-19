@@ -13,12 +13,14 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
+// Package types defines wasm low level types.
 package types
 
-// Value is a type of simple value
+// Value is a type of simple value.
 type Value byte
 
-// simple value types
+// simple value types.
 const (
 	I32 Value = 0x7F
 	I64 Value = 0x7E

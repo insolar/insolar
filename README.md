@@ -34,14 +34,14 @@ for a range of scenarios and collaborate with other entities on the platform.
 
 Components
 ----------
-### [Network](https://github.com/insolar/insolar/tree/master/network/host)
+### [Network](network/host)
 Kademlia DHT based blockchain network layer.
  - Support of heterogeneous network topology.
  - Network routing with a node or node group becoming relays for others nodes.
  - Ability to limit number of gateways to corporate node group via relays
    to keep the node group secure.
 
-See [package readme](https://github.com/insolar/insolar/tree/master/network/host) for more details.
+See [package readme](network/host) for more details.
 
 
 ### [Ledger](https://github.com/insolar/insolar/tree/master/ledger)
@@ -50,7 +50,9 @@ See [package readme](https://github.com/insolar/insolar/tree/master/network/host
 ### [Genesis](https://github.com/insolar/insolar/tree/master/genesis)
 
 
-### [Virtual machine](https://github.com/insolar/insolar/tree/master/vm)
+### [Virtual machines](vm)
+Various engines for smart contract execution:
+ - [wasm](vm/wasm) - WebAssembly implementation of smart contracts
 
 
 Installation
@@ -67,4 +69,5 @@ When submitting an issue, we ask that you please include a complete test functio
 
 License
 -------
-This project is licensed under the terms of the Apache license 2.0. Please see [LICENSE](https://github.com/insolar/insolar/blob/master/LICENSE) for more information.
+This project is licensed under the terms of the Apache license 2.0.
+Please see [LICENSE](LICENSE) for more information.
