@@ -13,12 +13,12 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
 package module
 
 import (
-	"testing"
-
 	"os"
+	"testing"
 )
 
 func TestRead(t *testing.T) {
@@ -29,7 +29,7 @@ func TestRead(t *testing.T) {
 	defer f.Close()
 
 	_, err = Read(f)
-	//_, err = wasm.ReadModule(f, nil)
+	// _, err = wasm.ReadModule(f, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
