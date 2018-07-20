@@ -733,35 +733,11 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 			}
 
 			var ctx Context
-			var err error
-			if msg.Receiver.ID == nil {
-				ctx, err = cb.SetDefaultNode().Build()
-			} else {
-				ctx, err = cb.SetNodeByID(msg.Receiver.ID).Build()
-			}
-			if err != nil {
-				// TODO: Do something sane with error!
-				log.Println(err)
-			}
+			ctx = checkRecvID(cb, msg)
 			ht := dht.htFromCtx(ctx)
 
 			if ht.Origin.ID.Equal(msg.Receiver.ID) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
-				messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
-
-				switch msg.Type {
-				case message.TypeFindNode:
-					dht.processFindNode(ctx, msg, messageBuilder)
-				case message.TypeFindValue:
-					dht.processFindValue(ctx, msg, messageBuilder)
-				case message.TypeStore:
-					dht.processStore(ctx, msg, messageBuilder)
-				case message.TypePing:
-					dht.processPing(ctx, msg, messageBuilder)
-				case message.TypeRPC:
-					dht.processRPC(ctx, msg, messageBuilder)
-				case message.TypeRelay:
-					dht.processRelay(ctx, msg, messageBuilder)
-				}
+				dht.switchType(ctx, msg, ht)
 			} else {
 				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.String())
 				if err != nil {
@@ -775,32 +751,69 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 						Type:      msg.Type,
 						RequestID: msg.RequestID,
 						Data:      msg.Data}
-					future, err := dht.transport.SendRequest(request)
-					if err != nil {
-						log.Println(err)
-					}
-					select {
-					case rsp := <-future.Result():
-						if rsp == nil {
-							// Channel was closed
-							log.Println("chanel closed unexpectedly")
-						}
-						dht.addNode(ctx, routing.NewRouteNode(rsp.Sender))
-
-						response := rsp.Data.(*message.ResponseDataRPC)
-						if response.Success {
-							log.Println(response.Result)
-						}
-						log.Println(response.Error)
-					case <-time.After(dht.options.MessageTimeout):
-						future.Cancel()
-						log.Println("timeout")
-					}
+					dht.sendRelayedRequest(request, ctx)
 				}
 			}
 		case <-stop:
 			return
 		}
+	}
+}
+
+func (dht *DHT) sendRelayedRequest(request *message.Message, ctx Context) {
+	future, err := dht.transport.SendRequest(request)
+	if err != nil {
+		log.Println(err)
+	}
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			// Channel was closed
+			log.Println("chanel closed unexpectedly")
+		}
+		dht.addNode(ctx, routing.NewRouteNode(rsp.Sender))
+
+		response := rsp.Data.(*message.ResponseDataRPC)
+		if response.Success {
+			log.Println(response.Result)
+		}
+		log.Println(response.Error)
+	case <-time.After(dht.options.MessageTimeout):
+		future.Cancel()
+		log.Println("timeout")
+	}
+}
+
+func checkRecvID(cb ContextBuilder, msg *message.Message) Context {
+	var ctx Context
+	var err error
+	if msg.Receiver.ID == nil {
+		ctx, err = cb.SetDefaultNode().Build()
+	} else {
+		ctx, err = cb.SetNodeByID(msg.Receiver.ID).Build()
+	}
+	if err != nil {
+		// TODO: Do something sane with error!
+		log.Println(err) // don't return this error cuz don't know what to do with
+	}
+	return ctx
+}
+
+func (dht *DHT) switchType(ctx Context, msg *message.Message, ht *routing.HashTable) {
+	messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
+	switch msg.Type {
+	case message.TypeFindNode:
+		dht.processFindNode(ctx, msg, messageBuilder)
+	case message.TypeFindValue:
+		dht.processFindValue(ctx, msg, messageBuilder)
+	case message.TypeStore:
+		dht.processStore(ctx, msg, messageBuilder)
+	case message.TypePing:
+		dht.processPing(ctx, msg, messageBuilder)
+	case message.TypeRPC:
+		dht.processRPC(ctx, msg, messageBuilder)
+	case message.TypeRelay:
+		dht.processRelay(ctx, msg, messageBuilder)
 	}
 }
 
