@@ -193,33 +193,15 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*
 	leftToAdd := num
 
 	// Next we select ParallelCalls contacts and add them to the route set
-	ht.selectParallelCalls(index, leftToAdd, &indexList, &ignoredNodes, routeSet)
-	// for leftToAdd > 0 && len(indexList) > 0 {
-	// 	index, indexList = indexList[0], indexList[1:]
-	// 	bucketContacts := len(ht.RoutingTable[index])
-	// 	for i := 0; i < bucketContacts; i++ {
-	// 		ignored := false
-	// 		for j := 0; j < len(ignoredNodes); j++ {
-	// 			if ht.RoutingTable[index][i].ID.Equal(ignoredNodes[j].ID) {
-	// 				ignored = true
-	// 			}
-	// 		}
-	// 		if !ignored {
-	// 			routeSet.Append(ht.RoutingTable[index][i])
-	// 			leftToAdd--
-	// 			if leftToAdd == 0 {
-	// 				break
-	// 			}
-	// 		}
-	// 	}
-	// }
+	ht.selectParallelCalls(leftToAdd, &indexList, &ignoredNodes, routeSet)
 
 	sort.Sort(routeSet)
 
 	return routeSet
 }
 
-func (ht *HashTable) selectParallelCalls(index, leftToAdd int, indexList *[]int, ignoredNodes *[]*node.Node, routeSet *RouteSet) {
+func (ht *HashTable) selectParallelCalls(leftToAdd int, indexList *[]int, ignoredNodes *[]*node.Node, routeSet *RouteSet) {
+	var index int
 	for leftToAdd > 0 && len(*indexList) > 0 {
 		index, *indexList = (*indexList)[0], (*indexList)[1:]
 		bucketContacts := len(ht.RoutingTable[index])
