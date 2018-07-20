@@ -44,10 +44,9 @@ Kademlia DHT based blockchain network layer.
 See [package readme](network/host) for more details.
 
 
-### [Ledger](https://github.com/insolar/insolar/tree/master/ledger)
+### [Ledger](ledger)
+Record storage engine backed by [LevelDB](https://github.com/syndtr/goleveldb).
 
-
-### [Genesis](https://github.com/insolar/insolar/tree/master/genesis)
 
 
 ### [Virtual machines](vm)
