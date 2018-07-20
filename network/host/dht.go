@@ -384,10 +384,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 
 	closestNode := routeSet.FirstNode()
 
-	if t == routing.IterateBootstrap {
-		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID)
-		ht.ResetRefreshTimeForBucket(bucket)
-	}
+	checkAndRefreshTieForBucket(t, ht, target)
 
 	var removeFromRouteSet []*node.Node
 
@@ -395,72 +392,49 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		var futures []transport.Future
 		var futuresCount int
 
-		dht.sendMessageToAlphaNodes(routeSet, queryRest, t, ht, &contacted, target, &futures, removeFromRouteSet)
+		dht.sendMessageToAlphaNodes(routeSet, queryRest, t, ht, &contacted, target, &futures, &removeFromRouteSet)
 
-		for _, n := range removeFromRouteSet {
-			routeSet.Remove(routing.NewRouteNode(n))
-		}
+		removeNodesFromRouteSet(routeSet, &removeFromRouteSet)
 
 		futuresCount = len(futures)
 
 		resultChan := make(chan *message.Message)
 		dht.setUpResultChan(&futures, ctx, resultChan)
 
-		var results []*message.Message
-		if futuresCount > 0 {
-		Loop:
-			for {
-				select {
-				case result := <-resultChan:
-					if result != nil {
-						results = append(results, result)
-					} else {
-						futuresCount--
-					}
-					if len(results) == futuresCount {
-						close(resultChan)
-						break Loop
-					}
-				case <-time.After(dht.options.MessageTimeout):
-					close(resultChan)
-					break Loop
-				}
-			}
-
-			for _, result := range results {
-				if result.Error != nil {
-					routeSet.Remove(routing.NewRouteNode(result.Sender))
-					continue
-				}
-				switch t {
-				case routing.IterateBootstrap, routing.IterateFindNode, routing.IterateStore:
-					responseData := result.Data.(*message.ResponseDataFindNode)
-					if len(responseData.Closest) > 0 && responseData.Closest[0].ID.Equal(target) {
-						return nil, responseData.Closest, nil
-					}
-					routeSet.Extend(routing.RouteNodesFrom(responseData.Closest))
-				case routing.IterateFindValue:
-					responseData := result.Data.(*message.ResponseDataFindValue)
-					routeSet.Extend(routing.RouteNodesFrom(responseData.Closest))
-					if responseData.Value != nil {
-						// TODO When an iterateFindValue succeeds, the initiator must
-						// store the key/value pair at the closest receiver seen which did
-						// not return the value.
-						return responseData.Value, nil, nil
-					}
-				}
-			}
+		// ---
+		// var results []*message.Message
+		// if futuresCount > 0 {
+		// Loop:
+		// 	for {
+		// 		if dht.selectResultChan(resultChan, &futuresCount, &results) {
+		// 			break Loop
+		// 		}
+		// 	}
+		//
+		// 	value, closest, err = resultsIterate(t, &results, routeSet, target)
+		// 	if closest != nil {
+		// 		return nil, closest, nil
+		// 	} else if value != nil {
+		// 		return value, nil, nil
+		// 	}
+		// }
+		//
+		// if !queryRest && routeSet.Len() == 0 {
+		// 	return nil, nil, nil
+		// }
+		value, closest, err = dht.checkFuturesCountAndGo(t, &queryRest, routeSet, futuresCount, resultChan, target, &closest)
+		if (err != nil) && (err.Error() != "nothing") {
+			return value, closest, err
 		}
-
-		if !queryRest && routeSet.Len() == 0 {
-			return nil, nil, nil
-		}
+		// ----
 
 		sort.Sort(routeSet)
 
 		// value, closest, err = dht.iterateIsDone(t, &queryRest, routeSet, data, ht, closestNode)
-		// if queryRest == true {
+		// if (err != nil) && (strings.Compare("continue", err.Error()) == 0) {
 		// 	continue
+		// } else if (err != nil) && (strings.Compare("do nothing", err.Error()) != 0) {
+		// 	return value, closest, err
 		// }
 
 		// If closestNode is unchanged then we are done
@@ -498,6 +472,148 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 	}
 }
 
+func (dht *DHT) checkFuturesCountAndGo(
+	t routing.IterateType,
+	queryRest *bool,
+	routeSet *routing.RouteSet,
+	futuresCount int,
+	resultChan chan *message.Message,
+	target []byte,
+	close *[]*node.Node,
+) (value []byte, closest []*node.Node, err error) {
+
+	var results []*message.Message
+	if futuresCount > 0 {
+	Loop:
+		for {
+			if dht.selectResultChan(resultChan, &futuresCount, &results) {
+				break Loop
+			}
+		}
+
+		value, *close, err = resultsIterate(t, &results, routeSet, target)
+		if *close != nil {
+			return nil, *close, nil
+		} else if value != nil {
+			return value, nil, nil
+		}
+	}
+
+	if !*queryRest && routeSet.Len() == 0 {
+		return nil, nil, nil
+	}
+	err = errors.New("nothing")
+	return nil, nil, err
+}
+
+// func (dht *DHT) iterateIsDone(
+// 	t routing.IterateType,
+// 	queryRest *bool,
+// 	routeSet *routing.RouteSet,
+// 	data []byte,
+// 	ht *routing.HashTable,
+// 	closestNode *node.Node) (value []byte, closest []*node.Node, err error) {
+//
+// 	if routeSet.FirstNode().ID.Equal(closestNode.ID) || *queryRest {
+// 		switch t {
+// 		case routing.IterateBootstrap:
+// 			if !*queryRest {
+// 				*queryRest = true
+// 				err = errors.New("continue")
+// 				return nil, nil, err
+// 			}
+// 			return nil, routeSet.Nodes(), nil
+// 		case routing.IterateFindNode, routing.IterateFindValue:
+// 			return nil, routeSet.Nodes(), nil
+// 		case routing.IterateStore:
+// 			for i, receiver := range routeSet.Nodes() {
+// 				if i >= routing.MaxContactsInBucket {
+// 					return nil, nil, nil
+// 				}
+//
+// 				msg := message.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(message.TypeStore).Request(
+// 					&message.RequestDataStore{
+// 						Data: data,
+// 					}).Build()
+//
+// 				future, _ := dht.transport.SendRequest(msg)
+// 				// We do not need to handle result of this message
+// 				future.Cancel()
+// 			}
+// 			return nil, nil, nil
+// 		}
+// 	} else {
+// 		*closestNode = *routeSet.FirstNode()
+// 	}
+// 	err = errors.New("do nothing")
+// 	return nil, nil, err
+// }
+
+func resultsIterate(
+	t routing.IterateType,
+	results *[]*message.Message,
+	routeSet *routing.RouteSet,
+	target []byte,
+) (value []byte, closest []*node.Node, err error) {
+
+	for _, result := range *results {
+		if result.Error != nil {
+			routeSet.Remove(routing.NewRouteNode(result.Sender))
+			continue
+		}
+		switch t {
+		case routing.IterateBootstrap, routing.IterateFindNode, routing.IterateStore:
+			responseData := result.Data.(*message.ResponseDataFindNode)
+			if len(responseData.Closest) > 0 && responseData.Closest[0].ID.Equal(target) {
+				return nil, responseData.Closest, nil
+			}
+			routeSet.Extend(routing.RouteNodesFrom(responseData.Closest))
+		case routing.IterateFindValue:
+			responseData := result.Data.(*message.ResponseDataFindValue)
+			routeSet.Extend(routing.RouteNodesFrom(responseData.Closest))
+			if responseData.Value != nil {
+				// TODO When an iterateFindValue succeeds, the initiator must
+				// store the key/value pair at the closest receiver seen which did
+				// not return the value.
+				return responseData.Value, nil, nil
+			}
+		}
+	}
+	return nil, nil, nil
+}
+
+func checkAndRefreshTieForBucket(t routing.IterateType, ht *routing.HashTable, target []byte) {
+	if t == routing.IterateBootstrap {
+		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID)
+		ht.ResetRefreshTimeForBucket(bucket)
+	}
+}
+
+func removeNodesFromRouteSet(routeSet *routing.RouteSet, removeFromRouteSet *[]*node.Node) {
+	for _, n := range *removeFromRouteSet {
+		routeSet.Remove(routing.NewRouteNode(n))
+	}
+}
+
+func (dht *DHT) selectResultChan(resultChan chan *message.Message, futuresCount *int, results *[]*message.Message) bool {
+	select {
+	case result := <-resultChan:
+		if result != nil {
+			*results = append(*results, result)
+		} else {
+			*futuresCount--
+		}
+		if len(*results) == *futuresCount {
+			close(resultChan)
+			return true
+		}
+	case <-time.After(dht.options.MessageTimeout):
+		close(resultChan)
+		return true
+	}
+	return false
+}
+
 func (dht *DHT) setUpResultChan(futures *[]transport.Future, ctx Context, resultChan chan *message.Message) {
 	for _, f := range *futures {
 		go func(future transport.Future) {
@@ -526,7 +642,8 @@ func (dht *DHT) sendMessageToAlphaNodes(
 	contacted *map[string]bool,
 	target []byte,
 	futures *[]transport.Future,
-	removeFromRouteSet []*node.Node) {
+	removeFromRouteSet *[]*node.Node,
+) {
 	// Next we send Messages to the first (closest) alpha nodes in the
 	// route set and wait for a response
 
@@ -555,52 +672,13 @@ func (dht *DHT) sendMessageToAlphaNodes(
 			// Node was unreachable for some reason. We will have to remove
 			// it from the route set, but we will keep it in our routing
 			// table in hopes that it might come back online in the f.
-			removeFromRouteSet = append(removeFromRouteSet, msg.Receiver)
+			*removeFromRouteSet = append(*removeFromRouteSet, msg.Receiver)
 			continue
 		}
 
 		*futures = append(*futures, res)
 	}
 }
-
-// func (dht *DHT) iterateIsDone(
-// 	t routing.IterateType,
-// 	queryRest *bool,
-// 	routeSet *routing.RouteSet,
-// 	data []byte,
-// 	ht *routing.HashTable,
-// 	closestNode *node.Node) (value []byte, closest []*node.Node, err error) {
-//
-// 	if routeSet.FirstNode().ID.Equal(closestNode.ID) || *queryRest {
-// 		switch t {
-// 		case routing.IterateBootstrap:
-// 			if !*queryRest {
-// 				*queryRest = true
-// 			}
-// 			return nil, routeSet.Nodes(), nil
-// 		case routing.IterateFindNode, routing.IterateFindValue:
-// 			return nil, routeSet.Nodes(), nil
-// 		case routing.IterateStore:
-// 			for i, receiver := range routeSet.Nodes() {
-// 				if i >= routing.MaxContactsInBucket {
-// 					return nil, nil, nil
-// 				}
-//
-// 				msg := message.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(message.TypeStore).Request(
-// 					&message.RequestDataStore{
-// 						Data: data,
-// 					}).Build()
-//
-// 				future, _ := dht.transport.SendRequest(msg)
-// 				// We do not need to handle result of this message
-// 				future.Cancel()
-// 			}
-// 			return nil, nil, nil
-// 		}
-// 	} else {
-// 		closestNode = routeSet.FirstNode()
-// 	}
-// }
 
 func checkRoutingIterateType(t routing.IterateType, messageBuilder *message.Builder, target []byte) {
 	switch t {
