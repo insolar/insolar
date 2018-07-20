@@ -21,14 +21,14 @@ type ReasonCode uint
 type ResultRecord struct {
 	AppDataRecord
 
-	RequestRecord RecordReference
+	RequestRecord Reference
 }
 
 type WipeOutRecord struct {
 	ResultRecord
 
-	Replacement RecordReference
-	WipedHash   RecordHash
+	Replacement Reference
+	WipedHash   Hash
 }
 
 type StatelessResult struct {
@@ -50,7 +50,7 @@ type StatelessCallResult struct {
 type StatelessExceptionResult struct {
 	StatelessCallResult
 
-	ExceptionType RecordReference
+	ExceptionType Reference
 }
 
 type ReadObjectResult struct {
@@ -81,20 +81,20 @@ type StatefulResult struct {
 type ActivationRecord struct {
 	StatefulResult
 
-	GoverningDomain RecordReference
+	GoverningDomain Reference
 }
 
 type ClassActivateRecord struct {
 	ActivationRecord
 
-	CodeRecord    RecordReference
+	CodeRecord    Reference
 	DefaultMemory Memory
 }
 
 type ObjectActivateRecord struct {
 	ActivationRecord
 
-	ClassActivateRecord RecordReference
+	ClassActivateRecord Reference
 	Memory              Memory
 }
 
@@ -105,7 +105,7 @@ type StorageRecord struct {
 type CodeRecord struct {
 	StorageRecord
 
-	Interfaces   []RecordReference
+	Interfaces   []Reference
 	TargetedCode [][]byte // []MachineBinaryCode
 	SourceCode   string   // ObjectSourceCode
 }
@@ -113,8 +113,8 @@ type CodeRecord struct {
 type AmendRecord struct {
 	StatefulResult
 
-	BaseRecord    RecordReference
-	AmendedRecord RecordReference
+	BaseRecord    Reference
+	AmendedRecord Reference
 }
 
 type ClassAmendRecord struct {
@@ -130,8 +130,8 @@ func (r *ClassAmendRecord) MigrationCodes() []*MemoryMigrationCode {
 type MemoryMigrationCode struct {
 	ClassAmendRecord
 
-	GeneratedByClassRecord RecordReference
-	MigrationCodeRecord    RecordReference
+	GeneratedByClassRecord Reference
+	MigrationCodeRecord    Reference
 }
 
 type DeactivationRecord struct {
@@ -153,7 +153,7 @@ type StatefulCallResult struct {
 type StatefulExceptionResult struct {
 	StatefulCallResult
 
-	ExceptionType RecordReference
+	ExceptionType Reference
 }
 
 type EnforcedObjectAmendRecord struct {

@@ -14,56 +14,64 @@
  *    limitations under the License.
  */
 
+// Package record contains various record type definitions.
 package record
 
-import (
-	"crypto/sha256"
-)
-
 const (
-	HashSize = sha256.Size
+	// HashSize is a record hash size. We use 256-bit SHA-3 hash.
+	HashSize = 32
 
-	RecTypeCodeBase = RecordType(iota + 1)
-	RecTypeCodeAmendment
-	RecTypeObjectInstance
-	RecTypeObjectAmendment
-	RecTypeObjectData
+	// RecTypeCodeBase = Type(iota + 1)
+	// RecTypeCodeAmendment
+	// RecTypeObjectInstance
+	// RecTypeObjectAmendment
+	// RecTypeObjectData
 )
 
-type RecordHash [HashSize]byte
+// Hash is hash sum of record, 32-byte array.
+type Hash [HashSize]byte
 
-type RecordType uint
+// Type is record type.
+type Type uint
 
+// ProjectionType is a "view filter" for record.
+// E.g. we can read whole object or just it's hash.
 type ProjectionType uint
 
+// Memory is actual contracts' state, variables etc.
 type Memory []byte
 
+// Record is base interface for all records.
 type Record interface {
-	Hash() RecordHash
+	Hash() Hash
 	TimeSlot() uint64
-	Type() RecordType
+	Type() Type
 }
 
-// TODO: Should implement normal RecordReference type (not interface)
+// Reference is a pointer that allows to address any record across whole network.
+// TODO: Should implement normal Reference type (not interface)
 // TODO: Globally unique record identifier must be found
-type RecordReference interface {
+type Reference interface {
 	Record
 }
 
+// AppDataRecord is persistent data record stored in ledger.
 type AppDataRecord struct {
-	timeSlotNo     uint64
-	recType        RecordType
-	collisionNonce uint // TODO: combine nonce with type?
+	timeSlotNo uint64
+	recType    Type
 }
 
-func (r *AppDataRecord) Hash() RecordHash {
+// Hash returns SHA-3 hash sum of Record
+func (r *AppDataRecord) Hash() Hash {
 	panic("implement me")
 }
 
+// TimeSlot returns time slot number that Record belongs to.
 func (r *AppDataRecord) TimeSlot() uint64 {
 	return r.timeSlotNo
 }
 
-func (r *AppDataRecord) Type() RecordType {
+// Type returns Record type.
+func (r *AppDataRecord) Type() Type {
 	return r.recType
 }

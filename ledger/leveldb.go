@@ -85,14 +85,12 @@ func newLedger() (*levelLedger, error) {
 	}, nil
 }
 
-func (ll *levelLedger) Get(id record.RecordHash) (bool, record.Record) {
+// Get returns record from leveldb by it's ID (timeslot + record hash)
+func (ll *levelLedger) Get(id record.Hash) (found bool, rec record.Record) {
 	return false, nil
 }
 
+// Set stores record in leveldb
 func (ll *levelLedger) Set(record record.Record) error {
-	return nil
-}
-
-func (ll *levelLedger) Update(id record.RecordHash, record record.Record) error {
 	return nil
 }
