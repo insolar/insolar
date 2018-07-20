@@ -283,25 +283,7 @@ func (dht *DHT) Bootstrap() error {
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
-		ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
-		if err != nil {
-			return err
-		}
-		for _, bn := range dht.options.BootstrapNodes {
-			request := message.NewPingMessage(ht.Origin, bn)
-
-			if bn.ID == nil {
-				res, err := dht.transport.SendRequest(request)
-				if err != nil {
-					continue
-				}
-				wg.Add(1)
-				futures = append(futures, res)
-			} else {
-				routeNode := routing.NewRouteNode(bn)
-				dht.addNode(ctx, routeNode)
-			}
-		}
+		dht.iterateHtSendRequest(ht, cb, wg, &futures)
 	}
 
 	for _, f := range futures {
@@ -328,7 +310,11 @@ func (dht *DHT) Bootstrap() error {
 	}
 
 	wg.Wait()
+	err := dht.iterateHt(cb)
+	return err
+}
 
+func (dht *DHT) iterateHt(cb ContextBuilder) error {
 	for _, ht := range dht.tables {
 		ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
 		if err != nil {
@@ -340,8 +326,29 @@ func (dht *DHT) Bootstrap() error {
 			return err
 		}
 	}
-
 	return nil
+}
+
+func (dht *DHT) iterateHtSendRequest(ht *routing.HashTable, cb ContextBuilder, wg *sync.WaitGroup, futures *[]transport.Future) {
+	ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
+	if err != nil {
+		return
+	}
+	for _, bn := range dht.options.BootstrapNodes {
+		request := message.NewPingMessage(ht.Origin, bn)
+
+		if bn.ID == nil {
+			res, err := dht.transport.SendRequest(request)
+			if err != nil {
+				continue
+			}
+			wg.Add(1)
+			*futures = append(*futures, res)
+		} else {
+			routeNode := routing.NewRouteNode(bn)
+			dht.addNode(ctx, routeNode)
+		}
+	}
 }
 
 // Disconnect will trigger a Stop from the insolar.
