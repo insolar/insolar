@@ -682,42 +682,46 @@ func (dht *DHT) handleStoreTimers(start, stop chan bool) {
 	ticker := time.NewTicker(time.Second)
 	cb := NewContextBuilder(dht)
 	for {
-		select {
-		case <-ticker.C:
-			keys := dht.store.GetKeysReadyToReplicate()
-			for _, ht := range dht.tables {
-				ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
-				// TODO: do something sane with error
-				if err != nil {
-					log.Fatal(err)
-				}
-				// Refresh
-				for i := 0; i < routing.KeyBitSize; i++ {
-					if time.Since(ht.GetRefreshTimeForBucket(i)) > dht.options.RefreshTime {
-						id := ht.GetRandomIDFromBucket(routing.MaxContactsInBucket)
-						_, _, err = dht.iterate(ctx, routing.IterateBootstrap, id, nil)
-						if err != nil {
-							continue
-						}
-					}
-				}
+		dht.selectTicker(ticker, &cb, &stop)
+	}
+}
 
-				// Replication
-				for _, key := range keys {
-					value, _ := dht.store.Retrieve(key)
-					_, _, err2 := dht.iterate(ctx, routing.IterateStore, key, value)
-					if err2 != nil {
+func (dht *DHT) selectTicker(ticker *time.Ticker, cb *ContextBuilder, stop *chan bool) {
+	select {
+	case <-ticker.C:
+		keys := dht.store.GetKeysReadyToReplicate()
+		for _, ht := range dht.tables {
+			ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
+			// TODO: do something sane with error
+			if err != nil {
+				log.Fatal(err)
+			}
+			// Refresh
+			for i := 0; i < routing.KeyBitSize; i++ {
+				if time.Since(ht.GetRefreshTimeForBucket(i)) > dht.options.RefreshTime {
+					id := ht.GetRandomIDFromBucket(routing.MaxContactsInBucket)
+					_, _, err = dht.iterate(ctx, routing.IterateBootstrap, id, nil)
+					if err != nil {
 						continue
 					}
 				}
 			}
 
-			// Expiration
-			dht.store.ExpireKeys()
-		case <-stop:
-			ticker.Stop()
-			return
+			// Replication
+			for _, key := range keys {
+				value, _ := dht.store.Retrieve(key)
+				_, _, err2 := dht.iterate(ctx, routing.IterateStore, key, value)
+				if err2 != nil {
+					continue
+				}
+			}
 		}
+
+		// Expiration
+		dht.store.ExpireKeys()
+	case <-(*stop):
+		ticker.Stop()
+		return
 	}
 }
 
