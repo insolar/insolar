@@ -49,3 +49,7 @@
   name = "github.com/chzyer/readline"
   version = "1.4"
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/satori/go.uuid"
+

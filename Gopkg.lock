@@ -9,7 +9,7 @@
     "inproc",
     "pproffd"
   ]
-  revision = "7cf54799d7d65e94d17f90d51ac4dee79f57af04"
+  revision = "c779509d115ae616665f1ab046858f1bb25aa34b"
 
 [[projects]]
   branch = "master"
@@ -27,7 +27,7 @@
   branch = "master"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
-  revision = "d9bbe8f8fa7bf7ed03e6cfc6a2796bb36139e1f4"
+  revision = "cf47f40ed501fe61ea55cb5b8315da7c4842d045"
 
 [[projects]]
   name = "github.com/chzyer/readline"
@@ -66,6 +66,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
+
+[[projects]]
   name = "github.com/stretchr/objx"
   packages = ["."]
   revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
@@ -102,6 +108,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a3c77d784e387402de2ba287ee5f716ecea35272fb4f3cf16a4203e3c16cfcf4"
+  inputs-digest = "54a569b7a0b47a0e7ecff4dc0f6bd4dacc419581b3b89d7a4b5194be41d1eb92"
   solver-name = "gps-cdcl"
   solver-version = 1
