@@ -384,7 +384,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 
 	closestNode := routeSet.FirstNode()
 
-	checkAndRefreshTieForBucket(t, ht, target)
+	checkAndRefreshTimeForBucket(t, ht, target)
 
 	var removeFromRouteSet []*node.Node
 
@@ -392,14 +392,14 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		var futures []transport.Future
 		var futuresCount int
 
-		dht.sendMessageToAlphaNodes(routeSet, queryRest, t, ht, &contacted, target, &futures, &removeFromRouteSet)
+		futures, removeFromRouteSet = dht.sendMessageToAlphaNodes(routeSet, queryRest, t, ht, contacted, target, futures, removeFromRouteSet)
 
 		removeNodesFromRouteSet(routeSet, &removeFromRouteSet)
 
 		futuresCount = len(futures)
 
 		resultChan := make(chan *message.Message)
-		dht.setUpResultChan(&futures, ctx, resultChan)
+		dht.setUpResultChan(futures, ctx, resultChan)
 
 		value, closest, err = dht.checkFuturesCountAndGo(t, &queryRest, routeSet, futuresCount, resultChan, target, &closest)
 		if (err == nil) || ((err != nil) && (err.Error() != "do nothing")) {
@@ -532,7 +532,7 @@ func resultsIterate(
 	return nil, nil, nil
 }
 
-func checkAndRefreshTieForBucket(t routing.IterateType, ht *routing.HashTable, target []byte) {
+func checkAndRefreshTimeForBucket(t routing.IterateType, ht *routing.HashTable, target []byte) {
 	if t == routing.IterateBootstrap {
 		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID)
 		ht.ResetRefreshTimeForBucket(bucket)
@@ -564,8 +564,8 @@ func (dht *DHT) selectResultChan(resultChan chan *message.Message, futuresCount 
 	return false
 }
 
-func (dht *DHT) setUpResultChan(futures *[]transport.Future, ctx Context, resultChan chan *message.Message) {
-	for _, f := range *futures {
+func (dht *DHT) setUpResultChan(futures []transport.Future, ctx Context, resultChan chan *message.Message) {
+	for _, f := range futures {
 		go func(future transport.Future) {
 			select {
 			case result := <-future.Result():
@@ -589,11 +589,11 @@ func (dht *DHT) sendMessageToAlphaNodes(
 	queryRest bool,
 	t routing.IterateType,
 	ht *routing.HashTable,
-	contacted *map[string]bool,
+	contacted map[string]bool,
 	target []byte,
-	futures *[]transport.Future,
-	removeFromRouteSet *[]*node.Node,
-) {
+	futures []transport.Future,
+	removeFromRouteSet []*node.Node,
+) (resultFutures []transport.Future, resultRouteSet []*node.Node) {
 	// Next we send Messages to the first (closest) alpha nodes in the
 	// route set and wait for a response
 
@@ -604,16 +604,14 @@ func (dht *DHT) sendMessageToAlphaNodes(
 		}
 
 		// Don't contact nodes already contacted
-		if (*contacted)[string(receiver.ID)] {
+		if (contacted)[string(receiver.ID)] {
 			continue
 		}
 
-		(*contacted)[string(receiver.ID)] = true
+		(contacted)[string(receiver.ID)] = true
 
 		messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(receiver)
-
-		checkRoutingIterateType(t, &messageBuilder, target)
-
+		messageBuilder = getMessageBuilder(t, messageBuilder, target)
 		msg := messageBuilder.Build()
 
 		// Send the async queries and wait for a response
@@ -622,28 +620,23 @@ func (dht *DHT) sendMessageToAlphaNodes(
 			// Node was unreachable for some reason. We will have to remove
 			// it from the route set, but we will keep it in our routing
 			// table in hopes that it might come back online in the f.
-			*removeFromRouteSet = append(*removeFromRouteSet, msg.Receiver)
+			removeFromRouteSet = append(removeFromRouteSet, msg.Receiver)
 			continue
 		}
 
-		*futures = append(*futures, res)
+		futures = append(futures, res)
 	}
+	return futures, removeFromRouteSet
 }
 
-func checkRoutingIterateType(t routing.IterateType, messageBuilder *message.Builder, target []byte) {
+func getMessageBuilder(t routing.IterateType, messageBuilder message.Builder, target []byte) message.Builder {
 	switch t {
 	case routing.IterateBootstrap, routing.IterateFindNode:
-		*messageBuilder = messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{
-			Target: target,
-		})
+		return messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{Target: target})
 	case routing.IterateFindValue:
-		*messageBuilder = messageBuilder.Type(message.TypeFindValue).Request(&message.RequestDataFindValue{
-			Target: target,
-		})
+		return messageBuilder.Type(message.TypeFindValue).Request(&message.RequestDataFindValue{Target: target})
 	case routing.IterateStore:
-		*messageBuilder = messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{
-			Target: target,
-		})
+		return messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{Target: target})
 	default:
 		panic("Unknown iterate type")
 	}
@@ -772,11 +765,11 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 			}
 
 			var ctx Context
-			ctx = checkRecvID(cb, msg)
+			ctx = buildContext(cb, msg)
 			ht := dht.htFromCtx(ctx)
 
 			if ht.Origin.ID.Equal(msg.Receiver.ID) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
-				dht.switchType(ctx, msg, ht)
+				dht.dispatchMessageType(ctx, msg, ht)
 			} else {
 				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.String())
 				if err != nil {
@@ -823,7 +816,7 @@ func (dht *DHT) sendRelayedRequest(request *message.Message, ctx Context) {
 	}
 }
 
-func checkRecvID(cb ContextBuilder, msg *message.Message) Context {
+func buildContext(cb ContextBuilder, msg *message.Message) Context {
 	var ctx Context
 	var err error
 	if msg.Receiver.ID == nil {
@@ -838,7 +831,7 @@ func checkRecvID(cb ContextBuilder, msg *message.Message) Context {
 	return ctx
 }
 
-func (dht *DHT) switchType(ctx Context, msg *message.Message, ht *routing.HashTable) {
+func (dht *DHT) dispatchMessageType(ctx Context, msg *message.Message, ht *routing.HashTable) {
 	messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 	switch msg.Type {
 	case message.TypeFindNode:
