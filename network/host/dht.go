@@ -401,75 +401,68 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		resultChan := make(chan *message.Message)
 		dht.setUpResultChan(&futures, ctx, resultChan)
 
-		// ---
-		// var results []*message.Message
-		// if futuresCount > 0 {
-		// Loop:
-		// 	for {
-		// 		if dht.selectResultChan(resultChan, &futuresCount, &results) {
-		// 			break Loop
-		// 		}
-		// 	}
-		//
-		// 	value, closest, err = resultsIterate(t, &results, routeSet, target)
-		// 	if closest != nil {
-		// 		return nil, closest, nil
-		// 	} else if value != nil {
-		// 		return value, nil, nil
-		// 	}
-		// }
-		//
-		// if !queryRest && routeSet.Len() == 0 {
-		// 	return nil, nil, nil
-		// }
 		value, closest, err = dht.checkFuturesCountAndGo(t, &queryRest, routeSet, futuresCount, resultChan, target, &closest)
-		if (err != nil) && (err.Error() != "nothing") {
+		if (err == nil) || ((err != nil) && (err.Error() != "do nothing")) {
 			return value, closest, err
 		}
-		// ----
 
 		sort.Sort(routeSet)
 
-		// value, closest, err = dht.iterateIsDone(t, &queryRest, routeSet, data, ht, closestNode)
-		// if (err != nil) && (strings.Compare("continue", err.Error()) == 0) {
-		// 	continue
-		// } else if (err != nil) && (strings.Compare("do nothing", err.Error()) != 0) {
-		// 	return value, closest, err
-		// }
-
-		// If closestNode is unchanged then we are done
-		if routeSet.FirstNode().ID.Equal(closestNode.ID) || queryRest {
-			// We are done
-			switch t {
-			case routing.IterateBootstrap:
-				if !queryRest {
-					queryRest = true
-					continue
-				}
-				return nil, routeSet.Nodes(), nil
-			case routing.IterateFindNode, routing.IterateFindValue:
-				return nil, routeSet.Nodes(), nil
-			case routing.IterateStore:
-				for i, receiver := range routeSet.Nodes() {
-					if i >= routing.MaxContactsInBucket {
-						return nil, nil, nil
-					}
-
-					msg := message.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(message.TypeStore).Request(
-						&message.RequestDataStore{
-							Data: data,
-						}).Build()
-
-					future, _ := dht.transport.SendRequest(msg)
-					// We do not need to handle result of this message
-					future.Cancel()
-				}
-				return nil, nil, nil
-			}
-		} else {
-			closestNode = routeSet.FirstNode()
+		var tmpValue []byte
+		var tmpClosest []*node.Node
+		var tmpNode *node.Node
+		tmpValue, tmpClosest, tmpNode, err = dht.iterateIsDone(t, &queryRest, routeSet, data, ht, closestNode)
+		if err == nil {
+			return tmpValue, tmpClosest, err
+		} else if tmpNode != nil {
+			closestNode = tmpNode
 		}
 	}
+}
+
+func (dht *DHT) iterateIsDone(
+	t routing.IterateType,
+	queryRest *bool,
+	routeSet *routing.RouteSet,
+	data []byte,
+	ht *routing.HashTable,
+	closestNode *node.Node,
+) (value []byte, closest []*node.Node, close *node.Node, err error) {
+
+	if routeSet.FirstNode().ID.Equal(closestNode.ID) || *(queryRest) {
+		switch t {
+		case routing.IterateBootstrap:
+			if !(*queryRest) {
+				*queryRest = true
+				err = errors.New("do nothing")
+				return nil, nil, nil, err
+			}
+			return nil, routeSet.Nodes(), nil, nil
+		case routing.IterateFindNode, routing.IterateFindValue:
+			return nil, routeSet.Nodes(), nil, nil
+		case routing.IterateStore:
+			for i, receiver := range routeSet.Nodes() {
+				if i >= routing.MaxContactsInBucket {
+					return nil, nil, nil, nil
+				}
+
+				msg := message.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(message.TypeStore).Request(
+					&message.RequestDataStore{
+						Data: data,
+					}).Build()
+
+				future, _ := dht.transport.SendRequest(msg)
+				// We do not need to handle result of this message
+				future.Cancel()
+			}
+			return nil, nil, nil, nil
+		}
+	} else {
+		err = errors.New("do nothing")
+		return nil, nil, routeSet.FirstNode(), err
+	}
+	err = errors.New("do nothing")
+	return nil, nil, nil, err
 }
 
 func (dht *DHT) checkFuturesCountAndGo(
@@ -493,61 +486,18 @@ func (dht *DHT) checkFuturesCountAndGo(
 
 		value, *close, err = resultsIterate(t, &results, routeSet, target)
 		if *close != nil {
-			return nil, *close, nil
+			return nil, *close, err
 		} else if value != nil {
-			return value, nil, nil
+			return value, nil, err
 		}
 	}
 
 	if !*queryRest && routeSet.Len() == 0 {
 		return nil, nil, nil
 	}
-	err = errors.New("nothing")
+	err = errors.New("do nothing")
 	return nil, nil, err
 }
-
-// func (dht *DHT) iterateIsDone(
-// 	t routing.IterateType,
-// 	queryRest *bool,
-// 	routeSet *routing.RouteSet,
-// 	data []byte,
-// 	ht *routing.HashTable,
-// 	closestNode *node.Node) (value []byte, closest []*node.Node, err error) {
-//
-// 	if routeSet.FirstNode().ID.Equal(closestNode.ID) || *queryRest {
-// 		switch t {
-// 		case routing.IterateBootstrap:
-// 			if !*queryRest {
-// 				*queryRest = true
-// 				err = errors.New("continue")
-// 				return nil, nil, err
-// 			}
-// 			return nil, routeSet.Nodes(), nil
-// 		case routing.IterateFindNode, routing.IterateFindValue:
-// 			return nil, routeSet.Nodes(), nil
-// 		case routing.IterateStore:
-// 			for i, receiver := range routeSet.Nodes() {
-// 				if i >= routing.MaxContactsInBucket {
-// 					return nil, nil, nil
-// 				}
-//
-// 				msg := message.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(message.TypeStore).Request(
-// 					&message.RequestDataStore{
-// 						Data: data,
-// 					}).Build()
-//
-// 				future, _ := dht.transport.SendRequest(msg)
-// 				// We do not need to handle result of this message
-// 				future.Cancel()
-// 			}
-// 			return nil, nil, nil
-// 		}
-// 	} else {
-// 		*closestNode = *routeSet.FirstNode()
-// 	}
-// 	err = errors.New("do nothing")
-// 	return nil, nil, err
-// }
 
 func resultsIterate(
 	t routing.IterateType,
