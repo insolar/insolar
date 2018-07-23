@@ -85,37 +85,44 @@ func (r *LockUnlockRequest) ExpectedLockDuration() time.Duration {
 	return r.expectedLockDuration
 }
 
-// ReadRequest is a request type for reading data.
+// ReadRequest is a request type to read data.
 type ReadRequest struct {
 	RequestRecord
 }
 
+// ReadRecordRequest is a request type to read another record.
 type ReadRecordRequest struct {
 	ReadRequest
 
 	expectedRecordType Type
 }
 
+// ExpectedRecordType is an expected Type of target record.
 func (r *ReadRecordRequest) ExpectedRecordType() Type {
 	return r.expectedRecordType
 }
 
+// ReadObject is a request type
 type ReadObject struct {
 	ReadRequest
 
 	projectionType ProjectionType
 }
 
+// ProjectionType is a "view filter" for record.
+// E.g. we can read whole object or just it's hash.
 func (r *ReadObject) ProjectionType() ProjectionType {
 	return r.projectionType
 }
 
+// ReadObjectComposite is a request to read object including it's "injected" fields.
 type ReadObjectComposite struct {
 	ReadObject
 
 	compositeType Reference
 }
 
+// CompositeType is reference to a Record describing composition type.
 func (r *ReadObjectComposite) CompositeType() Reference {
 	return r.compositeType
 }
