@@ -283,7 +283,7 @@ func (dht *DHT) Bootstrap() error {
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
-		dht.iterateHtSendRequest(ht, cb, wg, &futures)
+		futures = dht.iterateBootstrapNodes(ht, cb, wg, futures)
 	}
 
 	for _, f := range futures {
@@ -329,10 +329,15 @@ func (dht *DHT) iterateHt(cb ContextBuilder) error {
 	return nil
 }
 
-func (dht *DHT) iterateHtSendRequest(ht *routing.HashTable, cb ContextBuilder, wg *sync.WaitGroup, futures *[]transport.Future) {
+func (dht *DHT) iterateBootstrapNodes(
+	ht *routing.HashTable,
+	cb ContextBuilder,
+	wg *sync.WaitGroup,
+	futures []transport.Future,
+) []transport.Future {
 	ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
 	if err != nil {
-		return
+		return futures
 	}
 	for _, bn := range dht.options.BootstrapNodes {
 		request := message.NewPingMessage(ht.Origin, bn)
@@ -343,12 +348,13 @@ func (dht *DHT) iterateHtSendRequest(ht *routing.HashTable, cb ContextBuilder, w
 				continue
 			}
 			wg.Add(1)
-			*futures = append(*futures, res)
+			futures = append(futures, res)
 		} else {
 			routeNode := routing.NewRouteNode(bn)
 			dht.addNode(ctx, routeNode)
 		}
 	}
+	return futures
 }
 
 // Disconnect will trigger a Stop from the insolar.
@@ -401,7 +407,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		resultChan := make(chan *message.Message)
 		dht.setUpResultChan(futures, ctx, resultChan)
 
-		value, closest, err = dht.checkFuturesCountAndGo(t, &queryRest, routeSet, futuresCount, resultChan, target, &closest)
+		value, closest, err = dht.checkFuturesCountAndGo(t, &queryRest, routeSet, futuresCount, resultChan, target, closest)
 		if (err == nil) || ((err != nil) && (err.Error() != "do nothing")) {
 			return value, closest, err
 		}
@@ -472,41 +478,42 @@ func (dht *DHT) checkFuturesCountAndGo(
 	futuresCount int,
 	resultChan chan *message.Message,
 	target []byte,
-	close *[]*node.Node,
-) (value []byte, closest []*node.Node, err error) {
+	close []*node.Node,
+) ([]byte, []*node.Node, error) {
 
+	var err error
 	var results []*message.Message
+	var selected bool
 	if futuresCount > 0 {
 	Loop:
 		for {
-			if dht.selectResultChan(resultChan, &futuresCount, &results) {
+			results, selected = dht.selectResultChan(resultChan, &futuresCount, results)
+			if selected {
 				break Loop
 			}
 		}
 
-		value, *close, err = resultsIterate(t, &results, routeSet, target)
-		if *close != nil {
-			return nil, *close, err
-		} else if value != nil {
-			return value, nil, err
+		_, close, err = resultsIterate(t, results, routeSet, target)
+		if close != nil {
+			return nil, close, err
 		}
 	}
 
 	if !*queryRest && routeSet.Len() == 0 {
-		return nil, nil, nil
+		return nil, close, nil
 	}
 	err = errors.New("do nothing")
-	return nil, nil, err
+	return nil, close, err
 }
 
 func resultsIterate(
 	t routing.IterateType,
-	results *[]*message.Message,
+	results []*message.Message,
 	routeSet *routing.RouteSet,
 	target []byte,
 ) (value []byte, closest []*node.Node, err error) {
 
-	for _, result := range *results {
+	for _, result := range results {
 		if result.Error != nil {
 			routeSet.Remove(routing.NewRouteNode(result.Sender))
 			continue
@@ -539,23 +546,27 @@ func checkAndRefreshTimeForBucket(t routing.IterateType, ht *routing.HashTable, 
 	}
 }
 
-func (dht *DHT) selectResultChan(resultChan chan *message.Message, futuresCount *int, results *[]*message.Message) bool {
+func (dht *DHT) selectResultChan(
+	resultChan chan *message.Message,
+	futuresCount *int,
+	results []*message.Message,
+) ([]*message.Message, bool) {
 	select {
 	case result := <-resultChan:
 		if result != nil {
-			*results = append(*results, result)
+			results = append(results, result)
 		} else {
 			*futuresCount--
 		}
-		if len(*results) == *futuresCount {
+		if len(results) == *futuresCount {
 			close(resultChan)
-			return true
+			return results, true
 		}
 	case <-time.After(dht.options.MessageTimeout):
 		close(resultChan)
-		return true
+		return results, true
 	}
-	return false
+	return results, false
 }
 
 func (dht *DHT) setUpResultChan(futures []transport.Future, ctx Context, resultChan chan *message.Message) {
@@ -704,11 +715,11 @@ func (dht *DHT) handleStoreTimers(start, stop chan bool) {
 	ticker := time.NewTicker(time.Second)
 	cb := NewContextBuilder(dht)
 	for {
-		dht.selectTicker(ticker, &cb, &stop)
+		dht.selectTicker(ticker, &cb, stop)
 	}
 }
 
-func (dht *DHT) selectTicker(ticker *time.Ticker, cb *ContextBuilder, stop *chan bool) {
+func (dht *DHT) selectTicker(ticker *time.Ticker, cb *ContextBuilder, stop chan bool) {
 	select {
 	case <-ticker.C:
 		keys := dht.store.GetKeysReadyToReplicate()
@@ -741,7 +752,7 @@ func (dht *DHT) selectTicker(ticker *time.Ticker, cb *ContextBuilder, stop *chan
 
 		// Expiration
 		dht.store.ExpireKeys()
-	case <-(*stop):
+	case <-stop:
 		ticker.Stop()
 		return
 	}

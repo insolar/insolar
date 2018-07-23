@@ -193,22 +193,26 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*
 	leftToAdd := num
 
 	// Next we select ParallelCalls contacts and add them to the route set
-	ht.selectParallelCalls(leftToAdd, &indexList, &ignoredNodes, routeSet)
+	indexList = ht.selectParallelCalls(leftToAdd, indexList, ignoredNodes, routeSet)
 
 	sort.Sort(routeSet)
 
 	return routeSet
 }
 
-func (ht *HashTable) selectParallelCalls(leftToAdd int, indexList *[]int, ignoredNodes *[]*node.Node, routeSet *RouteSet) {
+func (ht *HashTable) selectParallelCalls(leftToAdd int,
+	indexList []int,
+	ignoredNodes []*node.Node,
+	routeSet *RouteSet,
+) []int {
 	var index int
-	for leftToAdd > 0 && len(*indexList) > 0 {
-		index, *indexList = (*indexList)[0], (*indexList)[1:]
+	for leftToAdd > 0 && len(indexList) > 0 {
+		index, indexList = (indexList)[0], (indexList)[1:]
 		bucketContacts := len(ht.RoutingTable[index])
 		for i := 0; i < bucketContacts; i++ {
 			ignored := false
-			for j := 0; j < len(*ignoredNodes); j++ {
-				if ht.RoutingTable[index][i].ID.Equal((*ignoredNodes)[j].ID) {
+			for j := 0; j < len(ignoredNodes); j++ {
+				if ht.RoutingTable[index][i].ID.Equal((ignoredNodes)[j].ID) {
 					ignored = true
 				}
 			}
@@ -221,6 +225,7 @@ func (ht *HashTable) selectParallelCalls(leftToAdd int, indexList *[]int, ignore
 			}
 		}
 	}
+	return indexList
 }
 
 // GetAllNodesInBucketCloserThan returns all nodes from given bucket that are closer to id then our node.
