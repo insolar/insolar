@@ -394,7 +394,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 
 		futures, removeFromRouteSet = dht.sendMessageToAlphaNodes(routeSet, queryRest, t, ht, contacted, target, futures, removeFromRouteSet)
 
-		removeNodesFromRouteSet(routeSet, &removeFromRouteSet)
+		routeSet.RemoveMany(routing.RouteNodesFrom(removeFromRouteSet))
 
 		futuresCount = len(futures)
 
@@ -517,10 +517,10 @@ func resultsIterate(
 			if len(responseData.Closest) > 0 && responseData.Closest[0].ID.Equal(target) {
 				return nil, responseData.Closest, nil
 			}
-			routeSet.Extend(routing.RouteNodesFrom(responseData.Closest))
+			routeSet.AppendMany(routing.RouteNodesFrom(responseData.Closest))
 		case routing.IterateFindValue:
 			responseData := result.Data.(*message.ResponseDataFindValue)
-			routeSet.Extend(routing.RouteNodesFrom(responseData.Closest))
+			routeSet.AppendMany(routing.RouteNodesFrom(responseData.Closest))
 			if responseData.Value != nil {
 				// TODO When an iterateFindValue succeeds, the initiator must
 				// store the key/value pair at the closest receiver seen which did
@@ -536,12 +536,6 @@ func checkAndRefreshTimeForBucket(t routing.IterateType, ht *routing.HashTable, 
 	if t == routing.IterateBootstrap {
 		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID)
 		ht.ResetRefreshTimeForBucket(bucket)
-	}
-}
-
-func removeNodesFromRouteSet(routeSet *routing.RouteSet, removeFromRouteSet *[]*node.Node) {
-	for _, n := range *removeFromRouteSet {
-		routeSet.Remove(routing.NewRouteNode(n))
 	}
 }
 
