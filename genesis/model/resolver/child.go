@@ -34,7 +34,7 @@ func newChildResolver(parent object.Parent) *childResolver {
 	}
 }
 
-// GetObject reserve object by its reference and return its proxy.
+// GetObject resolve object by its reference and return its proxy.
 func (r *childResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
 	// TODO: check ref.Scope
 	obj, err := r.parent.GetChild(ref.Record)

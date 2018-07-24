@@ -36,7 +36,7 @@ func newGlobalResolver() *globalResolver {
 	}
 }
 
-// GetObject reserve object by its reference and return its proxy.
+// GetObject resolve object by its reference and return its proxy.
 func (r *globalResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
 	// TODO: check ref.Scope
 	proxy, isExist := (*r.globalInstanceMap)[ref]
