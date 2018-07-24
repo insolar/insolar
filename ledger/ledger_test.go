@@ -17,8 +17,36 @@
 package ledger
 
 import (
+	"os"
 	"testing"
+
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/leveldb"
 )
 
-func TestStub(t *testing.T) {
+var storer storage.LedgerStorer
+
+func TestMain(m *testing.M) {
+	storer = levelDBInit()
+	retCode := m.Run()
+	os.Exit(retCode)
+}
+
+func TestLedger_LevelDB_Init(t *testing.T) {
+	ledger := Ledger{
+		Store: storer,
+	}
+	_, _ = ledger.Store.Get(storage.RecordKey{
+		Hash:     []byte("test"),
+		TimeSlot: 1,
+	})
+}
+
+func levelDBInit() storage.LedgerStorer {
+	// ledger, err := newLedger()
+	store, err := leveldb.InitDB()
+	if err != nil {
+		panic(err)
+	}
+	return store
 }
