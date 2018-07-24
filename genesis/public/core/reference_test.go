@@ -21,11 +21,11 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
+	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/stretchr/testify/assert"
-	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/satori/go.uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 type mockParent struct {
@@ -95,29 +95,29 @@ func TestReferenceDomain_RegisterReference(t *testing.T) {
 	domain := "1"
 	record := "1"
 	refObject, err := object.NewReference(record, domain, object.GlobalScope)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	refDomain := newReferenceDomain(nil)
 	registered, err := refDomain.RegisterReference(refObject)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	_, err = uuid.FromString(registered)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestReferenceDomain_ResolveReference(t *testing.T) {
 	domain := "1"
 	record := "1"
 	refObject, err := object.NewReference(record, domain, object.GlobalScope)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	refDomain := newReferenceDomain(nil)
 	registered, err := refDomain.RegisterReference(refObject)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	resolved, err := refDomain.ResolveReference(registered)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, domain, resolved.Domain)
 	assert.Equal(t, record, resolved.Record)
 
@@ -126,7 +126,7 @@ func TestReferenceDomain_ResolveReference(t *testing.T) {
 func TestReferenceDomain_ResolveReference_IncorrectRef(t *testing.T) {
 	refDomain := newReferenceDomain(nil)
 	_, err := refDomain.ResolveReference("1")
-	assert.NotNil(t, err)
+	assert.Equal(t, "object with record 1 does not exist", err.Error())
 }
 
 func TestNewReferenceDomainProxy(t *testing.T) {
@@ -142,32 +142,32 @@ func TestReferenceDomainProxy_RegisterReference(t *testing.T) {
 	domain := "1"
 	record := "1"
 	refObject, err := object.NewReference(record, domain, object.GlobalScope)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	parent := &mockParent{}
 	refDomainProxy := newReferenceDomainProxy(parent)
 
 	registered, err := refDomainProxy.RegisterReference(refObject)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	_, err = uuid.FromString(registered)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
 	domain := "1"
 	record := "1"
 	refObject, err := object.NewReference(record, domain, object.GlobalScope)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	parent := &mockParent{}
 	refDomainProxy := newReferenceDomainProxy(parent)
 
 	registered, err := refDomainProxy.RegisterReference(refObject)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	resolved, err := refDomainProxy.ResolveReference(registered)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, resolved.Domain, domain)
 	assert.Equal(t, resolved.Record, record)
 }
