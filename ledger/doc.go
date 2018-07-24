@@ -14,11 +14,5 @@
  *    limitations under the License.
  */
 
-package class
-
-import (
-	"testing"
-)
-
-func TestStub(t *testing.T) {
-}
+// Package ledger contains interfaces to storage engine and multiple record types
+package ledger

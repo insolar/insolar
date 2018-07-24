@@ -14,11 +14,19 @@
  *    limitations under the License.
  */
 
-package class
+package ledger
 
 import (
-	"testing"
+	"github.com/insolar/insolar/ledger/record"
 )
 
-func TestStub(t *testing.T) {
+// Ledger is a storage engine interface
+type Ledger interface {
+	Get(id record.Hash) (bool, record.Record)
+	Set(record record.Record) error
+}
+
+// NewLedger creates new ledger
+func NewLedger() (Ledger, error) {
+	return newLedger()
 }
