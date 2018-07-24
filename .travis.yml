@@ -3,13 +3,12 @@ language: go
 go:
   - "1.x"
 
-install:
-  - "go get -u -v github.com/alecthomas/gometalinter"
-  - "gometalinter --install"
-
 jobs:
   include:
     - stage: "lint"
+      before_script:
+        - "go get -u -v github.com/alecthomas/gometalinter"
+        - "gometalinter --install"
       script: "gometalinter --vendor ./..."
     - stage: "test"
       script: "go test -v --race ./..."
