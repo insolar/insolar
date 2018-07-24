@@ -125,7 +125,7 @@ func TestReferenceDomain_ResolveReference(t *testing.T) {
 func TestReferenceDomain_ResolveReference_IncorrectRef(t *testing.T) {
 	refDomain := newReferenceDomain(nil)
 	_, err := refDomain.ResolveReference("1")
-	assert.Equal(t, "object with record 1 does not exist", err.Error())
+	assert.EqualError(t, err, "object with record 1 does not exist")
 }
 
 func TestNewReferenceDomainProxy(t *testing.T) {
