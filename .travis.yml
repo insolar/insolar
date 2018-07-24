@@ -2,7 +2,14 @@ language: go
 
 go:
   - "1.x"
-  - "1.9.x"
 
-script:
-  - "go test -v --race ./..."
+install:
+  - "go get -u -v github.com/alecthomas/gometalinter"
+  - "gometalinter --install"
+
+jobs:
+  include:
+    - stage: "lint"
+      script: "gometalinter --vendor ./..."
+    - stage: "test"
+      script: "go test -v --race ./..."
