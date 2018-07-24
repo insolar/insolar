@@ -10,7 +10,7 @@
     "perf",
     "pproffd"
   ]
-  revision = "c779509d115ae616665f1ab046858f1bb25aa34b"
+  revision = "16be2b611ee338b7cd9744ebf8b80c1f6d189b70"
 
 [[projects]]
   branch = "master"
@@ -31,10 +31,10 @@
   revision = "cf47f40ed501fe61ea55cb5b8315da7c4842d045"
 
 [[projects]]
+  branch = "master"
   name = "github.com/chzyer/readline"
   packages = ["."]
-  revision = "62c6fe6193755f722b8b8788aa7357be55a50ff1"
-  version = "v1.4"
+  revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -106,9 +106,15 @@
   ]
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "54a569b7a0b47a0e7ecff4dc0f6bd4dacc419581b3b89d7a4b5194be41d1eb92"
+  inputs-digest = "aef7e6e6c35e2821ee84ca648c35988595285d74010b2b5339fd43286593bb59"
   solver-name = "gps-cdcl"
   solver-version = 1

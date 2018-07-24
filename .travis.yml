@@ -1,8 +1,17 @@
 language: go
 
-go:
-  - "1.x"
-  - "1.9.x"
+# Faster container-based builds
+sudo: false
 
-script:
-  - "go test -v --race ./..."
+go:
+  - "1.10.x"
+
+jobs:
+  include:
+    - stage: "test"
+      script: "go test -v --race ./..."
+    - stage: "lint"
+      before_script:
+        - "go get -u gopkg.in/alecthomas/gometalinter.v2"
+        - "gometalinter.v2 --install"
+      script: "gometalinter.v2 --vendor ./..."
