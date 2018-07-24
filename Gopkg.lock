@@ -25,16 +25,16 @@
   revision = "9e0e1d1d0572f5a09a669d4ea0372d8e8078dcc9"
 
 [[projects]]
+  branch = "master"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
-  revision = "04a4eed61c57ecc9903f8983d1d2c17b88d2e9e1"
-  version = "0.1.0"
+  revision = "cf47f40ed501fe61ea55cb5b8315da7c4842d045"
 
 [[projects]]
+  branch = "master"
   name = "github.com/chzyer/readline"
   packages = ["."]
-  revision = "62c6fe6193755f722b8b8788aa7357be55a50ff1"
-  version = "v1.4"
+  revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -67,10 +67,10 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/satori/go.uuid"
   packages = ["."]
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
+  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
 
 [[projects]]
   name = "github.com/stretchr/objx"
@@ -106,9 +106,15 @@
   ]
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d5c8c44bec27df41fd449341453fdb8f93f3fe9422188a88a17eb3e7b9d5a4dd"
+  inputs-digest = "aef7e6e6c35e2821ee84ca648c35988595285d74010b2b5339fd43286593bb59"
   solver-name = "gps-cdcl"
   solver-version = 1
