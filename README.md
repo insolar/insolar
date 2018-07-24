@@ -44,6 +44,11 @@ Kademlia DHT based blockchain network layer.
 See [package readme](network/host) for more details.
 
 
+### [Ledger](ledger)
+Record storage engine backed by [LevelDB](https://github.com/syndtr/goleveldb).
+
+
+
 ### [Virtual machines](vm)
 Various engines for smart contract execution:
  - [wasm](vm/wasm) - WebAssembly implementation of smart contracts
