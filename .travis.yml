@@ -12,6 +12,6 @@ jobs:
       script: "go test -v --race ./..."
     - stage: "lint"
       before_script:
-        - "go get -u -v github.com/alecthomas/gometalinter"
-        - "gometalinter --install"
-      script: "gometalinter --vendor ./..."
+        - "go get -u gopkg.in/alecthomas/gometalinter.v2"
+        - "gometalinter.v2 --install"
+      script: "gometalinter.v2 --vendor ./..."
