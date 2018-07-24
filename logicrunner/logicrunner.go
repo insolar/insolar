@@ -1,6 +1,8 @@
 package logicrunner
 
-import "github.com/insolar/insolar/logicrunner/goplugin"
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin"
+)
 
 type MachineType int
 
@@ -10,7 +12,7 @@ const (
 )
 
 type LogicRunner interface {
-	Exec(Object) error
+	Exec(object Object, method string, args Arguments) (ret Arguments, err error)
 }
 
 func NewLogicRunner(t MachineType, b API) LogicRunner {
