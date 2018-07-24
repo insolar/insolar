@@ -7,15 +7,16 @@
   packages = [
     ".",
     "inproc",
+    "perf",
     "pproffd"
   ]
-  revision = "7cf54799d7d65e94d17f90d51ac4dee79f57af04"
+  revision = "c779509d115ae616665f1ab046858f1bb25aa34b"
 
 [[projects]]
   branch = "master"
   name = "github.com/anacrolix/sync"
   packages = ["."]
-  revision = "3c4cb11f5a01b7769739b3a408c493e947fb839f"
+  revision = "f008fb17e46b87d6e2db40f91b95415242863861"
 
 [[projects]]
   branch = "master"
@@ -27,7 +28,7 @@
   branch = "master"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
-  revision = "d9bbe8f8fa7bf7ed03e6cfc6a2796bb36139e1f4"
+  revision = "cf47f40ed501fe61ea55cb5b8315da7c4842d045"
 
 [[projects]]
   name = "github.com/chzyer/readline"
