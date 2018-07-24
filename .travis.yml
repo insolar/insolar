@@ -8,10 +8,10 @@ go:
 
 jobs:
   include:
+    - stage: "test"
+      script: "go test -v --race ./..."
     - stage: "lint"
       before_script:
         - "go get -u -v github.com/alecthomas/gometalinter"
         - "gometalinter --install"
       script: "gometalinter --vendor ./..."
-    - stage: "test"
-      script: "go test -v --race ./..."
