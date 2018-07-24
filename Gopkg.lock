@@ -7,15 +7,16 @@
   packages = [
     ".",
     "inproc",
+    "perf",
     "pproffd"
   ]
-  revision = "7cf54799d7d65e94d17f90d51ac4dee79f57af04"
+  revision = "c779509d115ae616665f1ab046858f1bb25aa34b"
 
 [[projects]]
   branch = "master"
   name = "github.com/anacrolix/sync"
   packages = ["."]
-  revision = "3c4cb11f5a01b7769739b3a408c493e947fb839f"
+  revision = "f008fb17e46b87d6e2db40f91b95415242863861"
 
 [[projects]]
   branch = "master"
@@ -27,7 +28,7 @@
   branch = "master"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
-  revision = "d9bbe8f8fa7bf7ed03e6cfc6a2796bb36139e1f4"
+  revision = "cf47f40ed501fe61ea55cb5b8315da7c4842d045"
 
 [[projects]]
   name = "github.com/chzyer/readline"
@@ -40,6 +41,12 @@
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
   name = "github.com/huandu/xstrings"
@@ -80,9 +87,28 @@
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
+[[projects]]
+  branch = "master"
+  name = "github.com/syndtr/goleveldb"
+  packages = [
+    "leveldb",
+    "leveldb/cache",
+    "leveldb/comparer",
+    "leveldb/errors",
+    "leveldb/filter",
+    "leveldb/iterator",
+    "leveldb/journal",
+    "leveldb/memdb",
+    "leveldb/opt",
+    "leveldb/storage",
+    "leveldb/table",
+    "leveldb/util"
+  ]
+  revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a4de3593f4d443e3031498601f47614713bbb5de5cc7e381ca33d454c84045ac"
+  inputs-digest = "54a569b7a0b47a0e7ecff4dc0f6bd4dacc419581b3b89d7a4b5194be41d1eb92"
   solver-name = "gps-cdcl"
   solver-version = 1

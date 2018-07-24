@@ -283,25 +283,7 @@ func (dht *DHT) Bootstrap() error {
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
-		ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
-		if err != nil {
-			return err
-		}
-		for _, bn := range dht.options.BootstrapNodes {
-			request := message.NewPingMessage(ht.Origin, bn)
-
-			if bn.ID == nil {
-				res, err := dht.transport.SendRequest(request)
-				if err != nil {
-					continue
-				}
-				wg.Add(1)
-				futures = append(futures, res)
-			} else {
-				routeNode := routing.NewRouteNode(bn)
-				dht.addNode(ctx, routeNode)
-			}
-		}
+		futures = dht.iterateBootstrapNodes(ht, cb, wg, futures)
 	}
 
 	for _, f := range futures {
@@ -328,7 +310,10 @@ func (dht *DHT) Bootstrap() error {
 	}
 
 	wg.Wait()
+	return dht.iterateHt(cb)
+}
 
+func (dht *DHT) iterateHt(cb ContextBuilder) error {
 	for _, ht := range dht.tables {
 		ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
 		if err != nil {
@@ -340,8 +325,35 @@ func (dht *DHT) Bootstrap() error {
 			return err
 		}
 	}
-
 	return nil
+}
+
+func (dht *DHT) iterateBootstrapNodes(
+	ht *routing.HashTable,
+	cb ContextBuilder,
+	wg *sync.WaitGroup,
+	futures []transport.Future,
+) []transport.Future {
+	ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
+	if err != nil {
+		return futures
+	}
+	for _, bn := range dht.options.BootstrapNodes {
+		request := message.NewPingMessage(ht.Origin, bn)
+
+		if bn.ID == nil {
+			res, err := dht.transport.SendRequest(request)
+			if err != nil {
+				continue
+			}
+			wg.Add(1)
+			futures = append(futures, res)
+		} else {
+			routeNode := routing.NewRouteNode(bn)
+			dht.addNode(ctx, routeNode)
+		}
+	}
+	return futures
 }
 
 // Disconnect will trigger a Stop from the insolar.
@@ -377,10 +389,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 
 	closestNode := routeSet.FirstNode()
 
-	if t == routing.IterateBootstrap {
-		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID)
-		ht.ResetRefreshTimeForBucket(bucket)
-	}
+	checkAndRefreshTimeForBucket(t, ht, target)
 
 	var removeFromRouteSet []*node.Node
 
@@ -388,165 +397,252 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		var futures []transport.Future
 		var futuresCount int
 
-		// Next we send Messages to the first (closest) alpha nodes in the
-		// route set and wait for a response
+		futures, removeFromRouteSet = dht.sendMessageToAlphaNodes(routeSet, queryRest, t, ht, contacted, target, futures, removeFromRouteSet)
 
-		for i, receiver := range routeSet.Nodes() {
-			// Contact only alpha nodes
-			if i >= routing.ParallelCalls && !queryRest {
-				break
-			}
-
-			// Don't contact nodes already contacted
-			if contacted[string(receiver.ID)] {
-				continue
-			}
-
-			contacted[string(receiver.ID)] = true
-
-			messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(receiver)
-
-			switch t {
-			case routing.IterateBootstrap, routing.IterateFindNode:
-				messageBuilder = messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{
-					Target: target,
-				})
-			case routing.IterateFindValue:
-				messageBuilder = messageBuilder.Type(message.TypeFindValue).Request(&message.RequestDataFindValue{
-					Target: target,
-				})
-			case routing.IterateStore:
-				messageBuilder = messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{
-					Target: target,
-				})
-			default:
-				panic("Unknown iterate type")
-			}
-
-			msg := messageBuilder.Build()
-
-			// Send the async queries and wait for a response
-			res, err := dht.transport.SendRequest(msg)
-			if err != nil {
-				// Node was unreachable for some reason. We will have to remove
-				// it from the route set, but we will keep it in our routing
-				// table in hopes that it might come back online in the f.
-				removeFromRouteSet = append(removeFromRouteSet, msg.Receiver)
-				continue
-			}
-
-			futures = append(futures, res)
-		}
-
-		for _, n := range removeFromRouteSet {
-			routeSet.Remove(routing.NewRouteNode(n))
-		}
+		routeSet.RemoveMany(routing.RouteNodesFrom(removeFromRouteSet))
 
 		futuresCount = len(futures)
 
 		resultChan := make(chan *message.Message)
-		for _, f := range futures {
-			go func(future transport.Future) {
-				select {
-				case result := <-future.Result():
-					if result == nil {
-						// Channel was closed
-						return
-					}
-					dht.addNode(ctx, routing.NewRouteNode(result.Sender))
-					resultChan <- result
-					return
-				case <-time.After(dht.options.MessageTimeout):
-					future.Cancel()
-					return
-				}
-			}(f)
-		}
+		dht.setUpResultChan(futures, ctx, resultChan)
 
-		var results []*message.Message
-		if futuresCount > 0 {
-		Loop:
-			for {
-				select {
-				case result := <-resultChan:
-					if result != nil {
-						results = append(results, result)
-					} else {
-						futuresCount--
-					}
-					if len(results) == futuresCount {
-						close(resultChan)
-						break Loop
-					}
-				case <-time.After(dht.options.MessageTimeout):
-					close(resultChan)
-					break Loop
-				}
-			}
-
-			for _, result := range results {
-				if result.Error != nil {
-					routeSet.Remove(routing.NewRouteNode(result.Sender))
-					continue
-				}
-				switch t {
-				case routing.IterateBootstrap, routing.IterateFindNode, routing.IterateStore:
-					responseData := result.Data.(*message.ResponseDataFindNode)
-					if len(responseData.Closest) > 0 && responseData.Closest[0].ID.Equal(target) {
-						return nil, responseData.Closest, nil
-					}
-					routeSet.Extend(routing.RouteNodesFrom(responseData.Closest))
-				case routing.IterateFindValue:
-					responseData := result.Data.(*message.ResponseDataFindValue)
-					routeSet.Extend(routing.RouteNodesFrom(responseData.Closest))
-					if responseData.Value != nil {
-						// TODO When an iterateFindValue succeeds, the initiator must
-						// store the key/value pair at the closest receiver seen which did
-						// not return the value.
-						return responseData.Value, nil, nil
-					}
-				}
-			}
-		}
-
-		if !queryRest && routeSet.Len() == 0 {
-			return nil, nil, nil
+		value, closest, err = dht.checkFuturesCountAndGo(t, &queryRest, routeSet, futuresCount, resultChan, target, closest)
+		if (err == nil) || ((err != nil) && (err.Error() != "do nothing")) {
+			return value, closest, err
 		}
 
 		sort.Sort(routeSet)
 
-		// If closestNode is unchanged then we are done
-		if routeSet.FirstNode().ID.Equal(closestNode.ID) || queryRest {
-			// We are done
-			switch t {
-			case routing.IterateBootstrap:
-				if !queryRest {
-					queryRest = true
-					continue
-				}
-				return nil, routeSet.Nodes(), nil
-			case routing.IterateFindNode, routing.IterateFindValue:
-				return nil, routeSet.Nodes(), nil
-			case routing.IterateStore:
-				for i, receiver := range routeSet.Nodes() {
-					if i >= routing.MaxContactsInBucket {
-						return nil, nil, nil
-					}
-
-					msg := message.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(message.TypeStore).Request(
-						&message.RequestDataStore{
-							Data: data,
-						}).Build()
-
-					future, _ := dht.transport.SendRequest(msg)
-					// We do not need to handle result of this message
-					future.Cancel()
-				}
-				return nil, nil, nil
-			}
-		} else {
-			closestNode = routeSet.FirstNode()
+		var tmpValue []byte
+		var tmpClosest []*node.Node
+		var tmpNode *node.Node
+		tmpValue, tmpClosest, tmpNode, err = dht.iterateIsDone(t, &queryRest, routeSet, data, ht, closestNode)
+		if err == nil {
+			return tmpValue, tmpClosest, err
+		} else if tmpNode != nil {
+			closestNode = tmpNode
 		}
+	}
+}
+
+func (dht *DHT) iterateIsDone(
+	t routing.IterateType,
+	queryRest *bool,
+	routeSet *routing.RouteSet,
+	data []byte,
+	ht *routing.HashTable,
+	closestNode *node.Node,
+) (value []byte, closest []*node.Node, close *node.Node, err error) {
+
+	if routeSet.FirstNode().ID.Equal(closestNode.ID) || *(queryRest) {
+		switch t {
+		case routing.IterateBootstrap:
+			if !(*queryRest) {
+				*queryRest = true
+				err = errors.New("do nothing")
+				return nil, nil, nil, err
+			}
+			return nil, routeSet.Nodes(), nil, nil
+		case routing.IterateFindNode, routing.IterateFindValue:
+			return nil, routeSet.Nodes(), nil, nil
+		case routing.IterateStore:
+			for i, receiver := range routeSet.Nodes() {
+				if i >= routing.MaxContactsInBucket {
+					return nil, nil, nil, nil
+				}
+
+				msg := message.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(message.TypeStore).Request(
+					&message.RequestDataStore{
+						Data: data,
+					}).Build()
+
+				future, _ := dht.transport.SendRequest(msg)
+				// We do not need to handle result of this message
+				future.Cancel()
+			}
+			return nil, nil, nil, nil
+		}
+	} else {
+		err = errors.New("do nothing")
+		return nil, nil, routeSet.FirstNode(), err
+	}
+	err = errors.New("do nothing")
+	return nil, nil, nil, err
+}
+
+func (dht *DHT) checkFuturesCountAndGo(
+	t routing.IterateType,
+	queryRest *bool,
+	routeSet *routing.RouteSet,
+	futuresCount int,
+	resultChan chan *message.Message,
+	target []byte,
+	close []*node.Node,
+) ([]byte, []*node.Node, error) {
+
+	var err error
+	var results []*message.Message
+	var selected bool
+	if futuresCount > 0 {
+	Loop:
+		for {
+			results, selected = dht.selectResultChan(resultChan, &futuresCount, results)
+			if selected {
+				break Loop
+			}
+		}
+
+		_, close, err = resultsIterate(t, results, routeSet, target)
+		if close != nil {
+			return nil, close, err
+		}
+	}
+
+	if !*queryRest && routeSet.Len() == 0 {
+		return nil, close, nil
+	}
+	err = errors.New("do nothing")
+	return nil, close, err
+}
+
+func resultsIterate(
+	t routing.IterateType,
+	results []*message.Message,
+	routeSet *routing.RouteSet,
+	target []byte,
+) (value []byte, closest []*node.Node, err error) {
+
+	for _, result := range results {
+		if result.Error != nil {
+			routeSet.Remove(routing.NewRouteNode(result.Sender))
+			continue
+		}
+		switch t {
+		case routing.IterateBootstrap, routing.IterateFindNode, routing.IterateStore:
+			responseData := result.Data.(*message.ResponseDataFindNode)
+			if len(responseData.Closest) > 0 && responseData.Closest[0].ID.Equal(target) {
+				return nil, responseData.Closest, nil
+			}
+			routeSet.AppendMany(routing.RouteNodesFrom(responseData.Closest))
+		case routing.IterateFindValue:
+			responseData := result.Data.(*message.ResponseDataFindValue)
+			routeSet.AppendMany(routing.RouteNodesFrom(responseData.Closest))
+			if responseData.Value != nil {
+				// TODO When an iterateFindValue succeeds, the initiator must
+				// store the key/value pair at the closest receiver seen which did
+				// not return the value.
+				return responseData.Value, nil, nil
+			}
+		}
+	}
+	return nil, nil, nil
+}
+
+func checkAndRefreshTimeForBucket(t routing.IterateType, ht *routing.HashTable, target []byte) {
+	if t == routing.IterateBootstrap {
+		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID)
+		ht.ResetRefreshTimeForBucket(bucket)
+	}
+}
+
+func (dht *DHT) selectResultChan(
+	resultChan chan *message.Message,
+	futuresCount *int,
+	results []*message.Message,
+) ([]*message.Message, bool) {
+	select {
+	case result := <-resultChan:
+		if result != nil {
+			results = append(results, result)
+		} else {
+			*futuresCount--
+		}
+		if len(results) == *futuresCount {
+			close(resultChan)
+			return results, true
+		}
+	case <-time.After(dht.options.MessageTimeout):
+		close(resultChan)
+		return results, true
+	}
+	return results, false
+}
+
+func (dht *DHT) setUpResultChan(futures []transport.Future, ctx Context, resultChan chan *message.Message) {
+	for _, f := range futures {
+		go func(future transport.Future) {
+			select {
+			case result := <-future.Result():
+				if result == nil {
+					// Channel was closed
+					return
+				}
+				dht.addNode(ctx, routing.NewRouteNode(result.Sender))
+				resultChan <- result
+				return
+			case <-time.After(dht.options.MessageTimeout):
+				future.Cancel()
+				return
+			}
+		}(f)
+	}
+}
+
+func (dht *DHT) sendMessageToAlphaNodes(
+	routeSet *routing.RouteSet,
+	queryRest bool,
+	t routing.IterateType,
+	ht *routing.HashTable,
+	contacted map[string]bool,
+	target []byte,
+	futures []transport.Future,
+	removeFromRouteSet []*node.Node,
+) (resultFutures []transport.Future, resultRouteSet []*node.Node) {
+	// Next we send Messages to the first (closest) alpha nodes in the
+	// route set and wait for a response
+
+	for i, receiver := range routeSet.Nodes() {
+		// Contact only alpha nodes
+		if i >= routing.ParallelCalls && !queryRest {
+			break
+		}
+
+		// Don't contact nodes already contacted
+		if (contacted)[string(receiver.ID)] {
+			continue
+		}
+
+		(contacted)[string(receiver.ID)] = true
+
+		messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(receiver)
+		messageBuilder = getMessageBuilder(t, messageBuilder, target)
+		msg := messageBuilder.Build()
+
+		// Send the async queries and wait for a response
+		res, err := dht.transport.SendRequest(msg)
+		if err != nil {
+			// Node was unreachable for some reason. We will have to remove
+			// it from the route set, but we will keep it in our routing
+			// table in hopes that it might come back online in the f.
+			removeFromRouteSet = append(removeFromRouteSet, msg.Receiver)
+			continue
+		}
+
+		futures = append(futures, res)
+	}
+	return futures, removeFromRouteSet
+}
+
+func getMessageBuilder(t routing.IterateType, messageBuilder message.Builder, target []byte) message.Builder {
+	switch t {
+	case routing.IterateBootstrap, routing.IterateFindNode:
+		return messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{Target: target})
+	case routing.IterateFindValue:
+		return messageBuilder.Type(message.TypeFindValue).Request(&message.RequestDataFindValue{Target: target})
+	case routing.IterateStore:
+		return messageBuilder.Type(message.TypeFindNode).Request(&message.RequestDataFindNode{Target: target})
+	default:
+		panic("Unknown iterate type")
 	}
 }
 
@@ -618,42 +714,46 @@ func (dht *DHT) handleStoreTimers(start, stop chan bool) {
 	ticker := time.NewTicker(time.Second)
 	cb := NewContextBuilder(dht)
 	for {
-		select {
-		case <-ticker.C:
-			keys := dht.store.GetKeysReadyToReplicate()
-			for _, ht := range dht.tables {
-				ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
-				// TODO: do something sane with error
-				if err != nil {
-					log.Fatal(err)
-				}
-				// Refresh
-				for i := 0; i < routing.KeyBitSize; i++ {
-					if time.Since(ht.GetRefreshTimeForBucket(i)) > dht.options.RefreshTime {
-						id := ht.GetRandomIDFromBucket(routing.MaxContactsInBucket)
-						_, _, err = dht.iterate(ctx, routing.IterateBootstrap, id, nil)
-						if err != nil {
-							continue
-						}
-					}
-				}
+		dht.selectTicker(ticker, &cb, stop)
+	}
+}
 
-				// Replication
-				for _, key := range keys {
-					value, _ := dht.store.Retrieve(key)
-					_, _, err2 := dht.iterate(ctx, routing.IterateStore, key, value)
-					if err2 != nil {
+func (dht *DHT) selectTicker(ticker *time.Ticker, cb *ContextBuilder, stop chan bool) {
+	select {
+	case <-ticker.C:
+		keys := dht.store.GetKeysReadyToReplicate()
+		for _, ht := range dht.tables {
+			ctx, err := cb.SetNodeByID(ht.Origin.ID).Build()
+			// TODO: do something sane with error
+			if err != nil {
+				log.Fatal(err)
+			}
+			// Refresh
+			for i := 0; i < routing.KeyBitSize; i++ {
+				if time.Since(ht.GetRefreshTimeForBucket(i)) > dht.options.RefreshTime {
+					id := ht.GetRandomIDFromBucket(routing.MaxContactsInBucket)
+					_, _, err = dht.iterate(ctx, routing.IterateBootstrap, id, nil)
+					if err != nil {
 						continue
 					}
 				}
 			}
 
-			// Expiration
-			dht.store.ExpireKeys()
-		case <-stop:
-			ticker.Stop()
-			return
+			// Replication
+			for _, key := range keys {
+				value, _ := dht.store.Retrieve(key)
+				_, _, err2 := dht.iterate(ctx, routing.IterateStore, key, value)
+				if err2 != nil {
+					continue
+				}
+			}
 		}
+
+		// Expiration
+		dht.store.ExpireKeys()
+	case <-stop:
+		ticker.Stop()
+		return
 	}
 }
 
@@ -669,35 +769,11 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 			}
 
 			var ctx Context
-			var err error
-			if msg.Receiver.ID == nil {
-				ctx, err = cb.SetDefaultNode().Build()
-			} else {
-				ctx, err = cb.SetNodeByID(msg.Receiver.ID).Build()
-			}
-			if err != nil {
-				// TODO: Do something sane with error!
-				log.Println(err)
-			}
+			ctx = buildContext(cb, msg)
 			ht := dht.htFromCtx(ctx)
 
 			if ht.Origin.ID.Equal(msg.Receiver.ID) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
-				messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
-
-				switch msg.Type {
-				case message.TypeFindNode:
-					dht.processFindNode(ctx, msg, messageBuilder)
-				case message.TypeFindValue:
-					dht.processFindValue(ctx, msg, messageBuilder)
-				case message.TypeStore:
-					dht.processStore(ctx, msg, messageBuilder)
-				case message.TypePing:
-					dht.processPing(ctx, msg, messageBuilder)
-				case message.TypeRPC:
-					dht.processRPC(ctx, msg, messageBuilder)
-				case message.TypeRelay:
-					dht.processRelay(ctx, msg, messageBuilder)
-				}
+				dht.dispatchMessageType(ctx, msg, ht)
 			} else {
 				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.String())
 				if err != nil {
@@ -711,32 +787,69 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 						Type:      msg.Type,
 						RequestID: msg.RequestID,
 						Data:      msg.Data}
-					future, err := dht.transport.SendRequest(request)
-					if err != nil {
-						log.Println(err)
-					}
-					select {
-					case rsp := <-future.Result():
-						if rsp == nil {
-							// Channel was closed
-							log.Println("chanel closed unexpectedly")
-						}
-						dht.addNode(ctx, routing.NewRouteNode(rsp.Sender))
-
-						response := rsp.Data.(*message.ResponseDataRPC)
-						if response.Success {
-							log.Println(response.Result)
-						}
-						log.Println(response.Error)
-					case <-time.After(dht.options.MessageTimeout):
-						future.Cancel()
-						log.Println("timeout")
-					}
+					dht.sendRelayedRequest(request, ctx)
 				}
 			}
 		case <-stop:
 			return
 		}
+	}
+}
+
+func (dht *DHT) sendRelayedRequest(request *message.Message, ctx Context) {
+	future, err := dht.transport.SendRequest(request)
+	if err != nil {
+		log.Println(err)
+	}
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			// Channel was closed
+			log.Println("chanel closed unexpectedly")
+		}
+		dht.addNode(ctx, routing.NewRouteNode(rsp.Sender))
+
+		response := rsp.Data.(*message.ResponseDataRPC)
+		if response.Success {
+			log.Println(response.Result)
+		}
+		log.Println(response.Error)
+	case <-time.After(dht.options.MessageTimeout):
+		future.Cancel()
+		log.Println("timeout")
+	}
+}
+
+func buildContext(cb ContextBuilder, msg *message.Message) Context {
+	var ctx Context
+	var err error
+	if msg.Receiver.ID == nil {
+		ctx, err = cb.SetDefaultNode().Build()
+	} else {
+		ctx, err = cb.SetNodeByID(msg.Receiver.ID).Build()
+	}
+	if err != nil {
+		// TODO: Do something sane with error!
+		log.Println(err) // don't return this error cuz don't know what to do with
+	}
+	return ctx
+}
+
+func (dht *DHT) dispatchMessageType(ctx Context, msg *message.Message, ht *routing.HashTable) {
+	messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
+	switch msg.Type {
+	case message.TypeFindNode:
+		dht.processFindNode(ctx, msg, messageBuilder)
+	case message.TypeFindValue:
+		dht.processFindValue(ctx, msg, messageBuilder)
+	case message.TypeStore:
+		dht.processStore(ctx, msg, messageBuilder)
+	case message.TypePing:
+		dht.processPing(ctx, msg, messageBuilder)
+	case message.TypeRPC:
+		dht.processRPC(ctx, msg, messageBuilder)
+	case message.TypeRelay:
+		dht.processRelay(ctx, msg, messageBuilder)
 	}
 }
 

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package class
+package ledger
 
 import (
 	"testing"
