@@ -14,15 +14,17 @@
  *    limitations under the License.
  */
 
-package ledger
+package leveldb
 
 import (
 	"path/filepath"
 
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+
+	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage"
 )
 
 const (
@@ -33,7 +35,7 @@ type levelLedger struct {
 	db *leveldb.DB
 }
 
-func newLedger() (*levelLedger, error) {
+func InitDB() (*levelLedger, error) {
 	opts := &opt.Options{
 		AltFilters:                            nil,
 		BlockCacher:                           opt.LRUCacher,
@@ -85,9 +87,9 @@ func newLedger() (*levelLedger, error) {
 	}, nil
 }
 
-// Get returns record from leveldb by it's ID (timeslot + record hash)
-func (ll *levelLedger) Get(id record.Hash) (found bool, rec record.Record) {
-	return false, nil
+// Get returns record from leveldb by timeslot and hash passed in RecordKey.
+func (ll *levelLedger) Get(k storage.RecordKey) (rec record.Record, found bool) {
+	return nil, false
 }
 
 // Set stores record in leveldb
