@@ -12,20 +12,18 @@
  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
- *
  */
 
 package factory
 
 import (
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // Factory allows to create new objects with reference.
 type Factory interface {
 	object.Callable
-	Create(parent object.Parent) resolver.Proxy
+	Create(parent object.Parent) object.Proxy
 }
 
 // ProxyFactory allows to create new proxy instances.

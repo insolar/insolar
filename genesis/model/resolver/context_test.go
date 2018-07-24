@@ -76,9 +76,9 @@ func (p *mockParentNotChild) GetContextStorage() storage.Storage {
 
 func TestNewContextResolver(t *testing.T) {
 	mockParent := &mockParent{}
-	resolver := NewContextResolver(mockParent)
+	resolver := newContextResolver(mockParent)
 
-	assert.Equal(t, &ContextResolver{
+	assert.Equal(t, &contextResolver{
 		parent: mockParent,
 	}, resolver)
 }
@@ -88,7 +88,7 @@ func TestContextResolver_GetObject_No_Object(t *testing.T) {
 	mockParent := &mockParent{
 		ContextStorage: contextStorage,
 	}
-	resolver := NewContextResolver(mockParent)
+	resolver := newContextResolver(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
@@ -103,7 +103,7 @@ func TestContextResolver_GetObject_Wrong_classID(t *testing.T) {
 	mockParent := &mockParent{
 		ContextStorage: contextStorage,
 	}
-	resolver := NewContextResolver(mockParent)
+	resolver := newContextResolver(mockParent)
 	ref, _ := object.NewReference(record, "1", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
@@ -120,7 +120,7 @@ func TestContextResolver_GetObject_Not_Child(t *testing.T) {
 		ContextStorage: parentContextStorage,
 	}
 
-	resolver := NewContextResolver(parent)
+	resolver := newContextResolver(parent)
 	ref, _ := object.NewReference(record, "1", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
@@ -135,7 +135,7 @@ func TestContextResolver_GetObject(t *testing.T) {
 	mockParent := &mockParent{
 		ContextStorage: contextStorage,
 	}
-	resolver := NewContextResolver(mockParent)
+	resolver := newContextResolver(mockParent)
 	ref, _ := object.NewReference(record, "1", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "mockChild")

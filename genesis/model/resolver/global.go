@@ -12,7 +12,6 @@
  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
- *
  */
 
 package resolver
@@ -24,21 +23,21 @@ import (
 )
 
 // GlobalResolver is resolver for GlobalScope references.
-type GlobalResolver struct {
-	globalInstanceMap *map[*object.Reference]Proxy
+type globalResolver struct {
+	globalInstanceMap *map[*object.Reference]object.Proxy
 }
 
 // NewGlobalResolver creates new GlobalResolver instance.
 // TODO: pass map?
-func NewGlobalResolver() *GlobalResolver {
-	instanceMap := new(map[*object.Reference]Proxy)
-	return &GlobalResolver{
-		globalInstanceMap: instanceMap,
+func newGlobalResolver() *globalResolver {
+	instanceMap := make(map[*object.Reference]object.Proxy)
+	return &globalResolver{
+		globalInstanceMap: &instanceMap,
 	}
 }
 
 // GetObject reserve object by its reference and return its proxy.
-func (r *GlobalResolver) GetObject(ref *object.Reference, classID string) (Proxy, error) {
+func (r *globalResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
 	// TODO: check ref.Scope
 	proxy, isExist := (*r.globalInstanceMap)[ref]
 	if !isExist {
@@ -46,7 +45,7 @@ func (r *GlobalResolver) GetObject(ref *object.Reference, classID string) (Proxy
 	}
 
 	if proxy.GetClassID() != classID {
-		return nil, fmt.Errorf("instance type is not `%s`", classID)
+		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
 	return proxy, nil
 }

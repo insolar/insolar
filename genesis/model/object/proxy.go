@@ -14,13 +14,9 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
-import (
-	"github.com/insolar/insolar/genesis/model/object"
-)
-
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(*object.Reference, string) (object.Proxy, error)
+// Proxy marks instance as proxy object.
+type Proxy interface {
+	Child
 }

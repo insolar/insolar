@@ -92,16 +92,16 @@ func (p *mockParentWithError) GetChild(key string) (object.Child, error) {
 
 func TestNewChildResolver(t *testing.T) {
 	mockParent := &mockParent{}
-	mapStorage := NewChildResolver(mockParent)
+	mapStorage := newChildResolver(mockParent)
 
-	assert.Equal(t, &ChildResolver{
+	assert.Equal(t, &childResolver{
 		parent: mockParent,
 	}, mapStorage)
 }
 
 func TestChildResolver_GetObject_No_Object(t *testing.T) {
 	mockParent := &mockParentWithError{}
-	resolver := NewChildResolver(mockParent)
+	resolver := newChildResolver(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ChildScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
@@ -112,7 +112,7 @@ func TestChildResolver_GetObject_No_Object(t *testing.T) {
 
 func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
 	mockParent := &mockParent{}
-	resolver := NewChildResolver(mockParent)
+	resolver := newChildResolver(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ChildScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
@@ -123,7 +123,7 @@ func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
 
 func TestChildResolver_GetObject(t *testing.T) {
 	mockParent := &mockParent{}
-	resolver := NewChildResolver(mockParent)
+	resolver := newChildResolver(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ChildScope)
 
 	obj, err := resolver.GetObject(ref, "mockChild")
