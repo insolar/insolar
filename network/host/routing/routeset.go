@@ -75,8 +75,15 @@ func (rs *RouteSet) Remove(node *RouteNode) {
 	}
 }
 
-// Extend adds a list of RouteNodes to RouteSet.
-func (rs *RouteSet) Extend(nodes []*RouteNode) {
+// RemoveMany removes list of RoutNodes from RouteSet
+func (rs *RouteSet) RemoveMany(nodes []*RouteNode) {
+	for _, n := range nodes {
+		rs.Remove(n)
+	}
+}
+
+// AppendMany adds a list of RouteNodes to RouteSet.
+func (rs *RouteSet) AppendMany(nodes []*RouteNode) {
 	for _, n := range nodes {
 		rs.Append(n)
 	}

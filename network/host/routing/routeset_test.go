@@ -122,7 +122,26 @@ func TestRouteSet_Remove(t *testing.T) {
 	assert.True(t, rs.Contains(node3))
 }
 
-func TestRouteSet_Extend(t *testing.T) {
+func TestRouteSet_RemoveMany(t *testing.T) {
+	rs := NewRouteSet()
+	var nodes []*RouteNode
+	nodes = append(nodes, createRouteNode("127.0.0.1:31337"))
+	nodes = append(nodes, createRouteNode("10.10.11.11:12345"))
+	nodes = append(nodes, createRouteNode("192.168.1.1:13666"))
+	for _, n := range nodes {
+		rs.Append(n)
+	}
+
+	for _, n := range nodes {
+		assert.True(t, rs.Contains(n))
+	}
+
+	rs.RemoveMany(nodes)
+
+	assert.Empty(t, rs.Nodes())
+}
+
+func TestRouteSet_AppendMany(t *testing.T) {
 	rs := NewRouteSet()
 
 	assert.Empty(t, rs.nodes)
@@ -130,7 +149,7 @@ func TestRouteSet_Extend(t *testing.T) {
 	node1 := createRouteNode("127.0.0.1:31337")
 	node2 := createRouteNode("10.10.11.11:12345")
 
-	rs.Extend([]*RouteNode{node1, node2})
+	rs.AppendMany([]*RouteNode{node1, node2})
 
 	assert.Equal(t, []*node.Node{node1.Node, node2.Node}, rs.nodes)
 }
