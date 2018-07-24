@@ -24,6 +24,8 @@ import (
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/satori/go.uuid"
 )
 
 type mockParent struct {
@@ -81,4 +83,147 @@ func TestNewReferenceDomain_WithNoParent(t *testing.T) {
 	expected.Parent = refDomain
 
 	assert.Equal(t, expected, refDomain)
+}
+
+func TestReferenceDomain_GetClassID(t *testing.T) {
+	refDomain := newReferenceDomain(nil)
+	domainID := refDomain.GetClassID()
+	assert.Equal(t, class.ReferenceDomainID, domainID)
+}
+
+func TestReferenceDomain_RegisterReference(t *testing.T) {
+	domain := "1"
+	record := "1"
+	refObject, err := object.NewReference(record, domain, object.GlobalScope)
+	assert.Nil(t, err)
+
+	refDomain := newReferenceDomain(nil)
+	registered, err := refDomain.RegisterReference(refObject)
+
+	assert.Nil(t, err)
+
+	_, err = uuid.FromString(registered)
+	assert.Nil(t, err)
+}
+
+func TestReferenceDomain_ResolveReference(t *testing.T) {
+	domain := "1"
+	record := "1"
+	refObject, err := object.NewReference(record, domain, object.GlobalScope)
+	assert.Nil(t, err)
+
+	refDomain := newReferenceDomain(nil)
+	registered, err := refDomain.RegisterReference(refObject)
+	assert.Nil(t, err)
+
+	resolved, err := refDomain.ResolveReference(registered)
+	assert.Nil(t, err)
+	assert.Equal(t, domain, resolved.Domain)
+	assert.Equal(t, record, resolved.Record)
+
+}
+
+func TestReferenceDomain_ResolveReference_IncorrectRef(t *testing.T) {
+	refDomain := newReferenceDomain(nil)
+	_, err := refDomain.ResolveReference("1")
+	assert.NotNil(t, err)
+}
+
+func TestNewReferenceDomainProxy(t *testing.T) {
+	parent := &mockParent{}
+	refDomainProxy := newReferenceDomainProxy(parent)
+
+	assert.Equal(t, &referenceDomainProxy{
+		instance: newReferenceDomain(parent),
+	}, refDomainProxy)
+}
+
+func TestReferenceDomainProxy_RegisterReference(t *testing.T) {
+	domain := "1"
+	record := "1"
+	refObject, err := object.NewReference(record, domain, object.GlobalScope)
+	assert.Nil(t, err)
+
+	parent := &mockParent{}
+	refDomainProxy := newReferenceDomainProxy(parent)
+
+	registered, err := refDomainProxy.RegisterReference(refObject)
+	assert.Nil(t, err)
+
+	_, err = uuid.FromString(registered)
+	assert.Nil(t, err)
+}
+
+func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
+	domain := "1"
+	record := "1"
+	refObject, err := object.NewReference(record, domain, object.GlobalScope)
+	assert.Nil(t, err)
+
+	parent := &mockParent{}
+	refDomainProxy := newReferenceDomainProxy(parent)
+
+	registered, err := refDomainProxy.RegisterReference(refObject)
+	assert.Nil(t, err)
+
+	resolved, err := refDomainProxy.ResolveReference(registered)
+	assert.Nil(t, err)
+	assert.Equal(t, resolved.Domain, domain)
+	assert.Equal(t, resolved.Record, record)
+}
+
+func TestReferenceDomainProxy_GetReference(t *testing.T) {
+	parent := &mockParent{}
+	refDomainProxy := newReferenceDomainProxy(parent)
+
+	reference := refDomainProxy.GetReference()
+	// TODO should return actual reference
+	assert.Nil(t, reference)
+}
+
+func TestReferenceDomainProxy_GetParent(t *testing.T) {
+	parent := &mockParent{}
+	refDomainProxy := newReferenceDomainProxy(parent)
+
+	returnedParent := refDomainProxy.GetParent()
+	assert.Equal(t, parent, returnedParent)
+}
+
+func TestReferenceDomainProxy_GetClassID(t *testing.T) {
+	parent := &mockParent{}
+	refDomainProxy := newReferenceDomainProxy(parent)
+
+	id := refDomainProxy.GetClassID()
+	assert.Equal(t, class.ReferenceDomainID, id)
+}
+
+func TestNewReferenceDomainFactory(t *testing.T) {
+	expected := &referenceDomainFactory{}
+	factory := NewReferenceDomainFactory()
+
+	assert.Equal(t, expected, factory)
+}
+
+func TestReferenceDomainFactory_GetClassID(t *testing.T) {
+	factory := NewReferenceDomainFactory()
+	id := factory.GetClassID()
+
+	assert.Equal(t, class.ReferenceDomainID, id)
+}
+
+func TestReferenceDomainFactory_GetReference(t *testing.T) {
+	factory := NewReferenceDomainFactory()
+	reference := factory.GetReference()
+
+	assert.Nil(t, reference)
+}
+
+func TestReferenceDomainFactory_Create(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewReferenceDomainFactory()
+	refDomainProxy := factory.Create(parent)
+
+	assert.Equal(t, &referenceDomainProxy{
+		instance: newReferenceDomain(parent),
+	}, refDomainProxy)
 }
