@@ -29,11 +29,11 @@ func TestNewResolverHandler(t *testing.T) {
 	handler := NewResolverHandler(mockParent)
 
 	assert.Equal(t, &resolverHandler{
-		globalReserver: GlobalResolver,
-		childReserver: &childResolver{
+		globalResolver: GlobalResolver,
+		childResolver: &childResolver{
 			parent: mockParent,
 		},
-		contextReserver: &contextResolver{
+		contextResolver: &contextResolver{
 			parent: mockParent,
 		},
 	}, handler)

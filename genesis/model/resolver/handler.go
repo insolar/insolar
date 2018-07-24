@@ -23,19 +23,17 @@ import (
 )
 
 type resolverHandler struct {
-	globalReserver  *globalResolver
-	childReserver   *childResolver
-	contextReserver *contextResolver
+	globalResolver  *globalResolver
+	childResolver   *childResolver
+	contextResolver *contextResolver
 }
 
 // NewResolverHandler creates new resolverHandler instance.
 func NewResolverHandler(p object.Parent) Resolver {
-	childReserver := newChildResolver(p)
-	contextReserver := newContextResolver(p)
 	return &resolverHandler{
-		globalReserver:  GlobalResolver,
-		childReserver:   childReserver,
-		contextReserver: contextReserver,
+		globalResolver:  GlobalResolver,
+		childResolver:   newChildResolver(p),
+		contextResolver: newContextResolver(p),
 	}
 }
 
@@ -43,11 +41,11 @@ func NewResolverHandler(p object.Parent) Resolver {
 func (r *resolverHandler) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
 	switch ref.Scope {
 	case object.GlobalScope:
-		return r.globalReserver.GetObject(ref, classID)
+		return r.globalResolver.GetObject(ref, classID)
 	case object.ContextScope:
-		return r.contextReserver.GetObject(ref, classID)
+		return r.contextResolver.GetObject(ref, classID)
 	case object.ChildScope:
-		return r.childReserver.GetObject(ref, classID)
+		return r.childResolver.GetObject(ref, classID)
 	default:
 		return nil, fmt.Errorf("unknown scope type: %d", ref.Scope)
 	}
