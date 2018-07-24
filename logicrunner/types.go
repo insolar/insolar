@@ -1,11 +1,30 @@
 package logicrunner
 
 type Object struct {
+	MachineType MachineType
+	Reference   string
 }
 
 type API struct {
 }
 
-func (API) Call(address string, method string, args [][]byte) {
-	panic("implement me")
+type Arguments []byte
+type Type int
+type FuncTag int
+type FuncSig struct {
+	Args []Type
+	Ret  []Type
+	Tags []FuncTag
+}
+
+type Func struct {
+	Name string
+	Sig  FuncSig
+}
+
+type Interface []Func
+
+type Value struct {
+	Type  Type
+	Value []byte
 }
