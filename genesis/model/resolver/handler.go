@@ -28,7 +28,8 @@ type resolverHandler struct {
 	contextReserver *contextResolver
 }
 
-func NewResolverHandler(p object.Parent) *resolverHandler {
+// NewResolverHandler creates new resolverHandler instance.
+func NewResolverHandler(p object.Parent) Resolver {
 	childReserver := newChildResolver(p)
 	contextReserver := newContextResolver(p)
 	return &resolverHandler{
@@ -38,6 +39,7 @@ func NewResolverHandler(p object.Parent) *resolverHandler {
 	}
 }
 
+// GetObject reserve object by its reference and return its proxy.
 func (r *resolverHandler) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
 	switch ref.Scope {
 	case object.GlobalScope:

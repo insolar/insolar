@@ -22,12 +22,12 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// GlobalResolver is resolver for GlobalScope references.
+// globalResolver is resolver for GlobalScope references.
 type globalResolver struct {
 	globalInstanceMap *map[*object.Reference]object.Proxy
 }
 
-// NewGlobalResolver creates new GlobalResolver instance.
+// newGlobalResolver creates new globalResolver instance.
 // TODO: pass map?
 func newGlobalResolver() *globalResolver {
 	instanceMap := make(map[*object.Reference]object.Proxy)
@@ -50,4 +50,5 @@ func (r *globalResolver) GetObject(ref *object.Reference, classID string) (objec
 	return proxy, nil
 }
 
+// GlobalResolver is a public globalResolver instance for reserving all global references
 var GlobalResolver = newGlobalResolver()

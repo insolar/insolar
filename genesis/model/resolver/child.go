@@ -22,12 +22,12 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// ChildResolver is resolver for ChildScope references.
+// childResolver is resolver for ChildScope references.
 type childResolver struct {
 	parent object.Parent
 }
 
-// NewChildResolver creates new ChildResolver instance.
+// newChildResolver creates new childResolver instance.
 func newChildResolver(parent object.Parent) *childResolver {
 	return &childResolver{
 		parent: parent,

@@ -23,12 +23,12 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// ContextResolver is resolver for ContextScope references.
+// contextResolver is resolver for ContextScope references.
 type contextResolver struct {
 	parent object.Parent
 }
 
-// NewContextResolver creates new ContextResolver instance.
+// newContextResolver creates new contextResolver instance.
 func newContextResolver(parent object.Parent) *contextResolver {
 	return &contextResolver{
 		parent: parent,
