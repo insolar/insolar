@@ -310,8 +310,7 @@ func (dht *DHT) Bootstrap() error {
 	}
 
 	wg.Wait()
-	err := dht.iterateHt(cb)
-	return err
+	return dht.iterateHt(cb)
 }
 
 func (dht *DHT) iterateHt(cb ContextBuilder) error {
