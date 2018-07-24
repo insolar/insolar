@@ -49,3 +49,5 @@ func (r *globalResolver) GetObject(ref *object.Reference, classID string) (objec
 	}
 	return proxy, nil
 }
+
+var GlobalResolver = newGlobalResolver()
