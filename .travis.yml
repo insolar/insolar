@@ -1,5 +1,8 @@
 language: go
 
+# Faster container-based builds
+sudo: false
+
 go:
   - "1.x"
 
