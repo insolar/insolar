@@ -50,5 +50,5 @@ func (r *globalResolver) GetObject(ref *object.Reference, classID string) (objec
 	return proxy, nil
 }
 
-// GlobalResolver is a public globalResolver instance for reserving all global references
+// GlobalResolver is a public globalResolver instance for resolving all global references
 var GlobalResolver = newGlobalResolver()
