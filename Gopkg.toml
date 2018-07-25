@@ -25,18 +25,6 @@
 #   unused-packages = true
 
 
-[prune]
-  go-tests = true
-  unused-packages = true
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/jbenet/go-base58"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/stretchr/testify"
-
 [[constraint]]
   branch = "master"
   name = "github.com/anacrolix/utp"
@@ -46,10 +34,25 @@
   name = "github.com/ccding/go-stun"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/chzyer/readline"
-  version = "1.4"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/jbenet/go-base58"
 
 [[constraint]]
   branch = "master"
   name = "github.com/satori/go.uuid"
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/stretchr/testify"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/syndtr/goleveldb"
+
+[prune]
+  go-tests = true
+  unused-packages = true
