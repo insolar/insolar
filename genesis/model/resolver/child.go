@@ -22,27 +22,27 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// ChildResolver is resolver for ChildScope references.
-type ChildResolver struct {
+// childResolver is resolver for ChildScope references.
+type childResolver struct {
 	parent object.Parent
 }
 
-// NewChildResolver creates new ChildResolver instance.
-func NewChildResolver(parent object.Parent) *ChildResolver {
-	return &ChildResolver{
+// newChildResolver creates new childResolver instance.
+func newChildResolver(parent object.Parent) *childResolver {
+	return &childResolver{
 		parent: parent,
 	}
 }
 
-// GetObject reserve object by its reference and return its proxy.
-func (r *ChildResolver) GetObject(ref *object.Reference, classID string) (Proxy, error) {
+// GetObject resolve object by its reference and return its proxy.
+func (r *childResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
 	// TODO: check ref.Scope
 	obj, err := r.parent.GetChild(ref.Record)
 	if err != nil {
 		return nil, err
 	}
 
-	proxy, ok := obj.(Proxy)
+	proxy, ok := obj.(object.Proxy)
 	if !ok {
 		return nil, fmt.Errorf("object is not Proxy")
 	}
