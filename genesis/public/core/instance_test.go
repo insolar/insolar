@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +44,7 @@ func (p *mockProxy) GetParent() object.Parent {
 
 type mockFactory struct{}
 
-func (f *mockFactory) Create(parent object.Parent) resolver.Proxy {
+func (f *mockFactory) Create(parent object.Parent) object.Proxy {
 	return &mockProxy{
 		parent: parent,
 	}

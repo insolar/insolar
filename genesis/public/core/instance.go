@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // InstanceDomainName is a name for instance domain.
@@ -68,13 +67,13 @@ func (id *instanceDomain) CreateInstance(fc factory.Factory) (string, error) {
 }
 
 // GetInstance returns instance from its record in domain storage.
-func (id *instanceDomain) GetInstance(record string) (resolver.Proxy, error) {
+func (id *instanceDomain) GetInstance(record string) (object.Proxy, error) {
 	instance, err := id.ChildStorage.Get(record)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := instance.(resolver.Proxy)
+	result, ok := instance.(object.Proxy)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not `Proxy` instance", record)
 	}
