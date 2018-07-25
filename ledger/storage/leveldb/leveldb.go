@@ -31,15 +31,21 @@ const (
 	dbDirPath = "_db"
 )
 
-type levelLedger struct {
-	db *leveldb.DB
+// LevelLedger represents ledger's LevelDB storage.
+type LevelLedger struct {
+	// LDB contains LevelDB database instance.
+	LDB *leveldb.DB
 }
 
-func InitDB() (*levelLedger, error) {
+// InitDB returns LevelLedger with LevelDB initialized with default settings.
+func InitDB() (*LevelLedger, error) {
+	// Options struct doc: https://godoc.org/github.com/syndtr/goleveldb/leveldb/opt#Options.
 	opts := &opt.Options{
-		AltFilters:                            nil,
-		BlockCacher:                           opt.LRUCacher,
-		BlockCacheCapacity:                    32 * 1024 * 1024, // Default is 8 MiB
+		AltFilters:  nil,
+		BlockCacher: opt.LRUCacher,
+		// BlockCacheCapacity increased to 32MiB from default 8 MiB.
+		// BlockCacheCapacity defines the capacity of the 'sorted table' block caching.
+		BlockCacheCapacity:                    32 * 1024 * 1024,
 		BlockRestartInterval:                  16,
 		BlockSize:                             4 * 1024,
 		CompactionExpandLimitFactor:           25,
@@ -49,7 +55,11 @@ func InitDB() (*levelLedger, error) {
 		CompactionTableSize:                   2 * 1024 * 1024,
 		CompactionTableSizeMultiplier:         1.0,
 		CompactionTableSizeMultiplierPerLevel: nil,
-		CompactionTotalSize:                   32 * 1024 * 1024, // Default is 10 MiB
+		// CompactionTotalSize increased to 32MiB from default 10 MiB.
+		// CompactionTotalSize limits total size of 'sorted table' for each level.
+		// The limits for each level will be calculated as:
+		//   CompactionTotalSize * (CompactionTotalSizeMultiplier ^ Level)
+		CompactionTotalSize:                   32 * 1024 * 1024,
 		CompactionTotalSizeMultiplier:         10.0,
 		CompactionTotalSizeMultiplierPerLevel: nil,
 		Comparer:                     comparer.DefaultComparer,
@@ -82,17 +92,17 @@ func InitDB() (*levelLedger, error) {
 		return nil, err
 	}
 
-	return &levelLedger{
-		db: db,
+	return &LevelLedger{
+		LDB: db,
 	}, nil
 }
 
 // Get returns record from leveldb by timeslot and hash passed in RecordKey.
-func (ll *levelLedger) Get(k storage.RecordKey) (rec record.Record, found bool) {
+func (ll *LevelLedger) Get(k storage.RecordKey) (rec record.Record, found bool) {
 	return nil, false
 }
 
 // Set stores record in leveldb
-func (ll *levelLedger) Set(record record.Record) error {
+func (ll *LevelLedger) Set(record record.Record) error {
 	return nil
 }
