@@ -38,7 +38,7 @@ func TestGlobalResolver_GetObject_No_Object(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.Equal(t, "reference with address `#1.#1` not found", err.Error())
+	assert.EqualError(t, err, "reference with address `#1.#1` not found")
 	assert.Nil(t, obj)
 }
 
@@ -50,7 +50,7 @@ func TestGlobalResolver_GetObject_Wrong_classID(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.Equal(t, "instance class is not `someClass`", err.Error())
+	assert.EqualError(t, err, "instance class is not `someClass`")
 	assert.Nil(t, obj)
 }
 
@@ -62,6 +62,6 @@ func TestGlobalResolver_GetObject(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, "mockParent")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, mockParent, obj)
 }

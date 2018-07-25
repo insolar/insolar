@@ -106,7 +106,7 @@ func TestChildResolver_GetObject_No_Object(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.Equal(t, "object with record 1 does not exist", err.Error())
+	assert.EqualError(t, err, "object with record 1 does not exist")
 	assert.Nil(t, obj)
 }
 
@@ -117,7 +117,7 @@ func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.Equal(t, "instance class is not `someClass`", err.Error())
+	assert.EqualError(t, err, "instance class is not `someClass`")
 	assert.Nil(t, obj)
 }
 
@@ -128,6 +128,6 @@ func TestChildResolver_GetObject(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, "mockChild")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, child, obj)
 }

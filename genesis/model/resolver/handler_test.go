@@ -47,7 +47,7 @@ func TestResolverHandler_GetObject_GlobalScope(t *testing.T) {
 
 	obj, err := resolverHandler.GetObject(ref, "mockParent")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, mockParent, obj)
 }
 
@@ -58,7 +58,7 @@ func TestResolverHandler_GetObject_ChildScope(t *testing.T) {
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, child, obj)
 }
 
@@ -73,7 +73,7 @@ func TestResolverHandler_GetObject_ContextScope(t *testing.T) {
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, child, obj)
 }
 
@@ -86,6 +86,6 @@ func TestResolverHandler_GetObject_default(t *testing.T) {
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 
-	assert.Equal(t, "unknown scope type: 10000", err.Error())
+	assert.EqualError(t, err, "unknown scope type: 10000")
 	assert.Nil(t, obj)
 }
