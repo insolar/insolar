@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package ledger contains high level interfaces to storage engine and multiple record types
-package ledger
+// Package leveldb contains ledger implementation on top of Go's LevelDB engine
+package leveldb

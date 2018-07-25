@@ -14,5 +14,18 @@
  *    limitations under the License.
  */
 
-// Package ledger contains high level interfaces to storage engine and multiple record types
-package ledger
+package storage
+
+import "github.com/insolar/insolar/ledger/record"
+
+// RecordKey is a composite key for LedgerStore.Get method.
+type RecordKey struct {
+	Hash     []byte
+	TimeSlot uint64
+}
+
+// LedgerStorer represents append-only Ladger storage.
+type LedgerStorer interface {
+	Get(RecordKey) (record.Record, bool)
+	Set(record.Record) error
+}

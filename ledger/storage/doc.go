@@ -14,5 +14,6 @@
  *    limitations under the License.
  */
 
-// Package ledger contains high level interfaces to storage engine and multiple record types
-package ledger
+// Package storage contains low level interfaces and common structures
+// for concrete ledger storage engine implementations
+package storage
