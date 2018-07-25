@@ -15,3 +15,53 @@
  */
 
 package resolver
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewGlobalResolver(t *testing.T) {
+	resolver := newGlobalResolver()
+	instanceMap := make(map[*object.Reference]object.Proxy)
+
+	assert.Equal(t, &globalResolver{
+		globalInstanceMap: &instanceMap,
+	}, resolver)
+}
+
+func TestGlobalResolver_GetObject_No_Object(t *testing.T) {
+	resolver := newGlobalResolver()
+	ref, _ := object.NewReference("1", "1", object.GlobalScope)
+
+	obj, err := resolver.GetObject(ref, "someClass")
+
+	assert.EqualError(t, err, "reference with address `#1.#1` not found")
+	assert.Nil(t, obj)
+}
+
+func TestGlobalResolver_GetObject_Wrong_classID(t *testing.T) {
+	mockParent := &mockParent{}
+	resolver := newGlobalResolver()
+	ref, _ := object.NewReference("1", "1", object.GlobalScope)
+	(*resolver.globalInstanceMap)[ref] = mockParent
+
+	obj, err := resolver.GetObject(ref, "someClass")
+
+	assert.EqualError(t, err, "instance class is not `someClass`")
+	assert.Nil(t, obj)
+}
+
+func TestGlobalResolver_GetObject(t *testing.T) {
+	mockParent := &mockParent{}
+	resolver := newGlobalResolver()
+	ref, _ := object.NewReference("1", "1", object.GlobalScope)
+	(*resolver.globalInstanceMap)[ref] = mockParent
+
+	obj, err := resolver.GetObject(ref, "mockParent")
+
+	assert.NoError(t, err)
+	assert.Equal(t, mockParent, obj)
+}

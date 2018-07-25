@@ -23,6 +23,9 @@
 out
 gen
 
+### VSCode configuration
+.vscode
+
 # Go dep
 vendor
 

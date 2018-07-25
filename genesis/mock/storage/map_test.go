@@ -37,7 +37,7 @@ func TestMapStorage_Set(t *testing.T) {
 
 	key, err := mapStorage.Set(value)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Len(t, mapStorage.storage, 1)
 	assert.Equal(t, value, mapStorage.storage[key])
 	assert.Equal(t, []string{key}, mapStorage.keys)
@@ -50,7 +50,7 @@ func TestMapStorage_Get(t *testing.T) {
 
 	storedValue, err := mapStorage.Get(key)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, value, storedValue)
 }
 
@@ -60,7 +60,7 @@ func TestMapStorage_Get_Error(t *testing.T) {
 
 	storedValue, err := mapStorage.Get(key)
 
-	assert.Equal(t, "object with record some key does not exist", err.Error())
+	assert.EqualError(t, err, "object with record some key does not exist")
 	assert.Nil(t, storedValue)
 }
 

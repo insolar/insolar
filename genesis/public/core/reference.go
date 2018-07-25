@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // ReferenceDomainName is a name for reference domain.
@@ -139,7 +138,7 @@ func (adf *referenceDomainFactory) GetReference() *object.Reference {
 }
 
 // Create factory method for new ReferenceDomain instances.
-func (adf *referenceDomainFactory) Create(parent object.Parent) resolver.Proxy {
+func (adf *referenceDomainFactory) Create(parent object.Parent) object.Proxy {
 	proxy := newReferenceDomainProxy(parent)
 	_, err := parent.AddChild(proxy)
 	if err != nil {
