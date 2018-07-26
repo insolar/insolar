@@ -19,6 +19,7 @@ package core
 import (
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
+	"github.com/insolar/insolar/genesis/model/object"
 )
 
 // ClassDomainName is a name for class domain.
@@ -32,4 +33,16 @@ type ClassDomain interface {
 	RegisterClass(factory.Factory) (string, error)
 	// GetClass provides factory instance from record.
 	GetClass(string) (factory.Factory, error)
+}
+
+type classDomain struct {
+	domain.BaseDomain
+}
+
+// newClassDomain creates new instance of ClassDomain
+func newClassDomain(parent object.Parent) *classDomain {
+	classDomain := &classDomain{
+		BaseDomain: *domain.NewBaseDomain(parent, ClassDomainName),
+	}
+	return classDomain
 }
