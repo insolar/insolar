@@ -231,3 +231,37 @@ func TestInstanceDomainProxy_GetClassID(t *testing.T) {
 
 	assert.Equal(t, class.InstanceDomainID, proxy.GetClassID())
 }
+
+func TestNewInstanceDomainFactory(t *testing.T) {
+	factory := NewInstanceDomainFactory()
+	assert.Equal(t, &instanceDomainFactory{}, factory)
+}
+
+func TestInstanceDomainFactory_GetClassID(t *testing.T) {
+	factory := NewInstanceDomainFactory()
+	assert.Equal(t, class.InstanceDomainID, factory.GetClassID())
+}
+
+func TestInstanceDomainFactory_GetReference(t *testing.T) {
+	factory := NewInstanceDomainFactory()
+	assert.Nil(t, factory.GetReference())
+}
+
+func TestInstanceDomainFactory_Create(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewInstanceDomainFactory()
+	proxy := factory.Create(parent)
+	instDomain, _ := newInstanceDomain(parent)
+
+	assert.Equal(t, &instanceDomainProxy{
+		instance: instDomain,
+	}, proxy)
+}
+
+func TestInstanceDomainFactory_CreateWithError(t *testing.T) {
+	parent := &mockParentWithError{}
+	factory := NewInstanceDomainFactory()
+	refDomainProxy := factory.Create(parent)
+
+	assert.Nil(t, refDomainProxy)
+}
