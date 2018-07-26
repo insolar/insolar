@@ -33,17 +33,17 @@ Resolver makes possible for smart contracts to interact with each other.
 A method for resolving is provided for every type of reference.
 
 ### [Global](https://godoc.org/github.com/insolar/insolar/genesis/model/resolver/global.go)
-Reserve references of `GlobalScope` type.
+Resolve references of `GlobalScope` type.
 `GlobalScope` references are global reference, must be resolved via `ReferenceDomain`.
  Object with this type of reference consider as public. 
 
 
 ### [Context](https://godoc.org/github.com/insolar/insolar/genesis/model/resolver/context.go)
-Reserve references of `ContextScope` type.
+Resolve references of `ContextScope` type.
 `ContextScope` references point to an object within a context provided by parent.
 It may be a child or any other object available to the parent.
 
 
 ### [Child](https://godoc.org/github.com/insolar/insolar/genesis/model/resolver/child.go)
-Reserve references of `ChildScope` type.
+Resolve references of `ChildScope` type.
 `ChildScope` references to a child of an object which resolving the reference.

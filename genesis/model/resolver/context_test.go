@@ -76,9 +76,9 @@ func (p *mockParentNotChild) GetContextStorage() storage.Storage {
 
 func TestNewContextResolver(t *testing.T) {
 	mockParent := &mockParent{}
-	resolver := NewContextResolver(mockParent)
+	resolver := newContextResolver(mockParent)
 
-	assert.Equal(t, &ContextResolver{
+	assert.Equal(t, &contextResolver{
 		parent: mockParent,
 	}, resolver)
 }
@@ -88,12 +88,12 @@ func TestContextResolver_GetObject_No_Object(t *testing.T) {
 	mockParent := &mockParent{
 		ContextStorage: contextStorage,
 	}
-	resolver := NewContextResolver(mockParent)
+	resolver := newContextResolver(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.Equal(t, "object with record 1 does not exist", err.Error())
+	assert.EqualError(t, err, "object with record 1 does not exist")
 	assert.Nil(t, obj)
 }
 
@@ -103,12 +103,12 @@ func TestContextResolver_GetObject_Wrong_classID(t *testing.T) {
 	mockParent := &mockParent{
 		ContextStorage: contextStorage,
 	}
-	resolver := NewContextResolver(mockParent)
+	resolver := newContextResolver(mockParent)
 	ref, _ := object.NewReference(record, "1", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.Equal(t, "instance class is not `someClass`", err.Error())
+	assert.EqualError(t, err, "instance class is not `someClass`")
 	assert.Nil(t, obj)
 }
 
@@ -120,12 +120,12 @@ func TestContextResolver_GetObject_Not_Child(t *testing.T) {
 		ContextStorage: parentContextStorage,
 	}
 
-	resolver := NewContextResolver(parent)
+	resolver := newContextResolver(parent)
 	ref, _ := object.NewReference(record, "1", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.Equal(t, fmt.Sprintf("object with name #1.#%s does not exist", record), err.Error())
+	assert.EqualError(t, err, fmt.Sprintf("object with name #1.#%s does not exist", record))
 	assert.Nil(t, obj)
 }
 
@@ -135,11 +135,11 @@ func TestContextResolver_GetObject(t *testing.T) {
 	mockParent := &mockParent{
 		ContextStorage: contextStorage,
 	}
-	resolver := NewContextResolver(mockParent)
+	resolver := newContextResolver(mockParent)
 	ref, _ := object.NewReference(record, "1", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "mockChild")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, child, obj)
 }

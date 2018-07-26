@@ -29,7 +29,7 @@ func TestNewReference(t *testing.T) {
 	record := "1"
 	ref, err := NewReference(domain, record, GlobalScope)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, &Reference{
 		Domain: domain,
 		Record: record,
@@ -43,7 +43,7 @@ func TestNewReference_Error(t *testing.T) {
 	unknownScope := ScopeType(100)
 	ref, err := NewReference(domain, record, unknownScope)
 
-	assert.Equal(t, "unknown scope type: 100", err.Error())
+	assert.EqualError(t, err, "unknown scope type: 100")
 	assert.Nil(t, ref)
 }
 

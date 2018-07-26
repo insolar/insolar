@@ -14,13 +14,18 @@
  *    limitations under the License.
  */
 
-package resolver
+package storage
 
-import (
-	"github.com/insolar/insolar/genesis/model/object"
-)
+import "github.com/insolar/insolar/ledger/record"
 
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(*object.Reference, string) (object.Proxy, error)
+// RecordKey is a composite key for LedgerStore.Get method.
+type RecordKey struct {
+	Hash     []byte
+	TimeSlot uint64
+}
+
+// LedgerStorer represents append-only Ladger storage.
+type LedgerStorer interface {
+	Get(RecordKey) (record.Record, bool)
+	Set(record.Record) error
 }

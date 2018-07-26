@@ -139,7 +139,7 @@ func TestSmartContract_CreateComposite(t *testing.T) {
 
 	assert.Len(t, sc.CompositeMap, 1)
 	assert.Equal(t, sc.CompositeMap[composite.GetInterfaceKey()], composite)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestSmartContract_CreateComposite_Error(t *testing.T) {
@@ -151,7 +151,7 @@ func TestSmartContract_CreateComposite_Error(t *testing.T) {
 	res, err := sc.CreateComposite(&compositeFactory)
 
 	assert.Nil(t, res)
-	assert.Equal(t, "delegate with name BaseComposite already exist", err.Error())
+	assert.EqualError(t, err, "delegate with name BaseComposite already exist")
 }
 
 func TestSmartContract_GetComposite(t *testing.T) {
@@ -163,7 +163,7 @@ func TestSmartContract_GetComposite(t *testing.T) {
 	res, err := sc.GetComposite(composite.GetInterfaceKey())
 
 	assert.Equal(t, composite, res)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestSmartContract_GetComposite_Error(t *testing.T) {
@@ -174,7 +174,7 @@ func TestSmartContract_GetComposite_Error(t *testing.T) {
 	res, err := sc.GetComposite(composite.GetInterfaceKey())
 
 	assert.Nil(t, res)
-	assert.Equal(t, "delegate with name BaseComposite does not exist", err.Error())
+	assert.EqualError(t, err, "delegate with name BaseComposite does not exist")
 }
 
 func TestSmartContract_GetOrCreateComposite_Get(t *testing.T) {
@@ -185,7 +185,7 @@ func TestSmartContract_GetOrCreateComposite_Get(t *testing.T) {
 
 	res, err := sc.GetOrCreateComposite(composite.GetInterfaceKey(), compositeFactory)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, composite, res)
 }
 
@@ -199,7 +199,7 @@ func TestSmartContract_GetOrCreateComposite_Create(t *testing.T) {
 
 	assert.Len(t, sc.CompositeMap, 1)
 	assert.Equal(t, sc.CompositeMap[composite.GetInterfaceKey()], res)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestSmartContract_GetOrCreateComposite_Error(t *testing.T) {
@@ -212,7 +212,7 @@ func TestSmartContract_GetOrCreateComposite_Error(t *testing.T) {
 	res, err := sc.GetOrCreateComposite(composite.GetInterfaceKey(), compositeFactory)
 
 	assert.Nil(t, res)
-	assert.Equal(t, "delegate with name BaseComposite already exist", err.Error())
+	assert.EqualError(t, err, "delegate with name BaseComposite already exist")
 }
 
 func TestSmartContract_GetChildStorage(t *testing.T) {
@@ -231,7 +231,7 @@ func TestSmartContract_AddChild(t *testing.T) {
 
 	res, err := sc.AddChild(child)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Len(t, sc.ChildStorage.GetKeys(), 1)
 	assert.Equal(t, sc.ChildStorage.GetKeys()[0], res)
 }
@@ -244,7 +244,7 @@ func TestSmartContract_GetChild(t *testing.T) {
 
 	res, err := sc.GetChild(key)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, child, res)
 }
 
@@ -255,7 +255,7 @@ func TestSmartContract_GetChild_Error(t *testing.T) {
 	res, err := sc.GetChild("someKey")
 
 	assert.Nil(t, res)
-	assert.Equal(t, "object with record someKey does not exist", err.Error())
+	assert.EqualError(t, err, "object with record someKey does not exist")
 }
 
 func TestSmartContract_GetContextStorage(t *testing.T) {

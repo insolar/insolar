@@ -22,22 +22,22 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// GlobalResolver is resolver for GlobalScope references.
-type GlobalResolver struct {
-	globalInstanceMap *map[*object.Reference]Proxy
+// globalResolver is resolver for GlobalScope references.
+type globalResolver struct {
+	globalInstanceMap *map[*object.Reference]object.Proxy
 }
 
-// NewGlobalResolver creates new GlobalResolver instance.
+// newGlobalResolver creates new globalResolver instance.
 // TODO: pass map?
-func NewGlobalResolver() *GlobalResolver {
-	instanceMap := new(map[*object.Reference]Proxy)
-	return &GlobalResolver{
-		globalInstanceMap: instanceMap,
+func newGlobalResolver() *globalResolver {
+	instanceMap := make(map[*object.Reference]object.Proxy)
+	return &globalResolver{
+		globalInstanceMap: &instanceMap,
 	}
 }
 
-// GetObject reserve object by its reference and return its proxy.
-func (r *GlobalResolver) GetObject(ref *object.Reference, classID string) (Proxy, error) {
+// GetObject resolve object by its reference and return its proxy.
+func (r *globalResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
 	// TODO: check ref.Scope
 	proxy, isExist := (*r.globalInstanceMap)[ref]
 	if !isExist {
@@ -45,7 +45,10 @@ func (r *GlobalResolver) GetObject(ref *object.Reference, classID string) (Proxy
 	}
 
 	if proxy.GetClassID() != classID {
-		return nil, fmt.Errorf("instance type is not `%s`", classID)
+		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
 	return proxy, nil
 }
+
+// GlobalResolver is a public globalResolver instance for resolving all global references
+var GlobalResolver = newGlobalResolver()

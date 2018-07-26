@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package ledger contains interfaces to storage engine and multiple record types
+// Package ledger contains high level interfaces to storage engine and multiple record types
 package ledger

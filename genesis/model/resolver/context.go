@@ -23,20 +23,20 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// ContextResolver is resolver for ContextScope references.
-type ContextResolver struct {
+// contextResolver is resolver for ContextScope references.
+type contextResolver struct {
 	parent object.Parent
 }
 
-// NewContextResolver creates new ContextResolver instance.
-func NewContextResolver(parent object.Parent) *ContextResolver {
-	return &ContextResolver{
+// newContextResolver creates new contextResolver instance.
+func newContextResolver(parent object.Parent) *contextResolver {
+	return &contextResolver{
 		parent: parent,
 	}
 }
 
-// GetObject reserve object by its reference and return its proxy.
-func (r *ContextResolver) GetObject(ref *object.Reference, classID string) (Proxy, error) {
+// GetObject resolve object by its reference and return its proxy.
+func (r *contextResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
 	// TODO: check ref.Scope
 	contextHolder := r.parent
 	obj, err := contextHolder.GetContextStorage().Get(ref.Record)
@@ -45,7 +45,7 @@ func (r *ContextResolver) GetObject(ref *object.Reference, classID string) (Prox
 		return nil, err
 	}
 
-	proxy, ok := obj.(Proxy)
+	proxy, ok := obj.(object.Proxy)
 	if !ok {
 		return nil, fmt.Errorf("object is not Proxy")
 	}
@@ -56,7 +56,7 @@ func (r *ContextResolver) GetObject(ref *object.Reference, classID string) (Prox
 			return nil, fmt.Errorf("object with name %s does not exist", ref)
 		}
 		contextHolder = contextHolderWithChildInterface.GetParent()
-		contextResolver := NewContextResolver(contextHolder)
+		contextResolver := newContextResolver(contextHolder)
 		proxy, err = contextResolver.GetObject(proxy.(*object.Reference), classID)
 		if err != nil {
 			return nil, err

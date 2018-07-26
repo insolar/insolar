@@ -18,15 +18,23 @@ package ledger
 
 import (
 	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage"
 )
 
-// Ledger is a storage engine interface
-type Ledger interface {
+// Ledgerer is high level Ledger interface
+// TODO: signature probably will change
+type Ledgerer interface {
 	Get(id record.Hash) (bool, record.Record)
 	Set(record record.Record) error
 }
 
-// NewLedger creates new ledger
+// Ledger defines parameters for running ledger storer
+// TODO: should implements Ledgerer interface
+type Ledger struct {
+	Store storage.LedgerStorer
+}
+
+// NewLedger creates new Ledger
 func NewLedger() (Ledger, error) {
-	return newLedger()
+	panic("implement me")
 }
