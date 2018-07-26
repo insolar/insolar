@@ -103,7 +103,7 @@ func TestInstanceDomain_CreateInstance(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestInstanceDomain_CreateInstanceWithError(t *testing.T) {
+func TestInstanceDomain_CreateInstance_WithError(t *testing.T) {
 	parent := &mockParent{}
 	instDomain, err := newInstanceDomain(parent)
 	assert.NoError(t, err)
@@ -137,4 +137,97 @@ func TestInstanceDomain_GetInstance_IncorrectRef(t *testing.T) {
 
 	_, err = instDomain.GetInstance("1")
 	assert.EqualError(t, err, "object with record 1 does not exist")
+}
+
+func TestNewInstanceDomainProxy(t *testing.T) {
+	parent := &mockParent{}
+	domain, err := newInstanceDomain(parent)
+	assert.NoError(t, err)
+
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &instanceDomainProxy{
+		instance: domain,
+	}, proxy)
+}
+
+func TestNewInstanceDomainProxy_WithNilParent(t *testing.T) {
+	_, err := newInstanceDomainProxy(nil)
+	assert.EqualError(t, err, "parent must not be nil")
+}
+
+func TestInstanceDomainProxy_CreateInstance(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	factory := &mockFactory{}
+	registered, err := proxy.CreateInstance(factory)
+	assert.NoError(t, err)
+
+	_, err = uuid.FromString(registered)
+	assert.NoError(t, err)
+}
+
+func TestInstanceDomainProxy_CreateInstance_WithError(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	factory := &mockFactoryError{}
+	_, err = proxy.CreateInstance(factory)
+	assert.EqualError(t, err, "factory returns nil")
+}
+
+func TestInstanceDomainProxy_GetInstance(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	factory := &mockFactory{}
+	registered, err := proxy.CreateInstance(factory)
+	assert.NoError(t, err)
+
+	resolved, err := proxy.GetInstance(registered)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &mockProxy{
+		parent: proxy.instance,
+	}, resolved)
+}
+
+func TestInstanceDomainProxy_GetReference(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	reference := proxy.GetReference()
+	// TODO should return actual reference
+	assert.Nil(t, reference)
+}
+
+func TestInstanceDomainProxy_GetInstance_IncorrectRef(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	_, err = proxy.GetInstance("1")
+	assert.EqualError(t, err, "object with record 1 does not exist")
+}
+
+func TestInstanceDomainProxy_GetParent(t *testing.T) {
+	parent := &mockParent{}
+	refDomainProxy := newReferenceDomainProxy(parent)
+
+	returnedParent := refDomainProxy.GetParent()
+	assert.Equal(t, parent, returnedParent)
+}
+
+func TestInstanceDomainProxy_GetClassID(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	assert.Equal(t, class.InstanceDomainID, proxy.GetClassID())
 }
