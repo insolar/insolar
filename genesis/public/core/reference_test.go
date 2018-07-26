@@ -100,9 +100,7 @@ func TestReferenceDomain_GetClassID(t *testing.T) {
 }
 
 func TestReferenceDomain_RegisterReference(t *testing.T) {
-	domain := "1"
-	record := "1"
-	refObject, err := object.NewReference(record, domain, object.GlobalScope)
+	refObject, err := object.NewReference("1", "1", object.GlobalScope)
 	assert.NoError(t, err)
 
 	refDomain := newReferenceDomain(nil)
@@ -115,9 +113,7 @@ func TestReferenceDomain_RegisterReference(t *testing.T) {
 }
 
 func TestReferenceDomain_ResolveReference(t *testing.T) {
-	domain := "1"
-	record := "1"
-	refObject, err := object.NewReference(record, domain, object.GlobalScope)
+	refObject, err := object.NewReference("1", "1", object.GlobalScope)
 	assert.NoError(t, err)
 
 	refDomain := newReferenceDomain(nil)
@@ -125,10 +121,9 @@ func TestReferenceDomain_ResolveReference(t *testing.T) {
 	assert.NoError(t, err)
 
 	resolved, err := refDomain.ResolveReference(registered)
-	assert.NoError(t, err)
-	assert.Equal(t, domain, resolved.Domain)
-	assert.Equal(t, record, resolved.Record)
 
+	assert.NoError(t, err)
+	assert.Equal(t, refObject, resolved)
 }
 
 func TestReferenceDomain_ResolveReference_IncorrectRef(t *testing.T) {
@@ -163,9 +158,7 @@ func TestReferenceDomainProxy_RegisterReference(t *testing.T) {
 }
 
 func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
-	domain := "1"
-	record := "1"
-	refObject, err := object.NewReference(record, domain, object.GlobalScope)
+	refObject, err := object.NewReference("1", "1", object.GlobalScope)
 	assert.NoError(t, err)
 
 	parent := &mockParent{}
@@ -175,9 +168,17 @@ func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
 	assert.NoError(t, err)
 
 	resolved, err := refDomainProxy.ResolveReference(registered)
+
 	assert.NoError(t, err)
-	assert.Equal(t, resolved.Domain, domain)
-	assert.Equal(t, resolved.Record, record)
+	assert.Equal(t, refObject, resolved)
+}
+
+func TestReferenceDomainProxy_ResolveReference_IncorrectRef(t *testing.T) {
+	parent := &mockParent{}
+	refDomainProxy := newReferenceDomainProxy(parent)
+
+	_, err := refDomainProxy.ResolveReference("1")
+	assert.EqualError(t, err, "object with record 1 does not exist")
 }
 
 func TestReferenceDomainProxy_GetReference(t *testing.T) {
