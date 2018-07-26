@@ -56,6 +56,7 @@ func (sc *BaseSmartContract) GetClassID() string {
 
 // GetReference return reference to BaseSmartContract instance.
 func (sc *BaseSmartContract) GetReference() *object.Reference {
+	// TODO should return actual reference
 	return sc.Reference
 }
 

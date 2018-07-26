@@ -28,13 +28,13 @@ import (
 // InstanceDomainName is a name for instance domain.
 const InstanceDomainName = "InstanceDomain"
 
-// InstanceDomain is a contract that...
+// InstanceDomain is a contract that stores instances of other domains
 type InstanceDomain interface {
 	// Base domain implementation.
 	domain.Domain
-	// CreateInstance is used to...
+	// CreateInstance is used to new instance as a child to domain storage.
 	CreateInstance(*factory.Factory) (string, error)
-	// GetInstance provides...
+	// GetInstance returns instance from its record in domain storage.
 	GetInstance(string) (*factory.Factory, error)
 }
 
@@ -43,11 +43,15 @@ type instanceDomain struct {
 }
 
 // newInstanceDomain creates new instance of InstanceDomain
-func newInstanceDomain(parent object.Parent) *instanceDomain {
+func newInstanceDomain(parent object.Parent) (*instanceDomain, error) {
+	if parent == nil {
+		return nil, fmt.Errorf("parent must not be nil")
+	}
+
 	instDomain := &instanceDomain{
 		BaseDomain: *domain.NewBaseDomain(parent, InstanceDomainName),
 	}
-	return instDomain
+	return instDomain, nil
 }
 
 // GetClassID return string representation of InstanceDomain's class.
@@ -58,6 +62,10 @@ func (id *instanceDomain) GetClassID() string {
 // CreateInstance create new instance as a child to domain storage.
 func (id *instanceDomain) CreateInstance(fc factory.Factory) (string, error) {
 	instance := fc.Create(id)
+	if instance == nil {
+		return "", fmt.Errorf("factory returns nil")
+	}
+
 	record, err := id.ChildStorage.Set(instance)
 	if err != nil {
 		return "", err
