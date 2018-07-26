@@ -3,11 +3,34 @@ package goplugin
 import (
 	"net/rpc"
 
+	"os/exec"
+
+	"time"
+
 	"github.com/insolar/insolar/logicrunner"
 )
 
 type GoPlugin struct {
 	DockerAddr string
+	DockerCmd  *exec.Cmd
+}
+
+func NewGoPlugin(addr string) (*GoPlugin, error) {
+	gp := GoPlugin{
+		DockerAddr: addr,
+		DockerCmd:  exec.Command("ginsider/ginsider"),
+	}
+	gp.DockerCmd.Start()
+	time.Sleep(100 * time.Millisecond)
+	go gp.Start()
+	return &gp, nil
+}
+
+func (gp *GoPlugin) Start() {
+}
+
+func (gp *GoPlugin) Stop() {
+	gp.DockerCmd.Process.Kill()
 }
 
 type CallReq struct {
@@ -33,8 +56,5 @@ func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrun
 	}
 	ret = Ret.Ret
 	err = Ret.Err
-}
-
-func New() GoPlugin {
-	return GoPlugin{} // TODO
+	return ret, err
 }
