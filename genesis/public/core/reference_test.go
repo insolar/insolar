@@ -17,6 +17,7 @@
 package core
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
@@ -63,6 +64,14 @@ func (p *mockParent) GetContext() []string {
 
 func (p *mockParent) GetContextStorage() storage.Storage {
 	return p.ContextStorage
+}
+
+type mockParentWithError struct {
+	mockParent
+}
+
+func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
+	return "", fmt.Errorf("add child error")
 }
 
 func TestNewReferenceDomain(t *testing.T) {
@@ -225,4 +234,12 @@ func TestReferenceDomainFactory_Create(t *testing.T) {
 	assert.Equal(t, &referenceDomainProxy{
 		instance: newReferenceDomain(parent),
 	}, refDomainProxy)
+}
+
+func TestReferenceDomainFactory_CreateWithError(t *testing.T) {
+	parent := &mockParentWithError{}
+	factory := NewReferenceDomainFactory()
+	refDomainProxy := factory.Create(parent)
+
+	assert.Nil(t, refDomainProxy)
 }
