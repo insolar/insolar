@@ -17,6 +17,9 @@
 package core
 
 import (
+	"fmt"
+
+	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -45,4 +48,41 @@ func newClassDomain(parent object.Parent) *classDomain {
 		BaseDomain: *domain.NewBaseDomain(parent, ClassDomainName),
 	}
 	return classDomain
+}
+
+func (cd *classDomain) GetClassID() string {
+	return class.ClsDomainID
+}
+func (cd *classDomain) RegisterClass(f factory.Factory) (string, error) {
+	recordID, err := cd.AddChild(f)
+	if err != nil {
+		return "", fmt.Errorf("class registration error")
+	}
+
+	return recordID, nil
+}
+
+func (cd *classDomain) GetClass(recordID string) (factory.Factory, error) {
+	cls, err := cd.GetChild(recordID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, ok := cls.(factory.Factory)
+	if !ok {
+		return nil, fmt.Errorf("object with record `%s` is not a Class", recordID)
+	}
+
+	return result, nil
+}
+
+type classDomainProxy struct {
+	instance *classDomain
+}
+
+// newClassDomainProxy creates new proxy and associate it with new instance of ClassDomain.
+func newClassDomainProxy(parent object.Parent) *classDomainProxy {
+	return &classDomainProxy{
+		instance: newClassDomain(parent),
+	}
 }

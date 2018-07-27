@@ -120,11 +120,20 @@ func (rdp *referenceDomainProxy) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
-type referenceDomainFactory struct{}
+type referenceDomainFactory struct {
+	parent object.Parent
+}
 
 // NewReferenceDomainFactory creates new factory for ReferenceDomain.
-func NewReferenceDomainFactory() factory.Factory {
-	return &referenceDomainFactory{}
+func NewReferenceDomainFactory(parent object.Parent) factory.Factory {
+	return &referenceDomainFactory{
+		parent: parent,
+	}
+}
+
+func (adf *referenceDomainFactory) GetParent() object.Parent {
+	// TODO: return real parent, fix tests
+	return nil
 }
 
 // GetClassID return string representation of ReferenceDomain's class.
