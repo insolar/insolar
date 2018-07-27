@@ -30,3 +30,6 @@ const DomainID = "Domain"
 
 // ReferenceDomainID is a string representation of class for AddressDomain interface implementations.
 const ReferenceDomainID = "ReferenceDomain"
+
+// InstanceDomainID is a string representation of class for InstanceDomain interface implementations.
+const InstanceDomainID = "InstanceDomain"
