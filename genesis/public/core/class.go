@@ -86,3 +86,20 @@ func newClassDomainProxy(parent object.Parent) *classDomainProxy {
 		instance: newClassDomain(parent),
 	}
 }
+
+//
+
+// GetReference proxy call for instance method.
+func (cdp *classDomainProxy) GetReference() *object.Reference {
+	return cdp.instance.GetReference()
+}
+
+// GetParent proxy call for instance method.
+func (cdp *classDomainProxy) GetParent() object.Parent {
+	return cdp.instance.GetParent()
+}
+
+// GetClassID proxy call for instance method.
+func (cdp *classDomainProxy) GetClassID() string {
+	return class.ClsDomainID
+}
