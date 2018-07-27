@@ -32,7 +32,7 @@ const InstanceDomainName = "InstanceDomain"
 type InstanceDomain interface {
 	// Base domain implementation.
 	domain.Domain
-	// CreateInstance is used to new instance as a child to domain storage.
+	// CreateInstance is used to create new instance as a child to domain storage.
 	CreateInstance(*factory.Factory) (string, error)
 	// GetInstance returns instance from its record in domain storage.
 	GetInstance(string) (*factory.Factory, error)
