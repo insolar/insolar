@@ -15,7 +15,9 @@
  */
 
 /*
-Package core allows to create ReferenceDomain - system domain that allow global reference resolving.
+Package core allows to create Genesis Domain
+
+ReferenceDomain - system domain that allow global reference resolving.
 
 Usage:
 
@@ -24,6 +26,16 @@ Usage:
 
 	record, err := refDomain.RegisterReference(someReference)
 	resolved, err := refDomain.ResolveReference(record)
+
+InstanceDomain - system domain that stores instances of other domains
+
+Usage:
+
+	factory := NewInstanceDomainFactory()
+	instDom := factory.Create(parent)
+
+	record, err := instDom.CreateInstance(someDomainFactory)
+	domainProxy, err := instDom.GetInstance(record)
 
 */
 package core
