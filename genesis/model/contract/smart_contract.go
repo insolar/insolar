@@ -22,12 +22,14 @@ import (
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // SmartContract marks that object is smart contract.
 // TODO: Composite work interface
 type SmartContract interface {
-	object.Callable
+	object.Child
+	InitiateResolver(self interface{})
 }
 
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.
@@ -37,16 +39,31 @@ type BaseSmartContract struct {
 	ChildStorage   storage.Storage
 	ContextStorage storage.Storage
 	Parent         object.Parent
+	Resolver       resolver.Resolver
 }
 
 // NewBaseSmartContract creates new BaseSmartContract instance with empty CompositeMap, ChildStorage and specific parent.
 func NewBaseSmartContract(parent object.Parent) *BaseSmartContract {
 	// TODO: NewCompositeHolder
-	return &BaseSmartContract{
+	sc := BaseSmartContract{
 		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
+	sc.InitiateResolver(sc)
+	return &sc
+}
+
+// InitiateResolver create resolver.
+func (sc *BaseSmartContract) InitiateResolver(self interface{}) {
+	if sc.Resolver != nil {
+		return
+	}
+	scAsParent, ok := self.(object.Parent)
+	if !ok {
+		sc.Resolver = resolver.NewHandler(nil)
+	}
+	sc.Resolver = resolver.NewHandler(scAsParent)
 }
 
 // GetClassID return string representation of object's class.

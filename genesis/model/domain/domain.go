@@ -35,10 +35,12 @@ type BaseDomain struct {
 
 // NewBaseDomain creates new BaseDomain instance.
 func NewBaseDomain(parent object.Parent, name string) *BaseDomain {
-	return &BaseDomain{
+	domain := BaseDomain{
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 		Name:              name,
 	}
+	domain.InitiateResolver(domain)
+	return &domain
 }
 
 // GetClassID return string representation of object's class.
