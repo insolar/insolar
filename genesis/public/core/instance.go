@@ -146,7 +146,7 @@ func (idf *instanceDomainFactory) GetReference() *object.Reference {
 	return nil
 }
 
-// Create factory method is used to create new InstanceDomain instances.
+// Create is factory method that used to create new InstanceDomain instances.
 func (idf *instanceDomainFactory) Create(parent object.Parent) object.Proxy {
 	proxy, err := newInstanceDomainProxy(parent)
 	if err != nil {
