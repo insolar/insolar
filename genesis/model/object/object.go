@@ -43,7 +43,7 @@ type Composite interface {
 
 // CompositeFactory allows to create new composites.
 type CompositeFactory interface {
-	Create() Composite
+	Create() (Composite, error)
 }
 
 // ComposingContainer allows to store composites.
