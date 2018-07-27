@@ -24,30 +24,49 @@ import (
 
 // globalResolver is resolver for GlobalScope references.
 type globalResolver struct {
-	globalInstanceMap *map[*object.Reference]object.Proxy
+	globalInstanceMap *map[string]object.Proxy
 }
 
-// newGlobalResolver creates new globalResolver instance.
-// TODO: pass map?
+// newGlobalResolver creates new globalResolver instance with empty map.
 func newGlobalResolver() *globalResolver {
-	instanceMap := make(map[*object.Reference]object.Proxy)
-	return &globalResolver{
-		globalInstanceMap: &instanceMap,
-	}
+	return &globalResolver{}
 }
 
 // GetObject resolve object by its reference and return its proxy.
-func (r *globalResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
-	// TODO: check ref.Scope
-	proxy, isExist := (*r.globalInstanceMap)[ref]
+func (r *globalResolver) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
+	ref, ok := reference.(*object.Reference)
+	if !ok {
+		return nil, fmt.Errorf("reference is not Reference class object")
+	}
+	parentProxy, isExist := (*r.globalInstanceMap)[ref.Domain]
 	if !isExist {
 		return nil, fmt.Errorf("reference with address `%s` not found", ref)
 	}
-
-	if proxy.GetClassID() != classID {
+	parent, ok := parentProxy.(object.Parent)
+	if !ok {
+		return nil, fmt.Errorf("object with domain `%s` can not have children", ref.Domain)
+	}
+	proxy, err := parent.GetChild(ref.Record)
+	if err != nil {
+		return nil, err
+	}
+	classIDString, ok := classID.(string)
+	if !ok {
+		return nil, fmt.Errorf("classID is not string")
+	}
+	if proxy.GetClassID() != classIDString {
 		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
 	return proxy, nil
+}
+
+// SetMap set globalInstanceMap into globalResolver
+func (r *globalResolver) SetMap(globalInstanceMap *map[string]object.Proxy) error {
+	if r.globalInstanceMap != nil {
+		return fmt.Errorf("map was already set")
+	}
+	r.globalInstanceMap = globalInstanceMap
+	return nil
 }
 
 // GlobalResolver is a public globalResolver instance for resolving all global references

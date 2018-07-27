@@ -36,8 +36,11 @@ func newContextResolver(parent object.Parent) *contextResolver {
 }
 
 // GetObject resolve object by its reference and return its proxy.
-func (r *contextResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
-	// TODO: check ref.Scope
+func (r *contextResolver) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
+	ref, ok := reference.(*object.Reference)
+	if !ok {
+		return nil, fmt.Errorf("reference is not Reference class object")
+	}
 	contextHolder := r.parent
 	obj, err := contextHolder.GetContextStorage().Get(ref.Record)
 
@@ -51,19 +54,24 @@ func (r *contextResolver) GetObject(ref *object.Reference, classID string) (obje
 	}
 
 	for proxy.GetClassID() == class.ReferenceID {
-		contextHolderWithChildInterface, ok := contextHolder.(object.Child)
-		if !ok {
+		contextHolderWithChildInterface, isOk := contextHolder.(object.Child)
+		if !isOk {
 			return nil, fmt.Errorf("object with name %s does not exist", ref)
 		}
 		contextHolder = contextHolderWithChildInterface.GetParent()
 		contextResolver := newContextResolver(contextHolder)
-		proxy, err = contextResolver.GetObject(proxy.(*object.Reference), classID)
+		newProxy, err := contextResolver.GetObject(proxy, classID)
 		if err != nil {
 			return nil, err
 		}
+		proxy = newProxy.(object.Proxy)
 	}
 
-	if proxy.GetClassID() != classID {
+	classIDString, ok := classID.(string)
+	if !ok {
+		return nil, fmt.Errorf("classID is not string")
+	}
+	if proxy.GetClassID() != classIDString {
 		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
 

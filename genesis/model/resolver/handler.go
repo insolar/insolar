@@ -22,15 +22,16 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-type resolverHandler struct {
+// Handler can resolver references from any allowed scopes
+type Handler struct {
 	globalResolver  *globalResolver
 	childResolver   *childResolver
 	contextResolver *contextResolver
 }
 
-// NewResolverHandler creates new resolverHandler instance.
-func NewResolverHandler(p object.Parent) Resolver {
-	return &resolverHandler{
+// NewHandler creates new resolverHandler instance.
+func NewHandler(p object.Parent) *Handler {
+	return &Handler{
 		globalResolver:  GlobalResolver,
 		childResolver:   newChildResolver(p),
 		contextResolver: newContextResolver(p),
@@ -38,7 +39,11 @@ func NewResolverHandler(p object.Parent) Resolver {
 }
 
 // GetObject resolve object by its reference and return its proxy.
-func (r *resolverHandler) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
+func (r *Handler) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
+	ref, ok := reference.(*object.Reference)
+	if !ok {
+		return nil, fmt.Errorf("reference is not Reference class object")
+	}
 	switch ref.Scope {
 	case object.GlobalScope:
 		return r.globalResolver.GetObject(ref, classID)
@@ -49,4 +54,10 @@ func (r *resolverHandler) GetObject(ref *object.Reference, classID string) (obje
 	default:
 		return nil, fmt.Errorf("unknown scope type: %d", ref.Scope)
 	}
+}
+
+// SetGlobalMap set globalInstanceMap into globalResolver
+func (r *Handler) SetGlobalMap(globalInstanceMap *map[string]object.Proxy) error {
+	err := r.globalResolver.SetMap(globalInstanceMap)
+	return err
 }
