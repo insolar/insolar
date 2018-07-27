@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -110,6 +111,7 @@ func TestNewBaseSmartContract(t *testing.T) {
 		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: childStorage,
 		Parent:       parent,
+		Resolver:     resolver.NewHandler(nil),
 	}, sc)
 }
 
@@ -285,4 +287,17 @@ func TestSmartContract_GetParent(t *testing.T) {
 	res := sc.GetParent()
 
 	assert.Equal(t, sc.Parent, res)
+}
+
+func TestSmartContract_InitiateResolver(t *testing.T) {
+	parent := &mockParent{}
+	sc := BaseSmartContract{
+		CompositeMap: make(map[string]object.Composite),
+		ChildStorage: storage.NewMapStorage(),
+		Parent:       parent,
+	}
+	assert.Nil(t, sc.Resolver)
+	sc.InitiateResolver(sc)
+
+	assert.NotNil(t, sc.Resolver)
 }

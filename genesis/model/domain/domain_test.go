@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -68,6 +69,7 @@ func TestNewBaseDomain(t *testing.T) {
 			CompositeMap: make(map[string]object.Composite),
 			ChildStorage: storage.NewMapStorage(),
 			Parent:       parent,
+			Resolver:     resolver.NewHandler(nil),
 		},
 		Name: "NewDomain",
 	}, domain)
