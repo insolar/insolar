@@ -68,12 +68,12 @@ func (f *mockFactoryError) Create(parent object.Parent) object.Proxy {
 
 func TestNewInstanceDomain(t *testing.T) {
 	parent := &mockParent{}
-	instDomain, err := newInstanceDomain(parent)
+	instDom, err := newInstanceDomain(parent)
 
 	assert.NoError(t, err)
 	assert.Equal(t, &instanceDomain{
 		BaseDomain: *domain.NewBaseDomain(parent, InstanceDomainName),
-	}, instDomain)
+	}, instDom)
 }
 
 func TestNewInstanceDomain_WithNilParent(t *testing.T) {
@@ -83,20 +83,20 @@ func TestNewInstanceDomain_WithNilParent(t *testing.T) {
 
 func TestInstanceDomain_GetClassID(t *testing.T) {
 	parent := &mockParent{}
-	instDomain, err := newInstanceDomain(parent)
+	instDom, err := newInstanceDomain(parent)
 	assert.NoError(t, err)
 
-	domainID := instDomain.GetClassID()
+	domainID := instDom.GetClassID()
 	assert.Equal(t, class.InstanceDomainID, domainID)
 }
 
 func TestInstanceDomain_CreateInstance(t *testing.T) {
 	parent := &mockParent{}
-	instDomain, err := newInstanceDomain(parent)
+	instDom, err := newInstanceDomain(parent)
 	assert.NoError(t, err)
 
 	factory := &mockFactory{}
-	registered, err := instDomain.CreateInstance(factory)
+	registered, err := instDom.CreateInstance(factory)
 	assert.NoError(t, err)
 
 	_, err = uuid.FromString(registered)
@@ -105,50 +105,50 @@ func TestInstanceDomain_CreateInstance(t *testing.T) {
 
 func TestInstanceDomain_CreateInstance_WithError(t *testing.T) {
 	parent := &mockParent{}
-	instDomain, err := newInstanceDomain(parent)
+	instDom, err := newInstanceDomain(parent)
 	assert.NoError(t, err)
 
 	factory := &mockFactoryError{}
-	_, err = instDomain.CreateInstance(factory)
+	_, err = instDom.CreateInstance(factory)
 	assert.EqualError(t, err, "factory returns nil")
 }
 
 func TestInstanceDomain_GetInstance(t *testing.T) {
 	parent := &mockParent{}
-	instDomain, err := newInstanceDomain(parent)
+	instDom, err := newInstanceDomain(parent)
 	assert.NoError(t, err)
 
 	factory := &mockFactory{}
-	registered, err := instDomain.CreateInstance(factory)
+	registered, err := instDom.CreateInstance(factory)
 	assert.NoError(t, err)
 
-	resolved, err := instDomain.GetInstance(registered)
+	resolved, err := instDom.GetInstance(registered)
 	assert.NoError(t, err)
 
 	assert.Equal(t, &mockProxy{
-		parent: instDomain,
+		parent: instDom,
 	}, resolved)
 }
 
 func TestInstanceDomain_GetInstance_IncorrectRef(t *testing.T) {
 	parent := &mockParent{}
-	instDomain, err := newInstanceDomain(parent)
+	instDom, err := newInstanceDomain(parent)
 	assert.NoError(t, err)
 
-	_, err = instDomain.GetInstance("1")
+	_, err = instDom.GetInstance("1")
 	assert.EqualError(t, err, "object with record 1 does not exist")
 }
 
 func TestNewInstanceDomainProxy(t *testing.T) {
 	parent := &mockParent{}
-	domain, err := newInstanceDomain(parent)
+	instDom, err := newInstanceDomain(parent)
 	assert.NoError(t, err)
 
 	proxy, err := newInstanceDomainProxy(parent)
 	assert.NoError(t, err)
 
 	assert.Equal(t, &instanceDomainProxy{
-		instance: domain,
+		instance: instDom,
 	}, proxy)
 }
 
@@ -218,9 +218,10 @@ func TestInstanceDomainProxy_GetInstance_IncorrectRef(t *testing.T) {
 
 func TestInstanceDomainProxy_GetParent(t *testing.T) {
 	parent := &mockParent{}
-	refDomainProxy := newReferenceDomainProxy(parent)
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
 
-	returnedParent := refDomainProxy.GetParent()
+	returnedParent := proxy.GetParent()
 	assert.Equal(t, parent, returnedParent)
 }
 
@@ -251,17 +252,24 @@ func TestInstanceDomainFactory_Create(t *testing.T) {
 	parent := &mockParent{}
 	factory := NewInstanceDomainFactory()
 	proxy := factory.Create(parent)
-	instDomain, _ := newInstanceDomain(parent)
+	instDom, _ := newInstanceDomain(parent)
 
 	assert.Equal(t, &instanceDomainProxy{
-		instance: instDomain,
+		instance: instDom,
 	}, proxy)
+}
+
+func TestInstanceDomainFactory_CreateWithNoParent(t *testing.T) {
+	factory := NewInstanceDomainFactory()
+	instDomProxy := factory.Create(nil)
+
+	assert.Nil(t, instDomProxy)
 }
 
 func TestInstanceDomainFactory_CreateWithError(t *testing.T) {
 	parent := &mockParentWithError{}
 	factory := NewInstanceDomainFactory()
-	refDomainProxy := factory.Create(parent)
+	instDomProxy := factory.Create(parent)
 
-	assert.Nil(t, refDomainProxy)
+	assert.Nil(t, instDomProxy)
 }
