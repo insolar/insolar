@@ -13,10 +13,8 @@ type GoInsider struct {
 }
 
 func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error {
-	*reply = goplugin.CallResp{
-		Ret: []byte{1, 2, 3, 4, 5},
-		Err: nil,
-	}
+	o := args.Object
+
 	return nil
 }
 
