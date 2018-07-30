@@ -22,18 +22,8 @@ import "time"
 type RequestRecord struct {
 	AppDataRecord
 
-	requester Reference
-	target    Reference
-}
-
-// Requester is a request author's global address.
-func (r *RequestRecord) Requester() Reference {
-	return r.requester
-}
-
-// Target is an address of contract that we want to execute, data that we want to get etc.
-func (r *RequestRecord) Target() Reference {
-	return r.target
+	Requester Reference
+	Target    Reference
 }
 
 // CallRequest is a contract execution request.
@@ -41,48 +31,33 @@ func (r *RequestRecord) Target() Reference {
 type CallRequest struct {
 	RequestRecord
 
-	callInterface       Reference
-	callMethodSignature uint
-	paramMemory         Memory
-}
-
-// CallInterface is a call interface address.
-func (r *CallRequest) CallInterface() Reference {
-	return r.callInterface
+	CallInterface       Reference
+	CallMethodSignature uint32
+	ParamMemory         Memory
 }
 
 // CallMethod is a contract method number to call.
-func (r *CallRequest) CallMethod() uint {
-	return r.callMethodSignature
+func (r *CallRequest) CallMethod() uint32 {
+	return r.CallMethodSignature
 }
 
 // Read allows to read Request's paramMemory.
 func (r *CallRequest) Read(p []byte) (n int, err error) {
-	return copy(p, r.paramMemory), nil
+	return copy(p, r.ParamMemory), nil
 }
 
 // Write allows to write to Request's paramMemory.
 func (r *CallRequest) Write(p []byte) (n int, err error) {
-	r.paramMemory = make([]byte, len(p))
-	return copy(r.paramMemory, p), nil
+	r.ParamMemory = make([]byte, len(p))
+	return copy(r.ParamMemory, p), nil
 }
 
 // LockUnlockRequest is a request to temporary lock (or unlock) another record.
 type LockUnlockRequest struct {
 	RequestRecord
 
-	transaction          Reference
-	expectedLockDuration time.Duration
-}
-
-// Transaction is a Reference to Transaction record.
-func (r *LockUnlockRequest) Transaction() Reference {
-	return r.transaction
-}
-
-// ExpectedLockDuration is expected time duration that record will be locked.
-func (r *LockUnlockRequest) ExpectedLockDuration() time.Duration {
-	return r.expectedLockDuration
+	Transaction          Reference
+	ExpectedLockDuration time.Duration
 }
 
 // ReadRequest is a request type to read data.
@@ -94,35 +69,19 @@ type ReadRequest struct {
 type ReadRecordRequest struct {
 	ReadRequest
 
-	expectedRecordType TypeID
-}
-
-// ExpectedRecordType is an expected Type of target record.
-func (r *ReadRecordRequest) ExpectedRecordType() TypeID {
-	return r.expectedRecordType
+	ExpectedRecordType TypeID
 }
 
 // ReadObject is a request type
 type ReadObject struct {
 	ReadRequest
 
-	projectionType ProjectionType
-}
-
-// ProjectionType is a "view filter" for record.
-// E.g. we can read whole object or just it's hash.
-func (r *ReadObject) ProjectionType() ProjectionType {
-	return r.projectionType
+	ProjectionType ProjectionType
 }
 
 // ReadObjectComposite is a request to read object including it's "injected" fields.
 type ReadObjectComposite struct {
 	ReadObject
 
-	compositeType Reference
-}
-
-// CompositeType is reference to a Record describing composition type.
-func (r *ReadObjectComposite) CompositeType() Reference {
-	return r.compositeType
+	CompositeType Reference
 }
