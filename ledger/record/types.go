@@ -42,3 +42,9 @@ const SpecialPulseNumber PulseNum = 65536
 
 // TypeID encodes a record object type.
 type TypeID uint32
+
+// Reference allows to address any record across the whole network.
+type Reference struct {
+	Domain ID
+	Record ID
+}

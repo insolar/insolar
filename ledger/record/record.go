@@ -31,13 +31,6 @@ type Record interface {
 	Type() TypeID
 }
 
-// Reference is a pointer that allows to address any record across whole network.
-// TODO: Should implement normal Reference type (not interface)
-// TODO: Globally unique record identifier must be found
-type Reference interface {
-	Record
-}
-
 // AppDataRecord is persistent data record stored in ledger.
 type AppDataRecord struct {
 	timeSlotNo uint64
