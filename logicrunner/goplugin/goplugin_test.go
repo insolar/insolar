@@ -39,7 +39,6 @@ func TestHelloWorld(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(ret)
-
 }
 
 var PATH = "/Users/vany/go/src/github.com/insolar/insolar/logicrunner/goplugin/ginsider/plugins"
