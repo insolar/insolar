@@ -19,7 +19,7 @@ type HelloWorlder struct {
 }
 
 func TestHelloWorld(t *testing.T) {
-	gp, err := NewGoPlugin("localhost:7777")
+	gp, err := NewGoPlugin("localhost:7777", "localhost:7778")
 	defer gp.Stop()
 	if err != nil {
 		t.Fatal(err)

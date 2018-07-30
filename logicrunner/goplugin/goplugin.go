@@ -7,18 +7,45 @@ import (
 
 	"time"
 
+	"log"
+	"net"
+
+	"net/http"
+
 	"github.com/insolar/insolar/logicrunner"
 )
 
 type GoPlugin struct {
 	DockerAddr string
 	DockerCmd  *exec.Cmd
+	ListenAddr string
+	sock       net.Listener
+	CodeDir    string
 }
 
-func NewGoPlugin(addr string) (*GoPlugin, error) {
+type GoPluginRPC struct{
+	gp *GoPlugin
+}
+
+type GetObjectReq struct {
+	Reference string
+}
+
+type GetObjectResp struct {
+	Object logicrunner.Object
+}
+
+func (gpr *GoPluginRPC) GetObject(args GetObjectReq, reply *GetObjectResp) error {
+	addr := args.Reference
+	fname := gpr.gp.CodeDir + addr // sorry generic
+	reply.Object.Reference = fname // fix this
+}
+
+func NewGoPlugin(addr string, myaddr string) (*GoPlugin, error) {
 	gp := GoPlugin{
 		DockerAddr: addr,
 		DockerCmd:  exec.Command("ginsider/ginsider"),
+		ListenAddr: myaddr,
 	}
 	gp.DockerCmd.Start()
 	time.Sleep(200 * time.Millisecond)
@@ -27,10 +54,23 @@ func NewGoPlugin(addr string) (*GoPlugin, error) {
 }
 
 func (gp *GoPlugin) Start() {
+	r := GoPluginRPC{
+		gp gp
+	}
+	rpc.Register(r)
+	rpc.HandleHTTP()
+	l, e := net.Listen("tcp", gp.ListenAddr)
+	if e != nil {
+		log.Fatal("listen error:", e)
+	}
+	gp.sock = l
+	gp.
+	http.Serve(l, nil)
 }
 
 func (gp *GoPlugin) Stop() {
 	gp.DockerCmd.Process.Kill()
+	gp.sock.Close()
 }
 
 type CallReq struct {
