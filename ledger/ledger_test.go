@@ -38,8 +38,8 @@ func TestLedger_LevelDB_Init(t *testing.T) {
 		Store: storer,
 	}
 	_, _ = ledger.Store.Get(record.Key{
-		Hash:     []byte("test"),
-		TimeSlot: 1,
+		Pulse: 1,
+		Hash:  []byte("test"),
 	})
 }
 

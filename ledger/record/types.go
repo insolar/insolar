@@ -34,8 +34,8 @@ type ID [IDSize]byte
 //
 // Key and ID converts one to another in both directions.
 type Key struct {
-	Hash     []byte
-	TimeSlot uint64
+	Pulse PulseNum
+	Hash  []byte
 }
 
 // PulseNum is a sequential number of Pulse.
