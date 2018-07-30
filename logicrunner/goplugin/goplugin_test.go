@@ -44,6 +44,7 @@ func TestHelloWorld(t *testing.T) {
 var PATH = "/Users/vany/go/src/github.com/insolar/insolar/logicrunner/goplugin/ginsider/plugins"
 
 func TestConfigLoad(t *testing.T) {
+	//	t.Fatal(os.Getwd())
 	pl, err := plugin.Open(PATH + "/main.so")
 	if err != nil {
 		t.Fatal(err)
