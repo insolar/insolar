@@ -90,7 +90,7 @@ func (instDom *instanceDomain) GetInstance(record string) (object.Proxy, error) 
 }
 
 type instanceDomainProxy struct {
-	instance *instanceDomain
+	object.BaseProxy
 }
 
 // newInstanceDomainProxy creates new proxy and associate it with new instance of InstanceDomain.
@@ -100,33 +100,20 @@ func newInstanceDomainProxy(parent object.Parent) (*instanceDomainProxy, error) 
 		return nil, err
 	}
 	return &instanceDomainProxy{
-		instance: instance,
+		BaseProxy: object.BaseProxy{
+			Instance: instance,
+		},
 	}, nil
 }
 
 // CreateInstance proxy call for instance method.
 func (idp *instanceDomainProxy) CreateInstance(fc factory.Factory) (string, error) {
-	return idp.instance.CreateInstance(fc)
+	return idp.Instance.(*instanceDomain).CreateInstance(fc)
 }
 
 // GetInstance proxy call for instance method.
 func (idp *instanceDomainProxy) GetInstance(record string) (object.Proxy, error) {
-	return idp.instance.GetInstance(record)
-}
-
-// GetReference proxy call for instance method.
-func (idp *instanceDomainProxy) GetReference() *object.Reference {
-	return idp.instance.GetReference()
-}
-
-// GetParent proxy call for instance method.
-func (idp *instanceDomainProxy) GetParent() object.Parent {
-	return idp.instance.GetParent()
-}
-
-// GetClassID proxy call for instance method.
-func (idp *instanceDomainProxy) GetClassID() string {
-	return class.InstanceDomainID
+	return idp.Instance.(*instanceDomain).GetInstance(record)
 }
 
 type instanceDomainFactory struct{}

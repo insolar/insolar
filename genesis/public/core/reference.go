@@ -85,39 +85,27 @@ func (rd *referenceDomain) ResolveReference(record string) (*object.Reference, e
 }
 
 type referenceDomainProxy struct {
-	instance *referenceDomain
+	//instance *referenceDomain
+	object.BaseProxy
 }
 
 // newReferenceDomainProxy creates new proxy and associate it with new instance of ReferenceDomain.
 func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
 	return &referenceDomainProxy{
-		instance: newReferenceDomain(parent),
+		BaseProxy: object.BaseProxy{
+			Instance: newReferenceDomain(parent),
+		},
 	}
 }
 
 // RegisterReference proxy call for instance method.
 func (rdp *referenceDomainProxy) RegisterReference(address *object.Reference) (string, error) {
-	return rdp.instance.RegisterReference(address)
+	return rdp.Instance.(*referenceDomain).RegisterReference(address)
 }
 
 // ResolveReference proxy call for instance method.
 func (rdp *referenceDomainProxy) ResolveReference(record string) (*object.Reference, error) {
-	return rdp.instance.ResolveReference(record)
-}
-
-// GetReference proxy call for instance method.
-func (rdp *referenceDomainProxy) GetReference() *object.Reference {
-	return rdp.instance.GetReference()
-}
-
-// GetParent proxy call for instance method.
-func (rdp *referenceDomainProxy) GetParent() object.Parent {
-	return rdp.instance.GetParent()
-}
-
-// GetClassID proxy call for instance method.
-func (rdp *referenceDomainProxy) GetClassID() string {
-	return class.ReferenceDomainID
+	return rdp.Instance.(*referenceDomain).ResolveReference(record)
 }
 
 type referenceDomainFactory struct{}

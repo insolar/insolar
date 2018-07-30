@@ -20,3 +20,23 @@ package object
 type Proxy interface {
 	Child
 }
+
+// BaseProxy is a base implementation of Proxy.
+type BaseProxy struct {
+	Instance Child
+}
+
+// GetReference proxy call for instance method.
+func (bp *BaseProxy) GetReference() *Reference {
+	return bp.Instance.GetReference()
+}
+
+// GetParent proxy call for instance method.
+func (bp *BaseProxy) GetParent() Parent {
+	return bp.Instance.GetParent()
+}
+
+// GetClassID proxy call for instance method.
+func (bp *BaseProxy) GetClassID() string {
+	return bp.Instance.GetClassID()
+}
