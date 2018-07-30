@@ -24,7 +24,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
 )
 
 const (
@@ -97,8 +96,8 @@ func InitDB() (*LevelLedger, error) {
 	}, nil
 }
 
-// Get returns record from leveldb by timeslot and hash passed in RecordKey.
-func (ll *LevelLedger) Get(k storage.RecordKey) (rec record.Record, found bool) {
+// Get returns record from leveldb by timeslot and hash passed in record.Key
+func (ll *LevelLedger) Get(k record.Key) (rec record.Record, found bool) {
 	return nil, false
 }
 

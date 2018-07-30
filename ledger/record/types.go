@@ -30,6 +30,14 @@ type Hash [HashSize]byte
 // ID is a record ID. Compounds PulseNum and Type
 type ID [IDSize]byte
 
+// Key is a composite key for storage methods.
+//
+// Key and ID converts one to another in both directions.
+type Key struct {
+	Hash     []byte
+	TimeSlot uint64
+}
+
 // PulseNum is a sequential number of Pulse.
 // Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
 // Valid Absolute PulseNum must be >65536.
