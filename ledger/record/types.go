@@ -39,3 +39,6 @@ type PulseNum uint32
 // SpecialPulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
 // It is only allowed for Storage.
 const SpecialPulseNumber PulseNum = 65536
+
+// TypeID encodes a record object type.
+type TypeID uint32
