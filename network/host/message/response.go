@@ -44,13 +44,13 @@ type ResponseDataRPC struct {
 	Error   string
 }
 
-// ResponseRelay is data for relay request response
+// ResponseRelay is data for relay request response.
 type ResponseRelay struct {
 	Success bool
 	State   relay.State
 }
 
-// ResponseAuth is data for authentication request response
+// ResponseAuth is data for authentication request response.
 type ResponseAuth struct {
-	AuthUniqueKey string
+	AuthUniqueKey []byte
 }

@@ -80,7 +80,7 @@ func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message 
 	}
 }
 
-// NewAuthMessage uses for starting authentication
+// NewAuthMessage uses for starting authentication.
 func NewAuthMessage(sender, receiver *node.Node) *Message {
 	return &Message{
 		Sender:   sender,

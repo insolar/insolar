@@ -53,6 +53,6 @@ type RequestRelay struct {
 	Command CommandType
 }
 
-// RequestAuth is data for authentication
+// RequestAuth is data for authentication.
 type RequestAuth struct {
 }
