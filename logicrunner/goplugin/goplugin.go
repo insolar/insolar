@@ -21,7 +21,7 @@ func NewGoPlugin(addr string) (*GoPlugin, error) {
 		DockerCmd:  exec.Command("ginsider/ginsider"),
 	}
 	gp.DockerCmd.Start()
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 	go gp.Start()
 	return &gp, nil
 }
