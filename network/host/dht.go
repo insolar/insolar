@@ -18,6 +18,7 @@ package host
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"log"
 	"math"
@@ -47,6 +48,18 @@ type DHT struct {
 	rpc       rpc.RPC
 	relay     relay.Relay
 	proxy     relay.Proxy
+	auth      AuthInfo
+}
+
+// AuthInfo collects some information about authentication.
+type AuthInfo struct {
+	// True if origin node is authenticated.
+	Authenticated bool
+	// Sended/received unique auth keys.
+	SendedKeys   map[string][]byte
+	ReceivedKeys map[string][]byte
+
+	authenticatedNodes map[string]bool
 }
 
 // Options contains configuration options for the local node.
@@ -122,6 +135,8 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 	if options.MessageTimeout == 0 {
 		options.MessageTimeout = time.Second * 10
 	}
+
+	dht.auth.authenticatedNodes = make(map[string]bool)
 
 	return dht, nil
 }
@@ -298,6 +313,7 @@ func (dht *DHT) Bootstrap() error {
 						log.Fatal(err)
 					}
 					dht.addNode(ctx, routing.NewRouteNode(result.Sender))
+					dht.AuthenticationRequest(ctx, result.Sender.Address.String())
 				}
 				wg.Done()
 				return
@@ -925,6 +941,10 @@ func (dht *DHT) processRPC(ctx Context, msg *message.Message, messageBuilder mes
 
 // Precess relay request.
 func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder message.Builder) {
+	if dht.auth.authenticatedNodes[msg.Sender.Address.String()] == false {
+		log.Print("relay request from unknown node rejected")
+		return
+	}
 	data := msg.Data.(*message.RequestRelay)
 	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
 
@@ -959,6 +979,28 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 	err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
+	}
+}
+
+func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, messageBuilder message.Builder) {
+	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
+	if dht.auth.authenticatedNodes[msg.Sender.Address.String()] == false {
+		// TODO: whats next?
+	} else {
+		key := make([]byte, 512)
+		_, err := rand.Read(key) // crypto/rand
+		if err != nil {
+			log.Println("failed to create auth key. ", err)
+			return
+		}
+		dht.auth.SendedKeys[msg.Sender.Address.String()] = key
+		response := &message.ResponseAuth{AuthUniqueKey: key}
+
+		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+		if err != nil {
+			log.Println("Failed to send response:", err)
+		}
+		// TODO process verification msg.Sender node
 	}
 }
 
@@ -1025,6 +1067,49 @@ func (dht *DHT) handleRelayResponse(response *message.ResponseRelay, target stri
 		}
 	} else {
 		log.Printf("Unable to execute relay command on %s", target)
+	}
+}
+
+// AuthenticationRequest sends authentication request.
+func (dht *DHT) AuthenticationRequest(ctx Context, target string) error {
+	targetNode, exist, err := dht.FindNode(ctx, target)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("target for relay request not found")
+	}
+
+	request := message.NewAuthMessage(dht.htFromCtx(ctx).Origin, targetNode)
+	future, err := dht.transport.SendRequest(request)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*message.ResponseAuth)
+		dht.handleAuthResponse(response, target)
+
+	case <-time.After(dht.options.MessageTimeout):
+		future.Cancel()
+		err = errors.New("timeout")
+		return err
+	}
+
+	return nil
+}
+
+func (dht *DHT) handleAuthResponse(response *message.ResponseAuth, target string) {
+	if len(response.AuthUniqueKey) != 0 {
+		dht.auth.ReceivedKeys[target] = response.AuthUniqueKey
 	}
 }
 
