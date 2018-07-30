@@ -17,9 +17,6 @@
 // Package record contains various record type definitions.
 package record
 
-// Type is record type.
-type Type uint
-
 // ProjectionType is a "view filter" for record.
 // E.g. we can read whole object or just it's hash.
 type ProjectionType uint
@@ -31,7 +28,7 @@ type Memory []byte
 type Record interface {
 	Hash() Hash
 	TimeSlot() uint64
-	Type() Type
+	Type() TypeID
 }
 
 // Reference is a pointer that allows to address any record across whole network.
@@ -44,7 +41,7 @@ type Reference interface {
 // AppDataRecord is persistent data record stored in ledger.
 type AppDataRecord struct {
 	timeSlotNo uint64
-	recType    Type
+	recType    TypeID
 }
 
 // Hash returns SHA-3 hash sum of Record
@@ -58,6 +55,6 @@ func (r *AppDataRecord) TimeSlot() uint64 {
 }
 
 // Type returns Record type.
-func (r *AppDataRecord) Type() Type {
+func (r *AppDataRecord) Type() TypeID {
 	return r.recType
 }
