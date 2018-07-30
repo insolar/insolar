@@ -11,6 +11,8 @@ import (
 
 	"bytes"
 
+	"os"
+
 	"github.com/2tvenom/cbor"
 )
 
@@ -30,21 +32,25 @@ func TestHelloWorld(t *testing.T) {
 
 	obj := logicrunner.Object{
 		MachineType: logicrunner.MachineTypeGoPlugin,
-		Reference:   "main.so",
+		Reference:   "reference",
 		Data:        buff.Bytes(),
 	}
 
-	ret, err := gp.Exec(obj, "Hello", logicrunner.Arguments{})
+	data, ret, err := gp.Exec(obj, "Hello", logicrunner.Arguments{})
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(data) == 0 {
+		t.Fatal("len of data == 0")
+	}
+	//	if ret == logicrunner.Arguments{} // IDK, lets decide what must be here
 	t.Log(ret)
 }
 
 var PATH = "/Users/vany/go/src/github.com/insolar/insolar/logicrunner/goplugin/ginsider/plugins"
 
 func TestConfigLoad(t *testing.T) {
-	//	t.Fatal(os.Getwd())
+	t.Fatal(os.Getwd())
 	pl, err := plugin.Open(PATH + "/main.so")
 	if err != nil {
 		t.Fatal(err)

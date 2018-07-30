@@ -27,7 +27,7 @@ type GoPluginRPC struct {
 
 // returns code for
 func (gpr *GoPluginRPC) GetObject(args logicrunner.Object, reply *logicrunner.Object) error {
-	f, err := os.Open(gpr.gp.CodeDir + args.Reference)
+	f, err := os.Open(gpr.gp.CodeDir + args.Reference + ".so")
 	if err != nil {
 		return err
 	}
@@ -72,21 +72,23 @@ type CallReq struct {
 }
 
 type CallResp struct {
-	Ret logicrunner.Arguments
-	Err error
+	Object logicrunner.Object
+	Ret    logicrunner.Arguments
+	Err    error
 }
 
-func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) (ret logicrunner.Arguments, err error) {
+func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) (retdata logicrunner.Arguments, ret logicrunner.Arguments, err error) {
 	client, err := rpc.DialHTTP("tcp", gp.DockerAddr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	Ret := CallResp{}
 	err = client.Call("GoInsider.Call", CallReq{Object: object, Method: method, Args: args}, &Ret)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	retdata = Ret.Object.Data
 	ret = Ret.Ret
 	err = Ret.Err
-	return ret, err
+	return retdata, ret, err
 }
