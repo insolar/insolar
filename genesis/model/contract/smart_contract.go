@@ -29,7 +29,7 @@ import (
 // TODO: Composite work interface
 type SmartContract interface {
 	object.Child
-	InitiateResolver(self interface{})
+	GetResolver() resolver.Resolver
 }
 
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.
@@ -39,7 +39,7 @@ type BaseSmartContract struct {
 	ChildStorage   storage.Storage
 	ContextStorage storage.Storage
 	Parent         object.Parent
-	Resolver       resolver.Resolver
+	resolver       resolver.Resolver
 }
 
 // NewBaseSmartContract creates new BaseSmartContract instance with empty CompositeMap, ChildStorage and specific parent.
@@ -50,20 +50,16 @@ func NewBaseSmartContract(parent object.Parent) *BaseSmartContract {
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
-	sc.InitiateResolver(sc)
+	sc.GetResolver()
 	return &sc
 }
 
-// InitiateResolver create resolver.
-func (sc *BaseSmartContract) InitiateResolver(self interface{}) {
-	if sc.Resolver != nil {
-		return
+// GetResolver return instance or create it if necessary.
+func (sc *BaseSmartContract) GetResolver() resolver.Resolver {
+	if sc.resolver == nil {
+		sc.resolver = resolver.NewHandler(sc)
 	}
-	scAsParent, ok := self.(object.Parent)
-	if !ok {
-		sc.Resolver = resolver.NewHandler(nil)
-	}
-	sc.Resolver = resolver.NewHandler(scAsParent)
+	return sc.resolver
 }
 
 // GetClassID return string representation of object's class.

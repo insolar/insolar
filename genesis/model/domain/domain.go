@@ -39,7 +39,6 @@ func NewBaseDomain(parent object.Parent, name string) *BaseDomain {
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 		Name:              name,
 	}
-	domain.InitiateResolver(domain)
 	return &domain
 }
 
