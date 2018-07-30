@@ -111,7 +111,7 @@ func TestNewBaseSmartContract(t *testing.T) {
 		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: childStorage,
 		Parent:       parent,
-		Resolver:     resolver.NewHandler(nil),
+		resolver:     resolver.NewHandler(sc),
 	}, sc)
 }
 
@@ -289,15 +289,15 @@ func TestSmartContract_GetParent(t *testing.T) {
 	assert.Equal(t, sc.Parent, res)
 }
 
-func TestSmartContract_InitiateResolver(t *testing.T) {
+func TestSmartContract_GetResolver(t *testing.T) {
 	parent := &mockParent{}
 	sc := BaseSmartContract{
 		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
-	assert.Nil(t, sc.Resolver)
-	sc.InitiateResolver(sc)
+	assert.Nil(t, sc.resolver)
+	sc.GetResolver()
 
-	assert.NotNil(t, sc.Resolver)
+	assert.NotNil(t, sc.resolver)
 }

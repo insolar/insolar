@@ -53,7 +53,7 @@ func TestHandler_GetObject_GlobalScope(t *testing.T) {
 	mockParent := &mockParent{}
 	resolverHandler := NewHandler(nil)
 	newMap := make(map[string]object.Proxy)
-	resolverHandler.SetGlobalMap(&newMap)
+	resolverHandler.InitGlobalMap(&newMap)
 
 	ref, _ := object.NewReference("1", "123", object.GlobalScope)
 	(*GlobalResolver.globalInstanceMap)["123"] = mockParent
@@ -108,18 +108,7 @@ func TestHandler_SetGlobalMap(t *testing.T) {
 	resolverHandler.globalResolver.globalInstanceMap = nil
 
 	newMap := make(map[string]object.Proxy)
-	err := resolverHandler.SetGlobalMap(&newMap)
+	resolverHandler.InitGlobalMap(&newMap)
 
-	assert.NoError(t, err)
 	assert.Equal(t, &newMap, resolverHandler.globalResolver.globalInstanceMap)
-}
-
-func TestHandler_SetGlobalMap_Error(t *testing.T) {
-	resolverHandler := NewHandler(nil)
-	newMap := make(map[string]object.Proxy)
-	resolverHandler.SetGlobalMap(&newMap)
-
-	err := resolverHandler.SetGlobalMap(&newMap)
-
-	assert.EqualError(t, err, "map was already set")
 }

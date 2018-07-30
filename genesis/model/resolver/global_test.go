@@ -43,7 +43,7 @@ func TestGlobalResolver_GetObject_Not_Reference(t *testing.T) {
 func TestGlobalResolver_GetObject_No_Object(t *testing.T) {
 	resolver := newGlobalResolver()
 	newMap := make(map[string]object.Proxy)
-	resolver.SetMap(&newMap)
+	resolver.InitGlobalMap(&newMap)
 	ref, _ := object.NewReference("1", "123", object.GlobalScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
@@ -56,7 +56,7 @@ func TestGlobalResolver_GetObject_Not_Parent(t *testing.T) {
 	mockChild := &mockChild{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]object.Proxy)
-	resolver.SetMap(&newMap)
+	resolver.InitGlobalMap(&newMap)
 	ref, _ := object.NewReference("1", "123", object.GlobalScope)
 	(*resolver.globalInstanceMap)["123"] = mockChild
 
@@ -70,7 +70,7 @@ func TestGlobalResolver_GetObject_No_Child(t *testing.T) {
 	mockParent := &mockParentWithError{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]object.Proxy)
-	resolver.SetMap(&newMap)
+	resolver.InitGlobalMap(&newMap)
 	ref, _ := object.NewReference("1", "123", object.GlobalScope)
 	(*resolver.globalInstanceMap)["123"] = mockParent
 
@@ -84,7 +84,7 @@ func TestGlobalResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 	mockParent := &mockParent{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]object.Proxy)
-	resolver.SetMap(&newMap)
+	resolver.InitGlobalMap(&newMap)
 	ref, _ := object.NewReference("1", "123", object.GlobalScope)
 	(*resolver.globalInstanceMap)["123"] = mockParent
 
@@ -98,7 +98,7 @@ func TestGlobalResolver_GetObject_Wrong_classID(t *testing.T) {
 	mockParent := &mockParent{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]object.Proxy)
-	resolver.SetMap(&newMap)
+	resolver.InitGlobalMap(&newMap)
 	ref, _ := object.NewReference("1", "123", object.GlobalScope)
 	(*resolver.globalInstanceMap)["123"] = mockParent
 
@@ -112,7 +112,7 @@ func TestGlobalResolver_GetObject(t *testing.T) {
 	mockParent := &mockParent{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]object.Proxy)
-	resolver.SetMap(&newMap)
+	resolver.InitGlobalMap(&newMap)
 	ref, _ := object.NewReference("1", "123", object.GlobalScope)
 	(*resolver.globalInstanceMap)["123"] = mockParent
 
@@ -122,23 +122,13 @@ func TestGlobalResolver_GetObject(t *testing.T) {
 	assert.Equal(t, child, obj)
 }
 
-func TestGlobalResolver_SetMap(t *testing.T) {
+func TestGlobalResolver_InitGlobalMap(t *testing.T) {
 	resolver := newGlobalResolver()
 
 	assert.Nil(t, resolver.globalInstanceMap)
 
 	newMap := make(map[string]object.Proxy)
-	err := resolver.SetMap(&newMap)
+	resolver.InitGlobalMap(&newMap)
 
-	assert.NoError(t, err)
 	assert.Equal(t, &newMap, resolver.globalInstanceMap)
-}
-
-func TestGlobalResolver_SetMap_Error(t *testing.T) {
-	resolver := newGlobalResolver()
-	newMap := make(map[string]object.Proxy)
-	resolver.SetMap(&newMap)
-
-	err := resolver.SetMap(&newMap)
-	assert.EqualError(t, err, "map was already set")
 }

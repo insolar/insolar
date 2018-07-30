@@ -112,11 +112,11 @@ func init() {
 	// Create Handler empty instance
 	resolverHandler := resolver.NewHandler(nil)
 	// Set map to Handler.GlobalResolver
-	resolverHandler.SetGlobalMap(&globalResolverMap)
+	resolverHandler.InitGlobalMap(&globalResolverMap)
 	// Set map to ReferenceDomain.globalResolverMap
-	initRefDomain.SetMap(&globalResolverMap)
+	initRefDomain.InitGlobalMap(&globalResolverMap)
 	// Set map to ReferenceDomainProxy.ReferenceDomain.globalResolverMap
-	initRefDomainProxy.instance.SetMap(&globalResolverMap)
+	initRefDomainProxy.instance.InitGlobalMap(&globalResolverMap)
 
 }
 
@@ -150,21 +150,9 @@ func TestReferenceDomain_SetMap(t *testing.T) {
 	refDomain.globalResolverMap = nil
 
 	newMap := make(map[string]object.Proxy)
-	err := refDomain.SetMap(&newMap)
+	refDomain.InitGlobalMap(&newMap)
 
-	assert.NoError(t, err)
 	assert.Equal(t, &newMap, refDomain.globalResolverMap)
-}
-
-func TestReferenceDomain_SetMap_Error(t *testing.T) {
-	refDomain := newReferenceDomain(nil)
-	refDomain.globalResolverMap = nil
-	newMap := make(map[string]object.Proxy)
-	refDomain.SetMap(&newMap)
-
-	err := refDomain.SetMap(&newMap)
-
-	assert.EqualError(t, err, "map was already set")
 }
 
 func TestReferenceDomain_RegisterReference(t *testing.T) {
@@ -219,21 +207,9 @@ func TestReferenceDomainProxy_SetMap(t *testing.T) {
 	refDomain.instance.globalResolverMap = nil
 
 	newMap := make(map[string]object.Proxy)
-	err := refDomain.SetMap(&newMap)
+	refDomain.InitGlobalMap(&newMap)
 
-	assert.NoError(t, err)
 	assert.Equal(t, &newMap, refDomain.instance.globalResolverMap)
-}
-
-func TestReferenceDomainProxy_SetMap_Error(t *testing.T) {
-	refDomainProxy := newReferenceDomainProxy(nil)
-	refDomainProxy.instance.globalResolverMap = nil
-	newMap := make(map[string]object.Proxy)
-	refDomainProxy.SetMap(&newMap)
-
-	err := refDomainProxy.SetMap(&newMap)
-
-	assert.EqualError(t, err, "map was already set")
 }
 
 func TestReferenceDomainProxy_RegisterReference(t *testing.T) {

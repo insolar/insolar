@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,16 +61,18 @@ func (p *mockParent) GetContextStorage() storage.Storage {
 
 func TestNewBaseDomain(t *testing.T) {
 	parent := &mockParent{}
+
 	domain := NewBaseDomain(parent, "NewDomain")
 
+	sc := contract.BaseSmartContract{
+		CompositeMap: make(map[string]object.Composite),
+		ChildStorage: storage.NewMapStorage(),
+		Parent:       parent,
+	}
+	sc.GetResolver()
 	assert.Equal(t, &BaseDomain{
-		BaseSmartContract: contract.BaseSmartContract{
-			CompositeMap: make(map[string]object.Composite),
-			ChildStorage: storage.NewMapStorage(),
-			Parent:       parent,
-			Resolver:     resolver.NewHandler(nil),
-		},
-		Name: "NewDomain",
+		BaseSmartContract: sc,
+		Name:              "NewDomain",
 	}, domain)
 }
 
