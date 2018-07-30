@@ -49,3 +49,8 @@ type ResponseRelay struct {
 	Success bool
 	State   relay.State
 }
+
+// ResponseAuth is data for authentication request response
+type ResponseAuth struct {
+	AuthUniqueKey string
+}

@@ -40,6 +40,8 @@ const (
 	TypeRPC
 	// TypeRelay is message type for request target to be a relay
 	TypeRelay
+	// TypeAuth is message type for authentication between nodes
+	TypeAuth
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -78,6 +80,15 @@ func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message 
 	}
 }
 
+// NewAuthMessage uses for starting authentication
+func NewAuthMessage(sender, receiver *node.Node) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeAuth,
+	}
+}
+
 // IsValid checks if message data is a valid structure for current message type.
 func (m *Message) IsValid() (valid bool) {
 	switch m.Type {
@@ -93,6 +104,8 @@ func (m *Message) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestDataRPC)
 	case TypeRelay:
 		_, valid = m.Data.(*RequestRelay)
+	case TypeAuth:
+		_, valid = m.Data.(*RequestAuth)
 	default:
 		valid = false
 	}
@@ -164,10 +177,12 @@ func init() {
 	gob.Register(&RequestDataStore{})
 	gob.Register(&RequestDataRPC{})
 	gob.Register(&RequestRelay{})
+	gob.Register(&RequestAuth{})
 
 	gob.Register(&ResponseDataFindNode{})
 	gob.Register(&ResponseDataFindValue{})
 	gob.Register(&ResponseDataStore{})
 	gob.Register(&ResponseDataRPC{})
 	gob.Register(&ResponseRelay{})
+	gob.Register(&ResponseAuth{})
 }
