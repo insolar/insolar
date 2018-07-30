@@ -33,7 +33,7 @@ func newGlobalResolver() *globalResolver {
 }
 
 // GetObject resolve object by its reference and return its proxy.
-func (r *globalResolver) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
+func (r *globalResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
 	ref, ok := reference.(*object.Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
@@ -50,24 +50,22 @@ func (r *globalResolver) GetObject(reference interface{}, classID interface{}) (
 	if err != nil {
 		return nil, err
 	}
-	classIDString, ok := classID.(string)
+	classID, ok := cls.(string)
 	if !ok {
 		return nil, fmt.Errorf("classID is not string")
 	}
-	if proxy.GetClassID() != classIDString {
+	if proxy.GetClassID() != classID {
 		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
 	return proxy, nil
 }
 
-// SetMap set globalInstanceMap into globalResolver
-func (r *globalResolver) SetMap(globalInstanceMap *map[string]object.Proxy) error {
-	if r.globalInstanceMap != nil {
-		return fmt.Errorf("map was already set")
+// InitGlobalMap set globalInstanceMap into globalResolver.
+func (r *globalResolver) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
+	if r.globalInstanceMap == nil {
+		r.globalInstanceMap = globalInstanceMap
 	}
-	r.globalInstanceMap = globalInstanceMap
-	return nil
 }
 
-// GlobalResolver is a public globalResolver instance for resolving all global references
+// GlobalResolver is a public globalResolver instance for resolving all global references.
 var GlobalResolver = newGlobalResolver()
