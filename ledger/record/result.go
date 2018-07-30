@@ -52,18 +52,18 @@ type ReadRecordResult struct {
 type StatelessCallResult struct {
 	StatelessResult
 
-	resultMemory Memory
+	ResultMemory Memory
 }
 
 // Write allows to write to Request's paramMemory.
 func (r *StatelessCallResult) Write(p []byte) (n int, err error) {
-	r.resultMemory = make([]byte, len(p))
-	return copy(r.resultMemory, p), nil
+	r.ResultMemory = make([]byte, len(p))
+	return copy(r.ResultMemory, p), nil
 }
 
 // Read allows to read Result's resultMemory.
 func (r *StatelessCallResult) Read(p []byte) (n int, err error) {
-	return copy(p, r.resultMemory), nil
+	return copy(p, r.ResultMemory), nil
 }
 
 // StatelessExceptionResult is an exception result that does not need to be stored.
