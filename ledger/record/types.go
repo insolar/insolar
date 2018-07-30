@@ -24,6 +24,16 @@ const (
 	IDSize = 4 + HashSize
 )
 
+// PulseNum is a sequential number of Pulse.
+// Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
+// Valid Absolute PulseNum must be >65536.
+// If PulseNum <65536 it is a relative PulseNum
+type PulseNum uint32
+
+// SpecialPulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
+// It is only allowed for Storage.
+const SpecialPulseNumber PulseNum = 65536
+
 // Hash is hash sum of record, 24-byte array.
 type Hash [HashSize]byte
 
@@ -37,16 +47,6 @@ type Key struct {
 	Pulse PulseNum
 	Hash  []byte
 }
-
-// PulseNum is a sequential number of Pulse.
-// Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
-// Valid Absolute PulseNum must be >65536.
-// If PulseNum <65536 it is a relative PulseNum
-type PulseNum uint32
-
-// SpecialPulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
-// It is only allowed for Storage.
-const SpecialPulseNumber PulseNum = 65536
 
 // TypeID encodes a record object type.
 type TypeID uint32
