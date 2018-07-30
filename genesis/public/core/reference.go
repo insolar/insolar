@@ -32,12 +32,12 @@ const ReferenceDomainName = "ReferenceDomain"
 type ReferenceDomain interface {
 	// Base domain implementation.
 	domain.Domain
-	// RegisterReference is used to publish new global references
+	// RegisterReference is used to publish new global references.
 	RegisterReference(*object.Reference, string) (string, error)
-	// ResolveReference provides reference instance from record
+	// ResolveReference provides reference instance from record.
 	ResolveReference(string) (*object.Reference, error)
-	// SetMap set globalResolverMap for references register/resolving
-	SetMap(globalInstanceMap *map[string]object.Proxy) error
+	// InitGlobalMap set globalResolverMap for references register/resolving.
+	InitGlobalMap(globalInstanceMap *map[string]object.Proxy)
 }
 
 type referenceDomain struct {
@@ -45,7 +45,7 @@ type referenceDomain struct {
 	globalResolverMap *map[string]object.Proxy
 }
 
-// newReferenceDomain creates new instance of ReferenceDomain
+// newReferenceDomain creates new instance of ReferenceDomain.
 func newReferenceDomain(parent object.Parent) *referenceDomain {
 	refDomain := &referenceDomain{
 		BaseDomain: *domain.NewBaseDomain(parent, ReferenceDomainName),
@@ -54,7 +54,6 @@ func newReferenceDomain(parent object.Parent) *referenceDomain {
 	if parent == nil {
 		refDomain.Parent = refDomain
 	}
-	refDomain.InitiateResolver(refDomain)
 	return refDomain
 }
 
@@ -63,14 +62,12 @@ func (rd *referenceDomain) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
-// SetMap set globalResolverMap for references register/resolving
-// You can set map only once
-func (rd *referenceDomain) SetMap(globalInstanceMap *map[string]object.Proxy) error {
+// InitGlobalMap set globalResolverMap for references register/resolving.
+func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	if rd.globalResolverMap != nil {
-		return fmt.Errorf("map was already set")
+		return
 	}
 	rd.globalResolverMap = globalInstanceMap
-	return nil
 }
 
 // RegisterReference set new reference as a child to domain storage.
@@ -79,7 +76,8 @@ func (rd *referenceDomain) RegisterReference(ref *object.Reference, classID stri
 	if err != nil {
 		return "", err
 	}
-	obj, err := rd.Resolver.GetObject(ref, classID)
+	resolver := rd.GetResolver()
+	obj, err := resolver.GetObject(ref, classID)
 	if err != nil {
 		return "", err
 	}
@@ -143,9 +141,9 @@ func (rdp *referenceDomainProxy) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
-// SetMap proxy call for instance method.
-func (rdp *referenceDomainProxy) SetMap(globalInstanceMap *map[string]object.Proxy) error {
-	return rdp.instance.SetMap(globalInstanceMap)
+// InitGlobalMap proxy call for instance method.
+func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
+	rdp.instance.InitGlobalMap(globalInstanceMap)
 }
 
 type referenceDomainFactory struct{}
@@ -160,7 +158,7 @@ func (adf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
-// GetReference returns nil for not published factory
+// GetReference returns nil for not published factory.
 func (adf *referenceDomainFactory) GetReference() *object.Reference {
 	return nil
 }
