@@ -17,20 +17,6 @@
 // Package record contains various record type definitions.
 package record
 
-const (
-	// HashSize is a record hash size. We use 256-bit SHA-3 hash.
-	HashSize = 32
-
-	// RecTypeCodeBase = Type(iota + 1)
-	// RecTypeCodeAmendment
-	// RecTypeObjectInstance
-	// RecTypeObjectAmendment
-	// RecTypeObjectData
-)
-
-// Hash is hash sum of record, 32-byte array.
-type Hash [HashSize]byte
-
 // Type is record type.
 type Type uint
 
