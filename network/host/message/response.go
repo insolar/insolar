@@ -54,3 +54,8 @@ type ResponseRelay struct {
 type ResponseAuth struct {
 	AuthUniqueKey []byte
 }
+
+// ResponseCheckOrigin is data for check originality request response.
+type ResponseCheckOrigin struct {
+	AuthUniqueKey []byte
+}

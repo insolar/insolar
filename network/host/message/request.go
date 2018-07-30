@@ -56,3 +56,7 @@ type RequestRelay struct {
 // RequestAuth is data for authentication.
 type RequestAuth struct {
 }
+
+// RequestCheckOrigin is data ro check originality.
+type RequestCheckOrigin struct {
+}

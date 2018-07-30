@@ -38,10 +38,12 @@ const (
 	TypeFindValue
 	// TypeRPC is message type for RPC method.
 	TypeRPC
-	// TypeRelay is message type for request target to be a relay
+	// TypeRelay is message type for request target to be a relay.
 	TypeRelay
-	// TypeAuth is message type for authentication between nodes
+	// TypeAuth is message type for authentication between nodes.
 	TypeAuth
+	// TypeCheckOrigin is message to check originality of some node.
+	TypeCheckOrigin
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -86,6 +88,14 @@ func NewAuthMessage(sender, receiver *node.Node) *Message {
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeAuth,
+	}
+}
+
+func NewCheckOriginMessage(sender, receiver *node.Node) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeCheckOrigin,
 	}
 }
 
@@ -178,6 +188,7 @@ func init() {
 	gob.Register(&RequestDataRPC{})
 	gob.Register(&RequestRelay{})
 	gob.Register(&RequestAuth{})
+	gob.Register(&RequestCheckOrigin{})
 
 	gob.Register(&ResponseDataFindNode{})
 	gob.Register(&ResponseDataFindValue{})
@@ -185,4 +196,5 @@ func init() {
 	gob.Register(&ResponseDataRPC{})
 	gob.Register(&ResponseRelay{})
 	gob.Register(&ResponseAuth{})
+	gob.Register(&ResponseCheckOrigin{})
 }
