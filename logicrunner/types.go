@@ -3,6 +3,7 @@ package logicrunner
 type Object struct {
 	MachineType MachineType
 	Reference   string
+	Data        []byte
 }
 
 type API struct {
