@@ -1,16 +1,14 @@
 package goplugin
 
 import (
-	"net/rpc"
-
-	"os/exec"
-
-	"time"
-
+	"io/ioutil"
 	"log"
 	"net"
-
 	"net/http"
+	"net/rpc"
+	"os"
+	"os/exec"
+	"time"
 
 	"github.com/insolar/insolar/logicrunner"
 )
@@ -23,22 +21,19 @@ type GoPlugin struct {
 	CodeDir    string
 }
 
-type GoPluginRPC struct{
+type GoPluginRPC struct {
 	gp *GoPlugin
 }
 
-type GetObjectReq struct {
-	Reference string
-}
-
-type GetObjectResp struct {
-	Object logicrunner.Object
-}
-
-func (gpr *GoPluginRPC) GetObject(args GetObjectReq, reply *GetObjectResp) error {
-	addr := args.Reference
-	fname := gpr.gp.CodeDir + addr // sorry generic
-	reply.Object.Reference = fname // fix this
+// returns code for
+func (gpr *GoPluginRPC) GetObject(args logicrunner.Object, reply *logicrunner.Object) error {
+	f, err := os.Open(gpr.gp.CodeDir + args.Reference)
+	if err != nil {
+		return err
+	}
+	reply.MachineType = args.MachineType
+	reply.Data, err = ioutil.ReadAll(f)
+	return err
 }
 
 func NewGoPlugin(addr string, myaddr string) (*GoPlugin, error) {
@@ -54,9 +49,7 @@ func NewGoPlugin(addr string, myaddr string) (*GoPlugin, error) {
 }
 
 func (gp *GoPlugin) Start() {
-	r := GoPluginRPC{
-		gp gp
-	}
+	r := GoPluginRPC{gp: gp}
 	rpc.Register(r)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", gp.ListenAddr)
@@ -64,7 +57,6 @@ func (gp *GoPlugin) Start() {
 		log.Fatal("listen error:", e)
 	}
 	gp.sock = l
-	gp.
 	http.Serve(l, nil)
 }
 
