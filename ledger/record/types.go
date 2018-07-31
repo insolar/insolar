@@ -70,3 +70,9 @@ type Reference struct {
 	Domain ID
 	Record ID
 }
+
+// WriteHash implements hash.Writer interface.
+func (r Reference) WriteHash(w io.Writer) {
+	r.Domain.WriteHash(w)
+	r.Record.WriteHash(w)
+}
