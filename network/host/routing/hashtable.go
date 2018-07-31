@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 )
 
@@ -78,7 +79,7 @@ type HashTable struct {
 }
 
 // NewHashTable creates new HashTable.
-func NewHashTable(id node.ID, address *node.Address) (*HashTable, error) {
+func NewHashTable(id id.ID, address *node.Address) (*HashTable, error) {
 	if id == nil {
 		return nil, errors.New("id required")
 	}

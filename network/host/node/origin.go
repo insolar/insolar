@@ -16,19 +16,23 @@
 
 package node
 
+import (
+	"github.com/insolar/insolar/network/host/id"
+)
+
 // Origin is “self” variant of Node.
 // Unlike ordinary node it can have multiple IDs.
 type Origin struct {
-	IDs     []ID
+	IDs     []id.ID
 	Address *Address
 }
 
 // NewOrigin creates origin node from list of ids and insolar address.
-func NewOrigin(ids []ID, address *Address) (*Origin, error) {
+func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 	var err error
 
 	if len(ids) == 0 {
-		ids, err = NewIDs(1)
+		ids, err = id.NewIDs(1)
 	}
 
 	if err != nil {
@@ -41,7 +45,7 @@ func NewOrigin(ids []ID, address *Address) (*Origin, error) {
 	}, nil
 }
 
-func (s *Origin) containsID(id ID) bool {
+func (s *Origin) containsID(id id.ID) bool {
 	for _, myID := range s.IDs {
 		if id.Equal(myID) {
 			return true

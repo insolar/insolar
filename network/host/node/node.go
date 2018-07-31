@@ -18,12 +18,14 @@ package node
 
 import (
 	"fmt"
+
+	"github.com/insolar/insolar/network/host/id"
 )
 
 // Node is the over-the-wire representation of a node.
 type Node struct {
 	// ID is a 20 byte unique identifier.
-	ID ID
+	ID id.ID
 
 	// Address is IP and port.
 	Address *Address
