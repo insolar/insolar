@@ -17,6 +17,7 @@
 package host
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"errors"
@@ -53,13 +54,13 @@ type DHT struct {
 
 // AuthInfo collects some information about authentication.
 type AuthInfo struct {
-	// True if origin node is authenticated.
-	Authenticated bool
 	// Sended/received unique auth keys.
 	SendedKeys   map[string][]byte
 	ReceivedKeys map[string][]byte
 
 	authenticatedNodes map[string]bool
+
+	mut sync.Mutex
 }
 
 // Options contains configuration options for the local node.
@@ -137,6 +138,8 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 	}
 
 	dht.auth.authenticatedNodes = make(map[string]bool)
+	dht.auth.SendedKeys = make(map[string][]byte)
+	dht.auth.ReceivedKeys = make(map[string][]byte)
 
 	return dht, nil
 }
@@ -313,7 +316,6 @@ func (dht *DHT) Bootstrap() error {
 						log.Fatal(err)
 					}
 					dht.addNode(ctx, routing.NewRouteNode(result.Sender))
-					dht.AuthenticationRequest(ctx, result.Sender.Address.String())
 				}
 				wg.Done()
 				return
@@ -372,7 +374,7 @@ func (dht *DHT) iterateBootstrapNodes(
 	return futures
 }
 
-// Disconnect will trigger a Stop from the insolar.
+// Disconnect will trigger a StopRelay from the insolar.
 func (dht *DHT) Disconnect() {
 	dht.transport.Stop()
 }
@@ -866,6 +868,10 @@ func (dht *DHT) dispatchMessageType(ctx Context, msg *message.Message, ht *routi
 		dht.processRPC(ctx, msg, messageBuilder)
 	case message.TypeRelay:
 		dht.processRelay(ctx, msg, messageBuilder)
+	case message.TypeCheckOrigin:
+		dht.processCheckOriginRequest(ctx, msg, messageBuilder)
+	case message.TypeAuth:
+		dht.processAuthentication(ctx, msg, messageBuilder)
 	}
 }
 
@@ -941,71 +947,104 @@ func (dht *DHT) processRPC(ctx Context, msg *message.Message, messageBuilder mes
 
 // Precess relay request.
 func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder message.Builder) {
-	if dht.auth.authenticatedNodes[msg.Sender.Address.String()] == false {
-		log.Print("relay request from unknown node rejected")
-		return
-	}
-	data := msg.Data.(*message.RequestRelay)
-	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
-
-	var success bool
-	var state relay.State
 	var err error
+	if !dht.auth.authenticatedNodes[msg.Sender.ID.String()] {
+		log.Print("relay request from unknown node rejected")
+		response := &message.ResponseRelay{
+			Success: false,
+			State:   relay.NoAuth,
+		}
 
-	switch data.Command {
-	case message.Start:
-		err = dht.relay.AddClient(msg.Sender)
-		success = true
-		state = relay.Started
-	case message.Stop:
-		err = dht.relay.RemoveClient(msg.Sender)
-		success = true
-		state = relay.Stopped
-	default:
-		success = false
-		state = relay.Unknown
+		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	} else {
+		data := msg.Data.(*message.RequestRelay)
+		dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
+
+		var success bool
+		var state relay.State
+		var err error
+
+		switch data.Command {
+		case message.StartRelay:
+			err = dht.relay.AddClient(msg.Sender)
+			success = true
+			state = relay.Started
+		case message.StopRelay:
+			err = dht.relay.RemoveClient(msg.Sender)
+			success = true
+			state = relay.Stopped
+		default:
+			success = false
+			state = relay.Unknown
+		}
+
+		if err != nil {
+			success = false
+			state = relay.Error
+		}
+
+		response := &message.ResponseRelay{
+			Success: success,
+			State:   state,
+		}
+
+		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 	}
-
-	if err != nil {
-		success = false
-		state = relay.Error
-	}
-
-	response := &message.ResponseRelay{
-		Success: success,
-		State:   state,
-	}
-
-	err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
 }
 
 func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, messageBuilder message.Builder) {
-	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
-	if dht.auth.authenticatedNodes[msg.Sender.Address.String()] == false {
+	if dht.auth.authenticatedNodes[msg.Sender.ID.String()] {
 		// TODO: whats next?
 	} else {
-		key := make([]byte, 512)
-		_, err := rand.Read(key) // crypto/rand
-		if err != nil {
-			log.Println("failed to create auth key. ", err)
-			return
-		}
-		dht.auth.SendedKeys[msg.Sender.Address.String()] = key
-		response := &message.ResponseAuth{AuthUniqueKey: key}
+		data := msg.Data.(*message.RequestAuth)
+		switch data.Command {
+		case message.BeginAuth:
+			key := make([]byte, 512)
+			_, err := rand.Read(key) // crypto/rand
+			if err != nil {
+				log.Println("failed to create auth key. ", err)
+				return
+			}
+			dht.auth.SendedKeys[msg.Sender.ID.String()] = key
+			response := &message.ResponseAuth{AuthUniqueKey: key}
 
-		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+			err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+			if err != nil {
+				log.Println("Failed to send response:", err)
+			}
+			// TODO process verification msg.Sender node
+			// confirmed
+			err = dht.CheckOriginRequest(ctx, msg.Sender.ID.String())
+			if err != nil {
+				log.Println("error: ", err)
+			}
+		case message.RevokeAuth:
+			delete(dht.auth.authenticatedNodes, msg.Sender.Address.String())
+		default:
+			log.Println("unknown auth command")
+		}
+	}
+}
+
+func (dht *DHT) processCheckOriginRequest(ctx Context, msg *message.Message, messageBuilder message.Builder) {
+	dht.auth.mut.Lock()
+	dht.auth.mut.Unlock()
+	if key, ok := dht.auth.ReceivedKeys[msg.Sender.ID.String()]; ok {
+		response := &message.ResponseCheckOrigin{AuthUniqueKey: key}
+		err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 		if err != nil {
 			log.Println("Failed to send response:", err)
 		}
-		// TODO process verification msg.Sender node
+	} else {
+		log.Println("CheckOrigin request from unregistered node")
 	}
 }
 
 // RelayRequest sends relay request to target.
-func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
+func (dht *DHT) RelayRequest(ctx Context, command, target string) error { // target - node ID
 	var typedCommand message.CommandType
 	targetNode, exist, err := dht.FindNode(ctx, target)
 	if err != nil {
@@ -1018,9 +1057,9 @@ func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
 
 	switch command {
 	case "start":
-		typedCommand = message.Start
+		typedCommand = message.StartRelay
 	case "stop":
-		typedCommand = message.Stop
+		typedCommand = message.StopRelay
 	default:
 		err = errors.New("unknown command")
 		return err
@@ -1041,7 +1080,7 @@ func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
 		}
 
 		response := rsp.Data.(*message.ResponseRelay)
-		dht.handleRelayResponse(response, target)
+		dht.handleRelayResponse(ctx, response, target)
 
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
@@ -1052,35 +1091,89 @@ func (dht *DHT) RelayRequest(ctx Context, command, target string) error {
 	return nil
 }
 
-func (dht *DHT) handleRelayResponse(response *message.ResponseRelay, target string) {
-	if response.Success {
-		switch response.State {
-		case relay.Stopped:
-			// stop use this address as relay
-			dht.proxy.RemoveProxyNode(target)
-		case relay.Started:
-			// start use this address as relay
-			dht.proxy.AddProxyNode(target)
-		default:
-			// unknown state/failed to change state
-			log.Println("unknown response state:")
-		}
-	} else {
-		log.Printf("Unable to execute relay command on %s", target)
+func (dht *DHT) handleRelayResponse(ctx Context, response *message.ResponseRelay, target string) {
+	switch response.State {
+	case relay.Stopped:
+		// stop use this address as relay
+		dht.proxy.RemoveProxyNode(target)
+	case relay.Started:
+		// start use this address as relay
+		dht.proxy.AddProxyNode(target)
+	case relay.NoAuth:
+		log.Println("unable to execute relay because this node not authenticated.")
+	default:
+		// unknown state/failed to change state
+		log.Println("unknown response state:")
 	}
 }
 
-// AuthenticationRequest sends authentication request.
-func (dht *DHT) AuthenticationRequest(ctx Context, target string) error {
-	targetNode, exist, err := dht.FindNode(ctx, target)
+func (dht *DHT) handleCheckOriginResponse(response *message.ResponseCheckOrigin, target string) {
+	if bytes.Equal(response.AuthUniqueKey, dht.auth.SendedKeys[target]) {
+		delete(dht.auth.SendedKeys, target)
+		dht.auth.authenticatedNodes[target] = true
+	}
+}
+
+// CheckOriginRequest send a request to check target node originality
+func (dht *DHT) CheckOriginRequest(ctx Context, targetID string) error {
+	targetNode, exist, err := dht.FindNode(ctx, targetID)
 	if err != nil {
 		return err
 	}
 	if !exist {
 		err = errors.New("target for relay request not found")
+		return err
 	}
 
-	request := message.NewAuthMessage(dht.htFromCtx(ctx).Origin, targetNode)
+	request := message.NewCheckOriginMessage(dht.htFromCtx(ctx).Origin, targetNode)
+	future, err := dht.transport.SendRequest(request)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*message.ResponseCheckOrigin)
+		dht.handleCheckOriginResponse(response, targetID)
+
+	case <-time.After(dht.options.MessageTimeout):
+		future.Cancel()
+		err = errors.New("timeout")
+		return err
+	}
+
+	return nil
+}
+
+// AuthenticationRequest sends an authentication request.
+func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) error {
+	targetNode, exist, err := dht.FindNode(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("target for relay request not found")
+		return err
+	}
+
+	origin := dht.htFromCtx(ctx).Origin
+	var authCommand message.CommandType
+	switch command {
+	case "begin":
+		authCommand = message.BeginAuth
+	case "revoke":
+		authCommand = message.RevokeAuth
+	default:
+		authCommand = message.Unknown
+	}
+	request := message.NewAuthMessage(authCommand, origin, targetNode)
 	future, err := dht.transport.SendRequest(request)
 
 	if err != nil {
@@ -1096,7 +1189,7 @@ func (dht *DHT) AuthenticationRequest(ctx Context, target string) error {
 		}
 
 		response := rsp.Data.(*message.ResponseAuth)
-		dht.handleAuthResponse(response, target)
+		dht.handleAuthResponse(response, targetNode.ID.String())
 
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
@@ -1109,6 +1202,8 @@ func (dht *DHT) AuthenticationRequest(ctx Context, target string) error {
 
 func (dht *DHT) handleAuthResponse(response *message.ResponseAuth, target string) {
 	if len(response.AuthUniqueKey) != 0 {
+		dht.auth.mut.Lock()
+		defer dht.auth.mut.Unlock()
 		dht.auth.ReceivedKeys[target] = response.AuthUniqueKey
 	}
 }
