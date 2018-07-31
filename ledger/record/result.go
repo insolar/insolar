@@ -21,8 +21,6 @@ type ReasonCode uint
 
 // ResultRecord is a common type for all results.
 type ResultRecord struct {
-	AppDataRecord
-
 	RequestRecord Reference
 }
 

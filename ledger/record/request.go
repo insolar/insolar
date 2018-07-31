@@ -24,8 +24,6 @@ import (
 
 // RequestRecord is common type for all requests.
 type RequestRecord struct {
-	AppDataRecord
-
 	Requester Reference
 	Target    Reference
 }
