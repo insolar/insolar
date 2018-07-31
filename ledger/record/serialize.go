@@ -34,8 +34,8 @@ type Raw struct {
 }
 
 // Hash returns 28 bytes of SHA3 hash on Data field.
-func (s *Raw) Hash() Hash {
-	return sha3.Sum224(s.Data)
+func (raw *Raw) Hash() Hash {
+	return sha3.Sum224(raw.Data)
 }
 
 // Decode decodes Data field of Raw struct as record from CBOR format.
