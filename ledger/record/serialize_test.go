@@ -55,7 +55,8 @@ var type2idTests = []struct {
 	recRef Record
 	id     TypeID
 }{
-	{"RequestRecord", RequestRecord{}, &RequestRecord{}, callRequestID},
+	{"RequestRecord", RequestRecord{}, &RequestRecord{}, requestRecordID},
+	{"CallRequest", CallRequest{}, &CallRequest{}, callRequestID},
 	{"LockUnlockRequest", LockUnlockRequest{}, &LockUnlockRequest{}, lockUnlockRequestID},
 	{"ReadRecordRequest", ReadRecordRequest{}, &ReadRecordRequest{}, readRecordRequestID},
 	{"ReadObject", ReadObject{}, &ReadObject{}, readObjectID},

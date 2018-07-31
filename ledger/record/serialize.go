@@ -90,8 +90,10 @@ const (
 // This is useful with deserialization cases.
 func getRecordByTypeID(id TypeID) Record {
 	switch id {
-	case callRequestID:
+	case requestRecordID:
 		return &RequestRecord{}
+	case callRequestID:
+		return &CallRequest{}
 	case lockUnlockRequestID:
 		return &LockUnlockRequest{}
 	case readRecordRequestID:
@@ -109,6 +111,8 @@ func getRecordByTypeID(id TypeID) Record {
 func getTypeIDbyRecord(rec Record) TypeID {
 	switch v := rec.(type) {
 	case RequestRecord, *RequestRecord:
+		return requestRecordID
+	case CallRequest, *CallRequest:
 		return callRequestID
 	case LockUnlockRequest, *LockUnlockRequest:
 		return lockUnlockRequestID
