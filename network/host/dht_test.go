@@ -983,6 +983,22 @@ func TestDHT_RelayRequest(t *testing.T) {
 		}
 
 		ctx := getDefaultCtx(dhts[i])
+		err := dhts[index].AuthenticationRequest(ctx, "begin", idx[i])
+		if err != nil {
+			log.Println(err)
+		}
+		time.Sleep(time.Millisecond * 200)
+	}
+
+	index = 0
+	for i := range dhts {
+		if (i + 1) == count {
+			index = 0
+		} else {
+			index++
+		}
+
+		ctx := getDefaultCtx(dhts[i])
 		err := dhts[index].RelayRequest(ctx, "start", idx[i])
 		if err != nil {
 			log.Println(err)
@@ -990,6 +1006,7 @@ func TestDHT_RelayRequest(t *testing.T) {
 
 		assert.Equal(t, 1, dhts[i].relay.ClientsCount())
 		assert.Equal(t, true, dhts[index].proxy.ProxyNodesCount() > 0)
+		time.Sleep(time.Millisecond * 200)
 	}
 
 	for _, dht := range dhts {
