@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -35,6 +36,18 @@ type Raw struct {
 // Hash returns 28 bytes of SHA3 hash on Data field.
 func (s *Raw) Hash() Hash {
 	return sha3.Sum224(s.Data)
+}
+
+// Decode decodes Data field of Raw struct as record from CBOR format.
+func (raw *Raw) Decode() Record {
+	cborH := &codec.CborHandle{}
+	rec := getRecordByTypeID(raw.Type)
+	dec := codec.NewDecoder(bytes.NewReader(raw.Data), cborH)
+	err := dec.Decode(rec)
+	if err != nil {
+		panic(err)
+	}
+	return rec
 }
 
 // Key2ID converts Key with PulseNum and Hash pair to binary representation (record.ID).
