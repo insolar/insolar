@@ -58,7 +58,7 @@ func Test_str2Hash(t *testing.T) {
 }
 
 func Test_str2ID(t *testing.T) {
-	hashStr := "00001111110000"
-	id := str2ID(hashStr)
-	assert.Equal(t, hashStr, fmt.Sprintf("%x", id))
+	idStr := "00001111" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"
+	id := str2ID(idStr)
+	assert.Equal(t, idStr, fmt.Sprintf("%x", id))
 }
