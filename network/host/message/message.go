@@ -83,19 +83,22 @@ func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message 
 }
 
 // NewAuthMessage uses for starting authentication.
-func NewAuthMessage(sender, receiver *node.Node) *Message {
+func NewAuthMessage(command CommandType, sender, receiver *node.Node) *Message {
 	return &Message{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeAuth,
+		Data:     &RequestAuth{Command: command},
 	}
 }
 
+// NewCheckOriginMessage uses for check originality.
 func NewCheckOriginMessage(sender, receiver *node.Node) *Message {
 	return &Message{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeCheckOrigin,
+		Data:     &RequestCheckOrigin{},
 	}
 }
 
@@ -116,6 +119,8 @@ func (m *Message) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestRelay)
 	case TypeAuth:
 		_, valid = m.Data.(*RequestAuth)
+	case TypeCheckOrigin:
+		_, valid = m.Data.(*RequestCheckOrigin)
 	default:
 		valid = false
 	}

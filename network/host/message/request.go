@@ -20,10 +20,16 @@ package message
 type CommandType int
 
 const (
-	// Start - command start relay.
-	Start = CommandType(iota + 1)
-	// Stop - command stop relay.
-	Stop
+	// Unknown - unknown command.
+	Unknown = CommandType(iota + 1)
+	// StartRelay - command start relay.
+	StartRelay
+	// StopRelay - command stop relay.
+	StopRelay
+	// BeginAuth - begin authentication.
+	BeginAuth
+	// RevokeAuth - revoke authentication.
+	RevokeAuth
 )
 
 // RequestDataFindNode is data for FindNode request.
@@ -55,6 +61,7 @@ type RequestRelay struct {
 
 // RequestAuth is data for authentication.
 type RequestAuth struct {
+	Command CommandType
 }
 
 // RequestCheckOrigin is data ro check originality.
