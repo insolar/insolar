@@ -16,12 +16,11 @@ import (
 )
 
 type GoInsider struct {
+	dir string
 }
 
-var PATH = "/Users/ruz/go/src/github.com/insolar/insolar/tmp"
-
 func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error {
-	path := PATH + "/" + args.Object.Reference
+	path := t.dir + "/" + args.Object.Reference
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		err := ioutil.WriteFile(path, args.Object.Code, 0666)
 		if err != nil {
@@ -48,9 +47,11 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	return nil
 }
 
+var PATH = "/Users/ruz/go/src/github.com/insolar/insolar/tmp"
+
 func main() {
 	log.Print("ginsider launched")
-	insider := new(GoInsider)
+	insider := GoInsider{PATH}
 	rpc.Register(insider)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":7777")
