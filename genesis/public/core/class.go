@@ -101,3 +101,39 @@ func (cdp *classDomainProxy) GetParent() object.Parent {
 func (cdp *classDomainProxy) GetClassID() string {
 	return class.ClsDomainID
 }
+
+type classDomainFactory struct {
+	parent object.Parent
+}
+
+// NewClassDomainFactory creates new factory for ClassDomain.
+func NewClassDomainFactory(parent object.Parent) factory.Factory {
+	return &classDomainFactory{
+		parent: parent,
+	}
+}
+
+func (cdf *classDomainFactory) GetParent() object.Parent {
+	// TODO: return real parent, fix tests
+	return nil
+}
+
+// GetClassID return string representation of ClassDomain's class.
+func (cdf *classDomainFactory) GetClassID() string {
+	return class.ClsDomainID
+}
+
+// GetReference returns nil for not published factory
+func (cdf *classDomainFactory) GetReference() *object.Reference {
+	return nil
+}
+
+// Create factory method for new ClassDomain instances.
+func (cdf *classDomainFactory) Create(parent object.Parent) object.Proxy {
+	proxy := newClassDomainProxy(parent)
+	_, err := parent.AddChild(proxy)
+	if err != nil {
+		return nil
+	}
+	return proxy
+}
