@@ -131,3 +131,12 @@ func Encode(rec Record) ([]byte, error) {
 	err := enc.Encode(rec)
 	return b.Bytes(), err
 }
+
+// MustEncode is helper that wraps a call to a function Encode and panics if the error is non-nil.
+func MustEncode(rec Record) []byte {
+	b, err := Encode(rec)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
