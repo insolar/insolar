@@ -16,6 +16,11 @@
 
 package record
 
+import (
+	"encoding/binary"
+	"io"
+)
+
 const (
 	// HashSize is a record hash size. We use 224-bit SHA-3 hash (28 bytes).
 	HashSize = 28
@@ -40,6 +45,14 @@ type Hash [HashSize]byte
 
 // ID is a record ID. Compounds PulseNum and Type
 type ID [IDSize]byte
+
+// WriteHash implements hash.Writer interface.
+func (id ID) WriteHash(w io.Writer) {
+	err := binary.Write(w, binary.BigEndian, id)
+	if err != nil {
+		panic("binary.Write failed:" + err.Error())
+	}
+}
 
 // Key is a composite key for storage methods.
 //
