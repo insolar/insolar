@@ -17,12 +17,44 @@
 package resolver
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
+	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
+
+type referenceNonExistentScope struct{}
+
+func (r *referenceNonExistentScope) GetClassID() string {
+	return class.ReferenceID
+}
+
+func (r *referenceNonExistentScope) GetRecord() string {
+	return "145"
+}
+
+func (r *referenceNonExistentScope) GetDomain() string {
+	return "123"
+}
+
+func (r *referenceNonExistentScope) GetScope() object.ScopeType {
+	return object.ScopeType(10000)
+}
+
+func (r *referenceNonExistentScope) String() string {
+	return fmt.Sprintf("#%s.#%s", "145", "123")
+}
+
+func (r *referenceNonExistentScope) GetReference() object.Reference {
+	return r
+}
+
+func (r *referenceNonExistentScope) GetParent() object.Parent {
+	return nil
+}
 
 func TestNewHandler(t *testing.T) {
 	mockParent := &mockParent{}
@@ -93,9 +125,7 @@ func TestHandler_GetObject_ContextScope(t *testing.T) {
 func TestHandler_GetObject_default(t *testing.T) {
 	mockParent := &mockParent{}
 	resolverHandler := NewHandler(mockParent)
-	ref := &object.Reference{
-		Scope: object.ScopeType(10000),
-	}
+	ref := &referenceNonExistentScope{}
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 
