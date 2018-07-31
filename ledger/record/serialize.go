@@ -52,3 +52,11 @@ func Key2ID(k Key) ID {
 	}
 	return id
 }
+
+// ID2Key converts ID to Key with PulseNum and Hash pair.
+func ID2Key(id ID) Key {
+	return Key{
+		Pulse: PulseNum(binary.BigEndian.Uint32(id[:PulseNumSize])),
+		Hash:  id[PulseNumSize:],
+	}
+}
