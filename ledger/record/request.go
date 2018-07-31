@@ -94,11 +94,11 @@ type ReadRequest struct {
 type ReadRecordRequest struct {
 	ReadRequest
 
-	expectedRecordType Type
+	expectedRecordType TypeID
 }
 
 // ExpectedRecordType is an expected Type of target record.
-func (r *ReadRecordRequest) ExpectedRecordType() Type {
+func (r *ReadRecordRequest) ExpectedRecordType() TypeID {
 	return r.expectedRecordType
 }
 
