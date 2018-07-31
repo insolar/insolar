@@ -104,3 +104,12 @@ func getRecordByTypeID(id TypeID) Record {
 		panic(fmt.Errorf("unknown record type %v", id))
 	}
 }
+
+// Encode serializes record to CBOR blob.
+func Encode(rec Record) ([]byte, error) {
+	cborH := &codec.CborHandle{}
+	var b bytes.Buffer
+	enc := codec.NewEncoder(&b, cborH)
+	err := enc.Encode(rec)
+	return b.Bytes(), err
+}
