@@ -14,30 +14,23 @@
  *    limitations under the License.
  */
 
-package transport
+package utptransport
 
 import (
-	"testing"
+	"net"
 
-	"github.com/insolar/insolar/network/host/connection"
 	"github.com/insolar/insolar/network/host/relay"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/network/host/transport"
 )
 
-func TestNewMemoryStoreFactory(t *testing.T) {
-	expectedFactory := &utpTransportFactory{}
-	actualFactory := NewUTPTransportFactory()
+type utpTransportFactory struct{}
 
-	assert.Equal(t, expectedFactory, actualFactory)
+// NewUTPTransportFactory creates new Factory of utpTransport.
+func NewUTPTransportFactory() transport.Factory {
+	return &utpTransportFactory{}
 }
 
-func TestMemoryStoreFactory_Create(t *testing.T) {
-	conn, err := connection.NewConnectionFactory().Create("127.0.0.1:8080")
-	assert.NoError(t, err)
-	defer conn.Close()
-
-	transport, err := NewUTPTransportFactory().Create(conn, relay.NewProxy())
-
-	assert.NoError(t, err)
-	assert.Implements(t, (*Transport)(nil), transport)
+// Create creates new Transport.
+func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (transport.Transport, error) {
+	return NewUTPTransport(conn, proxy)
 }

@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/network/host/rpc"
 	"github.com/insolar/insolar/network/host/store"
 	"github.com/insolar/insolar/network/host/transport"
+	"github.com/insolar/insolar/network/host/transport/utptransport"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -93,6 +94,10 @@ func newMockTransport() *mockTransport {
 	return net
 }
 
+func (t *mockTransport) UniqueID() id.TransportUnique {
+	return id.TransportUnique(1337)
+}
+
 func (t *mockTransport) Start() error {
 	return nil
 }
@@ -120,7 +125,7 @@ func (t *mockTransport) failNextSendMessage() {
 }
 
 func (t *mockTransport) SendRequest(q *message.Message) (transport.Future, error) {
-	id := transport.AtomicLoadAndIncrementUint64(t.sequence)
+	sequenceNumber := utptransport.AtomicLoadAndIncrementUint64(t.sequence)
 
 	if t.failNext {
 		t.failNext = false
@@ -128,7 +133,7 @@ func (t *mockTransport) SendRequest(q *message.Message) (transport.Future, error
 	}
 	t.recv <- q
 
-	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: message.RequestID(id)}, nil
+	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: message.RequestID(sequenceNumber)}, nil
 }
 
 func (t *mockTransport) SendResponse(requestID message.RequestID, q *message.Message) error {
@@ -185,7 +190,7 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *node.Origin, tran
 	addr, _ := node.NewAddress(address)
 	origin, _ := node.NewOrigin(ids, addr)
 	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
+	tp, err := utptransport.NewUTPTransport(conn, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }

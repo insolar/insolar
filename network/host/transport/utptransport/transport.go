@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package transport
+package utptransport
 
 import (
 	"context"
@@ -24,11 +24,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/relay"
+	"github.com/insolar/insolar/network/host/transport"
 
 	"github.com/anacrolix/utp"
 )
+
+const UTPUnique = id.TransportUnique(1)
 
 type utpTransport struct {
 	socket *utp.Socket
@@ -40,13 +44,13 @@ type utpTransport struct {
 	disconnectFinished chan bool
 
 	mutex   *sync.RWMutex
-	futures map[message.RequestID]Future
+	futures map[message.RequestID]transport.Future
 
 	proxy relay.Proxy
 }
 
 // NewUTPTransport creates utpTransport.
-func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
+func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy) (transport.Transport, error) {
 	return newUTPTransport(conn, proxy)
 }
 
@@ -56,7 +60,7 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 		return nil, err
 	}
 
-	transport := &utpTransport{
+	tp := &utpTransport{
 		socket: socket,
 
 		received: make(chan *message.Message),
@@ -66,16 +70,20 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 		disconnectFinished: make(chan bool),
 
 		mutex:   &sync.RWMutex{},
-		futures: make(map[message.RequestID]Future),
+		futures: make(map[message.RequestID]transport.Future),
 
 		proxy: proxy,
 	}
 
-	return transport, nil
+	return tp, nil
+}
+
+func (t *utpTransport) UniqueID() id.TransportUnique {
+	return UTPUnique
 }
 
 // SendRequest sends request message and returns future.
-func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
+func (t *utpTransport) SendRequest(msg *message.Message) (transport.Future, error) {
 	msg.RequestID = t.generateID()
 
 	future := t.createFuture(msg)
@@ -155,8 +163,8 @@ func (t *utpTransport) generateID() message.RequestID {
 	return message.RequestID(id)
 }
 
-func (t *utpTransport) createFuture(msg *message.Message) Future {
-	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
+func (t *utpTransport) createFuture(msg *message.Message) transport.Future {
+	newFuture := transport.NewFuture(msg.RequestID, msg.Receiver, msg, func(f transport.Future) {
 		t.mutex.Lock()
 		defer t.mutex.Unlock()
 
@@ -170,7 +178,7 @@ func (t *utpTransport) createFuture(msg *message.Message) Future {
 	return newFuture
 }
 
-func (t *utpTransport) getFuture(msg *message.Message) Future {
+func (t *utpTransport) getFuture(msg *message.Message) transport.Future {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
@@ -236,7 +244,7 @@ func (t *utpTransport) processRequest(msg *message.Message) {
 	}
 }
 
-func shouldProcessMessage(future Future, msg *message.Message) bool {
+func shouldProcessMessage(future transport.Future, msg *message.Message) bool {
 	return !future.Actor().Equal(*msg.Sender) && msg.Type != message.TypePing || msg.Type != future.Request().Type
 }
 

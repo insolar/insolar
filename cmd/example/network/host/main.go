@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/network/host/resolver"
 	"github.com/insolar/insolar/network/host/rpc"
 	"github.com/insolar/insolar/network/host/store"
-	"github.com/insolar/insolar/network/host/transport"
+	"github.com/insolar/insolar/network/host/transport/utptransport"
 
 	"github.com/chzyer/readline"
 )
@@ -57,7 +57,7 @@ func main() {
 	configuration := host.NewNetworkConfiguration(
 		createResolver(*stun),
 		connection.NewConnectionFactory(),
-		transport.NewUTPTransportFactory(),
+		utptransport.NewUTPTransportFactory(),
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{"s": send}),
 		proxy)
