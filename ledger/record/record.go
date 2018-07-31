@@ -26,9 +26,6 @@ type Memory []byte
 
 // Record is base interface for all records.
 type Record interface {
-	Hash() Hash
-	TimeSlot() uint64
-	Type() TypeID
 }
 
 // AppDataRecord is persistent data record stored in ledger.
@@ -40,11 +37,6 @@ type AppDataRecord struct {
 // Hash returns SHA-3 hash sum of Record
 func (r *AppDataRecord) Hash() Hash {
 	panic("implement me")
-}
-
-// TimeSlot returns time slot number that Record belongs to.
-func (r *AppDataRecord) TimeSlot() uint64 {
-	return r.timeSlotNo
 }
 
 // Type returns Record type.
