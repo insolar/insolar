@@ -101,7 +101,25 @@ func getRecordByTypeID(id TypeID) Record {
 	case readObjectCompositeID:
 		return &ReadObjectComposite{}
 	default:
-		panic(fmt.Errorf("unknown record type %v", id))
+		panic(fmt.Errorf("unknown record type id %v", id))
+	}
+}
+
+// getRecordByTypeID returns record's TypeID based on concrete record type of Record interface.
+func getTypeIDbyRecord(rec Record) TypeID {
+	switch v := rec.(type) {
+	case RequestRecord, *RequestRecord:
+		return callRequestID
+	case LockUnlockRequest, *LockUnlockRequest:
+		return lockUnlockRequestID
+	case ReadRecordRequest, *ReadRecordRequest:
+		return readRecordRequestID
+	case ReadObject, *ReadObject:
+		return readObjectID
+	case ReadObjectComposite, *ReadObjectComposite:
+		return readObjectCompositeID
+	default:
+		panic(fmt.Errorf("can't find record id by type %T", v))
 	}
 }
 
