@@ -34,9 +34,12 @@ func newChildResolver(parent object.Parent) *childResolver {
 	}
 }
 
-// GetObject resolve object by its reference and return its proxy.
-func (r *childResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
-	// TODO: check ref.Scope
+// GetObject resolves object by its reference and return its proxy.
+func (r *childResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
+	ref, ok := reference.(*object.Reference)
+	if !ok {
+		return nil, fmt.Errorf("reference is not Reference class object")
+	}
 	obj, err := r.parent.GetChild(ref.Record)
 	if err != nil {
 		return nil, err
@@ -47,6 +50,10 @@ func (r *childResolver) GetObject(ref *object.Reference, classID string) (object
 		return nil, fmt.Errorf("object is not Proxy")
 	}
 
+	classID, ok := cls.(string)
+	if !ok {
+		return nil, fmt.Errorf("classID is not string")
+	}
 	if proxy.GetClassID() != classID {
 		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
