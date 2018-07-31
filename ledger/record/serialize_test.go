@@ -80,3 +80,41 @@ func Test_TypeIDConversion(t *testing.T) {
 		})
 	}
 }
+
+var serializeTests = []struct {
+	name         string
+	rec          Record
+	expectTypeID TypeID
+}{
+	{
+		"RequestRecord_WithRequester",
+		&RequestRecord{
+			Requester: Reference{
+				Domain: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+			},
+		},
+		requestRecordID,
+	},
+	{
+		"RequestRecord_WithTarget",
+		&RequestRecord{
+			Target: Reference{
+				Domain: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+			},
+		},
+		requestRecordID,
+	},
+}
+
+func Test_EncodeToRaw(t *testing.T) {
+	for _, tt := range serializeTests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw, err := encodeToRaw(tt.rec)
+			if err != nil {
+				panic(err)
+			}
+			// fmt.Println(tt.name, "got", spew.Sdump(raw))
+			assert.Equal(t, tt.expectTypeID, raw.Type)
+		})
+	}
+}
