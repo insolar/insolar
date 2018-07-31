@@ -36,7 +36,7 @@ type ReferenceDomain interface {
 	RegisterReference(*object.Reference, string) (string, error)
 	// ResolveReference provides reference instance from record.
 	ResolveReference(string) (*object.Reference, error)
-	// InitGlobalMap set globalResolverMap for references register/resolving.
+	// InitGlobalMap sets globalResolverMap for references register/resolving.
 	InitGlobalMap(globalInstanceMap *map[string]object.Proxy)
 }
 
@@ -57,7 +57,7 @@ func newReferenceDomain(parent object.Parent) *referenceDomain {
 	return refDomain
 }
 
-// GetClassID return string representation of ReferenceDomain's class.
+// GetClassID returns string representation of ReferenceDomain's class.
 func (rd *referenceDomain) GetClassID() string {
 	return class.ReferenceDomainID
 }
@@ -70,7 +70,7 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Pr
 	rd.globalResolverMap = globalInstanceMap
 }
 
-// RegisterReference set new reference as a child to domain storage.
+// RegisterReference sets new reference as a child to domain storage.
 func (rd *referenceDomain) RegisterReference(ref *object.Reference, classID string) (string, error) {
 	record, err := rd.ChildStorage.Set(ref)
 	if err != nil {
@@ -153,7 +153,7 @@ func NewReferenceDomainFactory() factory.Factory {
 	return &referenceDomainFactory{}
 }
 
-// GetClassID return string representation of ReferenceDomain's class.
+// GetClassID returns string representation of ReferenceDomain's class.
 func (adf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
 }
