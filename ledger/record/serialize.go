@@ -17,6 +17,9 @@
 package record
 
 import (
+	"bytes"
+	"encoding/binary"
+
 	"golang.org/x/crypto/sha3"
 )
 
@@ -31,4 +34,21 @@ type Raw struct {
 // Hash returns 28 bytes of SHA3 hash on Data field.
 func (s *Raw) Hash() Hash {
 	return sha3.Sum224(s.Data)
+}
+
+// Key2ID converts Key with PulseNum and Hash pair to binary representation (record.ID).
+func Key2ID(k Key) ID {
+	var id ID
+	var err error
+	buf := bytes.NewBuffer(id[:0])
+
+	err = binary.Write(buf, binary.BigEndian, k.Pulse)
+	if err != nil {
+		panic("binary.Write failed to write PulseNum:" + err.Error())
+	}
+	err = binary.Write(buf, binary.BigEndian, k.Hash)
+	if err != nil {
+		panic("binary.Write failed to write Hash:" + err.Error())
+	}
+	return id
 }
