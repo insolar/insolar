@@ -75,8 +75,8 @@ func (sc *BaseSmartContract) GetReference() *object.Reference {
 func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
 	composite := compositeFactory.Create()
 	interfaceKey := composite.GetInterfaceKey()
-	_, isExist := sc.CompositeMap[interfaceKey]
-	if isExist {
+	_, exist := sc.CompositeMap[interfaceKey]
+	if exist {
 		return nil, fmt.Errorf("delegate with name %s already exist", interfaceKey)
 	}
 	sc.CompositeMap[interfaceKey] = composite
@@ -85,8 +85,8 @@ func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFa
 
 // GetComposite return composite by its key (if its exist inside smart contract).
 func (sc *BaseSmartContract) GetComposite(key string) (object.Composite, error) {
-	composite, isExist := sc.CompositeMap[key]
-	if !isExist {
+	composite, exist := sc.CompositeMap[key]
+	if !exist {
 		return nil, fmt.Errorf("delegate with name %s does not exist", key)
 	}
 	return composite, nil

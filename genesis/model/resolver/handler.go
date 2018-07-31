@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// Handler can resolver references from any allowed scopes.
+// Handler should resolve references from any allowed scopes.
 type Handler struct {
 	globalResolver  *globalResolver
 	childResolver   *childResolver
@@ -42,7 +42,7 @@ func NewHandler(p interface{}) *Handler {
 	}
 }
 
-// GetObject resolve object by its reference and return its proxy.
+// GetObject resolves object by its reference and return its proxy.
 func (r *Handler) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
 	ref, ok := reference.(*object.Reference)
 	if !ok {
@@ -60,7 +60,7 @@ func (r *Handler) GetObject(reference interface{}, classID interface{}) (interfa
 	}
 }
 
-// InitGlobalMap set globalInstanceMap into globalResolver.
+// InitGlobalMap sets globalInstanceMap into globalResolver.
 func (r *Handler) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	r.globalResolver.InitGlobalMap(globalInstanceMap)
 }
