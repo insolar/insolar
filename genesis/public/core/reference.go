@@ -33,9 +33,9 @@ type ReferenceDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// RegisterReference is used to publish new global references.
-	RegisterReference(*object.Reference, string) (string, error)
+	RegisterReference(object.Reference, string) (string, error)
 	// ResolveReference provides reference instance from record.
-	ResolveReference(string) (*object.Reference, error)
+	ResolveReference(string) (object.Reference, error)
 	// InitGlobalMap set globalResolverMap for references register/resolving.
 	InitGlobalMap(globalInstanceMap *map[string]object.Proxy)
 }
@@ -71,7 +71,7 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Pr
 }
 
 // RegisterReference set new reference as a child to domain storage.
-func (rd *referenceDomain) RegisterReference(ref *object.Reference, classID string) (string, error) {
+func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
 	record, err := rd.ChildStorage.Set(ref)
 	if err != nil {
 		return "", err
@@ -91,13 +91,13 @@ func (rd *referenceDomain) RegisterReference(ref *object.Reference, classID stri
 }
 
 // ResolveReference returns reference from its record in domain storage.
-func (rd *referenceDomain) ResolveReference(record string) (*object.Reference, error) {
+func (rd *referenceDomain) ResolveReference(record string) (object.Reference, error) {
 	reference, err := rd.ChildStorage.Get(record)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := reference.(*object.Reference)
+	result, ok := reference.(object.Reference)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not `Reference` instance", record)
 	}
@@ -117,17 +117,17 @@ func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
 }
 
 // RegisterReference proxy call for instance method.
-func (rdp *referenceDomainProxy) RegisterReference(address *object.Reference, classID string) (string, error) {
+func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, classID string) (string, error) {
 	return rdp.instance.RegisterReference(address, classID)
 }
 
 // ResolveReference proxy call for instance method.
-func (rdp *referenceDomainProxy) ResolveReference(record string) (*object.Reference, error) {
+func (rdp *referenceDomainProxy) ResolveReference(record string) (object.Reference, error) {
 	return rdp.instance.ResolveReference(record)
 }
 
 // GetReference proxy call for instance method.
-func (rdp *referenceDomainProxy) GetReference() *object.Reference {
+func (rdp *referenceDomainProxy) GetReference() object.Reference {
 	return rdp.instance.GetReference()
 }
 
@@ -159,7 +159,7 @@ func (adf *referenceDomainFactory) GetClassID() string {
 }
 
 // GetReference returns nil for not published factory.
-func (adf *referenceDomainFactory) GetReference() *object.Reference {
+func (adf *referenceDomainFactory) GetReference() object.Reference {
 	return nil
 }
 

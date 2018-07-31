@@ -115,7 +115,7 @@ func (idp *instanceDomainProxy) GetInstance(record string) (object.Proxy, error)
 }
 
 // GetReference proxy call for instance method.
-func (idp *instanceDomainProxy) GetReference() *object.Reference {
+func (idp *instanceDomainProxy) GetReference() object.Reference {
 	return idp.instance.GetReference()
 }
 
@@ -142,7 +142,7 @@ func (idf *instanceDomainFactory) GetClassID() string {
 }
 
 // GetReference returns nil for not published factory
-func (idf *instanceDomainFactory) GetReference() *object.Reference {
+func (idf *instanceDomainFactory) GetReference() object.Reference {
 	return nil
 }
 
