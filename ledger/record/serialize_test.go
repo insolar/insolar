@@ -17,6 +17,7 @@
 package record
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,4 +47,35 @@ func Test_KeyIDConversion(t *testing.T) {
 
 func Test_RecordByTypeIDPanic(t *testing.T) {
 	assert.Panics(t, func() { getRecordByTypeID(0) })
+}
+
+var type2idTests = []struct {
+	typ    string
+	rec    Record
+	recRef Record
+	id     TypeID
+}{
+	{"RequestRecord", RequestRecord{}, &RequestRecord{}, callRequestID},
+	{"LockUnlockRequest", LockUnlockRequest{}, &LockUnlockRequest{}, lockUnlockRequestID},
+	{"ReadRecordRequest", ReadRecordRequest{}, &ReadRecordRequest{}, readRecordRequestID},
+	{"ReadObject", ReadObject{}, &ReadObject{}, readObjectID},
+	{"ReadObjectComposite", ReadObjectComposite{}, &ReadObjectComposite{}, readObjectCompositeID},
+}
+
+func Test_TypeIDConversion(t *testing.T) {
+	for _, tt := range type2idTests {
+		t.Run(tt.typ, func(t *testing.T) {
+			gotRecTypeID := getTypeIDbyRecord(tt.rec)
+			gotRecTypeIDbyRef := getTypeIDbyRecord(tt.recRef)
+			gotRecord := getRecordByTypeID(tt.id)
+			// fmt.Printf("gotRecTypeID: %+v\n", gotRecTypeID)
+			// fmt.Printf("gotRecTypeIDref: %+v\n", gotRecTypeIDbyRef)
+			// fmt.Printf("gotRecord: %+v", gotRecord)
+			// gotKey := ID2Key(gotID)
+			assert.Equal(t, "*record."+tt.typ, fmt.Sprintf("%T", gotRecord))
+			assert.Equal(t, tt.id, gotRecTypeID)
+			assert.Equal(t, tt.id, gotRecTypeIDbyRef)
+			// assert.Equal(t, tt.id, gotID)
+		})
+	}
 }
