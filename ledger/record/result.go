@@ -17,7 +17,7 @@
 package record
 
 // ReasonCode is an error reason code.
-type ReasonCode uint
+type ReasonCode uint32
 
 // ResultRecord is a common type for all results.
 type ResultRecord struct {
@@ -75,7 +75,7 @@ type StatelessExceptionResult struct {
 type ReadObjectResult struct {
 	StatelessResult
 
-	State            int
+	State            int32
 	MomoryProjection Memory
 }
 
