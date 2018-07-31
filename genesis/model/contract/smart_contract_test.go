@@ -286,3 +286,31 @@ func TestSmartContract_GetParent(t *testing.T) {
 
 	assert.Equal(t, sc.Parent, res)
 }
+
+func TestSmartContract_GetResolver(t *testing.T) {
+	parent := &mockParent{}
+	sc := BaseSmartContract{
+		CompositeMap: make(map[string]object.Composite),
+		ChildStorage: storage.NewMapStorage(),
+		Parent:       parent,
+	}
+	assert.Nil(t, sc.resolver)
+	sc.GetResolver()
+
+	assert.NotNil(t, sc.resolver)
+}
+
+func TestSmartContract_GetResolver_Twice(t *testing.T) {
+	parent := &mockParent{}
+	sc := BaseSmartContract{
+		CompositeMap: make(map[string]object.Composite),
+		ChildStorage: storage.NewMapStorage(),
+		Parent:       parent,
+	}
+	sc.GetResolver()
+	assert.NotNil(t, sc.resolver)
+
+	sc.GetResolver()
+
+	assert.NotNil(t, sc.resolver)
+}

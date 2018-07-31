@@ -24,31 +24,48 @@ import (
 
 // globalResolver is resolver for GlobalScope references.
 type globalResolver struct {
-	globalInstanceMap *map[*object.Reference]object.Proxy
+	globalInstanceMap *map[string]object.Proxy
 }
 
-// newGlobalResolver creates new globalResolver instance.
-// TODO: pass map?
+// newGlobalResolver creates new globalResolver instance with empty map.
 func newGlobalResolver() *globalResolver {
-	instanceMap := make(map[*object.Reference]object.Proxy)
-	return &globalResolver{
-		globalInstanceMap: &instanceMap,
-	}
+	return &globalResolver{}
 }
 
-// GetObject resolve object by its reference and return its proxy.
-func (r *globalResolver) GetObject(ref *object.Reference, classID string) (object.Proxy, error) {
-	// TODO: check ref.Scope
-	proxy, isExist := (*r.globalInstanceMap)[ref]
-	if !isExist {
+// GetObject resolves object by its reference and return its proxy.
+func (r *globalResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
+	ref, ok := reference.(*object.Reference)
+	if !ok {
+		return nil, fmt.Errorf("reference is not Reference class object")
+	}
+	parentProxy, exist := (*r.globalInstanceMap)[ref.Domain]
+	if !exist {
 		return nil, fmt.Errorf("reference with address `%s` not found", ref)
 	}
-
+	parent, ok := parentProxy.(object.Parent)
+	if !ok {
+		return nil, fmt.Errorf("object with domain `%s` can not have children", ref.Domain)
+	}
+	proxy, err := parent.GetChild(ref.Record)
+	if err != nil {
+		return nil, err
+	}
+	classID, ok := cls.(string)
+	if !ok {
+		return nil, fmt.Errorf("classID is not string")
+	}
 	if proxy.GetClassID() != classID {
 		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
 	return proxy, nil
 }
 
-// GlobalResolver is a public globalResolver instance for resolving all global references
+// InitGlobalMap sets globalInstanceMap into globalResolver.
+func (r *globalResolver) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
+	if r.globalInstanceMap == nil {
+		r.globalInstanceMap = globalInstanceMap
+	}
+}
+
+// GlobalResolver is a public globalResolver instance for resolving all global references.
 var GlobalResolver = newGlobalResolver()
