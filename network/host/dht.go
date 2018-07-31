@@ -962,7 +962,6 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 
 		var success bool
 		var state relay.State
-		var err error
 
 		switch data.Command {
 		case message.StartRelay:
@@ -1031,7 +1030,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, message
 
 func (dht *DHT) processCheckOriginRequest(ctx Context, msg *message.Message, messageBuilder message.Builder) {
 	dht.auth.mut.Lock()
-	dht.auth.mut.Unlock()
+	defer dht.auth.mut.Unlock()
 	if key, ok := dht.auth.ReceivedKeys[msg.Sender.ID.String()]; ok {
 		response := &message.ResponseCheckOrigin{AuthUniqueKey: key}
 		err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
