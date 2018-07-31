@@ -19,6 +19,7 @@ package record
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 
 	"golang.org/x/crypto/sha3"
 )
@@ -58,5 +59,34 @@ func ID2Key(id ID) Key {
 	return Key{
 		Pulse: PulseNum(binary.BigEndian.Uint32(id[:PulseNumSize])),
 		Hash:  id[PulseNumSize:],
+	}
+}
+
+// record type ids for record types
+// in use mostly for deserialization
+const (
+	callRequestID         TypeID = 1
+	lockUnlockRequestID   TypeID = 2
+	readRecordRequestID   TypeID = 3
+	readObjectID          TypeID = 4
+	readObjectCompositeID TypeID = 5
+)
+
+// getRecordByTypeID returns Record interface with concrete record type under the hood.
+// This is useful with deserialization cases.
+func getRecordByTypeID(id TypeID) Record {
+	switch id {
+	case callRequestID:
+		return &RequestRecord{}
+	case lockUnlockRequestID:
+		return &LockUnlockRequest{}
+	case readRecordRequestID:
+		return &ReadRecordRequest{}
+	case readObjectID:
+		return &ReadObject{}
+	case readObjectCompositeID:
+		return &ReadObjectComposite{}
+	default:
+		panic(fmt.Errorf("unknown record type %v", id))
 	}
 }

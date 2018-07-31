@@ -43,3 +43,7 @@ func Test_KeyIDConversion(t *testing.T) {
 		})
 	}
 }
+
+func Test_RecordByTypeIDPanic(t *testing.T) {
+	assert.Panics(t, func() { getRecordByTypeID(0) })
+}
