@@ -19,9 +19,10 @@ package record
 const (
 	// HashSize is a record hash size. We use 224-bit SHA-3 hash (28 bytes).
 	HashSize = 28
-	// IDSize is an record identifcator size.
-	// 4 bytes is a PulseNum size (uint32)
-	IDSize = 4 + HashSize
+	// PulseNumSize - 4 bytes is a PulseNum size (uint32)
+	PulseNumSize = 4
+	// IDSize is an record identifier size.
+	IDSize = PulseNumSize + HashSize
 )
 
 // PulseNum is a sequential number of Pulse.
