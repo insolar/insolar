@@ -76,13 +76,14 @@ func ID2Key(id ID) Key {
 }
 
 // record type ids for record types
-// in use mostly for deserialization
+// in use mostly for hashing and deserialization
 const (
-	callRequestID         TypeID = 1
-	lockUnlockRequestID   TypeID = 2
-	readRecordRequestID   TypeID = 3
-	readObjectID          TypeID = 4
-	readObjectCompositeID TypeID = 5
+	requestRecordID       TypeID = 1
+	callRequestID         TypeID = 2
+	lockUnlockRequestID   TypeID = 3
+	readRecordRequestID   TypeID = 4
+	readObjectID          TypeID = 5
+	readObjectCompositeID TypeID = 6
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
