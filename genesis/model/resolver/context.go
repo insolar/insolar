@@ -35,7 +35,7 @@ func newContextResolver(parent object.Parent) *contextResolver {
 	}
 }
 
-// GetObject resolve object by its reference and return its proxy.
+// GetObject resolves object by its reference and return its proxy.
 func (r *contextResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
 	ref, ok := reference.(object.Reference)
 	if !ok {

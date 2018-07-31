@@ -36,7 +36,7 @@ type ReferenceDomain interface {
 	RegisterReference(object.Reference, string) (string, error)
 	// ResolveReference provides reference instance from record.
 	ResolveReference(string) (object.Reference, error)
-	// InitGlobalMap set globalResolverMap for references register/resolving.
+	// InitGlobalMap sets globalResolverMap for references register/resolving.
 	InitGlobalMap(globalInstanceMap *map[string]object.Proxy)
 }
 
@@ -57,12 +57,12 @@ func newReferenceDomain(parent object.Parent) *referenceDomain {
 	return refDomain
 }
 
-// GetClassID return string representation of ReferenceDomain's class.
+// GetClassID returns string representation of ReferenceDomain's class.
 func (rd *referenceDomain) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
-// InitGlobalMap set globalResolverMap for references register/resolving.
+// InitGlobalMap sets globalResolverMap for register/resolve references.
 func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	if rd.globalResolverMap != nil {
 		return
@@ -70,7 +70,7 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Pr
 	rd.globalResolverMap = globalInstanceMap
 }
 
-// RegisterReference set new reference as a child to domain storage.
+// RegisterReference sets new reference as a child to domain storage.
 func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
 	record, err := rd.ChildStorage.Set(ref)
 	if err != nil {
@@ -116,32 +116,32 @@ func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
 	}
 }
 
-// RegisterReference proxy call for instance method.
+// RegisterReference is a proxy call for instance method.
 func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, classID string) (string, error) {
 	return rdp.instance.RegisterReference(address, classID)
 }
 
-// ResolveReference proxy call for instance method.
+// ResolveReference is a proxy call for instance method.
 func (rdp *referenceDomainProxy) ResolveReference(record string) (object.Reference, error) {
 	return rdp.instance.ResolveReference(record)
 }
 
-// GetReference proxy call for instance method.
+// GetReference is a proxy call for instance method.
 func (rdp *referenceDomainProxy) GetReference() object.Reference {
 	return rdp.instance.GetReference()
 }
 
-// GetParent proxy call for instance method.
+// GetParent is a proxy call for instance method.
 func (rdp *referenceDomainProxy) GetParent() object.Parent {
 	return rdp.instance.GetParent()
 }
 
-// GetClassID proxy call for instance method.
+// GetClassID is a proxy call for instance method.
 func (rdp *referenceDomainProxy) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
-// InitGlobalMap proxy call for instance method.
+// InitGlobalMap is a proxy call for instance method.
 func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	rdp.instance.InitGlobalMap(globalInstanceMap)
 }
@@ -153,7 +153,7 @@ func NewReferenceDomainFactory() factory.Factory {
 	return &referenceDomainFactory{}
 }
 
-// GetClassID return string representation of ReferenceDomain's class.
+// GetClassID returns string representation of ReferenceDomain's class.
 func (adf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
 }
