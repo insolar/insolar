@@ -27,7 +27,7 @@ Usage:
 		return "someFactory"
 	}
 
-	func (f *someFactory) GetReference() *object.Reference {
+	func (f *someFactory) GetReference() object.Reference {
 		return f.Reference
 	}
 
