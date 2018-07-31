@@ -87,8 +87,6 @@ func newClassDomainProxy(parent object.Parent) *classDomainProxy {
 	}
 }
 
-//
-
 // GetReference proxy call for instance method.
 func (cdp *classDomainProxy) GetReference() *object.Reference {
 	return cdp.instance.GetReference()
