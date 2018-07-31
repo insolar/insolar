@@ -69,7 +69,7 @@ func TestNewBaseDomain(t *testing.T) {
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
-	sc.GetResolver()
+
 	assert.Equal(t, &BaseDomain{
 		BaseSmartContract: sc,
 		Name:              "NewDomain",

@@ -45,13 +45,11 @@ type BaseSmartContract struct {
 // NewBaseSmartContract creates new BaseSmartContract instance with empty CompositeMap, ChildStorage and specific parent.
 func NewBaseSmartContract(parent object.Parent) *BaseSmartContract {
 	// TODO: NewCompositeHolder
-	sc := BaseSmartContract{
+	return &BaseSmartContract{
 		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
-	sc.GetResolver()
-	return &sc
 }
 
 // GetResolver return instance or create it if necessary.
