@@ -19,7 +19,7 @@ package record
 
 // ProjectionType is a "view filter" for record.
 // E.g. we can read whole object or just it's hash.
-type ProjectionType uint
+type ProjectionType uint32
 
 // Memory is actual contracts' state, variables etc.
 type Memory []byte
