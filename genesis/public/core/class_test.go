@@ -15,3 +15,19 @@
  */
 
 package core
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestClassDomain_GetClassID(t *testing.T) {
+	parent := &mockParent{}
+	clsDom, err := newClassDomain(parent)
+	assert.NoError(t, err)
+
+	domainID := clsDom.GetClassID()
+	assert.Equal(t, class.ClsDomainID, domainID)
+}

@@ -207,21 +207,24 @@ func TestReferenceDomainProxy_GetClassID(t *testing.T) {
 }
 
 func TestNewReferenceDomainFactory(t *testing.T) {
-	expected := &referenceDomainFactory{}
-	factory := NewReferenceDomainFactory()
+	parent := &mockParent{}
+	expected := &referenceDomainFactory{parent: parent}
+	factory := NewReferenceDomainFactory(parent)
 
 	assert.Equal(t, expected, factory)
 }
 
 func TestReferenceDomainFactory_GetClassID(t *testing.T) {
-	factory := NewReferenceDomainFactory()
+	parent := &mockParent{}
+	factory := NewReferenceDomainFactory(parent)
 	id := factory.GetClassID()
 
 	assert.Equal(t, class.ReferenceDomainID, id)
 }
 
 func TestReferenceDomainFactory_GetReference(t *testing.T) {
-	factory := NewReferenceDomainFactory()
+	parent := &mockParent{}
+	factory := NewReferenceDomainFactory(parent)
 	reference := factory.GetReference()
 
 	assert.Nil(t, reference)
@@ -229,7 +232,7 @@ func TestReferenceDomainFactory_GetReference(t *testing.T) {
 
 func TestReferenceDomainFactory_Create(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewReferenceDomainFactory()
+	factory := NewReferenceDomainFactory(parent)
 	refDomainProxy := factory.Create(parent)
 
 	assert.Equal(t, &referenceDomainProxy{
@@ -239,7 +242,7 @@ func TestReferenceDomainFactory_Create(t *testing.T) {
 
 func TestReferenceDomainFactory_CreateWithError(t *testing.T) {
 	parent := &mockParentWithError{}
-	factory := NewReferenceDomainFactory()
+	factory := NewReferenceDomainFactory(parent)
 	refDomainProxy := factory.Create(parent)
 
 	assert.Nil(t, refDomainProxy)

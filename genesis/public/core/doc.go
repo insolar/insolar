@@ -27,12 +27,24 @@ Usage:
 	record, err := refDomain.RegisterReference(someReference)
 	resolved, err := refDomain.ResolveReference(record)
 
+
+ClassDomain - system domain that stores base system types named Classes.
+
+Usage:
+
+	factory := NewClassDomainFactory()
+	clsDomain := factory.Create(parentDomain)
+
+	record, err := clsDomain.RegisterReference(someReference)
+	resolved, err := clsDomain.ResolveReference(record)
+
+
 InstanceDomain - system domain that stores instances of other domains
 
 Usage:
 
 	factory := NewInstanceDomainFactory()
-	instDom := factory.Create(parent)
+	instDom := factory.Create(parentDomain)
 
 	record, err := instDom.CreateInstance(someDomainFactory)
 	domainProxy, err := instDom.GetInstance(record)

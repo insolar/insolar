@@ -129,11 +129,20 @@ func (idp *instanceDomainProxy) GetClassID() string {
 	return class.InstanceDomainID
 }
 
-type instanceDomainFactory struct{}
+type instanceDomainFactory struct {
+	parent object.Parent
+}
 
 // NewInstanceDomainFactory creates new factory for InstanceDomain.
-func NewInstanceDomainFactory() factory.Factory {
-	return &instanceDomainFactory{}
+func NewInstanceDomainFactory(parent object.Parent) factory.Factory {
+	return &instanceDomainFactory{
+		parent: parent,
+	}
+}
+
+func (idf *instanceDomainFactory) GetParent() object.Parent {
+	// TODO: return real parent, fix tests
+	return nil
 }
 
 // GetClassID return string representation of InstanceDomain's class.
