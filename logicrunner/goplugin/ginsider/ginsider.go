@@ -41,12 +41,25 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	export, err := p.Lookup("EXP")
 	check(err)
 
-	cbor := cbor.NewEncoder(&bytes.Buffer{})
-	some, err := cbor.Unmarshal(args.Object.Data, export)
+	var data_buf bytes.Buffer
+	cbor := cbor.NewEncoder(&data_buf)
+	_, err = cbor.Unmarshal(args.Object.Data, export)
+	check(err)
 
-	r2 := reflect.ValueOf(export)
-	m2 := r2.MethodByName(args.Method)
-	_ = m2.Call([]reflect.Value{})
+	method := reflect.ValueOf(export).MethodByName(args.Method)
+	if !method.IsValid() {
+		panic("wtf, no method " + args.Method + "in the plugin")
+	}
+
+	res := method.Call([]reflect.Value{})
+
+	cbor.Marshal(export)
+	// TODO: reply should have different type
+	reply.Object = args.Object
+	reply.Object.Code = nil
+	reply.Object.Data = data_buf.Bytes()
+
+	log.Printf("res: %+v\nobj: %+v\n", res)
 
 	return nil
 }

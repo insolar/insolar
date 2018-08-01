@@ -44,4 +44,14 @@ func TestHelloWorld(t *testing.T) {
 	}
 	resp := goplugin.CallResp{}
 	gi.Call(req, &resp)
+
+	var new_data HelloWorlder
+	_, err = cbor.Unmarshal(resp.Object.Data, &new_data)
+	if err != nil {
+		panic(err)
+	}
+
+	if new_data.Greeted != 67 {
+		t.Fatalf("Got unexpected value: %d, 67 is expected", new_data.Greeted)
+	}
 }
