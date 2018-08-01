@@ -31,7 +31,7 @@ Usage:
 		return f.Reference
 	}
 
-	func (f *someFactory) Create(parent object.Callable) object.Callable
+	func (f *someFactory) Create(parent object.Callable) (object.Callable, error)
 		// do creation logic
 	}
 
