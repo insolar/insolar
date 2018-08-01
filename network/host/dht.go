@@ -50,6 +50,7 @@ type DHT struct {
 	relay     relay.Relay
 	proxy     relay.Proxy
 	auth      AuthInfo
+	subnet    Subnet
 }
 
 // AuthInfo collects some information about authentication.
@@ -61,6 +62,11 @@ type AuthInfo struct {
 	authenticatedNodes map[string]bool
 
 	mut sync.Mutex
+}
+
+// Subnet collects some information about self network part
+type Subnet struct {
+	SelfIPList []string
 }
 
 // Options contains configuration options for the local node.
@@ -1035,10 +1041,18 @@ func (dht *DHT) processCheckOriginRequest(ctx Context, msg *message.Message, mes
 		response := &message.ResponseCheckOrigin{AuthUniqueKey: key}
 		err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 		if err != nil {
-			log.Println("Failed to send response:", err)
+			log.Println("Failed to send check origin response:", err)
 		}
 	} else {
 		log.Println("CheckOrigin request from unregistered node")
+	}
+}
+
+func (dht *DHT) processObtainIPRequest(ctx Context, msg *message.Message, messageBuilder message.Builder) {
+	response := &message.ResponseObtainIP{Address: msg.Sender.Address.String()}
+	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	if err != nil {
+		log.Println("Failed to send obtain IP response:", err)
 	}
 }
 
@@ -1204,6 +1218,51 @@ func (dht *DHT) handleAuthResponse(response *message.ResponseAuth, target string
 		dht.auth.mut.Lock()
 		defer dht.auth.mut.Unlock()
 		dht.auth.ReceivedKeys[target] = response.AuthUniqueKey
+	}
+}
+
+func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
+	targetNode, exist, err := dht.FindNode(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("target for relay request not found")
+		return err
+	}
+
+	origin := dht.htFromCtx(ctx).Origin
+	request := message.NewObtainIPMessage(origin, targetNode)
+
+	future, err := dht.transport.SendRequest(request)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*message.ResponseObtainIP)
+		dht.handleObtainIPResponse(response, targetNode.ID.String())
+
+	case <-time.After(dht.options.MessageTimeout):
+		future.Cancel()
+		err = errors.New("timeout")
+		return err
+	}
+
+	return nil
+}
+
+func (dht *DHT) handleObtainIPResponse(response *message.ResponseObtainIP, target string) {
+	if response.Address != "" {
+		dht.subnet.SelfIPList = append(dht.subnet.SelfIPList, response.Address)
 	}
 }
 
