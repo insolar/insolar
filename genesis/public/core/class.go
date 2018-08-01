@@ -136,6 +136,7 @@ func NewClassDomainFactory(parent object.Parent) factory.Factory {
 	}
 }
 
+// GetParent is a method that return parent link
 func (cdf *classDomainFactory) GetParent() object.Parent {
 	// TODO: return real parent, fix tests
 	return nil
