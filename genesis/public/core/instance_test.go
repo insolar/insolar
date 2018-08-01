@@ -237,6 +237,24 @@ func TestInstanceDomainProxy_GetInstance_IncorrectRef(t *testing.T) {
 	assert.EqualError(t, err, "object with record 1 does not exist")
 }
 
+func TestInstanceDomainProxy_GetParent(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	res := proxy.GetParent()
+	assert.Equal(t, parent, res)
+}
+
+func TestInstanceDomainProxy_GetResolver(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newInstanceDomainProxy(parent)
+	assert.NoError(t, err)
+
+	res := proxy.GetResolver()
+	assert.NotNil(t, res)
+}
+
 func TestNewInstanceDomainFactory(t *testing.T) {
 	factory := NewInstanceDomainFactory()
 	assert.Equal(t, &instanceDomainFactory{}, factory)

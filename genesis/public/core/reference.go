@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // ReferenceDomainName is a name for reference domain.
@@ -106,7 +107,6 @@ func (rd *referenceDomain) ResolveReference(record string) (*object.Reference, e
 }
 
 type referenceDomainProxy struct {
-	//instance *referenceDomain
 	object.BaseProxy
 }
 
@@ -119,34 +119,29 @@ func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
 	}
 }
 
-// RegisterReference proxy call for instance method.
+// RegisterReference is a proxy call for instance method.
 func (rdp *referenceDomainProxy) RegisterReference(address *object.Reference, classID string) (string, error) {
-	return rdp.Instance.(*referenceDomain).RegisterReference(address, classID)
+	return rdp.Instance.(ReferenceDomain).RegisterReference(address, classID)
 }
 
 // ResolveReference is a proxy call for instance method.
 func (rdp *referenceDomainProxy) ResolveReference(record string) (*object.Reference, error) {
-	return rdp.Instance.(*referenceDomain).ResolveReference(record)
+	return rdp.Instance.(ReferenceDomain).ResolveReference(record)
 }
 
-// GetReference is a proxy call for instance method.
-/*func (rdp *referenceDomainProxy) GetReference() *object.Reference {
-	return rdp.Instance.GetReference()
+// GetResolver is a proxy call for instance method.
+func (rdp *referenceDomainProxy) GetResolver() resolver.Resolver {
+	return rdp.Instance.(ReferenceDomain).GetResolver()
 }
 
 // GetParent is a proxy call for instance method.
 func (rdp *referenceDomainProxy) GetParent() object.Parent {
-	return rdp.Instance.GetParent()
+	return rdp.Instance.(ReferenceDomain).GetParent()
 }
-
-// GetClassID is a proxy call for instance method.
-func (rdp *referenceDomainProxy) GetClassID() string {
-	return class.ReferenceDomainID
-}*/
 
 // InitGlobalMap is a proxy call for instance method.
 func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
-	rdp.Instance.(*referenceDomain).InitGlobalMap(globalInstanceMap)
+	rdp.Instance.(ReferenceDomain).InitGlobalMap(globalInstanceMap)
 }
 
 type referenceDomainFactory struct{}

@@ -26,17 +26,17 @@ type BaseProxy struct {
 	Instance Child
 }
 
-// GetReference proxy call for instance method.
+// GetReference is a proxy call for instance method.
 func (bp *BaseProxy) GetReference() *Reference {
 	return bp.Instance.GetReference()
 }
 
-// GetParent proxy call for instance method.
+// GetParent is a proxy call for instance method.
 func (bp *BaseProxy) GetParent() Parent {
 	return bp.Instance.GetParent()
 }
 
-// GetClassID proxy call for instance method.
+// GetClassID is a proxy call for instance method.
 func (bp *BaseProxy) GetClassID() string {
 	return bp.Instance.GetClassID()
 }

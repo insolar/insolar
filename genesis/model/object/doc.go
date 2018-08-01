@@ -53,9 +53,9 @@ Usage:
 
     proxy, err := newCustomDomainProxy(...)
 
-    proxy.GetReference() *Reference — is a proxy call for instance method.
-    proxy.GetParent() Parent — is a proxy call for instance method.
-    proxy.GetClassID() string — is a proxy call for instance method.
+    proxy.GetReference() is a proxy call for instance method.
+    proxy.GetParent() is a proxy call for instance method.
+    proxy.GetClassID() is a proxy call for instance method.
 
 */
 package object

@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // InstanceDomainName is a name for instance domain.
@@ -109,14 +110,24 @@ func newInstanceDomainProxy(parent object.Parent) (*instanceDomainProxy, error) 
 	}, nil
 }
 
-// CreateInstance proxy call for instance method.
+// CreateInstance is a proxy call for instance method.
 func (idp *instanceDomainProxy) CreateInstance(fc factory.Factory) (string, error) {
-	return idp.Instance.(*instanceDomain).CreateInstance(fc)
+	return idp.Instance.(InstanceDomain).CreateInstance(fc)
 }
 
-// GetInstance proxy call for instance method.
+// GetInstance is a proxy call for instance method.
 func (idp *instanceDomainProxy) GetInstance(record string) (object.Proxy, error) {
-	return idp.Instance.(*instanceDomain).GetInstance(record)
+	return idp.Instance.(InstanceDomain).GetInstance(record)
+}
+
+// GetResolver is a proxy call for instance method.
+func (idp *instanceDomainProxy) GetResolver() resolver.Resolver {
+	return idp.Instance.(InstanceDomain).GetResolver()
+}
+
+// GetParent is a proxy call for instance method.
+func (idp *instanceDomainProxy) GetParent() object.Parent {
+	return idp.Instance.(InstanceDomain).GetParent()
 }
 
 type instanceDomainFactory struct{}
