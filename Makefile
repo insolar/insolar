@@ -1,4 +1,4 @@
-.PHONY: lint test ci-lint
+.PHONY: metalint ci-lint test
 
 ci-lint:
 	golangci-lint --tests=0 run
