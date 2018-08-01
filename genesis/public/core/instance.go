@@ -143,7 +143,7 @@ func NewInstanceDomainFactory(parent object.Parent) factory.Factory {
 	}
 }
 
-// GetClassID returns parent link
+// GetParent returns parent link
 func (idf *instanceDomainFactory) GetParent() object.Parent {
 	// TODO: return real parent, fix tests
 	return nil
