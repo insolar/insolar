@@ -30,7 +30,6 @@ import (
 type SmartContract interface {
 	object.Child
 	GetResolver() resolver.Resolver
-	SetReference(reference interface{})
 }
 
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.
@@ -73,9 +72,8 @@ func (sc *BaseSmartContract) GetReference() *object.Reference {
 }
 
 // SetReference save reference to BaseSmartContract instance.
-func (sc *BaseSmartContract) SetReference(reference interface{}) {
-	// TODO should return actual reference
-	sc.Reference = reference.(*object.Reference)
+func (sc *BaseSmartContract) SetReference(reference *object.Reference) {
+	sc.Reference = reference
 }
 
 // CreateComposite allows to create composites inside smart contract.

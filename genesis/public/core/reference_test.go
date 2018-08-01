@@ -43,6 +43,10 @@ func (c *mockChild) GetReference() *object.Reference {
 	return c.Reference
 }
 
+func (c *mockChild) SetReference(reference *object.Reference) {
+	c.Reference = reference
+}
+
 func (c *mockChild) GetParent() object.Parent {
 	return c.parent
 }
@@ -65,6 +69,10 @@ func (p *mockParent) GetClassID() string {
 
 func (p *mockParent) GetReference() *object.Reference {
 	return p.Reference
+}
+
+func (p *mockParent) SetReference(reference *object.Reference) {
+	p.Reference = reference
 }
 
 func (p *mockParent) GetChildStorage() storage.Storage {

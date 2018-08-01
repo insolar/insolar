@@ -54,9 +54,9 @@ func (r *Handler) GetObject(reference interface{}, classID interface{}) (interfa
 		if err != nil {
 			return nil, err
 		}
-		ret.(interface {
-			SetReference(reference interface{})
-		}).SetReference(reference)
+		//ret.(interface {
+		//	SetReference(reference interface{})
+		//}).SetReference(reference)
 		return ret, nil
 	case object.ContextScope:
 		return r.contextResolver.GetObject(ref, classID)

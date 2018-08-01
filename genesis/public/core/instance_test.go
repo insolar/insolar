@@ -39,6 +39,10 @@ func (p *mockProxy) GetReference() *object.Reference {
 	return nil
 }
 
+func (p *mockProxy) SetReference(reference *object.Reference) {
+
+}
+
 func (p *mockProxy) GetParent() object.Parent {
 	return p.parent
 }
@@ -57,6 +61,10 @@ func (f *mockFactory) GetClassID() string {
 
 func (f *mockFactory) GetReference() *object.Reference {
 	return nil
+}
+
+func (f *mockFactory) SetReference(reference *object.Reference) {
+
 }
 
 type mockFactoryError struct {

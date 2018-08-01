@@ -22,14 +22,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockInstance struct{}
+type mockInstance struct {
+	ref *Reference
+}
 
 func (p *mockInstance) GetClassID() string {
 	return "mockChild"
 }
 
 func (p *mockInstance) GetReference() *Reference {
-	return nil
+	return p.ref
+}
+
+func (p *mockInstance) SetReference(reference *Reference) {
+	p.ref = reference
 }
 
 func (p *mockInstance) GetParent() Parent {
@@ -43,11 +49,13 @@ func TestBaseProxy_GetClassID(t *testing.T) {
 	assert.Equal(t, "mockChild", proxy.GetClassID())
 }
 
-func TestBaseProxy_GetReference(t *testing.T) {
+func TestBaseProxy_SetGetReference(t *testing.T) {
+	ref, _ := NewReference("1", "2", GlobalScope)
 	proxy := &BaseProxy{
 		Instance: &mockInstance{},
 	}
-	assert.Nil(t, proxy.GetReference())
+	proxy.SetReference(ref)
+	assert.Equal(t, ref, proxy.GetReference())
 }
 
 func TestBaseProxy_GetParent(t *testing.T) {

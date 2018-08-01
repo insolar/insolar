@@ -73,6 +73,10 @@ func (p *mockParentNotChild) GetReference() *object.Reference {
 	return p.Reference
 }
 
+func (p *mockParentNotChild) SetReference(reference *object.Reference) {
+	p.Reference = reference
+}
+
 func (p *mockParentNotChild) GetChildStorage() storage.Storage {
 	return nil
 }
