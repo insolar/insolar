@@ -14,40 +14,24 @@
  *    limitations under the License.
  */
 
-package ledger
+package hash
 
 import (
-	"os"
-	"testing"
+	"io"
 
-	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/leveldb"
+	"golang.org/x/crypto/sha3"
 )
 
-var storer storage.LedgerStorer
-
-func TestMain(m *testing.M) {
-	storer = levelDBInit()
-	retCode := m.Run()
-	os.Exit(retCode)
+// Writer is the interface that wraps the WriteHash method.
+//
+// WriteHash should write all required for proper hashing data to io.Writer.
+type Writer interface {
+	WriteHash(io.Writer)
 }
 
-func TestLedger_LevelDB_Init(t *testing.T) {
-	ledger := Ledger{
-		Store: storer,
-	}
-	_, _ = ledger.Store.Get(record.Key{
-		Pulse: 1,
-		Hash:  []byte("test"),
-	})
-}
-
-func levelDBInit() storage.LedgerStorer {
-	// ledger, err := newLedger()
-	store, err := leveldb.InitDB()
-	if err != nil {
-		panic(err)
-	}
-	return store
+// SHA3hash224 returns SHA3 hash calculated on data recieved from Writer.
+func SHA3hash224(hw Writer) []byte {
+	h := sha3.New224()
+	hw.WriteHash(h)
+	return h.Sum(nil)
 }

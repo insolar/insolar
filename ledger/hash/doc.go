@@ -14,13 +14,7 @@
  *    limitations under the License.
  */
 
-package record
-
-import (
-	"os"
-	"testing"
-)
-
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
-}
+// Package hash contains Writer interface and SHA3 hasher.
+//
+// hash.Writer intended to be implemented by records for proper hashing.
+package hash
