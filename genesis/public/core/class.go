@@ -32,7 +32,7 @@ const ClassDomainName = "ClassDomain"
 type ClassDomain interface {
 	// Base domain implementation.
 	domain.Domain
-	// RegisterClass is used to publish new .
+	// RegisterClass is used to publish new Class.
 	RegisterClass(factory.Factory) (string, error)
 	// GetClass provides factory instance from record.
 	GetClass(string) (factory.Factory, error)
@@ -42,7 +42,7 @@ type classDomain struct {
 	domain.BaseDomain
 }
 
-// newClassDomain creates new instance of ClassDomain
+// newClassDomain creates new instance of ClassDomain.
 func newClassDomain(parent object.Parent) (*classDomain, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
@@ -88,7 +88,7 @@ type classDomainProxy struct {
 	instance *classDomain
 }
 
-// newClassDomainProxy creates new proxy and associate it with new instance of ClassDomain.
+// newClassDomainProxy creates new proxy and associates it with new instance of ClassDomain.
 func newClassDomainProxy(parent object.Parent) (*classDomainProxy, error) {
 	instance, err := newClassDomain(parent)
 	if err != nil {
@@ -136,7 +136,7 @@ func NewClassDomainFactory(parent object.Parent) factory.Factory {
 	}
 }
 
-// GetParent is a method that return parent link
+// GetParent is a method that return parent link.
 func (cdf *classDomainFactory) GetParent() object.Parent {
 	// TODO: return real parent, fix tests
 	return nil
@@ -147,7 +147,7 @@ func (cdf *classDomainFactory) GetClassID() string {
 	return class.ClsDomainID
 }
 
-// GetReference returns nil for not published factory
+// GetReference returns nil for not published factory.
 func (cdf *classDomainFactory) GetReference() *object.Reference {
 	return nil
 }

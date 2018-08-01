@@ -35,8 +35,8 @@ Usage:
 	factory := NewClassDomainFactory(parent)
 	clsDomain := factory.Create(parentDomain)
 
-	record, err := clsDomain.RegisterReference(someReference)
-	resolved, err := clsDomain.ResolveReference(record)
+	record, err := clsDomain.RegisterClass(someFactory)
+	someFactory, err = clsDomain.GetClass(record)
 
 
 InstanceDomain - system domain that stores instances of other domains
