@@ -77,13 +77,39 @@ func ID2Key(id ID) Key {
 
 // record type ids for record types
 // in use mostly for hashing and deserialization
+// (we don't use iota for clarity and predictable ids,
+// not depended on defenition order)
 const (
+	// request record ids
 	requestRecordID       TypeID = 1
 	callRequestID         TypeID = 2
 	lockUnlockRequestID   TypeID = 3
 	readRecordRequestID   TypeID = 4
 	readObjectID          TypeID = 5
 	readObjectCompositeID TypeID = 6
+	// result record ids
+	resultRecordID              TypeID = 7
+	wipeOutRecordID             TypeID = 8
+	readRecordResultID          TypeID = 9
+	statelessCallResultID       TypeID = 10
+	statelessExceptionResultID  TypeID = 11
+	readObjectResultID          TypeID = 12
+	specialResultID             TypeID = 13
+	lockUnlockResultID          TypeID = 14
+	rejectionResultID           TypeID = 15
+	activationRecordID          TypeID = 16
+	classActivateRecordID       TypeID = 17
+	objectActivateRecordID      TypeID = 18
+	codeRecordID                TypeID = 19
+	amendRecordID               TypeID = 20
+	classAmendRecordID          TypeID = 21
+	memoryMigrationCodeID       TypeID = 22
+	deactivationRecordID        TypeID = 23
+	objectAmendRecordID         TypeID = 24
+	statefulCallResultID        TypeID = 25
+	statefulExceptionResultID   TypeID = 26
+	enforcedObjectAmendRecordID TypeID = 27
+	objectAppendRecordID        TypeID = 28
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
