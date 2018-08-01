@@ -26,33 +26,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type referenceNonExistentScope struct{}
+type invalidScopeReference struct{}
 
-func (r *referenceNonExistentScope) GetClassID() string {
+func (r *invalidScopeReference) GetClassID() string {
 	return class.ReferenceID
 }
 
-func (r *referenceNonExistentScope) GetRecord() string {
+func (r *invalidScopeReference) GetRecord() string {
 	return "145"
 }
 
-func (r *referenceNonExistentScope) GetDomain() string {
+func (r *invalidScopeReference) GetDomain() string {
 	return "123"
 }
 
-func (r *referenceNonExistentScope) GetScope() object.ScopeType {
+func (r *invalidScopeReference) GetScope() object.ScopeType {
 	return object.ScopeType(10000)
 }
 
-func (r *referenceNonExistentScope) String() string {
+func (r *invalidScopeReference) String() string {
 	return fmt.Sprintf("#%s.#%s", "145", "123")
 }
 
-func (r *referenceNonExistentScope) GetReference() object.Reference {
+func (r *invalidScopeReference) GetReference() object.Reference {
 	return r
 }
 
-func (r *referenceNonExistentScope) GetParent() object.Parent {
+func (r *invalidScopeReference) GetParent() object.Parent {
 	return nil
 }
 
@@ -87,7 +87,7 @@ func TestHandler_GetObject_GlobalScope(t *testing.T) {
 	newMap := make(map[string]object.Proxy)
 	resolverHandler.InitGlobalMap(&newMap)
 
-	ref, _ := object.NewReference("1", "123", object.GlobalScope)
+	ref, _ := object.NewReference("123", "1", object.GlobalScope)
 	(*GlobalResolver.globalInstanceMap)["123"] = mockParent
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
@@ -114,7 +114,7 @@ func TestHandler_GetObject_ContextScope(t *testing.T) {
 		ContextStorage: contextStorage,
 	}
 	resolverHandler := NewHandler(mockParent)
-	ref, _ := object.NewReference(record, "1", object.ContextScope)
+	ref, _ := object.NewReference("1", record, object.ContextScope)
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 
@@ -125,7 +125,7 @@ func TestHandler_GetObject_ContextScope(t *testing.T) {
 func TestHandler_GetObject_default(t *testing.T) {
 	mockParent := &mockParent{}
 	resolverHandler := NewHandler(mockParent)
-	ref := &referenceNonExistentScope{}
+	ref := &invalidScopeReference{}
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 

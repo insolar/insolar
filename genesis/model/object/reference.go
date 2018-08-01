@@ -42,18 +42,18 @@ type Reference interface {
 }
 
 type reference struct {
-	record string
 	domain string
+	record string
 	scope  ScopeType
 }
 
 // NewReference creates new reference instance.
-func NewReference(record string, domain string, scope ScopeType) (Reference, error) {
+func NewReference(domain string, record string, scope ScopeType) (Reference, error) {
 	switch scope {
 	case GlobalScope, ContextScope, ChildScope:
 		return &reference{
-			record: record,
 			domain: domain,
+			record: record,
 			scope:  scope,
 		}, nil
 	default:

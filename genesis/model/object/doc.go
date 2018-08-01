@@ -23,7 +23,7 @@ Usage:
 	func main() {
 		domain := "1"
 		record := "1"
-		ref, err := NewReference(record, domain, GlobalScope)
+		ref, err := NewReference(domain, record, GlobalScope)
 	}
 
 */

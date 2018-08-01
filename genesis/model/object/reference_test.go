@@ -27,7 +27,7 @@ import (
 func TestNewReference(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, err := NewReference(record, domain, GlobalScope)
+	ref, err := NewReference(domain, record, GlobalScope)
 
 	assert.NoError(t, err)
 	assert.Equal(t, &reference{
@@ -41,7 +41,7 @@ func TestNewReference_Error(t *testing.T) {
 	domain := "134"
 	record := "156"
 	unknownScope := ScopeType(100)
-	ref, err := NewReference(record, domain, unknownScope)
+	ref, err := NewReference(domain, record, unknownScope)
 
 	assert.EqualError(t, err, "unknown scope type: 100")
 	assert.Nil(t, ref)
@@ -50,7 +50,7 @@ func TestNewReference_Error(t *testing.T) {
 func TestReference_GetReferenceID(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := NewReference(record, domain, GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 
 	refID := ref.GetClassID()
 
@@ -60,7 +60,7 @@ func TestReference_GetReferenceID(t *testing.T) {
 func TestReference_String(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := NewReference(record, domain, GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 
 	stringRef := ref.String()
 
@@ -70,7 +70,7 @@ func TestReference_String(t *testing.T) {
 func TestReference_GetReference(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := NewReference(record, domain, GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 
 	refRef := ref.GetReference()
 
@@ -80,7 +80,7 @@ func TestReference_GetReference(t *testing.T) {
 func TestReference_GetRecord(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := NewReference(record, domain, GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 
 	refRecord := ref.GetRecord()
 
@@ -90,7 +90,7 @@ func TestReference_GetRecord(t *testing.T) {
 func TestReference_GetDomain(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := NewReference(record, domain, GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 
 	refDomain := ref.GetDomain()
 
@@ -100,7 +100,7 @@ func TestReference_GetDomain(t *testing.T) {
 func TestReference_GetScope(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := NewReference(record, domain, GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 
 	refScope := ref.GetScope()
 
