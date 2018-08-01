@@ -80,7 +80,10 @@ func (sc *BaseSmartContract) SetReference(reference interface{}) {
 
 // CreateComposite allows to create composites inside smart contract.
 func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
-	composite := compositeFactory.Create()
+	composite, err := compositeFactory.Create()
+	if err != nil {
+		return nil, err
+	}
 	interfaceKey := composite.GetInterfaceKey()
 	_, exist := sc.CompositeMap[interfaceKey]
 	if exist {
