@@ -114,7 +114,7 @@ const (
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
 // This is useful with deserialization cases.
-func getRecordByTypeID(id TypeID) Record {
+func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	switch id {
 	// request records
 	case requestRecordID:
@@ -179,7 +179,7 @@ func getRecordByTypeID(id TypeID) Record {
 }
 
 // getRecordByTypeID returns record's TypeID based on concrete record type of Record interface.
-func getTypeIDbyRecord(rec Record) TypeID {
+func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo
 	switch v := rec.(type) {
 	// request records
 	case *RequestRecord:
