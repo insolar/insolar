@@ -64,6 +64,10 @@ type RequestAuth struct {
 	Command CommandType
 }
 
-// RequestCheckOrigin is data ro check originality.
+// RequestCheckOrigin is data to check originality.
 type RequestCheckOrigin struct {
+}
+
+// RequestObtainIP is data to obtain a self IP.
+type RequestObtainIP struct {
 }

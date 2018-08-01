@@ -59,3 +59,8 @@ type ResponseAuth struct {
 type ResponseCheckOrigin struct {
 	AuthUniqueKey []byte
 }
+
+// ResponseObtainIP is data for get a IP of requesting node.
+type ResponseObtainIP struct {
+	Address string
+}

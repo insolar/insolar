@@ -44,6 +44,8 @@ const (
 	TypeAuth
 	// TypeCheckOrigin is message to check originality of some node.
 	TypeCheckOrigin
+	// TypeObtainIP is message to get itself IP from another node.
+	TypeObtainIP
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -99,6 +101,16 @@ func NewCheckOriginMessage(sender, receiver *node.Node) *Message {
 		Receiver: receiver,
 		Type:     TypeCheckOrigin,
 		Data:     &RequestCheckOrigin{},
+	}
+}
+
+// NewObtainIPMessage uses for get self IP.
+func NewObtainIPMessage(sender, receiver *node.Node) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeObtainIP,
+		Data:     &RequestObtainIP{},
 	}
 }
 
@@ -194,6 +206,7 @@ func init() {
 	gob.Register(&RequestRelay{})
 	gob.Register(&RequestAuth{})
 	gob.Register(&RequestCheckOrigin{})
+	gob.Register(&RequestObtainIP{})
 
 	gob.Register(&ResponseDataFindNode{})
 	gob.Register(&ResponseDataFindValue{})
@@ -202,4 +215,5 @@ func init() {
 	gob.Register(&ResponseRelay{})
 	gob.Register(&ResponseAuth{})
 	gob.Register(&ResponseCheckOrigin{})
+	gob.Register(&ResponseObtainIP{})
 }
