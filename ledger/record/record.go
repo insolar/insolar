@@ -17,6 +17,8 @@
 // Package record contains various record type definitions.
 package record
 
+import "github.com/insolar/insolar/ledger/hash"
+
 // ProjectionType is a "view filter" for record.
 // E.g. we can read whole object or just it's hash.
 type ProjectionType uint32
@@ -26,4 +28,5 @@ type Memory []byte
 
 // Record is base interface for all records.
 type Record interface {
+	hash.Writer
 }
