@@ -50,24 +50,22 @@ func Test_RecordByTypeIDPanic(t *testing.T) {
 }
 
 var type2idTests = []struct {
-	typ    string
-	rec    Record
-	recRef Record
-	id     TypeID
+	typ string
+	rec Record
+	id  TypeID
 }{
-	{"RequestRecord", RequestRecord{}, &RequestRecord{}, requestRecordID},
-	{"CallRequest", CallRequest{}, &CallRequest{}, callRequestID},
-	{"LockUnlockRequest", LockUnlockRequest{}, &LockUnlockRequest{}, lockUnlockRequestID},
-	{"ReadRecordRequest", ReadRecordRequest{}, &ReadRecordRequest{}, readRecordRequestID},
-	{"ReadObject", ReadObject{}, &ReadObject{}, readObjectID},
-	{"ReadObjectComposite", ReadObjectComposite{}, &ReadObjectComposite{}, readObjectCompositeID},
+	{"RequestRecord", &RequestRecord{}, requestRecordID},
+	{"CallRequest", &CallRequest{}, callRequestID},
+	{"LockUnlockRequest", &LockUnlockRequest{}, lockUnlockRequestID},
+	{"ReadRecordRequest", &ReadRecordRequest{}, readRecordRequestID},
+	{"ReadObject", &ReadObject{}, readObjectID},
+	{"ReadObjectComposite", &ReadObjectComposite{}, readObjectCompositeID},
 }
 
 func Test_TypeIDConversion(t *testing.T) {
 	for _, tt := range type2idTests {
 		t.Run(tt.typ, func(t *testing.T) {
 			gotRecTypeID := getTypeIDbyRecord(tt.rec)
-			gotRecTypeIDbyRef := getTypeIDbyRecord(tt.recRef)
 			gotRecord := getRecordByTypeID(tt.id)
 			// fmt.Printf("gotRecTypeID: %+v\n", gotRecTypeID)
 			// fmt.Printf("gotRecTypeIDref: %+v\n", gotRecTypeIDbyRef)
@@ -75,7 +73,6 @@ func Test_TypeIDConversion(t *testing.T) {
 			// gotKey := ID2Key(gotID)
 			assert.Equal(t, "*record."+tt.typ, fmt.Sprintf("%T", gotRecord))
 			assert.Equal(t, tt.id, gotRecTypeID)
-			assert.Equal(t, tt.id, gotRecTypeIDbyRef)
 			// assert.Equal(t, tt.id, gotID)
 		})
 	}
