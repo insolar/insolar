@@ -1,6 +1,6 @@
 .PHONY: clean
 clean:
-	rm secondary.so
+	rm -f secondary.so
 
 secondary.so: secondary
 	go build -buildmode=plugin ./secondary
