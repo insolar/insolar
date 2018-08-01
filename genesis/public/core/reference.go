@@ -166,6 +166,9 @@ func (adf *referenceDomainFactory) GetReference() *object.Reference {
 	return nil
 }
 
+func (adf *referenceDomainFactory) SetReference(reference *object.Reference) {
+}
+
 // Create factory method for new ReferenceDomain instances.
 func (adf *referenceDomainFactory) Create(parent object.Parent) object.Proxy {
 	proxy := newReferenceDomainProxy(parent)

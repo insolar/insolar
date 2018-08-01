@@ -59,9 +59,11 @@ func TestHandler_GetObject_GlobalScope(t *testing.T) {
 	(*GlobalResolver.globalInstanceMap)["123"] = mockParent
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
+	rf := obj.(*mockChild).GetReference()
 
 	assert.NoError(t, err)
 	assert.Equal(t, child, obj)
+	assert.Equal(t, ref, rf)
 }
 
 func TestHandler_GetObject_ChildScope(t *testing.T) {

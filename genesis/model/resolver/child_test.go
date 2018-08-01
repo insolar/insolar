@@ -39,6 +39,10 @@ func (c *mockChild) GetReference() *object.Reference {
 	return c.Reference
 }
 
+func (c *mockChild) SetReference(reference interface{}) {
+	c.Reference = reference.(*object.Reference)
+}
+
 func (c *mockChild) GetParent() object.Parent {
 	return c.parent
 }
