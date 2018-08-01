@@ -22,6 +22,7 @@ type GoInsider struct {
 }
 
 func NewGoInsider(path string) *GoInsider {
+	//TODO: check that path exist, it's a directory and writable
 	return &GoInsider{path}
 }
 
