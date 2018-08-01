@@ -57,6 +57,7 @@ func (id ID) WriteHash(w io.Writer) {
 // Key is a composite key for storage methods.
 //
 // Key and ID converts one to another in both directions.
+// Hash is a bytes slice here to avoid copy to Hash array.
 type Key struct {
 	Pulse PulseNum
 	Hash  []byte

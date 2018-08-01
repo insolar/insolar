@@ -67,13 +67,8 @@ func Test_TypeIDConversion(t *testing.T) {
 		t.Run(tt.typ, func(t *testing.T) {
 			gotRecTypeID := getTypeIDbyRecord(tt.rec)
 			gotRecord := getRecordByTypeID(tt.id)
-			// fmt.Printf("gotRecTypeID: %+v\n", gotRecTypeID)
-			// fmt.Printf("gotRecTypeIDref: %+v\n", gotRecTypeIDbyRef)
-			// fmt.Printf("gotRecord: %+v", gotRecord)
-			// gotKey := ID2Key(gotID)
 			assert.Equal(t, "*record."+tt.typ, fmt.Sprintf("%T", gotRecord))
 			assert.Equal(t, tt.id, gotRecTypeID)
-			// assert.Equal(t, tt.id, gotID)
 		})
 	}
 }
