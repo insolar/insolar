@@ -157,6 +157,7 @@ func NewReferenceDomainFactory(parent object.Parent) factory.Factory {
 	}
 }
 
+// GetParent returns parent
 func (rdf *referenceDomainFactory) GetParent() object.Parent {
 	// TODO: return real parent, fix tests
 	return nil
@@ -172,7 +173,7 @@ func (rdf *referenceDomainFactory) GetReference() *object.Reference {
 	return nil
 }
 
-// Create factory method for new ReferenceDomain instances.
+// Create is a factory method for new ReferenceDomain instances.
 func (rdf *referenceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy := newReferenceDomainProxy(parent)
 	_, err := parent.AddChild(proxy)

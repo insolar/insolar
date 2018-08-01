@@ -54,7 +54,7 @@ func newInstanceDomain(parent object.Parent) (*instanceDomain, error) {
 	return instDomain, nil
 }
 
-// GetClassID return string representation of InstanceDomain's class.
+// GetClassID returns string representation of InstanceDomain's class.
 func (instDom *instanceDomain) GetClassID() string {
 	return class.InstanceDomainID
 }
