@@ -179,7 +179,7 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 }
 
 // getRecordByTypeID returns record's TypeID based on concrete record type of Record interface.
-func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo
+func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 	switch v := rec.(type) {
 	// request records
 	case *RequestRecord:
@@ -262,7 +262,7 @@ func MustEncode(rec Record) []byte {
 }
 
 // encodeToRaw converts concrete record to Raw record.
-func encodeToRaw(rec Record) (Raw, error) {
+func encodeToRaw(rec Record) (Raw, error) { // nolint: deadcode, megacheck
 	b, err := Encode(rec)
 	if err != nil {
 		panic(err)
