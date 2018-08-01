@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	"log"
 	"net"
 	"net/http"
@@ -13,6 +13,7 @@ import (
 	"plugin"
 	"reflect"
 
+	"github.com/2tvenom/cbor"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
@@ -39,9 +40,11 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	export, err := p.Lookup("EXP")
 	check(err)
 
+	cbor := cbor.NewEncoder(&bytes.Buffer{})
+	some, err := cbor.Unmarshal(args.Object.Data, export)
+
 	r2 := reflect.ValueOf(export)
 	m2 := r2.MethodByName(args.Method)
-	fmt.Println(r2)
 	_ = m2.Call([]reflect.Value{})
 
 	return nil
