@@ -54,8 +54,8 @@ type DHT struct {
 
 // AuthInfo collects some information about authentication.
 type AuthInfo struct {
-	// Sended/received unique auth keys.
-	SendedKeys   map[string][]byte
+	// Sent/received unique auth keys.
+	SentKeys     map[string][]byte
 	ReceivedKeys map[string][]byte
 
 	authenticatedNodes map[string]bool
@@ -138,7 +138,7 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 	}
 
 	dht.auth.authenticatedNodes = make(map[string]bool)
-	dht.auth.SendedKeys = make(map[string][]byte)
+	dht.auth.SentKeys = make(map[string][]byte)
 	dht.auth.ReceivedKeys = make(map[string][]byte)
 
 	return dht, nil
@@ -1007,7 +1007,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, message
 				log.Println("failed to create auth key. ", err)
 				return
 			}
-			dht.auth.SendedKeys[msg.Sender.ID.String()] = key
+			dht.auth.SentKeys[msg.Sender.ID.String()] = key
 			response := &message.ResponseAuth{AuthUniqueKey: key}
 
 			err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
@@ -1107,8 +1107,8 @@ func (dht *DHT) handleRelayResponse(ctx Context, response *message.ResponseRelay
 }
 
 func (dht *DHT) handleCheckOriginResponse(response *message.ResponseCheckOrigin, target string) {
-	if bytes.Equal(response.AuthUniqueKey, dht.auth.SendedKeys[target]) {
-		delete(dht.auth.SendedKeys, target)
+	if bytes.Equal(response.AuthUniqueKey, dht.auth.SentKeys[target]) {
+		delete(dht.auth.SentKeys, target)
 		dht.auth.authenticatedNodes[target] = true
 	}
 }
