@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -19,29 +20,28 @@ type GoInsider struct {
 	dir string
 }
 
+func NewGoInsider(path string) *GoInsider {
+	return &GoInsider{path}
+}
+
 func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error {
 	path := t.dir + "/" + args.Object.Reference
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		err := ioutil.WriteFile(path, args.Object.Code, 0666)
-		if err != nil {
-			panic(err)
-		}
-	} else if err != nil {
-		panic(err)
+		check(err)
+	} else {
+		check(err)
 	}
 
 	p, err := plugin.Open(path)
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 
 	export, err := p.Lookup("EXP")
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 
 	r2 := reflect.ValueOf(export)
 	m2 := r2.MethodByName(args.Method)
+	fmt.Println(r2)
 	_ = m2.Call([]reflect.Value{})
 
 	return nil
@@ -60,4 +60,10 @@ func main() {
 	}
 	go http.Serve(l, nil)
 	<-make(chan byte)
+}
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
