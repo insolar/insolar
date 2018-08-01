@@ -271,19 +271,21 @@ func TestReferenceDomainFactory_GetReference(t *testing.T) {
 func TestReferenceDomainFactory_Create(t *testing.T) {
 	parent := &mockParent{}
 	factory := NewReferenceDomainFactory()
-	refDomainProxy := factory.Create(parent)
+	proxy, err := factory.Create(parent)
 
+	assert.NoError(t, err)
 	assert.Equal(t, &referenceDomainProxy{
 		BaseProxy: object.BaseProxy{
 			Instance: newReferenceDomain(parent),
 		},
-	}, refDomainProxy)
+	}, proxy)
 }
 
 func TestReferenceDomainFactory_CreateWithError(t *testing.T) {
 	parent := &mockParentWithError{}
 	factory := NewReferenceDomainFactory()
-	refDomainProxy := factory.Create(parent)
+	proxy, err := factory.Create(parent)
 
-	assert.Nil(t, refDomainProxy)
+	assert.EqualError(t, err, "add child error")
+	assert.Nil(t, proxy)
 }
