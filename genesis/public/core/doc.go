@@ -22,7 +22,7 @@ ReferenceDomain - system domain that allow global reference resolving.
 Usage:
 
 	factory := NewReferenceDomainFactory()
-	refDomain := factory.Create(nil)
+	refDomain, error := factory.Create(nil)
 
 	record, err := refDomain.RegisterReference(someReference)
 	resolved, err := refDomain.ResolveReference(record)
@@ -32,7 +32,7 @@ InstanceDomain - system domain that stores instances of other domains
 Usage:
 
 	factory := NewInstanceDomainFactory()
-	instDom := factory.Create(parent)
+	instDom, error := factory.Create(parent)
 
 	record, err := instDom.CreateInstance(someDomainFactory)
 	domainProxy, err := instDom.GetInstance(record)
