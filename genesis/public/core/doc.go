@@ -21,8 +21,8 @@ ReferenceDomain - system domain that allow global reference resolving.
 
 Usage:
 
-	factory := NewReferenceDomainFactory()
-	refDomain := factory.Create(nil)
+	factory := NewReferenceDomainFactory(parent)
+	refDomain, error := factory.Create(nil)
 
 	record, err := refDomain.RegisterReference(someReference)
 	resolved, err := refDomain.ResolveReference(record)
@@ -32,7 +32,7 @@ ClassDomain - system domain that stores base system types named Classes.
 
 Usage:
 
-	factory := NewClassDomainFactory()
+	factory := NewClassDomainFactory(parent)
 	clsDomain := factory.Create(parentDomain)
 
 	record, err := clsDomain.RegisterReference(someReference)
@@ -43,8 +43,8 @@ InstanceDomain - system domain that stores instances of other domains
 
 Usage:
 
-	factory := NewInstanceDomainFactory()
-	instDom := factory.Create(parentDomain)
+	factory := NewInstanceDomainFactory(parent)
+	instDom, error := factory.Create(parent)
 
 	record, err := instDom.CreateInstance(someDomainFactory)
 	domainProxy, err := instDom.GetInstance(record)

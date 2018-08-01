@@ -16,6 +16,8 @@
 
 /*
 Package resolver provides interface and default implementation of resolvers for getting objects from references.
+Interface Resolver uses interface{} type for reference, class and proxy (which GetObject returns),
+because in future implementation its going to be plugin. Virtual machine will be use it and provide resolving logic.
 
 Usage:
 	package main

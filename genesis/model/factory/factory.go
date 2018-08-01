@@ -24,5 +24,5 @@ import (
 type Factory interface {
 	object.Child
 	// Create returns new instance of specified type.
-	Create(parent object.Parent) object.Proxy
+	Create(parent object.Parent) (object.Proxy, error)
 }

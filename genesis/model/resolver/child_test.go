@@ -26,8 +26,9 @@ import (
 )
 
 type mockChild struct {
-	Reference *object.Reference
-	parent    object.Parent
+	Reference      *object.Reference
+	ContextStorage storage.Storage
+	parent         object.Parent
 }
 
 func (c *mockChild) GetClassID() string {
@@ -99,6 +100,16 @@ func TestNewChildResolver(t *testing.T) {
 	}, mapStorage)
 }
 
+func TestChildResolver_GetObject_Not_Reference(t *testing.T) {
+	mockParent := &mockParentWithError{}
+	resolver := newChildResolver(mockParent)
+
+	obj, err := resolver.GetObject("not reference", "mockParent")
+
+	assert.EqualError(t, err, "reference is not Reference class object")
+	assert.Nil(t, obj)
+}
+
 func TestChildResolver_GetObject_No_Object(t *testing.T) {
 	mockParent := &mockParentWithError{}
 	resolver := newChildResolver(mockParent)
@@ -118,6 +129,17 @@ func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
 	obj, err := resolver.GetObject(ref, "someClass")
 
 	assert.EqualError(t, err, "instance class is not `someClass`")
+	assert.Nil(t, obj)
+}
+
+func TestChildResolver_GetObject_ClassID_Not_Str(t *testing.T) {
+	mockParent := &mockParent{}
+	resolver := newChildResolver(mockParent)
+	ref, _ := object.NewReference("1", "1", object.ChildScope)
+
+	obj, err := resolver.GetObject(ref, ref)
+
+	assert.EqualError(t, err, "classID is not string")
 	assert.Nil(t, obj)
 }
 

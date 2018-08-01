@@ -152,15 +152,15 @@ func (cdf *classDomainFactory) GetReference() *object.Reference {
 }
 
 // Create factory method for new ClassDomain instances.
-func (cdf *classDomainFactory) Create(parent object.Parent) object.Proxy {
+func (cdf *classDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy, err := newClassDomainProxy(parent)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	_, err = parent.AddChild(proxy)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return proxy
+	return proxy, nil
 }

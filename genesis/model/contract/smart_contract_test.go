@@ -17,6 +17,7 @@
 package contract
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
@@ -97,8 +98,14 @@ func (c *anotherBaseComposite) GetClassID() string {
 
 type BaseCompositeFactory struct{}
 
-func (cf *BaseCompositeFactory) Create() object.Composite {
-	return &BaseComposite{}
+func (cf *BaseCompositeFactory) Create() (object.Composite, error) {
+	return &BaseComposite{}, nil
+}
+
+type BaseCompositeFactoryWithError struct{}
+
+func (cf *BaseCompositeFactoryWithError) Create() (object.Composite, error) {
+	return nil, fmt.Errorf("composite factory create error")
 }
 
 func TestNewBaseSmartContract(t *testing.T) {
@@ -152,6 +159,15 @@ func TestSmartContract_CreateComposite_Error(t *testing.T) {
 
 	assert.Nil(t, res)
 	assert.EqualError(t, err, "delegate with name BaseComposite already exist")
+}
+
+func TestSmartContract_CreateComposite_CreateError(t *testing.T) {
+	parent := &mockParent{}
+	sc := NewBaseSmartContract(parent)
+	errorFactory := BaseCompositeFactoryWithError{}
+
+	_, err := sc.CreateComposite(&errorFactory)
+	assert.EqualError(t, err, "composite factory create error")
 }
 
 func TestSmartContract_GetComposite(t *testing.T) {
@@ -285,4 +301,32 @@ func TestSmartContract_GetParent(t *testing.T) {
 	res := sc.GetParent()
 
 	assert.Equal(t, sc.Parent, res)
+}
+
+func TestSmartContract_GetResolver(t *testing.T) {
+	parent := &mockParent{}
+	sc := BaseSmartContract{
+		CompositeMap: make(map[string]object.Composite),
+		ChildStorage: storage.NewMapStorage(),
+		Parent:       parent,
+	}
+	assert.Nil(t, sc.resolver)
+	sc.GetResolver()
+
+	assert.NotNil(t, sc.resolver)
+}
+
+func TestSmartContract_GetResolver_Twice(t *testing.T) {
+	parent := &mockParent{}
+	sc := BaseSmartContract{
+		CompositeMap: make(map[string]object.Composite),
+		ChildStorage: storage.NewMapStorage(),
+		Parent:       parent,
+	}
+	sc.GetResolver()
+	assert.NotNil(t, sc.resolver)
+
+	sc.GetResolver()
+
+	assert.NotNil(t, sc.resolver)
 }

@@ -16,11 +16,7 @@
 
 package resolver
 
-import (
-	"github.com/insolar/insolar/genesis/model/object"
-)
-
 // Resolver marks that instance have ability to get proxy objects by its reference.
 type Resolver interface {
-	GetObject(*object.Reference, string) (object.Proxy, error)
+	GetObject(reference interface{}, classID interface{}) (interface{}, error)
 }
