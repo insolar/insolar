@@ -20,6 +20,9 @@ import "github.com/insolar/insolar/ledger/record"
 
 // LedgerStorer represents append-only Ladger storage.
 type LedgerStorer interface {
-	Get(record.Key) (record.Record, bool)
-	Set(record.Record) error
+	GetRecord(record.Key) (record.Record, bool)
+	SetRecord(record.Record) error
+
+	GetIndex(record.ID) (record.LifelineIndex, bool)
+	SetIndex(record.ID, record.LifelineIndex) error
 }
