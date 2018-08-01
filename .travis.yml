@@ -9,6 +9,8 @@ go:
 jobs:
   include:
     - stage: "test"
+      before_install: "go get -u github.com/golang/dep/cmd/dep"
+      install: "dep ensure"
       script: "go test -v --race ./..."
 #    - stage: "lint"
 #      before_script:
