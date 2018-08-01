@@ -181,6 +181,7 @@ func getRecordByTypeID(id TypeID) Record {
 // getRecordByTypeID returns record's TypeID based on concrete record type of Record interface.
 func getTypeIDbyRecord(rec Record) TypeID {
 	switch v := rec.(type) {
+	// request records
 	case *RequestRecord:
 		return requestRecordID
 	case *CallRequest:
@@ -193,6 +194,50 @@ func getTypeIDbyRecord(rec Record) TypeID {
 		return readObjectID
 	case *ReadObjectComposite:
 		return readObjectCompositeID
+	// result records
+	// case resultRecordID:
+	case *WipeOutRecord:
+		return wipeOutRecordID
+	case *ReadRecordResult:
+		return readRecordResultID
+	case *StatelessCallResult:
+		return statelessCallResultID
+	case *StatelessExceptionResult:
+		return statelessExceptionResultID
+	case *ReadObjectResult:
+		return readObjectResultID
+	case *SpecialResult:
+		return specialResultID
+	case *LockUnlockResult:
+		return lockUnlockResultID
+	case *RejectionResult:
+		return rejectionResultID
+	case *ActivationRecord:
+		return activationRecordID
+	case *ClassActivateRecord:
+		return classActivateRecordID
+	case *ObjectActivateRecord:
+		return objectActivateRecordID
+	case *CodeRecord:
+		return codeRecordID
+	case *AmendRecord:
+		return amendRecordID
+	case *ClassAmendRecord:
+		return classAmendRecordID
+	case *MemoryMigrationCode:
+		return memoryMigrationCodeID
+	case *DeactivationRecord:
+		return deactivationRecordID
+	case *ObjectAmendRecord:
+		return objectAmendRecordID
+	case *StatefulCallResult:
+		return statefulCallResultID
+	case *StatefulExceptionResult:
+		return statefulExceptionResultID
+	case *EnforcedObjectAmendRecord:
+		return enforcedObjectAmendRecordID
+	case *ObjectAppendRecord:
+		return objectAppendRecordID
 	default:
 		panic(fmt.Errorf("can't find record id by type %T", v))
 	}
