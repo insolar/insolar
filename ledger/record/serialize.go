@@ -116,6 +116,7 @@ const (
 // This is useful with deserialization cases.
 func getRecordByTypeID(id TypeID) Record {
 	switch id {
+	// request records
 	case requestRecordID:
 		return &RequestRecord{}
 	case callRequestID:
@@ -128,6 +129,50 @@ func getRecordByTypeID(id TypeID) Record {
 		return &ReadObject{}
 	case readObjectCompositeID:
 		return &ReadObjectComposite{}
+	// result records
+	// case resultRecordID:
+	case wipeOutRecordID:
+		return &WipeOutRecord{}
+	case readRecordResultID:
+		return &ReadRecordResult{}
+	case statelessCallResultID:
+		return &StatelessCallResult{}
+	case statelessExceptionResultID:
+		return &StatelessExceptionResult{}
+	case readObjectResultID:
+		return &ReadObjectResult{}
+	case specialResultID:
+		return &SpecialResult{}
+	case lockUnlockResultID:
+		return &LockUnlockResult{}
+	case rejectionResultID:
+		return &RejectionResult{}
+	case activationRecordID:
+		return &ActivationRecord{}
+	case classActivateRecordID:
+		return &ClassActivateRecord{}
+	case objectActivateRecordID:
+		return &ObjectActivateRecord{}
+	case codeRecordID:
+		return &CodeRecord{}
+	case amendRecordID:
+		return &AmendRecord{}
+	case classAmendRecordID:
+		return &ClassAmendRecord{}
+	case memoryMigrationCodeID:
+		return &MemoryMigrationCode{}
+	case deactivationRecordID:
+		return &DeactivationRecord{}
+	case objectAmendRecordID:
+		return &ObjectAmendRecord{}
+	case statefulCallResultID:
+		return &StatefulCallResult{}
+	case statefulExceptionResultID:
+		return &StatefulExceptionResult{}
+	case enforcedObjectAmendRecordID:
+		return &EnforcedObjectAmendRecord{}
+	case objectAppendRecordID:
+		return &ObjectAppendRecord{}
 	default:
 		panic(fmt.Errorf("unknown record type id %v", id))
 	}
