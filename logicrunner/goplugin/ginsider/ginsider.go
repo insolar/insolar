@@ -61,13 +61,31 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 }
 
 func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
-	path := t.dir + "/" + obj.Reference
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err := ioutil.WriteFile(path, obj.Code, 0666)
-		check(err)
-	} else {
-		check(err)
+	path := t.dir + "/" + string(obj.Reference)
+	_, err := os.Stat(path)
+
+	if err == nil {
+		return path, nil
+	} else if !os.IsNotExist(err) {
+		return "", err
 	}
+
+	client, err := rpc.DialHTTP("tcp", t.RpcAddress)
+	if err != nil {
+		return "", errors.Wrapf(err, "couldn't dial '%s'", t.RpcAddress)
+	}
+
+	res := logicrunner.Object{}
+	err = client.Call("GoPluginRPC.GetObject", obj.Reference, &res)
+	if err != nil {
+		return "", err
+	}
+
+	err = ioutil.WriteFile(path, res.Data, 0666)
+	if err != nil {
+		return "", err
+	}
+
 	return path, nil
 }
 
