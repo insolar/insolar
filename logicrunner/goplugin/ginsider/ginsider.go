@@ -14,6 +14,7 @@ import (
 	"reflect"
 
 	"github.com/2tvenom/cbor"
+	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
@@ -27,13 +28,8 @@ func NewGoInsider(path string) *GoInsider {
 }
 
 func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error {
-	path := t.dir + "/" + args.Object.Reference
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err := ioutil.WriteFile(path, args.Object.Code, 0666)
-		check(err)
-	} else {
-		check(err)
-	}
+	path, err := t.ObtainCode(args.Object)
+	check(err)
 
 	p, err := plugin.Open(path)
 	check(err)
@@ -59,6 +55,17 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	log.Printf("res: %+v\n", res)
 
 	return nil
+}
+
+func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
+	path := t.dir + "/" + obj.Reference
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err := ioutil.WriteFile(path, obj.Code, 0666)
+		check(err)
+	} else {
+		check(err)
+	}
+	return path, nil
 }
 
 var PATH = "/Users/ruz/go/src/github.com/insolar/insolar/tmp"
