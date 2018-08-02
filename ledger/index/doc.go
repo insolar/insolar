@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package index represents indexes and meta information for records
+// Package index represents indexes and meta information for records.
 package index
