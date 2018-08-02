@@ -736,6 +736,7 @@ func TestStoreReplication(t *testing.T) {
 // the store.
 func TestStoreExpiration(t *testing.T) {
 	id := getIDWithValues(0)
+	done := make(chan bool)
 
 	st, s, tp, r, err := realDhtParams([]node.ID{id}, "0.0.0.0:3000")
 	assert.NoError(t, err)
@@ -747,6 +748,7 @@ func TestStoreExpiration(t *testing.T) {
 
 	go func() {
 		dht.Listen()
+		done <- true
 	}()
 
 	k, _ := dht.Store(getDefaultCtx(dht), []byte("foo"))
@@ -763,6 +765,7 @@ func TestStoreExpiration(t *testing.T) {
 	assert.Equal(t, false, exists)
 
 	dht.Disconnect()
+	<-done
 }
 
 // Create a new node and bootstrap it. All nodes in the insolar know of a
@@ -770,6 +773,7 @@ func TestStoreExpiration(t *testing.T) {
 // is occupied.
 func TestFindNodeAllBuckets(t *testing.T) {
 	id := getIDWithValues(0)
+	done := make(chan bool)
 
 	bootstrapAddr, _ := node.NewAddress("0.0.0.0:3001")
 	st, s, tp, r, err := dhtParams([]node.ID{id}, "0.0.0.0:3000")
@@ -786,6 +790,7 @@ func TestFindNodeAllBuckets(t *testing.T) {
 
 	go func() {
 		dht.Listen()
+		done <- true
 	}()
 
 	var k = 0
@@ -820,6 +825,7 @@ func TestFindNodeAllBuckets(t *testing.T) {
 	}
 
 	dht.Disconnect()
+	<-done
 }
 
 // Tests timing out of nodes in a bucket. DHT bootstraps networks and learns
@@ -894,21 +900,23 @@ func TestAddNodeTimeout(t *testing.T) {
 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID, firstNode))
 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID, lastNode))
 
+	dht.Disconnect()
+
 	<-done
 	<-pinged
-
-	dht.Disconnect()
 }
 
 func TestGetRandomIDFromBucket(t *testing.T) {
 	id := getIDWithValues(0)
 	st, s, tp, r, err := realDhtParams([]node.ID{id}, "0.0.0.0:3000")
 	assert.NoError(t, err)
+	done := make(chan bool)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
 
 	go func() {
 		dht.Listen()
+		done <- true
 	}()
 
 	// Bytes should be equal up to the bucket index that the random RequestID was
@@ -921,6 +929,7 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 	}
 
 	dht.Disconnect()
+	<-done
 }
 
 func getZerodIDWithNthByte(n int, v byte) node.ID {
@@ -1099,6 +1108,7 @@ func TestDHT_Bootstrap(t *testing.T) {
 	count := 20
 	port := 3000
 	var dhts []*DHT
+	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
 		id, _ := node.NewIDs(1)
@@ -1122,6 +1132,7 @@ func TestDHT_Bootstrap(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, "closed", err.Error())
+			done <- true
 		}(dht)
 		go func(dht *DHT) {
 			err := dht.Bootstrap()
@@ -1135,6 +1146,7 @@ func TestDHT_Bootstrap(t *testing.T) {
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
 		dht.Disconnect()
+		<-done
 	}
 }
 
@@ -1143,6 +1155,7 @@ func TestDHT_FindNode(t *testing.T) {
 	port := 3000
 	var dhts []*DHT
 	idx := make(map[int]string, count)
+	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
 		id, _ := node.NewIDs(1)
@@ -1167,6 +1180,7 @@ func TestDHT_FindNode(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, "closed", err.Error())
+			done <- true
 		}(dht)
 		go func(dht *DHT) {
 			err := dht.Bootstrap()
@@ -1189,6 +1203,7 @@ func TestDHT_FindNode(t *testing.T) {
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
 		dht.Disconnect()
+		<-done
 	}
 }
 
@@ -1198,6 +1213,7 @@ func TestDHT_CheckOriginRequest(t *testing.T) {
 	port := 3000
 	var dhts []*DHT
 	idx := make(map[int]string, count)
+	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
 		id, _ := node.NewIDs(1)
@@ -1222,6 +1238,7 @@ func TestDHT_CheckOriginRequest(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, "closed", err.Error())
+			done <- true
 		}(dht)
 		go func(dht *DHT) {
 			err := dht.Bootstrap()
@@ -1266,6 +1283,7 @@ func TestDHT_CheckOriginRequest(t *testing.T) {
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
 		dht.Disconnect()
+		<-done
 	}
 }
 
@@ -1273,6 +1291,7 @@ func TestDHT_Listen(t *testing.T) {
 	count := 20
 	port := 3000
 	var dhts []*DHT
+	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
 		id, _ := node.NewIDs(1)
@@ -1296,11 +1315,13 @@ func TestDHT_Listen(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, "closed", err.Error())
+			done <- true
 		}(dht)
 	}
 
 	for _, dht := range dhts {
 		dht.Disconnect()
+		<-done
 	}
 }
 
@@ -1308,6 +1329,7 @@ func TestDHT_Disconnect(t *testing.T) {
 	count := 20
 	port := 3000
 	var dhts []*DHT
+	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
 		id, _ := node.NewIDs(1)
@@ -1331,12 +1353,14 @@ func TestDHT_Disconnect(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, "closed", err.Error())
+			done <- true
 		}(dht)
 		time.Sleep(time.Millisecond * 200)
 	}
 
 	for _, dht := range dhts {
 		dht.Disconnect()
+		<-done
 		time.Sleep(time.Millisecond * 200)
 	}
 }
@@ -1345,6 +1369,7 @@ func TestDHT_NumNodes(t *testing.T) {
 	count := 20
 	port := 3000
 	var dhts []*DHT
+	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
 		id, _ := node.NewIDs(1)
@@ -1368,6 +1393,7 @@ func TestDHT_NumNodes(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, "closed", err.Error())
+			done <- true
 		}(dht)
 		go func(dht *DHT) {
 			err := dht.Bootstrap()
@@ -1381,10 +1407,12 @@ func TestDHT_NumNodes(t *testing.T) {
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
 		dht.Disconnect()
+		<-done
 	}
 }
 
 func TestNewDHT(t *testing.T) {
+	done := make(chan bool)
 	port := 3000
 	id, _ := node.NewIDs(1)
 	st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
@@ -1398,15 +1426,18 @@ func TestNewDHT(t *testing.T) {
 
 	go func(dht *DHT) {
 		_ = dht.Listen()
+		done <- true
 	}(dht)
 
 	dht.Disconnect()
+	<-done
 }
 
 func TestDHT_GetOriginID(t *testing.T) {
 	count := 20
 	port := 3000
 	var dhts []*DHT
+	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
 		id, _ := node.NewIDs(1)
@@ -1434,11 +1465,13 @@ func TestDHT_GetOriginID(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, "closed", err.Error())
+			done <- true
 		}(dht)
 		time.Sleep(time.Millisecond * 200)
 	}
 
 	for _, dht := range dhts {
 		dht.Disconnect()
+		<-done
 	}
 }
