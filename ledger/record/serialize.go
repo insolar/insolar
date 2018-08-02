@@ -214,7 +214,8 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 	case *ReadObjectComposite:
 		return readObjectCompositeID
 	// result records
-	// case resultRecordID:
+	case *ResultRecord:
+		return resultRecordID
 	case *WipeOutRecord:
 		return wipeOutRecordID
 	case *ReadRecordResult:
