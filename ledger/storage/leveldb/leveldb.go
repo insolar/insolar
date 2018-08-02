@@ -19,6 +19,7 @@ package leveldb
 import (
 	"path/filepath"
 
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -33,8 +34,12 @@ const (
 // LevelLedger represents ledger's LevelDB storage.
 type LevelLedger struct {
 	// LDB contains LevelDB database instance.
-	LDB *leveldb.DB
+	ldb *leveldb.DB
 }
+
+const (
+	scopeIDLifeline byte = 1
+)
 
 // InitDB returns LevelLedger with LevelDB initialized with default settings.
 func InitDB() (*LevelLedger, error) {
@@ -92,16 +97,37 @@ func InitDB() (*LevelLedger, error) {
 	}
 
 	return &LevelLedger{
-		LDB: db,
+		ldb: db,
 	}, nil
 }
 
-// Get returns record from leveldb by timeslot and hash passed in record.Key
-func (ll *LevelLedger) Get(k record.Key) (rec record.Record, found bool) {
+// GetRecord returns record from leveldb by timeslot and hash passed in record.Key
+func (ll *LevelLedger) GetRecord(k record.Key) (rec record.Record, found bool) {
 	return nil, false
 }
 
-// Set stores record in leveldb
-func (ll *LevelLedger) Set(record record.Record) error {
+// SetRecord stores record in leveldb
+func (ll *LevelLedger) SetRecord(record record.Record) error {
 	return nil
+}
+
+// GetIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
+func (ll *LevelLedger) GetIndex(id record.ID) (*index.Lifeline, bool) {
+	buf, err := ll.ldb.Get(append([]byte{scopeIDLifeline}, id[:]...), nil)
+	if err != nil {
+		return nil, false
+	}
+	idx := index.DecodeLifeline(buf)
+	return &idx, true
+}
+
+// SetIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
+func (ll *LevelLedger) SetIndex(id record.ID, idx index.Lifeline) error {
+	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeLifeline(&idx), nil)
+	return err
+}
+
+// Close terminates db connection
+func (ll *LevelLedger) Close() error {
+	return ll.ldb.Close()
 }
