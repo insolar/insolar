@@ -115,21 +115,6 @@ func (cdp *classDomainProxy) GetClass(record string) (factory.Factory, error) {
 	return cdp.Instance.(ClassDomain).GetClass(record)
 }
 
-// GetReference is a proxy call for instance method.
-/*func (cdp *classDomainProxy) GetReference() object.Reference {
-	return cdp.Instance.(ClassDomain).GetReference()
-}
-
-// GetParent is a proxy call for instance method.
-func (cdp *classDomainProxy) GetParent() object.Parent {
-	return cdp.Instance.(ClassDomain).GetParent()
-}
-
-// GetClassID is a proxy call for instance method.
-func (cdp *classDomainProxy) GetClassID() string {
-	return class.ClsDomainID
-}*/
-
 type classDomainFactory struct {
 	parent object.Parent
 }

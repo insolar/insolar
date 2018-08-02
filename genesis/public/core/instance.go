@@ -118,26 +118,7 @@ func (idp *instanceDomainProxy) CreateInstance(fc factory.Factory) (string, erro
 // GetInstance is a proxy call for instance method.
 func (idp *instanceDomainProxy) GetInstance(record string) (resolver.Proxy, error) {
 	return idp.Instance.(InstanceDomain).GetInstance(record)
-	// GetInstance proxy call for instance method.
-	/*func (idp *instanceDomainProxy) GetInstance(record string) (object.Proxy, error) {
-	  	return idp.instance.GetInstance(record)
-	  }
-
-	  // GetReference proxy call for instance method.
-	  func (idp *instanceDomainProxy) GetReference() object.Reference {
-	  	return idp.instance.GetReference()
-	  }
-
-	  // GetParent proxy call for instance method.
-	  func (idp *instanceDomainProxy) GetParent() object.Parent {
-	  	return idp.instance.GetParent()
-	*/
 }
-
-// GetClassID proxy call for instance method.
-/*func (idp *instanceDomainProxy) GetClassID() string {
-	return class.InstanceDomainID
-}*/
 
 type instanceDomainFactory struct {
 	parent object.Parent
