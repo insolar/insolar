@@ -25,8 +25,7 @@ import (
 
 type recordgen func() Record
 
-var emptyRecords = []recordgen{
-	// request records
+var emptyRecordsGens = []recordgen{
 	func() Record { return &RequestRecord{} },
 	func() Record { return &CallRequest{} },
 	func() Record { return &LockUnlockRequest{} },
@@ -60,10 +59,11 @@ var emptyRecords = []recordgen{
 
 func Test_HashesNotTheSameOnDifferentTypes(t *testing.T) {
 	found := make(map[string]string)
-	for _, recFn := range emptyRecords {
+	for _, recFn := range emptyRecordsGens {
 		rec := recFn()
 		recType := fmt.Sprintf("%T", rec)
 		hashBytes := SHA3Hash224(rec)
+
 		hashHex := fmt.Sprintf("%x", hashBytes)
 		// fmt.Println(recType, "=>", hashHex)
 		typename, ok := found[hashHex]
@@ -71,23 +71,71 @@ func Test_HashesNotTheSameOnDifferentTypes(t *testing.T) {
 			found[hashHex] = recType
 			continue
 		}
-		t.Errorf("same hases for %s and %s types, empty struct with different types should not be the same", recType, typename)
+		t.Errorf("same hashes for %s and %s types, empty struct with different types should not be the same", recType, typename)
 	}
-
 }
 
 func Test_HashesTheSame(t *testing.T) {
-	hashes := make([]string, len(emptyRecords))
-	for i, recFn := range emptyRecords {
+	hashes := make([]string, len(emptyRecordsGens))
+	for i, recFn := range emptyRecordsGens {
 		rec := recFn()
 		hashHex := fmt.Sprintf("%x", SHA3Hash224(rec))
 		hashes[i] = hashHex
 	}
 
 	// same struct with different should produce the same hashes
-	for i, recFn := range emptyRecords {
+	for i, recFn := range emptyRecordsGens {
 		rec := recFn()
 		hashHex := fmt.Sprintf("%x", SHA3Hash224(rec))
 		assert.Equal(t, hashes[i], hashHex)
+	}
+}
+
+var hashtestsRecordsMutate = []struct {
+	typ     string
+	records []Record
+}{
+	{
+		"ReadObject",
+		[]Record{
+			&ReadObject{},
+			&ReadObject{ProjectionType: 1},
+			&ReadObject{ProjectionType: 2},
+		},
+	},
+	{
+		"ReadObjectComposite",
+		[]Record{
+			&ReadObjectComposite{},
+			&ReadObjectComposite{ReadObject: ReadObject{ProjectionType: 1}},
+			&ReadObjectComposite{ReadObject: ReadObject{ProjectionType: 2}},
+			&ReadObjectComposite{CompositeType: Reference{
+				Domain: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+				Record: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+			}},
+			&ReadObjectComposite{CompositeType: Reference{
+				Domain: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+			}},
+			&ReadObjectComposite{CompositeType: Reference{
+				Record: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+			}},
+		},
+	},
+}
+
+func Test_CBORhashesMutation(t *testing.T) {
+	for _, tt := range hashtestsRecordsMutate {
+		found := make(map[string]string)
+		for _, rec := range tt.records {
+			h := SHA3Hash224(rec)
+			hHex := fmt.Sprintf("%x", h)
+
+			typ, ok := found[hHex]
+			if !ok {
+				found[hHex] = tt.typ
+				continue
+			}
+			t.Errorf("%s failed: found %s hash for \"%s\" test, should not repeats in sha3hash224tests", tt.typ, hHex, typ)
+		}
 	}
 }
