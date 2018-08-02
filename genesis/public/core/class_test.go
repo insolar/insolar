@@ -14,15 +14,20 @@
  *    limitations under the License.
  */
 
-package factory
+package core
 
 import (
-	"github.com/insolar/insolar/genesis/model/object"
+	"testing"
+
+	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/stretchr/testify/assert"
 )
 
-// Factory allows to create new objects with reference.
-type Factory interface {
-	object.Child
-	// Create returns new instance of specified type.
-	Create(parent object.Parent) (object.Proxy, error)
+func TestClassDomain_GetClassID(t *testing.T) {
+	parent := &mockParent{}
+	clsDom, err := newClassDomain(parent)
+	assert.NoError(t, err)
+
+	domainID := clsDom.GetClassID()
+	assert.Equal(t, class.ClsDomainID, domainID)
 }

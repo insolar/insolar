@@ -33,9 +33,9 @@ type ReferenceDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// RegisterReference is used to publish new global references.
-	RegisterReference(*object.Reference, string) (string, error)
+	RegisterReference(object.Reference, string) (string, error)
 	// ResolveReference provides reference instance from record.
-	ResolveReference(string) (*object.Reference, error)
+	ResolveReference(string) (object.Reference, error)
 	// InitGlobalMap sets globalResolverMap for references register/resolving.
 	InitGlobalMap(globalInstanceMap *map[string]object.Proxy)
 }
@@ -71,7 +71,7 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Pr
 }
 
 // RegisterReference sets new reference as a child to domain storage.
-func (rd *referenceDomain) RegisterReference(ref *object.Reference, classID string) (string, error) {
+func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
 	record, err := rd.ChildStorage.Set(ref)
 	if err != nil {
 		return "", err
@@ -91,13 +91,13 @@ func (rd *referenceDomain) RegisterReference(ref *object.Reference, classID stri
 }
 
 // ResolveReference returns reference from its record in domain storage.
-func (rd *referenceDomain) ResolveReference(record string) (*object.Reference, error) {
+func (rd *referenceDomain) ResolveReference(record string) (object.Reference, error) {
 	reference, err := rd.ChildStorage.Get(record)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := reference.(*object.Reference)
+	result, ok := reference.(object.Reference)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not `Reference` instance", record)
 	}
@@ -117,17 +117,17 @@ func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
 }
 
 // RegisterReference is a proxy call for instance method.
-func (rdp *referenceDomainProxy) RegisterReference(address *object.Reference, classID string) (string, error) {
+func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, classID string) (string, error) {
 	return rdp.instance.RegisterReference(address, classID)
 }
 
 // ResolveReference is a proxy call for instance method.
-func (rdp *referenceDomainProxy) ResolveReference(record string) (*object.Reference, error) {
+func (rdp *referenceDomainProxy) ResolveReference(record string) (object.Reference, error) {
 	return rdp.instance.ResolveReference(record)
 }
 
 // GetReference is a proxy call for instance method.
-func (rdp *referenceDomainProxy) GetReference() *object.Reference {
+func (rdp *referenceDomainProxy) GetReference() object.Reference {
 	return rdp.instance.GetReference()
 }
 
@@ -146,25 +146,35 @@ func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]obj
 	rdp.instance.InitGlobalMap(globalInstanceMap)
 }
 
-type referenceDomainFactory struct{}
+type referenceDomainFactory struct {
+	parent object.Parent
+}
 
 // NewReferenceDomainFactory creates new factory for ReferenceDomain.
-func NewReferenceDomainFactory() factory.Factory {
-	return &referenceDomainFactory{}
+func NewReferenceDomainFactory(parent object.Parent) factory.Factory {
+	return &referenceDomainFactory{
+		parent: parent,
+	}
+}
+
+// GetParent returns parent
+func (rdf *referenceDomainFactory) GetParent() object.Parent {
+	// TODO: return real parent, fix tests
+	return nil
 }
 
 // GetClassID returns string representation of ReferenceDomain's class.
-func (adf *referenceDomainFactory) GetClassID() string {
+func (rdf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
 // GetReference returns nil for not published factory.
-func (adf *referenceDomainFactory) GetReference() *object.Reference {
+func (rdf *referenceDomainFactory) GetReference() object.Reference {
 	return nil
 }
 
-// Create factory method for new ReferenceDomain instances.
-func (adf *referenceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
+// Create is a factory method for new ReferenceDomain instances.
+func (rdf *referenceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy := newReferenceDomainProxy(parent)
 	_, err := parent.AddChild(proxy)
 	if err != nil {
