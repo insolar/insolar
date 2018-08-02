@@ -11,6 +11,9 @@ import (
 
 	"strings"
 
+	"bytes"
+	"io"
+
 	flag "github.com/spf13/pflag"
 )
 
@@ -21,25 +24,28 @@ func init() {
 func main() {
 	log.Println(os.Getwd())
 	for _, fn := range flag.Args() {
-		generateForFile(fn)
+		w := generateForFile(fn)
+		io.Copy(os.Stdout, w)
 	}
 }
 
-func generateForFile(fn string) {
+func generateForFile(fn string) io.Reader {
 	fs := token.NewFileSet()
 	node, err := parser.ParseFile(fs, fn, nil, parser.ParseComments)
 	if err != nil {
 		log.Fatalf("Can't parse %s : %s", fn, err)
 	}
-	//log.Print(node)
+	if node.Name.Name != "main" {
+		panic("Contract must be in main package")
+	}
 	getMethods(node)
 	code := generateWrappers()
-	code += "\n" + generateExports()
-	log.Printf("%s", code)
+	code += "\n" + generateExports() + "\n"
+	return bytes.NewBuffer([]byte(code))
 }
 
 var methods = make(map[string][]*ast.FuncDecl)
-var contracts = make([]string, 1)
+var contracts []string
 
 func getMethods(F *ast.File) {
 	for _, d := range F.Decls {
@@ -48,13 +54,14 @@ func getMethods(F *ast.File) {
 			if td.Tok != token.TYPE {
 				continue
 			}
-			log.Printf(td.Doc.Text())
 			if !strings.Contains(td.Doc.Text(), "@inscontract") {
 				continue
 			}
 			typename := td.Specs[0].(*ast.TypeSpec).Name.Name
 			contracts = append(contracts, typename)
-
+			if len(contracts) > 1 {
+				panic("more than one contract in a file")
+			}
 		case *ast.FuncDecl:
 			if td.Recv.NumFields() == 0 { // not a method
 				continue
@@ -71,7 +78,6 @@ func getMethods(F *ast.File) {
 
 func generateWrappers() string {
 	text := ""
-	log.Printf("%+v", contracts)
 	for _, class := range contracts {
 		for _, method := range methods[class] {
 			text += generateMethodWrapper(method, class) + "\n\n"
@@ -82,7 +88,7 @@ func generateWrappers() string {
 
 func generateMethodWrapper(method *ast.FuncDecl, class string) string {
 	text := ""
-	text += "func __INSMETHOD__" + method.Name.Name + "(_self *" + class + ","
+	text += "func (_self *" + class + ") INSMETHOD__" + method.Name.Name + "("
 	for _, arg := range method.Type.Params.List {
 		text += arg.Names[0].Name + " interface{}, "
 	}
@@ -97,7 +103,7 @@ func generateMethodWrapper(method *ast.FuncDecl, class string) string {
 func generateExports() string {
 	text := ""
 	for _, m := range contracts {
-		text += "var __INSEXPORT" + m + " " + m
+		text += "var INSEXPORT " + m
 	}
 	return text
 }

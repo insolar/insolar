@@ -38,7 +38,7 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	p, err := plugin.Open(path)
 	check(err)
 
-	export, err := p.Lookup("EXP")
+	export, err := p.Lookup("INSEXPORT")
 	check(err)
 
 	var data_buf bytes.Buffer
@@ -46,7 +46,7 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	_, err = cbor.Unmarshal(args.Object.Data, export)
 	check(err)
 
-	method := reflect.ValueOf(export).MethodByName(args.Method)
+	method := reflect.ValueOf(export).MethodByName("INSMETHOD__" + args.Method)
 	if !method.IsValid() {
 		panic("wtf, no method " + args.Method + "in the plugin")
 	}
