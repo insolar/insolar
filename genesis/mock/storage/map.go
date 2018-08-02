@@ -44,8 +44,8 @@ func (m *MapStorage) Set(obj interface{}) (string, error) {
 		return "", err
 	}
 	record := newUUID.String()
-	_, isExist := m.storage[record]
-	if isExist {
+	_, exist := m.storage[record]
+	if exist {
 		return "", fmt.Errorf("object with record %s already exist", record)
 	}
 	m.storage[record] = obj
@@ -55,8 +55,8 @@ func (m *MapStorage) Set(obj interface{}) (string, error) {
 
 // Get restore object from storage.
 func (m *MapStorage) Get(record string) (interface{}, error) {
-	obj, isExist := m.storage[record]
-	if !isExist {
+	obj, exist := m.storage[record]
+	if !exist {
 		return nil, fmt.Errorf("object with record %s does not exist", record)
 	}
 	return obj, nil
