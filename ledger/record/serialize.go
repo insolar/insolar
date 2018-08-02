@@ -279,8 +279,8 @@ func MustEncode(rec Record) []byte {
 	return b
 }
 
-// encodeToRaw converts concrete record to Raw record.
-func encodeToRaw(rec Record) (Raw, error) { // nolint: deadcode, megacheck
+// EncodeToRaw converts record to Raw record.
+func EncodeToRaw(rec Record) (Raw, error) {
 	b, err := Encode(rec)
 	if err != nil {
 		panic(err)
