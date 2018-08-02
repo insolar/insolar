@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/hash"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,7 +63,7 @@ func Test_HashesNotTheSameOnDifferentTypes(t *testing.T) {
 	for _, recFn := range emptyRecords {
 		rec := recFn()
 		recType := fmt.Sprintf("%T", rec)
-		hashBytes := hash.SHA3hash224(rec)
+		hashBytes := SHA3Hash224(rec)
 		hashHex := fmt.Sprintf("%x", hashBytes)
 		// fmt.Println(recType, "=>", hashHex)
 		typename, ok := found[hashHex]
@@ -81,14 +80,14 @@ func Test_HashesTheSame(t *testing.T) {
 	hashes := make([]string, len(emptyRecords))
 	for i, recFn := range emptyRecords {
 		rec := recFn()
-		hashHex := fmt.Sprintf("%x", hash.SHA3hash224(rec))
+		hashHex := fmt.Sprintf("%x", SHA3Hash224(rec))
 		hashes[i] = hashHex
 	}
 
 	// same struct with different should produce the same hashes
 	for i, recFn := range emptyRecords {
 		rec := recFn()
-		hashHex := fmt.Sprintf("%x", hash.SHA3hash224(rec))
+		hashHex := fmt.Sprintf("%x", SHA3Hash224(rec))
 		assert.Equal(t, hashes[i], hashHex)
 	}
 }
