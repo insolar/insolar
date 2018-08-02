@@ -1028,7 +1028,7 @@ func TestDHT_RelayRequest(t *testing.T) {
 func TestDHT_AuthenticationRequest(t *testing.T) {
 	count := 20
 	done := make(chan bool)
-	port := 3000
+	port := 4000
 	var dhts []*DHT
 	idx := make(map[int]string, count)
 
@@ -1106,7 +1106,7 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 
 func TestDHT_Bootstrap(t *testing.T) {
 	count := 20
-	port := 3000
+	port := 5000
 	var dhts []*DHT
 	done := make(chan bool)
 
@@ -1152,7 +1152,7 @@ func TestDHT_Bootstrap(t *testing.T) {
 
 func TestDHT_FindNode(t *testing.T) {
 	count := 20
-	port := 3000
+	port := 6000
 	var dhts []*DHT
 	idx := make(map[int]string, count)
 	done := make(chan bool)
@@ -1210,7 +1210,7 @@ func TestDHT_FindNode(t *testing.T) {
 // CheckOriginRequest works if and only if relay request accepted.
 func TestDHT_CheckOriginRequest(t *testing.T) {
 	count := 20
-	port := 3000
+	port := 7000
 	var dhts []*DHT
 	idx := make(map[int]string, count)
 	done := make(chan bool)
@@ -1289,7 +1289,7 @@ func TestDHT_CheckOriginRequest(t *testing.T) {
 
 func TestDHT_Listen(t *testing.T) {
 	count := 20
-	port := 3000
+	port := 8000
 	var dhts []*DHT
 	done := make(chan bool)
 
@@ -1327,7 +1327,7 @@ func TestDHT_Listen(t *testing.T) {
 
 func TestDHT_Disconnect(t *testing.T) {
 	count := 20
-	port := 3000
+	port := 9000
 	var dhts []*DHT
 	done := make(chan bool)
 
@@ -1367,7 +1367,7 @@ func TestDHT_Disconnect(t *testing.T) {
 
 func TestDHT_NumNodes(t *testing.T) {
 	count := 20
-	port := 3000
+	port := 10000
 	var dhts []*DHT
 	done := make(chan bool)
 
@@ -1415,7 +1415,7 @@ func TestDHT_NumNodes(t *testing.T) {
 
 func TestNewDHT(t *testing.T) {
 	done := make(chan bool)
-	port := 3000
+	port := 11000
 	id, _ := node.NewIDs(1)
 	st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
 	address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
@@ -1437,7 +1437,7 @@ func TestNewDHT(t *testing.T) {
 
 func TestDHT_GetOriginID(t *testing.T) {
 	count := 20
-	port := 3000
+	port := 12000
 	var dhts []*DHT
 	done := make(chan bool)
 
