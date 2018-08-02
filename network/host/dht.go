@@ -878,6 +878,8 @@ func (dht *DHT) dispatchMessageType(ctx Context, msg *message.Message, ht *routi
 		dht.processCheckOriginRequest(ctx, msg, messageBuilder)
 	case message.TypeAuth:
 		dht.processAuthentication(ctx, msg, messageBuilder)
+	case message.TypeObtainIP:
+		dht.processObtainIPRequest(ctx, msg, messageBuilder)
 	}
 }
 
@@ -1221,6 +1223,7 @@ func (dht *DHT) handleAuthResponse(response *message.ResponseAuth, target string
 	}
 }
 
+// ObtainIPRequest is request to self IP obtaining.
 func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
 	targetNode, exist, err := dht.FindNode(ctx, targetID)
 	if err != nil {
@@ -1315,6 +1318,20 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
 		return nil, errors.New("timeout")
+	}
+}
+
+// ObtainIP starts to self IP obtaining.
+func (dht *DHT) ObtainIP(ctx Context) {
+	for _, table := range dht.tables {
+		for i := range table.RoutingTable {
+			for j := range table.RoutingTable[i] {
+				err := dht.ObtainIPRequest(ctx, table.RoutingTable[i][j].ID.String())
+				if err != nil {
+					log.Println("error to obtain IP: ", err)
+				}
+			}
+		}
 	}
 }
 

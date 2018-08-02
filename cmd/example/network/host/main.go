@@ -77,6 +77,7 @@ func main() {
 
 	handleSignals(configuration)
 
+	dhtNetwork.ObtainIP(ctx)
 	repl(dhtNetwork, ctx)
 }
 
