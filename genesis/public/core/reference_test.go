@@ -30,7 +30,7 @@ import (
 )
 
 type mockChild struct {
-	Reference      *object.Reference
+	Reference      object.Reference
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -39,7 +39,7 @@ func (c *mockChild) GetClassID() string {
 	return "mockChild"
 }
 
-func (c *mockChild) GetReference() *object.Reference {
+func (c *mockChild) GetReference() object.Reference {
 	return c.Reference
 }
 
@@ -50,7 +50,7 @@ func (c *mockChild) GetParent() object.Parent {
 var child = &mockChild{}
 
 type mockParent struct {
-	Reference      *object.Reference
+	Reference      object.Reference
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -63,7 +63,7 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetReference() *object.Reference {
+func (p *mockParent) GetReference() object.Reference {
 	return p.Reference
 }
 
@@ -100,7 +100,7 @@ var globalParent = &mockParent{}
 // Create map for global resolving
 var globalResolverMap = make(map[string]object.Proxy)
 var domainString = "123"
-var initRefObject, _ = object.NewReference("1", domainString, object.GlobalScope)
+var initRefObject, _ = object.NewReference(domainString, "1", object.GlobalScope)
 
 // Create referenceDomain and its proxy
 var initRefDomain = newReferenceDomain(nil)
@@ -165,7 +165,7 @@ func TestReferenceDomain_RegisterReference(t *testing.T) {
 }
 
 func TestReferenceDomain_RegisterReference_GetObject_Error(t *testing.T) {
-	refObject, err := object.NewReference("1", "234", object.GlobalScope)
+	refObject, err := object.NewReference("234", "1", object.GlobalScope)
 	assert.NoError(t, err)
 
 	registered, err := initRefDomain.RegisterReference(refObject, "classID")
@@ -175,7 +175,7 @@ func TestReferenceDomain_RegisterReference_GetObject_Error(t *testing.T) {
 }
 
 func TestReferenceDomain_ResolveReference(t *testing.T) {
-	refObject, err := object.NewReference("1", "123", object.GlobalScope)
+	refObject, err := object.NewReference("123", "1", object.GlobalScope)
 	assert.NoError(t, err)
 
 	registered, err := initRefDomain.RegisterReference(refObject, "mockChild")
@@ -214,7 +214,7 @@ func TestReferenceDomainProxy_SetMap(t *testing.T) {
 
 func TestReferenceDomainProxy_RegisterReference(t *testing.T) {
 	record := "1"
-	refObject, err := object.NewReference(record, domainString, object.GlobalScope)
+	refObject, err := object.NewReference(domainString, record, object.GlobalScope)
 	assert.NoError(t, err)
 
 	registered, err := initRefDomainProxy.RegisterReference(refObject, "mockChild")
@@ -225,7 +225,7 @@ func TestReferenceDomainProxy_RegisterReference(t *testing.T) {
 }
 
 func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
-	refObject, err := object.NewReference("1", domainString, object.GlobalScope)
+	refObject, err := object.NewReference(domainString, "1", object.GlobalScope)
 	assert.NoError(t, err)
 
 	registered, err := initRefDomainProxy.RegisterReference(refObject, "mockChild")

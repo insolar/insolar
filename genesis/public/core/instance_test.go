@@ -35,7 +35,7 @@ func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
 }
 
-func (p *mockProxy) GetReference() *object.Reference {
+func (p *mockProxy) GetReference() object.Reference {
 	return nil
 }
 
@@ -55,7 +55,7 @@ func (f *mockFactory) GetClassID() string {
 	return "mockFactory"
 }
 
-func (f *mockFactory) GetReference() *object.Reference {
+func (f *mockFactory) GetReference() object.Reference {
 	return nil
 }
 

@@ -111,7 +111,7 @@ func (cdp *classDomainProxy) GetClass(record string) (factory.Factory, error) {
 }
 
 // GetReference is a proxy call for instance method.
-func (cdp *classDomainProxy) GetReference() *object.Reference {
+func (cdp *classDomainProxy) GetReference() object.Reference {
 	return cdp.instance.GetReference()
 }
 
@@ -148,7 +148,7 @@ func (cdf *classDomainFactory) GetClassID() string {
 }
 
 // GetReference returns nil for not published factory.
-func (cdf *classDomainFactory) GetReference() *object.Reference {
+func (cdf *classDomainFactory) GetReference() object.Reference {
 	return nil
 }
 
