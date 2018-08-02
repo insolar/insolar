@@ -1,0 +1,105 @@
+/*
+ *    Copyright 2018 INS Ecosystem
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package example
+
+import (
+	"github.com/insolar/insolar/genesis/model/domain"
+	"github.com/insolar/insolar/genesis/model/factory"
+	"github.com/insolar/insolar/genesis/model/object"
+)
+
+// MemberDomainName is a name for member domain.
+const MemberDomainName = "MemberDomain"
+
+// MemberDomainID is a string representation of class for MemberDomain interface implementations.
+const MemberDomainID = "MemberDomain"
+
+// MemberDomain is a contract that allows to add new members to system.
+type MemberDomain interface {
+	// Base domain implementation.
+	domain.Domain
+}
+
+type memberDomain struct {
+	domain.BaseDomain
+}
+
+// newMemberDomain creates new instance of MemberDomain.
+func newMemberDomain(parent object.Parent) *memberDomain {
+	mDomain := &memberDomain{
+		BaseDomain: *domain.NewBaseDomain(parent, MemberDomainName),
+	}
+	return mDomain
+}
+
+// GetClassID returns string representation of MemberDomain's class.
+func (md *memberDomain) GetClassID() string {
+	return MemberDomainID
+}
+
+type memberDomainProxy struct {
+	instance *memberDomain
+}
+
+// newMemberDomainProxy creates new proxy and associates it with new instance of MemberDomain.
+func newMemberDomainProxy(parent object.Parent) *memberDomainProxy {
+	return &memberDomainProxy{
+		instance: newMemberDomain(parent),
+	}
+}
+
+// GetReference is a proxy call for instance method.
+func (mdp *memberDomainProxy) GetReference() object.Reference {
+	return mdp.instance.GetReference()
+}
+
+// GetParent is a proxy call for instance method.
+func (mdp *memberDomainProxy) GetParent() object.Parent {
+	return mdp.instance.GetParent()
+}
+
+// GetClassID is a proxy call for instance method.
+func (mdp *memberDomainProxy) GetClassID() string {
+	return MemberDomainID
+}
+
+type memberDomainFactory struct{}
+
+// NewMemberDomainFactory creates new factory for MemberDomain.
+func NewMemberDomainFactory() factory.Factory {
+	return &memberDomainFactory{}
+}
+
+// GetClassID returns string representation of MemberDomain's class.
+func (mdf *memberDomainFactory) GetClassID() string {
+	return MemberDomainID
+}
+
+// GetReference returns nil for not published factory.
+func (mdf *memberDomainFactory) GetReference() object.Reference {
+	return nil
+}
+
+// Create is a factory method for new MemberDomain instances.
+func (mdf *memberDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
+	proxy := newMemberDomainProxy(parent)
+	_, err := parent.AddChild(proxy)
+	if err != nil {
+		return nil, err
+	}
+	return proxy, nil
+}
