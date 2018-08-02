@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,6 +93,54 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 	return "", fmt.Errorf("add child error")
 }
 
+type mockProxy struct {
+	parent object.Parent
+}
+
+func (p *mockProxy) GetClassID() string {
+	return "mockProxy"
+}
+
+func (p *mockProxy) GetReference() object.Reference {
+	return nil
+}
+
+func (p *mockProxy) GetParent() object.Parent {
+	return p.parent
+}
+
+type mockFactory struct{}
+
+func (f *mockFactory) Create(parent object.Parent) (object.Proxy, error) {
+	return &mockProxy{
+		parent: parent,
+	}, nil
+}
+
+func (f *mockFactory) GetClassID() string {
+	return "mockFactory"
+}
+
+func (f *mockFactory) GetReference() object.Reference {
+	return nil
+}
+
+type mockFactoryError struct {
+	mockFactory
+}
+
+func (f *mockFactoryError) Create(parent object.Parent) (object.Proxy, error) {
+	return nil, fmt.Errorf("factory create error")
+}
+
+type mockFactoryNilError struct {
+	mockFactory
+}
+
+func (f *mockFactoryNilError) Create(parent object.Parent) (object.Proxy, error) {
+	return nil, nil
+}
+
 func TestNewMemberDomain(t *testing.T) {
 	parent := &mockParent{}
 	mDomain := newMemberDomain(parent)
@@ -105,6 +154,60 @@ func TestMemberDomain_GetClassID(t *testing.T) {
 	mDomain := newMemberDomain(nil)
 	domainID := mDomain.GetClassID()
 	assert.Equal(t, MemberDomainID, domainID)
+}
+
+func TestMemberDomain_CreateMember(t *testing.T) {
+	parent := &mockParent{}
+	mDomain := newMemberDomain(parent)
+
+	factory := &mockFactory{}
+	member, err := mDomain.CreateMember(factory)
+	assert.NoError(t, err)
+
+	_, err = uuid.FromString(member)
+	assert.NoError(t, err)
+}
+
+func TestMemberDomain_CreateMember_WithError(t *testing.T) {
+	parent := &mockParent{}
+	mDomain := newMemberDomain(parent)
+
+	factory := &mockFactoryError{}
+	_, err := mDomain.CreateMember(factory)
+	assert.EqualError(t, err, "factory create error")
+}
+
+func TestMemberDomain_CreateMember_WithNilError(t *testing.T) {
+	parent := &mockParent{}
+	mDomain := newMemberDomain(parent)
+
+	factory := &mockFactoryNilError{}
+	_, err := mDomain.CreateMember(factory)
+	assert.EqualError(t, err, "factory returns nil")
+}
+
+func TestMemberDomain_GetMember(t *testing.T) {
+	parent := &mockParent{}
+	mDomain := newMemberDomain(parent)
+
+	factory := &mockFactory{}
+	member, err := mDomain.CreateMember(factory)
+	assert.NoError(t, err)
+
+	resolved, err := mDomain.GetMember(member)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &mockProxy{
+		parent: mDomain,
+	}, resolved)
+}
+
+func TestMemberDomain_GetMember_IncorrectRef(t *testing.T) {
+	parent := &mockParent{}
+	mDomain := newMemberDomain(parent)
+
+	_, err := mDomain.GetMember("1")
+	assert.EqualError(t, err, "object with record 1 does not exist")
 }
 
 func TestNewMemberDomainProxy(t *testing.T) {

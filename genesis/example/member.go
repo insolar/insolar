@@ -17,6 +17,8 @@
 package example
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -32,6 +34,10 @@ const MemberDomainID = "MemberDomain"
 type MemberDomain interface {
 	// Base domain implementation.
 	domain.Domain
+	// CreateMember is used to create new member as a child to domain storage.
+	CreateMember(factory.Factory) (string, error)
+	// GetMember returns member from its record in domain storage.
+	GetMember(string) (object.Proxy, error)
 }
 
 type memberDomain struct {
@@ -51,6 +57,39 @@ func (md *memberDomain) GetClassID() string {
 	return MemberDomainID
 }
 
+// CreateMember creates new member as a child to domain storage.
+func (md *memberDomain) CreateMember(fc factory.Factory) (string, error) {
+	member, err := fc.Create(md)
+	if err != nil {
+		return "", err
+	}
+	if member == nil {
+		return "", fmt.Errorf("factory returns nil")
+	}
+
+	record, err := md.ChildStorage.Set(member)
+	if err != nil {
+		return "", err
+	}
+
+	return record, nil
+}
+
+// GetMember returns member from its record in domain storage.
+func (md *memberDomain) GetMember(record string) (object.Proxy, error) {
+	member, err := md.ChildStorage.Get(record)
+	if err != nil {
+		return nil, err
+	}
+
+	result, ok := member.(object.Proxy)
+	if !ok {
+		return nil, fmt.Errorf("object with record `%s` is not `Proxy` instance", record)
+	}
+
+	return result, nil
+}
+
 type memberDomainProxy struct {
 	instance *memberDomain
 }
@@ -60,6 +99,16 @@ func newMemberDomainProxy(parent object.Parent) *memberDomainProxy {
 	return &memberDomainProxy{
 		instance: newMemberDomain(parent),
 	}
+}
+
+// CreateMember proxy call for instance method.
+func (mdp *memberDomainProxy) CreateMember(fc factory.Factory) (string, error) {
+	return mdp.instance.CreateMember(fc)
+}
+
+// GetMember proxy call for instance method.
+func (mdp *memberDomainProxy) GetMember(record string) (object.Proxy, error) {
+	return mdp.instance.GetMember(record)
 }
 
 // GetReference is a proxy call for instance method.
