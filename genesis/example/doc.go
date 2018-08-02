@@ -23,8 +23,8 @@ Entities:
 
 	Usage:
 
-		factory := NewMemberDomainFactory()
-		mDomain, error := factory.Create(parent)
+		factory := NewMemberDomainFactory(factoryParent)
+		mDomain, error := factory.Create(domainParent)
 
 		record, err := mDomain.CreateMember(someMemberFactory)
 		memberProxy, err := mDomain.GetMember(record)

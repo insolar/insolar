@@ -45,11 +45,14 @@ type memberDomain struct {
 }
 
 // newMemberDomain creates new instance of MemberDomain.
-func newMemberDomain(parent object.Parent) *memberDomain {
-	mDomain := &memberDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, MemberDomainName),
+func newMemberDomain(parent object.Parent) (*memberDomain, error) {
+	if parent == nil {
+		return nil, fmt.Errorf("parent must not be nil")
 	}
-	return mDomain
+
+	return &memberDomain{
+		BaseDomain: *domain.NewBaseDomain(parent, MemberDomainName),
+	}, nil
 }
 
 // GetClassID returns string representation of MemberDomain's class.
@@ -95,18 +98,22 @@ type memberDomainProxy struct {
 }
 
 // newMemberDomainProxy creates new proxy and associates it with new instance of MemberDomain.
-func newMemberDomainProxy(parent object.Parent) *memberDomainProxy {
-	return &memberDomainProxy{
-		instance: newMemberDomain(parent),
+func newMemberDomainProxy(parent object.Parent) (*memberDomainProxy, error) {
+	instance, err := newMemberDomain(parent)
+	if err != nil {
+		return nil, err
 	}
+	return &memberDomainProxy{
+		instance: instance,
+	}, nil
 }
 
-// CreateMember proxy call for instance method.
+// CreateMember is a proxy call for instance method.
 func (mdp *memberDomainProxy) CreateMember(fc factory.Factory) (string, error) {
 	return mdp.instance.CreateMember(fc)
 }
 
-// GetMember proxy call for instance method.
+// GetMember is a proxy call for instance method.
 func (mdp *memberDomainProxy) GetMember(record string) (object.Proxy, error) {
 	return mdp.instance.GetMember(record)
 }
@@ -126,11 +133,15 @@ func (mdp *memberDomainProxy) GetClassID() string {
 	return MemberDomainID
 }
 
-type memberDomainFactory struct{}
+type memberDomainFactory struct {
+	parent object.Parent
+}
 
 // NewMemberDomainFactory creates new factory for MemberDomain.
-func NewMemberDomainFactory() factory.Factory {
-	return &memberDomainFactory{}
+func NewMemberDomainFactory(parent object.Parent) factory.Factory {
+	return &memberDomainFactory{
+		parent: parent,
+	}
 }
 
 // GetClassID returns string representation of MemberDomain's class.
@@ -143,10 +154,20 @@ func (mdf *memberDomainFactory) GetReference() object.Reference {
 	return nil
 }
 
+// GetParent returns parent
+func (mdf *memberDomainFactory) GetParent() object.Parent {
+	// TODO: return real parent, fix tests
+	return nil
+}
+
 // Create is a factory method for new MemberDomain instances.
 func (mdf *memberDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
-	proxy := newMemberDomainProxy(parent)
-	_, err := parent.AddChild(proxy)
+	proxy, err := newMemberDomainProxy(parent)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = parent.AddChild(proxy)
 	if err != nil {
 		return nil, err
 	}

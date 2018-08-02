@@ -125,6 +125,10 @@ func (f *mockFactory) GetReference() object.Reference {
 	return nil
 }
 
+func (f *mockFactory) GetParent() object.Parent {
+	return nil
+}
+
 type mockFactoryError struct {
 	mockFactory
 }
@@ -143,22 +147,28 @@ func (f *mockFactoryNilError) Create(parent object.Parent) (object.Proxy, error)
 
 func TestNewMemberDomain(t *testing.T) {
 	parent := &mockParent{}
-	mDomain := newMemberDomain(parent)
+	mDomain, err := newMemberDomain(parent)
 
+	assert.NoError(t, err)
 	assert.Equal(t, &memberDomain{
 		BaseDomain: *domain.NewBaseDomain(parent, MemberDomainName),
 	}, mDomain)
 }
 
+func TestNewMemberDomain_WithNilParent(t *testing.T) {
+	_, err := newMemberDomain(nil)
+	assert.EqualError(t, err, "parent must not be nil")
+}
+
 func TestMemberDomain_GetClassID(t *testing.T) {
-	mDomain := newMemberDomain(nil)
+	mDomain, _ := newMemberDomain(nil)
 	domainID := mDomain.GetClassID()
 	assert.Equal(t, MemberDomainID, domainID)
 }
 
 func TestMemberDomain_CreateMember(t *testing.T) {
 	parent := &mockParent{}
-	mDomain := newMemberDomain(parent)
+	mDomain, _ := newMemberDomain(parent)
 
 	factory := &mockFactory{}
 	member, err := mDomain.CreateMember(factory)
@@ -170,7 +180,7 @@ func TestMemberDomain_CreateMember(t *testing.T) {
 
 func TestMemberDomain_CreateMember_WithError(t *testing.T) {
 	parent := &mockParent{}
-	mDomain := newMemberDomain(parent)
+	mDomain, _ := newMemberDomain(parent)
 
 	factory := &mockFactoryError{}
 	_, err := mDomain.CreateMember(factory)
@@ -179,7 +189,7 @@ func TestMemberDomain_CreateMember_WithError(t *testing.T) {
 
 func TestMemberDomain_CreateMember_WithNilError(t *testing.T) {
 	parent := &mockParent{}
-	mDomain := newMemberDomain(parent)
+	mDomain, _ := newMemberDomain(parent)
 
 	factory := &mockFactoryNilError{}
 	_, err := mDomain.CreateMember(factory)
@@ -188,7 +198,7 @@ func TestMemberDomain_CreateMember_WithNilError(t *testing.T) {
 
 func TestMemberDomain_GetMember(t *testing.T) {
 	parent := &mockParent{}
-	mDomain := newMemberDomain(parent)
+	mDomain, _ := newMemberDomain(parent)
 
 	factory := &mockFactory{}
 	member, err := mDomain.CreateMember(factory)
@@ -204,7 +214,7 @@ func TestMemberDomain_GetMember(t *testing.T) {
 
 func TestMemberDomain_GetMember_IncorrectRef(t *testing.T) {
 	parent := &mockParent{}
-	mDomain := newMemberDomain(parent)
+	mDomain, _ := newMemberDomain(parent)
 
 	_, err := mDomain.GetMember("1")
 	assert.EqualError(t, err, "object with record 1 does not exist")
@@ -212,16 +222,25 @@ func TestMemberDomain_GetMember_IncorrectRef(t *testing.T) {
 
 func TestNewMemberDomainProxy(t *testing.T) {
 	parent := &mockParent{}
-	mDomainProxy := newMemberDomainProxy(parent)
+	mDomain, err := newMemberDomain(parent)
+	assert.NoError(t, err)
+
+	proxy, err := newMemberDomainProxy(parent)
+	assert.NoError(t, err)
 
 	assert.Equal(t, &memberDomainProxy{
-		instance: newMemberDomain(parent),
-	}, mDomainProxy)
+		instance: mDomain,
+	}, proxy)
+}
+
+func TestNewMemberDomainProxy_WithNilParent(t *testing.T) {
+	_, err := newMemberDomainProxy(nil)
+	assert.EqualError(t, err, "parent must not be nil")
 }
 
 func TestMemberDomainProxy_GetReference(t *testing.T) {
 	parent := &mockParent{}
-	mDomainProxy := newMemberDomainProxy(parent)
+	mDomainProxy, _ := newMemberDomainProxy(parent)
 
 	reference := mDomainProxy.GetReference()
 	// TODO should return actual reference
@@ -230,7 +249,7 @@ func TestMemberDomainProxy_GetReference(t *testing.T) {
 
 func TestMemberDomainProxy_GetParent(t *testing.T) {
 	parent := &mockParent{}
-	mDomainProxy := newMemberDomainProxy(parent)
+	mDomainProxy, _ := newMemberDomainProxy(parent)
 
 	returnedParent := mDomainProxy.GetParent()
 	assert.Equal(t, parent, returnedParent)
@@ -238,38 +257,50 @@ func TestMemberDomainProxy_GetParent(t *testing.T) {
 
 func TestMemberDomainProxy_GetClassID(t *testing.T) {
 	parent := &mockParent{}
-	mDomainProxy := newMemberDomainProxy(parent)
+	mDomainProxy, _ := newMemberDomainProxy(parent)
 
 	id := mDomainProxy.GetClassID()
 	assert.Equal(t, MemberDomainID, id)
 }
 
 func TestNewMemberDomainFactory(t *testing.T) {
-	expected := &memberDomainFactory{}
-	factory := NewMemberDomainFactory()
+	parent := &mockParent{}
+	expected := &memberDomainFactory{parent: parent}
+
+	factory := NewMemberDomainFactory(parent)
 
 	assert.Equal(t, expected, factory)
 }
 
 func TestMemberDomainFactory_GetClassID(t *testing.T) {
-	factory := NewMemberDomainFactory()
+	parent := &mockParent{}
+	factory := NewMemberDomainFactory(parent)
 	id := factory.GetClassID()
 
 	assert.Equal(t, MemberDomainID, id)
 }
 
 func TestMemberDomainFactory_GetReference(t *testing.T) {
-	factory := NewMemberDomainFactory()
+	parent := &mockParent{}
+	factory := NewMemberDomainFactory(parent)
 	reference := factory.GetReference()
 
 	assert.Nil(t, reference)
 }
 
+// func TestMemberDomainFactory_GetParent(t *testing.T) {
+// 	parent := &mockParent{}
+// 	factory := NewMemberDomainFactory(parent)
+// 	reference := factory.GetParent()
+//
+// 	assert.Nil(t, reference)
+// }
+
 func TestMemberDomainFactory_Create(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewMemberDomainFactory()
+	factory := NewMemberDomainFactory(parent)
 	proxy, err := factory.Create(parent)
-	mDomain := newMemberDomain(parent)
+	mDomain, _ := newMemberDomain(parent)
 
 	assert.NoError(t, err)
 	assert.Equal(t, &memberDomainProxy{
@@ -277,9 +308,18 @@ func TestMemberDomainFactory_Create(t *testing.T) {
 	}, proxy)
 }
 
+func TestMemberDomainFactory_CreateWithNoParent(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewMemberDomainFactory(parent)
+	proxy, err := factory.Create(nil)
+
+	assert.EqualError(t, err, "parent must not be nil")
+	assert.Nil(t, proxy)
+}
+
 func TestMemberDomainFactory_CreateWithError(t *testing.T) {
 	parent := &mockParentWithError{}
-	factory := NewMemberDomainFactory()
+	factory := NewMemberDomainFactory(parent)
 	proxy, err := factory.Create(parent)
 
 	assert.EqualError(t, err, "add child error")
