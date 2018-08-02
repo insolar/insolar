@@ -16,10 +16,11 @@ type HelloWorlder struct {
 
 func TestHelloWorld(t *testing.T) {
 	gp, err := NewGoPlugin("127.0.0.1:7777", "127.0.0.1:7778")
-	defer gp.Stop()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer gp.Stop()
+
 	var buff bytes.Buffer
 	e := cbor.NewEncoder(&buff)
 	e.Marshal(HelloWorlder{77})
