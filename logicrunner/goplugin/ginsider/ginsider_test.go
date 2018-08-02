@@ -46,7 +46,7 @@ func TestHelloWorld(t *testing.T) {
 	gi.Call(req, &resp)
 
 	var new_data HelloWorlder
-	_, err = cbor.Unmarshal(resp.Object.Data, &new_data)
+	_, err = cbor.Unmarshal(resp.Data, &new_data)
 	if err != nil {
 		panic(err)
 	}
