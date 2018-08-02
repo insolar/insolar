@@ -1,8 +1,10 @@
 package logicrunner
 
+type Reference string
+
 type Object struct {
 	MachineType MachineType
-	Reference   string
+	Reference   Reference
 	Code        []byte
 	Data        []byte
 }

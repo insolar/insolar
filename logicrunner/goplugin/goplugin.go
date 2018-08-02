@@ -26,12 +26,11 @@ type GoPluginRPC struct {
 }
 
 // returns code for
-func (gpr *GoPluginRPC) GetObject(args logicrunner.Object, reply *logicrunner.Object) error {
-	f, err := os.Open(gpr.gp.CodeDir + args.Reference + ".so")
+func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
+	f, err := os.Open(gpr.gp.CodeDir + string(ref) + ".so")
 	if err != nil {
 		return err
 	}
-	reply.MachineType = args.MachineType
 	reply.Data, err = ioutil.ReadAll(f)
 	return err
 }

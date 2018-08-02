@@ -16,15 +16,18 @@ import (
 	"github.com/2tvenom/cbor"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
 )
 
 type GoInsider struct {
-	dir string
+	dir        string
+	RpcAddress string
 }
 
 func NewGoInsider(path string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	return &GoInsider{path}
+	return &GoInsider{dir: path}
 }
 
 func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error {
@@ -68,18 +71,23 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 	return path, nil
 }
 
-var PATH = "/Users/ruz/go/src/github.com/insolar/insolar/tmp"
-
 func main() {
-	log.Print("ginsider launched")
-	insider := GoInsider{PATH}
-	rpc.Register(insider)
+	listen := pflag.StringP("listen", "l", ":7778", "address and port to listen")
+	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
+	rpc_address := pflag.String("rpc", "localhost:7777", "address and port of RPC API")
+	pflag.Parse()
+
+	insider := GoInsider{dir: *path, RpcAddress: *rpc_address}
+	rpc.Register(&insider)
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", ":7777")
-	if e != nil {
-		log.Fatal("listen error:", e)
+	listener, err := net.Listen("tcp", *listen)
+
+	log.Print("ginsider launched, listens " + *listen)
+	if err != nil {
+		log.Fatal("listen error:", err)
+		os.Exit(1)
 	}
-	go http.Serve(l, nil)
+	go http.Serve(listener, nil)
 	<-make(chan byte)
 }
 
