@@ -20,6 +20,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/leveldb"
 )
@@ -36,9 +37,9 @@ func TestLedger_LevelDB_Init(t *testing.T) {
 	ledger := Ledger{
 		Store: storer,
 	}
-	_, _ = ledger.Store.Get(storage.RecordKey{
-		Hash:     []byte("test"),
-		TimeSlot: 1,
+	_, _ = ledger.Store.GetRecord(record.Key{
+		Pulse: 1,
+		Hash:  []byte("test"),
 	})
 }
 

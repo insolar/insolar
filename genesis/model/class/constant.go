@@ -31,5 +31,8 @@ const DomainID = "Domain"
 // ReferenceDomainID is a string representation of class for AddressDomain interface implementations.
 const ReferenceDomainID = "ReferenceDomain"
 
+// ClsDomainID is a string representation of class for ClassDomain interface implementations.
+const ClsDomainID = "ClassDomain"
+
 // InstanceDomainID is a string representation of class for InstanceDomain interface implementations.
 const InstanceDomainID = "InstanceDomain"

@@ -31,7 +31,7 @@ func NewAddress(address string) (*Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Address{*udpAddr}, nil
+	return &Address{UDPAddr: *udpAddr}, nil
 }
 
 // Equal checks if address is equal to another.
