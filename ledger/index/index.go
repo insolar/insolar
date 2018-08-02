@@ -22,7 +22,6 @@ import (
 
 // Lifeline represents meta information for record object
 type Lifeline struct {
-	LatestStateID   record.ID
-	LatestStateType record.TypeID
-	AppendIDs       []record.ID
+	LatestStateID record.ID
+	AppendIDs     []record.ID
 }

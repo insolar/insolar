@@ -50,11 +50,10 @@ func TestSetIndexStoresDataInDB(t *testing.T) {
 	defer ledger.Close()
 
 	idx := index.Lifeline{
-		LatestStateID:   record.ID{1, 2, 3},
-		LatestStateType: 1,
-		AppendIDs:       []record.ID{{1}, {2}, {3}},
+		LatestStateID: record.ID{1, 2, 3},
+		AppendIDs:     []record.ID{{1}, {2}, {3}},
 	}
-	err = ledger.SetIndex(record.ID{0}, idx)
+	err = ledger.SetIndex(record.ID{0}, &idx)
 	assert.Nil(t, err)
 
 	storedIndex, isFound := ledger.GetIndex(record.ID{0})
