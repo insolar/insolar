@@ -22,11 +22,7 @@ import (
 
 // Factory allows to create new objects with reference.
 type Factory interface {
-	object.Callable
+	object.Child
+	// Create returns new instance of specified type.
 	Create(parent object.Parent) (object.Proxy, error)
-}
-
-// ProxyFactory allows to create new proxy instances.
-type ProxyFactory interface {
-	Factory
 }

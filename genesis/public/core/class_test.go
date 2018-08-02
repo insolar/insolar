@@ -14,18 +14,20 @@
  *    limitations under the License.
  */
 
-package storage
+package core
 
 import (
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
+	"testing"
+
+	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/stretchr/testify/assert"
 )
 
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
-	GetRecord(record.Key) (record.Record, bool)
-	SetRecord(record.Record) error
+func TestClassDomain_GetClassID(t *testing.T) {
+	parent := &mockParent{}
+	clsDom, err := newClassDomain(parent)
+	assert.NoError(t, err)
 
-	GetIndex(record.ID) (*index.Lifeline, bool)
-	SetIndex(record.ID, index.Lifeline) error
+	domainID := clsDom.GetClassID()
+	assert.Equal(t, class.ClsDomainID, domainID)
 }
