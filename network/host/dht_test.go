@@ -1398,6 +1398,7 @@ func TestDHT_NumNodes(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Bootstrap()
 			assert.NoError(t, err)
+			done <- true
 		}(dht)
 		time.Sleep(time.Millisecond * 200)
 	}
@@ -1407,6 +1408,7 @@ func TestDHT_NumNodes(t *testing.T) {
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
 		dht.Disconnect()
+		<-done
 		<-done
 	}
 }
