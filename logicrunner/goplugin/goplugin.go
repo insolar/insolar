@@ -1,6 +1,7 @@
 package goplugin
 
 import (
+	"errors"
 	"io/ioutil"
 	"log"
 	"net"
@@ -13,12 +14,17 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 )
 
+type RunnerOptions struct {
+	Listen      string
+	StoragePath string
+}
+
 type GoPlugin struct {
-	DockerAddr string
-	DockerCmd  *exec.Cmd
-	ListenAddr string
-	sock       net.Listener
-	CodeDir    string
+	ListenAddr    string
+	sock          net.Listener
+	Runner        *exec.Cmd
+	RunnerOptions RunnerOptions
+	CodeDir       string
 }
 
 type GoPluginRPC struct {
@@ -35,14 +41,30 @@ func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.
 	return err
 }
 
-func NewGoPlugin(addr string, myaddr string) (*GoPlugin, error) {
+func NewGoPlugin(addr string, runner_options RunnerOptions) (*GoPlugin, error) {
 	gp := GoPlugin{
-		DockerAddr: addr,
-		DockerCmd:  exec.Command("ginsider/ginsider"),
-		ListenAddr: myaddr,
+		ListenAddr:    addr,
+		RunnerOptions: runner_options,
 	}
-	gp.DockerCmd.Start()
-	time.Sleep(200 * time.Millisecond)
+
+	var runner_arguments []string
+	if runner_options.Listen != "" {
+		runner_arguments = append(runner_arguments, "-s", runner_options.Listen)
+	} else {
+		return nil, errors.New("Listen is not optional in runner_options")
+	}
+	if runner_options.StoragePath != "" {
+		runner_arguments = append(runner_arguments, "-d", runner_options.StoragePath)
+	}
+	runner := exec.Command("ginsider/ginsider", runner_arguments...)
+	err := runner.Start()
+	if err != nil {
+		return nil, err
+	}
+
+	gp.Runner = runner
+
+	time.Sleep(2000 * time.Millisecond)
 	go gp.Start()
 	return &gp, nil
 }
@@ -60,7 +82,7 @@ func (gp *GoPlugin) Start() {
 }
 
 func (gp *GoPlugin) Stop() {
-	gp.DockerCmd.Process.Kill()
+	gp.Runner.Process.Kill()
 	gp.sock.Close()
 }
 
@@ -77,7 +99,7 @@ type CallResp struct {
 }
 
 func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
-	client, err := rpc.DialHTTP("tcp", gp.DockerAddr)
+	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
 	if err != nil {
 		return nil, nil, err
 	}
