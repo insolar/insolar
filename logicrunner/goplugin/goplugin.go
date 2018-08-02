@@ -72,23 +72,20 @@ type CallReq struct {
 }
 
 type CallResp struct {
-	Object logicrunner.Object
-	Ret    logicrunner.Arguments
-	Err    error
+	Data []byte
+	Ret  logicrunner.Arguments
+	Err  error
 }
 
-func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) (retdata logicrunner.Arguments, ret logicrunner.Arguments, err error) {
+func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
 	client, err := rpc.DialHTTP("tcp", gp.DockerAddr)
 	if err != nil {
 		return nil, nil, err
 	}
-	Ret := CallResp{}
-	err = client.Call("GoInsider.Call", CallReq{Object: object, Method: method, Args: args}, &Ret)
+	res := CallResp{}
+	err = client.Call("GoInsider.Call", CallReq{Object: object, Method: method, Args: args}, &res)
 	if err != nil {
 		return nil, nil, err
 	}
-	retdata = Ret.Object.Data
-	ret = Ret.Ret
-	err = Ret.Err
-	return retdata, ret, err
+	return res.Data, res.Ret, res.Err
 }

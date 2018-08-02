@@ -54,10 +54,7 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	res := method.Call([]reflect.Value{})
 
 	cbor.Marshal(export)
-	// TODO: reply should have different type
-	reply.Object = args.Object
-	reply.Object.Code = nil
-	reply.Object.Data = data_buf.Bytes()
+	reply.Data = data_buf.Bytes()
 
 	log.Printf("res: %+v\n", res)
 
