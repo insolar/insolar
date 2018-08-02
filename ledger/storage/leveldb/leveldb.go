@@ -102,8 +102,8 @@ func InitDB() (*LevelLedger, error) {
 }
 
 // GetRecord returns record from leveldb by timeslot and hash passed in record.Key
-func (ll *LevelLedger) GetRecord(k record.Key) (rec record.Record, found bool) {
-	return nil, false
+func (ll *LevelLedger) GetRecord(k record.Key) (record.Record, error) {
+	return nil, nil
 }
 
 // AddRecord stores record in leveldb
