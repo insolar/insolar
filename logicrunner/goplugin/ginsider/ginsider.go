@@ -59,7 +59,7 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	reply.Object.Code = nil
 	reply.Object.Data = data_buf.Bytes()
 
-	log.Printf("res: %+v\nobj: %+v\n", res)
+	log.Printf("res: %+v\n", res)
 
 	return nil
 }
