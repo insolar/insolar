@@ -20,25 +20,26 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-		"github.com/ugorji/go/codec"
+
+	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
 )
 
-// RawRecord struct contains raw serialized record.
+// Raw struct contains raw serialized record.
 // We need raw blob to not have dependency on record structure changes in future,
 // and have ability of consistent hash checking on old records.
-type RawRecord struct {
+type Raw struct {
 	Type TypeID
 	Data []byte
 }
 
 // Hash returns 28 bytes of SHA3 hash on Data field.
-func (raw *RawRecord) Hash() Hash {
+func (raw *Raw) Hash() Hash {
 	return sha3.Sum224(raw.Data)
 }
 
 // Decode decodes Data field of Raw struct as record from CBOR format.
-func (raw *RawRecord) Decode() Record {
+func (raw *Raw) Decode() Record {
 	cborH := &codec.CborHandle{}
 	rec := getRecordByTypeID(raw.Type)
 	dec := codec.NewDecoder(bytes.NewReader(raw.Data), cborH)
@@ -261,12 +262,12 @@ func MustEncode(rec Record) []byte {
 }
 
 // encodeToRaw converts concrete record to Raw record.
-func encodeToRaw(rec Record) (RawRecord, error) { // nolint: deadcode, megacheck
+func encodeToRaw(rec Record) (Raw, error) { // nolint: deadcode, megacheck
 	b, err := Encode(rec)
 	if err != nil {
 		panic(err)
 	}
-	return RawRecord{
+	return Raw{
 		Type: getTypeIDbyRecord(rec),
 		Data: b,
 	}, nil

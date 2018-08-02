@@ -19,6 +19,7 @@ package leveldb
 import (
 	"path/filepath"
 
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -37,7 +38,7 @@ type LevelLedger struct {
 }
 
 const (
-	scopeIDLifelineIndex byte = 1
+	scopeIDLifeline byte = 1
 )
 
 // InitDB returns LevelLedger with LevelDB initialized with default settings.
@@ -111,17 +112,18 @@ func (ll *LevelLedger) SetRecord(record record.Record) error {
 }
 
 // GetIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) GetIndex(id record.ID) (index record.LifelineIndex, found bool) {
-	buf, err := ll.ldb.Get(append([]byte{scopeIDLifelineIndex}, id[:]...), nil)
+func (ll *LevelLedger) GetIndex(id record.ID) (*index.Lifeline, bool) {
+	buf, err := ll.ldb.Get(append([]byte{scopeIDLifeline}, id[:]...), nil)
 	if err != nil {
-		return record.LifelineIndex{}, false
+		return nil, false
 	}
-	return record.DecodeLifelineIndex(buf), true
+	idx := index.DecodeLifeline(buf)
+	return &idx, true
 }
 
 // SetIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) SetIndex(id record.ID, index record.LifelineIndex) error {
-	err := ll.ldb.Put(append([]byte{scopeIDLifelineIndex}, id[:]...), record.EncodeLifelineIndex(&index), nil)
+func (ll *LevelLedger) SetIndex(id record.ID, idx index.Lifeline) error {
+	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeLifeline(&idx), nil)
 	return err
 }
 
