@@ -52,7 +52,7 @@ func TestHandler_GetObject_Not_Reference(t *testing.T) {
 func TestHandler_GetObject_GlobalScope(t *testing.T) {
 	mockParent := &mockParent{}
 	resolverHandler := NewHandler(nil)
-	newMap := make(map[string]object.Proxy)
+	newMap := make(map[string]Proxy)
 	resolverHandler.InitGlobalMap(&newMap)
 
 	ref, _ := object.NewReference("1", "123", object.GlobalScope)
@@ -107,7 +107,7 @@ func TestHandler_SetGlobalMap(t *testing.T) {
 	resolverHandler := NewHandler(nil)
 	resolverHandler.globalResolver.globalInstanceMap = nil
 
-	newMap := make(map[string]object.Proxy)
+	newMap := make(map[string]Proxy)
 	resolverHandler.InitGlobalMap(&newMap)
 
 	assert.Equal(t, &newMap, resolverHandler.globalResolver.globalInstanceMap)

@@ -14,11 +14,12 @@
  *    limitations under the License.
  */
 
-package object
+package resolver
 
 import (
 	"testing"
 
+	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,11 +29,11 @@ func (p *mockInstance) GetClassID() string {
 	return "mockChild"
 }
 
-func (p *mockInstance) GetReference() *Reference {
+func (p *mockInstance) GetReference() *object.Reference {
 	return nil
 }
 
-func (p *mockInstance) GetParent() Parent {
+func (p *mockInstance) GetParent() object.Parent {
 	return nil
 }
 
@@ -55,4 +56,11 @@ func TestBaseProxy_GetParent(t *testing.T) {
 		Instance: &mockInstance{},
 	}
 	assert.Nil(t, proxy.GetParent())
+}
+
+func TestBaseProxy_GetResolver(t *testing.T) {
+	proxy := &BaseProxy{
+		Instance: &mockInstance{},
+	}
+	assert.Nil(t, proxy.GetResolver())
 }

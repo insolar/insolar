@@ -61,6 +61,6 @@ func (r *Handler) GetObject(reference interface{}, classID interface{}) (interfa
 }
 
 // InitGlobalMap sets globalInstanceMap into globalResolver.
-func (r *Handler) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
+func (r *Handler) InitGlobalMap(globalInstanceMap *map[string]Proxy) {
 	r.globalResolver.InitGlobalMap(globalInstanceMap)
 }
