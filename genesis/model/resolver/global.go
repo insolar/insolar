@@ -34,19 +34,19 @@ func newGlobalResolver() *globalResolver {
 
 // GetObject resolves object by its reference and return its proxy.
 func (r *globalResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
-	ref, ok := reference.(*object.Reference)
+	ref, ok := reference.(object.Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
 	}
-	parentProxy, exist := (*r.globalInstanceMap)[ref.Domain]
+	parentProxy, exist := (*r.globalInstanceMap)[ref.GetDomain()]
 	if !exist {
 		return nil, fmt.Errorf("reference with address `%s` not found", ref)
 	}
 	parent, ok := parentProxy.(object.Parent)
 	if !ok {
-		return nil, fmt.Errorf("object with domain `%s` can not have children", ref.Domain)
+		return nil, fmt.Errorf("object with domain `%s` can not have children", ref.GetDomain())
 	}
-	proxy, err := parent.GetChild(ref.Record)
+	proxy, err := parent.GetChild(ref.GetRecord())
 	if err != nil {
 		return nil, err
 	}

@@ -55,7 +55,7 @@ func newInstanceDomain(parent object.Parent) (*instanceDomain, error) {
 	return instDomain, nil
 }
 
-// GetClassID return string representation of InstanceDomain's class.
+// GetClassID returns string representation of InstanceDomain's class.
 func (instDom *instanceDomain) GetClassID() string {
 	return class.InstanceDomainID
 }
@@ -118,22 +118,51 @@ func (idp *instanceDomainProxy) CreateInstance(fc factory.Factory) (string, erro
 // GetInstance is a proxy call for instance method.
 func (idp *instanceDomainProxy) GetInstance(record string) (resolver.Proxy, error) {
 	return idp.Instance.(InstanceDomain).GetInstance(record)
+	// GetInstance proxy call for instance method.
+	/*func (idp *instanceDomainProxy) GetInstance(record string) (object.Proxy, error) {
+	  	return idp.instance.GetInstance(record)
+	  }
+
+	  // GetReference proxy call for instance method.
+	  func (idp *instanceDomainProxy) GetReference() object.Reference {
+	  	return idp.instance.GetReference()
+	  }
+
+	  // GetParent proxy call for instance method.
+	  func (idp *instanceDomainProxy) GetParent() object.Parent {
+	  	return idp.instance.GetParent()
+	*/
 }
 
-type instanceDomainFactory struct{}
+// GetClassID proxy call for instance method.
+/*func (idp *instanceDomainProxy) GetClassID() string {
+	return class.InstanceDomainID
+}*/
+
+type instanceDomainFactory struct {
+	parent object.Parent
+}
 
 // NewInstanceDomainFactory creates new factory for InstanceDomain.
-func NewInstanceDomainFactory() factory.Factory {
-	return &instanceDomainFactory{}
+func NewInstanceDomainFactory(parent object.Parent) factory.Factory {
+	return &instanceDomainFactory{
+		parent: parent,
+	}
 }
 
-// GetClassID return string representation of InstanceDomain's class.
+// GetParent returns parent link
+func (idf *instanceDomainFactory) GetParent() object.Parent {
+	// TODO: return real parent, fix tests
+	return nil
+}
+
+// GetClassID returns string representation of InstanceDomain's class.
 func (idf *instanceDomainFactory) GetClassID() string {
 	return class.InstanceDomainID
 }
 
 // GetReference returns nil for not published factory
-func (idf *instanceDomainFactory) GetReference() *object.Reference {
+func (idf *instanceDomainFactory) GetReference() object.Reference {
 	return nil
 }
 

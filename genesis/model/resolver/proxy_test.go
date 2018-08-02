@@ -29,7 +29,7 @@ func (p *mockInstance) GetClassID() string {
 	return "mockChild"
 }
 
-func (p *mockInstance) GetReference() *object.Reference {
+func (p *mockInstance) GetReference() object.Reference {
 	return nil
 }
 

@@ -14,18 +14,32 @@
  *    limitations under the License.
  */
 
-package storage
+package index
 
 import (
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
+	"bytes"
+
+	"github.com/ugorji/go/codec"
 )
 
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
-	GetRecord(record.Key) (record.Record, bool)
-	SetRecord(record.Record) error
+// EncodeLifeline converts lifeline index into binary format
+func EncodeLifeline(index *Lifeline) []byte {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	err := enc.Encode(index)
+	if err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
 
-	GetIndex(record.ID) (*index.Lifeline, bool)
-	SetIndex(record.ID, index.Lifeline) error
+// DecodeLifeline converts byte array into lifeline index struct
+func DecodeLifeline(buf []byte) Lifeline {
+	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
+	var index Lifeline
+	err := dec.Decode(&index)
+	if err != nil {
+		panic(err)
+	}
+	return index
 }

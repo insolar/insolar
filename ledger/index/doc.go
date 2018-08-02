@@ -14,18 +14,5 @@
  *    limitations under the License.
  */
 
-package storage
-
-import (
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
-)
-
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
-	GetRecord(record.Key) (record.Record, bool)
-	SetRecord(record.Record) error
-
-	GetIndex(record.ID) (*index.Lifeline, bool)
-	SetIndex(record.ID, index.Lifeline) error
-}
+// Package index represents indexes and meta information for records.
+package index

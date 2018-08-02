@@ -36,11 +36,11 @@ func newChildResolver(parent object.Parent) *childResolver {
 
 // GetObject resolves object by its reference and return its proxy.
 func (r *childResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
-	ref, ok := reference.(*object.Reference)
+	ref, ok := reference.(object.Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
 	}
-	obj, err := r.parent.GetChild(ref.Record)
+	obj, err := r.parent.GetChild(ref.GetRecord())
 	if err != nil {
 		return nil, err
 	}

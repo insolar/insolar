@@ -31,7 +31,7 @@ type BaseProxy struct {
 }
 
 // GetReference is a proxy call for instance method.
-func (bp *BaseProxy) GetReference() *object.Reference {
+func (bp *BaseProxy) GetReference() object.Reference {
 	return bp.Instance.GetReference()
 }
 
