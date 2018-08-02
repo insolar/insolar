@@ -49,12 +49,10 @@ func (b hashableBytes) WriteHash(w io.Writer) {
 	}
 }
 
+// SHA3Hash224 hashes record (SHA3-224 on CBOR binary representation of record's struct).
 func SHA3Hash224(rec Record) []byte {
 	cborBlob := MustEncode(rec)
-	// cborHex := fmt.Sprintf("%x", b)
-	typeid := getTypeIDbyRecord(rec)
-	// _ = cborHex
-	return hash.SHA3hash224(typeid, hashableBytes(cborBlob))
+	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
 }
 
 // Decode decodes Data field of Raw struct as record from CBOR format.
