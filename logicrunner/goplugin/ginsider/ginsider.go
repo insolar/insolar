@@ -56,7 +56,9 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 
 	res := method.Call([]reflect.Value{})
 
-	cbor.Marshal(export)
+	_, err = cbor.Marshal(export)
+	check(err)
+
 	reply.Data = dataBuf.Bytes()
 
 	log.Printf("res: %+v\n", res)
@@ -102,7 +104,12 @@ func main() {
 	pflag.Parse()
 
 	insider := GoInsider{dir: *path, RPCAddress: *rpcAddress}
-	rpc.Register(&insider)
+	err := rpc.Register(&insider)
+	if err != nil {
+		log.Fatal("Couldn't register RPC interface: ", err)
+		os.Exit(1)
+	}
+
 	rpc.HandleHTTP()
 	listener, err := net.Listen("tcp", *listen)
 
