@@ -26,9 +26,9 @@ type GoInsider struct {
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
-func NewGoInsider(path string) *GoInsider {
+func NewGoInsider(path string, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	return &GoInsider{dir: path}
+	return &GoInsider{dir: path, RPCAddress: address}
 }
 
 // Call is an RPC that runs a method on an object and
@@ -102,8 +102,8 @@ func main() {
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	pflag.Parse()
 
-	insider := GoInsider{dir: *path, RPCAddress: *rpcAddress}
-	err := rpc.Register(&insider)
+	insider := NewGoInsider(*path, *rpcAddress)
+	err := rpc.Register(insider)
 	if err != nil {
 		log.Fatal("Couldn't register RPC interface: ", err)
 		os.Exit(1)
@@ -117,8 +117,12 @@ func main() {
 		log.Fatal("listen error:", err)
 		os.Exit(1)
 	}
-	go http.Serve(listener, nil)
-	<-make(chan byte)
+	err = http.Serve(listener, nil)
+	if err != nil {
+		log.Fatal("couldn't start server: ", err)
+		os.Exit(1)
+	}
+	log.Print("bye\n")
 }
 
 func check(err error) {
