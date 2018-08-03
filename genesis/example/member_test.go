@@ -241,29 +241,32 @@ func TestNewMemberDomainProxy_WithNilParent(t *testing.T) {
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
-func TestMemberDomainProxy_GetReference(t *testing.T) {
+func TestMemberDomainProxy_CreateMember(t *testing.T) {
 	parent := &mockParent{}
-	mDomainProxy, _ := newMemberDomainProxy(parent)
+	proxy, err := newMemberDomainProxy(parent)
 
-	reference := mDomainProxy.GetReference()
-	// TODO should return actual reference
-	assert.Nil(t, reference)
+	factory := &mockFactory{}
+	member, err := proxy.CreateMember(factory)
+	assert.NoError(t, err)
+
+	_, err = uuid.FromString(member)
+	assert.NoError(t, err)
 }
 
-func TestMemberDomainProxy_GetParent(t *testing.T) {
+func TestMemberDomainProxy_GetMember(t *testing.T) {
 	parent := &mockParent{}
-	mDomainProxy, _ := newMemberDomainProxy(parent)
+	proxy, err := newMemberDomainProxy(parent)
 
-	returnedParent := mDomainProxy.GetParent()
-	assert.Equal(t, parent, returnedParent)
-}
+	factory := &mockFactory{}
+	member, err := proxy.CreateMember(factory)
+	assert.NoError(t, err)
 
-func TestMemberDomainProxy_GetClassID(t *testing.T) {
-	parent := &mockParent{}
-	mDomainProxy, _ := newMemberDomainProxy(parent)
+	resolved, err := proxy.GetMember(member)
+	assert.NoError(t, err)
 
-	id := mDomainProxy.GetClassID()
-	assert.Equal(t, MemberDomainID, id)
+	assert.Equal(t, &mockProxy{
+		parent: proxy.Instance.(object.Parent),
+	}, resolved)
 }
 
 func TestNewMemberDomainFactory(t *testing.T) {
