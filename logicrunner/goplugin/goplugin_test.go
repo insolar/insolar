@@ -72,14 +72,19 @@ func TestHelloWorld(t *testing.T) {
 		Data:        buff.Bytes(),
 	}
 
-	data, ret, err := gp.Exec(obj, "Hello", logicrunner.Arguments{})
+	data, _, err := gp.Exec(obj, "Hello", logicrunner.Arguments{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%+v", data)
-	if len(data) == 0 {
-		t.Fatal("len of data == 0")
+
+	var newData HelloWorlder
+	_, err = e.Unmarshal(data, &newData)
+	if err != nil {
+		panic(err)
 	}
-	//	if ret == logicrunner.Arguments{} // IDK, lets decide what must be here
-	t.Log(ret)
+	if newData.Greeted != 78 {
+		t.Fatalf("Got unexpected value: %d, 78 is expected", newData.Greeted)
+	}
+
+	//TODO: check second returned value
 }
