@@ -116,7 +116,7 @@ func init() {
 	// Set map to ReferenceDomain.globalResolverMap
 	initRefDomain.InitGlobalMap(&globalResolverMap)
 	// Set map to ReferenceDomainProxy.ReferenceDomain.globalResolverMap
-	initRefDomainProxy.Instance.(*referenceDomain).InitGlobalMap(&globalResolverMap)
+	initRefDomainProxy.Instance.(ReferenceDomain).InitGlobalMap(&globalResolverMap)
 
 }
 

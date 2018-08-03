@@ -58,12 +58,12 @@ Usage:
 		}, nil
 	}
 
-    proxy, err := newCustomDomainProxy(...)
+	proxy, err := newCustomDomainProxy(...)
 
-    proxy.GetReference() is a proxy call for instance method.
-    proxy.GetParent() is a proxy call for instance method.
+	proxy.GetReference() is a proxy call for instance method.
+	proxy.GetParent() is a proxy call for instance method.
 	proxy.GetResolver() always returns nil.
-    proxy.GetClassID() is a proxy call for instance method.
+	proxy.GetClassID() is a proxy call for instance method.
 
 */
 package resolver
