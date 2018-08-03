@@ -14,14 +14,5 @@
  *    limitations under the License.
  */
 
-package index
-
-import (
-	"github.com/insolar/insolar/ledger/record"
-)
-
-// Lifeline represents meta information for record object
-type Lifeline struct {
-	LatestStateID record.ID
-	AppendIDs     []record.ID
-}
+// Package artifactmanager provides high-level storage API for vm module.
+package artifactmanager

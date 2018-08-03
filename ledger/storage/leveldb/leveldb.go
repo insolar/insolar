@@ -106,9 +106,9 @@ func (ll *LevelLedger) GetRecord(k record.Key) (rec record.Record, found bool) {
 	return nil, false
 }
 
-// SetRecord stores record in leveldb
-func (ll *LevelLedger) SetRecord(record record.Record) error {
-	return nil
+// AddRecord stores record in leveldb
+func (ll *LevelLedger) AddRecord(rec record.Record) (record.Reference, error) {
+	return record.Reference{}, nil
 }
 
 // GetIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
@@ -122,8 +122,8 @@ func (ll *LevelLedger) GetIndex(id record.ID) (*index.Lifeline, bool) {
 }
 
 // SetIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) SetIndex(id record.ID, idx index.Lifeline) error {
-	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeLifeline(&idx), nil)
+func (ll *LevelLedger) SetIndex(id record.ID, idx *index.Lifeline) error {
+	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeLifeline(idx), nil)
 	return err
 }
 
