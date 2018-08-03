@@ -195,7 +195,8 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 	done := make(chan bool)
 	port := 15000
 	var dhts []*DHT
-	for i := 0; i < 20; i++ {
+	count := 20
+	for i := 0; i < count; i++ {
 		id, _ := node.NewIDs(1)
 		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
@@ -229,7 +230,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 	time.Sleep(time.Millisecond * 2000)
 
 	for _, dht := range dhts {
-		assert.Equal(t, 19, dht.NumNodes(getDefaultCtx(dht)))
+		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
 		dht.Disconnect()
 		<-done
 	}
@@ -943,7 +944,7 @@ func getIDWithValues(b byte) node.ID {
 }
 
 func TestDHT_RelayRequest(t *testing.T) {
-	count := 20
+	count := 5
 	done := make(chan bool)
 	port := 3000
 	var dhts []*DHT
@@ -1026,7 +1027,7 @@ func TestDHT_RelayRequest(t *testing.T) {
 }
 
 func TestDHT_AuthenticationRequest(t *testing.T) {
-	count := 20
+	count := 5
 	done := make(chan bool)
 	port := 4000
 	var dhts []*DHT
@@ -1151,7 +1152,7 @@ func TestDHT_Bootstrap(t *testing.T) {
 }
 
 func TestDHT_FindNode(t *testing.T) {
-	count := 20
+	count := 5
 	port := 6000
 	var dhts []*DHT
 	idx := make(map[int]string, count)
@@ -1197,6 +1198,7 @@ func TestDHT_FindNode(t *testing.T) {
 			_, exist, err := dht.FindNode(ctx, idx[i])
 			assert.NoError(t, err)
 			assert.Equal(t, true, exist)
+			time.Sleep(time.Millisecond * 200)
 		}
 	}
 
@@ -1209,7 +1211,7 @@ func TestDHT_FindNode(t *testing.T) {
 
 // CheckOriginRequest works if and only if relay request accepted.
 func TestDHT_CheckOriginRequest(t *testing.T) {
-	count := 20
+	count := 5
 	port := 7000
 	var dhts []*DHT
 	idx := make(map[int]string, count)
@@ -1288,7 +1290,7 @@ func TestDHT_CheckOriginRequest(t *testing.T) {
 }
 
 func TestDHT_Listen(t *testing.T) {
-	count := 20
+	count := 5
 	port := 8000
 	var dhts []*DHT
 	done := make(chan bool)
@@ -1326,7 +1328,7 @@ func TestDHT_Listen(t *testing.T) {
 }
 
 func TestDHT_Disconnect(t *testing.T) {
-	count := 20
+	count := 5
 	port := 9000
 	var dhts []*DHT
 	done := make(chan bool)
@@ -1365,7 +1367,7 @@ func TestDHT_Disconnect(t *testing.T) {
 }
 
 func TestDHT_NumNodes(t *testing.T) {
-	count := 20
+	count := 5
 	port := 10000
 	var dhts []*DHT
 	done := make(chan bool)
@@ -1436,7 +1438,7 @@ func TestNewDHT(t *testing.T) {
 }
 
 func TestDHT_GetOriginID(t *testing.T) {
-	count := 20
+	count := 5
 	port := 12000
 	var dhts []*DHT
 	done := make(chan bool)
