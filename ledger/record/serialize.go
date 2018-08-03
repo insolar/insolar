@@ -34,6 +34,36 @@ type Raw struct {
 	Data []byte
 }
 
+// DecodeToRaw decodes bytes to Raw struct from CBOR.
+func DecodeToRaw(b []byte) (*Raw, error) {
+	cborH := &codec.CborHandle{}
+	var rec Raw
+	dec := codec.NewDecoderBytes(b, cborH)
+	err := dec.Decode(&rec)
+	if err != nil {
+		return nil, err
+	}
+	return &rec, nil
+}
+
+// MustEncodeRaw wraps EncodeRaw, panics on encode error.
+func MustEncodeRaw(raw *Raw) []byte {
+	b, err := EncodeRaw(raw)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// EncodeRaw encodes Raw to CBOR byte slice.
+func EncodeRaw(raw *Raw) ([]byte, error) {
+	cborH := &codec.CborHandle{}
+	var b bytes.Buffer
+	enc := codec.NewEncoder(&b, cborH)
+	err := enc.Encode(raw)
+	return b.Bytes(), err
+}
+
 // we can't use Hash on data?
 // Hash returns 28 bytes of SHA3 hash on Data field.
 // func (raw *Raw) Hash() Hash {
