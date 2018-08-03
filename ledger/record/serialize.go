@@ -280,12 +280,12 @@ func MustEncode(rec Record) []byte {
 }
 
 // EncodeToRaw converts record to Raw record.
-func EncodeToRaw(rec Record) (Raw, error) {
+func EncodeToRaw(rec Record) (*Raw, error) {
 	b, err := Encode(rec)
 	if err != nil {
 		panic(err)
 	}
-	return Raw{
+	return &Raw{
 		Type: getTypeIDbyRecord(rec),
 		Data: b,
 	}, nil
