@@ -23,8 +23,7 @@ type ArtifactManager interface {
 	// SetArchPref allows to set list of preferred VM architectures.
 	// When returning classes storage will return compiled code
 	// according to this preferences.
-	// TODO: implement Arch
-	// SetArchPref([]Arch) error
+	SetArchPref(pref []record.ArchType)
 
 	// GetObj returns object by reference.
 	GetObj(
@@ -41,18 +40,18 @@ type ArtifactManager interface {
 	)
 
 	// DeployCode deploys new code to storage (CodeRecord).
-	DeployCode(codeRecord record.CodeRecord) (record.Reference, error)
+	DeployCode(requestRef record.Reference) (record.Reference, error)
 
 	// ActivateClass activates class from given code (ClassActivateRecord).
-	ActivateClass(record record.ClassActivateRecord) (record.Reference, error)
+	ActivateClass(requestRef, codeRef record.Reference, memory record.Memory) (record.Reference, error)
 
 	// DeactivateClass deactivates class (DeactivationRecord)
-	DeactivateClass(ref record.Reference) (record.Reference, error)
+	DeactivateClass(requestRef, classRef record.Reference) (record.Reference, error)
 
 	// UpdateClass allows to change class code etc. (ClassAmendRecord).
 	UpdateClass(
-		ref record.Reference,
-		codeRecord record.CodeRecord,
+		requestRef,
+		classRef record.Reference,
 		migrations []record.MemoryMigrationCode,
 	) (record.Reference, error)
 

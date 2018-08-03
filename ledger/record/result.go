@@ -134,8 +134,8 @@ type CodeRecord struct {
 	StorageRecord
 
 	Interfaces   []Reference
-	TargetedCode [][]byte // []MachineBinaryCode
-	SourceCode   string   // ObjectSourceCode
+	TargetedCode map[ArchType][]byte // []MachineBinaryCode
+	SourceCode   string              // ObjectSourceCode
 }
 
 // AmendRecord is produced when we modify another record in ledger.
