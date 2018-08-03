@@ -162,7 +162,7 @@ func (rdf *referenceDomainFactory) GetReference() object.Reference {
 	return nil
 }
 
-// Create factory method for new ReferenceDomain instances.
+// Create is a factory method for new ReferenceDomain instances.
 func (rdf *referenceDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	proxy := newReferenceDomainProxy(parent)
 	_, err := parent.AddChild(proxy)

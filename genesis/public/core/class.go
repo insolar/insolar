@@ -86,7 +86,6 @@ func (cd *classDomain) GetClass(recordID string) (factory.Factory, error) {
 }
 
 type classDomainProxy struct {
-	//instance *classDomain
 	resolver.BaseProxy
 }
 
@@ -98,7 +97,6 @@ func newClassDomainProxy(parent object.Parent) (*classDomainProxy, error) {
 	}
 
 	return &classDomainProxy{
-		//instance: instance,
 		BaseProxy: resolver.BaseProxy{
 			Instance: instance,
 		},
