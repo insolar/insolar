@@ -33,5 +33,37 @@ Usage:
 		res := obj.(object.Object)
 	}
 
+
+Proxy is public interface to call object's methods. If you want to make proxy for your object inherit BaseProxy
+
+Usage:
+
+	// make your custom domain proxy
+
+	type customDomainProxy struct {
+		object.BaseProxy
+	}
+
+	// create proxy for your custom domain
+
+	func newCustomDomainProxy(parent object.Parent) (*customDomainProxy, error) {
+		instance, err := newCustomDomain(parent)
+		if err != nil {
+			return nil, err
+		}
+		return &customDomainProxy{
+			BaseProxy: object.BaseProxy{
+				Instance: instance,
+			},
+		}, nil
+	}
+
+	proxy, err := newCustomDomainProxy(...)
+
+	proxy.GetReference() is a proxy call for instance method.
+	proxy.GetParent() is a proxy call for instance method.
+	proxy.GetResolver() always returns nil.
+	proxy.GetClassID() is a proxy call for instance method.
+
 */
 package resolver

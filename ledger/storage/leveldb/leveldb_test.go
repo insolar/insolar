@@ -28,9 +28,14 @@ import (
 
 func TestMain(m *testing.M) {
 	absPath, err := filepath.Abs(dbDirPath)
-	if err == nil {
-		os.RemoveAll(absPath)
+	if err != nil {
+		os.Exit(1)
 	}
+
+	if err = os.RemoveAll(absPath); err != nil {
+		os.Exit(1)
+	}
+
 	os.Exit(m.Run())
 }
 

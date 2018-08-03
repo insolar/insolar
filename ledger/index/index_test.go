@@ -14,9 +14,13 @@
  *    limitations under the License.
  */
 
-package object
+package index
 
-// Proxy marks instance as proxy object.
-type Proxy interface {
-	Child
+import (
+	"os"
+	"testing"
+)
+
+func TestMain(m *testing.M) {
+	os.Exit(m.Run())
 }

@@ -66,14 +66,16 @@ type Key struct {
 // TypeID encodes a record object type.
 type TypeID uint32
 
+// WriteHash implements hash.Writer interface.
+func (id TypeID) WriteHash(w io.Writer) {
+	err := binary.Write(w, binary.BigEndian, id)
+	if err != nil {
+		panic("binary.Write failed:" + err.Error())
+	}
+}
+
 // Reference allows to address any record across the whole network.
 type Reference struct {
 	Domain ID
 	Record ID
-}
-
-// WriteHash implements hash.Writer interface.
-func (r Reference) WriteHash(w io.Writer) {
-	r.Domain.WriteHash(w)
-	r.Record.WriteHash(w)
 }
