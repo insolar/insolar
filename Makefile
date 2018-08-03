@@ -1,7 +1,9 @@
 .PHONY: metalint ci-lint test
 
+lint: ci-lint
+
 ci-lint:
-	golangci-lint --tests=0 run
+	golangci-lint run
 
 metalint:
 	gometalinter --vendor ./...

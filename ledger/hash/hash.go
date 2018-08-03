@@ -29,9 +29,11 @@ type Writer interface {
 	WriteHash(io.Writer)
 }
 
-// SHA3hash224 returns SHA3 hash calculated on data recieved from Writer.
-func SHA3hash224(hw Writer) []byte {
+// SHA3hash224 returns SHA3 hash calculated on data received from Writer.
+func SHA3hash224(hw ...Writer) []byte {
 	h := sha3.New224()
-	hw.WriteHash(h)
+	for _, w := range hw {
+		w.WriteHash(h)
+	}
 	return h.Sum(nil)
 }
