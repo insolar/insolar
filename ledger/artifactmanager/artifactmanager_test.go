@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,12 +33,15 @@ type LedgerMock struct {
 	Indexes map[record.ID]*index.Lifeline
 }
 
-func (mock *LedgerMock) GetRecord(k record.Key) (record.Record, bool) {
-	rec, ok := mock.Records[record.Key2ID(k)]
-	return rec, ok
+func (mock *LedgerMock) GetRecord(id record.ID) (record.Record, error) {
+	rec, ok := mock.Records[id]
+	if !ok {
+		return nil, errors.New("Record not found")
+	}
+	return rec, nil
 }
 
-func (mock *LedgerMock) AddRecord(rec record.Record) (record.Reference, error) {
+func (mock *LedgerMock) SetRecord(rec record.Record) (record.ID, error) {
 	buf := bytes.Buffer{}
 	// TODO: implement properly after merge with INS-1-storage-records-persist
 	// rec.WriteHash(&buf)
@@ -45,10 +49,7 @@ func (mock *LedgerMock) AddRecord(rec record.Record) (record.Reference, error) {
 	var id record.ID
 	copy(buf.Bytes()[0:record.IDSize], id[:])
 	mock.Records[record.ID{}] = rec
-	return record.Reference{
-		Domain: record.ID{},
-		Record: id,
-	}, nil
+	return id, nil
 }
 
 func (mock *LedgerMock) GetIndex(id record.ID) (*index.Lifeline, bool) {
@@ -69,6 +70,18 @@ func (mock *LedgerMock) Close() error {
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
+}
+
+// helper to workaround reference generation from id and record pair
+// func getReference(rec record.Record, id record.ID) record.Reference {
+// }
+
+func addRecord(mock *LedgerMock, rec record.Record) record.Reference {
+	id, _ := mock.SetRecord(rec)
+	return record.Reference{
+		Domain: rec.Domain(),
+		Record: id,
+	}
 }
 
 func TestDeployCodeCreatesRecord(t *testing.T) {
@@ -94,7 +107,7 @@ func TestActivateClassVerifiesCodeReference(t *testing.T) {
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	_, err := manager.ActivateClass(requestRef, record.Reference{}, record.Memory{})
 	assert.NotNil(t, err)
-	notCodeRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
+	notCodeRef := addRecord(&ledger, &record.ClassActivateRecord{})
 	_, err = manager.ActivateClass(requestRef, notCodeRef, record.Memory{})
 	assert.NotNil(t, err)
 }
@@ -104,11 +117,12 @@ func TestActivateClassCreatesActivateRecord(t *testing.T) {
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	memory := record.Memory{1, 2, 3}
-	codeRef, _ := ledger.AddRecord(&record.CodeRecord{})
+	codeRef := addRecord(&ledger, &record.CodeRecord{})
+
 	activateRef, err := manager.ActivateClass(requestRef, codeRef, memory)
 	assert.Nil(t, err)
-	activateRec, isFound := ledger.GetRecord(record.ID2Key(activateRef.Record))
-	assert.Equal(t, isFound, true)
+	activateRec, getErr := ledger.GetRecord(activateRef.Record)
+	assert.Nil(t, getErr)
 	assert.Equal(t, activateRec, &record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
@@ -128,7 +142,7 @@ func TestDeactivateClassVerifiesClassReference(t *testing.T) {
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	_, err := manager.DeactivateClass(requestRef, record.Reference{})
 	assert.NotNil(t, err)
-	notClassRef, _ := ledger.AddRecord(&record.CodeRecord{})
+	notClassRef := addRecord(&ledger, &record.CodeRecord{})
 	_, err = manager.DeactivateClass(requestRef, notClassRef)
 	assert.NotNil(t, err)
 }
@@ -137,8 +151,10 @@ func TestDeactivateClassVerifiesClassIsActive(t *testing.T) {
 	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	classRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
-	deactivateRef, _ := ledger.AddRecord(&record.DeactivationRecord{})
+
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
+	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
+
 	ledger.SetIndex(classRef.Record, &index.Lifeline{
 		LatestStateID: deactivateRef.Record,
 	})
@@ -150,14 +166,14 @@ func TestDeactivateClassCreatesDeactivateRecord(t *testing.T) {
 	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	classRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
 	ledger.SetIndex(classRef.Record, &index.Lifeline{
 		LatestStateID: classRef.Record,
 	})
 	deactivateRef, err := manager.DeactivateClass(requestRef, classRef)
 	assert.Nil(t, err)
-	deactivateRec, isFound := ledger.GetRecord(record.ID2Key(deactivateRef.Record))
-	assert.Equal(t, isFound, true)
+	deactivateRec, getErr := ledger.GetRecord(deactivateRef.Record)
+	assert.Nil(t, getErr)
 	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
@@ -176,7 +192,7 @@ func TestUpdateClassVerifiesClassReference(t *testing.T) {
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	_, err := manager.UpdateClass(requestRef, record.Reference{}, []record.MemoryMigrationCode{})
 	assert.NotNil(t, err)
-	notClassRef, _ := ledger.AddRecord(&record.CodeRecord{})
+	notClassRef := addRecord(&ledger, &record.CodeRecord{})
 	_, err = manager.UpdateClass(requestRef, notClassRef, []record.MemoryMigrationCode{})
 	assert.NotNil(t, err)
 }
@@ -190,8 +206,8 @@ func TestUpdateClassVerifiesClassIsActive(t *testing.T) {
 			MigrationCodeRecord: record.Reference{Record: record.ID{1, 2, 3}},
 		},
 	}
-	classRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
-	deactivateRef, _ := ledger.AddRecord(&record.DeactivationRecord{})
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
+	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
 	ledger.SetIndex(classRef.Record, &index.Lifeline{
 		LatestStateID: deactivateRef.Record,
 	})
@@ -208,14 +224,14 @@ func TestUpdateClassCreatesAmendRecord(t *testing.T) {
 			MigrationCodeRecord: record.Reference{Record: record.ID{1, 2, 3}},
 		},
 	}
-	classRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
 	ledger.SetIndex(classRef.Record, &index.Lifeline{
 		LatestStateID: classRef.Record,
 	})
 	updateRef, err := manager.UpdateClass(requestRef, classRef, migrations)
 	assert.Nil(t, err)
-	updateRec, isFound := ledger.GetRecord(record.ID2Key(updateRef.Record))
-	assert.Equal(t, isFound, true)
+	updateRec, getErr := ledger.GetRecord(updateRef.Record)
+	assert.Nil(t, getErr)
 	assert.Equal(t, updateRec, &record.ClassAmendRecord{
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{

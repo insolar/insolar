@@ -25,4 +25,5 @@ type Memory []byte
 
 // Record is base interface for all records.
 type Record interface {
+	Domain() ID
 }
