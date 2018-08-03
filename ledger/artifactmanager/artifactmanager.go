@@ -108,7 +108,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 ) (record.Reference, error) {
 	classIndex, err := m.getActiveClassIndex(classRef)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	rec := record.DeactivationRecord{
@@ -144,7 +144,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 ) (record.Reference, error) {
 	classIndex, err := m.getActiveClassIndex(classRef)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	rec := record.ClassAmendRecord{
