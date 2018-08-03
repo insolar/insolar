@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // MemberDomainName is a name for member domain.
@@ -37,7 +38,7 @@ type MemberDomain interface {
 	// CreateMember is used to create new member as a child to domain storage.
 	CreateMember(factory.Factory) (string, error)
 	// GetMember returns member from its record in domain storage.
-	GetMember(string) (object.Proxy, error)
+	GetMember(string) (resolver.Proxy, error)
 }
 
 type memberDomain struct {
@@ -79,13 +80,13 @@ func (md *memberDomain) CreateMember(fc factory.Factory) (string, error) {
 }
 
 // GetMember returns member from its record in domain storage.
-func (md *memberDomain) GetMember(record string) (object.Proxy, error) {
+func (md *memberDomain) GetMember(record string) (resolver.Proxy, error) {
 	member, err := md.ChildStorage.Get(record)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := member.(object.Proxy)
+	result, ok := member.(resolver.Proxy)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not `Proxy` instance", record)
 	}
@@ -94,7 +95,7 @@ func (md *memberDomain) GetMember(record string) (object.Proxy, error) {
 }
 
 type memberDomainProxy struct {
-	instance *memberDomain
+	resolver.BaseProxy
 }
 
 // newMemberDomainProxy creates new proxy and associates it with new instance of MemberDomain.
@@ -104,33 +105,20 @@ func newMemberDomainProxy(parent object.Parent) (*memberDomainProxy, error) {
 		return nil, err
 	}
 	return &memberDomainProxy{
-		instance: instance,
+		BaseProxy: resolver.BaseProxy{
+			Instance: instance,
+		},
 	}, nil
 }
 
 // CreateMember is a proxy call for instance method.
 func (mdp *memberDomainProxy) CreateMember(fc factory.Factory) (string, error) {
-	return mdp.instance.CreateMember(fc)
+	return mdp.Instance.(MemberDomain).CreateMember(fc)
 }
 
 // GetMember is a proxy call for instance method.
-func (mdp *memberDomainProxy) GetMember(record string) (object.Proxy, error) {
-	return mdp.instance.GetMember(record)
-}
-
-// GetReference is a proxy call for instance method.
-func (mdp *memberDomainProxy) GetReference() object.Reference {
-	return mdp.instance.GetReference()
-}
-
-// GetParent is a proxy call for instance method.
-func (mdp *memberDomainProxy) GetParent() object.Parent {
-	return mdp.instance.GetParent()
-}
-
-// GetClassID is a proxy call for instance method.
-func (mdp *memberDomainProxy) GetClassID() string {
-	return MemberDomainID
+func (mdp *memberDomainProxy) GetMember(record string) (resolver.Proxy, error) {
+	return mdp.Instance.(MemberDomain).GetMember(record)
 }
 
 type memberDomainFactory struct {
@@ -161,7 +149,7 @@ func (mdf *memberDomainFactory) GetParent() object.Parent {
 }
 
 // Create is a factory method for new MemberDomain instances.
-func (mdf *memberDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
+func (mdf *memberDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	proxy, err := newMemberDomainProxy(parent)
 	if err != nil {
 		return nil, err

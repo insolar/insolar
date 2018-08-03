@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -111,7 +112,7 @@ func (p *mockProxy) GetParent() object.Parent {
 
 type mockFactory struct{}
 
-func (f *mockFactory) Create(parent object.Parent) (object.Proxy, error) {
+func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	return &mockProxy{
 		parent: parent,
 	}, nil
@@ -133,7 +134,7 @@ type mockFactoryError struct {
 	mockFactory
 }
 
-func (f *mockFactoryError) Create(parent object.Parent) (object.Proxy, error) {
+func (f *mockFactoryError) Create(parent object.Parent) (resolver.Proxy, error) {
 	return nil, fmt.Errorf("factory create error")
 }
 
@@ -141,7 +142,7 @@ type mockFactoryNilError struct {
 	mockFactory
 }
 
-func (f *mockFactoryNilError) Create(parent object.Parent) (object.Proxy, error) {
+func (f *mockFactoryNilError) Create(parent object.Parent) (resolver.Proxy, error) {
 	return nil, nil
 }
 
@@ -229,7 +230,9 @@ func TestNewMemberDomainProxy(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &memberDomainProxy{
-		instance: mDomain,
+		BaseProxy: resolver.BaseProxy{
+			Instance: mDomain,
+		},
 	}, proxy)
 }
 
@@ -304,7 +307,9 @@ func TestMemberDomainFactory_Create(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, &memberDomainProxy{
-		instance: mDomain,
+		BaseProxy: resolver.BaseProxy{
+			Instance: mDomain,
+		},
 	}, proxy)
 }
 
