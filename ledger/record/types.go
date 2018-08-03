@@ -36,6 +36,23 @@ const (
 // If PulseNum <65536 it is a relative PulseNum
 type PulseNum uint32
 
+// ID evaluates record ID on PulseNum for Record
+func (pn PulseNum) ID(rec Record) ID {
+	return Key2ID(pn.Key(rec))
+}
+
+// Key evaluates record Key on PulseNum for Record
+func (pn PulseNum) Key(rec Record) Key {
+	raw, err := EncodeToRaw(rec)
+	if err != nil {
+		panic(err)
+	}
+	return Key{
+		Pulse: pn,
+		Hash:  raw.Hash(),
+	}
+}
+
 // SpecialPulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
 // It is only allowed for Storage.
 const SpecialPulseNumber PulseNum = 65536
