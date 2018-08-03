@@ -39,7 +39,9 @@ func (mock *LedgerMock) GetRecord(k record.Key) (record.Record, bool) {
 
 func (mock *LedgerMock) AddRecord(rec record.Record) (record.Reference, error) {
 	buf := bytes.Buffer{}
-	rec.WriteHash(&buf)
+	// TODO: implement properly after merge with INS-1-storage-records-persist
+	// rec.WriteHash(&buf)
+	buf.Write([]byte{1})
 	var id record.ID
 	copy(buf.Bytes()[0:record.IDSize], id[:])
 	mock.Records[record.ID{}] = rec
