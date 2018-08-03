@@ -98,6 +98,7 @@ func TestSetRecord(t *testing.T) {
 	idPulse1 := pulse1.ID(passRecPulse1)
 	rec, err := ledger.GetRecord(idPulse1)
 	assert.Nil(t, rec)
+	assert.Equal(t, ErrNotFound, err)
 
 	gotid, err := ledger.SetRecord(passRecPulse1)
 	assert.Nil(t, err)
