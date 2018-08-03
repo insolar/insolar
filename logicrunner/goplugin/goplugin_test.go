@@ -15,7 +15,10 @@ type HelloWorlder struct {
 }
 
 func TestHelloWorld(t *testing.T) {
-	gp, err := NewGoPlugin("127.0.0.1:7777", RunnerOptions{Listen: "127.0.0.1:7778", StoragePath: ""})
+	gp, err := NewGoPlugin(RunnerOptions{
+		APIAddr:     "127.0.0.1:7778",
+		InsiderAddr: "127.0.0.1:7777",
+		StoragePath: ""})
 	if err != nil {
 		t.Fatal(err)
 	}

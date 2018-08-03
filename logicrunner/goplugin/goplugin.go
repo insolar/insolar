@@ -9,14 +9,14 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/insolar/insolar/logicrunner"
 )
 
 // RunnerOptions - set of options to control internal isolated code runner(s)
 type RunnerOptions struct {
-	Listen      string
+	APIAddr     string
+	InsiderAddr string
 	StoragePath string
 }
 
@@ -46,15 +46,15 @@ func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(addr string, runnerOptions RunnerOptions) (*GoPlugin, error) {
+func NewGoPlugin(runnerOptions RunnerOptions) (*GoPlugin, error) {
 	gp := GoPlugin{
-		ListenAddr:    addr,
+		ListenAddr:    runnerOptions.APIAddr,
 		RunnerOptions: runnerOptions,
 	}
 
 	var runnerArguments []string
-	if runnerOptions.Listen != "" {
-		runnerArguments = append(runnerArguments, "-s", runnerOptions.Listen)
+	if runnerOptions.InsiderAddr != "" {
+		runnerArguments = append(runnerArguments, "-s", runnerOptions.InsiderAddr)
 	} else {
 		return nil, errors.New("Listen is not optional in runnerOptions")
 	}
@@ -68,8 +68,6 @@ func NewGoPlugin(addr string, runnerOptions RunnerOptions) (*GoPlugin, error) {
 	}
 
 	gp.Runner = runner
-
-	time.Sleep(2000 * time.Millisecond)
 	go gp.Start()
 	return &gp, nil
 }
@@ -78,14 +76,16 @@ func NewGoPlugin(addr string, runnerOptions RunnerOptions) (*GoPlugin, error) {
 // this for you
 func (gp *GoPlugin) Start() {
 	r := GoPluginRPC{gp: gp}
-	rpc.Register(r)
+	rpc.Register(&r)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", gp.ListenAddr)
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
 	gp.sock = l
+	log.Printf("START")
 	http.Serve(l, nil)
+	log.Printf("STOP")
 }
 
 // Stop stops runner(s) and RPC service
@@ -110,7 +110,7 @@ type CallResp struct {
 
 // Exec runs a method on an object in controlled environment
 func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
-	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
+	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.InsiderAddr)
 	if err != nil {
 		return nil, nil, err
 	}

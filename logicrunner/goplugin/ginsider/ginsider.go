@@ -98,9 +98,9 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 }
 
 func main() {
-	listen := pflag.StringP("listen", "l", ":7778", "address and port to listen")
+	listen := pflag.StringP("listen", "l", ":7777", "address and port to listen")
 	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
-	rpcAddress := pflag.String("rpc", "localhost:7777", "address and port of RPC API")
+	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	pflag.Parse()
 
 	insider := GoInsider{dir: *path, RPCAddress: *rpcAddress}
