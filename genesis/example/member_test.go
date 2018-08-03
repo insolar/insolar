@@ -288,13 +288,13 @@ func TestMemberDomainFactory_GetReference(t *testing.T) {
 	assert.Nil(t, reference)
 }
 
-// func TestMemberDomainFactory_GetParent(t *testing.T) {
-// 	parent := &mockParent{}
-// 	factory := NewMemberDomainFactory(parent)
-// 	reference := factory.GetParent()
-//
-// 	assert.Nil(t, reference)
-// }
+func TestMemberDomainFactory_GetParent(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewMemberDomainFactory(parent)
+	reference := factory.GetParent()
+
+	assert.Nil(t, reference)
+}
 
 func TestMemberDomainFactory_Create(t *testing.T) {
 	parent := &mockParent{}
