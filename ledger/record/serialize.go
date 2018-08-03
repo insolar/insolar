@@ -60,8 +60,8 @@ func SHA3Hash224(rec Record) []byte {
 	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
 }
 
-// Decode decodes Data field of Raw struct as record from CBOR format.
-func (raw *Raw) Decode() Record {
+// ToRecord decodes Raw to Record.
+func (raw *Raw) ToRecord() Record {
 	cborH := &codec.CborHandle{}
 	rec := getRecordByTypeID(raw.Type)
 	dec := codec.NewDecoder(bytes.NewReader(raw.Data), cborH)
