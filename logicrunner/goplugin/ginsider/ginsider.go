@@ -20,16 +20,20 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
 	dir        string
-	RpcAddress string
+	RPCAddress string
 }
 
+// NewGoInsider creates a new GoInsider instance validating arguments
 func NewGoInsider(path string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
 	return &GoInsider{dir: path}
 }
 
+// Call is an RPC that runs a method on an object and
+// returns a new state of the object and result of the method
 func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error {
 	path, err := t.ObtainCode(args.Object)
 	check(err)
@@ -40,8 +44,8 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	export, err := p.Lookup("INSEXPORT")
 	check(err)
 
-	var data_buf bytes.Buffer
-	cbor := cbor.NewEncoder(&data_buf)
+	var dataBuf bytes.Buffer
+	cbor := cbor.NewEncoder(&dataBuf)
 	_, err = cbor.Unmarshal(args.Object.Data, export)
 	check(err)
 
@@ -53,13 +57,15 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	res := method.Call([]reflect.Value{})
 
 	cbor.Marshal(export)
-	reply.Data = data_buf.Bytes()
+	reply.Data = dataBuf.Bytes()
 
 	log.Printf("res: %+v\n", res)
 
 	return nil
 }
 
+// ObtainCode returns path on the file system to the plugin, fetches it from a provider
+// if it's not in the storage
 func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 	path := t.dir + "/" + string(obj.Reference)
 	_, err := os.Stat(path)
@@ -70,9 +76,9 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 		return "", err
 	}
 
-	client, err := rpc.DialHTTP("tcp", t.RpcAddress)
+	client, err := rpc.DialHTTP("tcp", t.RPCAddress)
 	if err != nil {
-		return "", errors.Wrapf(err, "couldn't dial '%s'", t.RpcAddress)
+		return "", errors.Wrapf(err, "couldn't dial '%s'", t.RPCAddress)
 	}
 
 	res := logicrunner.Object{}
@@ -92,10 +98,10 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 func main() {
 	listen := pflag.StringP("listen", "l", ":7778", "address and port to listen")
 	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
-	rpc_address := pflag.String("rpc", "localhost:7777", "address and port of RPC API")
+	rpcAddress := pflag.String("rpc", "localhost:7777", "address and port of RPC API")
 	pflag.Parse()
 
-	insider := GoInsider{dir: *path, RpcAddress: *rpc_address}
+	insider := GoInsider{dir: *path, RPCAddress: *rpcAddress}
 	rpc.Register(&insider)
 	rpc.HandleHTTP()
 	listener, err := net.Listen("tcp", *listen)
