@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 var storer storage.LedgerStorer
@@ -37,10 +38,19 @@ func TestLedger_LevelDB_Init(t *testing.T) {
 	ledger := Ledger{
 		Store: storer,
 	}
-	_, _ = ledger.Store.GetRecord(record.Key{
-		Pulse: 1,
-		Hash:  []byte("test"),
-	})
+	rec := &record.RejectionResult{SpecialResult: record.SpecialResult{
+		ReasonCode: 1,
+	}}
+	s := ledger.Store
+	gotID, err := s.SetRecord(rec)
+	assert.Nil(t, err)
+
+	var emptyID record.ID
+	assert.NotEqual(t, emptyID, gotID)
+
+	gotRec, err := s.GetRecord(gotID)
+	assert.Nil(t, err)
+	assert.Equal(t, rec, gotRec)
 }
 
 func levelDBInit() storage.LedgerStorer {
