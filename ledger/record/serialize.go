@@ -49,6 +49,11 @@ func (b hashableBytes) WriteHash(w io.Writer) {
 	}
 }
 
+// Hash generates hash for Raw record.
+func (raw *Raw) Hash() []byte {
+	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
+}
+
 // SHA3Hash224 hashes record (SHA3-224 on CBOR binary representation of record's struct).
 func SHA3Hash224(rec Record) []byte {
 	cborBlob := MustEncode(rec)
