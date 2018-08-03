@@ -2,22 +2,21 @@ package main
 
 import (
 	"bytes"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/rpc"
-
-	"io/ioutil"
 	"os"
-
 	"plugin"
 	"reflect"
 
 	"github.com/2tvenom/cbor"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
+
+	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
 // GoInsider is an RPC interface to run code of plugins

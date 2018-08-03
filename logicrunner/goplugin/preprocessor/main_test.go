@@ -1,30 +1,18 @@
 package main
 
 import (
-	"io"
-	"os"
-	"plugin"
-	"reflect"
+	"io/ioutil"
 	"testing"
 )
 
 func Test_generateForFile(t *testing.T) {
 	w := generateForFile("../testplugins/secondary/main.go")
-	io.Copy(os.Stdout, w)
-}
-
-// just to find methods
-func TestConfigLoad(t *testing.T) {
-	path, _ := os.Getwd()
-	plugin, err := plugin.Open(path + "/../testplugins/secondary.so")
+	//io.Copy(os.Stdout, w)
+	b, err := ioutil.ReadAll(w)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("reading from generated code", err)
 	}
-
-	hw, err := plugin.Lookup("INSEXPORT")
-
-	r := reflect.ValueOf(hw)
-	m := r.MethodByName("INSMETHOD__Hello")
-	ret := m.Call([]reflect.Value{})
-	t.Logf("%+v", ret)
+	if len(b) == 0 {
+		t.Fatal("generator returns zero length code")
+	}
 }

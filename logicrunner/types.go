@@ -1,7 +1,9 @@
 package logicrunner
 
+// Reference is a contract address
 type Reference string
 
+// Object is an inner representation of storage object for transfwering it over API
 type Object struct {
 	MachineType MachineType
 	Reference   Reference
@@ -9,26 +11,5 @@ type Object struct {
 	Data        []byte
 }
 
-type API struct {
-}
-
+// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
-type Type int
-type FuncTag int
-type FuncSig struct {
-	Args []Type
-	Ret  []Type
-	Tags []FuncTag
-}
-
-type Func struct {
-	Name string
-	Sig  FuncSig
-}
-
-type Interface []Func
-
-type Value struct {
-	Type  Type
-	Value []byte
-}
