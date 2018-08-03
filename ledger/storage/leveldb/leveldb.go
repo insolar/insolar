@@ -19,11 +19,11 @@ package leveldb
 import (
 	"path/filepath"
 
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
 
@@ -98,17 +98,21 @@ func InitDB() (*LevelLedger, error) {
 
 	return &LevelLedger{
 		ldb: db,
+		// pulseFn: func() record.PulseNum {
+		// 	return record.PulseNum(time.Now().Unix() / 10)
+		// },
 	}, nil
 }
 
 // GetRecord returns record from leveldb by timeslot and hash passed in record.Key
-func (ll *LevelLedger) GetRecord(k record.Key) (record.Record, error) {
+func (ll *LevelLedger) GetRecord(id record.ID) (record.Record, error) {
 	return nil, nil
 }
 
-// AddRecord stores record in leveldb
-func (ll *LevelLedger) AddRecord(rec record.Record) (record.Reference, error) {
-	return record.Reference{}, nil
+// SetRecord stores record in leveldb
+func (ll *LevelLedger) SetRecord(rec record.Record) (record.ID, error) {
+	var id record.ID
+	return id, nil
 }
 
 // GetIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
