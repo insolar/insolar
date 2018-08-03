@@ -39,6 +39,19 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// TODO: uncomment when record storage is functional
+// func TestCreatesRootRecord(t *testing.T) {
+// 	ledger, err := InitDB()
+// 	assert.Nil(t, err)
+// 	defer ledger.Close()
+//
+// 	var zeroID record.ID
+// 	copy([]byte(zeroRecordBinary)[:record.IDSize], zeroID[:])
+// 	zeroRef, ok := ledger.GetRecord(record.ID2Key(zeroID))
+// 	assert.True(t, ok)
+// 	assert.Equal(t, ledger.zeroRef, zeroRef)
+// }
+
 func TestGetIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
