@@ -27,31 +27,31 @@ func TestHelloWorld(t *testing.T) {
 		panic(err)
 	}
 
-	var data_buf bytes.Buffer
-	cbor := cbor.NewEncoder(&data_buf)
+	var dataBuf bytes.Buffer
+	cbor := cbor.NewEncoder(&dataBuf)
 	cbor.Marshal(HelloWorlder{66})
 
 	gi := NewGoInsider(dir)
 	req := goplugin.CallReq{
-		logicrunner.Object{
+		Object: logicrunner.Object{
 			MachineType: logicrunner.MachineTypeGoPlugin,
 			Reference:   "secondary.so",
 			Code:        code,
-			Data:        data_buf.Bytes(),
+			Data:        dataBuf.Bytes(),
 		},
-		"Hello",
-		logicrunner.Arguments{},
+		Method: "Hello",
+		Args:   logicrunner.Arguments{},
 	}
 	resp := goplugin.CallResp{}
 	gi.Call(req, &resp)
 
-	var new_data HelloWorlder
-	_, err = cbor.Unmarshal(resp.Data, &new_data)
+	var newData HelloWorlder
+	_, err = cbor.Unmarshal(resp.Data, &newData)
 	if err != nil {
 		panic(err)
 	}
 
-	if new_data.Greeted != 67 {
-		t.Fatalf("Got unexpected value: %d, 67 is expected", new_data.Greeted)
+	if newData.Greeted != 67 {
+		t.Fatalf("Got unexpected value: %d, 67 is expected", newData.Greeted)
 	}
 }
