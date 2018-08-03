@@ -75,7 +75,7 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 	if err == nil {
 		return path, nil
 	} else if !os.IsNotExist(err) {
-		return "", err
+		return "", errors.Wrap(err, "file !notexists()")
 	}
 
 	client, err := rpc.DialHTTP("tcp", t.RPCAddress)
@@ -86,12 +86,12 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 	res := logicrunner.Object{}
 	err = client.Call("GoPluginRPC.GetObject", obj.Reference, &res)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "on calling main API")
 	}
 
 	err = ioutil.WriteFile(path, res.Data, 0666)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "on writing file down")
 	}
 
 	return path, nil

@@ -30,7 +30,7 @@ func TestHelloWorld(t *testing.T) {
 
 	obj := logicrunner.Object{
 		MachineType: logicrunner.MachineTypeGoPlugin,
-		Reference:   "reference",
+		Reference:   "secondary",
 		Data:        buff.Bytes(),
 	}
 
