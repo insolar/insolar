@@ -1,7 +1,6 @@
 package goplugin
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"net"
@@ -10,7 +9,10 @@ import (
 	"os"
 	"os/exec"
 
+	"time"
+
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/pkg/errors"
 )
 
 // RunnerOptions - set of options to control internal isolated code runner(s)
@@ -54,19 +56,25 @@ func NewGoPlugin(runnerOptions RunnerOptions) (*GoPlugin, error) {
 
 	var runnerArguments []string
 	if runnerOptions.InsiderAddr != "" {
-		runnerArguments = append(runnerArguments, "-s", runnerOptions.InsiderAddr)
+		runnerArguments = append(runnerArguments, "-l", runnerOptions.InsiderAddr)
 	} else {
-		return nil, errors.New("Listen is not optional in runnerOptions")
+		return nil, errors.New("listen is not optional in runnerOptions")
 	}
 	if runnerOptions.StoragePath != "" {
 		runnerArguments = append(runnerArguments, "-d", runnerOptions.StoragePath)
 	}
-	runner := exec.Command("ginsider/ginsider", runnerArguments...)
+	if runnerOptions.APIAddr != "" {
+		runnerArguments = append(runnerArguments, "-rpc", runnerOptions.StoragePath)
+	}
+	//	runner := exec.Command("ginsider/ginsider", runnerArguments...)
+	runner := exec.Command("ginsider/ginsider")
+	runner.Stdout = os.Stdout
+	runner.Stderr = os.Stderr
 	err := runner.Start()
 	if err != nil {
 		return nil, err
 	}
-
+	time.Sleep(200 * time.Millisecond)
 	gp.Runner = runner
 	go gp.Start()
 	return &gp, nil
@@ -112,12 +120,12 @@ type CallResp struct {
 func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
 	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.InsiderAddr)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
 	res := CallResp{}
 	err = client.Call("GoInsider.Call", CallReq{Object: object, Method: method, Args: args}, &res)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "problem with API call")
 	}
 	return res.Data, res.Ret, res.Err
 }

@@ -49,7 +49,7 @@ func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error 
 	_, err = cbor.Unmarshal(args.Object.Data, export)
 	check(err)
 
-	method := reflect.ValueOf(export).MethodByName("INSMETHOD__" + args.Method)
+	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
 		panic("wtf, no method " + args.Method + "in the plugin")
 	}
