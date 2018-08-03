@@ -243,7 +243,7 @@ func TestNewMemberDomainProxy_WithNilParent(t *testing.T) {
 
 func TestMemberDomainProxy_CreateMember(t *testing.T) {
 	parent := &mockParent{}
-	proxy, err := newMemberDomainProxy(parent)
+	proxy, _ := newMemberDomainProxy(parent)
 
 	factory := &mockFactory{}
 	member, err := proxy.CreateMember(factory)
@@ -255,7 +255,7 @@ func TestMemberDomainProxy_CreateMember(t *testing.T) {
 
 func TestMemberDomainProxy_GetMember(t *testing.T) {
 	parent := &mockParent{}
-	proxy, err := newMemberDomainProxy(parent)
+	proxy, _ := newMemberDomainProxy(parent)
 
 	factory := &mockFactory{}
 	member, err := proxy.CreateMember(factory)
