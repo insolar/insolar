@@ -45,7 +45,7 @@ func (r *childResolver) GetObject(reference interface{}, cls interface{}) (inter
 		return nil, err
 	}
 
-	proxy, ok := obj.(object.Proxy)
+	proxy, ok := obj.(Proxy)
 	if !ok {
 		return nil, fmt.Errorf("object is not Proxy")
 	}

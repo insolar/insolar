@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +46,7 @@ func (p *mockProxy) GetParent() object.Parent {
 
 type mockFactory struct{}
 
-func (f *mockFactory) Create(parent object.Parent) (object.Proxy, error) {
+func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	return &mockProxy{
 		parent: parent,
 	}, nil
@@ -67,7 +68,7 @@ type mockFactoryError struct {
 	mockFactory
 }
 
-func (f *mockFactoryError) Create(parent object.Parent) (object.Proxy, error) {
+func (f *mockFactoryError) Create(parent object.Parent) (resolver.Proxy, error) {
 	return nil, fmt.Errorf("factory create error")
 }
 
@@ -75,7 +76,7 @@ type mockFactoryNilError struct {
 	mockFactory
 }
 
-func (f *mockFactoryNilError) Create(parent object.Parent) (object.Proxy, error) {
+func (f *mockFactoryNilError) Create(parent object.Parent) (resolver.Proxy, error) {
 	return nil, nil
 }
 
@@ -171,7 +172,9 @@ func TestNewInstanceDomainProxy(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &instanceDomainProxy{
-		instance: instDom,
+		BaseProxy: resolver.BaseProxy{
+			Instance: instDom,
+		},
 	}, proxy)
 }
 
@@ -226,18 +229,8 @@ func TestInstanceDomainProxy_GetInstance(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &mockProxy{
-		parent: proxy.instance,
+		parent: proxy.Instance.(object.Parent),
 	}, resolved)
-}
-
-func TestInstanceDomainProxy_GetReference(t *testing.T) {
-	parent := &mockParent{}
-	proxy, err := newInstanceDomainProxy(parent)
-	assert.NoError(t, err)
-
-	reference := proxy.GetReference()
-	// TODO should return actual reference
-	assert.Nil(t, reference)
 }
 
 func TestInstanceDomainProxy_GetInstance_IncorrectRef(t *testing.T) {
@@ -247,23 +240,6 @@ func TestInstanceDomainProxy_GetInstance_IncorrectRef(t *testing.T) {
 
 	_, err = proxy.GetInstance("1")
 	assert.EqualError(t, err, "object with record 1 does not exist")
-}
-
-func TestInstanceDomainProxy_GetParent(t *testing.T) {
-	parent := &mockParent{}
-	proxy, err := newInstanceDomainProxy(parent)
-	assert.NoError(t, err)
-
-	returnedParent := proxy.GetParent()
-	assert.Equal(t, parent, returnedParent)
-}
-
-func TestInstanceDomainProxy_GetClassID(t *testing.T) {
-	parent := &mockParent{}
-	proxy, err := newInstanceDomainProxy(parent)
-	assert.NoError(t, err)
-
-	assert.Equal(t, class.InstanceDomainID, proxy.GetClassID())
 }
 
 func TestNewInstanceDomainFactory(t *testing.T) {
@@ -292,7 +268,9 @@ func TestInstanceDomainFactory_Create(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, &instanceDomainProxy{
-		instance: instDom,
+		BaseProxy: resolver.BaseProxy{
+			Instance: instDom,
+		},
 	}, proxy)
 }
 
