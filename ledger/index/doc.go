@@ -14,9 +14,5 @@
  *    limitations under the License.
  */
 
-package resolver
-
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, classID interface{}) (interface{}, error)
-}
+// Package index represents indexes and meta information for records.
+package index

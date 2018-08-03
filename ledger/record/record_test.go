@@ -17,8 +17,10 @@
 package record
 
 import (
+	"os"
 	"testing"
 )
 
-func TestStub(t *testing.T) {
+func TestMain(m *testing.M) {
+	os.Exit(m.Run())
 }

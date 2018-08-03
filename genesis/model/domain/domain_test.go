@@ -27,7 +27,7 @@ import (
 )
 
 type mockParent struct {
-	Reference      *object.Reference
+	Reference      object.Reference
 	ContextStorage storage.Storage
 }
 
@@ -35,7 +35,7 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetReference() *object.Reference {
+func (p *mockParent) GetReference() object.Reference {
 	return p.Reference
 }
 
@@ -61,15 +61,18 @@ func (p *mockParent) GetContextStorage() storage.Storage {
 
 func TestNewBaseDomain(t *testing.T) {
 	parent := &mockParent{}
+
 	domain := NewBaseDomain(parent, "NewDomain")
 
+	sc := contract.BaseSmartContract{
+		CompositeMap: make(map[string]object.Composite),
+		ChildStorage: storage.NewMapStorage(),
+		Parent:       parent,
+	}
+
 	assert.Equal(t, &BaseDomain{
-		BaseSmartContract: contract.BaseSmartContract{
-			CompositeMap: make(map[string]object.Composite),
-			ChildStorage: storage.NewMapStorage(),
-			Parent:       parent,
-		},
-		Name: "NewDomain",
+		BaseSmartContract: sc,
+		Name:              "NewDomain",
 	}, domain)
 }
 

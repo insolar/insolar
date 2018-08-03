@@ -14,9 +14,15 @@
  *    limitations under the License.
  */
 
-package resolver
+package index
 
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, classID interface{}) (interface{}, error)
+import (
+	"github.com/insolar/insolar/ledger/record"
+)
+
+// Lifeline represents meta information for record object
+type Lifeline struct {
+	LatestStateID   record.ID
+	LatestStateType record.TypeID
+	AppendIDs       []record.ID
 }

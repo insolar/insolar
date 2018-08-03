@@ -27,11 +27,11 @@ Usage:
 		return "someFactory"
 	}
 
-	func (f *someFactory) GetReference() *object.Reference {
+	func (f *someFactory) GetReference() object.Reference {
 		return f.Reference
 	}
 
-	func (f *someFactory) Create(parent object.Callable) object.Callable
+	func (f *someFactory) Create(parent object.Callable) (object.Callable, error)
 		// do creation logic
 	}
 

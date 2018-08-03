@@ -14,9 +14,32 @@
  *    limitations under the License.
  */
 
-package resolver
+package index
 
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, classID interface{}) (interface{}, error)
+import (
+	"bytes"
+
+	"github.com/ugorji/go/codec"
+)
+
+// EncodeLifeline converts lifeline index into binary format
+func EncodeLifeline(index *Lifeline) []byte {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	err := enc.Encode(index)
+	if err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+// DecodeLifeline converts byte array into lifeline index struct
+func DecodeLifeline(buf []byte) Lifeline {
+	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
+	var index Lifeline
+	err := dec.Decode(&index)
+	if err != nil {
+		panic(err)
+	}
+	return index
 }

@@ -33,20 +33,28 @@ const (
 )
 
 // Reference represents address of object.
-type Reference struct {
-	Record string
-	Domain string
-	Scope  ScopeType
+type Reference interface {
+	Child
+	String() string
+	GetRecord() string
+	GetDomain() string
+	GetScope() ScopeType
+}
+
+type reference struct {
+	domain string
+	record string
+	scope  ScopeType
 }
 
 // NewReference creates new reference instance.
-func NewReference(record string, domain string, scope ScopeType) (*Reference, error) {
+func NewReference(domain string, record string, scope ScopeType) (Reference, error) {
 	switch scope {
 	case GlobalScope, ContextScope, ChildScope:
-		return &Reference{
-			Record: record,
-			Domain: domain,
-			Scope:  scope,
+		return &reference{
+			domain: domain,
+			record: record,
+			scope:  scope,
 		}, nil
 	default:
 		return nil, fmt.Errorf("unknown scope type: %d", scope)
@@ -54,24 +62,39 @@ func NewReference(record string, domain string, scope ScopeType) (*Reference, er
 }
 
 // GetClassID return string representation of object's class.
-func (r *Reference) GetClassID() string {
+func (r *reference) GetClassID() string {
 	return class.ReferenceID
 }
 
+// GetRecord return record value for current reference.
+func (r *reference) GetRecord() string {
+	return r.record
+}
+
+// GetDomain return domain value for current reference.
+func (r *reference) GetDomain() string {
+	return r.domain
+}
+
+// GetScope return scope value for current reference.
+func (r *reference) GetScope() ScopeType {
+	return r.scope
+}
+
 // String return string representation of reference
-func (r *Reference) String() string {
-	return fmt.Sprintf("#%s.#%s", r.Domain, r.Record)
+func (r *reference) String() string {
+	return fmt.Sprintf("#%s.#%s", r.domain, r.record)
 }
 
 // GetReference return reference to Reference instance.
 // For now Reference is Proxy and have itself as its reference.
 // TODO: ProxyReference & ReferenceInterface
-func (r *Reference) GetReference() *Reference {
+func (r *reference) GetReference() Reference {
 	return r
 }
 
 // GetParent return parent of reference.
 // For now Reference is Proxy and has not actual parent.
-func (r *Reference) GetParent() Parent {
+func (r *reference) GetParent() Parent {
 	return nil
 }

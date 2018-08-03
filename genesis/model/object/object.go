@@ -43,7 +43,7 @@ type Composite interface {
 
 // CompositeFactory allows to create new composites.
 type CompositeFactory interface {
-	Create() Composite
+	Create() (Composite, error)
 }
 
 // ComposingContainer allows to store composites.
@@ -57,7 +57,7 @@ type ComposingContainer interface {
 // Callable allows itself to be called by its reference.
 type Callable interface {
 	Object
-	GetReference() *Reference
+	GetReference() Reference
 }
 
 // Parent allows to create objects (smart contracts) inside itself as children.

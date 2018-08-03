@@ -33,16 +33,35 @@ func (c *mockProxyReference) GetClassID() string {
 	return class.ReferenceID
 }
 
-func (c *mockProxyReference) GetReference() *object.Reference {
+func (c *mockProxyReference) GetReference() object.Reference {
 	return nil
 }
 
 func (c *mockProxyReference) GetParent() object.Parent {
 	return nil
 }
+func (c *mockProxyReference) GetChildStorage() storage.Storage {
+	return nil
+}
+
+func (c *mockProxyReference) AddChild(child object.Child) (string, error) {
+	return "", nil
+}
+
+func (c *mockProxyReference) GetChild(key string) (object.Child, error) {
+	return child, nil
+}
+
+func (c *mockProxyReference) GetContext() []string {
+	return []string{}
+}
+
+func (c *mockProxyReference) GetContextStorage() storage.Storage {
+	return nil
+}
 
 type mockParentNotChild struct {
-	Reference      *object.Reference
+	Reference      object.Reference
 	ContextStorage storage.Storage
 }
 
@@ -50,7 +69,7 @@ func (p *mockParentNotChild) GetClassID() string {
 	return "mockParentNotChild"
 }
 
-func (p *mockParentNotChild) GetReference() *object.Reference {
+func (p *mockParentNotChild) GetReference() object.Reference {
 	return p.Reference
 }
 
@@ -89,11 +108,11 @@ func TestContextResolver_GetObject_No_Object(t *testing.T) {
 		ContextStorage: contextStorage,
 	}
 	resolver := newContextResolver(mockParent)
-	ref, _ := object.NewReference("1", "1", object.ContextScope)
+	ref, _ := object.NewReference("123", "143", object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.EqualError(t, err, "object with record 1 does not exist")
+	assert.EqualError(t, err, "object with record 143 does not exist")
 	assert.Nil(t, obj)
 }
 
@@ -104,7 +123,7 @@ func TestContextResolver_GetObject_Wrong_classID(t *testing.T) {
 		ContextStorage: contextStorage,
 	}
 	resolver := newContextResolver(mockParent)
-	ref, _ := object.NewReference(record, "1", object.ContextScope)
+	ref, _ := object.NewReference("1", record, object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
@@ -121,11 +140,39 @@ func TestContextResolver_GetObject_Not_Child(t *testing.T) {
 	}
 
 	resolver := newContextResolver(parent)
-	ref, _ := object.NewReference(record, "1", object.ContextScope)
+	ref, _ := object.NewReference("1", record, object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
 	assert.EqualError(t, err, fmt.Sprintf("object with name #1.#%s does not exist", record))
+	assert.Nil(t, obj)
+}
+
+func TestContextResolver_GetObject_Not_Reference(t *testing.T) {
+	contextStorage := storage.NewMapStorage()
+	mockParent := &mockParent{
+		ContextStorage: contextStorage,
+	}
+	resolver := newContextResolver(mockParent)
+
+	obj, err := resolver.GetObject("not reference", "mockChild")
+
+	assert.EqualError(t, err, "reference is not Reference class object")
+	assert.Nil(t, obj)
+}
+
+func TestContextResolver_GetObject_ClassID_Not_Str(t *testing.T) {
+	contextStorage := storage.NewMapStorage()
+	record, _ := contextStorage.Set(child)
+	mockParent := &mockParent{
+		ContextStorage: contextStorage,
+	}
+	resolver := newContextResolver(mockParent)
+	ref, _ := object.NewReference("1", record, object.ContextScope)
+
+	obj, err := resolver.GetObject(ref, ref)
+
+	assert.EqualError(t, err, "classID is not string")
 	assert.Nil(t, obj)
 }
 
@@ -136,7 +183,7 @@ func TestContextResolver_GetObject(t *testing.T) {
 		ContextStorage: contextStorage,
 	}
 	resolver := newContextResolver(mockParent)
-	ref, _ := object.NewReference(record, "1", object.ContextScope)
+	ref, _ := object.NewReference("1", record, object.ContextScope)
 
 	obj, err := resolver.GetObject(ref, "mockChild")
 

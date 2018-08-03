@@ -14,9 +14,13 @@
  *    limitations under the License.
  */
 
-package resolver
+package index
 
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, classID interface{}) (interface{}, error)
+import (
+	"os"
+	"testing"
+)
+
+func TestMain(m *testing.M) {
+	os.Exit(m.Run())
 }

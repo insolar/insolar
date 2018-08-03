@@ -24,12 +24,33 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
 
+type mockChild struct {
+	Reference      object.Reference
+	ContextStorage storage.Storage
+	parent         object.Parent
+}
+
+func (c *mockChild) GetClassID() string {
+	return "mockChild"
+}
+
+func (c *mockChild) GetReference() object.Reference {
+	return c.Reference
+}
+
+func (c *mockChild) GetParent() object.Parent {
+	return c.parent
+}
+
+var child = &mockChild{}
+
 type mockParent struct {
-	Reference      *object.Reference
+	Reference      object.Reference
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -42,7 +63,7 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetReference() *object.Reference {
+func (p *mockParent) GetReference() object.Reference {
 	return p.Reference
 }
 
@@ -55,7 +76,7 @@ func (p *mockParent) AddChild(child object.Child) (string, error) {
 }
 
 func (p *mockParent) GetChild(key string) (object.Child, error) {
-	return nil, nil
+	return child, nil
 }
 
 func (p *mockParent) GetContext() []string {
@@ -72,6 +93,31 @@ type mockParentWithError struct {
 
 func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 	return "", fmt.Errorf("add child error")
+}
+
+var globalParent = &mockParent{}
+
+// Create map for global resolving
+var globalResolverMap = make(map[string]resolver.Proxy)
+var domainString = "123"
+var initRefObject, _ = object.NewReference(domainString, "1", object.GlobalScope)
+
+// Create referenceDomain and its proxy
+var initRefDomain = newReferenceDomain(nil)
+var initRefDomainProxy = newReferenceDomainProxy(globalParent)
+
+// Set one map for Handler and ReferenceDomain
+func init() {
+	globalResolverMap["123"] = globalParent
+	// Create Handler empty instance
+	resolverHandler := resolver.NewHandler(nil)
+	// Set map to Handler.GlobalResolver
+	resolverHandler.InitGlobalMap(&globalResolverMap)
+	// Set map to ReferenceDomain.globalResolverMap
+	initRefDomain.InitGlobalMap(&globalResolverMap)
+	// Set map to ReferenceDomainProxy.ReferenceDomain.globalResolverMap
+	initRefDomainProxy.Instance.(ReferenceDomain).InitGlobalMap(&globalResolverMap)
+
 }
 
 func TestNewReferenceDomain(t *testing.T) {
@@ -99,12 +145,18 @@ func TestReferenceDomain_GetClassID(t *testing.T) {
 	assert.Equal(t, class.ReferenceDomainID, domainID)
 }
 
-func TestReferenceDomain_RegisterReference(t *testing.T) {
-	refObject, err := object.NewReference("1", "1", object.GlobalScope)
-	assert.NoError(t, err)
-
+func TestReferenceDomain_SetMap(t *testing.T) {
 	refDomain := newReferenceDomain(nil)
-	registered, err := refDomain.RegisterReference(refObject)
+	refDomain.globalResolverMap = nil
+
+	newMap := make(map[string]resolver.Proxy)
+	refDomain.InitGlobalMap(&newMap)
+
+	assert.Equal(t, &newMap, refDomain.globalResolverMap)
+}
+
+func TestReferenceDomain_RegisterReference(t *testing.T) {
+	registered, err := initRefDomain.RegisterReference(initRefObject, "mockChild")
 
 	assert.NoError(t, err)
 
@@ -112,15 +164,24 @@ func TestReferenceDomain_RegisterReference(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestReferenceDomain_RegisterReference_GetObject_Error(t *testing.T) {
+	refObject, err := object.NewReference("234", "1", object.GlobalScope)
+	assert.NoError(t, err)
+
+	registered, err := initRefDomain.RegisterReference(refObject, "classID")
+
+	assert.Equal(t, "", registered)
+	assert.EqualError(t, err, "reference with address `#234.#1` not found")
+}
+
 func TestReferenceDomain_ResolveReference(t *testing.T) {
-	refObject, err := object.NewReference("1", "1", object.GlobalScope)
+	refObject, err := object.NewReference("123", "1", object.GlobalScope)
 	assert.NoError(t, err)
 
-	refDomain := newReferenceDomain(nil)
-	registered, err := refDomain.RegisterReference(refObject)
+	registered, err := initRefDomain.RegisterReference(refObject, "mockChild")
 	assert.NoError(t, err)
 
-	resolved, err := refDomain.ResolveReference(registered)
+	resolved, err := initRefDomain.ResolveReference(registered)
 
 	assert.NoError(t, err)
 	assert.Equal(t, refObject, resolved)
@@ -137,20 +198,28 @@ func TestNewReferenceDomainProxy(t *testing.T) {
 	refDomainProxy := newReferenceDomainProxy(parent)
 
 	assert.Equal(t, &referenceDomainProxy{
-		instance: newReferenceDomain(parent),
+		BaseProxy: resolver.BaseProxy{
+			Instance: newReferenceDomain(parent),
+		},
 	}, refDomainProxy)
 }
 
+func TestReferenceDomainProxy_SetMap(t *testing.T) {
+	refDomain := newReferenceDomainProxy(nil)
+	refDomain.Instance.(*referenceDomain).globalResolverMap = nil
+
+	newMap := make(map[string]resolver.Proxy)
+	refDomain.InitGlobalMap(&newMap)
+
+	assert.Equal(t, &newMap, refDomain.Instance.(*referenceDomain).globalResolverMap)
+}
+
 func TestReferenceDomainProxy_RegisterReference(t *testing.T) {
-	domain := "1"
 	record := "1"
-	refObject, err := object.NewReference(record, domain, object.GlobalScope)
+	refObject, err := object.NewReference(domainString, record, object.GlobalScope)
 	assert.NoError(t, err)
 
-	parent := &mockParent{}
-	refDomainProxy := newReferenceDomainProxy(parent)
-
-	registered, err := refDomainProxy.RegisterReference(refObject)
+	registered, err := initRefDomainProxy.RegisterReference(refObject, "mockChild")
 	assert.NoError(t, err)
 
 	_, err = uuid.FromString(registered)
@@ -158,16 +227,13 @@ func TestReferenceDomainProxy_RegisterReference(t *testing.T) {
 }
 
 func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
-	refObject, err := object.NewReference("1", "1", object.GlobalScope)
+	refObject, err := object.NewReference(domainString, "1", object.GlobalScope)
 	assert.NoError(t, err)
 
-	parent := &mockParent{}
-	refDomainProxy := newReferenceDomainProxy(parent)
-
-	registered, err := refDomainProxy.RegisterReference(refObject)
+	registered, err := initRefDomainProxy.RegisterReference(refObject, "mockChild")
 	assert.NoError(t, err)
 
-	resolved, err := refDomainProxy.ResolveReference(registered)
+	resolved, err := initRefDomainProxy.ResolveReference(registered)
 
 	assert.NoError(t, err)
 	assert.Equal(t, refObject, resolved)
@@ -181,47 +247,25 @@ func TestReferenceDomainProxy_ResolveReference_IncorrectRef(t *testing.T) {
 	assert.EqualError(t, err, "object with record 1 does not exist")
 }
 
-func TestReferenceDomainProxy_GetReference(t *testing.T) {
-	parent := &mockParent{}
-	refDomainProxy := newReferenceDomainProxy(parent)
-
-	reference := refDomainProxy.GetReference()
-	// TODO should return actual reference
-	assert.Nil(t, reference)
-}
-
-func TestReferenceDomainProxy_GetParent(t *testing.T) {
-	parent := &mockParent{}
-	refDomainProxy := newReferenceDomainProxy(parent)
-
-	returnedParent := refDomainProxy.GetParent()
-	assert.Equal(t, parent, returnedParent)
-}
-
-func TestReferenceDomainProxy_GetClassID(t *testing.T) {
-	parent := &mockParent{}
-	refDomainProxy := newReferenceDomainProxy(parent)
-
-	id := refDomainProxy.GetClassID()
-	assert.Equal(t, class.ReferenceDomainID, id)
-}
-
 func TestNewReferenceDomainFactory(t *testing.T) {
-	expected := &referenceDomainFactory{}
-	factory := NewReferenceDomainFactory()
+	parent := &mockParent{}
+	expected := &referenceDomainFactory{parent: parent}
+	factory := NewReferenceDomainFactory(parent)
 
 	assert.Equal(t, expected, factory)
 }
 
 func TestReferenceDomainFactory_GetClassID(t *testing.T) {
-	factory := NewReferenceDomainFactory()
+	parent := &mockParent{}
+	factory := NewReferenceDomainFactory(parent)
 	id := factory.GetClassID()
 
 	assert.Equal(t, class.ReferenceDomainID, id)
 }
 
 func TestReferenceDomainFactory_GetReference(t *testing.T) {
-	factory := NewReferenceDomainFactory()
+	parent := &mockParent{}
+	factory := NewReferenceDomainFactory(parent)
 	reference := factory.GetReference()
 
 	assert.Nil(t, reference)
@@ -229,18 +273,22 @@ func TestReferenceDomainFactory_GetReference(t *testing.T) {
 
 func TestReferenceDomainFactory_Create(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewReferenceDomainFactory()
-	refDomainProxy := factory.Create(parent)
+	factory := NewReferenceDomainFactory(parent)
+	proxy, err := factory.Create(parent)
 
+	assert.NoError(t, err)
 	assert.Equal(t, &referenceDomainProxy{
-		instance: newReferenceDomain(parent),
-	}, refDomainProxy)
+		BaseProxy: resolver.BaseProxy{
+			Instance: newReferenceDomain(parent),
+		},
+	}, proxy)
 }
 
 func TestReferenceDomainFactory_CreateWithError(t *testing.T) {
 	parent := &mockParentWithError{}
-	factory := NewReferenceDomainFactory()
-	refDomainProxy := factory.Create(parent)
+	factory := NewReferenceDomainFactory(parent)
+	proxy, err := factory.Create(parent)
 
-	assert.Nil(t, refDomainProxy)
+	assert.EqualError(t, err, "add child error")
+	assert.Nil(t, proxy)
 }

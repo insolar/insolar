@@ -17,18 +17,50 @@
 package resolver
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
+	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewResolverHandler(t *testing.T) {
-	mockParent := &mockParent{}
-	handler := NewResolverHandler(mockParent)
+type invalidScopeReference struct{}
 
-	assert.Equal(t, &resolverHandler{
+func (r *invalidScopeReference) GetClassID() string {
+	return class.ReferenceID
+}
+
+func (r *invalidScopeReference) GetRecord() string {
+	return "145"
+}
+
+func (r *invalidScopeReference) GetDomain() string {
+	return "123"
+}
+
+func (r *invalidScopeReference) GetScope() object.ScopeType {
+	return object.ScopeType(10000)
+}
+
+func (r *invalidScopeReference) String() string {
+	return fmt.Sprintf("#%s.#%s", "145", "123")
+}
+
+func (r *invalidScopeReference) GetReference() object.Reference {
+	return r
+}
+
+func (r *invalidScopeReference) GetParent() object.Parent {
+	return nil
+}
+
+func TestNewHandler(t *testing.T) {
+	mockParent := &mockParent{}
+	handler := NewHandler(mockParent)
+
+	assert.Equal(t, &Handler{
 		globalResolver: GlobalResolver,
 		childResolver: &childResolver{
 			parent: mockParent,
@@ -39,21 +71,34 @@ func TestNewResolverHandler(t *testing.T) {
 	}, handler)
 }
 
-func TestResolverHandler_GetObject_GlobalScope(t *testing.T) {
+func TestHandler_GetObject_Not_Reference(t *testing.T) {
 	mockParent := &mockParent{}
-	resolverHandler := NewResolverHandler(nil)
-	ref, _ := object.NewReference("1", "1", object.GlobalScope)
-	(*GlobalResolver.globalInstanceMap)[ref] = mockParent
+	resolverHandler := NewHandler(mockParent)
 
-	obj, err := resolverHandler.GetObject(ref, "mockParent")
+	obj, err := resolverHandler.GetObject("not reference", "mockChild")
 
-	assert.NoError(t, err)
-	assert.Equal(t, mockParent, obj)
+	assert.EqualError(t, err, "reference is not Reference class object")
+	assert.Nil(t, obj)
 }
 
-func TestResolverHandler_GetObject_ChildScope(t *testing.T) {
+func TestHandler_GetObject_GlobalScope(t *testing.T) {
 	mockParent := &mockParent{}
-	resolverHandler := NewResolverHandler(mockParent)
+	resolverHandler := NewHandler(nil)
+	newMap := make(map[string]Proxy)
+	resolverHandler.InitGlobalMap(&newMap)
+
+	ref, _ := object.NewReference("123", "1", object.GlobalScope)
+	(*GlobalResolver.globalInstanceMap)["123"] = mockParent
+
+	obj, err := resolverHandler.GetObject(ref, "mockChild")
+
+	assert.NoError(t, err)
+	assert.Equal(t, child, obj)
+}
+
+func TestHandler_GetObject_ChildScope(t *testing.T) {
+	mockParent := &mockParent{}
+	resolverHandler := NewHandler(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ChildScope)
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
@@ -62,14 +107,14 @@ func TestResolverHandler_GetObject_ChildScope(t *testing.T) {
 	assert.Equal(t, child, obj)
 }
 
-func TestResolverHandler_GetObject_ContextScope(t *testing.T) {
+func TestHandler_GetObject_ContextScope(t *testing.T) {
 	contextStorage := storage.NewMapStorage()
 	record, _ := contextStorage.Set(child)
 	mockParent := &mockParent{
 		ContextStorage: contextStorage,
 	}
-	resolverHandler := NewResolverHandler(mockParent)
-	ref, _ := object.NewReference(record, "1", object.ContextScope)
+	resolverHandler := NewHandler(mockParent)
+	ref, _ := object.NewReference("1", record, object.ContextScope)
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 
@@ -77,15 +122,23 @@ func TestResolverHandler_GetObject_ContextScope(t *testing.T) {
 	assert.Equal(t, child, obj)
 }
 
-func TestResolverHandler_GetObject_default(t *testing.T) {
+func TestHandler_GetObject_default(t *testing.T) {
 	mockParent := &mockParent{}
-	resolverHandler := NewResolverHandler(mockParent)
-	ref := &object.Reference{
-		Scope: object.ScopeType(10000),
-	}
+	resolverHandler := NewHandler(mockParent)
+	ref := &invalidScopeReference{}
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 
 	assert.EqualError(t, err, "unknown scope type: 10000")
 	assert.Nil(t, obj)
+}
+
+func TestHandler_SetGlobalMap(t *testing.T) {
+	resolverHandler := NewHandler(nil)
+	resolverHandler.globalResolver.globalInstanceMap = nil
+
+	newMap := make(map[string]Proxy)
+	resolverHandler.InitGlobalMap(&newMap)
+
+	assert.Equal(t, &newMap, resolverHandler.globalResolver.globalInstanceMap)
 }

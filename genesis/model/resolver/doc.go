@@ -16,6 +16,8 @@
 
 /*
 Package resolver provides interface and default implementation of resolvers for getting objects from references.
+Interface Resolver uses interface{} type for reference, class and proxy (which GetObject returns),
+because in future implementation its going to be plugin. Virtual machine will be use it and provide resolving logic.
 
 Usage:
 	package main
@@ -30,6 +32,38 @@ Usage:
 		obj, err := resolver.GetObject(ref, class.ObjectID)
 		res := obj.(object.Object)
 	}
+
+
+Proxy is public interface to call object's methods. If you want to make proxy for your object inherit BaseProxy
+
+Usage:
+
+	// make your custom domain proxy
+
+	type customDomainProxy struct {
+		object.BaseProxy
+	}
+
+	// create proxy for your custom domain
+
+	func newCustomDomainProxy(parent object.Parent) (*customDomainProxy, error) {
+		instance, err := newCustomDomain(parent)
+		if err != nil {
+			return nil, err
+		}
+		return &customDomainProxy{
+			BaseProxy: object.BaseProxy{
+				Instance: instance,
+			},
+		}, nil
+	}
+
+	proxy, err := newCustomDomainProxy(...)
+
+	proxy.GetReference() is a proxy call for instance method.
+	proxy.GetParent() is a proxy call for instance method.
+	proxy.GetResolver() always returns nil.
+	proxy.GetClassID() is a proxy call for instance method.
 
 */
 package resolver
