@@ -14,18 +14,26 @@
  *    limitations under the License.
  */
 
-package storage
+package hash
 
 import (
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
+	"io"
+
+	"golang.org/x/crypto/sha3"
 )
 
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
-	GetRecord(record.Key) (record.Record, bool)
-	SetRecord(record.Record) error
+// Writer is the interface that wraps the WriteHash method.
+//
+// WriteHash should write all required for proper hashing data to io.Writer.
+type Writer interface {
+	WriteHash(io.Writer)
+}
 
-	GetIndex(record.ID) (*index.Lifeline, bool)
-	SetIndex(record.ID, index.Lifeline) error
+// SHA3hash224 returns SHA3 hash calculated on data received from Writer.
+func SHA3hash224(hw ...Writer) []byte {
+	h := sha3.New224()
+	for _, w := range hw {
+		w.WriteHash(h)
+	}
+	return h.Sum(nil)
 }

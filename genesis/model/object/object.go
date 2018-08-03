@@ -57,8 +57,8 @@ type ComposingContainer interface {
 // Callable allows itself to be called by its reference.
 type Callable interface {
 	Object
-	GetReference() *Reference
-	SetReference(reference *Reference)
+	GetReference() Reference
+	SetReference(reference Reference)
 }
 
 // Parent allows to create objects (smart contracts) inside itself as children.

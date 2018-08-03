@@ -18,15 +18,12 @@ package factory
 
 import (
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // Factory allows to create new objects with reference.
 type Factory interface {
-	object.Callable
-	Create(parent object.Parent) (object.Proxy, error)
-}
-
-// ProxyFactory allows to create new proxy instances.
-type ProxyFactory interface {
-	Factory
+	object.Child
+	// Create returns new instance of specified type.
+	Create(parent object.Parent) (resolver.Proxy, error)
 }

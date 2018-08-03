@@ -26,36 +26,5 @@ Usage:
 		ref, err := NewReference(domain, record, GlobalScope)
 	}
 
-
-Proxy is public interface to call object's methods. If you want to make proxy for your object inherit BaseProxy
-
-Usage:
-
-	// make your custom domain proxy
-
-	type customDomainProxy struct {
-		object.BaseProxy
-	}
-
-	// create proxy for your custom domain
-
-	func newCustomDomainProxy(parent object.Parent) (*customDomainProxy, error) {
-		instance, err := newCustomDomain(parent)
-		if err != nil {
-			return nil, err
-		}
-		return &customDomainProxy{
-			BaseProxy: object.BaseProxy{
-				Instance: instance,
-			},
-		}, nil
-	}
-
-    proxy, err := newCustomDomainProxy(...)
-
-    proxy.GetReference() *Reference — is a proxy call for instance method.
-    proxy.GetParent() Parent — is a proxy call for instance method.
-    proxy.GetClassID() string — is a proxy call for instance method.
-
 */
 package object

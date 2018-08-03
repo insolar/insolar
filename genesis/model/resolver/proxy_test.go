@@ -14,31 +14,32 @@
  *    limitations under the License.
  */
 
-package object
+package resolver
 
 import (
 	"testing"
 
+	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockInstance struct {
-	ref *Reference
+	ref object.Reference
 }
 
 func (p *mockInstance) GetClassID() string {
 	return "mockChild"
 }
 
-func (p *mockInstance) GetReference() *Reference {
+func (p *mockInstance) GetReference() object.Reference {
 	return p.ref
 }
 
-func (p *mockInstance) SetReference(reference *Reference) {
+func (p *mockInstance) SetReference(reference object.Reference) {
 	p.ref = reference
 }
 
-func (p *mockInstance) GetParent() Parent {
+func (p *mockInstance) GetParent() object.Parent {
 	return nil
 }
 
@@ -50,7 +51,7 @@ func TestBaseProxy_GetClassID(t *testing.T) {
 }
 
 func TestBaseProxy_SetGetReference(t *testing.T) {
-	ref, _ := NewReference("1", "2", GlobalScope)
+	ref, _ := object.NewReference("1", "2", object.GlobalScope)
 	proxy := &BaseProxy{
 		Instance: &mockInstance{},
 	}
@@ -63,4 +64,11 @@ func TestBaseProxy_GetParent(t *testing.T) {
 		Instance: &mockInstance{},
 	}
 	assert.Nil(t, proxy.GetParent())
+}
+
+func TestBaseProxy_GetResolver(t *testing.T) {
+	proxy := &BaseProxy{
+		Instance: &mockInstance{},
+	}
+	assert.Nil(t, proxy.GetResolver())
 }

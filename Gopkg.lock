@@ -107,6 +107,18 @@
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
 [[projects]]
+  name = "github.com/ugorji/go"
+  packages = ["codec"]
+  revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
+  version = "v1.1.1"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["sha3"]
+  revision = "c126467f60eb25f8f27e5a981f32a87e3965053f"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
@@ -115,6 +127,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "aef7e6e6c35e2821ee84ca648c35988595285d74010b2b5339fd43286593bb59"
+  inputs-digest = "a58407f81fac1682566f53f17b8576bcca052a1ed8d9a82d60afd6bcef0d64c9"
   solver-name = "gps-cdcl"
   solver-version = 1

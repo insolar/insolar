@@ -16,19 +16,19 @@
 
 package record
 
+import (
+	"encoding/binary"
+	"io"
+)
+
 const (
 	// HashSize is a record hash size. We use 224-bit SHA-3 hash (28 bytes).
 	HashSize = 28
-	// IDSize is an record identifcator size.
-	// 4 bytes is a PulseNum size (uint32)
-	IDSize = 4 + HashSize
+	// PulseNumSize - 4 bytes is a PulseNum size (uint32)
+	PulseNumSize = 4
+	// IDSize is an record identifier size.
+	IDSize = PulseNumSize + HashSize
 )
-
-// Hash is hash sum of record, 24-byte array.
-type Hash [HashSize]byte
-
-// ID is a record ID. Compounds PulseNum and Type
-type ID [IDSize]byte
 
 // PulseNum is a sequential number of Pulse.
 // Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
@@ -40,5 +40,42 @@ type PulseNum uint32
 // It is only allowed for Storage.
 const SpecialPulseNumber PulseNum = 65536
 
+// Hash is hash sum of record, 24-byte array.
+type Hash [HashSize]byte
+
+// ID is a record ID. Compounds PulseNum and Type
+type ID [IDSize]byte
+
+// WriteHash implements hash.Writer interface.
+func (id ID) WriteHash(w io.Writer) {
+	err := binary.Write(w, binary.BigEndian, id)
+	if err != nil {
+		panic("binary.Write failed:" + err.Error())
+	}
+}
+
+// Key is a composite key for storage methods.
+//
+// Key and ID converts one to another in both directions.
+// Hash is a bytes slice here to avoid copy to Hash array.
+type Key struct {
+	Pulse PulseNum
+	Hash  []byte
+}
+
 // TypeID encodes a record object type.
 type TypeID uint32
+
+// WriteHash implements hash.Writer interface.
+func (id TypeID) WriteHash(w io.Writer) {
+	err := binary.Write(w, binary.BigEndian, id)
+	if err != nil {
+		panic("binary.Write failed:" + err.Error())
+	}
+}
+
+// Reference allows to address any record across the whole network.
+type Reference struct {
+	Domain ID
+	Record ID
+}

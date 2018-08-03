@@ -14,34 +14,44 @@
  *    limitations under the License.
  */
 
-package object
+package resolver
+
+import (
+	"github.com/insolar/insolar/genesis/model/object"
+)
 
 // Proxy marks instance as proxy object.
 type Proxy interface {
-	Child
+	object.Child
 }
 
 // BaseProxy is a base implementation of Proxy.
 type BaseProxy struct {
-	Instance Child
+	Instance object.Child
 }
 
-// GetReference proxy call for instance method.
-func (bp *BaseProxy) GetReference() *Reference {
+// GetReference is a proxy call for instance method.
+func (bp *BaseProxy) GetReference() object.Reference {
 	return bp.Instance.GetReference()
 }
 
 // SetReference proxy call for instance method.
-func (bp *BaseProxy) SetReference(reference *Reference) {
+func (bp *BaseProxy) SetReference(reference object.Reference) {
 	bp.Instance.SetReference(reference)
 }
 
 // GetParent proxy call for instance method.
-func (bp *BaseProxy) GetParent() Parent {
+// GetParent is a proxy call for instance method.
+func (bp *BaseProxy) GetParent() object.Parent {
 	return bp.Instance.GetParent()
 }
 
-// GetClassID proxy call for instance method.
+// GetResolver always returns nil.
+func (bp *BaseProxy) GetResolver() Resolver {
+	return nil
+}
+
+// GetClassID is a proxy call for instance method.
 func (bp *BaseProxy) GetClassID() string {
 	return bp.Instance.GetClassID()
 }

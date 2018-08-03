@@ -19,42 +19,11 @@ package record
 
 // ProjectionType is a "view filter" for record.
 // E.g. we can read whole object or just it's hash.
-type ProjectionType uint
+type ProjectionType uint32
 
 // Memory is actual contracts' state, variables etc.
 type Memory []byte
 
 // Record is base interface for all records.
 type Record interface {
-	Hash() Hash
-	TimeSlot() uint64
-	Type() TypeID
-}
-
-// Reference is a pointer that allows to address any record across whole network.
-// TODO: Should implement normal Reference type (not interface)
-// TODO: Globally unique record identifier must be found
-type Reference interface {
-	Record
-}
-
-// AppDataRecord is persistent data record stored in ledger.
-type AppDataRecord struct {
-	timeSlotNo uint64
-	recType    TypeID
-}
-
-// Hash returns SHA-3 hash sum of Record
-func (r *AppDataRecord) Hash() Hash {
-	panic("implement me")
-}
-
-// TimeSlot returns time slot number that Record belongs to.
-func (r *AppDataRecord) TimeSlot() uint64 {
-	return r.timeSlotNo
-}
-
-// Type returns Record type.
-func (r *AppDataRecord) Type() TypeID {
-	return r.recType
 }

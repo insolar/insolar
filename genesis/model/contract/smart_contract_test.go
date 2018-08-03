@@ -27,7 +27,7 @@ import (
 )
 
 type mockChild struct {
-	Reference *object.Reference
+	Reference object.Reference
 	parent    object.Parent
 }
 
@@ -35,11 +35,11 @@ func (c *mockChild) GetClassID() string {
 	return "mockChild"
 }
 
-func (c *mockChild) GetReference() *object.Reference {
+func (c *mockChild) GetReference() object.Reference {
 	return c.Reference
 }
 
-func (c *mockChild) SetReference(reference *object.Reference) {
+func (c *mockChild) SetReference(reference object.Reference) {
 	c.Reference = reference
 }
 
@@ -48,7 +48,7 @@ func (c *mockChild) GetParent() object.Parent {
 }
 
 type mockParent struct {
-	Reference      *object.Reference
+	Reference      object.Reference
 	ContextStorage storage.Storage
 }
 
@@ -56,11 +56,11 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetReference() *object.Reference {
+func (p *mockParent) GetReference() object.Reference {
 	return p.Reference
 }
 
-func (p *mockParent) SetReference(reference *object.Reference) {
+func (p *mockParent) SetReference(reference object.Reference) {
 	p.Reference = reference
 }
 
