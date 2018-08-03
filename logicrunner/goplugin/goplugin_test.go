@@ -1,6 +1,8 @@
 package goplugin
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/insolar/insolar/logicrunner"
@@ -15,15 +17,27 @@ type HelloWorlder struct {
 }
 
 func TestHelloWorld(t *testing.T) {
-	gp, err := NewGoPlugin(RunnerOptions{
-		APIAddr:     "127.0.0.1:7778",
-		InsiderAddr: "127.0.0.1:7777",
-		StoragePath: ""})
+	dir, err := ioutil.TempDir("", "test-")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(dir) // clean up
+
+	gp, err := NewGoPlugin(
+		Options{
+			Listen:   "127.0.0.1:7778",
+			CodePath: "./testplugins/",
+		},
+		RunnerOptions{
+			Listen:          "127.0.0.1:7777",
+			CodeStoragePath: dir,
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer gp.Stop()
-	//time.Sleep(1000 * time.Second)
+
 	var buff bytes.Buffer
 	e := cbor.NewEncoder(&buff)
 	e.Marshal(HelloWorlder{77})

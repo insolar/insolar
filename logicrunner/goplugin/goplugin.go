@@ -15,20 +15,28 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Options of the GoPlugin
+type Options struct {
+	// Listen  is address `GoPlugin` listens on and provides RPC interface for runner(s)
+	Listen string
+	// CodePath is path to directory with plugin's code, this should go away at some point
+	CodePath string
+}
+
 // RunnerOptions - set of options to control internal isolated code runner(s)
 type RunnerOptions struct {
-	APIAddr     string
-	InsiderAddr string
-	StoragePath string
+	// Listen is address the runner listens on and provides RPC interface for the `GoPlugin`
+	Listen string
+	// CodeStoragePath is path to directory where the runner caches code
+	CodeStoragePath string
 }
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
-	ListenAddr    string
-	sock          net.Listener
-	Runner        *exec.Cmd
+	Options       Options
 	RunnerOptions RunnerOptions
-	CodeDir       string
+	sock          net.Listener
+	runner        *exec.Cmd
 }
 
 // GoPluginRPC is a RPC interface for runner to use for variouse tasks, e.g. code fetching
@@ -39,7 +47,7 @@ type GoPluginRPC struct {
 // GetObject is an RPC retriving an object by its reference, so far short circueted to return
 // code of the plugin
 func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
-	f, err := os.Open(gpr.gp.CodeDir + string(ref) + ".so")
+	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
 	if err != nil {
 		return err
 	}
@@ -48,26 +56,28 @@ func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(runnerOptions RunnerOptions) (*GoPlugin, error) {
+func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error) {
 	gp := GoPlugin{
-		ListenAddr:    runnerOptions.APIAddr,
+		Options:       options,
 		RunnerOptions: runnerOptions,
 	}
 
+	if gp.Options.Listen == "" {
+		gp.Options.Listen = "127.0.0.1:7777"
+	}
+
 	var runnerArguments []string
-	if runnerOptions.InsiderAddr != "" {
-		runnerArguments = append(runnerArguments, "-l", runnerOptions.InsiderAddr)
+	if gp.RunnerOptions.Listen != "" {
+		runnerArguments = append(runnerArguments, "-l", gp.RunnerOptions.Listen)
 	} else {
-		return nil, errors.New("listen is not optional in runnerOptions")
+		return nil, errors.New("listen is not optional in gp.RunnerOptions")
 	}
-	if runnerOptions.StoragePath != "" {
-		runnerArguments = append(runnerArguments, "-d", runnerOptions.StoragePath)
+	if gp.RunnerOptions.CodeStoragePath != "" {
+		runnerArguments = append(runnerArguments, "-d", gp.RunnerOptions.CodeStoragePath)
 	}
-	if runnerOptions.APIAddr != "" {
-		runnerArguments = append(runnerArguments, "-rpc", runnerOptions.StoragePath)
-	}
-	//	runner := exec.Command("ginsider/ginsider", runnerArguments...)
-	runner := exec.Command("ginsider/ginsider")
+	runnerArguments = append(runnerArguments, "--rpc", gp.Options.Listen)
+
+	runner := exec.Command("ginsider/ginsider", runnerArguments...)
 	runner.Stdout = os.Stdout
 	runner.Stderr = os.Stderr
 	err := runner.Start()
@@ -75,7 +85,7 @@ func NewGoPlugin(runnerOptions RunnerOptions) (*GoPlugin, error) {
 		return nil, err
 	}
 	time.Sleep(200 * time.Millisecond)
-	gp.Runner = runner
+	gp.runner = runner
 	go gp.Start()
 	return &gp, nil
 }
@@ -86,7 +96,7 @@ func (gp *GoPlugin) Start() {
 	r := GoPluginRPC{gp: gp}
 	rpc.Register(&r)
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", gp.ListenAddr)
+	l, e := net.Listen("tcp", gp.Options.Listen)
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
@@ -98,7 +108,7 @@ func (gp *GoPlugin) Start() {
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() {
-	gp.Runner.Process.Kill()
+	gp.runner.Process.Kill()
 	gp.sock.Close()
 }
 
@@ -118,7 +128,7 @@ type CallResp struct {
 
 // Exec runs a method on an object in controlled environment
 func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
-	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.InsiderAddr)
+	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}

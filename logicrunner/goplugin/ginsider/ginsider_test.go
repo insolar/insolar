@@ -16,11 +16,6 @@ type HelloWorlder struct {
 }
 
 func TestHelloWorld(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		panic(err)
-	}
-	defer os.RemoveAll(dir) // clean up
 
 	code, err := ioutil.ReadFile("../testplugins/secondary.so")
 	if err != nil {

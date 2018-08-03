@@ -29,4 +29,6 @@ func (hw HelloWorlder) ConstEcho(s string) (string, error) {
 
 func JustExportedStaticFunction(int, int) {}
 
+var INSEXPORT HelloWorlder
+
 /// generated
