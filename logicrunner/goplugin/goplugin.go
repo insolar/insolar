@@ -14,11 +14,13 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 )
 
+// RunnerOptions - set of options to control internal isolated code runner(s)
 type RunnerOptions struct {
 	Listen      string
 	StoragePath string
 }
 
+// GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	ListenAddr    string
 	sock          net.Listener
@@ -27,11 +29,13 @@ type GoPlugin struct {
 	CodeDir       string
 }
 
+// GoPluginRPC is a RPC interface for runner to use for variouse tasks, e.g. code fetching
 type GoPluginRPC struct {
 	gp *GoPlugin
 }
 
-// returns code for
+// GetObject is an RPC retriving an object by its reference, so far short circueted to return
+// code of the plugin
 func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
 	f, err := os.Open(gpr.gp.CodeDir + string(ref) + ".so")
 	if err != nil {
@@ -41,22 +45,23 @@ func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.
 	return err
 }
 
-func NewGoPlugin(addr string, runner_options RunnerOptions) (*GoPlugin, error) {
+// NewGoPlugin returns a new started GoPlugin
+func NewGoPlugin(addr string, runnerOptions RunnerOptions) (*GoPlugin, error) {
 	gp := GoPlugin{
 		ListenAddr:    addr,
-		RunnerOptions: runner_options,
+		RunnerOptions: runnerOptions,
 	}
 
-	var runner_arguments []string
-	if runner_options.Listen != "" {
-		runner_arguments = append(runner_arguments, "-s", runner_options.Listen)
+	var runnerArguments []string
+	if runnerOptions.Listen != "" {
+		runnerArguments = append(runnerArguments, "-s", runnerOptions.Listen)
 	} else {
-		return nil, errors.New("Listen is not optional in runner_options")
+		return nil, errors.New("Listen is not optional in runnerOptions")
 	}
-	if runner_options.StoragePath != "" {
-		runner_arguments = append(runner_arguments, "-d", runner_options.StoragePath)
+	if runnerOptions.StoragePath != "" {
+		runnerArguments = append(runnerArguments, "-d", runnerOptions.StoragePath)
 	}
-	runner := exec.Command("ginsider/ginsider", runner_arguments...)
+	runner := exec.Command("ginsider/ginsider", runnerArguments...)
 	err := runner.Start()
 	if err != nil {
 		return nil, err
@@ -69,6 +74,8 @@ func NewGoPlugin(addr string, runner_options RunnerOptions) (*GoPlugin, error) {
 	return &gp, nil
 }
 
+// Start starts runner and RPC interface to help runner, note that NewGoPlugin does
+// this for you
 func (gp *GoPlugin) Start() {
 	r := GoPluginRPC{gp: gp}
 	rpc.Register(r)
@@ -81,23 +88,27 @@ func (gp *GoPlugin) Start() {
 	http.Serve(l, nil)
 }
 
+// Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() {
 	gp.Runner.Process.Kill()
 	gp.sock.Close()
 }
 
+// CallReq is a set of arguments for Call RPC in the runner
 type CallReq struct {
 	Object logicrunner.Object
 	Method string
 	Args   logicrunner.Arguments
 }
 
+// CallResp is response from Call RPC in the runner
 type CallResp struct {
 	Data []byte
 	Ret  logicrunner.Arguments
 	Err  error
 }
 
+// Exec runs a method on an object in controlled environment
 func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
 	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
 	if err != nil {
