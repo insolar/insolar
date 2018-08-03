@@ -26,7 +26,8 @@ import (
 
 // LedgerArtifactManager provides concrete API to storage for virtual processing module
 type LedgerArtifactManager struct {
-	storer storage.LedgerStorer
+	storer   storage.LedgerStorer
+	archPref []record.ArchType
 }
 
 func (m *LedgerArtifactManager) storeRecord(rec record.Record) (record.Reference, error) {
@@ -60,6 +61,10 @@ func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (
 	}
 
 	return classIndex, nil
+}
+
+func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
+	m.archPref = pref
 }
 
 // DeployCode deploys new code to storage (CodeRecord).
