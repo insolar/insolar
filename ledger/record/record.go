@@ -14,7 +14,6 @@
  *    limitations under the License.
  */
 
-// Package record contains various record type definitions.
 package record
 
 // ProjectionType is a "view filter" for record.

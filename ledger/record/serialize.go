@@ -46,7 +46,7 @@ func DecodeToRaw(b []byte) (*Raw, error) {
 	return &rec, nil
 }
 
-// MustEncodeRaw wraps EncodeRaw, panics on encode error.
+// MustEncodeRaw wraps EncodeRaw, panics on encode errors.
 func MustEncodeRaw(raw *Raw) []byte {
 	b, err := EncodeRaw(raw)
 	if err != nil {
@@ -55,7 +55,7 @@ func MustEncodeRaw(raw *Raw) []byte {
 	return b
 }
 
-// EncodeRaw encodes Raw to CBOR byte slice.
+// EncodeRaw encodes Raw to CBOR.
 func EncodeRaw(raw *Raw) ([]byte, error) {
 	cborH := &codec.CborHandle{}
 	var b bytes.Buffer
@@ -84,7 +84,7 @@ func (raw *Raw) Hash() []byte {
 	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
 }
 
-// SHA3Hash224 hashes record (SHA3-224 on CBOR binary representation of record's struct).
+// SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
 func SHA3Hash224(rec Record) []byte {
 	cborBlob := MustEncode(rec)
 	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
@@ -102,7 +102,7 @@ func (raw *Raw) ToRecord() Record {
 	return rec
 }
 
-// Key2ID converts Key with PulseNum and Hash pair to binary representation (record.ID).
+// Key2ID converts record Key to ID.
 func Key2ID(k Key) ID {
 	var id ID
 	var err error
@@ -119,7 +119,7 @@ func Key2ID(k Key) ID {
 	return id
 }
 
-// ID2Key converts ID to Key with PulseNum and Hash pair.
+// ID2Key converts record ID to Key.
 func ID2Key(id ID) Key {
 	return Key{
 		Pulse: PulseNum(binary.BigEndian.Uint32(id[:PulseNumSize])),
@@ -296,7 +296,7 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 	}
 }
 
-// Encode serializes record to CBOR blob.
+// Encode serializes record to CBOR.
 func Encode(rec Record) ([]byte, error) {
 	cborH := &codec.CborHandle{}
 	var b bytes.Buffer
@@ -305,7 +305,7 @@ func Encode(rec Record) ([]byte, error) {
 	return b.Bytes(), err
 }
 
-// MustEncode is helper that wraps a call to a function Encode and panics if the error is non-nil.
+// MustEncode wraps Encode, panics on encoding errors.
 func MustEncode(rec Record) []byte {
 	b, err := Encode(rec)
 	if err != nil {
