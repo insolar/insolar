@@ -3,7 +3,7 @@ package main
 import "errors"
 
 // @inscontract
-type HelloWorlder struct { //Docccc
+type HelloWorlder struct { //nolint
 	Greeted int
 }
 
@@ -27,8 +27,8 @@ func (hw HelloWorlder) ConstEcho(s string) (string, error) {
 	return s, nil
 }
 
-func JustExportedStaticFunction(int, int) {}
+func JustExportedStaticFunction(int, int) {} //nolint
 
-var INSEXPORT HelloWorlder
+var INSEXPORT HelloWorlder //nolint
 
 /// generated

@@ -25,7 +25,7 @@ func main() {
 	log.Println(os.Getwd())
 	for _, fn := range flag.Args() {
 		w := generateForFile(fn)
-		io.Copy(os.Stdout, w)
+		_, _ = io.Copy(os.Stdout, w)
 	}
 }
 

@@ -94,7 +94,7 @@ func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error
 // this for you
 func (gp *GoPlugin) Start() {
 	r := GoPluginRPC{gp: gp}
-	rpc.Register(&r)
+	_ = rpc.Register(&r)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", gp.Options.Listen)
 	if e != nil {
@@ -102,13 +102,13 @@ func (gp *GoPlugin) Start() {
 	}
 	gp.sock = l
 	log.Printf("START")
-	http.Serve(l, nil)
+	_ = http.Serve(l, nil)
 	log.Printf("STOP")
 }
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() {
-	gp.runner.Process.Kill()
+	_ = gp.runner.Process.Kill()
 	gp.sock.Close()
 }
 
