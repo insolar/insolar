@@ -35,7 +35,6 @@ type SmartContract interface {
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.
 type BaseSmartContract struct {
 	object.BaseCallable
-	//Reference      object.Reference
 	CompositeMap   map[string]object.Composite
 	ChildStorage   storage.Storage
 	ContextStorage storage.Storage
@@ -65,17 +64,6 @@ func (sc *BaseSmartContract) GetResolver() resolver.Resolver {
 func (sc *BaseSmartContract) GetClassID() string {
 	return class.SmartContractID
 }
-
-// GetReference return reference to BaseSmartContract instance.
-/*func (sc *BaseSmartContract) GetReference() object.Reference {
-	// TODO should return actual reference
-	return sc.Reference
-}
-
-// SetReference save reference to BaseSmartContract instance.
-func (sc *BaseSmartContract) SetReference(reference object.Reference) {
-	sc.Reference = reference
-}*/
 
 // CreateComposite allows to create composites inside smart contract.
 func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {

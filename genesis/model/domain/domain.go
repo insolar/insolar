@@ -29,7 +29,6 @@ type Domain interface {
 
 // BaseDomain is a base implementation of Domain interface.
 type BaseDomain struct {
-	//object.BaseCallable
 	contract.BaseSmartContract
 	Name string
 }

@@ -40,7 +40,6 @@ func (bp *BaseProxy) SetReference(reference object.Reference) {
 	bp.Instance.SetReference(reference)
 }
 
-// GetParent proxy call for instance method.
 // GetParent is a proxy call for instance method.
 func (bp *BaseProxy) GetParent() object.Parent {
 	return bp.Instance.GetParent()
