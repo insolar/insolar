@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
 	"github.com/pkg/errors"
 )
 
@@ -108,32 +109,27 @@ func (gp *GoPlugin) Start() {
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() {
-	_ = gp.runner.Process.Kill()
-	gp.sock.Close()
-}
+	err := gp.runner.Process.Kill()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// CallReq is a set of arguments for Call RPC in the runner
-type CallReq struct {
-	Object logicrunner.Object
-	Method string
-	Args   logicrunner.Arguments
-}
-
-// CallResp is response from Call RPC in the runner
-type CallResp struct {
-	Data []byte
-	Ret  logicrunner.Arguments
-	Err  error
+	if gp.sock != nil {
+		err = gp.sock.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 // Exec runs a method on an object in controlled environment
-func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
+func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args []logicrunner.Argument) ([]byte, logicrunner.Argument, error) {
 	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
-	res := CallResp{}
-	err = client.Call("GoInsider.Call", CallReq{Object: object, Method: method, Args: args}, &res)
+	res := girpc.CallResp{}
+	err = client.Call("GoInsider.Call", girpc.CallReq{Object: object, Method: method, Arguments: args}, &res)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with API call")
 	}
