@@ -29,7 +29,7 @@ type BaseCallable struct {
 	reference Reference
 }
 
-// GetReference return reference.
+// GetReference returns reference.
 func (bc *BaseCallable) GetReference() Reference {
 	return bc.reference
 }

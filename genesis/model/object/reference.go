@@ -87,6 +87,10 @@ func (r *reference) String() string {
 	return fmt.Sprintf("#%s.#%s", r.domain, r.record)
 }
 
+// GetReference return reference to Reference instance.
+// For now Reference is Proxy and have itself as its reference.
+// TODO: ProxyReference & ReferenceInterface
+
 // GetParent return parent of reference.
 // For now Reference is Proxy and has not actual parent.
 func (r *reference) GetParent() Parent {

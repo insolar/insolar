@@ -35,7 +35,7 @@ func (bp *BaseProxy) GetReference() object.Reference {
 	return bp.Instance.GetReference()
 }
 
-// SetReference proxy call for instance method.
+// SetReference is a proxy call for instance method.
 func (bp *BaseProxy) SetReference(reference object.Reference) {
 	bp.Instance.SetReference(reference)
 }
