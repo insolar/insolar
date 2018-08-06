@@ -29,18 +29,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockCallable struct {
+	reference object.Reference
+}
+
+func (c *mockCallable) GetReference() object.Reference {
+	return c.reference
+}
+
+func (c *mockCallable) SetReference(reference object.Reference) {
+	c.reference = reference
+}
+
 type mockChild struct {
-	Reference      object.Reference
+	mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
 
 func (c *mockChild) GetClassID() string {
 	return "mockChild"
-}
-
-func (c *mockChild) GetReference() object.Reference {
-	return c.Reference
 }
 
 func (c *mockChild) GetParent() object.Parent {
@@ -50,7 +58,7 @@ func (c *mockChild) GetParent() object.Parent {
 var child = &mockChild{}
 
 type mockParent struct {
-	Reference      object.Reference
+	mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -61,10 +69,6 @@ func (p *mockParent) GetParent() object.Parent {
 
 func (p *mockParent) GetClassID() string {
 	return "mockParent"
-}
-
-func (p *mockParent) GetReference() object.Reference {
-	return p.Reference
 }
 
 func (p *mockParent) GetChildStorage() storage.Storage {
@@ -107,11 +111,16 @@ func (p *mockProxy) GetReference() object.Reference {
 	return nil
 }
 
+func (p *mockProxy) SetReference(reference object.Reference) {
+}
+
 func (p *mockProxy) GetParent() object.Parent {
 	return p.parent
 }
 
-type mockFactory struct{}
+type mockFactory struct {
+	mockCallable
+}
 
 func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	return &mockProxy{
@@ -121,10 +130,6 @@ func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 
 func (f *mockFactory) GetClassID() string {
 	return "mockFactory"
-}
-
-func (f *mockFactory) GetReference() object.Reference {
-	return nil
 }
 
 func (f *mockFactory) GetParent() object.Parent {
@@ -286,14 +291,6 @@ func TestMemberDomainFactory_GetClassID(t *testing.T) {
 	id := factory.GetClassID()
 
 	assert.Equal(t, class.MemberDomainID, id)
-}
-
-func TestMemberDomainFactory_GetReference(t *testing.T) {
-	parent := &mockParent{}
-	factory := NewMemberDomainFactory(parent)
-	reference := factory.GetReference()
-
-	assert.Nil(t, reference)
 }
 
 func TestMemberDomainFactory_GetParent(t *testing.T) {
