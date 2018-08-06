@@ -48,7 +48,6 @@ var emptyRecordsGens = []recordgen{
 	func() Record { return &CodeRecord{} },
 	func() Record { return &AmendRecord{} },
 	func() Record { return &ClassAmendRecord{} },
-	func() Record { return &MemoryMigrationCode{} },
 	func() Record { return &DeactivationRecord{} },
 	func() Record { return &ObjectAmendRecord{} },
 	func() Record { return &StatefulCallResult{} },

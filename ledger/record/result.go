@@ -16,6 +16,10 @@
 
 package record
 
+import (
+	"github.com/pkg/errors"
+)
+
 // ReasonCode is an error reason code.
 type ReasonCode uint32
 
@@ -143,6 +147,16 @@ type CodeRecord struct {
 	SourceCode   string              // ObjectSourceCode
 }
 
+func (r *CodeRecord) GetCode(archPref []ArchType) ([]byte, error) {
+	for _, archType := range archPref {
+		code, ok := r.TargetedCode[archType]
+		if ok {
+			return code, nil
+		}
+	}
+	return nil, errors.New("code for preferred architectures not found")
+}
+
 // AmendRecord is produced when we modify another record in ledger.
 type AmendRecord struct {
 	StatefulResult
@@ -155,20 +169,8 @@ type AmendRecord struct {
 type ClassAmendRecord struct {
 	AmendRecord
 
-	NewCode []byte // ObjectBinaryCode
-}
-
-// MigrationCodes returns a list of data migration procedures for a given code change.
-func (r *ClassAmendRecord) MigrationCodes() []*MemoryMigrationCode {
-	panic("not implemented")
-}
-
-// MemoryMigrationCode is a data migration procedure.
-type MemoryMigrationCode struct {
-	ClassAmendRecord
-
-	GeneratedByClassRecord Reference
-	MigrationCodeRecord    Reference
+	NewCode    Reference   // CodeRecord
+	Migrations []Reference // CodeRecord
 }
 
 // DeactivationRecord marks targeted object as disabled.

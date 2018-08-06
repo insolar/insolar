@@ -36,17 +36,16 @@ type LedgerMock struct {
 func (mock *LedgerMock) GetRecord(id record.ID) (record.Record, error) {
 	rec, ok := mock.Records[id]
 	if !ok {
-		return nil, errors.New("Record not found")
+		return nil, errors.New("record not found")
 	}
 	return rec, nil
 }
 
 func (mock *LedgerMock) SetRecord(rec record.Record) (record.ID, error) {
 	raw, _ := record.EncodeToRaw(rec)
-	raw.Hash()
 	var id record.ID
-	copy(raw.Hash(), id[:])
-	mock.Records[record.ID{}] = rec
+	copy(id[:], raw.Hash())
+	mock.Records[id] = rec
 	return id, nil
 }
 
@@ -220,10 +219,10 @@ func TestUpdateClassVerifiesClassReference(t *testing.T) {
 	}
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.UpdateClass(requestRef, record.Reference{}, []record.MemoryMigrationCode{})
+	_, err := manager.UpdateClass(requestRef, record.Reference{}, record.Reference{}, nil)
 	assert.NotNil(t, err)
 	notClassRef := addRecord(&ledger, &record.CodeRecord{})
-	_, err = manager.UpdateClass(requestRef, notClassRef, []record.MemoryMigrationCode{})
+	_, err = manager.UpdateClass(requestRef, notClassRef, record.Reference{}, nil)
 	assert.NotNil(t, err)
 }
 
@@ -237,10 +236,11 @@ func TestUpdateClassVerifiesClassIsActive(t *testing.T) {
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
 	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
+	codeRef := addRecord(&ledger, &record.CodeRecord{})
 	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
 		LatestStateID: deactivateRef.Record,
 	})
-	_, err := manager.UpdateClass(requestRef, classRef, nil)
+	_, err := manager.UpdateClass(requestRef, classRef, codeRef, nil)
 	assert.NotNil(t, err)
 }
 
@@ -253,10 +253,14 @@ func TestUpdateClassCreatesAmendRecord(t *testing.T) {
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
+	return
 	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
 		LatestStateID: classRef.Record,
 	})
-	updateRef, err := manager.UpdateClass(requestRef, classRef, nil)
+	codeRef := addRecord(&ledger, &record.CodeRecord{})
+	migrationRef := addRecord(&ledger, &record.CodeRecord{SourceCode: "test"})
+	migrationRefs := []record.Reference{migrationRef}
+	updateRef, err := manager.UpdateClass(requestRef, classRef, codeRef, migrationRefs)
 	assert.Nil(t, err)
 	updateRec, getErr := ledger.GetRecord(updateRef.Record)
 	assert.Nil(t, getErr)
@@ -269,6 +273,8 @@ func TestUpdateClassCreatesAmendRecord(t *testing.T) {
 			},
 			AmendedRecord: classRef,
 		},
+		NewCode:    codeRef,
+		Migrations: migrationRefs,
 	})
 }
 
@@ -297,7 +303,9 @@ func TestActivateObjCreatesActivateRecord(t *testing.T) {
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	memory := record.Memory{1, 2, 3}
 	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{})
+	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
+		LatestStateID: classRef.Record,
+	})
 	activateRef, err := manager.ActivateObj(requestRef, classRef, memory)
 	assert.Nil(t, err)
 	activateRec, err := ledger.GetRecord(activateRef.Record)
@@ -403,7 +411,7 @@ func TestUpdateObjVerifiesObjectIsActive(t *testing.T) {
 	ledger.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
 		LatestStateID: deactivateRef.Record,
 	})
-	_, err := manager.UpdateClass(requestRef, objRef, nil)
+	_, err := manager.UpdateObj(requestRef, objRef, nil)
 	assert.NotNil(t, err)
 }
 

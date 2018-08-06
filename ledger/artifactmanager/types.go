@@ -52,7 +52,7 @@ type ArtifactManager interface {
 	UpdateClass(
 		requestRef,
 		classRef record.Reference,
-		migrations []record.MemoryMigrationCode,
+		migrationRefs []record.Reference,
 	) (record.Reference, error)
 
 	// ActivateObj creates and activates new object from given class (ObjectActivateRecord).
@@ -71,8 +71,8 @@ type ArtifactManager interface {
 // ClassDescr contains class code and migration procedures if any.
 type ClassDescr struct {
 	// TODO: implement MachineBinaryCode
-	// Code record.MachineBinaryCode // nil if LastClassRef is actual
-	Migrations []record.MemoryMigrationCode // can be empty
+	Code       []byte
+	Migrations [][]byte
 }
 
 // ObjDescr contains object memory and delegate appends if any.

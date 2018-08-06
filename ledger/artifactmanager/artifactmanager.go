@@ -30,6 +30,22 @@ type LedgerArtifactManager struct {
 	archPref []record.ArchType
 }
 
+func (m *LedgerArtifactManager) checkRequestRecord(requestRef record.Reference) error {
+	// TODO: implement request check
+	return nil
+}
+
+func (m *LedgerArtifactManager) checkCodeRecord(codeRef record.Reference) error {
+	codeRecord, err := m.storer.GetRecord(codeRef.Record)
+	if err != nil {
+		return errors.Wrap(err, "code record is not found")
+	}
+	if _, ok := codeRecord.(*record.CodeRecord); !ok {
+		return errors.New("provided reference is not a code reference")
+	}
+	return nil
+}
+
 func (m *LedgerArtifactManager) storeRecord(rec record.Record) (record.Reference, error) {
 	id, err := m.storer.SetRecord(rec)
 	if err != nil {
@@ -38,8 +54,8 @@ func (m *LedgerArtifactManager) storeRecord(rec record.Record) (record.Reference
 	return record.Reference{Domain: rec.Domain(), Record: id}, nil
 }
 
-func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (*index.ClassLifeline, error) {
-	classRecord, err := m.storer.GetRecord(classRef.Record)
+func (m *LedgerArtifactManager) getActiveClassIndex(classID record.ID) (*index.ClassLifeline, error) {
+	classRecord, err := m.storer.GetRecord(classID)
 	if err != nil {
 		return nil, errors.Wrap(err, "class record is not found")
 	}
@@ -47,9 +63,9 @@ func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (
 		return nil, errors.New("provided reference is not a class record")
 	}
 
-	classIndex, isFound := m.storer.GetClassIndex(classRef.Record)
+	classIndex, isFound := m.storer.GetClassIndex(classID)
 	if !isFound {
-		return nil, errors.New("class is not activated")
+		return nil, errors.New("inconsistent class index")
 	}
 	latestClassRecord, err := m.storer.GetRecord(classIndex.LatestStateID)
 	if err != nil {
@@ -62,8 +78,8 @@ func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (
 	return classIndex, nil
 }
 
-func (m *LedgerArtifactManager) getActiveObjectIndex(objRef record.Reference) (*index.ObjectLifeline, error) {
-	objRecord, err := m.storer.GetRecord(objRef.Record)
+func (m *LedgerArtifactManager) getActiveObjectIndex(objID record.ID) (*index.ObjectLifeline, error) {
+	objRecord, err := m.storer.GetRecord(objID)
 	if err != nil {
 		return nil, errors.Wrap(err, "object record is not found")
 	}
@@ -71,9 +87,9 @@ func (m *LedgerArtifactManager) getActiveObjectIndex(objRef record.Reference) (*
 		return nil, errors.New("provided reference is not an object record")
 	}
 
-	objIndex, isFound := m.storer.GetObjectIndex(objRef.Record)
+	objIndex, isFound := m.storer.GetObjectIndex(objID)
 	if !isFound {
-		return nil, errors.New("object is not activated")
+		return nil, errors.New("inconsistent object index")
 	}
 	latestObjRecord, err := m.storer.GetRecord(objIndex.LatestStateID)
 	if err != nil {
@@ -92,6 +108,11 @@ func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
 
 // DeployCode deploys new code to storage (CodeRecord).
 func (m *LedgerArtifactManager) DeployCode(requestRef record.Reference) (record.Reference, error) {
+	err := m.checkRequestRecord(requestRef)
+	if err != nil {
+		return record.Reference{}, nil
+	}
+
 	rec := record.CodeRecord{
 		StorageRecord: record.StorageRecord{
 			StatefulResult: record.StatefulResult{
@@ -109,14 +130,15 @@ func (m *LedgerArtifactManager) DeployCode(requestRef record.Reference) (record.
 func (m *LedgerArtifactManager) ActivateClass(
 	requestRef, codeRef record.Reference, memory record.Memory,
 ) (record.Reference, error) {
-	codeRecord, err := m.storer.GetRecord(codeRef.Record)
-	// TODO: add not found
+	err := m.checkRequestRecord(requestRef)
 	if err != nil {
-		return record.Reference{}, errors.Wrap(err, "code reference is not found")
+		return record.Reference{}, nil
 	}
-	if _, ok := codeRecord.(*record.CodeRecord); !ok {
-		return record.Reference{}, errors.New("provided reference is not a code reference")
+	err = m.checkCodeRecord(codeRef)
+	if err != nil {
+		return record.Reference{}, err
 	}
+
 	rec := record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
@@ -128,14 +150,30 @@ func (m *LedgerArtifactManager) ActivateClass(
 		CodeRecord:    codeRef,
 		DefaultMemory: memory,
 	}
-	return m.storeRecord(&rec)
+	classRef, err := m.storeRecord(&rec)
+	if err != nil {
+		return record.Reference{}, err
+	}
+	err = m.storer.SetClassIndex(classRef.Record, &index.ClassLifeline{
+		LatestStateID: classRef.Record,
+	})
+	if err != nil {
+		return record.Reference{}, errors.Wrap(err, "failed to store lifeline index")
+	}
+
+	return classRef, nil
 }
 
 // DeactivateClass deactivates class (DeactivationRecord)
 func (m *LedgerArtifactManager) DeactivateClass(
 	requestRef, classRef record.Reference,
 ) (record.Reference, error) {
-	classIndex, err := m.getActiveClassIndex(classRef)
+	err := m.checkRequestRecord(requestRef)
+	if err != nil {
+		return record.Reference{}, nil
+	}
+
+	classIndex, err := m.getActiveClassIndex(classRef.Record)
 	if err != nil {
 		return record.Reference{}, err
 	}
@@ -169,11 +207,27 @@ func (m *LedgerArtifactManager) DeactivateClass(
 
 // UpdateClass allows to change class code etc. (ClassAmendRecord).
 func (m *LedgerArtifactManager) UpdateClass(
-	requestRef, classRef record.Reference, migrations []record.MemoryMigrationCode,
+	requestRef, classRef, codeRef record.Reference, migrationRefs []record.Reference,
 ) (record.Reference, error) {
-	classIndex, err := m.getActiveClassIndex(classRef)
+	err := m.checkRequestRecord(requestRef)
+	if err != nil {
+		return record.Reference{}, nil
+	}
+
+	classIndex, err := m.getActiveClassIndex(classRef.Record)
 	if err != nil {
 		return record.Reference{}, err
+	}
+
+	err = m.checkCodeRecord(codeRef)
+	if err != nil {
+		return record.Reference{}, err
+	}
+	for _, migrationRef := range migrationRefs {
+		err = m.checkCodeRecord(migrationRef)
+		if err != nil {
+			return record.Reference{}, errors.Wrap(err, "invalid migrations")
+		}
 	}
 
 	rec := record.ClassAmendRecord{
@@ -188,7 +242,8 @@ func (m *LedgerArtifactManager) UpdateClass(
 				Record: classIndex.LatestStateID,
 			},
 		},
-		// TODO: require and fill code and migration params
+		NewCode:    codeRef,
+		Migrations: migrationRefs,
 	}
 
 	amendRef, err := m.storeRecord(&rec)
@@ -196,6 +251,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 		return record.Reference{}, errors.New("failed to store amend record")
 	}
 	classIndex.LatestStateID = amendRef.Record
+	classIndex.MigrationIDs = append(classIndex.MigrationIDs, amendRef.Record)
 	err = m.storer.SetClassIndex(classRef.Record, classIndex)
 	if err != nil {
 		// TODO: add transaction
@@ -209,8 +265,12 @@ func (m *LedgerArtifactManager) UpdateClass(
 func (m *LedgerArtifactManager) ActivateObj(
 	requestRef, classRef record.Reference, memory record.Memory,
 ) (record.Reference, error) {
+	err := m.checkRequestRecord(requestRef)
+	if err != nil {
+		return record.Reference{}, nil
+	}
 
-	_, err := m.getActiveClassIndex(classRef)
+	_, err = m.getActiveClassIndex(classRef.Record)
 	if err != nil {
 		return record.Reference{}, err
 	}
@@ -227,12 +287,29 @@ func (m *LedgerArtifactManager) ActivateObj(
 		Memory:              memory,
 	}
 
-	return m.storeRecord(&rec)
+	objRef, err := m.storeRecord(&rec)
+	if err != nil {
+		return record.Reference{}, err
+	}
+	err = m.storer.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
+		ClassID:       classRef.Record,
+		LatestStateID: objRef.Record,
+	})
+	if err != nil {
+		return record.Reference{}, errors.Wrap(err, "failed to store lifeline index")
+	}
+
+	return objRef, nil
 }
 
 // DeactivateObj deactivates object (DeactivationRecord).
 func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Reference) (record.Reference, error) {
-	objIndex, err := m.getActiveObjectIndex(objRef)
+	err := m.checkRequestRecord(requestRef)
+	if err != nil {
+		return record.Reference{}, nil
+	}
+
+	objIndex, err := m.getActiveObjectIndex(objRef.Record)
 	if err != nil {
 		return record.Reference{}, err
 	}
@@ -267,7 +344,12 @@ func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Referenc
 func (m *LedgerArtifactManager) UpdateObj(
 	requestRef, objRef record.Reference, memory record.Memory,
 ) (record.Reference, error) {
-	objIndex, err := m.getActiveObjectIndex(objRef)
+	err := m.checkRequestRecord(requestRef)
+	if err != nil {
+		return record.Reference{}, nil
+	}
+
+	objIndex, err := m.getActiveObjectIndex(objRef.Record)
 	if err != nil {
 		return record.Reference{}, err
 	}
@@ -304,7 +386,12 @@ func (m *LedgerArtifactManager) UpdateObj(
 func (m *LedgerArtifactManager) AppendObjDelegate(
 	requestRef, objRef record.Reference, memory record.Memory,
 ) (record.Reference, error) {
-	objIndex, err := m.getActiveObjectIndex(objRef)
+	err := m.checkRequestRecord(requestRef)
+	if err != nil {
+		return record.Reference{}, nil
+	}
+
+	objIndex, err := m.getActiveObjectIndex(objRef.Record)
 	if err != nil {
 		return record.Reference{}, err
 	}
@@ -336,4 +423,62 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 		return record.Reference{}, errors.New("failed to store lifeline index")
 	}
 	return appendRef, nil
+}
+
+func (m *LedgerArtifactManager) GetObj(
+	ref, storedClassRef, storedObjRef record.Reference,
+) (*ClassDescr, *ObjDescr, error) {
+	getMigrations := func(classIndex *index.ClassLifeline) ([][]byte, error) {
+		result := make([][]byte, len(classIndex.MigrationIDs))
+		for i := len(classIndex.MigrationIDs); i >= 0; i-- {
+			if storedClassRef.Record == classIndex.MigrationIDs[i] {
+				break
+			}
+			rec, err := m.storer.GetRecord(classIndex.MigrationIDs[i])
+			if err != nil {
+				return nil, err
+			}
+			codeRec, ok := rec.(*record.CodeRecord)
+			if !ok {
+				return nil, errors.New("migration reference is not a code record")
+			}
+			code, err := codeRec.GetCode(m.archPref)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, code)
+		}
+		sortedResult := make([][]byte, len(result))
+		for i := len(result); i >= 0; i-- {
+			sortedResult = append(sortedResult, result[i])
+		}
+		return sortedResult, nil
+	}
+
+	objIndex, err := m.getActiveObjectIndex(ref.Record)
+	if err != nil {
+		return nil, nil, err
+	}
+	classIndex, err := m.getActiveClassIndex(objIndex.ClassID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		class  *ClassDescr = nil
+		object *ObjDescr   = nil
+	)
+
+	if storedClassRef.Record != classIndex.LatestStateID {
+		migrations, err := getMigrations(classIndex)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "invalid migrations")
+		}
+		class = &ClassDescr{
+			Migrations: migrations,
+		}
+	}
+
+	// TODO: add object processing
+	return class, object, nil
 }
