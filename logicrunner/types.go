@@ -10,5 +10,5 @@ type Object struct {
 	Data        []byte
 }
 
-// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
-type Arguments []byte
+// Argument is a dedicated type for arguments, that represented as bynary cbored blob
+type Argument []byte

@@ -123,13 +123,13 @@ func (gp *GoPlugin) Stop() {
 }
 
 // Exec runs a method on an object in controlled environment
-func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
+func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args []logicrunner.Argument) ([]byte, logicrunner.Argument, error) {
 	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
 	res := girpc.CallResp{}
-	err = client.Call("GoInsider.Call", girpc.CallReq{Object: object, Method: method, Args: args}, &res)
+	err = client.Call("GoInsider.Call", girpc.CallReq{Object: object, Method: method, Arguments: args}, &res)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with API call")
 	}

@@ -18,6 +18,40 @@ type HelloWorlder struct {
 	Greeted int
 }
 
+func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
+	var buf bytes.Buffer
+	cborEnc := cbor.NewEncoder(&buf)
+	_, err := cborEnc.Marshal(*r)
+	if err != nil {
+		panic(err)
+	}
+
+	obj := logicrunner.Object{
+		MachineType: logicrunner.MachineTypeGoPlugin,
+		Reference:   "secondary",
+		Data:        buf.Bytes(),
+	}
+
+	args := make([]logicrunner.Argument, 1)
+	var bufArgs bytes.Buffer
+	cborEncArgs := cbor.NewEncoder(&bufArgs)
+	_, err = cborEncArgs.Marshal(s)
+	if err != nil {
+		panic(err)
+	}
+	args[0] = bufArgs.Bytes()
+
+	data, _, err := gp.Exec(obj, "Echo", args)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = cborEnc.Unmarshal(data, r)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func compileBinaries() error {
 	d, _ := os.Getwd()
 
@@ -70,31 +104,10 @@ func TestHelloWorld(t *testing.T) {
 	}
 	defer gp.Stop()
 
-	var buff bytes.Buffer
-	e := cbor.NewEncoder(&buff)
-	_, err = e.Marshal(HelloWorlder{77})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	obj := logicrunner.Object{
-		MachineType: logicrunner.MachineTypeGoPlugin,
-		Reference:   "secondary",
-		Data:        buff.Bytes(),
-	}
-
-	data, _, err := gp.Exec(obj, "Hello", logicrunner.Arguments{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var newData HelloWorlder
-	_, err = e.Unmarshal(data, &newData)
-	if err != nil {
-		panic(err)
-	}
-	if newData.Greeted != 78 {
-		t.Fatalf("Got unexpected value: %d, 78 is expected", newData.Greeted)
+	hw := &HelloWorlder{77}
+	hw.ProxyEcho(gp, "hi")
+	if hw.Greeted != 78 {
+		t.Fatalf("Got unexpected value: %d, 78 is expected", hw.Greeted)
 	}
 
 	//TODO: check second returned value

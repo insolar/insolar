@@ -10,6 +10,7 @@ import (
 	"os"
 	"plugin"
 	"reflect"
+	"strconv"
 
 	"github.com/2tvenom/cbor"
 	"github.com/pkg/errors"
@@ -50,8 +51,8 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	}
 
 	var dataBuf bytes.Buffer
-	cbor := cbor.NewEncoder(&dataBuf)
-	_, err = cbor.Unmarshal(args.Object.Data, export)
+	cborEnc := cbor.NewEncoder(&dataBuf)
+	_, err = cborEnc.Unmarshal(args.Object.Data, export)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't decode data into %T", export)
 	}
@@ -61,9 +62,27 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 		return errors.New("wtf, no method " + args.Method + "in the plugin")
 	}
 
-	res := method.Call([]reflect.Value{})
+	inLen := method.Type().NumIn()
+	if len(args.Arguments) != inLen {
+		return errors.New("Number of arguments didn't match, got: " + strconv.Itoa(len(args.Arguments)) + ", expected: " + strconv.Itoa(inLen))
+	}
 
-	_, err = cbor.Marshal(export)
+	in := make([]reflect.Value, inLen)
+	for i := 0; i < inLen; i++ {
+		argType := method.Type().In(i)
+
+		argInterface := reflect.New(argType).Interface()
+		_, err = cborEnc.Unmarshal(args.Arguments[i], argInterface)
+		if err != nil {
+			return errors.Wrap(err, "couldn't unmarshal cbor")
+		}
+
+		in[i] = reflect.ValueOf(argInterface).Elem()
+	}
+
+	res := method.Call(in)
+
+	_, err = cborEnc.Marshal(export)
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal new object data into cbor")
 	}
