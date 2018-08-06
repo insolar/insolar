@@ -17,7 +17,7 @@
 package artifactmanager
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
@@ -31,18 +31,18 @@ type LedgerArtifactManager struct {
 }
 
 func (m *LedgerArtifactManager) storeRecord(rec record.Record) (record.Reference, error) {
-	ref, err := m.storer.AddRecord(rec)
+	id, err := m.storer.SetRecord(rec)
 	if err != nil {
-		return record.Reference{}, errors.New("record store failed")
+		return record.Reference{}, errors.Wrap(err, "record store failed")
 	}
-
-	return ref, nil
+	return record.Reference{Domain: rec.Domain(), Record: id}, nil
 }
 
 func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (*index.Lifeline, error) {
-	classRecord, isFound := m.storer.GetRecord(record.ID2Key(classRef.Record))
-	if !isFound {
-		return nil, errors.New("class record is not found")
+	classRecord, err := m.storer.GetRecord(classRef.Record)
+	// TODO: add not found logic
+	if err != nil {
+		return nil, errors.Wrap(err, "class record is not found")
 	}
 	if _, ok := classRecord.(*record.ClassActivateRecord); !ok {
 		return nil, errors.New("provided reference is not a class record")
@@ -52,9 +52,10 @@ func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (
 	if !isFound {
 		return nil, errors.New("class is not activated")
 	}
-	latestClassRecord, isFound := m.storer.GetRecord(record.ID2Key(classIndex.LatestStateID))
-	if !isFound {
-		return nil, errors.New("latest class record is not found")
+	latestClassRecord, err := m.storer.GetRecord(classIndex.LatestStateID)
+	// TODO: add not found logic
+	if err != nil {
+		return nil, errors.Wrap(err, "latest class record is not found")
 	}
 	if _, ok := latestClassRecord.(*record.DeactivationRecord); ok {
 		return nil, errors.New("class is deactivated")
@@ -86,9 +87,10 @@ func (m *LedgerArtifactManager) DeployCode(requestRef record.Reference) (record.
 func (m *LedgerArtifactManager) ActivateClass(
 	requestRef, codeRef record.Reference, memory record.Memory,
 ) (record.Reference, error) {
-	codeRecord, isFound := m.storer.GetRecord(record.ID2Key(codeRef.Record))
-	if !isFound {
-		return record.Reference{}, errors.New("code reference is not found")
+	codeRecord, err := m.storer.GetRecord(codeRef.Record)
+	// TODO: add not found
+	if err != nil {
+		return record.Reference{}, errors.Wrap(err, "code reference is not found")
 	}
 	if _, ok := codeRecord.(*record.CodeRecord); !ok {
 		return record.Reference{}, errors.New("provided reference is not a code reference")

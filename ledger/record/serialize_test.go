@@ -125,7 +125,7 @@ var serializeTests = []struct {
 func Test_EncodeToRaw(t *testing.T) {
 	for _, tt := range serializeTests {
 		t.Run(tt.name, func(t *testing.T) {
-			raw, err := encodeToRaw(tt.rec)
+			raw, err := EncodeToRaw(tt.rec)
 			if err != nil {
 				panic(err)
 			}
