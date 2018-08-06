@@ -143,15 +143,6 @@ func (idf *instanceDomainFactory) GetClassID() string {
 	return class.InstanceDomainID
 }
 
-// GetReference returns nil for not published factory
-func (idf *instanceDomainFactory) GetReference() object.Reference {
-	return nil
-}
-
-func (idf *instanceDomainFactory) SetReference(reference object.Reference) {
-
-}
-
 // Create is factory method that used to create new InstanceDomain instances.
 func (idf *instanceDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	proxy, err := newInstanceDomainProxy(parent)

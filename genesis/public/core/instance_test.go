@@ -262,12 +262,6 @@ func TestInstanceDomainFactory_GetClassID(t *testing.T) {
 	assert.Equal(t, class.InstanceDomainID, factory.GetClassID())
 }
 
-func TestInstanceDomainFactory_GetReference(t *testing.T) {
-	parent := &mockParent{}
-	factory := NewInstanceDomainFactory(parent)
-	assert.Nil(t, factory.GetReference())
-}
-
 func TestInstanceDomainFactory_Create(t *testing.T) {
 	parent := &mockParent{}
 	factory := NewInstanceDomainFactory(parent)

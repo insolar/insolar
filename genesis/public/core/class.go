@@ -136,14 +136,6 @@ func (cdf *classDomainFactory) GetClassID() string {
 	return class.ClsDomainID
 }
 
-// GetReference returns nil for not published factory.
-func (cdf *classDomainFactory) GetReference() object.Reference {
-	return nil
-}
-
-func (cdf *classDomainFactory) SetReference(ref object.Reference) {
-}
-
 // Create is a factory method for new ClassDomain instances.
 func (cdf *classDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	proxy, err := newClassDomainProxy(parent)

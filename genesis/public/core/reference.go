@@ -158,14 +158,6 @@ func (rdf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
-// GetReference returns nil for not published factory.
-func (rdf *referenceDomainFactory) GetReference() object.Reference {
-	return nil
-}
-
-func (rdf *referenceDomainFactory) SetReference(reference object.Reference) {
-}
-
 // Create factory method for new ReferenceDomain instances.
 func (rdf *referenceDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	proxy := newReferenceDomainProxy(parent)
