@@ -14,21 +14,20 @@
  *    limitations under the License.
  */
 
-package storage
+/*
+Package example provides smart contracts for building example of system work.
 
-import (
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
-)
+Entities:
 
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
-	GetRecord(record.ID) (record.Record, error)
-	SetRecord(record.Record) (record.ID, error)
+	MemberDomain - domain that allows to add new members to system.
 
-	GetClassIndex(record.ID) (*index.ClassLifeline, bool)
-	SetClassIndex(record.ID, *index.ClassLifeline) error
+	Usage:
 
-	GetObjectIndex(record.ID) (*index.ObjectLifeline, bool)
-	SetObjectIndex(record.ID, *index.ObjectLifeline) error
-}
+		factory := NewMemberDomainFactory(factoryParent)
+		mDomain, error := factory.Create(domainParent)
+
+		record, err := mDomain.CreateMember(someMemberFactory)
+		memberProxy, err := mDomain.GetMember(record)
+
+*/
+package example

@@ -18,12 +18,13 @@ package leveldb
 
 import (
 	"path/filepath"
+	"time"
 
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
 
@@ -35,13 +36,14 @@ const (
 
 // LevelLedger represents ledger's LevelDB storage.
 type LevelLedger struct {
-	// LDB contains LevelDB database instance.
 	ldb     *leveldb.DB
+	pulseFn func() record.PulseNum
 	zeroRef record.Reference
 }
 
 const (
 	scopeIDLifeline byte = 1
+	scopeIDRecord   byte = 2
 )
 
 // InitDB returns LevelLedger with LevelDB initialized with default settings.
@@ -103,34 +105,67 @@ func InitDB() (*LevelLedger, error) {
 	copy([]byte(zeroRecordBinary)[:record.IDSize], zeroID[:])
 	ledger := LevelLedger{
 		ldb: db,
+		// FIXME: temporary pulse implementation
+		pulseFn: func() record.PulseNum {
+			return record.PulseNum(time.Now().Unix() / 10)
+		},
 		zeroRef: record.Reference{
 			Domain: record.ID{}, // TODO: fill domain
 			Record: zeroID,
 		},
 	}
 	_, err = db.Get([]byte(zeroRecordHash), nil)
-	switch err {
-	case nil:
-		return &ledger, nil
-	case leveldb.ErrNotFound:
+	if err == leveldb.ErrNotFound {
 		err = db.Put([]byte(zeroRecordHash), []byte(zeroRecordBinary), nil)
 		if err != nil {
 			return nil, err
 		}
 		return &ledger, nil
-	default:
+	}
+	if err != nil {
 		return nil, err
 	}
+	return &ledger, nil
 }
 
-// GetRecord returns record from leveldb by timeslot and hash passed in record.Key
-func (ll *LevelLedger) GetRecord(k record.Key) (rec record.Record, found bool) {
-	return nil, false
+// GetRecordByKey returns record from leveldb by record.Key
+// It just a simple wrapper for GetRecord method.
+func (ll *LevelLedger) GetRecordByKey(k record.Key) (record.Record, error) {
+	return ll.GetRecord(record.Key2ID(k))
 }
 
-// AddRecord stores record in leveldb
-func (ll *LevelLedger) AddRecord(rec record.Record) (record.Reference, error) {
-	return record.Reference{}, nil
+// GetRecord returns record from leveldb by record.ID
+// It returns ErrNotFound if the DB does not contains the key.
+func (ll *LevelLedger) GetRecord(id record.ID) (record.Record, error) {
+	getkey := append([]byte{scopeIDRecord}, id[:]...)
+	buf, err := ll.ldb.Get(getkey, nil)
+	if err != nil {
+		if err == leveldb.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	raw, err := record.DecodeToRaw(buf)
+	if err != nil {
+		return nil, err
+	}
+	return raw.ToRecord(), nil
+}
+
+func (ll *LevelLedger) setRawRecordByKey(k record.Key, raw *record.Raw) (record.ID, error) {
+	id := record.Key2ID(k)
+	putkey := append([]byte{scopeIDRecord}, id[:]...)
+	return id, ll.ldb.Put(putkey, record.MustEncodeRaw(raw), nil)
+}
+
+// SetRecord stores record in leveldb
+func (ll *LevelLedger) SetRecord(rec record.Record) (record.ID, error) {
+	raw, err := record.EncodeToRaw(rec)
+	if err != nil {
+		return record.ID{}, err
+	}
+	key := record.Key{Pulse: ll.pulseFn(), Hash: raw.Hash()}
+	return ll.setRawRecordByKey(key, raw)
 }
 
 // GetClassIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
