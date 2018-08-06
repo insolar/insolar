@@ -100,18 +100,12 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 }
 
 type mockProxy struct {
+	mockCallable
 	parent object.Parent
 }
 
 func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
-}
-
-func (p *mockProxy) GetReference() object.Reference {
-	return nil
-}
-
-func (p *mockProxy) SetReference(reference object.Reference) {
 }
 
 func (p *mockProxy) GetParent() object.Parent {
