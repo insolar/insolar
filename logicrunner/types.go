@@ -7,7 +7,6 @@ type Reference string
 type Object struct {
 	MachineType MachineType
 	Reference   Reference
-	Code        []byte
 	Data        []byte
 }
 
