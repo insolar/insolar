@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
 )
 
 // GoInsider is an RPC interface to run code of plugins
@@ -33,7 +33,7 @@ func NewGoInsider(path string, address string) *GoInsider {
 
 // Call is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error {
+func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	path, err := t.ObtainCode(args.Object)
 	check(err)
 

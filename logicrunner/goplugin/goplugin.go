@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
 	"github.com/pkg/errors"
 )
 
@@ -110,20 +111,7 @@ func (gp *GoPlugin) Start() {
 func (gp *GoPlugin) Stop() {
 	_ = gp.runner.Process.Kill()
 	gp.sock.Close()
-}
 
-// CallReq is a set of arguments for Call RPC in the runner
-type CallReq struct {
-	Object logicrunner.Object
-	Method string
-	Args   logicrunner.Arguments
-}
-
-// CallResp is response from Call RPC in the runner
-type CallResp struct {
-	Data []byte
-	Ret  logicrunner.Arguments
-	Err  error
 }
 
 // Exec runs a method on an object in controlled environment
@@ -132,8 +120,8 @@ func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrun
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
-	res := CallResp{}
-	err = client.Call("GoInsider.Call", CallReq{Object: object, Method: method, Args: args}, &res)
+	res := girpc.CallResp{}
+	err = client.Call("GoInsider.Call", girpc.CallReq{Object: object, Method: method, Args: args}, &res)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with API call")
 	}
