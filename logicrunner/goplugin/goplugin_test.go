@@ -21,19 +21,27 @@ type HelloWorlder struct {
 func compileBinaries() error {
 	d, _ := os.Getwd()
 
-	os.Chdir(d + "/ginsider")
-	err := exec.Command("go", "build", "ginsider.go").Run()
+	err := os.Chdir(d + "/ginsider")
+	if err != nil {
+		return errors.Wrap(err, "couldn't chdir")
+	}
+
+	defer os.Chdir(d) // nolint: errcheck
+
+	err = exec.Command("go", "build", "ginsider.go").Run()
 	if err != nil {
 		return errors.Wrap(err, "can't build ginsider")
 	}
 
-	os.Chdir(d + "/testplugins")
+	err = os.Chdir(d + "/testplugins")
+	if err != nil {
+		return errors.Wrap(err, "couldn't chdir")
+	}
+
 	err = exec.Command("make", "secondary.so").Run()
 	if err != nil {
 		return errors.Wrap(err, "can't build pluigins")
 	}
-
-	os.Chdir(d)
 	return nil
 }
 
@@ -45,7 +53,7 @@ func TestHelloWorld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // clean up
+	defer os.RemoveAll(dir) // nolint: errcheck
 
 	gp, err := NewGoPlugin(
 		Options{
@@ -64,7 +72,10 @@ func TestHelloWorld(t *testing.T) {
 
 	var buff bytes.Buffer
 	e := cbor.NewEncoder(&buff)
-	e.Marshal(HelloWorlder{77})
+	_, err = e.Marshal(HelloWorlder{77})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	obj := logicrunner.Object{
 		MachineType: logicrunner.MachineTypeGoPlugin,

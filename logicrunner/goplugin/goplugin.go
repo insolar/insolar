@@ -109,9 +109,15 @@ func (gp *GoPlugin) Start() {
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() {
-	_ = gp.runner.Process.Kill()
-	gp.sock.Close()
+	err := gp.runner.Process.Kill()
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	err = gp.sock.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // Exec runs a method on an object in controlled environment
