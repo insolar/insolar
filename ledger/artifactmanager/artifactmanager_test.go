@@ -17,7 +17,6 @@
 package artifactmanager
 
 import (
-	"bytes"
 	"os"
 	"testing"
 
@@ -38,12 +37,10 @@ func (mock *LedgerMock) GetRecord(k record.Key) (record.Record, bool) {
 }
 
 func (mock *LedgerMock) AddRecord(rec record.Record) (record.Reference, error) {
-	buf := bytes.Buffer{}
-	// TODO: implement properly after merge with INS-1-storage-records-persist
-	// rec.WriteHash(&buf)
-	buf.Write([]byte{1})
+	raw, _ := record.EncodeToRaw(rec)
+	raw.Hash()
 	var id record.ID
-	copy(buf.Bytes()[0:record.IDSize], id[:])
+	copy(raw.Hash(), id[:])
 	mock.Records[record.ID{}] = rec
 	return record.Reference{
 		Domain: record.ID{},
@@ -185,17 +182,12 @@ func TestUpdateClassVerifiesClassIsActive(t *testing.T) {
 	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	migrations := []record.MemoryMigrationCode{
-		record.MemoryMigrationCode{
-			MigrationCodeRecord: record.Reference{Record: record.ID{1, 2, 3}},
-		},
-	}
 	classRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
 	deactivateRef, _ := ledger.AddRecord(&record.DeactivationRecord{})
 	ledger.SetIndex(classRef.Record, &index.Lifeline{
 		LatestStateID: deactivateRef.Record,
 	})
-	_, err := manager.UpdateClass(requestRef, classRef, migrations)
+	_, err := manager.UpdateClass(requestRef, classRef, nil)
 	assert.NotNil(t, err)
 }
 
@@ -203,16 +195,11 @@ func TestUpdateClassCreatesAmendRecord(t *testing.T) {
 	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	migrations := []record.MemoryMigrationCode{
-		record.MemoryMigrationCode{
-			MigrationCodeRecord: record.Reference{Record: record.ID{1, 2, 3}},
-		},
-	}
 	classRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
 	ledger.SetIndex(classRef.Record, &index.Lifeline{
 		LatestStateID: classRef.Record,
 	})
-	updateRef, err := manager.UpdateClass(requestRef, classRef, migrations)
+	updateRef, err := manager.UpdateClass(requestRef, classRef, nil)
 	assert.Nil(t, err)
 	updateRec, isFound := ledger.GetRecord(record.ID2Key(updateRef.Record))
 	assert.Equal(t, isFound, true)
@@ -225,5 +212,191 @@ func TestUpdateClassCreatesAmendRecord(t *testing.T) {
 			},
 			AmendedRecord: classRef,
 		},
+	})
+}
+
+func TestActivateObjVerifiesClassReference(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	_, err := manager.ActivateObj(requestRef, record.Reference{}, record.Memory{})
+	assert.NotNil(t, err)
+	notClassRef, _ := ledger.AddRecord(&record.ObjectActivateRecord{})
+	_, err = manager.ActivateClass(requestRef, notClassRef, record.Memory{})
+	assert.NotNil(t, err)
+}
+
+func TestActivateObjCreatesActivateRecord(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	memory := record.Memory{1, 2, 3}
+	classRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
+	ledger.SetIndex(classRef.Record, &index.Lifeline{})
+	activateRef, err := manager.ActivateObj(requestRef, classRef, memory)
+	assert.Nil(t, err)
+	activateRec, isFound := ledger.GetRecord(record.ID2Key(activateRef.Record))
+	assert.Equal(t, isFound, true)
+	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					RequestRecord: requestRef,
+				},
+			},
+		},
+		ClassActivateRecord: classRef,
+		Memory:              memory,
+	})
+}
+
+func TestDeactivateObjVerifiesObjReference(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	_, err := manager.DeactivateClass(requestRef, record.Reference{})
+	assert.NotNil(t, err)
+	notObjRef, _ := ledger.AddRecord(&record.ClassActivateRecord{})
+	_, err = manager.DeactivateClass(requestRef, notObjRef)
+	assert.NotNil(t, err)
+}
+
+func TestDeactivateObjVerifiesObjectIsActive(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	objRef, _ := ledger.AddRecord(&record.ObjectActivateRecord{})
+	deactivateRef, _ := ledger.AddRecord(&record.DeactivationRecord{})
+	ledger.SetIndex(objRef.Record, &index.Lifeline{
+		LatestStateID: deactivateRef.Record,
+	})
+	_, err := manager.DeactivateObj(requestRef, objRef)
+	assert.NotNil(t, err)
+}
+
+func TestDeactivateObjCreatesDeactivateRecord(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	objRef, _ := ledger.AddRecord(&record.ObjectActivateRecord{})
+	ledger.SetIndex(objRef.Record, &index.Lifeline{
+		LatestStateID: objRef.Record,
+	})
+	deactivateRef, err := manager.DeactivateObj(requestRef, objRef)
+	assert.Nil(t, err)
+	deactivateRec, isFound := ledger.GetRecord(record.ID2Key(deactivateRef.Record))
+	assert.Equal(t, isFound, true)
+	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					RequestRecord: requestRef,
+				},
+			},
+			AmendedRecord: objRef,
+		},
+	})
+}
+
+func TestUpdateObjVerifiesObjectReference(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	_, err := manager.UpdateObj(requestRef, record.Reference{}, nil)
+	assert.NotNil(t, err)
+	notObjRef, _ := ledger.AddRecord(&record.CodeRecord{})
+	_, err = manager.UpdateObj(requestRef, notObjRef, nil)
+	assert.NotNil(t, err)
+}
+
+func TestUpdateObjVerifiesObjectIsActive(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	objRef, _ := ledger.AddRecord(&record.ObjectActivateRecord{})
+	deactivateRef, _ := ledger.AddRecord(&record.DeactivationRecord{})
+	ledger.SetIndex(objRef.Record, &index.Lifeline{
+		LatestStateID: deactivateRef.Record,
+	})
+	_, err := manager.UpdateClass(requestRef, objRef, nil)
+	assert.NotNil(t, err)
+}
+
+func TestUpdateObjCreatesAmendRecord(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	objRef, _ := ledger.AddRecord(&record.ObjectActivateRecord{})
+	ledger.SetIndex(objRef.Record, &index.Lifeline{
+		LatestStateID: objRef.Record,
+	})
+	memory := record.Memory{1, 2, 3}
+	updateRef, err := manager.UpdateObj(requestRef, objRef, memory)
+	assert.Nil(t, err)
+	updateRec, isFound := ledger.GetRecord(record.ID2Key(updateRef.Record))
+	assert.Equal(t, isFound, true)
+	assert.Equal(t, updateRec, &record.ObjectAmendRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					RequestRecord: requestRef,
+				},
+			},
+			AmendedRecord: objRef,
+		},
+		NewMemory: memory,
+	})
+}
+
+func TestAppendObjDelegateVerifiesObjRecord(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	_, err := manager.AppendObjDelegate(requestRef, record.Reference{}, nil)
+	assert.NotNil(t, err)
+	notObjRef, _ := ledger.AddRecord(&record.CodeRecord{})
+	_, err = manager.AppendObjDelegate(requestRef, notObjRef, nil)
+	assert.NotNil(t, err)
+}
+
+func TestAppendObjDelegateVerifiesObjectIsActive(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	objRef, _ := ledger.AddRecord(&record.ObjectActivateRecord{})
+	deactivateRef, _ := ledger.AddRecord(&record.DeactivationRecord{})
+	ledger.SetIndex(objRef.Record, &index.Lifeline{
+		LatestStateID: deactivateRef.Record,
+	})
+	_, err := manager.AppendObjDelegate(requestRef, objRef, nil)
+	assert.NotNil(t, err)
+}
+
+func TestAppendObjDelegateCreatesAmendRecord(t *testing.T) {
+	ledger := LedgerMock{map[record.ID]record.Record{}, map[record.ID]*index.Lifeline{}}
+	manager := LedgerArtifactManager{storer: &ledger}
+	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
+	objRef, _ := ledger.AddRecord(&record.ObjectActivateRecord{})
+	ledger.SetIndex(objRef.Record, &index.Lifeline{
+		LatestStateID: objRef.Record,
+	})
+	memory := record.Memory{1, 2, 3}
+	appendRef, err := manager.AppendObjDelegate(requestRef, objRef, memory)
+	assert.Nil(t, err)
+	appendRec, isFound := ledger.GetRecord(record.ID2Key(appendRef.Record))
+	objIndex, ok := ledger.GetIndex(objRef.Record)
+	assert.True(t, ok)
+	assert.Equal(t, objIndex.AppendIDs, []record.ID{appendRef.Record})
+	assert.Equal(t, isFound, true)
+	assert.Equal(t, appendRec, &record.ObjectAppendRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					RequestRecord: requestRef,
+				},
+			},
+			AmendedRecord: objRef,
+		},
+		AppendMemory: memory,
 	})
 }

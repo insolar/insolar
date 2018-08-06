@@ -34,11 +34,10 @@ type Raw struct {
 	Data []byte
 }
 
-// we can't use Hash on data?
-// Hash returns 28 bytes of SHA3 hash on Data field.
-// func (raw *Raw) Hash() Hash {
-// 	return sha3.Sum224(raw.Data)
-// }
+// Hash generates hash for Raw record.
+func (raw *Raw) Hash() []byte {
+	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
+}
 
 type hashableBytes []byte
 
@@ -279,8 +278,8 @@ func MustEncode(rec Record) []byte {
 	return b
 }
 
-// encodeToRaw converts concrete record to Raw record.
-func encodeToRaw(rec Record) (Raw, error) { // nolint: deadcode, megacheck
+// EncodeToRaw converts concrete record to Raw record.
+func EncodeToRaw(rec Record) (Raw, error) { // nolint: deadcode, megacheck
 	b, err := Encode(rec)
 	if err != nil {
 		panic(err)
