@@ -14,11 +14,12 @@
  *    limitations under the License.
  */
 
-package example
+package lottery
 
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -27,9 +28,6 @@ import (
 
 // MemberDomainName is a name for member domain.
 const MemberDomainName = "MemberDomain"
-
-// MemberDomainID is a string representation of class for MemberDomain interface implementations.
-const MemberDomainID = "MemberDomain"
 
 // MemberDomain is a contract that allows to add new members to system.
 type MemberDomain interface {
@@ -58,7 +56,7 @@ func newMemberDomain(parent object.Parent) (*memberDomain, error) {
 
 // GetClassID returns string representation of MemberDomain's class.
 func (md *memberDomain) GetClassID() string {
-	return MemberDomainID
+	return class.MemberDomainID
 }
 
 // CreateMember creates new member as a child to domain storage.
@@ -134,7 +132,7 @@ func NewMemberDomainFactory(parent object.Parent) factory.Factory {
 
 // GetClassID returns string representation of MemberDomain's class.
 func (mdf *memberDomainFactory) GetClassID() string {
-	return MemberDomainID
+	return class.MemberDomainID
 }
 
 // GetReference returns nil for not published factory.

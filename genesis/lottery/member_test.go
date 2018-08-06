@@ -14,13 +14,14 @@
  *    limitations under the License.
  */
 
-package example
+package lottery
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
+	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/insolar/insolar/genesis/model/resolver"
@@ -162,9 +163,10 @@ func TestNewMemberDomain_WithNilParent(t *testing.T) {
 }
 
 func TestMemberDomain_GetClassID(t *testing.T) {
-	mDomain, _ := newMemberDomain(nil)
+	parent := &mockParent{}
+	mDomain, _ := newMemberDomain(parent)
 	domainID := mDomain.GetClassID()
-	assert.Equal(t, MemberDomainID, domainID)
+	assert.Equal(t, class.MemberDomainID, domainID)
 }
 
 func TestMemberDomain_CreateMember(t *testing.T) {
@@ -283,7 +285,7 @@ func TestMemberDomainFactory_GetClassID(t *testing.T) {
 	factory := NewMemberDomainFactory(parent)
 	id := factory.GetClassID()
 
-	assert.Equal(t, MemberDomainID, id)
+	assert.Equal(t, class.MemberDomainID, id)
 }
 
 func TestMemberDomainFactory_GetReference(t *testing.T) {

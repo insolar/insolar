@@ -15,7 +15,7 @@
  */
 
 /*
-Package example provides smart contracts for building example of system work.
+Package lottery provides smart contracts for building lottery for members, which can make bets from balance of their wallets.
 
 Entities:
 
@@ -30,4 +30,4 @@ Entities:
 		memberProxy, err := mDomain.GetMember(record)
 
 */
-package example
+package lottery
