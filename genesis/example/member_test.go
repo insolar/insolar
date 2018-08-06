@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package lottery
+package example
 
 import (
 	"fmt"
