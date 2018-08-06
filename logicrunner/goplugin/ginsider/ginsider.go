@@ -10,13 +10,14 @@ import (
 	"os"
 	"plugin"
 	"reflect"
+	"strconv"
 
 	"github.com/2tvenom/cbor"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
 )
 
 // GoInsider is an RPC interface to run code of plugins
@@ -33,30 +34,58 @@ func NewGoInsider(path string, address string) *GoInsider {
 
 // Call is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *GoInsider) Call(args goplugin.CallReq, reply *goplugin.CallResp) error {
+func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	path, err := t.ObtainCode(args.Object)
-	check(err)
+	if err != nil {
+		return errors.Wrap(err, "couldn't obtain code")
+	}
 
 	p, err := plugin.Open(path)
-	check(err)
+	if err != nil {
+		return errors.Wrap(err, "couldn't open plugin")
+	}
 
 	export, err := p.Lookup("INSEXPORT")
-	check(err)
+	if err != nil {
+		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
+	}
 
 	var dataBuf bytes.Buffer
-	cbor := cbor.NewEncoder(&dataBuf)
-	_, err = cbor.Unmarshal(args.Object.Data, export)
-	check(err)
+	cborEnc := cbor.NewEncoder(&dataBuf)
+	_, err = cborEnc.Unmarshal(args.Object.Data, export)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't decode data into %T", export)
+	}
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
-		panic("wtf, no method " + args.Method + "in the plugin")
+		return errors.New("wtf, no method " + args.Method + "in the plugin")
 	}
 
-	res := method.Call([]reflect.Value{})
+	inLen := method.Type().NumIn()
+	if len(args.Arguments) != inLen {
+		return errors.New("Number of arguments didn't match, got: " + strconv.Itoa(len(args.Arguments)) + ", expected: " + strconv.Itoa(inLen))
+	}
 
-	_, err = cbor.Marshal(export)
-	check(err)
+	in := make([]reflect.Value, inLen)
+	for i := 0; i < inLen; i++ {
+		argType := method.Type().In(i)
+
+		argInterface := reflect.New(argType).Interface()
+		_, err = cborEnc.Unmarshal(args.Arguments[i], argInterface)
+		if err != nil {
+			return errors.Wrap(err, "couldn't unmarshal cbor")
+		}
+
+		in[i] = reflect.ValueOf(argInterface).Elem()
+	}
+
+	res := method.Call(in)
+
+	_, err = cborEnc.Marshal(export)
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal new object data into cbor")
+	}
 
 	reply.Data = dataBuf.Bytes()
 
@@ -123,10 +152,4 @@ func main() {
 		os.Exit(1)
 	}
 	log.Print("bye\n")
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
