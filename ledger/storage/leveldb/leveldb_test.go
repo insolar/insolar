@@ -39,6 +39,19 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// TODO: uncomment when record storage is functional
+// func TestCreatesRootRecord(t *testing.T) {
+// 	ledger, err := InitDB()
+// 	assert.Nil(t, err)
+// 	defer ledger.Close()
+//
+// 	var zeroID record.ID
+// 	copy([]byte(zeroRecordBinary)[:record.IDSize], zeroID[:])
+// 	zeroRef, ok := ledger.GetRecord(record.ID2Key(zeroID))
+// 	assert.True(t, ok)
+// 	assert.Equal(t, ledger.zeroRef, zeroRef)
+// }
+
 func TestGetIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
@@ -55,11 +68,10 @@ func TestSetIndexStoresDataInDB(t *testing.T) {
 	defer ledger.Close()
 
 	idx := index.Lifeline{
-		LatestStateID:   record.ID{1, 2, 3},
-		LatestStateType: 1,
-		AppendIDs:       []record.ID{{1}, {2}, {3}},
+		LatestStateID: record.ID{1, 2, 3},
+		AppendIDs:     []record.ID{{1}, {2}, {3}},
 	}
-	err = ledger.SetIndex(record.ID{0}, idx)
+	err = ledger.SetIndex(record.ID{0}, &idx)
 	assert.Nil(t, err)
 
 	storedIndex, isFound := ledger.GetIndex(record.ID{0})

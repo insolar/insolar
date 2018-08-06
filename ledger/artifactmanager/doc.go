@@ -14,9 +14,5 @@
  *    limitations under the License.
  */
 
-package object
-
-// Proxy marks instance as proxy object.
-type Proxy interface {
-	Child
-}
+// Package artifactmanager provides high-level storage API for vm module.
+package artifactmanager

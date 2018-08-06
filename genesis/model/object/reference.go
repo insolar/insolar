@@ -34,7 +34,7 @@ const (
 
 // Reference represents address of object.
 type Reference interface {
-	Proxy
+	Child
 	String() string
 	GetRecord() string
 	GetDomain() string

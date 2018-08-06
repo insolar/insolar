@@ -14,16 +14,38 @@
  *    limitations under the License.
  */
 
-package factory
+package resolver
 
 import (
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
-// Factory allows to create new objects with reference.
-type Factory interface {
+// Proxy marks instance as proxy object.
+type Proxy interface {
 	object.Child
-	// Create returns new instance of specified type.
-	Create(parent object.Parent) (resolver.Proxy, error)
+}
+
+// BaseProxy is a base implementation of Proxy.
+type BaseProxy struct {
+	Instance object.Child
+}
+
+// GetReference is a proxy call for instance method.
+func (bp *BaseProxy) GetReference() object.Reference {
+	return bp.Instance.GetReference()
+}
+
+// GetParent is a proxy call for instance method.
+func (bp *BaseProxy) GetParent() object.Parent {
+	return bp.Instance.GetParent()
+}
+
+// GetResolver always returns nil.
+func (bp *BaseProxy) GetResolver() Resolver {
+	return nil
+}
+
+// GetClassID is a proxy call for instance method.
+func (bp *BaseProxy) GetClassID() string {
+	return bp.Instance.GetClassID()
 }

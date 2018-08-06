@@ -48,7 +48,7 @@ func (r *contextResolver) GetObject(reference interface{}, cls interface{}) (int
 		return nil, err
 	}
 
-	proxy, ok := obj.(object.Proxy)
+	proxy, ok := obj.(Proxy)
 	if !ok {
 		return nil, fmt.Errorf("object is not Proxy")
 	}
@@ -64,7 +64,7 @@ func (r *contextResolver) GetObject(reference interface{}, cls interface{}) (int
 		if err != nil {
 			return nil, err
 		}
-		proxy = newProxy.(object.Proxy)
+		proxy = newProxy.(Proxy)
 	}
 
 	classID, ok := cls.(string)
