@@ -37,6 +37,9 @@ func (c *mockProxyReference) GetReference() object.Reference {
 	return nil
 }
 
+func (c *mockProxyReference) SetReference(ref object.Reference) {
+}
+
 func (c *mockProxyReference) GetParent() object.Parent {
 	return nil
 }
@@ -71,6 +74,10 @@ func (p *mockParentNotChild) GetClassID() string {
 
 func (p *mockParentNotChild) GetReference() object.Reference {
 	return p.Reference
+}
+
+func (p *mockParentNotChild) SetReference(reference object.Reference) {
+	p.Reference = reference
 }
 
 func (p *mockParentNotChild) GetChildStorage() storage.Storage {

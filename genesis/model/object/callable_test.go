@@ -14,25 +14,30 @@
  *    limitations under the License.
  */
 
-/*
-Package object provides basic interfaces and default implementations of them. Provides reference interface and types of reference scope.
-
-Usage:
-	package main
-
-	func main() {
-		domain := "1"
-		record := "1"
-		ref, err := NewReference(domain, record, GlobalScope)
-	}
-
-
-Callable allows itself to be called by its reference
-BaseCallable is a base implementation of Callable
-
-Usage:
-	GetReference() - returns reference
-	SetReference(reference) - sets reference
-
-*/
 package object
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+var ref = &reference{
+	domain: "domain1",
+	record: "record1",
+	scope:  GlobalScope,
+}
+
+func TestBaseCallable_SetReference(t *testing.T) {
+	callable := &BaseCallable{}
+	callable.SetReference(ref)
+
+	assert.Equal(t, ref, callable.reference)
+}
+
+func TestBaseCallable_GetReference(t *testing.T) {
+	callable := &BaseCallable{
+		reference: ref,
+	}
+	assert.Equal(t, ref, callable.GetReference())
+}

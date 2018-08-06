@@ -120,6 +120,7 @@ func (mdp *memberDomainProxy) GetMember(record string) (resolver.Proxy, error) {
 }
 
 type memberDomainFactory struct {
+	object.BaseCallable
 	parent object.Parent
 }
 
@@ -133,11 +134,6 @@ func NewMemberDomainFactory(parent object.Parent) factory.Factory {
 // GetClassID returns string representation of MemberDomain's class.
 func (mdf *memberDomainFactory) GetClassID() string {
 	return class.MemberDomainID
-}
-
-// GetReference returns nil for not published factory.
-func (mdf *memberDomainFactory) GetReference() object.Reference {
-	return nil
 }
 
 // GetParent returns parent

@@ -14,25 +14,27 @@
  *    limitations under the License.
  */
 
-/*
-Package object provides basic interfaces and default implementations of them. Provides reference interface and types of reference scope.
-
-Usage:
-	package main
-
-	func main() {
-		domain := "1"
-		record := "1"
-		ref, err := NewReference(domain, record, GlobalScope)
-	}
-
-
-Callable allows itself to be called by its reference
-BaseCallable is a base implementation of Callable
-
-Usage:
-	GetReference() - returns reference
-	SetReference(reference) - sets reference
-
-*/
 package object
+
+// Callable allows itself to be called by its reference.
+type Callable interface {
+	Object
+	GetReference() Reference
+	SetReference(reference Reference)
+}
+
+// BaseCallable is a base implementation of Callable.
+type BaseCallable struct {
+	BaseObject
+	reference Reference
+}
+
+// GetReference returns reference.
+func (bc *BaseCallable) GetReference() Reference {
+	return bc.reference
+}
+
+// SetReference sets reference.
+func (bc *BaseCallable) SetReference(reference Reference) {
+	bc.reference = reference
+}

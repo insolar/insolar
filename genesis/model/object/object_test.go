@@ -14,25 +14,17 @@
  *    limitations under the License.
  */
 
-/*
-Package object provides basic interfaces and default implementations of them. Provides reference interface and types of reference scope.
-
-Usage:
-	package main
-
-	func main() {
-		domain := "1"
-		record := "1"
-		ref, err := NewReference(domain, record, GlobalScope)
-	}
-
-
-Callable allows itself to be called by its reference
-BaseCallable is a base implementation of Callable
-
-Usage:
-	GetReference() - returns reference
-	SetReference(reference) - sets reference
-
-*/
 package object
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestBaseObject_GetClassID(t *testing.T) {
+	obj := &BaseObject{}
+
+	assert.Equal(t, class.ObjectID, obj.GetClassID())
+}

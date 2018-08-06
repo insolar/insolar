@@ -40,6 +40,10 @@ func (p *mockProxy) GetReference() object.Reference {
 	return nil
 }
 
+func (p *mockProxy) SetReference(reference object.Reference) {
+
+}
+
 func (p *mockProxy) GetParent() object.Parent {
 	return p.parent
 }
@@ -62,6 +66,10 @@ func (f *mockFactory) GetReference() object.Reference {
 
 func (f *mockFactory) GetParent() object.Parent {
 	return nil
+}
+
+func (f *mockFactory) SetReference(reference object.Reference) {
+
 }
 
 type mockFactoryError struct {
@@ -252,12 +260,6 @@ func TestInstanceDomainFactory_GetClassID(t *testing.T) {
 	parent := &mockParent{}
 	factory := NewInstanceDomainFactory(parent)
 	assert.Equal(t, class.InstanceDomainID, factory.GetClassID())
-}
-
-func TestInstanceDomainFactory_GetReference(t *testing.T) {
-	parent := &mockParent{}
-	factory := NewInstanceDomainFactory(parent)
-	assert.Nil(t, factory.GetReference())
 }
 
 func TestInstanceDomainFactory_Create(t *testing.T) {

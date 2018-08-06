@@ -75,5 +75,6 @@ func (r *contextResolver) GetObject(reference interface{}, cls interface{}) (int
 		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
 
+	proxy.SetReference(ref)
 	return proxy, nil
 }

@@ -52,6 +52,9 @@ func (r *invalidScopeReference) GetReference() object.Reference {
 	return r
 }
 
+func (r *invalidScopeReference) SetReference(ref object.Reference) {
+}
+
 func (r *invalidScopeReference) GetParent() object.Parent {
 	return nil
 }

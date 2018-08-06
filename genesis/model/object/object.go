@@ -54,12 +54,6 @@ type ComposingContainer interface {
 	GetOrCreateComposite(interfaceKey string, compositeFactory CompositeFactory) (Composite, error)
 }
 
-// Callable allows itself to be called by its reference.
-type Callable interface {
-	Object
-	GetReference() Reference
-}
-
 // Parent allows to create objects (smart contracts) inside itself as children.
 type Parent interface {
 	Callable
