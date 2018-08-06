@@ -115,18 +115,16 @@ func InitDB() (*LevelLedger, error) {
 		},
 	}
 	_, err = db.Get([]byte(zeroRecordHash), nil)
-	switch err {
-	case nil:
-		return &ledger, nil
-	case leveldb.ErrNotFound:
+	if err == leveldb.ErrNotFound {
 		err = db.Put([]byte(zeroRecordHash), []byte(zeroRecordBinary), nil)
 		if err != nil {
 			return nil, err
 		}
 		return &ledger, nil
-	default:
+	} else if err != nil {
 		return nil, err
 	}
+	return &ledger, nil
 }
 
 // GetRecordByKey returns record from leveldb by record.Key
