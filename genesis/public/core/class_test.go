@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
+	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -127,7 +128,9 @@ func TestClassDomainFactory_Create(t *testing.T) {
 
 	classDmn, err := newClassDomain(parent)
 	assert.Equal(t, &classDomainProxy{
-		instance: classDmn,
+		BaseProxy: resolver.BaseProxy{
+			Instance: classDmn,
+		},
 	}, proxy)
 }
 
@@ -147,7 +150,9 @@ func TestNewClassDomainProxy(t *testing.T) {
 	assert.NoError(t, clErr)
 
 	assert.Equal(t, &classDomainProxy{
-		instance: newClDomain,
+		BaseProxy: resolver.BaseProxy{
+			Instance: newClDomain,
+		},
 	}, clDomainProxy)
 }
 
