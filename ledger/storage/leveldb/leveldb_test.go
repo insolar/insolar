@@ -131,29 +131,57 @@ func TestSetRecord(t *testing.T) {
 // 	assert.Equal(t, ledger.zeroRef, zeroRef)
 // }
 
-func TestGetIndexOnEmptyDataReturnsNotFound(t *testing.T) {
+func TestGetClassIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
 	defer ledger.Close()
 
-	idx, isFound := ledger.GetIndex(record.ID{1})
+	idx, isFound := ledger.GetClassIndex(record.ID{1})
 	assert.Equal(t, isFound, false)
 	assert.Nil(t, idx)
 }
 
-func TestSetIndexStoresDataInDB(t *testing.T) {
+func TestSetClassIndexStoresDataInDB(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
 	defer ledger.Close()
 
-	idx := index.Lifeline{
+	idx := index.ClassLifeline{
+		LatestStateID: record.ID{1, 2, 3},
+		MigrationIDs:  []record.ID{{1}, {2}, {3}},
+	}
+	err = ledger.SetClassIndex(record.ID{0}, &idx)
+	assert.Nil(t, err)
+
+	storedIndex, isFound := ledger.GetClassIndex(record.ID{0})
+	assert.Equal(t, isFound, true)
+	assert.Equal(t, *storedIndex, idx)
+}
+
+func TestGetObjectIndexOnEmptyDataReturnsNotFound(t *testing.T) {
+	ledger, err := InitDB()
+	assert.Nil(t, err)
+	defer ledger.Close()
+
+	idx, isFound := ledger.GetObjectIndex(record.ID{1})
+	assert.Equal(t, isFound, false)
+	assert.Nil(t, idx)
+}
+
+func TestSetObjectIndexStoresDataInDB(t *testing.T) {
+	ledger, err := InitDB()
+	assert.Nil(t, err)
+	defer ledger.Close()
+
+	idx := index.ObjectLifeline{
+		ClassID:       record.ID{5, 6},
 		LatestStateID: record.ID{1, 2, 3},
 		AppendIDs:     []record.ID{{1}, {2}, {3}},
 	}
-	err = ledger.SetIndex(record.ID{0}, &idx)
+	err = ledger.SetObjectIndex(record.ID{0}, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, isFound := ledger.GetIndex(record.ID{0})
+	storedIndex, isFound := ledger.GetObjectIndex(record.ID{0})
 	assert.Equal(t, isFound, true)
 	assert.Equal(t, *storedIndex, idx)
 }
