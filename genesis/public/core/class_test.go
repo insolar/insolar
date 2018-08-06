@@ -42,7 +42,7 @@ func TestClassDomain_GetClass_NoSuchRecord(t *testing.T) {
 	assert.NoError(t, err)
 	cl, err := classDom.GetClass("test")
 
-	assert.Error(t, err)
+	assert.EqualError(t, err, "object with record test does not exist")
 	assert.Nil(t, cl)
 }
 
