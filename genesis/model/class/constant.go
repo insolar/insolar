@@ -36,3 +36,6 @@ const ClsDomainID = "ClassDomain"
 
 // InstanceDomainID is a string representation of class for InstanceDomain interface implementations.
 const InstanceDomainID = "InstanceDomain"
+
+// MemberDomainID is a string representation of class for MemberDomain interface implementations.
+const MemberDomainID = "MemberDomain"

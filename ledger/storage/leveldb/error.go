@@ -14,18 +14,11 @@
  *    limitations under the License.
  */
 
-package storage
+package leveldb
 
-import (
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
+import "errors"
+
+var (
+	// ErrNotFound returns if record not found in leveldb storage.
+	ErrNotFound = errors.New("record not found")
 )
-
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
-	GetRecord(record.ID) (record.Record, error)
-	SetRecord(record.Record) (record.ID, error)
-
-	GetIndex(record.ID) (*index.Lifeline, bool)
-	SetIndex(record.ID, *index.Lifeline) error
-}
