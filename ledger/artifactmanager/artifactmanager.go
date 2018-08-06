@@ -63,6 +63,30 @@ func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (
 	return classIndex, nil
 }
 
+func (m *LedgerArtifactManager) getActiveObjectIndex(objRef record.Reference) (*index.Lifeline, error) {
+	objRecord, isFound := m.storer.GetRecord(record.ID2Key(objRef.Record))
+	if !isFound {
+		return nil, errors.New("object record is not found")
+	}
+	if _, ok := objRecord.(*record.ObjectActivateRecord); !ok {
+		return nil, errors.New("provided reference is not an object record")
+	}
+
+	objIndex, isFound := m.storer.GetIndex(objRef.Record)
+	if !isFound {
+		return nil, errors.New("object is not activated")
+	}
+	latestObjRecord, isFound := m.storer.GetRecord(record.ID2Key(objIndex.LatestStateID))
+	if !isFound {
+		return nil, errors.New("latest object record is not found")
+	}
+	if _, ok := latestObjRecord.(*record.DeactivationRecord); ok {
+		return nil, errors.New("object is deactivated")
+	}
+
+	return objIndex, nil
+}
+
 func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
 	m.archPref = pref
 }
@@ -179,4 +203,137 @@ func (m *LedgerArtifactManager) UpdateClass(
 	}
 
 	return amendRef, nil
+}
+
+// ActivateObj creates and activates new object from given class (ObjectActivateRecord).
+func (m *LedgerArtifactManager) ActivateObj(
+	requestRef, classRef record.Reference, memory record.Memory,
+) (record.Reference, error) {
+
+	_, err := m.getActiveClassIndex(classRef)
+	if err != nil {
+		return record.Reference{}, err
+	}
+
+	rec := record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					RequestRecord: requestRef,
+				},
+			},
+		},
+		ClassActivateRecord: classRef,
+		Memory:              memory,
+	}
+
+	return m.storeRecord(&rec)
+}
+
+// DeactivateObj deactivates object (DeactivationRecord).
+func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Reference) (record.Reference, error) {
+	objIndex, err := m.getActiveObjectIndex(objRef)
+	if err != nil {
+		return record.Reference{}, err
+	}
+
+	rec := record.DeactivationRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					RequestRecord: requestRef,
+				},
+			},
+			AmendedRecord: record.Reference{
+				Domain: objRef.Domain,
+				Record: objIndex.LatestStateID,
+			},
+		},
+	}
+	deactivationRef, err := m.storeRecord(&rec)
+	if err != nil {
+		return record.Reference{}, errors.New("failed to store deactivation record")
+	}
+	objIndex.LatestStateID = deactivationRef.Record
+	err = m.storer.SetIndex(objRef.Record, objIndex)
+	if err != nil {
+		// TODO: add transaction
+		return record.Reference{}, errors.New("failed to store lifeline index")
+	}
+	return deactivationRef, nil
+}
+
+// UpdateObj allows to change object state (ObjectAmendRecord).
+func (m *LedgerArtifactManager) UpdateObj(
+	requestRef, objRef record.Reference, memory record.Memory,
+) (record.Reference, error) {
+	objIndex, err := m.getActiveObjectIndex(objRef)
+	if err != nil {
+		return record.Reference{}, err
+	}
+
+	rec := record.ObjectAmendRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					RequestRecord: requestRef,
+				},
+			},
+			AmendedRecord: record.Reference{
+				Domain: objRef.Domain,
+				Record: objIndex.LatestStateID,
+			},
+		},
+		NewMemory: memory,
+	}
+
+	amendRef, err := m.storeRecord(&rec)
+	if err != nil {
+		return record.Reference{}, errors.New("failed to store amend record")
+	}
+	objIndex.LatestStateID = amendRef.Record
+	objIndex.AppendIDs = []record.ID{}
+	err = m.storer.SetIndex(objRef.Record, objIndex)
+	if err != nil {
+		// TODO: add transaction
+		return record.Reference{}, errors.New("failed to store lifeline index")
+	}
+	return amendRef, nil
+}
+
+func (m *LedgerArtifactManager) AppendObjDelegate(
+	requestRef, objRef record.Reference, memory record.Memory,
+) (record.Reference, error) {
+	objIndex, err := m.getActiveObjectIndex(objRef)
+	if err != nil {
+		return record.Reference{}, err
+	}
+
+	rec := record.ObjectAppendRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					RequestRecord: requestRef,
+				},
+			},
+			AmendedRecord: record.Reference{
+				Domain: objRef.Domain,
+				Record: objIndex.LatestStateID,
+			},
+		},
+		AppendMemory: memory,
+	}
+
+	appendRef, err := m.storeRecord(&rec)
+	if err != nil {
+		return record.Reference{}, errors.New("failed to store append record")
+	}
+	objIndex.LatestStateID = appendRef.Record
+	objIndex.AppendIDs = append(objIndex.AppendIDs, appendRef.Record)
+	err = m.storer.SetIndex(objRef.Record, objIndex)
+	if err != nil {
+		// TODO: add transaction
+		return record.Reference{}, errors.New("failed to store lifeline index")
+	}
+	return appendRef, nil
 }
