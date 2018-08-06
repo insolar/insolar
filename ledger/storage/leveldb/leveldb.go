@@ -121,8 +121,7 @@ func InitDB() (*LevelLedger, error) {
 			return nil, err
 		}
 		return &ledger, nil
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 	return &ledger, nil
