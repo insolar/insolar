@@ -35,8 +35,29 @@ func TestClassDomain_GetClassID(t *testing.T) {
 	assert.Equal(t, class.ClsDomainID, domainID)
 }
 
-func TestClassDomain_GetClass(t *testing.T) {
+func TestClassDomain_GetClass_NoSuchRecord(t *testing.T) {
+	parent := &mockParent{}
+	classDom, err := newClassDomain(parent)
+	assert.NoError(t, err)
+	cl, err := classDom.GetClass("test")
 
+	assert.Error(t, err)
+	assert.Nil(t, cl)
+}
+
+func TestClassDomain_GetClass(t *testing.T) {
+	parent := &mockParent{}
+	classDom, err := newClassDomain(parent)
+	assert.NoError(t, err)
+
+	classFactory := NewClassDomainFactory(parent)
+	recordId, regErr := classDom.RegisterClass(classFactory)
+	assert.NoError(t, regErr)
+
+	resolved, err := classDom.GetClass(recordId)
+
+	assert.NoError(t, err)
+	assert.Equal(t, classFactory, resolved)
 }
 
 func TestNewClassDomain(t *testing.T) {
@@ -77,6 +98,20 @@ func TestNewClassDomainFactory(t *testing.T) {
 	assert.Equal(t, expected, factory)
 }
 
+func TestClassDomainFactory_GetParent(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewClassDomainFactory(parent)
+
+	assert.Nil(t, factory.GetParent())
+}
+
+func TestClassDomainFactory_GetReference(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewClassDomainFactory(parent)
+	reference := factory.GetReference()
+	assert.Nil(t, reference)
+}
+
 func TestClassDomainFactory_GetClassID(t *testing.T) {
 	parent := &mockParent{}
 	factory := NewClassDomainFactory(parent)
@@ -94,6 +129,12 @@ func TestClassDomainFactory_Create(t *testing.T) {
 	assert.Equal(t, &classDomainProxy{
 		instance: classDmn,
 	}, proxy)
+}
+
+func TestClassDomainFactory_Create_NoParent(t *testing.T) {
+	factory := NewClassDomainFactory(nil)
+	_, err := factory.Create(nil)
+	assert.EqualError(t, err, "parent must not be nil")
 }
 
 func TestNewClassDomainProxy(t *testing.T) {
@@ -125,6 +166,25 @@ func TestClassDomainProxy_GetReference(t *testing.T) {
 	reference := clDomainProxy.GetReference()
 	// TODO should return actual reference
 	assert.Nil(t, reference)
+}
+
+func TestClassDomainProxy_GetClass(t *testing.T) {
+	parent := &mockParent{}
+	clDomainProxy, err := newClassDomainProxy(parent)
+	assert.NoError(t, err)
+
+	result, err := clDomainProxy.GetClass("test")
+	// TODO should return actual reference
+	assert.Nil(t, result)
+}
+
+func TestClassDomainProxy_GetParent(t *testing.T) {
+	parent := &mockParent{}
+	clDomainProxy, err := newClassDomainProxy(parent)
+	assert.NoError(t, err)
+
+	actual_parent := clDomainProxy.GetParent()
+	assert.Equal(t, parent, actual_parent)
 }
 
 func TestClassDomainProxy_RegisterClass(t *testing.T) {
