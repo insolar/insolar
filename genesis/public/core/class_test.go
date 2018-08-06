@@ -85,7 +85,6 @@ func TestClassDomain_RegisterClass(t *testing.T) {
 	recordId, regErr := classDom.RegisterClass(NewClassDomainFactory(parent))
 
 	assert.NoError(t, regErr)
-	assert.NotEmpty(t, recordId)
 
 	_, err = uuid.FromString(recordId)
 	assert.NoError(t, err)
