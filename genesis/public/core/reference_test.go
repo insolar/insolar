@@ -29,9 +29,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockCallable struct {
+	reference object.Reference
+}
+
+func (c *mockCallable) GetReference() object.Reference {
+	return c.reference
+}
+
+func (c *mockCallable) SetReference(reference object.Reference) {
+	c.reference = reference
+}
+
 type mockChild struct {
-	// TODO remove BaseCallable
-	object.BaseCallable
+	mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -47,8 +58,7 @@ func (c *mockChild) GetParent() object.Parent {
 var child = &mockChild{}
 
 type mockParent struct {
-	// TODO remove BaseCallable
-	object.BaseCallable
+	mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -92,8 +102,7 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 var globalParent = &mockParent{}
 
 type mockDomain struct {
-	// TODO remove BaseCallable
-	object.BaseCallable
+	mockCallable
 	mockParent
 	mockChild
 }

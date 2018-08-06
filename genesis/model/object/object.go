@@ -54,29 +54,6 @@ type ComposingContainer interface {
 	GetOrCreateComposite(interfaceKey string, compositeFactory CompositeFactory) (Composite, error)
 }
 
-// Callable allows itself to be called by its reference.
-type Callable interface {
-	Object
-	GetReference() Reference
-	SetReference(reference Reference)
-}
-
-// BaseCallable is a base implementation of Callable.
-type BaseCallable struct {
-	BaseObject
-	reference Reference
-}
-
-// GetReference return reference.
-func (bc *BaseCallable) GetReference() Reference {
-	return bc.reference
-}
-
-// SetReference sets reference.
-func (bc *BaseCallable) SetReference(reference Reference) {
-	bc.reference = reference
-}
-
 // Parent allows to create objects (smart contracts) inside itself as children.
 type Parent interface {
 	Callable
