@@ -50,14 +50,7 @@ func (r *Handler) GetObject(reference interface{}, classID interface{}) (interfa
 	}
 	switch ref.GetScope() {
 	case object.GlobalScope:
-		ret, err := r.globalResolver.GetObject(ref, classID)
-		if err != nil {
-			return nil, err
-		}
-		//ret.(interface {
-		//	SetReference(reference interface{})
-		//}).SetReference(reference)
-		return ret, nil
+		return r.globalResolver.GetObject(ref, classID)
 	case object.ContextScope:
 		return r.contextResolver.GetObject(ref, classID)
 	case object.ChildScope:

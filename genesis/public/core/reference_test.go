@@ -30,21 +30,14 @@ import (
 )
 
 type mockChild struct {
-	Reference      object.Reference
+	// TODO remove BaseCallable
+	object.BaseCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
 
 func (c *mockChild) GetClassID() string {
 	return "mockChild"
-}
-
-func (c *mockChild) GetReference() object.Reference {
-	return c.Reference
-}
-
-func (c *mockChild) SetReference(reference object.Reference) {
-	c.Reference = reference
 }
 
 func (c *mockChild) GetParent() object.Parent {
@@ -54,7 +47,8 @@ func (c *mockChild) GetParent() object.Parent {
 var child = &mockChild{}
 
 type mockParent struct {
-	Reference      object.Reference
+	// TODO remove BaseCallable
+	object.BaseCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -65,14 +59,6 @@ func (p *mockParent) GetParent() object.Parent {
 
 func (p *mockParent) GetClassID() string {
 	return "mockParent"
-}
-
-func (p *mockParent) GetReference() object.Reference {
-	return p.Reference
-}
-
-func (p *mockParent) SetReference(reference object.Reference) {
-	p.Reference = reference
 }
 
 func (p *mockParent) GetChildStorage() storage.Storage {
@@ -105,6 +91,21 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 
 var globalParent = &mockParent{}
 
+type mockDomain struct {
+	// TODO remove BaseCallable
+	object.BaseCallable
+	mockParent
+	mockChild
+}
+
+func (d *mockDomain) GetClassID() string {
+	return "mockDomain"
+}
+
+func (d *mockDomain) GetParent() object.Parent {
+	return d.mockChild.parent
+}
+
 // Create map for global resolving
 var globalResolverMap = make(map[string]resolver.Proxy)
 var domainString = "123"
@@ -116,7 +117,7 @@ var initRefDomainProxy = newReferenceDomainProxy(globalParent)
 
 // Set one map for Handler and ReferenceDomain
 func init() {
-	globalResolverMap["123"] = globalParent
+	globalResolverMap["123"] = &mockDomain{}
 	// Create Handler empty instance
 	resolverHandler := resolver.NewHandler(nil)
 	// Set map to Handler.GlobalResolver

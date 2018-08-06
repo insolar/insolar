@@ -67,7 +67,7 @@ func TestReference_String(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("#%s.#%s", domain, record), stringRef)
 }
 
-func TestReference_GetReference(t *testing.T) {
+/*func TestReference_GetReference(t *testing.T) {
 	domain := "134"
 	record := "156"
 	ref, _ := NewReference(domain, record, GlobalScope)
@@ -75,7 +75,7 @@ func TestReference_GetReference(t *testing.T) {
 	refRef := ref.GetReference()
 
 	assert.Equal(t, ref, refRef)
-}
+}*/
 
 func TestReference_GetRecord(t *testing.T) {
 	domain := "134"

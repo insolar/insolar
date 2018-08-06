@@ -136,6 +136,7 @@ func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]res
 }
 
 type referenceDomainFactory struct {
+	object.BaseCallable
 	parent object.Parent
 }
 

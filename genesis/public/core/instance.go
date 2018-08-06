@@ -121,6 +121,7 @@ func (idp *instanceDomainProxy) GetInstance(record string) (resolver.Proxy, erro
 }
 
 type instanceDomainFactory struct {
+	object.BaseCallable
 	parent object.Parent
 }
 

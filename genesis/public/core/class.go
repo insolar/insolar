@@ -114,6 +114,7 @@ func (cdp *classDomainProxy) GetClass(record string) (factory.Factory, error) {
 }
 
 type classDomainFactory struct {
+	object.BaseCallable
 	parent object.Parent
 }
 
