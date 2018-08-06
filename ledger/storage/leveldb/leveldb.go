@@ -133,19 +133,35 @@ func (ll *LevelLedger) AddRecord(rec record.Record) (record.Reference, error) {
 	return record.Reference{}, nil
 }
 
-// GetIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) GetIndex(id record.ID) (*index.Lifeline, bool) {
+// GetClassIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
+func (ll *LevelLedger) GetClassIndex(id record.ID) (*index.ClassLifeline, bool) {
 	buf, err := ll.ldb.Get(append([]byte{scopeIDLifeline}, id[:]...), nil)
 	if err != nil {
 		return nil, false
 	}
-	idx := index.DecodeLifeline(buf)
+	idx := index.DecodeClassLifeline(buf)
 	return &idx, true
 }
 
-// SetIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) SetIndex(id record.ID, idx *index.Lifeline) error {
-	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeLifeline(idx), nil)
+// SetClassIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
+func (ll *LevelLedger) SetClassIndex(id record.ID, idx *index.ClassLifeline) error {
+	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeClassLifeline(idx), nil)
+	return err
+}
+
+// GetObjectIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
+func (ll *LevelLedger) GetObjectIndex(id record.ID) (*index.ObjectLifeline, bool) {
+	buf, err := ll.ldb.Get(append([]byte{scopeIDLifeline}, id[:]...), nil)
+	if err != nil {
+		return nil, false
+	}
+	idx := index.DecodeObjectLifeline(buf)
+	return &idx, true
+}
+
+// SetClassIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
+func (ll *LevelLedger) SetObjectIndex(id record.ID, idx *index.ObjectLifeline) error {
+	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeObjectLifeline(idx), nil)
 	return err
 }
 

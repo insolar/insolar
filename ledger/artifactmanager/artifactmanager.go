@@ -39,7 +39,7 @@ func (m *LedgerArtifactManager) storeRecord(rec record.Record) (record.Reference
 	return ref, nil
 }
 
-func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (*index.Lifeline, error) {
+func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (*index.ClassLifeline, error) {
 	classRecord, isFound := m.storer.GetRecord(record.ID2Key(classRef.Record))
 	if !isFound {
 		return nil, errors.New("class record is not found")
@@ -48,7 +48,7 @@ func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (
 		return nil, errors.New("provided reference is not a class record")
 	}
 
-	classIndex, isFound := m.storer.GetIndex(classRef.Record)
+	classIndex, isFound := m.storer.GetClassIndex(classRef.Record)
 	if !isFound {
 		return nil, errors.New("class is not activated")
 	}
@@ -63,7 +63,7 @@ func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (
 	return classIndex, nil
 }
 
-func (m *LedgerArtifactManager) getActiveObjectIndex(objRef record.Reference) (*index.Lifeline, error) {
+func (m *LedgerArtifactManager) getActiveObjectIndex(objRef record.Reference) (*index.ObjectLifeline, error) {
 	objRecord, isFound := m.storer.GetRecord(record.ID2Key(objRef.Record))
 	if !isFound {
 		return nil, errors.New("object record is not found")
@@ -72,7 +72,7 @@ func (m *LedgerArtifactManager) getActiveObjectIndex(objRef record.Reference) (*
 		return nil, errors.New("provided reference is not an object record")
 	}
 
-	objIndex, isFound := m.storer.GetIndex(objRef.Record)
+	objIndex, isFound := m.storer.GetObjectIndex(objRef.Record)
 	if !isFound {
 		return nil, errors.New("object is not activated")
 	}
@@ -158,7 +158,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 		return record.Reference{}, errors.New("failed to store deactivation record")
 	}
 	classIndex.LatestStateID = deactivationRef.Record
-	err = m.storer.SetIndex(classRef.Record, classIndex)
+	err = m.storer.SetClassIndex(classRef.Record, classIndex)
 	if err != nil {
 		// TODO: add transaction
 		return record.Reference{}, errors.New("failed to store lifeline index")
@@ -196,7 +196,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 		return record.Reference{}, errors.New("failed to store amend record")
 	}
 	classIndex.LatestStateID = amendRef.Record
-	err = m.storer.SetIndex(classRef.Record, classIndex)
+	err = m.storer.SetClassIndex(classRef.Record, classIndex)
 	if err != nil {
 		// TODO: add transaction
 		return record.Reference{}, errors.New("failed to store lifeline index")
@@ -255,7 +255,7 @@ func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Referenc
 		return record.Reference{}, errors.New("failed to store deactivation record")
 	}
 	objIndex.LatestStateID = deactivationRef.Record
-	err = m.storer.SetIndex(objRef.Record, objIndex)
+	err = m.storer.SetObjectIndex(objRef.Record, objIndex)
 	if err != nil {
 		// TODO: add transaction
 		return record.Reference{}, errors.New("failed to store lifeline index")
@@ -293,7 +293,7 @@ func (m *LedgerArtifactManager) UpdateObj(
 	}
 	objIndex.LatestStateID = amendRef.Record
 	objIndex.AppendIDs = []record.ID{}
-	err = m.storer.SetIndex(objRef.Record, objIndex)
+	err = m.storer.SetObjectIndex(objRef.Record, objIndex)
 	if err != nil {
 		// TODO: add transaction
 		return record.Reference{}, errors.New("failed to store lifeline index")
@@ -330,7 +330,7 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	}
 	objIndex.LatestStateID = appendRef.Record
 	objIndex.AppendIDs = append(objIndex.AppendIDs, appendRef.Record)
-	err = m.storer.SetIndex(objRef.Record, objIndex)
+	err = m.storer.SetObjectIndex(objRef.Record, objIndex)
 	if err != nil {
 		// TODO: add transaction
 		return record.Reference{}, errors.New("failed to store lifeline index")
