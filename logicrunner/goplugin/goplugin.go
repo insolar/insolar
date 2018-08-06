@@ -114,9 +114,11 @@ func (gp *GoPlugin) Stop() {
 		log.Fatal(err)
 	}
 
-	err = gp.sock.Close()
-	if err != nil {
-		log.Fatal(err)
+	if gp.sock != nil {
+		err = gp.sock.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
