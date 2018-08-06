@@ -63,6 +63,9 @@ type Hash [HashSize]byte
 // ID is a record ID. Compounds PulseNum and Type
 type ID [IDSize]byte
 
+// ArchType is a virtual machine runtime type
+type ArchType uint32
+
 // WriteHash implements hash.Writer interface.
 func (id ID) WriteHash(w io.Writer) {
 	err := binary.Write(w, binary.BigEndian, id)

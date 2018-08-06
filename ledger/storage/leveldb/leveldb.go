@@ -29,13 +29,16 @@ import (
 )
 
 const (
-	dbDirPath = "_db"
+	dbDirPath        = "_db"
+	zeroRecordBinary = "" // TODO: Empty ClassActivateRecord serialized
+	zeroRecordHash   = "" // TODO: Hash from zeroRecordBinary
 )
 
 // LevelLedger represents ledger's LevelDB storage.
 type LevelLedger struct {
 	ldb     *leveldb.DB
 	pulseFn func() record.PulseNum
+	zeroRef record.Reference
 }
 
 const (
@@ -98,13 +101,32 @@ func InitDB() (*LevelLedger, error) {
 		return nil, err
 	}
 
-	return &LevelLedger{
+	var zeroID record.ID
+	copy([]byte(zeroRecordBinary)[:record.IDSize], zeroID[:])
+	ledger := LevelLedger{
 		ldb: db,
 		// FIXME: temporary pulse implementation
 		pulseFn: func() record.PulseNum {
 			return record.PulseNum(time.Now().Unix() / 10)
 		},
-	}, nil
+		zeroRef: record.Reference{
+			Domain: record.ID{}, // TODO: fill domain
+			Record: zeroID,
+		},
+	}
+	_, err = db.Get([]byte(zeroRecordHash), nil)
+	switch err {
+	case nil:
+		return &ledger, nil
+	case leveldb.ErrNotFound:
+		err = db.Put([]byte(zeroRecordHash), []byte(zeroRecordBinary), nil)
+		if err != nil {
+			return nil, err
+		}
+		return &ledger, nil
+	default:
+		return nil, err
+	}
 }
 
 // GetRecordByKey returns record from leveldb by record.Key
