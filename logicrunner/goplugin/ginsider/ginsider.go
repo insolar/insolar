@@ -35,28 +35,38 @@ func NewGoInsider(path string, address string) *GoInsider {
 // returns a new state of the object and result of the method
 func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	path, err := t.ObtainCode(args.Object)
-	check(err)
+	if err != nil {
+		return errors.Wrap(err, "couldn't obtain code")
+	}
 
 	p, err := plugin.Open(path)
-	check(err)
+	if err != nil {
+		return errors.Wrap(err, "couldn't open plugin")
+	}
 
 	export, err := p.Lookup("INSEXPORT")
-	check(err)
+	if err != nil {
+		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
+	}
 
 	var dataBuf bytes.Buffer
 	cbor := cbor.NewEncoder(&dataBuf)
 	_, err = cbor.Unmarshal(args.Object.Data, export)
-	check(err)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't decode data into %T", export)
+	}
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
-		panic("wtf, no method " + args.Method + "in the plugin")
+		return errors.New("wtf, no method " + args.Method + "in the plugin")
 	}
 
 	res := method.Call([]reflect.Value{})
 
 	_, err = cbor.Marshal(export)
-	check(err)
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal new object data into cbor")
+	}
 
 	reply.Data = dataBuf.Bytes()
 
@@ -123,10 +133,4 @@ func main() {
 		os.Exit(1)
 	}
 	log.Print("bye\n")
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
