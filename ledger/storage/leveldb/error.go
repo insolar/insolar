@@ -14,14 +14,11 @@
  *    limitations under the License.
  */
 
-package index
+package leveldb
 
-import (
-	"github.com/insolar/insolar/ledger/record"
+import "errors"
+
+var (
+	// ErrNotFound returns if record not found in leveldb storage.
+	ErrNotFound = errors.New("record not found")
 )
-
-// Lifeline represents meta information for record object
-type Lifeline struct {
-	LatestStateID record.ID
-	AppendIDs     []record.ID
-}

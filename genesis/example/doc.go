@@ -14,14 +14,20 @@
  *    limitations under the License.
  */
 
-package index
+/*
+Package example provides smart contracts for building example of system work.
 
-import (
-	"github.com/insolar/insolar/ledger/record"
-)
+Entities:
 
-// Lifeline represents meta information for record object
-type Lifeline struct {
-	LatestStateID record.ID
-	AppendIDs     []record.ID
-}
+	MemberDomain - domain that allows to add new members to system.
+
+	Usage:
+
+		factory := NewMemberDomainFactory(factoryParent)
+		mDomain, error := factory.Create(domainParent)
+
+		record, err := mDomain.CreateMember(someMemberFactory)
+		memberProxy, err := mDomain.GetMember(record)
+
+*/
+package example
