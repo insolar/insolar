@@ -74,6 +74,7 @@ func main() {
 
 	go listen(dhtNetwork)
 	bootstrap(bootstrapNodes, dhtNetwork)
+	dhtNetwork.ObtainIP(ctx)
 
 	handleSignals(configuration)
 
