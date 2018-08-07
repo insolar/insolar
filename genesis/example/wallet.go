@@ -26,11 +26,16 @@ import (
 	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
+// WalletDomainName is a name for wallet domain.
 const WalletDomainName = "WalletDomain"
 
+// WalletDomain is a contract that allows to add new wallets to system.
 type WalletDomain interface {
+	// Base domain implementation.
 	domain.Domain
+	// CreateWallet is used to create new wallet as a child to domain storage.
 	CreateWallet(factory.Factory) (string, error)
+	// GetWallet returns wallet from its record in domain storage.
 	GetWallet(string) (resolver.Proxy, error)
 }
 
@@ -87,6 +92,7 @@ type walletDomainProxy struct {
 	resolver.BaseProxy
 }
 
+// newWalletDomainProxy creates new proxy and associates it with new instance of WalletDomain.
 func newWalletDomainProxy(parent object.Parent) (*walletDomainProxy, error) {
 	inst, err := newWalletDomain(parent)
 	if err != nil {
@@ -100,10 +106,12 @@ func newWalletDomainProxy(parent object.Parent) (*walletDomainProxy, error) {
 	}, nil
 }
 
+// CreateWallet is a proxy call for instance method.
 func (wdp *walletDomainProxy) CreateWallet(fc factory.Factory) (string, error) {
 	return wdp.Instance.(WalletDomain).CreateWallet(fc)
 }
 
+// GetWallet is a proxy call for instance method.
 func (wdp *walletDomainProxy) GetWallet(record string) (resolver.Proxy, error) {
 	return wdp.Instance.(WalletDomain).GetWallet(record)
 }
