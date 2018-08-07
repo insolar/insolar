@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
+	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -66,42 +67,42 @@ func TestWalletDomain_CreateWallet(t *testing.T) {
 
 func TestWalletDomain_CreateWallet_WithError(t *testing.T) {
 	parent := &mockParent{}
-	domain, err := newWalletDomain(parent)
+	wdomain, err := newWalletDomain(parent)
 	assert.NoError(t, err)
 
 	factory := &mockFactoryError{}
 
-	_, err = domain.CreateWallet(factory)
+	_, err = wdomain.CreateWallet(factory)
 
 	assert.EqualError(t, err, "factory create error")
 }
 
 func TestWalletDomain_CreateWallet_WithNilError(t *testing.T) {
 	parent := &mockParent{}
-	domain, err := newWalletDomain(parent)
+	wdomain, err := newWalletDomain(parent)
 	assert.NoError(t, err)
 
 	factory := &mockFactoryNilError{}
 
-	_, err = domain.CreateWallet(factory)
+	_, err = wdomain.CreateWallet(factory)
 
 	assert.EqualError(t, err, "factory returns nil")
 }
 
 func TestWalletDomain_GetClassID(t *testing.T) {
 	parent := &mockParent{}
-	domain, err := newWalletDomain(parent)
+	wdomain, err := newWalletDomain(parent)
 
 	assert.NoError(t, err)
-	assert.Equal(t, class.WalletDomainId, domain.GetClassID())
+	assert.Equal(t, class.WalletDomainId, wdomain.GetClassID())
 }
 
 func TestWalletDomain_GetWallet_NoShuchRecord(t *testing.T) {
 	parent := &mockParent{}
-	domain, err := newWalletDomain(parent)
+	wdomain, err := newWalletDomain(parent)
 	assert.NoError(t, err)
 
-	_, err = domain.GetWallet("test")
+	_, err = wdomain.GetWallet("test")
 	assert.EqualError(t, err, "object with record test does not exist")
 }
 
@@ -122,16 +123,49 @@ func TestWalletDomain_GetWallet(t *testing.T) {
 	}, proxy)
 }
 
-func TestWalletDomainFactory_Create(t *testing.T) {
+func TestWalletDomainFactory_Create_WithNoParent(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewWalletDomainFactory(parent)
+	_, err := factory.Create(nil)
+	assert.EqualError(t, err, "parent must not be nil")
+}
 
+func TestWalletDomainFactory_Create(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewWalletDomainFactory(parent)
+
+	wdomain, _ := newWalletDomain(parent)
+
+	proxy, err := factory.Create(parent)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &walletDomainProxy{
+		BaseProxy: resolver.BaseProxy{
+			Instance: wdomain,
+		},
+	}, proxy)
+}
+
+func TestWalletDomainFactory_Create_WithError(t *testing.T) {
+	parent := &mockParentWithError{}
+	factory := NewWalletDomainFactory(parent)
+	_, err := factory.Create(parent)
+
+	assert.EqualError(t, err, "add child error")
 }
 
 func TestWalletDomainFactory_GetClassID(t *testing.T) {
-
+	parent := &mockParentWithError{}
+	factory := NewWalletDomainFactory(parent)
+	assert.Equal(t, class.WalletDomainId, factory.GetClassID())
 }
 
 func TestWalletDomainFactory_GetParent(t *testing.T) {
+	parent := &mockParentWithError{}
+	factory := NewWalletDomainFactory(parent)
+	actual := factory.GetParent()
 
+	assert.Nil(t, actual)
 }
 
 func TestWalletDomainProxy_CreateWallet(t *testing.T) {

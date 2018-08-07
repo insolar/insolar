@@ -114,7 +114,7 @@ type walletDomainFactory struct {
 }
 
 func (wdf *walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
-	proxy, err := newMemberDomainProxy(parent)
+	proxy, err := newWalletDomainProxy(parent)
 	if err != nil {
 		return nil, err
 	}
