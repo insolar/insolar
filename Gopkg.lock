@@ -3,110 +3,143 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:26553bdecb5d2155e37185e91ac9e6cab762c06fdf231c151fb6d3ec60ff53b7"
   name = "github.com/2tvenom/cbor"
   packages = ["."]
+  pruneopts = "UT"
   revision = "384e799bd841fc59220d0f5911b8cbde7b380875"
 
 [[projects]]
   branch = "master"
+  digest = "1:d7e398c16b9c85f33ea98182809bfefe4e3ec8bf01f56de20f9721f9f7ab23de"
   name = "github.com/anacrolix/missinggo"
   packages = [
     ".",
     "inproc",
     "perf",
-    "pproffd"
+    "pproffd",
   ]
+  pruneopts = "UT"
   revision = "60ef2fbf63df5d871ada2680d4d8a6013dcd1745"
 
 [[projects]]
   branch = "master"
+  digest = "1:c9444b5e8f5df73cb6653af4b71fc42335f4f117d944b74dfdaee360ff1d30a8"
   name = "github.com/anacrolix/sync"
   packages = ["."]
+  pruneopts = "UT"
   revision = "fda11526ff0853fb50738fd7ba5bc9af2eb016bf"
 
 [[projects]]
   branch = "master"
+  digest = "1:c8c563c60665dd4b185e3c042d12e915b3dd6129d5477ae313914dce59c7319d"
   name = "github.com/anacrolix/utp"
   packages = ["."]
+  pruneopts = "UT"
   revision = "9e0e1d1d0572f5a09a669d4ea0372d8e8078dcc9"
 
 [[projects]]
   branch = "master"
+  digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
+  pruneopts = "UT"
   revision = "be486d185f3dfcb2dbf8429332da50a0da7f95a6"
 
 [[projects]]
   branch = "master"
+  digest = "1:454adc7f974228ff789428b6dc098638c57a64aa0718f0bd61e53d3cd39d7a75"
   name = "github.com/chzyer/readline"
   packages = ["."]
+  pruneopts = "UT"
   revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
 
 [[projects]]
+  digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = "UT"
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:4a0c6bb4805508a6287675fac876be2ac1182539ca8a32468d8128882e9d5009"
   name = "github.com/golang/snappy"
   packages = ["."]
+  pruneopts = "UT"
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
+  digest = "1:6b1e7618931d0ed9a17fec1c1d84271907aa61172c50b8272327f6cd4fafb650"
   name = "github.com/huandu/xstrings"
   packages = ["."]
+  pruneopts = "UT"
   revision = "2bf18b218c51864a87384c06996e40ff9dcff8e1"
   version = "v1.0.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:fa3a7dc0a780fb19838fb96d4e18c0b9a019d9bb618798308d7b6ca48fcb9876"
   name = "github.com/jbenet/go-base58"
   packages = ["."]
+  pruneopts = "UT"
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
+  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:ff6b0586c0621a76832cf783eee58cbb9d9795d2ce8acbc199a4131db11c42a9"
   name = "github.com/satori/go.uuid"
   packages = ["."]
+  pruneopts = "UT"
   revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
 
 [[projects]]
+  digest = "1:9424f440bba8f7508b69414634aef3b2b3a877e522d8a4624692412805407bb7"
   name = "github.com/spf13/pflag"
   packages = ["."]
+  pruneopts = "UT"
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:ac83cf90d08b63ad5f7e020ef480d319ae890c208f8524622a2f3136e2686b02"
   name = "github.com/stretchr/objx"
   packages = ["."]
+  pruneopts = "UT"
   revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
   version = "v0.1.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:15a4a7e5afac3cea801fa24831fce3bf3b5bd3620cbf8355a07b7dbf06877883"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "mock"
+    "mock",
   ]
+  pruneopts = "UT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
 
 [[projects]]
   branch = "master"
+  digest = "1:b3cfb8d82b1601a846417c3f31c03a7961862cb2c98dcf0959c473843e6d9a2b"
   name = "github.com/syndtr/goleveldb"
   packages = [
     "leveldb",
@@ -120,31 +153,54 @@
     "leveldb/opt",
     "leveldb/storage",
     "leveldb/table",
-    "leveldb/util"
+    "leveldb/util",
   ]
+  pruneopts = "UT"
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
 [[projects]]
+  digest = "1:03aa6e485e528acb119fb32901cf99582c380225fc7d5a02758e08b180cb56c3"
   name = "github.com/ugorji/go"
   packages = ["codec"]
+  pruneopts = "UT"
   revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
   version = "v1.1.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:e7a1ce56dc2fd57e2e1fe88c984583e8345d24a27068a47b134a2f2fd0e095a2"
   name = "golang.org/x/crypto"
   packages = ["sha3"]
+  pruneopts = "UT"
   revision = "56440b844dfe139a8ac053f4ecac0b20b79058f4"
 
 [[projects]]
   branch = "master"
+  digest = "1:6171b61a4a42ff7c8a1bd0cfb569c247e1654ec4d918b7da84228974216751f5"
   name = "golang.org/x/sys"
   packages = ["unix"]
+  pruneopts = "UT"
   revision = "34b17bdb430002e9db9ae7ddc8480b9fa05edc22"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0a6dbc0d2067a5735d62f6a2fe4e29e49d4eff9540d064b233c82bc1e0026226"
+  input-imports = [
+    "github.com/2tvenom/cbor",
+    "github.com/anacrolix/utp",
+    "github.com/ccding/go-stun/stun",
+    "github.com/chzyer/readline",
+    "github.com/jbenet/go-base58",
+    "github.com/pkg/errors",
+    "github.com/satori/go.uuid",
+    "github.com/spf13/pflag",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/mock",
+    "github.com/syndtr/goleveldb/leveldb",
+    "github.com/syndtr/goleveldb/leveldb/comparer",
+    "github.com/syndtr/goleveldb/leveldb/opt",
+    "github.com/ugorji/go/codec",
+    "golang.org/x/crypto/sha3",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
