@@ -3,7 +3,8 @@ resources:
   type: git
   source:
     uri: https://github.com/insolar/insolar.git
-    branch: master
+    branch: devops
+    
 
 
 jobs:
@@ -11,8 +12,17 @@ jobs:
   public: true
   plan:
   - get: insolar
-    trigger: true
+    trigger: false
   - task: unit
-    file: ci/test.yml
+    file: insolar/ci/test.yml
 
+
+jobs:
+- name: network
+  public: false
+  plan:
+  - get: insolar
+    trigger: true
+  - task: unit-net
+    file: insolar/ci/test-net.yml
 
