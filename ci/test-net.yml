@@ -6,7 +6,7 @@ image_resource:
   source: {repository: golang}
 
 inputs:
-- name: insolar
+- name: multibranch
   path: gopath/src/github.com/insolar/insolar
 
 caches:
