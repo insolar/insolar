@@ -1,17 +1,15 @@
 package goplugin
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"testing"
 
-	"github.com/2tvenom/cbor"
-
-	"os/exec"
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/pkg/errors"
 )
 
 type HelloWorlder struct {
@@ -19,9 +17,9 @@ type HelloWorlder struct {
 }
 
 func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
-	var buf bytes.Buffer
-	cborEnc := cbor.NewEncoder(&buf)
-	_, err := cborEnc.Marshal(*r)
+	ch := new(codec.CborHandle)
+	var data []byte
+	err := codec.NewEncoderBytes(&data, ch).Encode(*r)
 	if err != nil {
 		panic(err)
 	}
@@ -29,24 +27,24 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
 	obj := logicrunner.Object{
 		MachineType: logicrunner.MachineTypeGoPlugin,
 		Reference:   "secondary",
-		Data:        buf.Bytes(),
+		Data:        data,
 	}
 
 	args := make([]logicrunner.Argument, 1)
-	var bufArgs bytes.Buffer
-	cborEncArgs := cbor.NewEncoder(&bufArgs)
-	_, err = cborEncArgs.Marshal(s)
+
+	var arg []byte
+	err = codec.NewEncoderBytes(&arg, ch).Encode(s)
 	if err != nil {
 		panic(err)
 	}
-	args[0] = bufArgs.Bytes()
+	args[0] = arg
 
-	data, _, err := gp.Exec(obj, "Echo", args)
+	data, _, err = gp.Exec(obj, "Echo", args)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = cborEnc.Unmarshal(data, r)
+	err = codec.NewDecoderBytes(data, ch).Decode(r)
 	if err != nil {
 		panic(err)
 	}

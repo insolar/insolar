@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"io/ioutil"
 	"log"
 	"net"
@@ -12,9 +11,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/2tvenom/cbor"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
+	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
@@ -49,13 +48,16 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
 	}
+	log.Printf("decode: hi %T, %+v\n", export, export)
+	log.Printf("decode: hi2 %T, %+v\n", args.Object.Data, args.Object.Data)
 
-	var dataBuf bytes.Buffer
-	cborEnc := cbor.NewEncoder(&dataBuf)
-	_, err = cborEnc.Unmarshal(args.Object.Data, export)
+	ch := new(codec.CborHandle)
+
+	err = codec.NewDecoderBytes(args.Object.Data, ch).Decode(export)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't decode data into %T", export)
 	}
+	log.Printf("decode: hui %T, %+v\n", export, export)
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
@@ -72,7 +74,7 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 		argType := method.Type().In(i)
 
 		argInterface := reflect.New(argType).Interface()
-		_, err = cborEnc.Unmarshal(args.Arguments[i], argInterface)
+		err = codec.NewDecoderBytes(args.Arguments[i], ch).Decode(argInterface)
 		if err != nil {
 			return errors.Wrap(err, "couldn't unmarshal cbor")
 		}
@@ -82,12 +84,10 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 
 	res := method.Call(in)
 
-	_, err = cborEnc.Marshal(export)
+	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(export)
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal new object data into cbor")
 	}
-
-	reply.Data = dataBuf.Bytes()
 
 	log.Printf("res: %+v\n", res)
 
