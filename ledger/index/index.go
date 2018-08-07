@@ -29,6 +29,6 @@ type ClassLifeline struct {
 // ObjectLifeline represents meta information for record object
 type ObjectLifeline struct {
 	ClassID       record.ID
-	LatestStateID record.ID // Amend or activate record
-	AppendIDs     []record.ID
+	LatestStateID record.ID   // Amend or activate record
+	AppendIDs     []record.ID // ObjectAppendRecord
 }

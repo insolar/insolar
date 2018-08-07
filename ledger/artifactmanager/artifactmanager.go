@@ -477,6 +477,7 @@ func (m *LedgerArtifactManager) GetObj(
 				Record: objIndex.LatestStateID,
 			},
 
+			manager:           m,
 			activateRecord:    objActivateRec,
 			latestAmendRecord: objStateRec,
 			lifelineIndex:     objIndex,

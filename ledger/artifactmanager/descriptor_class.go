@@ -30,6 +30,19 @@ func (d *ClassDescriptor) getRecordCode(codeID record.ID) ([]byte, error) {
 	return code, nil
 }
 
+func (d *ClassDescriptor) GetCode() ([]byte, error) {
+	codeRef := d.activateRecord.CodeRecord
+	if d.latestAmendRecord != nil {
+		codeRef = d.latestAmendRecord.NewCode
+	}
+	code, err := d.getRecordCode(codeRef.Record)
+	if err != nil {
+		return nil, err
+	}
+
+	return code, nil
+}
+
 func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 	var amends []*record.ClassAmendRecord
 	for i := len(d.lifelineIndex.AmendIDs); i >= 0; i-- {
@@ -64,13 +77,4 @@ func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 	}
 
 	return migrations, nil
-}
-
-func (d *ClassDescriptor) GetCode() ([]byte, error) {
-	code, err := d.getRecordCode(d.latestAmendRecord.NewCode.Record)
-	if err != nil {
-		return nil, err
-	}
-
-	return code, nil
 }
