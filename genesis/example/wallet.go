@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
-const WalletDomainName = "WaletDomain"
+const WalletDomainName = "WalletDomain"
 
 type WalletDomain interface {
 	domain.Domain
@@ -128,6 +128,7 @@ func (wdf *walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, er
 }
 
 func (wdf *walletDomainFactory) GetParent() object.Parent {
+	// TODO: return real parent, fix tests
 	return nil
 }
 
