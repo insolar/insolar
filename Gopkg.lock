@@ -3,6 +3,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/2tvenom/cbor"
+  packages = ["."]
+  revision = "384e799bd841fc59220d0f5911b8cbde7b380875"
+
+[[projects]]
+  branch = "master"
   name = "github.com/anacrolix/missinggo"
   packages = [
     ".",
@@ -10,13 +16,13 @@
     "perf",
     "pproffd"
   ]
-  revision = "16be2b611ee338b7cd9744ebf8b80c1f6d189b70"
+  revision = "60ef2fbf63df5d871ada2680d4d8a6013dcd1745"
 
 [[projects]]
   branch = "master"
   name = "github.com/anacrolix/sync"
   packages = ["."]
-  revision = "f008fb17e46b87d6e2db40f91b95415242863861"
+  revision = "fda11526ff0853fb50738fd7ba5bc9af2eb016bf"
 
 [[projects]]
   branch = "master"
@@ -28,7 +34,7 @@
   branch = "master"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
-  revision = "cf47f40ed501fe61ea55cb5b8315da7c4842d045"
+  revision = "be486d185f3dfcb2dbf8429332da50a0da7f95a6"
 
 [[projects]]
   branch = "master"
@@ -55,10 +61,16 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/jbenet/go-base58"
   packages = ["."]
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
-  version = "1.0.0"
+
+[[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -73,19 +85,25 @@
   revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
 
 [[projects]]
+  name = "github.com/spf13/pflag"
+  packages = ["."]
+  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+  version = "v1.0.1"
+
+[[projects]]
   name = "github.com/stretchr/objx"
   packages = ["."]
   revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
   version = "v0.1.1"
 
 [[projects]]
+  branch = "master"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
     "mock"
   ]
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
 
 [[projects]]
   branch = "master"
@@ -116,17 +134,17 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["sha3"]
-  revision = "c126467f60eb25f8f27e5a981f32a87e3965053f"
+  revision = "56440b844dfe139a8ac053f4ecac0b20b79058f4"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
+  revision = "34b17bdb430002e9db9ae7ddc8480b9fa05edc22"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a58407f81fac1682566f53f17b8576bcca052a1ed8d9a82d60afd6bcef0d64c9"
+  inputs-digest = "0a6dbc0d2067a5735d62f6a2fe4e29e49d4eff9540d064b233c82bc1e0026226"
   solver-name = "gps-cdcl"
   solver-version = 1

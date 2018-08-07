@@ -24,6 +24,11 @@ type ResultRecord struct {
 	RequestRecord Reference
 }
 
+// Domain implements Record interface
+func (rec *ResultRecord) Domain() ID {
+	return rec.RequestRecord.Domain
+}
+
 // WipeOutRecord is a special record that takes place of another record
 // when we need to completely wipe out some information from storage
 // (think GDPR).
@@ -134,8 +139,8 @@ type CodeRecord struct {
 	StorageRecord
 
 	Interfaces   []Reference
-	TargetedCode [][]byte // []MachineBinaryCode
-	SourceCode   string   // ObjectSourceCode
+	TargetedCode map[ArchType][]byte // []MachineBinaryCode
+	SourceCode   string              // ObjectSourceCode
 }
 
 // AmendRecord is produced when we modify another record in ledger.

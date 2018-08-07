@@ -36,6 +36,23 @@ const (
 // If PulseNum <65536 it is a relative PulseNum
 type PulseNum uint32
 
+// ID evaluates record ID on PulseNum for Record
+func (pn PulseNum) ID(rec Record) ID {
+	return Key2ID(pn.Key(rec))
+}
+
+// Key evaluates record Key on PulseNum for Record
+func (pn PulseNum) Key(rec Record) Key {
+	raw, err := EncodeToRaw(rec)
+	if err != nil {
+		panic(err)
+	}
+	return Key{
+		Pulse: pn,
+		Hash:  raw.Hash(),
+	}
+}
+
 // SpecialPulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
 // It is only allowed for Storage.
 const SpecialPulseNumber PulseNum = 65536
@@ -46,6 +63,9 @@ type Hash [HashSize]byte
 // ID is a record ID. Compounds PulseNum and Type
 type ID [IDSize]byte
 
+// ArchType is a virtual machine runtime type
+type ArchType uint32
+
 // WriteHash implements hash.Writer interface.
 func (id ID) WriteHash(w io.Writer) {
 	err := binary.Write(w, binary.BigEndian, id)
@@ -54,10 +74,10 @@ func (id ID) WriteHash(w io.Writer) {
 	}
 }
 
-// Key is a composite key for storage methods.
+// Key is a composite key of record.
 //
 // Key and ID converts one to another in both directions.
-// Hash is a bytes slice here to avoid copy to Hash array.
+// Hash is a bytes slice here to avoid copy of Hash array.
 type Key struct {
 	Pulse PulseNum
 	Hash  []byte

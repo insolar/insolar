@@ -29,18 +29,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockCallable struct {
+	reference object.Reference
+}
+
+func (c *mockCallable) GetReference() object.Reference {
+	return c.reference
+}
+
+func (c *mockCallable) SetReference(reference object.Reference) {
+	c.reference = reference
+}
+
 type mockChild struct {
-	Reference      object.Reference
+	mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
 
 func (c *mockChild) GetClassID() string {
 	return "mockChild"
-}
-
-func (c *mockChild) GetReference() object.Reference {
-	return c.Reference
 }
 
 func (c *mockChild) GetParent() object.Parent {
@@ -50,7 +58,7 @@ func (c *mockChild) GetParent() object.Parent {
 var child = &mockChild{}
 
 type mockParent struct {
-	Reference      object.Reference
+	mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -61,10 +69,6 @@ func (p *mockParent) GetParent() object.Parent {
 
 func (p *mockParent) GetClassID() string {
 	return "mockParent"
-}
-
-func (p *mockParent) GetReference() object.Reference {
-	return p.Reference
 }
 
 func (p *mockParent) GetChildStorage() storage.Storage {
@@ -97,6 +101,20 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 
 var globalParent = &mockParent{}
 
+type mockDomain struct {
+	mockCallable
+	mockParent
+	mockChild
+}
+
+func (d *mockDomain) GetClassID() string {
+	return "mockDomain"
+}
+
+func (d *mockDomain) GetParent() object.Parent {
+	return d.mockChild.parent
+}
+
 // Create map for global resolving
 var globalResolverMap = make(map[string]resolver.Proxy)
 var domainString = "123"
@@ -108,7 +126,7 @@ var initRefDomainProxy = newReferenceDomainProxy(globalParent)
 
 // Set one map for Handler and ReferenceDomain
 func init() {
-	globalResolverMap["123"] = globalParent
+	globalResolverMap["123"] = &mockDomain{}
 	// Create Handler empty instance
 	resolverHandler := resolver.NewHandler(nil)
 	// Set map to Handler.GlobalResolver
@@ -261,14 +279,6 @@ func TestReferenceDomainFactory_GetClassID(t *testing.T) {
 	id := factory.GetClassID()
 
 	assert.Equal(t, class.ReferenceDomainID, id)
-}
-
-func TestReferenceDomainFactory_GetReference(t *testing.T) {
-	parent := &mockParent{}
-	factory := NewReferenceDomainFactory(parent)
-	reference := factory.GetReference()
-
-	assert.Nil(t, reference)
 }
 
 func TestReferenceDomainFactory_Create(t *testing.T) {
