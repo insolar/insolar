@@ -14,7 +14,6 @@
  *    limitations under the License.
  */
 
-// Package record contains various record type definitions.
 package record
 
 // ProjectionType is a "view filter" for record.
@@ -26,4 +25,5 @@ type Memory []byte
 
 // Record is base interface for all records.
 type Record interface {
+	Domain() ID
 }

@@ -114,6 +114,7 @@ func (cdp *classDomainProxy) GetClass(record string) (factory.Factory, error) {
 }
 
 type classDomainFactory struct {
+	object.BaseCallable
 	parent object.Parent
 }
 
@@ -133,11 +134,6 @@ func (cdf *classDomainFactory) GetParent() object.Parent {
 // GetClassID returns string representation of ClassDomain's class.
 func (cdf *classDomainFactory) GetClassID() string {
 	return class.ClsDomainID
-}
-
-// GetReference returns nil for not published factory.
-func (cdf *classDomainFactory) GetReference() object.Reference {
-	return nil
 }
 
 // Create is a factory method for new ClassDomain instances.

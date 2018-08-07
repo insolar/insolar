@@ -26,5 +26,13 @@ Usage:
 		ref, err := NewReference(domain, record, GlobalScope)
 	}
 
+
+Callable allows itself to be called by its reference
+BaseCallable is a base implementation of Callable
+
+Usage:
+	GetReference() - returns reference
+	SetReference(reference) - sets reference
+
 */
 package object

@@ -14,21 +14,27 @@
  *    limitations under the License.
  */
 
-package storage
+package object
 
-import (
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
-)
+// Callable allows itself to be called by its reference.
+type Callable interface {
+	Object
+	GetReference() Reference
+	SetReference(reference Reference)
+}
 
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
-	GetRecord(record.ID) (record.Record, error)
-	SetRecord(record.Record) (record.ID, error)
+// BaseCallable is a base implementation of Callable.
+type BaseCallable struct {
+	BaseObject
+	reference Reference
+}
 
-	GetClassIndex(record.ID) (*index.ClassLifeline, bool)
-	SetClassIndex(record.ID, *index.ClassLifeline) error
+// GetReference returns reference.
+func (bc *BaseCallable) GetReference() Reference {
+	return bc.reference
+}
 
-	GetObjectIndex(record.ID) (*index.ObjectLifeline, bool)
-	SetObjectIndex(record.ID, *index.ObjectLifeline) error
+// SetReference sets reference.
+func (bc *BaseCallable) SetReference(reference Reference) {
+	bc.reference = reference
 }

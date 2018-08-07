@@ -14,21 +14,30 @@
  *    limitations under the License.
  */
 
-package storage
+package object
 
 import (
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
-	GetRecord(record.ID) (record.Record, error)
-	SetRecord(record.Record) (record.ID, error)
+var ref = &reference{
+	domain: "domain1",
+	record: "record1",
+	scope:  GlobalScope,
+}
 
-	GetClassIndex(record.ID) (*index.ClassLifeline, bool)
-	SetClassIndex(record.ID, *index.ClassLifeline) error
+func TestBaseCallable_SetReference(t *testing.T) {
+	callable := &BaseCallable{}
+	callable.SetReference(ref)
 
-	GetObjectIndex(record.ID) (*index.ObjectLifeline, bool)
-	SetObjectIndex(record.ID, *index.ObjectLifeline) error
+	assert.Equal(t, ref, callable.reference)
+}
+
+func TestBaseCallable_GetReference(t *testing.T) {
+	callable := &BaseCallable{
+		reference: ref,
+	}
+	assert.Equal(t, ref, callable.GetReference())
 }
