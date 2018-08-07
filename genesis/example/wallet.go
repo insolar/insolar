@@ -48,8 +48,8 @@ func newWalletDomain(parent object.Parent) (*walletDomain, error) {
 	}, nil
 }
 
-func (md *walletDomain) GetClassID() string {
-	return class.WalletDomainId
+func (wd *walletDomain) GetClassID() string {
+	return class.WalletDomainID
 }
 
 func (wd *walletDomain) CreateWallet(fc factory.Factory) (string, error) {
@@ -133,7 +133,7 @@ func (wdf *walletDomainFactory) GetParent() object.Parent {
 }
 
 func (wdf *walletDomainFactory) GetClassID() string {
-	return class.WalletDomainId
+	return class.WalletDomainID
 }
 
 func NewWalletDomainFactory(pt object.Parent) factory.Factory {

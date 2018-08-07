@@ -95,7 +95,7 @@ func TestWalletDomain_GetClassID(t *testing.T) {
 	wdomain, err := newWalletDomain(parent)
 
 	assert.NoError(t, err)
-	assert.Equal(t, class.WalletDomainId, wdomain.GetClassID())
+	assert.Equal(t, class.WalletDomainID, wdomain.GetClassID())
 }
 
 func TestWalletDomain_GetWallet_NoShuchRecord(t *testing.T) {
@@ -158,7 +158,7 @@ func TestWalletDomainFactory_Create_WithError(t *testing.T) {
 func TestWalletDomainFactory_GetClassID(t *testing.T) {
 	parent := &mockParentWithError{}
 	factory := NewWalletDomainFactory(parent)
-	assert.Equal(t, class.WalletDomainId, factory.GetClassID())
+	assert.Equal(t, class.WalletDomainID, factory.GetClassID())
 }
 
 func TestWalletDomainFactory_GetParent(t *testing.T) {
