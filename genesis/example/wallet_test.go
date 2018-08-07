@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/domain"
+	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
@@ -168,10 +169,37 @@ func TestWalletDomainFactory_GetParent(t *testing.T) {
 	assert.Nil(t, actual)
 }
 
-func TestWalletDomainProxy_CreateWallet(t *testing.T) {
+func TestWalletDomainProxy_CreateWallet_WithNoParent(t *testing.T) {
+	_, err := newWalletDomainProxy(nil)
+	assert.EqualError(t, err, "parent must not be nil")
+}
 
+func TestWalletDomainProxy_CreateWallet(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newWalletDomainProxy(parent)
+	assert.NoError(t, err)
+
+	factory := &mockFactory{}
+	record, err := proxy.CreateWallet(factory)
+	assert.NoError(t, err)
+
+	_, err = uuid.FromString(record)
+	assert.NoError(t, err)
 }
 
 func TestWalletDomainProxy_GetWallet(t *testing.T) {
+	parent := &mockParent{}
+	proxyD, err := newWalletDomainProxy(parent)
+	assert.NoError(t, err)
 
+	factory := &mockFactory{}
+	record, err := proxyD.CreateWallet(factory)
+	assert.NoError(t, err)
+
+	proxyW, err := proxyD.GetWallet(record)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &mockProxy{
+		parent: proxyD.Instance.(object.Parent),
+	}, proxyW)
 }
