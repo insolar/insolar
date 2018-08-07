@@ -2,7 +2,7 @@ resources:
 - name: insolar
   type: git
   source:
-    uri: https://github.com:insolar/insolar.git
+    uri: https://github.com/insolar/insolar.git
     branch: master
 
 
