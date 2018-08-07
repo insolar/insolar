@@ -9,7 +9,6 @@ import (
 	"os"
 	"plugin"
 	"reflect"
-	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
@@ -48,8 +47,6 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
 	}
-	log.Printf("decode: hi %T, %+v\n", export, export)
-	log.Printf("decode: hi2 %T, %+v\n", args.Object.Data, args.Object.Data)
 
 	ch := new(codec.CborHandle)
 
@@ -57,7 +54,6 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't decode data into %T", export)
 	}
-	log.Printf("decode: hui %T, %+v\n", export, export)
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
@@ -65,21 +61,21 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	}
 
 	inLen := method.Type().NumIn()
-	if len(args.Arguments) != inLen {
-		return errors.New("Number of arguments didn't match, got: " + strconv.Itoa(len(args.Arguments)) + ", expected: " + strconv.Itoa(inLen))
+
+	mask := make([]interface{}, inLen)
+	for i := 0; i < inLen; i++ {
+		argType := method.Type().In(i)
+		mask[i] = reflect.Zero(argType).Interface()
+	}
+
+	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
+	if err != nil {
+		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the method")
 	}
 
 	in := make([]reflect.Value, inLen)
 	for i := 0; i < inLen; i++ {
-		argType := method.Type().In(i)
-
-		argInterface := reflect.New(argType).Interface()
-		err = codec.NewDecoderBytes(args.Arguments[i], ch).Decode(argInterface)
-		if err != nil {
-			return errors.Wrap(err, "couldn't unmarshal cbor")
-		}
-
-		in[i] = reflect.ValueOf(argInterface).Elem()
+		in[i] = reflect.ValueOf(mask[i])
 	}
 
 	res := method.Call(in)

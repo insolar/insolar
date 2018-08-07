@@ -30,16 +30,16 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
 		Data:        data,
 	}
 
-	args := make([]logicrunner.Argument, 1)
+	args := make([]interface{}, 1)
+	args[0] = s
 
-	var arg []byte
-	err = codec.NewEncoderBytes(&arg, ch).Encode(s)
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(args)
 	if err != nil {
 		panic(err)
 	}
-	args[0] = arg
 
-	data, _, err = gp.Exec(obj, "Echo", args)
+	data, _, err = gp.Exec(obj, "Echo", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -103,7 +103,7 @@ func TestHelloWorld(t *testing.T) {
 	defer gp.Stop()
 
 	hw := &HelloWorlder{77}
-	hw.ProxyEcho(gp, "hi")
+	hw.ProxyEcho(gp, "hi there here we are")
 	if hw.Greeted != 78 {
 		t.Fatalf("Got unexpected value: %d, 78 is expected", hw.Greeted)
 	}
