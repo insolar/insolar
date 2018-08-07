@@ -24,12 +24,59 @@ jobs:
   - get: insolar
     trigger: false
   - task: unit
-    file: insolar/ci/test.yml
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: insolar
+        path: gopath/src/github.com/insolar/insolar
+      caches:
+      - path: depspath/
+      - path: gopath/pkg/
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             pwd
+             ls -alh
+             cd gopath/src/github.com/insolar/insolar
+             echo "fetching dependencies..."
+             go get -t -d ./...
+             go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
+
 - name: unit-network
   public: false
   plan:
   - get: multibranch
     trigger: true
   - task: unit-net
-    file: multibranch/ci/test-net.yml
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: multibranch
+        path: gopath/src/github.com/insolar/insolar
+      caches:
+      - path: depspath/
+      - path: gopath/pkg/
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             pwd
+             ls -alh
+             cd gopath/src/github.com/insolar/insolar
+             echo "fetching dependencies..."
+             go get -t -d ./...
+             cd network/host
+             go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
+
 
