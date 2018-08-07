@@ -10,7 +10,7 @@ resources:
 - name: branches
   type: smuggler
   source:
-    smuggler_debug: false
+    smuggler_debug: true
     target_file: branches
     commands:
       check: |
@@ -44,6 +44,7 @@ jobs:
           repository: alpine
       inputs:
       - name: branches
+      - name: insolar
       run:
         path: sh
         args:
