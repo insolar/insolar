@@ -13,6 +13,6 @@ jobs:
   - get: insolar
     trigger: true
   - task: unit
-    file: insolar/ci/test.yml
+    file: ci/test.yml
 
 
