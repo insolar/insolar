@@ -16,7 +16,9 @@
 
 package artifactmanager
 
-import "github.com/insolar/insolar/ledger/record"
+import (
+	"github.com/insolar/insolar/ledger/record"
+)
 
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
@@ -34,8 +36,8 @@ type ArtifactManager interface {
 		// lastObjRef is reference to object that is already deployed to VM. Can be nil.
 		lastObjRef record.Reference,
 	) (
-		ClassDescr,
-		ObjDescr,
+		ClassDescriptor,
+		ObjectDescriptor,
 		error,
 	)
 
@@ -56,27 +58,14 @@ type ArtifactManager interface {
 	) (record.Reference, error)
 
 	// ActivateObj creates and activates new object from given class (ObjectActivateRecord).
-	ActivateObj(record record.ObjectActivateRecord) (record.Reference, error)
+	ActivateObj(requestRef, classRef record.Reference, memory record.Memory) (record.Reference, error)
 
 	// DeactivateObj deactivates object (DeactivationRecord).
-	DeactivateObj(ref record.Reference) (record.Reference, error)
+	DeactivateObj(requestRef, objRef record.Reference) (record.Reference, error)
 
 	// UpdateObj allows to change object state (ObjectAmendRecord).
-	UpdateObj(ref record.Reference, memory record.Memory) (record.Reference, error)
+	UpdateObj(requestRef, objRef record.Reference, memory record.Memory) (record.Reference, error)
 
 	// AppendDelegate allows to append some class'es delegate to object (ObjectAppendRecord).
-	AppendDelegate(ref record.Reference, delegate record.Memory) (record.Reference, error)
-}
-
-// ClassDescr contains class code and migration procedures if any.
-type ClassDescr struct {
-	// TODO: implement MachineBinaryCode
-	Code       []byte
-	Migrations [][]byte
-}
-
-// ObjDescr contains object memory and delegate appends if any.
-type ObjDescr struct {
-	ObjectMemory record.Memory   // nil if LastObjRef is actual
-	Appends      []record.Memory // can be empty
+	AppendObjDelegate(requestRef, objRef record.Reference, memory record.Memory) (record.Reference, error)
 }
