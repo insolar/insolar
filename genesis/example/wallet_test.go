@@ -52,12 +52,12 @@ func TestNewWalletDomainFactory(t *testing.T) {
 
 func TestWalletDomain_CreateWallet(t *testing.T) {
 	parent := &mockParent{}
-	member, err := newWalletDomain(parent)
+	wallet, err := newWalletDomain(parent)
 	assert.NoError(t, err)
 
 	factory := &mockFactory{}
 
-	record, err := member.CreateWallet(factory)
+	record, err := wallet.CreateWallet(factory)
 	assert.NoError(t, err)
 
 	_, err = uuid.FromString(record)
@@ -66,38 +66,60 @@ func TestWalletDomain_CreateWallet(t *testing.T) {
 
 func TestWalletDomain_CreateWallet_WithError(t *testing.T) {
 	parent := &mockParent{}
-	member, err := newWalletDomain(parent)
+	domain, err := newWalletDomain(parent)
 	assert.NoError(t, err)
 
 	factory := &mockFactoryError{}
 
-	_, err = member.CreateWallet(factory)
+	_, err = domain.CreateWallet(factory)
 
 	assert.EqualError(t, err, "factory create error")
 }
 
 func TestWalletDomain_CreateWallet_WithNilError(t *testing.T) {
 	parent := &mockParent{}
-	member, err := newWalletDomain(parent)
+	domain, err := newWalletDomain(parent)
 	assert.NoError(t, err)
 
 	factory := &mockFactoryNilError{}
 
-	_, err = member.CreateWallet(factory)
+	_, err = domain.CreateWallet(factory)
 
 	assert.EqualError(t, err, "factory returns nil")
 }
 
 func TestWalletDomain_GetClassID(t *testing.T) {
 	parent := &mockParent{}
-	member, err := newWalletDomain(parent)
+	domain, err := newWalletDomain(parent)
 
 	assert.NoError(t, err)
-	assert.Equal(t, class.WalletDomainId, member.GetClassID())
+	assert.Equal(t, class.WalletDomainId, domain.GetClassID())
+}
+
+func TestWalletDomain_GetWallet_NoShuchRecord(t *testing.T) {
+	parent := &mockParent{}
+	domain, err := newWalletDomain(parent)
+	assert.NoError(t, err)
+
+	_, err = domain.GetWallet("test")
+	assert.EqualError(t, err, "object with record test does not exist")
 }
 
 func TestWalletDomain_GetWallet(t *testing.T) {
+	parent := &mockParent{}
+	wdomain, err := newWalletDomain(parent)
+	assert.NoError(t, err)
 
+	factory := &mockFactory{}
+	record, err := wdomain.CreateWallet(factory)
+	assert.NoError(t, err)
+
+	proxy, err := wdomain.GetWallet(record)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &mockProxy{
+		parent: wdomain,
+	}, proxy)
 }
 
 func TestWalletDomainFactory_Create(t *testing.T) {
