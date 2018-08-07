@@ -14,17 +14,27 @@
  *    limitations under the License.
  */
 
-package logicrunner
+package object
 
-// Reference is a contract address
-type Reference string
-
-// Object is an inner representation of storage object for transfwering it over API
-type Object struct {
-	MachineType MachineType
-	Reference   Reference
-	Data        []byte
+// Callable allows itself to be called by its reference.
+type Callable interface {
+	Object
+	GetReference() Reference
+	SetReference(reference Reference)
 }
 
-// Argument is a dedicated type for arguments, that represented as bynary cbored blob
-type Argument []byte
+// BaseCallable is a base implementation of Callable.
+type BaseCallable struct {
+	BaseObject
+	reference Reference
+}
+
+// GetReference returns reference.
+func (bc *BaseCallable) GetReference() Reference {
+	return bc.reference
+}
+
+// SetReference sets reference.
+func (bc *BaseCallable) SetReference(reference Reference) {
+	bc.reference = reference
+}

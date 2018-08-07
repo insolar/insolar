@@ -121,6 +121,7 @@ func (idp *instanceDomainProxy) GetInstance(record string) (resolver.Proxy, erro
 }
 
 type instanceDomainFactory struct {
+	object.BaseCallable
 	parent object.Parent
 }
 
@@ -140,11 +141,6 @@ func (idf *instanceDomainFactory) GetParent() object.Parent {
 // GetClassID returns string representation of InstanceDomain's class.
 func (idf *instanceDomainFactory) GetClassID() string {
 	return class.InstanceDomainID
-}
-
-// GetReference returns nil for not published factory
-func (idf *instanceDomainFactory) GetReference() object.Reference {
-	return nil
 }
 
 // Create is factory method that used to create new InstanceDomain instances.

@@ -14,17 +14,30 @@
  *    limitations under the License.
  */
 
-package logicrunner
+package object
 
-// Reference is a contract address
-type Reference string
+import (
+	"testing"
 
-// Object is an inner representation of storage object for transfwering it over API
-type Object struct {
-	MachineType MachineType
-	Reference   Reference
-	Data        []byte
+	"github.com/stretchr/testify/assert"
+)
+
+var ref = &reference{
+	domain: "domain1",
+	record: "record1",
+	scope:  GlobalScope,
 }
 
-// Argument is a dedicated type for arguments, that represented as bynary cbored blob
-type Argument []byte
+func TestBaseCallable_SetReference(t *testing.T) {
+	callable := &BaseCallable{}
+	callable.SetReference(ref)
+
+	assert.Equal(t, ref, callable.reference)
+}
+
+func TestBaseCallable_GetReference(t *testing.T) {
+	callable := &BaseCallable{
+		reference: ref,
+	}
+	assert.Equal(t, ref, callable.GetReference())
+}

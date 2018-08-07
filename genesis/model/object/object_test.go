@@ -14,17 +14,17 @@
  *    limitations under the License.
  */
 
-package logicrunner
+package object
 
-// Reference is a contract address
-type Reference string
+import (
+	"testing"
 
-// Object is an inner representation of storage object for transfwering it over API
-type Object struct {
-	MachineType MachineType
-	Reference   Reference
-	Data        []byte
+	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestBaseObject_GetClassID(t *testing.T) {
+	obj := &BaseObject{}
+
+	assert.Equal(t, class.ObjectID, obj.GetClassID())
 }
-
-// Argument is a dedicated type for arguments, that represented as bynary cbored blob
-type Argument []byte

@@ -41,7 +41,11 @@ type Reference interface {
 	GetScope() ScopeType
 }
 
+// For now Reference is Proxy and have itself as its reference.
+// TODO: ProxyReference & ReferenceInterface
+
 type reference struct {
+	BaseCallable
 	domain string
 	record string
 	scope  ScopeType
@@ -84,13 +88,6 @@ func (r *reference) GetScope() ScopeType {
 // String return string representation of reference
 func (r *reference) String() string {
 	return fmt.Sprintf("#%s.#%s", r.domain, r.record)
-}
-
-// GetReference return reference to Reference instance.
-// For now Reference is Proxy and have itself as its reference.
-// TODO: ProxyReference & ReferenceInterface
-func (r *reference) GetReference() Reference {
-	return r
 }
 
 // GetParent return parent of reference.

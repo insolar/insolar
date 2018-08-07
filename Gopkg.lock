@@ -20,15 +20,15 @@
     "pproffd",
   ]
   pruneopts = "UT"
-  revision = "16be2b611ee338b7cd9744ebf8b80c1f6d189b70"
+  revision = "60ef2fbf63df5d871ada2680d4d8a6013dcd1745"
 
 [[projects]]
   branch = "master"
-  digest = "1:5f11fc5da6b24effa291e08a1060d9446ff8d60643ec5771e5f517bb9637afe4"
+  digest = "1:c9444b5e8f5df73cb6653af4b71fc42335f4f117d944b74dfdaee360ff1d30a8"
   name = "github.com/anacrolix/sync"
   packages = ["."]
   pruneopts = "UT"
-  revision = "f008fb17e46b87d6e2db40f91b95415242863861"
+  revision = "fda11526ff0853fb50738fd7ba5bc9af2eb016bf"
 
 [[projects]]
   branch = "master"
@@ -40,11 +40,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9d4f7f946068c820c71da07d0a6daf2ddfa0477c2d032486e2fc7ab318f61d4d"
+  digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
   name = "github.com/ccding/go-stun"
   packages = ["stun"]
   pruneopts = "UT"
-  revision = "cf47f40ed501fe61ea55cb5b8315da7c4842d045"
+  revision = "be486d185f3dfcb2dbf8429332da50a0da7f95a6"
 
 [[projects]]
   branch = "master"
@@ -172,15 +172,15 @@
   name = "golang.org/x/crypto"
   packages = ["sha3"]
   pruneopts = "UT"
-  revision = "c126467f60eb25f8f27e5a981f32a87e3965053f"
+  revision = "56440b844dfe139a8ac053f4ecac0b20b79058f4"
 
 [[projects]]
   branch = "master"
-  digest = "1:d773e525476aefa22ea944a5425a9bfb99819b2e67eeb9b1966454fd57522bbf"
+  digest = "1:6171b61a4a42ff7c8a1bd0cfb569c247e1654ec4d918b7da84228974216751f5"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
+  revision = "34b17bdb430002e9db9ae7ddc8480b9fa05edc22"
 
 [solve-meta]
   analyzer-name = "dep"
