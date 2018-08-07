@@ -1,0 +1,11 @@
+#!/bin/sh
+
+echo tests
+pwd
+ls -alh
+#go get -u github.com/golang/dep/cmd/dep
+#dep ensure
+cd gopath/src/github.com/insolar/insolar
+echo "fetching dependencies..."
+go get -t -d ./...
+go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...

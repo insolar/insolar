@@ -1,0 +1,18 @@
+resources:
+- name: insolar
+  type: git
+  source:
+    uri: https://github.com:insolar/insolar.git
+    branch: master
+
+
+jobs:
+- name: unit
+  public: true
+  plan:
+  - get: insolar
+    trigger: true
+  - task: unit
+    file: insolar/ci/test.yml
+
+
