@@ -9,7 +9,7 @@ resources:
   type: git
   source:
     uri: https://github.com/insolar/insolar.git
-    branch: devops
+    branch: master
 - name: multibranch
   type: git-multibranch
   source:
