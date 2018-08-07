@@ -1,0 +1,55 @@
+
+resource_types:
+- name: smuggler
+  type: docker-image
+  source:
+    repository: redfactorlabs/concourse-smuggler-resource
+    tag: alpine
+
+resources:
+- name: branches
+  type: smuggler
+  source:
+    smuggler_debug: false
+    target_file: branches
+    commands:
+      check: |
+        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '.[] | .name' | md5sum > ${SMUGGLER_OUTPUT_DIR}/versions
+      in: |
+        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '.[] | .name' > ${SMUGGLER_DESTINATION_DIR}/${SMUGGLER_target_file}
+        echo "date=$(date)" > ${SMUGGLER_OUTPUT_DIR}/metadata
+        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '.[] | .name' >> ${SMUGGLER_OUTPUT_DIR}/metadata
+
+- name: insolar
+  type: git
+  source:
+    uri: https://github.com/insolar/insolar.git
+    branch: devops
+    paths:
+      - 'ci'
+
+jobs:
+- name: magic
+  plan:
+  - get: branches
+    trigger: true
+  - get: insolar
+    trigger: true
+  - task: show_branches
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+      inputs:
+      - name: branches
+      run:
+        path: sh
+        args:
+        - -ec
+        - |
+          cat branches/branches
+          pwd
+          ls -alh
+

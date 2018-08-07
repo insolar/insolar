@@ -1,3 +1,11 @@
+groups:
+- name: master
+  jobs:
+    - unit-all
+- name: network
+  jobs:
+    - unit-network
+
 resource_types:
 - name: git-multibranch
   type: docker-image
