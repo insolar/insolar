@@ -78,14 +78,25 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 		in[i] = reflect.ValueOf(mask[i])
 	}
 
-	res := method.Call(in)
+	resValues := method.Call(in)
 
 	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(export)
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal new object data into cbor")
 	}
 
-	log.Printf("res: %+v\n", res)
+	res := make([]interface{}, len(resValues))
+	for i, v := range resValues {
+		res[i] = v.Interface()
+	}
+
+	var resSerialized []byte
+	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res)
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal returned values into cbor")
+	}
+
+	reply.Ret = resSerialized
 
 	return nil
 }
