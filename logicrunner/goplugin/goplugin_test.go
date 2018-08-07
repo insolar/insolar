@@ -16,7 +16,7 @@ type HelloWorlder struct {
 	Greeted int
 }
 
-func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
+func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 	ch := new(codec.CborHandle)
 	var data []byte
 	err := codec.NewEncoderBytes(&data, ch).Encode(*r)
@@ -39,7 +39,7 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
 		panic(err)
 	}
 
-	data, _, err = gp.Exec(obj, "Echo", argsSerialized)
+	data, res, err := gp.Exec(obj, "Echo", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -48,6 +48,14 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
 	if err != nil {
 		panic(err)
 	}
+
+	var resParsed []interface{}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	if err != nil {
+		panic(err)
+	}
+
+	return resParsed[0].(string)
 }
 
 func compileBinaries() error {
@@ -103,10 +111,12 @@ func TestHelloWorld(t *testing.T) {
 	defer gp.Stop()
 
 	hw := &HelloWorlder{77}
-	hw.ProxyEcho(gp, "hi there here we are")
+	res := hw.ProxyEcho(gp, "hi there here we are")
 	if hw.Greeted != 78 {
 		t.Fatalf("Got unexpected value: %d, 78 is expected", hw.Greeted)
 	}
 
-	//TODO: check second returned value
+	if res != "hi there here we are" {
+		t.Fatalf("Got unexpected value: %s, 'hi there here we are' is expected", res)
+	}
 }
