@@ -26,8 +26,16 @@ Entities:
 		factory := NewMemberDomainFactory(factoryParent)
 		mDomain, error := factory.Create(domainParent)
 
-		record, err := mDomain.CreateMember(someMemberFactory)
+		record, err := mDomain.CreateMember()
 		memberProxy, err := mDomain.GetMember(record)
+
+	Member - smart contract that represent user of the system.
+
+	Usage:
+
+		// because type of member is a child of memberDomain
+		factory := NewMemberFactory(memberDomain)
+		m, error := factory.Create(parent)
 
 */
 package example
