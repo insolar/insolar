@@ -5,6 +5,10 @@ resource_types:
   source:
     repository: redfactorlabs/concourse-smuggler-resource
     tag: alpine
+- name: concourse-pipeline
+  type: docker-image
+  source:
+    repository: chemist/concourse-pipeline-resource
 
 resources:
 - name: branches
@@ -19,6 +23,14 @@ resources:
         curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' > ${SMUGGLER_DESTINATION_DIR}/${SMUGGLER_target_file}
         echo "date=$(date)" > ${SMUGGLER_OUTPUT_DIR}/metadata
         curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' >> ${SMUGGLER_OUTPUT_DIR}/metadata
+
+- name: deploy
+  type: concourse-pipeline
+  source:
+    teams:
+    - name: main
+      username: {{ username }}
+      password: {{ password }}
 
 - name: insolar
   type: git
@@ -45,6 +57,8 @@ jobs:
       inputs:
       - name: branches
       - name: insolar
+      outputs:
+      - name: pipelines
       run:
         path: sh
         args:
@@ -52,9 +66,14 @@ jobs:
         - |
           echo Generate pipelines 
           echo "Input: $(cat branches/branches.json)"
-          cp branches/branches.json /data/
-          cp insolar/ci/templates/insolar.yml.j2 /templates/
-          jinja2 insolar/ci/templates/insolar.yml.j2 branches/branches.json > /out/insolar.yml
+          jinja2 insolar/ci/templates/insolar.yml.j2 branches/branches.json > pipelines/insolar.yml
           echo "Output: "
-          cat /out/insolar.yml
+          cat pipelines/insolar.yml
+  - put: deploy
+    params:
+      pipelines:
+        - name: insolar
+          team: main
+          config_file: pipelines/insolar.yml
+
 
