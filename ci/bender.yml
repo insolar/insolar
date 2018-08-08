@@ -66,14 +66,14 @@ jobs:
         - |
           echo Generate pipelines 
           echo "Input: $(cat branches/branches.json)"
-          jinja2 insolar/ci/templates/insolar.yml.j2 branches/branches.json > pipelines/insolar.yml
+          jinja2 insolar/ci/templates/insolar.yml.j2 branches/branches.json > pipelines/branches.yml
           echo "Output: "
-          cat pipelines/insolar.yml
+          cat pipelines/branches.yml
   - put: deploy
     params:
       pipelines:
-        - name: insolar
+        - name: branches
           team: main
-          config_file: pipelines/insolar.yml
+          config_file: pipelines/branches.yml
 
 
