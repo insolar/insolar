@@ -22,13 +22,13 @@ import (
 
 // ClassLifeline represents meta information for record object
 type ClassLifeline struct {
-	LatestStateID record.ID
-	MigrationIDs  []record.ID
+	LatestStateID record.ID   // Amend or activate record
+	AmendIDs      []record.ID // ClassAmendRecord
 }
 
 // ObjectLifeline represents meta information for record object
 type ObjectLifeline struct {
 	ClassID       record.ID
-	LatestStateID record.ID
-	AppendIDs     []record.ID
+	LatestStateID record.ID   // Amend or activate record
+	AppendIDs     []record.ID // ObjectAppendRecord
 }

@@ -77,7 +77,6 @@ var type2idTests = []struct {
 	{"CodeRecord", &CodeRecord{}, codeRecordID},
 	{"AmendRecord", &AmendRecord{}, amendRecordID},
 	{"ClassAmendRecord", &ClassAmendRecord{}, classAmendRecordID},
-	{"MemoryMigrationCode", &MemoryMigrationCode{}, memoryMigrationCodeID},
 	{"DeactivationRecord", &DeactivationRecord{}, deactivationRecordID},
 	{"ObjectAmendRecord", &ObjectAmendRecord{}, objectAmendRecordID},
 	{"StatefulCallResult", &StatefulCallResult{}, statefulCallResultID},

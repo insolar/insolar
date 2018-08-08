@@ -36,17 +36,16 @@ type LedgerMock struct {
 func (mock *LedgerMock) GetRecord(id record.ID) (record.Record, error) {
 	rec, ok := mock.Records[id]
 	if !ok {
-		return nil, errors.New("Record not found")
+		return nil, errors.New("record not found")
 	}
 	return rec, nil
 }
 
 func (mock *LedgerMock) SetRecord(rec record.Record) (record.ID, error) {
 	raw, _ := record.EncodeToRaw(rec)
-	raw.Hash()
 	var id record.ID
-	copy(raw.Hash(), id[:])
-	mock.Records[record.ID{}] = rec
+	copy(id[:], raw.Hash())
+	mock.Records[id] = rec
 	return id, nil
 }
 
@@ -89,7 +88,7 @@ func addRecord(mock *LedgerMock, rec record.Record) record.Reference {
 	}
 }
 
-func TestDeployCodeCreatesRecord(t *testing.T) {
+func TestLedgerArtifactManager_DeployCode(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -110,7 +109,7 @@ func TestDeployCodeCreatesRecord(t *testing.T) {
 	})
 }
 
-func TestActivateClassVerifiesCodeReference(t *testing.T) {
+func TestLedgerArtifactManager_ActivateClass_VerifiesRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -125,7 +124,7 @@ func TestActivateClassVerifiesCodeReference(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestActivateClassCreatesActivateRecord(t *testing.T) {
+func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -152,7 +151,7 @@ func TestActivateClassCreatesActivateRecord(t *testing.T) {
 	})
 }
 
-func TestDeactivateClassVerifiesClassReference(t *testing.T) {
+func TestLedgerArtifactManager_DeactivateClass_VerifiesRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -167,7 +166,7 @@ func TestDeactivateClassVerifiesClassReference(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestDeactivateClassVerifiesClassIsActive(t *testing.T) {
+func TestLedgerArtifactManager_DeactivateClass_VerifiesClassIsActive(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -184,7 +183,7 @@ func TestDeactivateClassVerifiesClassIsActive(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestDeactivateClassCreatesDeactivateRecord(t *testing.T) {
+func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -212,7 +211,7 @@ func TestDeactivateClassCreatesDeactivateRecord(t *testing.T) {
 	})
 }
 
-func TestUpdateClassVerifiesClassReference(t *testing.T) {
+func TestLedgerArtifactManager_UpdateClass_VerifiesRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -220,14 +219,14 @@ func TestUpdateClassVerifiesClassReference(t *testing.T) {
 	}
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.UpdateClass(requestRef, record.Reference{}, []record.MemoryMigrationCode{})
+	_, err := manager.UpdateClass(requestRef, record.Reference{}, record.Reference{}, nil)
 	assert.NotNil(t, err)
 	notClassRef := addRecord(&ledger, &record.CodeRecord{})
-	_, err = manager.UpdateClass(requestRef, notClassRef, []record.MemoryMigrationCode{})
+	_, err = manager.UpdateClass(requestRef, notClassRef, record.Reference{}, nil)
 	assert.NotNil(t, err)
 }
 
-func TestUpdateClassVerifiesClassIsActive(t *testing.T) {
+func TestLedgerArtifactManager_UpdateClass_VerifiesClassIsActive(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -237,14 +236,15 @@ func TestUpdateClassVerifiesClassIsActive(t *testing.T) {
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
 	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
+	codeRef := addRecord(&ledger, &record.CodeRecord{})
 	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
 		LatestStateID: deactivateRef.Record,
 	})
-	_, err := manager.UpdateClass(requestRef, classRef, nil)
+	_, err := manager.UpdateClass(requestRef, classRef, codeRef, nil)
 	assert.NotNil(t, err)
 }
 
-func TestUpdateClassCreatesAmendRecord(t *testing.T) {
+func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -253,10 +253,14 @@ func TestUpdateClassCreatesAmendRecord(t *testing.T) {
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
+	return
 	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
 		LatestStateID: classRef.Record,
 	})
-	updateRef, err := manager.UpdateClass(requestRef, classRef, nil)
+	codeRef := addRecord(&ledger, &record.CodeRecord{})
+	migrationRef := addRecord(&ledger, &record.CodeRecord{SourceCode: "test"})
+	migrationRefs := []record.Reference{migrationRef}
+	updateRef, err := manager.UpdateClass(requestRef, classRef, codeRef, migrationRefs)
 	assert.Nil(t, err)
 	updateRec, getErr := ledger.GetRecord(updateRef.Record)
 	assert.Nil(t, getErr)
@@ -269,10 +273,12 @@ func TestUpdateClassCreatesAmendRecord(t *testing.T) {
 			},
 			AmendedRecord: classRef,
 		},
+		NewCode:    codeRef,
+		Migrations: migrationRefs,
 	})
 }
 
-func TestActivateObjVerifiesClassReference(t *testing.T) {
+func TestLedgerArtifactManager_ActivateObj_VerifiesRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -287,7 +293,7 @@ func TestActivateObjVerifiesClassReference(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestActivateObjCreatesActivateRecord(t *testing.T) {
+func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -297,7 +303,9 @@ func TestActivateObjCreatesActivateRecord(t *testing.T) {
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
 	memory := record.Memory{1, 2, 3}
 	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{})
+	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
+		LatestStateID: classRef.Record,
+	})
 	activateRef, err := manager.ActivateObj(requestRef, classRef, memory)
 	assert.Nil(t, err)
 	activateRec, err := ledger.GetRecord(activateRef.Record)
@@ -315,7 +323,7 @@ func TestActivateObjCreatesActivateRecord(t *testing.T) {
 	})
 }
 
-func TestDeactivateObjVerifiesObjReference(t *testing.T) {
+func TestLedgerArtifactManager_DeactivateObj_VerifiesRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -330,7 +338,7 @@ func TestDeactivateObjVerifiesObjReference(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestDeactivateObjVerifiesObjectIsActive(t *testing.T) {
+func TestLedgerArtifactManager_DeactivateObj_VerifiesObjectIsActive(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -347,7 +355,7 @@ func TestDeactivateObjVerifiesObjectIsActive(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestDeactivateObjCreatesDeactivateRecord(t *testing.T) {
+func TestLedgerArtifactManager_DeactivateObj_CreatesCorrectRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -375,7 +383,7 @@ func TestDeactivateObjCreatesDeactivateRecord(t *testing.T) {
 	})
 }
 
-func TestUpdateObjVerifiesObjectReference(t *testing.T) {
+func TestLedgerArtifactManager_UpdateObj_VerifiesRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -390,7 +398,7 @@ func TestUpdateObjVerifiesObjectReference(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestUpdateObjVerifiesObjectIsActive(t *testing.T) {
+func TestLedgerArtifactManager_UpdateObj_VerifiesObjectIsActive(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -403,11 +411,11 @@ func TestUpdateObjVerifiesObjectIsActive(t *testing.T) {
 	ledger.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
 		LatestStateID: deactivateRef.Record,
 	})
-	_, err := manager.UpdateClass(requestRef, objRef, nil)
+	_, err := manager.UpdateObj(requestRef, objRef, nil)
 	assert.NotNil(t, err)
 }
 
-func TestUpdateObjCreatesAmendRecord(t *testing.T) {
+func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -437,7 +445,7 @@ func TestUpdateObjCreatesAmendRecord(t *testing.T) {
 	})
 }
 
-func TestAppendObjDelegateVerifiesObjRecord(t *testing.T) {
+func TestLedgerArtifactManager_AppendObjDelegate_VerifiesRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -452,7 +460,7 @@ func TestAppendObjDelegateVerifiesObjRecord(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestAppendObjDelegateVerifiesObjectIsActive(t *testing.T) {
+func TestLedgerArtifactManager_AppendObjDelegate_VerifiesClassIsActive(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -469,7 +477,7 @@ func TestAppendObjDelegateVerifiesObjectIsActive(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestAppendObjDelegateCreatesAmendRecord(t *testing.T) {
+func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -499,5 +507,128 @@ func TestAppendObjDelegateCreatesAmendRecord(t *testing.T) {
 			AmendedRecord: objRef,
 		},
 		AppendMemory: memory,
+	})
+}
+
+func TestLedgerArtifactManager_GetObj_VerifiesRecords(t *testing.T) {
+	ledger := LedgerMock{
+		Records:       map[record.ID]record.Record{},
+		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
+		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
+	}
+	manager := LedgerArtifactManager{storer: &ledger}
+	_, _, err := manager.GetObj(record.Reference{}, record.Reference{}, record.Reference{})
+	assert.NotNil(t, err)
+
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
+	objectRef := addRecord(&ledger, &record.ObjectActivateRecord{})
+	wrongRef := addRecord(&ledger, &record.CodeRecord{})
+	_, _, err = manager.GetObj(wrongRef, classRef, objectRef)
+	assert.NotNil(t, err)
+	_, _, err = manager.GetObj(objectRef, wrongRef, objectRef)
+	assert.NotNil(t, err)
+	_, _, err = manager.GetObj(objectRef, classRef, wrongRef)
+	assert.NotNil(t, err)
+}
+
+func TestLedgerArtifactManager_GetObj_VerifiesClassIsActive(t *testing.T) {
+	ledger := LedgerMock{
+		Records:       map[record.ID]record.Record{},
+		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
+		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
+	}
+	manager := LedgerArtifactManager{storer: &ledger}
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
+	classDeactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
+	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{LatestStateID: classDeactivateRef.Record})
+	objectRef := addRecord(&ledger, &record.ObjectActivateRecord{})
+	ledger.SetObjectIndex(objectRef.Record, &index.ObjectLifeline{
+		LatestStateID: objectRef.Record,
+		ClassID:       classRef.Record,
+	})
+	_, _, err := manager.GetObj(objectRef, classRef, objectRef)
+	assert.NotNil(t, err)
+}
+
+func TestLedgerArtifactManager_GetObj_ReturnsNilDescriptorsIfCurrentStateProvided(t *testing.T) {
+	ledger := LedgerMock{
+		Records:       map[record.ID]record.Record{},
+		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
+		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
+	}
+	manager := LedgerArtifactManager{storer: &ledger}
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
+	classAmendRef := addRecord(&ledger, &record.ClassAmendRecord{})
+	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
+		LatestStateID: classAmendRef.Record,
+	})
+	objectRef := addRecord(&ledger, &record.ObjectActivateRecord{})
+	objectAmendRef := addRecord(&ledger, &record.ObjectAmendRecord{})
+	ledger.SetObjectIndex(objectRef.Record, &index.ObjectLifeline{
+		LatestStateID: objectAmendRef.Record,
+		ClassID:       classRef.Record,
+	})
+	classDesc, objDesc, err := manager.GetObj(objectRef, classAmendRef, objectAmendRef)
+	assert.Nil(t, err)
+	assert.Nil(t, classDesc)
+	assert.Nil(t, objDesc)
+}
+
+func TestLedgerArtifactManager_GetObj_ReturnsCorrectDescriptors(t *testing.T) {
+	ledger := LedgerMock{
+		Records:       map[record.ID]record.Record{},
+		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
+		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
+	}
+
+	manager := LedgerArtifactManager{storer: &ledger}
+
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{DefaultMemory: record.Memory{1}})
+	classRec, _ := ledger.GetRecord(classRef.Record)
+	classRecCasted, _ := classRec.(*record.ClassActivateRecord)
+	classAmendRef := addRecord(&ledger, &record.ClassAmendRecord{NewCode: record.Reference{Record: record.ID{2}}})
+	classAmendRec, _ := ledger.GetRecord(classAmendRef.Record)
+	classAmendRecCasted, _ := classAmendRec.(*record.ClassAmendRecord)
+	classIndex := index.ClassLifeline{
+		LatestStateID: classAmendRef.Record,
+	}
+	ledger.SetClassIndex(classRef.Record, &classIndex)
+
+	objectRef := addRecord(&ledger, &record.ObjectActivateRecord{Memory: record.Memory{3}})
+	objectRec, _ := ledger.GetRecord(objectRef.Record)
+	objectRecCasted, _ := objectRec.(*record.ObjectActivateRecord)
+	objectAmendRef := addRecord(&ledger, &record.ObjectAmendRecord{NewMemory: record.Memory{4}})
+	objectAmendRec, _ := ledger.GetRecord(objectAmendRef.Record)
+	objectAmendRecCasted, _ := objectAmendRec.(*record.ObjectAmendRecord)
+	objectIndex := index.ObjectLifeline{
+		LatestStateID: objectAmendRef.Record,
+		ClassID:       classRef.Record,
+	}
+	ledger.SetObjectIndex(objectRef.Record, &objectIndex)
+
+	classDesc, objectDesc, err := manager.GetObj(objectRef, classRef, objectRef)
+	assert.NoError(t, err)
+	assert.Equal(t, *classDesc, ClassDescriptor{
+		StateRef: record.Reference{
+			Domain: classRef.Domain,
+			Record: classAmendRef.Record,
+		},
+
+		manager:           &manager,
+		fromState:         classRef,
+		activateRecord:    classRecCasted,
+		latestAmendRecord: classAmendRecCasted,
+		lifelineIndex:     &classIndex,
+	})
+	assert.Equal(t, *objectDesc, ObjectDescriptor{
+		StateRef: record.Reference{
+			Domain: objectRef.Domain,
+			Record: objectAmendRef.Record,
+		},
+
+		manager:           &manager,
+		activateRecord:    objectRecCasted,
+		latestAmendRecord: objectAmendRecCasted,
+		lifelineIndex:     &objectIndex,
 	})
 }
