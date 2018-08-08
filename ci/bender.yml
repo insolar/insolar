@@ -29,8 +29,8 @@ resources:
   source:
     teams:
     - name: main
-      username: {{ username }}
-      password: {{ password }}
+      username: (( username ))
+      password: (( password ))
 
 - name: insolar
   type: git
