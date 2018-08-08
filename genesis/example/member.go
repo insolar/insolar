@@ -17,8 +17,6 @@
 package example
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
@@ -32,26 +30,13 @@ type Member interface {
 	object.ComposingContainer
 	contract.SmartContract
 	GetUsername() string
-	GetPublicKey() *rsa.PublicKey
+	GetPublicKey() string
 }
 
 type member struct {
 	contract.BaseSmartContract
-	Username   string
-	privateKey *rsa.PrivateKey
-}
-
-// generateKey generates public and private rsa keys.
-func generateKey() *rsa.PrivateKey {
-	reader := rand.Reader
-	bitSize := 2048
-
-	key, err := rsa.GenerateKey(reader, bitSize)
-	if err != nil {
-		return nil
-	}
-	return key
-
+	Username  string
+	publicKey string
 }
 
 // newMember creates new instance of member.
@@ -75,13 +60,8 @@ func (m *member) GetUsername() string {
 }
 
 // GetPublicKey returns member's public key.
-func (m *member) GetPublicKey() *rsa.PublicKey {
-	if m.privateKey == nil {
-		key := generateKey()
-		m.privateKey = key
-	}
-
-	return &m.privateKey.PublicKey
+func (m *member) GetPublicKey() string {
+	return m.publicKey
 }
 
 type memberProxy struct {
@@ -107,7 +87,7 @@ func (mp *memberProxy) GetUsername() string {
 }
 
 // GetPublicKey is a proxy call for instance method.
-func (mp *memberProxy) GetPublicKey() *rsa.PublicKey {
+func (mp *memberProxy) GetPublicKey() string {
 	return mp.Instance.(Member).GetPublicKey()
 }
 

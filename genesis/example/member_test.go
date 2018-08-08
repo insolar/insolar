@@ -41,12 +41,6 @@ func (cf *BaseCompositeFactory) Create() (object.Composite, error) {
 	return &BaseComposite{}, nil
 }
 
-func TestGenerateKey(t *testing.T) {
-	key := generateKey()
-
-	assert.NotNil(t, key)
-}
-
 func TestNewMember(t *testing.T) {
 	parent := &mockParent{}
 	testMember, err := newMember(parent)
@@ -78,25 +72,12 @@ func TestMember_GetUsername(t *testing.T) {
 	assert.Equal(t, "", username)
 }
 
-func TestMember_GetPublicKey_Exist(t *testing.T) {
+func TestMember_GetPublicKey(t *testing.T) {
 	parent := &mockParent{}
 	testMember, _ := newMember(parent)
-	currenrPublicKey := testMember.GetPublicKey()
-
-	assert.NotNil(t, testMember.(*member).privateKey)
 
 	publicKey := testMember.GetPublicKey()
-	assert.Equal(t, currenrPublicKey, publicKey)
-}
-
-func TestMember_GetPublicKey_NotExist(t *testing.T) {
-	parent := &mockParent{}
-	testMember, _ := newMember(parent)
-	testMember.(*member).privateKey = nil
-
-	publicKey := testMember.GetPublicKey()
-
-	assert.NotNil(t, publicKey)
+	assert.Equal(t, "", publicKey)
 }
 
 func TestNewMemberProxy(t *testing.T) {
@@ -132,34 +113,9 @@ func TestMemberProxy_GetUsername(t *testing.T) {
 func TestMemberProxy_GetPublicKey(t *testing.T) {
 	parent := &mockParent{}
 	proxy, _ := newMemberProxy(parent)
-	currenrPublicKey := proxy.GetPublicKey()
 
 	publicKey := proxy.GetPublicKey()
-	assert.Equal(t, currenrPublicKey, publicKey)
-}
-
-func TestMemberProxy_CreateComposite(t *testing.T) {
-	parent := &mockParent{}
-	proxy, _ := newMemberProxy(parent)
-	compositeFactory := BaseCompositeFactory{}
-
-	composite, err := proxy.CreateComposite(&compositeFactory)
-
-	assert.Len(t, proxy.Instance.(*member).CompositeMap, 1)
-	assert.Equal(t, proxy.Instance.(*member).CompositeMap[composite.GetInterfaceKey()], composite)
-	assert.NoError(t, err)
-}
-
-func TestMemberProxy_GetComposite(t *testing.T) {
-	parent := &mockParent{}
-	proxy, _ := newMemberProxy(parent)
-	compositeFactory := BaseCompositeFactory{}
-	composite, _ := proxy.CreateComposite(&compositeFactory)
-
-	res, err := proxy.GetComposite(composite.GetInterfaceKey())
-
-	assert.Equal(t, composite, res)
-	assert.NoError(t, err)
+	assert.Equal(t, "", publicKey)
 }
 
 func TestMemberProxy_GetOrCreateComposite_Get(t *testing.T) {

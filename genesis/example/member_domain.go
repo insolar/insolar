@@ -41,7 +41,7 @@ type MemberDomain interface {
 
 type memberDomain struct {
 	domain.BaseDomain
-	memberFactoryRecord string
+	memberFactoryReference object.Reference
 }
 
 // newMemberDomain creates new instance of MemberDomain.
@@ -60,7 +60,10 @@ func newMemberDomain(parent object.Parent) (MemberDomain, error) {
 	if err != nil {
 		return nil, err
 	}
-	md.memberFactoryRecord = record
+	md.memberFactoryReference, err = object.NewReference("", record, object.ChildScope)
+	if err != nil {
+		return nil, err
+	}
 	return md, nil
 }
 
@@ -72,14 +75,15 @@ func (md *memberDomain) GetClassID() string {
 // CreateMember creates new member as a child to domain storage.
 func (md *memberDomain) CreateMember() (string, error) {
 	// Get child by memberFactoryRecord
-	child, err := md.GetChild(md.memberFactoryRecord)
+	r := md.GetResolver()
+	child, err := r.GetObject(md.memberFactoryReference, class.MemberID)
 	if err != nil {
 		return "", err
 	}
 	// Check if it Factory
 	mf, ok := child.(factory.Factory)
 	if !ok {
-		return "", fmt.Errorf("child by record `%s` is not Factory instance", md.memberFactoryRecord)
+		return "", fmt.Errorf("child by reference `%s` is not Factory instance", md.memberFactoryReference)
 	}
 	// Create member
 	member, err := mf.Create(md)
@@ -88,10 +92,6 @@ func (md *memberDomain) CreateMember() (string, error) {
 	}
 	if member == nil {
 		return "", fmt.Errorf("factory returns nil")
-	}
-	_, ok = member.(Member)
-	if !ok {
-		return "", fmt.Errorf("factory returns not Member instance")
 	}
 
 	record, err := md.AddChild(member)
@@ -104,20 +104,17 @@ func (md *memberDomain) CreateMember() (string, error) {
 
 // GetMember returns member from its record in domain storage.
 func (md *memberDomain) GetMember(record string) (Member, error) {
-	member, err := md.GetChild(record)
+	r := md.GetResolver()
+	ref, err := object.NewReference("", record, object.ChildScope)
+	if err != nil {
+		return nil, err
+	}
+	member, err := r.GetObject(ref, class.MemberID)
 	if err != nil {
 		return nil, err
 	}
 
-	proxy, ok := member.(resolver.Proxy)
-	if !ok {
-		return nil, fmt.Errorf("object with record `%s` is not `Proxy` instance", record)
-	}
-
-	result, ok := proxy.(Member)
-	if !ok {
-		return nil, fmt.Errorf("object by record `%s` is not `Member` instance", record)
-	}
+	result, _ := member.(Member)
 
 	return result, nil
 }
