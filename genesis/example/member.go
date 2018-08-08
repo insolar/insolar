@@ -34,24 +34,34 @@ type MemberDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// CreateMember is used to create new member as a child to domain storage.
-	CreateMember(factory.Factory) (string, error)
+	CreateMember() (string, error)
 	// GetMember returns member from its record in domain storage.
-	GetMember(string) (resolver.Proxy, error)
+	GetMember(string) (Member, error)
 }
 
 type memberDomain struct {
 	domain.BaseDomain
+	memberFactoryRecord string
 }
 
 // newMemberDomain creates new instance of MemberDomain.
-func newMemberDomain(parent object.Parent) (*memberDomain, error) {
+func newMemberDomain(parent object.Parent) (MemberDomain, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
-	return &memberDomain{
+	mf, _ := NewMemberFactory(parent).(*memberFactory)
+
+	md := &memberDomain{
 		BaseDomain: *domain.NewBaseDomain(parent, MemberDomainName),
-	}, nil
+	}
+	// Add memberFactory as a child
+	record, err := md.AddChild(mf)
+	if err != nil {
+		return nil, err
+	}
+	md.memberFactoryRecord = record
+	return md, nil
 }
 
 // GetClassID returns string representation of MemberDomain's class.
@@ -60,16 +70,31 @@ func (md *memberDomain) GetClassID() string {
 }
 
 // CreateMember creates new member as a child to domain storage.
-func (md *memberDomain) CreateMember(fc factory.Factory) (string, error) {
-	member, err := fc.Create(md)
+func (md *memberDomain) CreateMember() (string, error) {
+	// Get child by memberFactoryRecord
+	child, err := md.GetChild(md.memberFactoryRecord)
+	if err != nil {
+		return "", err
+	}
+	// Check if it Factory
+	mf, ok := child.(factory.Factory)
+	if !ok {
+		return "", fmt.Errorf("child by record `%s` is not Factory instance", md.memberFactoryRecord)
+	}
+	// Create member
+	member, err := mf.Create(md)
 	if err != nil {
 		return "", err
 	}
 	if member == nil {
 		return "", fmt.Errorf("factory returns nil")
 	}
+	_, ok = member.(Member)
+	if !ok {
+		return "", fmt.Errorf("factory returns not Member instance")
+	}
 
-	record, err := md.ChildStorage.Set(member)
+	record, err := md.AddChild(member)
 	if err != nil {
 		return "", err
 	}
@@ -78,15 +103,20 @@ func (md *memberDomain) CreateMember(fc factory.Factory) (string, error) {
 }
 
 // GetMember returns member from its record in domain storage.
-func (md *memberDomain) GetMember(record string) (resolver.Proxy, error) {
-	member, err := md.ChildStorage.Get(record)
+func (md *memberDomain) GetMember(record string) (Member, error) {
+	member, err := md.GetChild(record)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := member.(resolver.Proxy)
+	proxy, ok := member.(resolver.Proxy)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not `Proxy` instance", record)
+	}
+
+	result, ok := proxy.(Member)
+	if !ok {
+		return nil, fmt.Errorf("object by record `%s` is not `Member` instance", record)
 	}
 
 	return result, nil
@@ -110,12 +140,12 @@ func newMemberDomainProxy(parent object.Parent) (*memberDomainProxy, error) {
 }
 
 // CreateMember is a proxy call for instance method.
-func (mdp *memberDomainProxy) CreateMember(fc factory.Factory) (string, error) {
-	return mdp.Instance.(MemberDomain).CreateMember(fc)
+func (mdp *memberDomainProxy) CreateMember() (string, error) {
+	return mdp.Instance.(MemberDomain).CreateMember()
 }
 
 // GetMember is a proxy call for instance method.
-func (mdp *memberDomainProxy) GetMember(record string) (resolver.Proxy, error) {
+func (mdp *memberDomainProxy) GetMember(record string) (Member, error) {
 	return mdp.Instance.(MemberDomain).GetMember(record)
 }
 
