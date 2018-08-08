@@ -35,7 +35,7 @@ type Member interface {
 
 type member struct {
 	contract.BaseSmartContract
-	Username  string
+	username  string
 	publicKey string
 }
 
@@ -56,7 +56,7 @@ func (m *member) GetClassID() string {
 
 // GetUsername returns member's username.
 func (m *member) GetUsername() string {
-	return m.Username
+	return m.username
 }
 
 // GetPublicKey returns member's public key.
