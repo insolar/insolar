@@ -113,10 +113,7 @@ func (md *memberDomain) GetMember(record string) (Member, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	result, _ := member.(Member)
-
-	return result, nil
+	return member.(Member), nil
 }
 
 type memberDomainProxy struct {
