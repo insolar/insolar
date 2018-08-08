@@ -23,62 +23,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockInstance struct {
-	ref object.Reference
-}
-
-func (p *mockInstance) GetClassID() string {
-	return "mockChild"
-}
-
-func (p *mockInstance) GetReference() object.Reference {
-	return p.ref
-}
-
-func (p *mockInstance) SetReference(reference object.Reference) {
-	p.ref = reference
-}
-
-func (p *mockInstance) GetParent() object.Parent {
-	return nil
-}
-
 func TestBaseProxy_GetClassID(t *testing.T) {
-	proxy := &BaseProxy{
-		Instance: &mockInstance{},
-	}
-	assert.Equal(t, "mockChild", proxy.GetClassID())
+	proxy := &BaseProxy{}
+	assert.Equal(t, "Proxy", proxy.GetClassID())
+}
+
+func TestBaseProxy_GetParent(t *testing.T) {
+	proxy := &BaseProxy{}
+	assert.Nil(t, proxy.GetParent())
 }
 
 func TestBaseProxy_SetReference(t *testing.T) {
 	ref, _ := object.NewReference("1", "2", object.GlobalScope)
-	proxy := &BaseProxy{
-		Instance: &mockInstance{},
-	}
+	proxy := &BaseProxy{}
 	proxy.SetReference(ref)
-	assert.Equal(t, ref, proxy.Instance.(*mockInstance).ref)
+	assert.Equal(t, ref, proxy.reference)
 }
 
 func TestBaseProxy_GetReference(t *testing.T) {
 	ref, _ := object.NewReference("1", "2", object.GlobalScope)
 	proxy := &BaseProxy{
-		Instance: &mockInstance{
-			ref: ref,
-		},
+		reference: ref,
 	}
 	assert.Equal(t, ref, proxy.GetReference())
-}
-
-func TestBaseProxy_GetParent(t *testing.T) {
-	proxy := &BaseProxy{
-		Instance: &mockInstance{},
-	}
-	assert.Nil(t, proxy.GetParent())
-}
-
-func TestBaseProxy_GetResolver(t *testing.T) {
-	proxy := &BaseProxy{
-		Instance: &mockInstance{},
-	}
-	assert.Nil(t, proxy.GetResolver())
 }

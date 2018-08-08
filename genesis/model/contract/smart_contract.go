@@ -34,7 +34,7 @@ type SmartContract interface {
 
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.
 type BaseSmartContract struct {
-	object.BaseCallable
+	object.BaseObject
 	CompositeMap   map[string]object.Composite
 	ChildStorage   storage.Storage
 	ContextStorage storage.Storage

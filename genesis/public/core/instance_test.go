@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/insolar/insolar/genesis/model/resolver"
@@ -29,7 +30,8 @@ import (
 )
 
 type mockProxy struct {
-	parent object.Parent
+	parent    object.Parent
+	reference object.Reference
 }
 
 func (p *mockProxy) GetClassID() string {
@@ -37,18 +39,19 @@ func (p *mockProxy) GetClassID() string {
 }
 
 func (p *mockProxy) GetReference() object.Reference {
-	return nil
+	return p.reference
 }
 
 func (p *mockProxy) SetReference(reference object.Reference) {
-
+	p.reference = reference
 }
 
 func (p *mockProxy) GetParent() object.Parent {
 	return p.parent
 }
 
-type mockFactory struct{}
+type mockFactory struct {
+}
 
 func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	return &mockProxy{
@@ -180,7 +183,7 @@ func TestNewInstanceDomainProxy(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &instanceDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: instDom,
 		},
 	}, proxy)
@@ -270,7 +273,7 @@ func TestInstanceDomainFactory_Create(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, &instanceDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: instDom,
 		},
 	}, proxy)

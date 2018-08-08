@@ -17,40 +17,38 @@
 package resolver
 
 import (
+	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
 // Proxy marks instance as proxy object.
 type Proxy interface {
 	object.Child
+	GetReference() object.Reference
+	SetReference(reference object.Reference)
 }
 
 // BaseProxy is a base implementation of Proxy.
 type BaseProxy struct {
-	Instance object.Child
-}
-
-// GetReference is a proxy call for instance method.
-func (bp *BaseProxy) GetReference() object.Reference {
-	return bp.Instance.GetReference()
-}
-
-// SetReference is a proxy call for instance method.
-func (bp *BaseProxy) SetReference(reference object.Reference) {
-	bp.Instance.SetReference(reference)
-}
-
-// GetParent is a proxy call for instance method.
-func (bp *BaseProxy) GetParent() object.Parent {
-	return bp.Instance.GetParent()
-}
-
-// GetResolver always returns nil.
-func (bp *BaseProxy) GetResolver() Resolver {
-	return nil
+	reference object.Reference
 }
 
 // GetClassID is a proxy call for instance method.
 func (bp *BaseProxy) GetClassID() string {
-	return bp.Instance.GetClassID()
+	return class.ProxyID
+}
+
+// GetParent is a proxy call for instance method.
+func (bp *BaseProxy) GetParent() object.Parent {
+	return nil
+}
+
+// GetReference is a proxy call for instance method.
+func (bp *BaseProxy) GetReference() object.Reference {
+	return bp.reference
+}
+
+// SetReference is a proxy call for instance method.
+func (bp *BaseProxy) SetReference(reference object.Reference) {
+	bp.reference = reference
 }

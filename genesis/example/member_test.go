@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/insolar/insolar/genesis/model/resolver"
@@ -29,20 +30,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCallable struct {
-	reference object.Reference
-}
+//type mockCallable struct {
+//reference object.Reference
+//}
 
-func (c *mockCallable) GetReference() object.Reference {
+/*func (c *mockCallable) GetReference() object.Reference {
 	return c.reference
 }
 
 func (c *mockCallable) SetReference(reference object.Reference) {
 	c.reference = reference
-}
+}*/
 
 type mockChild struct {
-	mockCallable
+	//mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -58,7 +59,7 @@ func (c *mockChild) GetParent() object.Parent {
 var child = &mockChild{}
 
 type mockParent struct {
-	mockCallable
+	//mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -100,8 +101,9 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 }
 
 type mockProxy struct {
-	mockCallable
-	parent object.Parent
+	//mockCallable
+	parent    object.Parent
+	reference object.Reference
 }
 
 func (p *mockProxy) GetClassID() string {
@@ -112,8 +114,17 @@ func (p *mockProxy) GetParent() object.Parent {
 	return p.parent
 }
 
+func (p *mockProxy) GetReference() object.Reference {
+	return p.reference
+}
+
+func (p *mockProxy) SetReference(reference object.Reference) {
+	p.reference = reference
+}
+
 type mockFactory struct {
-	mockCallable
+	//mockCallable
+	reference object.Reference
 }
 
 func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
@@ -128,6 +139,14 @@ func (f *mockFactory) GetClassID() string {
 
 func (f *mockFactory) GetParent() object.Parent {
 	return nil
+}
+
+func (f *mockFactory) GetReference() object.Reference {
+	return f.reference
+}
+
+func (f *mockFactory) SetReference(reference object.Reference) {
+	f.reference = reference
 }
 
 type mockFactoryError struct {
@@ -231,7 +250,7 @@ func TestNewMemberDomainProxy(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &memberDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: mDomain,
 		},
 	}, proxy)
@@ -303,7 +322,7 @@ func TestMemberDomainFactory_Create(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, &memberDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: mDomain,
 		},
 	}, proxy)

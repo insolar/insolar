@@ -137,13 +137,13 @@ func TestSmartContract_GetClassID(t *testing.T) {
 	assert.Equal(t, class.SmartContractID, classID)
 }
 
-func TestSmartContract_GetReference(t *testing.T) {
+/*func TestSmartContract_GetReference(t *testing.T) {
 	parent := &mockParent{}
 	sc := NewBaseSmartContract(parent)
 	ref := sc.GetReference()
 
 	assert.Nil(t, ref)
-}
+}*/
 
 func TestSmartContract_CreateComposite(t *testing.T) {
 	parent := &mockParent{}

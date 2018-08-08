@@ -19,6 +19,9 @@ package class
 // ObjectID is a string representation of class for Object interface implementations.
 const ObjectID = "Object"
 
+// ProxyID is a string representation of class for Proxy interface implementations.
+const ProxyID = "Proxy"
+
 // ReferenceID is a string representation of class for Reference interface implementations.
 const ReferenceID = "Reference"
 

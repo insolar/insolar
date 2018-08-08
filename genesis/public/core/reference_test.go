@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/insolar/insolar/genesis/model/resolver"
@@ -216,7 +217,7 @@ func TestNewReferenceDomainProxy(t *testing.T) {
 	refDomainProxy := newReferenceDomainProxy(parent)
 
 	assert.Equal(t, &referenceDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: newReferenceDomain(parent),
 		},
 	}, refDomainProxy)
@@ -288,7 +289,7 @@ func TestReferenceDomainFactory_Create(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, &referenceDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: newReferenceDomain(parent),
 		},
 	}, proxy)
