@@ -44,9 +44,9 @@ func newMember(parent object.Parent) (Member, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
-	m := &member{}
-	m.CompositeMap = make(map[string]object.Composite)
-	return m, nil
+	return &member{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+	}, nil
 }
 
 // GetClassID returns string representation of member's class.

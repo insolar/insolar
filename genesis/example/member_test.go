@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/stretchr/testify/assert"
@@ -46,8 +47,9 @@ func TestNewMember(t *testing.T) {
 	testMember, err := newMember(parent)
 
 	assert.NoError(t, err)
-	expectedMember := &member{}
-	expectedMember.CompositeMap = make(map[string]object.Composite)
+	expectedMember := &member{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+	}
 	assert.Equal(t, expectedMember, testMember)
 }
 
@@ -88,7 +90,9 @@ func TestNewMemberProxy(t *testing.T) {
 	proxy, err := newMemberProxy(parent)
 	assert.NoError(t, err)
 
-	expectedMember := &member{}
+	expectedMember := &member{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+	}
 	expectedMember.CompositeMap = make(map[string]object.Composite)
 	assert.Equal(t, &memberProxy{
 		BaseProxy: resolver.BaseProxy{
@@ -176,7 +180,9 @@ func TestMemberFactory_Create(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	expectedMember := &member{}
+	expectedMember := &member{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+	}
 	expectedMember.CompositeMap = make(map[string]object.Composite)
 	assert.Equal(t, &memberProxy{
 		BaseProxy: resolver.BaseProxy{
