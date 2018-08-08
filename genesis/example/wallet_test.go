@@ -37,10 +37,9 @@ func TestNewWalletDomain(t *testing.T) {
 	proxy, err := newWalletDomain(parent)
 
 	assert.NoError(t, err)
-	assert.Equal(t, proxy,
-		&walletDomain{
-			BaseDomain: *domain.NewBaseDomain(parent, WalletDomainName),
-		})
+	assert.Equal(t, &walletDomain{
+		BaseDomain: *domain.NewBaseDomain(parent, WalletDomainName),
+	}, proxy)
 }
 
 func TestNewWalletDomainFactory(t *testing.T) {
@@ -98,7 +97,7 @@ func TestWalletDomain_GetClassID(t *testing.T) {
 	assert.Equal(t, class.WalletDomainID, wdomain.GetClassID())
 }
 
-func TestWalletDomain_GetWallet_NoShuchRecord(t *testing.T) {
+func TestWalletDomain_GetWallet_NoSuchRecord(t *testing.T) {
 	parent := &mockParent{}
 	wdomain, err := newWalletDomain(parent)
 	assert.NoError(t, err)

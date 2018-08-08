@@ -75,7 +75,7 @@ func (wd *walletDomain) CreateWallet(fc factory.Factory) (string, error) {
 }
 
 func (wd *walletDomain) GetWallet(record string) (resolver.Proxy, error) {
-	wallet, err := wd.ChildStorage.Get(record)
+	wallet, err := wd.GetChild(record)
 	if err != nil {
 		return nil, err
 	}
