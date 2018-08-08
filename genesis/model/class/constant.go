@@ -42,3 +42,6 @@ const MemberDomainID = "MemberDomain"
 
 // WalletDomainID is a string representation of class for WalletDomain interface implementations.
 const WalletDomainID = "WalletDomain"
+
+// WalletID is a string representation of class for Wallet interface implementations.
+const WalletID = "Wallet"
