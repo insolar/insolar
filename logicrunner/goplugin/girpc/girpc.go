@@ -6,12 +6,12 @@ import "github.com/insolar/insolar/logicrunner"
 type CallReq struct {
 	Object    logicrunner.Object
 	Method    string
-	Arguments []logicrunner.Argument
+	Arguments logicrunner.Arguments
 }
 
 // CallResp is response from Call RPC in the runner
 type CallResp struct {
 	Data []byte
-	Ret  logicrunner.Argument
+	Ret  logicrunner.Arguments
 	Err  error
 }
