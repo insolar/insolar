@@ -46,7 +46,7 @@ jobs:
   - get: branches
     trigger: true
   - get: insolar
-    trigger: true
+    trigger: false
   - task: generate_pipelines
     config:
       platform: linux
