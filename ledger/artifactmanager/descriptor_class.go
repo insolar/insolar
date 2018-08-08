@@ -45,7 +45,7 @@ func (d *ClassDescriptor) GetCode() ([]byte, error) {
 
 func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 	var amends []*record.ClassAmendRecord
-	for i := len(d.lifelineIndex.AmendIDs); i >= 0; i-- {
+	for i := len(d.lifelineIndex.AmendIDs) - 1; i >= 0; i-- {
 		amendID := d.lifelineIndex.AmendIDs[i]
 		if d.fromState.Record == amendID {
 			break
@@ -61,8 +61,8 @@ func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 		amends = append(amends, amendRec)
 	}
 	sortedAmends := make([]*record.ClassAmendRecord, len(amends))
-	for i := len(amends); i >= 0; i-- {
-		sortedAmends = append(sortedAmends, amends[i])
+	for i, amend := range amends {
+		sortedAmends[len(amends)-i-1] = amend
 	}
 
 	var migrations [][]byte
