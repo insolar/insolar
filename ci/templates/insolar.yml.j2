@@ -1,0 +1,48 @@
+groups:
+{% for branch in branches %}
+- name: {{ branch }}
+  jobs:
+    - unit-{{ branch }}
+{% endfor %}
+
+resources:
+{% for branch in branches %}
+- name: insolar-{{ branch }}
+  type: git
+  source:
+    uri: https://github.com/insolar/insolar.git
+    branch: {{ branch }}
+{% endfor %}
+
+jobs:
+{% for branch in branches %}
+- name: unit-{{ branch }}
+  public: true
+  plan:
+  - get: insolar-{{ branch }}
+    trigger: false
+  - task: unit
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: insolar
+        path: gopath/src/github.com/insolar/insolar
+      caches:
+      - path: depspath/
+      - path: gopath/pkg/
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             pwd
+             ls -alh
+             cd gopath/src/github.com/insolar/insolar
+             echo "fetching dependencies..."
+             go get -t -d ./...
+             go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
+{% endfor %}

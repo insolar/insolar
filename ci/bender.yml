@@ -11,14 +11,14 @@ resources:
   type: smuggler
   source:
     smuggler_debug: true
-    target_file: branches
+    target_file: branches.json
     commands:
       check: |
-        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '.[] | .name' | md5sum > ${SMUGGLER_OUTPUT_DIR}/versions
+        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' | md5sum > ${SMUGGLER_OUTPUT_DIR}/versions
       in: |
-        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '.[] | .name' > ${SMUGGLER_DESTINATION_DIR}/${SMUGGLER_target_file}
+        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' > ${SMUGGLER_DESTINATION_DIR}/${SMUGGLER_target_file}
         echo "date=$(date)" > ${SMUGGLER_OUTPUT_DIR}/metadata
-        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '.[] | .name' >> ${SMUGGLER_OUTPUT_DIR}/metadata
+        curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' >> ${SMUGGLER_OUTPUT_DIR}/metadata
 
 - name: insolar
   type: git
@@ -35,13 +35,13 @@ jobs:
     trigger: true
   - get: insolar
     trigger: true
-  - task: show_branches
+  - task: generate_pipelines
     config:
       platform: linux
       image_resource:
         type: docker-image
         source:
-          repository: alpine
+          repository: chemist/alpine-jinja-cli
       inputs:
       - name: branches
       - name: insolar
@@ -50,7 +50,11 @@ jobs:
         args:
         - -ec
         - |
-          cat branches/branches
-          pwd
-          ls -alh
+          echo Generate pipelines 
+          echo "Input: $(cat branches/branches.json)"
+          cp branches/branches.json /data/
+          cp insolar/ci/templates/insolar.yml.j2 /templates/
+          jinja2 insolar/ci/templates/insolar.yml.j2 branches/branches.json > /out/insolar.yml
+          echo "Output: "
+          cat /out/insolar.yml
 
