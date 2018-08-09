@@ -21,16 +21,26 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
+	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 type Wallet interface {
 	object.Composite
 	contract.SmartContract
+
+	GetBalance() int
 }
 
 type wallet struct {
 	contract.BaseSmartContract
+
+	balance int
+}
+
+func (w *wallet) GetBalance() int {
+	return w.balance
 }
 
 func (w *wallet) GetClassID() string {
@@ -48,5 +58,60 @@ func newWallet(parent object.Parent) (Wallet, error) {
 
 	return &wallet{
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		balance:           0,
 	}, nil
+}
+
+type walletProxy struct {
+	resolver.BaseProxy
+}
+
+func newWalletProxy(parent object.Parent) (*walletProxy, error) {
+	instance, err := newWallet(parent)
+	if err != nil {
+		return nil, err
+	}
+
+	return &walletProxy{
+		BaseProxy: resolver.BaseProxy{
+			Instance: instance,
+		},
+	}, nil
+}
+
+func (wp *walletProxy) GetBalance() int {
+	return wp.Instance.(Wallet).GetBalance()
+}
+
+type walletFactory struct {
+	object.BaseCallable
+	parent object.Parent
+}
+
+func NewWalletFactory(parent object.Parent) factory.Factory {
+	return &walletFactory{
+		parent: parent,
+	}
+}
+
+func (wf *walletFactory) GetClassID() string {
+	return class.WalletID
+}
+
+func (*walletFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+	proxy, err := newWalletProxy(parent)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = parent.AddChild(proxy)
+	if err != nil {
+		return nil, err
+	}
+
+	return proxy, nil
+}
+
+func (wf *walletFactory) GetParent() object.Parent {
+	return wf.parent
 }
