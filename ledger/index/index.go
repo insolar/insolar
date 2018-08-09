@@ -30,5 +30,6 @@ type ClassLifeline struct {
 type ObjectLifeline struct {
 	ClassID       record.ID
 	LatestStateID record.ID   // Amend or activate record
+	StateIDs      []record.ID // ObjectAppendRecord or ObjectAmendRecord
 	AppendIDs     []record.ID // ObjectAppendRecord
 }

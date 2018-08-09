@@ -47,6 +47,19 @@ func (m *LedgerArtifactManager) getCodeRecord(codeID record.ID) (*record.CodeRec
 	return codeRec, nil
 }
 
+func (m *LedgerArtifactManager) getCodeRecordCode(codeID record.ID) ([]byte, error) {
+	codeRec, err := m.getCodeRecord(codeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve code record")
+	}
+	code, err := codeRec.GetCode(m.archPref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve code")
+	}
+
+	return code, nil
+}
+
 func (m *LedgerArtifactManager) storeRecord(rec record.Record) (record.Reference, error) {
 	id, err := m.storer.SetRecord(rec)
 	if err != nil {
@@ -121,7 +134,9 @@ func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
 }
 
 // DeployCode deploys new code to storage (CodeRecord).
-func (m *LedgerArtifactManager) DeployCode(requestRef record.Reference) (record.Reference, error) {
+func (m *LedgerArtifactManager) DeployCode(
+	requestRef record.Reference, codeMap map[record.ArchType][]byte,
+) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
 		return record.Reference{}, nil
@@ -135,7 +150,7 @@ func (m *LedgerArtifactManager) DeployCode(requestRef record.Reference) (record.
 				},
 			},
 		},
-		// TODO: require and fill code params
+		TargetedCode: codeMap,
 	}
 	return m.storeRecord(&rec)
 }
@@ -438,7 +453,51 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	return appendRef, nil
 }
 
-func (m *LedgerArtifactManager) GetObj(
+func (m *LedgerArtifactManager) GetExactObj(
+	classRef, objectRef record.Reference,
+) ([]byte, record.Memory, error) {
+	classRec, err := m.storer.GetRecord(classRef.Record)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "class record not found")
+	}
+	var codeID record.ID
+	classActivateRec, ok := classRec.(*record.ClassActivateRecord)
+	if ok {
+		codeID = classActivateRec.CodeRecord.Record
+	} else {
+		classAmendRec, ok := classRec.(*record.ClassAmendRecord)
+		if ok {
+			codeID = classAmendRec.NewCode.Record
+		} else {
+			return nil, nil, errors.New("wrong class reference")
+		}
+	}
+	code, err := m.getCodeRecordCode(codeID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	objectRec, err := m.storer.GetRecord(objectRef.Record)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "object record not found")
+	}
+	var memory record.Memory
+	objectActivateRec, ok := objectRec.(*record.ObjectActivateRecord)
+	if ok {
+		memory = objectActivateRec.Memory
+	} else {
+		objectAmendRec, ok := objectRec.(*record.ObjectAmendRecord)
+		if ok {
+			memory = objectAmendRec.NewMemory
+		} else {
+			return nil, nil, errors.New("wrong object reference")
+		}
+	}
+
+	return code, memory, nil
+}
+
+func (m *LedgerArtifactManager) GetLatestObj(
 	objectRef, storedClassState, storedObjState record.Reference,
 ) (*ClassDescriptor, *ObjectDescriptor, error) {
 	var (

@@ -17,25 +17,12 @@ type ClassDescriptor struct {
 	lifelineIndex     *index.ClassLifeline
 }
 
-func (d *ClassDescriptor) getRecordCode(codeID record.ID) ([]byte, error) {
-	codeRec, err := d.manager.getCodeRecord(codeID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code record")
-	}
-	code, err := codeRec.GetCode(d.manager.archPref)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code")
-	}
-
-	return code, nil
-}
-
 func (d *ClassDescriptor) GetCode() ([]byte, error) {
 	codeRef := d.activateRecord.CodeRecord
 	if d.latestAmendRecord != nil {
 		codeRef = d.latestAmendRecord.NewCode
 	}
-	code, err := d.getRecordCode(codeRef.Record)
+	code, err := d.manager.getCodeRecordCode(codeRef.Record)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +55,7 @@ func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 	var migrations [][]byte
 	for _, amendRec := range sortedAmends {
 		for _, codeID := range amendRec.Migrations {
-			code, err := d.getRecordCode(codeID.Record)
+			code, err := d.manager.getCodeRecordCode(codeID.Record)
 			if err != nil {
 				return nil, errors.Wrap(err, "invalid migration reference in amend record")
 			}

@@ -27,22 +27,22 @@ type ArtifactManager interface {
 	// according to this preferences.
 	SetArchPref(pref []record.ArchType)
 
-	// GetObj returns object by reference.
-	GetObj(
-		// ref is target object reference
-		ref record.Reference,
-		// lastClassRef is reference to class that is already deployed to VM. Can be nil.
-		lastClassRef record.Reference,
-		// lastObjRef is reference to object that is already deployed to VM. Can be nil.
-		lastObjRef record.Reference,
+	// GetExactObj returns exact object data and code ref without calculating last state
+	GetExactObj(classRef, objectRef record.Reference) ([]byte, record.Memory, error)
+
+	// GetLatestObj returns object by reference.
+	GetLatestObj(
+		objectRef record.Reference,
+		storedClassState record.Reference,
+		storedObjState record.Reference,
 	) (
-		ClassDescriptor,
-		ObjectDescriptor,
+		*ClassDescriptor,
+		*ObjectDescriptor,
 		error,
 	)
 
 	// DeployCode deploys new code to storage (CodeRecord).
-	DeployCode(requestRef record.Reference) (record.Reference, error)
+	DeployCode(requestRef record.Reference, codeMap map[record.ArchType][]byte) (record.Reference, error)
 
 	// ActivateClass activates class from given code (ClassActivateRecord).
 	ActivateClass(requestRef, codeRef record.Reference, memory record.Memory) (record.Reference, error)

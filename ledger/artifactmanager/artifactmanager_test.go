@@ -96,7 +96,8 @@ func TestLedgerArtifactManager_DeployCode(t *testing.T) {
 	}
 	manager := LedgerArtifactManager{storer: &ledger}
 	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	ref, err := manager.DeployCode(requestRef)
+	codeMap := map[record.ArchType][]byte{1: {1}}
+	ref, err := manager.DeployCode(requestRef, codeMap)
 	assert.Nil(t, err)
 	assert.Equal(t, ledger.Records[ref.Record], &record.CodeRecord{
 		StorageRecord: record.StorageRecord{
@@ -106,6 +107,7 @@ func TestLedgerArtifactManager_DeployCode(t *testing.T) {
 				},
 			},
 		},
+		TargetedCode: codeMap,
 	})
 }
 
@@ -510,28 +512,28 @@ func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing
 	})
 }
 
-func TestLedgerArtifactManager_GetObj_VerifiesRecords(t *testing.T) {
+func TestLedgerArtifactManager_GetLatestObj_VerifiesRecords(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
 		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
 	}
 	manager := LedgerArtifactManager{storer: &ledger}
-	_, _, err := manager.GetObj(record.Reference{}, record.Reference{}, record.Reference{})
+	_, _, err := manager.GetLatestObj(record.Reference{}, record.Reference{}, record.Reference{})
 	assert.NotNil(t, err)
 
 	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
 	objectRef := addRecord(&ledger, &record.ObjectActivateRecord{})
 	wrongRef := addRecord(&ledger, &record.CodeRecord{})
-	_, _, err = manager.GetObj(wrongRef, classRef, objectRef)
+	_, _, err = manager.GetLatestObj(wrongRef, classRef, objectRef)
 	assert.NotNil(t, err)
-	_, _, err = manager.GetObj(objectRef, wrongRef, objectRef)
+	_, _, err = manager.GetLatestObj(objectRef, wrongRef, objectRef)
 	assert.NotNil(t, err)
-	_, _, err = manager.GetObj(objectRef, classRef, wrongRef)
+	_, _, err = manager.GetLatestObj(objectRef, classRef, wrongRef)
 	assert.NotNil(t, err)
 }
 
-func TestLedgerArtifactManager_GetObj_VerifiesClassIsActive(t *testing.T) {
+func TestLedgerArtifactManager_GetLatestObj_VerifiesClassIsActive(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -546,11 +548,11 @@ func TestLedgerArtifactManager_GetObj_VerifiesClassIsActive(t *testing.T) {
 		LatestStateID: objectRef.Record,
 		ClassID:       classRef.Record,
 	})
-	_, _, err := manager.GetObj(objectRef, classRef, objectRef)
+	_, _, err := manager.GetLatestObj(objectRef, classRef, objectRef)
 	assert.NotNil(t, err)
 }
 
-func TestLedgerArtifactManager_GetObj_ReturnsNilDescriptorsIfCurrentStateProvided(t *testing.T) {
+func TestLedgerArtifactManager_GetLatestObj_ReturnsNilDescriptorsIfCurrentStateProvided(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -568,13 +570,13 @@ func TestLedgerArtifactManager_GetObj_ReturnsNilDescriptorsIfCurrentStateProvide
 		LatestStateID: objectAmendRef.Record,
 		ClassID:       classRef.Record,
 	})
-	classDesc, objDesc, err := manager.GetObj(objectRef, classAmendRef, objectAmendRef)
+	classDesc, objDesc, err := manager.GetLatestObj(objectRef, classAmendRef, objectAmendRef)
 	assert.Nil(t, err)
 	assert.Nil(t, classDesc)
 	assert.Nil(t, objDesc)
 }
 
-func TestLedgerArtifactManager_GetObj_ReturnsCorrectDescriptors(t *testing.T) {
+func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing.T) {
 	ledger := LedgerMock{
 		Records:       map[record.ID]record.Record{},
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
@@ -606,7 +608,7 @@ func TestLedgerArtifactManager_GetObj_ReturnsCorrectDescriptors(t *testing.T) {
 	}
 	ledger.SetObjectIndex(objectRef.Record, &objectIndex)
 
-	classDesc, objectDesc, err := manager.GetObj(objectRef, classRef, objectRef)
+	classDesc, objectDesc, err := manager.GetLatestObj(objectRef, classRef, objectRef)
 	assert.NoError(t, err)
 	assert.Equal(t, *classDesc, ClassDescriptor{
 		StateRef: record.Reference{
