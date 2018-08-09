@@ -1,9 +1,7 @@
 package main
 
 import (
-	"io"
 	"io/ioutil"
-	"os"
 	"testing"
 )
 
@@ -13,7 +11,7 @@ func Test_generateForFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.Copy(os.Stdout, w)
+	// io.Copy(os.Stdout, w)
 	b, err := ioutil.ReadAll(w)
 	if err != nil {
 		t.Fatal("reading from generated code", err)

@@ -31,4 +31,5 @@ func (Hw) GetNewInstance(r logicrunner.Reference) Hw {
 
 func (_self *Hw) Echo(s string) string {
 	foundation.APICall(_self.Reference, "Echo", s)
+	return s
 }
