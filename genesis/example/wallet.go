@@ -27,7 +27,7 @@ import (
 )
 
 type Wallet interface {
-	object.Composite
+	factory.Composite
 	contract.SmartContract
 
 	GetBalance() int
@@ -83,22 +83,30 @@ func (wp *walletProxy) GetBalance() int {
 	return wp.Instance.(Wallet).GetBalance()
 }
 
+func (wp *walletProxy) GetInterfaceKey() string {
+	return wp.Instance.(Wallet).GetInterfaceKey()
+}
+
 type walletFactory struct {
 	object.BaseCallable
 	parent object.Parent
 }
 
-func NewWalletFactory(parent object.Parent) factory.Factory {
+func NewWalletFactory(parent object.Parent) factory.CompositeFactory {
 	return &walletFactory{
 		parent: parent,
 	}
+}
+
+func (wf *walletFactory) GetInterfaceKey() string {
+	return class.WalletID
 }
 
 func (wf *walletFactory) GetClassID() string {
 	return class.WalletID
 }
 
-func (*walletFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (*walletFactory) Create(parent object.Parent) (factory.Composite, error) {
 	proxy, err := newWalletProxy(parent)
 	if err != nil {
 		return nil, err

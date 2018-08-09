@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
+	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
@@ -69,7 +70,7 @@ func TestNewBaseDomain(t *testing.T) {
 	domain := NewBaseDomain(parent, "NewDomain")
 
 	sc := contract.BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
+		CompositeMap: make(map[string]factory.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}

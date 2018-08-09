@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
@@ -106,13 +107,51 @@ func (c *anotherBaseComposite) GetClassID() string {
 
 type BaseCompositeFactory struct{}
 
-func (cf *BaseCompositeFactory) Create() (object.Composite, error) {
+func (bcf *BaseCompositeFactory) SetReference(reference object.Reference) {
+}
+
+func (bcf *BaseCompositeFactory) GetReference() object.Reference {
+	return nil
+}
+
+func (bcf *BaseCompositeFactory) GetParent() object.Parent {
+	return nil
+}
+
+func (bcf *BaseCompositeFactory) GetClassID() string {
+	return "BaseCompositeFactory_ID"
+}
+
+func (bcf *BaseCompositeFactory) GetInterfaceKey() string {
+	return "BaseCompositeFactory_ID"
+}
+
+func (cf *BaseCompositeFactory) Create(parent object.Parent) (factory.Composite, error) {
 	return &BaseComposite{}, nil
 }
 
 type BaseCompositeFactoryWithError struct{}
 
-func (cf *BaseCompositeFactoryWithError) Create() (object.Composite, error) {
+func (bcf *BaseCompositeFactoryWithError) GetClassID() string {
+	return "BaseCompositeFactoryWithError_ID"
+}
+
+func (bcf *BaseCompositeFactoryWithError) SetReference(reference object.Reference) {
+}
+
+func (bcf *BaseCompositeFactoryWithError) GetReference() object.Reference {
+	return nil
+}
+
+func (bcf *BaseCompositeFactoryWithError) GetParent() object.Parent {
+	return nil
+}
+
+func (bcf *BaseCompositeFactoryWithError) GetInterfaceKey() string {
+	return "BaseCompositeFactoryWithError_ID"
+}
+
+func (cf *BaseCompositeFactoryWithError) Create(parent object.Parent) (factory.Composite, error) {
 	return nil, fmt.Errorf("composite factory create error")
 }
 
@@ -122,7 +161,7 @@ func TestNewBaseSmartContract(t *testing.T) {
 	sc := NewBaseSmartContract(parent)
 
 	assert.Equal(t, &BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
+		CompositeMap: make(map[string]factory.Composite),
 		ChildStorage: childStorage,
 		Parent:       parent,
 	}, sc)
@@ -207,7 +246,7 @@ func TestSmartContract_GetOrCreateComposite_Get(t *testing.T) {
 	composite := &BaseComposite{}
 	compositeFactory := &BaseCompositeFactory{}
 
-	res, err := sc.GetOrCreateComposite(composite.GetInterfaceKey(), compositeFactory)
+	res, err := sc.GetOrCreateComposite(compositeFactory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, composite, res)
@@ -219,7 +258,7 @@ func TestSmartContract_GetOrCreateComposite_Create(t *testing.T) {
 	composite := &BaseComposite{}
 	compositeFactory := &BaseCompositeFactory{}
 
-	res, err := sc.GetOrCreateComposite(composite.GetInterfaceKey(), compositeFactory)
+	res, err := sc.GetOrCreateComposite(compositeFactory)
 
 	assert.Len(t, sc.CompositeMap, 1)
 	assert.Equal(t, sc.CompositeMap[composite.GetInterfaceKey()], res)
@@ -229,11 +268,10 @@ func TestSmartContract_GetOrCreateComposite_Create(t *testing.T) {
 func TestSmartContract_GetOrCreateComposite_Error(t *testing.T) {
 	parent := &mockParent{}
 	sc := NewBaseSmartContract(parent)
-	composite := &anotherBaseComposite{}
 	compositeFactory := &BaseCompositeFactory{}
 	sc.CreateComposite(compositeFactory)
 
-	res, err := sc.GetOrCreateComposite(composite.GetInterfaceKey(), compositeFactory)
+	res, err := sc.GetOrCreateComposite(compositeFactory)
 
 	assert.Nil(t, res)
 	assert.EqualError(t, err, "delegate with name BaseComposite already exist")
@@ -314,7 +352,7 @@ func TestSmartContract_GetParent(t *testing.T) {
 func TestSmartContract_GetResolver(t *testing.T) {
 	parent := &mockParent{}
 	sc := BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
+		CompositeMap: make(map[string]factory.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
@@ -327,7 +365,7 @@ func TestSmartContract_GetResolver(t *testing.T) {
 func TestSmartContract_GetResolver_Twice(t *testing.T) {
 	parent := &mockParent{}
 	sc := BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
+		CompositeMap: make(map[string]factory.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
