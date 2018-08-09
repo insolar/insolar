@@ -453,6 +453,7 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	return appendRef, nil
 }
 
+// TODO: find a way to check that the object belongs to the class
 func (m *LedgerArtifactManager) GetExactObj(
 	classRef, objectRef record.Reference,
 ) ([]byte, record.Memory, error) {

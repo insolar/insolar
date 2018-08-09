@@ -582,7 +582,6 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
 		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
 	}
-
 	manager := LedgerArtifactManager{storer: &ledger}
 
 	classRef := addRecord(&ledger, &record.ClassActivateRecord{DefaultMemory: record.Memory{1}})
@@ -633,4 +632,43 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 		latestAmendRecord: objectAmendRecCasted,
 		lifelineIndex:     &objectIndex,
 	})
+}
+
+func TestLedgerArtifactManager_GetExactObj_VerifiesRecords(t *testing.T) {
+	ledger := LedgerMock{
+		Records:       map[record.ID]record.Record{},
+		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
+		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
+	}
+	manager := LedgerArtifactManager{storer: &ledger}
+	_, _, err := manager.GetExactObj(record.Reference{}, record.Reference{})
+	assert.Error(t, err)
+}
+
+func TestLedgerArtifactManager_GetExactObj_ReturnsCorrectData(t *testing.T) {
+	ledger := LedgerMock{
+		Records:       map[record.ID]record.Record{},
+		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
+		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
+	}
+	manager := LedgerArtifactManager{
+		storer:   &ledger,
+		archPref: []record.ArchType{1},
+	}
+
+	codeRec := record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
+		1: {1},
+	}}
+	codeRef := addRecord(&ledger, &codeRec)
+	addRecord(&ledger, &record.ClassActivateRecord{})
+	classAmendRef := addRecord(&ledger, &record.ClassAmendRecord{NewCode: codeRef})
+
+	memoryRec := record.Memory{4}
+	addRecord(&ledger, &record.ObjectActivateRecord{Memory: record.Memory{3}})
+	objectAmendRef := addRecord(&ledger, &record.ObjectAmendRecord{NewMemory: memoryRec})
+
+	code, memory, err := manager.GetExactObj(classAmendRef, objectAmendRef)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{1}, code)
+	assert.Equal(t, memoryRec, memory)
 }
