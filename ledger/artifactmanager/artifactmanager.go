@@ -214,6 +214,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord: classRef,
 			AmendedRecord: record.Reference{
 				Domain: classRef.Domain,
 				Record: classIndex.LatestStateID,
@@ -266,6 +267,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord: classRef,
 			AmendedRecord: record.Reference{
 				Domain: classRef.Domain,
 				Record: classIndex.LatestStateID,
@@ -350,6 +352,7 @@ func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Referenc
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord: objRef,
 			AmendedRecord: record.Reference{
 				Domain: objRef.Domain,
 				Record: objIndex.LatestStateID,
@@ -390,6 +393,7 @@ func (m *LedgerArtifactManager) UpdateObj(
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord: objRef,
 			AmendedRecord: record.Reference{
 				Domain: objRef.Domain,
 				Record: objIndex.LatestStateID,
@@ -432,6 +436,7 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord: objRef,
 			AmendedRecord: record.Reference{
 				Domain: objRef.Domain,
 				Record: objIndex.LatestStateID,
@@ -453,46 +458,53 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	return appendRef, nil
 }
 
-// TODO: find a way to check that the object belongs to the class
 func (m *LedgerArtifactManager) GetExactObj(
-	classRef, objectRef record.Reference,
+	classState, objectState record.Reference,
 ) ([]byte, record.Memory, error) {
-	classRec, err := m.storer.GetRecord(classRef.Record)
+	classRec, err := m.storer.GetRecord(classState.Record)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "class record not found")
 	}
 	var codeID record.ID
-	classActivateRec, ok := classRec.(*record.ClassActivateRecord)
-	if ok {
-		codeID = classActivateRec.CodeRecord.Record
-	} else {
-		classAmendRec, ok := classRec.(*record.ClassAmendRecord)
-		if ok {
-			codeID = classAmendRec.NewCode.Record
-		} else {
-			return nil, nil, errors.New("wrong class reference")
-		}
+	var classHeadRef record.Reference
+	switch rec := classRec.(type) {
+	case *record.ClassActivateRecord:
+		codeID = rec.CodeRecord.Record
+		classHeadRef = classState
+	case *record.ClassAmendRecord:
+		codeID = rec.NewCode.Record
+		classHeadRef = rec.HeadRecord
+	default:
+		return nil, nil, errors.New("wrong class reference")
 	}
 	code, err := m.getCodeRecordCode(codeID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	objectRec, err := m.storer.GetRecord(objectRef.Record)
+	objectRec, err := m.storer.GetRecord(objectState.Record)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "object record not found")
 	}
 	var memory record.Memory
-	objectActivateRec, ok := objectRec.(*record.ObjectActivateRecord)
-	if ok {
-		memory = objectActivateRec.Memory
-	} else {
-		objectAmendRec, ok := objectRec.(*record.ObjectAmendRecord)
-		if ok {
-			memory = objectAmendRec.NewMemory
-		} else {
-			return nil, nil, errors.New("wrong object reference")
-		}
+	var objectHeadRef record.Reference
+	switch rec := objectRec.(type) {
+	case *record.ObjectActivateRecord:
+		memory = rec.Memory
+		objectHeadRef = objectState
+	case *record.ObjectAmendRecord:
+		memory = rec.NewMemory
+		objectHeadRef = rec.HeadRecord
+	default:
+		return nil, nil, errors.New("wrong object reference")
+	}
+	objectIndex, ok := m.storer.GetObjectIndex(objectHeadRef.Record)
+	if !ok {
+		return nil, nil, errors.New("object index not found")
+	}
+
+	if objectIndex.ClassID != classHeadRef.Record {
+		return nil, nil, errors.New("the object does not belong to the class")
 	}
 
 	return code, memory, nil

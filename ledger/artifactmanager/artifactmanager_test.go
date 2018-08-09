@@ -208,6 +208,7 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord:    classRef,
 			AmendedRecord: classRef,
 		},
 	})
@@ -380,6 +381,7 @@ func TestLedgerArtifactManager_DeactivateObj_CreatesCorrectRecord(t *testing.T) 
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord:    objRef,
 			AmendedRecord: objRef,
 		},
 	})
@@ -441,6 +443,7 @@ func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord:    objRef,
 			AmendedRecord: objRef,
 		},
 		NewMemory: memory,
@@ -506,6 +509,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing
 					RequestRecord: requestRef,
 				},
 			},
+			HeadRecord:    objRef,
 			AmendedRecord: objRef,
 		},
 		AppendMemory: memory,
@@ -660,12 +664,30 @@ func TestLedgerArtifactManager_GetExactObj_ReturnsCorrectData(t *testing.T) {
 		1: {1},
 	}}
 	codeRef := addRecord(&ledger, &codeRec)
-	addRecord(&ledger, &record.ClassActivateRecord{})
-	classAmendRef := addRecord(&ledger, &record.ClassAmendRecord{NewCode: codeRef})
+	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
+	classAmendRef := addRecord(&ledger, &record.ClassAmendRecord{
+		NewCode: codeRef,
+		AmendRecord: record.AmendRecord{
+			HeadRecord: classRef,
+		},
+	})
 
 	memoryRec := record.Memory{4}
-	addRecord(&ledger, &record.ObjectActivateRecord{Memory: record.Memory{3}})
-	objectAmendRef := addRecord(&ledger, &record.ObjectAmendRecord{NewMemory: memoryRec})
+	objectRef := addRecord(&ledger, &record.ObjectActivateRecord{Memory: record.Memory{3}})
+	objectAmendRef := addRecord(&ledger, &record.ObjectAmendRecord{
+		NewMemory: memoryRec,
+		AmendRecord: record.AmendRecord{
+			HeadRecord: objectRef,
+		},
+	})
+
+	_, _, err := manager.GetExactObj(classAmendRef, objectAmendRef)
+	assert.Error(t, err)
+
+	ledger.SetObjectIndex(objectRef.Record, &index.ObjectLifeline{
+		LatestStateID: objectAmendRef.Record,
+		ClassID:       classRef.Record,
+	})
 
 	code, memory, err := manager.GetExactObj(classAmendRef, objectAmendRef)
 	assert.NoError(t, err)

@@ -161,7 +161,7 @@ func (r *CodeRecord) GetCode(archPref []ArchType) ([]byte, error) {
 type AmendRecord struct {
 	StatefulResult
 
-	BaseRecord    Reference
+	HeadRecord    Reference
 	AmendedRecord Reference
 }
 
