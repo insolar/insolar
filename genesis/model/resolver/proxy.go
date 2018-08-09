@@ -38,7 +38,7 @@ func (bp *BaseProxy) GetClassID() string {
 	return class.ProxyID
 }
 
-// GetParent is a proxy call for instance method.
+// GetParent always returns nil.
 func (bp *BaseProxy) GetParent() object.Parent {
 	return nil
 }
