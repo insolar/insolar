@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -118,7 +118,7 @@ func TestWalletDomain_GetWallet(t *testing.T) {
 	proxy, err := wdomain.GetWallet(record)
 	assert.NoError(t, err)
 
-	assert.Equal(t, &mockProxy{
+	assert.Equal(t, &mockChildProxy{
 		parent: wdomain,
 	}, proxy)
 }
@@ -140,7 +140,7 @@ func TestWalletDomainFactory_Create(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &walletDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: wdomain,
 		},
 	}, proxy)
@@ -198,7 +198,7 @@ func TestWalletDomainProxy_GetWallet(t *testing.T) {
 	proxyW, err := proxyD.GetWallet(record)
 	assert.NoError(t, err)
 
-	assert.Equal(t, &mockProxy{
+	assert.Equal(t, &mockChildProxy{
 		parent: proxyD.Instance.(object.Parent),
 	}, proxyW)
 }

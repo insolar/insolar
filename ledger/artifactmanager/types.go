@@ -16,7 +16,9 @@
 
 package artifactmanager
 
-import "github.com/insolar/insolar/ledger/record"
+import (
+	"github.com/insolar/insolar/ledger/record"
+)
 
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
@@ -25,22 +27,22 @@ type ArtifactManager interface {
 	// according to this preferences.
 	SetArchPref(pref []record.ArchType)
 
-	// GetObj returns object by reference.
-	GetObj(
-		// ref is target object reference
-		ref record.Reference,
-		// lastClassRef is reference to class that is already deployed to VM. Can be nil.
-		lastClassRef record.Reference,
-		// lastObjRef is reference to object that is already deployed to VM. Can be nil.
-		lastObjRef record.Reference,
+	// GetExactObj returns exact object data and code ref without calculating last state
+	GetExactObj(classRef, objectRef record.Reference) ([]byte, record.Memory, error)
+
+	// GetLatestObj returns object by reference.
+	GetLatestObj(
+		objectRef record.Reference,
+		storedClassState record.Reference,
+		storedObjState record.Reference,
 	) (
-		ClassDescr,
-		ObjDescr,
+		*ClassDescriptor,
+		*ObjectDescriptor,
 		error,
 	)
 
 	// DeployCode deploys new code to storage (CodeRecord).
-	DeployCode(requestRef record.Reference) (record.Reference, error)
+	DeployCode(requestRef record.Reference, codeMap map[record.ArchType][]byte) (record.Reference, error)
 
 	// ActivateClass activates class from given code (ClassActivateRecord).
 	ActivateClass(requestRef, codeRef record.Reference, memory record.Memory) (record.Reference, error)
@@ -52,31 +54,18 @@ type ArtifactManager interface {
 	UpdateClass(
 		requestRef,
 		classRef record.Reference,
-		migrations []record.MemoryMigrationCode,
+		migrationRefs []record.Reference,
 	) (record.Reference, error)
 
 	// ActivateObj creates and activates new object from given class (ObjectActivateRecord).
-	ActivateObj(record record.ObjectActivateRecord) (record.Reference, error)
+	ActivateObj(requestRef, classRef record.Reference, memory record.Memory) (record.Reference, error)
 
 	// DeactivateObj deactivates object (DeactivationRecord).
-	DeactivateObj(ref record.Reference) (record.Reference, error)
+	DeactivateObj(requestRef, objRef record.Reference) (record.Reference, error)
 
 	// UpdateObj allows to change object state (ObjectAmendRecord).
-	UpdateObj(ref record.Reference, memory record.Memory) (record.Reference, error)
+	UpdateObj(requestRef, objRef record.Reference, memory record.Memory) (record.Reference, error)
 
 	// AppendDelegate allows to append some class'es delegate to object (ObjectAppendRecord).
-	AppendDelegate(ref record.Reference, delegate record.Memory) (record.Reference, error)
-}
-
-// ClassDescr contains class code and migration procedures if any.
-type ClassDescr struct {
-	// TODO: implement MachineBinaryCode
-	// Code record.MachineBinaryCode // nil if LastClassRef is actual
-	Migrations []record.MemoryMigrationCode // can be empty
-}
-
-// ObjDescr contains object memory and delegate appends if any.
-type ObjDescr struct {
-	ObjectMemory record.Memory   // nil if LastObjRef is actual
-	Appends      []record.Memory // can be empty
+	AppendObjDelegate(requestRef, objRef record.Reference, memory record.Memory) (record.Reference, error)
 }

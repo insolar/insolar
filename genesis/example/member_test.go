@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -107,7 +106,7 @@ func TestNewMemberProxy(t *testing.T) {
 	expectedMember.CompositeMap = make(map[string]object.Composite)
 	expectedMember.ChildStorage = storage.NewMapStorage()
 	assert.Equal(t, &memberProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: expectedMember,
 		},
 	}, proxy)
@@ -198,7 +197,7 @@ func TestMemberFactory_Create(t *testing.T) {
 	expectedMember.CompositeMap = make(map[string]object.Composite)
 	expectedMember.ChildStorage = storage.NewMapStorage()
 	assert.Equal(t, &memberProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: expectedMember,
 		},
 	}, proxy)

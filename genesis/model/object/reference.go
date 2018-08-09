@@ -45,7 +45,7 @@ type Reference interface {
 // TODO: ProxyReference & ReferenceInterface
 
 type reference struct {
-	BaseCallable
+	BaseObject
 	domain string
 	record string
 	scope  ScopeType

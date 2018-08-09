@@ -65,7 +65,7 @@ func (m *member) GetPublicKey() string {
 }
 
 type memberProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 // newMemberProxy creates new proxy and associates it with new instance of Member.
@@ -75,7 +75,7 @@ func newMemberProxy(parent object.Parent) (*memberProxy, error) {
 		return nil, err
 	}
 	return &memberProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: instance,
 		},
 	}, nil
@@ -107,7 +107,7 @@ func (mp *memberProxy) GetOrCreateComposite(interfaceKey string, compositeFactor
 }
 
 type memberFactory struct {
-	object.BaseCallable
+	resolver.BaseProxy
 	parent object.Parent
 }
 

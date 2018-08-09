@@ -53,7 +53,7 @@ func TestGlobalResolver_GetObject_No_Object(t *testing.T) {
 }
 
 func TestGlobalResolver_GetObject_Not_Parent(t *testing.T) {
-	mockChild := &mockChild{}
+	mockChild := &mockChildProxy{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]Proxy)
 	resolver.InitGlobalMap(&newMap)
@@ -81,7 +81,7 @@ func TestGlobalResolver_GetObject_No_Child(t *testing.T) {
 }
 
 func TestGlobalResolver_GetObject_ClassID_Not_Str(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]Proxy)
 	resolver.InitGlobalMap(&newMap)
@@ -95,7 +95,7 @@ func TestGlobalResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 }
 
 func TestGlobalResolver_GetObject_Wrong_classID(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]Proxy)
 	resolver.InitGlobalMap(&newMap)
@@ -109,7 +109,7 @@ func TestGlobalResolver_GetObject_Wrong_classID(t *testing.T) {
 }
 
 func TestGlobalResolver_GetObject(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]Proxy)
 	resolver.InitGlobalMap(&newMap)

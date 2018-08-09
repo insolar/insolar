@@ -155,13 +155,12 @@ const (
 	codeRecordID                TypeID = 19
 	amendRecordID               TypeID = 20
 	classAmendRecordID          TypeID = 21
-	memoryMigrationCodeID       TypeID = 22
-	deactivationRecordID        TypeID = 23
-	objectAmendRecordID         TypeID = 24
-	statefulCallResultID        TypeID = 25
-	statefulExceptionResultID   TypeID = 26
-	enforcedObjectAmendRecordID TypeID = 27
-	objectAppendRecordID        TypeID = 28
+	deactivationRecordID        TypeID = 22
+	objectAmendRecordID         TypeID = 23
+	statefulCallResultID        TypeID = 24
+	statefulExceptionResultID   TypeID = 25
+	enforcedObjectAmendRecordID TypeID = 26
+	objectAppendRecordID        TypeID = 27
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -211,8 +210,6 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 		return &AmendRecord{}
 	case classAmendRecordID:
 		return &ClassAmendRecord{}
-	case memoryMigrationCodeID:
-		return &MemoryMigrationCode{}
 	case deactivationRecordID:
 		return &DeactivationRecord{}
 	case objectAmendRecordID:
@@ -277,8 +274,6 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 		return amendRecordID
 	case *ClassAmendRecord:
 		return classAmendRecordID
-	case *MemoryMigrationCode:
-		return memoryMigrationCodeID
 	case *DeactivationRecord:
 		return deactivationRecordID
 	case *ObjectAmendRecord:

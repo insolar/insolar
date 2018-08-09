@@ -29,36 +29,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCallable struct {
+type mockProxy struct {
 	reference object.Reference
 }
 
-func (c *mockCallable) GetReference() object.Reference {
+func (c *mockProxy) GetReference() object.Reference {
 	return c.reference
 }
 
-func (c *mockCallable) SetReference(reference object.Reference) {
+func (c *mockProxy) SetReference(reference object.Reference) {
 	c.reference = reference
 }
 
-type mockChild struct {
-	mockCallable
+type mockChildProxy struct {
+	mockProxy
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
 
-func (c *mockChild) GetClassID() string {
+func (c *mockChildProxy) GetClassID() string {
 	return "mockChild"
 }
 
-func (c *mockChild) GetParent() object.Parent {
+func (c *mockChildProxy) GetParent() object.Parent {
 	return c.parent
 }
 
-var child = &mockChild{}
+var child = &mockChildProxy{}
 
 type mockParent struct {
-	mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -99,25 +98,12 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 	return "", fmt.Errorf("add child error")
 }
 
-type mockProxy struct {
-	mockCallable
-	parent object.Parent
-}
-
-func (p *mockProxy) GetClassID() string {
-	return "mockProxy"
-}
-
-func (p *mockProxy) GetParent() object.Parent {
-	return p.parent
-}
-
 type mockFactory struct {
-	mockCallable
+	mockProxy
 }
 
 func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
-	return &mockProxy{
+	return &mockChildProxy{
 		parent: parent,
 	}, nil
 }
@@ -147,7 +133,7 @@ func (f *mockFactoryNilError) Create(parent object.Parent) (resolver.Proxy, erro
 }
 
 type mockNotFactory struct {
-	mockCallable
+	mockProxy
 }
 
 func (f *mockNotFactory) GetClassID() string {
@@ -261,7 +247,7 @@ func TestMemberDomain_GetMember_NotMember(t *testing.T) {
 	parent := &mockParent{}
 	mDomain, _ := newMemberDomain(parent)
 
-	recordID, _ := mDomain.(object.Parent).AddChild(parent)
+	recordID, _ := mDomain.(object.Parent).AddChild(&mockChildProxy{})
 
 	_, err := mDomain.GetMember(recordID)
 	assert.EqualError(t, err, "instance class is not `Member`")
