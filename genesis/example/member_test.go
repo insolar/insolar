@@ -25,113 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//<<<<<<< HEAD
-//type mockCallable struct {
-//reference object.Reference
-//}
-
-/*func (c *mockCallable) GetReference() object.Reference {
-	return c.reference
-}
-
-func (c *mockCallable) SetReference(reference object.Reference) {
-	c.reference = reference
-}*/
-
-/*type mockChild struct {
-	//mockCallable
-	ContextStorage storage.Storage
-	parent         object.Parent
-}
-
-func (c *mockChild) GetClassID() string {
-	return "mockChild"
-}
-
-func (c *mockChild) GetParent() object.Parent {
-	return c.parent
-}
-
-var child = &mockChild{}
-
-type mockParent struct {
-	//mockCallable
-	ContextStorage storage.Storage
-	parent         object.Parent
-}
-
-func (p *mockParent) GetParent() object.Parent {
-	return p.parent
-}
-
-func (p *mockParent) GetClassID() string {
-	return "mockParent"
-}
-
-func (p *mockParent) GetChildStorage() storage.Storage {
-	return nil
-}
-
-func (p *mockParent) AddChild(child object.Child) (string, error) {
-	return "", nil
-}
-
-func (p *mockParent) GetChild(key string) (object.Child, error) {
-	return child, nil
-}
-
-func (p *mockParent) GetContext() []string {
-	return []string{}
-}
-
-func (p *mockParent) GetContextStorage() storage.Storage {
-	return p.ContextStorage
-}
-
-type mockParentWithError struct {
-	mockParent
-}
-
-func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
-	return "", fmt.Errorf("add child error")
-}
-
-type mockProxy struct {
-	//mockCallable
-	parent    object.Parent
-	reference object.Reference
-}
-
-func (p *mockProxy) GetClassID() string {
-	return "mockProxy"
-}
-
-func (p *mockProxy) GetParent() object.Parent {
-	return p.parent
-}
-
-func (p *mockProxy) GetReference() object.Reference {
-	return p.reference
-}
-
-func (p *mockProxy) SetReference(reference object.Reference) {
-	p.reference = reference
-}
-
-type mockFactory struct {
-	//mockCallable
-	reference object.Reference
-}
-
-func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
-	return &mockProxy{
-		parent: parent,
-	}, nil
-}
-=======*/
 type BaseComposite struct{}
-
-//>>>>>>> c58cdcfc979b429cafb9cc4fad009c35a8c990ff
 
 func (c *BaseComposite) GetInterfaceKey() string {
 	return "BaseComposite"
@@ -141,30 +35,7 @@ func (c *BaseComposite) GetClassID() string {
 	return "BaseComposite"
 }
 
-/*<<<<<<< HEAD
-func (f *mockFactory) GetReference() object.Reference {
-	return f.reference
-}
-
-func (f *mockFactory) SetReference(reference object.Reference) {
-	f.reference = reference
-}
-
-type mockFactoryError struct {
-	mockFactory
-}
-
-func (f *mockFactoryError) Create(parent object.Parent) (resolver.Proxy, error) {
-	return nil, fmt.Errorf("factory create error")
-}
-
-type mockFactoryNilError struct {
-	mockFactory
-}
-=======*/
 type BaseCompositeFactory struct{}
-
-//>>>>>>> c58cdcfc979b429cafb9cc4fad009c35a8c990ff
 
 func (cf *BaseCompositeFactory) Create() (object.Composite, error) {
 	return &BaseComposite{}, nil
@@ -238,19 +109,8 @@ func TestMemberProxy_GetUsername(t *testing.T) {
 	parent := &mockParent{}
 	proxy, _ := newMemberProxy(parent)
 
-	/*<<<<<<< HEAD
-		proxy, err := newMemberDomainProxy(parent)
-		assert.NoError(t, err)
-
-		assert.Equal(t, &memberDomainProxy{
-			BaseSmartContractProxy: contract.BaseSmartContractProxy{
-				Instance: mDomain,
-			},
-		}, proxy)
-	=======*/
 	username := proxy.GetUsername()
 	assert.Equal(t, "", username)
-	//>>>>>>> c58cdcfc979b429cafb9cc4fad009c35a8c990ff
 }
 
 func TestMemberProxy_GetPublicKey(t *testing.T) {
@@ -318,11 +178,6 @@ func TestMemberFactory_Create(t *testing.T) {
 	proxy, err := factory.Create(parent)
 
 	assert.NoError(t, err)
-	/*<<<<<<< HEAD
-		assert.Equal(t, &memberDomainProxy{
-			BaseSmartContractProxy: contract.BaseSmartContractProxy{
-				Instance: mDomain,
-	=======*/
 
 	expectedMember := &member{
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
@@ -331,7 +186,6 @@ func TestMemberFactory_Create(t *testing.T) {
 	assert.Equal(t, &memberProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: expectedMember,
-			//>>>>>>> c58cdcfc979b429cafb9cc4fad009c35a8c990ff
 		},
 	}, proxy)
 }

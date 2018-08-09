@@ -22,13 +22,13 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-type InternalDomain interface {
-	contract.InternalSmartContract
-}
-
 // Domain is a collection of objects and related policies (construction, referencing, logical consensus etc).
 type Domain interface {
 	contract.SmartContract
+}
+
+type InternalDomain interface {
+	contract.InternalSmartContract
 }
 
 // BaseDomain is a base implementation of Domain interface.

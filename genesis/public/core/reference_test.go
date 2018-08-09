@@ -30,36 +30,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCallable struct {
-	reference object.Reference
-}
-
-func (c *mockCallable) GetReference() object.Reference {
-	return c.reference
-}
-
-func (c *mockCallable) SetReference(reference object.Reference) {
-	c.reference = reference
-}
-
-type mockChild struct {
-	mockCallable
+type mockChildProxy struct {
+	mockProxy
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
 
-func (c *mockChild) GetClassID() string {
+func (c *mockChildProxy) GetClassID() string {
 	return "mockChild"
 }
 
-func (c *mockChild) GetParent() object.Parent {
+func (c *mockChildProxy) GetParent() object.Parent {
 	return c.parent
 }
 
-var child = &mockChild{}
+var child = &mockChildProxy{}
 
 type mockParent struct {
-	mockCallable
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
@@ -103,9 +90,8 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 var globalParent = &mockParent{}
 
 type mockDomain struct {
-	mockCallable
 	mockParent
-	mockChild
+	mockChildProxy
 }
 
 func (d *mockDomain) GetClassID() string {
@@ -113,7 +99,7 @@ func (d *mockDomain) GetClassID() string {
 }
 
 func (d *mockDomain) GetParent() object.Parent {
-	return d.mockChild.parent
+	return d.mockChildProxy.parent
 }
 
 // Create map for global resolving

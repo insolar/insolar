@@ -65,7 +65,7 @@ func TestBaseSmartContractProxy_GetOrCreateComposite(t *testing.T) {
 func TestBaseSmartContractProxy_GetOrCreateComposite_Error(t *testing.T) {
 	parent := &mockParent{}
 	proxy := &BaseSmartContractProxy{
-		Instance: &mockChild{
+		Instance: &mockChildProxy{
 			parent: parent,
 		},
 	}

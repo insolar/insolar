@@ -56,7 +56,7 @@ func TestWalletDomain_CreateWallet(t *testing.T) {
 	wallet, err := newWalletDomain(parent)
 	assert.NoError(t, err)
 
-	factory := &mockFactory{}
+	factory := &mockFactoryProxy{}
 
 	record, err := wallet.CreateWallet(factory)
 	assert.NoError(t, err)
@@ -111,14 +111,14 @@ func TestWalletDomain_GetWallet(t *testing.T) {
 	wdomain, err := newWalletDomain(parent)
 	assert.NoError(t, err)
 
-	factory := &mockFactory{}
+	factory := &mockFactoryProxy{}
 	record, err := wdomain.CreateWallet(factory)
 	assert.NoError(t, err)
 
 	proxy, err := wdomain.GetWallet(record)
 	assert.NoError(t, err)
 
-	assert.Equal(t, &mockProxy{
+	assert.Equal(t, &mockChildProxy{
 		parent: wdomain,
 	}, proxy)
 }
@@ -178,7 +178,7 @@ func TestWalletDomainProxy_CreateWallet(t *testing.T) {
 	proxy, err := newWalletDomainProxy(parent)
 	assert.NoError(t, err)
 
-	factory := &mockFactory{}
+	factory := &mockFactoryProxy{}
 	record, err := proxy.CreateWallet(factory)
 	assert.NoError(t, err)
 
@@ -191,14 +191,14 @@ func TestWalletDomainProxy_GetWallet(t *testing.T) {
 	proxyD, err := newWalletDomainProxy(parent)
 	assert.NoError(t, err)
 
-	factory := &mockFactory{}
+	factory := &mockFactoryProxy{}
 	record, err := proxyD.CreateWallet(factory)
 	assert.NoError(t, err)
 
 	proxyW, err := proxyD.GetWallet(record)
 	assert.NoError(t, err)
 
-	assert.Equal(t, &mockProxy{
+	assert.Equal(t, &mockChildProxy{
 		parent: proxyD.Instance.(object.Parent),
 	}, proxyW)
 }

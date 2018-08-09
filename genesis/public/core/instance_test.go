@@ -30,7 +30,6 @@ import (
 )
 
 type mockProxy struct {
-	parent    object.Parent
 	reference object.Reference
 }
 
@@ -46,15 +45,11 @@ func (p *mockProxy) SetReference(reference object.Reference) {
 	p.reference = reference
 }
 
-func (p *mockProxy) GetParent() object.Parent {
-	return p.parent
-}
-
 type mockFactory struct {
 }
 
 func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
-	return &mockProxy{
+	return &mockChildProxy{
 		parent: parent,
 	}, nil
 }
@@ -160,7 +155,7 @@ func TestInstanceDomain_GetInstance(t *testing.T) {
 	resolved, err := instDom.GetInstance(registered)
 	assert.NoError(t, err)
 
-	assert.Equal(t, &mockProxy{
+	assert.Equal(t, &mockChildProxy{
 		parent: instDom,
 	}, resolved)
 }
@@ -239,7 +234,7 @@ func TestInstanceDomainProxy_GetInstance(t *testing.T) {
 	resolved, err := proxy.GetInstance(registered)
 	assert.NoError(t, err)
 
-	assert.Equal(t, &mockProxy{
+	assert.Equal(t, &mockChildProxy{
 		parent: proxy.Instance.(object.Parent),
 	}, resolved)
 }
