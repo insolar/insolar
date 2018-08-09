@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -117,7 +118,7 @@ func (md *memberDomain) GetMember(record string) (Member, error) {
 }
 
 type memberDomainProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 // newMemberDomainProxy creates new proxy and associates it with new instance of MemberDomain.
@@ -127,7 +128,7 @@ func newMemberDomainProxy(parent object.Parent) (*memberDomainProxy, error) {
 		return nil, err
 	}
 	return &memberDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: instance,
 		},
 	}, nil
@@ -144,7 +145,7 @@ func (mdp *memberDomainProxy) GetMember(record string) (Member, error) {
 }
 
 type memberDomainFactory struct {
-	object.BaseCallable
+	factory.BaseFactory
 	parent object.Parent
 }
 

@@ -16,25 +16,7 @@
 
 package object
 
-// Callable allows itself to be called by its reference.
+// Callable is a marker interface that shows that object is able to be called.
 type Callable interface {
 	Object
-	GetReference() Reference
-	SetReference(reference Reference)
-}
-
-// BaseCallable is a base implementation of Callable.
-type BaseCallable struct {
-	BaseObject
-	reference Reference
-}
-
-// GetReference returns reference.
-func (bc *BaseCallable) GetReference() Reference {
-	return bc.reference
-}
-
-// SetReference sets reference.
-func (bc *BaseCallable) SetReference(reference Reference) {
-	bc.reference = reference
 }

@@ -25,74 +25,74 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockChild struct {
-	Reference      object.Reference
+type mockProxy struct {
+	reference object.Reference
+}
+
+func (p *mockProxy) GetClassID() string {
+	return "mockProxy"
+}
+
+func (p *mockProxy) GetReference() object.Reference {
+	return p.reference
+}
+
+func (p *mockProxy) SetReference(reference object.Reference) {
+	p.reference = reference
+}
+
+type mockChildProxy struct {
+	mockProxy
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
 
-func (c *mockChild) GetClassID() string {
+func (c *mockChildProxy) GetClassID() string {
 	return "mockChild"
 }
 
-func (c *mockChild) GetReference() object.Reference {
-	return c.Reference
-}
-
-func (c *mockChild) SetReference(reference object.Reference) {
-	c.Reference = reference
-}
-
-func (c *mockChild) GetParent() object.Parent {
+func (c *mockChildProxy) GetParent() object.Parent {
 	return c.parent
 }
 
-var child = &mockChild{}
+var child = &mockChildProxy{}
 
-type mockParent struct {
-	Reference      object.Reference
+type mockParentProxy struct {
+	mockProxy
 	ContextStorage storage.Storage
 	parent         object.Parent
 }
 
-func (p *mockParent) GetParent() object.Parent {
+func (p *mockParentProxy) GetParent() object.Parent {
 	return p.parent
 }
 
-func (p *mockParent) GetClassID() string {
+func (p *mockParentProxy) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetReference() object.Reference {
-	return p.Reference
-}
-
-func (p *mockParent) SetReference(reference object.Reference) {
-	p.Reference = reference
-}
-
-func (p *mockParent) GetChildStorage() storage.Storage {
+func (p *mockParentProxy) GetChildStorage() storage.Storage {
 	return nil
 }
 
-func (p *mockParent) AddChild(child object.Child) (string, error) {
+func (p *mockParentProxy) AddChild(child object.Child) (string, error) {
 	return "", nil
 }
 
-func (p *mockParent) GetChild(key string) (object.Child, error) {
+func (p *mockParentProxy) GetChild(key string) (object.Child, error) {
 	return child, nil
 }
 
-func (p *mockParent) GetContext() []string {
+func (p *mockParentProxy) GetContext() []string {
 	return []string{}
 }
 
-func (p *mockParent) GetContextStorage() storage.Storage {
+func (p *mockParentProxy) GetContextStorage() storage.Storage {
 	return p.ContextStorage
 }
 
 type mockParentWithError struct {
-	mockParent
+	mockParentProxy
 }
 
 func (p *mockParentWithError) GetChild(key string) (object.Child, error) {
@@ -100,7 +100,7 @@ func (p *mockParentWithError) GetChild(key string) (object.Child, error) {
 }
 
 func TestNewChildResolver(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	mapStorage := newChildResolver(mockParent)
 
 	assert.Equal(t, &childResolver{
@@ -130,7 +130,7 @@ func TestChildResolver_GetObject_No_Object(t *testing.T) {
 }
 
 func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolver := newChildResolver(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ChildScope)
 
@@ -141,7 +141,7 @@ func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
 }
 
 func TestChildResolver_GetObject_ClassID_Not_Str(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolver := newChildResolver(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ChildScope)
 
@@ -152,7 +152,7 @@ func TestChildResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 }
 
 func TestChildResolver_GetObject(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolver := newChildResolver(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ChildScope)
 

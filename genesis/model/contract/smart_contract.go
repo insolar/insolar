@@ -29,12 +29,17 @@ import (
 // TODO: Composite work interface
 type SmartContract interface {
 	object.Child
+}
+
+// InternalSmartContract contains private method.
+type InternalSmartContract interface {
+	object.Child
 	GetResolver() resolver.Resolver
 }
 
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.
 type BaseSmartContract struct {
-	object.BaseCallable
+	object.BaseObject
 	CompositeMap   map[string]object.Composite
 	ChildStorage   storage.Storage
 	ContextStorage storage.Storage

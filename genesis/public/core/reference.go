@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -107,13 +108,13 @@ func (rd *referenceDomain) ResolveReference(record string) (object.Reference, er
 }
 
 type referenceDomainProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 // newReferenceDomainProxy creates new proxy and associate it with new instance of ReferenceDomain.
 func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
 	return &referenceDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: newReferenceDomain(parent),
 		},
 	}
@@ -136,7 +137,7 @@ func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]res
 }
 
 type referenceDomainFactory struct {
-	object.BaseCallable
+	factory.BaseFactory
 	parent object.Parent
 }
 

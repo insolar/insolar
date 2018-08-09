@@ -26,42 +26,41 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockChild struct {
-	Reference object.Reference
-	parent    object.Parent
+type mockProxy struct {
+	reference object.Reference
 }
 
-func (c *mockChild) GetClassID() string {
+func (p *mockProxy) GetClassID() string {
+	return "mockProxy"
+}
+
+func (p *mockProxy) GetReference() object.Reference {
+	return p.reference
+}
+
+func (p *mockProxy) SetReference(reference object.Reference) {
+	p.reference = reference
+}
+
+type mockChildProxy struct {
+	mockProxy
+	parent object.Parent
+}
+
+func (c *mockChildProxy) GetClassID() string {
 	return "mockChild"
 }
 
-func (c *mockChild) GetReference() object.Reference {
-	return c.Reference
-}
-
-func (c *mockChild) SetReference(reference object.Reference) {
-	c.Reference = reference
-}
-
-func (c *mockChild) GetParent() object.Parent {
+func (c *mockChildProxy) GetParent() object.Parent {
 	return c.parent
 }
 
 type mockParent struct {
-	Reference      object.Reference
 	ContextStorage storage.Storage
 }
 
 func (p *mockParent) GetClassID() string {
 	return "mockParent"
-}
-
-func (p *mockParent) GetReference() object.Reference {
-	return p.Reference
-}
-
-func (p *mockParent) SetReference(reference object.Reference) {
-	p.Reference = reference
 }
 
 func (p *mockParent) GetChildStorage() storage.Storage {
@@ -135,14 +134,6 @@ func TestSmartContract_GetClassID(t *testing.T) {
 	classID := sc.GetClassID()
 
 	assert.Equal(t, class.SmartContractID, classID)
-}
-
-func TestSmartContract_GetReference(t *testing.T) {
-	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
-	ref := sc.GetReference()
-
-	assert.Nil(t, ref)
 }
 
 func TestSmartContract_CreateComposite(t *testing.T) {
@@ -251,7 +242,7 @@ func TestSmartContract_GetChildStorage(t *testing.T) {
 func TestSmartContract_AddChild(t *testing.T) {
 	parent := &mockParent{}
 	sc := NewBaseSmartContract(parent)
-	child := &mockChild{}
+	child := &mockChildProxy{}
 
 	res, err := sc.AddChild(child)
 
@@ -263,7 +254,7 @@ func TestSmartContract_AddChild(t *testing.T) {
 func TestSmartContract_GetChild(t *testing.T) {
 	parent := &mockParent{}
 	sc := NewBaseSmartContract(parent)
-	child := &mockChild{}
+	child := &mockChildProxy{}
 	key, _ := sc.AddChild(child)
 
 	res, err := sc.GetChild(key)
