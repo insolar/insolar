@@ -139,7 +139,7 @@ func (m *LedgerArtifactManager) DeployCode(
 ) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	rec := record.CodeRecord{
@@ -161,7 +161,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 ) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 	_, err = m.getCodeRecord(codeRef.Record)
 	if err != nil {
@@ -199,7 +199,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 ) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	_, _, classIndex, err := m.getActiveClass(classRef.Record)
@@ -241,7 +241,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 ) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	_, _, classIndex, err := m.getActiveClass(classRef.Record)
@@ -298,7 +298,7 @@ func (m *LedgerArtifactManager) ActivateObj(
 ) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	_, _, _, err = m.getActiveClass(classRef.Record)
@@ -337,7 +337,7 @@ func (m *LedgerArtifactManager) ActivateObj(
 func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Reference) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	_, _, objIndex, err := m.getActiveObject(objRef.Record)
@@ -378,7 +378,7 @@ func (m *LedgerArtifactManager) UpdateObj(
 ) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	_, _, objIndex, err := m.getActiveObject(objRef.Record)
@@ -421,7 +421,7 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 ) (record.Reference, error) {
 	err := m.checkRequestRecord(requestRef.Record)
 	if err != nil {
-		return record.Reference{}, nil
+		return record.Reference{}, err
 	}
 
 	_, _, objIndex, err := m.getActiveObject(objRef.Record)
