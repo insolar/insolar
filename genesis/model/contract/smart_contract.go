@@ -25,11 +25,15 @@ import (
 	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
+type InternalSmartContract interface {
+	object.Child
+	GetResolver() resolver.Resolver
+}
+
 // SmartContract marks that object is smart contract.
 // TODO: Composite work interface
 type SmartContract interface {
 	object.Child
-	GetResolver() resolver.Resolver
 }
 
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.

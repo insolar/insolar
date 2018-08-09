@@ -48,7 +48,6 @@ type CompositeFactory interface {
 
 // ComposingContainer allows to store composites.
 type ComposingContainer interface {
-	Object
 	CreateComposite(compositeFactory CompositeFactory) (Composite, error)
 	GetComposite(interfaceKey string) (Composite, error)
 	GetOrCreateComposite(interfaceKey string, compositeFactory CompositeFactory) (Composite, error)
