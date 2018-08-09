@@ -47,7 +47,17 @@ func (hw *HelloWorlder) HelloHuman(Name FullName) PersonalGreeting {
 	}
 }
 
+// nolint
 func (hw *HelloWorlder) HelloHumanPointer(Name FullName) *PersonalGreeting {
+	hw.Greeted++
+	return &PersonalGreeting{
+		Name:    Name,
+		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
+	}
+}
+
+// nolint
+func (hw *HelloWorlder) MultiArgs(Name FullName, s string, i int) *PersonalGreeting {
 	hw.Greeted++
 	return &PersonalGreeting{
 		Name:    Name,
@@ -62,7 +72,3 @@ func (hw HelloWorlder) ConstEcho(s string) (string, error) {
 
 // nolint
 func JustExportedStaticFunction(int, int) {}
-
-var INSEXPORT HelloWorlder //nolint
-
-/// generated

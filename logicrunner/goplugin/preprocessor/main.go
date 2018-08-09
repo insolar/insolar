@@ -1,37 +1,52 @@
 package main
 
 import (
+	"bytes"
+	"flag"
+	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
-	"log"
-
+	"io"
+	"io/ioutil"
 	"os"
-
-	"go/ast"
-
 	"strings"
 
-	"bytes"
-	"io"
-
-	"io/ioutil"
-
 	"github.com/pkg/errors"
-	flag "github.com/spf13/pflag"
 )
 
-func init() {
-	flag.Parse()
+type ContractInterface struct {
+	Types    map[string]string
+	Methods  map[string][]*ast.FuncDecl
+	Contract string
 }
 
+var mode string
+var outfile string
+
 func main() {
-	log.Println(os.Getwd())
+	flag.StringVar(&mode, "mode", "wrapper", "Generation mode: <wrapper|helper>")
+	flag.StringVar(&outfile, "o", "-", "output file")
+	flag.Parse()
+
+	var output io.WriteCloser
+	if outfile == "-" {
+		output = os.Stdout
+	} else {
+		var err error
+		output, err = os.OpenFile(outfile, os.O_WRONLY, 0644)
+		if err != nil {
+			panic(err)
+		}
+		defer output.Close()
+	}
+
 	for _, fn := range flag.Args() {
 		w, err := generateForFile(fn)
 		if err != nil {
 			panic(err)
 		}
-		_, _ = io.Copy(os.Stdout, w)
+		io.Copy(output, w)
 	}
 }
 
@@ -51,22 +66,26 @@ func generateForFile(fn string) (io.Reader, error) {
 
 	node, err := parser.ParseFile(fs, fn, buff, parser.ParseComments)
 	if err != nil {
-		log.Fatalf("Can't parse %s : %s", fn, err)
+		return nil, errors.Wrapf(err, "Can't parse %s", fn)
 	}
 	if node.Name.Name != "main" {
 		panic("Contract must be in main package")
 	}
-	getMethods(node, buff)
-	code := generateWrappers()
-	code += "\n" + generateExports() + "\n"
-	return bytes.NewBuffer([]byte(code)), nil
+	b := bytes.Buffer{}
+	ci := getMethods(node, buff)
+	if mode == "wrapper" {
+		b.WriteString("package " + node.Name.Name + "\n\n")
+		b.WriteString(generateWrappers(ci) + "\n")
+		b.WriteString(generateExports(ci) + "\n")
+	}
+	return &b, nil
 }
 
-var types = make(map[string]string)
-var methods = make(map[string][]*ast.FuncDecl)
-var contract string
-
-func getMethods(F *ast.File, text []byte) {
+func getMethods(F *ast.File, text []byte) *ContractInterface {
+	ci := ContractInterface{
+		Types:   make(map[string]string),
+		Methods: make(map[string][]*ast.FuncDecl),
+	}
 	for _, d := range F.Decls {
 		switch td := d.(type) {
 		case *ast.GenDecl:
@@ -75,13 +94,13 @@ func getMethods(F *ast.File, text []byte) {
 			}
 			typeNode := td.Specs[0].(*ast.TypeSpec)
 			if strings.Contains(td.Doc.Text(), "@inscontract") {
-				if contract != "" {
+				if ci.Contract != "" {
 					panic("more than one contract in a file")
 				}
-				contract = typeNode.Name.Name
+				ci.Contract = typeNode.Name.Name
 				continue
 			}
-			types[typeNode.Name.Name] = string(text[typeNode.Pos()-1 : typeNode.End()])
+			ci.Types[typeNode.Name.Name] = string(text[typeNode.Pos()-1 : typeNode.End()])
 			continue
 		case *ast.FuncDecl:
 			if td.Recv.NumFields() == 0 { // not a method
@@ -92,38 +111,84 @@ func getMethods(F *ast.File, text []byte) {
 				r = tr.X
 			}
 			typename := r.(*ast.Ident).Name
-			methods[typename] = append(methods[typename], td)
+			ci.Methods[typename] = append(ci.Methods[typename], td)
 		}
 	}
+	return &ci
 }
 
-func generateWrappers() string {
+func generateTypes(ci *ContractInterface) string {
 	text := ""
-	for _, t := range types {
+	for _, t := range ci.Types {
 		text += "type " + t + "\n"
 	}
-	for _, method := range methods[contract] {
-		text += generateMethodWrapper(method, contract) + "\n\n"
+
+	text += "type " + ci.Contract + " struct { // Contract proxy type\n"
+	text += "    address Reference logicrunner.Reference\n"
+	text += "}\n\n"
+
+	text += "func (c *" + ci.Contract + ")GetReference"
+	// GetReference
+	return text
+}
+
+func generateWrappers(ci *ContractInterface) string {
+	text := `import (
+	"github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
+	)` + "\n"
+
+	for _, method := range ci.Methods[ci.Contract] {
+		text += generateMethodWrapper(method, ci.Contract) + "\n"
 	}
 	return text
 }
 
 func generateMethodWrapper(method *ast.FuncDecl, class string) string {
-	text := ""
-	text += "func (_self *" + class + ") INSMETHOD__" + method.Name.Name + "("
-	for _, arg := range method.Type.Params.List {
-		text += arg.Names[0].Name + " interface{}, "
+	text := fmt.Sprintf("func (self *%s) INSWRAPER_%s(cbor foundation.CBORMarshaler, data []byte) ([]byte) {\n",
+		class, method.Name.Name)
+	text += fmt.Sprintf("\targs := [%d]interface{}{}\n", method.Type.Params.NumFields())
+
+	args := []string{}
+	for i, arg := range method.Type.Params.List {
+		initializer := ""
+		tname := fmt.Sprintf("%v", arg.Type)
+		switch tname {
+		case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
+			initializer = tname + "(0)"
+		case "string":
+			initializer = `""`
+		default:
+			initializer = tname + "{}"
+		}
+		text += fmt.Sprintf("\targs[%d] = %s\n", i, initializer)
+		args = append(args, fmt.Sprintf("args[%d].(%s)", i, tname))
 	}
-	text += ") {\n\t_self." + method.Name.Name + "("
-	for _, arg := range method.Type.Params.List {
-		text += arg.Names[0].Name + ".(" + arg.Type.(*ast.Ident).Name + "), "
+
+	text += "\tcbor.Unmarshal(&args, data)\n"
+
+	rets := []string{}
+	for i := range method.Type.Results.List {
+		rets = append(rets, fmt.Sprintf("ret%d", i))
 	}
-	text += ")\n}"
+	ret := strings.Join(rets, ", ")
+	text += fmt.Sprintf("\t%s := self.%s(%s)\n", ret, method.Name.Name, strings.Join(args, ", "))
+
+	text += fmt.Sprintf("\treturn cbor.Marshal([]interface{}{%s})\n", strings.Join(rets, ", "))
+	text += "}\n"
 	return text
 }
 
-func generateExports() string {
-	text := ""
-	text += "var INSEXPORT " + contract
+/*
+func (hw *HelloWorlder) INSWRAPER_Echo(cbor cborer, data []byte) ([]byte, error) {
+	args := [1]interface{}{}
+	args[0] = ""
+	cbor.Unmarshal(&args, data)
+	ret1, ret2 := hw.Echo(args[0].(string))
+	return cbor.Marshal([]interface{}{ret1, ret2}), nil
+}
+*/
+
+func generateExports(ci *ContractInterface) string {
+	text := "var INSEXPORT " + ci.Contract + "\n"
 	return text
 }

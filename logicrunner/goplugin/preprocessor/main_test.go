@@ -8,6 +8,7 @@ import (
 )
 
 func Test_generateForFile(t *testing.T) {
+	mode = "wrapper"
 	w, err := generateForFile("../testplugins/secondary/main.go")
 	if err != nil {
 		t.Fatal(err)
