@@ -37,7 +37,6 @@ func (bo *BaseObject) GetClassID() string {
 
 // Composite marks that instance have ability to be compose in another object.
 type Composite interface {
-	Object
 	GetInterfaceKey() string // string ID of interface/type of Composite object; basically, GetClassID()
 }
 

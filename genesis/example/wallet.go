@@ -16,25 +16,37 @@
 
 package example
 
-// type Wallet interface {
-// 	object.Composite
-// 	contract.SmartContract
-// }
-//
-// type wallet struct {
-// 	contract.BaseSmartContract
-// }
-//
-// func (w *wallet) GetClassID() string {
-// 	return class.WalletID
-// }
-//
-// func newWallet(parent object.Parent) (Wallet, error) {
-// 	if parent == nil {
-// 		return nil, fmt.Errorf("parent must not be nil")
-// 	}
-//
-// 	return &wallet{
-// 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
-// 	}, nil
-// }
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
+	"github.com/insolar/insolar/genesis/model/object"
+)
+
+type Wallet interface {
+	object.Composite
+	contract.SmartContract
+}
+
+type wallet struct {
+	contract.BaseSmartContract
+}
+
+func (w *wallet) GetClassID() string {
+	return class.WalletID
+}
+
+func (w *wallet) GetInterfaceKey() string {
+	return w.GetClassID()
+}
+
+func newWallet(parent object.Parent) (Wallet, error) {
+	if parent == nil {
+		return nil, fmt.Errorf("parent must not be nil")
+	}
+
+	return &wallet{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+	}, nil
+}
