@@ -16,7 +16,7 @@
 
 package object
 
-// Callable allows itself to be called by its reference.
+// Callable is a marker interface that shows that object is able to be called.
 type Callable interface {
 	Object
 }

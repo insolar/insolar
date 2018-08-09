@@ -98,26 +98,26 @@ func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
 	return "", fmt.Errorf("add child error")
 }
 
-type mockFactoryProxy struct {
+type mockFactory struct {
 	mockProxy
 }
 
-func (f *mockFactoryProxy) Create(parent object.Parent) (resolver.Proxy, error) {
+func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	return &mockChildProxy{
 		parent: parent,
 	}, nil
 }
 
-func (f *mockFactoryProxy) GetClassID() string {
+func (f *mockFactory) GetClassID() string {
 	return class.MemberID
 }
 
-func (f *mockFactoryProxy) GetParent() object.Parent {
+func (f *mockFactory) GetParent() object.Parent {
 	return nil
 }
 
 type mockFactoryError struct {
-	mockFactoryProxy
+	mockFactory
 }
 
 func (f *mockFactoryError) Create(parent object.Parent) (resolver.Proxy, error) {
@@ -125,7 +125,7 @@ func (f *mockFactoryError) Create(parent object.Parent) (resolver.Proxy, error) 
 }
 
 type mockFactoryNilError struct {
-	mockFactoryProxy
+	mockFactory
 }
 
 func (f *mockFactoryNilError) Create(parent object.Parent) (resolver.Proxy, error) {
