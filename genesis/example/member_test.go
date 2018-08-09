@@ -19,6 +19,7 @@ package example
 import (
 	"testing"
 
+	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -35,6 +36,16 @@ func (c *BaseComposite) GetInterfaceKey() string {
 func (c *BaseComposite) GetClassID() string {
 	return "BaseComposite"
 }
+
+func (c *BaseComposite) GetParent() object.Parent {
+	return nil
+}
+
+func (c *BaseComposite) GetReference() object.Reference {
+	return nil
+}
+
+func (c *BaseComposite) SetReference(reference object.Reference) {}
 
 type BaseCompositeFactory struct{}
 
@@ -94,6 +105,7 @@ func TestNewMemberProxy(t *testing.T) {
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 	}
 	expectedMember.CompositeMap = make(map[string]object.Composite)
+	expectedMember.ChildStorage = storage.NewMapStorage()
 	assert.Equal(t, &memberProxy{
 		BaseProxy: resolver.BaseProxy{
 			Instance: expectedMember,
@@ -184,6 +196,7 @@ func TestMemberFactory_Create(t *testing.T) {
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 	}
 	expectedMember.CompositeMap = make(map[string]object.Composite)
+	expectedMember.ChildStorage = storage.NewMapStorage()
 	assert.Equal(t, &memberProxy{
 		BaseProxy: resolver.BaseProxy{
 			Instance: expectedMember,
