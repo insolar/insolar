@@ -14,7 +14,6 @@ func Call(Reference logicrunner.Reference, MethodName string, Arguments []interf
 }
 
 func APICall() { // GetPulsar / GetNodeList / GetValidatorCandidates
-	return
 }
 
 // ???

@@ -11,11 +11,13 @@ type HelloWorlder struct {
 	Greeted int
 }
 
+// nolint
 type FullName struct {
 	First string
 	Last  string
 }
 
+// nolint
 type PersonalGreeting struct {
 	Name    FullName
 	Message string

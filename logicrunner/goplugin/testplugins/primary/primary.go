@@ -2,7 +2,6 @@ package primary
 
 import (
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
 )
 
 type INFHwRunner interface {
@@ -15,10 +14,10 @@ type HwRunner struct {
 	Runned int
 }
 
-func (h *HwRunner) Run() string {
-	hw := Hw.GetNewInstance(logicrunner.Reference("#1.#2"))
-	return hw.Echo("Ooops")
-}
+//func (h *HwRunner) Run() string {
+//	hw := Hw.GetNewInstance(logicrunner.Reference("#1.#2"))
+//	return hw.Echo("Ooops")
+//}
 
 //
 type Hw struct {
@@ -29,7 +28,7 @@ func (Hw) GetNewInstance(r logicrunner.Reference) Hw {
 	return Hw{Reference: r}
 }
 
-func (_self *Hw) Echo(s string) string {
-	foundation.APICall(_self.Reference, "Echo", s)
-	return s
-}
+//func (_self *Hw) Echo(s string) string {
+//	foundation.APICall(_self.Reference, "Echo", s)
+//	return s
+//}
