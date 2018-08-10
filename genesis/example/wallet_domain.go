@@ -35,7 +35,7 @@ type WalletDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// CreateWallet is used to create new wallet as a child to domain storage and inject composite to member
-	CreateWallet(m *memberProxy) error
+	CreateWallet(m Member) error
 }
 
 type walletDomain struct {
@@ -66,11 +66,11 @@ func newWalletDomain(parent object.Parent) (*walletDomain, error) {
 	return wd, nil
 }
 
-func (wd *walletDomain) GetClassID() string {
+func (*walletDomain) GetClassID() string {
 	return class.WalletDomainID
 }
 
-func (wd *walletDomain) CreateWallet(memb *memberProxy) error {
+func (wd *walletDomain) CreateWallet(m Member) error {
 	// Get child by walletFactoryReference
 	r := wd.GetResolver()
 	// TODO: pass specific classID for factory resolving
@@ -79,13 +79,13 @@ func (wd *walletDomain) CreateWallet(memb *memberProxy) error {
 		return err
 	}
 
-	// Check if it Factory
+	// Check if it CompositeFactory
 	wf, ok := child.(factory.CompositeFactory)
 	if !ok {
-		return fmt.Errorf("child by reference `%s` is not Factory instance", wd.walletFactoryReference)
+		return fmt.Errorf("child by reference `%s` is not CompositeFactory instance", wd.walletFactoryReference)
 	}
 
-	_, err = memb.CreateComposite(wf)
+	_, err = m.GetOrCreateComposite(wf)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ type walletDomainFactory struct {
 	parent object.Parent
 }
 
-func (wdf *walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (*walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	proxy, err := newWalletDomainProxy(parent)
 	if err != nil {
 		return nil, err
@@ -135,12 +135,12 @@ func (wdf *walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, er
 	return proxy, nil
 }
 
-func (wdf *walletDomainFactory) GetParent() object.Parent {
+func (*walletDomainFactory) GetParent() object.Parent {
 	// TODO: return real parent, fix tests
 	return nil
 }
 
-func (wdf *walletDomainFactory) GetClassID() string {
+func (*walletDomainFactory) GetClassID() string {
 	return class.WalletDomainID
 }
 

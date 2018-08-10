@@ -35,19 +35,19 @@ Entities:
 
 		// because type of member is a child of memberDomain
 		factory := NewMemberFactory(memberDomain)
-		m, error := factory.Create(parent)
+        m, error := factory.Create(parent)
 
 ////
 
-    WalletDomain - domain that allows to add new wallets to system
+	WalletDomain - domain that allows to add new wallets to system
 
 	Usage:
 
-		factory := NewWalletDomainFactory( factoryParent )
-		wDomain, err := factory.Create( domainParent )
+		factory := NewWalletDomainFactory(factoryParent)
+		wDomain, err := factory.Create(domainParent)
 
-		// since Create inject composite to member proxy
-		err := wDomain.CreateWallet( memberProxy )
+		// since Create inject composite to member
+		err := wDomain.CreateWallet(member)
 
 	Wallet - smart contract that represent wallet
 
@@ -55,7 +55,14 @@ Entities:
 		factory := NewWalletFactory(walletDomain)
 		w, err := factory.Create(parent)
 
+////
 
+	Get user balance example:
+		err := wDomain.CreateWallet(member)
+		wFactory := NewWalletFactory(walletDomain)
+
+		w := m.GetOrCreateComposite( wFactory )
+		w.GetBalance()
 
 */
 package example

@@ -52,7 +52,7 @@ func (w *wallet) GetBalance() int {
 	return w.balance
 }
 
-func (w *wallet) GetClassID() string {
+func (*wallet) GetClassID() string {
 	return class.WalletID
 }
 
@@ -96,11 +96,11 @@ func NewWalletFactory(parent object.Parent) factory.CompositeFactory {
 	}
 }
 
-func (wf *walletFactory) GetInterfaceKey() string {
+func (*walletFactory) GetInterfaceKey() string {
 	return class.WalletID
 }
 
-func (wf *walletFactory) GetClassID() string {
+func (*walletFactory) GetClassID() string {
 	return class.WalletID
 }
 

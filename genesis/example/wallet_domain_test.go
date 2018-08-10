@@ -63,22 +63,6 @@ func TestWalletDomain_CreateWallet(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestWalletDomain_CreateWallet_CantAddComposite(t *testing.T) {
-	parent := &mockParent{}
-	wallet, err := newWalletDomain(parent)
-	assert.NoError(t, err)
-
-	mProxy, err := newMemberProxy(parent)
-	assert.NoError(t, err)
-
-	wf := walletFactory{}
-
-	mProxy.CreateComposite(&wf)
-
-	err = wallet.CreateWallet(mProxy)
-	assert.EqualError(t, err, "delegate with name Wallet already exist")
-}
-
 func TestWalletDomain_CreateWallet_NoMemberFactoryRecord(t *testing.T) {
 	parent := &mockParent{}
 
@@ -119,7 +103,7 @@ func TestWalletDomain_CreateWallet_NotFactory(t *testing.T) {
 
 	wDomain.walletFactoryReference, _ = object.NewReference("", record, object.ChildScope)
 	err = wDomain.CreateWallet(mProxy)
-	assert.EqualError(t, err, fmt.Sprintf("child by reference `#.#%s` is not Factory instance", record))
+	assert.EqualError(t, err, fmt.Sprintf("child by reference `#.#%s` is not CompositeFactory instance", record))
 }
 
 func TestWalletDomain_GetClassID(t *testing.T) {
