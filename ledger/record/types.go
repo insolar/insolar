@@ -124,3 +124,16 @@ func (ref *Reference) Key() []byte {
 	_ = copy(b[IDSize:], rk)
 	return b
 }
+
+// IsEqual checks equality of References.
+func (ref Reference) IsEqual(ref2 Reference) bool {
+	if !ref.Domain.IsEqual(ref2.Domain) {
+		return false
+	}
+	return ref.Record.IsEqual(ref2.Record)
+}
+
+// IsNotEqual checks non equality of References.
+func (ref Reference) IsNotEqual(ref2 Reference) bool {
+	return !ref.IsEqual(ref2)
+}
