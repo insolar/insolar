@@ -29,7 +29,9 @@ func TestNewReferenceContainer(t *testing.T) {
 	record := "156"
 	ref, _ := object.NewReference(domain, record, object.GlobalScope)
 	container := NewReferenceContainer(ref)
-	assert.Equal(t, ref, container.reference)
+	assert.Equal(t, &ReferenceContainer{
+		reference: ref,
+	}, container)
 
 }
 

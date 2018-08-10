@@ -48,8 +48,11 @@ ReferenceContainer provides methods for store Reference as BaseProxy
 
 Usage:
 
-     NewReferenceContainer() creates new container for reference.
-     GetClassID() return string representation of object's class.
-     GetStoredReference() returns stored reference.
+	ref, _ := object.NewReference(domain, record, object.GlobalScope)
+	container = NewReferenceContainer(ref)
+
+	container.GetClassID()         // return string representation of object's class.
+	container.GetStoredReference() // returns stored reference.
+
 */
 package resolver
