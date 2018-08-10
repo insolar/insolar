@@ -35,7 +35,7 @@ Entities:
 
 		// because type of member is a child of memberDomain
 		factory := NewMemberFactory(memberDomain)
-        m, error := factory.Create(parent)
+		m, error := factory.Create(parent)
 
 ////
 
@@ -58,10 +58,9 @@ Entities:
 ////
 
 	Get user balance example:
-		err := wDomain.CreateWallet(member)
 		wFactory := NewWalletFactory(walletDomain)
 
-		w := m.GetOrCreateComposite( wFactory )
+		w := m.GetOrCreateComposite(wFactory)
 		w.GetBalance()
 
 */
