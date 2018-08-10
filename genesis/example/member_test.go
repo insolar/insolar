@@ -47,28 +47,28 @@ func (c *BaseComposite) GetReference() object.Reference {
 
 func (c *BaseComposite) SetReference(reference object.Reference) {}
 
-type BaseCompositeFactory struct{}
+type MockBaseCompositeFactory struct{}
 
-func (bcf *BaseCompositeFactory) SetReference(reference object.Reference) {
+func (bcf *MockBaseCompositeFactory) SetReference(reference object.Reference) {
 }
 
-func (bcf *BaseCompositeFactory) GetReference() object.Reference {
+func (bcf *MockBaseCompositeFactory) GetReference() object.Reference {
 	return nil
 }
 
-func (bcf *BaseCompositeFactory) GetParent() object.Parent {
+func (bcf *MockBaseCompositeFactory) GetParent() object.Parent {
 	return nil
 }
 
-func (bcf *BaseCompositeFactory) GetClassID() string {
+func (bcf *MockBaseCompositeFactory) GetClassID() string {
 	return "BaseCompositeFactory_ID"
 }
 
-func (bcf *BaseCompositeFactory) GetInterfaceKey() string {
+func (bcf *MockBaseCompositeFactory) GetInterfaceKey() string {
 	return class.MemberID
 }
 
-func (cf *BaseCompositeFactory) Create(parent object.Parent) (factory.Composite, error) {
+func (cf *MockBaseCompositeFactory) Create(parent object.Parent) (factory.Composite, error) {
 	return &BaseComposite{}, nil
 }
 
@@ -158,7 +158,7 @@ func TestMemberProxy_GetOrCreateComposite_Get(t *testing.T) {
 	parent := &mockParent{}
 	proxy, _ := newMemberProxy(parent)
 	composite := &BaseComposite{}
-	compositeFactory := &BaseCompositeFactory{}
+	compositeFactory := &MockBaseCompositeFactory{}
 
 	res, err := proxy.GetOrCreateComposite(compositeFactory)
 
@@ -170,7 +170,7 @@ func TestMemberProxy_GetOrCreateComposite_Create(t *testing.T) {
 	parent := &mockParent{}
 	proxy, _ := newMemberProxy(parent)
 	composite := &BaseComposite{}
-	compositeFactory := &BaseCompositeFactory{}
+	compositeFactory := &MockBaseCompositeFactory{}
 
 	res, err := proxy.GetOrCreateComposite(compositeFactory)
 
