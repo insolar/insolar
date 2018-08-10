@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -86,7 +87,7 @@ func (cd *classDomain) GetClass(recordID string) (factory.Factory, error) {
 }
 
 type classDomainProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 // newClassDomainProxy creates new proxy and associates it with new instance of ClassDomain.
@@ -97,7 +98,7 @@ func newClassDomainProxy(parent object.Parent) (*classDomainProxy, error) {
 	}
 
 	return &classDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: instance,
 		},
 	}, nil
@@ -114,7 +115,7 @@ func (cdp *classDomainProxy) GetClass(record string) (factory.Factory, error) {
 }
 
 type classDomainFactory struct {
-	object.BaseCallable
+	factory.BaseFactory
 	parent object.Parent
 }
 

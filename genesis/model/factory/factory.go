@@ -23,9 +23,13 @@ import (
 
 // Factory allows to create new objects with reference.
 type Factory interface {
-	object.Child
+	resolver.Proxy
 	// Create returns new instance of specified type.
 	Create(parent object.Parent) (resolver.Proxy, error)
+}
+
+type BaseFactory struct {
+	resolver.BaseProxy
 }
 
 // Composite marks that instance have ability to be compose in another object.

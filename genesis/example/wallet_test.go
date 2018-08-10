@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
-	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,7 +54,7 @@ func TestNewWalletProxy(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &walletProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: nWallet,
 		},
 	}, proxy)
@@ -70,7 +69,7 @@ func TestWalletProxy_GetBalance(t *testing.T) {
 		balance:           test_balance,
 	}
 	proxy := walletProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: &w,
 		},
 	}
@@ -143,7 +142,7 @@ func TestWalletFactory_Create(t *testing.T) {
 	}
 
 	assert.Equal(t, &walletProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: &expecatedWallet,
 		},
 	}, proxy)

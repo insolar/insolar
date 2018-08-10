@@ -19,8 +19,30 @@ package record
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
+}
+
+func TestCodeRecord_GetCode(t *testing.T) {
+	rec := CodeRecord{
+		TargetedCode: map[ArchType][]byte{
+			1: {1},
+			2: {2},
+		},
+	}
+
+	code, err := rec.GetCode([]ArchType{15})
+	assert.Error(t, err)
+
+	code, err = rec.GetCode([]ArchType{3, 2, 1})
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{2}, code)
+
+	code, err = rec.GetCode([]ArchType{1})
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{1}, code)
 }

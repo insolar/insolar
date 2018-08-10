@@ -40,14 +40,14 @@ type GoPlugin struct {
 	runner        *exec.Cmd
 }
 
-// GoPluginRPC is a RPC interface for runner to use for variouse tasks, e.g. code fetching
-type GoPluginRPC struct {
+// RPC is a RPC interface for runner to use for variouse tasks, e.g. code fetching
+type RPC struct {
 	gp *GoPlugin
 }
 
 // GetObject is an RPC retriving an object by its reference, so far short circueted to return
 // code of the plugin
-func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
+func (gpr *RPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
 	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error
 // Start starts runner and RPC interface to help runner, note that NewGoPlugin does
 // this for you
 func (gp *GoPlugin) Start() {
-	r := GoPluginRPC{gp: gp}
+	r := RPC{gp: gp}
 	_ = rpc.Register(&r)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", gp.Options.Listen)

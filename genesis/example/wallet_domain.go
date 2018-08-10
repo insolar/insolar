@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -93,7 +94,7 @@ func (wd *walletDomain) CreateWallet(memb *memberProxy) error {
 }
 
 type walletDomainProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 // newWalletDomainProxy creates new proxy and associates it with new instance of WalletDomain.
@@ -104,7 +105,7 @@ func newWalletDomainProxy(parent object.Parent) (*walletDomainProxy, error) {
 	}
 
 	return &walletDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: inst,
 		},
 	}, nil
@@ -116,7 +117,7 @@ func (wdp *walletDomainProxy) CreateWallet(mp *memberProxy) error {
 }
 
 type walletDomainFactory struct {
-	object.BaseCallable
+	factory.BaseFactory
 	parent object.Parent
 }
 

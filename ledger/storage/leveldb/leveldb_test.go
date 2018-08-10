@@ -148,7 +148,7 @@ func TestSetClassIndexStoresDataInDB(t *testing.T) {
 
 	idx := index.ClassLifeline{
 		LatestStateID: record.ID{1, 2, 3},
-		MigrationIDs:  []record.ID{{1}, {2}, {3}},
+		AmendIDs:      []record.ID{{1}, {2}, {3}},
 	}
 	err = ledger.SetClassIndex(record.ID{0}, &idx)
 	assert.Nil(t, err)

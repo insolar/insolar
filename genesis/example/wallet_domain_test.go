@@ -95,7 +95,7 @@ func TestWalletDomain_CreateWallet_NoMemberFactoryRecord(t *testing.T) {
 }
 
 type mockWalletNotFactory struct {
-	mockCallable
+	mockProxy
 }
 
 func (f *mockWalletNotFactory) GetClassID() string {

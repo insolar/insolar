@@ -64,20 +64,11 @@ func (c *mockProxyReference) GetContextStorage() storage.Storage {
 }
 
 type mockParentNotChild struct {
-	Reference      object.Reference
 	ContextStorage storage.Storage
 }
 
 func (p *mockParentNotChild) GetClassID() string {
 	return "mockParentNotChild"
-}
-
-func (p *mockParentNotChild) GetReference() object.Reference {
-	return p.Reference
-}
-
-func (p *mockParentNotChild) SetReference(reference object.Reference) {
-	p.Reference = reference
 }
 
 func (p *mockParentNotChild) GetChildStorage() storage.Storage {
@@ -101,7 +92,7 @@ func (p *mockParentNotChild) GetContextStorage() storage.Storage {
 }
 
 func TestNewContextResolver(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolver := newContextResolver(mockParent)
 
 	assert.Equal(t, &contextResolver{
@@ -111,7 +102,7 @@ func TestNewContextResolver(t *testing.T) {
 
 func TestContextResolver_GetObject_No_Object(t *testing.T) {
 	contextStorage := storage.NewMapStorage()
-	mockParent := &mockParent{
+	mockParent := &mockParentProxy{
 		ContextStorage: contextStorage,
 	}
 	resolver := newContextResolver(mockParent)
@@ -126,7 +117,7 @@ func TestContextResolver_GetObject_No_Object(t *testing.T) {
 func TestContextResolver_GetObject_Wrong_classID(t *testing.T) {
 	contextStorage := storage.NewMapStorage()
 	record, _ := contextStorage.Set(child)
-	mockParent := &mockParent{
+	mockParent := &mockParentProxy{
 		ContextStorage: contextStorage,
 	}
 	resolver := newContextResolver(mockParent)
@@ -157,7 +148,7 @@ func TestContextResolver_GetObject_Not_Child(t *testing.T) {
 
 func TestContextResolver_GetObject_Not_Reference(t *testing.T) {
 	contextStorage := storage.NewMapStorage()
-	mockParent := &mockParent{
+	mockParent := &mockParentProxy{
 		ContextStorage: contextStorage,
 	}
 	resolver := newContextResolver(mockParent)
@@ -171,7 +162,7 @@ func TestContextResolver_GetObject_Not_Reference(t *testing.T) {
 func TestContextResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 	contextStorage := storage.NewMapStorage()
 	record, _ := contextStorage.Set(child)
-	mockParent := &mockParent{
+	mockParent := &mockParentProxy{
 		ContextStorage: contextStorage,
 	}
 	resolver := newContextResolver(mockParent)
@@ -186,7 +177,7 @@ func TestContextResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 func TestContextResolver_GetObject(t *testing.T) {
 	contextStorage := storage.NewMapStorage()
 	record, _ := contextStorage.Set(child)
-	mockParent := &mockParent{
+	mockParent := &mockParentProxy{
 		ContextStorage: contextStorage,
 	}
 	resolver := newContextResolver(mockParent)

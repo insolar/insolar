@@ -119,7 +119,7 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 	}
 
 	res := logicrunner.Object{}
-	err = client.Call("GoPluginRPC.GetObject", obj.Reference, &res)
+	err = client.Call("RPC.GetObject", obj.Reference, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}

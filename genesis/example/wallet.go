@@ -63,7 +63,7 @@ func newWallet(parent object.Parent) (Wallet, error) {
 }
 
 type walletProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 func newWalletProxy(parent object.Parent) (*walletProxy, error) {
@@ -73,7 +73,7 @@ func newWalletProxy(parent object.Parent) (*walletProxy, error) {
 	}
 
 	return &walletProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: instance,
 		},
 	}, nil
@@ -88,7 +88,7 @@ func (wp *walletProxy) GetInterfaceKey() string {
 }
 
 type walletFactory struct {
-	object.BaseCallable
+	resolver.BaseProxy
 	parent object.Parent
 }
 
