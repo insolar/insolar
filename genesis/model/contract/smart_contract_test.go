@@ -93,6 +93,30 @@ func (c *BaseComposite) GetClassID() string {
 	return "BaseComposite"
 }
 
+func (c *BaseComposite) GetParent() object.Parent {
+	return nil
+}
+
+func (c *BaseComposite) GetReference() object.Reference {
+	return nil
+}
+
+type BaseCompositeNotChild struct{}
+
+func (c *BaseCompositeNotChild) GetInterfaceKey() string {
+	return "BaseCompositeNotChild"
+}
+
+func (c *BaseCompositeNotChild) GetClassID() string {
+	return "BaseCompositeNotChild"
+}
+
+func (c *BaseCompositeNotChild) GetReference() object.Reference {
+	return nil
+}
+
+func (c *BaseComposite) SetReference(reference object.Reference) {}
+
 type anotherBaseComposite struct{}
 
 func (c *anotherBaseComposite) GetInterfaceKey() string {
@@ -102,6 +126,16 @@ func (c *anotherBaseComposite) GetInterfaceKey() string {
 func (c *anotherBaseComposite) GetClassID() string {
 	return "anotherBaseComposite"
 }
+
+func (c *anotherBaseComposite) GetParent() object.Parent {
+	return nil
+}
+
+func (c *anotherBaseComposite) GetReference() object.Reference {
+	return nil
+}
+
+func (c *anotherBaseComposite) SetReference(reference object.Reference) {}
 
 type BaseCompositeFactory struct{}
 
@@ -113,6 +147,12 @@ type BaseCompositeFactoryWithError struct{}
 
 func (cf *BaseCompositeFactoryWithError) Create() (object.Composite, error) {
 	return nil, fmt.Errorf("composite factory create error")
+}
+
+type BaseCompositeNotChildFactory struct{}
+
+func (cf *BaseCompositeNotChildFactory) Create() (object.Composite, error) {
+	return &BaseCompositeNotChild{}, nil
 }
 
 func TestNewBaseSmartContract(t *testing.T) {
@@ -145,6 +185,10 @@ func TestSmartContract_CreateComposite(t *testing.T) {
 
 	assert.Len(t, sc.CompositeMap, 1)
 	assert.Equal(t, sc.CompositeMap[composite.GetInterfaceKey()], composite)
+	assert.Len(t, sc.ChildStorage.GetKeys(), 1)
+	compositeRecord := sc.ChildStorage.GetKeys()[0]
+	compositeInChildStorage, _ := sc.ChildStorage.Get(compositeRecord)
+	assert.Equal(t, compositeInChildStorage, composite)
 	assert.NoError(t, err)
 }
 
@@ -152,12 +196,30 @@ func TestSmartContract_CreateComposite_Error(t *testing.T) {
 	parent := &mockParent{}
 	sc := NewBaseSmartContract(parent)
 	compositeFactory := BaseCompositeFactory{}
+	// Add to CompositeMap and ChildStorage prepared item
 	sc.CreateComposite(&compositeFactory)
 
 	res, err := sc.CreateComposite(&compositeFactory)
 
 	assert.Nil(t, res)
 	assert.EqualError(t, err, "delegate with name BaseComposite already exist")
+	// CompositeMap and ChildStorage contains only one prepared item
+	assert.Len(t, sc.CompositeMap, 1)
+	assert.Len(t, sc.ChildStorage.GetKeys(), 1)
+}
+
+func TestSmartContract_CreateComposite_NotChild(t *testing.T) {
+	parent := &mockParent{}
+	sc := NewBaseSmartContract(parent)
+	compositeFactory := BaseCompositeNotChildFactory{}
+
+	res, err := sc.CreateComposite(&compositeFactory)
+
+	assert.Nil(t, res)
+	assert.EqualError(t, err, "composite is not a Child")
+	// CompositeMap and ChildStorage contains zero items
+	assert.Len(t, sc.CompositeMap, 0)
+	assert.Len(t, sc.ChildStorage.GetKeys(), 0)
 }
 
 func TestSmartContract_CreateComposite_CreateError(t *testing.T) {
