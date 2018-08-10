@@ -43,5 +43,13 @@ Usage:
 	proxy.GetParent() always returns nil.
 	proxy.GetClassID() is a proxy call for instance method.
 
+
+ReferenceContainer provides methods for store Reference as BaseProxy
+
+Usage:
+
+     NewReferenceContainer() creates new container for reference.
+     GetClassID() return string representation of object's class.
+     GetStoredReference() returns stored reference.
 */
 package resolver

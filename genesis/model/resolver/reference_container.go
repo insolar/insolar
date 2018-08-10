@@ -21,11 +21,13 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
+// ReferenceContainer is a implementation of container for Proxy.
 type ReferenceContainer struct {
 	reference object.Reference
 	BaseProxy
 }
 
+// NewReferenceContainer creates new container for reference.
 func NewReferenceContainer(ref object.Reference) *ReferenceContainer {
 	return &ReferenceContainer{
 		reference: ref,
@@ -37,6 +39,7 @@ func (rc *ReferenceContainer) GetClassID() string {
 	return class.ReferenceID
 }
 
+// GetStoredReference returns stored reference.
 func (rc *ReferenceContainer) GetStoredReference() object.Reference {
 	return rc.reference
 }
