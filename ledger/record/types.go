@@ -82,6 +82,22 @@ type ID struct {
 	Hash  []byte
 }
 
+// IsEqual checks equality of IDs.
+func (id ID) IsEqual(id2 ID) bool {
+	if (id.Hash == nil) != (id2.Hash == nil) {
+		return false
+	}
+	if len(id.Hash) != len(id2.Hash) {
+		return false
+	}
+	for i := range id.Hash {
+		if id.Hash[i] != id2.Hash[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // TypeID encodes a record object type.
 type TypeID uint32
 
