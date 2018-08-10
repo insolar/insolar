@@ -46,7 +46,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		io.Copy(output, w)
+		_, err = io.Copy(output, w)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -117,6 +120,7 @@ func getMethods(F *ast.File, text []byte) *ContractInterface {
 	return &ci
 }
 
+// nolint
 func generateTypes(ci *ContractInterface) string {
 	text := ""
 	for _, t := range ci.Types {
@@ -178,7 +182,8 @@ func generateMethodWrapper(method *ast.FuncDecl, class string) string {
 	return text
 }
 
-/*
+/* generated snipped must be something like this
+
 func (hw *HelloWorlder) INSWRAPER_Echo(cbor cborer, data []byte) ([]byte, error) {
 	args := [1]interface{}{}
 	args[0] = ""
