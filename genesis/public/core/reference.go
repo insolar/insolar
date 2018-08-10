@@ -74,7 +74,8 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]resolver.
 
 // RegisterReference sets new reference as a child to domain storage.
 func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
-	record, err := rd.ChildStorage.Set(ref)
+	container := resolver.NewReferenceContainer(ref)
+	record, err := rd.ChildStorage.Set(container)
 	if err != nil {
 		return "", err
 	}
@@ -99,12 +100,12 @@ func (rd *referenceDomain) ResolveReference(record string) (object.Reference, er
 		return nil, err
 	}
 
-	result, ok := reference.(object.Reference)
+	container, ok := reference.(*resolver.ReferenceContainer)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not `Reference` instance", record)
 	}
 
-	return result, nil
+	return container.GetStoredReference(), nil
 }
 
 type referenceDomainProxy struct {
