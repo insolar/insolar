@@ -14,6 +14,9 @@ import (
 	"bytes"
 	"io"
 
+	"io/ioutil"
+
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 )
 
@@ -24,44 +27,62 @@ func init() {
 func main() {
 	log.Println(os.Getwd())
 	for _, fn := range flag.Args() {
-		w := generateForFile(fn)
+		w, err := generateForFile(fn)
+		if err != nil {
+			panic(err)
+		}
 		_, _ = io.Copy(os.Stdout, w)
 	}
 }
 
-func generateForFile(fn string) io.Reader {
+func generateForFile(fn string) (io.Reader, error) {
 	fs := token.NewFileSet()
-	node, err := parser.ParseFile(fs, fn, nil, parser.ParseComments)
+
+	F, err := os.OpenFile(fn, os.O_RDONLY, 0)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't open file "+fn)
+	}
+	defer F.Close()
+
+	buff, err := ioutil.ReadAll(F)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't read file "+fn)
+	}
+
+	node, err := parser.ParseFile(fs, fn, buff, parser.ParseComments)
 	if err != nil {
 		log.Fatalf("Can't parse %s : %s", fn, err)
 	}
 	if node.Name.Name != "main" {
 		panic("Contract must be in main package")
 	}
-	getMethods(node)
+	getMethods(node, buff)
 	code := generateWrappers()
 	code += "\n" + generateExports() + "\n"
-	return bytes.NewBuffer([]byte(code))
+	return bytes.NewBuffer([]byte(code)), nil
 }
 
+var types = make(map[string]string)
 var methods = make(map[string][]*ast.FuncDecl)
-var contracts []string
+var contract string
 
-func getMethods(F *ast.File) {
+func getMethods(F *ast.File, text []byte) {
 	for _, d := range F.Decls {
 		switch td := d.(type) {
 		case *ast.GenDecl:
 			if td.Tok != token.TYPE {
 				continue
 			}
-			if !strings.Contains(td.Doc.Text(), "@inscontract") {
+			typeNode := td.Specs[0].(*ast.TypeSpec)
+			if strings.Contains(td.Doc.Text(), "@inscontract") {
+				if contract != "" {
+					panic("more than one contract in a file")
+				}
+				contract = typeNode.Name.Name
 				continue
 			}
-			typename := td.Specs[0].(*ast.TypeSpec).Name.Name
-			contracts = append(contracts, typename)
-			if len(contracts) > 1 {
-				panic("more than one contract in a file")
-			}
+			types[typeNode.Name.Name] = string(text[typeNode.Pos()-1 : typeNode.End()])
+			continue
 		case *ast.FuncDecl:
 			if td.Recv.NumFields() == 0 { // not a method
 				continue
@@ -78,10 +99,11 @@ func getMethods(F *ast.File) {
 
 func generateWrappers() string {
 	text := ""
-	for _, class := range contracts {
-		for _, method := range methods[class] {
-			text += generateMethodWrapper(method, class) + "\n\n"
-		}
+	for _, t := range types {
+		text += "type " + t + "\n"
+	}
+	for _, method := range methods[contract] {
+		text += generateMethodWrapper(method, contract) + "\n\n"
 	}
 	return text
 }
@@ -102,8 +124,6 @@ func generateMethodWrapper(method *ast.FuncDecl, class string) string {
 
 func generateExports() string {
 	text := ""
-	for _, m := range contracts {
-		text += "var INSEXPORT " + m
-	}
+	text += "var INSEXPORT " + contract
 	return text
 }
