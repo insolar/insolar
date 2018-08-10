@@ -129,7 +129,7 @@ func ID2Bytes(id ID) []byte {
 // record type ids for record types
 // in use mostly for hashing and deserialization
 // (we don't use iota for clarity and predictable ids,
-// not depended on defenition order)
+// not depended on definition order)
 const (
 	// request record ids
 	requestRecordID       TypeID = 1
