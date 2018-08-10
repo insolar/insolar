@@ -29,13 +29,11 @@ import (
 type Wallet interface {
 	factory.Composite
 	contract.SmartContract
-
 	GetBalance() int
 }
 
 type wallet struct {
 	contract.BaseSmartContract
-
 	balance int
 }
 

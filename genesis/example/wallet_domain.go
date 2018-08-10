@@ -34,7 +34,7 @@ const WalletDomainName = "WalletDomain"
 type WalletDomain interface {
 	// Base domain implementation.
 	domain.Domain
-	// CreateWallet is used to create new wallet as a child to domain storage.
+	// CreateWallet is used to create new wallet as a child to domain storage and inject composite to member
 	CreateWallet(m *memberProxy) error
 }
 

@@ -37,5 +37,25 @@ Entities:
 		factory := NewMemberFactory(memberDomain)
 		m, error := factory.Create(parent)
 
+////
+
+    WalletDomain - domain that allows to add new wallets to system
+
+	Usage:
+
+		factory := NewWalletDomainFactory( factoryParent )
+		wDomain, err := factory.Create( domainParent )
+
+		// since Create inject composite to member proxy
+		err := wDomain.CreateWallet( memberProxy )
+
+	Wallet - smart contract that represent wallet
+
+	Usage:
+		factory := NewWalletFactory(walletDomain)
+		w, err := factory.Create(parent)
+
+
+
 */
 package example
