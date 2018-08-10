@@ -21,7 +21,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// ReferenceContainer is a implementation of container for Proxy.
+// ReferenceContainer is a implementation of Proxy for containerization purpose.
 type ReferenceContainer struct {
 	reference object.Reference
 	BaseProxy

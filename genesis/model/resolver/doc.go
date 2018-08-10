@@ -44,7 +44,7 @@ Usage:
 	proxy.GetClassID() is a proxy call for instance method.
 
 
-ReferenceContainer provides methods for store Reference as BaseProxy
+ReferenceContainer provides methods for store Reference as Proxy
 
 Usage:
 
