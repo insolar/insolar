@@ -53,7 +53,7 @@ func newWalletDomain(parent object.Parent) (*walletDomain, error) {
 		BaseDomain: *domain.NewBaseDomain(parent, WalletDomainName),
 	}
 
-	// Add memberFactory as a child
+	// Add walletFactory as a child
 	record, err := wd.AddChild(wf)
 	if err != nil {
 		return nil, err
