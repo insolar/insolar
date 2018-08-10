@@ -37,6 +37,17 @@ type wallet struct {
 	balance int
 }
 
+func newWallet(parent object.Parent) (Wallet, error) {
+	if parent == nil {
+		return nil, fmt.Errorf("parent must not be nil")
+	}
+
+	return &wallet{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		balance:           0,
+	}, nil
+}
+
 func (w *wallet) GetBalance() int {
 	return w.balance
 }
@@ -47,17 +58,6 @@ func (w *wallet) GetClassID() string {
 
 func (w *wallet) GetInterfaceKey() string {
 	return w.GetClassID()
-}
-
-func newWallet(parent object.Parent) (Wallet, error) {
-	if parent == nil {
-		return nil, fmt.Errorf("parent must not be nil")
-	}
-
-	return &wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
-		balance:           0,
-	}, nil
 }
 
 type walletProxy struct {
