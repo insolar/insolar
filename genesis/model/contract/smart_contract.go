@@ -82,7 +82,18 @@ func (sc *BaseSmartContract) CreateComposite(compositeFactory factory.CompositeF
 	if exist {
 		return nil, fmt.Errorf("delegate with name %s already exist", interfaceKey)
 	}
+
+	compositeAsChild, ok := composite.(object.Child)
+	if !ok {
+		return nil, fmt.Errorf("composite is not a Child")
+	}
+
+	_, err = sc.AddChild(compositeAsChild)
+	if err != nil {
+		return nil, err
+	}
 	sc.CompositeMap[interfaceKey] = composite
+
 	return composite, nil
 }
 
