@@ -102,7 +102,6 @@ func InitDB() (*LevelLedger, error) {
 	}
 
 	var zeroID record.ID
-	copy([]byte(zeroRecordBinary)[:record.IDSize], zeroID[:])
 	ledger := LevelLedger{
 		ldb: db,
 		// FIXME: temporary pulse implementation
@@ -127,17 +126,19 @@ func InitDB() (*LevelLedger, error) {
 	return &ledger, nil
 }
 
-// GetRecordByKey returns record from leveldb by record.Key
-// It just a simple wrapper for GetRecord method.
-func (ll *LevelLedger) GetRecordByKey(k record.Key) (record.Record, error) {
-	return ll.GetRecord(record.Key2ID(k))
+func prefixkey(prefix byte, key []byte) []byte {
+	k := make([]byte, record.RefIDSize+1)
+	k[0] = prefix
+	_ = copy(k[1:], key)
+	return k
 }
 
-// GetRecord returns record from leveldb by record.ID
+// GetRecord returns record from leveldb by *record.Reference.
+//
 // It returns ErrNotFound if the DB does not contains the key.
-func (ll *LevelLedger) GetRecord(id record.ID) (record.Record, error) {
-	getkey := append([]byte{scopeIDRecord}, id[:]...)
-	buf, err := ll.ldb.Get(getkey, nil)
+func (ll *LevelLedger) GetRecord(ref *record.Reference) (record.Record, error) {
+	k := prefixkey(scopeIDRecord, ref.Key())
+	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
 			return nil, ErrNotFound
@@ -151,25 +152,28 @@ func (ll *LevelLedger) GetRecord(id record.ID) (record.Record, error) {
 	return raw.ToRecord(), nil
 }
 
-func (ll *LevelLedger) setRawRecordByKey(k record.Key, raw *record.Raw) (record.ID, error) {
-	id := record.Key2ID(k)
-	putkey := append([]byte{scopeIDRecord}, id[:]...)
-	return id, ll.ldb.Put(putkey, record.MustEncodeRaw(raw), nil)
-}
-
 // SetRecord stores record in leveldb
-func (ll *LevelLedger) SetRecord(rec record.Record) (record.ID, error) {
+func (ll *LevelLedger) SetRecord(rec record.Record) (*record.Reference, error) {
 	raw, err := record.EncodeToRaw(rec)
 	if err != nil {
-		return record.ID{}, err
+		return nil, err
 	}
-	key := record.Key{Pulse: ll.pulseFn(), Hash: raw.Hash()}
-	return ll.setRawRecordByKey(key, raw)
+	ref := &record.Reference{
+		Domain: rec.Domain(),
+		Record: record.ID{Pulse: ll.pulseFn(), Hash: raw.Hash()},
+	}
+	k := prefixkey(scopeIDRecord, ref.Key())
+	err = ll.ldb.Put(k, record.MustEncodeRaw(raw), nil)
+	if err != nil {
+		return nil, err
+	}
+	return ref, nil
 }
 
 // GetClassIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) GetClassIndex(id record.ID) (*index.ClassLifeline, bool) {
-	buf, err := ll.ldb.Get(append([]byte{scopeIDLifeline}, id[:]...), nil)
+func (ll *LevelLedger) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, bool) {
+	k := prefixkey(scopeIDLifeline, ref.Key())
+	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		return nil, false
 	}
@@ -178,14 +182,15 @@ func (ll *LevelLedger) GetClassIndex(id record.ID) (*index.ClassLifeline, bool) 
 }
 
 // SetClassIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) SetClassIndex(id record.ID, idx *index.ClassLifeline) error {
-	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeClassLifeline(idx), nil)
-	return err
+func (ll *LevelLedger) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
+	k := prefixkey(scopeIDLifeline, ref.Key())
+	return ll.ldb.Put(k, index.EncodeClassLifeline(idx), nil)
 }
 
 // GetObjectIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) GetObjectIndex(id record.ID) (*index.ObjectLifeline, bool) {
-	buf, err := ll.ldb.Get(append([]byte{scopeIDLifeline}, id[:]...), nil)
+func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, bool) {
+	k := prefixkey(scopeIDLifeline, ref.Key())
+	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		return nil, false
 	}
@@ -193,10 +198,10 @@ func (ll *LevelLedger) GetObjectIndex(id record.ID) (*index.ObjectLifeline, bool
 	return &idx, true
 }
 
-// SetClassIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) SetObjectIndex(id record.ID, idx *index.ObjectLifeline) error {
-	err := ll.ldb.Put(append([]byte{scopeIDLifeline}, id[:]...), index.EncodeObjectLifeline(idx), nil)
-	return err
+// SetObjectIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
+func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
+	k := prefixkey(scopeIDLifeline, ref.Key())
+	return ll.ldb.Put(k, index.EncodeObjectLifeline(idx), nil)
 }
 
 // Close terminates db connection
