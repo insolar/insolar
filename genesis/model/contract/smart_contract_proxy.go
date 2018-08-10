@@ -19,6 +19,7 @@ package contract
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/insolar/insolar/genesis/model/resolver"
 )
@@ -40,10 +41,10 @@ func (bp *BaseSmartContractProxy) GetParent() object.Parent {
 }
 
 // GetOrCreateComposite is a proxy call for instance method if instance inherit ComposingContainer.
-func (bp *BaseSmartContractProxy) GetOrCreateComposite(interfaceKey string, compositeFactory object.CompositeFactory) (object.Composite, error) {
-	sc, ok := bp.Instance.(object.ComposingContainer)
+func (bp *BaseSmartContractProxy) GetOrCreateComposite(interfaceKey string, compositeFactory factory.CompositeFactory) (factory.Composite, error) {
+	sc, ok := bp.Instance.(factory.ComposingContainer)
 	if !ok {
 		return nil, fmt.Errorf("Instance is not Composing Container")
 	}
-	return sc.GetOrCreateComposite(interfaceKey, compositeFactory)
+	return sc.GetOrCreateComposite(compositeFactory)
 }

@@ -27,7 +27,7 @@ import (
 )
 
 type Member interface {
-	object.ComposingContainer
+	factory.ComposingContainer
 	contract.SmartContract
 	GetUsername() string
 	GetPublicKey() string
@@ -92,18 +92,18 @@ func (mp *memberProxy) GetPublicKey() string {
 }
 
 // CreateComposite is a proxy call for instance method.
-func (mp *memberProxy) CreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
+func (mp *memberProxy) CreateComposite(compositeFactory factory.CompositeFactory) (factory.Composite, error) {
 	return mp.Instance.(Member).CreateComposite(compositeFactory)
 }
 
 // GetComposite is a proxy call for instance method.
-func (mp *memberProxy) GetComposite(interfaceKey string) (object.Composite, error) {
+func (mp *memberProxy) GetComposite(interfaceKey string) (factory.Composite, error) {
 	return mp.Instance.(Member).GetComposite(interfaceKey)
 }
 
 // GetOrCreateComposite is a proxy call for instance method.
-func (mp *memberProxy) GetOrCreateComposite(interfaceKey string, compositeFactory object.CompositeFactory) (object.Composite, error) {
-	return mp.Instance.(Member).GetOrCreateComposite(interfaceKey, compositeFactory)
+func (mp *memberProxy) GetOrCreateComposite(compositeFactory factory.CompositeFactory) (factory.Composite, error) {
+	return mp.Instance.(Member).GetOrCreateComposite(compositeFactory)
 }
 
 type memberFactory struct {

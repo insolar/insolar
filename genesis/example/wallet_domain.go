@@ -34,14 +34,13 @@ const WalletDomainName = "WalletDomain"
 type WalletDomain interface {
 	// Base domain implementation.
 	domain.Domain
-	// CreateWallet is used to create new wallet as a child to domain storage.
-	CreateWallet(factory.Factory) (string, error)
-	// GetWallet returns wallet from its record in domain storage.
-	GetWallet(string) (resolver.Proxy, error)
+	// CreateWallet is used to create new wallet as a child to domain storage and inject composite to member
+	CreateWallet(m Member) error
 }
 
 type walletDomain struct {
 	domain.BaseDomain
+	walletFactoryReference object.Reference
 }
 
 func newWalletDomain(parent object.Parent) (*walletDomain, error) {
@@ -49,44 +48,49 @@ func newWalletDomain(parent object.Parent) (*walletDomain, error) {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
-	return &walletDomain{
+	wf := NewWalletFactory(parent)
+	wd := &walletDomain{
 		BaseDomain: *domain.NewBaseDomain(parent, WalletDomainName),
-	}, nil
-}
-
-func (wd *walletDomain) GetClassID() string {
-	return class.WalletDomainID
-}
-
-func (wd *walletDomain) CreateWallet(fc factory.Factory) (string, error) {
-	wallet, err := fc.Create(wd)
-	if err != nil {
-		return "", err
-	}
-	if wallet == nil {
-		return "", fmt.Errorf("factory returns nil")
 	}
 
-	record, err := wd.ChildStorage.Set(wallet)
-	if err != nil {
-		return "", err
-	}
-
-	return record, nil
-}
-
-func (wd *walletDomain) GetWallet(record string) (resolver.Proxy, error) {
-	wallet, err := wd.GetChild(record)
+	// Add walletFactory as a child
+	record, err := wd.AddChild(wf)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := wallet.(resolver.Proxy)
-	if !ok {
-		return nil, fmt.Errorf("object with record `%s` is not `Proxy` instance", record)
+	wd.walletFactoryReference, err = object.NewReference("", record, object.ChildScope)
+	if err != nil {
+		return nil, err
+	}
+	return wd, nil
+}
+
+func (*walletDomain) GetClassID() string {
+	return class.WalletDomainID
+}
+
+func (wd *walletDomain) CreateWallet(m Member) error {
+	// Get child by walletFactoryReference
+	r := wd.GetResolver()
+	// TODO: pass specific classID for factory resolving
+	child, err := r.GetObject(wd.walletFactoryReference, class.WalletID)
+	if err != nil {
+		return err
 	}
 
-	return result, nil
+	// Check if it CompositeFactory
+	wf, ok := child.(factory.CompositeFactory)
+	if !ok {
+		return fmt.Errorf("child by reference `%s` is not CompositeFactory instance", wd.walletFactoryReference)
+	}
+
+	_, err = m.GetOrCreateComposite(wf)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type walletDomainProxy struct {
@@ -108,13 +112,8 @@ func newWalletDomainProxy(parent object.Parent) (*walletDomainProxy, error) {
 }
 
 // CreateWallet is a proxy call for instance method.
-func (wdp *walletDomainProxy) CreateWallet(fc factory.Factory) (string, error) {
-	return wdp.Instance.(WalletDomain).CreateWallet(fc)
-}
-
-// GetWallet is a proxy call for instance method.
-func (wdp *walletDomainProxy) GetWallet(record string) (resolver.Proxy, error) {
-	return wdp.Instance.(WalletDomain).GetWallet(record)
+func (wdp *walletDomainProxy) CreateWallet(mp *memberProxy) error {
+	return wdp.Instance.(WalletDomain).CreateWallet(mp)
 }
 
 type walletDomainFactory struct {
@@ -122,7 +121,7 @@ type walletDomainFactory struct {
 	parent object.Parent
 }
 
-func (wdf *walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (*walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	proxy, err := newWalletDomainProxy(parent)
 	if err != nil {
 		return nil, err
@@ -136,12 +135,12 @@ func (wdf *walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, er
 	return proxy, nil
 }
 
-func (wdf *walletDomainFactory) GetParent() object.Parent {
+func (*walletDomainFactory) GetParent() object.Parent {
 	// TODO: return real parent, fix tests
 	return nil
 }
 
-func (wdf *walletDomainFactory) GetClassID() string {
+func (*walletDomainFactory) GetClassID() string {
 	return class.WalletDomainID
 }
 
