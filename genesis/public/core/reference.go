@@ -102,7 +102,7 @@ func (rd *referenceDomain) ResolveReference(record string) (object.Reference, er
 
 	container, ok := reference.(*resolver.ReferenceContainer)
 	if !ok {
-		return nil, fmt.Errorf("object with record `%s` is not `Reference` instance", record)
+		return nil, fmt.Errorf("object with record `%s` is not `ReferenceContainer` instance", record)
 	}
 
 	return container.GetStoredReference(), nil
