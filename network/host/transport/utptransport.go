@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -209,7 +210,7 @@ func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 			// }
 			return
 		}
-
+		msg.RemoteAddress = strings.Split(conn.RemoteAddr().String(), ":")[0]
 		t.handleMessage(msg)
 	}
 }
