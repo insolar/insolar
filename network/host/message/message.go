@@ -53,10 +53,11 @@ type RequestID uint64
 
 // Message is DHT message object.
 type Message struct {
-	Sender    *node.Node
-	Receiver  *node.Node
-	Type      messageType
-	RequestID RequestID
+	Sender        *node.Node
+	Receiver      *node.Node
+	Type          messageType
+	RequestID     RequestID
+	RemoteAddress string
 
 	Data       interface{}
 	Error      error
