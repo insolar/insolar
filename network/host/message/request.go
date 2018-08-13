@@ -71,3 +71,8 @@ type RequestCheckOrigin struct {
 // RequestObtainIP is data to obtain a self IP.
 type RequestObtainIP struct {
 }
+
+// RequestRelayOwnership is data to notify that current node can be a relay.
+type RequestRelayOwnership struct {
+	Ready bool
+}

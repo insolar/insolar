@@ -46,6 +46,8 @@ const (
 	TypeCheckOrigin
 	// TypeObtainIP is message to get itself IP from another node.
 	TypeObtainIP
+	// TypeRelayOwnership is message to say all other nodes that current node have a static IP.
+	TypeRelayOwnership
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -115,6 +117,16 @@ func NewObtainIPMessage(sender, receiver *node.Node) *Message {
 	}
 }
 
+func NewRelayOwnershipMessage(sender, receiver *node.Node, ready bool) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeRelayOwnership,
+		Data:     &RequestRelayOwnership{ready},
+	}
+
+}
+
 // IsValid checks if message data is a valid structure for current message type.
 func (m *Message) IsValid() (valid bool) {
 	switch m.Type {
@@ -136,6 +148,8 @@ func (m *Message) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestCheckOrigin)
 	case TypeObtainIP:
 		_, valid = m.Data.(*RequestObtainIP)
+	case TypeRelayOwnership:
+		_, valid = m.Data.(*RequestRelayOwnership)
 	default:
 		valid = false
 	}
@@ -210,6 +224,7 @@ func init() {
 	gob.Register(&RequestAuth{})
 	gob.Register(&RequestCheckOrigin{})
 	gob.Register(&RequestObtainIP{})
+	gob.Register(&RequestRelayOwnership{})
 
 	gob.Register(&ResponseDataFindNode{})
 	gob.Register(&ResponseDataFindValue{})
@@ -219,4 +234,5 @@ func init() {
 	gob.Register(&ResponseAuth{})
 	gob.Register(&ResponseCheckOrigin{})
 	gob.Register(&ResponseObtainIP{})
+	gob.Register(&ResponseRelayOwnership{})
 }

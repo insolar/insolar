@@ -64,3 +64,8 @@ type ResponseCheckOrigin struct {
 type ResponseObtainIP struct {
 	IP string
 }
+
+// ResponseRelayOwnership is data to response to relay ownership request.
+type ResponseRelayOwnership struct {
+	Accepted bool
+}
