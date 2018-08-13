@@ -17,6 +17,10 @@
 // Package logicrunner - infrastructure for executing smartcontracts
 package logicrunner
 
+import (
+	"github.com/pkg/errors"
+)
+
 // MachineType is a type of virtual machine
 type MachineType int
 
@@ -26,9 +30,45 @@ const (
 	MachineTypeGoPlugin
 )
 
+// Executor is an interface implementers for one particular machine type
+type Executor interface {
+	Exec(object Object, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
+}
+
 // LogicRunner is a general interface of contract executor
-type LogicRunner interface {
-	Start()
-	Stop()
-	Exec(object Object, method string, args Arguments) (ret Arguments, err error)
+type LogicRunner struct {
+	Executors [MachineTypeGoPlugin + 1]Executor
+}
+
+// NewLogicRunner is constructor for `LogicRunner`
+func NewLogicRunner() (*LogicRunner, error) {
+	res := LogicRunner{}
+
+	return &res, nil
+}
+
+// RegisterExecutor registers an executor for particular `MachineType`
+func (r *LogicRunner) RegisterExecutor(t MachineType, e Executor) error {
+	r.Executors[int(t)] = e
+	return nil
+}
+
+// GetExecutor returns an executor for the `MachineType` if it was registered (`RegisterExecutor`),
+// returns error otherwise
+func (r *LogicRunner) GetExecutor(t MachineType) (Executor, error) {
+	if res := r.Executors[int(t)]; res != nil {
+		return res, nil
+	}
+
+	return nil, errors.New("No executor registered for machine")
+}
+
+// Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
+func (r *LogicRunner) Execute(object Object, method string, args Arguments) ([]byte, Arguments, error) {
+	e, err := r.GetExecutor(object.MachineType)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "no executer registered")
+	}
+
+	return e.Exec(object, method, args)
 }
