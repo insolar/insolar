@@ -24,6 +24,76 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
+// ArtifactManager is a high level storage interface.
+type ArtifactManager interface {
+	// SetArchPref allows to set a list of preferred VM architectures. When returning classes storage will return
+	// compiled code according to this preferences.
+	SetArchPref(pref []record.ArchType)
+
+	// GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
+	// (e.g. object considered to be active).
+	//
+	// This method is used by validator to fetch the exact state of the object that was used by the executor.
+	GetExactObj(classRef, objectRef record.Reference) ([]byte, record.Memory, error)
+
+	// GetLatestObj returns descriptors for latest known state of the object/class known to the storage. The caller
+	// should provide latest known states of the object/class known to it. If the object or the class is deactivated,
+	// an error should be returned.
+	//
+	// Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
+	GetLatestObj(objectRef record.Reference, storedClassState record.Reference, storedObjState record.Reference) (
+		*ClassDescriptor, *ObjectDescriptor, error,
+	)
+
+	// DeployCode creates new code record in storage.
+	DeployCode(requestRef record.Reference, codeMap map[record.ArchType][]byte) (record.Reference, error)
+
+	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
+	// and memory as the default memory for class objects.
+	//
+	// Activation reference will be this class'es identifier and referred as "class head".
+	ActivateClass(requestRef, codeRef record.Reference, memory record.Memory) (record.Reference, error)
+
+	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
+	// the class. If class is already deactivated, an error should be returned.
+	//
+	// Deactivated class cannot be changed or instantiate objects.
+	DeactivateClass(requestRef, classRef record.Reference) (record.Reference, error)
+
+	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
+	// the class. Migrations are references to code records.
+	//
+	// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
+	UpdateClass(requestRef, classRef record.Reference, migrationRefs []record.Reference) (record.Reference, error)
+
+	// ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
+	// memory as memory of crated object. If memory is not provided, the class default memory will be used.
+	//
+	// Activation reference will be this object's identifier and referred as "object head".
+	ActivateObj(requestRef, classRef record.Reference, memory record.Memory) (record.Reference, error)
+
+	// DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
+	// of the object. If object is already deactivated, an error should be returned.
+	//
+	// Deactivated object cannot be changed.
+	DeactivateObj(requestRef, objRef record.Reference) (record.Reference, error)
+
+	// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
+	// object. Provided memory well be the new object memory.
+	//
+	// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
+	// them to the new memory manually if its required.
+	UpdateObj(requestRef, objRef record.Reference, memory record.Memory) (record.Reference, error)
+
+	// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
+	// of the object. Provided memory well be used as append delegate memory.
+	//
+	// Object's delegates will be provided by GetLatestObj. Any object update will nullify all the object's append
+	// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
+	// required.
+	AppendObjDelegate(requestRef, objRef record.Reference, memory record.Memory) (record.Reference, error)
+}
+
 // LedgerArtifactManager provides concrete API to storage for virtual processing module
 type LedgerArtifactManager struct {
 	storer   storage.LedgerStorer
