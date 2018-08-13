@@ -69,7 +69,7 @@ type AuthInfo struct {
 
 // Subnet collects some information about self network part
 type Subnet struct {
-	SelfIPList []string
+	SubnetIDs map[string][]string // key - ip, value - id
 }
 
 // Options contains configuration options for the local node.
@@ -1056,7 +1056,7 @@ func (dht *DHT) processCheckOriginRequest(ctx Context, msg *message.Message, mes
 }
 
 func (dht *DHT) processObtainIPRequest(ctx Context, msg *message.Message, messageBuilder message.Builder) {
-	response := &message.ResponseObtainIP{Address: msg.Sender.Address.String()}
+	response := &message.ResponseObtainIP{IP: msg.RemoteAddress}
 	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send obtain IP response:", err)
@@ -1269,8 +1269,8 @@ func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
 }
 
 func (dht *DHT) handleObtainIPResponse(response *message.ResponseObtainIP, target string) {
-	if response.Address != "" {
-		dht.subnet.SelfIPList = append(dht.subnet.SelfIPList, response.Address)
+	if response.IP != "" {
+		dht.subnet.SubnetIDs[response.IP] = append(dht.subnet.SubnetIDs[response.IP], target)
 	}
 }
 
