@@ -134,6 +134,8 @@ func (m *Message) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestAuth)
 	case TypeCheckOrigin:
 		_, valid = m.Data.(*RequestCheckOrigin)
+	case TypeObtainIP:
+		_, valid = m.Data.(*RequestObtainIP)
 	default:
 		valid = false
 	}
