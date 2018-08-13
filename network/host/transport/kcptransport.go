@@ -17,21 +17,22 @@
 package transport
 
 import (
-	"context"
+
+	//"context"
 	"log"
 	"net"
 	"sync"
-	"sync/atomic"
+
 	"time"
 
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/relay"
 
-	"github.com/anacrolix/utp"
+	"github.com/xtaci/kcp-go"
 )
 
-type utpTransport struct {
-	socket *utp.Socket
+type kcpTransport struct {
+	listener *kcp.Listener
 
 	received chan *message.Message
 	sequence *uint64
@@ -45,20 +46,21 @@ type utpTransport struct {
 	proxy relay.Proxy
 }
 
-// NewUTPTransport creates utpTransport.
-func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
-	//return newUTPTransport(conn, proxy)
+// NewKCPTransport creates utpTransport.
+func NewKCPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
 	return newKCPTransport(conn, proxy)
 }
 
-func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, error) {
-	socket, err := utp.NewSocketFromPacketConn(conn)
+func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, error) {
+	//crypt, _ := kcp.NewNoneBlockCrypt([]byte{})
+
+	lis, err := kcp.ServeConn( /*crypt*/ nil, 0, 0, conn)
 	if err != nil {
 		return nil, err
 	}
 
-	transport := &utpTransport{
-		socket: socket,
+	transport := &kcpTransport{
+		listener: lis,
 
 		received: make(chan *message.Message),
 		sequence: new(uint64),
@@ -76,7 +78,7 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 }
 
 // SendRequest sends request message and returns future.
-func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
+func (t *kcpTransport) SendRequest(msg *message.Message) (Future, error) {
 	msg.RequestID = t.generateID()
 
 	future := t.createFuture(msg)
@@ -91,42 +93,44 @@ func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
 }
 
 // SendResponse sends response message.
-func (t *utpTransport) SendResponse(requestID message.RequestID, msg *message.Message) error {
+func (t *kcpTransport) SendResponse(requestID message.RequestID, msg *message.Message) error {
 	msg.RequestID = requestID
 
 	return t.sendMessage(msg)
 }
 
 // Start starts networking.
-func (t *utpTransport) Start() error {
+func (t *kcpTransport) Start() error {
 	for {
-		conn, err := t.socket.Accept()
-
-		if err != nil {
+		if conn, err := t.listener.AcceptKCP(); err == nil {
+			//conn.SetStreamMode(true)
+			//conn.SetWriteDelay(true)
+			log.Println("Accepted remote address:", conn.RemoteAddr())
+			go t.handleAcceptedConnection(conn)
+		} else {
+			//log.Printf("%+v", err)
 			<-t.disconnectFinished
 			return err
 		}
-
-		go t.handleAcceptedConnection(conn)
 	}
 }
 
 // Stop stops networking.
-func (t *utpTransport) Stop() {
+func (t *kcpTransport) Stop() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
 	t.disconnectStarted <- true
 	close(t.disconnectStarted)
 
-	err := t.socket.CloseNow()
+	err := t.listener.Close()
 	if err != nil {
 		log.Println("Failed to close socket:", err.Error())
 	}
 }
 
 // Close closes message channels.
-func (t *utpTransport) Close() {
+func (t *kcpTransport) Close() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -135,28 +139,29 @@ func (t *utpTransport) Close() {
 }
 
 // Messages returns incoming messages channel.
-func (t *utpTransport) Messages() <-chan *message.Message {
+func (t *kcpTransport) Messages() <-chan *message.Message {
 	return t.received
 }
 
 // Stopped checks if networking is stopped already.
-func (t *utpTransport) Stopped() <-chan bool {
+func (t *kcpTransport) Stopped() <-chan bool {
 	return t.disconnectStarted
 }
 
-func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (net.Conn, error) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
-	defer cancel()
+func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (net.Conn, error) {
+	//ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
+	//defer cancel()
 
-	return t.socket.DialContext(ctx, "", addr)
+	return kcp.Dial(addr)
+	//return t.socket.DialContext(ctx, "", addr)
 }
 
-func (t *utpTransport) generateID() message.RequestID {
+func (t *kcpTransport) generateID() message.RequestID {
 	id := AtomicLoadAndIncrementUint64(t.sequence)
 	return message.RequestID(id)
 }
 
-func (t *utpTransport) createFuture(msg *message.Message) Future {
+func (t *kcpTransport) createFuture(msg *message.Message) Future {
 	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
 		t.mutex.Lock()
 		defer t.mutex.Unlock()
@@ -171,14 +176,14 @@ func (t *utpTransport) createFuture(msg *message.Message) Future {
 	return newFuture
 }
 
-func (t *utpTransport) getFuture(msg *message.Message) Future {
+func (t *kcpTransport) getFuture(msg *message.Message) Future {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
 	return t.futures[msg.RequestID]
 }
 
-func (t *utpTransport) sendMessage(msg *message.Message) error {
+func (t *kcpTransport) sendMessage(msg *message.Message) error {
 	var recvAddress string
 	if t.proxy.ProxyNodesCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()
@@ -186,6 +191,7 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	if len(recvAddress) == 0 {
 		recvAddress = msg.Receiver.Address.String()
 	}
+
 	conn, err := t.socketDialTimeout(recvAddress, time.Second)
 	if err != nil {
 		return err
@@ -200,7 +206,7 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	return err
 }
 
-func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
+func (t *kcpTransport) handleAcceptedConnection(conn net.Conn) {
 	for {
 		// Wait for Messages
 		msg, err := message.DeserializeMessage(conn)
@@ -215,7 +221,7 @@ func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 	}
 }
 
-func (t *utpTransport) handleMessage(msg *message.Message) {
+func (t *kcpTransport) handleMessage(msg *message.Message) {
 	if msg.IsResponse {
 		t.processResponse(msg)
 	} else {
@@ -223,7 +229,7 @@ func (t *utpTransport) handleMessage(msg *message.Message) {
 	}
 }
 
-func (t *utpTransport) processResponse(msg *message.Message) {
+func (t *kcpTransport) processResponse(msg *message.Message) {
 	future := t.getFuture(msg)
 	if future != nil && !shouldProcessMessage(future, msg) {
 		future.SetResult(msg)
@@ -231,12 +237,13 @@ func (t *utpTransport) processResponse(msg *message.Message) {
 	future.Cancel()
 }
 
-func (t *utpTransport) processRequest(msg *message.Message) {
+func (t *kcpTransport) processRequest(msg *message.Message) {
 	if msg.IsValid() {
 		t.received <- msg
 	}
 }
 
+/*
 func shouldProcessMessage(future Future, msg *message.Message) bool {
 	return !future.Actor().Equal(*msg.Sender) && msg.Type != message.TypePing || msg.Type != future.Request().Type
 }
@@ -250,3 +257,4 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 		}
 	}
 }
+*/
