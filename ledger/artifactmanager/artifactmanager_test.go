@@ -32,12 +32,6 @@ func genRandomRef() *record.Reference {
 	return &record.Reference{Domain: record.ID{Pulse: record.PulseNum(rand.Int())}}
 }
 
-func getLedgerManager() (storage.LedgerStorer, ArtifactManager) {
-	ledger, _ := leveldb.InitDB()
-	manager := LedgerArtifactManager{storer: ledger}
-	return ledger, &manager
-}
-
 func prepareTestArtifactManager() (storage.LedgerStorer, ArtifactManager, *record.Reference) {
 	if err := leveldb.DropDB(); err != nil {
 		os.Exit(1)
