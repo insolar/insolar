@@ -52,9 +52,9 @@ func NewKCPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) 
 }
 
 func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, error) {
-	//crypt, _ := kcp.NewNoneBlockCrypt([]byte{})
+	crypt, _ := kcp.NewNoneBlockCrypt([]byte{})
 
-	lis, err := kcp.ServeConn( /*crypt*/ nil, 0, 0, conn)
+	lis, err := kcp.ServeConn(crypt, 0, 0, conn)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (t *kcpTransport) Start() error {
 		if conn, err := t.listener.AcceptKCP(); err == nil {
 			//conn.SetStreamMode(true)
 			//conn.SetWriteDelay(true)
-			log.Println("Accepted remote address:", conn.RemoteAddr())
+			//log.Println("Accepted remote address:", conn.RemoteAddr())
 			go t.handleAcceptedConnection(conn)
 		} else {
 			//log.Printf("%+v", err)
@@ -152,7 +152,9 @@ func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (ne
 	//ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
 	//defer cancel()
 
-	return kcp.Dial(addr)
+	crypt, _ := kcp.NewNoneBlockCrypt([]byte{})
+
+	return kcp.DialWithOptions(addr, crypt, 0, 0)
 	//return t.socket.DialContext(ctx, "", addr)
 }
 
