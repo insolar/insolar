@@ -17,8 +17,6 @@
 package record
 
 import (
-	"encoding/binary"
-	"io"
 	"time"
 )
 
@@ -28,15 +26,10 @@ type RequestRecord struct {
 	Target    Reference
 }
 
-// WriteHash implements hash.Writer interface.
-func (r *RequestRecord) WriteHash(w io.Writer) {
-	// hash own fields
-	r.Requester.WriteHash(w)
-	r.Target.WriteHash(w)
-	err := binary.Write(w, binary.BigEndian, requestRecordID)
-	if err != nil {
-		panic("binary.Write failed:" + err.Error())
-	}
+// Domain implements Record interface
+func (rec *RequestRecord) Domain() ID {
+	// FIXME: return proper domain ID
+	return ID{}
 }
 
 // CallRequest is a contract execution request.
@@ -47,26 +40,6 @@ type CallRequest struct {
 	CallInterface       Reference
 	CallMethodSignature uint32
 	ParamMemory         Memory
-}
-
-// WriteHash implements hash.Writer interface.
-func (r *CallRequest) WriteHash(w io.Writer) {
-	// hash parent
-	r.RequestRecord.WriteHash(w)
-
-	// hash own fields
-	r.CallInterface.WriteHash(w)
-	var data = []interface{}{
-		callRequestID,
-		r.CallMethodSignature,
-		r.ParamMemory,
-	}
-	for _, v := range data {
-		err := binary.Write(w, binary.BigEndian, v)
-		if err != nil {
-			panic("binary.Write failed:" + err.Error())
-		}
-	}
 }
 
 // CallMethod is a contract method number to call.
@@ -93,25 +66,6 @@ type LockUnlockRequest struct {
 	ExpectedLockDuration time.Duration
 }
 
-// WriteHash implements hash.Writer interface.
-func (r *LockUnlockRequest) WriteHash(w io.Writer) {
-	// hash parent
-	r.RequestRecord.WriteHash(w)
-
-	// hash own fields
-	r.Transaction.WriteHash(w)
-	var data = []interface{}{
-		lockUnlockRequestID,
-		r.ExpectedLockDuration,
-	}
-	for _, v := range data {
-		err := binary.Write(w, binary.BigEndian, v)
-		if err != nil {
-			panic("binary.Write failed:" + err.Error())
-		}
-	}
-}
-
 // ReadRequest is a request type to read data.
 type ReadRequest struct {
 	RequestRecord
@@ -124,23 +78,6 @@ type ReadRecordRequest struct {
 	ExpectedRecordType TypeID
 }
 
-// WriteHash implements hash.Writer interface.
-func (r *ReadRecordRequest) WriteHash(w io.Writer) {
-	// hash parent
-	r.ReadRequest.WriteHash(w)
-	// hash own fields
-	var data = []interface{}{
-		readRecordRequestID,
-		r.ExpectedRecordType,
-	}
-	for _, v := range data {
-		err := binary.Write(w, binary.BigEndian, v)
-		if err != nil {
-			panic("binary.Write failed:" + err.Error())
-		}
-	}
-}
-
 // ReadObject is a request type
 type ReadObject struct {
 	ReadRequest
@@ -148,35 +85,9 @@ type ReadObject struct {
 	ProjectionType ProjectionType
 }
 
-// WriteHash implements hash.Writer interface.
-func (r *ReadObject) WriteHash(w io.Writer) {
-	// hash parent
-	r.ReadRequest.WriteHash(w)
-
-	// hash own fields
-	var data = []interface{}{
-		readObjectID,
-		r.ProjectionType,
-	}
-	for _, v := range data {
-		err := binary.Write(w, binary.BigEndian, v)
-		if err != nil {
-			panic("binary.Write failed:" + err.Error())
-		}
-	}
-}
-
 // ReadObjectComposite is a request to read object including it's "injected" fields.
 type ReadObjectComposite struct {
 	ReadObject
 
 	CompositeType Reference
-}
-
-// WriteHash implements hash.Writer interface.
-func (r *ReadObjectComposite) WriteHash(w io.Writer) {
-	// hash parent
-	r.ReadObject.WriteHash(w)
-	// hash own fields
-	r.CompositeType.WriteHash(w)
 }

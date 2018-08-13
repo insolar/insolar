@@ -26,8 +26,10 @@ const (
 	HashSize = 28
 	// PulseNumSize - 4 bytes is a PulseNum size (uint32)
 	PulseNumSize = 4
-	// IDSize is an record identifier size.
+	// IDSize is the size in bytes of ID binary representation.
 	IDSize = PulseNumSize + HashSize
+	// RefIDSize is the size in bytes of Reference binary representation.
+	RefIDSize = IDSize * 2
 )
 
 // PulseNum is a sequential number of Pulse.
@@ -36,6 +38,23 @@ const (
 // If PulseNum <65536 it is a relative PulseNum
 type PulseNum uint32
 
+// ID evaluates record ID on PulseNum for Record.
+func (pn PulseNum) ID(rec Record) ID {
+	raw, err := EncodeToRaw(rec)
+	if err != nil {
+		panic(err)
+	}
+	return ID{
+		Pulse: pn,
+		Hash:  raw.Hash(),
+	}
+}
+
+// Bytes evaluates bytes representation of PulseNum and Record pair.
+func (pn PulseNum) Bytes(rec Record) []byte {
+	return ID2Bytes(pn.ID(rec))
+}
+
 // SpecialPulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
 // It is only allowed for Storage.
 const SpecialPulseNumber PulseNum = 65536
@@ -43,28 +62,52 @@ const SpecialPulseNumber PulseNum = 65536
 // Hash is hash sum of record, 24-byte array.
 type Hash [HashSize]byte
 
-// ID is a record ID. Compounds PulseNum and Type
-type ID [IDSize]byte
+// ArchType is a virtual machine runtime type
+type ArchType uint32
 
 // WriteHash implements hash.Writer interface.
 func (id ID) WriteHash(w io.Writer) {
-	err := binary.Write(w, binary.BigEndian, id)
+	b := ID2Bytes(id)
+	err := binary.Write(w, binary.BigEndian, b)
 	if err != nil {
 		panic("binary.Write failed:" + err.Error())
 	}
 }
 
-// Key is a composite key for storage methods.
+// ID is a composite identifier for records.
 //
-// Key and ID converts one to another in both directions.
-// Hash is a bytes slice here to avoid copy to Hash array.
-type Key struct {
+// Hash is a bytes slice here to avoid copy of Hash array.
+type ID struct {
 	Pulse PulseNum
 	Hash  []byte
 }
 
+// IsEqual checks equality of IDs.
+func (id ID) IsEqual(id2 ID) bool {
+	if (id.Hash == nil) != (id2.Hash == nil) {
+		return false
+	}
+	if len(id.Hash) != len(id2.Hash) {
+		return false
+	}
+	for i := range id.Hash {
+		if id.Hash[i] != id2.Hash[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // TypeID encodes a record object type.
 type TypeID uint32
+
+// WriteHash implements hash.Writer interface.
+func (id TypeID) WriteHash(w io.Writer) {
+	err := binary.Write(w, binary.BigEndian, id)
+	if err != nil {
+		panic("binary.Write failed:" + err.Error())
+	}
+}
 
 // Reference allows to address any record across the whole network.
 type Reference struct {
@@ -72,8 +115,25 @@ type Reference struct {
 	Record ID
 }
 
-// WriteHash implements hash.Writer interface.
-func (r Reference) WriteHash(w io.Writer) {
-	r.Domain.WriteHash(w)
-	r.Record.WriteHash(w)
+// Key generates Reference byte representation (key without prefix).
+func (ref *Reference) Key() []byte {
+	b := make([]byte, RefIDSize)
+	dk := ID2Bytes(ref.Domain)
+	rk := ID2Bytes(ref.Record)
+	_ = copy(b[:IDSize], dk)
+	_ = copy(b[IDSize:], rk)
+	return b
+}
+
+// IsEqual checks equality of References.
+func (ref Reference) IsEqual(ref2 Reference) bool {
+	if !ref.Domain.IsEqual(ref2.Domain) {
+		return false
+	}
+	return ref.Record.IsEqual(ref2.Record)
+}
+
+// IsNotEqual checks non equality of References.
+func (ref Reference) IsNotEqual(ref2 Reference) bool {
+	return !ref.IsEqual(ref2)
 }

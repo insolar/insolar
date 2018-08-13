@@ -24,7 +24,7 @@ import (
 
 // globalResolver is resolver for GlobalScope references.
 type globalResolver struct {
-	globalInstanceMap *map[string]object.Proxy
+	globalInstanceMap *map[string]Proxy
 }
 
 // newGlobalResolver creates new globalResolver instance with empty map.
@@ -57,11 +57,12 @@ func (r *globalResolver) GetObject(reference interface{}, cls interface{}) (inte
 	if proxy.GetClassID() != classID {
 		return nil, fmt.Errorf("instance class is not `%s`", classID)
 	}
+	proxy.(Proxy).SetReference(ref)
 	return proxy, nil
 }
 
 // InitGlobalMap sets globalInstanceMap into globalResolver.
-func (r *globalResolver) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
+func (r *globalResolver) InitGlobalMap(globalInstanceMap *map[string]Proxy) {
 	if r.globalInstanceMap == nil {
 		r.globalInstanceMap = globalInstanceMap
 	}

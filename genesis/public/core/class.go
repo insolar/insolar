@@ -20,9 +20,11 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
+	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // ClassDomainName is a name for class domain.
@@ -85,7 +87,7 @@ func (cd *classDomain) GetClass(recordID string) (factory.Factory, error) {
 }
 
 type classDomainProxy struct {
-	instance *classDomain
+	contract.BaseSmartContractProxy
 }
 
 // newClassDomainProxy creates new proxy and associates it with new instance of ClassDomain.
@@ -96,36 +98,24 @@ func newClassDomainProxy(parent object.Parent) (*classDomainProxy, error) {
 	}
 
 	return &classDomainProxy{
-		instance: instance,
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: instance,
+		},
 	}, nil
 }
 
 // RegisterClass is a proxy call for instance method.
 func (cdp *classDomainProxy) RegisterClass(fc factory.Factory) (string, error) {
-	return cdp.instance.RegisterClass(fc)
+	return cdp.Instance.(ClassDomain).RegisterClass(fc)
 }
 
 // GetClass is a proxy call for instance method.
 func (cdp *classDomainProxy) GetClass(record string) (factory.Factory, error) {
-	return cdp.instance.GetClass(record)
-}
-
-// GetReference is a proxy call for instance method.
-func (cdp *classDomainProxy) GetReference() object.Reference {
-	return cdp.instance.GetReference()
-}
-
-// GetParent is a proxy call for instance method.
-func (cdp *classDomainProxy) GetParent() object.Parent {
-	return cdp.instance.GetParent()
-}
-
-// GetClassID is a proxy call for instance method.
-func (cdp *classDomainProxy) GetClassID() string {
-	return class.ClsDomainID
+	return cdp.Instance.(ClassDomain).GetClass(record)
 }
 
 type classDomainFactory struct {
+	factory.BaseFactory
 	parent object.Parent
 }
 
@@ -147,13 +137,8 @@ func (cdf *classDomainFactory) GetClassID() string {
 	return class.ClsDomainID
 }
 
-// GetReference returns nil for not published factory.
-func (cdf *classDomainFactory) GetReference() object.Reference {
-	return nil
-}
-
 // Create is a factory method for new ClassDomain instances.
-func (cdf *classDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
+func (cdf *classDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
 	proxy, err := newClassDomainProxy(parent)
 	if err != nil {
 		return nil, err

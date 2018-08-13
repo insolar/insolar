@@ -27,6 +27,10 @@ type Domain interface {
 	contract.SmartContract
 }
 
+type InternalDomain interface {
+	contract.InternalSmartContract
+}
+
 // BaseDomain is a base implementation of Domain interface.
 type BaseDomain struct {
 	contract.BaseSmartContract

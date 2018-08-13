@@ -52,12 +52,15 @@ func (r *invalidScopeReference) GetReference() object.Reference {
 	return r
 }
 
+func (r *invalidScopeReference) SetReference(ref object.Reference) {
+}
+
 func (r *invalidScopeReference) GetParent() object.Parent {
 	return nil
 }
 
 func TestNewHandler(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	handler := NewHandler(mockParent)
 
 	assert.Equal(t, &Handler{
@@ -72,7 +75,7 @@ func TestNewHandler(t *testing.T) {
 }
 
 func TestHandler_GetObject_Not_Reference(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolverHandler := NewHandler(mockParent)
 
 	obj, err := resolverHandler.GetObject("not reference", "mockChild")
@@ -82,9 +85,9 @@ func TestHandler_GetObject_Not_Reference(t *testing.T) {
 }
 
 func TestHandler_GetObject_GlobalScope(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolverHandler := NewHandler(nil)
-	newMap := make(map[string]object.Proxy)
+	newMap := make(map[string]Proxy)
 	resolverHandler.InitGlobalMap(&newMap)
 
 	ref, _ := object.NewReference("123", "1", object.GlobalScope)
@@ -97,7 +100,7 @@ func TestHandler_GetObject_GlobalScope(t *testing.T) {
 }
 
 func TestHandler_GetObject_ChildScope(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolverHandler := NewHandler(mockParent)
 	ref, _ := object.NewReference("1", "1", object.ChildScope)
 
@@ -110,7 +113,7 @@ func TestHandler_GetObject_ChildScope(t *testing.T) {
 func TestHandler_GetObject_ContextScope(t *testing.T) {
 	contextStorage := storage.NewMapStorage()
 	record, _ := contextStorage.Set(child)
-	mockParent := &mockParent{
+	mockParent := &mockParentProxy{
 		ContextStorage: contextStorage,
 	}
 	resolverHandler := NewHandler(mockParent)
@@ -123,7 +126,7 @@ func TestHandler_GetObject_ContextScope(t *testing.T) {
 }
 
 func TestHandler_GetObject_default(t *testing.T) {
-	mockParent := &mockParent{}
+	mockParent := &mockParentProxy{}
 	resolverHandler := NewHandler(mockParent)
 	ref := &invalidScopeReference{}
 
@@ -137,7 +140,7 @@ func TestHandler_SetGlobalMap(t *testing.T) {
 	resolverHandler := NewHandler(nil)
 	resolverHandler.globalResolver.globalInstanceMap = nil
 
-	newMap := make(map[string]object.Proxy)
+	newMap := make(map[string]Proxy)
 	resolverHandler.InitGlobalMap(&newMap)
 
 	assert.Equal(t, &newMap, resolverHandler.globalResolver.globalInstanceMap)

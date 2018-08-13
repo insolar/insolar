@@ -23,9 +23,12 @@ import (
 
 // LedgerStorer represents append-only Ladger storage.
 type LedgerStorer interface {
-	GetRecord(record.Key) (record.Record, bool)
-	SetRecord(record.Record) error
+	GetRecord(*record.Reference) (record.Record, error)
+	SetRecord(record.Record) (*record.Reference, error)
 
-	GetIndex(record.ID) (*index.Lifeline, bool)
-	SetIndex(record.ID, index.Lifeline) error
+	GetClassIndex(*record.Reference) (*index.ClassLifeline, bool)
+	SetClassIndex(*record.Reference, *index.ClassLifeline) error
+
+	GetObjectIndex(*record.Reference) (*index.ObjectLifeline, bool)
+	SetObjectIndex(*record.Reference, *index.ObjectLifeline) error
 }

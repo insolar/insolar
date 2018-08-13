@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,16 +46,6 @@ func TestNewReference_Error(t *testing.T) {
 	assert.Nil(t, ref)
 }
 
-func TestReference_GetReferenceID(t *testing.T) {
-	domain := "134"
-	record := "156"
-	ref, _ := NewReference(domain, record, GlobalScope)
-
-	refID := ref.GetClassID()
-
-	assert.Equal(t, class.ReferenceID, refID)
-}
-
 func TestReference_String(t *testing.T) {
 	domain := "134"
 	record := "156"
@@ -65,16 +54,6 @@ func TestReference_String(t *testing.T) {
 	stringRef := ref.String()
 
 	assert.Equal(t, fmt.Sprintf("#%s.#%s", domain, record), stringRef)
-}
-
-func TestReference_GetReference(t *testing.T) {
-	domain := "134"
-	record := "156"
-	ref, _ := NewReference(domain, record, GlobalScope)
-
-	refRef := ref.GetReference()
-
-	assert.Equal(t, ref, refRef)
 }
 
 func TestReference_GetRecord(t *testing.T) {

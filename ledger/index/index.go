@@ -20,9 +20,15 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 )
 
-// Lifeline represents meta information for record object
-type Lifeline struct {
-	LatestStateID   record.ID
-	LatestStateType record.TypeID
-	AppendIDs       []record.ID
+// ClassLifeline represents meta information for record object
+type ClassLifeline struct {
+	LatestStateRef record.Reference   // Amend or activate record
+	AmendRefs      []record.Reference // ClassAmendRecord
+}
+
+// ObjectLifeline represents meta information for record object
+type ObjectLifeline struct {
+	ClassRef       record.Reference
+	LatestStateRef record.Reference   // Amend or activate record
+	AppendRefs     []record.Reference // ObjectAppendRecord
 }

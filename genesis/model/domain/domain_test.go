@@ -22,21 +22,17 @@ import (
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
+	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockParent struct {
-	Reference      object.Reference
 	ContextStorage storage.Storage
 }
 
 func (p *mockParent) GetClassID() string {
 	return "mockParent"
-}
-
-func (p *mockParent) GetReference() object.Reference {
-	return p.Reference
 }
 
 func (p *mockParent) GetChildStorage() storage.Storage {
@@ -65,7 +61,7 @@ func TestNewBaseDomain(t *testing.T) {
 	domain := NewBaseDomain(parent, "NewDomain")
 
 	sc := contract.BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
+		CompositeMap: make(map[string]factory.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}

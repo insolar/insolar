@@ -20,14 +20,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/hash"
 	"github.com/stretchr/testify/assert"
 )
 
 type recordgen func() Record
 
-var emptyRecords = []recordgen{
-	// request records
+var emptyRecordsGens = []recordgen{
 	func() Record { return &RequestRecord{} },
 	func() Record { return &CallRequest{} },
 	func() Record { return &LockUnlockRequest{} },
@@ -50,7 +48,6 @@ var emptyRecords = []recordgen{
 	func() Record { return &CodeRecord{} },
 	func() Record { return &AmendRecord{} },
 	func() Record { return &ClassAmendRecord{} },
-	func() Record { return &MemoryMigrationCode{} },
 	func() Record { return &DeactivationRecord{} },
 	func() Record { return &ObjectAmendRecord{} },
 	func() Record { return &StatefulCallResult{} },
@@ -61,10 +58,11 @@ var emptyRecords = []recordgen{
 
 func Test_HashesNotTheSameOnDifferentTypes(t *testing.T) {
 	found := make(map[string]string)
-	for _, recFn := range emptyRecords {
+	for _, recFn := range emptyRecordsGens {
 		rec := recFn()
 		recType := fmt.Sprintf("%T", rec)
-		hashBytes := hash.SHA3hash224(rec)
+		hashBytes := SHA3Hash224(rec)
+
 		hashHex := fmt.Sprintf("%x", hashBytes)
 		// fmt.Println(recType, "=>", hashHex)
 		typename, ok := found[hashHex]
@@ -72,23 +70,78 @@ func Test_HashesNotTheSameOnDifferentTypes(t *testing.T) {
 			found[hashHex] = recType
 			continue
 		}
-		t.Errorf("same hases for %s and %s types, empty struct with different types should not be the same", recType, typename)
+		t.Errorf("same hashes for %s and %s types, empty struct with different types should not be the same", recType, typename)
 	}
-
 }
 
 func Test_HashesTheSame(t *testing.T) {
-	hashes := make([]string, len(emptyRecords))
-	for i, recFn := range emptyRecords {
+	hashes := make([]string, len(emptyRecordsGens))
+	for i, recFn := range emptyRecordsGens {
 		rec := recFn()
-		hashHex := fmt.Sprintf("%x", hash.SHA3hash224(rec))
+		hashHex := fmt.Sprintf("%x", SHA3Hash224(rec))
 		hashes[i] = hashHex
 	}
 
 	// same struct with different should produce the same hashes
-	for i, recFn := range emptyRecords {
+	for i, recFn := range emptyRecordsGens {
 		rec := recFn()
-		hashHex := fmt.Sprintf("%x", hash.SHA3hash224(rec))
+		hashHex := fmt.Sprintf("%x", SHA3Hash224(rec))
 		assert.Equal(t, hashes[i], hashHex)
+	}
+}
+
+func newMockID() ID {
+	return ID{
+		Pulse: 0x0a,
+		Hash:  str2Bytes("21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+	}
+}
+
+var hashtestsRecordsMutate = []struct {
+	typ     string
+	records []Record
+}{
+	{
+		"ReadObject",
+		[]Record{
+			&ReadObject{},
+			&ReadObject{ProjectionType: 1},
+			&ReadObject{ProjectionType: 2},
+		},
+	},
+	{
+		"ReadObjectComposite",
+		[]Record{
+			&ReadObjectComposite{},
+			&ReadObjectComposite{ReadObject: ReadObject{ProjectionType: 1}},
+			&ReadObjectComposite{ReadObject: ReadObject{ProjectionType: 2}},
+			&ReadObjectComposite{CompositeType: Reference{
+				Domain: newMockID(),
+				Record: newMockID(),
+			}},
+			&ReadObjectComposite{CompositeType: Reference{
+				Domain: newMockID(),
+			}},
+			&ReadObjectComposite{CompositeType: Reference{
+				Record: newMockID(),
+			}},
+		},
+	},
+}
+
+func Test_CBORhashesMutation(t *testing.T) {
+	for _, tt := range hashtestsRecordsMutate {
+		found := make(map[string]string)
+		for _, rec := range tt.records {
+			h := SHA3Hash224(rec)
+			hHex := fmt.Sprintf("%x", h)
+
+			typ, ok := found[hHex]
+			if !ok {
+				found[hHex] = tt.typ
+				continue
+			}
+			t.Errorf("%s failed: found %s hash for \"%s\" test, should not repeats in sha3hash224tests", tt.typ, hHex, typ)
+		}
 	}
 }

@@ -33,5 +33,26 @@ Usage:
 		res := obj.(object.Object)
 	}
 
+
+Proxy provides interface and default implementation of proxy. It inherited by SmartContractProxy and Factory
+
+Usage:
+
+	proxy.SetReference(Reference) sets reference to proxy.
+	proxy.GetReference() gets reference from proxy.
+	proxy.GetParent() always returns nil.
+	proxy.GetClassID() is a proxy call for instance method.
+
+
+ReferenceContainer provides methods for store Reference as Proxy
+
+Usage:
+
+	ref, _ := object.NewReference(domain, record, object.GlobalScope)
+	container = NewReferenceContainer(ref)
+
+	container.GetClassID()         // return string representation of object's class.
+	container.GetStoredReference() // returns stored reference.
+
 */
 package resolver

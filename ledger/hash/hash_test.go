@@ -20,7 +20,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"os"
 	"testing"
@@ -138,7 +137,6 @@ func Test_sha3hash224(t *testing.T) {
 			// s := fmtSprintf(tt.in, &flagprinter)
 			hashBytes := SHA3hash224(tt.hw)
 			hashHexStr := fmt.Sprintf("%x", hashBytes)
-			log.Println(t.Name(), "hashBytes:", hashHexStr)
 
 			assert.Equal(t, 28, len(hashBytes))
 			assert.Equal(t, tt.expectHash, hashHexStr)

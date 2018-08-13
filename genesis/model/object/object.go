@@ -35,31 +35,6 @@ func (bo *BaseObject) GetClassID() string {
 	return class.ObjectID
 }
 
-// Composite marks that instance have ability to be compose in another object.
-type Composite interface {
-	Object
-	GetInterfaceKey() string // string ID of interface/type of Composite object; basically, GetClassID()
-}
-
-// CompositeFactory allows to create new composites.
-type CompositeFactory interface {
-	Create() (Composite, error)
-}
-
-// ComposingContainer allows to store composites.
-type ComposingContainer interface {
-	Object
-	CreateComposite(compositeFactory CompositeFactory) (Composite, error)
-	GetComposite(interfaceKey string) (Composite, error)
-	GetOrCreateComposite(interfaceKey string, compositeFactory CompositeFactory) (Composite, error)
-}
-
-// Callable allows itself to be called by its reference.
-type Callable interface {
-	Object
-	GetReference() Reference
-}
-
 // Parent allows to create objects (smart contracts) inside itself as children.
 type Parent interface {
 	Callable
