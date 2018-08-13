@@ -1,5 +1,6 @@
 package artifactmanager
 
+/*
 import (
 	"testing"
 
@@ -79,3 +80,4 @@ func TestObjectDescriptor_GetDelegates(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []record.Memory{{2}, {3}}, appends)
 }
+*/

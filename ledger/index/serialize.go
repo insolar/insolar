@@ -44,7 +44,7 @@ func DecodeClassLifeline(buf []byte) ClassLifeline {
 	return idx
 }
 
-// EncodeClassLifeline converts lifeline index into binary format
+// EncodeObjectLifeline converts lifeline index into binary format.
 func EncodeObjectLifeline(index *ObjectLifeline) []byte {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
@@ -55,7 +55,7 @@ func EncodeObjectLifeline(index *ObjectLifeline) []byte {
 	return buf.Bytes()
 }
 
-// DecodeClassLifeline converts byte array into lifeline index struct
+// DecodeObjectLifeline converts byte array into lifeline index struct.
 func DecodeObjectLifeline(buf []byte) ObjectLifeline {
 	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
 	var index ObjectLifeline

@@ -1,5 +1,6 @@
 package artifactmanager
 
+/*
 import (
 	"testing"
 
@@ -85,3 +86,4 @@ func TestClassDescriptor_GetMigrations(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, [][]byte{{2}, {3}, {4}}, migrations)
 }
+*/

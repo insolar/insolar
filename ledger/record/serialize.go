@@ -102,35 +102,34 @@ func (raw *Raw) ToRecord() Record {
 	return rec
 }
 
-// Key2ID converts record Key to ID.
-func Key2ID(k Key) ID {
-	var id ID
-	var err error
-	buf := bytes.NewBuffer(id[:0])
+// Bytes2ID converts ID from byte representation to struct.
+func Bytes2ID(b []byte) ID {
+	return ID{
+		Pulse: PulseNum(binary.BigEndian.Uint32(b[:PulseNumSize])),
+		Hash:  b[PulseNumSize:],
+	}
+}
 
-	err = binary.Write(buf, binary.BigEndian, k.Pulse)
+// ID2Bytes converts ID struct to it's byte representation.
+func ID2Bytes(id ID) []byte {
+	var err error
+	var b = make([]byte, IDSize)
+	buf := bytes.NewBuffer(b[:0])
+	err = binary.Write(buf, binary.BigEndian, id.Pulse)
 	if err != nil {
 		panic("binary.Write failed to write PulseNum:" + err.Error())
 	}
-	err = binary.Write(buf, binary.BigEndian, k.Hash)
+	err = binary.Write(buf, binary.BigEndian, id.Hash)
 	if err != nil {
 		panic("binary.Write failed to write Hash:" + err.Error())
 	}
-	return id
-}
-
-// ID2Key converts record ID to Key.
-func ID2Key(id ID) Key {
-	return Key{
-		Pulse: PulseNum(binary.BigEndian.Uint32(id[:PulseNumSize])),
-		Hash:  id[PulseNumSize:],
-	}
+	return b
 }
 
 // record type ids for record types
 // in use mostly for hashing and deserialization
 // (we don't use iota for clarity and predictable ids,
-// not depended on defenition order)
+// not depended on definition order)
 const (
 	// request record ids
 	requestRecordID       TypeID = 1

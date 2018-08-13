@@ -22,7 +22,7 @@ func (d *ClassDescriptor) GetCode() ([]byte, error) {
 	if d.latestAmendRecord != nil {
 		codeRef = d.latestAmendRecord.NewCode
 	}
-	code, err := d.manager.getCodeRecordCode(codeRef.Record)
+	code, err := d.manager.getCodeRecordCode(codeRef)
 	if err != nil {
 		return nil, err
 	}
@@ -32,12 +32,12 @@ func (d *ClassDescriptor) GetCode() ([]byte, error) {
 
 func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 	var amends []*record.ClassAmendRecord
-	for i := len(d.lifelineIndex.AmendIDs) - 1; i >= 0; i-- {
-		amendID := d.lifelineIndex.AmendIDs[i]
-		if d.fromState.Record == amendID {
+	for i := len(d.lifelineIndex.AmendRefs) - 1; i >= 0; i-- {
+		amendRef := d.lifelineIndex.AmendRefs[i]
+		if d.fromState.IsEqual(amendRef) {
 			break
 		}
-		rec, err := d.manager.storer.GetRecord(amendID)
+		rec, err := d.manager.storer.GetRecord(&amendRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "inconsistent class index")
 		}
@@ -54,8 +54,8 @@ func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 
 	var migrations [][]byte
 	for _, amendRec := range sortedAmends {
-		for _, codeID := range amendRec.Migrations {
-			code, err := d.manager.getCodeRecordCode(codeID.Record)
+		for _, codeRef := range amendRec.Migrations {
+			code, err := d.manager.getCodeRecordCode(codeRef)
 			if err != nil {
 				return nil, errors.Wrap(err, "invalid migration reference in amend record")
 			}

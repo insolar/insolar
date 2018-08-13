@@ -26,8 +26,8 @@ func (d *ObjectDescriptor) GetMemory() (record.Memory, error) {
 
 func (d *ObjectDescriptor) GetDelegates() ([]record.Memory, error) {
 	var delegates []record.Memory
-	for _, appendID := range d.lifelineIndex.AppendIDs {
-		rec, err := d.manager.storer.GetRecord(appendID)
+	for _, appendRef := range d.lifelineIndex.AppendRefs {
+		rec, err := d.manager.storer.GetRecord(&appendRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "invalid append reference in object index")
 		}
