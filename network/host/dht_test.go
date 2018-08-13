@@ -467,6 +467,8 @@ func TestReconnect(t *testing.T) {
 
 		<-done
 		<-done
+
+		time.Sleep(time.Millisecond * 50)
 	}
 }
 

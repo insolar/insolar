@@ -3,14 +3,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:26553bdecb5d2155e37185e91ac9e6cab762c06fdf231c151fb6d3ec60ff53b7"
-  name = "github.com/2tvenom/cbor"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "384e799bd841fc59220d0f5911b8cbde7b380875"
-
-[[projects]]
-  branch = "master"
   digest = "1:d7e398c16b9c85f33ea98182809bfefe4e3ec8bf01f56de20f9721f9f7ab23de"
   name = "github.com/anacrolix/missinggo"
   packages = [
@@ -24,11 +16,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c9444b5e8f5df73cb6653af4b71fc42335f4f117d944b74dfdaee360ff1d30a8"
+  digest = "1:3adb53977686df2c767d57feaba122fa813df4b7d7a8a79c0bfcb47222e57ffc"
   name = "github.com/anacrolix/sync"
   packages = ["."]
   pruneopts = "UT"
-  revision = "fda11526ff0853fb50738fd7ba5bc9af2eb016bf"
+  revision = "44578de4e778a60bb7a9c15ab60b3f0b0311a53a"
 
 [[projects]]
   branch = "master"
@@ -87,6 +79,22 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
+  digest = "1:4ea0668d490ca32a38366453a486e2e8c60fbdaf1f2607c96b4a093d8a5c8de7"
+  name = "github.com/klauspost/cpuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
+  version = "v1.1"
+
+[[projects]]
+  digest = "1:a863aa8e37dcea3224abebd5f92bb38ca985db0599748bd2b36dd26007679dd8"
+  name = "github.com/klauspost/reedsolomon"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "6bb6130ff6a76a904c1841707d65603aec9cc288"
+  version = "v1.6"
+
+[[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -111,12 +119,12 @@
   revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
 
 [[projects]]
-  digest = "1:9424f440bba8f7508b69414634aef3b2b3a877e522d8a4624692412805407bb7"
+  digest = "1:dab83a1bbc7ad3d7a6ba1a1cc1760f25ac38cdf7d96a5cdd55cd915a4f5ceaf9"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = "UT"
-  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
-  version = "v1.0.1"
+  revision = "9a97c102cda95a86cec2345a6f09f55a939babf5"
+  version = "v1.0.2"
 
 [[projects]]
   digest = "1:ac83cf90d08b63ad5f7e020ef480d319ae890c208f8524622a2f3136e2686b02"
@@ -159,6 +167,30 @@
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
 [[projects]]
+  branch = "master"
+  digest = "1:f10bb2efe706eea8e386fa5021281e302a58e8fa0ba9f2e31ad9ca2cb234b282"
+  name = "github.com/templexxx/cpufeat"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "cef66df7f161dee20f4d650da7268d77eaaec82d"
+
+[[projects]]
+  digest = "1:a0a269bea865974fc4d583373c984a5aa60cf98b5aa4f3e1b5de527891d37845"
+  name = "github.com/templexxx/xor"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0af8e873c554da75f37f2049cdffda804533d44c"
+  version = "0.1.2"
+
+[[projects]]
+  digest = "1:97293f3bd0b9f81484da18dba66a20de340307b43835a91157aaaee484c80e9b"
+  name = "github.com/tjfoc/gmsm"
+  packages = ["sm4"]
+  pruneopts = "UT"
+  revision = "98aa888b79d8de04afe0fccf45ed10594efc858b"
+  version = "v1.1"
+
+[[projects]]
   digest = "1:03aa6e485e528acb119fb32901cf99582c380225fc7d5a02758e08b180cb56c3"
   name = "github.com/ugorji/go"
   packages = ["codec"]
@@ -167,26 +199,57 @@
   version = "v1.1.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:e7a1ce56dc2fd57e2e1fe88c984583e8345d24a27068a47b134a2f2fd0e095a2"
-  name = "golang.org/x/crypto"
-  packages = ["sha3"]
+  digest = "1:6430cb8f5f61e9550411648f06f0bba8771c9b4b13ce8e5dc4b8ecb9236dcf3f"
+  name = "github.com/xtaci/kcp-go"
+  packages = ["."]
   pruneopts = "UT"
-  revision = "56440b844dfe139a8ac053f4ecac0b20b79058f4"
+  revision = "60be01eef6f665151bfbcde38429ee1d8710f68f"
+  version = "v4.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:6171b61a4a42ff7c8a1bd0cfb569c247e1654ec4d918b7da84228974216751f5"
+  digest = "1:687c123cabafce1c51b34b816fc9e824561172b59bde36338c83f0875b63ddf8"
+  name = "golang.org/x/crypto"
+  packages = [
+    "blowfish",
+    "cast5",
+    "internal/subtle",
+    "pbkdf2",
+    "salsa20",
+    "salsa20/salsa",
+    "sha3",
+    "tea",
+    "twofish",
+    "xtea",
+  ]
+  pruneopts = "UT"
+  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
+
+[[projects]]
+  branch = "master"
+  digest = "1:937d8f64b118c494c48b0cc9c990f2163c7483e6c70b5828f20006d81c61412f"
+  name = "golang.org/x/net"
+  packages = [
+    "bpf",
+    "internal/iana",
+    "internal/socket",
+    "ipv4",
+  ]
+  pruneopts = "UT"
+  revision = "c39426892332e1bb5ec0a434a079bf82f5d30c54"
+
+[[projects]]
+  branch = "master"
+  digest = "1:33a43cb31975899cfcd81600d1390467db1778ae87102f80668a753fed8c663e"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "34b17bdb430002e9db9ae7ddc8480b9fa05edc22"
+  revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/2tvenom/cbor",
     "github.com/anacrolix/utp",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
@@ -200,6 +263,7 @@
     "github.com/syndtr/goleveldb/leveldb/comparer",
     "github.com/syndtr/goleveldb/leveldb/opt",
     "github.com/ugorji/go/codec",
+    "github.com/xtaci/kcp-go",
     "golang.org/x/crypto/sha3",
   ]
   solver-name = "gps-cdcl"

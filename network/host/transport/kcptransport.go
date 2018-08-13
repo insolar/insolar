@@ -120,13 +120,13 @@ func (t *kcpTransport) Stop() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	t.disconnectStarted <- true
-	close(t.disconnectStarted)
-
 	err := t.listener.Close()
 	if err != nil {
 		log.Println("Failed to close socket:", err.Error())
 	}
+
+	t.disconnectStarted <- true
+	close(t.disconnectStarted)
 }
 
 // Close closes message channels.
