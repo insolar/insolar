@@ -69,7 +69,9 @@ type AuthInfo struct {
 
 // Subnet collects some information about self network part
 type Subnet struct {
-	SubnetIDs map[string][]string // key - ip, value - id
+	SubnetIDs        map[string][]string // key - ip, value - id
+	PossibleRelayIDs []string
+	PossibleProxyIds []string
 }
 
 // Options contains configuration options for the local node.
@@ -885,6 +887,29 @@ func (dht *DHT) dispatchMessageType(ctx Context, msg *message.Message, ht *routi
 		dht.processAuthentication(ctx, msg, messageBuilder)
 	case message.TypeObtainIP:
 		dht.processObtainIPRequest(ctx, msg, messageBuilder)
+	case message.TypeRelayOwnership:
+		dht.processRelayOwnership(ctx, msg, messageBuilder)
+	}
+}
+
+func (dht *DHT) processRelayOwnership(ctx Context, msg *message.Message, messageBuilder message.Builder) {
+	data := msg.Data.(*message.RequestRelayOwnership)
+
+	if data.Ready {
+		dht.subnet.PossibleProxyIds = append(dht.subnet.PossibleProxyIds, msg.Sender.ID.String())
+	} else {
+		for i, j := range dht.subnet.PossibleProxyIds {
+			if j == msg.Sender.ID.String() {
+				dht.subnet.PossibleProxyIds = append(dht.subnet.PossibleProxyIds[:i], dht.subnet.PossibleProxyIds[i+1:]...)
+				break
+			}
+		}
+	}
+	response := &message.ResponseRelayOwnership{true}
+
+	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	if err != nil {
+		log.Println("Failed to send response:", err.Error())
 	}
 }
 
@@ -1375,6 +1400,69 @@ func (dht *DHT) isSubnet() bool {
 		}
 	}
 	return true
+}
+
+func (dht *DHT) analyzeNetwork() {
+	if len(dht.subnet.SubnetIDs) == 1 { // current node have a static IP
+		dht.sendRelayOwnership()
+	} else {
+		// TODO: implement it
+	}
+}
+
+func (dht *DHT) sendRelayOwnership() {
+	for _, i := range dht.subnet.SubnetIDs {
+		for _, id := range i {
+			dht.relayOwnershipRequest(id, true)
+		}
+	}
+}
+
+func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
+	ctx, err := NewContextBuilder(dht).SetDefaultNode().Build()
+	if err != nil {
+		log.Fatalln("Failed to create context:", err.Error())
+	}
+	targetNode, exist, err := dht.FindNode(ctx, target)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("target for relay request not found")
+		return err
+	}
+
+	request := message.NewRelayOwnershipMessage(dht.htFromCtx(ctx).Origin, targetNode, true)
+	future, err := dht.transport.SendRequest(request)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*message.ResponseRelayOwnership)
+		dht.handleRelayOwnership(response, target)
+
+	case <-time.After(dht.options.MessageTimeout):
+		future.Cancel()
+		err = errors.New("timeout")
+		return err
+	}
+
+	return nil
+}
+
+func (dht *DHT) handleRelayOwnership(response *message.ResponseRelayOwnership, target string) {
+	if response.Accepted {
+		dht.subnet.PossibleRelayIDs = append(dht.subnet.PossibleRelayIDs, target)
+	}
 }
 
 func (dht *DHT) htFromCtx(ctx Context) *routing.HashTable {
