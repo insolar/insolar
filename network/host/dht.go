@@ -23,10 +23,13 @@ import (
 	"errors"
 	"log"
 	"math"
+	"math/big"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/node"
 	"github.com/insolar/insolar/network/host/relay"
@@ -146,6 +149,8 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 	dht.auth.authenticatedNodes = make(map[string]bool)
 	dht.auth.SentKeys = make(map[string][]byte)
 	dht.auth.ReceivedKeys = make(map[string][]byte)
+
+	dht.subnet.SubnetIDs = make(map[string][]string)
 
 	return dht, nil
 }
@@ -1333,6 +1338,43 @@ func (dht *DHT) ObtainIP(ctx Context) {
 			}
 		}
 	}
+}
+
+// GetDistance returns a distance between id1 and id2.
+func (dht *DHT) GetDistance(id1, id2 []byte) *big.Int {
+	buf1 := new(big.Int).SetBytes(id1)
+	buf2 := new(big.Int).SetBytes(id2)
+	return new(big.Int).Xor(buf1, buf2)
+}
+
+func (dht *DHT) getNearestNode(id string, ids []string) string {
+	idByte := []byte(id)
+	dist := dht.GetDistance(idByte, []byte(ids[0]))
+	index := 0
+	for i, j := range ids {
+		idsByte := []byte(j)
+		tmpDist := dht.GetDistance(idByte, idsByte)
+		if dist.Cmp(tmpDist) == -1 {
+			index = i
+			dist = tmpDist
+		}
+	}
+	return ids[index]
+}
+
+func (dht *DHT) isSubnet() bool {
+	for _, i := range dht.subnet.SubnetIDs {
+		first := i[0]
+		first = xstrings.Reverse(first)
+		first = strings.SplitAfterN(first, ".", 2)[1]
+		first = xstrings.Reverse(first)
+		for j := 1; j < len(i); j++ {
+			if !strings.Contains(i[j], first) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (dht *DHT) htFromCtx(ctx Context) *routing.HashTable {
