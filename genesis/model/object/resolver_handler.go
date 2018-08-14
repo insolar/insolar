@@ -14,28 +14,26 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"fmt"
-
-	"github.com/insolar/insolar/genesis/model/object"
 )
 
-// Handler should resolve references from any allowed scopes.
-type Handler struct {
+// ResolverHandler should resolve references from any allowed scopes.
+type ResolverHandler struct {
 	globalResolver  *globalResolver
 	childResolver   *childResolver
 	contextResolver *contextResolver
 }
 
-// NewHandler creates new resolverHandler instance.
-func NewHandler(p interface{}) *Handler {
-	parent, ok := p.(object.Parent)
+// NewResolverHandler creates new ResolverHandler instance.
+func NewResolverHandler(p interface{}) *ResolverHandler {
+	parent, ok := p.(Parent)
 	if !ok {
 		parent = nil
 	}
-	return &Handler{
+	return &ResolverHandler{
 		globalResolver:  GlobalResolver,
 		childResolver:   newChildResolver(parent),
 		contextResolver: newContextResolver(parent),
@@ -43,17 +41,17 @@ func NewHandler(p interface{}) *Handler {
 }
 
 // GetObject resolves object by its reference and return its proxy.
-func (r *Handler) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
-	ref, ok := reference.(object.Reference)
+func (r *ResolverHandler) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
+	ref, ok := reference.(Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
 	}
 	switch ref.GetScope() {
-	case object.GlobalScope:
+	case GlobalScope:
 		return r.globalResolver.GetObject(ref, classID)
-	case object.ContextScope:
+	case ContextScope:
 		return r.contextResolver.GetObject(ref, classID)
-	case object.ChildScope:
+	case ChildScope:
 		return r.childResolver.GetObject(ref, classID)
 	default:
 		return nil, fmt.Errorf("unknown scope type: %d", ref.GetScope())
@@ -61,6 +59,6 @@ func (r *Handler) GetObject(reference interface{}, classID interface{}) (interfa
 }
 
 // InitGlobalMap sets globalInstanceMap into globalResolver.
-func (r *Handler) InitGlobalMap(globalInstanceMap *map[string]Proxy) {
+func (r *ResolverHandler) InitGlobalMap(globalInstanceMap *map[string]Proxy) {
 	r.globalResolver.InitGlobalMap(globalInstanceMap)
 }

@@ -14,30 +14,9 @@
  *    limitations under the License.
  */
 
-/*
-Package factory provides interfaces for factories of all objects and proxy objects.
+package object
 
-Usage:
-
-	package main
-
-	type someFactory struct {}
-
-	func (f *someFactory) GetClassID() string {
-		return "someFactory"
-	}
-
-	func (f *someFactory) GetReference() object.Reference {
-		return f.Reference
-	}
-
-	func (f *someFactory) Create(parent object.Callable) (object.Callable, error)
-		// do creation logic
-	}
-
-	func main() {
-		factory := someFactory{}
-		obj := factory.Create(parent)
-	}
-*/
-package factory
+// Resolver marks that instance have ability to get proxy objects by its reference.
+type Resolver interface {
+	GetObject(reference interface{}, classID interface{}) (interface{}, error)
+}

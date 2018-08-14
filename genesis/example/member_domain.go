@@ -22,9 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // MemberDomainName is a name for member domain.
@@ -82,7 +80,7 @@ func (md *memberDomain) CreateMember() (string, error) {
 		return "", err
 	}
 	// Check if it Factory
-	mf, ok := child.(factory.Factory)
+	mf, ok := child.(object.Factory)
 	if !ok {
 		return "", fmt.Errorf("child by reference `%s` is not Factory instance", md.memberFactoryReference)
 	}
@@ -145,12 +143,12 @@ func (mdp *memberDomainProxy) GetMember(record string) (Member, error) {
 }
 
 type memberDomainFactory struct {
-	factory.BaseFactory
+	object.BaseFactory
 	parent object.Parent
 }
 
 // NewMemberDomainFactory creates new factory for MemberDomain.
-func NewMemberDomainFactory(parent object.Parent) factory.Factory {
+func NewMemberDomainFactory(parent object.Parent) object.Factory {
 	return &memberDomainFactory{
 		parent: parent,
 	}
@@ -168,7 +166,7 @@ func (mdf *memberDomainFactory) GetParent() object.Parent {
 }
 
 // Create is a factory method for new MemberDomain instances.
-func (mdf *memberDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (mdf *memberDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy, err := newMemberDomainProxy(parent)
 	if err != nil {
 		return nil, err

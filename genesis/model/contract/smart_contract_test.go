@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
@@ -86,57 +85,37 @@ func (p *mockParent) GetContextStorage() storage.Storage {
 
 type BaseComposite struct{}
 
-func (c *BaseComposite) GetInterfaceKey() string {
+func (bc *BaseComposite) GetInterfaceKey() string {
 	return "BaseComposite"
 }
 
-func (c *BaseComposite) GetClassID() string {
+func (bc *BaseComposite) GetClassID() string {
 	return "BaseComposite"
 }
 
-func (c *BaseComposite) GetParent() object.Parent {
+func (bc *BaseComposite) GetParent() object.Parent {
 	return nil
 }
 
-func (c *BaseComposite) GetReference() object.Reference {
+func (bc *BaseComposite) GetReference() object.Reference {
 	return nil
 }
 
 type BaseCompositeNotChild struct{}
 
-func (c *BaseCompositeNotChild) GetInterfaceKey() string {
+func (bc *BaseCompositeNotChild) GetInterfaceKey() string {
 	return "BaseCompositeNotChild"
 }
 
-func (c *BaseCompositeNotChild) GetClassID() string {
+func (bc *BaseCompositeNotChild) GetClassID() string {
 	return "BaseCompositeNotChild"
 }
 
-func (c *BaseCompositeNotChild) GetReference() object.Reference {
+func (bc *BaseCompositeNotChild) GetReference() object.Reference {
 	return nil
 }
 
-func (c *BaseComposite) SetReference(reference object.Reference) {}
-
-type anotherBaseComposite struct{}
-
-func (c *anotherBaseComposite) GetInterfaceKey() string {
-	return "anotherBaseComposite"
-}
-
-func (c *anotherBaseComposite) GetClassID() string {
-	return "anotherBaseComposite"
-}
-
-func (c *anotherBaseComposite) GetParent() object.Parent {
-	return nil
-}
-
-func (c *anotherBaseComposite) GetReference() object.Reference {
-	return nil
-}
-
-func (c *anotherBaseComposite) SetReference(reference object.Reference) {}
+func (bc *BaseComposite) SetReference(reference object.Reference) {}
 
 type BaseCompositeFactory struct{}
 
@@ -159,7 +138,7 @@ func (bcf *BaseCompositeFactory) GetInterfaceKey() string {
 	return "BaseCompositeFactory_ID"
 }
 
-func (cf *BaseCompositeFactory) Create(parent object.Parent) (factory.Composite, error) {
+func (bcf *BaseCompositeFactory) Create(parent object.Parent) (object.Composite, error) {
 	return &BaseComposite{}, nil
 }
 
@@ -184,7 +163,7 @@ func (bcf *BaseCompositeFactoryWithError) GetInterfaceKey() string {
 	return "BaseCompositeFactoryWithError_ID"
 }
 
-func (cf *BaseCompositeFactoryWithError) Create(parent object.Parent) (factory.Composite, error) {
+func (bcf *BaseCompositeFactoryWithError) Create(parent object.Parent) (object.Composite, error) {
 	return nil, fmt.Errorf("composite factory create error")
 }
 
@@ -205,11 +184,11 @@ func (bcf *BaseCompositeNotChildFactory) GetParent() object.Parent {
 	return nil
 }
 
-func (cf *BaseCompositeNotChildFactory) GetInterfaceKey() string {
+func (bcf *BaseCompositeNotChildFactory) GetInterfaceKey() string {
 	return "BaseCompositeNotChildFactory"
 }
 
-func (cf *BaseCompositeNotChildFactory) Create(parent object.Parent) (factory.Composite, error) {
+func (bcf *BaseCompositeNotChildFactory) Create(parent object.Parent) (object.Composite, error) {
 	return &BaseCompositeNotChild{}, nil
 }
 
@@ -219,7 +198,7 @@ func TestNewBaseSmartContract(t *testing.T) {
 	sc := NewBaseSmartContract(parent)
 
 	assert.Equal(t, &BaseSmartContract{
-		CompositeMap: make(map[string]factory.Composite),
+		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: childStorage,
 		Parent:       parent,
 	}, sc)
@@ -424,7 +403,7 @@ func TestSmartContract_GetParent(t *testing.T) {
 func TestSmartContract_GetResolver(t *testing.T) {
 	parent := &mockParent{}
 	sc := BaseSmartContract{
-		CompositeMap: make(map[string]factory.Composite),
+		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
@@ -437,7 +416,7 @@ func TestSmartContract_GetResolver(t *testing.T) {
 func TestSmartContract_GetResolver_Twice(t *testing.T) {
 	parent := &mockParent{}
 	sc := BaseSmartContract{
-		CompositeMap: make(map[string]factory.Composite),
+		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}

@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
@@ -68,7 +67,7 @@ func (bcf *MockBaseCompositeFactory) GetInterfaceKey() string {
 	return class.MemberID
 }
 
-func (cf *MockBaseCompositeFactory) Create(parent object.Parent) (factory.Composite, error) {
+func (cf *MockBaseCompositeFactory) Create(parent object.Parent) (object.Composite, error) {
 	return &BaseComposite{}, nil
 }
 
@@ -124,7 +123,7 @@ func TestNewMemberProxy(t *testing.T) {
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 	}
 
-	expectedMember.CompositeMap = make(map[string]factory.Composite)
+	expectedMember.CompositeMap = make(map[string]object.Composite)
 	expectedMember.ChildStorage = storage.NewMapStorage()
 	assert.Equal(t, &memberProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
@@ -216,7 +215,7 @@ func TestMemberFactory_Create(t *testing.T) {
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 	}
 
-	expectedMember.CompositeMap = make(map[string]factory.Composite)
+	expectedMember.CompositeMap = make(map[string]object.Composite)
 	expectedMember.ChildStorage = storage.NewMapStorage()
 	assert.Equal(t, &memberProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
