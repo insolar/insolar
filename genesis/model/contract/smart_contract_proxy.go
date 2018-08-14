@@ -41,7 +41,7 @@ func (bp *BaseSmartContractProxy) GetParent() object.Parent {
 }
 
 // GetOrCreateComposite is a proxy call for instance method if instance inherit ComposingContainer.
-func (bp *BaseSmartContractProxy) GetOrCreateComposite(interfaceKey string, compositeFactory factory.CompositeFactory) (factory.Composite, error) {
+func (bp *BaseSmartContractProxy) GetOrCreateComposite(compositeFactory factory.CompositeFactory) (factory.Composite, error) {
 	sc, ok := bp.Instance.(factory.ComposingContainer)
 	if !ok {
 		return nil, fmt.Errorf("Instance is not Composing Container")
