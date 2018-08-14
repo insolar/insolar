@@ -1,27 +1,25 @@
 package goplugin
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"testing"
 
-	"github.com/2tvenom/cbor"
-
-	"os/exec"
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/pkg/errors"
 )
 
 type HelloWorlder struct {
 	Greeted int
 }
 
-func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
-	var buf bytes.Buffer
-	cborEnc := cbor.NewEncoder(&buf)
-	_, err := cborEnc.Marshal(*r)
+func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
+	ch := new(codec.CborHandle)
+	var data []byte
+	err := codec.NewEncoderBytes(&data, ch).Encode(*r)
 	if err != nil {
 		panic(err)
 	}
@@ -29,27 +27,35 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) {
 	obj := logicrunner.Object{
 		MachineType: logicrunner.MachineTypeGoPlugin,
 		Reference:   "secondary",
-		Data:        buf.Bytes(),
+		Data:        data,
 	}
 
-	args := make([]logicrunner.Argument, 1)
-	var bufArgs bytes.Buffer
-	cborEncArgs := cbor.NewEncoder(&bufArgs)
-	_, err = cborEncArgs.Marshal(s)
-	if err != nil {
-		panic(err)
-	}
-	args[0] = bufArgs.Bytes()
+	args := make([]interface{}, 1)
+	args[0] = s
 
-	data, _, err := gp.Exec(obj, "Echo", args)
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(args)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = cborEnc.Unmarshal(data, r)
+	data, res, err := gp.Exec(obj, "Echo", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
+
+	err = codec.NewDecoderBytes(data, ch).Decode(r)
+	if err != nil {
+		panic(err)
+	}
+
+	var resParsed []interface{}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	if err != nil {
+		panic(err)
+	}
+
+	return resParsed[0].(string)
 }
 
 func compileBinaries() error {
@@ -105,10 +111,12 @@ func TestHelloWorld(t *testing.T) {
 	defer gp.Stop()
 
 	hw := &HelloWorlder{77}
-	hw.ProxyEcho(gp, "hi")
+	res := hw.ProxyEcho(gp, "hi there here we are")
 	if hw.Greeted != 78 {
 		t.Fatalf("Got unexpected value: %d, 78 is expected", hw.Greeted)
 	}
 
-	//TODO: check second returned value
+	if res != "hi there here we are" {
+		t.Fatalf("Got unexpected value: %s, 'hi there here we are' is expected", res)
+	}
 }

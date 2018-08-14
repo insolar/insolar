@@ -19,6 +19,9 @@ package class
 // ObjectID is a string representation of class for Object interface implementations.
 const ObjectID = "Object"
 
+// ProxyID is a string representation of class for Proxy interface implementations.
+const ProxyID = "Proxy"
+
 // ReferenceID is a string representation of class for Reference interface implementations.
 const ReferenceID = "Reference"
 
@@ -39,3 +42,12 @@ const InstanceDomainID = "InstanceDomain"
 
 // MemberDomainID is a string representation of class for MemberDomain interface implementations.
 const MemberDomainID = "MemberDomain"
+
+// MemberID is a string representation of class for Member interface implementations.
+const MemberID = "Member"
+
+// WalletDomainID is a string representation of class for WalletDomain interface implementations.
+const WalletDomainID = "WalletDomain"
+
+// WalletID is a string representation of class for Wallet interface implementations.
+const WalletID = "Wallet"

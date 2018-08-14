@@ -14,30 +14,4 @@
  *    limitations under the License.
  */
 
-package object
-
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
-var ref = &reference{
-	domain: "domain1",
-	record: "record1",
-	scope:  GlobalScope,
-}
-
-func TestBaseCallable_SetReference(t *testing.T) {
-	callable := &BaseCallable{}
-	callable.SetReference(ref)
-
-	assert.Equal(t, ref, callable.reference)
-}
-
-func TestBaseCallable_GetReference(t *testing.T) {
-	callable := &BaseCallable{
-		reference: ref,
-	}
-	assert.Equal(t, ref, callable.GetReference())
-}
+package logicrunner

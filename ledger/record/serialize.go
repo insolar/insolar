@@ -84,12 +84,6 @@ func (raw *Raw) Hash() []byte {
 	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
 }
 
-// SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
-func SHA3Hash224(rec Record) []byte {
-	cborBlob := MustEncode(rec)
-	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
-}
-
 // ToRecord decodes Raw to Record.
 func (raw *Raw) ToRecord() Record {
 	cborH := &codec.CborHandle{}
@@ -102,35 +96,34 @@ func (raw *Raw) ToRecord() Record {
 	return rec
 }
 
-// Key2ID converts record Key to ID.
-func Key2ID(k Key) ID {
-	var id ID
-	var err error
-	buf := bytes.NewBuffer(id[:0])
+// Bytes2ID converts ID from byte representation to struct.
+func Bytes2ID(b []byte) ID {
+	return ID{
+		Pulse: PulseNum(binary.BigEndian.Uint32(b[:PulseNumSize])),
+		Hash:  b[PulseNumSize:],
+	}
+}
 
-	err = binary.Write(buf, binary.BigEndian, k.Pulse)
+// ID2Bytes converts ID struct to it's byte representation.
+func ID2Bytes(id ID) []byte {
+	var err error
+	var b = make([]byte, IDSize)
+	buf := bytes.NewBuffer(b[:0])
+	err = binary.Write(buf, binary.BigEndian, id.Pulse)
 	if err != nil {
 		panic("binary.Write failed to write PulseNum:" + err.Error())
 	}
-	err = binary.Write(buf, binary.BigEndian, k.Hash)
+	err = binary.Write(buf, binary.BigEndian, id.Hash)
 	if err != nil {
 		panic("binary.Write failed to write Hash:" + err.Error())
 	}
-	return id
-}
-
-// ID2Key converts record ID to Key.
-func ID2Key(id ID) Key {
-	return Key{
-		Pulse: PulseNum(binary.BigEndian.Uint32(id[:PulseNumSize])),
-		Hash:  id[PulseNumSize:],
-	}
+	return b
 }
 
 // record type ids for record types
 // in use mostly for hashing and deserialization
 // (we don't use iota for clarity and predictable ids,
-// not depended on defenition order)
+// not depended on definition order)
 const (
 	// request record ids
 	requestRecordID       TypeID = 1
@@ -155,13 +148,12 @@ const (
 	codeRecordID                TypeID = 19
 	amendRecordID               TypeID = 20
 	classAmendRecordID          TypeID = 21
-	memoryMigrationCodeID       TypeID = 22
-	deactivationRecordID        TypeID = 23
-	objectAmendRecordID         TypeID = 24
-	statefulCallResultID        TypeID = 25
-	statefulExceptionResultID   TypeID = 26
-	enforcedObjectAmendRecordID TypeID = 27
-	objectAppendRecordID        TypeID = 28
+	deactivationRecordID        TypeID = 22
+	objectAmendRecordID         TypeID = 23
+	statefulCallResultID        TypeID = 24
+	statefulExceptionResultID   TypeID = 25
+	enforcedObjectAmendRecordID TypeID = 26
+	objectAppendRecordID        TypeID = 27
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -211,8 +203,6 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 		return &AmendRecord{}
 	case classAmendRecordID:
 		return &ClassAmendRecord{}
-	case memoryMigrationCodeID:
-		return &MemoryMigrationCode{}
 	case deactivationRecordID:
 		return &DeactivationRecord{}
 	case objectAmendRecordID:
@@ -277,8 +267,6 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 		return amendRecordID
 	case *ClassAmendRecord:
 		return classAmendRecordID
-	case *MemoryMigrationCode:
-		return memoryMigrationCodeID
 	case *DeactivationRecord:
 		return deactivationRecordID
 	case *ObjectAmendRecord:

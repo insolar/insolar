@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
@@ -73,7 +74,8 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]resolver.
 
 // RegisterReference sets new reference as a child to domain storage.
 func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
-	record, err := rd.ChildStorage.Set(ref)
+	container := resolver.NewReferenceContainer(ref)
+	record, err := rd.ChildStorage.Set(container)
 	if err != nil {
 		return "", err
 	}
@@ -98,22 +100,22 @@ func (rd *referenceDomain) ResolveReference(record string) (object.Reference, er
 		return nil, err
 	}
 
-	result, ok := reference.(object.Reference)
+	container, ok := reference.(*resolver.ReferenceContainer)
 	if !ok {
-		return nil, fmt.Errorf("object with record `%s` is not `Reference` instance", record)
+		return nil, fmt.Errorf("object with record `%s` is not `ReferenceContainer` instance", record)
 	}
 
-	return result, nil
+	return container.GetStoredReference(), nil
 }
 
 type referenceDomainProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 // newReferenceDomainProxy creates new proxy and associate it with new instance of ReferenceDomain.
 func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
 	return &referenceDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: newReferenceDomain(parent),
 		},
 	}
@@ -136,7 +138,7 @@ func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]res
 }
 
 type referenceDomainFactory struct {
-	object.BaseCallable
+	factory.BaseFactory
 	parent object.Parent
 }
 

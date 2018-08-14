@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package artifactmanager provides high-level storage API for vm module.
+// Package artifactmanager provides high-level storage API for logic runner module.
 package artifactmanager

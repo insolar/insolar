@@ -1,3 +1,20 @@
+/*
+ *    Copyright 2018 INS Ecosystem
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+// Package goplugin - golang plugin in docker runner
 package goplugin
 
 import (
@@ -40,14 +57,14 @@ type GoPlugin struct {
 	runner        *exec.Cmd
 }
 
-// GoPluginRPC is a RPC interface for runner to use for variouse tasks, e.g. code fetching
-type GoPluginRPC struct {
+// RPC is a RPC interface for runner to use for variouse tasks, e.g. code fetching
+type RPC struct {
 	gp *GoPlugin
 }
 
 // GetObject is an RPC retriving an object by its reference, so far short circueted to return
 // code of the plugin
-func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
+func (gpr *RPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
 	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
 	if err != nil {
 		return err
@@ -94,7 +111,7 @@ func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error
 // Start starts runner and RPC interface to help runner, note that NewGoPlugin does
 // this for you
 func (gp *GoPlugin) Start() {
-	r := GoPluginRPC{gp: gp}
+	r := RPC{gp: gp}
 	_ = rpc.Register(&r)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", gp.Options.Listen)
@@ -122,16 +139,23 @@ func (gp *GoPlugin) Stop() {
 	}
 }
 
+const timeout = time.Second * 5
+
 // Exec runs a method on an object in controlled environment
-func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args []logicrunner.Argument) ([]byte, logicrunner.Argument, error) {
+func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
 	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
 	res := girpc.CallResp{}
-	err = client.Call("GoInsider.Call", girpc.CallReq{Object: object, Method: method, Arguments: args}, &res)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "problem with API call")
+
+	select {
+	case call := <-client.Go("GoInsider.Call", girpc.CallReq{Object: object, Method: method, Arguments: args}, &res, nil).Done:
+		if call.Error != nil {
+			return nil, nil, errors.Wrap(err, "problem with API call")
+		}
+	case <-time.After(timeout):
+		return nil, nil, errors.New("timeout")
 	}
 	return res.Data, res.Ret, res.Err
 }

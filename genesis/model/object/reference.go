@@ -18,8 +18,6 @@ package object
 
 import (
 	"fmt"
-
-	"github.com/insolar/insolar/genesis/model/class"
 )
 
 // ScopeType represent type of scope for references.
@@ -34,18 +32,14 @@ const (
 
 // Reference represents address of object.
 type Reference interface {
-	Child
 	String() string
 	GetRecord() string
 	GetDomain() string
 	GetScope() ScopeType
 }
 
-// For now Reference is Proxy and have itself as its reference.
-// TODO: ProxyReference & ReferenceInterface
-
 type reference struct {
-	BaseCallable
+	BaseObject
 	domain string
 	record string
 	scope  ScopeType
@@ -63,11 +57,6 @@ func NewReference(domain string, record string, scope ScopeType) (Reference, err
 	default:
 		return nil, fmt.Errorf("unknown scope type: %d", scope)
 	}
-}
-
-// GetClassID return string representation of object's class.
-func (r *reference) GetClassID() string {
-	return class.ReferenceID
 }
 
 // GetRecord return record value for current reference.
@@ -88,10 +77,4 @@ func (r *reference) GetScope() ScopeType {
 // String return string representation of reference
 func (r *reference) String() string {
 	return fmt.Sprintf("#%s.#%s", r.domain, r.record)
-}
-
-// GetParent return parent of reference.
-// For now Reference is Proxy and has not actual parent.
-func (r *reference) GetParent() Parent {
-	return nil
 }

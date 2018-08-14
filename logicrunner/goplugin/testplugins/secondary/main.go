@@ -1,10 +1,26 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
+// @inscontract
 // nolint
 type HelloWorlder struct {
 	Greeted int
+}
+
+// nolint
+type FullName struct {
+	First string
+	Last  string
+}
+
+// nolint
+type PersonalGreeting struct {
+	Name    FullName
+	Message string
 }
 
 // nolint
@@ -25,6 +41,32 @@ func (hw *HelloWorlder) Echo(s string) (string, error) {
 	return s, nil
 }
 
+func (hw *HelloWorlder) HelloHuman(Name FullName) PersonalGreeting {
+	hw.Greeted++
+	return PersonalGreeting{
+		Name:    Name,
+		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
+	}
+}
+
+// nolint
+func (hw *HelloWorlder) HelloHumanPointer(Name FullName) *PersonalGreeting {
+	hw.Greeted++
+	return &PersonalGreeting{
+		Name:    Name,
+		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
+	}
+}
+
+// nolint
+func (hw *HelloWorlder) MultiArgs(Name FullName, s string, i int) *PersonalGreeting {
+	hw.Greeted++
+	return &PersonalGreeting{
+		Name:    Name,
+		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
+	}
+}
+
 // nolint
 func (hw HelloWorlder) ConstEcho(s string) (string, error) {
 	return s, nil
@@ -32,7 +74,3 @@ func (hw HelloWorlder) ConstEcho(s string) (string, error) {
 
 // nolint
 func JustExportedStaticFunction(int, int) {}
-
-var INSEXPORT HelloWorlder //nolint
-
-/// generated

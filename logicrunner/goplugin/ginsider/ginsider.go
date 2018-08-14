@@ -1,7 +1,22 @@
+/*
+ *    Copyright 2018 INS Ecosystem
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package main
 
 import (
-	"bytes"
 	"io/ioutil"
 	"log"
 	"net"
@@ -10,11 +25,10 @@ import (
 	"os"
 	"plugin"
 	"reflect"
-	"strconv"
 
-	"github.com/2tvenom/cbor"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
+	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
@@ -50,9 +64,9 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
 	}
 
-	var dataBuf bytes.Buffer
-	cborEnc := cbor.NewEncoder(&dataBuf)
-	_, err = cborEnc.Unmarshal(args.Object.Data, export)
+	ch := new(codec.CborHandle)
+
+	err = codec.NewDecoderBytes(args.Object.Data, ch).Decode(export)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't decode data into %T", export)
 	}
@@ -63,33 +77,42 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	}
 
 	inLen := method.Type().NumIn()
-	if len(args.Arguments) != inLen {
-		return errors.New("Number of arguments didn't match, got: " + strconv.Itoa(len(args.Arguments)) + ", expected: " + strconv.Itoa(inLen))
+
+	mask := make([]interface{}, inLen)
+	for i := 0; i < inLen; i++ {
+		argType := method.Type().In(i)
+		mask[i] = reflect.Zero(argType).Interface()
+	}
+
+	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
+	if err != nil {
+		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the method")
 	}
 
 	in := make([]reflect.Value, inLen)
 	for i := 0; i < inLen; i++ {
-		argType := method.Type().In(i)
-
-		argInterface := reflect.New(argType).Interface()
-		_, err = cborEnc.Unmarshal(args.Arguments[i], argInterface)
-		if err != nil {
-			return errors.Wrap(err, "couldn't unmarshal cbor")
-		}
-
-		in[i] = reflect.ValueOf(argInterface).Elem()
+		in[i] = reflect.ValueOf(mask[i])
 	}
 
-	res := method.Call(in)
+	resValues := method.Call(in)
 
-	_, err = cborEnc.Marshal(export)
+	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(export)
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal new object data into cbor")
 	}
 
-	reply.Data = dataBuf.Bytes()
+	res := make([]interface{}, len(resValues))
+	for i, v := range resValues {
+		res[i] = v.Interface()
+	}
 
-	log.Printf("res: %+v\n", res)
+	var resSerialized []byte
+	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res)
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal returned values into cbor")
+	}
+
+	reply.Ret = resSerialized
 
 	return nil
 }
@@ -112,7 +135,7 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 	}
 
 	res := logicrunner.Object{}
-	err = client.Call("GoPluginRPC.GetObject", obj.Reference, &res)
+	err = client.Call("RPC.GetObject", obj.Reference, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}

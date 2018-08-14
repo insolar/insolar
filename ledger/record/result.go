@@ -16,6 +16,10 @@
 
 package record
 
+import (
+	"github.com/pkg/errors"
+)
+
 // ReasonCode is an error reason code.
 type ReasonCode uint32
 
@@ -36,7 +40,7 @@ type WipeOutRecord struct {
 	ResultRecord
 
 	Replacement Reference
-	WipedHash   Hash
+	WipedHash   [HashSize]byte
 }
 
 // StatelessResult is a result type that does not need to be stored.
@@ -143,11 +147,23 @@ type CodeRecord struct {
 	SourceCode   string              // ObjectSourceCode
 }
 
+// GetCode returns class code according to provided architecture preferences. If preferences are not provided or the
+// record does not contain code for any of provided architectures an error will be returned.
+func (r *CodeRecord) GetCode(archPref []ArchType) ([]byte, error) {
+	for _, archType := range archPref {
+		code, ok := r.TargetedCode[archType]
+		if ok {
+			return code, nil
+		}
+	}
+	return nil, errors.New("code for preferred architectures not found")
+}
+
 // AmendRecord is produced when we modify another record in ledger.
 type AmendRecord struct {
 	StatefulResult
 
-	BaseRecord    Reference
+	HeadRecord    Reference
 	AmendedRecord Reference
 }
 
@@ -155,20 +171,8 @@ type AmendRecord struct {
 type ClassAmendRecord struct {
 	AmendRecord
 
-	NewCode []byte // ObjectBinaryCode
-}
-
-// MigrationCodes returns a list of data migration procedures for a given code change.
-func (r *ClassAmendRecord) MigrationCodes() []*MemoryMigrationCode {
-	panic("not implemented")
-}
-
-// MemoryMigrationCode is a data migration procedure.
-type MemoryMigrationCode struct {
-	ClassAmendRecord
-
-	GeneratedByClassRecord Reference
-	MigrationCodeRecord    Reference
+	NewCode    Reference   // CodeRecord
+	Migrations []Reference // CodeRecord
 }
 
 // DeactivationRecord marks targeted object as disabled.
