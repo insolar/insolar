@@ -70,8 +70,16 @@ type AuthInfo struct {
 // Subnet collects some information about self network part
 type Subnet struct {
 	SubnetIDs        map[string][]string // key - ip, value - id
+	HomeSubnetKey    string              // key of home subnet fo SubnetIDs
 	PossibleRelayIDs []string
 	PossibleProxyIds []string
+	HighKnownNodes   HighKnownOuterNodesNode
+}
+
+// HighKnownOuterNodesNode collects an information about node in home subnet which have a more known outer nodes.
+type HighKnownOuterNodesNode struct {
+	ID         string
+	OuterNodes int
 }
 
 // Options contains configuration options for the local node.
@@ -889,6 +897,8 @@ func (dht *DHT) dispatchMessageType(ctx Context, msg *message.Message, ht *routi
 		dht.processObtainIPRequest(ctx, msg, messageBuilder)
 	case message.TypeRelayOwnership:
 		dht.processRelayOwnership(ctx, msg, messageBuilder)
+	case message.TypeKnownOuterNodes:
+		dht.processKnownOuterNodes(ctx, msg, messageBuilder)
 	}
 }
 
@@ -1387,19 +1397,24 @@ func (dht *DHT) getNearestNode(id string, ids []string) string {
 	return ids[index]
 }
 
-func (dht *DHT) isSubnet() bool {
-	for _, i := range dht.subnet.SubnetIDs {
-		first := i[0]
+func (dht *DHT) getHomeSubnetKey() string {
+	var result string
+	for key, subnet := range dht.subnet.SubnetIDs {
+		first := subnet[0]
 		first = xstrings.Reverse(first)
-		first = strings.SplitAfterN(first, ".", 2)[1]
+		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.X.this byte
+		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.this byte
 		first = xstrings.Reverse(first)
-		for j := 1; j < len(i); j++ {
-			if !strings.Contains(i[j], first) {
-				return false
+		for j := 1; j < len(subnet); j++ {
+			if !strings.Contains(subnet[j], first) {
+				result = ""
+				break
+			} else {
+				result = key
 			}
 		}
 	}
-	return true
+	return result
 }
 
 func (dht *DHT) analyzeNetwork() {
@@ -1459,9 +1474,66 @@ func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
 	return nil
 }
 
-func (dht *DHT) handleRelayOwnership(response *message.ResponseRelayOwnership, target string) {
-	if response.Accepted {
-		dht.subnet.PossibleRelayIDs = append(dht.subnet.PossibleRelayIDs, target)
+func (dht *DHT) processKnownOuterNodes(ctx Context, msg *message.Message, messageBuilder message.Builder) {
+	data := msg.Data.(*message.RequestKnownOuterNodes)
+
+	ID := dht.subnet.HighKnownNodes.ID
+	nodes := dht.subnet.HighKnownNodes.OuterNodes
+	if data.OuterNodes > nodes {
+		ID = data.ID
+		nodes = data.OuterNodes
+	}
+	response := &message.ResponseKnownOuterNodes{ID, nodes}
+
+	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	if err != nil {
+		log.Println("Failed to send response:", err.Error())
+	}
+}
+
+func (dht *DHT) knownOuterNodesRequest(target string, nodes int) error {
+	ctx, err := NewContextBuilder(dht).SetDefaultNode().Build()
+	if err != nil {
+		return err
+	}
+	targetNode, exist, err := dht.FindNode(ctx, target)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("target for relay request not found")
+		return err
+	}
+
+	request := message.NewKnownOuterNodesMessage(dht.htFromCtx(ctx).Origin, targetNode, nodes)
+	future, err := dht.transport.SendRequest(request)
+
+	if err != nil {
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			return err
+		}
+
+		response := rsp.Data.(*message.ResponseKnownOuterNodes)
+		dht.handleKnownOuterNodes(response, target)
+
+	case <-time.After(dht.options.MessageTimeout):
+		future.Cancel()
+		err = errors.New("timeout")
+		return err
+	}
+
+	return nil
+}
+
+func (dht *DHT) handleKnownOuterNodes(response *message.ResponseKnownOuterNodes, target string) {
+	if response.OuterNodes > dht.subnet.HighKnownNodes.OuterNodes { // update data
+		dht.subnet.HighKnownNodes.OuterNodes = response.OuterNodes
+		dht.subnet.HighKnownNodes.ID = response.ID
 	}
 }
 
