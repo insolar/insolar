@@ -55,31 +55,12 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:865079840386857c809b72ce300be7580cb50d3d3129ce11bf9aa6ca2bc1934a"
-  name = "github.com/fatih/color"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
-  version = "v1.7.0"
-
-[[projects]]
   branch = "master"
   digest = "1:4a0c6bb4805508a6287675fac876be2ac1182539ca8a32468d8128882e9d5009"
   name = "github.com/golang/snappy"
   packages = ["."]
   pruneopts = "UT"
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
-
-[[projects]]
-  digest = "1:c92a201ed537c2b32ff45a3ebc911e12c1d9bffd7c91bd5aff1214a1d10dcde4"
-  name = "github.com/golangci/golangci-lint"
-  packages = [
-    "pkg/exitcodes",
-    "pkg/logutils",
-  ]
-  pruneopts = "UT"
-  revision = "a2b901227c37337bce9860499a413db2b464481b"
-  version = "v1.10"
 
 [[projects]]
   digest = "1:6b1e7618931d0ed9a17fec1c1d84271907aa61172c50b8272327f6cd4fafb650"
@@ -114,22 +95,6 @@
   version = "v1.6"
 
 [[projects]]
-  digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
-  name = "github.com/mattn/go-colorable"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
-
-[[projects]]
-  digest = "1:d4d17353dbd05cb52a2a52b7fe1771883b682806f68db442b436294926bbfafb"
-  name = "github.com/mattn/go-isatty"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
-
-[[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -152,14 +117,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
-
-[[projects]]
-  digest = "1:d867dfa6751c8d7a435821ad3b736310c2ed68945d05b50fb9d23aee0540c8cc"
-  name = "github.com/sirupsen/logrus"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
-  version = "v1.0.6"
 
 [[projects]]
   digest = "1:dab83a1bbc7ad3d7a6ba1a1cc1760f25ac38cdf7d96a5cdd55cd915a4f5ceaf9"
@@ -253,7 +210,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:886c37423371473271b6b490f5b270fe778bd9ae2fdff9324f2060b096c81b9e"
+  digest = "1:687c123cabafce1c51b34b816fc9e824561172b59bde36338c83f0875b63ddf8"
   name = "golang.org/x/crypto"
   packages = [
     "blowfish",
@@ -263,7 +220,6 @@
     "salsa20",
     "salsa20/salsa",
     "sha3",
-    "ssh/terminal",
     "tea",
     "twofish",
     "xtea",
@@ -286,12 +242,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a60cae5be8993938498243605b120290533a5208fd5cac81c932afbad3642fb0"
+  digest = "1:33a43cb31975899cfcd81600d1390467db1778ae87102f80668a753fed8c663e"
   name = "golang.org/x/sys"
-  packages = [
-    "unix",
-    "windows",
-  ]
+  packages = ["unix"]
   pruneopts = "UT"
   revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
 
@@ -302,7 +255,6 @@
     "github.com/anacrolix/utp",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
-    "github.com/golangci/golangci-lint/pkg/logutils",
     "github.com/jbenet/go-base58",
     "github.com/pkg/errors",
     "github.com/satori/go.uuid",
