@@ -915,7 +915,7 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *message.Message, message
 			}
 		}
 	}
-	response := &message.ResponseRelayOwnership{true}
+	response := &message.ResponseRelayOwnership{Accepted: true}
 
 	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 	if err != nil {
@@ -1425,18 +1425,23 @@ func (dht *DHT) analyzeNetwork() {
 	}
 }
 
-func (dht *DHT) sendRelayOwnership() {
-	for _, i := range dht.subnet.SubnetIDs {
-		for _, id := range i {
-			dht.relayOwnershipRequest(id, true)
-		}
+func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
+	for _, id := range subnetIDs {
+		err := dht.relayOwnershipRequest(id, true)
+		log.Println(err.Error())
+	}
+}
+
+func (dht *DHT) handleRelayOwnership(response *message.ResponseRelayOwnership, target string) {
+	if response.Accepted {
+		dht.subnet.PossibleRelayIDs = append(dht.subnet.PossibleRelayIDs, target)
 	}
 }
 
 func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
 	ctx, err := NewContextBuilder(dht).SetDefaultNode().Build()
 	if err != nil {
-		log.Fatalln("Failed to create context:", err.Error())
+		return err
 	}
 	targetNode, exist, err := dht.FindNode(ctx, target)
 	if err != nil {
@@ -1451,14 +1456,12 @@ func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
 	future, err := dht.transport.SendRequest(request)
 
 	if err != nil {
-		log.Println(err.Error())
 		return err
 	}
 
 	select {
 	case rsp := <-future.Result():
 		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
 			return err
 		}
 
