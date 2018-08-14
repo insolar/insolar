@@ -40,7 +40,7 @@ type WipeOutRecord struct {
 	ResultRecord
 
 	Replacement Reference
-	WipedHash   Hash
+	WipedHash   [HashSize]byte
 }
 
 // StatelessResult is a result type that does not need to be stored.

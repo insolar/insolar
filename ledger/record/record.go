@@ -51,9 +51,6 @@ type PulseNum uint32
 // It is only allowed for Storage.
 const SpecialPulseNumber PulseNum = 65536
 
-// Hash is hash sum of record, 24-byte array.
-type Hash [HashSize]byte
-
 // ArchType is a virtual machine runtime type
 type ArchType uint32
 
