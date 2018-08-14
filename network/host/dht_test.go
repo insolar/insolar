@@ -36,6 +36,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const closedMessage = "closed" // "broken pipe" for kcpTransport
+
 func getDefaultCtx(dht *DHT) Context {
 	ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
 	return ctx
@@ -216,7 +218,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "broken pipe", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		go func(dht *DHT) {
@@ -273,12 +275,12 @@ func TestBootstrapTwoNodes(t *testing.T) {
 			done <- true
 		}()
 		err3 := dht2.Listen()
-		assert.Equal(t, "broken pipe", err3.Error())
+		assert.Equal(t, closedMessage, err3.Error())
 		done <- true
 	}()
 
 	err = dht1.Listen()
-	assert.Equal(t, "broken pipe", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -347,16 +349,16 @@ func TestBootstrapThreeNodes(t *testing.T) {
 			}(dht1, dht2, dht3)
 
 			err4 := dht3.Listen()
-			assert.Equal(t, "broken pipe", err4.Error())
+			assert.Equal(t, closedMessage, err4.Error())
 			done <- true
 		}(dht1, dht2, dht3)
 		err5 := dht2.Listen()
-		assert.Equal(t, "broken pipe", err5.Error())
+		assert.Equal(t, closedMessage, err5.Error())
 		done <- true
 	}(dht1, dht2, dht3)
 
 	err = dht1.Listen()
-	assert.Equal(t, "broken pipe", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 2, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 2, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -403,12 +405,12 @@ func TestBootstrapNoID(t *testing.T) {
 			done <- true
 		}()
 		err3 := dht2.Listen()
-		assert.Equal(t, "broken pipe", err3.Error())
+		assert.Equal(t, closedMessage, err3.Error())
 		done <- true
 	}()
 
 	err = dht1.Listen()
-	assert.Equal(t, "broken pipe", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -454,13 +456,13 @@ func TestReconnect(t *testing.T) {
 				done <- true
 			}()
 			err3 := dht2.Listen()
-			assert.Equal(t, "broken pipe", err3.Error())
+			assert.Equal(t, closedMessage, err3.Error())
 			done <- true
 
 		}()
 
 		err = dht1.Listen()
-		assert.Equal(t, "broken pipe", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 
 		assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 		assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -494,13 +496,13 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 
 	go func() {
 		err := dht1.Listen()
-		assert.Equal(t, "broken pipe", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 		done <- true
 	}()
 
 	go func() {
 		err := dht2.Listen()
-		assert.Equal(t, "broken pipe", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 		done <- true
 	}()
 
@@ -964,7 +966,7 @@ func TestDHT_FindNode(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "broken pipe", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		go func(dht *DHT) {
@@ -1020,7 +1022,7 @@ func TestDHT_Listen(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "broken pipe", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 	}
@@ -1058,7 +1060,7 @@ func TestDHT_Disconnect(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "broken pipe", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		time.Sleep(time.Millisecond * 200)

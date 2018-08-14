@@ -24,11 +24,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMemoryStoreFactory(t *testing.T) {
+func TestNewMemoryStoreUTPFactory(t *testing.T) {
 	expectedFactory := &utpTransportFactory{}
 	actualFactory := NewUTPTransportFactory()
 
 	assert.Equal(t, expectedFactory, actualFactory)
+	assert.Implements(t, (*Factory)(nil), actualFactory)
+}
+
+func TestNewMemoryStoreKCPFactory(t *testing.T) {
+	expectedFactory := &kcpTransportFactory{}
+	actualFactory := NewKCPTransportFactory()
+
+	assert.Equal(t, expectedFactory, actualFactory)
+	assert.Implements(t, (*Factory)(nil), actualFactory)
 }
 
 func TestMemoryStoreFactory_Create(t *testing.T) {

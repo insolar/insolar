@@ -47,8 +47,7 @@ type utpTransport struct {
 
 // NewUTPTransport creates utpTransport.
 func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
-	//return newUTPTransport(conn, proxy)
-	return newKCPTransport(conn, proxy)
+	return newUTPTransport(conn, proxy)
 }
 
 func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, error) {
