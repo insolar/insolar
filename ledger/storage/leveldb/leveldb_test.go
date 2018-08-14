@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -32,12 +31,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	absPath, err := filepath.Abs(dbDirPath)
-	if err != nil {
-		os.Exit(1)
-	}
-
-	if err = os.RemoveAll(absPath); err != nil {
+	if err := DropDB(); err != nil {
 		os.Exit(1)
 	}
 

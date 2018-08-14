@@ -17,6 +17,7 @@
 package leveldb
 
 import (
+	"os"
 	"path/filepath"
 	"time"
 
@@ -207,4 +208,17 @@ func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLi
 // Close terminates db connection
 func (ll *LevelLedger) Close() error {
 	return ll.ldb.Close()
+}
+
+func DropDB() error {
+	absPath, err := filepath.Abs(dbDirPath)
+	if err != nil {
+		return err
+	}
+
+	if err = os.RemoveAll(absPath); err != nil {
+		return err
+	}
+
+	return nil
 }
