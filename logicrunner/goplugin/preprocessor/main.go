@@ -17,7 +17,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"go/ast"
@@ -58,46 +57,47 @@ func main() {
 	}
 
 	for _, fn := range flag.Args() {
-		w, err := generateForFile(fn)
-		if err != nil {
-			panic(err)
-		}
-		_, err = io.Copy(output, w)
+		err := generateContractWrapper(fn, output)
 		if err != nil {
 			panic(err)
 		}
 	}
 }
 
-func generateForFile(fn string) (io.Reader, error) {
+func slurpFile(fileName string) ([]byte, error) {
+	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't open file '"+fileName+"'")
+	}
+	defer file.Close()
+
+	res, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't read file '"+fileName+"'")
+	}
+	return res, nil
+}
+
+func generateContractWrapper(fileName string, out io.Writer) error {
+	sourceCode, err := slurpFile(fileName)
+	if err != nil {
+		return errors.Wrap(err, "Can't read slurp file")
+	}
+
 	fs := token.NewFileSet()
-
-	F, err := os.OpenFile(fn, os.O_RDONLY, 0)
+	node, err := parser.ParseFile(fs, fileName, sourceCode, parser.ParseComments)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't open file "+fn)
-	}
-	defer F.Close()
-
-	buff, err := ioutil.ReadAll(F)
-	if err != nil {
-		return nil, errors.Wrap(err, "Can't read file "+fn)
+		return errors.Wrapf(err, "Can't parse %s", fileName)
 	}
 
-	node, err := parser.ParseFile(fs, fn, buff, parser.ParseComments)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Can't parse %s", fn)
-	}
 	if node.Name.Name != "main" {
 		panic("Contract must be in main package")
 	}
-	b := bytes.Buffer{}
-	ci := getMethods(node, buff)
-	if mode == "wrapper" {
-		b.WriteString("package " + node.Name.Name + "\n\n")
-		b.WriteString(generateWrappers(ci) + "\n")
-		b.WriteString(generateExports(ci) + "\n")
-	}
-	return &b, nil
+	ci := getMethods(node, sourceCode)
+	out.Write([]byte("package " + node.Name.Name + "\n\n"))
+	out.Write([]byte(generateWrappers(ci) + "\n"))
+	out.Write([]byte(generateExports(ci) + "\n"))
+	return nil
 }
 
 func getMethods(F *ast.File, text []byte) *ContractInterface {
@@ -111,20 +111,21 @@ func getMethods(F *ast.File, text []byte) *ContractInterface {
 			if td.Tok != token.TYPE {
 				continue
 			}
+
 			typeNode := td.Specs[0].(*ast.TypeSpec)
 			if strings.Contains(td.Doc.Text(), "@inscontract") {
 				if ci.Contract != "" {
 					panic("more than one contract in a file")
 				}
 				ci.Contract = typeNode.Name.Name
-				continue
+			} else {
+				ci.Types[typeNode.Name.Name] = string(text[typeNode.Pos()-1 : typeNode.End()])
 			}
-			ci.Types[typeNode.Name.Name] = string(text[typeNode.Pos()-1 : typeNode.End()])
-			continue
 		case *ast.FuncDecl:
-			if td.Recv.NumFields() == 0 { // not a method
+			if td.Recv == nil || td.Recv.NumFields() == 0 { // not a method
 				continue
 			}
+
 			r := td.Recv.List[0].Type
 			if tr, ok := r.(*ast.StarExpr); ok { // *type
 				r = tr.X

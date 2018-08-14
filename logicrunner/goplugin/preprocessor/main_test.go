@@ -17,22 +17,23 @@
 package main
 
 import (
+	"bytes"
 	"io/ioutil"
 	"testing"
 )
 
-func Test_generateForFile(t *testing.T) {
-	mode = "wrapper"
-	w, err := generateForFile("../testplugins/secondary/main.go")
+func Test_generateContractWrapper(t *testing.T) {
+	buf := bytes.Buffer{}
+	err := generateContractWrapper("../testplugins/secondary/main.go", &buf)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// io.Copy(os.Stdout, w)
-	b, err := ioutil.ReadAll(w)
+	code, err := ioutil.ReadAll(&buf)
 	if err != nil {
 		t.Fatal("reading from generated code", err)
 	}
-	if len(b) == 0 {
+	if len(code) == 0 {
 		t.Fatal("generator returns zero length code")
 	}
 }
