@@ -574,10 +574,12 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	classState, objectState record.Reference,
 ) ([]byte, record.Memory, error) {
+	// Fetching class data
 	classRec, err := m.storer.GetRecord(&classState)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "class record not found")
 	}
+
 	var codeRef record.Reference
 	var classHeadRef record.Reference
 	switch rec := classRec.(type) {
@@ -590,15 +592,18 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	default:
 		return nil, nil, errors.New("wrong class reference")
 	}
+
 	code, err := m.getCodeRecordCode(codeRef)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// Fetching object data
 	objectRec, err := m.storer.GetRecord(&objectState)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "object record not found")
 	}
+
 	var memory record.Memory
 	var objectHeadRef record.Reference
 	switch rec := objectRec.(type) {
@@ -611,11 +616,13 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	default:
 		return nil, nil, errors.New("wrong object reference")
 	}
+
 	objectIndex, err := m.storer.GetObjectIndex(&objectHeadRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "object index not found")
 	}
 
+	// Checking if the object belongs to the class
 	if objectIndex.ClassRef.IsNotEqual(classHeadRef) {
 		return nil, nil, errors.New("the object does not belong to the class")
 	}
@@ -645,12 +652,10 @@ func (m *LedgerArtifactManager) GetLatestObj(
 		return nil, nil, err
 	}
 
+	// if provided reference is the last reference in the lifeline, we can return nil
 	if storedClassState.IsNotEqual(classIndex.LatestStateRef) {
 		class = &ClassDescriptor{
-			StateRef: record.Reference{
-				Domain: storedClassState.Domain,
-				Record: classIndex.LatestStateRef.Record,
-			},
+			StateRef: classIndex.LatestStateRef,
 
 			manager:           m,
 			fromState:         storedClassState,
@@ -660,12 +665,10 @@ func (m *LedgerArtifactManager) GetLatestObj(
 		}
 	}
 
+	// if provided reference is the last reference in the lifeline, we can return nil
 	if storedObjState.IsNotEqual(objIndex.LatestStateRef) {
 		object = &ObjectDescriptor{
-			StateRef: record.Reference{
-				Domain: storedObjState.Domain,
-				Record: objIndex.LatestStateRef.Record,
-			},
+			StateRef: objIndex.LatestStateRef,
 
 			manager:           m,
 			activateRecord:    objActivateRec,
