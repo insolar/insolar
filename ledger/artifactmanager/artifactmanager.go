@@ -152,8 +152,8 @@ func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "class record is not found")
 	}
-	activateRec, ok := classRecord.(*record.ClassActivateRecord)
-	if !ok {
+	activateRec, isClassRec := classRecord.(*record.ClassActivateRecord)
+	if !isClassRec {
 		return nil, nil, nil, errors.New("provided reference is not a class record")
 	}
 	classIndex, err := m.storer.GetClassIndex(&classRef)
@@ -164,11 +164,11 @@ func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "latest class record is not found")
 	}
-	if _, ok := latestClassRecord.(*record.DeactivationRecord); ok { // nolint: vetshadow
+	if _, isDeactivated := latestClassRecord.(*record.DeactivationRecord); isDeactivated {
 		return nil, nil, nil, errors.New("class is deactivated")
 	}
-	amendRecord, ok := latestClassRecord.(*record.ClassAmendRecord)
-	if classRef.IsNotEqual(classIndex.LatestStateRef) && !ok {
+	amendRecord, isLatestAmend := latestClassRecord.(*record.ClassAmendRecord)
+	if classRef.IsNotEqual(classIndex.LatestStateRef) && !isLatestAmend {
 		return nil, nil, nil, errors.New("wrong index record")
 	}
 
@@ -182,8 +182,8 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "object record is not found")
 	}
-	activateRec, ok := objRecord.(*record.ObjectActivateRecord)
-	if !ok {
+	activateRec, isObjectRec := objRecord.(*record.ObjectActivateRecord)
+	if !isObjectRec {
 		return nil, nil, nil, errors.New("provided reference is not an object record")
 	}
 
@@ -195,11 +195,11 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "latest object record is not found")
 	}
-	if _, ok := latestObjRecord.(*record.DeactivationRecord); ok { // nolint: vetshadow
+	if _, isDeactivated := latestObjRecord.(*record.DeactivationRecord); isDeactivated {
 		return nil, nil, nil, errors.New("object is deactivated")
 	}
-	amendRecord, ok := latestObjRecord.(*record.ObjectAmendRecord)
-	if objRef.IsNotEqual(objIndex.LatestStateRef) && !ok {
+	amendRecord, isLatestAmend := latestObjRecord.(*record.ObjectAmendRecord)
+	if objRef.IsNotEqual(objIndex.LatestStateRef) && !isLatestAmend {
 		return nil, nil, nil, errors.New("wrong index record")
 	}
 
