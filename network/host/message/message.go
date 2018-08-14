@@ -48,6 +48,8 @@ const (
 	TypeObtainIP
 	// TypeRelayOwnership is message to say all other nodes that current node have a static IP.
 	TypeRelayOwnership
+	// TypeKnownOuterNodes is message to say how much outer nodes current node know.
+	TypeKnownOuterNodes
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -117,14 +119,27 @@ func NewObtainIPMessage(sender, receiver *node.Node) *Message {
 	}
 }
 
+// NewRelayOwnershipMessage uses for relay ownership request.
 func NewRelayOwnershipMessage(sender, receiver *node.Node, ready bool) *Message {
 	return &Message{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeRelayOwnership,
-		Data:     &RequestRelayOwnership{ready},
+		Data:     &RequestRelayOwnership{Ready: ready},
 	}
+}
 
+// NewKnownOuterNodesMessage uses to notify all nodes in home subnet about known outer nodes.
+func NewKnownOuterNodesMessage(sender, receiver *node.Node, nodes int) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeKnownOuterNodes,
+		Data: &RequestKnownOuterNodes{
+			ID:         sender.ID.String(),
+			OuterNodes: nodes,
+		},
+	}
 }
 
 // IsValid checks if message data is a valid structure for current message type.
@@ -150,6 +165,8 @@ func (m *Message) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestObtainIP)
 	case TypeRelayOwnership:
 		_, valid = m.Data.(*RequestRelayOwnership)
+	case TypeKnownOuterNodes:
+		_, valid = m.Data.(*RequestKnownOuterNodes)
 	default:
 		valid = false
 	}
@@ -225,6 +242,7 @@ func init() {
 	gob.Register(&RequestCheckOrigin{})
 	gob.Register(&RequestObtainIP{})
 	gob.Register(&RequestRelayOwnership{})
+	gob.Register(&RequestKnownOuterNodes{})
 
 	gob.Register(&ResponseDataFindNode{})
 	gob.Register(&ResponseDataFindValue{})
@@ -235,4 +253,5 @@ func init() {
 	gob.Register(&ResponseCheckOrigin{})
 	gob.Register(&ResponseObtainIP{})
 	gob.Register(&ResponseRelayOwnership{})
+	gob.Register(&ResponseKnownOuterNodes{})
 }
