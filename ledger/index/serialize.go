@@ -23,45 +23,45 @@ import (
 )
 
 // EncodeClassLifeline converts lifeline index into binary format
-func EncodeClassLifeline(index *ClassLifeline) []byte {
+func EncodeClassLifeline(index *ClassLifeline) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(index)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
 // DecodeClassLifeline converts byte array into lifeline index struct
-func DecodeClassLifeline(buf []byte) ClassLifeline {
+func DecodeClassLifeline(buf []byte) (*ClassLifeline, error) {
 	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
 	var idx ClassLifeline
 	err := dec.Decode(&idx)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return idx
+	return &idx, nil
 }
 
 // EncodeObjectLifeline converts lifeline index into binary format.
-func EncodeObjectLifeline(index *ObjectLifeline) []byte {
+func EncodeObjectLifeline(index *ObjectLifeline) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(index)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
 // DecodeObjectLifeline converts byte array into lifeline index struct.
-func DecodeObjectLifeline(buf []byte) ObjectLifeline {
+func DecodeObjectLifeline(buf []byte) (*ObjectLifeline, error) {
 	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
 	var index ObjectLifeline
 	err := dec.Decode(&index)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return index
+	return &index, nil
 }
