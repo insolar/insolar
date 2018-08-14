@@ -78,23 +78,45 @@ func slurpFile(fileName string) ([]byte, error) {
 	return res, nil
 }
 
-func generateContractWrapper(fileName string, out io.Writer) error {
+type parsedFile struct {
+	name    string
+	code    []byte
+	fileSet *token.FileSet
+	node    *ast.File
+}
+
+func parseFile(fileName string) (parsedFile, error) {
+	res := parsedFile{
+		name: fileName,
+	}
 	sourceCode, err := slurpFile(fileName)
 	if err != nil {
-		return errors.Wrap(err, "Can't read slurp file")
+		return res, errors.Wrap(err, "Can't read slurp file")
 	}
+	res.code = sourceCode
 
-	fs := token.NewFileSet()
-	node, err := parser.ParseFile(fs, fileName, sourceCode, parser.ParseComments)
+	res.fileSet = token.NewFileSet()
+	node, err := parser.ParseFile(res.fileSet, res.name, res.code, parser.ParseComments)
 	if err != nil {
-		return errors.Wrapf(err, "Can't parse %s", fileName)
+		return res, errors.Wrapf(err, "Can't parse %s", fileName)
+	}
+	res.node = node
+
+	return res, nil
+}
+
+func generateContractWrapper(fileName string, out io.Writer) error {
+	parsed, err := parseFile(fileName)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse")
 	}
 
-	if node.Name.Name != "main" {
+	packageName := parsed.node.Name.Name
+	if packageName != "main" {
 		panic("Contract must be in main package")
 	}
-	ci := getMethods(node, sourceCode)
-	out.Write([]byte("package " + node.Name.Name + "\n\n"))
+	ci := getMethods(parsed.node, parsed.code)
+	out.Write([]byte("package " + packageName + "\n\n"))
 	out.Write([]byte(generateWrappers(ci) + "\n"))
 	out.Write([]byte(generateExports(ci) + "\n"))
 	return nil
