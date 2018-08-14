@@ -84,12 +84,6 @@ func (raw *Raw) Hash() []byte {
 	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
 }
 
-// SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
-func SHA3Hash224(rec Record) []byte {
-	cborBlob := MustEncode(rec)
-	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
-}
-
 // ToRecord decodes Raw to Record.
 func (raw *Raw) ToRecord() Record {
 	cborH := &codec.CborHandle{}
