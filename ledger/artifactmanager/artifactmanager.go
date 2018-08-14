@@ -26,8 +26,11 @@ import (
 
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
-	// SetArchPref allows to set a list of preferred VM architectures. When returning classes storage will return
-	// compiled code according to this preferences.
+	// SetArchPref stores a list of preferred VM architectures memory.
+	//
+	// When returning classes storage will return compiled code according to this preferences. VM is responsible for
+	// calling this method before fetching object in a new process. If preference is not provided, object getters will
+	// return an error.
 	SetArchPref(pref []record.ArchType)
 
 	// GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
@@ -46,6 +49,8 @@ type ArtifactManager interface {
 	)
 
 	// DeployCode creates new code record in storage.
+	//
+	// Code records are used to activate class or as migration code for an object.
 	DeployCode(requestRef record.Reference, codeMap map[record.ArchType][]byte) (*record.Reference, error)
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
@@ -96,7 +101,7 @@ type ArtifactManager interface {
 	AppendObjDelegate(requestRef, objRef record.Reference, memory record.Memory) (*record.Reference, error)
 }
 
-// LedgerArtifactManager provides concrete API to storage for virtual processing module
+// LedgerArtifactManager provides concrete API to storage for processing module
 type LedgerArtifactManager struct {
 	storer   storage.LedgerStorer
 	archPref []record.ArchType
@@ -159,7 +164,7 @@ func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "latest class record is not found")
 	}
-	if _, ok := latestClassRecord.(*record.DeactivationRecord); ok {
+	if _, ok := latestClassRecord.(*record.DeactivationRecord); ok { // nolint: vetshadow
 		return nil, nil, nil, errors.New("class is deactivated")
 	}
 	amendRecord, ok := latestClassRecord.(*record.ClassAmendRecord)
@@ -190,7 +195,7 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "latest object record is not found")
 	}
-	if _, ok := latestObjRecord.(*record.DeactivationRecord); ok {
+	if _, ok := latestObjRecord.(*record.DeactivationRecord); ok { // nolint: vetshadow
 		return nil, nil, nil, errors.New("object is deactivated")
 	}
 	amendRecord, ok := latestObjRecord.(*record.ObjectAmendRecord)
@@ -201,11 +206,18 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 	return activateRec, amendRecord, objIndex, nil
 }
 
+// SetArchPref stores a list of preferred VM architectures memory.
+//
+// When returning classes storage will return compiled code according to this preferences. VM is responsible for
+// calling this method before fetching object in a new process. If preference is not provided, object getters will
+// return an error.
 func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
 	m.archPref = pref
 }
 
-// DeployCode deploys new code to storage (CodeRecord).
+// DeployCode creates new code record in storage.
+//
+// Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
 	requestRef record.Reference, codeMap map[record.ArchType][]byte,
 ) (*record.Reference, error) {
@@ -227,7 +239,10 @@ func (m *LedgerArtifactManager) DeployCode(
 	return m.storeRecord(&rec)
 }
 
-// ActivateClass activates class from given code (ClassActivateRecord).
+// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
+// and memory as the default memory for class objects.
+//
+// Activation reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
 	requestRef, codeRef record.Reference, memory record.Memory,
 ) (*record.Reference, error) {
@@ -265,7 +280,10 @@ func (m *LedgerArtifactManager) ActivateClass(
 	return classRef, nil
 }
 
-// DeactivateClass deactivates class (DeactivationRecord)
+// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
+// the class. If class is already deactivated, an error should be returned.
+//
+// Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
 	requestRef, classRef record.Reference,
 ) (*record.Reference, error) {
@@ -307,7 +325,10 @@ func (m *LedgerArtifactManager) DeactivateClass(
 	return deactivationRef, nil
 }
 
-// UpdateClass allows to change class code etc. (ClassAmendRecord).
+// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
+// the class. Migrations are references to code records.
+//
+// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
 	requestRef, classRef, codeRef record.Reference, migrationRefs []record.Reference,
 ) (*record.Reference, error) {
@@ -364,7 +385,10 @@ func (m *LedgerArtifactManager) UpdateClass(
 	return amendRef, nil
 }
 
-// ActivateObj creates and activates new object from given class (ObjectActivateRecord).
+// ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
+// memory as memory of crated object. If memory is not provided, the class default memory will be used.
+//
+// Activation reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObj(
 	requestRef, classRef record.Reference, memory record.Memory,
 ) (*record.Reference, error) {
@@ -405,7 +429,10 @@ func (m *LedgerArtifactManager) ActivateObj(
 	return objRef, nil
 }
 
-// DeactivateObj deactivates object (DeactivationRecord).
+// DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
+// of the object. If object is already deactivated, an error should be returned.
+//
+// Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Reference) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -444,7 +471,11 @@ func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Referenc
 	return deactivationRef, nil
 }
 
-// UpdateObj allows to change object state (ObjectAmendRecord).
+// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
+// object. Provided memory well be the new object memory.
+//
+// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
+// them to the new memory manually if its required.
 func (m *LedgerArtifactManager) UpdateObj(
 	requestRef, objRef record.Reference, memory record.Memory,
 ) (*record.Reference, error) {
@@ -488,6 +519,12 @@ func (m *LedgerArtifactManager) UpdateObj(
 	return amendRef, nil
 }
 
+// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
+// of the object. Provided memory well be used as append delegate memory.
+//
+// Object's delegates will be provided by GetLatestObj. Any object update will nullify all the object's append
+// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
+// required.
 func (m *LedgerArtifactManager) AppendObjDelegate(
 	requestRef, objRef record.Reference, memory record.Memory,
 ) (*record.Reference, error) {
@@ -530,7 +567,11 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	return appendRef, nil
 }
 
-func (m *LedgerArtifactManager) GetExactObj(
+// GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
+// (e.g. object considered to be active).
+//
+// This method is used by validator to fetch the exact state of the object that was used by the executor.
+func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	classState, objectState record.Reference,
 ) ([]byte, record.Memory, error) {
 	classRec, err := m.storer.GetRecord(&classState)
@@ -582,6 +623,11 @@ func (m *LedgerArtifactManager) GetExactObj(
 	return code, memory, nil
 }
 
+// GetLatestObj returns descriptors for latest known state of the object/class known to the storage. The caller
+// should provide latest known states of the object/class known to it. If the object or the class is deactivated,
+// an error should be returned.
+//
+// Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
 func (m *LedgerArtifactManager) GetLatestObj(
 	objectRef, storedClassState, storedObjState record.Reference,
 ) (*ClassDescriptor, *ObjectDescriptor, error) {
