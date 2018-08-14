@@ -62,6 +62,8 @@ Proxy provides interface and default implementation of proxy. It inherited by Sm
 
 Usage:
 
+	proxy := &BaseProxy{}
+
 	proxy.SetReference(Reference) sets reference to proxy.
 	proxy.GetReference() gets reference from proxy.
 	proxy.GetParent() always returns nil.
