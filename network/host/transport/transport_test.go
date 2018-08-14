@@ -27,14 +27,18 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type TransportSuite struct {
+type transportSuite struct {
 	suite.Suite
 	factory    Factory
 	connection net.PacketConn
 	transport  Transport
 }
 
-func (t *TransportSuite) SetupTest() {
+func NewSuite(factory Factory) *transportSuite {
+	return &transportSuite{suite.Suite{}, NewUTPTransportFactory(), nil, nil}
+}
+
+func (t *transportSuite) SetupTest() {
 	t.connection, _ = connection.NewConnectionFactory().Create("127.0.0.1:3012")
 	var err error
 	t.transport, err = t.factory.Create(t.connection, relay.NewProxy())
@@ -42,17 +46,17 @@ func (t *TransportSuite) SetupTest() {
 	t.Assert().Implements((*Transport)(nil), t.transport)
 }
 
-func (t *TransportSuite) BeforeTest(suiteName, testName string) {
+func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	go t.transport.Start()
 }
 
-func (t *TransportSuite) AfterTest(suiteName, testName string) {
+func (t *transportSuite) AfterTest(suiteName, testName string) {
 	go t.transport.Stop()
 	<-t.transport.Stopped()
 	t.transport.Close()
 }
 
-func (t *TransportSuite) TestPingPong() {
+func (t *transportSuite) TestPingPong() {
 
 	addr, _ := node.NewAddress("127.0.0.1:3012")
 	nodeOne := node.NewNode(addr)
@@ -77,9 +81,14 @@ func (t *TransportSuite) TestPingPong() {
 }
 
 func TestUTPTransport(t *testing.T) {
-	suite.Run(t, &TransportSuite{suite.Suite{}, NewUTPTransportFactory(), nil, nil})
+	suite.Run(t, NewSuite(NewUTPTransportFactory()))
 }
 
 func TestKCPTransport(t *testing.T) {
-	suite.Run(t, &TransportSuite{suite.Suite{}, NewKCPTransportFactory(), nil, nil})
+	suite.Run(t, NewSuite(NewKCPTransportFactory()))
+}
+
+func TestKCPSecureTransport(t *testing.T) {
+	// secureOptions := {}
+	suite.Run(t, NewSuite(NewKCPTransportFactory( /* secureOptions */ )))
 }
