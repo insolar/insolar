@@ -76,3 +76,9 @@ type RequestObtainIP struct {
 type RequestRelayOwnership struct {
 	Ready bool
 }
+
+// RequestKnownOuterNodes is data to notify home subnet about known outer nodes.
+type RequestKnownOuterNodes struct {
+	ID         string // origin ID
+	OuterNodes int    // number of known outer nodes
+}

@@ -69,3 +69,9 @@ type ResponseObtainIP struct {
 type ResponseRelayOwnership struct {
 	Accepted bool
 }
+
+// ResponseKnownOuterNodes is data to answer if origin node know more outer nodes.
+type ResponseKnownOuterNodes struct {
+	ID         string //	id of node in which more known outer nodes
+	OuterNodes int    // number of known outer nodes
+}
