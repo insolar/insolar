@@ -151,9 +151,9 @@ func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
 	if !ok {
 		return nil, nil, nil, errors.New("provided reference is not a class record")
 	}
-	classIndex, isFound := m.storer.GetClassIndex(&classRef)
-	if !isFound {
-		return nil, nil, nil, errors.New("inconsistent class index")
+	classIndex, err := m.storer.GetClassIndex(&classRef)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
 	latestClassRecord, err := m.storer.GetRecord(&classIndex.LatestStateRef)
 	if err != nil {
@@ -182,9 +182,9 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 		return nil, nil, nil, errors.New("provided reference is not an object record")
 	}
 
-	objIndex, isFound := m.storer.GetObjectIndex(&objRef)
-	if !isFound {
-		return nil, nil, nil, errors.New("inconsistent object index")
+	objIndex, err := m.storer.GetObjectIndex(&objRef)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
 	latestObjRecord, err := m.storer.GetRecord(&objIndex.LatestStateRef)
 	if err != nil {
@@ -570,9 +570,9 @@ func (m *LedgerArtifactManager) GetExactObj(
 	default:
 		return nil, nil, errors.New("wrong object reference")
 	}
-	objectIndex, ok := m.storer.GetObjectIndex(&objectHeadRef)
-	if !ok {
-		return nil, nil, errors.New("object index not found")
+	objectIndex, err := m.storer.GetObjectIndex(&objectHeadRef)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "object index not found")
 	}
 
 	if objectIndex.ClassRef.IsNotEqual(classHeadRef) {

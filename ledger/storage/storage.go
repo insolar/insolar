@@ -26,9 +26,9 @@ type LedgerStorer interface {
 	GetRecord(*record.Reference) (record.Record, error)
 	SetRecord(record.Record) (*record.Reference, error)
 
-	GetClassIndex(*record.Reference) (*index.ClassLifeline, bool)
+	GetClassIndex(*record.Reference) (*index.ClassLifeline, error)
 	SetClassIndex(*record.Reference, *index.ClassLifeline) error
 
-	GetObjectIndex(*record.Reference) (*index.ObjectLifeline, bool)
+	GetObjectIndex(*record.Reference) (*index.ObjectLifeline, error)
 	SetObjectIndex(*record.Reference, *index.ObjectLifeline) error
 }

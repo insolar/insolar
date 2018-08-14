@@ -213,8 +213,8 @@ func TestGetClassIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 		Record: record.ID{Pulse: 1},
 	}
 
-	idx, isFound := ledger.GetClassIndex(ref)
-	assert.Equal(t, isFound, false)
+	idx, err := ledger.GetClassIndex(ref)
+	assert.Equal(t, err, ErrNotFound)
 	assert.Nil(t, idx)
 }
 
@@ -247,8 +247,8 @@ func TestSetClassIndexStoresDataInDB(t *testing.T) {
 	err = ledger.SetClassIndex(&zeroRef, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, isFound := ledger.GetClassIndex(&zeroRef)
-	assert.Equal(t, isFound, true)
+	storedIndex, err := ledger.GetClassIndex(&zeroRef)
+	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }
 
@@ -258,8 +258,8 @@ func TestGetObjectIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 	defer ledger.Close()
 
 	ref := referenceWithHashes("1000", "5000")
-	idx, isFound := ledger.GetObjectIndex(&ref)
-	assert.Equal(t, isFound, false)
+	idx, err := ledger.GetObjectIndex(&ref)
+	assert.Equal(t, ErrNotFound, err)
 	assert.Nil(t, idx)
 }
 
@@ -281,7 +281,7 @@ func TestSetObjectIndexStoresDataInDB(t *testing.T) {
 	err = ledger.SetObjectIndex(&zeroref, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, isFound := ledger.GetObjectIndex(&zeroref)
-	assert.Equal(t, isFound, true)
+	storedIndex, err := ledger.GetObjectIndex(&zeroref)
+	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }

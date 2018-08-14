@@ -32,9 +32,9 @@ func str2Bytes(s string) []byte {
 	return b
 }
 
-func str2Hash(s string) Hash {
+func str2Hash(s string) [HashSize]byte {
 	// TODO: add check for s length
-	var h Hash
+	var h [HashSize]byte
 	b := str2Bytes(s)
 	_ = copy(h[:], b)
 	return h
