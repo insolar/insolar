@@ -19,6 +19,8 @@ package record
 import (
 	"encoding/binary"
 	"io"
+
+	"github.com/insolar/insolar/ledger/hash"
 )
 
 const (
@@ -69,6 +71,12 @@ type ID struct {
 // Record is base interface for all records.
 type Record interface {
 	Domain() ID
+}
+
+// SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
+func SHA3Hash224(rec Record) []byte {
+	cborBlob := MustEncode(rec)
+	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
 }
 
 // ID evaluates record ID on PulseNum for Record.
