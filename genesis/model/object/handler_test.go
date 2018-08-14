@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"fmt"
@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
-	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,22 +39,22 @@ func (r *invalidScopeReference) GetDomain() string {
 	return "123"
 }
 
-func (r *invalidScopeReference) GetScope() object.ScopeType {
-	return object.ScopeType(10000)
+func (r *invalidScopeReference) GetScope() ScopeType {
+	return ScopeType(10000)
 }
 
 func (r *invalidScopeReference) String() string {
 	return fmt.Sprintf("#%s.#%s", "145", "123")
 }
 
-func (r *invalidScopeReference) GetReference() object.Reference {
+func (r *invalidScopeReference) GetReference() Reference {
 	return r
 }
 
-func (r *invalidScopeReference) SetReference(ref object.Reference) {
+func (r *invalidScopeReference) SetReference(ref Reference) {
 }
 
-func (r *invalidScopeReference) GetParent() object.Parent {
+func (r *invalidScopeReference) GetParent() Parent {
 	return nil
 }
 
@@ -90,7 +89,7 @@ func TestHandler_GetObject_GlobalScope(t *testing.T) {
 	newMap := make(map[string]Proxy)
 	resolverHandler.InitGlobalMap(&newMap)
 
-	ref, _ := object.NewReference("123", "1", object.GlobalScope)
+	ref, _ := NewReference("123", "1", GlobalScope)
 	(*GlobalResolver.globalInstanceMap)["123"] = mockParent
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
@@ -102,7 +101,7 @@ func TestHandler_GetObject_GlobalScope(t *testing.T) {
 func TestHandler_GetObject_ChildScope(t *testing.T) {
 	mockParent := &mockParentProxy{}
 	resolverHandler := NewHandler(mockParent)
-	ref, _ := object.NewReference("1", "1", object.ChildScope)
+	ref, _ := NewReference("1", "1", ChildScope)
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 
@@ -117,7 +116,7 @@ func TestHandler_GetObject_ContextScope(t *testing.T) {
 		ContextStorage: contextStorage,
 	}
 	resolverHandler := NewHandler(mockParent)
-	ref, _ := object.NewReference("1", record, object.ContextScope)
+	ref, _ := NewReference("1", record, ContextScope)
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
 

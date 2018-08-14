@@ -14,9 +14,11 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, classID interface{}) (interface{}, error)
+import (
+	"testing"
+)
+
+func TestStub(t *testing.T) {
 }

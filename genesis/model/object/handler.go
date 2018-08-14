@@ -14,12 +14,10 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"fmt"
-
-	"github.com/insolar/insolar/genesis/model/object"
 )
 
 // Handler should resolve references from any allowed scopes.
@@ -31,7 +29,7 @@ type Handler struct {
 
 // NewHandler creates new resolverHandler instance.
 func NewHandler(p interface{}) *Handler {
-	parent, ok := p.(object.Parent)
+	parent, ok := p.(Parent)
 	if !ok {
 		parent = nil
 	}
@@ -44,16 +42,16 @@ func NewHandler(p interface{}) *Handler {
 
 // GetObject resolves object by its reference and return its proxy.
 func (r *Handler) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
-	ref, ok := reference.(object.Reference)
+	ref, ok := reference.(Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
 	}
 	switch ref.GetScope() {
-	case object.GlobalScope:
+	case GlobalScope:
 		return r.globalResolver.GetObject(ref, classID)
-	case object.ContextScope:
+	case ContextScope:
 		return r.contextResolver.GetObject(ref, classID)
-	case object.ChildScope:
+	case ChildScope:
 		return r.childResolver.GetObject(ref, classID)
 	default:
 		return nil, fmt.Errorf("unknown scope type: %d", ref.GetScope())

@@ -22,9 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // ClassDomainName is a name for class domain.
@@ -35,9 +33,9 @@ type ClassDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// RegisterClass is used to publish new Class.
-	RegisterClass(factory.Factory) (string, error)
+	RegisterClass(object.Factory) (string, error)
 	// GetClass provides factory instance from record.
-	GetClass(string) (factory.Factory, error)
+	GetClass(string) (object.Factory, error)
 }
 
 type classDomain struct {
@@ -62,7 +60,7 @@ func (cd *classDomain) GetClassID() string {
 }
 
 // RegisterClass method used to create new public Class.
-func (cd *classDomain) RegisterClass(fc factory.Factory) (string, error) {
+func (cd *classDomain) RegisterClass(fc object.Factory) (string, error) {
 	recordID, err := cd.AddChild(fc)
 	if err != nil {
 		return "", fmt.Errorf("class registration error")
@@ -72,13 +70,13 @@ func (cd *classDomain) RegisterClass(fc factory.Factory) (string, error) {
 }
 
 // GetClass method used for retrieve class information from record.
-func (cd *classDomain) GetClass(recordID string) (factory.Factory, error) {
+func (cd *classDomain) GetClass(recordID string) (object.Factory, error) {
 	cls, err := cd.GetChild(recordID)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := cls.(factory.Factory)
+	result, ok := cls.(object.Factory)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not a Class", recordID)
 	}
@@ -105,22 +103,22 @@ func newClassDomainProxy(parent object.Parent) (*classDomainProxy, error) {
 }
 
 // RegisterClass is a proxy call for instance method.
-func (cdp *classDomainProxy) RegisterClass(fc factory.Factory) (string, error) {
+func (cdp *classDomainProxy) RegisterClass(fc object.Factory) (string, error) {
 	return cdp.Instance.(ClassDomain).RegisterClass(fc)
 }
 
 // GetClass is a proxy call for instance method.
-func (cdp *classDomainProxy) GetClass(record string) (factory.Factory, error) {
+func (cdp *classDomainProxy) GetClass(record string) (object.Factory, error) {
 	return cdp.Instance.(ClassDomain).GetClass(record)
 }
 
 type classDomainFactory struct {
-	factory.BaseFactory
+	object.BaseFactory
 	parent object.Parent
 }
 
 // NewClassDomainFactory creates new factory for ClassDomain.
-func NewClassDomainFactory(parent object.Parent) factory.Factory {
+func NewClassDomainFactory(parent object.Parent) object.Factory {
 	return &classDomainFactory{
 		parent: parent,
 	}
@@ -138,7 +136,7 @@ func (cdf *classDomainFactory) GetClassID() string {
 }
 
 // Create is a factory method for new ClassDomain instances.
-func (cdf *classDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (cdf *classDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy, err := newClassDomainProxy(parent)
 	if err != nil {
 		return nil, err
