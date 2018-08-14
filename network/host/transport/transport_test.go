@@ -21,8 +21,9 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/network/host/connection"
+	"github.com/insolar/insolar/network/host/message"
+	"github.com/insolar/insolar/network/host/node"
 	"github.com/insolar/insolar/network/host/relay"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -37,16 +38,42 @@ func (t *TransportSuite) SetupTest() {
 	t.connection, _ = connection.NewConnectionFactory().Create("127.0.0.1:3012")
 	var err error
 	t.transport, err = t.factory.Create(t.connection, relay.NewProxy())
-	assert.NoError(t.T(), err)
-	assert.Implements(t.T(), (*Transport)(nil), t.transport)
+	t.Assert().NoError(err)
+	t.Assert().Implements((*Transport)(nil), t.transport)
 }
 
-func (t *TransportSuite) TestStartStop() {
-
+func (t *TransportSuite) BeforeTest(suiteName, testName string) {
 	go t.transport.Start()
+}
+
+func (t *TransportSuite) AfterTest(suiteName, testName string) {
 	go t.transport.Stop()
 	<-t.transport.Stopped()
 	t.transport.Close()
+}
+
+func (t *TransportSuite) TestPingPong() {
+
+	addr, _ := node.NewAddress("127.0.0.1:3012")
+	nodeOne := node.NewNode(addr)
+
+	future, err := t.transport.SendRequest(message.NewPingMessage(nodeOne, nodeOne))
+	t.Assert().NoError(err)
+
+	requestMsg := <-t.transport.Messages()
+	t.Assert().Equal(true, requestMsg.IsValid())
+	t.Assert().Equal(message.TypePing, requestMsg.Type)
+	t.Assert().Equal(nodeOne, future.Actor())
+	t.Assert().Equal(false, requestMsg.IsResponse)
+
+	builder := message.NewBuilder().Sender(nodeOne).Receiver(requestMsg.Sender).Type(message.TypePing)
+	err = t.transport.SendResponse(requestMsg.RequestID, builder.Response(nil).Build())
+	t.Assert().NoError(err)
+
+	responseMsg := <-future.Result()
+	t.Assert().Equal(true, responseMsg.IsValid())
+	t.Assert().Equal(message.TypePing, responseMsg.Type)
+	t.Assert().Equal(true, responseMsg.IsResponse)
 }
 
 func TestUTPTransport(t *testing.T) {
