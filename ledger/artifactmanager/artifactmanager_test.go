@@ -336,7 +336,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing
 	memory := record.Memory{1, 2, 3}
 	appendRef, err := manager.AppendObjDelegate(*requestRef, *objRef, memory)
 	assert.Nil(t, err)
-	appendRec, err := ledger.GetRecord(appendRef)
+	appendRec, _ := ledger.GetRecord(appendRef)
 	objIndex, err := ledger.GetObjectIndex(objRef)
 	assert.NoError(t, err)
 	assert.Equal(t, objIndex.AppendRefs, []record.Reference{*appendRef})
