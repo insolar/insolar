@@ -37,3 +37,18 @@ func Test_generateContractWrapper(t *testing.T) {
 		t.Fatal("generator returns zero length code")
 	}
 }
+
+func Test_generateContractProxy(t *testing.T) {
+	buf := bytes.Buffer{}
+	err := generateContractProxy("../testplugins/secondary/main.go", &buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, err := ioutil.ReadAll(&buf)
+	if err != nil {
+		t.Fatal("reading from generated code", err)
+	}
+	if len(code) == 0 {
+		t.Fatal("generator returns zero length code")
+	}
+}

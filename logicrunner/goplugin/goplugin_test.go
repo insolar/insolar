@@ -38,7 +38,7 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 		panic(err)
 	}
 
-	args := make([]interface{}, 1)
+	var args [1]interface{}
 	args[0] = s
 
 	var argsSerialized []byte
