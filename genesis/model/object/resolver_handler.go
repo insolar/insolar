@@ -21,19 +21,19 @@ import (
 )
 
 // Handler should resolve references from any allowed scopes.
-type Handler struct {
+type ResolverHandler struct {
 	globalResolver  *globalResolver
 	childResolver   *childResolver
 	contextResolver *contextResolver
 }
 
 // NewHandler creates new resolverHandler instance.
-func NewHandler(p interface{}) *Handler {
+func NewResolverHandler(p interface{}) *ResolverHandler {
 	parent, ok := p.(Parent)
 	if !ok {
 		parent = nil
 	}
-	return &Handler{
+	return &ResolverHandler{
 		globalResolver:  GlobalResolver,
 		childResolver:   newChildResolver(parent),
 		contextResolver: newContextResolver(parent),
@@ -41,7 +41,7 @@ func NewHandler(p interface{}) *Handler {
 }
 
 // GetObject resolves object by its reference and return its proxy.
-func (r *Handler) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
+func (r *ResolverHandler) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
 	ref, ok := reference.(Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
@@ -59,6 +59,6 @@ func (r *Handler) GetObject(reference interface{}, classID interface{}) (interfa
 }
 
 // InitGlobalMap sets globalInstanceMap into globalResolver.
-func (r *Handler) InitGlobalMap(globalInstanceMap *map[string]Proxy) {
+func (r *ResolverHandler) InitGlobalMap(globalInstanceMap *map[string]Proxy) {
 	r.globalResolver.InitGlobalMap(globalInstanceMap)
 }

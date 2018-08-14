@@ -60,9 +60,9 @@ func (r *invalidScopeReference) GetParent() Parent {
 
 func TestNewHandler(t *testing.T) {
 	mockParent := &mockParentProxy{}
-	handler := NewHandler(mockParent)
+	handler := NewResolverHandler(mockParent)
 
-	assert.Equal(t, &Handler{
+	assert.Equal(t, &ResolverHandler{
 		globalResolver: GlobalResolver,
 		childResolver: &childResolver{
 			parent: mockParent,
@@ -75,7 +75,7 @@ func TestNewHandler(t *testing.T) {
 
 func TestHandler_GetObject_Not_Reference(t *testing.T) {
 	mockParent := &mockParentProxy{}
-	resolverHandler := NewHandler(mockParent)
+	resolverHandler := NewResolverHandler(mockParent)
 
 	obj, err := resolverHandler.GetObject("not reference", "mockChild")
 
@@ -85,7 +85,7 @@ func TestHandler_GetObject_Not_Reference(t *testing.T) {
 
 func TestHandler_GetObject_GlobalScope(t *testing.T) {
 	mockParent := &mockParentProxy{}
-	resolverHandler := NewHandler(nil)
+	resolverHandler := NewResolverHandler(nil)
 	newMap := make(map[string]Proxy)
 	resolverHandler.InitGlobalMap(&newMap)
 
@@ -100,7 +100,7 @@ func TestHandler_GetObject_GlobalScope(t *testing.T) {
 
 func TestHandler_GetObject_ChildScope(t *testing.T) {
 	mockParent := &mockParentProxy{}
-	resolverHandler := NewHandler(mockParent)
+	resolverHandler := NewResolverHandler(mockParent)
 	ref, _ := NewReference("1", "1", ChildScope)
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
@@ -115,7 +115,7 @@ func TestHandler_GetObject_ContextScope(t *testing.T) {
 	mockParent := &mockParentProxy{
 		ContextStorage: contextStorage,
 	}
-	resolverHandler := NewHandler(mockParent)
+	resolverHandler := NewResolverHandler(mockParent)
 	ref, _ := NewReference("1", record, ContextScope)
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
@@ -126,7 +126,7 @@ func TestHandler_GetObject_ContextScope(t *testing.T) {
 
 func TestHandler_GetObject_default(t *testing.T) {
 	mockParent := &mockParentProxy{}
-	resolverHandler := NewHandler(mockParent)
+	resolverHandler := NewResolverHandler(mockParent)
 	ref := &invalidScopeReference{}
 
 	obj, err := resolverHandler.GetObject(ref, "mockChild")
@@ -136,7 +136,7 @@ func TestHandler_GetObject_default(t *testing.T) {
 }
 
 func TestHandler_SetGlobalMap(t *testing.T) {
-	resolverHandler := NewHandler(nil)
+	resolverHandler := NewResolverHandler(nil)
 	resolverHandler.globalResolver.globalInstanceMap = nil
 
 	newMap := make(map[string]Proxy)

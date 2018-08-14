@@ -59,7 +59,7 @@ func NewBaseSmartContract(parent object.Parent) *BaseSmartContract {
 // GetResolver return instance or create it if necessary.
 func (sc *BaseSmartContract) GetResolver() object.Resolver {
 	if sc.resolver == nil {
-		sc.resolver = object.NewHandler(sc)
+		sc.resolver = object.NewResolverHandler(sc)
 	}
 	return sc.resolver
 }

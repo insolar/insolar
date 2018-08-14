@@ -114,7 +114,7 @@ var initRefDomainProxy = newReferenceDomainProxy(globalParent)
 func init() {
 	globalResolverMap["123"] = &mockDomain{}
 	// Create Handler empty instance
-	resolverHandler := object.NewHandler(nil)
+	resolverHandler := object.NewResolverHandler(nil)
 	// Set map to Handler.GlobalResolver
 	resolverHandler.InitGlobalMap(&globalResolverMap)
 	// Set map to ReferenceDomain.globalResolverMap
