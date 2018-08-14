@@ -74,11 +74,11 @@ func main() {
 
 	go listen(dhtNetwork)
 	bootstrap(bootstrapNodes, dhtNetwork)
-	dhtNetwork.ObtainIP(ctx)
 
 	handleSignals(configuration)
 
 	dhtNetwork.ObtainIP(ctx)
+	dhtNetwork.AnalyzeNetwork(ctx)
 	repl(dhtNetwork, ctx)
 }
 
