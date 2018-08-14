@@ -20,14 +20,14 @@ import (
 	"fmt"
 )
 
-// Handler should resolve references from any allowed scopes.
+// ResolverHandler should resolve references from any allowed scopes.
 type ResolverHandler struct {
 	globalResolver  *globalResolver
 	childResolver   *childResolver
 	contextResolver *contextResolver
 }
 
-// NewHandler creates new resolverHandler instance.
+// NewResolverHandler creates new ResolverHandler instance.
 func NewResolverHandler(p interface{}) *ResolverHandler {
 	parent, ok := p.(Parent)
 	if !ok {
