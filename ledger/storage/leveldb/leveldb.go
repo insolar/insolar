@@ -171,7 +171,7 @@ func (ll *LevelLedger) SetRecord(rec record.Record) (*record.Reference, error) {
 	return ref, nil
 }
 
-// GetClassIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
+// GetClassIndex fetches lifeline index from leveldb
 func (ll *LevelLedger) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
 	k := prefixkey(scopeIDLifeline, ref.Key())
 	buf, err := ll.ldb.Get(k, nil)
@@ -188,7 +188,7 @@ func (ll *LevelLedger) GetClassIndex(ref *record.Reference) (*index.ClassLifelin
 	return idx, nil
 }
 
-// SetClassIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
+// SetClassIndex stores lifeline index into leveldb
 func (ll *LevelLedger) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.Key())
 	encoded, err := index.EncodeClassLifeline(idx)
@@ -198,7 +198,7 @@ func (ll *LevelLedger) SetClassIndex(ref *record.Reference, idx *index.ClassLife
 	return ll.ldb.Put(k, encoded, nil)
 }
 
-// GetObjectIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
+// GetObjectIndex fetches lifeline index from leveldb
 func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
 	k := prefixkey(scopeIDLifeline, ref.Key())
 	buf, err := ll.ldb.Get(k, nil)
@@ -215,7 +215,7 @@ func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifel
 	return idx, nil
 }
 
-// SetObjectIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
+// SetObjectIndex stores lifeline index into leveldb
 func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.Key())
 	encoded, err := index.EncodeObjectLifeline(idx)
