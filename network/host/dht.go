@@ -1417,11 +1417,24 @@ func (dht *DHT) getHomeSubnetKey() string {
 	return result
 }
 
-func (dht *DHT) analyzeNetwork() {
-	if len(dht.subnet.SubnetIDs) == 1 { // current node have a static IP
-		dht.sendRelayOwnership()
-	} else {
-		// TODO: implement it
+// AnalyzeNetwork is func to analyze the network after IP obtaining.
+func (dht *DHT) AnalyzeNetwork(ctx Context) {
+	dht.subnet.HomeSubnetKey = dht.getHomeSubnetKey()
+	if len(dht.subnet.SubnetIDs) == 1 {
+		if dht.subnet.HomeSubnetKey == "" { // current node have a static IP
+			for _, subnetIDs := range dht.subnet.SubnetIDs {
+				dht.sendRelayOwnership(subnetIDs)
+			}
+		} else { // current node in subnet and can't see an outer node
+			// TODO find a relay in subnet
+		}
+	} else { // current node in a subnet and have access to outer nodes
+		if (len(dht.subnet.SubnetIDs) - 1) > 0 { // except home subnet
+			nodes := dht.subnet.SubnetIDs[dht.subnet.HomeSubnetKey]
+			for _, ids := range nodes {
+				dht.knownOuterNodesRequest(ids, dht.subnet.HighKnownNodes.OuterNodes)
+			}
+		}
 	}
 }
 
