@@ -45,6 +45,11 @@ func (mc *mockComposite) GetInterfaceKey() string {
 	return GetTestIntarfaceKey(mc.interfaceKeyIdx)
 }
 
+func TestBaseCompositeCollection_GetInterfaceKey(t *testing.T) {
+	compCollection := NewBaseCompositeCollection()
+	assert.Equal(t, class.CompositeCollectionID, compCollection.GetInterfaceKey())
+}
+
 func TestBaseCompositeCollection_Add(t *testing.T) {
 	compCollection := NewBaseCompositeCollection()
 
@@ -69,7 +74,7 @@ func TestBaseCompositeCollection_Add_SameInterfaceKeys(t *testing.T) {
 	assert.Equal(t, compCollection.storage[1].GetInterfaceKey(), GetTestIntarfaceKey(testIdx))
 }
 
-func TestBaseCompositeCollection_GitList(t *testing.T) {
+func TestBaseCompositeCollection_GetList(t *testing.T) {
 	compCollection := NewBaseCompositeCollection()
 	assert.Len(t, compCollection.GetList(), 0)
 
