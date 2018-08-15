@@ -72,14 +72,15 @@ type Subnet struct {
 	SubnetIDs        map[string][]string // key - ip, value - id
 	HomeSubnetKey    string              // key of home subnet fo SubnetIDs
 	PossibleRelayIDs []string
-	PossibleProxyIds []string
+	PossibleProxyIDs []string
 	HighKnownNodes   HighKnownOuterNodesNode
 }
 
 // HighKnownOuterNodesNode collects an information about node in home subnet which have a more known outer nodes.
 type HighKnownOuterNodesNode struct {
-	ID         string
-	OuterNodes int
+	ID                  string
+	OuterNodes          int // high known outer nodes by ID node
+	SelfKnownOuterNodes int
 }
 
 // Options contains configuration options for the local node.
@@ -1417,22 +1418,30 @@ func (dht *DHT) getHomeSubnetKey() string {
 	return result
 }
 
+func (dht *DHT) countOuterNodes() {
+	if len(dht.subnet.SubnetIDs) > 1 {
+		for key, nodes := range dht.subnet.SubnetIDs {
+			if key == dht.subnet.HomeSubnetKey {
+				continue
+			}
+			dht.subnet.HighKnownNodes.SelfKnownOuterNodes += len(nodes)
+		}
+	}
+}
+
 // AnalyzeNetwork is func to analyze the network after IP obtaining.
 func (dht *DHT) AnalyzeNetwork(ctx Context) {
 	dht.subnet.HomeSubnetKey = dht.getHomeSubnetKey()
+	dht.countOuterNodes()
+	dht.subnet.HighKnownNodes.OuterNodes = dht.subnet.HighKnownNodes.SelfKnownOuterNodes
+	nodes := dht.subnet.SubnetIDs[dht.subnet.HomeSubnetKey]
+	for _, ids := range nodes {
+		dht.knownOuterNodesRequest(ids, dht.subnet.HighKnownNodes.OuterNodes)
+	}
 	if len(dht.subnet.SubnetIDs) == 1 {
 		if dht.subnet.HomeSubnetKey == "" { // current node have a static IP
 			for _, subnetIDs := range dht.subnet.SubnetIDs {
 				dht.sendRelayOwnership(subnetIDs)
-			}
-		} else { // current node in subnet and can't see an outer node
-			// TODO find a relay in subnet
-		}
-	} else { // current node in a subnet and have access to outer nodes
-		if (len(dht.subnet.SubnetIDs) - 1) > 0 { // except home subnet
-			nodes := dht.subnet.SubnetIDs[dht.subnet.HomeSubnetKey]
-			for _, ids := range nodes {
-				dht.knownOuterNodesRequest(ids, dht.subnet.HighKnownNodes.OuterNodes)
 			}
 		}
 	}
@@ -1499,7 +1508,10 @@ func (dht *DHT) processKnownOuterNodes(ctx Context, msg *message.Message, messag
 		ID = data.ID
 		nodes = data.OuterNodes
 	}
-	response := &message.ResponseKnownOuterNodes{ID, nodes}
+	response := &message.ResponseKnownOuterNodes{
+		ID:         ID,
+		OuterNodes: nodes,
+	}
 
 	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 	if err != nil {
@@ -1550,6 +1562,11 @@ func (dht *DHT) handleKnownOuterNodes(response *message.ResponseKnownOuterNodes,
 	if response.OuterNodes > dht.subnet.HighKnownNodes.OuterNodes { // update data
 		dht.subnet.HighKnownNodes.OuterNodes = response.OuterNodes
 		dht.subnet.HighKnownNodes.ID = response.ID
+		if (response.OuterNodes > dht.subnet.HighKnownNodes.SelfKnownOuterNodes) &&
+			(dht.proxy.ProxyNodesCount() == 0) {
+			dht.AuthenticationRequest(ctx, "begin", targetID)
+			dht.RelayRequest(ctx, "start", targetID)
+		}
 	}
 }
 
