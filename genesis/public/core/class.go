@@ -43,13 +43,13 @@ type classDomain struct {
 }
 
 // newClassDomain creates new instance of ClassDomain.
-func newClassDomain(parent object.Parent) (*classDomain, error) {
+func newClassDomain(parent object.Parent, class object.Factory) (*classDomain, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
 	classDomain := &classDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, ClassDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, class, ClassDomainName),
 	}
 	return classDomain, nil
 }
@@ -57,10 +57,6 @@ func newClassDomain(parent object.Parent) (*classDomain, error) {
 // GetClassID returns string representation of ClassDomain's class.
 func (cd *classDomain) GetClassID() string {
 	return class.ClsDomainID
-}
-
-func (cd *classDomain) GetClass() object.Factory {
-	return NewClassDomainFactory(cd.Parent)
 }
 
 // RegisterClass method used to create new public Class.
@@ -93,8 +89,8 @@ type classDomainProxy struct {
 }
 
 // newClassDomainProxy creates new proxy and associates it with new instance of ClassDomain.
-func newClassDomainProxy(parent object.Parent) (*classDomainProxy, error) {
-	instance, err := newClassDomain(parent)
+func newClassDomainProxy(parent object.Parent, class object.Factory) (*classDomainProxy, error) {
+	instance, err := newClassDomain(parent, class)
 	if err != nil {
 		return nil, err
 	}
@@ -140,12 +136,12 @@ func (cdf *classDomainFactory) GetClassID() string {
 }
 
 func (cdf *classDomainFactory) GetClass() object.Factory {
-	return NewClassDomainFactory(cdf.parent)
+	return cdf
 }
 
 // Create is a factory method for new ClassDomain instances.
 func (cdf *classDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
-	proxy, err := newClassDomainProxy(parent)
+	proxy, err := newClassDomainProxy(parent, cdf)
 	if err != nil {
 		return nil, err
 	}

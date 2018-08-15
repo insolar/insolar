@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -105,14 +105,16 @@ func (d *mockDomain) GetParent() object.Parent {
 	return d.mockChildProxy.parent
 }
 
+var globalFactory = &mockFactory{}
+
 // Create map for global resolving
 var globalResolverMap = make(map[string]object.Proxy)
 var domainString = "123"
 var initRefObject, _ = object.NewReference(domainString, "1", object.GlobalScope)
 
 // Create referenceDomain and its proxy
-var initRefDomain = newReferenceDomain(nil)
-var initRefDomainProxy = newReferenceDomainProxy(globalParent)
+var initRefDomain = newReferenceDomain(nil, globalFactory)
+var initRefDomainProxy = newReferenceDomainProxy(globalParent, globalFactory)
 
 // Set one map for Handler and ReferenceDomain
 func init() {
@@ -129,18 +131,20 @@ func init() {
 }
 
 func TestNewReferenceDomain(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	refDomain := newReferenceDomain(parent)
+	refDomain := newReferenceDomain(parent, factory)
 
 	assert.Equal(t, &referenceDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, ReferenceDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, factory, ReferenceDomainName),
 	}, refDomain)
 }
 
 func TestNewReferenceDomain_WithNoParent(t *testing.T) {
-	refDomain := newReferenceDomain(nil)
+	factory := &mockFactory{}
+	refDomain := newReferenceDomain(nil, factory)
 	expected := &referenceDomain{
-		BaseDomain: *domain.NewBaseDomain(nil, ReferenceDomainName),
+		BaseDomain: *domain.NewBaseDomain(nil, factory, ReferenceDomainName),
 	}
 	expected.Parent = refDomain
 
@@ -148,19 +152,22 @@ func TestNewReferenceDomain_WithNoParent(t *testing.T) {
 }
 
 func TestReferenceDomain_GetClassID(t *testing.T) {
-	refDomain := newReferenceDomain(nil)
+	factory := &mockFactory{}
+	refDomain := newReferenceDomain(nil, factory)
 	domainID := refDomain.GetClassID()
 	assert.Equal(t, class.ReferenceDomainID, domainID)
 }
 
 func TestReferenceDomain_GetClass(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	refDomain := newReferenceDomain(parent)
-	assert.Equal(t, &referenceDomainFactory{parent: parent}, refDomain.GetClass())
+	refDomain := newReferenceDomain(parent, factory)
+	assert.Equal(t, factory, refDomain.GetClass())
 }
 
 func TestReferenceDomain_SetMap(t *testing.T) {
-	refDomain := newReferenceDomain(nil)
+	factory := &mockFactory{}
+	refDomain := newReferenceDomain(nil, factory)
 	refDomain.globalResolverMap = nil
 
 	newMap := make(map[string]object.Proxy)
@@ -202,24 +209,27 @@ func TestReferenceDomain_ResolveReference(t *testing.T) {
 }
 
 func TestReferenceDomain_ResolveReference_IncorrectRef(t *testing.T) {
-	refDomain := newReferenceDomain(nil)
+	factory := &mockFactory{}
+	refDomain := newReferenceDomain(nil, factory)
 	_, err := refDomain.ResolveReference("1")
 	assert.EqualError(t, err, "object with record 1 does not exist")
 }
 
 func TestNewReferenceDomainProxy(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	refDomainProxy := newReferenceDomainProxy(parent)
+	refDomainProxy := newReferenceDomainProxy(parent, factory)
 
 	assert.Equal(t, &referenceDomainProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
-			Instance: newReferenceDomain(parent),
+			Instance: newReferenceDomain(parent, factory),
 		},
 	}, refDomainProxy)
 }
 
 func TestReferenceDomainProxy_SetMap(t *testing.T) {
-	refDomain := newReferenceDomainProxy(nil)
+	factory := &mockFactory{}
+	refDomain := newReferenceDomainProxy(nil, factory)
 	refDomain.Instance.(*referenceDomain).globalResolverMap = nil
 
 	newMap := make(map[string]object.Proxy)
@@ -254,8 +264,9 @@ func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
 }
 
 func TestReferenceDomainProxy_ResolveReference_IncorrectRef(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	refDomainProxy := newReferenceDomainProxy(parent)
+	refDomainProxy := newReferenceDomainProxy(parent, factory)
 
 	_, err := refDomainProxy.ResolveReference("1")
 	assert.EqualError(t, err, "object with record 1 does not exist")
@@ -291,7 +302,7 @@ func TestReferenceDomainFactory_Create(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &referenceDomainProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
-			Instance: newReferenceDomain(parent),
+			Instance: newReferenceDomain(parent, factory),
 		},
 	}, proxy)
 }

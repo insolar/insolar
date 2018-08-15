@@ -46,9 +46,9 @@ type referenceDomain struct {
 }
 
 // newReferenceDomain creates new instance of ReferenceDomain.
-func newReferenceDomain(parent object.Parent) *referenceDomain {
+func newReferenceDomain(parent object.Parent, class object.Factory) *referenceDomain {
 	refDomain := &referenceDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, ReferenceDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, class, ReferenceDomainName),
 	}
 	// Bootstrap case
 	if parent == nil {
@@ -60,10 +60,6 @@ func newReferenceDomain(parent object.Parent) *referenceDomain {
 // GetClassID returns string representation of ReferenceDomain's class.
 func (rd *referenceDomain) GetClassID() string {
 	return class.ReferenceDomainID
-}
-
-func (rd *referenceDomain) GetClass() object.Factory {
-	return NewReferenceDomainFactory(rd.Parent)
 }
 
 // InitGlobalMap sets globalResolverMap for register/resolve references.
@@ -115,10 +111,10 @@ type referenceDomainProxy struct {
 }
 
 // newReferenceDomainProxy creates new proxy and associate it with new instance of ReferenceDomain.
-func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
+func newReferenceDomainProxy(parent object.Parent, class object.Factory) *referenceDomainProxy {
 	return &referenceDomainProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
-			Instance: newReferenceDomain(parent),
+			Instance: newReferenceDomain(parent, class),
 		},
 	}
 }
@@ -163,12 +159,12 @@ func (rdf *referenceDomainFactory) GetClassID() string {
 }
 
 func (rdf *referenceDomainFactory) GetClass() object.Factory {
-	return NewReferenceDomainFactory(rdf.parent)
+	return rdf
 }
 
 // Create factory is a method for new ReferenceDomain instances.
 func (rdf *referenceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
-	proxy := newReferenceDomainProxy(parent)
+	proxy := newReferenceDomainProxy(parent, rdf)
 	_, err := parent.AddChild(proxy)
 	if err != nil {
 		return nil, err

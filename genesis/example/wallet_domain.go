@@ -41,14 +41,14 @@ type walletDomain struct {
 	walletFactoryReference object.Reference
 }
 
-func newWalletDomain(parent object.Parent) (*walletDomain, error) {
+func newWalletDomain(parent object.Parent, class object.Factory) (*walletDomain, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
 	wf := NewWalletFactory(parent)
 	wd := &walletDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, WalletDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, class, WalletDomainName),
 	}
 
 	// Add walletFactory as a child
@@ -96,8 +96,8 @@ type walletDomainProxy struct {
 }
 
 // newWalletDomainProxy creates new proxy and associates it with new instance of WalletDomain.
-func newWalletDomainProxy(parent object.Parent) (*walletDomainProxy, error) {
-	inst, err := newWalletDomain(parent)
+func newWalletDomainProxy(parent object.Parent, class object.Factory) (*walletDomainProxy, error) {
+	inst, err := newWalletDomain(parent, class)
 	if err != nil {
 		return nil, err
 	}
@@ -119,8 +119,8 @@ type walletDomainFactory struct {
 	parent object.Parent
 }
 
-func (*walletDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
-	proxy, err := newWalletDomainProxy(parent)
+func (wdf *walletDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
+	proxy, err := newWalletDomainProxy(parent, wdf)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +140,10 @@ func (*walletDomainFactory) GetParent() object.Parent {
 
 func (*walletDomainFactory) GetClassID() string {
 	return class.WalletDomainID
+}
+
+func (wdf *walletDomainFactory) GetClass() object.Factory {
+	return wdf
 }
 
 func NewWalletDomainFactory(pt object.Parent) object.Factory {
