@@ -28,6 +28,8 @@ type MachineType int
 const (
 	MachineTypeBuiltin MachineType = iota
 	MachineTypeGoPlugin
+
+	MachineTypesTotalCount
 )
 
 // Executor is an interface for implementers of one particular machine type
@@ -42,7 +44,7 @@ type ArtifactManager interface {
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [MachineTypeGoPlugin + 1]Executor
+	Executors       [MachineTypesTotalCount]Executor
 	ArtifactManager ArtifactManager
 }
 
