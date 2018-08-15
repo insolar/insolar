@@ -18,6 +18,7 @@ package contract
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
@@ -25,6 +26,70 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
+
+type mockComposite struct {
+	interfaceKeyIdx int
+}
+
+func GetTestIntarfaceKey(idx int) string {
+	return "mockComposite" + strconv.Itoa(idx)
+}
+
+func newMockComposite(idx int) mockComposite {
+	return mockComposite{
+		interfaceKeyIdx: idx,
+	}
+}
+
+func (mc *mockComposite) GetInterfaceKey() string {
+	return GetTestIntarfaceKey(mc.interfaceKeyIdx)
+}
+
+func TestBaseCompositeCollection_Add(t *testing.T) {
+	compCollection := NewBaseCompositeCollection()
+
+	numEl := 10
+	for i := 0; i < numEl; i++ {
+		mc := newMockComposite(i)
+		compCollection.Add(&mc)
+		assert.Len(t, compCollection.storage, i+1)
+		assert.Equal(t, compCollection.storage[i].GetInterfaceKey(), GetTestIntarfaceKey(i))
+	}
+
+	// Add Composites with the same interface keys
+	test_idx := 77
+	mc := newMockComposite(test_idx)
+	numEl = len(compCollection.storage)
+	compCollection.Add(&mc)
+	compCollection.Add(&mc)
+	numEl += 2
+
+	assert.Len(t, compCollection.storage, numEl)
+	assert.Equal(t, compCollection.storage[numEl-1].GetInterfaceKey(), GetTestIntarfaceKey(test_idx))
+	assert.Equal(t, compCollection.storage[numEl-2].GetInterfaceKey(), GetTestIntarfaceKey(test_idx))
+
+	assert.NotEqual(t, compCollection.storage[numEl-3].GetInterfaceKey(), GetTestIntarfaceKey(test_idx))
+
+}
+
+func TestBaseCompositeCollection_GitList(t *testing.T) {
+	compCollection := NewBaseCompositeCollection()
+	assert.Len(t, compCollection.GetList(), 0)
+
+	numEl := 10
+	for i := 0; i < numEl; i++ {
+		mc := newMockComposite(i)
+		compCollection.Add(&mc)
+	}
+
+	assert.Len(t, compCollection.GetList(), numEl)
+}
+
+func TestNewBaseCompositeCollection(t *testing.T) {
+	compCollection := NewBaseCompositeCollection()
+	assert.Len(t, compCollection.storage, 0)
+
+}
 
 type mockProxy struct {
 	reference object.Reference

@@ -28,12 +28,16 @@ type BaseCompositeCollection struct {
 	storage []object.Composite
 }
 
-func (bcc *BaseCompositeCollection) GitList() []object.Composite {
+func (bcc *BaseCompositeCollection) GetList() []object.Composite {
 	return bcc.storage
 }
 
 func (bcc *BaseCompositeCollection) Add(composite object.Composite) {
 	bcc.storage = append(bcc.storage, composite)
+}
+
+func (bcc *BaseCompositeCollection) GetInterfaceKey() string {
+	return class.CompositeCollectionID
 }
 
 func NewBaseCompositeCollection() *BaseCompositeCollection {
