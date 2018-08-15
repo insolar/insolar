@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -142,7 +143,7 @@ func (ll *LevelLedger) GetRecord(ref *record.Reference) (record.Record, error) {
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
-			return nil, ErrNotFound
+			return nil, storage.ErrNotFound
 		}
 		return nil, err
 	}
@@ -177,7 +178,7 @@ func (ll *LevelLedger) GetClassIndex(ref *record.Reference) (*index.ClassLifelin
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
-			return nil, ErrNotFound
+			return nil, storage.ErrNotFound
 		}
 		return nil, err
 	}
@@ -204,7 +205,7 @@ func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifel
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
-			return nil, ErrNotFound
+			return nil, storage.ErrNotFound
 		}
 		return nil, err
 	}
