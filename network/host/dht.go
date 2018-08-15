@@ -912,8 +912,14 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *message.Message, message
 		for i, j := range dht.subnet.PossibleProxyIDs {
 			if j == msg.Sender.ID.String() {
 				dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs[:i], dht.subnet.PossibleProxyIDs[i+1:]...)
-				dht.AuthenticationRequest(ctx, "begin", msg.Sender.ID.String())
-				dht.RelayRequest(ctx, "start", msg.Sender.ID.String())
+				err := dht.AuthenticationRequest(ctx, "begin", msg.Sender.ID.String())
+				if err != nil {
+					log.Println("error to send auth request: ", err)
+				}
+				err = dht.RelayRequest(ctx, "start", msg.Sender.ID.String())
+				if err != nil {
+					log.Println("error to send relay request: ", err)
+				}
 				break
 			}
 		}
@@ -1385,21 +1391,6 @@ func (dht *DHT) GetDistance(id1, id2 []byte) *big.Int {
 	return new(big.Int).Xor(buf1, buf2)
 }
 
-func (dht *DHT) getNearestNode(id string, ids []string) string {
-	idByte := []byte(id)
-	dist := dht.GetDistance(idByte, []byte(ids[0]))
-	index := 0
-	for i, j := range ids {
-		idsByte := []byte(j)
-		tmpDist := dht.GetDistance(idByte, idsByte)
-		if dist.Cmp(tmpDist) == -1 {
-			index = i
-			dist = tmpDist
-		}
-	}
-	return ids[index]
-}
-
 func (dht *DHT) getHomeSubnetKey() string {
 	var result string
 	for key, subnet := range dht.subnet.SubnetIDs {
@@ -1438,7 +1429,10 @@ func (dht *DHT) AnalyzeNetwork(ctx Context) {
 	dht.subnet.HighKnownNodes.OuterNodes = dht.subnet.HighKnownNodes.SelfKnownOuterNodes
 	nodes := dht.subnet.SubnetIDs[dht.subnet.HomeSubnetKey]
 	for _, ids := range nodes {
-		dht.knownOuterNodesRequest(ids, dht.subnet.HighKnownNodes.OuterNodes)
+		err := dht.knownOuterNodesRequest(ids, dht.subnet.HighKnownNodes.OuterNodes)
+		if err != nil {
+			log.Println("error to send outer nodes request: ", err)
+		}
 	}
 	if len(dht.subnet.SubnetIDs) == 1 {
 		if dht.subnet.HomeSubnetKey == "" { // current node have a static IP
@@ -1567,8 +1561,14 @@ func (dht *DHT) handleKnownOuterNodes(ctx Context, response *message.ResponseKno
 	}
 	if (response.OuterNodes > dht.subnet.HighKnownNodes.SelfKnownOuterNodes) &&
 		(dht.proxy.ProxyNodesCount() == 0) {
-		dht.AuthenticationRequest(ctx, "begin", targetID)
-		dht.RelayRequest(ctx, "start", targetID)
+		err := dht.AuthenticationRequest(ctx, "begin", targetID)
+		if err != nil {
+			log.Println("error to send auth request: ", err)
+		}
+		err = dht.RelayRequest(ctx, "start", targetID)
+		if err != nil {
+			log.Println("error to send relay request: ", err)
+		}
 	}
 }
 
