@@ -56,7 +56,7 @@ func TestBaseSmartContractProxy_GetOrCreateComposite(t *testing.T) {
 
 	compositeFactory := &BaseCompositeFactory{}
 
-	res, err := proxy.GetOrCreateComposite(composite.GetInterfaceKey(), compositeFactory)
+	res, err := proxy.GetOrCreateComposite(compositeFactory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, composite, res)
@@ -69,11 +69,10 @@ func TestBaseSmartContractProxy_GetOrCreateComposite_Error(t *testing.T) {
 			parent: parent,
 		},
 	}
-	composite := &BaseComposite{}
 
 	compositeFactory := &BaseCompositeFactory{}
 
-	_, err := proxy.GetOrCreateComposite(composite.GetInterfaceKey(), compositeFactory)
+	_, err := proxy.GetOrCreateComposite(compositeFactory)
 
 	assert.EqualError(t, err, "Instance is not Composing Container")
 }

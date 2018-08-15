@@ -230,6 +230,7 @@ func (ll *LevelLedger) Close() error {
 	return ll.ldb.Close()
 }
 
+// DropDB erases all data from storage.
 func DropDB() error {
 	absPath, err := filepath.Abs(dbDirPath)
 	if err != nil {

@@ -147,6 +147,8 @@ type CodeRecord struct {
 	SourceCode   string              // ObjectSourceCode
 }
 
+// GetCode returns class code according to provided architecture preferences. If preferences are not provided or the
+// record does not contain code for any of provided architectures an error will be returned.
 func (r *CodeRecord) GetCode(archPref []ArchType) ([]byte, error) {
 	for _, archType := range archPref {
 		code, ok := r.TargetedCode[archType]

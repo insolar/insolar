@@ -20,7 +20,8 @@ import "github.com/insolar/insolar/logicrunner"
 
 // CallReq is a set of arguments for Call RPC in the runner
 type CallReq struct {
-	Object    logicrunner.Object
+	Reference logicrunner.Reference
+	Data      []byte
 	Method    string
 	Arguments logicrunner.Arguments
 }

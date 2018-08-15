@@ -14,21 +14,20 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"github.com/insolar/insolar/genesis/model/class"
-	"github.com/insolar/insolar/genesis/model/object"
 )
 
 // ReferenceContainer is a implementation of Proxy for containerization purpose.
 type ReferenceContainer struct {
-	reference object.Reference
+	reference Reference
 	BaseProxy
 }
 
 // NewReferenceContainer creates new container for reference.
-func NewReferenceContainer(ref object.Reference) *ReferenceContainer {
+func NewReferenceContainer(ref Reference) *ReferenceContainer {
 	return &ReferenceContainer{
 		reference: ref,
 	}
@@ -40,6 +39,6 @@ func (rc *ReferenceContainer) GetClassID() string {
 }
 
 // GetStoredReference returns stored reference.
-func (rc *ReferenceContainer) GetStoredReference() object.Reference {
+func (rc *ReferenceContainer) GetStoredReference() Reference {
 	return rc.reference
 }

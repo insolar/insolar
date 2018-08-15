@@ -142,15 +142,17 @@ func (gp *GoPlugin) Stop() {
 const timeout = time.Second * 5
 
 // Exec runs a method on an object in controlled environment
-func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
+func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
 	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
 	res := girpc.CallResp{}
 
+	req := girpc.CallReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
+
 	select {
-	case call := <-client.Go("GoInsider.Call", girpc.CallReq{Object: object, Method: method, Arguments: args}, &res, nil).Done:
+	case call := <-client.Go("GoInsider.Call", req, &res, nil).Done:
 		if call.Error != nil {
 			return nil, nil, errors.Wrap(err, "problem with API call")
 		}

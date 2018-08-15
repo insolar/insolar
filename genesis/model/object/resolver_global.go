@@ -14,12 +14,10 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"fmt"
-
-	"github.com/insolar/insolar/genesis/model/object"
 )
 
 // globalResolver is resolver for GlobalScope references.
@@ -34,7 +32,7 @@ func newGlobalResolver() *globalResolver {
 
 // GetObject resolves object by its reference and return its proxy.
 func (r *globalResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
-	ref, ok := reference.(object.Reference)
+	ref, ok := reference.(Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
 	}
@@ -42,7 +40,7 @@ func (r *globalResolver) GetObject(reference interface{}, cls interface{}) (inte
 	if !exist {
 		return nil, fmt.Errorf("reference with address `%s` not found", ref)
 	}
-	parent, ok := parentProxy.(object.Parent)
+	parent, ok := parentProxy.(Parent)
 	if !ok {
 		return nil, fmt.Errorf("object with domain `%s` can not have children", ref.GetDomain())
 	}

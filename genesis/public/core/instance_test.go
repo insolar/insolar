@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +47,7 @@ func (p *mockProxy) SetReference(reference object.Reference) {
 type mockFactory struct {
 }
 
-func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (f *mockFactory) Create(parent object.Parent) (object.Proxy, error) {
 	return &mockChildProxy{
 		parent: parent,
 	}, nil
@@ -74,7 +73,7 @@ type mockFactoryError struct {
 	mockFactory
 }
 
-func (f *mockFactoryError) Create(parent object.Parent) (resolver.Proxy, error) {
+func (f *mockFactoryError) Create(parent object.Parent) (object.Proxy, error) {
 	return nil, fmt.Errorf("factory create error")
 }
 
@@ -82,7 +81,7 @@ type mockFactoryNilError struct {
 	mockFactory
 }
 
-func (f *mockFactoryNilError) Create(parent object.Parent) (resolver.Proxy, error) {
+func (f *mockFactoryNilError) Create(parent object.Parent) (object.Proxy, error) {
 	return nil, nil
 }
 
