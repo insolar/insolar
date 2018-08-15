@@ -17,19 +17,37 @@
 package example
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
+	"github.com/insolar/insolar/genesis/model/object"
 )
 
 type Allowance interface {
+	object.Composite
+	contract.SmartContract
 	GetAmount() int
 	GetSender() string
 }
 
 type allowance struct {
+	contract.BaseSmartContract
 	sender string
 	amount int
 	active bool
+}
+
+func newAllowance(parent object.Parent) (Allowance, error) {
+	if parent == nil {
+		return nil, fmt.Errorf("parent must not be nil")
+	}
+
+	//TODO: add posibility to init allowance fields
+	return &allowance{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		active:            false,
+	}, nil
 }
 
 func (a *allowance) GetInterfaceKey() string {
@@ -44,20 +62,69 @@ func (a *allowance) GetSender() string {
 	return a.sender
 }
 
-func newAllowance(sender string, amount int) *allowance {
-	return &allowance{
-		sender: sender,
-		amount: amount,
-		active: false,
+type allowanceFactory struct {
+	object.BaseProxy
+	parent object.Parent
+}
+
+func NewAllowanceFactory(parent object.Parent) object.CompositeFactory {
+	//Todo: should check if parent is nil and add test
+	return &allowanceFactory{
+		parent: parent,
 	}
 }
 
-type allowanceCollection struct {
-	contract.BaseCompositeCollection
+func (*allowanceFactory) Create(parent object.Parent) (object.Composite, error) {
+	proxy, err := newAllowanceProxy(parent)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = parent.AddChild(proxy)
+	if err != nil {
+		return nil, err
+	}
+
+	return proxy, nil
 }
 
-func newAllowanceCollection() *allowanceCollection {
-	return &allowanceCollection{
-		BaseCompositeCollection: *contract.NewBaseCompositeCollection(),
+func (*allowanceFactory) GetInterfaceKey() string {
+	return class.AllowanceID
+}
+
+func (*allowanceFactory) GetClassID() string {
+	return class.AllowanceID
+}
+
+func (aF *allowanceFactory) GetParent() object.Parent {
+	return aF.parent
+}
+
+type allowanceProxy struct {
+	contract.BaseSmartContractProxy
+}
+
+func newAllowanceProxy(parent object.Parent) (*allowanceProxy, error) {
+	inst, err := newAllowance(parent)
+	if err != nil {
+		return nil, err
 	}
+
+	return &allowanceProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: inst,
+		},
+	}, nil
+}
+
+func (ap *allowanceProxy) GetAmount() int {
+	return ap.Instance.(Allowance).GetAmount()
+}
+
+func (ap *allowanceProxy) GetSender() string {
+	return ap.Instance.(Allowance).GetSender()
+}
+
+func (ap *allowanceProxy) GetInterfaceKey() string {
+	return ap.Instance.(Allowance).GetInterfaceKey()
 }
