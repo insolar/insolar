@@ -17,6 +17,8 @@
 package transport
 
 import (
+	"crypto/rand"
+	"log"
 	"net"
 	"testing"
 
@@ -32,10 +34,12 @@ type transportSuite struct {
 	factory    Factory
 	connection net.PacketConn
 	transport  Transport
+	node       *node.Node
 }
 
 func NewSuite(factory Factory) *transportSuite {
-	return &transportSuite{suite.Suite{}, NewUTPTransportFactory(), nil, nil}
+	addr, _ := node.NewAddress("127.0.0.1:3012")
+	return &transportSuite{suite.Suite{}, NewUTPTransportFactory(), nil, nil, node.NewNode(addr)}
 }
 
 func (t *transportSuite) SetupTest() {
@@ -56,28 +60,63 @@ func (t *transportSuite) AfterTest(suiteName, testName string) {
 	t.transport.Close()
 }
 
+func generateRandomBytes(n int) ([]byte, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
 func (t *transportSuite) TestPingPong() {
-
-	addr, _ := node.NewAddress("127.0.0.1:3012")
-	nodeOne := node.NewNode(addr)
-
-	future, err := t.transport.SendRequest(message.NewPingMessage(nodeOne, nodeOne))
+	future, err := t.transport.SendRequest(message.NewPingMessage(t.node, t.node))
 	t.Assert().NoError(err)
 
 	requestMsg := <-t.transport.Messages()
-	t.Assert().Equal(true, requestMsg.IsValid())
+	t.Assert().True(requestMsg.IsValid())
 	t.Assert().Equal(message.TypePing, requestMsg.Type)
-	t.Assert().Equal(nodeOne, future.Actor())
-	t.Assert().Equal(false, requestMsg.IsResponse)
+	t.Assert().Equal(t.node, future.Actor())
+	t.Assert().False(requestMsg.IsResponse)
 
-	builder := message.NewBuilder().Sender(nodeOne).Receiver(requestMsg.Sender).Type(message.TypePing)
+	builder := message.NewBuilder().Sender(t.node).Receiver(requestMsg.Sender).Type(message.TypePing)
 	err = t.transport.SendResponse(requestMsg.RequestID, builder.Response(nil).Build())
 	t.Assert().NoError(err)
 
 	responseMsg := <-future.Result()
-	t.Assert().Equal(true, responseMsg.IsValid())
+	t.Assert().True(responseMsg.IsValid())
 	t.Assert().Equal(message.TypePing, responseMsg.Type)
-	t.Assert().Equal(true, responseMsg.IsResponse)
+	t.Assert().True(responseMsg.IsResponse)
+}
+
+func (t *transportSuite) TestSendBigMessage() {
+	t.T().Skip("fix impl for this test pass")
+
+	data, _ := generateRandomBytes(1024 * 1024)
+	builder := message.NewBuilder().Sender(t.node).Receiver(t.node).Type(message.TypeStore)
+	requestMsg := builder.Request(&message.RequestDataStore{data, true}).Build()
+	t.Assert().True(requestMsg.IsValid())
+
+	_, err := t.transport.SendRequest(requestMsg)
+	t.Assert().NoError(err)
+
+	msg := <-t.transport.Messages()
+	t.Assert().True(requestMsg.IsValid())
+	t.Assert().Equal(message.TypeStore, requestMsg.Type)
+	receivedData := msg.Data.(*message.RequestDataStore).Data
+	t.Assert().Equal(data, receivedData)
+}
+
+func (t *transportSuite) TestSendInvalidMessage() {
+	t.T().Skip("fix impl for this test pass")
+
+	builder := message.NewBuilder().Sender(t.node).Receiver(t.node).Type(message.TypeRPC)
+	msg := builder.Build()
+	t.Assert().False(msg.IsValid())
+
+	future, err := t.transport.SendRequest(msg)
+	t.Assert().Error(err)
+	log.Println("future: ", future.ID())
 }
 
 func TestUTPTransport(t *testing.T) {
@@ -88,7 +127,9 @@ func TestKCPTransport(t *testing.T) {
 	suite.Run(t, NewSuite(NewKCPTransportFactory()))
 }
 
+/*
 func TestKCPSecureTransport(t *testing.T) {
 	// secureOptions := {}
-	suite.Run(t, NewSuite(NewKCPTransportFactory( /* secureOptions */ )))
+	suite.Run(t, NewSuite(NewKCPTransportFactory( /* secureOptions * )))
 }
+*/
