@@ -16,12 +16,39 @@
 
 package messagerouter
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
-type runner struct{}
+type req struct {
+	ref    string
+	method string
+	args   []byte
+}
+
+type resp struct {
+	data []byte
+	res  []byte
+	err  error
+}
+
+type runner struct {
+	requests  []req
+	responses []resp
+}
 
 func (r *runner) Execute(ref string, method string, args []byte) ([]byte, []byte, error) {
-	return nil, nil, nil
+	if len(r.responses) == 0 {
+		panic("no request expected")
+	}
+
+	r.requests = append(r.requests, req{ref, method, args})
+
+	resp := r.responses[0]
+	r.responses = r.responses[1:]
+
+	return resp.data, resp.res, resp.err
 }
 
 func TestNew(t *testing.T) {
@@ -32,4 +59,64 @@ func TestNew(t *testing.T) {
 	if mr == nil {
 		t.Fatal("no object created")
 	}
+}
+
+func TestRoute(t *testing.T) {
+	r := new(runner)
+	r.requests = make([]req, 0)
+	r.responses = make([]resp, 0)
+
+	mr, _ := New(r)
+
+	t.Run("success", func(t *testing.T) {
+		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
+		resp, err := mr.Route(Message{Reference: "some.ref", Method: "SomeMethod", Arguments: []byte("args")})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(resp.Data) != "data" {
+			t.Fatal("unexpected data")
+		}
+		if string(resp.Result) != "result" {
+			t.Fatal("unexpected data")
+		}
+		if len(r.requests) != 1 {
+			t.Fatal("unexpected number of requests registered")
+		}
+		req := r.requests[0]
+		r.requests = r.requests[1:]
+
+		if req.ref != "some.ref" {
+			t.Fatal("unexpected data")
+		}
+		if req.method != "SomeMethod" {
+			t.Fatal("unexpected data")
+		}
+		if string(req.args) != "args" {
+			t.Fatal("unexpected data")
+		}
+	})
+	t.Run("error", func(t *testing.T) {
+		r.responses = append(r.responses, resp{[]byte{}, []byte{}, errors.New("wtf")})
+		_, err := mr.Route(Message{Reference: "some.ref", Method: "SomeMethod", Arguments: []byte("args")})
+		if err == nil {
+			t.Fatal("error expected")
+		}
+
+		if len(r.requests) != 1 {
+			t.Fatal("unexpected number of requests registered")
+		}
+		req := r.requests[0]
+		r.requests = r.requests[1:]
+
+		if req.ref != "some.ref" {
+			t.Fatal("unexpected data")
+		}
+		if req.method != "SomeMethod" {
+			t.Fatal("unexpected data")
+		}
+		if string(req.args) != "args" {
+			t.Fatal("unexpected data")
+		}
+	})
 }
