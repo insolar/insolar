@@ -1419,12 +1419,20 @@ func (dht *DHT) getHomeSubnetKey() string {
 }
 
 func (dht *DHT) countOuterNodes() {
+	ctx, err := NewContextBuilder(dht).SetDefaultNode().Build()
+	if err != nil {
+		log.Printf("couldn't create a context: %s", err)
+	}
 	if len(dht.subnet.SubnetIDs) > 1 {
 		for key, nodes := range dht.subnet.SubnetIDs {
 			if key == dht.subnet.HomeSubnetKey {
 				continue
 			}
 			dht.subnet.HighKnownNodes.SelfKnownOuterNodes += len(nodes)
+			for _, n := range nodes {
+				dht.AuthenticationRequest(ctx, "begin", n)
+				dht.RelayRequest(ctx, "start", n)
+			}
 		}
 	}
 }
@@ -1562,11 +1570,11 @@ func (dht *DHT) handleKnownOuterNodes(ctx Context, response *message.ResponseKno
 	if response.OuterNodes > dht.subnet.HighKnownNodes.OuterNodes { // update data
 		dht.subnet.HighKnownNodes.OuterNodes = response.OuterNodes
 		dht.subnet.HighKnownNodes.ID = response.ID
-		if (response.OuterNodes > dht.subnet.HighKnownNodes.SelfKnownOuterNodes) &&
-			(dht.proxy.ProxyNodesCount() == 0) {
-			dht.AuthenticationRequest(ctx, "begin", targetID)
-			dht.RelayRequest(ctx, "start", targetID)
-		}
+	}
+	if (response.OuterNodes > dht.subnet.HighKnownNodes.SelfKnownOuterNodes) &&
+		(dht.proxy.ProxyNodesCount() == 0) {
+		dht.AuthenticationRequest(ctx, "begin", targetID)
+		dht.RelayRequest(ctx, "start", targetID)
 	}
 }
 
