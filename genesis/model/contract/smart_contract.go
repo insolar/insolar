@@ -26,6 +26,24 @@ import (
 	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
+type BaseCompositeCollection struct {
+	storage []factory.Composite
+}
+
+func (bcc *BaseCompositeCollection) GitList() []factory.Composite {
+	return bcc.storage
+}
+
+func (bcc *BaseCompositeCollection) Add(composite factory.Composite) {
+	bcc.storage = append(bcc.storage, composite)
+}
+
+func NewBaseCompositeCollection() *BaseCompositeCollection {
+	return &BaseCompositeCollection{
+		storage: make([]factory.Composite, 0),
+	}
+}
+
 // SmartContract marks that object is smart contract.
 // TODO: Composite work interface
 type SmartContract interface {

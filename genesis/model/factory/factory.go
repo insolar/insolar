@@ -39,6 +39,8 @@ type Composite interface {
 
 type CompositeCollection interface {
 	Composite
+	GetList() []Composite
+	Add(composite Composite)
 }
 
 type CompositeCollectionFactory interface {
