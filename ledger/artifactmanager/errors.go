@@ -1,6 +1,8 @@
 package artifactmanager
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+)
 
 var (
 	ErrInvalidRef        = errors.New("invalid reference")

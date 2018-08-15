@@ -16,7 +16,9 @@
 
 package storage
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrNotFound returns if record/index not found in leveldb storage.
