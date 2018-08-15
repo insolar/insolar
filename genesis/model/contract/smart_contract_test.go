@@ -34,6 +34,10 @@ func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
 }
 
+func (p *mockProxy) GetClass() object.Factory {
+	return nil
+}
+
 func (p *mockProxy) GetReference() object.Reference {
 	return p.reference
 }
@@ -61,6 +65,10 @@ type mockParent struct {
 
 func (p *mockParent) GetClassID() string {
 	return "mockParent"
+}
+
+func (p *mockParent) GetClass() object.Factory {
+	return nil
 }
 
 func (p *mockParent) GetChildStorage() storage.Storage {
@@ -93,6 +101,10 @@ func (bc *BaseComposite) GetClassID() string {
 	return "BaseComposite"
 }
 
+func (bc *BaseComposite) GetClass() object.Factory {
+	return nil
+}
+
 func (bc *BaseComposite) GetParent() object.Parent {
 	return nil
 }
@@ -109,6 +121,10 @@ func (bc *BaseCompositeNotChild) GetInterfaceKey() string {
 
 func (bc *BaseCompositeNotChild) GetClassID() string {
 	return "BaseCompositeNotChild"
+}
+
+func (bc *BaseCompositeNotChild) GetClass() object.Factory {
+	return nil
 }
 
 func (bc *BaseCompositeNotChild) GetReference() object.Reference {
@@ -134,6 +150,10 @@ func (bcf *BaseCompositeFactory) GetClassID() string {
 	return "BaseCompositeFactory_ID"
 }
 
+func (bcf *BaseCompositeFactory) GetClass() object.Factory {
+	return nil
+}
+
 func (bcf *BaseCompositeFactory) GetInterfaceKey() string {
 	return "BaseCompositeFactory_ID"
 }
@@ -146,6 +166,10 @@ type BaseCompositeFactoryWithError struct{}
 
 func (bcf *BaseCompositeFactoryWithError) GetClassID() string {
 	return "BaseCompositeFactoryWithError_ID"
+}
+
+func (bcf *BaseCompositeFactoryWithError) GetClass() object.Factory {
+	return nil
 }
 
 func (bcf *BaseCompositeFactoryWithError) SetReference(reference object.Reference) {
@@ -171,6 +195,10 @@ type BaseCompositeNotChildFactory struct{}
 
 func (bcf *BaseCompositeNotChildFactory) GetClassID() string {
 	return "BaseCompositeNotChildFactory_ID"
+}
+
+func (bcf *BaseCompositeNotChildFactory) GetClass() object.Factory {
+	return nil
 }
 
 func (bcf *BaseCompositeNotChildFactory) SetReference(reference object.Reference) {

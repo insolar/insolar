@@ -32,6 +32,10 @@ func (c *mockProxyReference) GetClassID() string {
 	return class.ReferenceID
 }
 
+func (c *mockProxyReference) GetClass() Factory {
+	return nil
+}
+
 func (c *mockProxyReference) GetReference() Reference {
 	return nil
 }
@@ -68,6 +72,10 @@ type mockParentNotChild struct {
 
 func (p *mockParentNotChild) GetClassID() string {
 	return "mockParentNotChild"
+}
+
+func (p *mockParentNotChild) GetClass() Factory {
+	return nil
 }
 
 func (p *mockParentNotChild) GetChildStorage() storage.Storage {

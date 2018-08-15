@@ -62,6 +62,10 @@ func (rd *referenceDomain) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
+func (rd *referenceDomain) GetClass() object.Factory {
+	return NewReferenceDomainFactory(rd.Parent)
+}
+
 // InitGlobalMap sets globalResolverMap for register/resolve references.
 func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	if rd.globalResolverMap != nil {
@@ -156,6 +160,10 @@ func (rdf *referenceDomainFactory) GetParent() object.Parent {
 // GetClassID returns string representation of ReferenceDomain's class.
 func (rdf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
+}
+
+func (rdf *referenceDomainFactory) GetClass() object.Factory {
+	return NewReferenceDomainFactory(rdf.parent)
 }
 
 // Create factory is a method for new ReferenceDomain instances.

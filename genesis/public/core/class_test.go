@@ -36,17 +36,25 @@ func TestClassDomain_GetClassID(t *testing.T) {
 	assert.Equal(t, class.ClsDomainID, domainID)
 }
 
-func TestClassDomain_GetClass_NoSuchRecord(t *testing.T) {
+func TestClassDomain_GetClass(t *testing.T) {
+	parent := &mockParent{}
+	clsDom, err := newClassDomain(parent)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &classDomainFactory{parent: parent}, clsDom.GetClass())
+}
+
+func TestClassDomain_GetStoredClass_NoSuchRecord(t *testing.T) {
 	parent := &mockParent{}
 	classDom, err := newClassDomain(parent)
 	assert.NoError(t, err)
-	cl, err := classDom.GetClass("test")
+	cl, err := classDom.GetStoredClass("test")
 
 	assert.EqualError(t, err, "object with record test does not exist")
 	assert.Nil(t, cl)
 }
 
-func TestClassDomain_GetClass(t *testing.T) {
+func TestClassDomain_GetStoredClass(t *testing.T) {
 	parent := &mockParent{}
 	classDom, err := newClassDomain(parent)
 	assert.NoError(t, err)
@@ -55,7 +63,7 @@ func TestClassDomain_GetClass(t *testing.T) {
 	recordId, regErr := classDom.RegisterClass(classFactory)
 	assert.NoError(t, regErr)
 
-	resolved, err := classDom.GetClass(recordId)
+	resolved, err := classDom.GetStoredClass(recordId)
 
 	assert.NoError(t, err)
 	assert.Equal(t, classFactory, resolved)
@@ -112,6 +120,12 @@ func TestClassDomainFactory_GetClassID(t *testing.T) {
 	assert.Equal(t, class.ClsDomainID, classId)
 }
 
+func TestClassDomainFactory_GetClass(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewClassDomainFactory(parent)
+	assert.Equal(t, &classDomainFactory{parent: parent}, factory.GetClass())
+}
+
 func TestClassDomainFactory_Create(t *testing.T) {
 	parent := &mockParent{}
 	factory := NewClassDomainFactory(parent)
@@ -155,7 +169,7 @@ func TestNewClassDomainProxy_Error(t *testing.T) {
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
-func TestClassDomainProxy_GetClass(t *testing.T) {
+func TestClassDomainProxy_GetStoredClass(t *testing.T) {
 
 	parent := &mockParent{}
 	clDomainProxy, err := newClassDomainProxy(parent)
@@ -166,7 +180,7 @@ func TestClassDomainProxy_GetClass(t *testing.T) {
 
 	assert.NoError(t, regErr)
 
-	resolved, err := clDomainProxy.GetClass(recordId)
+	resolved, err := clDomainProxy.GetStoredClass(recordId)
 
 	assert.NoError(t, err)
 	assert.Equal(t, classFactory, resolved)

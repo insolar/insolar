@@ -24,6 +24,7 @@ import (
 // Object marks that instance has ClassID (string representation of class).
 type Object interface {
 	GetClassID() string
+	GetClass() Factory
 }
 
 // BaseObject is a base implementation of Object interface.
@@ -33,6 +34,10 @@ type BaseObject struct {
 // GetClassID return string representation of object's class.
 func (bo *BaseObject) GetClassID() string {
 	return class.ObjectID
+}
+
+func (bo *BaseObject) GetClass() Factory {
+	return nil
 }
 
 // Parent allows to create objects (smart contracts) inside itself as children.

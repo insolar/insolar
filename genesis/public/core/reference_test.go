@@ -58,6 +58,10 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
+func (p *mockParent) GetClass() object.Factory {
+	return nil
+}
+
 func (p *mockParent) GetChildStorage() storage.Storage {
 	return nil
 }
@@ -147,6 +151,12 @@ func TestReferenceDomain_GetClassID(t *testing.T) {
 	refDomain := newReferenceDomain(nil)
 	domainID := refDomain.GetClassID()
 	assert.Equal(t, class.ReferenceDomainID, domainID)
+}
+
+func TestReferenceDomain_GetClass(t *testing.T) {
+	parent := &mockParent{}
+	refDomain := newReferenceDomain(parent)
+	assert.Equal(t, &referenceDomainFactory{parent: parent}, refDomain.GetClass())
 }
 
 func TestReferenceDomain_SetMap(t *testing.T) {
@@ -265,6 +275,12 @@ func TestReferenceDomainFactory_GetClassID(t *testing.T) {
 	id := factory.GetClassID()
 
 	assert.Equal(t, class.ReferenceDomainID, id)
+}
+
+func TestReferenceDomainFactory_GetClass(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewReferenceDomainFactory(parent)
+	assert.Equal(t, &referenceDomainFactory{parent: parent}, factory.GetClass())
 }
 
 func TestReferenceDomainFactory_Create(t *testing.T) {

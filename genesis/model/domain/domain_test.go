@@ -34,6 +34,10 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
+func (p *mockParent) GetClass() object.Factory {
+	return nil
+}
+
 func (p *mockParent) GetChildStorage() storage.Storage {
 	return nil
 }

@@ -29,6 +29,10 @@ func (p *mockInstance) GetClassID() string {
 	return "mockInstance"
 }
 
+func (p *mockInstance) GetClass() object.Factory {
+	return nil
+}
+
 func (p *mockInstance) GetParent() object.Parent {
 	return nil
 }

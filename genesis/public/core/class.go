@@ -35,7 +35,7 @@ type ClassDomain interface {
 	// RegisterClass is used to publish new Class.
 	RegisterClass(object.Factory) (string, error)
 	// GetClass provides factory instance from record.
-	GetClass(string) (object.Factory, error)
+	GetStoredClass(string) (object.Factory, error)
 }
 
 type classDomain struct {
@@ -59,6 +59,10 @@ func (cd *classDomain) GetClassID() string {
 	return class.ClsDomainID
 }
 
+func (cd *classDomain) GetClass() object.Factory {
+	return NewClassDomainFactory(cd.Parent)
+}
+
 // RegisterClass method used to create new public Class.
 func (cd *classDomain) RegisterClass(fc object.Factory) (string, error) {
 	recordID, err := cd.AddChild(fc)
@@ -70,7 +74,7 @@ func (cd *classDomain) RegisterClass(fc object.Factory) (string, error) {
 }
 
 // GetClass method used for retrieve class information from record.
-func (cd *classDomain) GetClass(recordID string) (object.Factory, error) {
+func (cd *classDomain) GetStoredClass(recordID string) (object.Factory, error) {
 	cls, err := cd.GetChild(recordID)
 	if err != nil {
 		return nil, err
@@ -108,8 +112,8 @@ func (cdp *classDomainProxy) RegisterClass(fc object.Factory) (string, error) {
 }
 
 // GetClass is a proxy call for instance method.
-func (cdp *classDomainProxy) GetClass(record string) (object.Factory, error) {
-	return cdp.Instance.(ClassDomain).GetClass(record)
+func (cdp *classDomainProxy) GetStoredClass(record string) (object.Factory, error) {
+	return cdp.Instance.(ClassDomain).GetStoredClass(record)
 }
 
 type classDomainFactory struct {
@@ -133,6 +137,10 @@ func (cdf *classDomainFactory) GetParent() object.Parent {
 // GetClassID returns string representation of ClassDomain's class.
 func (cdf *classDomainFactory) GetClassID() string {
 	return class.ClsDomainID
+}
+
+func (cdf *classDomainFactory) GetClass() object.Factory {
+	return NewClassDomainFactory(cdf.parent)
 }
 
 // Create is a factory method for new ClassDomain instances.

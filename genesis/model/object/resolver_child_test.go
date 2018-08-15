@@ -32,6 +32,10 @@ func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
 }
 
+func (p *mockProxy) GetClass() Factory {
+	return nil
+}
+
 func (p *mockProxy) GetReference() Reference {
 	return p.reference
 }

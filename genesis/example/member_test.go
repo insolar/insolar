@@ -36,6 +36,10 @@ func (c *BaseComposite) GetClassID() string {
 	return "BaseComposite"
 }
 
+func (c *BaseComposite) GetClass() object.Factory {
+	return nil
+}
+
 func (c *BaseComposite) GetParent() object.Parent {
 	return nil
 }
@@ -61,6 +65,10 @@ func (bcf *MockBaseCompositeFactory) GetParent() object.Parent {
 
 func (bcf *MockBaseCompositeFactory) GetClassID() string {
 	return "BaseCompositeFactory_ID"
+}
+
+func (bcf *MockBaseCompositeFactory) GetClass() object.Factory {
+	return nil
 }
 
 func (bcf *MockBaseCompositeFactory) GetInterfaceKey() string {

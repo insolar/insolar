@@ -33,6 +33,10 @@ func (bp *BaseSmartContractProxy) GetClassID() string {
 	return bp.Instance.GetClassID()
 }
 
+func (bp *BaseSmartContractProxy) GetClass() object.Factory {
+	return bp.Instance.GetClass()
+}
+
 // GetParent is a proxy call for instance method.
 func (bp *BaseSmartContractProxy) GetParent() object.Parent {
 	return bp.Instance.GetParent()

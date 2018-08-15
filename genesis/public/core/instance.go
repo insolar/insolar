@@ -59,6 +59,10 @@ func (instDom *instanceDomain) GetClassID() string {
 	return class.InstanceDomainID
 }
 
+func (instDom *instanceDomain) GetClass() object.Factory {
+	return NewInstanceDomainFactory(instDom.Parent)
+}
+
 // CreateInstance creates new instance as a child to domain storage.
 func (instDom *instanceDomain) CreateInstance(fc object.Factory) (string, error) {
 	instance, err := fc.Create(instDom)
@@ -140,6 +144,10 @@ func (idf *instanceDomainFactory) GetParent() object.Parent {
 // GetClassID returns string representation of InstanceDomain's class.
 func (idf *instanceDomainFactory) GetClassID() string {
 	return class.InstanceDomainID
+}
+
+func (idf *instanceDomainFactory) GetClass() object.Factory {
+	return NewInstanceDomainFactory(idf.parent)
 }
 
 // Create is factory method that used to create new InstanceDomain instances.
