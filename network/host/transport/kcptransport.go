@@ -17,17 +17,14 @@
 package transport
 
 import (
-
-	//"context"
+	"errors"
 	"log"
 	"net"
 	"sync"
-
 	"time"
 
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/relay"
-
 	"github.com/xtaci/kcp-go"
 )
 
@@ -43,7 +40,8 @@ type kcpTransport struct {
 	mutex   *sync.RWMutex
 	futures map[message.RequestID]Future
 
-	proxy relay.Proxy
+	proxy      relay.Proxy
+	blockCrypt kcp.BlockCrypt
 }
 
 // NewKCPTransport creates utpTransport.
@@ -52,7 +50,11 @@ func NewKCPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) 
 }
 
 func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, error) {
-	crypt, _ := kcp.NewNoneBlockCrypt([]byte{})
+	crypt, err := kcp.NewNoneBlockCrypt([]byte{})
+	//crypt, err := kcp.NewSimpleXORBlockCrypt([]byte("test key"))
+	if err != nil {
+		return nil, err
+	}
 
 	lis, err := kcp.ServeConn(crypt, 0, 0, conn)
 	if err != nil {
@@ -71,7 +73,8 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, err
 		mutex:   &sync.RWMutex{},
 		futures: make(map[message.RequestID]Future),
 
-		proxy: proxy,
+		proxy:      proxy,
+		blockCrypt: crypt,
 	}
 
 	return transport, nil
@@ -79,6 +82,10 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, err
 
 // SendRequest sends request message and returns future.
 func (t *kcpTransport) SendRequest(msg *message.Message) (Future, error) {
+	if !msg.IsValid() {
+		return nil, errors.New("invalid message")
+	}
+
 	msg.RequestID = t.generateID()
 
 	future := t.createFuture(msg)
@@ -102,11 +109,11 @@ func (t *kcpTransport) SendResponse(requestID message.RequestID, msg *message.Me
 // Start starts networking.
 func (t *kcpTransport) Start() error {
 	for {
-		if conn, err := t.listener.AcceptKCP(); err == nil {
-			//conn.SetStreamMode(true)
+		if session, err := t.listener.AcceptKCP(); err == nil {
+			//session.SetStreamMode(true)
 			//conn.SetWriteDelay(true)
 			//log.Println("Accepted remote address:", conn.RemoteAddr())
-			go t.handleAcceptedConnection(conn)
+			go t.handleAcceptedConnection(session)
 		} else {
 			//log.Printf("%+v", err)
 			<-t.disconnectFinished
@@ -148,14 +155,8 @@ func (t *kcpTransport) Stopped() <-chan bool {
 	return t.disconnectStarted
 }
 
-func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (net.Conn, error) {
-	//ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
-	//defer cancel()
-
-	crypt, _ := kcp.NewNoneBlockCrypt([]byte{})
-
-	return kcp.DialWithOptions(addr, crypt, 0, 0)
-	//return t.socket.DialContext(ctx, "", addr)
+func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (*kcp.UDPSession, error) {
+	return kcp.DialWithOptions(addr, t.blockCrypt, 0, 0)
 }
 
 func (t *kcpTransport) generateID() message.RequestID {
@@ -194,7 +195,7 @@ func (t *kcpTransport) sendMessage(msg *message.Message) error {
 		recvAddress = msg.Receiver.Address.String()
 	}
 
-	conn, err := t.socketDialTimeout(recvAddress, time.Second)
+	session, err := t.socketDialTimeout(recvAddress, time.Second)
 	if err != nil {
 		return err
 	}
@@ -204,14 +205,25 @@ func (t *kcpTransport) sendMessage(msg *message.Message) error {
 		return err
 	}
 
-	_, err = conn.Write(data)
+	_, err = session.Write(data)
+	//_, err = session.
+
+	/*
+		err = session.Close()
+		if err != nil {
+			return err
+		}
+	*/
 	return err
 }
 
-func (t *kcpTransport) handleAcceptedConnection(conn net.Conn) {
+func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 	for {
+		session.SetStreamMode(true)
+		session.SetReadDeadline(time.Now().Add(time.Millisecond * 50))
+		//session.SetReadBuffer()
 		// Wait for Messages
-		msg, err := message.DeserializeMessage(conn)
+		msg, err := message.DeserializeMessage(session)
 		if err != nil {
 			// TODO should we penalize this Node somehow ? Ban it ?
 			// if err.Error() != "EOF" {

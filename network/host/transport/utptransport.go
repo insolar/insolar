@@ -18,6 +18,7 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"sync"
@@ -76,6 +77,10 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 
 // SendRequest sends request message and returns future.
 func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
+	if !msg.IsValid() {
+		return nil, errors.New("invalid message")
+	}
+
 	msg.RequestID = t.generateID()
 
 	future := t.createFuture(msg)
@@ -196,6 +201,12 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	}
 
 	_, err = conn.Write(data)
+
+	conn.Close()
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 

@@ -18,7 +18,6 @@ package transport
 
 import (
 	"crypto/rand"
-	"log"
 	"net"
 	"testing"
 
@@ -39,7 +38,7 @@ type transportSuite struct {
 
 func NewSuite(factory Factory) *transportSuite {
 	addr, _ := node.NewAddress("127.0.0.1:3012")
-	return &transportSuite{suite.Suite{}, NewUTPTransportFactory(), nil, nil, node.NewNode(addr)}
+	return &transportSuite{suite.Suite{}, factory, nil, nil, node.NewNode(addr)}
 }
 
 func (t *transportSuite) SetupTest() {
@@ -70,6 +69,8 @@ func generateRandomBytes(n int) ([]byte, error) {
 }
 
 func (t *transportSuite) TestPingPong() {
+	//t.T().Skip("fix impl for this test pass")
+
 	future, err := t.transport.SendRequest(message.NewPingMessage(t.node, t.node))
 	t.Assert().NoError(err)
 
@@ -90,9 +91,9 @@ func (t *transportSuite) TestPingPong() {
 }
 
 func (t *transportSuite) TestSendBigMessage() {
-	t.T().Skip("fix impl for this test pass")
+	//t.T().Skip("fix impl for this test pass")
 
-	data, _ := generateRandomBytes(1024 * 1024)
+	data, _ := generateRandomBytes(1024 * 1024 * 2)
 	builder := message.NewBuilder().Sender(t.node).Receiver(t.node).Type(message.TypeStore)
 	requestMsg := builder.Request(&message.RequestDataStore{data, true}).Build()
 	t.Assert().True(requestMsg.IsValid())
@@ -105,21 +106,22 @@ func (t *transportSuite) TestSendBigMessage() {
 	t.Assert().Equal(message.TypeStore, requestMsg.Type)
 	receivedData := msg.Data.(*message.RequestDataStore).Data
 	t.Assert().Equal(data, receivedData)
+	//fmt.Printf("%s", hex.Dump(receivedData))
 }
 
 func (t *transportSuite) TestSendInvalidMessage() {
-	t.T().Skip("fix impl for this test pass")
-
 	builder := message.NewBuilder().Sender(t.node).Receiver(t.node).Type(message.TypeRPC)
 	msg := builder.Build()
 	t.Assert().False(msg.IsValid())
 
 	future, err := t.transport.SendRequest(msg)
 	t.Assert().Error(err)
-	log.Println("future: ", future.ID())
+	t.Assert().Nil(future)
 }
 
 func TestUTPTransport(t *testing.T) {
+	//t.Skip("ignore UTP transport")
+
 	suite.Run(t, NewSuite(NewUTPTransportFactory()))
 }
 
