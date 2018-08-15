@@ -70,6 +70,7 @@ func TestBaseCompositeCollection_Add_SameInterfaceKeys(t *testing.T) {
 	compCollection.Add(&mc)
 	compCollection.Add(&mc)
 
+	assert.Len(t, compCollection.storage, 2)
 	assert.Equal(t, compCollection.storage[0].GetInterfaceKey(), GetTestIntarfaceKey(testIdx))
 	assert.Equal(t, compCollection.storage[1].GetInterfaceKey(), GetTestIntarfaceKey(testIdx))
 }
