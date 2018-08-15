@@ -34,9 +34,10 @@ func TestNewAllowance(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &allowance{
-		amount: 0,
-		sender: "",
-		active: false,
+		amount:            0,
+		sender:            "",
+		active:            false,
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 	}, al)
 }
 
