@@ -64,12 +64,6 @@ func EncodeRaw(raw *Raw) ([]byte, error) {
 	return b.Bytes(), err
 }
 
-// we can't use Hash on data?
-// Hash returns 28 bytes of SHA3 hash on Data field.
-// func (raw *Raw) Hash() Hash {
-// 	return sha3.Sum224(raw.Data)
-// }
-
 type hashableBytes []byte
 
 func (b hashableBytes) WriteHash(w io.Writer) {
@@ -82,12 +76,6 @@ func (b hashableBytes) WriteHash(w io.Writer) {
 // Hash generates hash for Raw record.
 func (raw *Raw) Hash() []byte {
 	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
-}
-
-// SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
-func SHA3Hash224(rec Record) []byte {
-	cborBlob := MustEncode(rec)
-	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
 }
 
 // ToRecord decodes Raw to Record.

@@ -1,41 +1,44 @@
 package artifactmanager
 
-/*
 import (
+	"os"
 	"testing"
 
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/leveldb"
 	"github.com/stretchr/testify/assert"
 )
 
-func prepareClassDescriptorTest() (*LedgerMock, *LedgerArtifactManager, *record.ClassActivateRecord, record.Reference) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
+func prepareClassDescriptorTest() (
+	storage.LedgerStorer, *LedgerArtifactManager, *record.ClassActivateRecord, *record.Reference,
+) {
+	if err := leveldb.DropDB(); err != nil {
+		os.Exit(1)
 	}
+	ledger, _ := leveldb.InitDB()
 	manager := LedgerArtifactManager{
-		storer:   &ledger,
+		storer:   ledger,
 		archPref: []record.ArchType{1},
 	}
 	rec := record.ClassActivateRecord{}
-	ref := addRecord(&ledger, &rec)
+	ref, _ := ledger.SetRecord(&rec)
 
-	return &ledger, &manager, &rec, ref
+	return ledger, &manager, &rec, ref
 }
 
 func TestClassDescriptor_GetCode(t *testing.T) {
 	ledger, manager, classRec, classRef := prepareClassDescriptorTest()
-	codeRef := addRecord(ledger, &record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
+	codeRef, _ := ledger.SetRecord(&record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
 		1: {1, 2, 3},
 	}})
-	amendRec := record.ClassAmendRecord{NewCode: codeRef}
-	amendRef := addRecord(ledger, &amendRec)
+	amendRec := record.ClassAmendRecord{NewCode: *codeRef}
+	amendRef, _ := ledger.SetRecord(&amendRec)
 	idx := index.ClassLifeline{
-		LatestStateID: amendRef.Record,
+		LatestStateRef: *amendRef,
 	}
-	ledger.SetClassIndex(classRef.Record, &idx)
+	ledger.SetClassIndex(classRef, &idx)
 
 	desc := ClassDescriptor{
 		manager:           manager,
@@ -51,32 +54,32 @@ func TestClassDescriptor_GetCode(t *testing.T) {
 
 func TestClassDescriptor_GetMigrations(t *testing.T) {
 	ledger, manager, classRec, classRef := prepareClassDescriptorTest()
-	codeRef1 := addRecord(ledger, &record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
+	codeRef1, _ := ledger.SetRecord(&record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
 		record.ArchType(1): {1},
 	}})
-	codeRef2 := addRecord(ledger, &record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
+	codeRef2, _ := ledger.SetRecord(&record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
 		record.ArchType(1): {2},
 	}})
-	codeRef3 := addRecord(ledger, &record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
+	codeRef3, _ := ledger.SetRecord(&record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
 		record.ArchType(1): {3},
 	}})
-	codeRef4 := addRecord(ledger, &record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
+	codeRef4, _ := ledger.SetRecord(&record.CodeRecord{TargetedCode: map[record.ArchType][]byte{
 		record.ArchType(1): {4},
 	}})
 
-	amendRec3 := record.ClassAmendRecord{Migrations: []record.Reference{codeRef4}}
-	amendRef1 := addRecord(ledger, &record.ClassAmendRecord{Migrations: []record.Reference{codeRef1}})
-	amendRef2 := addRecord(ledger, &record.ClassAmendRecord{Migrations: []record.Reference{codeRef2, codeRef3}})
-	amendRef3 := addRecord(ledger, &amendRec3)
+	amendRec3 := record.ClassAmendRecord{Migrations: []record.Reference{*codeRef4}}
+	amendRef1, _ := ledger.SetRecord(&record.ClassAmendRecord{Migrations: []record.Reference{*codeRef1}})
+	amendRef2, _ := ledger.SetRecord(&record.ClassAmendRecord{Migrations: []record.Reference{*codeRef2, *codeRef3}})
+	amendRef3, _ := ledger.SetRecord(&amendRec3)
 	idx := index.ClassLifeline{
-		LatestStateID: amendRef2.Record,
-		AmendIDs:      []record.ID{amendRef1.Record, amendRef2.Record, amendRef3.Record},
+		LatestStateRef: *amendRef2,
+		AmendRefs:      []record.Reference{*amendRef1, *amendRef2, *amendRef3},
 	}
-	ledger.SetClassIndex(classRef.Record, &idx)
+	ledger.SetClassIndex(classRef, &idx)
 
 	desc := ClassDescriptor{
 		manager:           manager,
-		fromState:         amendRef1,
+		fromState:         *amendRef1,
 		activateRecord:    classRec,
 		latestAmendRecord: &amendRec3,
 		lifelineIndex:     &idx,
@@ -86,4 +89,3 @@ func TestClassDescriptor_GetMigrations(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, [][]byte{{2}, {3}, {4}}, migrations)
 }
-*/

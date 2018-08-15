@@ -22,9 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // InstanceDomainName is a name for instance domain.
@@ -35,9 +33,9 @@ type InstanceDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// CreateInstance is used to create new instance as a child to domain storage.
-	CreateInstance(factory.Factory) (string, error)
+	CreateInstance(object.Factory) (string, error)
 	// GetInstance returns instance from its record in domain storage.
-	GetInstance(string) (resolver.Proxy, error)
+	GetInstance(string) (object.Proxy, error)
 }
 
 type instanceDomain struct {
@@ -62,7 +60,7 @@ func (instDom *instanceDomain) GetClassID() string {
 }
 
 // CreateInstance creates new instance as a child to domain storage.
-func (instDom *instanceDomain) CreateInstance(fc factory.Factory) (string, error) {
+func (instDom *instanceDomain) CreateInstance(fc object.Factory) (string, error) {
 	instance, err := fc.Create(instDom)
 	if err != nil {
 		return "", err
@@ -80,13 +78,13 @@ func (instDom *instanceDomain) CreateInstance(fc factory.Factory) (string, error
 }
 
 // GetInstance returns instance from its record in domain storage.
-func (instDom *instanceDomain) GetInstance(record string) (resolver.Proxy, error) {
+func (instDom *instanceDomain) GetInstance(record string) (object.Proxy, error) {
 	instance, err := instDom.ChildStorage.Get(record)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := instance.(resolver.Proxy)
+	result, ok := instance.(object.Proxy)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not `Proxy` instance", record)
 	}
@@ -112,22 +110,22 @@ func newInstanceDomainProxy(parent object.Parent) (*instanceDomainProxy, error) 
 }
 
 // CreateInstance is a proxy call for instance method.
-func (idp *instanceDomainProxy) CreateInstance(fc factory.Factory) (string, error) {
+func (idp *instanceDomainProxy) CreateInstance(fc object.Factory) (string, error) {
 	return idp.Instance.(InstanceDomain).CreateInstance(fc)
 }
 
 // GetInstance is a proxy call for instance method.
-func (idp *instanceDomainProxy) GetInstance(record string) (resolver.Proxy, error) {
+func (idp *instanceDomainProxy) GetInstance(record string) (object.Proxy, error) {
 	return idp.Instance.(InstanceDomain).GetInstance(record)
 }
 
 type instanceDomainFactory struct {
-	factory.BaseFactory
+	object.BaseFactory
 	parent object.Parent
 }
 
 // NewInstanceDomainFactory creates new factory for InstanceDomain.
-func NewInstanceDomainFactory(parent object.Parent) factory.Factory {
+func NewInstanceDomainFactory(parent object.Parent) object.Factory {
 	return &instanceDomainFactory{
 		parent: parent,
 	}
@@ -145,7 +143,7 @@ func (idf *instanceDomainFactory) GetClassID() string {
 }
 
 // Create is factory method that used to create new InstanceDomain instances.
-func (idf *instanceDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (idf *instanceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy, err := newInstanceDomainProxy(parent)
 	if err != nil {
 		return nil, err

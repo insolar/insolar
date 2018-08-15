@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ObjectDescriptor represents meta info required to fetch all object data
+// ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor struct {
 	StateRef record.Reference
 
@@ -16,6 +16,7 @@ type ObjectDescriptor struct {
 	lifelineIndex     *index.ObjectLifeline
 }
 
+// GetMemory fetches latest memory of the object known to storage.
 func (d *ObjectDescriptor) GetMemory() (record.Memory, error) {
 	if d.latestAmendRecord != nil {
 		return d.latestAmendRecord.NewMemory, nil
@@ -24,6 +25,9 @@ func (d *ObjectDescriptor) GetMemory() (record.Memory, error) {
 	return d.activateRecord.Memory, nil
 }
 
+// GetDelegates fetches unamended delegates from storage.
+//
+// VM is responsible for collecting all delegates and adding them to the object memory manually if its required.
 func (d *ObjectDescriptor) GetDelegates() ([]record.Memory, error) {
 	var delegates []record.Memory
 	for _, appendRef := range d.lifelineIndex.AppendRefs {

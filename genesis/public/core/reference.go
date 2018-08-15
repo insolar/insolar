@@ -22,9 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // ReferenceDomainName is a name for reference domain.
@@ -39,12 +37,12 @@ type ReferenceDomain interface {
 	// ResolveReference provides reference instance from record.
 	ResolveReference(string) (object.Reference, error)
 	// InitGlobalMap sets globalResolverMap for references register/resolving.
-	InitGlobalMap(globalInstanceMap *map[string]resolver.Proxy)
+	InitGlobalMap(globalInstanceMap *map[string]object.Proxy)
 }
 
 type referenceDomain struct {
 	domain.BaseDomain
-	globalResolverMap *map[string]resolver.Proxy
+	globalResolverMap *map[string]object.Proxy
 }
 
 // newReferenceDomain creates new instance of ReferenceDomain.
@@ -65,7 +63,7 @@ func (rd *referenceDomain) GetClassID() string {
 }
 
 // InitGlobalMap sets globalResolverMap for register/resolve references.
-func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]resolver.Proxy) {
+func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	if rd.globalResolverMap != nil {
 		return
 	}
@@ -74,7 +72,7 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]resolver.
 
 // RegisterReference sets new reference as a child to domain storage.
 func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
-	container := resolver.NewReferenceContainer(ref)
+	container := object.NewReferenceContainer(ref)
 	record, err := rd.ChildStorage.Set(container)
 	if err != nil {
 		return "", err
@@ -84,7 +82,7 @@ func (rd *referenceDomain) RegisterReference(ref object.Reference, classID strin
 	if err != nil {
 		return "", err
 	}
-	proxy, ok := obj.(resolver.Proxy)
+	proxy, ok := obj.(object.Proxy)
 	if !ok {
 		return "", fmt.Errorf("object with reference `%s` is not `Proxy` instance", ref)
 	}
@@ -100,7 +98,7 @@ func (rd *referenceDomain) ResolveReference(record string) (object.Reference, er
 		return nil, err
 	}
 
-	container, ok := reference.(*resolver.ReferenceContainer)
+	container, ok := reference.(*object.ReferenceContainer)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not `ReferenceContainer` instance", record)
 	}
@@ -133,17 +131,17 @@ func (rdp *referenceDomainProxy) ResolveReference(record string) (object.Referen
 }
 
 // InitGlobalMap is a proxy call for instance method.
-func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]resolver.Proxy) {
+func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	rdp.Instance.(ReferenceDomain).InitGlobalMap(globalInstanceMap)
 }
 
 type referenceDomainFactory struct {
-	factory.BaseFactory
+	object.BaseFactory
 	parent object.Parent
 }
 
 // NewReferenceDomainFactory creates new factory for ReferenceDomain.
-func NewReferenceDomainFactory(parent object.Parent) factory.Factory {
+func NewReferenceDomainFactory(parent object.Parent) object.Factory {
 	return &referenceDomainFactory{
 		parent: parent,
 	}
@@ -161,7 +159,7 @@ func (rdf *referenceDomainFactory) GetClassID() string {
 }
 
 // Create factory is a method for new ReferenceDomain instances.
-func (rdf *referenceDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (rdf *referenceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy := newReferenceDomainProxy(parent)
 	_, err := parent.AddChild(proxy)
 	if err != nil {
