@@ -14,22 +14,21 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
-	"github.com/insolar/insolar/genesis/model/object"
 )
 
 // contextResolver is resolver for ContextScope references.
 type contextResolver struct {
-	parent object.Parent
+	parent Parent
 }
 
 // newContextResolver creates new contextResolver instance.
-func newContextResolver(parent object.Parent) *contextResolver {
+func newContextResolver(parent Parent) *contextResolver {
 	return &contextResolver{
 		parent: parent,
 	}
@@ -37,7 +36,7 @@ func newContextResolver(parent object.Parent) *contextResolver {
 
 // GetObject resolves object by its reference and return its proxy.
 func (r *contextResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
-	ref, ok := reference.(object.Reference)
+	ref, ok := reference.(Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
 	}
@@ -54,7 +53,7 @@ func (r *contextResolver) GetObject(reference interface{}, cls interface{}) (int
 	}
 
 	for proxy.GetClassID() == class.ReferenceID {
-		contextHolderWithChildInterface, isChild := contextHolder.(object.Child)
+		contextHolderWithChildInterface, isChild := contextHolder.(Child)
 		if !isChild {
 			return nil, fmt.Errorf("object with name %s does not exist", ref)
 		}

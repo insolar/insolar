@@ -64,12 +64,6 @@ func EncodeRaw(raw *Raw) ([]byte, error) {
 	return b.Bytes(), err
 }
 
-// we can't use Hash on data?
-// Hash returns 28 bytes of SHA3 hash on Data field.
-// func (raw *Raw) Hash() Hash {
-// 	return sha3.Sum224(raw.Data)
-// }
-
 type hashableBytes []byte
 
 func (b hashableBytes) WriteHash(w io.Writer) {

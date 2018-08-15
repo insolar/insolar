@@ -8,8 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
-
-	"github.com/insolar/insolar/logicrunner"
 )
 
 type HelloWorlder struct {
@@ -24,12 +22,6 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 		panic(err)
 	}
 
-	obj := logicrunner.Object{
-		MachineType: logicrunner.MachineTypeGoPlugin,
-		Reference:   "secondary",
-		Data:        data,
-	}
-
 	args := make([]interface{}, 1)
 	args[0] = s
 
@@ -39,7 +31,7 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 		panic(err)
 	}
 
-	data, res, err := gp.Exec(obj, "Echo", argsSerialized)
+	data, res, err := gp.Exec("secondary", data, "Echo", argsSerialized)
 	if err != nil {
 		panic(err)
 	}

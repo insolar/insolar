@@ -14,20 +14,19 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/genesis/model/class"
-	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewReferenceContainer(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := object.NewReference(domain, record, object.GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 	container := NewReferenceContainer(ref)
 	assert.Equal(t, &ReferenceContainer{
 		reference: ref,
@@ -38,7 +37,7 @@ func TestNewReferenceContainer(t *testing.T) {
 func TestReferenceContainer_GetStoredReference(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := object.NewReference(domain, record, object.GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 	container := &ReferenceContainer{
 		reference: ref,
 	}
@@ -49,7 +48,7 @@ func TestReferenceContainer_GetStoredReference(t *testing.T) {
 func TestReferenceContainer_GetClassID(t *testing.T) {
 	domain := "134"
 	record := "156"
-	ref, _ := object.NewReference(domain, record, object.GlobalScope)
+	ref, _ := NewReference(domain, record, GlobalScope)
 	container := &ReferenceContainer{
 		reference: ref,
 	}
