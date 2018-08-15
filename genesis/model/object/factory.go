@@ -32,6 +32,12 @@ type Composite interface {
 	GetInterfaceKey() string // string ID of interface/type of Composite object; basically, GetClassID()
 }
 
+type CompositeCollection interface {
+	Composite
+	GetList() []Composite
+	Add(composite Composite)
+}
+
 // CompositeFactory allows to create new composites.
 type CompositeFactory interface {
 	Proxy
@@ -42,6 +48,6 @@ type CompositeFactory interface {
 // ComposingContainer allows to store composites.
 type ComposingContainer interface {
 	CreateComposite(compositeFactory CompositeFactory) (Composite, error)
-	GetComposite(interfaceKey string) (Composite, error)
+	GetComposite(interfaceKey string, classID string) (Composite, error)
 	GetOrCreateComposite(compositeFactory CompositeFactory) (Composite, error)
 }

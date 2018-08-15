@@ -51,3 +51,6 @@ const WalletDomainID = "WalletDomain"
 
 // WalletID is a string representation of class for Wallet interface implementations.
 const WalletID = "Wallet"
+
+// CompositeCollectionID is a string representation of class for CompositeCollection interface implementations.
+const CompositeCollectionID = "CompositeCollection"

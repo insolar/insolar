@@ -60,7 +60,7 @@ func TestNewBaseDomain(t *testing.T) {
 	domain := NewBaseDomain(parent, "NewDomain")
 
 	sc := contract.BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
+		CompositeMap: make(map[string]object.Reference),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 	}
