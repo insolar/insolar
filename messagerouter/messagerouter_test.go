@@ -18,8 +18,14 @@ package messagerouter
 
 import "testing"
 
+type runner struct{}
+
+func (r *runner) Execute(ref string, method string, args []byte) ([]byte, []byte, error) {
+	return nil, nil, nil
+}
+
 func TestNew(t *testing.T) {
-	mr, err := New()
+	mr, err := New(new(runner))
 	if err != nil {
 		t.Fatal(err)
 	}

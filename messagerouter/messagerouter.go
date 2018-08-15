@@ -18,9 +18,37 @@ package messagerouter
 
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
-type MessageRouter struct{}
+type MessageRouter struct {
+	LogicRunner LogicRunner
+}
 
-// New is a `MessageRouter` constructor
-func New() (*MessageRouter, error) {
-	return &MessageRouter{}, nil
+// LogicRunner is an interface that should satisfy logic executor
+type LogicRunner interface {
+	Execute(ref string, method string, args []byte) ([]byte, []byte, error)
+}
+
+// Message is a routable message, ATM just a method call
+type Message struct {
+	Caller    struct{}
+	Reference string
+	Method    string
+	Arguments []byte
+}
+
+// Response to a `Message`
+type Response struct {
+	Data   []byte
+	Result []byte
+}
+
+// New is a `MessageRouter` constructor, takes an executor object
+// that satisfies `LogicRunner` interface
+func New(lr LogicRunner) (*MessageRouter, error) {
+	return &MessageRouter{lr}, nil
+}
+
+// Route a `Message` and get a `Response` or error
+func (r *MessageRouter) Route(msg Message) (Response, error) {
+	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
+	return Response{data, res}, err
 }
