@@ -49,7 +49,7 @@ func NewGoInsider(path string, address string) *GoInsider {
 // Call is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
-	path, err := t.ObtainCode(args.Object.Reference)
+	path, err := t.ObtainCode(args.Reference)
 	if err != nil {
 		return errors.Wrap(err, "couldn't obtain code")
 	}
@@ -66,7 +66,7 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 
 	ch := new(codec.CborHandle)
 
-	err = codec.NewDecoderBytes(args.Object.Data, ch).Decode(export)
+	err = codec.NewDecoderBytes(args.Data, ch).Decode(export)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't decode data into %T", export)
 	}

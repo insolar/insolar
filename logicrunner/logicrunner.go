@@ -30,19 +30,25 @@ const (
 	MachineTypeGoPlugin
 )
 
-// Executor is an interface implementers for one particular machine type
+// Executor is an interface for implementers of one particular machine type
 type Executor interface {
-	Exec(object Object, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
+	Exec(codeRef Reference, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
+}
+
+// ArtifactManager interface
+type ArtifactManager interface {
+	Get(ref string) (data []byte, codeRef Reference, err error)
 }
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors [MachineTypeGoPlugin + 1]Executor
+	Executors       [MachineTypeGoPlugin + 1]Executor
+	ArtifactManager ArtifactManager
 }
 
 // NewLogicRunner is constructor for `LogicRunner`
-func NewLogicRunner() (*LogicRunner, error) {
-	res := LogicRunner{}
+func NewLogicRunner(am ArtifactManager) (*LogicRunner, error) {
+	res := LogicRunner{ArtifactManager: am}
 
 	return &res, nil
 }
@@ -64,11 +70,16 @@ func (r *LogicRunner) GetExecutor(t MachineType) (Executor, error) {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (r *LogicRunner) Execute(object Object, method string, args Arguments) ([]byte, Arguments, error) {
-	e, err := r.GetExecutor(object.MachineType)
+func (r *LogicRunner) Execute(ref string, method string, args Arguments) ([]byte, []byte, error) {
+	data, codeRef, err := r.ArtifactManager.Get(ref)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't ")
+	}
+
+	executor, err := r.GetExecutor(MachineTypeGoPlugin)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "no executer registered")
 	}
 
-	return e.Exec(object, method, args)
+	return executor.Exec(codeRef, data, method, args)
 }
