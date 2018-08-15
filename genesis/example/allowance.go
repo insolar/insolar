@@ -29,6 +29,7 @@ type Allowance interface {
 type allowance struct {
 	sender string
 	amount int
+	active bool
 }
 
 func (a *allowance) GetInterfaceKey() string {
@@ -47,6 +48,7 @@ func newAllowance(sender string, amount int) *allowance {
 	return &allowance{
 		sender: sender,
 		amount: amount,
+		active: false,
 	}
 }
 
@@ -54,6 +56,8 @@ type allowanceCollection struct {
 	contract.BaseCompositeCollection
 }
 
-func newAllowanceCollection() {
-
+func newAllowanceCollection() *allowanceCollection {
+	return &allowanceCollection{
+		BaseCompositeCollection: *contract.NewBaseCompositeCollection(),
+	}
 }
