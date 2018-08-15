@@ -49,7 +49,7 @@ func NewGoInsider(path string, address string) *GoInsider {
 // Call is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
-	path, err := t.ObtainCode(args.Object)
+	path, err := t.ObtainCode(args.Object.Reference)
 	if err != nil {
 		return errors.Wrap(err, "couldn't obtain code")
 	}
@@ -119,8 +119,8 @@ func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
-func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
-	path := t.dir + "/" + string(obj.Reference)
+func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
+	path := t.dir + "/" + string(ref)
 	_, err := os.Stat(path)
 
 	if err == nil {
@@ -135,7 +135,7 @@ func (t *GoInsider) ObtainCode(obj logicrunner.Object) (string, error) {
 	}
 
 	res := logicrunner.Object{}
-	err = client.Call("RPC.GetObject", obj.Reference, &res)
+	err = client.Call("RPC.GetObject", ref, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}
