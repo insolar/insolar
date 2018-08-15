@@ -115,13 +115,13 @@ func TestAllowanceFactory_Create(t *testing.T) {
 	proxy, err := factory.Create(parent)
 	assert.NoError(t, err)
 
-	expecatedWallet := allowance{
+	expecatedAllowance := allowance{
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 	}
 
 	assert.Equal(t, &allowanceProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
-			Instance: &expecatedWallet,
+			Instance: &expecatedAllowance,
 		},
 	}, proxy)
 }
