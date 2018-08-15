@@ -16,10 +16,6 @@
 
 package object
 
-import (
-	"github.com/insolar/insolar/network/host/relay"
-)
-
 // Factory allows to create new objects with reference.
 type Factory interface {
 	Proxy
@@ -40,12 +36,6 @@ type CompositeCollection interface {
 	Composite
 	GetList() []Composite
 	Add(composite Composite)
-}
-
-type CompositeCollectionFactory interface {
-	relay.Proxy
-	Create(parent Parent) (Composite, error)
-	GetInterfaceKey() string
 }
 
 // CompositeFactory allows to create new composites.

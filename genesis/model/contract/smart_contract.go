@@ -114,8 +114,6 @@ func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFa
 		return nil, err
 	}
 
-	// Test
-
 	ref, err := object.NewReference("", record, object.ChildScope)
 	if err != nil {
 		// TODO: Remove child and do test

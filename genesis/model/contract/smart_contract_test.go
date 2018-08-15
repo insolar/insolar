@@ -56,20 +56,17 @@ func TestBaseCompositeCollection_Add(t *testing.T) {
 		assert.Equal(t, compCollection.storage[i].GetInterfaceKey(), GetTestIntarfaceKey(i))
 	}
 
-	// Add Composites with the same interface keys
-	test_idx := 77
-	mc := newMockComposite(test_idx)
-	numEl = len(compCollection.storage)
+}
+
+func TestBaseCompositeCollection_Add_SameInterfaceKeys(t *testing.T) {
+	compCollection := NewBaseCompositeCollection()
+	testIdx := 77
+	mc := newMockComposite(testIdx)
 	compCollection.Add(&mc)
 	compCollection.Add(&mc)
-	numEl += 2
 
-	assert.Len(t, compCollection.storage, numEl)
-	assert.Equal(t, compCollection.storage[numEl-1].GetInterfaceKey(), GetTestIntarfaceKey(test_idx))
-	assert.Equal(t, compCollection.storage[numEl-2].GetInterfaceKey(), GetTestIntarfaceKey(test_idx))
-
-	assert.NotEqual(t, compCollection.storage[numEl-3].GetInterfaceKey(), GetTestIntarfaceKey(test_idx))
-
+	assert.Equal(t, compCollection.storage[0].GetInterfaceKey(), GetTestIntarfaceKey(testIdx))
+	assert.Equal(t, compCollection.storage[1].GetInterfaceKey(), GetTestIntarfaceKey(testIdx))
 }
 
 func TestBaseCompositeCollection_GitList(t *testing.T) {
@@ -340,7 +337,7 @@ func TestSmartContract_GetComposite(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	res, err := sc.GetComposite(composite.GetInterfaceKey(), composite.(object.Object).GetClassID())
+	res, err := sc.GetComposite(compositeFactory.GetInterfaceKey(), compositeFactory.GetClassID())
 
 	assert.NoError(t, err)
 	assert.Equal(t, composite, res)

@@ -174,12 +174,11 @@ func TestMemberProxy_GetOrCreateComposite_Create(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, proxy.Instance.(*member).CompositeMap, 1)
 
-	inst := proxy.Instance.(*member).CompositeMap
-	if inst == nil {
-
-	}
-
 	ref := proxy.Instance.(*member).CompositeMap[compositeFactory.GetInterfaceKey()]
+
+	record := proxy.Instance.(*member).ChildStorage.GetKeys()[0]
+
+	assert.Equal(t, record, ref.GetRecord())
 	assert.Equal(t, "", ref.GetDomain())
 	assert.Equal(t, object.ChildScope, ref.GetScope())
 }
