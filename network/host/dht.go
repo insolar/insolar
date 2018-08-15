@@ -907,11 +907,11 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *message.Message, message
 	data := msg.Data.(*message.RequestRelayOwnership)
 
 	if data.Ready {
-		dht.subnet.PossibleProxyIds = append(dht.subnet.PossibleProxyIds, msg.Sender.ID.String())
+		dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs, msg.Sender.ID.String())
 	} else {
-		for i, j := range dht.subnet.PossibleProxyIds {
+		for i, j := range dht.subnet.PossibleProxyIDs {
 			if j == msg.Sender.ID.String() {
-				dht.subnet.PossibleProxyIds = append(dht.subnet.PossibleProxyIds[:i], dht.subnet.PossibleProxyIds[i+1:]...)
+				dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs[:i], dht.subnet.PossibleProxyIDs[i+1:]...)
 				break
 			}
 		}
@@ -1100,9 +1100,9 @@ func (dht *DHT) processObtainIPRequest(ctx Context, msg *message.Message, messag
 }
 
 // RelayRequest sends relay request to target.
-func (dht *DHT) RelayRequest(ctx Context, command, target string) error { // target - node ID
+func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error { // target - node ID
 	var typedCommand message.CommandType
-	targetNode, exist, err := dht.FindNode(ctx, target)
+	targetNode, exist, err := dht.FindNode(ctx, targetID)
 	if err != nil {
 		return err
 	}
@@ -1136,7 +1136,7 @@ func (dht *DHT) RelayRequest(ctx Context, command, target string) error { // tar
 		}
 
 		response := rsp.Data.(*message.ResponseRelay)
-		dht.handleRelayResponse(ctx, response, target)
+		dht.handleRelayResponse(ctx, response, targetID)
 
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
@@ -1147,14 +1147,14 @@ func (dht *DHT) RelayRequest(ctx Context, command, target string) error { // tar
 	return nil
 }
 
-func (dht *DHT) handleRelayResponse(ctx Context, response *message.ResponseRelay, target string) {
+func (dht *DHT) handleRelayResponse(ctx Context, response *message.ResponseRelay, targetID string) {
 	switch response.State {
 	case relay.Stopped:
 		// stop use this address as relay
-		dht.proxy.RemoveProxyNode(target)
+		dht.proxy.RemoveProxyNode(targetID)
 	case relay.Started:
 		// start use this address as relay
-		dht.proxy.AddProxyNode(target)
+		dht.proxy.AddProxyNode(targetID)
 	case relay.NoAuth:
 		log.Println("unable to execute relay because this node not authenticated.")
 	default:
@@ -1163,10 +1163,10 @@ func (dht *DHT) handleRelayResponse(ctx Context, response *message.ResponseRelay
 	}
 }
 
-func (dht *DHT) handleCheckOriginResponse(response *message.ResponseCheckOrigin, target string) {
-	if bytes.Equal(response.AuthUniqueKey, dht.auth.SentKeys[target]) {
-		delete(dht.auth.SentKeys, target)
-		dht.auth.authenticatedNodes[target] = true
+func (dht *DHT) handleCheckOriginResponse(response *message.ResponseCheckOrigin, targetID string) {
+	if bytes.Equal(response.AuthUniqueKey, dht.auth.SentKeys[targetID]) {
+		delete(dht.auth.SentKeys, targetID)
+		dht.auth.authenticatedNodes[targetID] = true
 	}
 }
 
@@ -1519,12 +1519,12 @@ func (dht *DHT) processKnownOuterNodes(ctx Context, msg *message.Message, messag
 	}
 }
 
-func (dht *DHT) knownOuterNodesRequest(target string, nodes int) error {
+func (dht *DHT) knownOuterNodesRequest(targetID string, nodes int) error {
 	ctx, err := NewContextBuilder(dht).SetDefaultNode().Build()
 	if err != nil {
 		return err
 	}
-	targetNode, exist, err := dht.FindNode(ctx, target)
+	targetNode, exist, err := dht.FindNode(ctx, targetID)
 	if err != nil {
 		return err
 	}
@@ -1547,7 +1547,7 @@ func (dht *DHT) knownOuterNodesRequest(target string, nodes int) error {
 		}
 
 		response := rsp.Data.(*message.ResponseKnownOuterNodes)
-		dht.handleKnownOuterNodes(response, target)
+		dht.handleKnownOuterNodes(ctx, response, targetID)
 
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
@@ -1558,7 +1558,7 @@ func (dht *DHT) knownOuterNodesRequest(target string, nodes int) error {
 	return nil
 }
 
-func (dht *DHT) handleKnownOuterNodes(response *message.ResponseKnownOuterNodes, target string) {
+func (dht *DHT) handleKnownOuterNodes(ctx Context, response *message.ResponseKnownOuterNodes, targetID string) {
 	if response.OuterNodes > dht.subnet.HighKnownNodes.OuterNodes { // update data
 		dht.subnet.HighKnownNodes.OuterNodes = response.OuterNodes
 		dht.subnet.HighKnownNodes.ID = response.ID
