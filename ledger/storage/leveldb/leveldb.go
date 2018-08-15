@@ -17,6 +17,7 @@
 package leveldb
 
 import (
+	"os"
 	"path/filepath"
 	"time"
 
@@ -170,41 +171,75 @@ func (ll *LevelLedger) SetRecord(rec record.Record) (*record.Reference, error) {
 	return ref, nil
 }
 
-// GetClassIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, bool) {
+// GetClassIndex fetches lifeline index from leveldb
+func (ll *LevelLedger) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
 	k := prefixkey(scopeIDLifeline, ref.Key())
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
-		return nil, false
+		if err == leveldb.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
 	}
-	idx := index.DecodeClassLifeline(buf)
-	return &idx, true
+	idx, err := index.DecodeClassLifeline(buf)
+	if err != nil {
+		return nil, err
+	}
+	return idx, nil
 }
 
-// SetClassIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
+// SetClassIndex stores lifeline index into leveldb
 func (ll *LevelLedger) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.Key())
-	return ll.ldb.Put(k, index.EncodeClassLifeline(idx), nil)
+	encoded, err := index.EncodeClassLifeline(idx)
+	if err != nil {
+		return err
+	}
+	return ll.ldb.Put(k, encoded, nil)
 }
 
-// GetObjectIndex fetches lifeline index from leveldb (records and lifeline indexes have the same id, but different scopes)
-func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, bool) {
+// GetObjectIndex fetches lifeline index from leveldb
+func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
 	k := prefixkey(scopeIDLifeline, ref.Key())
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
-		return nil, false
+		if err == leveldb.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
 	}
-	idx := index.DecodeObjectLifeline(buf)
-	return &idx, true
+	idx, err := index.DecodeObjectLifeline(buf)
+	if err != nil {
+		return nil, err
+	}
+	return idx, nil
 }
 
-// SetObjectIndex stores lifeline index into leveldb (records and lifeline indexes have the same id, but different scopes)
+// SetObjectIndex stores lifeline index into leveldb
 func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.Key())
-	return ll.ldb.Put(k, index.EncodeObjectLifeline(idx), nil)
+	encoded, err := index.EncodeObjectLifeline(idx)
+	if err != nil {
+		return err
+	}
+	return ll.ldb.Put(k, encoded, nil)
 }
 
 // Close terminates db connection
 func (ll *LevelLedger) Close() error {
 	return ll.ldb.Close()
+}
+
+// DropDB erases all data from storage.
+func DropDB() error {
+	absPath, err := filepath.Abs(dbDirPath)
+	if err != nil {
+		return err
+	}
+
+	if err = os.RemoveAll(absPath); err != nil {
+		return err
+	}
+
+	return nil
 }

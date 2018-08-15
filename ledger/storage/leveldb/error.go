@@ -19,6 +19,6 @@ package leveldb
 import "errors"
 
 var (
-	// ErrNotFound returns if record not found in leveldb storage.
+	// ErrNotFound returns if record/index not found in leveldb storage.
 	ErrNotFound = errors.New("record not found")
 )

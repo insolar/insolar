@@ -21,26 +21,24 @@ import (
 
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 type BaseCompositeCollection struct {
-	storage []factory.Composite
+	storage []object.Composite
 }
 
-func (bcc *BaseCompositeCollection) GitList() []factory.Composite {
+func (bcc *BaseCompositeCollection) GitList() []object.Composite {
 	return bcc.storage
 }
 
-func (bcc *BaseCompositeCollection) Add(composite factory.Composite) {
+func (bcc *BaseCompositeCollection) Add(composite object.Composite) {
 	bcc.storage = append(bcc.storage, composite)
 }
 
 func NewBaseCompositeCollection() *BaseCompositeCollection {
 	return &BaseCompositeCollection{
-		storage: make([]factory.Composite, 0),
+		storage: make([]object.Composite, 0),
 	}
 }
 
@@ -53,7 +51,7 @@ type SmartContract interface {
 // InternalSmartContract contains private method.
 type InternalSmartContract interface {
 	object.Child
-	GetResolver() resolver.Resolver
+	GetResolver() object.Resolver
 }
 
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.
@@ -63,7 +61,7 @@ type BaseSmartContract struct {
 	ChildStorage   storage.Storage
 	ContextStorage storage.Storage
 	Parent         object.Parent
-	resolver       resolver.Resolver
+	resolver       object.Resolver
 }
 
 // NewBaseSmartContract creates new BaseSmartContract instance with empty CompositeMap, ChildStorage and specific parent.
@@ -77,9 +75,9 @@ func NewBaseSmartContract(parent object.Parent) *BaseSmartContract {
 }
 
 // GetResolver return instance or create it if necessary.
-func (sc *BaseSmartContract) GetResolver() resolver.Resolver {
+func (sc *BaseSmartContract) GetResolver() object.Resolver {
 	if sc.resolver == nil {
-		sc.resolver = resolver.NewHandler(sc)
+		sc.resolver = object.NewResolverHandler(sc)
 	}
 	return sc.resolver
 }
@@ -90,7 +88,7 @@ func (sc *BaseSmartContract) GetClassID() string {
 }
 
 // CreateComposite allows to create composites inside smart contract.
-func (sc *BaseSmartContract) CreateComposite(compositeFactory factory.CompositeFactory) (factory.Composite, error) {
+func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
 	composite, err := compositeFactory.Create(sc)
 	if err != nil {
 		return nil, err
@@ -125,18 +123,18 @@ func (sc *BaseSmartContract) CreateComposite(compositeFactory factory.CompositeF
 }
 
 // GetComposite return composite by its key (if its exist inside smart contract).
-func (sc *BaseSmartContract) GetComposite(key string, class_id string) (factory.Composite, error) {
+func (sc *BaseSmartContract) GetComposite(key string, classID string) (object.Composite, error) {
 	ref, exist := sc.CompositeMap[key]
 	if !exist {
 		return nil, fmt.Errorf("delegate with name %s does not exist", key)
 	}
 
-	compObject, err := sc.GetResolver().GetObject(ref, class_id)
+	compObject, err := sc.GetResolver().GetObject(ref, classID)
 	if err != nil {
 		return nil, err
 	}
 
-	composite, ok := compObject.(factory.Composite)
+	composite, ok := compObject.(object.Composite)
 	if !ok {
 		return nil, fmt.Errorf("GetComposite: object is not Composite")
 	}
@@ -145,7 +143,7 @@ func (sc *BaseSmartContract) GetComposite(key string, class_id string) (factory.
 }
 
 // GetOrCreateComposite return composite by its key if its exist inside smart contract and create new one otherwise.
-func (sc *BaseSmartContract) GetOrCreateComposite(compositeFactory factory.CompositeFactory) (factory.Composite, error) {
+func (sc *BaseSmartContract) GetOrCreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
 	composite, err := sc.GetComposite(compositeFactory.GetInterfaceKey(), compositeFactory.GetClassID())
 	if err != nil {
 		composite, err = sc.CreateComposite(compositeFactory)

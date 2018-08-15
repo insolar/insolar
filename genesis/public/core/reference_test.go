@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -103,7 +102,7 @@ func (d *mockDomain) GetParent() object.Parent {
 }
 
 // Create map for global resolving
-var globalResolverMap = make(map[string]resolver.Proxy)
+var globalResolverMap = make(map[string]object.Proxy)
 var domainString = "123"
 var initRefObject, _ = object.NewReference(domainString, "1", object.GlobalScope)
 
@@ -115,7 +114,7 @@ var initRefDomainProxy = newReferenceDomainProxy(globalParent)
 func init() {
 	globalResolverMap["123"] = &mockDomain{}
 	// Create Handler empty instance
-	resolverHandler := resolver.NewHandler(nil)
+	resolverHandler := object.NewResolverHandler(nil)
 	// Set map to Handler.GlobalResolver
 	resolverHandler.InitGlobalMap(&globalResolverMap)
 	// Set map to ReferenceDomain.globalResolverMap
@@ -154,7 +153,7 @@ func TestReferenceDomain_SetMap(t *testing.T) {
 	refDomain := newReferenceDomain(nil)
 	refDomain.globalResolverMap = nil
 
-	newMap := make(map[string]resolver.Proxy)
+	newMap := make(map[string]object.Proxy)
 	refDomain.InitGlobalMap(&newMap)
 
 	assert.Equal(t, &newMap, refDomain.globalResolverMap)
@@ -213,7 +212,7 @@ func TestReferenceDomainProxy_SetMap(t *testing.T) {
 	refDomain := newReferenceDomainProxy(nil)
 	refDomain.Instance.(*referenceDomain).globalResolverMap = nil
 
-	newMap := make(map[string]resolver.Proxy)
+	newMap := make(map[string]object.Proxy)
 	refDomain.InitGlobalMap(&newMap)
 
 	assert.Equal(t, &newMap, refDomain.Instance.(*referenceDomain).globalResolverMap)

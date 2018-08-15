@@ -17,16 +17,8 @@
 package ledger
 
 import (
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
-
-// Ledgerer is high level Ledger interface
-// TODO: signature probably will change
-type Ledgerer interface {
-	Get(id record.Hash) (bool, record.Record)
-	Set(record record.Record) error
-}
 
 // Ledger defines parameters for running ledger storer
 // TODO: should implements Ledgerer interface

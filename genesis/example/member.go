@@ -21,13 +21,11 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 type Member interface {
-	factory.ComposingContainer
+	object.ComposingContainer
 	contract.SmartContract
 	GetUsername() string
 	GetPublicKey() string
@@ -92,27 +90,27 @@ func (mp *memberProxy) GetPublicKey() string {
 }
 
 // CreateComposite is a proxy call for instance method.
-func (mp *memberProxy) CreateComposite(compositeFactory factory.CompositeFactory) (factory.Composite, error) {
+func (mp *memberProxy) CreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
 	return mp.Instance.(Member).CreateComposite(compositeFactory)
 }
 
 // GetComposite is a proxy call for instance method.
-func (mp *memberProxy) GetComposite(interfaceKey string, classId string) (factory.Composite, error) {
-	return mp.Instance.(Member).GetComposite(interfaceKey, classId)
+func (mp *memberProxy) GetComposite(interfaceKey string, classID string) (object.Composite, error) {
+	return mp.Instance.(Member).GetComposite(interfaceKey, classID)
 }
 
 // GetOrCreateComposite is a proxy call for instance method.
-func (mp *memberProxy) GetOrCreateComposite(compositeFactory factory.CompositeFactory) (factory.Composite, error) {
+func (mp *memberProxy) GetOrCreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
 	return mp.Instance.(Member).GetOrCreateComposite(compositeFactory)
 }
 
 type memberFactory struct {
-	resolver.BaseProxy
+	object.BaseProxy
 	parent object.Parent
 }
 
 // NewMemberFactory creates new factory for Member.
-func NewMemberFactory(parent object.Parent) factory.Factory {
+func NewMemberFactory(parent object.Parent) object.Factory {
 	return &memberFactory{
 		parent: parent,
 	}
@@ -129,7 +127,7 @@ func (mf *memberFactory) GetParent() object.Parent {
 }
 
 // Create is a factory method for new Member instances.
-func (mf *memberFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (mf *memberFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy, err := newMemberProxy(parent)
 	if err != nil {
 		return nil, err

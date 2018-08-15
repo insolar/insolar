@@ -35,10 +35,10 @@ func TestCodeRecord_GetCode(t *testing.T) {
 		},
 	}
 
-	code, err := rec.GetCode([]ArchType{15})
+	_, err := rec.GetCode([]ArchType{15})
 	assert.Error(t, err)
 
-	code, err = rec.GetCode([]ArchType{3, 2, 1})
+	code, err := rec.GetCode([]ArchType{3, 2, 1})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{2}, code)
 

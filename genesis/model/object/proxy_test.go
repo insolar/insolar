@@ -14,12 +14,11 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"testing"
 
-	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,14 +33,14 @@ func TestBaseProxy_GetParent(t *testing.T) {
 }
 
 func TestBaseProxy_SetReference(t *testing.T) {
-	ref, _ := object.NewReference("1", "2", object.GlobalScope)
+	ref, _ := NewReference("1", "2", GlobalScope)
 	proxy := &BaseProxy{}
 	proxy.SetReference(ref)
 	assert.Equal(t, ref, proxy.reference)
 }
 
 func TestBaseProxy_GetReference(t *testing.T) {
-	ref, _ := object.NewReference("1", "2", object.GlobalScope)
+	ref, _ := NewReference("1", "2", GlobalScope)
 	proxy := &BaseProxy{
 		reference: ref,
 	}
