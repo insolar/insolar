@@ -912,6 +912,8 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *message.Message, message
 		for i, j := range dht.subnet.PossibleProxyIDs {
 			if j == msg.Sender.ID.String() {
 				dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs[:i], dht.subnet.PossibleProxyIDs[i+1:]...)
+				dht.AuthenticationRequest(ctx, "begin", msg.Sender.ID.String())
+				dht.RelayRequest(ctx, "start", msg.Sender.ID.String())
 				break
 			}
 		}
@@ -1419,20 +1421,12 @@ func (dht *DHT) getHomeSubnetKey() string {
 }
 
 func (dht *DHT) countOuterNodes() {
-	ctx, err := NewContextBuilder(dht).SetDefaultNode().Build()
-	if err != nil {
-		log.Printf("couldn't create a context: %s", err)
-	}
 	if len(dht.subnet.SubnetIDs) > 1 {
 		for key, nodes := range dht.subnet.SubnetIDs {
 			if key == dht.subnet.HomeSubnetKey {
 				continue
 			}
 			dht.subnet.HighKnownNodes.SelfKnownOuterNodes += len(nodes)
-			for _, n := range nodes {
-				dht.AuthenticationRequest(ctx, "begin", n)
-				dht.RelayRequest(ctx, "start", n)
-			}
 		}
 	}
 }
