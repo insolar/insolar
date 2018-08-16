@@ -115,11 +115,11 @@ func (m *LedgerArtifactManager) checkRequestRecord(requestRef *record.Reference)
 func (m *LedgerArtifactManager) getCodeRecord(codeRef record.Reference) (*record.CodeRecord, error) {
 	rec, err := m.storer.GetRecord(&codeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "code record is not found")
+		return nil, errors.Wrap(err, "failed to retrieve code record")
 	}
 	codeRec, ok := rec.(*record.CodeRecord)
 	if !ok {
-		return nil, errors.New("provided reference is not a code reference")
+		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
 	}
 	return codeRec, nil
 }
@@ -127,7 +127,7 @@ func (m *LedgerArtifactManager) getCodeRecord(codeRef record.Reference) (*record
 func (m *LedgerArtifactManager) getCodeRecordCode(codeRef record.Reference) ([]byte, error) {
 	codeRec, err := m.getCodeRecord(codeRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code record")
+		return nil, err
 	}
 	code, err := codeRec.GetCode(m.archPref)
 	if err != nil {
@@ -137,24 +137,16 @@ func (m *LedgerArtifactManager) getCodeRecordCode(codeRef record.Reference) ([]b
 	return code, nil
 }
 
-func (m *LedgerArtifactManager) storeRecord(rec record.Record) (*record.Reference, error) {
-	ref, err := m.storer.SetRecord(rec)
-	if err != nil {
-		return nil, errors.Wrap(err, "record store failed")
-	}
-	return ref, nil
-}
-
 func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
 	*record.ClassActivateRecord, *record.ClassAmendRecord, *index.ClassLifeline, error,
 ) {
 	classRecord, err := m.storer.GetRecord(&classRef)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "class record is not found")
+		return nil, nil, nil, errors.Wrap(err, "failed to retrieve class record")
 	}
 	activateRec, isClassRec := classRecord.(*record.ClassActivateRecord)
 	if !isClassRec {
-		return nil, nil, nil, errors.New("provided reference is not a class record")
+		return nil, nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
 	}
 	classIndex, err := m.storer.GetClassIndex(&classRef)
 	if err != nil {
@@ -162,14 +154,14 @@ func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
 	}
 	latestClassRecord, err := m.storer.GetRecord(&classIndex.LatestStateRef)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "latest class record is not found")
+		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
 	if _, isDeactivated := latestClassRecord.(*record.DeactivationRecord); isDeactivated {
-		return nil, nil, nil, errors.New("class is deactivated")
+		return nil, nil, nil, ErrClassDeactivated
 	}
-	amendRecord, isLatestAmend := latestClassRecord.(*record.ClassAmendRecord)
-	if classRef.IsNotEqual(classIndex.LatestStateRef) && !isLatestAmend {
-		return nil, nil, nil, errors.New("wrong index record")
+	amendRecord, isLatestStateAmend := latestClassRecord.(*record.ClassAmendRecord)
+	if classRef.IsNotEqual(classIndex.LatestStateRef) && !isLatestStateAmend {
+		return nil, nil, nil, errors.Wrap(ErrInconsistentIndex, "inconsistent class index")
 	}
 
 	return activateRec, amendRecord, classIndex, nil
@@ -180,11 +172,11 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 ) {
 	objRecord, err := m.storer.GetRecord(&objRef)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "object record is not found")
+		return nil, nil, nil, errors.Wrap(err, "failed to retrieve object record")
 	}
 	activateRec, isObjectRec := objRecord.(*record.ObjectActivateRecord)
 	if !isObjectRec {
-		return nil, nil, nil, errors.New("provided reference is not an object record")
+		return nil, nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve object record")
 	}
 
 	objIndex, err := m.storer.GetObjectIndex(&objRef)
@@ -193,14 +185,14 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 	}
 	latestObjRecord, err := m.storer.GetRecord(&objIndex.LatestStateRef)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "latest object record is not found")
+		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
 	if _, isDeactivated := latestObjRecord.(*record.DeactivationRecord); isDeactivated {
-		return nil, nil, nil, errors.New("object is deactivated")
+		return nil, nil, nil, ErrObjectDeactivated
 	}
 	amendRecord, isLatestAmend := latestObjRecord.(*record.ObjectAmendRecord)
 	if objRef.IsNotEqual(objIndex.LatestStateRef) && !isLatestAmend {
-		return nil, nil, nil, errors.New("wrong index record")
+		return nil, nil, nil, errors.Wrap(ErrInconsistentIndex, "inconsistent object index")
 	}
 
 	return activateRec, amendRecord, objIndex, nil
@@ -236,7 +228,11 @@ func (m *LedgerArtifactManager) DeployCode(
 		},
 		TargetedCode: codeMap,
 	}
-	return m.storeRecord(&rec)
+	codeRef, err := m.storer.SetRecord(&rec)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to store record")
+	}
+	return codeRef, nil
 }
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
@@ -266,9 +262,9 @@ func (m *LedgerArtifactManager) ActivateClass(
 		CodeRecord:    codeRef,
 		DefaultMemory: memory,
 	}
-	classRef, err := m.storeRecord(&rec)
+	classRef, err := m.storer.SetRecord(&rec)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to store record")
 	}
 	err = m.storer.SetClassIndex(classRef, &index.ClassLifeline{
 		LatestStateRef: *classRef,
@@ -311,15 +307,14 @@ func (m *LedgerArtifactManager) DeactivateClass(
 			},
 		},
 	}
-	deactivationRef, err := m.storeRecord(&rec)
+	deactivationRef, err := m.storer.SetRecord(&rec)
 	if err != nil {
-		return nil, errors.New("failed to store deactivation record")
+		return nil, errors.Wrap(err, "failed to store record")
 	}
 	classIndex.LatestStateRef = *deactivationRef
 	err = m.storer.SetClassIndex(&classRef, classIndex)
 	if err != nil {
-		// TODO: add transaction
-		return nil, errors.New("failed to store lifeline index")
+		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
 	return deactivationRef, nil
@@ -370,16 +365,15 @@ func (m *LedgerArtifactManager) UpdateClass(
 		Migrations: migrationRefs,
 	}
 
-	amendRef, err := m.storeRecord(&rec)
+	amendRef, err := m.storer.SetRecord(&rec)
 	if err != nil {
-		return nil, errors.New("failed to store amend record")
+		return nil, errors.Wrap(err, "failed to store record")
 	}
 	classIndex.LatestStateRef = *amendRef
 	classIndex.AmendRefs = append(classIndex.AmendRefs, *amendRef)
 	err = m.storer.SetClassIndex(&classRef, classIndex)
 	if err != nil {
-		// TODO: add transaction
-		return nil, errors.New("failed to store lifeline index")
+		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
 	return amendRef, nil
@@ -414,9 +408,9 @@ func (m *LedgerArtifactManager) ActivateObj(
 		Memory:              memory,
 	}
 
-	objRef, err := m.storeRecord(&rec)
+	objRef, err := m.storer.SetRecord(&rec)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to store record")
 	}
 	err = m.storer.SetObjectIndex(objRef, &index.ObjectLifeline{
 		ClassRef:       classRef,
@@ -458,15 +452,14 @@ func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Referenc
 			},
 		},
 	}
-	deactivationRef, err := m.storeRecord(&rec)
+	deactivationRef, err := m.storer.SetRecord(&rec)
 	if err != nil {
-		return nil, errors.New("failed to store deactivation record")
+		return nil, errors.Wrap(err, "failed to store record")
 	}
 	objIndex.LatestStateRef = *deactivationRef
 	err = m.storer.SetObjectIndex(&objRef, objIndex)
 	if err != nil {
-		// TODO: add transaction
-		return nil, errors.New("failed to store lifeline index")
+		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 	return deactivationRef, nil
 }
@@ -505,16 +498,15 @@ func (m *LedgerArtifactManager) UpdateObj(
 		NewMemory: memory,
 	}
 
-	amendRef, err := m.storeRecord(&rec)
+	amendRef, err := m.storer.SetRecord(&rec)
 	if err != nil {
-		return nil, errors.New("failed to store amend record")
+		return nil, errors.Wrap(err, "failed to store record")
 	}
 	objIndex.LatestStateRef = *amendRef
 	objIndex.AppendRefs = []record.Reference{}
 	err = m.storer.SetObjectIndex(&objRef, objIndex)
 	if err != nil {
-		// TODO: add transaction
-		return nil, errors.New("failed to store lifeline index")
+		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 	return amendRef, nil
 }
@@ -554,15 +546,14 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 		AppendMemory: memory,
 	}
 
-	appendRef, err := m.storeRecord(&rec)
+	appendRef, err := m.storer.SetRecord(&rec)
 	if err != nil {
-		return nil, errors.New("failed to store append record")
+		return nil, errors.Wrap(err, "failed to store record")
 	}
 	objIndex.AppendRefs = append(objIndex.AppendRefs, *appendRef)
 	err = m.storer.SetObjectIndex(&objRef, objIndex)
 	if err != nil {
-		// TODO: add transaction
-		return nil, errors.New("failed to store lifeline index")
+		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 	return appendRef, nil
 }
@@ -577,7 +568,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	// Fetching class data
 	classRec, err := m.storer.GetRecord(&classState)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "class record not found")
+		return nil, nil, errors.Wrap(err, "failed to retrieve class record")
 	}
 
 	var codeRef record.Reference
@@ -590,7 +581,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 		codeRef = rec.NewCode
 		classHeadRef = rec.HeadRecord
 	default:
-		return nil, nil, errors.New("wrong class reference")
+		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
 	}
 
 	code, err := m.getCodeRecordCode(codeRef)
@@ -601,7 +592,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	// Fetching object data
 	objectRec, err := m.storer.GetRecord(&objectState)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "object record not found")
+		return nil, nil, errors.Wrap(err, "failed to retrieve object record")
 	}
 
 	var memory record.Memory
@@ -614,17 +605,17 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 		memory = rec.NewMemory
 		objectHeadRef = rec.HeadRecord
 	default:
-		return nil, nil, errors.New("wrong object reference")
+		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve object record")
 	}
 
 	objectIndex, err := m.storer.GetObjectIndex(&objectHeadRef)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "object index not found")
+		return nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
 
 	// Checking if the object belongs to the class
 	if objectIndex.ClassRef.IsNotEqual(classHeadRef) {
-		return nil, nil, errors.New("the object does not belong to the class")
+		return nil, nil, ErrWrongObject
 	}
 
 	return code, memory, nil

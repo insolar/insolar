@@ -14,11 +14,13 @@
  *    limitations under the License.
  */
 
-package leveldb
+package storage
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrNotFound returns if record/index not found in leveldb storage.
-	ErrNotFound = errors.New("record not found")
+	ErrNotFound = errors.New("storage object not found")
 )

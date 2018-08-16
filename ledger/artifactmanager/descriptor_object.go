@@ -33,11 +33,11 @@ func (d *ObjectDescriptor) GetDelegates() ([]record.Memory, error) {
 	for _, appendRef := range d.lifelineIndex.AppendRefs {
 		rec, err := d.manager.storer.GetRecord(&appendRef)
 		if err != nil {
-			return nil, errors.Wrap(err, "invalid append reference in object index")
+			return nil, errors.Wrap(err, "inconsistent object index")
 		}
 		appendRec, ok := rec.(*record.ObjectAppendRecord)
 		if !ok {
-			return nil, errors.New("invalid append reference in object index")
+			return nil, errors.Wrap(ErrInvalidRef, "inconsistent object index")
 		}
 		delegates = append(delegates, appendRec.AppendMemory)
 	}
