@@ -1291,11 +1291,11 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 
 func (dht *DHT) handleAuthResponse(response *message.ResponseAuth, target string) error {
 	var err error
-	err = nil
 	if (len(response.AuthUniqueKey) != 0) && response.Success {
 		dht.auth.mut.Lock()
 		defer dht.auth.mut.Unlock()
 		dht.auth.ReceivedKeys[target] = response.AuthUniqueKey
+		err = nil
 	} else {
 		if response.Success && (len(response.AuthUniqueKey) == 0) { // revoke success
 			return err
