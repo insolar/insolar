@@ -1052,36 +1052,57 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 }
 
 func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, messageBuilder message.Builder) {
-	if dht.auth.authenticatedNodes[msg.Sender.ID.String()] {
-		// TODO: whats next?
-	} else {
-		data := msg.Data.(*message.RequestAuth)
-		switch data.Command {
-		case message.BeginAuth:
-			key := make([]byte, 512)
-			_, err := rand.Read(key) // crypto/rand
-			if err != nil {
-				log.Println("failed to create auth key. ", err)
-				return
+	data := msg.Data.(*message.RequestAuth)
+	switch data.Command {
+	case message.BeginAuth:
+		if dht.auth.authenticatedNodes[msg.Sender.ID.String()] {
+			// TODO: whats next?
+			response := &message.ResponseAuth{
+				Success:       false,
+				AuthUniqueKey: nil,
 			}
-			dht.auth.SentKeys[msg.Sender.ID.String()] = key
-			response := &message.ResponseAuth{AuthUniqueKey: key}
 
-			err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+			err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 			if err != nil {
 				log.Println("Failed to send response:", err)
 			}
-			// TODO process verification msg.Sender node
-			// confirmed
-			err = dht.CheckOriginRequest(ctx, msg.Sender.ID.String())
-			if err != nil {
-				log.Println("error: ", err)
-			}
-		case message.RevokeAuth:
-			delete(dht.auth.authenticatedNodes, msg.Sender.Address.String())
-		default:
-			log.Println("unknown auth command")
+			break
 		}
+		key := make([]byte, 512)
+		_, err := rand.Read(key) // crypto/rand
+		if err != nil {
+			log.Println("failed to create auth key. ", err)
+			return
+		}
+		dht.auth.SentKeys[msg.Sender.ID.String()] = key
+		response := &message.ResponseAuth{
+			Success:       true,
+			AuthUniqueKey: key,
+		}
+
+		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+		if err != nil {
+			log.Println("Failed to send response:", err)
+		}
+		// TODO process verification msg.Sender node
+		// confirmed
+		err = dht.CheckOriginRequest(ctx, msg.Sender.ID.String())
+		if err != nil {
+			log.Println("error: ", err)
+		}
+	case message.RevokeAuth:
+		delete(dht.auth.authenticatedNodes, msg.Sender.ID.String())
+		response := &message.ResponseAuth{
+			Success:       true,
+			AuthUniqueKey: nil,
+		}
+
+		err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+		if err != nil {
+			log.Println("Failed to send response:", err)
+		}
+	default:
+		log.Println("unknown auth command")
 	}
 }
 
@@ -1223,7 +1244,7 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 		return err
 	}
 	if !exist {
-		err = errors.New("target for relay request not found")
+		err = errors.New("target for auth request not found")
 		return err
 	}
 
@@ -1235,7 +1256,8 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 	case "revoke":
 		authCommand = message.RevokeAuth
 	default:
-		authCommand = message.Unknown
+		err = errors.New("unknown command")
+		return err
 	}
 	request := message.NewAuthMessage(authCommand, origin, targetNode)
 	future, err := dht.transport.SendRequest(request)
@@ -1253,7 +1275,10 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 		}
 
 		response := rsp.Data.(*message.ResponseAuth)
-		dht.handleAuthResponse(response, targetNode.ID.String())
+		err = dht.handleAuthResponse(response, targetNode.ID.String())
+		if err != nil {
+			return err
+		}
 
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
@@ -1264,12 +1289,24 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 	return nil
 }
 
-func (dht *DHT) handleAuthResponse(response *message.ResponseAuth, target string) {
-	if len(response.AuthUniqueKey) != 0 {
+func (dht *DHT) handleAuthResponse(response *message.ResponseAuth, target string) error {
+	var err error
+	err = nil
+	if (len(response.AuthUniqueKey) != 0) && response.Success {
 		dht.auth.mut.Lock()
 		defer dht.auth.mut.Unlock()
 		dht.auth.ReceivedKeys[target] = response.AuthUniqueKey
+	} else {
+		if response.Success && (len(response.AuthUniqueKey) == 0) { // revoke success
+			return err
+		}
+		if !response.Success {
+			err = errors.New("authentication unsuccessful")
+		} else if len(response.AuthUniqueKey) == 0 {
+			err = errors.New("wrong auth unique key received")
+		}
 	}
+	return err
 }
 
 // ObtainIPRequest is request to self IP obtaining.
