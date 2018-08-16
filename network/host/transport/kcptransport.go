@@ -44,14 +44,15 @@ type kcpTransport struct {
 	blockCrypt kcp.BlockCrypt
 }
 
-// NewKCPTransport creates utpTransport.
+// NewKCPTransport creates kcpTransport.
 func NewKCPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
 	return newKCPTransport(conn, proxy)
 }
 
 func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, error) {
 	crypt, err := kcp.NewNoneBlockCrypt([]byte{})
-	//crypt, err := kcp.NewSimpleXORBlockCrypt([]byte("test key"))
+	// crypt, err := kcp.NewSimpleXORBlockCrypt([]byte("test key"))
+
 	if err != nil {
 		return nil, err
 	}
@@ -110,12 +111,8 @@ func (t *kcpTransport) SendResponse(requestID message.RequestID, msg *message.Me
 func (t *kcpTransport) Start() error {
 	for {
 		if session, err := t.listener.AcceptKCP(); err == nil {
-			//session.SetStreamMode(true)
-			//conn.SetWriteDelay(true)
-			//log.Println("Accepted remote address:", conn.RemoteAddr())
 			go t.handleAcceptedConnection(session)
 		} else {
-			//log.Printf("%+v", err)
 			<-t.disconnectFinished
 			return err
 		}
@@ -206,22 +203,13 @@ func (t *kcpTransport) sendMessage(msg *message.Message) error {
 	}
 
 	_, err = session.Write(data)
-	//_, err = session.
 
-	/*
-		err = session.Close()
-		if err != nil {
-			return err
-		}
-	*/
 	return err
 }
 
 func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 	for {
-		session.SetStreamMode(true)
-		session.SetReadDeadline(time.Now().Add(time.Millisecond * 50))
-		//session.SetReadBuffer()
+		session.SetDeadline(time.Now().Add(time.Millisecond * 50))
 		// Wait for Messages
 		msg, err := message.DeserializeMessage(session)
 		if err != nil {

@@ -141,19 +141,9 @@ func DeserializeMessage(conn io.Reader) (*Message, error) {
 		return nil, err
 	}
 
-	//fmt.Println("length: ", length)
-
 	var reader bytes.Buffer
 	for uint64(reader.Len()) < length {
-		_, err := reader.ReadFrom(conn)
-		if err != nil {
-			//fmt.Println(err.Error())
-			//return nil, err
-			//conn.SetReadDeadline(time.Now().Add(time.Second))
-		}
-
-		//fmt.Println("message length: ", length)
-		//fmt.Println("reader length: ", reader.Len())
+		reader.ReadFrom(conn)
 	}
 
 	msg := &Message{}

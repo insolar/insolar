@@ -69,8 +69,6 @@ func generateRandomBytes(n int) ([]byte, error) {
 }
 
 func (t *transportSuite) TestPingPong() {
-	//t.T().Skip("fix impl for this test pass")
-
 	future, err := t.transport.SendRequest(message.NewPingMessage(t.node, t.node))
 	t.Assert().NoError(err)
 
@@ -91,8 +89,6 @@ func (t *transportSuite) TestPingPong() {
 }
 
 func (t *transportSuite) TestSendBigMessage() {
-	//t.T().Skip("fix impl for this test pass")
-
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
 	builder := message.NewBuilder().Sender(t.node).Receiver(t.node).Type(message.TypeStore)
 	requestMsg := builder.Request(&message.RequestDataStore{data, true}).Build()
@@ -106,7 +102,6 @@ func (t *transportSuite) TestSendBigMessage() {
 	t.Assert().Equal(message.TypeStore, requestMsg.Type)
 	receivedData := msg.Data.(*message.RequestDataStore).Data
 	t.Assert().Equal(data, receivedData)
-	//fmt.Printf("%s", hex.Dump(receivedData))
 }
 
 func (t *transportSuite) TestSendInvalidMessage() {
@@ -120,18 +115,9 @@ func (t *transportSuite) TestSendInvalidMessage() {
 }
 
 func TestUTPTransport(t *testing.T) {
-	//t.Skip("ignore UTP transport")
-
 	suite.Run(t, NewSuite(NewUTPTransportFactory()))
 }
 
 func TestKCPTransport(t *testing.T) {
 	suite.Run(t, NewSuite(NewKCPTransportFactory()))
 }
-
-/*
-func TestKCPSecureTransport(t *testing.T) {
-	// secureOptions := {}
-	suite.Run(t, NewSuite(NewKCPTransportFactory( /* secureOptions * )))
-}
-*/

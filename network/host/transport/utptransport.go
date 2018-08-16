@@ -194,6 +194,7 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	data, err := message.SerializeMessage(msg)
 	if err != nil {
@@ -201,11 +202,6 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	}
 
 	_, err = conn.Write(data)
-
-	conn.Close()
-	if err != nil {
-		return err
-	}
 
 	return err
 }
