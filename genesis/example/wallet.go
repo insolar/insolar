@@ -47,7 +47,6 @@ func newWallet(parent object.Parent) (Wallet, error) {
 }
 
 func (w *wallet) GetBalance() int {
-	//w.GetOrCreateComposite()
 	return w.balance
 }
 
