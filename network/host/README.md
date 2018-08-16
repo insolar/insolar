@@ -65,13 +65,14 @@ import (
 	"github.com/insolar/insolar/network/host/rpc"
 	"github.com/insolar/insolar/network/host/store"
 	"github.com/insolar/insolar/network/host/transport"
+	"github.com/insolar/insolar/network/host/transport/utptransport"
 )
 
 func main() {
 	configuration := host.NewNetworkConfiguration(
 		resolver.NewStunResolver(""),
 		connection.NewConnectionFactory(),
-		transport.NewUTPTransportFactory(),
+		utptransport.NewUTPTransportFactory(),
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
 		relay.NewProxy())
