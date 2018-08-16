@@ -28,7 +28,6 @@ import (
 func MakeTestReference(record string) object.Reference {
 	result, _ := object.NewReference("test", record, object.ContextScope)
 	return result
-
 }
 
 var testAmount = 100500
