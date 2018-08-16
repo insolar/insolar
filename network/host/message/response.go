@@ -46,8 +46,7 @@ type ResponseDataRPC struct {
 
 // ResponseRelay is data for relay request response.
 type ResponseRelay struct {
-	Success bool
-	State   relay.State
+	State relay.State
 }
 
 // ResponseAuth is data for authentication request response.

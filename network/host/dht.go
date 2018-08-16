@@ -1008,8 +1008,7 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 	if !dht.auth.authenticatedNodes[msg.Sender.ID.String()] {
 		log.Print("relay request from unknown node rejected")
 		response := &message.ResponseRelay{
-			Success: false,
-			State:   relay.NoAuth,
+			State: relay.NoAuth,
 		}
 
 		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
@@ -1017,31 +1016,25 @@ func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder m
 		data := msg.Data.(*message.RequestRelay)
 		dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
 
-		var success bool
 		var state relay.State
 
 		switch data.Command {
 		case message.StartRelay:
 			err = dht.relay.AddClient(msg.Sender)
-			success = true
 			state = relay.Started
 		case message.StopRelay:
 			err = dht.relay.RemoveClient(msg.Sender)
-			success = true
 			state = relay.Stopped
 		default:
-			success = false
 			state = relay.Unknown
 		}
 
 		if err != nil {
-			success = false
 			state = relay.Error
 		}
 
 		response := &message.ResponseRelay{
-			Success: success,
-			State:   state,
+			State: state,
 		}
 
 		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
@@ -1165,7 +1158,10 @@ func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error { // t
 		}
 
 		response := rsp.Data.(*message.ResponseRelay)
-		dht.handleRelayResponse(ctx, response, targetID)
+		err = dht.handleRelayResponse(ctx, response, targetID)
+		if err != nil {
+			return err
+		}
 
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
@@ -1176,20 +1172,28 @@ func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error { // t
 	return nil
 }
 
-func (dht *DHT) handleRelayResponse(ctx Context, response *message.ResponseRelay, targetID string) {
+func (dht *DHT) handleRelayResponse(ctx Context, response *message.ResponseRelay, targetID string) error {
+	var err error
 	switch response.State {
 	case relay.Stopped:
 		// stop use this address as relay
 		dht.proxy.RemoveProxyNode(targetID)
+		err = nil
 	case relay.Started:
 		// start use this address as relay
 		dht.proxy.AddProxyNode(targetID)
+		err = nil
 	case relay.NoAuth:
-		log.Println("unable to execute relay because this node not authenticated.")
+		err = errors.New("unable to execute relay because this node not authenticated")
+	case relay.Unknown:
+		err = errors.New("unknown relay command")
+	case relay.Error:
+		err = errors.New("relay request error")
 	default:
 		// unknown state/failed to change state
-		log.Println("unknown response state:")
+		err = errors.New("unknown response state")
 	}
+	return err
 }
 
 func (dht *DHT) handleCheckOriginResponse(response *message.ResponseCheckOrigin, targetID string) {
