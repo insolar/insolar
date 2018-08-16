@@ -29,13 +29,16 @@ type Allowance interface {
 	contract.SmartContract
 	GetAmount() int
 	GetSender() string
+	GetReciever() string
+	MarkCompleted()
 }
 
 type allowance struct {
 	contract.BaseSmartContract
-	sender string
-	amount int
-	active bool
+	sender    string
+	reciever  string
+	amount    int
+	completed bool
 }
 
 func newAllowance(parent object.Parent) (Allowance, error) {
@@ -46,7 +49,7 @@ func newAllowance(parent object.Parent) (Allowance, error) {
 	//TODO: add posibility to init allowance fields
 	return &allowance{
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
-		active:            false,
+		completed:         false,
 	}, nil
 }
 
@@ -58,8 +61,16 @@ func (a *allowance) GetAmount() int {
 	return a.amount
 }
 
+func (a *allowance) MarkCompleted() {
+	a.completed = true
+}
+
 func (a *allowance) GetSender() string {
 	return a.sender
+}
+
+func (a *allowance) GetReciever() string {
+	return a.reciever
 }
 
 type allowanceFactory struct {
@@ -123,6 +134,14 @@ func (ap *allowanceProxy) GetAmount() int {
 
 func (ap *allowanceProxy) GetSender() string {
 	return ap.Instance.(Allowance).GetSender()
+}
+
+func (ap *allowanceProxy) GetReciever() string {
+	return ap.Instance.(Allowance).GetReciever()
+}
+
+func (ap *allowanceProxy) MarkCompleted() {
+	ap.Instance.(Allowance).MarkCompleted()
 }
 
 func (ap *allowanceProxy) GetInterfaceKey() string {

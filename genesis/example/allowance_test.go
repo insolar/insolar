@@ -26,6 +26,7 @@ import (
 
 var testAmount = 100500
 var testSender = "test"
+var testReciever = "testReciever"
 
 func TestNewAllowance(t *testing.T) {
 
@@ -36,7 +37,7 @@ func TestNewAllowance(t *testing.T) {
 	assert.Equal(t, &allowance{
 		amount:            0,
 		sender:            "",
-		active:            false,
+		completed:         false,
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 	}, al)
 }
@@ -55,6 +56,13 @@ func TestAllowance_GetSender(t *testing.T) {
 		sender: testSender,
 	}
 	assert.Equal(t, testSender, al.GetSender())
+}
+
+func TestAllowance_GetReciever(t *testing.T) {
+	al := allowance{
+		reciever: testReciever,
+	}
+	assert.Equal(t, testReciever, al.GetReciever())
 }
 
 func TestAllowance_GetInterfaceKey(t *testing.T) {
@@ -182,9 +190,30 @@ func TestAllowanceProxy_GetSender(t *testing.T) {
 	assert.Equal(t, proxy.GetSender(), testSender)
 }
 
+func TestAllowanceProxy_GetReciever(t *testing.T) {
+	al := allowance{
+		reciever: testReciever,
+	}
+
+	proxy := allowanceProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: &al,
+		},
+	}
+
+	assert.Equal(t, proxy.GetReciever(), testReciever)
+}
+
 func TestAllowanceProxy_GetInterfaceKey(t *testing.T) {
 	parent := &mockParent{}
 	proxy, err := newAllowanceProxy(parent)
 	assert.NoError(t, err)
 	assert.Equal(t, class.AllowanceID, proxy.GetInterfaceKey())
+}
+
+func TestAllowanceProxy_MarkCompleted(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newAllowanceProxy(parent)
+	assert.NoError(t, err)
+	assert.Equal(t, false, proxy.Instance.(*allowance).completed)
 }
