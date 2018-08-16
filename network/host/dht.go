@@ -1439,16 +1439,22 @@ func (dht *DHT) GetDistance(id1, id2 []byte) *big.Int {
 	return new(big.Int).Xor(buf1, buf2)
 }
 
-func (dht *DHT) getHomeSubnetKey() string {
+func (dht *DHT) getHomeSubnetKey(ctx Context) (string, error) {
 	var result string
 	for key, subnet := range dht.subnet.SubnetIDs {
-		first := subnet[0]
+		first := key
 		first = xstrings.Reverse(first)
 		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.X.this byte
 		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.this byte
 		first = xstrings.Reverse(first)
-		for j := 1; j < len(subnet); j++ {
-			if !strings.Contains(subnet[j], first) {
+		for _, id := range subnet {
+			target, exist, err := dht.FindNode(ctx, id)
+			if err != nil {
+				return "", err
+			} else if !exist {
+				return "", errors.New("couldn't find a node")
+			}
+			if !strings.Contains(target.Address.IP.String(), first) {
 				result = ""
 				break
 			} else {
@@ -1456,7 +1462,7 @@ func (dht *DHT) getHomeSubnetKey() string {
 			}
 		}
 	}
-	return result
+	return result, nil
 }
 
 func (dht *DHT) countOuterNodes() {
@@ -1471,15 +1477,19 @@ func (dht *DHT) countOuterNodes() {
 }
 
 // AnalyzeNetwork is func to analyze the network after IP obtaining.
-func (dht *DHT) AnalyzeNetwork(ctx Context) {
-	dht.subnet.HomeSubnetKey = dht.getHomeSubnetKey()
+func (dht *DHT) AnalyzeNetwork(ctx Context) error {
+	var err error
+	dht.subnet.HomeSubnetKey, err = dht.getHomeSubnetKey(ctx)
+	if err != nil {
+		return err
+	}
 	dht.countOuterNodes()
 	dht.subnet.HighKnownNodes.OuterNodes = dht.subnet.HighKnownNodes.SelfKnownOuterNodes
 	nodes := dht.subnet.SubnetIDs[dht.subnet.HomeSubnetKey]
 	for _, ids := range nodes {
-		err := dht.knownOuterNodesRequest(ids, dht.subnet.HighKnownNodes.OuterNodes)
+		err = dht.knownOuterNodesRequest(ids, dht.subnet.HighKnownNodes.OuterNodes)
 		if err != nil {
-			log.Println("error to send outer nodes request: ", err)
+			return err
 		}
 	}
 	if len(dht.subnet.SubnetIDs) == 1 {
@@ -1489,6 +1499,8 @@ func (dht *DHT) AnalyzeNetwork(ctx Context) {
 			}
 		}
 	}
+
+	return nil
 }
 
 func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
@@ -1602,22 +1614,24 @@ func (dht *DHT) knownOuterNodesRequest(targetID string, nodes int) error {
 	return nil
 }
 
-func (dht *DHT) handleKnownOuterNodes(ctx Context, response *message.ResponseKnownOuterNodes, targetID string) {
+func (dht *DHT) handleKnownOuterNodes(ctx Context, response *message.ResponseKnownOuterNodes, targetID string) error {
+	var err error
 	if response.OuterNodes > dht.subnet.HighKnownNodes.OuterNodes { // update data
 		dht.subnet.HighKnownNodes.OuterNodes = response.OuterNodes
 		dht.subnet.HighKnownNodes.ID = response.ID
 	}
 	if (response.OuterNodes > dht.subnet.HighKnownNodes.SelfKnownOuterNodes) &&
 		(dht.proxy.ProxyNodesCount() == 0) {
-		err := dht.AuthenticationRequest(ctx, "begin", targetID)
+		err = dht.AuthenticationRequest(ctx, "begin", targetID)
 		if err != nil {
-			log.Println("error to send auth request: ", err)
+			return err
 		}
 		err = dht.RelayRequest(ctx, "start", targetID)
 		if err != nil {
-			log.Println("error to send relay request: ", err)
+			return err
 		}
 	}
+	return nil
 }
 
 func (dht *DHT) htFromCtx(ctx Context) *routing.HashTable {
