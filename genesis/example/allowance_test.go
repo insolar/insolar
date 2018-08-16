@@ -49,11 +49,24 @@ func TestNewAllowance(t *testing.T) {
 }
 
 func TestAllowance_IsCompleted(t *testing.T) {
+	al := allowance{
+		completed: false,
+	}
 
+	assert.Equal(t, false, al.IsCompleted())
+
+	al.completed = true
+	assert.Equal(t, true, al.IsCompleted())
 }
 
 func TestAllowance_MarkCompleted(t *testing.T) {
+	al := allowance{
+		completed: false,
+	}
+	assert.Equal(t, false, al.completed)
 
+	al.MarkCompleted()
+	assert.Equal(t, true, al.completed)
 }
 
 func TestAllowance_GetAmount(t *testing.T) {
