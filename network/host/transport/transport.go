@@ -17,14 +17,11 @@
 package transport
 
 import (
-	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/message"
 )
 
 // Transport is an interface for insolar transport.
 type Transport interface {
-	UniqueID() id.TransportUnique
-
 	// SendRequest sends message to destination. Sequence number is generated automatically.
 	SendRequest(*message.Message) (Future, error)
 

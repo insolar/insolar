@@ -24,15 +24,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/relay"
 	"github.com/insolar/insolar/network/host/transport"
 
 	"github.com/anacrolix/utp"
 )
-
-const UTPUnique = id.TransportUnique(1)
 
 type utpTransport struct {
 	socket *utp.Socket
@@ -76,10 +73,6 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 	}
 
 	return tp, nil
-}
-
-func (t *utpTransport) UniqueID() id.TransportUnique {
-	return UTPUnique
 }
 
 // SendRequest sends request message and returns future.

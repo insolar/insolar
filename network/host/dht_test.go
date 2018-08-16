@@ -93,10 +93,6 @@ func newMockTransport() *mockTransport {
 	return net
 }
 
-func (t *mockTransport) UniqueID() id.TransportUnique {
-	return id.TransportUnique(1337)
-}
-
 func (t *mockTransport) Start() error {
 	return nil
 }
