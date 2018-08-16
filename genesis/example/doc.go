@@ -63,5 +63,13 @@ Entities:
 		w := m.GetOrCreateComposite(wFactory)
 		w.GetBalance()
 
+////
+
+	Allowance - smart contract that represent allowance during money transmission between wallets
+
+	Usage:
+		factory := NewAllowanceFactory(walletDomain)
+		al, err := factory.Create(parent)
+
 */
 package example
