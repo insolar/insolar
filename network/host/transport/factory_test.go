@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMemoryStoreUTPFactory(t *testing.T) {
+func TestNewUTPTransportFactory(t *testing.T) {
 	expectedFactory := &utpTransportFactory{}
 	actualFactory := NewUTPTransportFactory()
 

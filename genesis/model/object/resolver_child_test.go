@@ -14,44 +14,43 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
-	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockProxy struct {
-	reference object.Reference
+	reference Reference
 }
 
 func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
 }
 
-func (p *mockProxy) GetReference() object.Reference {
+func (p *mockProxy) GetReference() Reference {
 	return p.reference
 }
 
-func (p *mockProxy) SetReference(reference object.Reference) {
+func (p *mockProxy) SetReference(reference Reference) {
 	p.reference = reference
 }
 
 type mockChildProxy struct {
 	mockProxy
 	ContextStorage storage.Storage
-	parent         object.Parent
+	parent         Parent
 }
 
 func (c *mockChildProxy) GetClassID() string {
 	return "mockChild"
 }
 
-func (c *mockChildProxy) GetParent() object.Parent {
+func (c *mockChildProxy) GetParent() Parent {
 	return c.parent
 }
 
@@ -60,10 +59,10 @@ var child = &mockChildProxy{}
 type mockParentProxy struct {
 	mockProxy
 	ContextStorage storage.Storage
-	parent         object.Parent
+	parent         Parent
 }
 
-func (p *mockParentProxy) GetParent() object.Parent {
+func (p *mockParentProxy) GetParent() Parent {
 	return p.parent
 }
 
@@ -75,11 +74,11 @@ func (p *mockParentProxy) GetChildStorage() storage.Storage {
 	return nil
 }
 
-func (p *mockParentProxy) AddChild(child object.Child) (string, error) {
+func (p *mockParentProxy) AddChild(child Child) (string, error) {
 	return "", nil
 }
 
-func (p *mockParentProxy) GetChild(key string) (object.Child, error) {
+func (p *mockParentProxy) GetChild(key string) (Child, error) {
 	return child, nil
 }
 
@@ -95,7 +94,7 @@ type mockParentWithError struct {
 	mockParentProxy
 }
 
-func (p *mockParentWithError) GetChild(key string) (object.Child, error) {
+func (p *mockParentWithError) GetChild(key string) (Child, error) {
 	return nil, fmt.Errorf("object with record %s does not exist", key)
 }
 
@@ -121,7 +120,7 @@ func TestChildResolver_GetObject_Not_Reference(t *testing.T) {
 func TestChildResolver_GetObject_No_Object(t *testing.T) {
 	mockParent := &mockParentWithError{}
 	resolver := newChildResolver(mockParent)
-	ref, _ := object.NewReference("1", "1", object.ChildScope)
+	ref, _ := NewReference("1", "1", ChildScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
@@ -132,7 +131,7 @@ func TestChildResolver_GetObject_No_Object(t *testing.T) {
 func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
 	mockParent := &mockParentProxy{}
 	resolver := newChildResolver(mockParent)
-	ref, _ := object.NewReference("1", "1", object.ChildScope)
+	ref, _ := NewReference("1", "1", ChildScope)
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
@@ -143,7 +142,7 @@ func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
 func TestChildResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 	mockParent := &mockParentProxy{}
 	resolver := newChildResolver(mockParent)
-	ref, _ := object.NewReference("1", "1", object.ChildScope)
+	ref, _ := NewReference("1", "1", ChildScope)
 
 	obj, err := resolver.GetObject(ref, ref)
 
@@ -154,7 +153,7 @@ func TestChildResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 func TestChildResolver_GetObject(t *testing.T) {
 	mockParent := &mockParentProxy{}
 	resolver := newChildResolver(mockParent)
-	ref, _ := object.NewReference("1", "1", object.ChildScope)
+	ref, _ := NewReference("1", "1", ChildScope)
 
 	obj, err := resolver.GetObject(ref, "mockChild")
 

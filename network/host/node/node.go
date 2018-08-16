@@ -18,12 +18,14 @@ package node
 
 import (
 	"fmt"
+
+	"github.com/insolar/insolar/network/host/id"
 )
 
 // Node is the over-the-wire representation of a node.
 type Node struct {
 	// ID is a 20 byte unique identifier.
-	ID ID
+	ID id.ID
 
 	// Address is IP and port.
 	Address *Address
@@ -41,7 +43,7 @@ func (node Node) String() string {
 	return fmt.Sprintf("%s (%s)", node.ID.String(), node.Address.String())
 }
 
-// Equal checks if node equals to other node (e.g. nodes' IDs and insolar addresses match).
+// Equal checks if node equals to other node (e.g. nodes' IDs and network addresses match).
 func (node Node) Equal(other Node) bool {
 	return node.ID.Equal(other.ID) && other.Address != nil && node.Address.Equal(*other.Address)
 }

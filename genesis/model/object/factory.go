@@ -14,22 +14,17 @@
  *    limitations under the License.
  */
 
-package factory
-
-import (
-	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
-)
+package object
 
 // Factory allows to create new objects with reference.
 type Factory interface {
-	resolver.Proxy
+	Proxy
 	// Create returns new instance of specified type.
-	Create(parent object.Parent) (resolver.Proxy, error)
+	Create(parent Parent) (Proxy, error)
 }
 
 type BaseFactory struct {
-	resolver.BaseProxy
+	BaseProxy
 }
 
 // Composite marks that instance have ability to be compose in another object.
@@ -37,16 +32,22 @@ type Composite interface {
 	GetInterfaceKey() string // string ID of interface/type of Composite object; basically, GetClassID()
 }
 
+type CompositeCollection interface {
+	Composite
+	GetList() []Composite
+	Add(composite Composite)
+}
+
 // CompositeFactory allows to create new composites.
 type CompositeFactory interface {
-	resolver.Proxy
-	Create(parent object.Parent) (Composite, error)
+	Proxy
+	Create(parent Parent) (Composite, error)
 	GetInterfaceKey() string // string ID of interface/type of Composite object; basically, GetClassID()
 }
 
 // ComposingContainer allows to store composites.
 type ComposingContainer interface {
 	CreateComposite(compositeFactory CompositeFactory) (Composite, error)
-	GetComposite(interfaceKey string) (Composite, error)
+	GetComposite(interfaceKey string, classID string) (Composite, error)
 	GetOrCreateComposite(compositeFactory CompositeFactory) (Composite, error)
 }

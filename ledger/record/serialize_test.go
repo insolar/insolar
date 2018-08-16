@@ -25,21 +25,21 @@ import (
 
 var convertTests = []struct {
 	name string
-	key  Key
+	b    []byte
 	id   ID
 }{
 	{
-		key: Key{Pulse: 10, Hash: str2Bytes("21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193")},
-		id:  str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+		b:  str2Bytes("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+		id: ID{Pulse: 10, Hash: str2Bytes("21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193")},
 	},
 }
 
-func Test_KeyIDConversion(t *testing.T) {
+func Test_KeyBytesConversion(t *testing.T) {
 	for _, tt := range convertTests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID := Key2ID(tt.key)
-			gotKey := ID2Key(gotID)
-			assert.Equal(t, tt.key, gotKey)
+			gotID := Bytes2ID(tt.b)
+			gotBytes := ID2Bytes(gotID)
+			assert.Equal(t, tt.b, gotBytes)
 			assert.Equal(t, tt.id, gotID)
 		})
 	}

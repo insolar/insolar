@@ -21,7 +21,7 @@ import (
 	"github.com/insolar/insolar/network/host/node"
 )
 
-// Future is insolar response future.
+// Future is network response future.
 type Future interface {
 
 	// ID returns message sequence number.

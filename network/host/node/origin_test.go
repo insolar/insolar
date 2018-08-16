@@ -19,30 +19,32 @@ package node
 import (
 	"testing"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewOrigin(t *testing.T) {
-	random = newMockReader()
+func TestNewOrigin_WithIds(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
-	ids, _ := NewIDs(10)
+	ids, _ := id.NewIDs(10)
 
 	expectedOrigin := &Origin{ids, addr}
 	actualOrigin, err := NewOrigin(ids, addr)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedOrigin, actualOrigin)
+}
 
-	// Reset random
-	random = newMockReader()
-	actualOrigin, err = NewOrigin(nil, addr)
+func TestNewOrigin_WithoutIds(t *testing.T) {
+	addr, _ := NewAddress("127.0.0.1:31337")
+
+	or, err := NewOrigin(nil, addr)
 
 	assert.NoError(t, err)
-	assert.Equal(t, ids[0:1], actualOrigin.IDs)
+	assert.Len(t, or.IDs, 1)
 }
 
 func TestOrigin_Contains(t *testing.T) {
-	ids, _ := NewIDs(20)
+	ids, _ := id.NewIDs(20)
 	addr, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 	origin, _ := NewOrigin(ids[:10], addr)

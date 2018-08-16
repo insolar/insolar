@@ -22,9 +22,7 @@ import (
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // WalletDomainName is a name for wallet domain.
@@ -80,7 +78,7 @@ func (wd *walletDomain) CreateWallet(m Member) error {
 	}
 
 	// Check if it CompositeFactory
-	wf, ok := child.(factory.CompositeFactory)
+	wf, ok := child.(object.CompositeFactory)
 	if !ok {
 		return fmt.Errorf("child by reference `%s` is not CompositeFactory instance", wd.walletFactoryReference)
 	}
@@ -117,11 +115,11 @@ func (wdp *walletDomainProxy) CreateWallet(mp *memberProxy) error {
 }
 
 type walletDomainFactory struct {
-	factory.BaseFactory
+	object.BaseFactory
 	parent object.Parent
 }
 
-func (*walletDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
+func (*walletDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
 	proxy, err := newWalletDomainProxy(parent)
 	if err != nil {
 		return nil, err
@@ -144,7 +142,7 @@ func (*walletDomainFactory) GetClassID() string {
 	return class.WalletDomainID
 }
 
-func NewWalletDomainFactory(pt object.Parent) factory.Factory {
+func NewWalletDomainFactory(pt object.Parent) object.Factory {
 	return &walletDomainFactory{
 		parent: pt,
 	}

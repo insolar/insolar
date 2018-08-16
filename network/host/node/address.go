@@ -20,7 +20,7 @@ import (
 	"net"
 )
 
-// Address is node's real insolar address.
+// Address is node's real network address.
 type Address struct {
 	net.UDPAddr
 }

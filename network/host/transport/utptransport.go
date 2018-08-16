@@ -18,7 +18,6 @@ package transport
 
 import (
 	"context"
-	"errors"
 	"log"
 	"net"
 	"sync"
@@ -29,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network/host/relay"
 
 	"github.com/anacrolix/utp"
+	"errors"
 )
 
 type utpTransport struct {
@@ -202,7 +202,6 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	}
 
 	_, err = conn.Write(data)
-
 	return err
 }
 

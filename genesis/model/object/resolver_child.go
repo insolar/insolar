@@ -14,21 +14,19 @@
  *    limitations under the License.
  */
 
-package resolver
+package object
 
 import (
 	"fmt"
-
-	"github.com/insolar/insolar/genesis/model/object"
 )
 
 // childResolver is resolver for ChildScope references.
 type childResolver struct {
-	parent object.Parent
+	parent Parent
 }
 
 // newChildResolver creates new childResolver instance.
-func newChildResolver(parent object.Parent) *childResolver {
+func newChildResolver(parent Parent) *childResolver {
 	return &childResolver{
 		parent: parent,
 	}
@@ -36,7 +34,7 @@ func newChildResolver(parent object.Parent) *childResolver {
 
 // GetObject resolves object by its reference and return its proxy.
 func (r *childResolver) GetObject(reference interface{}, cls interface{}) (interface{}, error) {
-	ref, ok := reference.(object.Reference)
+	ref, ok := reference.(Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
 	}

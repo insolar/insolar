@@ -21,13 +21,11 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 type Wallet interface {
-	factory.Composite
+	object.Composite
 	contract.SmartContract
 	GetBalance() int
 }
@@ -86,11 +84,11 @@ func (wp *walletProxy) GetInterfaceKey() string {
 }
 
 type walletFactory struct {
-	resolver.BaseProxy
+	object.BaseProxy
 	parent object.Parent
 }
 
-func NewWalletFactory(parent object.Parent) factory.CompositeFactory {
+func NewWalletFactory(parent object.Parent) object.CompositeFactory {
 	return &walletFactory{
 		parent: parent,
 	}
@@ -104,7 +102,7 @@ func (*walletFactory) GetClassID() string {
 	return class.WalletID
 }
 
-func (*walletFactory) Create(parent object.Parent) (factory.Composite, error) {
+func (*walletFactory) Create(parent object.Parent) (object.Composite, error) {
 	proxy, err := newWalletProxy(parent)
 	if err != nil {
 		return nil, err
