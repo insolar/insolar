@@ -26,7 +26,7 @@ import (
 
 var testAmount = 100500
 var testSender = "test"
-var testReciever = "testReciever"
+var testReceiver = "testReceiver"
 
 func TestNewAllowance(t *testing.T) {
 
@@ -60,9 +60,9 @@ func TestAllowance_GetSender(t *testing.T) {
 
 func TestAllowance_GetReciever(t *testing.T) {
 	al := allowance{
-		reciever: testReciever,
+		receiver: testReceiver,
 	}
-	assert.Equal(t, testReciever, al.GetReciever())
+	assert.Equal(t, testReceiver, al.GetReceiver())
 }
 
 func TestAllowance_GetInterfaceKey(t *testing.T) {
@@ -192,7 +192,7 @@ func TestAllowanceProxy_GetSender(t *testing.T) {
 
 func TestAllowanceProxy_GetReciever(t *testing.T) {
 	al := allowance{
-		reciever: testReciever,
+		receiver: testReceiver,
 	}
 
 	proxy := allowanceProxy{
@@ -201,7 +201,7 @@ func TestAllowanceProxy_GetReciever(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, proxy.GetReciever(), testReciever)
+	assert.Equal(t, proxy.GetReceiver(), testReceiver)
 }
 
 func TestAllowanceProxy_GetInterfaceKey(t *testing.T) {

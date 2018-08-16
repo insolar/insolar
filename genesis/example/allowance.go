@@ -29,14 +29,14 @@ type Allowance interface {
 	contract.SmartContract
 	GetAmount() int
 	GetSender() string
-	GetReciever() string
+	GetReceiver() string
 	MarkCompleted()
 }
 
 type allowance struct {
 	contract.BaseSmartContract
 	sender    string
-	reciever  string
+	receiver  string
 	amount    int
 	completed bool
 }
@@ -69,8 +69,8 @@ func (a *allowance) GetSender() string {
 	return a.sender
 }
 
-func (a *allowance) GetReciever() string {
-	return a.reciever
+func (a *allowance) GetReceiver() string {
+	return a.receiver
 }
 
 type allowanceFactory struct {
@@ -136,8 +136,8 @@ func (ap *allowanceProxy) GetSender() string {
 	return ap.Instance.(Allowance).GetSender()
 }
 
-func (ap *allowanceProxy) GetReciever() string {
-	return ap.Instance.(Allowance).GetReciever()
+func (ap *allowanceProxy) GetReceiver() string {
+	return ap.Instance.(Allowance).GetReceiver()
 }
 
 func (ap *allowanceProxy) MarkCompleted() {
