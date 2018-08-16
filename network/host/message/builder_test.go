@@ -20,6 +20,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,10 +42,10 @@ func TestBuilder_Build_RequestMessage(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
 
@@ -63,10 +64,10 @@ func TestBuilder_Build_ResponseMessage(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
 
@@ -85,10 +86,10 @@ func TestBuilder_Build_ErrorMessage(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
 

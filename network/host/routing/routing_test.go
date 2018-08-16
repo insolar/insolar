@@ -21,6 +21,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 
 	"github.com/stretchr/testify/assert"
@@ -85,12 +86,12 @@ func TestRouteSet(t *testing.T) {
 	assert.Equal(t, n4, nl.nodes[3])
 }
 
-func getZerodIDWithNthByte(n int, v byte) node.ID {
+func getZerodIDWithNthByte(n int, v byte) id.ID {
 	id := getIDWithValues(0)
 	id[n] = v
 	return id
 }
 
-func getIDWithValues(b byte) node.ID {
-	return node.ID{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b}
+func getIDWithValues(b byte) id.ID {
+	return id.ID{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b}
 }

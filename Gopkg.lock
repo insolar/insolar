@@ -3,14 +3,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:26553bdecb5d2155e37185e91ac9e6cab762c06fdf231c151fb6d3ec60ff53b7"
-  name = "github.com/2tvenom/cbor"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "384e799bd841fc59220d0f5911b8cbde7b380875"
-
-[[projects]]
-  branch = "master"
   digest = "1:d7e398c16b9c85f33ea98182809bfefe4e3ec8bf01f56de20f9721f9f7ab23de"
   name = "github.com/anacrolix/missinggo"
   packages = [
@@ -186,7 +178,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/2tvenom/cbor",
     "github.com/anacrolix/utp",
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",

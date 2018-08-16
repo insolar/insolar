@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 	"github.com/stretchr/testify/assert"
 )
@@ -57,7 +58,7 @@ func makeNodes(count int, t *testing.T) []*node.Node {
 	addresses := makeAddresses(count, t)
 
 	for i := 0; i < count; i++ {
-		id, err := node.NewID()
+		id, err := id.NewID()
 
 		if err != nil {
 			assert.Errorf(t, nil, "error: %s", err.Error())

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,10 +28,10 @@ import (
 func TestNewPingMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 
 	m := NewPingMessage(sender, receiver)
 
@@ -94,12 +95,12 @@ func TestMessage_IsValid_Fail(t *testing.T) {
 func TestMessage_IsForMe(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
-	origin, _ := node.NewOrigin([]node.ID{receiver.ID}, receiver.Address)
+	origin, _ := node.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
 
 	myMessage := builder.Receiver(receiver).Build()
 	notMyMessage := builder.Receiver(sender).Build()
@@ -111,10 +112,10 @@ func TestMessage_IsForMe(t *testing.T) {
 func TestSerializeMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID}).Build()
 
@@ -126,10 +127,10 @@ func TestSerializeMessage(t *testing.T) {
 func TestDeserializeMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID}).Build()
 

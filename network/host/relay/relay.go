@@ -17,6 +17,7 @@
 package relay
 
 import (
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 
 	"errors"
@@ -93,7 +94,7 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 	return false
 }
 
-func (r *relay) findClient(id node.ID) (int, *node.Node) {
+func (r *relay) findClient(id id.ID) (int, *node.Node) {
 	for idx, nodeIterator := range r.clients {
 		if nodeIterator.ID.Equal(id) {
 			return idx, nodeIterator

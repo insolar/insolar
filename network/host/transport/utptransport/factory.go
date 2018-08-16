@@ -14,19 +14,23 @@
  *    limitations under the License.
  */
 
-package node
+package utptransport
 
 import (
-	"crypto/rand"
-	"io"
+	"net"
+
+	"github.com/insolar/insolar/network/host/relay"
+	"github.com/insolar/insolar/network/host/transport"
 )
 
-var random io.Reader = &cryptoReader{}
+type utpTransportFactory struct{}
 
-type cryptoReader struct{}
+// NewUTPTransportFactory creates new Factory of utpTransport.
+func NewUTPTransportFactory() transport.Factory {
+	return &utpTransportFactory{}
+}
 
-// Read implements io.Reader interface.
-// Can be replaced with mock reader for testing purposes.
-func (cr *cryptoReader) Read(b []byte) (n int, err error) {
-	return rand.Read(b)
+// Create creates new Transport.
+func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (transport.Transport, error) {
+	return NewUTPTransport(conn, proxy)
 }

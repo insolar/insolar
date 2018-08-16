@@ -15,7 +15,7 @@
  */
 
 /*
-Package message provides insolar messaging protocol and serialization layer.
+Package message provides network messaging protocol and serialization layer.
 
 Message can be created with shortcut:
 
