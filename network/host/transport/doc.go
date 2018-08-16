@@ -15,8 +15,8 @@
  */
 
 /*
-Package transport provides insolar transport interface. It allows to abstract our insolar from physical transport.
-It can either be IP based insolar or any other kind of message courier (e.g. an industrial message bus).
+Package transport provides network transport interface. It allows to abstract our insolar from physical transport.
+It can either be IP based network or any other kind of message courier (e.g. an industrial message bus).
 
 Package exports simple interfaces for easily defining new transports.
 

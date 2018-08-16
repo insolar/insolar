@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/network/host/node"
 )
 
-// RouteNode represents a node in the insolar locally
+// RouteNode represents a node in the network locally
 // a separate struct due to the fact that we may want to add some metadata
 // here later such as RTT, or LastSeen time.
 type RouteNode struct {

@@ -27,7 +27,7 @@ type Origin struct {
 	Address *Address
 }
 
-// NewOrigin creates origin node from list of ids and insolar address.
+// NewOrigin creates origin node from list of ids and network address.
 func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 	var err error
 
@@ -54,7 +54,7 @@ func (s *Origin) containsID(id id.ID) bool {
 	return false
 }
 
-// Contains checks if origin node “contains” insolar node.
+// Contains checks if origin node “contains” network node.
 // It checks if node's and origin's addresses match and node's id is in origin's ids list.
 func (s *Origin) Contains(node *Node) bool {
 	return node.Address.Equal(*s.Address) && s.containsID(node.ID)

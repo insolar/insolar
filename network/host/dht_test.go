@@ -768,7 +768,7 @@ func TestStoreExpiration(t *testing.T) {
 	dht.Disconnect()
 }
 
-// Create a new node and bootstrap it. All nodes in the insolar know of a
+// Create a new node and bootstrap it. All nodes in the network know of a
 // single node closer to the original node. This continues until every MaxContactsInBucket bucket
 // is occupied.
 func TestFindNodeAllBuckets(t *testing.T) {

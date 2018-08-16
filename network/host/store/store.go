@@ -34,7 +34,7 @@ type Store interface {
 	Delete(key Key)
 
 	// GetKeysReadyToReplicate should return the keys of all data to be
-	// replicated across the insolar. Typically all data should be
+	// replicated across the network. Typically all data should be
 	// replicated every tReplicate seconds.
 	GetKeysReadyToReplicate() []Key
 

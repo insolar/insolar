@@ -26,7 +26,7 @@ type stunResolver struct {
 	stunAddress string
 }
 
-// NewStunResolver returns new STUN insolar address resolver.
+// NewStunResolver returns new STUN network address resolver.
 func NewStunResolver(stunAddress string) PublicAddressResolver {
 	return newStunResolver(stunAddress)
 }
@@ -37,7 +37,7 @@ func newStunResolver(stunAddress string) *stunResolver {
 	}
 }
 
-// Resolve returns node's public insolar address as it seen from Internet.
+// Resolve returns node's public network address as it seen from Internet.
 func (sr *stunResolver) Resolve(conn net.PacketConn) (string, error) {
 	client := stun.NewClientWithConnection(conn)
 
