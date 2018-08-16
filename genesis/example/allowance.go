@@ -28,15 +28,16 @@ type Allowance interface {
 	object.Composite
 	contract.SmartContract
 	GetAmount() int
-	GetSender() string
-	GetReceiver() string
+	GetSender() object.Reference
+	GetReceiver() object.Reference
 	MarkCompleted()
+	IsCompleted() bool
 }
 
 type allowance struct {
 	contract.BaseSmartContract
-	sender    string
-	receiver  string
+	sender    object.Reference
+	receiver  object.Reference
 	amount    int
 	completed bool
 }
@@ -61,15 +62,19 @@ func (a *allowance) GetAmount() int {
 	return a.amount
 }
 
+func (a *allowance) IsCompleted() bool {
+	return a.completed
+}
+
 func (a *allowance) MarkCompleted() {
 	a.completed = true
 }
 
-func (a *allowance) GetSender() string {
+func (a *allowance) GetSender() object.Reference {
 	return a.sender
 }
 
-func (a *allowance) GetReceiver() string {
+func (a *allowance) GetReceiver() object.Reference {
 	return a.receiver
 }
 
@@ -132,16 +137,20 @@ func (ap *allowanceProxy) GetAmount() int {
 	return ap.Instance.(Allowance).GetAmount()
 }
 
-func (ap *allowanceProxy) GetSender() string {
+func (ap *allowanceProxy) GetSender() object.Reference {
 	return ap.Instance.(Allowance).GetSender()
 }
 
-func (ap *allowanceProxy) GetReceiver() string {
+func (ap *allowanceProxy) GetReceiver() object.Reference {
 	return ap.Instance.(Allowance).GetReceiver()
 }
 
 func (ap *allowanceProxy) MarkCompleted() {
 	ap.Instance.(Allowance).MarkCompleted()
+}
+
+func (ap *allowanceProxy) IsCompleted() bool {
+	return ap.Instance.(Allowance).IsCompleted()
 }
 
 func (ap *allowanceProxy) GetInterfaceKey() string {

@@ -21,12 +21,19 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
+	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
+func MakeTestReference(record string) object.Reference {
+	result, _ := object.NewReference("test", record, object.ContextScope)
+	return result
+
+}
+
 var testAmount = 100500
-var testSender = "test"
-var testReceiver = "testReceiver"
+var testSender = MakeTestReference("sender")
+var testReceiver = MakeTestReference("receiver")
 
 func TestNewAllowance(t *testing.T) {
 
@@ -36,10 +43,17 @@ func TestNewAllowance(t *testing.T) {
 
 	assert.Equal(t, &allowance{
 		amount:            0,
-		sender:            "",
 		completed:         false,
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 	}, al)
+}
+
+func TestAllowance_IsCompleted(t *testing.T) {
+
+}
+
+func TestAllowance_MarkCompleted(t *testing.T) {
+
 }
 
 func TestAllowance_GetAmount(t *testing.T) {
@@ -58,7 +72,7 @@ func TestAllowance_GetSender(t *testing.T) {
 	assert.Equal(t, testSender, al.GetSender())
 }
 
-func TestAllowance_GetReciever(t *testing.T) {
+func TestAllowance_GetReceiver(t *testing.T) {
 	al := allowance{
 		receiver: testReceiver,
 	}
@@ -190,7 +204,7 @@ func TestAllowanceProxy_GetSender(t *testing.T) {
 	assert.Equal(t, proxy.GetSender(), testSender)
 }
 
-func TestAllowanceProxy_GetReciever(t *testing.T) {
+func TestAllowanceProxy_GetReceiver(t *testing.T) {
 	al := allowance{
 		receiver: testReceiver,
 	}
@@ -216,4 +230,16 @@ func TestAllowanceProxy_MarkCompleted(t *testing.T) {
 	proxy, err := newAllowanceProxy(parent)
 	assert.NoError(t, err)
 	assert.Equal(t, false, proxy.Instance.(*allowance).completed)
+	proxy.MarkCompleted()
+	assert.Equal(t, true, proxy.Instance.(*allowance).completed)
+}
+
+func TestAllowanceProxy_IsCompleted(t *testing.T) {
+	parent := &mockParent{}
+	proxy, err := newAllowanceProxy(parent)
+	assert.NoError(t, err)
+	assert.Equal(t, false, proxy.Instance.(*allowance).IsCompleted())
+
+	proxy.Instance.(*allowance).completed = true
+	assert.Equal(t, true, proxy.Instance.(*allowance).IsCompleted())
 }
