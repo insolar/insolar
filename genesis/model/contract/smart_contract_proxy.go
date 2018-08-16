@@ -33,7 +33,7 @@ func (bp *BaseSmartContractProxy) GetClassID() string {
 	return bp.Instance.GetClassID()
 }
 
-func (bp *BaseSmartContractProxy) GetClass() object.Factory {
+func (bp *BaseSmartContractProxy) GetClass() object.Proxy {
 	return bp.Instance.GetClass()
 }
 

@@ -158,7 +158,7 @@ func (rdf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
-func (rdf *referenceDomainFactory) GetClass() object.Factory {
+func (rdf *referenceDomainFactory) GetClass() object.Proxy {
 	return rdf
 }
 

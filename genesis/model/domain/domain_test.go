@@ -34,7 +34,7 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetClass() object.Factory {
+func (p *mockParent) GetClass() object.Proxy {
 	return nil
 }
 
@@ -66,7 +66,7 @@ func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
 }
 
-func (p *mockProxy) GetClass() object.Factory {
+func (p *mockProxy) GetClass() object.Proxy {
 	return nil
 }
 
@@ -92,8 +92,6 @@ func (c *mockChildProxy) GetParent() object.Parent {
 	return c.parent
 }
 
-var child = &mockChildProxy{}
-
 type mockFactory struct {
 }
 
@@ -107,7 +105,7 @@ func (f *mockFactory) GetClassID() string {
 	return "mockFactory"
 }
 
-func (f *mockFactory) GetClass() object.Factory {
+func (f *mockFactory) GetClass() object.Proxy {
 	return &mockFactory{}
 }
 
@@ -124,10 +122,9 @@ func (f *mockFactory) SetReference(reference object.Reference) {
 }
 
 func TestNewBaseDomain(t *testing.T) {
-	factory := &mockFactory{}
 	parent := &mockParent{}
 
-	domain := NewBaseDomain(parent, factory, "NewDomain")
+	domain := NewBaseDomain(parent, nil, "NewDomain")
 
 	sc := contract.BaseSmartContract{
 		CompositeMap: make(map[string]object.Composite),
@@ -138,7 +135,6 @@ func TestNewBaseDomain(t *testing.T) {
 	assert.Equal(t, &BaseDomain{
 		BaseSmartContract: sc,
 		Name:              "NewDomain",
-		class:             factory,
 	}, domain)
 }
 

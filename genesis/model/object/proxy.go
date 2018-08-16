@@ -37,7 +37,7 @@ func (bp *BaseProxy) GetClassID() string {
 	return class.ProxyID
 }
 
-func (bp *BaseProxy) GetClass() Factory {
+func (bp *BaseProxy) GetClass() Proxy {
 	return nil
 }
 

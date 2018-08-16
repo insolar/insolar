@@ -32,7 +32,7 @@ func (c *mockProxyReference) GetClassID() string {
 	return class.ReferenceID
 }
 
-func (c *mockProxyReference) GetClass() Factory {
+func (c *mockProxyReference) GetClass() Proxy {
 	return nil
 }
 
@@ -74,7 +74,7 @@ func (p *mockParentNotChild) GetClassID() string {
 	return "mockParentNotChild"
 }
 
-func (p *mockParentNotChild) GetClass() Factory {
+func (p *mockParentNotChild) GetClass() Proxy {
 	return nil
 }
 

@@ -34,7 +34,7 @@ func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
 }
 
-func (p *mockProxy) GetClass() object.Factory {
+func (p *mockProxy) GetClass() object.Proxy {
 	return nil
 }
 
@@ -59,6 +59,35 @@ func (c *mockChildProxy) GetParent() object.Parent {
 	return c.parent
 }
 
+type mockFactory struct {
+}
+
+func (f *mockFactory) Create(parent object.Parent) (object.Proxy, error) {
+	return &mockChildProxy{
+		parent: parent,
+	}, nil
+}
+
+func (f *mockFactory) GetClassID() string {
+	return "mockFactory"
+}
+
+func (f *mockFactory) GetClass() object.Proxy {
+	return &mockFactory{}
+}
+
+func (f *mockFactory) GetReference() object.Reference {
+	return nil
+}
+
+func (f *mockFactory) GetParent() object.Parent {
+	return nil
+}
+
+func (f *mockFactory) SetReference(reference object.Reference) {
+
+}
+
 type mockParent struct {
 	ContextStorage storage.Storage
 }
@@ -67,7 +96,7 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetClass() object.Factory {
+func (p *mockParent) GetClass() object.Proxy {
 	return nil
 }
 
@@ -101,7 +130,7 @@ func (bc *BaseComposite) GetClassID() string {
 	return "BaseComposite"
 }
 
-func (bc *BaseComposite) GetClass() object.Factory {
+func (bc *BaseComposite) GetClass() object.Proxy {
 	return nil
 }
 
@@ -123,7 +152,7 @@ func (bc *BaseCompositeNotChild) GetClassID() string {
 	return "BaseCompositeNotChild"
 }
 
-func (bc *BaseCompositeNotChild) GetClass() object.Factory {
+func (bc *BaseCompositeNotChild) GetClass() object.Proxy {
 	return nil
 }
 
@@ -150,7 +179,7 @@ func (bcf *BaseCompositeFactory) GetClassID() string {
 	return "BaseCompositeFactory_ID"
 }
 
-func (bcf *BaseCompositeFactory) GetClass() object.Factory {
+func (bcf *BaseCompositeFactory) GetClass() object.Proxy {
 	return nil
 }
 
@@ -168,7 +197,7 @@ func (bcf *BaseCompositeFactoryWithError) GetClassID() string {
 	return "BaseCompositeFactoryWithError_ID"
 }
 
-func (bcf *BaseCompositeFactoryWithError) GetClass() object.Factory {
+func (bcf *BaseCompositeFactoryWithError) GetClass() object.Proxy {
 	return nil
 }
 
@@ -197,7 +226,7 @@ func (bcf *BaseCompositeNotChildFactory) GetClassID() string {
 	return "BaseCompositeNotChildFactory_ID"
 }
 
-func (bcf *BaseCompositeNotChildFactory) GetClass() object.Factory {
+func (bcf *BaseCompositeNotChildFactory) GetClass() object.Proxy {
 	return nil
 }
 
@@ -223,7 +252,7 @@ func (bcf *BaseCompositeNotChildFactory) Create(parent object.Parent) (object.Co
 func TestNewBaseSmartContract(t *testing.T) {
 	parent := &mockParent{}
 	childStorage := storage.NewMapStorage()
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, nil)
 
 	assert.Equal(t, &BaseSmartContract{
 		CompositeMap: make(map[string]object.Composite),
@@ -233,8 +262,9 @@ func TestNewBaseSmartContract(t *testing.T) {
 }
 
 func TestSmartContract_GetClassID(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 
 	classID := sc.GetClassID()
 
@@ -242,8 +272,9 @@ func TestSmartContract_GetClassID(t *testing.T) {
 }
 
 func TestSmartContract_CreateComposite(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	compositeFactory := BaseCompositeFactory{}
 
 	composite, err := sc.CreateComposite(&compositeFactory)
@@ -258,8 +289,9 @@ func TestSmartContract_CreateComposite(t *testing.T) {
 }
 
 func TestSmartContract_CreateComposite_Error(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	compositeFactory := BaseCompositeFactory{}
 	// Add to CompositeMap and ChildStorage prepared item
 	sc.CreateComposite(&compositeFactory)
@@ -274,8 +306,9 @@ func TestSmartContract_CreateComposite_Error(t *testing.T) {
 }
 
 func TestSmartContract_CreateComposite_NotChild(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	compositeFactory := BaseCompositeNotChildFactory{}
 
 	res, err := sc.CreateComposite(&compositeFactory)
@@ -288,8 +321,9 @@ func TestSmartContract_CreateComposite_NotChild(t *testing.T) {
 }
 
 func TestSmartContract_CreateComposite_CreateError(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	errorFactory := BaseCompositeFactoryWithError{}
 
 	_, err := sc.CreateComposite(&errorFactory)
@@ -297,8 +331,9 @@ func TestSmartContract_CreateComposite_CreateError(t *testing.T) {
 }
 
 func TestSmartContract_GetComposite(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	compositeFactory := BaseCompositeFactory{}
 	composite, _ := sc.CreateComposite(&compositeFactory)
 
@@ -309,8 +344,9 @@ func TestSmartContract_GetComposite(t *testing.T) {
 }
 
 func TestSmartContract_GetComposite_Error(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	composite := BaseComposite{}
 
 	res, err := sc.GetComposite(composite.GetInterfaceKey())
@@ -320,8 +356,9 @@ func TestSmartContract_GetComposite_Error(t *testing.T) {
 }
 
 func TestSmartContract_GetOrCreateComposite_Get(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	composite := &BaseComposite{}
 	compositeFactory := &BaseCompositeFactory{}
 
@@ -332,8 +369,9 @@ func TestSmartContract_GetOrCreateComposite_Get(t *testing.T) {
 }
 
 func TestSmartContract_GetOrCreateComposite_Create(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	composite := &BaseComposite{}
 	compositeFactory := &BaseCompositeFactory{}
 
@@ -345,8 +383,9 @@ func TestSmartContract_GetOrCreateComposite_Create(t *testing.T) {
 }
 
 func TestSmartContract_GetOrCreateComposite_Error(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	compositeFactory := &BaseCompositeFactory{}
 	sc.CreateComposite(compositeFactory)
 
@@ -357,8 +396,9 @@ func TestSmartContract_GetOrCreateComposite_Error(t *testing.T) {
 }
 
 func TestSmartContract_GetChildStorage(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 
 	res := sc.GetChildStorage()
 
@@ -366,8 +406,9 @@ func TestSmartContract_GetChildStorage(t *testing.T) {
 }
 
 func TestSmartContract_AddChild(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	child := &mockChildProxy{}
 
 	res, err := sc.AddChild(child)
@@ -378,8 +419,9 @@ func TestSmartContract_AddChild(t *testing.T) {
 }
 
 func TestSmartContract_GetChild(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	child := &mockChildProxy{}
 	key, _ := sc.AddChild(child)
 
@@ -390,8 +432,9 @@ func TestSmartContract_GetChild(t *testing.T) {
 }
 
 func TestSmartContract_GetChild_Error(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 
 	res, err := sc.GetChild("someKey")
 
@@ -400,8 +443,9 @@ func TestSmartContract_GetChild_Error(t *testing.T) {
 }
 
 func TestSmartContract_GetContextStorage(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 
 	res := sc.GetContextStorage()
 
@@ -409,9 +453,10 @@ func TestSmartContract_GetContextStorage(t *testing.T) {
 }
 
 func TestSmartContract_GetContext(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
 	contextStorage := storage.NewMapStorage()
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 	sc.ContextStorage = contextStorage
 
 	res := sc.GetContext()
@@ -420,8 +465,9 @@ func TestSmartContract_GetContext(t *testing.T) {
 }
 
 func TestSmartContract_GetParent(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	sc := NewBaseSmartContract(parent)
+	sc := NewBaseSmartContract(parent, factory)
 
 	res := sc.GetParent()
 

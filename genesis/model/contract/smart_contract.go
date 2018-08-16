@@ -44,15 +44,17 @@ type BaseSmartContract struct {
 	ContextStorage storage.Storage
 	Parent         object.Parent
 	resolver       object.Resolver
+	class          object.Proxy
 }
 
 // NewBaseSmartContract creates new BaseSmartContract instance with empty CompositeMap, ChildStorage and specific parent.
-func NewBaseSmartContract(parent object.Parent) *BaseSmartContract {
+func NewBaseSmartContract(parent object.Parent, class object.Proxy) *BaseSmartContract {
 	// TODO: NewCompositeHolder
 	return &BaseSmartContract{
 		CompositeMap: make(map[string]object.Composite),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
+		class:        class,
 	}
 }
 
@@ -67,6 +69,10 @@ func (sc *BaseSmartContract) GetResolver() object.Resolver {
 // GetClassID return string representation of object's class.
 func (sc *BaseSmartContract) GetClassID() string {
 	return class.SmartContractID
+}
+
+func (sc *BaseSmartContract) GetClass() object.Proxy {
+	return sc.class
 }
 
 // CreateComposite allows to create composites inside smart contract.

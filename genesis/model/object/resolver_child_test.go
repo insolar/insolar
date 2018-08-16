@@ -32,7 +32,7 @@ func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
 }
 
-func (p *mockProxy) GetClass() Factory {
+func (p *mockProxy) GetClass() Proxy {
 	return nil
 }
 

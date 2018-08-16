@@ -159,7 +159,7 @@ func (mdf *memberDomainFactory) GetClassID() string {
 	return class.MemberDomainID
 }
 
-func (mdf *memberDomainFactory) GetClass() object.Factory {
+func (mdf *memberDomainFactory) GetClass() object.Proxy {
 	return mdf
 }
 

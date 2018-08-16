@@ -57,7 +57,7 @@ func TestWalletDomain_CreateWallet(t *testing.T) {
 	wallet, err := newWalletDomain(parent, factory)
 	assert.NoError(t, err)
 
-	mProxy, err := newMemberProxy(parent)
+	mProxy, err := newMemberProxy(parent, factory)
 	assert.NoError(t, err)
 
 	// TODO: Check inserted composite
@@ -75,7 +75,7 @@ func TestWalletDomain_CreateWallet_NoMemberFactoryRecord(t *testing.T) {
 	}
 	wDomain.walletFactoryReference, _ = object.NewReference("", "unexistedRecord", object.ChildScope)
 
-	mProxy, err := newMemberProxy(parent)
+	mProxy, err := newMemberProxy(parent, factory)
 	assert.NoError(t, err)
 	err = wDomain.CreateWallet(mProxy)
 
@@ -103,7 +103,7 @@ func TestWalletDomain_CreateWallet_NotFactory(t *testing.T) {
 		BaseDomain: *domain.NewBaseDomain(parent, factory, WalletDomainName),
 	}
 	record, _ := wDomain.AddChild(notFactory)
-	mProxy, err := newMemberProxy(parent)
+	mProxy, err := newMemberProxy(parent, factory)
 	assert.NoError(t, err)
 
 	wDomain.walletFactoryReference, _ = object.NewReference("", record, object.ChildScope)
@@ -170,7 +170,8 @@ func TestWalletDomainProxy_CreateWallet(t *testing.T) {
 	proxy, err := newWalletDomainProxy(parent, factory)
 	assert.NoError(t, err)
 
-	mProxy, err := newMemberProxy(parent)
+	mProxy, err := newMemberProxy(parent, factory)
+	assert.NoError(t, err)
 	err = proxy.CreateWallet(mProxy)
 
 	// TODO: Check inserted composite

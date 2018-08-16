@@ -142,7 +142,7 @@ func (idf *instanceDomainFactory) GetClassID() string {
 	return class.InstanceDomainID
 }
 
-func (idf *instanceDomainFactory) GetClass() object.Factory {
+func (idf *instanceDomainFactory) GetClass() object.Proxy {
 	return idf
 }
 

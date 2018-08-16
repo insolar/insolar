@@ -135,7 +135,7 @@ func (cdf *classDomainFactory) GetClassID() string {
 	return class.ClsDomainID
 }
 
-func (cdf *classDomainFactory) GetClass() object.Factory {
+func (cdf *classDomainFactory) GetClass() object.Proxy {
 	return cdf
 }
 

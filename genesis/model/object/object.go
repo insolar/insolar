@@ -24,7 +24,7 @@ import (
 // Object marks that instance has ClassID (string representation of class).
 type Object interface {
 	GetClassID() string
-	GetClass() Factory
+	GetClass() Proxy
 }
 
 // BaseObject is a base implementation of Object interface.
@@ -36,7 +36,7 @@ func (bo *BaseObject) GetClassID() string {
 	return class.ObjectID
 }
 
-func (bo *BaseObject) GetClass() Factory {
+func (bo *BaseObject) GetClass() Proxy {
 	return nil
 }
 

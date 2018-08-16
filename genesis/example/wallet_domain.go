@@ -142,7 +142,7 @@ func (*walletDomainFactory) GetClassID() string {
 	return class.WalletDomainID
 }
 
-func (wdf *walletDomainFactory) GetClass() object.Factory {
+func (wdf *walletDomainFactory) GetClass() object.Proxy {
 	return wdf
 }
 

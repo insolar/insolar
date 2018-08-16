@@ -58,7 +58,7 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetClass() object.Factory {
+func (p *mockParent) GetClass() object.Proxy {
 	return nil
 }
 

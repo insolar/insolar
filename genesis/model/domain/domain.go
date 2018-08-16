@@ -34,16 +34,16 @@ type InternalDomain interface {
 // BaseDomain is a base implementation of Domain interface.
 type BaseDomain struct {
 	contract.BaseSmartContract
-	class object.Factory
-	Name  string
+	//class object.Factory
+	Name string
 }
 
 // NewBaseDomain creates new BaseDomain instance.
 func NewBaseDomain(parent object.Parent, class object.Factory, name string) *BaseDomain {
 	return &BaseDomain{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
-		class:             class,
-		Name:              name,
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, class.(object.Proxy)),
+		//class:             class,
+		Name: name,
 	}
 }
 
@@ -52,9 +52,9 @@ func (d *BaseDomain) GetClassID() string {
 	return class.DomainID
 }
 
-func (d *BaseDomain) GetClass() object.Factory {
+/*func (d *BaseDomain) GetClass() object.Factory {
 	return d.class
-}
+}*/
 
 // GetName return name of domain.
 func (d *BaseDomain) GetName() string {
