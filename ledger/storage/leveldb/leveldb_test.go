@@ -28,6 +28,7 @@ import (
 
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage"
 )
 
 func TestMain(m *testing.M) {
@@ -50,7 +51,7 @@ func TestGetRecordNotFound(t *testing.T) {
 
 	ref := &record.Reference{}
 	rec, err := ledger.GetRecord(ref)
-	assert.Equal(t, err, ErrNotFound)
+	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, rec)
 }
 
@@ -104,7 +105,7 @@ func TestSetRawRecord(t *testing.T) {
 
 	// record should not exists
 	rec, err := ledger.GetRecord(ref)
-	assert.Equal(t, err, ErrNotFound)
+	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, rec)
 
 	// put record in storage by key
@@ -171,7 +172,7 @@ func TestSetRecord(t *testing.T) {
 	}
 	rec, err := ledger.GetRecord(refPulse1)
 	assert.Nil(t, rec)
-	assert.Equal(t, ErrNotFound, err)
+	assert.Equal(t, storage.ErrNotFound, err)
 
 	gotRef, err := ledger.SetRecord(passRecPulse1)
 	assert.Nil(t, err)
@@ -214,7 +215,7 @@ func TestGetClassIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 	}
 
 	idx, err := ledger.GetClassIndex(ref)
-	assert.Equal(t, err, ErrNotFound)
+	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, idx)
 }
 
@@ -259,7 +260,7 @@ func TestGetObjectIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 
 	ref := referenceWithHashes("1000", "5000")
 	idx, err := ledger.GetObjectIndex(&ref)
-	assert.Equal(t, ErrNotFound, err)
+	assert.Equal(t, storage.ErrNotFound, err)
 	assert.Nil(t, idx)
 }
 
