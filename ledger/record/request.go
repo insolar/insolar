@@ -27,9 +27,9 @@ type RequestRecord struct {
 }
 
 // Domain implements Record interface
-func (rec *RequestRecord) Domain() ID {
+func (rec *RequestRecord) Domain() *Reference {
 	// FIXME: return proper domain ID
-	return ID{}
+	return &Reference{}
 }
 
 // CallRequest is a contract execution request.

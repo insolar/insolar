@@ -161,7 +161,7 @@ func (ll *LevelLedger) SetRecord(rec record.Record) (*record.Reference, error) {
 		return nil, err
 	}
 	ref := &record.Reference{
-		Domain: rec.Domain(),
+		Domain: rec.Domain().Record,
 		Record: record.ID{Pulse: ll.pulseFn(), Hash: raw.Hash()},
 	}
 	k := prefixkey(scopeIDRecord, ref.Key())
