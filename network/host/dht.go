@@ -231,7 +231,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 		targetNode = &node.Node{ID: keyBytes, Address: address}
 		return targetNode, true, nil
 	} else {
-		log.Println("Node not found in routing table. Iterating through insolar...")
+		log.Println("Node not found in routing table. Iterating through network...")
 		_, closest, err := dht.iterate(ctx, routing.IterateFindNode, keyBytes, nil)
 		if err != nil {
 			return nil, false, err
