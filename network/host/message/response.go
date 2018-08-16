@@ -52,6 +52,7 @@ type ResponseRelay struct {
 
 // ResponseAuth is data for authentication request response.
 type ResponseAuth struct {
+	Success       bool
 	AuthUniqueKey []byte
 }
 
