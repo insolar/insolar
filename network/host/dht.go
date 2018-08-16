@@ -1342,7 +1342,10 @@ func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
 		}
 
 		response := rsp.Data.(*message.ResponseObtainIP)
-		dht.handleObtainIPResponse(response, targetNode.ID.String())
+		err = dht.handleObtainIPResponse(response, targetNode.ID.String())
+		if err != nil {
+			return err
+		}
 
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
@@ -1353,10 +1356,13 @@ func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
 	return nil
 }
 
-func (dht *DHT) handleObtainIPResponse(response *message.ResponseObtainIP, target string) {
+func (dht *DHT) handleObtainIPResponse(response *message.ResponseObtainIP, target string) error {
 	if response.IP != "" {
 		dht.subnet.SubnetIDs[response.IP] = append(dht.subnet.SubnetIDs[response.IP], target)
+	} else {
+		return errors.New("received empty IP")
 	}
+	return nil
 }
 
 // RemoteProcedureCall calls remote procedure on target node.
@@ -1412,17 +1418,18 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 }
 
 // ObtainIP starts to self IP obtaining.
-func (dht *DHT) ObtainIP(ctx Context) {
+func (dht *DHT) ObtainIP(ctx Context) error {
 	for _, table := range dht.tables {
 		for i := range table.RoutingTable {
 			for j := range table.RoutingTable[i] {
 				err := dht.ObtainIPRequest(ctx, table.RoutingTable[i][j].ID.String())
 				if err != nil {
-					log.Println("error to obtain IP: ", err)
+					return err
 				}
 			}
 		}
 	}
+	return nil
 }
 
 // GetDistance returns a distance between id1 and id2.
