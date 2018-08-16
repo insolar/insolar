@@ -1169,3 +1169,77 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 	}
 	<-done
 }
+
+func TestDHT_RelayRequest(t *testing.T) {
+	count := 2
+	port := 8000
+	var dhts []*DHT
+	done := make(chan bool)
+	var ids []string
+
+	for i := 0; i < count; i++ {
+		id, _ := node.NewIDs(1)
+		ids = append(ids, id[0].String())
+		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
+		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
+		bootstrapNode := node.NewNode(address)
+		dht, err := NewDHT(st, s, tp, r, &Options{
+			BootstrapNodes: []*node.Node{
+				bootstrapNode,
+			},
+		},
+			relay.NewProxy())
+		port++
+		dhts = append(dhts, dht)
+		assert.NoError(t, err)
+	}
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
+		assert.Equal(t, 0, dht.NumNodes(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, "closed", err.Error())
+			done <- true
+		}(dht)
+	}
+
+	for _, dht := range dhts {
+		dht.Bootstrap()
+	}
+
+	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultNode().Build()
+
+	err := dhts[0].RelayRequest(ctx, "start", ids[1])
+	assert.EqualError(t, err, "unable to execute relay because this node not authenticated")
+	time.Sleep(time.Millisecond * 200)
+
+	err = dhts[0].AuthenticationRequest(ctx, "begin", ids[1])
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 200)
+
+	err = dhts[0].RelayRequest(ctx, "wrong command", ids[1])
+	assert.EqualError(t, err, "unknown command")
+	time.Sleep(time.Millisecond * 200)
+
+	err = dhts[0].RelayRequest(ctx, "start", ids[1])
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 200)
+
+	err = dhts[0].RelayRequest(ctx, "start", ids[1])
+	assert.EqualError(t, err, "relay request error")
+	time.Sleep(time.Millisecond * 200)
+
+	err = dhts[0].RelayRequest(ctx, "stop", ids[1])
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 200)
+
+	err = dhts[0].RelayRequest(ctx, "start", ids[1])
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 200)
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
+	<-done
+}
