@@ -206,6 +206,10 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	return err
 }
 
+func (t *utpTransport) getRemoteAddress(conn net.Conn) string {
+	return strings.Split(conn.RemoteAddr().String(), ":")[0]
+}
+
 func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 	for {
 		// Wait for Messages
@@ -216,7 +220,7 @@ func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 			// }
 			return
 		}
-		msg.RemoteAddress = strings.Split(conn.RemoteAddr().String(), ":")[0]
+		msg.RemoteAddress = t.getRemoteAddress(conn)
 		t.handleMessage(msg)
 	}
 }
