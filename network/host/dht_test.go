@@ -21,6 +21,7 @@ import (
 	"errors"
 	"math"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -1111,6 +1112,17 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 	var dhts []*DHT
 	done := make(chan bool)
 	var ids []string
+	args := []struct {
+		first  string
+		second error
+		name   string
+	}{
+		{"wrong command", errors.New("unknown command"), "undefined command"},
+		{"begin", nil, "begin auth"},
+		{"begin", errors.New("authentication unsuccessful"), "begin auth second time"},
+		{"revoke", nil, "revoke auth"},
+		{"begin", nil, "begin auth"},
+	}
 
 	for i := 0; i < count; i++ {
 		id, _ := id.NewIDs(1)
@@ -1134,7 +1146,7 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 	}
@@ -1145,30 +1157,13 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 
 	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultNode().Build()
 
-	err := dhts[0].AuthenticationRequest(ctx, "wrong command", ids[1])
-	assert.EqualError(t, err, "unknown command")
-
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].AuthenticationRequest(ctx, "begin", ids[1])
-	assert.NoError(t, err)
-
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].AuthenticationRequest(ctx, "begin", ids[1])
-	assert.EqualError(t, err, "authentication unsuccessful")
-
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].AuthenticationRequest(ctx, "revoke", ids[1])
-	assert.NoError(t, err)
-
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].AuthenticationRequest(ctx, "begin", ids[1])
-	assert.NoError(t, err)
-
-	time.Sleep(time.Millisecond * 200)
+	for _, arg := range args {
+		t.Run(arg.name, func(t *testing.T) {
+			err := dhts[0].AuthenticationRequest(ctx, arg.first, ids[1])
+			assert.Equal(t, err, arg.second)
+			time.Sleep(time.Millisecond * 200)
+		})
+	}
 
 	for _, dht := range dhts {
 		dht.Disconnect()
@@ -1182,6 +1177,19 @@ func TestDHT_RelayRequest(t *testing.T) {
 	var dhts []*DHT
 	done := make(chan bool)
 	var ids []string
+	args := []struct {
+		first  string
+		second error
+		name   string
+	}{
+		{"start", errors.New("unable to execute relay because this node not authenticated"), "start relay w/o auth"},
+		{"begin", nil, "begin auth"},
+		{"wrong command", errors.New("unknown command"), "undefined command"},
+		{"start", nil, "start relay"},
+		{"start", errors.New("relay request error"), "start relay twice"},
+		{"stop", nil, "stop relay"},
+		{"start", nil, "start relay"},
+	}
 
 	for i := 0; i < count; i++ {
 		id, _ := id.NewIDs(1)
@@ -1205,7 +1213,7 @@ func TestDHT_RelayRequest(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 	}
@@ -1216,33 +1224,19 @@ func TestDHT_RelayRequest(t *testing.T) {
 
 	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultNode().Build()
 
-	err := dhts[0].RelayRequest(ctx, "start", ids[1])
-	assert.EqualError(t, err, "unable to execute relay because this node not authenticated")
-	time.Sleep(time.Millisecond * 200)
+	var err error
+	for _, arg := range args {
+		t.Run(arg.name, func(t *testing.T) {
+			if strings.Contains(arg.name, "begin auth") {
+				err = dhts[0].AuthenticationRequest(ctx, arg.first, ids[1])
+			} else {
 
-	err = dhts[0].AuthenticationRequest(ctx, "begin", ids[1])
-	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].RelayRequest(ctx, "wrong command", ids[1])
-	assert.EqualError(t, err, "unknown command")
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].RelayRequest(ctx, "start", ids[1])
-	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].RelayRequest(ctx, "start", ids[1])
-	assert.EqualError(t, err, "relay request error")
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].RelayRequest(ctx, "stop", ids[1])
-	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 200)
-
-	err = dhts[0].RelayRequest(ctx, "start", ids[1])
-	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 200)
+				err = dhts[0].RelayRequest(ctx, arg.first, ids[1])
+			}
+			assert.Equal(t, err, arg.second)
+			time.Sleep(time.Millisecond * 200)
+		})
+	}
 
 	for _, dht := range dhts {
 		dht.Disconnect()
