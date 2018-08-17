@@ -1108,7 +1108,7 @@ func TestNewDHT(t *testing.T) {
 
 func TestDHT_AuthenticationRequest(t *testing.T) {
 	count := 2
-	port := 8000
+	port := 46000
 	var dhts []*DHT
 	done := make(chan bool)
 	var ids []string
@@ -1173,7 +1173,7 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 
 func TestDHT_RelayRequest(t *testing.T) {
 	count := 2
-	port := 8000
+	port := 45000
 	var dhts []*DHT
 	done := make(chan bool)
 	var ids []string
@@ -1246,7 +1246,7 @@ func TestDHT_RelayRequest(t *testing.T) {
 
 func TestDHT_ObtainIP(t *testing.T) {
 	count := 2
-	port := 8000
+	port := 47000
 	var dhts []*DHT
 	done := make(chan bool)
 	var ids []string
@@ -1295,7 +1295,7 @@ func TestDHT_ObtainIP(t *testing.T) {
 
 func TestDHT_AnalyzeNetwork(t *testing.T) {
 	count := 2
-	port := 8000
+	port := 48000
 	var dhts []*DHT
 	done := make(chan bool)
 	var ids []string

@@ -40,26 +40,12 @@ func TestRelay_ClientsCount(t *testing.T) {
 
 func TestNewProxy(t *testing.T) {
 	proxy := NewProxy()
-
-	check := true
-
-	if proxy == nil {
-		check = false
-	}
-
-	assert.Equal(t, true, check)
+	assert.NotNil(t, proxy)
 }
 
 func TestNewRelay(t *testing.T) {
 	relay := NewRelay()
-
-	check := true
-
-	if relay == nil {
-		check = false
-	}
-
-	assert.Equal(t, true, check)
+	assert.NotNil(t, relay)
 }
 
 func makeAddresses(count int, t *testing.T) []*node.Address {
