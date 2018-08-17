@@ -32,7 +32,7 @@ func TestNewUTPTransportFactory(t *testing.T) {
 	assert.Implements(t, (*Factory)(nil), actualFactory)
 }
 
-func TestNewMemoryStoreKCPFactory(t *testing.T) {
+func TestNewKCPFactory(t *testing.T) {
 	expectedFactory := &kcpTransportFactory{}
 	actualFactory := NewKCPTransportFactory()
 
@@ -40,7 +40,7 @@ func TestNewMemoryStoreKCPFactory(t *testing.T) {
 	assert.Implements(t, (*Factory)(nil), actualFactory)
 }
 
-func TestMemoryStoreFactory_Create(t *testing.T) {
+func TestUTPTransportFactory_Create(t *testing.T) {
 	conn, err := connection.NewConnectionFactory().Create("127.0.0.1:8080")
 	assert.NoError(t, err)
 	defer conn.Close()
