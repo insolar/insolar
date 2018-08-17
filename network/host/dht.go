@@ -1603,7 +1603,10 @@ func (dht *DHT) knownOuterNodesRequest(targetID string, nodes int) error {
 		}
 
 		response := rsp.Data.(*message.ResponseKnownOuterNodes)
-		dht.handleKnownOuterNodes(ctx, response, targetID)
+		err = dht.handleKnownOuterNodes(ctx, response, targetID)
+		if err != nil {
+			return err
+		}
 
 	case <-time.After(dht.options.MessageTimeout):
 		future.Cancel()
