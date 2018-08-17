@@ -18,6 +18,7 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"strings"
@@ -29,7 +30,6 @@ import (
 	"github.com/insolar/insolar/network/host/relay"
 
 	"github.com/anacrolix/utp"
-	"errors"
 )
 
 type utpTransport struct {
