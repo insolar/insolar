@@ -51,7 +51,6 @@ func NewKCPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) 
 
 func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, error) {
 	crypt, err := kcp.NewNoneBlockCrypt([]byte{})
-	// crypt, err := kcp.NewSimpleXORBlockCrypt([]byte("test key"))
 
 	if err != nil {
 		return nil, err
@@ -209,7 +208,10 @@ func (t *kcpTransport) sendMessage(msg *message.Message) error {
 
 func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 	for {
-		session.SetDeadline(time.Now().Add(time.Millisecond * 50))
+		err := session.SetDeadline(time.Now().Add(time.Millisecond * 50))
+		if err != nil {
+			log.Println(err.Error())
+		}
 		// Wait for Messages
 		msg, err := message.DeserializeMessage(session)
 		if err != nil {
@@ -244,19 +246,3 @@ func (t *kcpTransport) processRequest(msg *message.Message) {
 		t.received <- msg
 	}
 }
-
-/*
-func shouldProcessMessage(future Future, msg *message.Message) bool {
-	return !future.Actor().Equal(*msg.Sender) && msg.Type != message.TypePing || msg.Type != future.Request().Type
-}
-
-// AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
-}
-*/
