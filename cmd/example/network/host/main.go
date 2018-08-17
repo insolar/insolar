@@ -77,6 +77,14 @@ func main() {
 
 	handleSignals(configuration)
 
+	err = dhtNetwork.ObtainIP(ctx)
+	if err != nil {
+		log.Println(err)
+	}
+	err = dhtNetwork.AnalyzeNetwork(ctx)
+	if err != nil {
+		log.Println(err)
+	}
 	repl(dhtNetwork, ctx)
 }
 

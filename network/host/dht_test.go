@@ -21,6 +21,7 @@ import (
 	"errors"
 	"math"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -741,6 +742,7 @@ func TestStoreReplication(t *testing.T) {
 // and then wait longer than ExpirationTime. The value should no longer exist in
 // the store.
 func TestStoreExpiration(t *testing.T) {
+	done := make(chan bool)
 	zeroID := getIDWithValues(0)
 
 	st, s, tp, r, err := realDhtParams([]id.ID{zeroID}, "0.0.0.0:25000")
@@ -753,6 +755,7 @@ func TestStoreExpiration(t *testing.T) {
 
 	go func() {
 		dht.Listen()
+		done <- true
 	}()
 
 	k, _ := dht.Store(getDefaultCtx(dht), []byte("foo"))
@@ -769,12 +772,14 @@ func TestStoreExpiration(t *testing.T) {
 	assert.Equal(t, false, exists)
 
 	dht.Disconnect()
+	<-done
 }
 
 // Create a new node and bootstrap it. All nodes in the network know of a
 // single node closer to the original node. This continues until every MaxContactsInBucket bucket
 // is occupied.
 func TestFindNodeAllBuckets(t *testing.T) {
+	done := make(chan bool)
 	zeroID := getIDWithValues(0)
 
 	bootstrapAddr, _ := node.NewAddress("0.0.0.0:26001")
@@ -792,6 +797,7 @@ func TestFindNodeAllBuckets(t *testing.T) {
 
 	go func() {
 		dht.Listen()
+		done <- true
 	}()
 
 	var k = 0
@@ -826,6 +832,7 @@ func TestFindNodeAllBuckets(t *testing.T) {
 	}
 
 	dht.Disconnect()
+	<-done
 }
 
 // Tests timing out of nodes in a bucket. DHT bootstraps networks and learns
@@ -900,21 +907,23 @@ func TestAddNodeTimeout(t *testing.T) {
 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID, firstNode))
 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID, lastNode))
 
+	dht.Disconnect()
+
 	<-done
 	<-pinged
-
-	dht.Disconnect()
 }
 
 func TestGetRandomIDFromBucket(t *testing.T) {
 	zeroID := getIDWithValues(0)
 	st, s, tp, r, err := realDhtParams([]id.ID{zeroID}, "0.0.0.0:28000")
 	assert.NoError(t, err)
+	done := make(chan bool)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
 
 	go func() {
 		dht.Listen()
+		done <- true
 	}()
 
 	// Bytes should be equal up to the bucket index that the random RequestID was
@@ -927,6 +936,7 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 	}
 
 	dht.Disconnect()
+	<-done
 }
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
@@ -1093,5 +1103,244 @@ func TestNewDHT(t *testing.T) {
 	}(dht)
 
 	dht.Disconnect()
+	<-done
+}
+
+func TestDHT_AuthenticationRequest(t *testing.T) {
+	count := 2
+	port := 46000
+	var dhts []*DHT
+	done := make(chan bool)
+	var ids []string
+	args := []struct {
+		first  string
+		second error
+		name   string
+	}{
+		{"wrong command", errors.New("unknown command"), "undefined command"},
+		{"begin", nil, "begin auth"},
+		{"begin", errors.New("authentication unsuccessful"), "begin auth second time"},
+		{"revoke", nil, "revoke auth"},
+		{"begin", nil, "begin auth"},
+	}
+
+	for i := 0; i < count; i++ {
+		id, _ := id.NewIDs(1)
+		ids = append(ids, id[0].String())
+		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
+		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
+		bootstrapNode := node.NewNode(address)
+		dht, err := NewDHT(st, s, tp, r, &Options{
+			BootstrapNodes: []*node.Node{
+				bootstrapNode,
+			},
+		},
+			relay.NewProxy())
+		port++
+		dhts = append(dhts, dht)
+		assert.NoError(t, err)
+	}
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
+		assert.Equal(t, 0, dht.NumNodes(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, closedMessage, err.Error())
+			done <- true
+		}(dht)
+	}
+
+	for _, dht := range dhts {
+		dht.Bootstrap()
+	}
+
+	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultNode().Build()
+
+	for _, arg := range args {
+		t.Run(arg.name, func(t *testing.T) {
+			err := dhts[0].AuthenticationRequest(ctx, arg.first, ids[1])
+			assert.Equal(t, err, arg.second)
+			time.Sleep(time.Millisecond * 200)
+		})
+	}
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
+	<-done
+}
+
+func TestDHT_RelayRequest(t *testing.T) {
+	count := 2
+	port := 45000
+	var dhts []*DHT
+	done := make(chan bool)
+	var ids []string
+	args := []struct {
+		first  string
+		second error
+		name   string
+	}{
+		{"start", errors.New("unable to execute relay because this node not authenticated"), "start relay w/o auth"},
+		{"begin", nil, "begin auth"},
+		{"wrong command", errors.New("unknown command"), "undefined command"},
+		{"start", nil, "start relay"},
+		{"start", errors.New("relay request error"), "start relay twice"},
+		{"stop", nil, "stop relay"},
+		{"start", nil, "start relay"},
+	}
+
+	for i := 0; i < count; i++ {
+		id, _ := id.NewIDs(1)
+		ids = append(ids, id[0].String())
+		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
+		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
+		bootstrapNode := node.NewNode(address)
+		dht, err := NewDHT(st, s, tp, r, &Options{
+			BootstrapNodes: []*node.Node{
+				bootstrapNode,
+			},
+		},
+			relay.NewProxy())
+		port++
+		dhts = append(dhts, dht)
+		assert.NoError(t, err)
+	}
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
+		assert.Equal(t, 0, dht.NumNodes(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, closedMessage, err.Error())
+			done <- true
+		}(dht)
+	}
+
+	for _, dht := range dhts {
+		dht.Bootstrap()
+	}
+
+	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultNode().Build()
+
+	var err error
+	for _, arg := range args {
+		t.Run(arg.name, func(t *testing.T) {
+			if strings.Contains(arg.name, "begin auth") {
+				err = dhts[0].AuthenticationRequest(ctx, arg.first, ids[1])
+			} else {
+
+				err = dhts[0].RelayRequest(ctx, arg.first, ids[1])
+			}
+			assert.Equal(t, err, arg.second)
+			time.Sleep(time.Millisecond * 200)
+		})
+	}
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
+	<-done
+}
+
+func TestDHT_ObtainIP(t *testing.T) {
+	count := 2
+	port := 47000
+	var dhts []*DHT
+	done := make(chan bool)
+	var ids []string
+
+	for i := 0; i < count; i++ {
+		id, _ := id.NewIDs(1)
+		ids = append(ids, id[0].String())
+		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
+		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
+		bootstrapNode := node.NewNode(address)
+		dht, err := NewDHT(st, s, tp, r, &Options{
+			BootstrapNodes: []*node.Node{
+				bootstrapNode,
+			},
+		},
+			relay.NewProxy())
+		port++
+		dhts = append(dhts, dht)
+		assert.NoError(t, err)
+	}
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
+		assert.Equal(t, 0, dht.NumNodes(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, "closed", err.Error())
+			done <- true
+		}(dht)
+	}
+
+	for _, dht := range dhts {
+		dht.Bootstrap()
+	}
+
+	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultNode().Build()
+
+	err := dhts[0].ObtainIP(ctx)
+	assert.NoError(t, err)
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
+	<-done
+}
+
+func TestDHT_AnalyzeNetwork(t *testing.T) {
+	count := 2
+	port := 48000
+	var dhts []*DHT
+	done := make(chan bool)
+	var ids []string
+
+	for i := 0; i < count; i++ {
+		id, _ := id.NewIDs(1)
+		ids = append(ids, id[0].String())
+		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
+		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
+		bootstrapNode := node.NewNode(address)
+		dht, err := NewDHT(st, s, tp, r, &Options{
+			BootstrapNodes: []*node.Node{
+				bootstrapNode,
+			},
+		},
+			relay.NewProxy())
+		port++
+		dhts = append(dhts, dht)
+		assert.NoError(t, err)
+	}
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
+		assert.Equal(t, 0, dht.NumNodes(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, "closed", err.Error())
+			done <- true
+		}(dht)
+	}
+
+	for _, dht := range dhts {
+		dht.Bootstrap()
+	}
+
+	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultNode().Build()
+
+	err := dhts[0].ObtainIP(ctx)
+	assert.NoError(t, err)
+
+	err = dhts[0].AnalyzeNetwork(ctx)
+	assert.NoError(t, err)
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
 	<-done
 }

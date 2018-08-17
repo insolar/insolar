@@ -27,14 +27,16 @@ import (
 type State int
 
 const (
+	// Unknown unknown relay state.
+	Unknown = State(iota + 1)
 	// Started is relay type means relaying started.
-	Started = State(iota + 1)
+	Started
 	// Stopped is relay type means relaying stopped.
 	Stopped
 	// Error is relay type means error state change.
 	Error
-	// Unknown unknown relay state.
-	Unknown
+	// NoAuth - this error returns if node tries to send relay request but not authenticated.
+	NoAuth
 )
 
 // Relay Interface for relaying
