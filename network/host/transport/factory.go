@@ -26,15 +26,3 @@ import (
 type Factory interface {
 	Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error)
 }
-
-type utpTransportFactory struct{}
-
-// NewUTPTransportFactory creates new Factory of utpTransport.
-func NewUTPTransportFactory() Factory {
-	return &utpTransportFactory{}
-}
-
-// Create creates new Transport.
-func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
-	return NewUTPTransport(conn, proxy)
-}

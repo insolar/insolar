@@ -22,26 +22,27 @@ Usage:
 	package main
 
 	import (
-		"github.com/insolar/insolar"
-		"github.com/insolar/insolar/connection"
-		"github.com/insolar/insolar/node"
-		"github.com/insolar/insolar/relay"
-		"github.com/insolar/insolar/resolver"
-		"github.com/insolar/insolar/rpc"
-		"github.com/insolar/insolar/store"
-		"github.com/insolar/insolar/transport"
+		"github.com/insolar/insolar/network/host"
+		"github.com/insolar/insolar/network/host/connection"
+		"github.com/insolar/insolar/network/host/node"
+		"github.com/insolar/insolar/network/host/relay"
+		"github.com/insolar/insolar/network/host/resolver"
+		"github.com/insolar/insolar/network/host/rpc"
+		"github.com/insolar/insolar/network/host/store"
+		"github.com/insolar/insolar/network/host/transport"
+		"github.com/insolar/insolar/network/host/transport/utptransport"
 	)
 
 	func main() {
-		configuration := insolar.NewNetworkConfiguration(
+		configuration := host.NewNetworkConfiguration(
 			resolver.NewStunResolver(""),
 			connection.NewConnectionFactory(),
-			transport.NewUTPTransportFactory(),
+			utptransport.NewUTPTransportFactory(),
 			store.NewMemoryStoreFactory(),
 			rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
 			relay.NewProxy())
 
-		dhtNetwork, err := configuration.CreateNetwork("0.0.0.0:31337", &insolar.Options{})
+		dhtNetwork, err := configuration.CreateNetwork("0.0.0.0:31337", &host.Options{})
 		if err != nil {
 			panic(err)
 		}

@@ -14,11 +14,23 @@
  *    limitations under the License.
  */
 
-package leveldb
+package utptransport
 
-import "errors"
+import (
+	"net"
 
-var (
-	// ErrNotFound returns if record/index not found in leveldb storage.
-	ErrNotFound = errors.New("record not found")
+	"github.com/insolar/insolar/network/host/relay"
+	"github.com/insolar/insolar/network/host/transport"
 )
+
+type utpTransportFactory struct{}
+
+// NewUTPTransportFactory creates new Factory of utpTransport.
+func NewUTPTransportFactory() transport.Factory {
+	return &utpTransportFactory{}
+}
+
+// Create creates new Transport.
+func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (transport.Transport, error) {
+	return NewUTPTransport(conn, proxy)
+}

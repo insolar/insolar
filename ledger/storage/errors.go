@@ -14,19 +14,13 @@
  *    limitations under the License.
  */
 
-package node
+package storage
 
 import (
-	"crypto/rand"
-	"io"
+	"errors"
 )
 
-var random io.Reader = &cryptoReader{}
-
-type cryptoReader struct{}
-
-// Read implements io.Reader interface.
-// Can be replaced with mock reader for testing purposes.
-func (cr *cryptoReader) Read(b []byte) (n int, err error) {
-	return rand.Read(b)
-}
+var (
+	// ErrNotFound returns if record/index not found in leveldb storage.
+	ErrNotFound = errors.New("storage object not found")
+)

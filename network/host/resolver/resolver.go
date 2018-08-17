@@ -20,9 +20,9 @@ import (
 	"net"
 )
 
-// PublicAddressResolver is insolar address resolver interface.
+// PublicAddressResolver is network address resolver interface.
 type PublicAddressResolver interface {
 
-	// Returns public insolar address from given connection.
+	// Returns public network address from given connection.
 	Resolve(conn net.PacketConn) (string, error)
 }

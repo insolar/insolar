@@ -20,9 +20,8 @@ import (
 	"github.com/insolar/insolar/network/host/message"
 )
 
-// Transport is an interface for insolar transport.
+// Transport is an interface for network transport.
 type Transport interface {
-
 	// SendRequest sends message to destination. Sequence number is generated automatically.
 	SendRequest(*message.Message) (Future, error)
 

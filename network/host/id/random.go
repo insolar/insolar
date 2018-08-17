@@ -14,25 +14,19 @@
  *    limitations under the License.
  */
 
-package resolver
+package id
 
 import (
-	"net"
+	"crypto/rand"
+	"io"
 )
 
-type exactResolver struct {
-}
+var random io.Reader = &cryptoReader{}
 
-// NewExactResolver returns new no-op resolver.
-func NewExactResolver() PublicAddressResolver {
-	return newExactResolver()
-}
+type cryptoReader struct{}
 
-func newExactResolver() *exactResolver {
-	return &exactResolver{}
-}
-
-// Resolve returns node's current network address.
-func (er *exactResolver) Resolve(conn net.PacketConn) (string, error) {
-	return conn.LocalAddr().String(), nil
+// Read implements io.Reader interface.
+// Can be replaced with mock reader for testing purposes.
+func (cr *cryptoReader) Read(b []byte) (n int, err error) {
+	return rand.Read(b)
 }
