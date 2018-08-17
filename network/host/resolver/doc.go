@@ -15,7 +15,7 @@
  */
 
 /*
-Package resolver provides interface (and default implementation) to retrieve public insolar address.
+Package resolver provides interface (and default implementation) to retrieve public network address.
 
 Currently there are two default implementation of resolvers:
 

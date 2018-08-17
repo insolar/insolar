@@ -18,8 +18,10 @@ package message
 
 import (
 	"bytes"
+	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,10 +29,10 @@ import (
 func TestNewPingMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 
 	m := NewPingMessage(sender, receiver)
 
@@ -50,6 +52,66 @@ func TestMessage_IsValid(t *testing.T) {
 
 	badtMessage := builder.Type(TypeStore).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
 	assert.False(t, badtMessage.IsValid())
+}
+
+func TestNewAuthMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewAuthMessage(BeginAuth, sender, receiver)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewCheckOriginMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewCheckOriginMessage(sender, receiver)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewKnownOuterNodesMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewKnownOuterNodesMessage(sender, receiver, 1)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewObtainIPMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewObtainIPMessage(sender, receiver)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewRelayMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewRelayMessage(StartRelay, sender, receiver)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewRelayOwnershipMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewRelayOwnershipMessage(sender, receiver, true)
+	assert.True(t, msg.IsValid())
 }
 
 func TestMessage_IsValid_Ok(t *testing.T) {
@@ -94,12 +156,12 @@ func TestMessage_IsValid_Fail(t *testing.T) {
 func TestMessage_IsForMe(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
-	origin, _ := node.NewOrigin([]node.ID{receiver.ID}, receiver.Address)
+	origin, _ := node.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
 
 	myMessage := builder.Receiver(receiver).Build()
 	notMyMessage := builder.Receiver(sender).Build()
@@ -111,10 +173,10 @@ func TestMessage_IsForMe(t *testing.T) {
 func TestSerializeMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID}).Build()
 
@@ -126,10 +188,10 @@ func TestSerializeMessage(t *testing.T) {
 func TestDeserializeMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = node.NewID()
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = node.NewID()
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID}).Build()
 
@@ -143,4 +205,28 @@ func TestDeserializeMessage(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, deserialized, msg)
+}
+
+func TestDeserializeBigMessage(t *testing.T) {
+	address, _ := node.NewAddress("127.0.0.1:31337")
+	nodeOne := node.NewNode(address)
+
+	data := make([]byte, 1024*1024*10)
+	rand.Read(data)
+
+	builder := NewBuilder()
+	msg := builder.Sender(nodeOne).Receiver(nodeOne).Type(TypeStore).Request(&RequestDataStore{data, true}).Build()
+	assert.True(t, msg.IsValid())
+
+	serialized, err := SerializeMessage(msg)
+	assert.NoError(t, err)
+
+	var buffer bytes.Buffer
+	buffer.Write(serialized)
+
+	deserializedMsg, err := DeserializeMessage(&buffer)
+	assert.NoError(t, err)
+
+	deserializedData := deserializedMsg.Data.(*RequestDataStore).Data
+	assert.Equal(t, data, deserializedData)
 }

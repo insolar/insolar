@@ -32,7 +32,7 @@ func genRandomRef() *record.Reference {
 	return &record.Reference{Domain: record.ID{Pulse: record.PulseNum(rand.Int())}}
 }
 
-func prepareTestArtifactManager() (storage.LedgerStorer, ArtifactManager, *record.Reference) {
+func prepareTestArtifactManager() (storage.LedgerStorer, ArtifactManager, *record.Reference, *record.Reference) {
 	if err := leveldb.DropDB(); err != nil {
 		os.Exit(1)
 	}
@@ -40,13 +40,13 @@ func prepareTestArtifactManager() (storage.LedgerStorer, ArtifactManager, *recor
 	ledger, _ := leveldb.InitDB()
 	manager := LedgerArtifactManager{storer: ledger}
 
-	return ledger, &manager, genRandomRef()
+	return ledger, &manager, genRandomRef(), genRandomRef()
 }
 
 func TestLedgerArtifactManager_DeployCode(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	codeMap := map[record.ArchType][]byte{1: {1}}
-	ref, err := manager.DeployCode(*requestRef, codeMap)
+	ref, err := manager.DeployCode(*domainRef, *requestRef, codeMap)
 	assert.NoError(t, err)
 	codeRec, err := ledger.GetRecord(ref)
 	assert.NoError(t, err)
@@ -54,6 +54,7 @@ func TestLedgerArtifactManager_DeployCode(t *testing.T) {
 		StorageRecord: record.StorageRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  *domainRef,
 					RequestRecord: *requestRef,
 				},
 			},
@@ -63,19 +64,19 @@ func TestLedgerArtifactManager_DeployCode(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_ActivateClass_VerifiesRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
-	_, err := manager.ActivateClass(*requestRef, record.Reference{}, record.Memory{})
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
+	_, err := manager.ActivateClass(*domainRef, *requestRef, record.Reference{}, record.Memory{})
 	assert.NotNil(t, err)
 	notCodeRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
-	_, err = manager.ActivateClass(*requestRef, *notCodeRef, record.Memory{})
+	_, err = manager.ActivateClass(*domainRef, *requestRef, *notCodeRef, record.Memory{})
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	memory := record.Memory{1, 2, 3}
 	codeRef, _ := ledger.SetRecord(&record.CodeRecord{})
-	activateRef, err := manager.ActivateClass(*requestRef, *codeRef, memory)
+	activateRef, err := manager.ActivateClass(*domainRef, *requestRef, *codeRef, memory)
 	assert.Nil(t, err)
 	activateRec, getErr := ledger.GetRecord(activateRef)
 	assert.Nil(t, getErr)
@@ -83,6 +84,7 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  *domainRef,
 					RequestRecord: *requestRef,
 				},
 			},
@@ -93,34 +95,34 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 }
 
 func TestLedgerArtifactManager_DeactivateClass_VerifiesRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
-	_, err := manager.DeactivateClass(*requestRef, record.Reference{})
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
+	_, err := manager.DeactivateClass(*domainRef, *requestRef, record.Reference{})
 	assert.NotNil(t, err)
 
 	notClassRef, _ := ledger.SetRecord(&record.CodeRecord{})
-	_, err = manager.DeactivateClass(*requestRef, *notClassRef)
+	_, err = manager.DeactivateClass(*domainRef, *requestRef, *notClassRef)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_DeactivateClass_VerifiesClassIsActive(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	classRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
 	deactivateRef, _ := ledger.SetRecord(&record.DeactivationRecord{})
 	ledger.SetClassIndex(classRef, &index.ClassLifeline{
 		LatestStateRef: *deactivateRef,
 	})
-	_, err := manager.DeactivateClass(*requestRef, *classRef)
+	_, err := manager.DeactivateClass(*domainRef, *requestRef, *classRef)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	classRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
 	ledger.SetClassIndex(classRef, &index.ClassLifeline{
 		LatestStateRef: *classRef,
 	})
 
-	deactivateRef, err := manager.DeactivateClass(*requestRef, *classRef)
+	deactivateRef, err := manager.DeactivateClass(*domainRef, *requestRef, *classRef)
 	assert.NoError(t, err)
 	deactivateRec, err := ledger.GetRecord(deactivateRef)
 	assert.NoError(t, err)
@@ -128,6 +130,7 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  *domainRef,
 					RequestRecord: *requestRef,
 				},
 			},
@@ -138,28 +141,28 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 }
 
 func TestLedgerArtifactManager_UpdateClass_VerifiesRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
-	_, err := manager.UpdateClass(*requestRef, record.Reference{}, record.Reference{}, nil)
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
+	_, err := manager.UpdateClass(*domainRef, *requestRef, record.Reference{}, record.Reference{}, nil)
 	assert.NotNil(t, err)
 	notClassRef, _ := ledger.SetRecord(&record.CodeRecord{})
-	_, err = manager.UpdateClass(*requestRef, *notClassRef, record.Reference{}, nil)
+	_, err = manager.UpdateClass(*domainRef, *requestRef, *notClassRef, record.Reference{}, nil)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_UpdateClass_VerifiesClassIsActive(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	classRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
 	deactivateRef, _ := ledger.SetRecord(&record.DeactivationRecord{})
 	codeRef, _ := ledger.SetRecord(&record.CodeRecord{})
 	ledger.SetClassIndex(classRef, &index.ClassLifeline{
 		LatestStateRef: *deactivateRef,
 	})
-	_, err := manager.UpdateClass(*requestRef, *classRef, *codeRef, nil)
+	_, err := manager.UpdateClass(*domainRef, *requestRef, *classRef, *codeRef, nil)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	classRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
 	ledger.SetClassIndex(classRef, &index.ClassLifeline{
 		LatestStateRef: *classRef,
@@ -167,7 +170,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 	codeRef, _ := ledger.SetRecord(&record.CodeRecord{})
 	migrationRef, _ := ledger.SetRecord(&record.CodeRecord{SourceCode: "test"})
 	migrationRefs := []record.Reference{*migrationRef}
-	updateRef, err := manager.UpdateClass(*requestRef, *classRef, *codeRef, migrationRefs)
+	updateRef, err := manager.UpdateClass(*domainRef, *requestRef, *classRef, *codeRef, migrationRefs)
 	assert.Nil(t, err)
 	updateRec, getErr := ledger.GetRecord(updateRef)
 	assert.Nil(t, getErr)
@@ -175,6 +178,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  *domainRef,
 					RequestRecord: *requestRef,
 				},
 			},
@@ -187,22 +191,22 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_ActivateObj_VerifiesRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
-	_, err := manager.ActivateObj(*requestRef, record.Reference{}, record.Memory{})
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
+	_, err := manager.ActivateObj(*domainRef, *requestRef, record.Reference{}, record.Memory{})
 	assert.NotNil(t, err)
 	notClassRef, _ := ledger.SetRecord(&record.ObjectActivateRecord{})
-	_, err = manager.ActivateClass(*requestRef, *notClassRef, record.Memory{})
+	_, err = manager.ActivateClass(*domainRef, *requestRef, *notClassRef, record.Memory{})
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	memory := record.Memory{1, 2, 3}
 	classRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
 	ledger.SetClassIndex(classRef, &index.ClassLifeline{
 		LatestStateRef: *classRef,
 	})
-	activateRef, err := manager.ActivateObj(*requestRef, *classRef, memory)
+	activateRef, err := manager.ActivateObj(*domainRef, *requestRef, *classRef, memory)
 	assert.Nil(t, err)
 	activateRec, err := ledger.GetRecord(activateRef)
 	assert.Nil(t, err)
@@ -210,6 +214,7 @@ func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  *domainRef,
 					RequestRecord: *requestRef,
 				},
 			},
@@ -220,32 +225,32 @@ func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_DeactivateObj_VerifiesRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
-	_, err := manager.DeactivateClass(*requestRef, record.Reference{})
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
+	_, err := manager.DeactivateClass(*domainRef, *requestRef, record.Reference{})
 	assert.NotNil(t, err)
 	notObjRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
-	_, err = manager.DeactivateClass(*requestRef, *notObjRef)
+	_, err = manager.DeactivateClass(*domainRef, *requestRef, *notObjRef)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_DeactivateObj_VerifiesObjectIsActive(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	objRef, _ := ledger.SetRecord(&record.ObjectActivateRecord{})
 	deactivateRef, _ := ledger.SetRecord(&record.DeactivationRecord{})
 	ledger.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestStateRef: *deactivateRef,
 	})
-	_, err := manager.DeactivateObj(*requestRef, *objRef)
+	_, err := manager.DeactivateObj(*domainRef, *requestRef, *objRef)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_DeactivateObj_CreatesCorrectRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	objRef, _ := ledger.SetRecord(&record.ObjectActivateRecord{})
 	ledger.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestStateRef: *objRef,
 	})
-	deactivateRef, err := manager.DeactivateObj(*requestRef, *objRef)
+	deactivateRef, err := manager.DeactivateObj(*domainRef, *requestRef, *objRef)
 	assert.Nil(t, err)
 	deactivateRec, err := ledger.GetRecord(deactivateRef)
 	assert.Nil(t, err)
@@ -253,6 +258,7 @@ func TestLedgerArtifactManager_DeactivateObj_CreatesCorrectRecord(t *testing.T) 
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  *domainRef,
 					RequestRecord: *requestRef,
 				},
 			},
@@ -263,33 +269,33 @@ func TestLedgerArtifactManager_DeactivateObj_CreatesCorrectRecord(t *testing.T) 
 }
 
 func TestLedgerArtifactManager_UpdateObj_VerifiesRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
-	_, err := manager.UpdateObj(*requestRef, record.Reference{}, nil)
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
+	_, err := manager.UpdateObj(*domainRef, *requestRef, record.Reference{}, nil)
 	assert.NotNil(t, err)
 	notObjRef, _ := ledger.SetRecord(&record.CodeRecord{})
-	_, err = manager.UpdateObj(*requestRef, *notObjRef, nil)
+	_, err = manager.UpdateObj(*domainRef, *requestRef, *notObjRef, nil)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_UpdateObj_VerifiesObjectIsActive(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	objRef, _ := ledger.SetRecord(&record.ObjectActivateRecord{})
 	deactivateRef, _ := ledger.SetRecord(&record.DeactivationRecord{})
 	ledger.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestStateRef: *deactivateRef,
 	})
-	_, err := manager.UpdateObj(*requestRef, *objRef, nil)
+	_, err := manager.UpdateObj(*domainRef, *requestRef, *objRef, nil)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	objRef, _ := ledger.SetRecord(&record.ObjectActivateRecord{})
 	ledger.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestStateRef: *objRef,
 	})
 	memory := record.Memory{1, 2, 3}
-	updateRef, err := manager.UpdateObj(*requestRef, *objRef, memory)
+	updateRef, err := manager.UpdateObj(*domainRef, *requestRef, *objRef, memory)
 	assert.Nil(t, err)
 	updateRec, err := ledger.GetRecord(updateRef)
 	assert.Nil(t, err)
@@ -297,6 +303,7 @@ func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  *domainRef,
 					RequestRecord: *requestRef,
 				},
 			},
@@ -308,33 +315,33 @@ func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_AppendObjDelegate_VerifiesRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
-	_, err := manager.AppendObjDelegate(*requestRef, record.Reference{}, nil)
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
+	_, err := manager.AppendObjDelegate(*domainRef, *requestRef, record.Reference{}, nil)
 	assert.NotNil(t, err)
 	notObjRef, _ := ledger.SetRecord(&record.CodeRecord{})
-	_, err = manager.AppendObjDelegate(*requestRef, *notObjRef, nil)
+	_, err = manager.AppendObjDelegate(*domainRef, *requestRef, *notObjRef, nil)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_AppendObjDelegate_VerifiesClassIsActive(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	objRef, _ := ledger.SetRecord(&record.ObjectActivateRecord{})
 	deactivateRef, _ := ledger.SetRecord(&record.DeactivationRecord{})
 	ledger.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestStateRef: *deactivateRef,
 	})
-	_, err := manager.AppendObjDelegate(*requestRef, *objRef, nil)
+	_, err := manager.AppendObjDelegate(*domainRef, *requestRef, *objRef, nil)
 	assert.NotNil(t, err)
 }
 
 func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing.T) {
-	ledger, manager, requestRef := prepareTestArtifactManager()
+	ledger, manager, domainRef, requestRef := prepareTestArtifactManager()
 	objRef, _ := ledger.SetRecord(&record.ObjectActivateRecord{})
 	ledger.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestStateRef: *objRef,
 	})
 	memory := record.Memory{1, 2, 3}
-	appendRef, err := manager.AppendObjDelegate(*requestRef, *objRef, memory)
+	appendRef, err := manager.AppendObjDelegate(*domainRef, *requestRef, *objRef, memory)
 	assert.Nil(t, err)
 	appendRec, _ := ledger.GetRecord(appendRef)
 	objIndex, err := ledger.GetObjectIndex(objRef)
@@ -345,6 +352,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  *domainRef,
 					RequestRecord: *requestRef,
 				},
 			},
@@ -356,7 +364,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing
 }
 
 func TestLedgerArtifactManager_GetLatestObj_VerifiesRecords(t *testing.T) {
-	ledger, manager, _ := prepareTestArtifactManager()
+	ledger, manager, _, _ := prepareTestArtifactManager()
 	_, _, err := manager.GetLatestObj(record.Reference{}, record.Reference{}, record.Reference{})
 	assert.NotNil(t, err)
 
@@ -372,7 +380,7 @@ func TestLedgerArtifactManager_GetLatestObj_VerifiesRecords(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_GetLatestObj_VerifiesClassIsActive(t *testing.T) {
-	ledger, manager, _ := prepareTestArtifactManager()
+	ledger, manager, _, _ := prepareTestArtifactManager()
 	classRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
 	classDeactivateRef, _ := ledger.SetRecord(&record.DeactivationRecord{})
 	ledger.SetClassIndex(classRef, &index.ClassLifeline{LatestStateRef: *classDeactivateRef})
@@ -386,7 +394,7 @@ func TestLedgerArtifactManager_GetLatestObj_VerifiesClassIsActive(t *testing.T) 
 }
 
 func TestLedgerArtifactManager_GetLatestObj_ReturnsNilDescriptorsIfCurrentStateProvided(t *testing.T) {
-	ledger, manager, _ := prepareTestArtifactManager()
+	ledger, manager, _, _ := prepareTestArtifactManager()
 	classRef, _ := ledger.SetRecord(&record.ClassActivateRecord{})
 	classAmendRef, _ := ledger.SetRecord(&record.ClassAmendRecord{})
 	ledger.SetClassIndex(classRef, &index.ClassLifeline{
@@ -405,7 +413,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsNilDescriptorsIfCurrentStateP
 }
 
 func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing.T) {
-	ledger, manager, _ := prepareTestArtifactManager()
+	ledger, manager, _, _ := prepareTestArtifactManager()
 	ledgerManager, _ := manager.(*LedgerArtifactManager)
 
 	classRef, _ := ledger.SetRecord(&record.ClassActivateRecord{DefaultMemory: record.Memory{1}})
@@ -459,13 +467,13 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 }
 
 func TestLedgerArtifactManager_GetExactObj_VerifiesRecords(t *testing.T) {
-	_, manager, _ := prepareTestArtifactManager()
+	_, manager, _, _ := prepareTestArtifactManager()
 	_, _, err := manager.GetExactObj(record.Reference{}, record.Reference{})
 	assert.Error(t, err)
 }
 
 func TestLedgerArtifactManager_GetExactObj_ReturnsCorrectData(t *testing.T) {
-	ledger, manager, _ := prepareTestArtifactManager()
+	ledger, manager, _, _ := prepareTestArtifactManager()
 	manager.SetArchPref([]record.ArchType{1})
 
 	codeRec := record.CodeRecord{TargetedCode: map[record.ArchType][]byte{

@@ -65,7 +65,7 @@ func main() {
 		BootstrapNodes: bootstrapNodes,
 	})
 	if err != nil {
-		log.Fatalln("Failed to create insolar:", err.Error())
+		log.Fatalln("Failed to create network:", err.Error())
 	}
 
 	defer closeNetwork(configuration)
@@ -77,6 +77,14 @@ func main() {
 
 	handleSignals(configuration)
 
+	err = dhtNetwork.ObtainIP(ctx)
+	if err != nil {
+		log.Println(err)
+	}
+	err = dhtNetwork.AnalyzeNetwork(ctx)
+	if err != nil {
+		log.Println(err)
+	}
 	repl(dhtNetwork, ctx)
 }
 
@@ -102,7 +110,7 @@ func bootstrap(bootstrapNodes []*node.Node, dhtNetwork *host.DHT) {
 	if len(bootstrapNodes) > 0 {
 		err := dhtNetwork.Bootstrap()
 		if err != nil {
-			log.Fatalln("Failed to bootstrap insolar", err.Error())
+			log.Fatalln("Failed to bootstrap network", err.Error())
 		}
 	}
 }
@@ -120,7 +128,7 @@ func closeNetwork(configuration *host.Configuration) {
 	func() {
 		err := configuration.CloseNetwork()
 		if err != nil {
-			log.Fatalln("Failed to close insolar:", err.Error())
+			log.Fatalln("Failed to close network:", err.Error())
 		}
 	}()
 }
@@ -253,7 +261,7 @@ Options:
 func displayInteractiveHelp() {
 	fmt.Println(`
 help - This message
-findnode <key> - Find node's real insolar address
+findnode <key> - Find node's real network address
 info - Display information about this node
 
 <method> <target> <args...> - Remote procedure call`)

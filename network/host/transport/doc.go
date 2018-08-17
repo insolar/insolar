@@ -15,12 +15,14 @@
  */
 
 /*
-Package transport provides insolar transport interface. It allows to abstract our insolar from physical transport.
-It can either be IP based insolar or any other kind of message courier (e.g. an industrial message bus).
+Package transport provides network transport interface. It allows to abstract our network from physical transport.
+It can either be IP based network or any other kind of message courier (e.g. an industrial message bus).
 
 Package exports simple interfaces for easily defining new transports.
 
-For now we provide one default implementation using BitTorrent µTP protocol.
+For now we provide two implementations of transport.
+The default is UTPTransport which using BitTorrent µTP protocol.
+The second one is KCPTransport based on KCP protocol and supports packet level encryption.
 
 Usage:
 

@@ -18,10 +18,10 @@
 
 Package node is a fundamental part of networking system. Each node has:
 
- - one real insolar address (IP or any other transport protocol address)
- - multiple abstract insolar IDs (either node's own or ones belonging to relayed nodes)
+ - one real network address (IP or any other transport protocol address)
+ - multiple abstract network IDs (either node's own or ones belonging to relayed nodes)
 
-Contains structures to describe insolar entities in code.
+Contains structures to describe network entities in code.
 
 Usage:
 

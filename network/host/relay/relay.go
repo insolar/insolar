@@ -17,6 +17,7 @@
 package relay
 
 import (
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 
 	"errors"
@@ -26,14 +27,16 @@ import (
 type State int
 
 const (
+	// Unknown unknown relay state.
+	Unknown = State(iota + 1)
 	// Started is relay type means relaying started.
-	Started = State(iota + 1)
+	Started
 	// Stopped is relay type means relaying stopped.
 	Stopped
 	// Error is relay type means error state change.
 	Error
-	// Unknown unknown relay state.
-	Unknown
+	// NoAuth - this error returns if node tries to send relay request but not authenticated.
+	NoAuth
 )
 
 // Relay Interface for relaying
@@ -93,7 +96,7 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 	return false
 }
 
-func (r *relay) findClient(id node.ID) (int, *node.Node) {
+func (r *relay) findClient(id id.ID) (int, *node.Node) {
 	for idx, nodeIterator := range r.clients {
 		if nodeIterator.ID.Equal(id) {
 			return idx, nodeIterator

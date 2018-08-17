@@ -20,10 +20,16 @@ package message
 type CommandType int
 
 const (
-	// Start - command start relay.
-	Start = CommandType(iota + 1)
-	// Stop - command stop relay.
-	Stop
+	// Unknown - unknown command.
+	Unknown = CommandType(iota + 1)
+	// StartRelay - command start relay.
+	StartRelay
+	// StopRelay - command stop relay.
+	StopRelay
+	// BeginAuth - begin authentication.
+	BeginAuth
+	// RevokeAuth - revoke authentication.
+	RevokeAuth
 )
 
 // RequestDataFindNode is data for FindNode request.
@@ -51,4 +57,28 @@ type RequestDataRPC struct {
 // RequestRelay is data for relay request (commands: start/stop relay).
 type RequestRelay struct {
 	Command CommandType
+}
+
+// RequestAuth is data for authentication.
+type RequestAuth struct {
+	Command CommandType
+}
+
+// RequestCheckOrigin is data to check originality.
+type RequestCheckOrigin struct {
+}
+
+// RequestObtainIP is data to obtain a self IP.
+type RequestObtainIP struct {
+}
+
+// RequestRelayOwnership is data to notify that current node can be a relay.
+type RequestRelayOwnership struct {
+	Ready bool
+}
+
+// RequestKnownOuterNodes is data to notify home subnet about known outer nodes.
+type RequestKnownOuterNodes struct {
+	ID         string // origin ID
+	OuterNodes int    // number of known outer nodes
 }

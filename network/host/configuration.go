@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/network/host/transport"
 )
 
-// Configuration is a helper to initialize insolar easily.
+// Configuration is a helper to initialize network easily.
 type Configuration struct {
 	addressResolver resolver.PublicAddressResolver
 
@@ -63,7 +63,7 @@ func NewNetworkConfiguration(
 	}
 }
 
-// CreateNetwork creates and returns DHT insolar with parameters stored in Configuration.
+// CreateNetwork creates and returns DHT network with parameters stored in Configuration.
 func (cfg *Configuration) CreateNetwork(address string, options *Options) (*DHT, error) {
 	var err error
 
