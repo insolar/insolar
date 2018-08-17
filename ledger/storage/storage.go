@@ -18,11 +18,14 @@ package storage
 
 import (
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 )
 
 // LedgerStorer represents append-only Ladger storage.
 type LedgerStorer interface {
+	GetCurrentPulse() record.PulseNum
+
 	GetRecord(*record.Reference) (record.Record, error)
 	SetRecord(record.Record) (*record.Reference, error)
 
@@ -31,4 +34,9 @@ type LedgerStorer interface {
 
 	GetObjectIndex(*record.Reference) (*index.ObjectLifeline, error)
 	SetObjectIndex(*record.Reference, *index.ObjectLifeline) error
+
+	GetPulseKeys(record.PulseNum) ([][]byte, error)
+
+	GetDrop(record.PulseNum) (*jetdrop.JetDrop, error)
+	SetDrop(record.PulseNum, *jetdrop.JetDrop) error
 }

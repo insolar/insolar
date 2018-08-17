@@ -307,3 +307,13 @@ func EncodeToRaw(rec Record) (*Raw, error) {
 		Data: b,
 	}, nil
 }
+
+func EncodePulseNum(pulse PulseNum) []byte {
+	buff := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buff, uint32(pulse))
+	return buff
+}
+
+func DecodePulseNum(buff []byte) PulseNum {
+	return PulseNum(binary.LittleEndian.Uint32(buff))
+}

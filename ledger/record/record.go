@@ -137,8 +137,9 @@ func (ref *Reference) Key() []byte {
 	b := make([]byte, RefIDSize)
 	dk := ID2Bytes(ref.Domain)
 	rk := ID2Bytes(ref.Record)
-	_ = copy(b[:IDSize], dk)
-	_ = copy(b[IDSize:], rk)
+	// Record part should go first so we can iterate keys of a certain slot
+	_ = copy(b[:IDSize], rk)
+	_ = copy(b[IDSize:], dk)
 	return b
 }
 
