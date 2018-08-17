@@ -152,7 +152,7 @@ func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method stri
 	req := girpc.CallReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
 
 	select {
-	case call := <-client.Go("GoInsider.Call", req, &res, nil).Done:
+	case call := <-client.Go("RPC.Call", req, &res, nil).Done:
 		if call.Error != nil {
 			return nil, nil, errors.Wrap(err, "problem with API call")
 		}

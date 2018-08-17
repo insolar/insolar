@@ -46,10 +46,15 @@ func NewGoInsider(path string, address string) *GoInsider {
 	return &GoInsider{dir: path, RPCAddress: address}
 }
 
+// RPC struct with methods representing RPC interface of this code runner
+type RPC struct {
+	gi *GoInsider
+}
+
 // Call is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
-	path, err := t.ObtainCode(args.Reference)
+func (t *RPC) Call(args girpc.CallReq, reply *girpc.CallResp) error {
+	path, err := t.gi.ObtainCode(args.Reference)
 	if err != nil {
 		return errors.Wrap(err, "couldn't obtain code")
 	}
@@ -155,7 +160,7 @@ func main() {
 	pflag.Parse()
 
 	insider := NewGoInsider(*path, *rpcAddress)
-	err := rpc.Register(insider)
+	err := rpc.Register(&RPC{insider})
 	if err != nil {
 		log.Fatal("Couldn't register RPC interface: ", err)
 		os.Exit(1)
