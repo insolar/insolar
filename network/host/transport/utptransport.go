@@ -18,6 +18,7 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"sync"
@@ -26,8 +27,6 @@ import (
 
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/relay"
-
-	"errors"
 
 	"github.com/anacrolix/utp"
 )
