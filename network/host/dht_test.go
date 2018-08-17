@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/network/host/connection"
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/node"
 	"github.com/insolar/insolar/network/host/relay"
@@ -35,6 +36,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+const closedMessage = "closed" // "broken pipe" for kcpTransport
 
 func getDefaultCtx(dht *DHT) Context {
 	ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
@@ -118,7 +121,7 @@ func (t *mockTransport) failNextSendMessage() {
 }
 
 func (t *mockTransport) SendRequest(q *message.Message) (transport.Future, error) {
-	id := transport.AtomicLoadAndIncrementUint64(t.sequence)
+	sequenceNumber := transport.AtomicLoadAndIncrementUint64(t.sequence)
 
 	if t.failNext {
 		t.failNext = false
@@ -126,7 +129,7 @@ func (t *mockTransport) SendRequest(q *message.Message) (transport.Future, error
 	}
 	t.recv <- q
 
-	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: message.RequestID(id)}, nil
+	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: message.RequestID(sequenceNumber)}, nil
 }
 
 func (t *mockTransport) SendResponse(requestID message.RequestID, q *message.Message) error {
@@ -169,7 +172,7 @@ func mockFindNodeResponseEmpty(request *message.Message) *message.Message {
 	return r
 }
 
-func dhtParams(ids []node.ID, address string) (store.Store, *node.Origin, transport.Transport, rpc.RPC, error) {
+func dhtParams(ids []id.ID, address string) (store.Store, *node.Origin, transport.Transport, rpc.RPC, error) {
 	st := store.NewMemoryStore()
 	addr, _ := node.NewAddress(address)
 	origin, err := node.NewOrigin(ids, addr)
@@ -178,7 +181,7 @@ func dhtParams(ids []node.ID, address string) (store.Store, *node.Origin, transp
 	return st, origin, tp, r, err
 }
 
-func realDhtParams(ids []node.ID, address string) (store.Store, *node.Origin, transport.Transport, rpc.RPC, error) {
+func realDhtParams(ids []id.ID, address string) (store.Store, *node.Origin, transport.Transport, rpc.RPC, error) {
 	st := store.NewMemoryStore()
 	addr, _ := node.NewAddress(address)
 	origin, _ := node.NewOrigin(ids, addr)
@@ -195,8 +198,9 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 	port := 15000
 	var dhts []*DHT
 	count := 20
+
 	for i := 0; i < count; i++ {
-		id, _ := node.NewIDs(1)
+		id, _ := id.NewIDs(1)
 		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapNode := node.NewNode(address)
@@ -216,7 +220,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		go func(dht *DHT) {
@@ -240,7 +244,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 func TestBootstrapTwoNodes(t *testing.T) {
 	done := make(chan bool)
 
-	id1, _ := node.NewIDs(1)
+	id1, _ := id.NewIDs(1)
 	st, s, tp, r, err := realDhtParams(id1, "127.0.0.1:16000")
 	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
 	assert.NoError(t, err)
@@ -266,19 +270,19 @@ func TestBootstrapTwoNodes(t *testing.T) {
 			err2 := dht2.Bootstrap()
 			assert.NoError(t, err2)
 
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 
 			dht2.Disconnect()
 			dht1.Disconnect()
 			done <- true
 		}()
 		err3 := dht2.Listen()
-		assert.Equal(t, "closed", err3.Error())
+		assert.Equal(t, closedMessage, err3.Error())
 		done <- true
 	}()
 
 	err = dht1.Listen()
-	assert.Equal(t, "closed", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -291,12 +295,12 @@ func TestBootstrapTwoNodes(t *testing.T) {
 func TestBootstrapThreeNodes(t *testing.T) {
 	done := make(chan bool)
 
-	id1, _ := node.NewIDs(1)
+	id1, _ := id.NewIDs(1)
 	st1, s1, tp1, r1, err := realDhtParams(id1, "127.0.0.1:17000")
 	assert.NoError(t, err)
 	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
 
-	id2, _ := node.NewIDs(1)
+	id2, _ := id.NewIDs(1)
 	st2, s2, tp2, r2, err := realDhtParams(id2, "127.0.0.1:17001")
 	assert.NoError(t, err)
 	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
@@ -347,16 +351,16 @@ func TestBootstrapThreeNodes(t *testing.T) {
 			}(dht1, dht2, dht3)
 
 			err4 := dht3.Listen()
-			assert.Equal(t, "closed", err4.Error())
+			assert.Equal(t, closedMessage, err4.Error())
 			done <- true
 		}(dht1, dht2, dht3)
 		err5 := dht2.Listen()
-		assert.Equal(t, "closed", err5.Error())
+		assert.Equal(t, closedMessage, err5.Error())
 		done <- true
 	}(dht1, dht2, dht3)
 
 	err = dht1.Listen()
-	assert.Equal(t, "closed", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 2, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 2, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -372,7 +376,7 @@ func TestBootstrapThreeNodes(t *testing.T) {
 func TestBootstrapNoID(t *testing.T) {
 	done := make(chan bool)
 
-	id1, _ := node.NewIDs(1)
+	id1, _ := id.NewIDs(1)
 	st1, s1, tp1, r1, err := realDhtParams(id1, "0.0.0.0:18000")
 	assert.NoError(t, err)
 	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
@@ -403,12 +407,12 @@ func TestBootstrapNoID(t *testing.T) {
 			done <- true
 		}()
 		err3 := dht2.Listen()
-		assert.Equal(t, "closed", err3.Error())
+		assert.Equal(t, closedMessage, err3.Error())
 		done <- true
 	}()
 
 	err = dht1.Listen()
-	assert.Equal(t, "closed", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -424,7 +428,7 @@ func TestReconnect(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		done := make(chan bool)
 
-		id1, _ := node.NewIDs(1)
+		id1, _ := id.NewIDs(1)
 		st1, s1, tp1, r1, err := realDhtParams(id1, "127.0.0.1:19000")
 		assert.NoError(t, err)
 		dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
@@ -454,19 +458,21 @@ func TestReconnect(t *testing.T) {
 				done <- true
 			}()
 			err3 := dht2.Listen()
-			assert.Equal(t, "closed", err3.Error())
+			assert.Equal(t, closedMessage, err3.Error())
 			done <- true
 
 		}()
 
 		err = dht1.Listen()
-		assert.Equal(t, "closed", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 
 		assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 		assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
 
 		<-done
 		<-done
+
+		time.Sleep(time.Millisecond * 50)
 	}
 }
 
@@ -476,7 +482,7 @@ func TestReconnect(t *testing.T) {
 func TestStoreAndFindLargeValue(t *testing.T) {
 	done := make(chan bool)
 
-	id1, _ := node.NewIDs(1)
+	id1, _ := id.NewIDs(1)
 	st1, s1, tp1, r1, _ := realDhtParams(id1, "127.0.0.1:20000")
 	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
 
@@ -492,13 +498,13 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 
 	go func() {
 		err := dht1.Listen()
-		assert.Equal(t, "closed", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 		done <- true
 	}()
 
 	go func() {
 		err := dht2.Listen()
-		assert.Equal(t, "closed", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 		done <- true
 	}()
 
@@ -528,11 +534,11 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 // Tests sending a message which results in an error when attempting to
 // send over uTP
 func TestNetworkingSendError(t *testing.T) {
-	id := getIDWithValues(0)
+	zeroId := getIDWithValues(0)
 	done := make(chan int)
 
 	bootstrapAddr, _ := node.NewAddress("0.0.0.0:21001")
-	st, s, tp, r, err := dhtParams([]node.ID{id}, "0.0.0.0:21000")
+	st, s, tp, r, err := dhtParams([]id.ID{zeroId}, "0.0.0.0:21000")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
@@ -566,11 +572,11 @@ func TestNetworkingSendError(t *testing.T) {
 // Tests sending a message which results in a successful send, but the node
 // never responds
 func TestNodeResponseSendError(t *testing.T) {
-	id := getIDWithValues(0)
+	zeroID := getIDWithValues(0)
 	done := make(chan int)
 
 	bootstrapAddr, _ := node.NewAddress("0.0.0.0:22001")
-	st, s, tp, r, err := dhtParams([]node.ID{id}, "0.0.0.0:22000")
+	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:22000")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
@@ -617,12 +623,12 @@ func TestNodeResponseSendError(t *testing.T) {
 // Tests a bucket refresh by setting a very low RefreshTime value, adding a single
 // node to a bucket, and waiting for the refresh message for the bucket
 func TestBucketRefresh(t *testing.T) {
-	id := getIDWithValues(0)
+	zeroID := getIDWithValues(0)
 	done := make(chan int)
 	refresh := make(chan int)
 
 	bootstrapAddr, _ := node.NewAddress("0.0.0.0:23001")
-	st, s, tp, r, err := dhtParams([]node.ID{id}, "0.0.0.0:23000")
+	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:23000")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
@@ -673,12 +679,12 @@ func TestBucketRefresh(t *testing.T) {
 // Tets store replication by setting the ReplicateTime time to a very small value.
 // Stores some data, and then expects another store message in ReplicateTime time
 func TestStoreReplication(t *testing.T) {
-	id := getIDWithValues(0)
+	zeroID := getIDWithValues(0)
 	done := make(chan int)
 	replicate := make(chan int)
 
 	bootstrapAddr, _ := node.NewAddress("0.0.0.0:24001")
-	st, s, tp, r, err := dhtParams([]node.ID{id}, "0.0.0.0:24000")
+	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:24000")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
@@ -735,9 +741,9 @@ func TestStoreReplication(t *testing.T) {
 // and then wait longer than ExpirationTime. The value should no longer exist in
 // the store.
 func TestStoreExpiration(t *testing.T) {
-	id := getIDWithValues(0)
+	zeroID := getIDWithValues(0)
 
-	st, s, tp, r, err := realDhtParams([]node.ID{id}, "0.0.0.0:25000")
+	st, s, tp, r, err := realDhtParams([]id.ID{zeroID}, "0.0.0.0:25000")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
@@ -765,14 +771,14 @@ func TestStoreExpiration(t *testing.T) {
 	dht.Disconnect()
 }
 
-// Create a new node and bootstrap it. All nodes in the insolar know of a
+// Create a new node and bootstrap it. All nodes in the network know of a
 // single node closer to the original node. This continues until every MaxContactsInBucket bucket
 // is occupied.
 func TestFindNodeAllBuckets(t *testing.T) {
-	id := getIDWithValues(0)
+	zeroID := getIDWithValues(0)
 
 	bootstrapAddr, _ := node.NewAddress("0.0.0.0:26001")
-	st, s, tp, r, err := dhtParams([]node.ID{id}, "0.0.0.0:26000")
+	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:26000")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
@@ -827,12 +833,12 @@ func TestFindNodeAllBuckets(t *testing.T) {
 // node to the now full bucket, we should receive a ping to the very first node
 // added in order to determine if it is still alive.
 func TestAddNodeTimeout(t *testing.T) {
-	id := getIDWithValues(0)
+	zeroID := getIDWithValues(0)
 	done := make(chan int)
 	pinged := make(chan int)
 
 	bootstrapAddr, _ := node.NewAddress("0.0.0.0:27001")
-	st, s, tp, r, err := dhtParams([]node.ID{id}, "0.0.0.0:27000")
+	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:27000")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
@@ -901,8 +907,8 @@ func TestAddNodeTimeout(t *testing.T) {
 }
 
 func TestGetRandomIDFromBucket(t *testing.T) {
-	id := getIDWithValues(0)
-	st, s, tp, r, err := realDhtParams([]node.ID{id}, "0.0.0.0:28000")
+	zeroID := getIDWithValues(0)
+	st, s, tp, r, err := realDhtParams([]id.ID{zeroID}, "0.0.0.0:28000")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
@@ -923,13 +929,13 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 	dht.Disconnect()
 }
 
-func getZerodIDWithNthByte(n int, v byte) node.ID {
+func getZerodIDWithNthByte(n int, v byte) id.ID {
 	id := getIDWithValues(0)
 	id[n] = v
 	return id
 }
 
-func getIDWithValues(b byte) node.ID {
+func getIDWithValues(b byte) id.ID {
 	return []byte{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b}
 }
 
@@ -941,9 +947,9 @@ func TestDHT_FindNode(t *testing.T) {
 	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
-		id, _ := node.NewIDs(1)
-		idx[i] = id[0].String()
-		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
+		newID, _ := id.NewIDs(1)
+		idx[i] = newID[0].String()
+		st, s, tp, r, _ := realDhtParams(newID, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapNode := node.NewNode(address)
 		dht, err := NewDHT(st, s, tp, r, &Options{
@@ -962,7 +968,7 @@ func TestDHT_FindNode(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		go func(dht *DHT) {
@@ -998,7 +1004,7 @@ func TestDHT_Listen(t *testing.T) {
 	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
-		id, _ := node.NewIDs(1)
+		id, _ := id.NewIDs(1)
 		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapNode := node.NewNode(address)
@@ -1018,7 +1024,7 @@ func TestDHT_Listen(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 	}
@@ -1036,7 +1042,7 @@ func TestDHT_Disconnect(t *testing.T) {
 	done := make(chan bool)
 
 	for i := 0; i < count; i++ {
-		id, _ := node.NewIDs(1)
+		id, _ := id.NewIDs(1)
 		st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapNode := node.NewNode(address)
@@ -1056,7 +1062,7 @@ func TestDHT_Disconnect(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		time.Sleep(time.Millisecond * 200)
@@ -1071,7 +1077,7 @@ func TestDHT_Disconnect(t *testing.T) {
 func TestNewDHT(t *testing.T) {
 	done := make(chan bool)
 	port := 11000
-	id, _ := node.NewIDs(1)
+	id, _ := id.NewIDs(1)
 	st, s, tp, r, _ := realDhtParams(id, "127.0.0.1:"+strconv.Itoa(port))
 	address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 	bootstrapNode := node.NewNode(address)

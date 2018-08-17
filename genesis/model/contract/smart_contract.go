@@ -24,6 +24,28 @@ import (
 	"github.com/insolar/insolar/genesis/model/object"
 )
 
+type BaseCompositeCollection struct {
+	storage []object.Composite
+}
+
+func (bcc *BaseCompositeCollection) GetList() []object.Composite {
+	return bcc.storage
+}
+
+func (bcc *BaseCompositeCollection) Add(composite object.Composite) {
+	bcc.storage = append(bcc.storage, composite)
+}
+
+func (bcc *BaseCompositeCollection) GetInterfaceKey() string {
+	return class.CompositeCollectionID
+}
+
+func NewBaseCompositeCollection() *BaseCompositeCollection {
+	return &BaseCompositeCollection{
+		storage: make([]object.Composite, 0),
+	}
+}
+
 // SmartContract marks that object is smart contract.
 // TODO: Composite work interface
 type SmartContract interface {
@@ -39,7 +61,7 @@ type InternalSmartContract interface {
 // BaseSmartContract is a base implementation of ComposingContainer, Callable and TypedObject interfaces.
 type BaseSmartContract struct {
 	object.BaseObject
-	CompositeMap   map[string]object.Composite
+	CompositeMap   map[string]object.Reference
 	ChildStorage   storage.Storage
 	ContextStorage storage.Storage
 	Parent         object.Parent
@@ -51,7 +73,7 @@ type BaseSmartContract struct {
 func NewBaseSmartContract(parent object.Parent, class object.Proxy) *BaseSmartContract {
 	// TODO: NewCompositeHolder
 	return &BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
+		CompositeMap: make(map[string]object.Reference),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
 		class:        class,
@@ -81,7 +103,8 @@ func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFa
 	if err != nil {
 		return nil, err
 	}
-	interfaceKey := composite.GetInterfaceKey()
+
+	interfaceKey := compositeFactory.GetInterfaceKey()
 	_, exist := sc.CompositeMap[interfaceKey]
 	if exist {
 		return nil, fmt.Errorf("delegate with name %s already exist", interfaceKey)
@@ -92,27 +115,44 @@ func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFa
 		return nil, fmt.Errorf("composite is not a Child")
 	}
 
-	_, err = sc.AddChild(compositeAsChild)
+	record, err := sc.AddChild(compositeAsChild)
 	if err != nil {
 		return nil, err
 	}
-	sc.CompositeMap[interfaceKey] = composite
+
+	ref, err := object.NewReference("", record, object.ChildScope)
+	if err != nil {
+		// TODO: Remove child and do test
+		return nil, err
+	}
+	sc.CompositeMap[interfaceKey] = ref
 
 	return composite, nil
 }
 
 // GetComposite return composite by its key (if its exist inside smart contract).
-func (sc *BaseSmartContract) GetComposite(key string) (object.Composite, error) {
-	composite, exist := sc.CompositeMap[key]
+func (sc *BaseSmartContract) GetComposite(key string, class object.CompositeFactory) (object.Composite, error) {
+	ref, exist := sc.CompositeMap[key]
 	if !exist {
 		return nil, fmt.Errorf("delegate with name %s does not exist", key)
 	}
+
+	compObject, err := sc.GetResolver().GetObject(ref, class)
+	if err != nil {
+		return nil, err
+	}
+
+	composite, ok := compObject.(object.Composite)
+	if !ok {
+		return nil, fmt.Errorf("GetComposite: object is not Composite")
+	}
+
 	return composite, nil
 }
 
 // GetOrCreateComposite return composite by its key if its exist inside smart contract and create new one otherwise.
 func (sc *BaseSmartContract) GetOrCreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
-	composite, err := sc.GetComposite(compositeFactory.GetInterfaceKey())
+	composite, err := sc.GetComposite(compositeFactory.GetInterfaceKey(), compositeFactory)
 	if err != nil {
 		composite, err = sc.CreateComposite(compositeFactory)
 		if err != nil {

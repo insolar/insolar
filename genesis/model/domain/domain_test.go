@@ -128,7 +128,6 @@ func TestNewBaseDomain(t *testing.T) {
 	domain := NewBaseDomain(parent, factory, "NewDomain")
 
 	sc := contract.NewBaseSmartContract(parent, factory)
-
 	assert.Equal(t, &BaseDomain{
 		BaseSmartContract: *sc,
 		Name:              "NewDomain",

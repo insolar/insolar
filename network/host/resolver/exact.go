@@ -32,7 +32,7 @@ func newExactResolver() *exactResolver {
 	return &exactResolver{}
 }
 
-// Resolve returns node's current insolar address.
+// Resolve returns node's current network address.
 func (er *exactResolver) Resolve(conn net.PacketConn) (string, error) {
 	return conn.LocalAddr().String(), nil
 }

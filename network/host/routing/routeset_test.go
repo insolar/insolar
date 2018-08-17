@@ -20,6 +20,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,7 @@ import (
 func createRouteNode(addrString string) *RouteNode {
 	addr, _ := node.NewAddress(addrString)
 	newNode := node.NewNode(addr)
-	newNode.ID, _ = node.NewID()
+	newNode.ID, _ = id.NewID()
 	return NewRouteNode(newNode)
 }
 

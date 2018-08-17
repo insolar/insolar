@@ -26,7 +26,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type BaseComposite struct{}
+type BaseComposite struct {
+	class object.CompositeFactory
+}
 
 func (c *BaseComposite) GetInterfaceKey() string {
 	return "BaseComposite"
@@ -37,7 +39,7 @@ func (c *BaseComposite) GetClassID() string {
 }
 
 func (c *BaseComposite) GetClass() object.Proxy {
-	return nil
+	return c.class
 }
 
 func (c *BaseComposite) GetParent() object.Parent {
@@ -76,7 +78,9 @@ func (bcf *MockBaseCompositeFactory) GetInterfaceKey() string {
 }
 
 func (bcf *MockBaseCompositeFactory) Create(parent object.Parent) (object.Composite, error) {
-	return &BaseComposite{}, nil
+	return &BaseComposite{
+		class: bcf,
+	}, nil
 }
 
 func TestNewMember(t *testing.T) {
@@ -137,7 +141,7 @@ func TestNewMemberProxy(t *testing.T) {
 		BaseSmartContract: *contract.NewBaseSmartContract(parent, factory),
 	}
 
-	expectedMember.CompositeMap = make(map[string]object.Composite)
+	expectedMember.CompositeMap = make(map[string]object.Reference)
 	expectedMember.ChildStorage = storage.NewMapStorage()
 	assert.Equal(t, &memberProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
@@ -174,8 +178,10 @@ func TestMemberProxy_GetOrCreateComposite_Get(t *testing.T) {
 	factory := &mockFactory{}
 	parent := &mockParent{}
 	proxy, _ := newMemberProxy(parent, factory)
-	composite := &BaseComposite{}
 	compositeFactory := &MockBaseCompositeFactory{}
+	composite := &BaseComposite{
+		class: compositeFactory,
+	}
 
 	res, err := proxy.GetOrCreateComposite(compositeFactory)
 
@@ -187,14 +193,19 @@ func TestMemberProxy_GetOrCreateComposite_Create(t *testing.T) {
 	factory := &mockFactory{}
 	parent := &mockParent{}
 	proxy, _ := newMemberProxy(parent, factory)
-	composite := &BaseComposite{}
 	compositeFactory := &MockBaseCompositeFactory{}
 
-	res, err := proxy.GetOrCreateComposite(compositeFactory)
-
-	assert.Len(t, proxy.Instance.(*member).CompositeMap, 1)
-	assert.Equal(t, proxy.Instance.(*member).CompositeMap[composite.GetInterfaceKey()], res)
+	_, err := proxy.GetOrCreateComposite(compositeFactory)
 	assert.NoError(t, err)
+	assert.Len(t, proxy.Instance.(*member).CompositeMap, 1)
+
+	ref := proxy.Instance.(*member).CompositeMap[compositeFactory.GetInterfaceKey()]
+
+	record := proxy.Instance.(*member).ChildStorage.GetKeys()[0]
+
+	assert.Equal(t, record, ref.GetRecord())
+	assert.Equal(t, "", ref.GetDomain())
+	assert.Equal(t, object.ChildScope, ref.GetScope())
 }
 
 func TestNewMemberFactory(t *testing.T) {
@@ -234,7 +245,7 @@ func TestMemberFactory_Create(t *testing.T) {
 		BaseSmartContract: *contract.NewBaseSmartContract(parent, mFactory),
 	}
 
-	expectedMember.CompositeMap = make(map[string]object.Composite)
+	expectedMember.CompositeMap = make(map[string]object.Reference)
 	expectedMember.ChildStorage = storage.NewMapStorage()
 	assert.Equal(t, &memberProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{

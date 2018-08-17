@@ -95,8 +95,8 @@ func (mp *memberProxy) CreateComposite(compositeFactory object.CompositeFactory)
 }
 
 // GetComposite is a proxy call for instance method.
-func (mp *memberProxy) GetComposite(interfaceKey string) (object.Composite, error) {
-	return mp.Instance.(Member).GetComposite(interfaceKey)
+func (mp *memberProxy) GetComposite(interfaceKey string, class object.CompositeFactory) (object.Composite, error) {
+	return mp.Instance.(Member).GetComposite(interfaceKey, class)
 }
 
 // GetOrCreateComposite is a proxy call for instance method.

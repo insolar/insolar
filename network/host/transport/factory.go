@@ -34,7 +34,19 @@ func NewUTPTransportFactory() Factory {
 	return &utpTransportFactory{}
 }
 
-// Create creates new Transport.
+// Create creates new UTP Transport.
 func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
 	return NewUTPTransport(conn, proxy)
+}
+
+type kcpTransportFactory struct{}
+
+// NewKCPTransportFactory creates new Factory of kcpTransport.
+func NewKCPTransportFactory( /* security params, keys, etc */ ) Factory {
+	return &kcpTransportFactory{}
+}
+
+// Create creates new KCP Transport.
+func (kcpTransportFactory *kcpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
+	return NewKCPTransport(conn, proxy)
 }

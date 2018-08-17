@@ -24,14 +24,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMemoryStoreFactory(t *testing.T) {
+func TestNewUTPTransportFactory(t *testing.T) {
 	expectedFactory := &utpTransportFactory{}
 	actualFactory := NewUTPTransportFactory()
 
 	assert.Equal(t, expectedFactory, actualFactory)
+	assert.Implements(t, (*Factory)(nil), actualFactory)
 }
 
-func TestMemoryStoreFactory_Create(t *testing.T) {
+func TestNewKCPFactory(t *testing.T) {
+	expectedFactory := &kcpTransportFactory{}
+	actualFactory := NewKCPTransportFactory()
+
+	assert.Equal(t, expectedFactory, actualFactory)
+	assert.Implements(t, (*Factory)(nil), actualFactory)
+}
+
+func TestUTPTransportFactory_Create(t *testing.T) {
 	conn, err := connection.NewConnectionFactory().Create("127.0.0.1:8080")
 	assert.NoError(t, err)
 	defer conn.Close()

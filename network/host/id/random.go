@@ -14,11 +14,19 @@
  *    limitations under the License.
  */
 
-package leveldb
+package id
 
-import "errors"
-
-var (
-	// ErrNotFound returns if record/index not found in leveldb storage.
-	ErrNotFound = errors.New("record not found")
+import (
+	"crypto/rand"
+	"io"
 )
+
+var random io.Reader = &cryptoReader{}
+
+type cryptoReader struct{}
+
+// Read implements io.Reader interface.
+// Can be replaced with mock reader for testing purposes.
+func (cr *cryptoReader) Read(b []byte) (n int, err error) {
+	return rand.Read(b)
+}

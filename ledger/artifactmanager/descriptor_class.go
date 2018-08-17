@@ -49,7 +49,7 @@ func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 		}
 		amendRec, ok := rec.(*record.ClassAmendRecord)
 		if !ok {
-			return nil, errors.New("inconsistent class index")
+			return nil, errors.Wrap(ErrInvalidRef, "inconsistent class index")
 		}
 		amends = append(amends, amendRec)
 	}

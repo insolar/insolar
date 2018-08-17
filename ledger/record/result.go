@@ -25,12 +25,13 @@ type ReasonCode uint32
 
 // ResultRecord is a common type for all results.
 type ResultRecord struct {
+	DomainRecord  Reference
 	RequestRecord Reference
 }
 
 // Domain implements Record interface
-func (rec *ResultRecord) Domain() ID {
-	return rec.RequestRecord.Domain
+func (rec *ResultRecord) Domain() *Reference {
+	return &rec.DomainRecord
 }
 
 // WipeOutRecord is a special record that takes place of another record

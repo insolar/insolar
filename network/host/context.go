@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/insolar/insolar/network/host/node"
+	"github.com/insolar/insolar/network/host/id"
 )
 
 // Context type is localized for future purposes.
@@ -61,7 +61,7 @@ func (cb ContextBuilder) Build() (ctx Context, err error) {
 }
 
 // SetNodeByID sets node id in Context.
-func (cb ContextBuilder) SetNodeByID(nodeID node.ID) ContextBuilder {
+func (cb ContextBuilder) SetNodeByID(nodeID id.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
 		for index, id := range cb.dht.origin.IDs {
 			if nodeID.Equal(id) {

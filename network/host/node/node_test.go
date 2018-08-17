@@ -19,6 +19,7 @@ package node
 import (
 	"testing"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,24 +35,23 @@ func TestNewNode(t *testing.T) {
 }
 
 func TestNode_String(t *testing.T) {
-	random = newMockReader()
 	addr, _ := NewAddress("127.0.0.1:31337")
 	nd := NewNode(addr)
-	nd.ID, _ = NewID()
+	nd.ID = id.ID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 
 	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb (127.0.0.1:31337)", nd.String())
 }
 
 func TestNode_Equal(t *testing.T) {
-	id1, _ := NewID()
-	id2, _ := NewID()
+	id1, _ := id.NewID()
+	id2, _ := id.NewID()
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
 	tests := []struct {
-		id1   ID
+		id1   id.ID
 		addr1 *Address
-		id2   ID
+		id2   id.ID
 		addr2 *Address
 		equal bool
 		name  string

@@ -83,6 +83,14 @@ func TestWalletProxy_GetBalance(t *testing.T) {
 
 }
 
+func TestWalletProxy_GetInterfaceKey(t *testing.T) {
+	factory := &MockBaseCompositeFactory{}
+	parent := &mockParent{}
+	proxy, err := newWalletProxy(parent, factory)
+	assert.NoError(t, err)
+	assert.Equal(t, class.WalletID, proxy.GetInterfaceKey())
+}
+
 func TestNewWalletFactory(t *testing.T) {
 	parent := &mockParent{}
 	expected := &walletFactory{parent: parent}
@@ -163,9 +171,23 @@ func TestWalletFactory_GetClassID(t *testing.T) {
 	assert.Equal(t, class.WalletID, factory.GetClassID())
 }
 
+func TestWalletFactory_GetInterfaceKey(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewWalletFactory(parent)
+
+	assert.Equal(t, class.WalletID, factory.GetInterfaceKey())
+}
+
 func TestWalletFactory_GetParent(t *testing.T) {
 	parent := &mockParent{}
 	factory := NewWalletFactory(parent)
 
 	assert.Equal(t, parent, factory.GetParent())
+}
+
+func TestWalletFactory_InterfaceKeyEqualClassID(t *testing.T) {
+	parent := &mockParent{}
+	factory := NewWalletFactory(parent)
+
+	assert.Equal(t, factory.GetInterfaceKey(), factory.GetClassID())
 }

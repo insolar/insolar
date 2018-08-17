@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 )
 
@@ -47,7 +48,7 @@ const (
 )
 
 const (
-	// ParallelCalls is a small number representing the degree of parallelism in insolar calls.
+	// ParallelCalls is a small number representing the degree of parallelism in network calls.
 	ParallelCalls = 3
 
 	// KeyBitSize is the size in bits of the keys used to identify nodes and store and
@@ -63,7 +64,7 @@ type HashTable struct {
 	// The local node.
 	Origin *node.Node
 
-	// Routing table a list of all known nodes in the insolar
+	// Routing table a list of all known nodes in the network
 	// Nodes within buckets are sorted by least recently seen e.g.
 	// [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
 	//  ^                                                           ^
@@ -78,7 +79,7 @@ type HashTable struct {
 }
 
 // NewHashTable creates new HashTable.
-func NewHashTable(id node.ID, address *node.Address) (*HashTable, error) {
+func NewHashTable(id id.ID, address *node.Address) (*HashTable, error) {
 	if id == nil {
 		return nil, errors.New("id required")
 	}

@@ -67,7 +67,7 @@ type ID struct {
 
 // Record is base interface for all records.
 type Record interface {
-	Domain() ID
+	Domain() *Reference
 }
 
 // SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
