@@ -3,10 +3,6 @@
 
 [[projects]]
   branch = "master"
-<<<<<<< HEAD
-=======
-  digest = "1:d7e398c16b9c85f33ea98182809bfefe4e3ec8bf01f56de20f9721f9f7ab23de"
->>>>>>> b3d3f67de08e0f58e820f3c6dc02f0707cae3615
   name = "github.com/anacrolix/missinggo"
   packages = [
     ".",
@@ -143,25 +139,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-<<<<<<< HEAD
   inputs-digest = "d611171b5613cd1dfcbc51d46c98d30934ad7ddd42e15d058782d23b20728d3d"
-=======
-  input-imports = [
-    "github.com/anacrolix/utp",
-    "github.com/ccding/go-stun/stun",
-    "github.com/chzyer/readline",
-    "github.com/jbenet/go-base58",
-    "github.com/pkg/errors",
-    "github.com/satori/go.uuid",
-    "github.com/spf13/pflag",
-    "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/mock",
-    "github.com/syndtr/goleveldb/leveldb",
-    "github.com/syndtr/goleveldb/leveldb/comparer",
-    "github.com/syndtr/goleveldb/leveldb/opt",
-    "github.com/ugorji/go/codec",
-    "golang.org/x/crypto/sha3",
-  ]
->>>>>>> b3d3f67de08e0f58e820f3c6dc02f0707cae3615
   solver-name = "gps-cdcl"
   solver-version = 1
