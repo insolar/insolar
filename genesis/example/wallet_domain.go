@@ -72,7 +72,7 @@ func (wd *walletDomain) CreateWallet(m Member) error {
 	// Get child by walletFactoryReference
 	r := wd.GetResolver()
 	// TODO: pass specific classID for factory resolving
-	child, err := r.GetObject(wd.walletFactoryReference, class.WalletID)
+	child, err := r.GetObject(wd.walletFactoryReference, nil)
 	if err != nil {
 		return err
 	}

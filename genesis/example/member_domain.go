@@ -75,7 +75,7 @@ func (md *memberDomain) GetClassID() string {
 func (md *memberDomain) CreateMember() (string, error) {
 	// Get child by memberFactoryRecord
 	r := md.GetResolver()
-	child, err := r.GetObject(md.memberFactoryReference, class.MemberID)
+	child, err := r.GetObject(md.memberFactoryReference, nil)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +108,17 @@ func (md *memberDomain) GetMember(record string) (Member, error) {
 	if err != nil {
 		return nil, err
 	}
-	member, err := r.GetObject(ref, class.MemberID)
+	child, err := r.GetObject(md.memberFactoryReference, nil)
+	if err != nil {
+		return nil, err
+	}
+	// Check if it Factory
+	mf, ok := child.(object.Factory)
+	if !ok {
+		return nil, fmt.Errorf("child by reference `%s` is not Factory instance", md.memberFactoryReference)
+	}
+
+	member, err := r.GetObject(ref, mf)
 	if err != nil {
 		return nil, err
 	}

@@ -29,10 +29,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var factory = &mockFactory{}
+
 type mockChildProxy struct {
 	mockProxy
 	ContextStorage storage.Storage
 	parent         object.Parent
+	class          object.Proxy
 }
 
 func (c *mockChildProxy) GetClassID() string {
@@ -43,7 +46,9 @@ func (c *mockChildProxy) GetParent() object.Parent {
 	return c.parent
 }
 
-var child = &mockChildProxy{}
+var child = &mockChildProxy{
+	class: factory,
+}
 
 type mockParent struct {
 	ContextStorage storage.Storage
@@ -177,7 +182,7 @@ func TestReferenceDomain_SetMap(t *testing.T) {
 }
 
 func TestReferenceDomain_RegisterReference(t *testing.T) {
-	registered, err := initRefDomain.RegisterReference(initRefObject, "mockChild")
+	registered, err := initRefDomain.RegisterReference(initRefObject, nil)
 
 	assert.NoError(t, err)
 
@@ -189,7 +194,7 @@ func TestReferenceDomain_RegisterReference_GetObject_Error(t *testing.T) {
 	refObject, err := object.NewReference("234", "1", object.GlobalScope)
 	assert.NoError(t, err)
 
-	registered, err := initRefDomain.RegisterReference(refObject, "classID")
+	registered, err := initRefDomain.RegisterReference(refObject, factory)
 
 	assert.Equal(t, "", registered)
 	assert.EqualError(t, err, "reference with address `#234.#1` not found")
@@ -199,7 +204,7 @@ func TestReferenceDomain_ResolveReference(t *testing.T) {
 	refObject, err := object.NewReference("123", "1", object.GlobalScope)
 	assert.NoError(t, err)
 
-	registered, err := initRefDomain.RegisterReference(refObject, "mockChild")
+	registered, err := initRefDomain.RegisterReference(refObject, nil)
 	assert.NoError(t, err)
 
 	resolved, err := initRefDomain.ResolveReference(registered)
@@ -243,7 +248,7 @@ func TestReferenceDomainProxy_RegisterReference(t *testing.T) {
 	refObject, err := object.NewReference(domainString, record, object.GlobalScope)
 	assert.NoError(t, err)
 
-	registered, err := initRefDomainProxy.RegisterReference(refObject, "mockChild")
+	registered, err := initRefDomainProxy.RegisterReference(refObject, nil)
 	assert.NoError(t, err)
 
 	_, err = uuid.FromString(registered)
@@ -254,7 +259,7 @@ func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
 	refObject, err := object.NewReference(domainString, "1", object.GlobalScope)
 	assert.NoError(t, err)
 
-	registered, err := initRefDomainProxy.RegisterReference(refObject, "mockChild")
+	registered, err := initRefDomainProxy.RegisterReference(refObject, nil)
 	assert.NoError(t, err)
 
 	resolved, err := initRefDomainProxy.ResolveReference(registered)

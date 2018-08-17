@@ -33,7 +33,7 @@ type ReferenceDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// RegisterReference is used to publish new global references.
-	RegisterReference(object.Reference, string) (string, error)
+	RegisterReference(object.Reference, object.Proxy) (string, error)
 	// ResolveReference provides reference instance from record.
 	ResolveReference(string) (object.Reference, error)
 	// InitGlobalMap sets globalResolverMap for references register/resolving.
@@ -71,14 +71,14 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Pr
 }
 
 // RegisterReference sets new reference as a child to domain storage.
-func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
+func (rd *referenceDomain) RegisterReference(ref object.Reference, class object.Proxy) (string, error) {
 	container := object.NewReferenceContainer(ref)
 	record, err := rd.ChildStorage.Set(container)
 	if err != nil {
 		return "", err
 	}
 	res := rd.GetResolver()
-	obj, err := res.GetObject(ref, classID)
+	obj, err := res.GetObject(ref, class)
 	if err != nil {
 		return "", err
 	}
@@ -121,8 +121,8 @@ func newReferenceDomainProxy(parent object.Parent, class object.Factory) *refere
 
 // RegisterReference is a proxy call for instance method.
 
-func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, classID string) (string, error) {
-	return rdp.Instance.(ReferenceDomain).RegisterReference(address, classID)
+func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, class object.Proxy) (string, error) {
+	return rdp.Instance.(ReferenceDomain).RegisterReference(address, class)
 }
 
 // ResolveReference is a proxy call for instance method.

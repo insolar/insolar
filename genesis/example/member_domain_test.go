@@ -267,7 +267,7 @@ func TestMemberDomain_GetMember_NotMember(t *testing.T) {
 	recordID, _ := mDomain.(object.Parent).AddChild(&mockChildProxy{})
 
 	_, err := mDomain.GetMember(recordID)
-	assert.EqualError(t, err, "instance class is not `Member`")
+	assert.EqualError(t, err, "instance class is not equal received")
 }
 
 func TestMemberDomain_GetMember_IncorrectRef(t *testing.T) {

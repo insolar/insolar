@@ -115,24 +115,9 @@ func TestContextResolver_GetObject_No_Object(t *testing.T) {
 	resolver := newContextResolver(mockParent)
 	ref, _ := NewReference("123", "143", ContextScope)
 
-	obj, err := resolver.GetObject(ref, "someClass")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.EqualError(t, err, "object with record 143 does not exist")
-	assert.Nil(t, obj)
-}
-
-func TestContextResolver_GetObject_Wrong_classID(t *testing.T) {
-	contextStorage := storage.NewMapStorage()
-	record, _ := contextStorage.Set(child)
-	mockParent := &mockParentProxy{
-		ContextStorage: contextStorage,
-	}
-	resolver := newContextResolver(mockParent)
-	ref, _ := NewReference("1", record, ContextScope)
-
-	obj, err := resolver.GetObject(ref, "someClass")
-
-	assert.EqualError(t, err, "instance class is not `someClass`")
 	assert.Nil(t, obj)
 }
 
@@ -147,7 +132,7 @@ func TestContextResolver_GetObject_Not_Child(t *testing.T) {
 	resolver := newContextResolver(parent)
 	ref, _ := NewReference("1", record, ContextScope)
 
-	obj, err := resolver.GetObject(ref, "someClass")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.EqualError(t, err, fmt.Sprintf("object with name #1.#%s does not exist", record))
 	assert.Nil(t, obj)
@@ -166,7 +151,7 @@ func TestContextResolver_GetObject_Not_Reference(t *testing.T) {
 	assert.Nil(t, obj)
 }
 
-func TestContextResolver_GetObject_ClassID_Not_Str(t *testing.T) {
+func TestContextResolver_GetObject_Wrong_Class(t *testing.T) {
 	contextStorage := storage.NewMapStorage()
 	record, _ := contextStorage.Set(child)
 	mockParent := &mockParentProxy{
@@ -177,7 +162,7 @@ func TestContextResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, ref)
 
-	assert.EqualError(t, err, "classID is not string")
+	assert.EqualError(t, err, "instance class is not equal received")
 	assert.Nil(t, obj)
 }
 
@@ -190,7 +175,7 @@ func TestContextResolver_GetObject(t *testing.T) {
 	resolver := newContextResolver(mockParent)
 	ref, _ := NewReference("1", record, ContextScope)
 
-	obj, err := resolver.GetObject(ref, "mockChild")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, child, obj)

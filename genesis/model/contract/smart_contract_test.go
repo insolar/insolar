@@ -73,7 +73,7 @@ func (f *mockFactory) GetClassID() string {
 }
 
 func (f *mockFactory) GetClass() object.Proxy {
-	return &mockFactory{}
+	return f
 }
 
 func (f *mockFactory) GetReference() object.Reference {

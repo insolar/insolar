@@ -122,18 +122,15 @@ func (f *mockFactory) SetReference(reference object.Reference) {
 }
 
 func TestNewBaseDomain(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
 
-	domain := NewBaseDomain(parent, nil, "NewDomain")
+	domain := NewBaseDomain(parent, factory, "NewDomain")
 
-	sc := contract.BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
-		ChildStorage: storage.NewMapStorage(),
-		Parent:       parent,
-	}
+	sc := contract.NewBaseSmartContract(parent, factory)
 
 	assert.Equal(t, &BaseDomain{
-		BaseSmartContract: sc,
+		BaseSmartContract: *sc,
 		Name:              "NewDomain",
 	}, domain)
 }
