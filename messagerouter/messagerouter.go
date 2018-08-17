@@ -24,7 +24,7 @@ type MessageRouter struct {
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	Execute(ref string, method string, args []byte) ([]byte, []byte, error)
+	Execute(ref string, method string, args []byte) (data []byte, result []byte, err error)
 }
 
 // Message is a routable message, ATM just a method call
@@ -47,8 +47,18 @@ func New(lr LogicRunner) (*MessageRouter, error) {
 	return &MessageRouter{lr}, nil
 }
 
-// Route a `Message` and get a `Response` or error
+// Route a `Message` and get a `Response` or error from remote node
 func (r *MessageRouter) Route(msg Message) (Response, error) {
+
+	// TODO: get network address from msg.Reference
+	// TODO: serialize Message to network RPC message, send and wait for response
+	// TODO: node which receive this RPC request calls Deliver method
+	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
+	return Response{data, res}, err
+}
+
+// Deliver method calls LogicRunner.Execute on this local node
+func (r *MessageRouter) Deliver(msg Message) (Response, error) {
 	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
 	return Response{data, res}, err
 }
