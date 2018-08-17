@@ -53,6 +53,66 @@ func TestMessage_IsValid(t *testing.T) {
 	assert.False(t, badtMessage.IsValid())
 }
 
+func TestNewAuthMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewAuthMessage(BeginAuth, sender, receiver)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewCheckOriginMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewCheckOriginMessage(sender, receiver)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewKnownOuterNodesMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewKnownOuterNodesMessage(sender, receiver, 1)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewObtainIPMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewObtainIPMessage(sender, receiver)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewRelayMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewRelayMessage(StartRelay, sender, receiver)
+	assert.True(t, msg.IsValid())
+}
+
+func TestNewRelayOwnershipMessage(t *testing.T) {
+	addr1, _ := node.NewAddress("127.0.0.1:55551")
+	addr2, _ := node.NewAddress("127.0.0.1:55552")
+	sender := node.NewNode(addr1)
+	receiver := node.NewNode(addr2)
+
+	msg := NewRelayOwnershipMessage(sender, receiver, true)
+	assert.True(t, msg.IsValid())
+}
+
 func TestMessage_IsValid_Ok(t *testing.T) {
 	tests := []struct {
 		name        string
