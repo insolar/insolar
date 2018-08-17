@@ -40,8 +40,6 @@ func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, prox
 }
 
 type kcpTransportFactory struct{}
-type kcpSecureOptions struct {
-}
 
 // NewKCPTransportFactory creates new Factory of kcpTransport.
 func NewKCPTransportFactory( /* security params, keys, etc */ ) Factory {
