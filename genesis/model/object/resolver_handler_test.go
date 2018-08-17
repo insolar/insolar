@@ -92,7 +92,7 @@ func TestHandler_GetObject_GlobalScope(t *testing.T) {
 	ref, _ := NewReference("123", "1", GlobalScope)
 	(*GlobalResolver.globalInstanceMap)["123"] = mockParent
 
-	obj, err := resolverHandler.GetObject(ref, "mockChild")
+	obj, err := resolverHandler.GetObject(ref, factory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, child, obj)
@@ -103,7 +103,7 @@ func TestHandler_GetObject_ChildScope(t *testing.T) {
 	resolverHandler := NewResolverHandler(mockParent)
 	ref, _ := NewReference("1", "1", ChildScope)
 
-	obj, err := resolverHandler.GetObject(ref, "mockChild")
+	obj, err := resolverHandler.GetObject(ref, factory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, child, obj)
@@ -118,7 +118,7 @@ func TestHandler_GetObject_ContextScope(t *testing.T) {
 	resolverHandler := NewResolverHandler(mockParent)
 	ref, _ := NewReference("1", record, ContextScope)
 
-	obj, err := resolverHandler.GetObject(ref, "mockChild")
+	obj, err := resolverHandler.GetObject(ref, factory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, child, obj)
@@ -129,7 +129,7 @@ func TestHandler_GetObject_default(t *testing.T) {
 	resolverHandler := NewResolverHandler(mockParent)
 	ref := &invalidScopeReference{}
 
-	obj, err := resolverHandler.GetObject(ref, "mockChild")
+	obj, err := resolverHandler.GetObject(ref, factory)
 
 	assert.EqualError(t, err, "unknown scope type: 10000")
 	assert.Nil(t, obj)

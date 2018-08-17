@@ -33,7 +33,7 @@ type ReferenceDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// RegisterReference is used to publish new global references.
-	RegisterReference(object.Reference, string) (string, error)
+	RegisterReference(object.Reference, object.Proxy) (string, error)
 	// ResolveReference provides reference instance from record.
 	ResolveReference(string) (object.Reference, error)
 	// InitGlobalMap sets globalResolverMap for references register/resolving.
@@ -46,9 +46,9 @@ type referenceDomain struct {
 }
 
 // newReferenceDomain creates new instance of ReferenceDomain.
-func newReferenceDomain(parent object.Parent) *referenceDomain {
+func newReferenceDomain(parent object.Parent, class object.Factory) *referenceDomain {
 	refDomain := &referenceDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, ReferenceDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, class, ReferenceDomainName),
 	}
 	// Bootstrap case
 	if parent == nil {
@@ -71,14 +71,14 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Pr
 }
 
 // RegisterReference sets new reference as a child to domain storage.
-func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
+func (rd *referenceDomain) RegisterReference(ref object.Reference, class object.Proxy) (string, error) {
 	container := object.NewReferenceContainer(ref)
 	record, err := rd.ChildStorage.Set(container)
 	if err != nil {
 		return "", err
 	}
 	res := rd.GetResolver()
-	obj, err := res.GetObject(ref, classID)
+	obj, err := res.GetObject(ref, class)
 	if err != nil {
 		return "", err
 	}
@@ -111,18 +111,18 @@ type referenceDomainProxy struct {
 }
 
 // newReferenceDomainProxy creates new proxy and associate it with new instance of ReferenceDomain.
-func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
+func newReferenceDomainProxy(parent object.Parent, class object.Factory) *referenceDomainProxy {
 	return &referenceDomainProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
-			Instance: newReferenceDomain(parent),
+			Instance: newReferenceDomain(parent, class),
 		},
 	}
 }
 
 // RegisterReference is a proxy call for instance method.
 
-func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, classID string) (string, error) {
-	return rdp.Instance.(ReferenceDomain).RegisterReference(address, classID)
+func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, class object.Proxy) (string, error) {
+	return rdp.Instance.(ReferenceDomain).RegisterReference(address, class)
 }
 
 // ResolveReference is a proxy call for instance method.
@@ -158,9 +158,13 @@ func (rdf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
+func (rdf *referenceDomainFactory) GetClass() object.Proxy {
+	return rdf
+}
+
 // Create factory is a method for new ReferenceDomain instances.
 func (rdf *referenceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
-	proxy := newReferenceDomainProxy(parent)
+	proxy := newReferenceDomainProxy(parent, rdf)
 	_, err := parent.AddChild(proxy)
 	if err != nil {
 		return nil, err

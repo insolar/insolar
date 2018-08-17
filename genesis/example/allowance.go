@@ -42,14 +42,14 @@ type allowance struct {
 	completed bool
 }
 
-func newAllowance(parent object.Parent) (Allowance, error) {
+func newAllowance(parent object.Parent, class object.CompositeFactory) (Allowance, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
 	//TODO: add posibility to init allowance fields
 	return &allowance{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, class.(object.Proxy)),
 		completed:         false,
 	}, nil
 }
@@ -90,8 +90,8 @@ func NewAllowanceFactory(parent object.Parent) object.CompositeFactory {
 	}
 }
 
-func (*allowanceFactory) Create(parent object.Parent) (object.Composite, error) {
-	proxy, err := newAllowanceProxy(parent)
+func (af *allowanceFactory) Create(parent object.Parent) (object.Composite, error) {
+	proxy, err := newAllowanceProxy(parent, af)
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +112,10 @@ func (*allowanceFactory) GetClassID() string {
 	return class.AllowanceID
 }
 
+func (af *allowanceFactory) GetClass() object.Proxy {
+	return af
+}
+
 func (aF *allowanceFactory) GetParent() object.Parent {
 	return aF.parent
 }
@@ -120,8 +124,8 @@ type allowanceProxy struct {
 	contract.BaseSmartContractProxy
 }
 
-func newAllowanceProxy(parent object.Parent) (*allowanceProxy, error) {
-	inst, err := newAllowance(parent)
+func newAllowanceProxy(parent object.Parent, class object.CompositeFactory) (*allowanceProxy, error) {
+	inst, err := newAllowance(parent, class)
 	if err != nil {
 		return nil, err
 	}

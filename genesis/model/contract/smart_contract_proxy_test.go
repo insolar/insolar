@@ -29,6 +29,10 @@ func (p *mockInstance) GetClassID() string {
 	return "mockInstance"
 }
 
+func (p *mockInstance) GetClass() object.Proxy {
+	return nil
+}
+
 func (p *mockInstance) GetParent() object.Parent {
 	return nil
 }
@@ -48,13 +52,15 @@ func TestBaseSmartContractProxy_GetParent(t *testing.T) {
 }
 
 func TestBaseSmartContractProxy_GetOrCreateComposite(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
 	proxy := &BaseSmartContractProxy{
-		Instance: NewBaseSmartContract(parent),
+		Instance: NewBaseSmartContract(parent, factory),
 	}
-	composite := &BaseComposite{}
-
 	compositeFactory := &BaseCompositeFactory{}
+	composite := &BaseComposite{
+		class: compositeFactory,
+	}
 
 	res, err := proxy.GetOrCreateComposite(compositeFactory)
 

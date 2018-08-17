@@ -41,18 +41,18 @@ func NewResolverHandler(p interface{}) *ResolverHandler {
 }
 
 // GetObject resolves object by its reference and return its proxy.
-func (r *ResolverHandler) GetObject(reference interface{}, classID interface{}) (interface{}, error) {
+func (r *ResolverHandler) GetObject(reference interface{}, class interface{}) (interface{}, error) {
 	ref, ok := reference.(Reference)
 	if !ok {
 		return nil, fmt.Errorf("reference is not Reference class object")
 	}
 	switch ref.GetScope() {
 	case GlobalScope:
-		return r.globalResolver.GetObject(ref, classID)
+		return r.globalResolver.GetObject(ref, class)
 	case ContextScope:
-		return r.contextResolver.GetObject(ref, classID)
+		return r.contextResolver.GetObject(ref, class)
 	case ChildScope:
-		return r.childResolver.GetObject(ref, classID)
+		return r.childResolver.GetObject(ref, class)
 	default:
 		return nil, fmt.Errorf("unknown scope type: %d", ref.GetScope())
 	}

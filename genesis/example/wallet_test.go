@@ -25,32 +25,36 @@ import (
 )
 
 func TestNewWallet_WithNilParent(t *testing.T) {
-	_, err := newWallet(nil)
+	cFactory := &MockBaseCompositeFactory{}
+	_, err := newWallet(nil, cFactory)
 
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
 func TestNewWallet(t *testing.T) {
+	cFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	wActual, err := newWallet(parent)
+	wActual, err := newWallet(parent, cFactory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, &wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, cFactory),
 	}, wActual)
 }
 
 func TestNewWalletProxy_WithNilParent(t *testing.T) {
-	_, err := newWalletProxy(nil)
+	cFactory := &MockBaseCompositeFactory{}
+	_, err := newWalletProxy(nil, cFactory)
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
 func TestNewWalletProxy(t *testing.T) {
+	cFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	nWallet, err := newWallet(parent)
+	nWallet, err := newWallet(parent, cFactory)
 	assert.NoError(t, err)
 
-	proxy, err := newWalletProxy(parent)
+	proxy, err := newWalletProxy(parent, cFactory)
 	assert.NoError(t, err)
 
 	assert.Equal(t, &walletProxy{
@@ -61,12 +65,13 @@ func TestNewWalletProxy(t *testing.T) {
 }
 
 func TestWalletProxy_GetBalance(t *testing.T) {
+	cFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	test_balance := 42
+	testBalance := 42
 
 	w := wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
-		balance:           test_balance,
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, cFactory),
+		balance:           testBalance,
 	}
 	proxy := walletProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
@@ -74,13 +79,14 @@ func TestWalletProxy_GetBalance(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, proxy.GetBalance(), test_balance)
+	assert.Equal(t, proxy.GetBalance(), testBalance)
 
 }
 
 func TestWalletProxy_GetInterfaceKey(t *testing.T) {
+	factory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	proxy, err := newWalletProxy(parent)
+	proxy, err := newWalletProxy(parent, factory)
 	assert.NoError(t, err)
 	assert.Equal(t, class.WalletID, proxy.GetInterfaceKey())
 }
@@ -95,28 +101,31 @@ func TestNewWalletFactory(t *testing.T) {
 }
 
 func TestWallet_GetBalance(t *testing.T) {
+	cFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	test_balance := 42
+	testBalance := 42
 
 	w := wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
-		balance:           test_balance,
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, cFactory),
+		balance:           testBalance,
 	}
 
-	assert.Equal(t, w.GetBalance(), test_balance)
+	assert.Equal(t, w.GetBalance(), testBalance)
 }
 
 func TestWallet_GetClassID(t *testing.T) {
+	cFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	w, err := newWallet(parent)
+	w, err := newWallet(parent, cFactory)
 	assert.NoError(t, err)
 
 	assert.Equal(t, class.WalletID, w.GetClassID())
 }
 
 func TestWallet_GetInterfaceKey(t *testing.T) {
+	cFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	w, err := newWallet(parent)
+	w, err := newWallet(parent, cFactory)
 	assert.NoError(t, err)
 
 	assert.Equal(t, class.WalletID, w.GetInterfaceKey())
@@ -145,7 +154,7 @@ func TestWalletFactory_Create(t *testing.T) {
 	assert.NoError(t, err)
 
 	expecatedWallet := wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, factory),
 	}
 
 	assert.Equal(t, &walletProxy{

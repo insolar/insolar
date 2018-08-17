@@ -26,7 +26,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type BaseComposite struct{}
+type BaseComposite struct {
+	class object.CompositeFactory
+}
 
 func (c *BaseComposite) GetInterfaceKey() string {
 	return "BaseComposite"
@@ -34,6 +36,10 @@ func (c *BaseComposite) GetInterfaceKey() string {
 
 func (c *BaseComposite) GetClassID() string {
 	return "BaseComposite"
+}
+
+func (c *BaseComposite) GetClass() object.Proxy {
+	return c.class
 }
 
 func (c *BaseComposite) GetParent() object.Parent {
@@ -63,64 +69,76 @@ func (bcf *MockBaseCompositeFactory) GetClassID() string {
 	return "BaseCompositeFactory_ID"
 }
 
+func (bcf *MockBaseCompositeFactory) GetClass() object.Proxy {
+	return nil
+}
+
 func (bcf *MockBaseCompositeFactory) GetInterfaceKey() string {
 	return class.MemberID
 }
 
-func (cf *MockBaseCompositeFactory) Create(parent object.Parent) (object.Composite, error) {
-	return &BaseComposite{}, nil
+func (bcf *MockBaseCompositeFactory) Create(parent object.Parent) (object.Composite, error) {
+	return &BaseComposite{
+		class: bcf,
+	}, nil
 }
 
 func TestNewMember(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	testMember, err := newMember(parent)
+	testMember, err := newMember(parent, factory)
 
 	assert.NoError(t, err)
 	expectedMember := &member{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, factory),
 	}
 	assert.Equal(t, expectedMember, testMember)
 }
 
 func TestNewMember_WithNilParent(t *testing.T) {
-	_, err := newMember(nil)
+	factory := &mockFactory{}
+	_, err := newMember(nil, factory)
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
 func TestMember_GetClassID(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	testMember, _ := newMember(parent)
+	testMember, _ := newMember(parent, factory)
 
 	memberID := testMember.GetClassID()
 	assert.Equal(t, class.MemberID, memberID)
 }
 
 func TestMember_GetUsername(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	testMember, _ := newMember(parent)
+	testMember, _ := newMember(parent, factory)
 
 	username := testMember.GetUsername()
 	assert.Equal(t, "", username)
 }
 
 func TestMember_GetPublicKey(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	testMember, _ := newMember(parent)
+	testMember, _ := newMember(parent, factory)
 
 	publicKey := testMember.GetPublicKey()
 	assert.Equal(t, "", publicKey)
 }
 
 func TestNewMemberProxy(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	_, err := newMember(parent)
+	_, err := newMember(parent, factory)
 	assert.NoError(t, err)
 
-	proxy, err := newMemberProxy(parent)
+	proxy, err := newMemberProxy(parent, factory)
 	assert.NoError(t, err)
 
 	expectedMember := &member{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, factory),
 	}
 
 	expectedMember.CompositeMap = make(map[string]object.Reference)
@@ -133,31 +151,37 @@ func TestNewMemberProxy(t *testing.T) {
 }
 
 func TestNewMemberProxy_WithNilParent(t *testing.T) {
-	_, err := newMemberProxy(nil)
+	factory := &mockFactory{}
+	_, err := newMemberProxy(nil, factory)
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
 func TestMemberProxy_GetUsername(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	proxy, _ := newMemberProxy(parent)
+	proxy, _ := newMemberProxy(parent, factory)
 
 	username := proxy.GetUsername()
 	assert.Equal(t, "", username)
 }
 
 func TestMemberProxy_GetPublicKey(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	proxy, _ := newMemberProxy(parent)
+	proxy, _ := newMemberProxy(parent, factory)
 
 	publicKey := proxy.GetPublicKey()
 	assert.Equal(t, "", publicKey)
 }
 
 func TestMemberProxy_GetOrCreateComposite_Get(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	proxy, _ := newMemberProxy(parent)
-	composite := &BaseComposite{}
+	proxy, _ := newMemberProxy(parent, factory)
 	compositeFactory := &MockBaseCompositeFactory{}
+	composite := &BaseComposite{
+		class: compositeFactory,
+	}
 
 	res, err := proxy.GetOrCreateComposite(compositeFactory)
 
@@ -166,8 +190,9 @@ func TestMemberProxy_GetOrCreateComposite_Get(t *testing.T) {
 }
 
 func TestMemberProxy_GetOrCreateComposite_Create(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	proxy, _ := newMemberProxy(parent)
+	proxy, _ := newMemberProxy(parent, factory)
 	compositeFactory := &MockBaseCompositeFactory{}
 
 	_, err := proxy.GetOrCreateComposite(compositeFactory)
@@ -217,7 +242,7 @@ func TestMemberFactory_Create(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedMember := &member{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, mFactory),
 	}
 
 	expectedMember.CompositeMap = make(map[string]object.Reference)

@@ -45,7 +45,7 @@ func TestGlobalResolver_GetObject_No_Object(t *testing.T) {
 	resolver.InitGlobalMap(&newMap)
 	ref, _ := NewReference("123", "1", GlobalScope)
 
-	obj, err := resolver.GetObject(ref, "someClass")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.EqualError(t, err, "reference with address `#123.#1` not found")
 	assert.Nil(t, obj)
@@ -59,7 +59,7 @@ func TestGlobalResolver_GetObject_Not_Parent(t *testing.T) {
 	ref, _ := NewReference("123", "1", GlobalScope)
 	(*resolver.globalInstanceMap)["123"] = mockChild
 
-	obj, err := resolver.GetObject(ref, "mockChild")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.EqualError(t, err, "object with domain `123` can not have children")
 	assert.Nil(t, obj)
@@ -73,13 +73,13 @@ func TestGlobalResolver_GetObject_No_Child(t *testing.T) {
 	ref, _ := NewReference("123", "1", GlobalScope)
 	(*resolver.globalInstanceMap)["123"] = mockParent
 
-	obj, err := resolver.GetObject(ref, "someClass")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.EqualError(t, err, "object with record 1 does not exist")
 	assert.Nil(t, obj)
 }
 
-func TestGlobalResolver_GetObject_ClassID_Not_Str(t *testing.T) {
+func TestGlobalResolver_GetObject_Wrong_Class(t *testing.T) {
 	mockParent := &mockParentProxy{}
 	resolver := newGlobalResolver()
 	newMap := make(map[string]Proxy)
@@ -89,21 +89,7 @@ func TestGlobalResolver_GetObject_ClassID_Not_Str(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, ref)
 
-	assert.EqualError(t, err, "classID is not string")
-	assert.Nil(t, obj)
-}
-
-func TestGlobalResolver_GetObject_Wrong_classID(t *testing.T) {
-	mockParent := &mockParentProxy{}
-	resolver := newGlobalResolver()
-	newMap := make(map[string]Proxy)
-	resolver.InitGlobalMap(&newMap)
-	ref, _ := NewReference("123", "1", GlobalScope)
-	(*resolver.globalInstanceMap)["123"] = mockParent
-
-	obj, err := resolver.GetObject(ref, "someClass")
-
-	assert.EqualError(t, err, "instance class is not `someClass`")
+	assert.EqualError(t, err, "instance class is not equal received")
 	assert.Nil(t, obj)
 }
 
@@ -115,7 +101,7 @@ func TestGlobalResolver_GetObject(t *testing.T) {
 	ref, _ := NewReference("123", "1", GlobalScope)
 	(*resolver.globalInstanceMap)["123"] = mockParent
 
-	obj, err := resolver.GetObject(ref, "mockChild")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, child, obj)

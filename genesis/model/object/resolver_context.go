@@ -18,8 +18,6 @@ package object
 
 import (
 	"fmt"
-
-	"github.com/insolar/insolar/genesis/model/class"
 )
 
 // contextResolver is resolver for ContextScope references.
@@ -52,7 +50,12 @@ func (r *contextResolver) GetObject(reference interface{}, cls interface{}) (int
 		return nil, fmt.Errorf("object is not Proxy")
 	}
 
-	for proxy.GetClassID() == class.ReferenceID {
+	class := proxy.GetClass()
+	for {
+
+		if _, ok := class.(*ReferenceContainer); !ok {
+			break
+		}
 		contextHolderWithChildInterface, isChild := contextHolder.(Child)
 		if !isChild {
 			return nil, fmt.Errorf("object with name %s does not exist", ref)
@@ -66,12 +69,8 @@ func (r *contextResolver) GetObject(reference interface{}, cls interface{}) (int
 		proxy = newProxy.(Proxy)
 	}
 
-	classID, ok := cls.(string)
-	if !ok {
-		return nil, fmt.Errorf("classID is not string")
-	}
-	if proxy.GetClassID() != classID {
-		return nil, fmt.Errorf("instance class is not `%s`", classID)
+	if err = checkClass(class, cls); err != nil {
+		return nil, err
 	}
 
 	proxy.SetReference(ref)
