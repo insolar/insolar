@@ -143,7 +143,10 @@ func DeserializeMessage(conn io.Reader) (*Message, error) {
 
 	var reader bytes.Buffer
 	for uint64(reader.Len()) < length {
-		reader.ReadFrom(conn)
+		n, err := reader.ReadFrom(conn)
+		if err != nil && n == 0 {
+			return nil, err
+		}
 	}
 
 	msg := &Message{}
