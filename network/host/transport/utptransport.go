@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package utptransport
+package transport
 
 import (
 	"context"
@@ -27,9 +27,9 @@ import (
 
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/relay"
-	"github.com/insolar/insolar/network/host/transport"
 
 	"github.com/anacrolix/utp"
+	"errors"
 )
 
 type utpTransport struct {
@@ -42,13 +42,13 @@ type utpTransport struct {
 	disconnectFinished chan bool
 
 	mutex   *sync.RWMutex
-	futures map[message.RequestID]transport.Future
+	futures map[message.RequestID]Future
 
 	proxy relay.Proxy
 }
 
 // NewUTPTransport creates utpTransport.
-func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy) (transport.Transport, error) {
+func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
 	return newUTPTransport(conn, proxy)
 }
 
@@ -58,7 +58,7 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 		return nil, err
 	}
 
-	tp := &utpTransport{
+	transport := &utpTransport{
 		socket: socket,
 
 		received: make(chan *message.Message),
@@ -68,16 +68,20 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 		disconnectFinished: make(chan bool),
 
 		mutex:   &sync.RWMutex{},
-		futures: make(map[message.RequestID]transport.Future),
+		futures: make(map[message.RequestID]Future),
 
 		proxy: proxy,
 	}
 
-	return tp, nil
+	return transport, nil
 }
 
 // SendRequest sends request message and returns future.
-func (t *utpTransport) SendRequest(msg *message.Message) (transport.Future, error) {
+func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
+	if !msg.IsValid() {
+		return nil, errors.New("invalid message")
+	}
+
 	msg.RequestID = t.generateID()
 
 	future := t.createFuture(msg)
@@ -157,8 +161,8 @@ func (t *utpTransport) generateID() message.RequestID {
 	return message.RequestID(id)
 }
 
-func (t *utpTransport) createFuture(msg *message.Message) transport.Future {
-	newFuture := transport.NewFuture(msg.RequestID, msg.Receiver, msg, func(f transport.Future) {
+func (t *utpTransport) createFuture(msg *message.Message) Future {
+	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
 		t.mutex.Lock()
 		defer t.mutex.Unlock()
 
@@ -172,7 +176,7 @@ func (t *utpTransport) createFuture(msg *message.Message) transport.Future {
 	return newFuture
 }
 
-func (t *utpTransport) getFuture(msg *message.Message) transport.Future {
+func (t *utpTransport) getFuture(msg *message.Message) Future {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
@@ -191,6 +195,7 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	data, err := message.SerializeMessage(msg)
 	if err != nil {
@@ -238,7 +243,7 @@ func (t *utpTransport) processRequest(msg *message.Message) {
 	}
 }
 
-func shouldProcessMessage(future transport.Future, msg *message.Message) bool {
+func shouldProcessMessage(future Future, msg *message.Message) bool {
 	return !future.Actor().Equal(*msg.Sender) && msg.Type != message.TypePing || msg.Type != future.Request().Type
 }
 

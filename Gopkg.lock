@@ -16,7 +16,7 @@
   branch = "master"
   name = "github.com/anacrolix/sync"
   packages = ["."]
-  revision = "fda11526ff0853fb50738fd7ba5bc9af2eb016bf"
+  revision = "44578de4e778a60bb7a9c15ab60b3f0b0311a53a"
 
 [[projects]]
   branch = "master"
@@ -61,6 +61,18 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
+  name = "github.com/klauspost/cpuid"
+  packages = ["."]
+  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/klauspost/reedsolomon"
+  packages = ["."]
+  revision = "6bb6130ff6a76a904c1841707d65603aec9cc288"
+  version = "v1.6"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -81,8 +93,8 @@
 [[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
-  version = "v1.0.1"
+  revision = "9a97c102cda95a86cec2345a6f09f55a939babf5"
+  version = "v1.0.2"
 
 [[projects]]
   name = "github.com/stretchr/objx"
@@ -95,7 +107,9 @@
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "mock"
+    "mock",
+    "require",
+    "suite"
   ]
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
 
@@ -119,26 +133,72 @@
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/templexxx/cpufeat"
+  packages = ["."]
+  revision = "cef66df7f161dee20f4d650da7268d77eaaec82d"
+
+[[projects]]
+  name = "github.com/templexxx/xor"
+  packages = ["."]
+  revision = "0af8e873c554da75f37f2049cdffda804533d44c"
+  version = "0.1.2"
+
+[[projects]]
+  name = "github.com/tjfoc/gmsm"
+  packages = ["sm4"]
+  revision = "98aa888b79d8de04afe0fccf45ed10594efc858b"
+  version = "v1.1"
+
+[[projects]]
   name = "github.com/ugorji/go"
   packages = ["codec"]
   revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
   version = "v1.1.1"
 
 [[projects]]
+  name = "github.com/xtaci/kcp-go"
+  packages = ["."]
+  revision = "60be01eef6f665151bfbcde38429ee1d8710f68f"
+  version = "v4.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["sha3"]
-  revision = "56440b844dfe139a8ac053f4ecac0b20b79058f4"
+  packages = [
+    "blowfish",
+    "cast5",
+    "internal/subtle",
+    "pbkdf2",
+    "salsa20",
+    "salsa20/salsa",
+    "sha3",
+    "tea",
+    "twofish",
+    "xtea"
+  ]
+  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/net"
+  packages = [
+    "bpf",
+    "internal/iana",
+    "internal/socket",
+    "ipv4"
+  ]
+  revision = "c39426892332e1bb5ec0a434a079bf82f5d30c54"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "34b17bdb430002e9db9ae7ddc8480b9fa05edc22"
+  revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d611171b5613cd1dfcbc51d46c98d30934ad7ddd42e15d058782d23b20728d3d"
+  inputs-digest = "32469594fab058e7bbd6bf90e845c3095b9e4f73069f8326a95d55979a4d7f88"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -14,14 +14,13 @@
  *    limitations under the License.
  */
 
-package utptransport
+package transport
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/network/host/connection"
 	"github.com/insolar/insolar/network/host/relay"
-	"github.com/insolar/insolar/network/host/transport"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,6 +29,15 @@ func TestNewUTPTransportFactory(t *testing.T) {
 	actualFactory := NewUTPTransportFactory()
 
 	assert.Equal(t, expectedFactory, actualFactory)
+	assert.Implements(t, (*Factory)(nil), actualFactory)
+}
+
+func TestNewKCPFactory(t *testing.T) {
+	expectedFactory := &kcpTransportFactory{}
+	actualFactory := NewKCPTransportFactory()
+
+	assert.Equal(t, expectedFactory, actualFactory)
+	assert.Implements(t, (*Factory)(nil), actualFactory)
 }
 
 func TestUTPTransportFactory_Create(t *testing.T) {
@@ -37,8 +45,8 @@ func TestUTPTransportFactory_Create(t *testing.T) {
 	assert.NoError(t, err)
 	defer conn.Close()
 
-	tp, err := NewUTPTransportFactory().Create(conn, relay.NewProxy())
+	transport, err := NewUTPTransportFactory().Create(conn, relay.NewProxy())
 
 	assert.NoError(t, err)
-	assert.Implements(t, (*transport.Transport)(nil), tp)
+	assert.Implements(t, (*Transport)(nil), transport)
 }

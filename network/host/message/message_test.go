@@ -18,6 +18,7 @@ package message
 
 import (
 	"bytes"
+	"crypto/rand"
 	"testing"
 
 	"github.com/insolar/insolar/network/host/id"
@@ -204,4 +205,28 @@ func TestDeserializeMessage(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, deserialized, msg)
+}
+
+func TestDeserializeBigMessage(t *testing.T) {
+	address, _ := node.NewAddress("127.0.0.1:31337")
+	nodeOne := node.NewNode(address)
+
+	data := make([]byte, 1024*1024*10)
+	rand.Read(data)
+
+	builder := NewBuilder()
+	msg := builder.Sender(nodeOne).Receiver(nodeOne).Type(TypeStore).Request(&RequestDataStore{data, true}).Build()
+	assert.True(t, msg.IsValid())
+
+	serialized, err := SerializeMessage(msg)
+	assert.NoError(t, err)
+
+	var buffer bytes.Buffer
+	buffer.Write(serialized)
+
+	deserializedMsg, err := DeserializeMessage(&buffer)
+	assert.NoError(t, err)
+
+	deserializedData := deserializedMsg.Data.(*RequestDataStore).Data
+	assert.Equal(t, data, deserializedData)
 }
