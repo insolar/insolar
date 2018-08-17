@@ -51,25 +51,25 @@ type ArtifactManager interface {
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate class or as migration code for an object.
-	DeployCode(requestRef record.Reference, codeMap map[record.ArchType][]byte) (*record.Reference, error)
+	DeployCode(domainRef, requestRef record.Reference, codeMap map[record.ArchType][]byte) (*record.Reference, error)
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
 	// and memory as the default memory for class objects.
 	//
 	// Activation reference will be this class'es identifier and referred as "class head".
-	ActivateClass(requestRef, codeRef record.Reference, memory record.Memory) (*record.Reference, error)
+	ActivateClass(domainRef, requestRef, codeRef record.Reference, memory record.Memory) (*record.Reference, error)
 
 	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
 	// the class. If class is already deactivated, an error should be returned.
 	//
 	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(requestRef, classRef record.Reference) (*record.Reference, error)
+	DeactivateClass(domainRef, requestRef, classRef record.Reference) (*record.Reference, error)
 
 	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 	// the class. Migrations are references to code records.
 	//
 	// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
-	UpdateClass(requestRef, classRef, codeRef record.Reference, migrationRefs []record.Reference) (
+	UpdateClass(domainRef, requestRef, classRef, codeRef record.Reference, migrationRefs []record.Reference) (
 		*record.Reference, error,
 	)
 
@@ -77,20 +77,20 @@ type ArtifactManager interface {
 	// memory as memory of crated object. If memory is not provided, the class default memory will be used.
 	//
 	// Activation reference will be this object's identifier and referred as "object head".
-	ActivateObj(requestRef, classRef record.Reference, memory record.Memory) (*record.Reference, error)
+	ActivateObj(domainRef, requestRef, classRef record.Reference, memory record.Memory) (*record.Reference, error)
 
 	// DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObj(requestRef, objRef record.Reference) (*record.Reference, error)
+	DeactivateObj(domainRef, requestRef, objRef record.Reference) (*record.Reference, error)
 
 	// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
 	// them to the new memory manually if its required.
-	UpdateObj(requestRef, objRef record.Reference, memory record.Memory) (*record.Reference, error)
+	UpdateObj(domainRef, requestRef, objRef record.Reference, memory record.Memory) (*record.Reference, error)
 
 	// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
 	// of the object. Provided memory well be used as append delegate memory.
@@ -98,7 +98,7 @@ type ArtifactManager interface {
 	// Object's delegates will be provided by GetLatestObj. Any object update will nullify all the object's append
 	// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
 	// required.
-	AppendObjDelegate(requestRef, objRef record.Reference, memory record.Memory) (*record.Reference, error)
+	AppendObjDelegate(domainRef, requestRef, objRef record.Reference, memory record.Memory) (*record.Reference, error)
 }
 
 // LedgerArtifactManager provides concrete API to storage for processing module
@@ -211,7 +211,7 @@ func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
 //
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
-	requestRef record.Reference, codeMap map[record.ArchType][]byte,
+	domainRef, requestRef record.Reference, codeMap map[record.ArchType][]byte,
 ) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -222,6 +222,7 @@ func (m *LedgerArtifactManager) DeployCode(
 		StorageRecord: record.StorageRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
 					RequestRecord: requestRef,
 				},
 			},
@@ -240,7 +241,7 @@ func (m *LedgerArtifactManager) DeployCode(
 //
 // Activation reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	requestRef, codeRef record.Reference, memory record.Memory,
+	domainRef, requestRef, codeRef record.Reference, memory record.Memory,
 ) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -255,6 +256,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
 					RequestRecord: requestRef,
 				},
 			},
@@ -281,7 +283,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 //
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
-	requestRef, classRef record.Reference,
+	domainRef, requestRef, classRef record.Reference,
 ) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -297,14 +299,12 @@ func (m *LedgerArtifactManager) DeactivateClass(
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
 					RequestRecord: requestRef,
 				},
 			},
-			HeadRecord: classRef,
-			AmendedRecord: record.Reference{
-				Domain: classRef.Domain,
-				Record: classIndex.LatestStateRef.Record,
-			},
+			HeadRecord:    classRef,
+			AmendedRecord: classIndex.LatestStateRef,
 		},
 	}
 	deactivationRef, err := m.storer.SetRecord(&rec)
@@ -325,7 +325,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 //
 // Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
-	requestRef, classRef, codeRef record.Reference, migrationRefs []record.Reference,
+	domainRef, requestRef, classRef, codeRef record.Reference, migrationRefs []record.Reference,
 ) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -352,14 +352,12 @@ func (m *LedgerArtifactManager) UpdateClass(
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
 					RequestRecord: requestRef,
 				},
 			},
-			HeadRecord: classRef,
-			AmendedRecord: record.Reference{
-				Domain: classRef.Domain,
-				Record: classIndex.LatestStateRef.Record,
-			},
+			HeadRecord:    classRef,
+			AmendedRecord: classIndex.LatestStateRef,
 		},
 		NewCode:    codeRef,
 		Migrations: migrationRefs,
@@ -384,7 +382,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 //
 // Activation reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObj(
-	requestRef, classRef record.Reference, memory record.Memory,
+	domainRef, requestRef, classRef record.Reference, memory record.Memory,
 ) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -400,6 +398,7 @@ func (m *LedgerArtifactManager) ActivateObj(
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
 					RequestRecord: requestRef,
 				},
 			},
@@ -427,7 +426,9 @@ func (m *LedgerArtifactManager) ActivateObj(
 // of the object. If object is already deactivated, an error should be returned.
 //
 // Deactivated object cannot be changed.
-func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Reference) (*record.Reference, error) {
+func (m *LedgerArtifactManager) DeactivateObj(
+	domainRef, requestRef, objRef record.Reference,
+) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -442,14 +443,12 @@ func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Referenc
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
 					RequestRecord: requestRef,
 				},
 			},
-			HeadRecord: objRef,
-			AmendedRecord: record.Reference{
-				Domain: objRef.Domain,
-				Record: objIndex.LatestStateRef.Record,
-			},
+			HeadRecord:    objRef,
+			AmendedRecord: objIndex.LatestStateRef,
 		},
 	}
 	deactivationRef, err := m.storer.SetRecord(&rec)
@@ -470,7 +469,7 @@ func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Referenc
 // This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
 // them to the new memory manually if its required.
 func (m *LedgerArtifactManager) UpdateObj(
-	requestRef, objRef record.Reference, memory record.Memory,
+	domainRef, requestRef, objRef record.Reference, memory record.Memory,
 ) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -486,14 +485,12 @@ func (m *LedgerArtifactManager) UpdateObj(
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
 					RequestRecord: requestRef,
 				},
 			},
-			HeadRecord: objRef,
-			AmendedRecord: record.Reference{
-				Domain: objRef.Domain,
-				Record: objIndex.LatestStateRef.Record,
-			},
+			HeadRecord:    objRef,
+			AmendedRecord: objIndex.LatestStateRef,
 		},
 		NewMemory: memory,
 	}
@@ -518,7 +515,7 @@ func (m *LedgerArtifactManager) UpdateObj(
 // delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
 // required.
 func (m *LedgerArtifactManager) AppendObjDelegate(
-	requestRef, objRef record.Reference, memory record.Memory,
+	domainRef, requestRef, objRef record.Reference, memory record.Memory,
 ) (*record.Reference, error) {
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -534,14 +531,12 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
 					RequestRecord: requestRef,
 				},
 			},
-			HeadRecord: objRef,
-			AmendedRecord: record.Reference{
-				Domain: objRef.Domain,
-				Record: objIndex.LatestStateRef.Record,
-			},
+			HeadRecord:    objRef,
+			AmendedRecord: objIndex.LatestStateRef,
 		},
 		AppendMemory: memory,
 	}
