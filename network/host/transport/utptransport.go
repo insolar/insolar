@@ -27,8 +27,9 @@ import (
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/relay"
 
-	"github.com/anacrolix/utp"
 	"errors"
+
+	"github.com/anacrolix/utp"
 )
 
 type utpTransport struct {
