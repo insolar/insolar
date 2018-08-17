@@ -25,7 +25,23 @@ import (
 )
 
 type BaseCompositeCollection struct {
+	parent  object.Parent
 	storage []object.Composite
+}
+
+func NewBaseCompositeCollection(parent object.Parent) *BaseCompositeCollection {
+	return &BaseCompositeCollection{
+		storage: make([]object.Composite, 0),
+		parent:  parent,
+	}
+}
+
+func (bcc *BaseCompositeCollection) GetClassID() string {
+	return class.CompositeCollectionID
+}
+
+func (bcc *BaseCompositeCollection) GetParent() object.Parent {
+	return bcc.parent
 }
 
 func (bcc *BaseCompositeCollection) GetList() []object.Composite {
@@ -40,10 +56,20 @@ func (bcc *BaseCompositeCollection) GetInterfaceKey() string {
 	return class.CompositeCollectionID
 }
 
-func NewBaseCompositeCollection() *BaseCompositeCollection {
-	return &BaseCompositeCollection{
-		storage: make([]object.Composite, 0),
-	}
+type BaseCompositeCollectionProxy struct {
+	BaseSmartContractProxy
+}
+
+func (*BaseCompositeCollectionProxy) GetInterfaceKey() string {
+	return class.AllowanceID
+}
+
+func (cp *BaseCompositeCollectionProxy) GetList() []object.Composite {
+	return cp.Instance.(object.CompositeCollection).GetList()
+}
+
+func (cp *BaseCompositeCollectionProxy) Add(composite object.Composite) {
+	cp.Instance.(object.CompositeCollection).Add(composite)
 }
 
 // SmartContract marks that object is smart contract.

@@ -100,7 +100,7 @@ func TestAllowance_GetInterfaceKey(t *testing.T) {
 
 func TestNewAllowanceFactory(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewAllowanceFactory(parent)
+	factory, _ := NewAllowanceFactory(parent)
 
 	expected := &allowanceFactory{
 		parent: parent,
@@ -112,32 +112,32 @@ func TestNewAllowanceFactory(t *testing.T) {
 
 func TestAllowanceFactory_GetClassID(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewAllowanceFactory(parent)
+	factory, _ := NewAllowanceFactory(parent)
 	assert.Equal(t, class.AllowanceID, factory.GetClassID())
 }
 
 func TestAllowanceFactory_GetInterfaceKey(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewAllowanceFactory(parent)
+	factory, _ := NewAllowanceFactory(parent)
 	assert.Equal(t, class.AllowanceID, factory.GetInterfaceKey())
 }
 
 func TestAllowanceFactory_InterfaceKeyEqualClassID(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewAllowanceFactory(parent)
+	factory, _ := NewAllowanceFactory(parent)
 	assert.Equal(t, factory.GetInterfaceKey(), factory.GetClassID())
 }
 
 func TestAllowanceFactory_Create_WithNilParet(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewAllowanceFactory(parent)
+	factory, _ := NewAllowanceFactory(parent)
 	_, err := factory.Create(nil)
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
 func TestAllowanceFactory_CreateWithError(t *testing.T) {
 	parent := &mockParentWithError{}
-	factory := NewAllowanceFactory(parent)
+	factory, _ := NewAllowanceFactory(parent)
 	_, err := factory.Create(parent)
 
 	assert.EqualError(t, err, "add child error")
@@ -145,24 +145,22 @@ func TestAllowanceFactory_CreateWithError(t *testing.T) {
 
 func TestAllowanceFactory_Create(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewAllowanceFactory(parent)
+	factory, _ := NewAllowanceFactory(parent)
 	proxy, err := factory.Create(parent)
 	assert.NoError(t, err)
 
-	expecatedAllowance := allowance{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
-	}
+	expectedAllowance := AllowanceCompositeCollection{}
 
-	assert.Equal(t, &allowanceProxy{
+	assert.Equal(t, &contract.BaseCompositeCollectionProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
-			Instance: &expecatedAllowance,
+			Instance: &expectedAllowance,
 		},
 	}, proxy)
 }
 
 func TestAllowanceFactory_GetParent(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewAllowanceFactory(parent)
+	factory, _ := NewAllowanceFactory(parent)
 
 	assert.Equal(t, parent, factory.GetParent())
 }

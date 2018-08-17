@@ -54,6 +54,21 @@ func newAllowance(parent object.Parent) (Allowance, error) {
 	}, nil
 }
 
+func newAllowanceWithParams(parent object.Parent, sender object.Reference, receiver object.Reference, amount int) (Allowance, error) {
+	if parent == nil {
+		return nil, fmt.Errorf("parent must not be nil")
+	}
+
+	//TODO: add posibility to init allowance fields
+	return &allowance{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		sender:            sender,
+		receiver:          receiver,
+		amount:            amount,
+		completed:         false,
+	}, nil
+}
+
 func (a *allowance) GetInterfaceKey() string {
 	return class.AllowanceID
 }
@@ -83,15 +98,45 @@ type allowanceFactory struct {
 	parent object.Parent
 }
 
-func NewAllowanceFactory(parent object.Parent) object.CompositeFactory {
-	//Todo: should check if parent is nil and add test
+func NewAllowanceFactory(parent object.Parent) (object.CompositeFactory, error) {
+	if parent == nil {
+		return nil, fmt.Errorf("parent must not be nil")
+	}
+
 	return &allowanceFactory{
 		parent: parent,
+	}, nil
+}
+
+type AllowanceCompositeCollection struct {
+	contract.BaseCompositeCollection
+}
+
+func (*AllowanceCompositeCollection) GetInterfaceKey() string {
+	return class.AllowanceID
+}
+
+func (bcc *AllowanceCompositeCollection) GetClassID() string {
+	return class.AllowanceID
+}
+
+func newAllowanceCollectionProxy(parent object.Parent) (*contract.BaseCompositeCollectionProxy, error) {
+	if parent == nil {
+		return nil, fmt.Errorf("parent must not be nil")
 	}
+	alCollection := AllowanceCompositeCollection{}
+
+	cProxy := &contract.BaseCompositeCollectionProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: &alCollection,
+		},
+	}
+
+	return cProxy, nil
 }
 
 func (*allowanceFactory) Create(parent object.Parent) (object.Composite, error) {
-	proxy, err := newAllowanceProxy(parent)
+	proxy, err := newAllowanceCollectionProxy(parent)
 	if err != nil {
 		return nil, err
 	}

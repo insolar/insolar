@@ -27,7 +27,7 @@ import (
 type Wallet interface {
 	object.Composite
 	contract.SmartContract
-	GetBalance() int
+	GetBalance() (int, error)
 }
 
 type wallet struct {
@@ -46,8 +46,40 @@ func newWallet(parent object.Parent) (Wallet, error) {
 	}, nil
 }
 
-func (w *wallet) GetBalance() int {
-	return w.balance
+func (w *wallet) GetBalance() (int, error) {
+	parent := w.GetParent()
+	owner, ok := parent.(Member)
+	if !ok {
+		return 0, fmt.Errorf("parent must be wallet")
+	}
+
+	factory, err := NewAllowanceFactory(parent)
+	if err != nil {
+		return 0, fmt.Errorf("parent must not be nil")
+	}
+	composite, err := owner.GetOrCreateComposite(factory)
+	if err != nil {
+		return 0, err
+	}
+
+	alCollection, ok := composite.(object.CompositeCollection)
+	if !ok {
+		return 0, fmt.Errorf("allowance must be composite collection")
+	}
+
+	totalAllowance := 0
+	for _, c := range alCollection.GetList() {
+		totalAllowance += c.(Allowance).GetAmount()
+		c.(Allowance).MarkCompleted()
+	}
+
+	w.balance += totalAllowance
+
+	return w.balance, nil
+}
+
+func (w *wallet) GetParent() object.Parent {
+	return w.Parent
 }
 
 func (*wallet) GetClassID() string {
@@ -75,7 +107,7 @@ func newWalletProxy(parent object.Parent) (*walletProxy, error) {
 	}, nil
 }
 
-func (wp *walletProxy) GetBalance() int {
+func (wp *walletProxy) GetBalance() (int, error) {
 	return wp.Instance.(Wallet).GetBalance()
 }
 

@@ -53,7 +53,7 @@ func (r *childResolver) GetObject(reference interface{}, cls interface{}) (inter
 		return nil, fmt.Errorf("classID is not string")
 	}
 	if proxy.GetClassID() != classID {
-		return nil, fmt.Errorf("instance class is not `%s`", classID)
+		return nil, fmt.Errorf("instance class is not `%s`. Original: `%s`", classID, proxy.GetClassID())
 	}
 	proxy.SetReference(ref)
 	return proxy, nil

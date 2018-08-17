@@ -29,6 +29,11 @@ type Member interface {
 	contract.SmartContract
 	GetUsername() string
 	GetPublicKey() string
+	// AddChild(child object.Child) (string, error)
+	// GetChild(key string) (object.Child, error)
+	// GetChildStorage() storage.Storage
+	// GetContext() []string
+	// GetContextStorage() storage.Storage
 }
 
 type member struct {

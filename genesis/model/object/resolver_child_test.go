@@ -135,7 +135,7 @@ func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
 
 	obj, err := resolver.GetObject(ref, "someClass")
 
-	assert.EqualError(t, err, "instance class is not `someClass`")
+	assert.EqualError(t, err, "instance class is not `someClass`. Original: `mockChild`")
 	assert.Nil(t, obj)
 }
 
