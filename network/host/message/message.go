@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"io"
+	"log"
 
 	"github.com/insolar/insolar/network/host/node"
 )
@@ -143,9 +144,9 @@ func DeserializeMessage(conn io.Reader) (*Message, error) {
 
 	var reader bytes.Buffer
 	for uint64(reader.Len()) < length {
-		n, err := reader.ReadFrom(conn)
+		n, _ := reader.ReadFrom(conn)
 		if err != nil && n == 0 {
-			return nil, err
+			log.Println(err.Error())
 		}
 	}
 
