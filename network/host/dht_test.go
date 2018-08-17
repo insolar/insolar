@@ -33,10 +33,11 @@ import (
 	"github.com/insolar/insolar/network/host/rpc"
 	"github.com/insolar/insolar/network/host/store"
 	"github.com/insolar/insolar/network/host/transport"
-	"github.com/insolar/insolar/network/host/transport/utptransport"
 
 	"github.com/stretchr/testify/assert"
 )
+
+const closedMessage = "closed" // "broken pipe" for kcpTransport
 
 func getDefaultCtx(dht *DHT) Context {
 	ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
@@ -120,7 +121,7 @@ func (t *mockTransport) failNextSendMessage() {
 }
 
 func (t *mockTransport) SendRequest(q *message.Message) (transport.Future, error) {
-	sequenceNumber := utptransport.AtomicLoadAndIncrementUint64(t.sequence)
+	sequenceNumber := transport.AtomicLoadAndIncrementUint64(t.sequence)
 
 	if t.failNext {
 		t.failNext = false
@@ -185,7 +186,7 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *node.Origin, tran
 	addr, _ := node.NewAddress(address)
 	origin, _ := node.NewOrigin(ids, addr)
 	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := utptransport.NewUTPTransport(conn, relay.NewProxy())
+	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
@@ -219,7 +220,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		go func(dht *DHT) {
@@ -269,19 +270,19 @@ func TestBootstrapTwoNodes(t *testing.T) {
 			err2 := dht2.Bootstrap()
 			assert.NoError(t, err2)
 
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 
 			dht2.Disconnect()
 			dht1.Disconnect()
 			done <- true
 		}()
 		err3 := dht2.Listen()
-		assert.Equal(t, "closed", err3.Error())
+		assert.Equal(t, closedMessage, err3.Error())
 		done <- true
 	}()
 
 	err = dht1.Listen()
-	assert.Equal(t, "closed", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -350,16 +351,16 @@ func TestBootstrapThreeNodes(t *testing.T) {
 			}(dht1, dht2, dht3)
 
 			err4 := dht3.Listen()
-			assert.Equal(t, "closed", err4.Error())
+			assert.Equal(t, closedMessage, err4.Error())
 			done <- true
 		}(dht1, dht2, dht3)
 		err5 := dht2.Listen()
-		assert.Equal(t, "closed", err5.Error())
+		assert.Equal(t, closedMessage, err5.Error())
 		done <- true
 	}(dht1, dht2, dht3)
 
 	err = dht1.Listen()
-	assert.Equal(t, "closed", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 2, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 2, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -406,12 +407,12 @@ func TestBootstrapNoID(t *testing.T) {
 			done <- true
 		}()
 		err3 := dht2.Listen()
-		assert.Equal(t, "closed", err3.Error())
+		assert.Equal(t, closedMessage, err3.Error())
 		done <- true
 	}()
 
 	err = dht1.Listen()
-	assert.Equal(t, "closed", err.Error())
+	assert.Equal(t, closedMessage, err.Error())
 
 	assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 	assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
@@ -457,19 +458,21 @@ func TestReconnect(t *testing.T) {
 				done <- true
 			}()
 			err3 := dht2.Listen()
-			assert.Equal(t, "closed", err3.Error())
+			assert.Equal(t, closedMessage, err3.Error())
 			done <- true
 
 		}()
 
 		err = dht1.Listen()
-		assert.Equal(t, "closed", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 
 		assert.Equal(t, 1, dht1.NumNodes(getDefaultCtx(dht1)))
 		assert.Equal(t, 1, dht2.NumNodes(getDefaultCtx(dht2)))
 
 		<-done
 		<-done
+
+		time.Sleep(time.Millisecond * 50)
 	}
 }
 
@@ -495,13 +498,13 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 
 	go func() {
 		err := dht1.Listen()
-		assert.Equal(t, "closed", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 		done <- true
 	}()
 
 	go func() {
 		err := dht2.Listen()
-		assert.Equal(t, "closed", err.Error())
+		assert.Equal(t, closedMessage, err.Error())
 		done <- true
 	}()
 
@@ -965,7 +968,7 @@ func TestDHT_FindNode(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		go func(dht *DHT) {
@@ -1021,7 +1024,7 @@ func TestDHT_Listen(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 	}
@@ -1059,7 +1062,7 @@ func TestDHT_Disconnect(t *testing.T) {
 		assert.Equal(t, 0, dht.NumNodes(ctx))
 		go func(dht *DHT) {
 			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
+			assert.Equal(t, closedMessage, err.Error())
 			done <- true
 		}(dht)
 		time.Sleep(time.Millisecond * 200)

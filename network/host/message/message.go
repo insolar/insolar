@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"io"
+	"log"
 
 	"github.com/insolar/insolar/network/host/node"
 )
@@ -128,6 +129,7 @@ func SerializeMessage(q *Message) ([]byte, error) {
 
 // DeserializeMessage reads message from io.Reader.
 func DeserializeMessage(conn io.Reader) (*Message, error) {
+
 	lengthBytes := make([]byte, 8)
 	_, err := conn.Read(lengthBytes)
 	if err != nil {
@@ -140,15 +142,16 @@ func DeserializeMessage(conn io.Reader) (*Message, error) {
 		return nil, err
 	}
 
-	msgBytes := make([]byte, length)
-	_, err = conn.Read(msgBytes)
-	if err != nil {
-		return nil, err
+	var reader bytes.Buffer
+	for uint64(reader.Len()) < length {
+		n, _ := reader.ReadFrom(conn)
+		if err != nil && n == 0 {
+			log.Println(err.Error())
+		}
 	}
 
-	reader := bytes.NewBuffer(msgBytes)
 	msg := &Message{}
-	dec := gob.NewDecoder(reader)
+	dec := gob.NewDecoder(&reader)
 
 	err = dec.Decode(msg)
 	if err != nil {
