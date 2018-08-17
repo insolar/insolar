@@ -131,7 +131,23 @@ func generateContractProxy(fileName string, out io.Writer) error {
 	if packageName != "main" {
 		panic("Contract must be in main package")
 	}
+
 	out.Write([]byte("package " + packageName + "\n\n"))
+
+	out.Write([]byte(`// Contract proxy type
+type ` + parsed.contract + ` struct {
+	Reference logicrunner.Reference
+	RPC struct{}
+}
+
+`))
+
+	out.Write([]byte(`// GetObject
+func GetObject(ref logicrunner.Reference) (r *` + parsed.contract + `) {
+	return &` + parsed.contract + `{}
+}
+`))
+
 	out.Write([]byte(generateMethodsProxies(parsed) + "\n"))
 	return nil
 }
@@ -177,12 +193,6 @@ func generateTypes(parsed *parsedFile) string {
 		text += "type " + t + "\n"
 	}
 
-	text += "type " + parsed.contract + " struct { // Contract proxy type\n"
-	text += "    address Reference logicrunner.Reference\n"
-	text += "}\n\n"
-
-	text += "func (c *" + parsed.contract + ")GetReference"
-	// GetReference
 	return text
 }
 
@@ -298,7 +308,7 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	}
 `
 
-	text += fmt.Sprintf(`\tdata, res, err := XXXGoPlugin.Exec(obj, "%s", argsSerialized)`, method.Name.Name)
+	text += fmt.Sprintf(`\tdata, res, err := r.RPC.Exec(r.Reference, "%s", argsSerialized)`, method.Name.Name)
 
 	text += `
 	if err != nil {
