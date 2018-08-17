@@ -6,11 +6,11 @@ import (
 
 type JetDrop struct {
 	PrevHash     []byte
-	RecordHashes [][]byte
+	RecordHashes [][]byte // TODO: we should probable store merkle tree here
 }
 
 func (jd *JetDrop) Hash() ([]byte, error) {
-	// TODO: hash records with merkle tree
+	// TODO: use merkle tree root instead of records here
 	encoded, err := EncodeJetDrop(jd)
 	if err != nil {
 		return nil, err
