@@ -62,7 +62,7 @@ type RPC struct {
 	gp *GoPlugin
 }
 
-// GetObject is an RPC retriving an object by its reference, so far short circueted to return
+// GetObject is an RPC retriving an object by its reference, so far short circuted to return
 // code of the plugin
 func (gpr *RPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
 	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
