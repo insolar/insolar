@@ -59,7 +59,6 @@ func newAllowanceWithParams(parent object.Parent, sender object.Reference, recei
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
-	//TODO: add posibility to init allowance fields
 	return &allowance{
 		BaseSmartContract: *contract.NewBaseSmartContract(parent),
 		sender:            sender,
