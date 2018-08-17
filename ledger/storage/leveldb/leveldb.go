@@ -137,6 +137,7 @@ func prefixkey(prefix byte, key []byte) []byte {
 	return k
 }
 
+// GetCurrentPulse return currently stored pulse.
 func (ll *LevelLedger) GetCurrentPulse() record.PulseNum {
 	return ll.pulseFn()
 }
@@ -232,11 +233,13 @@ func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLi
 	return ll.ldb.Put(k, encoded, nil)
 }
 
-func (ll *LevelLedger) GetPulseKeys(record.PulseNum) ([][]byte, error) {
+// GetPulseKeys returns all record keys from slot after given pulse.
+func (ll *LevelLedger) GetPulseKeys(pulse record.PulseNum) ([][]byte, error) {
 	// TODO: implement me
 	return [][]byte{}, nil
 }
 
+// GetDrop returns jet drop for a given pulse number.
 func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 	buf, err := ll.ldb.Get(k, nil)
@@ -253,6 +256,7 @@ func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) 
 	return drop, nil
 }
 
+// SetDrop stores given jet drop for given pulse number.
 func (ll *LevelLedger) SetDrop(pulse record.PulseNum, drop *jetdrop.JetDrop) error {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 	encoded, err := jetdrop.EncodeJetDrop(drop)

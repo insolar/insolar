@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	ErrInvalidRef        = errors.New("invalid reference")
+	ErrInvalidRef        = errors.New("invalid reference") // nolint
 	ErrClassDeactivated  = errors.New("class is deactivated")
 	ErrObjectDeactivated = errors.New("object is deactivated")
 	ErrInconsistentIndex = errors.New("inconsistent index")

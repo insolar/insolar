@@ -21,12 +21,14 @@ func (s sortHashes) Len() int {
 	return len(s)
 }
 
+// CreateJetDrop creates new jet drop from records in storage. Previous pulse is required to calculate hash.
 func CreateJetDrop(storage storage.LedgerStorer, prevPulse, newPulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	prevDrop, err := storage.GetDrop(prevPulse)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO: implement GetPulseKeys
 	recordHashes, err := storage.GetPulseKeys(newPulse)
 	if err != nil {
 		return nil, err
@@ -39,7 +41,7 @@ func CreateJetDrop(storage storage.LedgerStorer, prevPulse, newPulse record.Puls
 	}
 	drop := jetdrop.JetDrop{
 		PrevHash:     prevHash,
-		RecordHashes: recordHashes,
+		RecordHashes: recordHashes, // TODO: use merkle tree root hash here
 	}
 
 	return &drop, nil
