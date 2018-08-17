@@ -28,7 +28,7 @@ resources:
   type: concourse-pipeline
   source:
     teams:
-    - name: main
+    - name: insolar
       username: ((username))
       password: ((password))
 
@@ -73,7 +73,7 @@ jobs:
     params:
       pipelines:
         - name: branches
-          team: main
+          team: insolar
           config_file: pipelines/branches.yml
 
 
