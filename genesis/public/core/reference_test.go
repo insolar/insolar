@@ -136,7 +136,7 @@ func init() {
 }
 
 func TestNewReferenceDomain(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	parent := &mockParent{}
 	refDomain := newReferenceDomain(parent, factory)
 
@@ -146,7 +146,7 @@ func TestNewReferenceDomain(t *testing.T) {
 }
 
 func TestNewReferenceDomain_WithNoParent(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	refDomain := newReferenceDomain(nil, factory)
 	expected := &referenceDomain{
 		BaseDomain: *domain.NewBaseDomain(nil, factory, ReferenceDomainName),
@@ -157,21 +157,21 @@ func TestNewReferenceDomain_WithNoParent(t *testing.T) {
 }
 
 func TestReferenceDomain_GetClassID(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	refDomain := newReferenceDomain(nil, factory)
 	domainID := refDomain.GetClassID()
 	assert.Equal(t, class.ReferenceDomainID, domainID)
 }
 
 func TestReferenceDomain_GetClass(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	parent := &mockParent{}
 	refDomain := newReferenceDomain(parent, factory)
 	assert.Equal(t, factory, refDomain.GetClass())
 }
 
 func TestReferenceDomain_SetMap(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	refDomain := newReferenceDomain(nil, factory)
 	refDomain.globalResolverMap = nil
 
@@ -214,14 +214,14 @@ func TestReferenceDomain_ResolveReference(t *testing.T) {
 }
 
 func TestReferenceDomain_ResolveReference_IncorrectRef(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	refDomain := newReferenceDomain(nil, factory)
 	_, err := refDomain.ResolveReference("1")
 	assert.EqualError(t, err, "object with record 1 does not exist")
 }
 
 func TestNewReferenceDomainProxy(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	parent := &mockParent{}
 	refDomainProxy := newReferenceDomainProxy(parent, factory)
 
@@ -233,7 +233,7 @@ func TestNewReferenceDomainProxy(t *testing.T) {
 }
 
 func TestReferenceDomainProxy_SetMap(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	refDomain := newReferenceDomainProxy(nil, factory)
 	refDomain.Instance.(*referenceDomain).globalResolverMap = nil
 
@@ -269,7 +269,7 @@ func TestReferenceDomainProxy_ResolveReference(t *testing.T) {
 }
 
 func TestReferenceDomainProxy_ResolveReference_IncorrectRef(t *testing.T) {
-	factory := &mockFactory{}
+	// factory := &mockFactory{}
 	parent := &mockParent{}
 	refDomainProxy := newReferenceDomainProxy(parent, factory)
 

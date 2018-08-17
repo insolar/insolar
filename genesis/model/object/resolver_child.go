@@ -49,7 +49,7 @@ func (r *childResolver) GetObject(reference interface{}, cls interface{}) (inter
 	}
 
 	class := proxy.GetClass()
-	if cls == nil && class != cls {
+	/*if cls == nil && class != cls {
 		_, okF := class.(Factory)
 		_, okCF := class.(CompositeFactory)
 		if !okF && !okCF {
@@ -58,6 +58,9 @@ func (r *childResolver) GetObject(reference interface{}, cls interface{}) (inter
 	} else if class != cls {
 		fmt.Println(proxy.GetClass(), cls)
 		return nil, fmt.Errorf("instance class is not equal received")
+	}*/
+	if err = checkClass(class, cls); err != nil {
+		return nil, err
 	}
 
 	proxy.SetReference(ref)

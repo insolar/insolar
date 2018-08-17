@@ -33,7 +33,7 @@ func (c *mockProxyReference) GetClassID() string {
 }
 
 func (c *mockProxyReference) GetClass() Proxy {
-	return nil
+	return &ReferenceContainer{}
 }
 
 func (c *mockProxyReference) GetReference() Reference {
