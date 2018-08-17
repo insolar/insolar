@@ -20,6 +20,7 @@ import (
 	"errors"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -206,6 +207,10 @@ func (t *kcpTransport) sendMessage(msg *message.Message) error {
 	return err
 }
 
+func (t *kcpTransport) getRemoteAddress(conn net.Conn) string {
+	return strings.Split(conn.RemoteAddr().String(), ":")[0]
+}
+
 func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 	for {
 		err := session.SetDeadline(time.Now().Add(time.Millisecond * 50))
@@ -220,7 +225,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 			// }
 			return
 		}
-
+		msg.RemoteAddress = t.getRemoteAddress(session)
 		t.handleMessage(msg)
 	}
 }

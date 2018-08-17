@@ -39,8 +39,18 @@ const (
 	TypeFindValue
 	// TypeRPC is message type for RPC method.
 	TypeRPC
-	// TypeRelay is message type for request target to be a relay
+	// TypeRelay is message type for request target to be a relay.
 	TypeRelay
+	// TypeAuth is message type for authentication between nodes.
+	TypeAuth
+	// TypeCheckOrigin is message to check originality of some node.
+	TypeCheckOrigin
+	// TypeObtainIP is message to get itself IP from another node.
+	TypeObtainIP
+	// TypeRelayOwnership is message to say all other nodes that current node have a static IP.
+	TypeRelayOwnership
+	// TypeKnownOuterNodes is message to say how much outer nodes current node know.
+	TypeKnownOuterNodes
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -48,10 +58,11 @@ type RequestID uint64
 
 // Message is DHT message object.
 type Message struct {
-	Sender    *node.Node
-	Receiver  *node.Node
-	Type      messageType
-	RequestID RequestID
+	Sender        *node.Node
+	Receiver      *node.Node
+	Type          messageType
+	RequestID     RequestID
+	RemoteAddress string
 
 	Data       interface{}
 	Error      error
@@ -79,6 +90,59 @@ func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message 
 	}
 }
 
+// NewAuthMessage uses for starting authentication.
+func NewAuthMessage(command CommandType, sender, receiver *node.Node) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeAuth,
+		Data:     &RequestAuth{Command: command},
+	}
+}
+
+// NewCheckOriginMessage uses for check originality.
+func NewCheckOriginMessage(sender, receiver *node.Node) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeCheckOrigin,
+		Data:     &RequestCheckOrigin{},
+	}
+}
+
+// NewObtainIPMessage uses for get self IP.
+func NewObtainIPMessage(sender, receiver *node.Node) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeObtainIP,
+		Data:     &RequestObtainIP{},
+	}
+}
+
+// NewRelayOwnershipMessage uses for relay ownership request.
+func NewRelayOwnershipMessage(sender, receiver *node.Node, ready bool) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeRelayOwnership,
+		Data:     &RequestRelayOwnership{Ready: ready},
+	}
+}
+
+// NewKnownOuterNodesMessage uses to notify all nodes in home subnet about known outer nodes.
+func NewKnownOuterNodesMessage(sender, receiver *node.Node, nodes int) *Message {
+	return &Message{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeKnownOuterNodes,
+		Data: &RequestKnownOuterNodes{
+			ID:         sender.ID.String(),
+			OuterNodes: nodes,
+		},
+	}
+}
+
 // IsValid checks if message data is a valid structure for current message type.
 func (m *Message) IsValid() (valid bool) {
 	switch m.Type {
@@ -94,6 +158,16 @@ func (m *Message) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestDataRPC)
 	case TypeRelay:
 		_, valid = m.Data.(*RequestRelay)
+	case TypeAuth:
+		_, valid = m.Data.(*RequestAuth)
+	case TypeCheckOrigin:
+		_, valid = m.Data.(*RequestCheckOrigin)
+	case TypeObtainIP:
+		_, valid = m.Data.(*RequestObtainIP)
+	case TypeRelayOwnership:
+		_, valid = m.Data.(*RequestRelayOwnership)
+	case TypeKnownOuterNodes:
+		_, valid = m.Data.(*RequestKnownOuterNodes)
 	default:
 		valid = false
 	}
@@ -167,10 +241,20 @@ func init() {
 	gob.Register(&RequestDataStore{})
 	gob.Register(&RequestDataRPC{})
 	gob.Register(&RequestRelay{})
+	gob.Register(&RequestAuth{})
+	gob.Register(&RequestCheckOrigin{})
+	gob.Register(&RequestObtainIP{})
+	gob.Register(&RequestRelayOwnership{})
+	gob.Register(&RequestKnownOuterNodes{})
 
 	gob.Register(&ResponseDataFindNode{})
 	gob.Register(&ResponseDataFindValue{})
 	gob.Register(&ResponseDataStore{})
 	gob.Register(&ResponseDataRPC{})
 	gob.Register(&ResponseRelay{})
+	gob.Register(&ResponseAuth{})
+	gob.Register(&ResponseCheckOrigin{})
+	gob.Register(&ResponseObtainIP{})
+	gob.Register(&ResponseRelayOwnership{})
+	gob.Register(&ResponseKnownOuterNodes{})
 }

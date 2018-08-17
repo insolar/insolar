@@ -25,16 +25,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewRelay(t *testing.T) {
+func TestRelay_ClientsCount(t *testing.T) {
 	relay := NewRelay()
+	count := 20
 
-	check := true
+	nodes := makeNodes(count, t)
 
-	if relay == nil {
-		check = false
+	for i := range nodes {
+		relay.AddClient(nodes[i])
 	}
 
-	assert.Equal(t, true, check)
+	assert.Equal(t, count, relay.ClientsCount())
+}
+
+func TestNewProxy(t *testing.T) {
+	proxy := NewProxy()
+	assert.NotNil(t, proxy)
+}
+
+func TestNewRelay(t *testing.T) {
+	relay := NewRelay()
+	assert.NotNil(t, relay)
 }
 
 func makeAddresses(count int, t *testing.T) []*node.Address {
@@ -78,7 +89,10 @@ func TestRelay_AddClient(t *testing.T) {
 	nodes := makeNodes(count, t)
 
 	for i := range nodes {
-		relay.AddClient(nodes[i])
+		err := relay.AddClient(nodes[i])
+		assert.NoError(t, err)
+		err = relay.AddClient(nodes[i]) // adding existing node
+		assert.EqualError(t, err, "client exists already")
 	}
 
 	assert.Equal(t, count, relay.ClientsCount())
@@ -99,7 +113,10 @@ func TestRelay_RemoveClient(t *testing.T) {
 	assert.Equal(t, count, relay.ClientsCount())
 
 	for i := range nodes {
-		relay.RemoveClient(nodes[i])
+		err := relay.RemoveClient(nodes[i])
+		assert.NoError(t, err)
+		err = relay.RemoveClient(nodes[i])
+		assert.EqualError(t, err, "client not found")
 	}
 
 	assert.Equal(t, 0, relay.ClientsCount())
@@ -155,6 +172,7 @@ func TestProxy_AddProxyNode(t *testing.T) {
 
 	for i := range addresses {
 		proxy.AddProxyNode(addresses[i].String())
+		proxy.AddProxyNode(addresses[i].String()) // adding existed node
 	}
 
 	assert.Equal(t, count, proxy.ProxyNodesCount())
@@ -173,6 +191,7 @@ func TestProxy_RemoveProxyNode(t *testing.T) {
 
 	for i := range addresses {
 		proxy.RemoveProxyNode(addresses[i].String())
+		proxy.RemoveProxyNode(addresses[i].String()) // remove removed node
 	}
 
 	assert.Equal(t, 0, proxy.ProxyNodesCount())
@@ -184,6 +203,8 @@ func TestProxy_GetNextProxyAddress(t *testing.T) {
 	proxy := NewProxy()
 	idx := make(map[int]string, count)
 
+	assert.Equal(t, "", proxy.GetNextProxyAddress())
+
 	for i := range addresses {
 		proxy.AddProxyNode(addresses[i].String())
 		idx[i] = addresses[i].String()
@@ -192,6 +213,9 @@ func TestProxy_GetNextProxyAddress(t *testing.T) {
 	assert.Equal(t, count, proxy.ProxyNodesCount())
 	assert.Equal(t, count, len(idx))
 
+	for i := 0; i < proxy.ProxyNodesCount(); i++ {
+		assert.Equal(t, idx[i], proxy.GetNextProxyAddress())
+	}
 	for i := 0; i < proxy.ProxyNodesCount(); i++ {
 		assert.Equal(t, idx[i], proxy.GetNextProxyAddress())
 	}

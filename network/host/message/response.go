@@ -44,8 +44,34 @@ type ResponseDataRPC struct {
 	Error   string
 }
 
-// ResponseRelay is data for relay request response
+// ResponseRelay is data for relay request response.
 type ResponseRelay struct {
-	Success bool
-	State   relay.State
+	State relay.State
+}
+
+// ResponseAuth is data for authentication request response.
+type ResponseAuth struct {
+	Success       bool
+	AuthUniqueKey []byte
+}
+
+// ResponseCheckOrigin is data for check originality request response.
+type ResponseCheckOrigin struct {
+	AuthUniqueKey []byte
+}
+
+// ResponseObtainIP is data for get a IP of requesting node.
+type ResponseObtainIP struct {
+	IP string
+}
+
+// ResponseRelayOwnership is data to response to relay ownership request.
+type ResponseRelayOwnership struct {
+	Accepted bool
+}
+
+// ResponseKnownOuterNodes is data to answer if origin node know more outer nodes.
+type ResponseKnownOuterNodes struct {
+	ID         string //	id of node in which more known outer nodes
+	OuterNodes int    // number of known outer nodes
 }
