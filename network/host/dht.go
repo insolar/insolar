@@ -40,6 +40,11 @@ import (
 	"github.com/jbenet/go-base58"
 )
 
+type RPC interface {
+	RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error)
+	RemoteProcedureRegister(name string, method func(args [][]byte) ([]byte, error))
+}
+
 // DHT represents the state of the local node in the distributed hash table.
 type DHT struct {
 	tables  []*routing.HashTable
@@ -1415,6 +1420,16 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 		future.Cancel()
 		return nil, errors.New("timeout")
 	}
+}
+
+// Register procedure for remote call on this node
+func (dht *DHT) RemoteProcedureRegister(name string, method func(args [][]byte) ([]byte, error)) {
+	rp := func(sender *node.Node, args [][]byte) ([]byte, error) {
+		// TODO: what about sender ?
+		return method(args)
+	}
+
+	dht.rpc.RegisterMethod(name, rp)
 }
 
 // ObtainIP starts to self IP obtaining.
