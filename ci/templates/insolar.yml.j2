@@ -39,6 +39,8 @@ jobs:
              pwd
              ls -alh go
              export GOPATH=$(pwd)/go
+             mkdir $GOPATH/bin
+             export PATH=$PATH:$GOPATH/bin
              ls -alh
              env
              cd $GOPATH/src/github.com/insolar/insolar
