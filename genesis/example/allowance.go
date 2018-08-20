@@ -54,7 +54,7 @@ func newAllowance(parent object.Parent, class object.CompositeFactory) (Allowanc
 	}, nil
 }
 
-func newAllowanceWithParams(parent object.Parent, class object.CompositeFactory, sender object.Reference, receiver object.Reference, amount int) (Allowance, error) {
+func NewAllowanceWithParams(parent object.Parent, class object.CompositeFactory, sender object.Reference, receiver object.Reference, amount int) (Allowance, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}

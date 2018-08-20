@@ -166,7 +166,7 @@ func TestWalletProxy_GetBalance_With_Allowances(t *testing.T) {
 	assert.NoError(t, err)
 	alCollection := composite.(object.CompositeCollection)
 
-	nAllowance, err := newAllowanceWithParams(parent, factory, testSender, testReceiver, testAllowance)
+	nAllowance, err := NewAllowanceWithParams(parent, factory, testSender, testReceiver, testAllowance)
 	assert.NoError(t, err)
 
 	alCollection.Add(nAllowance)
