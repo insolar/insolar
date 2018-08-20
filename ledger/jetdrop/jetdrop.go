@@ -14,16 +14,28 @@
  *    limitations under the License.
  */
 
-package artifactmanager
+package jetdrop
 
 import (
-	"errors"
+	"golang.org/x/crypto/sha3"
 )
 
-var (
-	ErrInvalidRef        = errors.New("invalid reference") // nolint
-	ErrClassDeactivated  = errors.New("class is deactivated")
-	ErrObjectDeactivated = errors.New("object is deactivated")
-	ErrInconsistentIndex = errors.New("inconsistent index")
-	ErrWrongObject       = errors.New("provided object is not and instance of provided class")
-)
+// JetDrop is a blockchain block. It contains hashes from all records from slot.
+type JetDrop struct {
+	PrevHash     []byte
+	RecordHashes [][]byte // TODO: this should be a byte slice that represents the merkle tree root of records
+}
+
+// Hash calculates jet drop hash. Raw data for hash should contain previous hash and merkle tree hash from records.
+func (jd *JetDrop) Hash() ([]byte, error) {
+	encoded, err := EncodeJetDrop(jd)
+	if err != nil {
+		return nil, err
+	}
+	h := sha3.New224()
+	_, err = h.Write(encoded)
+	if err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
+}
