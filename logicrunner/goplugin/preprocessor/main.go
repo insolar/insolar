@@ -185,6 +185,12 @@ func generateContractProxy(fileName string, out io.Writer) error {
 
 	out.Write([]byte("package " + proxyPackageName + "\n\n"))
 
+	out.Write([]byte(`import (
+	"github.com/ugorji/go/codec"
+)
+
+`))
+
 	out.Write([]byte(`// Contract proxy type
 type ` + parsed.contract + ` struct {
 	Reference logicrunner.Reference
