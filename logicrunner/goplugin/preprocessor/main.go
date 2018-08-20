@@ -17,7 +17,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -28,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 )
 
 type parsedFile struct {
@@ -44,28 +44,71 @@ type parsedFile struct {
 var mode string
 var outfile string
 
-func main() {
-	flag.StringVar(&mode, "mode", "wrapper", "Generation mode: <wrapper|helper>")
-	flag.StringVar(&outfile, "o", "-", "output file")
-	flag.Parse()
+func printUsage() {
+	fmt.Println("usage: preprocessor <command> [<args>]")
+	fmt.Println("Commands: ")
+	fmt.Println(" wrapper   generate contract's wrapper")
+	fmt.Println(" proxy     generate contract's proxy")
+}
 
-	var output io.WriteCloser
-	if outfile == "-" {
-		output = os.Stdout
+type outputFlag struct {
+	path   string
+	writer io.Writer
+}
+
+func newOutputFlag() *outputFlag {
+	return &outputFlag{path: "-", writer: os.Stdout}
+}
+
+func (r *outputFlag) String() string {
+	return r.path
+}
+func (r *outputFlag) Set(arg string) error {
+	var res io.Writer
+	if arg == "-" {
+		res = os.Stdout
 	} else {
 		var err error
-		output, err = os.OpenFile(outfile, os.O_WRONLY, 0644)
+		res, err = os.OpenFile(arg, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
-			panic(err)
+			return errors.Wrap(err, "couldn't open file for writing")
 		}
-		defer output.Close()
+	}
+	r.path = arg
+	r.writer = res
+	return nil
+}
+func (r *outputFlag) Type() string {
+	return "file"
+}
+
+func main() {
+
+	if len(os.Args) == 1 {
+		printUsage()
+		return
 	}
 
-	for _, fn := range flag.Args() {
-		err := generateContractWrapper(fn, output)
-		if err != nil {
-			panic(err)
+	switch os.Args[1] {
+	case "wrapper":
+		fs := flag.NewFlagSet("wrapper", flag.ExitOnError)
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		fs.Parse(os.Args[2:])
+
+		for _, fn := range fs.Args() {
+			err := generateContractWrapper(fn, output.writer)
+			if err != nil {
+				panic(err)
+			}
 		}
+	case "proxy":
+		fs := flag.NewFlagSet("proxy", flag.ExitOnError)
+		fs.Parse(os.Args[2:])
+	default:
+		printUsage()
+		fmt.Printf("\n\n%q is not valid command.\n", os.Args[1])
+		os.Exit(2)
 	}
 }
 
