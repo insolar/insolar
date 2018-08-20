@@ -41,9 +41,6 @@ type parsedFile struct {
 	contract string
 }
 
-var mode string
-var outfile string
-
 func printUsage() {
 	fmt.Println("usage: preprocessor <command> [<args>]")
 	fmt.Println("Commands: ")
