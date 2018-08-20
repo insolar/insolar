@@ -365,7 +365,7 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	}
 `
 
-	text += fmt.Sprintf(`\tdata, res, err := r.RPC.Exec(r.Reference, "%s", argsSerialized)`, method.Name.Name)
+	text += fmt.Sprintf("\t"+`data, res, err := r.RPC.Exec(r.Reference, "%s", argsSerialized)`, method.Name.Name)
 
 	text += `
 	if err != nil {
