@@ -193,14 +193,14 @@ func generateContractProxy(fileName string, out io.Writer) error {
 
 	out.Write([]byte(`// Contract proxy type
 type ` + parsed.contract + ` struct {
-	Reference logicrunner.Reference
+	Reference string
 	RPC struct{}
 }
 
 `))
 
 	out.Write([]byte(`// GetObject
-func GetObject(ref logicrunner.Reference) (r *` + parsed.contract + `) {
+func GetObject(ref string) (r *` + parsed.contract + `) {
 	return &` + parsed.contract + `{}
 }
 `))
