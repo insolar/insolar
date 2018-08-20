@@ -24,6 +24,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -167,12 +168,22 @@ func generateContractProxy(fileName string, out io.Writer) error {
 		return errors.Wrap(err, "couldn't parse")
 	}
 
+	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(fileName)
+	if match == nil {
+		return errors.Wrap(err, "couldn't match filename without extension and path")
+	}
+
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
 		panic("Contract must be in main package")
 	}
 
-	out.Write([]byte("package " + packageName + "\n\n"))
+	proxyPackageName := match[2]
+	if proxyPackageName == "main" {
+		proxyPackageName = match[1]
+	}
+
+	out.Write([]byte("package " + proxyPackageName + "\n\n"))
 
 	out.Write([]byte(`// Contract proxy type
 type ` + parsed.contract + ` struct {
