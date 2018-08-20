@@ -48,13 +48,13 @@ func (r *globalResolver) GetObject(reference interface{}, cls interface{}) (inte
 	if err != nil {
 		return nil, err
 	}
-	classID, ok := cls.(string)
-	if !ok {
-		return nil, fmt.Errorf("classID is not string")
+
+	class := proxy.GetClass()
+
+	if err = checkClass(class, cls); err != nil {
+		return nil, err
 	}
-	if proxy.GetClassID() != classID {
-		return nil, fmt.Errorf("instance class is not `%s`", classID)
-	}
+
 	proxy.(Proxy).SetReference(ref)
 	return proxy, nil
 }

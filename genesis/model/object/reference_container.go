@@ -22,14 +22,14 @@ import (
 
 // ReferenceContainer is a implementation of Proxy for containerization purpose.
 type ReferenceContainer struct {
-	reference Reference
+	storedReference Reference
 	BaseProxy
 }
 
 // NewReferenceContainer creates new container for reference.
 func NewReferenceContainer(ref Reference) *ReferenceContainer {
 	return &ReferenceContainer{
-		reference: ref,
+		storedReference: ref,
 	}
 }
 
@@ -38,7 +38,11 @@ func (rc *ReferenceContainer) GetClassID() string {
 	return class.ReferenceID
 }
 
+func (rc *ReferenceContainer) GetClass() Proxy {
+	return rc
+}
+
 // GetStoredReference returns stored reference.
 func (rc *ReferenceContainer) GetStoredReference() Reference {
-	return rc.reference
+	return rc.storedReference
 }

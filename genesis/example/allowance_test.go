@@ -36,14 +36,15 @@ var testReceiver = MakeTestReference("receiver")
 
 func TestNewAllowance(t *testing.T) {
 
+	compositeFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	al, err := newAllowance(parent)
+	al, err := newAllowance(parent, compositeFactory)
 	assert.NoError(t, err)
 
 	assert.Equal(t, &allowance{
 		amount:            0,
 		completed:         false,
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, compositeFactory),
 	}, al)
 }
 
@@ -92,8 +93,9 @@ func TestAllowance_GetReceiver(t *testing.T) {
 }
 
 func TestAllowance_GetInterfaceKey(t *testing.T) {
+	compositeFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	al, err := newAllowance(parent)
+	al, err := newAllowance(parent, compositeFactory)
 	assert.NoError(t, err)
 	assert.Equal(t, class.AllowanceID, al.GetInterfaceKey())
 }
@@ -149,7 +151,10 @@ func TestAllowanceFactory_Create(t *testing.T) {
 	proxy, err := factory.Create(parent)
 	assert.NoError(t, err)
 
-	expectedAllowance := AllowanceCompositeCollection{}
+	expectedAllowance := AllowanceCompositeCollection{
+		parent: parent,
+		class:  factory,
+	}
 
 	assert.Equal(t, &contract.BaseCompositeCollectionProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
@@ -166,16 +171,18 @@ func TestAllowanceFactory_GetParent(t *testing.T) {
 }
 
 func TestNewAllowanceProxy_WithNilParent(t *testing.T) {
-	_, err := newAllowanceProxy(nil)
+	compositeFactory := &MockBaseCompositeFactory{}
+	_, err := newAllowanceProxy(nil, compositeFactory)
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
 func TestNewAllowanceProxy(t *testing.T) {
+	compositeFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	proxy, err := newAllowanceProxy(parent)
+	proxy, err := newAllowanceProxy(parent, compositeFactory)
 	assert.NoError(t, err)
 
-	nAllowance, err := newAllowance(parent)
+	nAllowance, err := newAllowance(parent, compositeFactory)
 	assert.NoError(t, err)
 
 	assert.Equal(t, &allowanceProxy{
@@ -229,15 +236,17 @@ func TestAllowanceProxy_GetReceiver(t *testing.T) {
 }
 
 func TestAllowanceProxy_GetInterfaceKey(t *testing.T) {
+	compositeFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	proxy, err := newAllowanceProxy(parent)
+	proxy, err := newAllowanceProxy(parent, compositeFactory)
 	assert.NoError(t, err)
 	assert.Equal(t, class.AllowanceID, proxy.GetInterfaceKey())
 }
 
 func TestAllowanceProxy_MarkCompleted(t *testing.T) {
+	compositeFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	proxy, err := newAllowanceProxy(parent)
+	proxy, err := newAllowanceProxy(parent, compositeFactory)
 	assert.NoError(t, err)
 	assert.Equal(t, false, proxy.Instance.(*allowance).completed)
 	proxy.MarkCompleted()
@@ -245,8 +254,9 @@ func TestAllowanceProxy_MarkCompleted(t *testing.T) {
 }
 
 func TestAllowanceProxy_IsCompleted(t *testing.T) {
+	compositeFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
-	proxy, err := newAllowanceProxy(parent)
+	proxy, err := newAllowanceProxy(parent, compositeFactory)
 	assert.NoError(t, err)
 	assert.Equal(t, false, proxy.Instance.(*allowance).IsCompleted())
 

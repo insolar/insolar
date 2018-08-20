@@ -29,7 +29,7 @@ func TestNewReferenceContainer(t *testing.T) {
 	ref, _ := NewReference(domain, record, GlobalScope)
 	container := NewReferenceContainer(ref)
 	assert.Equal(t, &ReferenceContainer{
-		reference: ref,
+		storedReference: ref,
 	}, container)
 
 }
@@ -39,7 +39,7 @@ func TestReferenceContainer_GetStoredReference(t *testing.T) {
 	record := "156"
 	ref, _ := NewReference(domain, record, GlobalScope)
 	container := &ReferenceContainer{
-		reference: ref,
+		storedReference: ref,
 	}
 
 	assert.Equal(t, ref, container.GetStoredReference())
@@ -50,7 +50,7 @@ func TestReferenceContainer_GetClassID(t *testing.T) {
 	record := "156"
 	ref, _ := NewReference(domain, record, GlobalScope)
 	container := &ReferenceContainer{
-		reference: ref,
+		storedReference: ref,
 	}
 
 	refID := container.GetClassID()

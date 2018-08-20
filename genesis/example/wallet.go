@@ -32,18 +32,23 @@ type Wallet interface {
 
 type wallet struct {
 	contract.BaseSmartContract
-	balance int
+	balance        int
+	allowanceClass object.CompositeFactory
 }
 
-func newWallet(parent object.Parent) (Wallet, error) {
+func newWallet(parent object.Parent, class object.CompositeFactory) (Wallet, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
 	return &wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, class.(object.Proxy)),
 		balance:           0,
 	}, nil
+}
+
+func (w *wallet) SetAllowanceClass(alClass object.CompositeFactory) {
+	w.allowanceClass = alClass
 }
 
 func (w *wallet) GetBalance() (int, error) {
@@ -53,11 +58,11 @@ func (w *wallet) GetBalance() (int, error) {
 		return 0, fmt.Errorf("parent must be wallet")
 	}
 
-	factory, err := NewAllowanceFactory(parent)
-	if err != nil {
-		return 0, fmt.Errorf("parent must not be nil")
+	if w.allowanceClass == nil {
+		return w.balance, nil
 	}
-	composite, err := owner.GetOrCreateComposite(factory)
+
+	composite, err := owner.GetOrCreateComposite(w.allowanceClass)
 	if err != nil {
 		return 0, err
 	}
@@ -94,8 +99,8 @@ type walletProxy struct {
 	contract.BaseSmartContractProxy
 }
 
-func newWalletProxy(parent object.Parent) (*walletProxy, error) {
-	instance, err := newWallet(parent)
+func newWalletProxy(parent object.Parent, class object.CompositeFactory) (*walletProxy, error) {
+	instance, err := newWallet(parent, class)
 	if err != nil {
 		return nil, err
 	}
@@ -117,6 +122,7 @@ func (wp *walletProxy) GetInterfaceKey() string {
 
 type walletFactory struct {
 	object.BaseProxy
+	//object.BaseFactory
 	parent object.Parent
 }
 
@@ -134,8 +140,12 @@ func (*walletFactory) GetClassID() string {
 	return class.WalletID
 }
 
-func (*walletFactory) Create(parent object.Parent) (object.Composite, error) {
-	proxy, err := newWalletProxy(parent)
+func (wf *walletFactory) GetClass() object.Proxy {
+	return wf
+}
+
+func (wf *walletFactory) Create(parent object.Parent) (object.Composite, error) {
+	proxy, err := newWalletProxy(parent, wf)
 	if err != nil {
 		return nil, err
 	}

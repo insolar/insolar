@@ -16,7 +16,32 @@
 
 package object
 
+import (
+	"fmt"
+	"reflect"
+)
+
 // Resolver marks that instance have ability to get proxy objects by its reference.
 type Resolver interface {
-	GetObject(reference interface{}, classID interface{}) (interface{}, error)
+	GetObject(reference interface{}, cls interface{}) (interface{}, error)
+}
+
+func checkClass(class Proxy, expected interface{}) error {
+	if class == expected {
+		return nil
+	}
+	if expected == nil {
+		_, okF := class.(Factory)
+		_, okCF := class.(CompositeFactory)
+		if okF || okCF {
+			return nil
+		}
+
+	}
+	fmt.Printf("%+v\n", class)
+	fmt.Printf("%+v\n", expected)
+
+	fmt.Println(reflect.DeepEqual(class, expected))
+
+	return fmt.Errorf("instance class is not equal received")
 }

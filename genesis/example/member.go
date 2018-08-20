@@ -29,11 +29,6 @@ type Member interface {
 	contract.SmartContract
 	GetUsername() string
 	GetPublicKey() string
-	// AddChild(child object.Child) (string, error)
-	// GetChild(key string) (object.Child, error)
-	// GetChildStorage() storage.Storage
-	// GetContext() []string
-	// GetContextStorage() storage.Storage
 }
 
 type member struct {
@@ -43,12 +38,12 @@ type member struct {
 }
 
 // newMember creates new instance of member.
-func newMember(parent object.Parent) (Member, error) {
+func newMember(parent object.Parent, class object.Factory) (Member, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 	return &member{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, class.(object.Proxy)),
 	}, nil
 }
 
@@ -72,8 +67,8 @@ type memberProxy struct {
 }
 
 // newMemberProxy creates new proxy and associates it with new instance of Member.
-func newMemberProxy(parent object.Parent) (*memberProxy, error) {
-	instance, err := newMember(parent)
+func newMemberProxy(parent object.Parent, class object.Factory) (*memberProxy, error) {
+	instance, err := newMember(parent, class)
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +95,8 @@ func (mp *memberProxy) CreateComposite(compositeFactory object.CompositeFactory)
 }
 
 // GetComposite is a proxy call for instance method.
-func (mp *memberProxy) GetComposite(interfaceKey string, classID string) (object.Composite, error) {
-	return mp.Instance.(Member).GetComposite(interfaceKey, classID)
+func (mp *memberProxy) GetComposite(interfaceKey string, class object.CompositeFactory) (object.Composite, error) {
+	return mp.Instance.(Member).GetComposite(interfaceKey, class)
 }
 
 // GetOrCreateComposite is a proxy call for instance method.
@@ -126,6 +121,10 @@ func (mf *memberFactory) GetClassID() string {
 	return class.MemberID
 }
 
+func (mf *memberFactory) GetClass() object.Proxy {
+	return mf
+}
+
 // GetParent returns parent.
 func (mf *memberFactory) GetParent() object.Parent {
 	return mf.parent
@@ -133,7 +132,7 @@ func (mf *memberFactory) GetParent() object.Parent {
 
 // Create is a factory method for new Member instances.
 func (mf *memberFactory) Create(parent object.Parent) (object.Proxy, error) {
-	proxy, err := newMemberProxy(parent)
+	proxy, err := newMemberProxy(parent, mf)
 	if err != nil {
 		return nil, err
 	}

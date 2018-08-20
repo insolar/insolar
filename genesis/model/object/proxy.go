@@ -37,6 +37,10 @@ func (bp *BaseProxy) GetClassID() string {
 	return class.ProxyID
 }
 
+func (bp *BaseProxy) GetClass() Proxy {
+	return nil
+}
+
 // GetParent always returns nil.
 func (bp *BaseProxy) GetParent() Parent {
 	return nil

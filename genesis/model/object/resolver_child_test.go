@@ -32,6 +32,10 @@ func (p *mockProxy) GetClassID() string {
 	return "mockProxy"
 }
 
+func (p *mockProxy) GetClass() Proxy {
+	return nil
+}
+
 func (p *mockProxy) GetReference() Reference {
 	return p.reference
 }
@@ -40,21 +44,59 @@ func (p *mockProxy) SetReference(reference Reference) {
 	p.reference = reference
 }
 
+type mockFactory struct {
+}
+
+func (f *mockFactory) Create(parent Parent) (Proxy, error) {
+	return &mockChildProxy{
+		parent: parent,
+	}, nil
+}
+
+func (f *mockFactory) GetClassID() string {
+	return "mockFactory"
+}
+
+func (f *mockFactory) GetClass() Proxy {
+	return f
+}
+
+func (f *mockFactory) GetReference() Reference {
+	return nil
+}
+
+func (f *mockFactory) GetParent() Parent {
+	return nil
+}
+
+func (f *mockFactory) SetReference(reference Reference) {
+
+}
+
+var factory = &mockFactory{}
+
 type mockChildProxy struct {
 	mockProxy
 	ContextStorage storage.Storage
 	parent         Parent
+	class          Proxy
 }
 
 func (c *mockChildProxy) GetClassID() string {
 	return "mockChild"
 }
 
+func (c *mockChildProxy) GetClass() Proxy {
+	return c.class
+}
+
 func (c *mockChildProxy) GetParent() Parent {
 	return c.parent
 }
 
-var child = &mockChildProxy{}
+var child = &mockChildProxy{
+	class: factory,
+}
 
 type mockParentProxy struct {
 	mockProxy
@@ -122,31 +164,20 @@ func TestChildResolver_GetObject_No_Object(t *testing.T) {
 	resolver := newChildResolver(mockParent)
 	ref, _ := NewReference("1", "1", ChildScope)
 
-	obj, err := resolver.GetObject(ref, "someClass")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.EqualError(t, err, "object with record 1 does not exist")
 	assert.Nil(t, obj)
 }
 
-func TestChildResolver_GetObject_Wrong_classID(t *testing.T) {
-	mockParent := &mockParentProxy{}
-	resolver := newChildResolver(mockParent)
-	ref, _ := NewReference("1", "1", ChildScope)
-
-	obj, err := resolver.GetObject(ref, "someClass")
-
-	assert.EqualError(t, err, "instance class is not `someClass`. Original: `mockChild`")
-	assert.Nil(t, obj)
-}
-
-func TestChildResolver_GetObject_ClassID_Not_Str(t *testing.T) {
+func TestChildResolver_GetObject_Wrong_Class(t *testing.T) {
 	mockParent := &mockParentProxy{}
 	resolver := newChildResolver(mockParent)
 	ref, _ := NewReference("1", "1", ChildScope)
 
 	obj, err := resolver.GetObject(ref, ref)
 
-	assert.EqualError(t, err, "classID is not string")
+	assert.EqualError(t, err, "instance class is not equal received")
 	assert.Nil(t, obj)
 }
 
@@ -155,7 +186,7 @@ func TestChildResolver_GetObject(t *testing.T) {
 	resolver := newChildResolver(mockParent)
 	ref, _ := NewReference("1", "1", ChildScope)
 
-	obj, err := resolver.GetObject(ref, "mockChild")
+	obj, err := resolver.GetObject(ref, factory)
 
 	assert.NoError(t, err)
 	assert.Equal(t, child, obj)

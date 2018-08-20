@@ -43,13 +43,13 @@ type instanceDomain struct {
 }
 
 // newInstanceDomain creates new instance of InstanceDomain
-func newInstanceDomain(parent object.Parent) (*instanceDomain, error) {
+func newInstanceDomain(parent object.Parent, class object.Factory) (*instanceDomain, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
 	instDomain := &instanceDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, InstanceDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, class, InstanceDomainName),
 	}
 	return instDomain, nil
 }
@@ -97,8 +97,8 @@ type instanceDomainProxy struct {
 }
 
 // newInstanceDomainProxy creates new proxy and associate it with new instance of InstanceDomain.
-func newInstanceDomainProxy(parent object.Parent) (*instanceDomainProxy, error) {
-	instance, err := newInstanceDomain(parent)
+func newInstanceDomainProxy(parent object.Parent, class object.Factory) (*instanceDomainProxy, error) {
+	instance, err := newInstanceDomain(parent, class)
 	if err != nil {
 		return nil, err
 	}
@@ -142,9 +142,13 @@ func (idf *instanceDomainFactory) GetClassID() string {
 	return class.InstanceDomainID
 }
 
+func (idf *instanceDomainFactory) GetClass() object.Proxy {
+	return idf
+}
+
 // Create is factory method that used to create new InstanceDomain instances.
 func (idf *instanceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
-	proxy, err := newInstanceDomainProxy(parent)
+	proxy, err := newInstanceDomainProxy(parent, idf)
 	if err != nil {
 		return nil, err
 	}
