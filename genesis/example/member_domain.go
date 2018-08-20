@@ -44,7 +44,7 @@ type memberDomain struct {
 }
 
 // newMemberDomain creates new instance of MemberDomain.
-func newMemberDomain(parent object.Parent) (MemberDomain, error) {
+func newMemberDomain(parent object.Parent, class object.Factory) (MemberDomain, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
@@ -52,7 +52,7 @@ func newMemberDomain(parent object.Parent) (MemberDomain, error) {
 	mf, _ := NewMemberFactory(parent).(*memberFactory)
 
 	md := &memberDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, MemberDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, class, MemberDomainName),
 	}
 	// Add memberFactory as a child
 	record, err := md.AddChild(mf)
@@ -75,7 +75,7 @@ func (md *memberDomain) GetClassID() string {
 func (md *memberDomain) CreateMember() (string, error) {
 	// Get child by memberFactoryRecord
 	r := md.GetResolver()
-	child, err := r.GetObject(md.memberFactoryReference, class.MemberID)
+	child, err := r.GetObject(md.memberFactoryReference, nil)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +108,17 @@ func (md *memberDomain) GetMember(record string) (Member, error) {
 	if err != nil {
 		return nil, err
 	}
-	member, err := r.GetObject(ref, class.MemberID)
+	child, err := r.GetObject(md.memberFactoryReference, nil)
+	if err != nil {
+		return nil, err
+	}
+	// Check if it Factory
+	mf, ok := child.(object.Factory)
+	if !ok {
+		return nil, fmt.Errorf("child by reference `%s` is not Factory instance", md.memberFactoryReference)
+	}
+
+	member, err := r.GetObject(ref, mf)
 	if err != nil {
 		return nil, err
 	}
@@ -120,8 +130,8 @@ type memberDomainProxy struct {
 }
 
 // newMemberDomainProxy creates new proxy and associates it with new instance of MemberDomain.
-func newMemberDomainProxy(parent object.Parent) (*memberDomainProxy, error) {
-	instance, err := newMemberDomain(parent)
+func newMemberDomainProxy(parent object.Parent, class object.Factory) (*memberDomainProxy, error) {
+	instance, err := newMemberDomain(parent, class)
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +169,10 @@ func (mdf *memberDomainFactory) GetClassID() string {
 	return class.MemberDomainID
 }
 
+func (mdf *memberDomainFactory) GetClass() object.Proxy {
+	return mdf
+}
+
 // GetParent returns parent
 func (mdf *memberDomainFactory) GetParent() object.Parent {
 	// TODO: return real parent, fix tests
@@ -167,7 +181,7 @@ func (mdf *memberDomainFactory) GetParent() object.Parent {
 
 // Create is a factory method for new MemberDomain instances.
 func (mdf *memberDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
-	proxy, err := newMemberDomainProxy(parent)
+	proxy, err := newMemberDomainProxy(parent, mdf)
 	if err != nil {
 		return nil, err
 	}

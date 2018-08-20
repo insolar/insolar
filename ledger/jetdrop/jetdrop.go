@@ -14,28 +14,28 @@
  *    limitations under the License.
  */
 
-package object
+package jetdrop
 
 import (
-	"fmt"
+	"golang.org/x/crypto/sha3"
 )
 
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, cls interface{}) (interface{}, error)
+// JetDrop is a blockchain block. It contains hashes from all records from slot.
+type JetDrop struct {
+	PrevHash     []byte
+	RecordHashes [][]byte // TODO: this should be a byte slice that represents the merkle tree root of records
 }
 
-func checkClass(class Proxy, estimated interface{}) error {
-	if class == estimated {
-		return nil
+// Hash calculates jet drop hash. Raw data for hash should contain previous hash and merkle tree hash from records.
+func (jd *JetDrop) Hash() ([]byte, error) {
+	encoded, err := EncodeJetDrop(jd)
+	if err != nil {
+		return nil, err
 	}
-	if estimated == nil {
-		_, okF := class.(Factory)
-		_, okCF := class.(CompositeFactory)
-		if okF || okCF {
-			return nil
-		}
-
+	h := sha3.New224()
+	_, err = h.Write(encoded)
+	if err != nil {
+		return nil, err
 	}
-	return fmt.Errorf("instance class is not equal received")
+	return h.Sum(nil), nil
 }

@@ -14,28 +14,7 @@
  *    limitations under the License.
  */
 
-package object
-
-import (
-	"fmt"
-)
-
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, cls interface{}) (interface{}, error)
-}
-
-func checkClass(class Proxy, estimated interface{}) error {
-	if class == estimated {
-		return nil
-	}
-	if estimated == nil {
-		_, okF := class.(Factory)
-		_, okCF := class.(CompositeFactory)
-		if okF || okCF {
-			return nil
-		}
-
-	}
-	return fmt.Errorf("instance class is not equal received")
-}
+// Package jetcoordinator is responsible for all jet manipulations.
+//
+// Package responsible for jet drops, split/merge jets, choose of validators.
+package jetcoordinator

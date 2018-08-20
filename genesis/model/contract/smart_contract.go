@@ -66,15 +66,17 @@ type BaseSmartContract struct {
 	ContextStorage storage.Storage
 	Parent         object.Parent
 	resolver       object.Resolver
+	class          object.Proxy
 }
 
 // NewBaseSmartContract creates new BaseSmartContract instance with empty CompositeMap, ChildStorage and specific parent.
-func NewBaseSmartContract(parent object.Parent) *BaseSmartContract {
+func NewBaseSmartContract(parent object.Parent, class object.Proxy) *BaseSmartContract {
 	// TODO: NewCompositeHolder
 	return &BaseSmartContract{
 		CompositeMap: make(map[string]object.Reference),
 		ChildStorage: storage.NewMapStorage(),
 		Parent:       parent,
+		class:        class,
 	}
 }
 
@@ -89,6 +91,10 @@ func (sc *BaseSmartContract) GetResolver() object.Resolver {
 // GetClassID return string representation of object's class.
 func (sc *BaseSmartContract) GetClassID() string {
 	return class.SmartContractID
+}
+
+func (sc *BaseSmartContract) GetClass() object.Proxy {
+	return sc.class
 }
 
 // CreateComposite allows to create composites inside smart contract.
@@ -125,13 +131,13 @@ func (sc *BaseSmartContract) CreateComposite(compositeFactory object.CompositeFa
 }
 
 // GetComposite return composite by its key (if its exist inside smart contract).
-func (sc *BaseSmartContract) GetComposite(key string, classID string) (object.Composite, error) {
+func (sc *BaseSmartContract) GetComposite(key string, class object.CompositeFactory) (object.Composite, error) {
 	ref, exist := sc.CompositeMap[key]
 	if !exist {
 		return nil, fmt.Errorf("delegate with name %s does not exist", key)
 	}
 
-	compObject, err := sc.GetResolver().GetObject(ref, classID)
+	compObject, err := sc.GetResolver().GetObject(ref, class)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +152,7 @@ func (sc *BaseSmartContract) GetComposite(key string, classID string) (object.Co
 
 // GetOrCreateComposite return composite by its key if its exist inside smart contract and create new one otherwise.
 func (sc *BaseSmartContract) GetOrCreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
-	composite, err := sc.GetComposite(compositeFactory.GetInterfaceKey(), compositeFactory.GetClassID())
+	composite, err := sc.GetComposite(compositeFactory.GetInterfaceKey(), compositeFactory)
 	if err != nil {
 		composite, err = sc.CreateComposite(compositeFactory)
 		if err != nil {

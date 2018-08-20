@@ -14,28 +14,34 @@
  *    limitations under the License.
  */
 
-package object
+package jetdrop
 
 import (
-	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, cls interface{}) (interface{}, error)
-}
-
-func checkClass(class Proxy, estimated interface{}) error {
-	if class == estimated {
-		return nil
+func TestJetDrop_Hash(t *testing.T) {
+	drop1 := JetDrop{
+		PrevHash:     []byte{1, 2, 3},
+		RecordHashes: [][]byte{{4}, {5}, {6}},
 	}
-	if estimated == nil {
-		_, okF := class.(Factory)
-		_, okCF := class.(CompositeFactory)
-		if okF || okCF {
-			return nil
-		}
-
+	drop2 := JetDrop{
+		PrevHash:     []byte{1, 2, 3},
+		RecordHashes: [][]byte{{4}, {5}, {6}},
 	}
-	return fmt.Errorf("instance class is not equal received")
+	drop3 := JetDrop{
+		PrevHash:     []byte{1, 2, 3},
+		RecordHashes: [][]byte{{5}, {4}, {6}},
+	}
+
+	h1, err := drop1.Hash()
+	assert.NoError(t, err)
+	h2, err := drop2.Hash()
+	assert.NoError(t, err)
+	h3, err := drop3.Hash()
+	assert.NoError(t, err)
+	assert.Equal(t, h1, h2)
+	assert.NotEqual(t, h1, h3)
 }

@@ -14,28 +14,32 @@
  *    limitations under the License.
  */
 
-package object
+package jetdrop
 
 import (
-	"fmt"
+	"bytes"
+
+	"github.com/ugorji/go/codec"
 )
 
-// Resolver marks that instance have ability to get proxy objects by its reference.
-type Resolver interface {
-	GetObject(reference interface{}, cls interface{}) (interface{}, error)
+// EncodeJetDrop serializes jet drop
+func EncodeJetDrop(drop *JetDrop) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	err := enc.Encode(drop)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
-func checkClass(class Proxy, estimated interface{}) error {
-	if class == estimated {
-		return nil
+// DecodeJetDrop deserializes jet drop
+func DecodeJetDrop(buf []byte) (*JetDrop, error) {
+	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
+	var drop JetDrop
+	err := dec.Decode(&drop)
+	if err != nil {
+		return nil, err
 	}
-	if estimated == nil {
-		_, okF := class.(Factory)
-		_, okCF := class.(CompositeFactory)
-		if okF || okCF {
-			return nil
-		}
-
-	}
-	return fmt.Errorf("instance class is not equal received")
+	return &drop, nil
 }

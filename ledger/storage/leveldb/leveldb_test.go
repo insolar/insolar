@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -155,7 +156,7 @@ func referenceWithHashes(domainhash, recordhash string) record.Reference {
 	}
 }
 
-func TestSetRecord(t *testing.T) {
+func TestLevelLedger_SetRecord(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
 	// mock pulse source
@@ -192,20 +193,7 @@ func TestSetRecord(t *testing.T) {
 	assert.NotEqual(t, idPulse1Hex, idPulse0Hex, "got hash")
 }
 
-// TODO: uncomment when record storage is functional
-// func TestCreatesRootRecord(t *testing.T) {
-// 	ledger, err := InitDB()
-// 	assert.Nil(t, err)
-// 	defer ledger.Close()
-//
-// 	var zeroID record.ID
-// 	copy([]byte(zeroRecordBinary)[:record.IDSize], zeroID[:])
-// 	zeroRef, ok := ledger.GetRecord(record.ID2Key(zeroID))
-// 	assert.True(t, ok)
-// 	assert.Equal(t, ledger.zeroRef, zeroRef)
-// }
-
-func TestGetClassIndexOnEmptyDataReturnsNotFound(t *testing.T) {
+func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
 	defer ledger.Close()
@@ -219,7 +207,7 @@ func TestGetClassIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 	assert.Nil(t, idx)
 }
 
-func TestSetClassIndexStoresDataInDB(t *testing.T) {
+func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
 	defer ledger.Close()
@@ -253,7 +241,7 @@ func TestSetClassIndexStoresDataInDB(t *testing.T) {
 	assert.Equal(t, *storedIndex, idx)
 }
 
-func TestGetObjectIndexOnEmptyDataReturnsNotFound(t *testing.T) {
+func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
 	defer ledger.Close()
@@ -264,7 +252,7 @@ func TestGetObjectIndexOnEmptyDataReturnsNotFound(t *testing.T) {
 	assert.Nil(t, idx)
 }
 
-func TestSetObjectIndexStoresDataInDB(t *testing.T) {
+func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	ledger, err := InitDB()
 	assert.Nil(t, err)
 	defer ledger.Close()
@@ -285,4 +273,30 @@ func TestSetObjectIndexStoresDataInDB(t *testing.T) {
 	storedIndex, err := ledger.GetObjectIndex(&zeroref)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
+}
+
+func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
+	ledger, err := InitDB()
+	assert.Nil(t, err)
+	defer ledger.Close()
+
+	drop, err := ledger.GetDrop(1)
+	assert.Equal(t, err, storage.ErrNotFound)
+	assert.Nil(t, drop)
+}
+
+func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
+	ledger, err := InitDB()
+	assert.Nil(t, err)
+	defer ledger.Close()
+
+	drop := jetdrop.JetDrop{
+		PrevHash:     []byte{1, 2, 3},
+		RecordHashes: [][]byte{{4}, {5}, {6}},
+	}
+	err = ledger.SetDrop(42, &drop)
+	assert.NoError(t, err)
+	restoredDrop, err := ledger.GetDrop(42)
+	assert.NoError(t, err)
+	assert.Equal(t, *restoredDrop, drop)
 }

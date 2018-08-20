@@ -35,13 +35,13 @@ type wallet struct {
 	balance int
 }
 
-func newWallet(parent object.Parent) (Wallet, error) {
+func newWallet(parent object.Parent, class object.CompositeFactory) (Wallet, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
 	return &wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, class.(object.Proxy)),
 		balance:           0,
 	}, nil
 }
@@ -62,8 +62,8 @@ type walletProxy struct {
 	contract.BaseSmartContractProxy
 }
 
-func newWalletProxy(parent object.Parent) (*walletProxy, error) {
-	instance, err := newWallet(parent)
+func newWalletProxy(parent object.Parent, class object.CompositeFactory) (*walletProxy, error) {
+	instance, err := newWallet(parent, class)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +85,7 @@ func (wp *walletProxy) GetInterfaceKey() string {
 
 type walletFactory struct {
 	object.BaseProxy
+	//object.BaseFactory
 	parent object.Parent
 }
 
@@ -102,8 +103,12 @@ func (*walletFactory) GetClassID() string {
 	return class.WalletID
 }
 
-func (*walletFactory) Create(parent object.Parent) (object.Composite, error) {
-	proxy, err := newWalletProxy(parent)
+func (wf *walletFactory) GetClass() object.Proxy {
+	return wf
+}
+
+func (wf *walletFactory) Create(parent object.Parent) (object.Composite, error) {
+	proxy, err := newWalletProxy(parent, wf)
 	if err != nil {
 		return nil, err
 	}
