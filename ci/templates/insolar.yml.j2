@@ -43,6 +43,8 @@ jobs:
              env
              cd $GOPATH/src/github.com/insolar/insolar
              echo "fetching dependencies..."
-             go get -t -d ./...
+             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+             #go get -t -d ./...
+             dep ensure
              go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
 {% endfor %}
