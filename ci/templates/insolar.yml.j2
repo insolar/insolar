@@ -29,10 +29,7 @@ jobs:
         source: {repository: golang}
       inputs:
       - name: insolar-{{ branch }}
-        path: gopath/src/github.com/insolar/insolar
-      caches:
-      - path: depspath/
-      - path: gopath/pkg/
+        path: /go/src/github.com/insolar/insolar
       run:
         path: sh
         args:
@@ -42,7 +39,7 @@ jobs:
              pwd
              ls -alh
              env
-             cd gopath/src/github.com/insolar/insolar
+             cd /go/src/github.com/insolar/insolar
              echo "fetching dependencies..."
              go get -t -d ./...
              go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
