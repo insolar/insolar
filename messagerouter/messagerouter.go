@@ -19,7 +19,6 @@ package messagerouter
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
 
 	"github.com/insolar/insolar/network/host"
 	"github.com/insolar/insolar/network/host/id"
@@ -31,7 +30,7 @@ const DeliverRpcMethodName = "MessageRouter.Deliver"
 // e.g. glue between network and logic runner
 type MessageRouter struct {
 	LogicRunner LogicRunner
-	rpc         *host.DHT // TODO: use interface
+	rpc         host.RPC
 }
 
 // LogicRunner is an interface that should satisfy logic executor
@@ -55,14 +54,14 @@ type Response struct {
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr LogicRunner, rpc *host.DHT) (*MessageRouter, error) {
+func New(lr LogicRunner, rpc host.RPC) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc}
 	mr.rpc.RemoteProcedureRegister(DeliverRpcMethodName, mr.deliverRpc)
 	return mr, nil
 }
 
 // Route a `Message` and get a `Response` or error from remote node
-func (r *MessageRouter) Route(msg Message) (response Response, err error) {
+func (r *MessageRouter) Route(ctx host.Context, msg Message) (response Response, err error) {
 	request, err := Serialize(msg)
 	if err != nil {
 		return
@@ -73,8 +72,6 @@ func (r *MessageRouter) Route(msg Message) (response Response, err error) {
 		return
 	}
 
-	ctx := r.createContext()
-	//var ctx host.Context
 	result, err := r.rpc.RemoteProcedureCall(ctx, nodeId.String(), DeliverRpcMethodName, [][]byte{request})
 	if err != nil {
 		return
@@ -111,14 +108,6 @@ func (r *MessageRouter) getNodeId(reference string) (nodeId id.ID, err error) {
 	// TODO: need help from teammates
 	nodeId, err = id.NewID()
 	return
-}
-
-func (r *MessageRouter) createContext() host.Context {
-	ctx, err := host.NewContextBuilder(r.rpc).SetDefaultNode().Build()
-	if err != nil {
-		log.Fatalln("Failed to create context:", err.Error())
-	}
-	return ctx
 }
 
 func Serialize(value interface{}) (res []byte, err error) {

@@ -95,6 +95,17 @@ func bootstrapTwoNodes() (dht1 *host.DHT, dht2 *host.DHT, err error) {
 	return
 }
 
+type mockRpc struct {
+}
+
+func (r *mockRpc) RemoteProcedureCall(ctx host.Context, target string, method string, args [][]byte) (result []byte, err error) {
+	return nil, errors.New("not implemented in mock")
+}
+
+func (r *mockRpc) RemoteProcedureRegister(name string, method host.RemoteProcedure) {
+	return
+}
+
 func (r *runner) Execute(ref string, method string, args []byte) ([]byte, []byte, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
@@ -109,9 +120,7 @@ func (r *runner) Execute(ref string, method string, args []byte) ([]byte, []byte
 }
 
 func TestNew(t *testing.T) {
-	dht1, _, _ := bootstrapTwoNodes()
-
-	mr, err := New(new(runner), dht1)
+	mr, err := New(new(runner), new(mockRpc))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,9 +134,7 @@ func TestDeliver(t *testing.T) {
 	r.requests = make([]req, 0)
 	r.responses = make([]resp, 0)
 
-	dht1, _, _ := bootstrapTwoNodes()
-
-	mr, _ := New(r, dht1)
+	mr, _ := New(r, new(mockRpc))
 
 	t.Run("success", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
@@ -180,9 +187,6 @@ func TestDeliver(t *testing.T) {
 			t.Fatal("unexpected data")
 		}
 	})
-
-	//dht1.Disconnect()
-	//dht2.Disconnect()
 }
 
 func TestRoute(t *testing.T) {
