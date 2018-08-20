@@ -16,10 +16,22 @@
 
 package messagerouter
 
+import (
+	"bytes"
+	"encoding/gob"
+	"log"
+
+	"github.com/insolar/insolar/network/host"
+	"github.com/insolar/insolar/network/host/id"
+)
+
+const DeliverRpcMethodName = "MessageRouter.Deliver"
+
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageRouter struct {
 	LogicRunner LogicRunner
+	rpc         *host.DHT // TODO: use interface
 }
 
 // LogicRunner is an interface that should satisfy logic executor
@@ -43,22 +55,98 @@ type Response struct {
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr LogicRunner) (*MessageRouter, error) {
-	return &MessageRouter{lr}, nil
+func New(lr LogicRunner, rpc *host.DHT) (*MessageRouter, error) {
+	mr := &MessageRouter{lr, rpc}
+	mr.rpc.RemoteProcedureRegister(DeliverRpcMethodName, mr.deliverRpc)
+	return mr, nil
 }
 
 // Route a `Message` and get a `Response` or error from remote node
-func (r *MessageRouter) Route(msg Message) (Response, error) {
+func (r *MessageRouter) Route(msg Message) (response Response, err error) {
+	request, err := Serialize(msg)
+	if err != nil {
+		return
+	}
 
-	// TODO: get network address from msg.Reference
-	// TODO: serialize Message to network RPC message, send and wait for response
-	// TODO: node which receive this RPC request calls Deliver method
-	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
-	return Response{data, res}, err
+	nodeId, err := r.getNodeId(msg.Reference)
+	if err != nil {
+		return
+	}
+
+	ctx := r.createContext()
+	//var ctx host.Context
+	result, err := r.rpc.RemoteProcedureCall(ctx, nodeId.String(), DeliverRpcMethodName, [][]byte{request})
+	if err != nil {
+		return
+	}
+
+	response, err = DeserializeResponse(result)
+	return
 }
 
 // Deliver method calls LogicRunner.Execute on this local node
 func (r *MessageRouter) Deliver(msg Message) (Response, error) {
 	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
 	return Response{data, res}, err
+}
+
+// method for register as RPC stub
+func (r *MessageRouter) deliverRpc(args [][]byte) (result []byte, err error) {
+
+	msg, err := DeserializeMessage(args[0]) // TODO: check empty args
+	if err != nil {
+		return
+	}
+
+	res, err := r.Deliver(msg)
+	if err != nil {
+		return
+	}
+
+	result, err = Serialize(res)
+	return
+}
+
+func (r *MessageRouter) getNodeId(reference string) (nodeId id.ID, err error) {
+	// TODO: need help from teammates
+	nodeId, err = id.NewID()
+	return
+}
+
+func (r *MessageRouter) createContext() host.Context {
+	ctx, err := host.NewContextBuilder(r.rpc).SetDefaultNode().Build()
+	if err != nil {
+		log.Fatalln("Failed to create context:", err.Error())
+	}
+	return ctx
+}
+
+func Serialize(value interface{}) (res []byte, err error) {
+	var buffer bytes.Buffer
+	enc := gob.NewEncoder(&buffer)
+	err = enc.Encode(value)
+	if err != nil {
+		return
+	}
+	res = buffer.Bytes()
+	return
+}
+
+func DeserializeMessage(data []byte) (msg Message, err error) {
+	buffer := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buffer)
+	err = dec.Decode(msg)
+	return
+}
+
+func DeserializeResponse(data []byte) (res Response, err error) {
+	buffer := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buffer)
+	err = dec.Decode(res)
+	return
+}
+
+func init() {
+	gob.Register(&Message{})
+	gob.Register(&Response{})
 }
