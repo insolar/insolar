@@ -137,7 +137,7 @@ func NewKnownOuterNodesMessage(sender, receiver *node.Node, nodes int) *Message 
 		Receiver: receiver,
 		Type:     TypeKnownOuterNodes,
 		Data: &RequestKnownOuterNodes{
-			ID:         sender.ID.String(),
+			ID:         sender.ID.HashString(),
 			OuterNodes: nodes,
 		},
 	}

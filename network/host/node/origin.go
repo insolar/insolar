@@ -29,14 +29,13 @@ type Origin struct {
 
 // NewOrigin creates origin node from list of ids and network address.
 func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
-	var err error
-
 	if len(ids) == 0 {
-		ids, err = id.NewIDs(1)
-	}
+		id1, err := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		ids = append(ids, id1)
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Origin{
@@ -47,7 +46,7 @@ func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 
 func (s *Origin) containsID(id id.ID) bool {
 	for _, myID := range s.IDs {
-		if id.Equal(myID) {
+		if id.HashEqual(myID.Hash) {
 			return true
 		}
 	}

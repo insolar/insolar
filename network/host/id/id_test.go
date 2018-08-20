@@ -48,23 +48,11 @@ func (mr *mockReader) Read(b []byte) (n int, err error) {
 func TestNewID(t *testing.T) {
 	random = newMockReader()
 
-	id, err := NewID()
+	id, err := NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 
 	assert.NoError(t, err)
-	assert.Len(t, id, 20)
-	assert.Equal(t, ID("1234567890abcdefghij"), id)
-}
-
-func TestNewIDs(t *testing.T) {
-	random = newMockReader()
-
-	ids, err := NewIDs(123)
-
-	assert.NoError(t, err)
-	assert.Len(t, ids, 123)
-	assert.Len(t, ids[0], 20)
-	assert.Equal(t, ID("1234567890abcdefghij"), ids[0])
-	assert.Equal(t, ID("klmnopqrstuvwxyzABCD"), ids[1])
+	assert.Len(t, id.Hash, 20)
+	assert.Equal(t, ID{Hash: []byte("1234567890abcdefghij"), Key: nil}.Hash, id.Hash)
 }
 
 func TestID_Equal(t *testing.T) {
@@ -73,19 +61,19 @@ func TestID_Equal(t *testing.T) {
 		equal    bool
 		name     string
 	}{
-		{ID("1234567890abcdefghij"), ID("1234567890abcdefghij"), true, "same ids"},
-		{ID("1234567890abcdefghij"), ID("klmnopqrstuvwxyzABCD"), false, "different ids"},
+		{ID{Hash: []byte("1234567890abcdefghij"), Key: nil}, ID{Hash: []byte("1234567890abcdefghij"), Key: nil}, true, "same ids"},
+		{ID{Hash: []byte("1234567890abcdefghij"), Key: nil}, ID{Hash: []byte("klmnopqrstuvwxyzABCD"), Key: nil}, false, "different ids"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.equal, test.id1.Equal(test.id2))
+			assert.Equal(t, test.equal, test.id1.HashEqual(test.id2.Hash))
 		})
 	}
 }
 
 func TestID_String(t *testing.T) {
 	random = newMockReader()
-	id, _ := NewID()
+	id, _ := NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 
-	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.String())
+	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.HashString())
 }

@@ -23,38 +23,35 @@ import (
 )
 
 // ID is node id.
-type ID []byte
+type ID struct {
+	Key  []byte
+	Hash []byte
+}
 
 // NewID returns random node id.
-func NewID() (ID, error) {
-	result := make([]byte, 20)
-	_, err := random.Read(result)
-	return result, err
+func NewID(key []byte) (ID, error) {
+	hash := make([]byte, 20) // TODO: choose hash func
+	_, err := random.Read(hash)
+	id := ID{Hash: hash, Key: key}
+	return id, err
 }
 
-// NewIDs returns given number of random node ids.
-func NewIDs(num int) ([]ID, error) {
-	result := make([]ID, num)
-
-	for i := range result {
-		id, err := NewID()
-
-		if err != nil {
-			return nil, err
-		}
-
-		result[i] = id
-	}
-
-	return result, nil
+// HashEqual checks if hash is equal to another.
+func (id ID) HashEqual(other []byte) bool {
+	return bytes.Equal(id.Hash, other)
 }
 
-// Equal checks if id is equal to another.
-func (id ID) Equal(other ID) bool {
-	return bytes.Equal(id, other)
+// KeyEqual checks if id is equal ot another.
+func (id ID) KeyEqual(other []byte) bool {
+	return bytes.Equal(id.Key, other)
 }
 
-// String is a base58-encoded string representation of node id.
-func (id ID) String() string {
-	return base58.Encode(id)
+// KeyString is a base58-encoded string representation of node public key.
+func (id ID) KeyString() string {
+	return base58.Encode(id.Key)
+}
+
+// HashString is a base58-encoded string representation hash of public key.
+func (id ID) HashString() string {
+	return base58.Encode(id.Hash)
 }

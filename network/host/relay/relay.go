@@ -98,7 +98,7 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 
 func (r *relay) findClient(id id.ID) (int, *node.Node) {
 	for idx, nodeIterator := range r.clients {
-		if nodeIterator.ID.Equal(id) {
+		if nodeIterator.ID.HashEqual(id.Hash) {
 			return idx, nodeIterator
 		}
 	}
