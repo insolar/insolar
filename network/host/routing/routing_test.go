@@ -93,7 +93,7 @@ func getZerodIDWithNthByte(n int, v byte) id.ID {
 }
 
 func getIDWithValues(b byte) id.ID {
-	id1, _ := id.NewID(nil)
+	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash([]byte{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b})
 	return id1
 }

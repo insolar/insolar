@@ -29,7 +29,7 @@ import (
 func createRouteNode(addrString string) *RouteNode {
 	addr, _ := node.NewAddress(addrString)
 	newNode := node.NewNode(addr)
-	newNode.ID, _ = id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	newNode.ID, _ = id.NewID(id.GetRandomKey())
 	return NewRouteNode(newNode)
 }
 

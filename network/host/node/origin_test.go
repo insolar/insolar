@@ -28,7 +28,7 @@ func TestNewOrigin_WithIds(t *testing.T) {
 	idsCount := 10
 	ids := make([]id.ID, idsCount)
 	for i := 0; i < idsCount; i++ {
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids = append(ids, id1)
 	}
 
@@ -52,7 +52,7 @@ func TestOrigin_Contains(t *testing.T) {
 	idsCount := 20
 	ids := make([]id.ID, 0)
 	for i := 0; i < idsCount; i++ {
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids = append(ids, id1)
 	}
 	addr, _ := NewAddress("127.0.0.1:31337")

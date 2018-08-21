@@ -39,7 +39,7 @@ func TestNewNode(t *testing.T) {
 func TestNode_String(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
 	nd := NewNode(addr)
-	id1, _ := id.NewID(nil)
+	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 	nd.ID = id1
 
@@ -47,9 +47,9 @@ func TestNode_String(t *testing.T) {
 }
 
 func TestNode_Equal(t *testing.T) {
-	id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
-	id2, _ := id.NewID([]byte{106, 105, 104, 103, 102, 101, 100, 99, 98, 97, 48, 57, 56, 55, 54, 53, 52, 51, 50, 49})
-	idNil, _ := id.NewID(nil)
+	id1, _ := id.NewID(id.GetRandomKey())
+	id2, _ := id.NewID(id.GetRandomKey())
+	idNil, _ := id.NewID(id.GetRandomKey())
 	idNil.SetHash(nil)
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")

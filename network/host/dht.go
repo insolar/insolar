@@ -270,7 +270,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	} else if dht.proxy.ProxyNodesCount() > 0 {
 		address, _ := node.NewAddress(dht.proxy.GetNextProxyAddress())
 		// TODO: current key insertion
-		id1, _ := id.NewID(nil)
+		id1, _ := id.NewID(id.GetRandomKey())
 		id1.SetHash(keyBytes)
 		targetNode = &node.Node{ID: id1, Address: address}
 		return targetNode, true, nil

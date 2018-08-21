@@ -30,7 +30,7 @@ type Origin struct {
 // NewOrigin creates origin node from list of ids and network address.
 func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 	if len(ids) == 0 {
-		id1, err := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, err := id.NewID(id.GetRandomKey())
 		ids = append(ids, id1)
 
 		if err != nil {

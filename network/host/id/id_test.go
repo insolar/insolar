@@ -48,19 +48,19 @@ func (mr *mockReader) Read(b []byte) (n int, err error) {
 func TestNewID(t *testing.T) {
 	random = newMockReader()
 
-	id, err := NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id2, err := NewID(nil)
 
 	assert.NoError(t, err)
-	assert.Len(t, id.GetHash(), 20)
+	assert.Len(t, id2.GetHash(), 20)
 	id1, _ := NewID(nil)
 	id1.SetHash([]byte("1234567890abcdefghij"))
-	assert.Equal(t, id1.GetHash(), id.GetHash())
+	assert.Equal(t, id1.GetHash(), id2.GetHash())
 }
 
 func TestID_Equal(t *testing.T) {
-	id1, _ := NewID(nil)
+	id1, _ := NewID(GetRandomKey())
 	id1.SetHash([]byte("1234567890abcdefghij"))
-	id2, _ := NewID(nil)
+	id2, _ := NewID(GetRandomKey())
 	id2.SetHash([]byte("klmnopqrstuvwxyzABCD"))
 	tests := []struct {
 		id1, id2 ID
@@ -79,7 +79,7 @@ func TestID_Equal(t *testing.T) {
 
 func TestID_String(t *testing.T) {
 	random = newMockReader()
-	id, _ := NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id, _ := NewID(nil)
 
 	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.HashString())
 }

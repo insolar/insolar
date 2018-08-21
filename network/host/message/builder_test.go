@@ -42,10 +42,10 @@ func TestBuilder_Build_RequestMessage(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	sender.ID, _ = id.NewID(id.GetRandomKey())
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
 
@@ -64,10 +64,10 @@ func TestBuilder_Build_ResponseMessage(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	sender.ID, _ = id.NewID(id.GetRandomKey())
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
 
@@ -86,10 +86,10 @@ func TestBuilder_Build_ErrorMessage(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	sender.ID, _ = id.NewID(id.GetRandomKey())
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
 

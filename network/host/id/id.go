@@ -29,6 +29,13 @@ type ID struct {
 	hash []byte
 }
 
+// GetRandomKey generates and returns a random key for ID.
+func GetRandomKey() []byte {
+	key := make([]byte, 20)
+	_, _ = random.Read(key)
+	return key
+}
+
 // GetHash returns hash of key.
 func (id ID) GetHash() []byte {
 	return id.hash

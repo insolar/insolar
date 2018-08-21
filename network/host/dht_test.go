@@ -152,7 +152,7 @@ func mockFindNodeResponse(request *message.Message, nextID []byte) *message.Mess
 	r.Type = request.Type
 	r.IsResponse = true
 	responseData := &message.ResponseDataFindNode{}
-	id1, _ := id.NewID(nil)
+	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(nextID)
 	responseData.Closest = []*node.Node{{ID: id1, Address: netAddr}}
 	r.Data = responseData
@@ -204,7 +204,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids := make([]id.ID, 0)
-		id, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id, _ := id.NewID(id.GetRandomKey())
 		ids = append(ids, id)
 		st, s, tp, r, _ := realDhtParams(ids, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
@@ -250,7 +250,7 @@ func TestBootstrapTwoNodes(t *testing.T) {
 	done := make(chan bool)
 
 	ids1 := make([]id.ID, 0)
-	id, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id, _ := id.NewID(id.GetRandomKey())
 	ids1 = append(ids1, id)
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
 	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
@@ -303,14 +303,14 @@ func TestBootstrapThreeNodes(t *testing.T) {
 	done := make(chan bool)
 
 	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id1, _ := id.NewID(id.GetRandomKey())
 	ids1 = append(ids1, id1)
 	st1, s1, tp1, r1, err := realDhtParams(ids1, "127.0.0.1:17000")
 	assert.NoError(t, err)
 	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
 
 	ids2 := make([]id.ID, 0)
-	id2, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id2, _ := id.NewID(id.GetRandomKey())
 	ids2 = append(ids2, id2)
 	st2, s2, tp2, r2, err := realDhtParams(ids2, "127.0.0.1:17001")
 	assert.NoError(t, err)
@@ -388,7 +388,7 @@ func TestBootstrapNoID(t *testing.T) {
 	done := make(chan bool)
 
 	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id1, _ := id.NewID(id.GetRandomKey())
 	ids1 = append(ids1, id1)
 	st1, s1, tp1, r1, err := realDhtParams(ids1, "0.0.0.0:18000")
 	assert.NoError(t, err)
@@ -442,7 +442,7 @@ func TestReconnect(t *testing.T) {
 		done := make(chan bool)
 
 		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
 		st1, s1, tp1, r1, err := realDhtParams(ids1, "127.0.0.1:19000")
 		assert.NoError(t, err)
@@ -498,7 +498,7 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 	done := make(chan bool)
 
 	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id1, _ := id.NewID(id.GetRandomKey())
 	ids1 = append(ids1, id1)
 	st1, s1, tp1, r1, _ := realDhtParams(ids1, "127.0.0.1:20000")
 	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
@@ -976,7 +976,7 @@ func TestDHT_FindNode(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
 		idx[i] = ids1[0].HashString()
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
@@ -1035,7 +1035,7 @@ func TestDHT_Listen(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
@@ -1075,7 +1075,7 @@ func TestDHT_Disconnect(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
@@ -1112,7 +1112,7 @@ func TestNewDHT(t *testing.T) {
 	done := make(chan bool)
 	port := 11000
 	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id1, _ := id.NewID(id.GetRandomKey())
 	ids1 = append(ids1, id1)
 	st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 	address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
@@ -1152,7 +1152,7 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
 		ids = append(ids, ids1[0].HashString())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
@@ -1221,7 +1221,7 @@ func TestDHT_RelayRequest(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
 		ids = append(ids, ids1[0].HashString())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
@@ -1283,7 +1283,7 @@ func TestDHT_ObtainIP(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
 		ids = append(ids, ids1[0].HashString())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
@@ -1334,7 +1334,7 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
 		ids = append(ids, ids1[0].HashString())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
