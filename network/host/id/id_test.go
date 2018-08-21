@@ -17,6 +17,8 @@
 package id
 
 import (
+	"bytes"
+	"encoding/gob"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -75,6 +77,36 @@ func TestID_Equal(t *testing.T) {
 			assert.Equal(t, test.equal, test.id1.HashEqual(test.id2.GetHash()))
 		})
 	}
+}
+
+func TestID_MarshalBinary(t *testing.T) {
+	var buf bytes.Buffer
+
+	enc := gob.NewEncoder(&buf)
+	key := GetRandomKey()
+	hash := GetRandomKey()
+	id, _ := NewID(key)
+	id.SetHash(hash)
+	err := enc.Encode(id)
+	assert.NoError(t, err)
+
+	dec := gob.NewDecoder(&buf)
+	var resID ID
+	err = dec.Decode(&resID)
+	assert.NoError(t, err)
+
+	assert.True(t, id.KeyEqual(resID.key))
+	assert.Equal(t, id.HashString(), resID.HashString())
+}
+
+func TestID_KeyEqual(t *testing.T) {
+	key := GetRandomKey()
+	id1, _ := NewID(key)
+	id2, _ := NewID(key)
+	id3, _ := NewID(GetRandomKey())
+
+	assert.Equal(t, id1.KeyString(), id2.KeyString())
+	assert.NotEqual(t, id1.KeyString(), id3.KeyString())
 }
 
 func TestID_String(t *testing.T) {

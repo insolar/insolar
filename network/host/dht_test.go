@@ -204,8 +204,8 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ids := make([]id.ID, 0)
-		id, _ := id.NewID(id.GetRandomKey())
-		ids = append(ids, id)
+		id1, _ := id.NewID(id.GetRandomKey())
+		ids = append(ids, id1)
 		st, s, tp, r, _ := realDhtParams(ids, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapNode := node.NewNode(address)
@@ -235,8 +235,6 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 		time.Sleep(time.Millisecond * 200)
 	}
 
-	time.Sleep(time.Millisecond * 2000)
-
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
 		dht.Disconnect()
@@ -250,8 +248,8 @@ func TestBootstrapTwoNodes(t *testing.T) {
 	done := make(chan bool)
 
 	ids1 := make([]id.ID, 0)
-	id, _ := id.NewID(id.GetRandomKey())
-	ids1 = append(ids1, id)
+	id1, _ := id.NewID(id.GetRandomKey())
+	ids1 = append(ids1, id1)
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
 	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
 	assert.NoError(t, err)
@@ -889,24 +887,24 @@ func TestAddNodeTimeout(t *testing.T) {
 			}
 			switch request.Type {
 			case message.TypeFindNode:
-				id := getIDWithValues(0)
+				id1 := getIDWithValues(0)
 				if nodesAdded > routing.MaxContactsInBucket+1 {
 					close(done)
 					return
 				}
 
 				if nodesAdded == 1 {
-					firstNode = id.GetHash()
+					firstNode = id1.GetHash()
 				}
 
 				if nodesAdded == routing.MaxContactsInBucket {
-					lastNode = id.GetHash()
+					lastNode = id1.GetHash()
 				}
 
-				id.GetHash()[1] = byte(255 - nodesAdded)
+				id1.GetHash()[1] = byte(255 - nodesAdded)
 				nodesAdded++
 
-				res := mockFindNodeResponse(request, id.GetHash())
+				res := mockFindNodeResponse(request, id1.GetHash())
 				mockTp.send <- res
 			case message.TypePing:
 				assert.Equal(t, message.TypePing, request.Type)
@@ -956,9 +954,9 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 }
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
-	id := getIDWithValues(0)
-	id.GetHash()[n] = v
-	return id
+	id1 := getIDWithValues(0)
+	id1.GetHash()[n] = v
+	return id1
 }
 
 func getIDWithValues(b byte) id.ID {
