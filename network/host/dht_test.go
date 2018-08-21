@@ -206,8 +206,10 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 		ids := make([]id.ID, 0)
 		id1, _ := id.NewID(id.GetRandomKey())
 		ids = append(ids, id1)
-		st, s, tp, r, _ := realDhtParams(ids, "127.0.0.1:"+strconv.Itoa(port))
-		address, _ := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
+		st, s, tp, r, err := realDhtParams(ids, "127.0.0.1:"+strconv.Itoa(port))
+		assert.NoError(t, err)
+		address, err := node.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
+		assert.NoError(t, err)
 		bootstrapNode := node.NewNode(address)
 		dht, err := NewDHT(st, s, tp, r, &Options{
 			BootstrapNodes: []*node.Node{
@@ -216,8 +218,8 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 		},
 			relay.NewProxy())
 		port++
-		dhts = append(dhts, dht)
 		assert.NoError(t, err)
+		dhts = append(dhts, dht)
 	}
 
 	for _, dht := range dhts {
@@ -231,9 +233,12 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Bootstrap()
 			assert.NoError(t, err)
+			time.Sleep(time.Millisecond * 200)
 		}(dht)
 		time.Sleep(time.Millisecond * 200)
 	}
+
+	time.Sleep(time.Millisecond * 2000)
 
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))
