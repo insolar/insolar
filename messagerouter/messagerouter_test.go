@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network/host/rpc"
 	"github.com/insolar/insolar/network/host/store"
 	"github.com/insolar/insolar/network/host/transport"
+	"github.com/stretchr/testify/assert"
 )
 
 type req struct {
@@ -83,15 +84,6 @@ func bootstrapTwoNodes() (dht1 *host.DHT, dht2 *host.DHT, err error) {
 	},
 		relay.NewProxy())
 
-	//err = dht2.Bootstrap()
-	//dht1.Listen()
-	/*
-		if (err != nil) {
-			dht2.Disconnect()
-			dht1.Disconnect()
-			return
-		}
-	*/
 	return
 }
 
@@ -191,6 +183,20 @@ func TestDeliver(t *testing.T) {
 
 func TestRoute(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
+		dht1, _, err := bootstrapTwoNodes()
+		r := new(runner)
+		r.requests = make([]req, 0)
+		r.responses = make([]resp, 0)
+		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
+
+		mr, _ := New(r, dht1)
+		ctx := getDefaultCtx(dht1)
+
+		reference := dht1.GetOriginID(ctx)
+		message := Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")}
+		_, err = mr.Route(ctx, message)
+		assert.NoError(t, err)
+
 		return
 	})
 }

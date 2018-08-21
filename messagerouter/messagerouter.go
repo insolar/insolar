@@ -19,9 +19,11 @@ package messagerouter
 import (
 	"bytes"
 	"encoding/gob"
+	"log"
 
 	"github.com/insolar/insolar/network/host"
 	"github.com/insolar/insolar/network/host/id"
+	"github.com/jbenet/go-base58"
 )
 
 const DeliverRpcMethodName = "MessageRouter.Deliver"
@@ -106,7 +108,9 @@ func (r *MessageRouter) deliverRpc(args [][]byte) (result []byte, err error) {
 
 func (r *MessageRouter) getNodeId(reference string) (nodeId id.ID, err error) {
 	// TODO: need help from teammates
-	nodeId, err = id.NewID()
+	log.Println("getNodeId: ", reference)
+
+	nodeId = base58.Decode(reference)
 	return
 }
 
@@ -124,14 +128,14 @@ func Serialize(value interface{}) (res []byte, err error) {
 func DeserializeMessage(data []byte) (msg Message, err error) {
 	buffer := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buffer)
-	err = dec.Decode(msg)
+	err = dec.Decode(&msg)
 	return
 }
 
 func DeserializeResponse(data []byte) (res Response, err error) {
 	buffer := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buffer)
-	err = dec.Decode(res)
+	err = dec.Decode(&res)
 	return
 }
 
