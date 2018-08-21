@@ -25,11 +25,11 @@ type Resolver interface {
 	GetObject(reference interface{}, cls interface{}) (interface{}, error)
 }
 
-func checkClass(class Proxy, estimated interface{}) error {
-	if class == estimated {
+func checkClass(class Proxy, expected interface{}) error {
+	if class == expected {
 		return nil
 	}
-	if estimated == nil {
+	if expected == nil {
 		_, okF := class.(Factory)
 		_, okCF := class.(CompositeFactory)
 		if okF || okCF {
@@ -37,5 +37,6 @@ func checkClass(class Proxy, estimated interface{}) error {
 		}
 
 	}
+
 	return fmt.Errorf("instance class is not equal received")
 }

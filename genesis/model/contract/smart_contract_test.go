@@ -46,12 +46,14 @@ func (mc *mockComposite) GetInterfaceKey() string {
 }
 
 func TestBaseCompositeCollection_GetInterfaceKey(t *testing.T) {
-	compCollection := NewBaseCompositeCollection()
+	parent := &mockParent{}
+	compCollection := NewBaseCompositeCollection(parent)
 	assert.Equal(t, class.CompositeCollectionID, compCollection.GetInterfaceKey())
 }
 
 func TestBaseCompositeCollection_Add(t *testing.T) {
-	compCollection := NewBaseCompositeCollection()
+	parent := &mockParent{}
+	compCollection := NewBaseCompositeCollection(parent)
 
 	numEl := 10
 	for i := 0; i < numEl; i++ {
@@ -64,7 +66,8 @@ func TestBaseCompositeCollection_Add(t *testing.T) {
 }
 
 func TestBaseCompositeCollection_Add_SameInterfaceKeys(t *testing.T) {
-	compCollection := NewBaseCompositeCollection()
+	parent := &mockParent{}
+	compCollection := NewBaseCompositeCollection(parent)
 	testIdx := 77
 	mc := newMockComposite(testIdx)
 	compCollection.Add(&mc)
@@ -76,7 +79,8 @@ func TestBaseCompositeCollection_Add_SameInterfaceKeys(t *testing.T) {
 }
 
 func TestBaseCompositeCollection_GetList(t *testing.T) {
-	compCollection := NewBaseCompositeCollection()
+	parent := &mockParent{}
+	compCollection := NewBaseCompositeCollection(parent)
 	assert.Len(t, compCollection.GetList(), 0)
 
 	numEl := 10
@@ -89,7 +93,8 @@ func TestBaseCompositeCollection_GetList(t *testing.T) {
 }
 
 func TestNewBaseCompositeCollection(t *testing.T) {
-	compCollection := NewBaseCompositeCollection()
+	parent := &mockParent{}
+	compCollection := NewBaseCompositeCollection(parent)
 	assert.Len(t, compCollection.storage, 0)
 
 }
