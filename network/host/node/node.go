@@ -45,5 +45,5 @@ func (node Node) String() string {
 
 // Equal checks if node equals to other node (e.g. nodes' IDs and network addresses match).
 func (node Node) Equal(other Node) bool {
-	return node.ID.HashEqual(other.ID.Hash) && other.Address != nil && node.Address.Equal(*other.Address)
+	return node.ID.HashEqual(other.ID.GetHash()) && other.Address != nil && node.Address.Equal(*other.Address)
 }

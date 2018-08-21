@@ -51,22 +51,28 @@ func TestNewID(t *testing.T) {
 	id, err := NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 
 	assert.NoError(t, err)
-	assert.Len(t, id.Hash, 20)
-	assert.Equal(t, ID{Hash: []byte("1234567890abcdefghij"), Key: nil}.Hash, id.Hash)
+	assert.Len(t, id.GetHash(), 20)
+	id1, _ := NewID(nil)
+	id1.SetHash([]byte("1234567890abcdefghij"))
+	assert.Equal(t, id1.GetHash(), id.GetHash())
 }
 
 func TestID_Equal(t *testing.T) {
+	id1, _ := NewID(nil)
+	id1.SetHash([]byte("1234567890abcdefghij"))
+	id2, _ := NewID(nil)
+	id2.SetHash([]byte("klmnopqrstuvwxyzABCD"))
 	tests := []struct {
 		id1, id2 ID
 		equal    bool
 		name     string
 	}{
-		{ID{Hash: []byte("1234567890abcdefghij"), Key: nil}, ID{Hash: []byte("1234567890abcdefghij"), Key: nil}, true, "same ids"},
-		{ID{Hash: []byte("1234567890abcdefghij"), Key: nil}, ID{Hash: []byte("klmnopqrstuvwxyzABCD"), Key: nil}, false, "different ids"},
+		{id1, id1, true, "same ids"},
+		{id1, id2, false, "different ids"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.equal, test.id1.HashEqual(test.id2.Hash))
+			assert.Equal(t, test.equal, test.id1.HashEqual(test.id2.GetHash()))
 		})
 	}
 }

@@ -80,7 +80,7 @@ type HashTable struct {
 
 // NewHashTable creates new HashTable.
 func NewHashTable(id id.ID, address *node.Address) (*HashTable, error) {
-	if id.Hash == nil {
+	if id.GetHash() == nil {
 		return nil, errors.New("id required")
 	}
 
@@ -136,11 +136,11 @@ func (ht *HashTable) MarkNodeAsSeen(node []byte) {
 	ht.Lock()
 	defer ht.Unlock()
 
-	index := GetBucketIndexFromDifferingBit(ht.Origin.ID.Hash, node)
+	index := GetBucketIndexFromDifferingBit(ht.Origin.ID.GetHash(), node)
 	bucket := ht.RoutingTable[index]
 	nodeIndex := -1
 	for i, v := range bucket {
-		if bytes.Equal(v.ID.Hash, node) {
+		if bytes.Equal(v.ID.GetHash(), node) {
 			nodeIndex = i
 			break
 		}
@@ -161,7 +161,7 @@ func (ht *HashTable) DoesNodeExistInBucket(bucket int, node []byte) bool {
 	defer ht.Unlock()
 
 	for _, v := range ht.RoutingTable[bucket] {
-		if bytes.Equal(v.ID.Hash, node) {
+		if bytes.Equal(v.ID.GetHash(), node) {
 			return true
 		}
 	}
@@ -174,7 +174,7 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*
 	defer ht.Unlock()
 	// First we need to build the list of adjacent indices to our target
 	// in order
-	index := GetBucketIndexFromDifferingBit(ht.Origin.ID.Hash, target)
+	index := GetBucketIndexFromDifferingBit(ht.Origin.ID.GetHash(), target)
 	indexList := []int{index}
 	i := index - 1
 	j := index + 1
@@ -213,7 +213,7 @@ func (ht *HashTable) selectParallelCalls(
 		for i := 0; i < bucketContacts; i++ {
 			ignored := false
 			for j := 0; j < len(ignoredNodes); j++ {
-				if ht.RoutingTable[index][i].ID.HashEqual(ignoredNodes[j].ID.Hash) {
+				if ht.RoutingTable[index][i].ID.HashEqual(ignoredNodes[j].ID.GetHash()) {
 					ignored = true
 				}
 			}
@@ -233,12 +233,12 @@ func (ht *HashTable) GetAllNodesInBucketCloserThan(bucket int, id []byte) [][]by
 	b := ht.RoutingTable[bucket]
 	var nodes [][]byte
 	for _, v := range b {
-		d1 := ht.getDistance(id, ht.Origin.ID.Hash)
-		d2 := ht.getDistance(id, v.ID.Hash)
+		d1 := ht.getDistance(id, ht.Origin.ID.GetHash())
+		d2 := ht.getDistance(id, v.ID.GetHash())
 
 		result := d1.Sub(d1, d2)
 		if result.Sign() > -1 {
-			nodes = append(nodes, v.ID.Hash)
+			nodes = append(nodes, v.ID.GetHash())
 		}
 	}
 
@@ -271,7 +271,7 @@ func (ht *HashTable) GetRandomIDFromBucket(bucket int) []byte {
 	byteIndex := bucket / 8
 	var id []byte
 	for i := 0; i < byteIndex; i++ {
-		id = append(id, ht.Origin.ID.Hash[i])
+		id = append(id, ht.Origin.ID.GetHash()[i])
 	}
 	differingBitStart := bucket % 8
 
@@ -282,7 +282,7 @@ func (ht *HashTable) GetRandomIDFromBucket(bucket int) []byte {
 		// up to the differing bit. Then begin randomizing
 		var bit bool
 		if i < differingBitStart {
-			bit = hasBit(ht.Origin.ID.Hash[byteIndex], uint8(i))
+			bit = hasBit(ht.Origin.ID.GetHash()[byteIndex], uint8(i))
 		} else {
 			bit = ht.rand.Intn(2) == 1
 		}

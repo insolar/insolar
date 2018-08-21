@@ -30,23 +30,23 @@ import (
 func TestDistanceMetric(t *testing.T) {
 	n := NewRouteNode(&node.Node{})
 	n.ID = getIDWithValues(0)
-	assert.Equal(t, 20, len(n.ID.Hash))
+	assert.Equal(t, 20, len(n.ID.GetHash()))
 
-	value := getDistance(n.ID.Hash, getIDWithValues(0).Hash)
+	value := getDistance(n.ID.GetHash(), getIDWithValues(0).GetHash())
 	assert.Equal(t, 0, value.Cmp(new(big.Int).SetInt64(int64(0))))
 
 	v := getIDWithValues(0)
-	v.Hash[19] = byte(1)
-	value = getDistance(n.ID.Hash, v.Hash)
+	v.GetHash()[19] = byte(1)
+	value = getDistance(n.ID.GetHash(), v.GetHash())
 	assert.Equal(t, big.NewInt(1), value)
 
 	v = getIDWithValues(0)
-	v.Hash[18] = byte(1)
-	value = getDistance(n.ID.Hash, v.Hash)
+	v.GetHash()[18] = byte(1)
+	value = getDistance(n.ID.GetHash(), v.GetHash())
 	assert.Equal(t, big.NewInt(256), value)
 
 	v = getIDWithValues(255)
-	value = getDistance(n.ID.Hash, v.Hash)
+	value = getDistance(n.ID.GetHash(), v.GetHash())
 
 	// (2^160)-1 = max possible distance
 	maxDistance := new(big.Int).Exp(big.NewInt(2), big.NewInt(160), nil)
@@ -76,7 +76,7 @@ func TestRouteSet(t *testing.T) {
 	n4 := &node.Node{ID: getZerodIDWithNthByte(16, 1)}
 
 	nl.nodes = []*node.Node{n3, n2, n4, n1}
-	nl.comparator = comparator.Hash
+	nl.comparator = comparator.GetHash()
 
 	sort.Sort(nl)
 
@@ -88,10 +88,12 @@ func TestRouteSet(t *testing.T) {
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
 	id := getIDWithValues(0)
-	id.Hash[n] = v
+	id.GetHash()[n] = v
 	return id
 }
 
 func getIDWithValues(b byte) id.ID {
-	return id.ID{Hash: []byte{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b}, Key: nil}
+	id1, _ := id.NewID(nil)
+	id1.SetHash([]byte{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b})
+	return id1
 }

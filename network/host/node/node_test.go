@@ -26,8 +26,10 @@ import (
 func TestNewNode(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
 	actualNode := NewNode(addr)
+	id1, _ := id.NewID(nil)
+	id1.SetHash(nil)
 	expectedNode := &Node{
-		ID:      id.ID{Hash: nil, Key: nil},
+		ID:      id1,
 		Address: addr,
 	}
 
@@ -37,7 +39,9 @@ func TestNewNode(t *testing.T) {
 func TestNode_String(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
 	nd := NewNode(addr)
-	nd.ID = id.ID{Hash: []byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106}, Key: nil}
+	id1, _ := id.NewID(nil)
+	id1.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	nd.ID = id1
 
 	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb (127.0.0.1:31337)", nd.String())
 }
@@ -45,6 +49,8 @@ func TestNode_String(t *testing.T) {
 func TestNode_Equal(t *testing.T) {
 	id1, _ := id.NewID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 	id2, _ := id.NewID([]byte{106, 105, 104, 103, 102, 101, 100, 99, 98, 97, 48, 57, 56, 55, 54, 53, 52, 51, 50, 49})
+	idNil, _ := id.NewID(nil)
+	idNil.SetHash(nil)
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
@@ -56,13 +62,13 @@ func TestNode_Equal(t *testing.T) {
 		equal bool
 		name  string
 	}{
-		{id.ID{Hash: id1.Hash, Key: id1.Key}, addr1, id.ID{Hash: id1.Hash, Key: id1.Key}, addr1, true, "same id and address"},
-		{id.ID{Hash: id1.Hash, Key: id1.Key}, addr1, id.ID{Hash: id1.Hash, Key: id1.Key}, addr2, false, "different addresses"},
-		{id.ID{Hash: id1.Hash, Key: id1.Key}, addr1, id.ID{Hash: id2.Hash, Key: id2.Key}, addr1, false, "different ids"},
-		{id.ID{Hash: id1.Hash, Key: id1.Key}, addr1, id.ID{Hash: id2.Hash, Key: id2.Key}, addr2, false, "different id and address"},
-		{id.ID{Hash: id1.Hash, Key: id1.Key}, addr1, id.ID{Hash: id2.Hash, Key: id2.Key}, addr2, false, "different id and address"},
-		{id.ID{Hash: id1.Hash, Key: id1.Key}, nil, id.ID{Hash: id1.Hash, Key: id1.Key}, nil, false, "nil addresses"},
-		{id.ID{Hash: nil, Key: nil}, addr1, id.ID{Hash: nil, Key: nil}, addr1, true, "nil ids"},
+		{id1, addr1, id1, addr1, true, "same id and address"},
+		{id1, addr1, id1, addr2, false, "different addresses"},
+		{id1, addr1, id2, addr1, false, "different ids"},
+		{id1, addr1, id2, addr2, false, "different id and address"},
+		{id1, addr1, id2, addr2, false, "different id and address"},
+		{id1, nil, id1, nil, false, "nil addresses"},
+		{idNil, addr1, idNil, addr1, true, "nil ids"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

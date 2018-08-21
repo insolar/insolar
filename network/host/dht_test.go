@@ -152,7 +152,9 @@ func mockFindNodeResponse(request *message.Message, nextID []byte) *message.Mess
 	r.Type = request.Type
 	r.IsResponse = true
 	responseData := &message.ResponseDataFindNode{}
-	responseData.Closest = []*node.Node{{ID: id.ID{Hash: nextID, Key: nil}, Address: netAddr}}
+	id1, _ := id.NewID(nil)
+	id1.SetHash(nextID)
+	responseData.Closest = []*node.Node{{ID: id1, Address: netAddr}}
 	r.Data = responseData
 	return r
 }
@@ -620,7 +622,7 @@ func TestNodeResponseSendError(t *testing.T) {
 				close(done)
 			} else {
 				queries++
-				res := mockFindNodeResponse(request, getZerodIDWithNthByte(2, byte(255)).Hash)
+				res := mockFindNodeResponse(request, getZerodIDWithNthByte(2, byte(255)).GetHash())
 				mockTp.send <- res
 			}
 		}
@@ -824,7 +826,7 @@ func TestFindNodeAllBuckets(t *testing.T) {
 				return
 			}
 
-			res := mockFindNodeResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).Hash)
+			res := mockFindNodeResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).GetHash())
 
 			i--
 			if i < 0 {
@@ -894,17 +896,17 @@ func TestAddNodeTimeout(t *testing.T) {
 				}
 
 				if nodesAdded == 1 {
-					firstNode = id.Hash
+					firstNode = id.GetHash()
 				}
 
 				if nodesAdded == routing.MaxContactsInBucket {
-					lastNode = id.Hash
+					lastNode = id.GetHash()
 				}
 
-				id.Hash[1] = byte(255 - nodesAdded)
+				id.GetHash()[1] = byte(255 - nodesAdded)
 				nodesAdded++
 
-				res := mockFindNodeResponse(request, id.Hash)
+				res := mockFindNodeResponse(request, id.GetHash())
 				mockTp.send <- res
 			case message.TypePing:
 				assert.Equal(t, message.TypePing, request.Type)
@@ -918,8 +920,8 @@ func TestAddNodeTimeout(t *testing.T) {
 
 	// ensure the first node in the table is the second node contacted, and the
 	// last is the last node contacted
-	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.Hash, firstNode))
-	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.Hash, lastNode))
+	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.GetHash(), firstNode))
+	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.GetHash(), lastNode))
 
 	dht.Disconnect()
 
@@ -955,12 +957,14 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
 	id := getIDWithValues(0)
-	id.Hash[n] = v
+	id.GetHash()[n] = v
 	return id
 }
 
 func getIDWithValues(b byte) id.ID {
-	return id.ID{Hash: []byte{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b}, Key: nil}
+	id1, _ := id.NewID(nil)
+	id1.SetHash([]byte{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b})
+	return id1
 }
 
 func TestDHT_FindNode(t *testing.T) {

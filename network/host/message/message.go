@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 )
 
@@ -257,4 +258,6 @@ func init() {
 	gob.Register(&ResponseObtainIP{})
 	gob.Register(&ResponseRelayOwnership{})
 	gob.Register(&ResponseKnownOuterNodes{})
+
+	gob.Register(&id.ID{})
 }

@@ -46,7 +46,7 @@ func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 
 func (s *Origin) containsID(id id.ID) bool {
 	for _, myID := range s.IDs {
-		if id.HashEqual(myID.Hash) {
+		if id.HashEqual(myID.GetHash()) {
 			return true
 		}
 	}

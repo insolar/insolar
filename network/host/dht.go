@@ -185,7 +185,7 @@ func newTables(origin *node.Origin) ([]*routing.HashTable, error) {
 func (dht *DHT) getExpirationTime(ctx context.Context, key []byte) time.Time {
 	ht := dht.htFromCtx(ctx)
 
-	bucket := routing.GetBucketIndexFromDifferingBit(key, ht.Origin.ID.Hash)
+	bucket := routing.GetBucketIndexFromDifferingBit(key, ht.Origin.ID.GetHash())
 	var total int
 	for i := 0; i < bucket; i++ {
 		total += ht.GetTotalNodesInBucket(i)
@@ -270,7 +270,9 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	} else if dht.proxy.ProxyNodesCount() > 0 {
 		address, _ := node.NewAddress(dht.proxy.GetNextProxyAddress())
 		// TODO: current key insertion
-		targetNode = &node.Node{ID: id.ID{Key: nil, Hash: keyBytes}, Address: address}
+		id1, _ := id.NewID(nil)
+		id1.SetHash(keyBytes)
+		targetNode = &node.Node{ID: id1, Address: address}
 		return targetNode, true, nil
 	} else {
 		log.Println("Node not found in routing table. Iterating through network...")
@@ -363,7 +365,7 @@ func (dht *DHT) iterateHt(cb ContextBuilder) error {
 		}
 
 		if dht.NumNodes(ctx) > 0 {
-			_, _, err = dht.iterate(ctx, routing.IterateBootstrap, ht.Origin.ID.Hash, nil)
+			_, _, err = dht.iterate(ctx, routing.IterateBootstrap, ht.Origin.ID.GetHash(), nil)
 			return err
 		}
 	}
@@ -383,7 +385,7 @@ func (dht *DHT) iterateBootstrapNodes(
 	for _, bn := range dht.options.BootstrapNodes {
 		request := message.NewPingMessage(ht.Origin, bn)
 
-		if bn.ID.Hash == nil {
+		if bn.ID.GetHash() == nil {
 			res, err := dht.transport.SendRequest(request)
 			if err != nil {
 				continue
@@ -476,7 +478,7 @@ func (dht *DHT) iterateIsDone(
 	closestNode *node.Node,
 ) (value []byte, closest []*node.Node, close *node.Node, err error) {
 
-	if routeSet.FirstNode().ID.HashEqual(closestNode.ID.Hash) || *(queryRest) {
+	if routeSet.FirstNode().ID.HashEqual(closestNode.ID.GetHash()) || *(queryRest) {
 		switch t {
 		case routing.IterateBootstrap:
 			if !(*queryRest) {
@@ -582,7 +584,7 @@ func resultsIterate(
 
 func checkAndRefreshTimeForBucket(t routing.IterateType, ht *routing.HashTable, target []byte) {
 	if t == routing.IterateBootstrap {
-		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID.Hash)
+		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID.GetHash())
 		ht.ResetRefreshTimeForBucket(bucket)
 	}
 }
@@ -650,11 +652,11 @@ func (dht *DHT) sendMessageToAlphaNodes(
 		}
 
 		// Don't contact nodes already contacted
-		if (contacted)[string(receiver.ID.Hash)] {
+		if (contacted)[string(receiver.ID.GetHash())] {
 			continue
 		}
 
-		(contacted)[string(receiver.ID.Hash)] = true
+		(contacted)[string(receiver.ID.GetHash())] = true
 
 		messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(receiver)
 		messageBuilder = getMessageBuilder(t, messageBuilder, target)
@@ -693,12 +695,12 @@ func getMessageBuilder(t routing.IterateType, messageBuilder message.Builder, ta
 // from right to left in order to find the appropriate bucket
 func (dht *DHT) addNode(ctx Context, node *routing.RouteNode) {
 	ht := dht.htFromCtx(ctx)
-	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.Hash, node.ID.Hash)
+	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.GetHash(), node.ID.GetHash())
 
 	// Make sure node doesn't already exist
 	// If it does, mark it as seen
-	if ht.DoesNodeExistInBucket(index, node.ID.Hash) {
-		ht.MarkNodeAsSeen(node.ID.Hash)
+	if ht.DoesNodeExistInBucket(index, node.ID.GetHash()) {
+		ht.MarkNodeAsSeen(node.ID.GetHash())
 		return
 	}
 
@@ -814,7 +816,7 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 			ctx = buildContext(cb, msg)
 			ht := dht.htFromCtx(ctx)
 
-			if ht.Origin.ID.HashEqual(msg.Receiver.ID.Hash) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
+			if ht.Origin.ID.HashEqual(msg.Receiver.ID.GetHash()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
 				dht.dispatchMessageType(ctx, msg, ht)
 			} else {
 				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.HashString())
@@ -865,7 +867,7 @@ func (dht *DHT) sendRelayedRequest(request *message.Message, ctx Context) {
 func buildContext(cb ContextBuilder, msg *message.Message) Context {
 	var ctx Context
 	var err error
-	if msg.Receiver.ID.Hash == nil {
+	if msg.Receiver.ID.GetHash() == nil {
 		ctx, err = cb.SetDefaultNode().Build()
 	} else {
 		ctx, err = cb.SetNodeByID(msg.Receiver.ID).Build()
