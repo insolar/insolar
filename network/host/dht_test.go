@@ -200,7 +200,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 	done := make(chan bool)
 	port := 15000
 	var dhts []*DHT
-	count := 20
+	count := 10
 
 	for i := 0; i < count; i++ {
 		ids := make([]id.ID, 0)
