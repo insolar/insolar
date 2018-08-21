@@ -149,3 +149,10 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 	return path, nil
 }
 
+// Exec
+func (t *GoInsider) Exec(ref string, method string, args []byte) (data []byte, res []byte, err error) {
+	return data, res, err
+}
+
+// CurrentGoInsider - hackish way to give proxies access to the current environment
+var CurrentGoInsider *GoInsider

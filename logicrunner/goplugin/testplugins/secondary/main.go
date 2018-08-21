@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -40,23 +39,34 @@ type PersonalGreeting struct {
 }
 
 // nolint
-func (hw *HelloWorlder) Hello() (string, error) {
+type Error struct {
+	S string
+}
+
+// nolint
+func (e *Error) Error() string {
+	return e.S
+}
+
+// nolint
+func (hw *HelloWorlder) Hello() (string, *Error) {
 	hw.Greeted++
 	return "Hello world 2", nil
 }
 
 // nolint
-func (hw *HelloWorlder) Fail() (string, error) {
+func (hw *HelloWorlder) Fail() (string, *Error) {
 	hw.Greeted++
-	return "", errors.New("We failed 2")
+	return "", &Error{"We failed 2"}
 }
 
 // nolint
-func (hw *HelloWorlder) Echo(s string) (string, error) {
+func (hw *HelloWorlder) Echo(s string) (string, *Error) {
 	hw.Greeted++
 	return s, nil
 }
 
+// nolint
 func (hw *HelloWorlder) HelloHuman(Name FullName) PersonalGreeting {
 	hw.Greeted++
 	return PersonalGreeting{
@@ -84,7 +94,7 @@ func (hw *HelloWorlder) MultiArgs(Name FullName, s string, i int) *PersonalGreet
 }
 
 // nolint
-func (hw HelloWorlder) ConstEcho(s string) (string, error) {
+func (hw HelloWorlder) ConstEcho(s string) (string, *Error) {
 	return s, nil
 }
 

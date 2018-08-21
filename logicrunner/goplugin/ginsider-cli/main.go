@@ -19,6 +19,7 @@ func main() {
 	pflag.Parse()
 
 	insider := ginsider.NewGoInsider(*path, *rpcAddress)
+	ginsider.CurrentGoInsider = insider
 
 	err := rpc.Register(&ginsider.RPC{insider})
 	if err != nil {

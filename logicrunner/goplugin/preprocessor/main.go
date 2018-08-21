@@ -37,7 +37,7 @@ type parsedFile struct {
 	fileSet *token.FileSet
 	node    *ast.File
 
-	types    map[string]string
+	types    map[string]*ast.TypeSpec
 	methods  map[string][]*ast.FuncDecl
 	contract string
 }
@@ -187,14 +187,16 @@ func generateContractProxy(fileName string, out io.Writer) error {
 
 	out.Write([]byte(`import (
 	"github.com/ugorji/go/codec"
+	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
 )
 
 `))
 
+	out.Write([]byte(generateTypes(parsed) + "\n"))
+
 	out.Write([]byte(`// Contract proxy type
 type ` + parsed.contract + ` struct {
 	Reference string
-	RPC struct{}
 }
 
 `))
@@ -210,7 +212,7 @@ func GetObject(ref string) (r *` + parsed.contract + `) {
 }
 
 func getMethods(parsed *parsedFile) {
-	parsed.types = make(map[string]string)
+	parsed.types = make(map[string]*ast.TypeSpec)
 	parsed.methods = make(map[string][]*ast.FuncDecl)
 	for _, d := range parsed.node.Decls {
 		switch td := d.(type) {
@@ -219,14 +221,17 @@ func getMethods(parsed *parsedFile) {
 				continue
 			}
 
-			typeNode := td.Specs[0].(*ast.TypeSpec)
-			if strings.Contains(td.Doc.Text(), "@inscontract") {
-				if parsed.contract != "" {
-					panic("more than one contract in a file")
+			for _, e := range td.Specs {
+				typeNode := e.(*ast.TypeSpec)
+
+				if strings.Contains(td.Doc.Text(), "@inscontract") {
+					if parsed.contract != "" {
+						panic("more than one contract in a file")
+					}
+					parsed.contract = typeNode.Name.Name
+				} else {
+					parsed.types[typeNode.Name.Name] = typeNode
 				}
-				parsed.contract = typeNode.Name.Name
-			} else {
-				parsed.types[typeNode.Name.Name] = string(parsed.code[typeNode.Pos()-1 : typeNode.End()])
 			}
 		case *ast.FuncDecl:
 			if td.Recv == nil || td.Recv.NumFields() == 0 { // not a method
@@ -247,7 +252,7 @@ func getMethods(parsed *parsedFile) {
 func generateTypes(parsed *parsedFile) string {
 	text := ""
 	for _, t := range parsed.types {
-		text += "type " + t + "\n"
+		text += "type " + string(parsed.code[t.Pos()-1:t.End()-1]) + "\n\n"
 	}
 
 	return text
@@ -259,31 +264,50 @@ func generateWrappers(parsed *parsedFile) string {
 	)` + "\n"
 
 	for _, method := range parsed.methods[parsed.contract] {
-		text += generateMethodWrapper(method, parsed.contract) + "\n"
+		text += generateMethodWrapper(parsed, method) + "\n"
 	}
 	return text
 }
 
-func generateMethodWrapper(method *ast.FuncDecl, class string) string {
-	text := fmt.Sprintf("func (self *%s) INSWRAPER_%s(cbor foundation.CBORMarshaler, data []byte) ([]byte) {\n",
-		class, method.Name.Name)
-	text += fmt.Sprintf("\targs := [%d]interface{}{}\n", method.Type.Params.NumFields())
+func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
+	text := fmt.Sprintf("\t%s := [%d]interface{}{}\n", name, list.NumFields())
 
-	args := []string{}
-	for i, arg := range method.Type.Params.List {
+	for i, arg := range list.List {
 		initializer := ""
-		tname := fmt.Sprintf("%v", arg.Type)
+		tname := string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
 		switch tname {
 		case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
 			initializer = tname + "(0)"
 		case "string":
 			initializer = `""`
 		default:
-			initializer = tname + "{}"
+			switch td := arg.Type.(type) {
+			case *ast.StarExpr:
+				initializer = "&" + string(parsed.code[td.X.Pos()-1:td.X.End()-1]) + "{}"
+			default:
+				initializer = tname + "{}"
+			}
 		}
-		text += fmt.Sprintf("\targs[%d] = %s\n", i, initializer)
-		args = append(args, fmt.Sprintf("args[%d].(%s)", i, tname))
+		text += fmt.Sprintf("\t%s[%d] = %s\n", name, i, initializer)
 	}
+
+	listCode := ""
+	for i, arg := range list.List {
+		if i > 0 {
+			listCode += ", "
+		}
+		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1]))
+	}
+
+	return text, listCode
+}
+
+func generateMethodWrapper(parsed *parsedFile, method *ast.FuncDecl) string {
+	text := fmt.Sprintf("func (self *%s) INSWRAPER_%s(cbor foundation.CBORMarshaler, data []byte) ([]byte) {\n",
+		parsed.contract, method.Name.Name)
+
+	argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
+	text += argsInit
 
 	text += "\tcbor.Unmarshal(&args, data)\n"
 
@@ -292,7 +316,7 @@ func generateMethodWrapper(method *ast.FuncDecl, class string) string {
 		rets = append(rets, fmt.Sprintf("ret%d", i))
 	}
 	ret := strings.Join(rets, ", ")
-	text += fmt.Sprintf("\t%s := self.%s(%s)\n", ret, method.Name.Name, strings.Join(args, ", "))
+	text += fmt.Sprintf("\t%s := self.%s(%s)\n", ret, method.Name.Name, argsList)
 
 	text += fmt.Sprintf("\treturn cbor.Marshal([]interface{}{%s})\n", strings.Join(rets, ", "))
 	text += "}\n"
@@ -365,19 +389,27 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	}
 `
 
-	text += fmt.Sprintf("\t"+`data, res, err := r.RPC.Exec(r.Reference, "%s", argsSerialized)`, method.Name.Name)
+	text += fmt.Sprintf("\t"+`_, res, err := ginsider.CurrentGoInsider.Exec(r.Reference, "%s", argsSerialized)`, method.Name.Name)
 
 	text += `
 	if err != nil {
 		panic(err)
 	}
 `
+	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
+	text += resInit
+
 	text += `
-	err = codec.NewDecoderBytes(data, ch).Decode(r)
+	err = codec.NewDecoderBytes(res, ch).Decode(resList)
 	if err != nil {
 		panic(err)
 	}
 `
+
+	if method.Type.Results.NumFields() > 0 {
+		text += "\treturn " + resList
+	}
+
 	text += "}\n"
 
 	return text

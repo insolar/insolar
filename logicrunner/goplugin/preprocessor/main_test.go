@@ -18,7 +18,10 @@ package main
 
 import (
 	"bytes"
+	"go/build"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"testing"
 )
 
@@ -50,5 +53,77 @@ func Test_generateContractProxy(t *testing.T) {
 	}
 	if len(code) == 0 {
 		t.Fatal("generator returns zero length code")
+	}
+}
+
+func TestCompileContractProxy(t *testing.T) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(cwd) // nolint: errcheck
+
+	tmpDir, err := ioutil.TempDir("", "test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	//defer os.RemoveAll(tmpDir) // nolint: errcheck
+	t.Log("tmp dir", tmpDir)
+
+	os.MkdirAll(tmpDir+"/src/secondary/", 0777)
+
+	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = generateContractProxy("../testplugins/secondary/main.go", proxyFh)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = proxyFh.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mainFh, err := os.OpenFile(tmpDir+"/test.go", os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mainFh.Write([]byte(`
+package test
+
+import "secondary"
+
+func main() {
+	_ = secondary.GetObject("some")
+}
+	`))
+	err = mainFh.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.Chdir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gopathOrigEnv := os.Getenv("GOPATH")
+	gopath := gopathOrigEnv
+	if gopath == "" {
+		gopath = build.Default.GOPATH
+	}
+
+	err = os.Setenv("GOPATH", tmpDir+":"+gopath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Setenv("GOPATH", gopathOrigEnv) // nolint: errcheck
+
+	out, err := exec.Command("go", "build", "test.go").CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(out))
 	}
 }

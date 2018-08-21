@@ -86,9 +86,9 @@ func compileBinaries() error {
 		return errors.Wrap(err, "couldn't chdir")
 	}
 
-	err = exec.Command("make", "secondary.so").Run()
+	out, err := exec.Command("make", "secondary.so").CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "can't build pluigins")
+		return errors.Wrap(err, "can't build pluigins: "+string(out))
 	}
 	return nil
 }
