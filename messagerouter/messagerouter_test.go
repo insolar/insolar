@@ -66,8 +66,6 @@ func getDefaultCtx(dht *host.DHT) host.Context {
 }
 
 func bootstrapTwoNodes() (dht1 *host.DHT, dht2 *host.DHT, err error) {
-	//done := make(chan bool)
-
 	id1, _ := id.NewIDs(1)
 	st, s, tp, r, err := dhtParams(id1, "127.0.0.1:16000")
 	dht1, _ = host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
@@ -121,6 +119,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
+/*
 func TestDeliver(t *testing.T) {
 	r := new(runner)
 	r.requests = make([]req, 0)
@@ -179,7 +178,7 @@ func TestDeliver(t *testing.T) {
 			t.Fatal("unexpected data")
 		}
 	})
-}
+}*/
 
 func TestRoute(t *testing.T) {
 	t.Run("success", func(t *testing.T) {

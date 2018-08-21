@@ -58,7 +58,7 @@ type Response struct {
 // that satisfies `LogicRunner` interface
 func New(lr LogicRunner, rpc host.RPC) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc}
-	mr.rpc.RemoteProcedureRegister(DeliverRpcMethodName, mr.deliverRpc)
+	mr.rpc.RemoteProcedureRegister(DeliverRpcMethodName, mr.deliver)
 	return mr, nil
 }
 
@@ -66,77 +66,57 @@ func New(lr LogicRunner, rpc host.RPC) (*MessageRouter, error) {
 func (r *MessageRouter) Route(ctx host.Context, msg Message) (response Response, err error) {
 	request, err := Serialize(msg)
 	if err != nil {
-		return
+		return response, err
 	}
 
-	nodeId, err := r.getNodeId(msg.Reference)
+	result, err := r.rpc.RemoteProcedureCall(ctx, r.getNodeId(msg.Reference).String(), DeliverRpcMethodName, [][]byte{request})
 	if err != nil {
-		return
+		return response, err
 	}
 
-	result, err := r.rpc.RemoteProcedureCall(ctx, nodeId.String(), DeliverRpcMethodName, [][]byte{request})
-	if err != nil {
-		return
-	}
-
-	response, err = DeserializeResponse(result)
-	return
+	return DeserializeResponse(result)
 }
 
-// Deliver method calls LogicRunner.Execute on this local node
-func (r *MessageRouter) Deliver(msg Message) (Response, error) {
-	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
-	return Response{data, res}, err
-}
-
-// method for register as RPC stub
-func (r *MessageRouter) deliverRpc(args [][]byte) (result []byte, err error) {
+// Deliver method calls LogicRunner.Execute on local node
+// this method is registered as RPC stub
+func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 
 	msg, err := DeserializeMessage(args[0]) // TODO: check empty args
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	res, err := r.Deliver(msg)
-	if err != nil {
-		return
-	}
-
-	result, err = Serialize(res)
-	return
+	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
+	return Serialize(Response{data, res})
 }
 
-func (r *MessageRouter) getNodeId(reference string) (nodeId id.ID, err error) {
+func (r *MessageRouter) getNodeId(reference string) (nodeId id.ID) {
 	// TODO: need help from teammates
 	log.Println("getNodeId: ", reference)
 
 	nodeId = base58.Decode(reference)
-	return
+	return nodeId
 }
 
-func Serialize(value interface{}) (res []byte, err error) {
+func Serialize(value interface{}) ([]byte, error) {
 	var buffer bytes.Buffer
 	enc := gob.NewEncoder(&buffer)
-	err = enc.Encode(value)
+	err := enc.Encode(value)
 	if err != nil {
-		return
+		return nil, err
 	}
-	res = buffer.Bytes()
-	return
+	res := buffer.Bytes()
+	return res, err
 }
 
 func DeserializeMessage(data []byte) (msg Message, err error) {
-	buffer := bytes.NewBuffer(data)
-	dec := gob.NewDecoder(buffer)
-	err = dec.Decode(&msg)
-	return
+	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&msg)
+	return msg, err
 }
 
 func DeserializeResponse(data []byte) (res Response, err error) {
-	buffer := bytes.NewBuffer(data)
-	dec := gob.NewDecoder(buffer)
-	err = dec.Decode(&res)
-	return
+	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&res)
+	return res, err
 }
 
 func init() {
