@@ -69,14 +69,14 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 func compileBinaries() error {
 	d, _ := os.Getwd()
 
-	err := os.Chdir(d + "/ginsider")
+	err := os.Chdir(d + "/ginsider-cli")
 	if err != nil {
 		return errors.Wrap(err, "couldn't chdir")
 	}
 
 	defer os.Chdir(d) // nolint: errcheck
 
-	err = exec.Command("go", "build", "ginsider.go").Run()
+	err = exec.Command("go", "build", "-o", "ginsider-cli", "main.go").Run()
 	if err != nil {
 		return errors.Wrap(err, "can't build ginsider")
 	}

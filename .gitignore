@@ -36,6 +36,6 @@ _db
 vm/wasm/test/data/!simple!.wasm
 vm/wasm/test/data/*.wat
 
-logicrunner/goplugin/ginsider/ginsider
+logicrunner/goplugin/ginsider-cli/ginsider-cli
 logicrunner/goplugin/preprocessor/preprocessor
 *_generated.go

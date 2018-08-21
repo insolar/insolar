@@ -95,7 +95,7 @@ func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Options.Listen)
 
-	runner := exec.Command("ginsider/ginsider", runnerArguments...)
+	runner := exec.Command("ginsider-cli/ginsider-cli", runnerArguments...)
 	runner.Stdout = os.Stdout
 	runner.Stderr = os.Stderr
 	err := runner.Start()
