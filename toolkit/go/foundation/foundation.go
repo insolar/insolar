@@ -60,7 +60,7 @@ func GetObject(ref *Reference) BaseContractInterface {
 	return FakeLedger[ref].(BaseContractInterface)
 }
 
-func (bc *BaseContract) SetYourDelegate(delegate BaseContractInterface, class *Reference) *Reference {
+func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class *Reference) *Reference {
 	me := bc.context.Me
 	uid, _ := uuid.NewV4()
 	key := Reference(uid.String())
