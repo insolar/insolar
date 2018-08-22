@@ -70,7 +70,10 @@ func TestCompileContractProxy(t *testing.T) {
 	//defer os.RemoveAll(tmpDir) // nolint: errcheck
 	t.Log("tmp dir", tmpDir)
 
-	os.MkdirAll(tmpDir+"/src/secondary/", 0777)
+	err = os.MkdirAll(tmpDir+"/src/secondary/", 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -91,7 +94,7 @@ func TestCompileContractProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mainFh.Write([]byte(`
+	_, err = mainFh.Write([]byte(`
 package test
 
 import "secondary"
@@ -100,6 +103,10 @@ func main() {
 	_ = secondary.GetObject("some")
 }
 	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = mainFh.Close()
 	if err != nil {
 		t.Fatal(err)

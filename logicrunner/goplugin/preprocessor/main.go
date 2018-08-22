@@ -92,7 +92,10 @@ func main() {
 		fs := flag.NewFlagSet("wrapper", flag.ExitOnError)
 		output := newOutputFlag()
 		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
-		fs.Parse(os.Args[2:])
+		err := fs.Parse(os.Args[2:])
+		if err != nil {
+			panic(err)
+		}
 
 		for _, fn := range fs.Args() {
 			err := generateContractWrapper(fn, output.writer)
@@ -129,7 +132,7 @@ func slurpFile(fileName string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't open file '"+fileName+"'")
 	}
-	defer file.Close()
+	defer file.Close() //nolint: errcheck
 
 	res, err := ioutil.ReadAll(file)
 	if err != nil {
@@ -170,9 +173,16 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	if packageName != "main" {
 		panic("Contract must be in main package")
 	}
-	out.Write([]byte("package " + packageName + "\n\n"))
-	out.Write([]byte(generateWrappers(parsed) + "\n"))
-	out.Write([]byte(generateExports(parsed) + "\n"))
+
+	code := "package " + packageName + "\n\n"
+	code += generateWrappers(parsed) + "\n"
+	code += generateExports(parsed) + "\n"
+
+	_, err = out.Write([]byte(code))
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
 	return nil
 }
 
@@ -197,31 +207,37 @@ func generateContractProxy(fileName string, out io.Writer) error {
 		proxyPackageName = match[1]
 	}
 
-	out.Write([]byte("package " + proxyPackageName + "\n\n"))
+	code := "package " + proxyPackageName + "\n\n"
 
-	out.Write([]byte(`import (
+	code += `import (
 	"github.com/ugorji/go/codec"
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
 )
 
-`))
+`
 
-	out.Write([]byte(generateTypes(parsed) + "\n"))
+	code += generateTypes(parsed) + "\n"
 
-	out.Write([]byte(`// Contract proxy type
+	code += `// Contract proxy type
 type ` + parsed.contract + ` struct {
 	Reference string
 }
 
-`))
+`
 
-	out.Write([]byte(`// GetObject
+	code += `// GetObject
 func GetObject(ref string) (r *` + parsed.contract + `) {
 	return &` + parsed.contract + `{}
 }
-`))
+`
 
-	out.Write([]byte(generateMethodsProxies(parsed) + "\n"))
+	code += generateMethodsProxies(parsed) + "\n"
+
+	_, err = out.Write([]byte(code))
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
 	return nil
 }
 
