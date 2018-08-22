@@ -1,44 +1,55 @@
 package wallet
 
-
 import (
-	"ilya/v2/allowance"
-	"ilya/v2/memberProxy"
-	mfm "ilya/v2/mockMagic"
+	"github.com/insolar/insolar/genesis/experiment/allowance"
+	"github.com/insolar/insolar/genesis/experiment/member"
+	"github.com/insolar/insolar/logicrunner/goplugin/experiment/foundation"
 )
 
+// todo make this investigation through reflection
+var TypeReference = foundation.Reference("wallet")
+
 type Wallet struct {
-	mfm.MockMagic
+	foundation.BaseContract
 	balance uint
 }
 
-func (w *Wallet) Allocate(amount uint, to *mfm.Reference) *allowance.Allowance {
+func (w *Wallet) Allocate(amount uint, to *foundation.Reference) *allowance.Allowance {
 	// TODO check balance is enough
 	w.balance -= amount
-	return &allowance.Allowance{} //to: to, amount: amount, expTime: 0} // TODO Set real exp time
+	return &allowance.Allowance{To: to, Amount: amount, ExpireTime: w.GetContext().Time.Unix() + 10}
 }
 
-func (w *Wallet) Receive(amount uint, from *mfm.Reference) {
-	memberSender := memberProxy.ProxyGetObject(from)
-	interfaceSender := memberSender.ProxyGetImplementation(&mfm.Reference{}) // TODO set reference to wallet class
-	walletSender := interfaceSender.(Wallet)
-	walletReceiver := w.MockGetSelfReference()
-	allowance := walletSender.Allocate(amount, walletReceiver)
-	w.balance += allowance.TakeAmount()
+func (w *Wallet) Receive(amount uint, from *foundation.Reference) {
+	fromMember := member.GetObject(from)
+	fromWallet := fromMember.GetImplementationFor(&TypeReference).(*Wallet)
+	Allowance := fromWallet.Allocate(amount, w.GetContext().Me)
+	Allowance.SetContext(&foundation.CallContext{ // todo this is hack for testing
+		Caller: w.GetContext().Me,
+	})
+	w.balance += Allowance.TakeAmount()
 }
 
 func (w *Wallet) GetTotalBalance() uint {
-	children := allowance.ProxyGetChildrenOf(&mfm.Reference{})
 	var totalAllowanced uint = 0
-	for _, child := range children {
-		totalAllowanced += child.GetBalanceForOwner()
+	for _, c := range w.GetChildrenTyped(&allowance.TypeReference) {
+		allowance := c.(allowance.Allowance)
+		totalAllowanced += allowance.GetBalanceForOwner()
 	}
 	return w.balance + totalAllowanced
 }
 
 func (w *Wallet) ReturnAndDeleteExpiriedAllowances() {
-	children := allowance.ProxyGetChildrenOf(&mfm.Reference{})
-	for _, child := range children {
-		w.balance += child.DeleteExpiredAllowance()
+	for _, c := range w.GetChildrenTyped(&allowance.TypeReference) {
+		allowance := c.(allowance.Allowance)
+		w.balance += allowance.DeleteExpiredAllowance()
 	}
+}
+
+func NewWallet(balance uint) (*Wallet, *foundation.Reference) {
+	wallet := &Wallet{
+		balance: balance,
+	}
+	reference := foundation.SaveToLedger(wallet)
+	return wallet, reference
 }

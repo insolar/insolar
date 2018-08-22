@@ -1,45 +1,43 @@
 package allowance
 
-import(
-	mfm "ilya/v2/mockMagic"
+import (
+	"time"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/experiment/foundation"
 )
 
+var TypeReference = foundation.Reference("allowance")
+
 type Allowance struct {
-	mfm.MockMagic
-	to *mfm.Reference
-	amount uint
-	expTime uint
+	foundation.BaseContract
+	To         *foundation.Reference
+	Amount     uint
+	ExpireTime int64
 }
 
-func ProxyGetChildrenOf(reference *mfm.Reference) []*Allowance {
-	return make([]*Allowance, 3)
-}
-
-func ( a *Allowance ) IsExpired() bool{
-	var currTime uint = 0 // TODO: Get real time
-	return currTime > a.expTime
+func (a *Allowance) IsExpired() bool {
+	return a.GetContext().Time.After(time.Unix(a.ExpireTime, 0))
 }
 
 func (a *Allowance) TakeAmount() uint {
-	if a.MockGetCaller() == a.to && !a.IsExpired() {
-		a.MockSelfDestructRequest()
-		return a.amount
+	if a.GetContext().Caller == a.To && !a.IsExpired() {
+		a.SelfDestructRequest()
+		return a.Amount
 	}
 	return 0
 }
 
-func (a *Allowance) GetBalanceForOwner() (uint) {
+func (a *Allowance) GetBalanceForOwner() uint {
 	if !a.IsExpired() {
-		return a.amount
+		return a.Amount
 	}
 	return 0
 }
 
-func (a *Allowance) DeleteExpiredAllowance() (uint) {
-	if a.MockGetCaller() == a.MockGetMyOwner() && !a.IsExpired() {
-		a.MockSelfDestructRequest()
-		return a.amount
+func (a *Allowance) DeleteExpiredAllowance() uint {
+	if a.GetContext().Caller == a.GetContext().Parent && !a.IsExpired() {
+		a.SelfDestructRequest()
+		return a.Amount
 	}
 	return 0
 }
-
