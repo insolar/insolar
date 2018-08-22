@@ -19,6 +19,16 @@ package messagerouter
 import (
 	"errors"
 	"testing"
+
+	"github.com/insolar/insolar/network/host"
+	"github.com/insolar/insolar/network/host/connection"
+	"github.com/insolar/insolar/network/host/id"
+	"github.com/insolar/insolar/network/host/node"
+	"github.com/insolar/insolar/network/host/relay"
+	"github.com/insolar/insolar/network/host/rpc"
+	"github.com/insolar/insolar/network/host/store"
+	"github.com/insolar/insolar/network/host/transport"
+	"github.com/stretchr/testify/assert"
 )
 
 type req struct {
@@ -38,6 +48,41 @@ type runner struct {
 	responses []resp
 }
 
+const closedMessage = "closed" // "broken pipe" for kcpTransport
+
+func dhtParams(ids []id.ID, address string) (store.Store, *node.Origin, transport.Transport, rpc.RPC, error) {
+	st := store.NewMemoryStore()
+	addr, _ := node.NewAddress(address)
+	origin, _ := node.NewOrigin(ids, addr)
+	conn, _ := connection.NewConnectionFactory().Create(address)
+	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
+	r := rpc.NewRPC()
+	return st, origin, tp, r, err
+}
+
+func getDefaultCtx(dht *host.DHT) host.Context {
+	ctx, _ := host.NewContextBuilder(dht).SetDefaultNode().Build()
+	return ctx
+}
+
+func NewNode() (*host.DHT, error) {
+	id1, _ := id.NewIDs(1)
+	st, s, tp, r, err := dhtParams(id1, "127.0.0.1:16000")
+	dht, err := host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
+	return dht, err
+}
+
+type mockRpc struct {
+}
+
+func (r *mockRpc) RemoteProcedureCall(ctx host.Context, target string, method string, args [][]byte) (result []byte, err error) {
+	return nil, errors.New("not implemented in mock")
+}
+
+func (r *mockRpc) RemoteProcedureRegister(name string, method host.RemoteProcedure) {
+	return
+}
+
 func (r *runner) Execute(ref string, method string, args []byte) ([]byte, []byte, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
@@ -52,7 +97,7 @@ func (r *runner) Execute(ref string, method string, args []byte) ([]byte, []byte
 }
 
 func TestNew(t *testing.T) {
-	mr, err := New(new(runner))
+	mr, err := New(new(runner), new(mockRpc))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,11 +111,15 @@ func TestRoute(t *testing.T) {
 	r.requests = make([]req, 0)
 	r.responses = make([]resp, 0)
 
-	mr, _ := New(r)
+	dht, _ := NewNode()
+	ctx := getDefaultCtx(dht)
+
+	mr, _ := New(r, dht)
+	reference := dht.GetOriginID(ctx)
 
 	t.Run("success", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
-		resp, err := mr.Route(Message{Reference: "some.ref", Method: "SomeMethod", Arguments: []byte("args")})
+		resp, err := mr.Route(ctx, Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -86,7 +135,7 @@ func TestRoute(t *testing.T) {
 		req := r.requests[0]
 		r.requests = r.requests[1:]
 
-		if req.ref != "some.ref" {
+		if req.ref != reference {
 			t.Fatal("unexpected data")
 		}
 		if req.method != "SomeMethod" {
@@ -98,7 +147,7 @@ func TestRoute(t *testing.T) {
 	})
 	t.Run("error", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte{}, []byte{}, errors.New("wtf")})
-		_, err := mr.Route(Message{Reference: "some.ref", Method: "SomeMethod", Arguments: []byte("args")})
+		_, err := mr.Route(ctx, Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
 		if err == nil {
 			t.Fatal("error expected")
 		}
@@ -109,7 +158,7 @@ func TestRoute(t *testing.T) {
 		req := r.requests[0]
 		r.requests = r.requests[1:]
 
-		if req.ref != "some.ref" {
+		if req.ref != reference {
 			t.Fatal("unexpected data")
 		}
 		if req.method != "SomeMethod" {
@@ -118,5 +167,10 @@ func TestRoute(t *testing.T) {
 		if string(req.args) != "args" {
 			t.Fatal("unexpected data")
 		}
+	})
+
+	t.Run("referenceNotFound", func(t *testing.T) {
+		_, err := mr.Route(ctx, Message{Reference: "refNotFound", Method: "SomeMethod", Arguments: []byte("args")})
+		assert.Error(t, err)
 	})
 }
