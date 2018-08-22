@@ -67,8 +67,7 @@ func TestCompileContractProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//defer os.RemoveAll(tmpDir) // nolint: errcheck
-	t.Log("tmp dir", tmpDir)
+	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
 	err = os.MkdirAll(tmpDir+"/src/secondary/", 0777)
 	if err != nil {
