@@ -3,7 +3,7 @@ package wallet
 import (
 	"github.com/insolar/insolar/genesis/experiment/allowance"
 	"github.com/insolar/insolar/genesis/experiment/member"
-	"github.com/insolar/insolar/logicrunner/goplugin/experiment/foundation"
+	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
 // todo make this investigation through reflection

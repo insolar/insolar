@@ -12,12 +12,17 @@ type CallContext struct {
 	Me     *Reference
 	Caller *Reference
 	Parent *Reference
+	Type   *Reference
 	Time   time.Time
 	Pulse  uint64
 }
 
 type BaseContract struct {
 	context *CallContext
+}
+
+type BaseContractInterface interface {
+	GetContext() *CallContext
 }
 
 func (bc *BaseContract) GetContext() *CallContext {
@@ -43,8 +48,6 @@ func (bc *BaseContract) GetChildrenTyped(r *Reference) []interface{} {
 	return FakeChildren[bc.context.Me][r]
 }
 
-func (bc *BaseContract) SelfDestructRequest() {}
-
 func SaveToLedger(rec interface{}) *Reference {
 	u2, _ := uuid.NewV4()
 	key := Reference(u2.String())
@@ -57,4 +60,21 @@ func SetDelegate(to *Reference, class *Reference, delegate interface{}) {
 		FakeDelegates[to] = make(map[*Reference]interface{})
 	}
 	FakeDelegates[to][class] = delegate
+}
+
+func (bc *BaseContract) SelfDestructRequest() {
+	me := bc.context.Me
+	delete(FakeLedger, me)
+	for _, v := range FakeDelegates {
+		delete(v, me)
+	}
+	for _, c := range FakeChildren {
+		arr := []interface{}{}
+		for _, v := range c[bc.context.Type] {
+			if v.(BaseContractInterface).GetContext().Me != me {
+				arr = append(arr, v)
+			}
+		}
+		c[bc.context.Type] = arr
+	}
 }

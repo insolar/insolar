@@ -21,7 +21,7 @@ import (
 
 	"github.com/insolar/insolar/genesis/experiment/member"
 	"github.com/insolar/insolar/genesis/experiment/wallet"
-	"github.com/insolar/insolar/logicrunner/goplugin/experiment/foundation"
+	"github.com/insolar/insolar/toolkit/go/foundation"
 	"github.com/stretchr/testify/assert"
 )
 

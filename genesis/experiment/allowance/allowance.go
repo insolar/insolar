@@ -3,7 +3,7 @@ package allowance
 import (
 	"time"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/experiment/foundation"
+	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
 var TypeReference = foundation.Reference("allowance")
