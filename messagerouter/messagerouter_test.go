@@ -65,24 +65,11 @@ func getDefaultCtx(dht *host.DHT) host.Context {
 	return ctx
 }
 
-func bootstrapTwoNodes() (dht1 *host.DHT, dht2 *host.DHT, err error) {
+func NewNode() (*host.DHT, error) {
 	id1, _ := id.NewIDs(1)
 	st, s, tp, r, err := dhtParams(id1, "127.0.0.1:16000")
-	dht1, _ = host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
-
-	bootstrapAddr2, _ := node.NewAddress("127.0.0.1:16000")
-	st2, s2, tp2, r2, err := dhtParams(nil, "127.0.0.1:16001")
-	dht2, _ = host.NewDHT(st2, s2, tp2, r2, &host.Options{
-		BootstrapNodes: []*node.Node{
-			{
-				ID:      id1[0],
-				Address: bootstrapAddr2,
-			},
-		},
-	},
-		relay.NewProxy())
-
-	return
+	dht, err := host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
+	return dht, err
 }
 
 type mockRpc struct {
@@ -119,17 +106,20 @@ func TestNew(t *testing.T) {
 	}
 }
 
-/*
-func TestDeliver(t *testing.T) {
+func TestRoute(t *testing.T) {
 	r := new(runner)
 	r.requests = make([]req, 0)
 	r.responses = make([]resp, 0)
 
-	mr, _ := New(r, new(mockRpc))
+	dht, _ := NewNode()
+	ctx := getDefaultCtx(dht)
+
+	mr, _ := New(r, dht)
+	reference := dht.GetOriginID(ctx)
 
 	t.Run("success", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
-		resp, err := mr.Deliver(Message{Reference: "some.ref", Method: "SomeMethod", Arguments: []byte("args")})
+		resp, err := mr.Route(ctx, Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -145,7 +135,7 @@ func TestDeliver(t *testing.T) {
 		req := r.requests[0]
 		r.requests = r.requests[1:]
 
-		if req.ref != "some.ref" {
+		if req.ref != reference {
 			t.Fatal("unexpected data")
 		}
 		if req.method != "SomeMethod" {
@@ -157,7 +147,7 @@ func TestDeliver(t *testing.T) {
 	})
 	t.Run("error", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte{}, []byte{}, errors.New("wtf")})
-		_, err := mr.Deliver(Message{Reference: "some.ref", Method: "SomeMethod", Arguments: []byte("args")})
+		_, err := mr.Route(ctx, Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
 		if err == nil {
 			t.Fatal("error expected")
 		}
@@ -168,7 +158,7 @@ func TestDeliver(t *testing.T) {
 		req := r.requests[0]
 		r.requests = r.requests[1:]
 
-		if req.ref != "some.ref" {
+		if req.ref != reference {
 			t.Fatal("unexpected data")
 		}
 		if req.method != "SomeMethod" {
@@ -178,24 +168,9 @@ func TestDeliver(t *testing.T) {
 			t.Fatal("unexpected data")
 		}
 	})
-}*/
 
-func TestRoute(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		dht1, _, err := bootstrapTwoNodes()
-		r := new(runner)
-		r.requests = make([]req, 0)
-		r.responses = make([]resp, 0)
-		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
-
-		mr, _ := New(r, dht1)
-		ctx := getDefaultCtx(dht1)
-
-		reference := dht1.GetOriginID(ctx)
-		message := Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")}
-		_, err = mr.Route(ctx, message)
-		assert.NoError(t, err)
-
-		return
+	t.Run("referenceNotFound", func(t *testing.T) {
+		_, err := mr.Route(ctx, Message{Reference: "refNotFound", Method: "SomeMethod", Arguments: []byte("args")})
+		assert.Error(t, err)
 	})
 }

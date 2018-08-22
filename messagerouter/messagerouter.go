@@ -52,6 +52,7 @@ type Message struct {
 type Response struct {
 	Data   []byte
 	Result []byte
+	Error  error
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
@@ -87,7 +88,7 @@ func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 	}
 
 	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
-	return Serialize(Response{data, res})
+	return Serialize(Response{data, res, err})
 }
 
 func (r *MessageRouter) getNodeId(reference string) (nodeId id.ID) {
