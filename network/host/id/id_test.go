@@ -115,3 +115,11 @@ func TestID_String(t *testing.T) {
 
 	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.HashString())
 }
+
+func TestCryptoReader_Read(t *testing.T) {
+	var crypto cryptoReader
+	data := GetRandomKey()
+	n, err := crypto.Read(data)
+	assert.NoError(t, err)
+	assert.Equal(t, n, len(data))
+}
