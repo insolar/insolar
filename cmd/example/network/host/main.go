@@ -270,7 +270,7 @@ info - Display information about this node
 func send(sender *node.Node, args [][]byte) ([]byte, error) {
 	bs := append([]byte{}, []byte(time.Now().Format(time.Kitchen))...)
 	bs = append(bs, ' ')
-	bs = append(bs, sender.ID.String()...)
+	bs = append(bs, sender.ID.HashString()...)
 
 	for _, item := range args {
 		bs = append(bs, ' ')

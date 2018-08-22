@@ -26,8 +26,10 @@ import (
 func TestNewNode(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
 	actualNode := NewNode(addr)
+	id1, _ := id.NewID(nil)
+	id1.SetHash(nil)
 	expectedNode := &Node{
-		ID:      nil,
+		ID:      id1,
 		Address: addr,
 	}
 
@@ -37,14 +39,18 @@ func TestNewNode(t *testing.T) {
 func TestNode_String(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
 	nd := NewNode(addr)
-	nd.ID = id.ID([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	id1, _ := id.NewID(id.GetRandomKey())
+	id1.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
+	nd.ID = id1
 
 	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb (127.0.0.1:31337)", nd.String())
 }
 
 func TestNode_Equal(t *testing.T) {
-	id1, _ := id.NewID()
-	id2, _ := id.NewID()
+	id1, _ := id.NewID(id.GetRandomKey())
+	id2, _ := id.NewID(id.GetRandomKey())
+	idNil, _ := id.NewID(id.GetRandomKey())
+	idNil.SetHash(nil)
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
@@ -62,7 +68,7 @@ func TestNode_Equal(t *testing.T) {
 		{id1, addr1, id2, addr2, false, "different id and address"},
 		{id1, addr1, id2, addr2, false, "different id and address"},
 		{id1, nil, id1, nil, false, "nil addresses"},
-		{nil, addr1, nil, addr1, true, "nil ids"},
+		{idNil, addr1, idNil, addr1, true, "nil ids"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

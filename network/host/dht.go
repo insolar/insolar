@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/huandu/xstrings"
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/node"
 	"github.com/insolar/insolar/network/host/relay"
@@ -175,8 +176,8 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 func newTables(origin *node.Origin) ([]*routing.HashTable, error) {
 	tables := make([]*routing.HashTable, len(origin.IDs))
 
-	for i, id := range origin.IDs {
-		ht, err := routing.NewHashTable(id, origin.Address)
+	for i, id1 := range origin.IDs {
+		ht, err := routing.NewHashTable(id1, origin.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -190,7 +191,7 @@ func newTables(origin *node.Origin) ([]*routing.HashTable, error) {
 func (dht *DHT) getExpirationTime(ctx context.Context, key []byte) time.Time {
 	ht := dht.htFromCtx(ctx)
 
-	bucket := routing.GetBucketIndexFromDifferingBit(key, ht.Origin.ID)
+	bucket := routing.GetBucketIndexFromDifferingBit(key, ht.Origin.ID.GetHash())
 	var total int
 	for i := 0; i < bucket; i++ {
 		total += ht.GetTotalNodesInBucket(i)
@@ -261,7 +262,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	}
 	ht := dht.htFromCtx(ctx)
 
-	if ht.Origin.ID.Equal(keyBytes) {
+	if ht.Origin.ID.HashEqual(keyBytes) {
 		return ht.Origin, true, nil
 	}
 
@@ -269,12 +270,15 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 	var exists = false
 	routeSet := ht.GetClosestContacts(1, keyBytes, nil)
 
-	if routeSet.Len() > 0 && routeSet.FirstNode().ID.Equal(keyBytes) {
+	if routeSet.Len() > 0 && routeSet.FirstNode().ID.HashEqual(keyBytes) {
 		targetNode = routeSet.FirstNode()
 		exists = true
 	} else if dht.proxy.ProxyNodesCount() > 0 {
 		address, _ := node.NewAddress(dht.proxy.GetNextProxyAddress())
-		targetNode = &node.Node{ID: keyBytes, Address: address}
+		// TODO: current key insertion
+		id1, _ := id.NewID(id.GetRandomKey())
+		id1.SetHash(keyBytes)
+		targetNode = &node.Node{ID: id1, Address: address}
 		return targetNode, true, nil
 	} else {
 		log.Println("Node not found in routing table. Iterating through network...")
@@ -283,7 +287,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 			return nil, false, err
 		}
 		for i := range closest {
-			if closest[i].ID.Equal(keyBytes) {
+			if closest[i].ID.HashEqual(keyBytes) {
 				targetNode = closest[i]
 				exists = true
 			}
@@ -302,7 +306,7 @@ func (dht *DHT) NumNodes(ctx Context) int {
 // GetOriginID returns the base58 encoded identifier of the local node.
 func (dht *DHT) GetOriginID(ctx Context) string {
 	ht := dht.htFromCtx(ctx)
-	return ht.Origin.ID.String()
+	return ht.Origin.ID.HashString()
 }
 
 // Listen begins listening on the socket for incoming Messages.
@@ -367,7 +371,7 @@ func (dht *DHT) iterateHt(cb ContextBuilder) error {
 		}
 
 		if dht.NumNodes(ctx) > 0 {
-			_, _, err = dht.iterate(ctx, routing.IterateBootstrap, ht.Origin.ID, nil)
+			_, _, err = dht.iterate(ctx, routing.IterateBootstrap, ht.Origin.ID.GetHash(), nil)
 			return err
 		}
 	}
@@ -387,7 +391,7 @@ func (dht *DHT) iterateBootstrapNodes(
 	for _, bn := range dht.options.BootstrapNodes {
 		request := message.NewPingMessage(ht.Origin, bn)
 
-		if bn.ID == nil {
+		if bn.ID.GetHash() == nil {
 			res, err := dht.transport.SendRequest(request)
 			if err != nil {
 				continue
@@ -480,7 +484,7 @@ func (dht *DHT) iterateIsDone(
 	closestNode *node.Node,
 ) (value []byte, closest []*node.Node, close *node.Node, err error) {
 
-	if routeSet.FirstNode().ID.Equal(closestNode.ID) || *(queryRest) {
+	if routeSet.FirstNode().ID.HashEqual(closestNode.ID.GetHash()) || *(queryRest) {
 		switch t {
 		case routing.IterateBootstrap:
 			if !(*queryRest) {
@@ -566,7 +570,7 @@ func resultsIterate(
 		switch t {
 		case routing.IterateBootstrap, routing.IterateFindNode, routing.IterateStore:
 			responseData := result.Data.(*message.ResponseDataFindNode)
-			if len(responseData.Closest) > 0 && responseData.Closest[0].ID.Equal(target) {
+			if len(responseData.Closest) > 0 && responseData.Closest[0].ID.HashEqual(target) {
 				return nil, responseData.Closest, nil
 			}
 			routeSet.AppendMany(routing.RouteNodesFrom(responseData.Closest))
@@ -586,7 +590,7 @@ func resultsIterate(
 
 func checkAndRefreshTimeForBucket(t routing.IterateType, ht *routing.HashTable, target []byte) {
 	if t == routing.IterateBootstrap {
-		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID)
+		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID.GetHash())
 		ht.ResetRefreshTimeForBucket(bucket)
 	}
 }
@@ -654,11 +658,11 @@ func (dht *DHT) sendMessageToAlphaNodes(
 		}
 
 		// Don't contact nodes already contacted
-		if (contacted)[string(receiver.ID)] {
+		if (contacted)[string(receiver.ID.GetHash())] {
 			continue
 		}
 
-		(contacted)[string(receiver.ID)] = true
+		(contacted)[string(receiver.ID.GetHash())] = true
 
 		messageBuilder := message.NewBuilder().Sender(ht.Origin).Receiver(receiver)
 		messageBuilder = getMessageBuilder(t, messageBuilder, target)
@@ -697,12 +701,12 @@ func getMessageBuilder(t routing.IterateType, messageBuilder message.Builder, ta
 // from right to left in order to find the appropriate bucket
 func (dht *DHT) addNode(ctx Context, node *routing.RouteNode) {
 	ht := dht.htFromCtx(ctx)
-	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID, node.ID)
+	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.GetHash(), node.ID.GetHash())
 
 	// Make sure node doesn't already exist
 	// If it does, mark it as seen
-	if ht.DoesNodeExistInBucket(index, node.ID) {
-		ht.MarkNodeAsSeen(node.ID)
+	if ht.DoesNodeExistInBucket(index, node.ID.GetHash()) {
+		ht.MarkNodeAsSeen(node.ID.GetHash())
 		return
 	}
 
@@ -777,8 +781,8 @@ func (dht *DHT) selectTicker(ticker *time.Ticker, cb *ContextBuilder, stop chan 
 			// Refresh
 			for i := 0; i < routing.KeyBitSize; i++ {
 				if time.Since(ht.GetRefreshTimeForBucket(i)) > dht.options.RefreshTime {
-					id := ht.GetRandomIDFromBucket(routing.MaxContactsInBucket)
-					_, _, err = dht.iterate(ctx, routing.IterateBootstrap, id, nil)
+					id1 := ht.GetRandomIDFromBucket(routing.MaxContactsInBucket)
+					_, _, err = dht.iterate(ctx, routing.IterateBootstrap, id1, nil)
 					if err != nil {
 						continue
 					}
@@ -818,14 +822,14 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 			ctx = buildContext(cb, msg)
 			ht := dht.htFromCtx(ctx)
 
-			if ht.Origin.ID.Equal(msg.Receiver.ID) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
+			if ht.Origin.ID.HashEqual(msg.Receiver.ID.GetHash()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
 				dht.dispatchMessageType(ctx, msg, ht)
 			} else {
-				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.String())
+				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.HashString())
 				if err != nil {
 					log.Println(err)
 				} else if !exist {
-					log.Printf("Target node addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
+					log.Printf("Target node addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.HashString())
 				} else {
 					// need to relay incoming message
 					request := &message.Message{Sender: &node.Node{Address: dht.origin.Address, ID: msg.Sender.ID},
@@ -869,7 +873,7 @@ func (dht *DHT) sendRelayedRequest(request *message.Message, ctx Context) {
 func buildContext(cb ContextBuilder, msg *message.Message) Context {
 	var ctx Context
 	var err error
-	if msg.Receiver.ID == nil {
+	if msg.Receiver.ID.GetHash() == nil {
 		ctx, err = cb.SetDefaultNode().Build()
 	} else {
 		ctx, err = cb.SetNodeByID(msg.Receiver.ID).Build()
@@ -913,16 +917,16 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *message.Message, message
 	data := msg.Data.(*message.RequestRelayOwnership)
 
 	if data.Ready {
-		dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs, msg.Sender.ID.String())
+		dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs, msg.Sender.ID.HashString())
 	} else {
 		for i, j := range dht.subnet.PossibleProxyIDs {
-			if j == msg.Sender.ID.String() {
+			if j == msg.Sender.ID.HashString() {
 				dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs[:i], dht.subnet.PossibleProxyIDs[i+1:]...)
-				err := dht.AuthenticationRequest(ctx, "begin", msg.Sender.ID.String())
+				err := dht.AuthenticationRequest(ctx, "begin", msg.Sender.ID.HashString())
 				if err != nil {
 					log.Println("error to send auth request: ", err)
 				}
-				err = dht.RelayRequest(ctx, "start", msg.Sender.ID.String())
+				err = dht.RelayRequest(ctx, "start", msg.Sender.ID.HashString())
 				if err != nil {
 					log.Println("error to send relay request: ", err)
 				}
@@ -1011,7 +1015,7 @@ func (dht *DHT) processRPC(ctx Context, msg *message.Message, messageBuilder mes
 // Precess relay request.
 func (dht *DHT) processRelay(ctx Context, msg *message.Message, messageBuilder message.Builder) {
 	var err error
-	if !dht.auth.authenticatedNodes[msg.Sender.ID.String()] {
+	if !dht.auth.authenticatedNodes[msg.Sender.ID.HashString()] {
 		log.Print("relay request from unknown node rejected")
 		response := &message.ResponseRelay{
 			State: relay.NoAuth,
@@ -1054,7 +1058,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, message
 	data := msg.Data.(*message.RequestAuth)
 	switch data.Command {
 	case message.BeginAuth:
-		if dht.auth.authenticatedNodes[msg.Sender.ID.String()] {
+		if dht.auth.authenticatedNodes[msg.Sender.ID.HashString()] {
 			// TODO: whats next?
 			response := &message.ResponseAuth{
 				Success:       false,
@@ -1073,7 +1077,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, message
 			log.Println("failed to create auth key. ", err)
 			return
 		}
-		dht.auth.SentKeys[msg.Sender.ID.String()] = key
+		dht.auth.SentKeys[msg.Sender.ID.HashString()] = key
 		response := &message.ResponseAuth{
 			Success:       true,
 			AuthUniqueKey: key,
@@ -1085,12 +1089,12 @@ func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, message
 		}
 		// TODO process verification msg.Sender node
 		// confirmed
-		err = dht.CheckOriginRequest(ctx, msg.Sender.ID.String())
+		err = dht.CheckOriginRequest(ctx, msg.Sender.ID.HashString())
 		if err != nil {
 			log.Println("error: ", err)
 		}
 	case message.RevokeAuth:
-		delete(dht.auth.authenticatedNodes, msg.Sender.ID.String())
+		delete(dht.auth.authenticatedNodes, msg.Sender.ID.HashString())
 		response := &message.ResponseAuth{
 			Success:       true,
 			AuthUniqueKey: nil,
@@ -1108,7 +1112,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *message.Message, message
 func (dht *DHT) processCheckOriginRequest(ctx Context, msg *message.Message, messageBuilder message.Builder) {
 	dht.auth.mut.Lock()
 	defer dht.auth.mut.Unlock()
-	if key, ok := dht.auth.ReceivedKeys[msg.Sender.ID.String()]; ok {
+	if key, ok := dht.auth.ReceivedKeys[msg.Sender.ID.HashString()]; ok {
 		response := &message.ResponseCheckOrigin{AuthUniqueKey: key}
 		err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
 		if err != nil {
@@ -1285,7 +1289,7 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 		}
 
 		response := rsp.Data.(*message.ResponseAuth)
-		err = dht.handleAuthResponse(response, targetNode.ID.String())
+		err = dht.handleAuthResponse(response, targetNode.ID.HashString())
 		if err != nil {
 			return err
 		}
@@ -1348,7 +1352,7 @@ func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
 		}
 
 		response := rsp.Data.(*message.ResponseObtainIP)
-		err = dht.handleObtainIPResponse(response, targetNode.ID.String())
+		err = dht.handleObtainIPResponse(response, targetNode.ID.HashString())
 		if err != nil {
 			return err
 		}
@@ -1437,7 +1441,7 @@ func (dht *DHT) ObtainIP(ctx Context) error {
 	for _, table := range dht.tables {
 		for i := range table.RoutingTable {
 			for j := range table.RoutingTable[i] {
-				err := dht.ObtainIPRequest(ctx, table.RoutingTable[i][j].ID.String())
+				err := dht.ObtainIPRequest(ctx, table.RoutingTable[i][j].ID.HashString())
 				if err != nil {
 					return err
 				}
@@ -1462,8 +1466,8 @@ func (dht *DHT) getHomeSubnetKey(ctx Context) (string, error) {
 		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.X.this byte
 		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.this byte
 		first = xstrings.Reverse(first)
-		for _, id := range subnet {
-			target, exist, err := dht.FindNode(ctx, id)
+		for _, id1 := range subnet {
+			target, exist, err := dht.FindNode(ctx, id1)
 			if err != nil {
 				return "", err
 			} else if !exist {
@@ -1519,8 +1523,8 @@ func (dht *DHT) AnalyzeNetwork(ctx Context) error {
 }
 
 func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
-	for _, id := range subnetIDs {
-		err := dht.relayOwnershipRequest(id, true)
+	for _, id1 := range subnetIDs {
+		err := dht.relayOwnershipRequest(id1, true)
 		log.Println(err.Error())
 	}
 }

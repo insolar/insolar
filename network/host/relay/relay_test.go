@@ -69,7 +69,7 @@ func makeNodes(count int, t *testing.T) []*node.Node {
 	addresses := makeAddresses(count, t)
 
 	for i := 0; i < count; i++ {
-		id, err := id.NewID()
+		id, err := id.NewID(id.GetRandomKey())
 
 		if err != nil {
 			assert.Errorf(t, nil, "error: %s", err.Error())

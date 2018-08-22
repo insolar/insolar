@@ -29,10 +29,10 @@ import (
 func TestNewPingMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.ID, _ = id.NewID(id.GetRandomKey())
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
 	m := NewPingMessage(sender, receiver)
 
@@ -156,10 +156,10 @@ func TestMessage_IsValid_Fail(t *testing.T) {
 func TestMessage_IsForMe(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.ID, _ = id.NewID(id.GetRandomKey())
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.ID, _ = id.NewID(id.GetRandomKey())
 	builder := NewBuilder()
 	origin, _ := node.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
 
@@ -173,12 +173,12 @@ func TestMessage_IsForMe(t *testing.T) {
 func TestSerializeMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.ID, _ = id.NewID(id.GetRandomKey())
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.ID, _ = id.NewID(id.GetRandomKey())
 	builder := NewBuilder()
-	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID}).Build()
+	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID.GetHash()}).Build()
 
 	_, err := SerializeMessage(msg)
 
@@ -188,12 +188,14 @@ func TestSerializeMessage(t *testing.T) {
 func TestDeserializeMessage(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
-	sender.ID, _ = id.NewID()
+	sender.ID, _ = id.NewID(id.GetRandomKey())
+	sender.ID.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
 	receiver := node.NewNode(receiverAddress)
-	receiver.ID, _ = id.NewID()
+	receiver.ID, _ = id.NewID(id.GetRandomKey())
+	receiver.ID.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 	builder := NewBuilder()
-	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID}).Build()
+	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID.GetHash()}).Build()
 
 	serialized, _ := SerializeMessage(msg)
 

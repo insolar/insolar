@@ -51,7 +51,7 @@ func (rs *RouteSet) FirstNode() *node.Node {
 func (rs *RouteSet) Contains(node *RouteNode) bool {
 	exists := false
 	for _, n := range rs.nodes {
-		if node.ID.Equal(n.ID) {
+		if node.ID.HashEqual(n.ID.GetHash()) {
 			exists = true
 		}
 	}
@@ -68,7 +68,7 @@ func (rs *RouteSet) Append(node *RouteNode) {
 // Remove removes node from RouteSet.
 func (rs *RouteSet) Remove(node *RouteNode) {
 	for i, n := range rs.nodes {
-		if n.ID.Equal(node.ID) {
+		if n.ID.HashEqual(node.ID.GetHash()) {
 			rs.nodes = append(rs.nodes[:i], rs.nodes[i+1:]...)
 			return
 		}
@@ -101,8 +101,8 @@ func (rs *RouteSet) Swap(i, j int) {
 
 // Less is a sorting function for RouteSet.
 func (rs *RouteSet) Less(i, j int) bool {
-	iDist := getDistance(rs.nodes[i].ID, rs.comparator)
-	jDist := getDistance(rs.nodes[j].ID, rs.comparator)
+	iDist := getDistance(rs.nodes[i].ID.GetHash(), rs.comparator)
+	jDist := getDistance(rs.nodes[j].ID.GetHash(), rs.comparator)
 
 	return iDist.Cmp(jDist) == -1
 }
