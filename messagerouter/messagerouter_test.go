@@ -68,8 +68,11 @@ func getDefaultCtx(dht *host.DHT) host.Context {
 func NewNode() (*host.DHT, error) {
 	id1, _ := id.NewIDs(1)
 	st, s, tp, r, err := dhtParams(id1, "127.0.0.1:16000")
-	dht, err := host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
-	return dht, err
+	if err != nil {
+		return nil, err
+	}
+
+	return host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
 }
 
 type mockRpc struct {
