@@ -35,16 +35,16 @@ func (w *Wallet) Receive(amount uint, from *foundation.Reference) {
 func (w *Wallet) GetTotalBalance() uint {
 	var totalAllowanced uint = 0
 	for _, c := range w.GetChildrenTyped(&allowance.TypeReference) {
-		allowance := c.(allowance.Allowance)
-		totalAllowanced += allowance.GetBalanceForOwner()
+		Allowance := c.(*allowance.Allowance)
+		totalAllowanced += Allowance.GetBalanceForOwner()
 	}
 	return w.balance + totalAllowanced
 }
 
 func (w *Wallet) ReturnAndDeleteExpiriedAllowances() {
 	for _, c := range w.GetChildrenTyped(&allowance.TypeReference) {
-		allowance := c.(allowance.Allowance)
-		w.balance += allowance.DeleteExpiredAllowance()
+		Allowance := c.(*allowance.Allowance)
+		w.balance += Allowance.DeleteExpiredAllowance()
 	}
 }
 
