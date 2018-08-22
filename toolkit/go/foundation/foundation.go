@@ -25,11 +25,11 @@ type BaseContractInterface interface {
 	GetContext() *CallContext
 }
 
-func (bc BaseContract) GetContext() *CallContext {
+func (bc *BaseContract) GetContext() *CallContext {
 	return bc.context
 }
 
-func (bc BaseContract) SetContext(c *CallContext) {
+func (bc *BaseContract) SetContext(c *CallContext) {
 	if bc.context != nil {
 		return
 	}
