@@ -14,20 +14,16 @@
  *    limitations under the License.
  */
 
-package main
+package ginsider
 
 import (
 	"io/ioutil"
-	"log"
-	"net"
-	"net/http"
 	"net/rpc"
 	"os"
 	"plugin"
 	"reflect"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
@@ -46,10 +42,15 @@ func NewGoInsider(path string, address string) *GoInsider {
 	return &GoInsider{dir: path, RPCAddress: address}
 }
 
+// RPC struct with methods representing RPC interface of this code runner
+type RPC struct {
+	GI *GoInsider
+}
+
 // Call is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *GoInsider) Call(args girpc.CallReq, reply *girpc.CallResp) error {
-	path, err := t.ObtainCode(args.Reference)
+func (t *RPC) Call(args girpc.CallReq, reply *girpc.CallResp) error {
+	path, err := t.GI.ObtainCode(args.Reference)
 	if err != nil {
 		return errors.Wrap(err, "couldn't obtain code")
 	}
@@ -148,31 +149,10 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 	return path, nil
 }
 
-func main() {
-	listen := pflag.StringP("listen", "l", ":7777", "address and port to listen")
-	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
-	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
-	pflag.Parse()
-
-	insider := NewGoInsider(*path, *rpcAddress)
-	err := rpc.Register(insider)
-	if err != nil {
-		log.Fatal("Couldn't register RPC interface: ", err)
-		os.Exit(1)
-	}
-
-	rpc.HandleHTTP()
-	listener, err := net.Listen("tcp", *listen)
-
-	log.Print("ginsider launched, listens " + *listen)
-	if err != nil {
-		log.Fatal("listen error:", err)
-		os.Exit(1)
-	}
-	err = http.Serve(listener, nil)
-	if err != nil {
-		log.Fatal("couldn't start server: ", err)
-		os.Exit(1)
-	}
-	log.Print("bye\n")
+// Exec
+func (t *GoInsider) Exec(ref string, method string, args []byte) (data []byte, res []byte, err error) {
+	return data, res, err
 }
+
+// CurrentGoInsider - hackish way to give proxies access to the current environment
+var CurrentGoInsider *GoInsider

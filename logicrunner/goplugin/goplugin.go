@@ -57,12 +57,12 @@ type GoPlugin struct {
 	runner        *exec.Cmd
 }
 
-// RPC is a RPC interface for runner to use for variouse tasks, e.g. code fetching
+// RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
 type RPC struct {
 	gp *GoPlugin
 }
 
-// GetObject is an RPC retriving an object by its reference, so far short circueted to return
+// GetObject is an RPC retrieving an object by its reference, so far short circuted to return
 // code of the plugin
 func (gpr *RPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
 	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
@@ -95,7 +95,7 @@ func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Options.Listen)
 
-	runner := exec.Command("ginsider/ginsider", runnerArguments...)
+	runner := exec.Command("ginsider-cli/ginsider-cli", runnerArguments...)
 	runner.Stdout = os.Stdout
 	runner.Stderr = os.Stderr
 	err := runner.Start()
@@ -152,7 +152,7 @@ func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method stri
 	req := girpc.CallReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
 
 	select {
-	case call := <-client.Go("GoInsider.Call", req, &res, nil).Done:
+	case call := <-client.Go("RPC.Call", req, &res, nil).Done:
 		if call.Error != nil {
 			return nil, nil, errors.Wrap(err, "problem with API call")
 		}
