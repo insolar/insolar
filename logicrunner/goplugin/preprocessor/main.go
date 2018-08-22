@@ -264,8 +264,8 @@ func getMethods(parsed *parsedFile) {
 				}
 			}
 		case *ast.FuncDecl:
-			if td.Recv == nil || td.Recv.NumFields() == 0 { // not a method
-				continue
+			if td.Recv == nil || td.Recv.NumFields() == 0 {
+				continue // todo we must store it and use, it may be a constructor
 			}
 
 			r := td.Recv.List[0].Type
