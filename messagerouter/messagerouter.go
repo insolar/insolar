@@ -70,7 +70,7 @@ func (r *MessageRouter) Route(ctx host.Context, msg Message) (response Response,
 		return response, err
 	}
 
-	result, err := r.rpc.RemoteProcedureCall(ctx, r.getNodeID(msg.Reference).String(), DeliverRPCMethodName, [][]byte{request})
+	result, err := r.rpc.RemoteProcedureCall(ctx, r.getNodeID(msg.Reference).HashString(), DeliverRPCMethodName, [][]byte{request})
 	if err != nil {
 		return response, err
 	}
@@ -95,7 +95,8 @@ func (r *MessageRouter) getNodeID(reference string) id.ID {
 	// TODO: need help from teammates
 	log.Println("getNodeID: ", reference)
 
-	nodeID := base58.Decode(reference)
+	nodeID, _ := id.NewID(nil)
+	nodeID.SetHash(base58.Decode(reference))
 	return nodeID
 }
 
