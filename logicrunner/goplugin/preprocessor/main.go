@@ -102,7 +102,21 @@ func main() {
 		}
 	case "proxy":
 		fs := flag.NewFlagSet("proxy", flag.ExitOnError)
-		fs.Parse(os.Args[2:])
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		err := fs.Parse(os.Args[2:])
+		if err != nil {
+			panic(err)
+		}
+
+		if fs.NArg() != 1 {
+			panic(errors.New("proxy command should be followed by exactly one file name to process"))
+		}
+
+		err = generateContractProxy(fs.Arg(0), output.writer)
+		if err != nil {
+			panic(err)
+		}
 	default:
 		printUsage()
 		fmt.Printf("\n\n%q is not valid command.\n", os.Args[1])
