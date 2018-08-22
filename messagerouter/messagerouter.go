@@ -26,7 +26,7 @@ import (
 	"github.com/jbenet/go-base58"
 )
 
-const DeliverRpcMethodName = "MessageRouter.Deliver"
+const DeliverRPCMethodName = "MessageRouter.Deliver"
 
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
@@ -59,7 +59,7 @@ type Response struct {
 // that satisfies `LogicRunner` interface
 func New(lr LogicRunner, rpc host.RPC) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc}
-	mr.rpc.RemoteProcedureRegister(DeliverRpcMethodName, mr.deliver)
+	mr.rpc.RemoteProcedureRegister(DeliverRPCMethodName, mr.deliver)
 	return mr, nil
 }
 
@@ -70,7 +70,7 @@ func (r *MessageRouter) Route(ctx host.Context, msg Message) (response Response,
 		return response, err
 	}
 
-	result, err := r.rpc.RemoteProcedureCall(ctx, r.getNodeId(msg.Reference).String(), DeliverRpcMethodName, [][]byte{request})
+	result, err := r.rpc.RemoteProcedureCall(ctx, r.getNodeID(msg.Reference).String(), DeliverRPCMethodName, [][]byte{request})
 	if err != nil {
 		return response, err
 	}
@@ -91,9 +91,9 @@ func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 	return Serialize(Response{data, res, err})
 }
 
-func (r *MessageRouter) getNodeId(reference string) (nodeId id.ID) {
+func (r *MessageRouter) getNodeID(reference string) (nodeId id.ID) {
 	// TODO: need help from teammates
-	log.Println("getNodeId: ", reference)
+	log.Println("getNodeID: ", reference)
 
 	nodeId = base58.Decode(reference)
 	return nodeId
