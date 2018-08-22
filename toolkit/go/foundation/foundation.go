@@ -23,6 +23,7 @@ type BaseContract struct {
 
 type BaseContractInterface interface {
 	GetContext() *CallContext
+	GetImplementationFor(r *Reference) interface{}
 }
 
 func (bc *BaseContract) GetContext() *CallContext {
@@ -55,11 +56,32 @@ func SaveToLedger(rec interface{}) *Reference {
 	return &key
 }
 
-func SetDelegate(to *Reference, class *Reference, delegate interface{}) {
-	if FakeDelegates[to] == nil {
-		FakeDelegates[to] = make(map[*Reference]interface{})
+func GetObject(ref *Reference) BaseContractInterface {
+	return FakeLedger[ref].(BaseContractInterface)
+}
+
+func (bc *BaseContract) SetYourDelegate(delegate interface{}, class *Reference) *Reference {
+	me := bc.context.Me
+	uid, _ := uuid.NewV4()
+	key := Reference(uid.String())
+
+	FakeLedger[&key] = delegate
+
+	if FakeDelegates[me] == nil {
+		FakeDelegates[me] = make(map[*Reference]interface{})
 	}
-	FakeDelegates[to][class] = delegate
+	FakeDelegates[me][class] = delegate
+
+	if FakeChildren[me] == nil {
+		FakeChildren[me] = make(map[*Reference][]interface{})
+	}
+	if FakeChildren[me][class] == nil {
+		FakeChildren[me][class] = make([]interface{}, 1)
+	}
+
+	FakeChildren[me][class] = append(FakeChildren[me][class], delegate)
+
+	return &key
 }
 
 func (bc *BaseContract) SelfDestructRequest() {

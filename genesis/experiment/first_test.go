@@ -46,7 +46,7 @@ func TestFirst(t *testing.T) {
 		Me: fromWalletRef,
 	})
 
-	foundation.SetDelegate(fromMemberRef, &wallet.TypeReference, fromWallet)
+	fromMember.SetYourDelegate(fromWallet, &wallet.TypeReference)
 
 	_, ok := fromMember.GetImplementationFor(&wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
