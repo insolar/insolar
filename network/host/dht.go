@@ -170,8 +170,8 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 func newTables(origin *node.Origin) ([]*routing.HashTable, error) {
 	tables := make([]*routing.HashTable, len(origin.IDs))
 
-	for i, id := range origin.IDs {
-		ht, err := routing.NewHashTable(id, origin.Address)
+	for i, id1 := range origin.IDs {
+		ht, err := routing.NewHashTable(id1, origin.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -775,8 +775,8 @@ func (dht *DHT) selectTicker(ticker *time.Ticker, cb *ContextBuilder, stop chan 
 			// Refresh
 			for i := 0; i < routing.KeyBitSize; i++ {
 				if time.Since(ht.GetRefreshTimeForBucket(i)) > dht.options.RefreshTime {
-					id := ht.GetRandomIDFromBucket(routing.MaxContactsInBucket)
-					_, _, err = dht.iterate(ctx, routing.IterateBootstrap, id, nil)
+					id1 := ht.GetRandomIDFromBucket(routing.MaxContactsInBucket)
+					_, _, err = dht.iterate(ctx, routing.IterateBootstrap, id1, nil)
 					if err != nil {
 						continue
 					}
@@ -1451,8 +1451,8 @@ func (dht *DHT) getHomeSubnetKey(ctx Context) (string, error) {
 		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.X.this byte
 		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.this byte
 		first = xstrings.Reverse(first)
-		for _, id := range subnet {
-			target, exist, err := dht.FindNode(ctx, id)
+		for _, id1 := range subnet {
+			target, exist, err := dht.FindNode(ctx, id1)
 			if err != nil {
 				return "", err
 			} else if !exist {
@@ -1508,8 +1508,8 @@ func (dht *DHT) AnalyzeNetwork(ctx Context) error {
 }
 
 func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
-	for _, id := range subnetIDs {
-		err := dht.relayOwnershipRequest(id, true)
+	for _, id1 := range subnetIDs {
+		err := dht.relayOwnershipRequest(id1, true)
 		log.Println(err.Error())
 	}
 }

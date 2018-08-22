@@ -269,9 +269,9 @@ func (ht *HashTable) GetRandomIDFromBucket(bucket int) []byte {
 	// the byte of the first differing bit in the bucket
 
 	byteIndex := bucket / 8
-	var id []byte
+	var id1 []byte
 	for i := 0; i < byteIndex; i++ {
-		id = append(id, ht.Origin.ID.GetHash()[i])
+		id1 = append(id1, ht.Origin.ID.GetHash()[i])
 	}
 	differingBitStart := bucket % 8
 
@@ -292,15 +292,15 @@ func (ht *HashTable) GetRandomIDFromBucket(bucket int) []byte {
 		}
 	}
 
-	id = append(id, firstByte)
+	id1 = append(id1, firstByte)
 
 	// Randomize each remaining byte
 	for i := byteIndex + 1; i < 20; i++ {
 		randomByte := byte(ht.rand.Intn(256))
-		id = append(id, randomByte)
+		id1 = append(id1, randomByte)
 	}
 
-	return id
+	return id1
 }
 
 // GetBucketIndexFromDifferingBit returns appropriate bucket number for two node IDs.
