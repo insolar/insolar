@@ -21,7 +21,7 @@ func main() {
 	insider := ginsider.NewGoInsider(*path, *rpcAddress)
 	ginsider.CurrentGoInsider = insider
 
-	err := rpc.Register(&ginsider.RPC{insider})
+	err := rpc.Register(&ginsider.RPC{GI: insider})
 	if err != nil {
 		log.Fatal("Couldn't register RPC interface: ", err)
 		os.Exit(1)
