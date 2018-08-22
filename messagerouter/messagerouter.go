@@ -91,12 +91,12 @@ func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 	return Serialize(Response{data, res, err})
 }
 
-func (r *MessageRouter) getNodeID(reference string) (nodeId id.ID) {
+func (r *MessageRouter) getNodeID(reference string) id.ID {
 	// TODO: need help from teammates
 	log.Println("getNodeID: ", reference)
 
-	nodeId = base58.Decode(reference)
-	return nodeId
+	nodeID := base58.Decode(reference)
+	return nodeID
 }
 
 func Serialize(value interface{}) ([]byte, error) {
