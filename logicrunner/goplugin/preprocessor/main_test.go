@@ -75,6 +75,12 @@ func TestCompileContractProxy(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// XXX: dirty hack to make `dep` installed packages available in generated code
+	err = os.Symlink(cwd+"/../../../vendor/", tmpDir+"/src/secondary/vendor")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		t.Fatal(err)
