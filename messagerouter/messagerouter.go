@@ -26,7 +26,7 @@ import (
 	"github.com/jbenet/go-base58"
 )
 
-const DeliverRPCMethodName = "MessageRouter.Deliver"
+const deliverRPCMethodName = "MessageRouter.Deliver"
 
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
@@ -59,7 +59,7 @@ type Response struct {
 // that satisfies `LogicRunner` interface
 func New(lr LogicRunner, rpc host.RPC) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc}
-	mr.rpc.RemoteProcedureRegister(DeliverRPCMethodName, mr.deliver)
+	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return mr, nil
 }
 
@@ -70,7 +70,7 @@ func (r *MessageRouter) Route(ctx host.Context, msg Message) (response Response,
 		return response, err
 	}
 
-	result, err := r.rpc.RemoteProcedureCall(ctx, r.getNodeID(msg.Reference).HashString(), DeliverRPCMethodName, [][]byte{request})
+	result, err := r.rpc.RemoteProcedureCall(ctx, r.getNodeID(msg.Reference).HashString(), deliverRPCMethodName, [][]byte{request})
 	if err != nil {
 		return response, err
 	}
@@ -100,6 +100,7 @@ func (r *MessageRouter) getNodeID(reference string) id.ID {
 	return nodeID
 }
 
+// Serialize converts Message or Response to byte slice.
 func Serialize(value interface{}) ([]byte, error) {
 	var buffer bytes.Buffer
 	enc := gob.NewEncoder(&buffer)
@@ -111,11 +112,13 @@ func Serialize(value interface{}) ([]byte, error) {
 	return res, err
 }
 
+// DeserializeMessage reads message from byte slice.
 func DeserializeMessage(data []byte) (msg Message, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&msg)
 	return msg, err
 }
 
+// DeserializeResponse reads response from byte slice.
 func DeserializeResponse(data []byte) (res Response, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&res)
 	return res, err

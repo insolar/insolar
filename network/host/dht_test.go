@@ -238,7 +238,7 @@ func TestBootstrapTwentyNodes(t *testing.T) {
 		time.Sleep(time.Millisecond * 200)
 	}
 
-	time.Sleep(time.Millisecond * 2000)
+	time.Sleep(time.Millisecond * 3000)
 
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumNodes(getDefaultCtx(dht)))

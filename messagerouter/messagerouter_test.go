@@ -70,8 +70,11 @@ func NewNode() (*host.DHT, error) {
 	id1, _ := id.NewID(nil)
 	ids = append(ids, id1)
 	st, s, tp, r, err := dhtParams(ids, "127.0.0.1:16000")
-	dht, err := host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
-	return dht, err
+	if err != nil {
+		return nil, err
+	}
+
+	return host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
 }
 
 type mockRpc struct {

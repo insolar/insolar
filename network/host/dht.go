@@ -41,7 +41,10 @@ import (
 	"github.com/jbenet/go-base58"
 )
 
+// RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(args [][]byte) ([]byte, error)
+
+// RPC is remote procedure call interface
 type RPC interface {
 	RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error)
 	RemoteProcedureRegister(name string, method RemoteProcedure)
@@ -1427,7 +1430,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 	}
 }
 
-// Register procedure for remote call on this node
+// RemoteProcedureRegister registers procedure for remote call on this node
 func (dht *DHT) RemoteProcedureRegister(name string, method RemoteProcedure) {
 	rp := func(sender *node.Node, args [][]byte) ([]byte, error) {
 		return method(args)
