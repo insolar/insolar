@@ -21,6 +21,7 @@ package foundation
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -56,7 +57,7 @@ type BaseContractInterface interface {
 
 // MyReference - Returns public reference of contract
 func (bc *BaseContract) MyReference() *Reference {
-	r := Reference(fmt.Sprintf("%x", bc))
+	r := Reference(fmt.Sprintf("%x", reflect.ValueOf(bc).Pointer()))
 	return &r
 }
 
@@ -76,10 +77,9 @@ func (bc *BaseContract) GetContext(debug ...string) *CallContext {
 	return &CallContext{}
 }
 
+// SetContext sets context on contract in testing environment.
+// It is not supposed to use it from contracts.
 func (bc *BaseContract) SetContext(c *CallContext) {
-	if bc.context != nil {
-		return
-	}
 	bc.context = c
 }
 
@@ -90,6 +90,7 @@ var FakeChildren = make(map[string]map[string][]BaseContractInterface)
 var FakeContexts = make(map[uint]*CallContext)
 var contextStep uint = 0
 
+// InjectFakeContext - add mocked context to queue for substitution
 func InjectFakeContext(step uint, ctx *CallContext, reset ...bool) {
 	if len(reset) > 0 && reset[0] {
 		FakeContexts = make(map[uint]*CallContext)
