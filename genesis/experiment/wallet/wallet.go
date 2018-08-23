@@ -22,8 +22,8 @@ func (w *Wallet) Allocate(amount uint, to *foundation.Reference) *allowance.Allo
 }
 
 func (w *Wallet) Receive(amount uint, from *foundation.Reference) {
-	intr := foundation.GetObject(from)
-	fromWallet := intr.GetImplementationFor(&TypeReference).(*Wallet)
+	//intr := foundation.GetObject(from)
+	fromWallet := foundation.GetImplementationFor(from, &TypeReference).(*Wallet)
 
 	Allowance := fromWallet.Allocate(amount, w.GetContext().Me)
 	w.balance += Allowance.TakeAmount()
