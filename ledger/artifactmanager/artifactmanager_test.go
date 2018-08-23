@@ -20,11 +20,12 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
-	"github.com/stretchr/testify/assert"
 )
 
 func genRandomRef() *record.Reference {

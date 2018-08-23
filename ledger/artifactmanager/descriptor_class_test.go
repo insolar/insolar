@@ -19,11 +19,12 @@ package artifactmanager
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
-	"github.com/stretchr/testify/assert"
 )
 
 type preparedDCTestData struct {
@@ -51,26 +52,10 @@ func prepareDCTestData(t *testing.T) (preparedDCTestData, func()) {
 	}, cleaner
 }
 
-// func prepareClassDescriptorTest() (
-// 	storage.LedgerStorer, *LedgerArtifactManager, *record.ClassActivateRecord, *record.Reference,
-// ) {
-// 	if err := leveldb.DropDB(); err != nil {
-// 		os.Exit(1)
-// 	}
-// 	ledger, _ := leveldb.InitDB("_db", nil)
-// 	manager := LedgerArtifactManager{
-// 		storer:   ledger,
-// 		archPref: []record.ArchType{1},
-// 	}
-// 	rec := record.ClassActivateRecord{}
-// 	ref, _ := ledger.SetRecord(&rec)
-
-// 	return ledger, &manager, &rec, ref
-// }
-
 func TestClassDescriptor_GetCode(t *testing.T) {
 	td, cleaner := prepareDCTestData(t)
 	defer cleaner()
+
 	codeRef, _ := td.ledger.SetRecord(&record.CodeRecord{
 		TargetedCode: map[record.ArchType][]byte{
 			1: {1, 2, 3},
@@ -98,6 +83,7 @@ func TestClassDescriptor_GetCode(t *testing.T) {
 func TestClassDescriptor_GetMigrations(t *testing.T) {
 	td, cleaner := prepareDCTestData(t)
 	defer cleaner()
+
 	codeRef1, _ := td.ledger.SetRecord(&record.CodeRecord{
 		TargetedCode: map[record.ArchType][]byte{
 			record.ArchType(1): {1},
