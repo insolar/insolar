@@ -117,7 +117,7 @@ func TestTransferViaTransfer(t *testing.T) {
 	assert.NotNil(t, toMemberAsWallet)
 
 	// Inject fake context of Caller for test
-	foundation.InjectFakeContext(2, &foundation.CallContext{Caller: toMemberRef})
+	foundation.InjectFakeContext(3, &foundation.CallContext{Caller: toWalletRef})
 
 	// Call to get money from one member to another
 	fromMemberAsWallet.Transfer(500, toMemberRef)

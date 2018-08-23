@@ -31,7 +31,11 @@ func (w *Wallet) Receive(amount uint, from *foundation.Reference) {
 
 func (w *Wallet) Transfer(amount uint, to *foundation.Reference) {
 	w.balance -= amount
-	a := allowance.Allowance{To: to, Amount: amount, ExpireTime: w.GetContext().Time.Unix() + 10}
+
+	toWalletInt := foundation.GetImplementationFor(to, &TypeReference).(*Wallet)
+	toWalletRef := toWalletInt.GetContext().Me
+
+	a := allowance.Allowance{To: toWalletRef, Amount: amount, ExpireTime: w.GetContext().Time.Unix() + 10}
 	w.AddChild(&a, &allowance.TypeReference)
 
 	toWallet := foundation.GetImplementationFor(to, &TypeReference).(*Wallet)
