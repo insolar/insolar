@@ -227,7 +227,7 @@ type ` + parsed.contract + ` struct {
 
 	code += `// GetObject
 func GetObject(ref string) (r *` + parsed.contract + `) {
-	return &` + parsed.contract + `{}
+	return &` + parsed.contract + `{Reference: ref}
 }
 `
 

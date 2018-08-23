@@ -24,6 +24,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
 type HelloWorlder struct {
@@ -66,12 +68,20 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 	return resParsed[0].(string)
 }
 
-func buildInciderCLI() error {
-	out, err := exec.Command("go", "build", "-o", "./ginsider-cli/ginsider-cli", "./ginsider-cli/").CombinedOutput()
+func buildCLI(name string) error {
+	out, err := exec.Command("go", "build", "-o", "./"+name+"/"+name, "./"+name+"/").CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "can't build ginsider: "+string(out))
+		return errors.Wrapf(err, "can't build %s: %s", name, string(out))
 	}
 	return nil
+}
+
+func buildInciderCLI() error {
+	return buildCLI("ginsider-cli")
+}
+
+func buildPreprocessor() error {
+	return buildCLI("preprocessor")
 }
 
 func compileBinaries() error {
@@ -130,5 +140,144 @@ func TestHelloWorld(t *testing.T) {
 
 	if res != "hi there here we are" {
 		t.Fatalf("Got unexpected value: %s, 'hi there here we are' is expected", res)
+	}
+}
+
+const contractOneCode = `
+package main
+
+import "contract-proxy/two"
+
+// @inscontract
+type One struct {
+}
+
+func (r *One) Hello(s string) string {
+	friend := two.GetObject("some")
+	res := friend.Hello(s)
+
+	return "Hi, " + s + "! Two said: " + res
+}
+`
+
+const contractTwoCode = `
+package main
+
+// @inscontract
+type Two struct {
+}
+
+func (r *Two) Hello(s string) string {
+	return "Hello you too, " + s
+}
+`
+
+func generateContractProxy(root string, name string) error {
+	dstDir := root + "/src/contract-proxy/" + name
+
+	err := os.MkdirAll(dstDir, 0777)
+	if err != nil {
+		return err
+	}
+
+	contractPath := root + "/src/contract/" + name + "/main.go"
+
+	out, err := exec.Command("./preprocessor/preprocessor", "proxy", "-o", dstDir+"/main.go", contractPath).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "can't generate proxy: "+string(out))
+	}
+	return nil
+}
+
+func buildContractPlugin(root string, name string) error {
+	dstDir := root + "/plugins/"
+
+	err := os.MkdirAll(dstDir, 0777)
+	if err != nil {
+		return err
+	}
+
+	origGoPath, err := testutil.ChangeGoPath(root)
+	if err != nil {
+		return err
+	}
+	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
+
+	//contractPath := root + "/src/contract/" + name + "/main.go"
+
+	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", "contract/"+name).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "can't build contract: "+string(out))
+	}
+	return nil
+}
+
+func generateContractWrapper(root string, name string) error {
+	contractPath := root + "/src/contract/" + name + "/main.go"
+	wrapperPath := root + "/src/contract/" + name + "/main_wrapper.go"
+
+	out, err := exec.Command("./preprocessor/preprocessor", "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"': "+string(out))
+	}
+	return nil
+}
+
+func buildContracts(root string, names ...string) error {
+	for _, name := range names {
+		err := generateContractProxy(root, name)
+		if err != nil {
+			return err
+		}
+		err = generateContractWrapper(root, name)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, name := range names {
+		err := buildContractPlugin(root, name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func TestContractCallingContract(t *testing.T) {
+	err := buildInciderCLI()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = buildPreprocessor()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(cwd) // nolint: errcheck
+
+	tmpDir, err := ioutil.TempDir("", "test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir) // nolint: errcheck
+
+	err = testutil.WriteFile(tmpDir+"/src/contract/one/", "main.go", contractOneCode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = testutil.WriteFile(tmpDir+"/src/contract/two/", "main.go", contractTwoCode)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = buildContracts(tmpDir, "one", "two")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
