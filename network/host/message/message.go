@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 
+	"github.com/insolar/insolar/network/host/id"
 	"github.com/insolar/insolar/network/host/node"
 )
 
@@ -137,7 +138,7 @@ func NewKnownOuterNodesMessage(sender, receiver *node.Node, nodes int) *Message 
 		Receiver: receiver,
 		Type:     TypeKnownOuterNodes,
 		Data: &RequestKnownOuterNodes{
-			ID:         sender.ID.String(),
+			ID:         sender.ID.HashString(),
 			OuterNodes: nodes,
 		},
 	}
@@ -257,4 +258,6 @@ func init() {
 	gob.Register(&ResponseObtainIP{})
 	gob.Register(&ResponseRelayOwnership{})
 	gob.Register(&ResponseKnownOuterNodes{})
+
+	gob.Register(&id.ID{})
 }

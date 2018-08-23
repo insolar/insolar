@@ -64,7 +64,7 @@ func (cb ContextBuilder) Build() (ctx Context, err error) {
 func (cb ContextBuilder) SetNodeByID(nodeID id.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
 		for index, id := range cb.dht.origin.IDs {
-			if nodeID.Equal(id) {
+			if nodeID.HashEqual(id.GetHash()) {
 				return context.WithValue(ctx, ctxTableIndex, index), nil
 			}
 		}

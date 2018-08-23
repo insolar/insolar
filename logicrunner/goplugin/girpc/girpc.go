@@ -19,7 +19,7 @@ package girpc
 import "github.com/insolar/insolar/logicrunner"
 
 // CallReq is a set of arguments for Call RPC in the runner
-type CallReq struct {
+type CallReq struct { // todo it may use foundation.Context
 	Reference logicrunner.Reference
 	Data      []byte
 	Method    string

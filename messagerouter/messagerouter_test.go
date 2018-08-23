@@ -66,8 +66,10 @@ func getDefaultCtx(dht *host.DHT) host.Context {
 }
 
 func NewNode() (*host.DHT, error) {
-	id1, _ := id.NewIDs(1)
-	st, s, tp, r, err := dhtParams(id1, "127.0.0.1:16000")
+	var ids []id.ID
+	id1, _ := id.NewID(nil)
+	ids = append(ids, id1)
+	st, s, tp, r, err := dhtParams(ids, "127.0.0.1:16000")
 	if err != nil {
 		return nil, err
 	}

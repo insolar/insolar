@@ -25,7 +25,12 @@ import (
 
 func TestNewOrigin_WithIds(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
-	ids, _ := id.NewIDs(10)
+	idsCount := 10
+	ids := make([]id.ID, idsCount)
+	for i := 0; i < idsCount; i++ {
+		id1, _ := id.NewID(id.GetRandomKey())
+		ids = append(ids, id1)
+	}
 
 	expectedOrigin := &Origin{ids, addr}
 	actualOrigin, err := NewOrigin(ids, addr)
@@ -44,7 +49,12 @@ func TestNewOrigin_WithoutIds(t *testing.T) {
 }
 
 func TestOrigin_Contains(t *testing.T) {
-	ids, _ := id.NewIDs(20)
+	idsCount := 20
+	ids := make([]id.ID, 0)
+	for i := 0; i < idsCount; i++ {
+		id1, _ := id.NewID(id.GetRandomKey())
+		ids = append(ids, id1)
+	}
 	addr, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 	origin, _ := NewOrigin(ids[:10], addr)

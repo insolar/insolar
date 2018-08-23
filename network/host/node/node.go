@@ -40,10 +40,10 @@ func NewNode(address *Address) *Node {
 
 // String representation of Node.
 func (node Node) String() string {
-	return fmt.Sprintf("%s (%s)", node.ID.String(), node.Address.String())
+	return fmt.Sprintf("%s (%s)", node.ID.HashString(), node.Address.String())
 }
 
 // Equal checks if node equals to other node (e.g. nodes' IDs and network addresses match).
 func (node Node) Equal(other Node) bool {
-	return node.ID.Equal(other.ID) && other.Address != nil && node.Address.Equal(*other.Address)
+	return node.ID.HashEqual(other.ID.GetHash()) && other.Address != nil && node.Address.Equal(*other.Address)
 }

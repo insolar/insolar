@@ -8,7 +8,7 @@ clean:
 
 
 secondary.so: secondary ../preprocessor/preprocessor
-	../preprocessor/preprocessor ./secondary/main.go > secondary/main_generated.go && \
+	../preprocessor/preprocessor wrapper ./secondary/main.go > secondary/main_generated.go && \
 	GOPATH=`go env GOPATH`:`pwd`/secondary go build -buildmode=plugin ./secondary
 
 

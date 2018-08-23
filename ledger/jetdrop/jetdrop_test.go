@@ -14,16 +14,34 @@
  *    limitations under the License.
  */
 
-package artifactmanager
+package jetdrop
 
 import (
-	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var (
-	ErrInvalidRef        = errors.New("invalid reference") // nolint
-	ErrClassDeactivated  = errors.New("class is deactivated")
-	ErrObjectDeactivated = errors.New("object is deactivated")
-	ErrInconsistentIndex = errors.New("inconsistent index")
-	ErrWrongObject       = errors.New("provided object is not and instance of provided class")
-)
+func TestJetDrop_Hash(t *testing.T) {
+	drop1 := JetDrop{
+		PrevHash:     []byte{1, 2, 3},
+		RecordHashes: [][]byte{{4}, {5}, {6}},
+	}
+	drop2 := JetDrop{
+		PrevHash:     []byte{1, 2, 3},
+		RecordHashes: [][]byte{{4}, {5}, {6}},
+	}
+	drop3 := JetDrop{
+		PrevHash:     []byte{1, 2, 3},
+		RecordHashes: [][]byte{{5}, {4}, {6}},
+	}
+
+	h1, err := drop1.Hash()
+	assert.NoError(t, err)
+	h2, err := drop2.Hash()
+	assert.NoError(t, err)
+	h3, err := drop3.Hash()
+	assert.NoError(t, err)
+	assert.Equal(t, h1, h2)
+	assert.NotEqual(t, h1, h3)
+}

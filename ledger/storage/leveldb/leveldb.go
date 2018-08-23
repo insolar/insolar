@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/comparer"
@@ -44,8 +45,9 @@ type LevelLedger struct {
 }
 
 const (
-	scopeIDLifeline byte = 1
-	scopeIDRecord   byte = 2
+	scopeIDLifeline byte = iota
+	scopeIDRecord
+	scopeIDJetDrop
 )
 
 // InitDB returns LevelLedger with LevelDB initialized with default settings.
@@ -135,6 +137,11 @@ func prefixkey(prefix byte, key []byte) []byte {
 	return k
 }
 
+// GetCurrentPulse return currently stored pulse.
+func (ll *LevelLedger) GetCurrentPulse() record.PulseNum {
+	return ll.pulseFn()
+}
+
 // GetRecord returns record from leveldb by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contains the key.
@@ -220,6 +227,39 @@ func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifel
 func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.Key())
 	encoded, err := index.EncodeObjectLifeline(idx)
+	if err != nil {
+		return err
+	}
+	return ll.ldb.Put(k, encoded, nil)
+}
+
+// GetPulseKeys returns all record keys from slot after given pulse.
+func (ll *LevelLedger) GetPulseKeys(pulse record.PulseNum) ([][]byte, error) {
+	// TODO: implement me
+	return [][]byte{}, nil
+}
+
+// GetDrop returns jet drop for a given pulse number.
+func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+	buf, err := ll.ldb.Get(k, nil)
+	if err != nil {
+		if err == leveldb.ErrNotFound {
+			return nil, storage.ErrNotFound
+		}
+		return nil, err
+	}
+	drop, err := jetdrop.DecodeJetDrop(buf)
+	if err != nil {
+		return nil, err
+	}
+	return drop, nil
+}
+
+// SetDrop stores given jet drop for given pulse number.
+func (ll *LevelLedger) SetDrop(pulse record.PulseNum, drop *jetdrop.JetDrop) error {
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+	encoded, err := jetdrop.EncodeJetDrop(drop)
 	if err != nil {
 		return err
 	}

@@ -78,3 +78,13 @@ func TestReference2Key(t *testing.T) {
 	k1 := refPulse1.Key()
 	assert.NotEqual(t, k0, k1)
 }
+
+// This ensures serialized reference has Record prefix and Domain suffix.
+// It's required for selecting records by record pulse
+func TestReference_Key(t *testing.T) {
+	ref := Reference{
+		Domain: ID{Pulse: 1},
+		Record: ID{Pulse: 2},
+	}
+	assert.Equal(t, []byte{0, 0, 0, 2}, ref.Key()[:4])
+}

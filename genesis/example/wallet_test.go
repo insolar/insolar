@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/insolar/insolar/genesis/model/contract"
+	"github.com/insolar/insolar/genesis/model/object"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,22 +66,121 @@ func TestNewWalletProxy(t *testing.T) {
 }
 
 func TestWalletProxy_GetBalance(t *testing.T) {
-	cFactory := &MockBaseCompositeFactory{}
 	parent := &mockParent{}
 	testBalance := 42
 
+	factory := &mockFactory{}
+	mParent, _ := newMember(parent, factory)
+
+	alFactory, _ := NewAllowanceFactory(mParent.(object.Parent))
+
 	w := wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent, cFactory),
+		BaseSmartContract: *contract.NewBaseSmartContract(mParent.(object.Parent), factory),
 		balance:           testBalance,
+		allowanceClass:    alFactory,
 	}
+
 	proxy := walletProxy{
 		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: &w,
 		},
 	}
 
-	assert.Equal(t, proxy.GetBalance(), testBalance)
+	tBalance, err := proxy.GetBalance()
+	assert.NoError(t, err)
+	assert.Equal(t, testBalance, tBalance)
 
+}
+
+func TestWalletProxy_GetBalance_WrongParent(t *testing.T) {
+	parent := &mockParent{}
+	factory := &mockFactory{}
+
+	mParent, _ := newMember(parent, factory)
+	alFactory, _ := NewAllowanceFactory(mParent.(object.Parent))
+
+	w := wallet{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, factory),
+		allowanceClass:    alFactory,
+	}
+
+	proxy := walletProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: &w,
+		},
+	}
+
+	_, err := proxy.GetBalance()
+	assert.EqualError(t, err, "parent must be wallet")
+}
+
+type memberBadComposite struct {
+	member
+}
+
+func (*memberBadComposite) GetOrCreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
+	return &allowance{}, nil
+}
+
+func TestWalletProxy_GetBalance_AllowanceIsNotCollection(t *testing.T) {
+
+	m := memberBadComposite{}
+	factory := &mockFactory{}
+
+	parent := &mockParent{}
+	mParent, _ := newMember(parent, factory)
+	alFactory, _ := NewAllowanceFactory(mParent.(object.Parent))
+
+	w := wallet{
+		BaseSmartContract: *contract.NewBaseSmartContract(&m, factory),
+		allowanceClass:    alFactory,
+	}
+
+	proxy := walletProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: &w,
+		},
+	}
+
+	_, err := proxy.GetBalance()
+	assert.EqualError(t, err, "allowance must be composite collection")
+}
+
+func TestWalletProxy_GetBalance_With_Allowances(t *testing.T) {
+
+	parent := &mockParent{}
+	testBalance := 42
+	testAllowance := 100500
+	f := &mockFactory{}
+
+	mParent, _ := newMember(parent, f)
+	factory, _ := NewAllowanceFactory(mParent.(object.Parent))
+
+	w := wallet{
+		BaseSmartContract: *contract.NewBaseSmartContract(mParent.(object.Parent), f),
+		balance:           testBalance,
+		allowanceClass:    factory,
+	}
+
+	composite, err := mParent.GetOrCreateComposite(factory)
+	assert.NoError(t, err)
+	alCollection := composite.(object.CompositeCollection)
+
+	nAllowance, err := NewAllowanceWithParams(parent, factory, testSender, testReceiver, testAllowance)
+	assert.NoError(t, err)
+
+	alCollection.Add(nAllowance)
+	alCollection.Add(nAllowance)
+
+	proxy := walletProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: &w,
+		},
+	}
+
+	tBalance, err := proxy.GetBalance()
+	assert.NoError(t, err)
+	assert.Equal(t, testBalance+testAllowance*2, tBalance)
 }
 
 func TestWalletProxy_GetInterfaceKey(t *testing.T) {
@@ -102,15 +202,26 @@ func TestNewWalletFactory(t *testing.T) {
 
 func TestWallet_GetBalance(t *testing.T) {
 	cFactory := &MockBaseCompositeFactory{}
+	mf := &mockFactory{}
 	parent := &mockParent{}
 	testBalance := 42
 
+	m, err := newMember(parent, mf)
+	assert.NoError(t, err)
+
+	mParent, _ := newMember(parent, mf)
+	alFactory, _ := NewAllowanceFactory(mParent.(object.Parent))
+
 	w := wallet{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent, cFactory),
+		BaseSmartContract: *contract.NewBaseSmartContract(m.(object.Parent), cFactory),
 		balance:           testBalance,
+		allowanceClass:    alFactory,
 	}
 
-	assert.Equal(t, w.GetBalance(), testBalance)
+	tBalance, err := w.GetBalance()
+	assert.NoError(t, err)
+
+	assert.Equal(t, tBalance, testBalance)
 }
 
 func TestWallet_GetClassID(t *testing.T) {

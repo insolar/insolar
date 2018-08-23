@@ -17,8 +17,6 @@
 package main
 
 import (
-	"bytes"
-	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -26,163 +24,320 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 )
 
-type ContractInterface struct {
-	Types    map[string]string
-	Methods  map[string][]*ast.FuncDecl
-	Contract string
+type parsedFile struct {
+	name    string
+	code    []byte
+	fileSet *token.FileSet
+	node    *ast.File
+
+	types    map[string]*ast.TypeSpec
+	methods  map[string][]*ast.FuncDecl
+	contract string
 }
 
-var mode string
-var outfile string
+func printUsage() {
+	fmt.Println("usage: preprocessor <command> [<args>]")
+	fmt.Println("Commands: ")
+	fmt.Println(" wrapper   generate contract's wrapper")
+	fmt.Println(" proxy     generate contract's proxy")
+}
 
-func main() {
-	flag.StringVar(&mode, "mode", "wrapper", "Generation mode: <wrapper|helper>")
-	flag.StringVar(&outfile, "o", "-", "output file")
-	flag.Parse()
+type outputFlag struct {
+	path   string
+	writer io.Writer
+}
 
-	var output io.WriteCloser
-	if outfile == "-" {
-		output = os.Stdout
+func newOutputFlag() *outputFlag {
+	return &outputFlag{path: "-", writer: os.Stdout}
+}
+
+func (r *outputFlag) String() string {
+	return r.path
+}
+func (r *outputFlag) Set(arg string) error {
+	var res io.Writer
+	if arg == "-" {
+		res = os.Stdout
 	} else {
 		var err error
-		output, err = os.OpenFile(outfile, os.O_WRONLY, 0644)
+		res, err = os.OpenFile(arg, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
-			panic(err)
+			return errors.Wrap(err, "couldn't open file for writing")
 		}
-		defer output.Close()
+	}
+	r.path = arg
+	r.writer = res
+	return nil
+}
+func (r *outputFlag) Type() string {
+	return "file"
+}
+
+func main() {
+
+	if len(os.Args) == 1 {
+		printUsage()
+		return
 	}
 
-	for _, fn := range flag.Args() {
-		w, err := generateForFile(fn)
+	switch os.Args[1] {
+	case "wrapper":
+		fs := flag.NewFlagSet("wrapper", flag.ExitOnError)
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		err := fs.Parse(os.Args[2:])
 		if err != nil {
 			panic(err)
 		}
-		_, err = io.Copy(output, w)
+
+		for _, fn := range fs.Args() {
+			err := generateContractWrapper(fn, output.writer)
+			if err != nil {
+				panic(err)
+			}
+		}
+	case "proxy":
+		fs := flag.NewFlagSet("proxy", flag.ExitOnError)
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		err := fs.Parse(os.Args[2:])
 		if err != nil {
 			panic(err)
 		}
+
+		if fs.NArg() != 1 {
+			panic(errors.New("proxy command should be followed by exactly one file name to process"))
+		}
+
+		err = generateContractProxy(fs.Arg(0), output.writer)
+		if err != nil {
+			panic(err)
+		}
+	default:
+		printUsage()
+		fmt.Printf("\n\n%q is not valid command.\n", os.Args[1])
+		os.Exit(2)
 	}
 }
 
-func generateForFile(fn string) (io.Reader, error) {
-	fs := token.NewFileSet()
-
-	F, err := os.OpenFile(fn, os.O_RDONLY, 0)
+func slurpFile(fileName string) ([]byte, error) {
+	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't open file "+fn)
+		return nil, errors.Wrap(err, "Can't open file '"+fileName+"'")
 	}
-	defer F.Close()
+	defer file.Close() //nolint: errcheck
 
-	buff, err := ioutil.ReadAll(F)
+	res, err := ioutil.ReadAll(file)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't read file "+fn)
+		return nil, errors.Wrap(err, "Can't read file '"+fileName+"'")
+	}
+	return res, nil
+}
+
+func parseFile(fileName string) (*parsedFile, error) {
+	res := parsedFile{
+		name: fileName,
+	}
+	sourceCode, err := slurpFile(fileName)
+	if err != nil {
+		return &res, errors.Wrap(err, "Can't read slurp file")
+	}
+	res.code = sourceCode
+
+	res.fileSet = token.NewFileSet()
+	node, err := parser.ParseFile(res.fileSet, res.name, res.code, parser.ParseComments)
+	if err != nil {
+		return &res, errors.Wrapf(err, "Can't parse %s", fileName)
+	}
+	res.node = node
+
+	getMethods(&res)
+
+	return &res, nil
+}
+
+func generateContractWrapper(fileName string, out io.Writer) error {
+	parsed, err := parseFile(fileName)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse")
 	}
 
-	node, err := parser.ParseFile(fs, fn, buff, parser.ParseComments)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Can't parse %s", fn)
-	}
-	if node.Name.Name != "main" {
+	packageName := parsed.node.Name.Name
+	if packageName != "main" {
 		panic("Contract must be in main package")
 	}
-	b := bytes.Buffer{}
-	ci := getMethods(node, buff)
-	if mode == "wrapper" {
-		b.WriteString("package " + node.Name.Name + "\n\n")
-		b.WriteString(generateWrappers(ci) + "\n")
-		b.WriteString(generateExports(ci) + "\n")
+
+	code := "package " + packageName + "\n\n"
+	code += generateWrappers(parsed) + "\n"
+	code += generateExports(parsed) + "\n"
+
+	_, err = out.Write([]byte(code))
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code output handle")
 	}
-	return &b, nil
+
+	return nil
 }
 
-func getMethods(F *ast.File, text []byte) *ContractInterface {
-	ci := ContractInterface{
-		Types:   make(map[string]string),
-		Methods: make(map[string][]*ast.FuncDecl),
+func generateContractProxy(fileName string, out io.Writer) error {
+	parsed, err := parseFile(fileName)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse")
 	}
-	for _, d := range F.Decls {
+
+	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(fileName)
+	if match == nil {
+		return errors.Wrap(err, "couldn't match filename without extension and path")
+	}
+
+	packageName := parsed.node.Name.Name
+	if packageName != "main" {
+		panic("Contract must be in main package")
+	}
+
+	proxyPackageName := match[2]
+	if proxyPackageName == "main" {
+		proxyPackageName = match[1]
+	}
+
+	code := "package " + proxyPackageName + "\n\n"
+
+	code += `import (
+	"github.com/ugorji/go/codec"
+	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
+)
+
+`
+
+	code += generateTypes(parsed) + "\n"
+
+	code += `// Contract proxy type
+type ` + parsed.contract + ` struct {
+	Reference string
+}
+
+`
+
+	code += `// GetObject
+func GetObject(ref string) (r *` + parsed.contract + `) {
+	return &` + parsed.contract + `{}
+}
+`
+
+	code += generateMethodsProxies(parsed) + "\n"
+
+	_, err = out.Write([]byte(code))
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
+	return nil
+}
+
+func getMethods(parsed *parsedFile) {
+	parsed.types = make(map[string]*ast.TypeSpec)
+	parsed.methods = make(map[string][]*ast.FuncDecl)
+	for _, d := range parsed.node.Decls {
 		switch td := d.(type) {
 		case *ast.GenDecl:
 			if td.Tok != token.TYPE {
 				continue
 			}
-			typeNode := td.Specs[0].(*ast.TypeSpec)
-			if strings.Contains(td.Doc.Text(), "@inscontract") {
-				if ci.Contract != "" {
-					panic("more than one contract in a file")
+
+			for _, e := range td.Specs {
+				typeNode := e.(*ast.TypeSpec)
+
+				if strings.Contains(td.Doc.Text(), "@inscontract") {
+					if parsed.contract != "" {
+						panic("more than one contract in a file")
+					}
+					parsed.contract = typeNode.Name.Name
+				} else {
+					parsed.types[typeNode.Name.Name] = typeNode
 				}
-				ci.Contract = typeNode.Name.Name
-				continue
 			}
-			ci.Types[typeNode.Name.Name] = string(text[typeNode.Pos()-1 : typeNode.End()])
-			continue
 		case *ast.FuncDecl:
-			if td.Recv.NumFields() == 0 { // not a method
-				continue
+			if td.Recv == nil || td.Recv.NumFields() == 0 {
+				continue // todo we must store it and use, it may be a constructor
 			}
+
 			r := td.Recv.List[0].Type
 			if tr, ok := r.(*ast.StarExpr); ok { // *type
 				r = tr.X
 			}
 			typename := r.(*ast.Ident).Name
-			ci.Methods[typename] = append(ci.Methods[typename], td)
+			parsed.methods[typename] = append(parsed.methods[typename], td)
 		}
 	}
-	return &ci
 }
 
 // nolint
-func generateTypes(ci *ContractInterface) string {
+func generateTypes(parsed *parsedFile) string {
 	text := ""
-	for _, t := range ci.Types {
-		text += "type " + t + "\n"
+	for _, t := range parsed.types {
+		text += "type " + string(parsed.code[t.Pos()-1:t.End()-1]) + "\n\n"
 	}
 
-	text += "type " + ci.Contract + " struct { // Contract proxy type\n"
-	text += "    address Reference logicrunner.Reference\n"
-	text += "}\n\n"
-
-	text += "func (c *" + ci.Contract + ")GetReference"
-	// GetReference
 	return text
 }
 
-func generateWrappers(ci *ContractInterface) string {
+func generateWrappers(parsed *parsedFile) string {
 	text := `import (
 	"github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
 	)` + "\n"
 
-	for _, method := range ci.Methods[ci.Contract] {
-		text += generateMethodWrapper(method, ci.Contract) + "\n"
+	for _, method := range parsed.methods[parsed.contract] {
+		text += generateMethodWrapper(parsed, method) + "\n"
 	}
 	return text
 }
 
-func generateMethodWrapper(method *ast.FuncDecl, class string) string {
-	text := fmt.Sprintf("func (self *%s) INSWRAPER_%s(cbor foundation.CBORMarshaler, data []byte) ([]byte) {\n",
-		class, method.Name.Name)
-	text += fmt.Sprintf("\targs := [%d]interface{}{}\n", method.Type.Params.NumFields())
+func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
+	text := fmt.Sprintf("\t%s := [%d]interface{}{}\n", name, list.NumFields())
 
-	args := []string{}
-	for i, arg := range method.Type.Params.List {
+	for i, arg := range list.List {
 		initializer := ""
-		tname := fmt.Sprintf("%v", arg.Type)
+		tname := string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
 		switch tname {
 		case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
 			initializer = tname + "(0)"
 		case "string":
 			initializer = `""`
 		default:
-			initializer = tname + "{}"
+			switch td := arg.Type.(type) {
+			case *ast.StarExpr:
+				initializer = "&" + string(parsed.code[td.X.Pos()-1:td.X.End()-1]) + "{}"
+			default:
+				initializer = tname + "{}"
+			}
 		}
-		text += fmt.Sprintf("\targs[%d] = %s\n", i, initializer)
-		args = append(args, fmt.Sprintf("args[%d].(%s)", i, tname))
+		text += fmt.Sprintf("\t%s[%d] = %s\n", name, i, initializer)
 	}
+
+	listCode := ""
+	for i, arg := range list.List {
+		if i > 0 {
+			listCode += ", "
+		}
+		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1]))
+	}
+
+	return text, listCode
+}
+
+func generateMethodWrapper(parsed *parsedFile, method *ast.FuncDecl) string {
+	text := fmt.Sprintf("func (self *%s) INSWRAPER_%s(cbor foundation.CBORMarshaler, data []byte) ([]byte) {\n",
+		parsed.contract, method.Name.Name)
+
+	argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
+	text += argsInit
 
 	text += "\tcbor.Unmarshal(&args, data)\n"
 
@@ -191,7 +346,7 @@ func generateMethodWrapper(method *ast.FuncDecl, class string) string {
 		rets = append(rets, fmt.Sprintf("ret%d", i))
 	}
 	ret := strings.Join(rets, ", ")
-	text += fmt.Sprintf("\t%s := self.%s(%s)\n", ret, method.Name.Name, strings.Join(args, ", "))
+	text += fmt.Sprintf("\t%s := self.%s(%s)\n", ret, method.Name.Name, argsList)
 
 	text += fmt.Sprintf("\treturn cbor.Marshal([]interface{}{%s})\n", strings.Join(rets, ", "))
 	text += "}\n"
@@ -209,7 +364,83 @@ func (hw *HelloWorlder) INSWRAPER_Echo(cbor cborer, data []byte) ([]byte, error)
 }
 */
 
-func generateExports(ci *ContractInterface) string {
-	text := "var INSEXPORT " + ci.Contract + "\n"
+func generateExports(parsed *parsedFile) string {
+	text := "var INSEXPORT " + parsed.contract + "\n"
+	return text
+}
+
+func generateMethodsProxies(parsed *parsedFile) string {
+	text := ""
+
+	for _, method := range parsed.methods[parsed.contract] {
+		text += generateMethodProxy(parsed, method) + "\n"
+	}
+	return text
+}
+
+func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
+	text := fmt.Sprintf("func (r *%s) %s(", parsed.contract, method.Name.Name)
+	for i, arg := range method.Type.Params.List {
+		if i > 0 {
+			text += ", "
+		}
+		text += arg.Names[0].Name
+		text += " " + string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1])
+	}
+	text += ") ("
+
+	for i, arg := range method.Type.Results.List {
+		if i > 0 {
+			text += ", "
+		}
+		text += string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
+	}
+
+	text += ") {\n"
+	text += `
+	ch := new(codec.CborHandle)
+	var data []byte
+	err := codec.NewEncoderBytes(&data, ch).Encode(*r)
+	if err != nil {
+		panic(err)
+	}
+`
+
+	text += fmt.Sprintf("\tvar args [%d]interface{}\n", method.Type.Params.NumFields())
+	for i, arg := range method.Type.Params.List {
+		text += fmt.Sprintf("\targs[%d] = %s\n", i, arg.Names[0].Name)
+	}
+
+	text += `
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(args)
+	if err != nil {
+		panic(err)
+	}
+`
+
+	text += fmt.Sprintf("\t"+`_, res, err := ginsider.CurrentGoInsider.Exec(r.Reference, "%s", argsSerialized)`, method.Name.Name)
+
+	text += `
+	if err != nil {
+		panic(err)
+	}
+`
+	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
+	text += resInit
+
+	text += `
+	err = codec.NewDecoderBytes(res, ch).Decode(resList)
+	if err != nil {
+		panic(err)
+	}
+`
+
+	if method.Type.Results.NumFields() > 0 {
+		text += "\treturn " + resList
+	}
+
+	text += "}\n"
+
 	return text
 }

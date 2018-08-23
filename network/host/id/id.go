@@ -18,43 +18,78 @@ package id
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/jbenet/go-base58"
 )
 
 // ID is node id.
-type ID []byte
+type ID struct {
+	key  []byte
+	hash []byte
+}
+
+// GetRandomKey generates and returns a random key for ID.
+func GetRandomKey() []byte {
+	key := make([]byte, 20)
+	_, _ = random.Read(key)
+	return key
+}
+
+// GetHash returns hash of key.
+func (id ID) GetHash() []byte {
+	return id.hash
+}
+
+// SetHash sets new hash.
+func (id *ID) SetHash(newHash []byte) {
+	id.hash = newHash
+}
+
+// MarshalBinary is binary marshaler.
+func (id ID) MarshalBinary() ([]byte, error) {
+	var res bytes.Buffer
+	key := base58.Encode(id.key)
+	hash := base58.Encode(id.hash)
+	fmt.Fprintln(&res, key, hash)
+	return res.Bytes(), nil
+}
+
+// UnmarshalBinary is binary unmarshaler.
+func (id *ID) UnmarshalBinary(data []byte) error {
+	res := bytes.NewBuffer(data)
+	var key string
+	var hash string
+	_, err := fmt.Fscanln(res, &key, &hash)
+	id.key = base58.Decode(key)
+	id.hash = base58.Decode(hash)
+	return err
+}
 
 // NewID returns random node id.
-func NewID() (ID, error) {
-	result := make([]byte, 20)
-	_, err := random.Read(result)
-	return result, err
+func NewID(key []byte) (ID, error) {
+	hash := make([]byte, 20) // TODO: choose hash func
+	_, err := random.Read(hash)
+	id := ID{hash: hash, key: key}
+	return id, err
 }
 
-// NewIDs returns given number of random node ids.
-func NewIDs(num int) ([]ID, error) {
-	result := make([]ID, num)
-
-	for i := range result {
-		id, err := NewID()
-
-		if err != nil {
-			return nil, err
-		}
-
-		result[i] = id
-	}
-
-	return result, nil
+// HashEqual checks if hash is equal to another.
+func (id ID) HashEqual(other []byte) bool {
+	return bytes.Equal(id.hash, other)
 }
 
-// Equal checks if id is equal to another.
-func (id ID) Equal(other ID) bool {
-	return bytes.Equal(id, other)
+// KeyEqual checks if id is equal ot another.
+func (id ID) KeyEqual(other []byte) bool {
+	return bytes.Equal(id.key, other)
 }
 
-// String is a base58-encoded string representation of node id.
-func (id ID) String() string {
-	return base58.Encode(id)
+// KeyString is a base58-encoded string representation of node public key.
+func (id ID) KeyString() string {
+	return base58.Encode(id.key)
+}
+
+// HashString is a base58-encoded string representation hash of public key.
+func (id ID) HashString() string {
+	return base58.Encode(id.hash)
 }

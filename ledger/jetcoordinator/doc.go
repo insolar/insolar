@@ -14,16 +14,7 @@
  *    limitations under the License.
  */
 
-package artifactmanager
-
-import (
-	"errors"
-)
-
-var (
-	ErrInvalidRef        = errors.New("invalid reference") // nolint
-	ErrClassDeactivated  = errors.New("class is deactivated")
-	ErrObjectDeactivated = errors.New("object is deactivated")
-	ErrInconsistentIndex = errors.New("inconsistent index")
-	ErrWrongObject       = errors.New("provided object is not and instance of provided class")
-)
+// Package jetcoordinator is responsible for all jet manipulations.
+//
+// Package responsible for jet drops, split/merge jets, choose of validators.
+package jetcoordinator
