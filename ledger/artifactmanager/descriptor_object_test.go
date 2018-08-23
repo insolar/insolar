@@ -17,44 +17,55 @@
 package artifactmanager
 
 import (
-	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage/leveldb"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
 
-func prepareObjectDescriptorTest() (
-	*leveldb.LevelLedger, *LedgerArtifactManager, *record.ObjectActivateRecord, *record.Reference,
-) {
-	if err := leveldb.DropDB(); err != nil {
-		os.Exit(1)
-	}
-	ledger, _ := leveldb.InitDB("_db", nil)
-	manager := LedgerArtifactManager{
-		storer:   ledger,
-		archPref: []record.ArchType{1},
-	}
-	rec := record.ObjectActivateRecord{Memory: record.Memory{1}}
-	ref, _ := ledger.SetRecord(&rec)
+type preparedDOTestData struct {
+	ledger  storage.LedgerStorer
+	manager *LedgerArtifactManager
+	objRec  *record.ObjectActivateRecord
+	objRef  *record.Reference
+}
 
-	return ledger, &manager, &rec, ref
+func prepareDOTestData(t *testing.T) (preparedDOTestData, func()) {
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+
+	rec := record.ObjectActivateRecord{Memory: record.Memory{1}}
+	ref, err := ledger.SetRecord(&rec)
+	assert.NoError(t, err)
+
+	return preparedDOTestData{
+		ledger: ledger,
+		manager: &LedgerArtifactManager{
+			storer:   ledger,
+			archPref: []record.ArchType{1},
+		},
+		objRec: &rec,
+		objRef: ref,
+	}, cleaner
 }
 
 func TestObjectDescriptor_GetMemory(t *testing.T) {
-	ledger, manager, objRec, objRef := prepareObjectDescriptorTest()
+	td, cleaner := prepareDOTestData(t)
+	defer cleaner()
+
 	amendRec := record.ObjectAmendRecord{NewMemory: record.Memory{2}}
-	amendRef, _ := ledger.SetRecord(&amendRec)
+	amendRef, _ := td.ledger.SetRecord(&amendRec)
 	idx := index.ObjectLifeline{
 		LatestStateRef: *amendRef,
 	}
-	ledger.SetObjectIndex(objRef, &idx)
+	td.ledger.SetObjectIndex(td.objRef, &idx)
 
 	desc := ObjectDescriptor{
-		manager:           manager,
-		activateRecord:    objRec,
+		manager:           td.manager,
+		activateRecord:    td.objRec,
 		latestAmendRecord: nil,
 		lifelineIndex:     &idx,
 	}
@@ -63,8 +74,8 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 	assert.Equal(t, record.Memory{1}, mem)
 
 	desc = ObjectDescriptor{
-		manager:           manager,
-		activateRecord:    objRec,
+		manager:           td.manager,
+		activateRecord:    td.objRec,
 		latestAmendRecord: &amendRec,
 		lifelineIndex:     &idx,
 	}
@@ -74,20 +85,22 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 }
 
 func TestObjectDescriptor_GetDelegates(t *testing.T) {
-	ledger, manager, objRec, objRef := prepareObjectDescriptorTest()
+	td, cleaner := prepareDOTestData(t)
+	defer cleaner()
+
 	appendRec1 := record.ObjectAppendRecord{AppendMemory: record.Memory{2}}
 	appendRec2 := record.ObjectAppendRecord{AppendMemory: record.Memory{3}}
-	appendRef1, _ := ledger.SetRecord(&appendRec1)
-	appendRef2, _ := ledger.SetRecord(&appendRec2)
+	appendRef1, _ := td.ledger.SetRecord(&appendRec1)
+	appendRef2, _ := td.ledger.SetRecord(&appendRec2)
 	idx := index.ObjectLifeline{
-		LatestStateRef: *objRef,
+		LatestStateRef: *td.objRef,
 		AppendRefs:     []record.Reference{*appendRef1, *appendRef2},
 	}
-	ledger.SetObjectIndex(objRef, &idx)
+	td.ledger.SetObjectIndex(td.objRef, &idx)
 
 	desc := ObjectDescriptor{
-		manager:           manager,
-		activateRecord:    objRec,
+		manager:           td.manager,
+		activateRecord:    td.objRec,
 		latestAmendRecord: nil,
 		lifelineIndex:     &idx,
 	}
