@@ -40,8 +40,8 @@ const (
 	// IterateBootstrap is iteration type for Bootstrap requests.
 	IterateBootstrap
 
-	// IterateFindNode is iteration type for FindNode requests.
-	IterateFindNode
+	// IterateFindHost is iteration type for FindHost requests.
+	IterateFindHost
 
 	// IterateFindValue is iteration type for FindValue requests.
 	IterateFindValue
@@ -51,7 +51,7 @@ const (
 	// ParallelCalls is a small number representing the degree of parallelism in network calls.
 	ParallelCalls = 3
 
-	// KeyBitSize is the size in bits of the keys used to identify nodes and store and
+	// KeyBitSize is the size in bits of the keys used to identify hosts and store and
 	// retrieve data; in basic Kademlia this is 160, the length of a SHA1.
 	KeyBitSize = 160
 
@@ -64,7 +64,7 @@ type HashTable struct {
 	// The local host.
 	Origin *host.Host
 
-	// Routing table a list of all known nodes in the network
+	// Routing table a list of all known hosts in the network
 	// Nodes within buckets are sorted by least recently seen e.g.
 	// [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
 	//  ^                                                           ^
@@ -228,7 +228,7 @@ func (ht *HashTable) selectParallelCalls(
 	}
 }
 
-// GetAllNodesInBucketCloserThan returns all nodes from given bucket that are closer to id then our host.
+// GetAllNodesInBucketCloserThan returns all hosts from given bucket that are closer to id then our host.
 func (ht *HashTable) GetAllNodesInBucketCloserThan(bucket int, id []byte) [][]byte {
 	b := ht.RoutingTable[bucket]
 	var nodes [][]byte
@@ -325,7 +325,7 @@ func GetBucketIndexFromDifferingBit(id1, id2 []byte) int {
 	return 0
 }
 
-// TotalNodes returns total number of nodes in HashTable.
+// TotalNodes returns total number of hosts in HashTable.
 func (ht *HashTable) TotalNodes() int {
 	ht.Lock()
 	defer ht.Unlock()

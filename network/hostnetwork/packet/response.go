@@ -21,7 +21,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
 
-// ResponseDataFindNode is data for FindNode response.
+// ResponseDataFindNode is data for FindHost response.
 type ResponseDataFindNode struct {
 	Closest []*host.Host
 }

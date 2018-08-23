@@ -20,11 +20,11 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
-// RouteSet is used in order to sort a list of arbitrary nodes against a
-// comparator. These nodes are sorted by xor distance.
+// RouteSet is used in order to sort a list of arbitrary hosts against a
+// comparator. These hosts are sorted by xor distance.
 type RouteSet struct {
-	// nodes are a list of nodes to be compared.
-	nodes []*host.Host
+	// hosts are a list of hosts to be compared.
+	hosts []*host.Host
 
 	// comparator is the requestID to compare to.
 	comparator []byte
@@ -35,22 +35,22 @@ func NewRouteSet() *RouteSet {
 	return &RouteSet{}
 }
 
-// Nodes returns list of RouteSet nodes.
+// Nodes returns list of RouteSet hosts.
 func (rs *RouteSet) Nodes() []*host.Host {
-	nodes := make([]*host.Host, len(rs.nodes))
-	copy(nodes, rs.nodes)
+	nodes := make([]*host.Host, len(rs.hosts))
+	copy(nodes, rs.hosts)
 	return nodes
 }
 
-// FirstNode returns first Host from RouteSet.
-func (rs *RouteSet) FirstNode() *host.Host {
-	return rs.nodes[0]
+// FirstHost returns first Host from RouteSet.
+func (rs *RouteSet) FirstHost() *host.Host {
+	return rs.hosts[0]
 }
 
 // Contains checks if RouteSet contains given RouteNode.
 func (rs *RouteSet) Contains(node *RouteNode) bool {
 	exists := false
-	for _, n := range rs.nodes {
+	for _, n := range rs.hosts {
 		if node.ID.HashEqual(n.ID.GetHash()) {
 			exists = true
 		}
@@ -61,15 +61,15 @@ func (rs *RouteSet) Contains(node *RouteNode) bool {
 // Append adds single RouteNode to RouteSet.
 func (rs *RouteSet) Append(node *RouteNode) {
 	if !rs.Contains(node) {
-		rs.nodes = append(rs.nodes, node.Host)
+		rs.hosts = append(rs.hosts, node.Host)
 	}
 }
 
 // Remove removes host from RouteSet.
 func (rs *RouteSet) Remove(node *RouteNode) {
-	for i, n := range rs.nodes {
+	for i, n := range rs.hosts {
 		if n.ID.HashEqual(node.ID.GetHash()) {
-			rs.nodes = append(rs.nodes[:i], rs.nodes[i+1:]...)
+			rs.hosts = append(rs.hosts[:i], rs.hosts[i+1:]...)
 			return
 		}
 	}
@@ -89,20 +89,20 @@ func (rs *RouteSet) AppendMany(nodes []*RouteNode) {
 	}
 }
 
-// Len returns number of nodes in RouteSet.
+// Len returns number of hosts in RouteSet.
 func (rs *RouteSet) Len() int {
-	return len(rs.nodes)
+	return len(rs.hosts)
 }
 
-// Swap swaps two nodes in RouteSet.
+// Swap swaps two hosts in RouteSet.
 func (rs *RouteSet) Swap(i, j int) {
-	rs.nodes[i], rs.nodes[j] = rs.nodes[j], rs.nodes[i]
+	rs.hosts[i], rs.hosts[j] = rs.hosts[j], rs.hosts[i]
 }
 
 // Less is a sorting function for RouteSet.
 func (rs *RouteSet) Less(i, j int) bool {
-	iDist := getDistance(rs.nodes[i].ID.GetHash(), rs.comparator)
-	jDist := getDistance(rs.nodes[j].ID.GetHash(), rs.comparator)
+	iDist := getDistance(rs.hosts[i].ID.GetHash(), rs.comparator)
+	jDist := getDistance(rs.hosts[j].ID.GetHash(), rs.comparator)
 
 	return iDist.Cmp(jDist) == -1
 }

@@ -732,7 +732,7 @@ func TestStoreReplication(t *testing.T) {
 			}
 
 			switch request.Type {
-			case packet.TypeFindNode:
+			case packet.TypeFindHost:
 				res := mockFindNodeResponseEmpty(request)
 				mockTp.send <- res
 			case packet.TypeStore:
@@ -891,7 +891,7 @@ func TestAddNodeTimeout(t *testing.T) {
 				return
 			}
 			switch request.Type {
-			case packet.TypeFindNode:
+			case packet.TypeFindHost:
 				id1 := getIDWithValues(0)
 				if nodesAdded > routing.MaxContactsInBucket+1 {
 					close(done)
@@ -1016,7 +1016,7 @@ func TestDHT_FindNode(t *testing.T) {
 	for _, dht := range dhts {
 		for i := range idx {
 			ctx, _ := NewContextBuilder(dht).SetDefaultNode().Build()
-			_, exist, err := dht.FindNode(ctx, idx[i])
+			_, exist, err := dht.FindHost(ctx, idx[i])
 			assert.NoError(t, err)
 			assert.Equal(t, true, exist)
 			time.Sleep(time.Millisecond * 200)

@@ -121,7 +121,7 @@ func TestPacket_IsValid_Ok(t *testing.T) {
 		data       interface{}
 	}{
 		{"TypePing", TypePing, nil},
-		{"TypeFindNode", TypeFindNode, &RequestDataFindNode{}},
+		{"TypeFindHost", TypeFindHost, &RequestDataFindHost{}},
 		{"TypeFindValue", TypeFindValue, &RequestDataFindValue{}},
 		{"TypeStore", TypeStore, &RequestDataStore{}},
 		{"TypeRPC", TypeRPC, &RequestDataRPC{"test", [][]byte{}}},
@@ -142,7 +142,7 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 		data       interface{}
 	}{
 		{"incorrect request", TypeStore, &RequestDataRPC{"test", [][]byte{}}},
-		{"incorrect type", packetType(1337), &RequestDataFindNode{}},
+		{"incorrect type", packetType(1337), &RequestDataFindHost{}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -178,7 +178,7 @@ func TestSerializePacket(t *testing.T) {
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 	builder := NewBuilder()
-	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID.GetHash()}).Build()
+	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.GetHash()}).Build()
 
 	_, err := SerializePacket(msg)
 
@@ -195,7 +195,7 @@ func TestDeserializePacket(t *testing.T) {
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 	receiver.ID.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 	builder := NewBuilder()
-	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID.GetHash()}).Build()
+	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.GetHash()}).Build()
 
 	serialized, _ := SerializePacket(msg)
 

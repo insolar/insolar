@@ -195,7 +195,7 @@ func doFindNode(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 		return
 	}
 	fmt.Println("Searching for targetNode", input[1])
-	targetNode, exists, err := dhtNetwork.FindNode(ctx, input[1])
+	targetNode, exists, err := dhtNetwork.FindHost(ctx, input[1])
 	if err != nil {
 		fmt.Println(err.Error())
 	}

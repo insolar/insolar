@@ -43,8 +43,8 @@ Or with builder:
 	msg := builder.
 		Sender(sender).
 		Receiver(receiver).
-		Type(packet.TypeFindNode).
-		Request(&packet.RequestDataFindNode{}).
+		Type(packet.TypeFindHost).
+		Request(&packet.RequestDataFindHost{}).
 		Build()
 
 	// do something with packet

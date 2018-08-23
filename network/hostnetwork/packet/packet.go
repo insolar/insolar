@@ -34,8 +34,8 @@ const (
 	TypePing = packetType(iota + 1)
 	// TypeStore is packet type for store method.
 	TypeStore
-	// TypeFindNode is packet type for FindNode method.
-	TypeFindNode
+	// TypeFindHost is packet type for FindHost method.
+	TypeFindHost
 	// TypeFindValue is packet type for FindValue method.
 	TypeFindValue
 	// TypeRPC is packet type for RPC method.
@@ -137,9 +137,9 @@ func NewKnownOuterNodesPacket(sender, receiver *host.Host, nodes int) *Packet {
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeKnownOuterNodes,
-		Data: &RequestKnownOuterNodes{
+		Data: &RequestKnownOuterHosts{
 			ID:         sender.ID.HashString(),
-			OuterNodes: nodes,
+			OuterHosts: nodes,
 		},
 	}
 }
@@ -149,8 +149,8 @@ func (m *Packet) IsValid() (valid bool) {
 	switch m.Type {
 	case TypePing:
 		valid = true
-	case TypeFindNode:
-		_, valid = m.Data.(*RequestDataFindNode)
+	case TypeFindHost:
+		_, valid = m.Data.(*RequestDataFindHost)
 	case TypeFindValue:
 		_, valid = m.Data.(*RequestDataFindValue)
 	case TypeStore:
@@ -168,7 +168,7 @@ func (m *Packet) IsValid() (valid bool) {
 	case TypeRelayOwnership:
 		_, valid = m.Data.(*RequestRelayOwnership)
 	case TypeKnownOuterNodes:
-		_, valid = m.Data.(*RequestKnownOuterNodes)
+		_, valid = m.Data.(*RequestKnownOuterHosts)
 	default:
 		valid = false
 	}
@@ -237,7 +237,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 }
 
 func init() {
-	gob.Register(&RequestDataFindNode{})
+	gob.Register(&RequestDataFindHost{})
 	gob.Register(&RequestDataFindValue{})
 	gob.Register(&RequestDataStore{})
 	gob.Register(&RequestDataRPC{})
@@ -246,7 +246,7 @@ func init() {
 	gob.Register(&RequestCheckOrigin{})
 	gob.Register(&RequestObtainIP{})
 	gob.Register(&RequestRelayOwnership{})
-	gob.Register(&RequestKnownOuterNodes{})
+	gob.Register(&RequestKnownOuterHosts{})
 
 	gob.Register(&ResponseDataFindNode{})
 	gob.Register(&ResponseDataFindValue{})

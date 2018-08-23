@@ -32,8 +32,8 @@ const (
 	RevokeAuth
 )
 
-// RequestDataFindNode is data for FindNode request.
-type RequestDataFindNode struct {
+// RequestDataFindHost is data for FindHost request.
+type RequestDataFindHost struct {
 	Target []byte
 }
 
@@ -77,8 +77,8 @@ type RequestRelayOwnership struct {
 	Ready bool
 }
 
-// RequestKnownOuterNodes is data to notify home subnet about known outer nodes.
-type RequestKnownOuterNodes struct {
+// RequestKnownOuterHosts is data to notify home subnet about known outer hosts.
+type RequestKnownOuterHosts struct {
 	ID         string // origin ID
-	OuterNodes int    // number of known outer nodes
+	OuterHosts int    // number of known outer hosts
 }

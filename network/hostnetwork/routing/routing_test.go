@@ -75,15 +75,15 @@ func TestRouteSet(t *testing.T) {
 	n3 := &host.Host{ID: getZerodIDWithNthByte(17, 1)}
 	n4 := &host.Host{ID: getZerodIDWithNthByte(16, 1)}
 
-	nl.nodes = []*host.Host{n3, n2, n4, n1}
+	nl.hosts = []*host.Host{n3, n2, n4, n1}
 	nl.comparator = comparator.GetHash()
 
 	sort.Sort(nl)
 
-	assert.Equal(t, n1, nl.nodes[0])
-	assert.Equal(t, n2, nl.nodes[1])
-	assert.Equal(t, n3, nl.nodes[2])
-	assert.Equal(t, n4, nl.nodes[3])
+	assert.Equal(t, n1, nl.hosts[0])
+	assert.Equal(t, n2, nl.hosts[1])
+	assert.Equal(t, n3, nl.hosts[2])
+	assert.Equal(t, n4, nl.hosts[3])
 }
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {

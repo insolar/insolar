@@ -72,7 +72,7 @@ type AuthInfo struct {
 	SentKeys     map[string][]byte
 	ReceivedKeys map[string][]byte
 
-	authenticatedNodes map[string]bool
+	authenticatedHosts map[string]bool
 
 	mut sync.Mutex
 }
@@ -167,7 +167,7 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 		options.PacketTimeout = time.Second * 10
 	}
 
-	dht.auth.authenticatedNodes = make(map[string]bool)
+	dht.auth.authenticatedHosts = make(map[string]bool)
 	dht.auth.SentKeys = make(map[string][]byte)
 	dht.auth.ReceivedKeys = make(map[string][]byte)
 
@@ -257,8 +257,8 @@ func (dht *DHT) Get(ctx Context, key string) ([]byte, bool, error) {
 	return value, exists, nil
 }
 
-// FindNode returns target host's real network address.
-func (dht *DHT) FindNode(ctx Context, key string) (*host.Host, bool, error) {
+// FindHost returns target host's real network address.
+func (dht *DHT) FindHost(ctx Context, key string) (*host.Host, bool, error) {
 	keyBytes := base58.Decode(key)
 	if len(keyBytes) != routing.MaxContactsInBucket {
 		return nil, false, errors.New("invalid key")
@@ -273,8 +273,8 @@ func (dht *DHT) FindNode(ctx Context, key string) (*host.Host, bool, error) {
 	var exists = false
 	routeSet := ht.GetClosestContacts(1, keyBytes, nil)
 
-	if routeSet.Len() > 0 && routeSet.FirstNode().ID.HashEqual(keyBytes) {
-		targetNode = routeSet.FirstNode()
+	if routeSet.Len() > 0 && routeSet.FirstHost().ID.HashEqual(keyBytes) {
+		targetNode = routeSet.FirstHost()
 		exists = true
 	} else if dht.proxy.ProxyNodesCount() > 0 {
 		address, _ := host.NewAddress(dht.proxy.GetNextProxyAddress())
@@ -285,7 +285,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*host.Host, bool, error) {
 		return targetNode, true, nil
 	} else {
 		log.Println("Host not found in routing table. Iterating through network...")
-		_, closest, err := dht.iterate(ctx, routing.IterateFindNode, keyBytes, nil)
+		_, closest, err := dht.iterate(ctx, routing.IterateFindHost, keyBytes, nil)
 		if err != nil {
 			return nil, false, err
 		}
@@ -350,7 +350,7 @@ func (dht *DHT) Bootstrap() error {
 					if err != nil {
 						log.Fatal(err)
 					}
-					dht.addNode(ctx, routing.NewRouteNode(result.Sender))
+					dht.addHost(ctx, routing.NewRouteNode(result.Sender))
 				}
 				wg.Done()
 				return
@@ -403,7 +403,7 @@ func (dht *DHT) iterateBootstrapNodes(
 			futures = append(futures, res)
 		} else {
 			routeNode := routing.NewRouteNode(bn)
-			dht.addNode(ctx, routeNode)
+			dht.addHost(ctx, routeNode)
 		}
 	}
 	return futures
@@ -440,7 +440,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		return nil, nil, nil
 	}
 
-	closestNode := routeSet.FirstNode()
+	closestNode := routeSet.FirstHost()
 
 	checkAndRefreshTimeForBucket(t, ht, target)
 
@@ -487,7 +487,7 @@ func (dht *DHT) iterateIsDone(
 	closestNode *host.Host,
 ) (value []byte, closest []*host.Host, close *host.Host, err error) {
 
-	if routeSet.FirstNode().ID.HashEqual(closestNode.ID.GetHash()) || *(queryRest) {
+	if routeSet.FirstHost().ID.HashEqual(closestNode.ID.GetHash()) || *(queryRest) {
 		switch t {
 		case routing.IterateBootstrap:
 			if !(*queryRest) {
@@ -496,7 +496,7 @@ func (dht *DHT) iterateIsDone(
 				return nil, nil, nil, err
 			}
 			return nil, routeSet.Nodes(), nil, nil
-		case routing.IterateFindNode, routing.IterateFindValue:
+		case routing.IterateFindHost, routing.IterateFindValue:
 			return nil, routeSet.Nodes(), nil, nil
 		case routing.IterateStore:
 			for i, receiver := range routeSet.Nodes() {
@@ -517,7 +517,7 @@ func (dht *DHT) iterateIsDone(
 		}
 	} else {
 		err = errors.New("do nothing")
-		return nil, nil, routeSet.FirstNode(), err
+		return nil, nil, routeSet.FirstHost(), err
 	}
 	err = errors.New("do nothing")
 	return nil, nil, nil, err
@@ -571,7 +571,7 @@ func resultsIterate(
 			continue
 		}
 		switch t {
-		case routing.IterateBootstrap, routing.IterateFindNode, routing.IterateStore:
+		case routing.IterateBootstrap, routing.IterateFindHost, routing.IterateStore:
 			responseData := result.Data.(*packet.ResponseDataFindNode)
 			if len(responseData.Closest) > 0 && responseData.Closest[0].ID.HashEqual(target) {
 				return nil, responseData.Closest, nil
@@ -630,7 +630,7 @@ func (dht *DHT) setUpResultChan(futures []transport.Future, ctx Context, resultC
 					// Channel was closed
 					return
 				}
-				dht.addNode(ctx, routing.NewRouteNode(result.Sender))
+				dht.addHost(ctx, routing.NewRouteNode(result.Sender))
 				resultChan <- result
 				return
 			case <-time.After(dht.options.PacketTimeout):
@@ -688,21 +688,21 @@ func (dht *DHT) sendPacketToAlphaNodes(
 
 func getPacketBuilder(t routing.IterateType, packetBuilder packet.Builder, target []byte) packet.Builder {
 	switch t {
-	case routing.IterateBootstrap, routing.IterateFindNode:
-		return packetBuilder.Type(packet.TypeFindNode).Request(&packet.RequestDataFindNode{Target: target})
+	case routing.IterateBootstrap, routing.IterateFindHost:
+		return packetBuilder.Type(packet.TypeFindHost).Request(&packet.RequestDataFindHost{Target: target})
 	case routing.IterateFindValue:
 		return packetBuilder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: target})
 	case routing.IterateStore:
-		return packetBuilder.Type(packet.TypeFindNode).Request(&packet.RequestDataFindNode{Target: target})
+		return packetBuilder.Type(packet.TypeFindHost).Request(&packet.RequestDataFindHost{Target: target})
 	default:
 		panic("Unknown iterate type")
 	}
 }
 
-// addNode adds a host into the appropriate k bucket
+// addHost adds a host into the appropriate k bucket
 // we store these buckets in big-endian order so we look at the bits
 // from right to left in order to find the appropriate bucket
-func (dht *DHT) addNode(ctx Context, node *routing.RouteNode) {
+func (dht *DHT) addHost(ctx Context, node *routing.RouteNode) {
 	ht := dht.htFromCtx(ctx)
 	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.GetHash(), node.ID.GetHash())
 
@@ -828,7 +828,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 			if ht.Origin.ID.HashEqual(msg.Receiver.ID.GetHash()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
 				dht.dispatchPacketType(ctx, msg, ht)
 			} else {
-				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.HashString())
+				targetNode, exist, err := dht.FindHost(ctx, msg.Receiver.ID.HashString())
 				if err != nil {
 					log.Println(err)
 				} else if !exist {
@@ -860,7 +860,7 @@ func (dht *DHT) sendRelayedRequest(request *packet.Packet, ctx Context) {
 			// Channel was closed
 			log.Println("chanel closed unexpectedly")
 		}
-		dht.addNode(ctx, routing.NewRouteNode(rsp.Sender))
+		dht.addHost(ctx, routing.NewRouteNode(rsp.Sender))
 
 		response := rsp.Data.(*packet.ResponseDataRPC)
 		if response.Success {
@@ -891,8 +891,8 @@ func buildContext(cb ContextBuilder, msg *packet.Packet) Context {
 func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.HashTable) {
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 	switch msg.Type {
-	case packet.TypeFindNode:
-		dht.processFindNode(ctx, msg, packetBuilder)
+	case packet.TypeFindHost:
+		dht.processFindHost(ctx, msg, packetBuilder)
 	case packet.TypeFindValue:
 		dht.processFindValue(ctx, msg, packetBuilder)
 	case packet.TypeStore:
@@ -945,10 +945,10 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *packet.Packet, packetBui
 	}
 }
 
-func (dht *DHT) processFindNode(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
+func (dht *DHT) processFindHost(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	ht := dht.htFromCtx(ctx)
-	data := msg.Data.(*packet.RequestDataFindNode)
-	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
+	data := msg.Data.(*packet.RequestDataFindHost)
+	dht.addHost(ctx, routing.NewRouteNode(msg.Sender))
 	closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*host.Host{msg.Sender})
 	response := &packet.ResponseDataFindNode{
 		Closest: closest.Nodes(),
@@ -962,7 +962,7 @@ func (dht *DHT) processFindNode(ctx Context, msg *packet.Packet, packetBuilder p
 func (dht *DHT) processFindValue(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	ht := dht.htFromCtx(ctx)
 	data := msg.Data.(*packet.RequestDataFindValue)
-	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
+	dht.addHost(ctx, routing.NewRouteNode(msg.Sender))
 	value, exists := dht.store.Retrieve(data.Target)
 	response := &packet.ResponseDataFindValue{}
 	if exists {
@@ -979,7 +979,7 @@ func (dht *DHT) processFindValue(ctx Context, msg *packet.Packet, packetBuilder 
 
 func (dht *DHT) processStore(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	data := msg.Data.(*packet.RequestDataStore)
-	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
+	dht.addHost(ctx, routing.NewRouteNode(msg.Sender))
 	key := store.NewKey(data.Data)
 	expiration := dht.getExpirationTime(ctx, key)
 	replication := time.Now().Add(dht.options.ReplicateTime)
@@ -998,7 +998,7 @@ func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packe
 
 func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	data := msg.Data.(*packet.RequestDataRPC)
-	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
+	dht.addHost(ctx, routing.NewRouteNode(msg.Sender))
 	result, err := dht.rpc.Invoke(msg.Sender, data.Method, data.Args)
 	response := &packet.ResponseDataRPC{
 		Success: true,
@@ -1018,7 +1018,7 @@ func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet
 // Precess relay request.
 func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	var err error
-	if !dht.auth.authenticatedNodes[msg.Sender.ID.HashString()] {
+	if !dht.auth.authenticatedHosts[msg.Sender.ID.HashString()] {
 		log.Print("relay request from unknown host rejected")
 		response := &packet.ResponseRelay{
 			State: relay.NoAuth,
@@ -1027,7 +1027,7 @@ func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, packetBuilder pack
 		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	} else {
 		data := msg.Data.(*packet.RequestRelay)
-		dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
+		dht.addHost(ctx, routing.NewRouteNode(msg.Sender))
 
 		var state relay.State
 
@@ -1061,7 +1061,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, packetBui
 	data := msg.Data.(*packet.RequestAuth)
 	switch data.Command {
 	case packet.BeginAuth:
-		if dht.auth.authenticatedNodes[msg.Sender.ID.HashString()] {
+		if dht.auth.authenticatedHosts[msg.Sender.ID.HashString()] {
 			// TODO: whats next?
 			response := &packet.ResponseAuth{
 				Success:       false,
@@ -1097,7 +1097,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, packetBui
 			log.Println("error: ", err)
 		}
 	case packet.RevokeAuth:
-		delete(dht.auth.authenticatedNodes, msg.Sender.ID.HashString())
+		delete(dht.auth.authenticatedHosts, msg.Sender.ID.HashString())
 		response := &packet.ResponseAuth{
 			Success:       true,
 			AuthUniqueKey: nil,
@@ -1137,7 +1137,7 @@ func (dht *DHT) processObtainIPRequest(ctx Context, msg *packet.Packet, packetBu
 // RelayRequest sends relay request to target.
 func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error { // target - host ID
 	var typedCommand packet.CommandType
-	targetNode, exist, err := dht.FindNode(ctx, targetID)
+	targetNode, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
@@ -1212,13 +1212,13 @@ func (dht *DHT) handleRelayResponse(ctx Context, response *packet.ResponseRelay,
 func (dht *DHT) handleCheckOriginResponse(response *packet.ResponseCheckOrigin, targetID string) {
 	if bytes.Equal(response.AuthUniqueKey, dht.auth.SentKeys[targetID]) {
 		delete(dht.auth.SentKeys, targetID)
-		dht.auth.authenticatedNodes[targetID] = true
+		dht.auth.authenticatedHosts[targetID] = true
 	}
 }
 
 // CheckOriginRequest send a request to check target host originality
 func (dht *DHT) CheckOriginRequest(ctx Context, targetID string) error {
-	targetNode, exist, err := dht.FindNode(ctx, targetID)
+	targetNode, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
@@ -1256,7 +1256,7 @@ func (dht *DHT) CheckOriginRequest(ctx Context, targetID string) error {
 
 // AuthenticationRequest sends an authentication request.
 func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) error {
-	targetNode, exist, err := dht.FindNode(ctx, targetID)
+	targetNode, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
@@ -1328,7 +1328,7 @@ func (dht *DHT) handleAuthResponse(response *packet.ResponseAuth, target string)
 
 // ObtainIPRequest is request to self IP obtaining.
 func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
-	targetNode, exist, err := dht.FindNode(ctx, targetID)
+	targetNode, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
@@ -1380,7 +1380,7 @@ func (dht *DHT) handleObtainIPResponse(response *packet.ResponseObtainIP, target
 
 // RemoteProcedureCall calls remote procedure on target host.
 func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error) {
-	targetNode, exists, err := dht.FindNode(ctx, target)
+	targetNode, exists, err := dht.FindHost(ctx, target)
 	ht := dht.htFromCtx(ctx)
 
 	if err != nil {
@@ -1417,7 +1417,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 			// Channel was closed
 			return nil, errors.New("chanel closed unexpectedly")
 		}
-		dht.addNode(ctx, routing.NewRouteNode(rsp.Sender))
+		dht.addHost(ctx, routing.NewRouteNode(rsp.Sender))
 
 		response := rsp.Data.(*packet.ResponseDataRPC)
 		if response.Success {
@@ -1470,7 +1470,7 @@ func (dht *DHT) getHomeSubnetKey(ctx Context) (string, error) {
 		first = strings.SplitAfterN(first, ".", 2)[1] // remove X.X.this byte
 		first = xstrings.Reverse(first)
 		for _, id1 := range subnet {
-			target, exist, err := dht.FindNode(ctx, id1)
+			target, exist, err := dht.FindHost(ctx, id1)
 			if err != nil {
 				return "", err
 			} else if !exist {
@@ -1543,7 +1543,7 @@ func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
 	if err != nil {
 		return err
 	}
-	targetNode, exist, err := dht.FindNode(ctx, target)
+	targetNode, exist, err := dht.FindHost(ctx, target)
 	if err != nil {
 		return err
 	}
@@ -1578,13 +1578,13 @@ func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
 }
 
 func (dht *DHT) processKnownOuterNodes(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	data := msg.Data.(*packet.RequestKnownOuterNodes)
+	data := msg.Data.(*packet.RequestKnownOuterHosts)
 
 	ID := dht.subnet.HighKnownNodes.ID
 	nodes := dht.subnet.HighKnownNodes.OuterNodes
-	if data.OuterNodes > nodes {
+	if data.OuterHosts > nodes {
 		ID = data.ID
-		nodes = data.OuterNodes
+		nodes = data.OuterHosts
 	}
 	response := &packet.ResponseKnownOuterNodes{
 		ID:         ID,
@@ -1602,7 +1602,7 @@ func (dht *DHT) knownOuterNodesRequest(targetID string, nodes int) error {
 	if err != nil {
 		return err
 	}
-	targetNode, exist, err := dht.FindNode(ctx, targetID)
+	targetNode, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
