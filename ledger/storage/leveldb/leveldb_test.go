@@ -28,11 +28,8 @@ import (
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/leveldb"
 	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
-
-var dbDirPath = "_db"
 
 func TestGetRecordNotFound(t *testing.T) {
 	ledger, cleaner := leveltestutils.TmpDB(t, "")
@@ -172,9 +169,8 @@ func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	ledger, err := leveldb.InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 
 	ref := referenceWithHashes("1000", "5000")
 	idx, err := ledger.GetObjectIndex(&ref)
