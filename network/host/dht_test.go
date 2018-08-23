@@ -27,8 +27,8 @@ import (
 
 	"github.com/insolar/insolar/network/host/connection"
 	"github.com/insolar/insolar/network/host/id"
-	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/node"
+	"github.com/insolar/insolar/network/host/packet"
 	"github.com/insolar/insolar/network/host/relay"
 	"github.com/insolar/insolar/network/host/routing"
 	"github.com/insolar/insolar/network/host/rpc"
@@ -46,13 +46,13 @@ func getDefaultCtx(dht *DHT) Context {
 }
 
 type mockFuture struct {
-	result    chan *message.Message
+	result    chan *packet.Packet
 	actor     *node.Node
-	request   *message.Message
-	requestID message.RequestID
+	request   *packet.Packet
+	requestID packet.RequestID
 }
 
-func (f *mockFuture) ID() message.RequestID {
+func (f *mockFuture) ID() packet.RequestID {
 	return f.requestID
 }
 
@@ -60,35 +60,35 @@ func (f *mockFuture) Actor() *node.Node {
 	return f.actor
 }
 
-func (f *mockFuture) Request() *message.Message {
+func (f *mockFuture) Request() *packet.Packet {
 	return f.request
 }
 
-func (f *mockFuture) Result() <-chan *message.Message {
+func (f *mockFuture) Result() <-chan *packet.Packet {
 	return f.result
 }
 
-func (f *mockFuture) SetResult(msg *message.Message) {
+func (f *mockFuture) SetResult(msg *packet.Packet) {
 	f.result <- msg
 }
 
 func (f *mockFuture) Cancel() {}
 
 type mockTransport struct {
-	recv     chan *message.Message
-	send     chan *message.Message
+	recv     chan *packet.Packet
+	send     chan *packet.Packet
 	dc       chan bool
-	msgChan  chan *message.Message
+	msgChan  chan *packet.Packet
 	failNext bool
 	sequence *uint64
 }
 
 func newMockTransport() *mockTransport {
 	net := &mockTransport{
-		recv:     make(chan *message.Message),
-		send:     make(chan *message.Message),
+		recv:     make(chan *packet.Packet),
+		send:     make(chan *packet.Packet),
 		dc:       make(chan bool),
-		msgChan:  make(chan *message.Message),
+		msgChan:  make(chan *packet.Packet),
 		failNext: false,
 		sequence: new(uint64),
 	}
@@ -113,7 +113,7 @@ func (t *mockTransport) Stopped() <-chan bool {
 	return t.dc
 }
 
-func (t *mockTransport) Messages() <-chan *message.Message {
+func (t *mockTransport) Messages() <-chan *packet.Packet {
 	return t.msgChan
 }
 
@@ -121,7 +121,7 @@ func (t *mockTransport) failNextSendMessage() {
 	t.failNext = true
 }
 
-func (t *mockTransport) SendRequest(q *message.Message) (transport.Future, error) {
+func (t *mockTransport) SendRequest(q *packet.Packet) (transport.Future, error) {
 	sequenceNumber := transport.AtomicLoadAndIncrementUint64(t.sequence)
 
 	if t.failNext {
@@ -130,10 +130,10 @@ func (t *mockTransport) SendRequest(q *message.Message) (transport.Future, error
 	}
 	t.recv <- q
 
-	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: message.RequestID(sequenceNumber)}, nil
+	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: packet.RequestID(sequenceNumber)}, nil
 }
 
-func (t *mockTransport) SendResponse(requestID message.RequestID, q *message.Message) error {
+func (t *mockTransport) SendResponse(requestID packet.RequestID, q *packet.Packet) error {
 	if t.failNext {
 		t.failNext = false
 		return errors.New("MockNetworking Error")
@@ -141,8 +141,8 @@ func (t *mockTransport) SendResponse(requestID message.RequestID, q *message.Mes
 	return nil
 }
 
-func mockFindNodeResponse(request *message.Message, nextID []byte) *message.Message {
-	r := &message.Message{}
+func mockFindNodeResponse(request *packet.Packet, nextID []byte) *packet.Packet {
+	r := &packet.Packet{}
 	n := &node.Node{}
 	n.ID = request.Sender.ID
 	n.Address = request.Sender.Address
@@ -151,7 +151,7 @@ func mockFindNodeResponse(request *message.Message, nextID []byte) *message.Mess
 	r.Sender = &node.Node{ID: request.Receiver.ID, Address: netAddr}
 	r.Type = request.Type
 	r.IsResponse = true
-	responseData := &message.ResponseDataFindNode{}
+	responseData := &packet.ResponseDataFindNode{}
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(nextID)
 	responseData.Closest = []*node.Node{{ID: id1, Address: netAddr}}
@@ -159,8 +159,8 @@ func mockFindNodeResponse(request *message.Message, nextID []byte) *message.Mess
 	return r
 }
 
-func mockFindNodeResponseEmpty(request *message.Message) *message.Message {
-	r := &message.Message{}
+func mockFindNodeResponseEmpty(request *packet.Packet) *packet.Packet {
+	r := &packet.Packet{}
 	n := &node.Node{}
 	n.ID = request.Sender.ID
 	n.Address = request.Sender.Address
@@ -169,7 +169,7 @@ func mockFindNodeResponseEmpty(request *message.Message) *message.Message {
 	r.Sender = &node.Node{ID: request.Receiver.ID, Address: netAddr}
 	r.Type = request.Type
 	r.IsResponse = true
-	responseData := &message.ResponseDataFindNode{}
+	responseData := &packet.ResponseDataFindNode{}
 	responseData.Closest = []*node.Node{}
 	r.Data = responseData
 	return r
@@ -494,7 +494,7 @@ func TestReconnect(t *testing.T) {
 	}
 }
 
-// Create two DHTs and have them connect. Send a store message with 100mb
+// Create two DHTs and have them connect. Send a store packet with 100mb
 // payload from one node to another. Ensure that the other node now has
 // this data in its store.
 func TestStoreAndFindLargeValue(t *testing.T) {
@@ -551,7 +551,7 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 	<-done
 }
 
-// Tests sending a message which results in an error when attempting to
+// Tests sending a packet which results in an error when attempting to
 // send over uTP
 func TestNetworkingSendError(t *testing.T) {
 	zeroId := getIDWithValues(0)
@@ -589,7 +589,7 @@ func TestNetworkingSendError(t *testing.T) {
 	<-done
 }
 
-// Tests sending a message which results in a successful send, but the node
+// Tests sending a packet which results in a successful send, but the node
 // never responds
 func TestNodeResponseSendError(t *testing.T) {
 	zeroID := getIDWithValues(0)
@@ -641,7 +641,7 @@ func TestNodeResponseSendError(t *testing.T) {
 }
 
 // Tests a bucket refresh by setting a very low RefreshTime value, adding a single
-// node to a bucket, and waiting for the refresh message for the bucket
+// node to a bucket, and waiting for the refresh packet for the bucket
 func TestBucketRefresh(t *testing.T) {
 	zeroID := getIDWithValues(0)
 	done := make(chan int)
@@ -697,7 +697,7 @@ func TestBucketRefresh(t *testing.T) {
 }
 
 // Tets store replication by setting the ReplicateTime time to a very small value.
-// Stores some data, and then expects another store message in ReplicateTime time
+// Stores some data, and then expects another store packet in ReplicateTime time
 func TestStoreReplication(t *testing.T) {
 	zeroID := getIDWithValues(0)
 	done := make(chan int)
@@ -732,12 +732,12 @@ func TestStoreReplication(t *testing.T) {
 			}
 
 			switch request.Type {
-			case message.TypeFindNode:
+			case packet.TypeFindNode:
 				res := mockFindNodeResponseEmpty(request)
 				mockTp.send <- res
-			case message.TypeStore:
+			case packet.TypeStore:
 				stores++
-				d := request.Data.(*message.RequestDataStore)
+				d := request.Data.(*packet.RequestDataStore)
 				assert.Equal(t, []byte("foo"), d.Data)
 				if stores >= 2 {
 					close(replicate)
@@ -891,7 +891,7 @@ func TestAddNodeTimeout(t *testing.T) {
 				return
 			}
 			switch request.Type {
-			case message.TypeFindNode:
+			case packet.TypeFindNode:
 				id1 := getIDWithValues(0)
 				if nodesAdded > routing.MaxContactsInBucket+1 {
 					close(done)
@@ -911,8 +911,8 @@ func TestAddNodeTimeout(t *testing.T) {
 
 				res := mockFindNodeResponse(request, id1.GetHash())
 				mockTp.send <- res
-			case message.TypePing:
-				assert.Equal(t, message.TypePing, request.Type)
+			case packet.TypePing:
+				assert.Equal(t, packet.TypePing, request.Type)
 				assert.Equal(t, getZerodIDWithNthByte(1, byte(255)), request.Receiver.ID)
 				close(pinged)
 			}

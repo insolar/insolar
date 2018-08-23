@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/host/message"
+	"github.com/insolar/insolar/network/host/packet"
 	"github.com/insolar/insolar/network/host/relay"
 	"github.com/xtaci/kcp-go"
 )
@@ -32,14 +32,14 @@ import (
 type kcpTransport struct {
 	listener *kcp.Listener
 
-	received chan *message.Message
+	received chan *packet.Packet
 	sequence *uint64
 
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
 
 	mutex   *sync.RWMutex
-	futures map[message.RequestID]Future
+	futures map[packet.RequestID]Future
 
 	proxy      relay.Proxy
 	blockCrypt kcp.BlockCrypt
@@ -65,14 +65,14 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, err
 	transport := &kcpTransport{
 		listener: lis,
 
-		received: make(chan *message.Message),
+		received: make(chan *packet.Packet),
 		sequence: new(uint64),
 
 		disconnectStarted:  make(chan bool),
 		disconnectFinished: make(chan bool),
 
 		mutex:   &sync.RWMutex{},
-		futures: make(map[message.RequestID]Future),
+		futures: make(map[packet.RequestID]Future),
 
 		proxy:      proxy,
 		blockCrypt: crypt,
@@ -81,10 +81,10 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, err
 	return transport, nil
 }
 
-// SendRequest sends request message and returns future.
-func (t *kcpTransport) SendRequest(msg *message.Message) (Future, error) {
+// SendRequest sends request packet and returns future.
+func (t *kcpTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	if !msg.IsValid() {
-		return nil, errors.New("invalid message")
+		return nil, errors.New("invalid packet")
 	}
 
 	msg.RequestID = t.generateID()
@@ -100,8 +100,8 @@ func (t *kcpTransport) SendRequest(msg *message.Message) (Future, error) {
 	return future, nil
 }
 
-// SendResponse sends response message.
-func (t *kcpTransport) SendResponse(requestID message.RequestID, msg *message.Message) error {
+// SendResponse sends response packet.
+func (t *kcpTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
 	return t.sendMessage(msg)
@@ -133,7 +133,7 @@ func (t *kcpTransport) Stop() {
 	close(t.disconnectStarted)
 }
 
-// Close closes message channels.
+// Close closes packet channels.
 func (t *kcpTransport) Close() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -143,7 +143,7 @@ func (t *kcpTransport) Close() {
 }
 
 // Messages returns incoming messages channel.
-func (t *kcpTransport) Messages() <-chan *message.Message {
+func (t *kcpTransport) Messages() <-chan *packet.Packet {
 	return t.received
 }
 
@@ -156,12 +156,12 @@ func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (*k
 	return kcp.DialWithOptions(addr, t.blockCrypt, 0, 0)
 }
 
-func (t *kcpTransport) generateID() message.RequestID {
+func (t *kcpTransport) generateID() packet.RequestID {
 	id := AtomicLoadAndIncrementUint64(t.sequence)
-	return message.RequestID(id)
+	return packet.RequestID(id)
 }
 
-func (t *kcpTransport) createFuture(msg *message.Message) Future {
+func (t *kcpTransport) createFuture(msg *packet.Packet) Future {
 	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
 		t.mutex.Lock()
 		defer t.mutex.Unlock()
@@ -176,14 +176,14 @@ func (t *kcpTransport) createFuture(msg *message.Message) Future {
 	return newFuture
 }
 
-func (t *kcpTransport) getFuture(msg *message.Message) Future {
+func (t *kcpTransport) getFuture(msg *packet.Packet) Future {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
 	return t.futures[msg.RequestID]
 }
 
-func (t *kcpTransport) sendMessage(msg *message.Message) error {
+func (t *kcpTransport) sendMessage(msg *packet.Packet) error {
 	var recvAddress string
 	if t.proxy.ProxyNodesCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()
@@ -197,7 +197,7 @@ func (t *kcpTransport) sendMessage(msg *message.Message) error {
 		return err
 	}
 
-	data, err := message.SerializeMessage(msg)
+	data, err := packet.SerializePacket(msg)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 			log.Println(err.Error())
 		}
 		// Wait for Messages
-		msg, err := message.DeserializeMessage(session)
+		msg, err := packet.DeserializePacket(session)
 		if err != nil {
 			// TODO should we penalize this Node somehow ? Ban it ?
 			// if err.Error() != "EOF" {
@@ -230,7 +230,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 	}
 }
 
-func (t *kcpTransport) handleMessage(msg *message.Message) {
+func (t *kcpTransport) handleMessage(msg *packet.Packet) {
 	if msg.IsResponse {
 		t.processResponse(msg)
 	} else {
@@ -238,7 +238,7 @@ func (t *kcpTransport) handleMessage(msg *message.Message) {
 	}
 }
 
-func (t *kcpTransport) processResponse(msg *message.Message) {
+func (t *kcpTransport) processResponse(msg *packet.Packet) {
 	future := t.getFuture(msg)
 	if future != nil && !shouldProcessMessage(future, msg) {
 		future.SetResult(msg)
@@ -246,7 +246,7 @@ func (t *kcpTransport) processResponse(msg *message.Message) {
 	future.Cancel()
 }
 
-func (t *kcpTransport) processRequest(msg *message.Message) {
+func (t *kcpTransport) processRequest(msg *packet.Packet) {
 	if msg.IsValid() {
 		t.received <- msg
 	}

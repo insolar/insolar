@@ -17,16 +17,16 @@
 package transport
 
 import (
-	"github.com/insolar/insolar/network/host/message"
+	"github.com/insolar/insolar/network/host/packet"
 )
 
 // Transport is an interface for network transport.
 type Transport interface {
-	// SendRequest sends message to destination. Sequence number is generated automatically.
-	SendRequest(*message.Message) (Future, error)
+	// SendRequest sends packet to destination. Sequence number is generated automatically.
+	SendRequest(*packet.Packet) (Future, error)
 
-	// SendResponse sends message for request with passed request id.
-	SendResponse(message.RequestID, *message.Message) error
+	// SendResponse sends packet for request with passed request id.
+	SendResponse(packet.RequestID, *packet.Packet) error
 
 	// Start starts thread to listen incoming messages.
 	Start() error
@@ -38,7 +38,7 @@ type Transport interface {
 	Close()
 
 	// Messages returns channel to listen incoming messages.
-	Messages() <-chan *message.Message
+	Messages() <-chan *packet.Packet
 
 	// Stopped returns signal channel to support graceful shutdown.
 	Stopped() <-chan bool

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package packet
 
 // CommandType - type for commands.
 type CommandType int

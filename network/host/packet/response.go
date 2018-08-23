@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package packet
 
 import (
 	"github.com/insolar/insolar/network/host/node"

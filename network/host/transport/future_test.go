@@ -19,8 +19,8 @@ package transport
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/node"
+	"github.com/insolar/insolar/network/host/packet"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,8 +28,8 @@ func TestNewFuture(t *testing.T) {
 	addr, _ := node.NewAddress("127.0.0.1:8080")
 	n := node.NewNode(addr)
 	cb := func(f Future) {}
-	m := &message.Message{}
-	f := NewFuture(message.RequestID(1), n, m, cb)
+	m := &packet.Packet{}
+	f := NewFuture(packet.RequestID(1), n, m, cb)
 
 	assert.Implements(t, (*Future)(nil), f)
 }
@@ -38,18 +38,18 @@ func TestFuture_ID(t *testing.T) {
 	addr, _ := node.NewAddress("127.0.0.1:8080")
 	n := node.NewNode(addr)
 	cb := func(f Future) {}
-	m := &message.Message{}
-	f := NewFuture(message.RequestID(1), n, m, cb)
+	m := &packet.Packet{}
+	f := NewFuture(packet.RequestID(1), n, m, cb)
 
-	assert.Equal(t, f.ID(), message.RequestID(1))
+	assert.Equal(t, f.ID(), packet.RequestID(1))
 }
 
 func TestFuture_Actor(t *testing.T) {
 	addr, _ := node.NewAddress("127.0.0.1:8080")
 	n := node.NewNode(addr)
 	cb := func(f Future) {}
-	m := &message.Message{}
-	f := NewFuture(message.RequestID(1), n, m, cb)
+	m := &packet.Packet{}
+	f := NewFuture(packet.RequestID(1), n, m, cb)
 
 	assert.Equal(t, f.Actor(), n)
 }
@@ -58,8 +58,8 @@ func TestFuture_Result(t *testing.T) {
 	addr, _ := node.NewAddress("127.0.0.1:8080")
 	n := node.NewNode(addr)
 	cb := func(f Future) {}
-	m := &message.Message{}
-	f := NewFuture(message.RequestID(1), n, m, cb)
+	m := &packet.Packet{}
+	f := NewFuture(packet.RequestID(1), n, m, cb)
 
 	assert.Empty(t, f.Result())
 }
@@ -68,8 +68,8 @@ func TestFuture_Request(t *testing.T) {
 	addr, _ := node.NewAddress("127.0.0.1:8080")
 	n := node.NewNode(addr)
 	cb := func(f Future) {}
-	m := &message.Message{}
-	f := NewFuture(message.RequestID(1), n, m, cb)
+	m := &packet.Packet{}
+	f := NewFuture(packet.RequestID(1), n, m, cb)
 
 	assert.Equal(t, f.Request(), m)
 }
@@ -78,8 +78,8 @@ func TestFuture_SetResult(t *testing.T) {
 	addr, _ := node.NewAddress("127.0.0.1:8080")
 	n := node.NewNode(addr)
 	cb := func(f Future) {}
-	m := &message.Message{}
-	f := NewFuture(message.RequestID(1), n, m, cb)
+	m := &packet.Packet{}
+	f := NewFuture(packet.RequestID(1), n, m, cb)
 
 	assert.Empty(t, f.Result())
 
@@ -98,8 +98,8 @@ func TestFuture_Cancel(t *testing.T) {
 
 	cb := func(f Future) { cbCalled = true }
 
-	m := &message.Message{}
-	f := NewFuture(message.RequestID(1), n, m, cb)
+	m := &packet.Packet{}
+	f := NewFuture(packet.RequestID(1), n, m, cb)
 
 	f.Cancel()
 

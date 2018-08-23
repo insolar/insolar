@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package packet
 
 import (
 	"errors"
@@ -32,13 +32,13 @@ func TestNewBuilder(t *testing.T) {
 	assert.Empty(t, builder.actions)
 }
 
-func TestBuilder_Build_EmptyMessage(t *testing.T) {
+func TestBuilder_Build_EmptyPacket(t *testing.T) {
 	builder := NewBuilder()
 
-	assert.Equal(t, builder.Build(), &Message{})
+	assert.Equal(t, builder.Build(), &Packet{})
 }
 
-func TestBuilder_Build_RequestMessage(t *testing.T) {
+func TestBuilder_Build_RequestPacket(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
@@ -49,7 +49,7 @@ func TestBuilder_Build_RequestMessage(t *testing.T) {
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
 
-	expectedMessage := &Message{
+	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
 		Type:       TypeRPC,
@@ -57,10 +57,10 @@ func TestBuilder_Build_RequestMessage(t *testing.T) {
 		IsResponse: false,
 		Error:      nil,
 	}
-	assert.Equal(t, expectedMessage, m)
+	assert.Equal(t, expectedPacket, m)
 }
 
-func TestBuilder_Build_ResponseMessage(t *testing.T) {
+func TestBuilder_Build_ResponsePacket(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
@@ -71,7 +71,7 @@ func TestBuilder_Build_ResponseMessage(t *testing.T) {
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
 
-	expectedMessage := &Message{
+	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
 		Type:       TypeRPC,
@@ -79,10 +79,10 @@ func TestBuilder_Build_ResponseMessage(t *testing.T) {
 		IsResponse: true,
 		Error:      nil,
 	}
-	assert.Equal(t, expectedMessage, m)
+	assert.Equal(t, expectedPacket, m)
 }
 
-func TestBuilder_Build_ErrorMessage(t *testing.T) {
+func TestBuilder_Build_ErrorPacket(t *testing.T) {
 	builder := NewBuilder()
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
@@ -93,7 +93,7 @@ func TestBuilder_Build_ErrorMessage(t *testing.T) {
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
 
-	expectedMessage := &Message{
+	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
 		Type:       TypeRPC,
@@ -101,5 +101,5 @@ func TestBuilder_Build_ErrorMessage(t *testing.T) {
 		IsResponse: true,
 		Error:      errors.New("test error"),
 	}
-	assert.Equal(t, expectedMessage, m)
+	assert.Equal(t, expectedPacket, m)
 }

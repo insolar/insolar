@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package packet
 
 import (
 	"bytes"
@@ -27,41 +27,41 @@ import (
 	"github.com/insolar/insolar/network/host/node"
 )
 
-type messageType int
+type packetType int
 
 const (
-	// TypePing is message type for ping method.
-	TypePing = messageType(iota + 1)
-	// TypeStore is message type for store method.
+	// TypePing is packet type for ping method.
+	TypePing = packetType(iota + 1)
+	// TypeStore is packet type for store method.
 	TypeStore
-	// TypeFindNode is message type for FindNode method.
+	// TypeFindNode is packet type for FindNode method.
 	TypeFindNode
-	// TypeFindValue is message type for FindValue method.
+	// TypeFindValue is packet type for FindValue method.
 	TypeFindValue
-	// TypeRPC is message type for RPC method.
+	// TypeRPC is packet type for RPC method.
 	TypeRPC
-	// TypeRelay is message type for request target to be a relay.
+	// TypeRelay is packet type for request target to be a relay.
 	TypeRelay
-	// TypeAuth is message type for authentication between nodes.
+	// TypeAuth is packet type for authentication between nodes.
 	TypeAuth
-	// TypeCheckOrigin is message to check originality of some node.
+	// TypeCheckOrigin is packet to check originality of some node.
 	TypeCheckOrigin
-	// TypeObtainIP is message to get itself IP from another node.
+	// TypeObtainIP is packet to get itself IP from another node.
 	TypeObtainIP
-	// TypeRelayOwnership is message to say all other nodes that current node have a static IP.
+	// TypeRelayOwnership is packet to say all other nodes that current node have a static IP.
 	TypeRelayOwnership
-	// TypeKnownOuterNodes is message to say how much outer nodes current node know.
+	// TypeKnownOuterNodes is packet to say how much outer nodes current node know.
 	TypeKnownOuterNodes
 )
 
 // RequestID is 64 bit unsigned int request id.
 type RequestID uint64
 
-// Message is DHT message object.
-type Message struct {
+// Packet is DHT packet object.
+type Packet struct {
 	Sender        *node.Node
 	Receiver      *node.Node
-	Type          messageType
+	Type          packetType
 	RequestID     RequestID
 	RemoteAddress string
 
@@ -70,18 +70,18 @@ type Message struct {
 	IsResponse bool
 }
 
-// NewPingMessage can be used as a shortcut for creating ping messages instead of message Builder.
-func NewPingMessage(sender, receiver *node.Node) *Message {
-	return &Message{
+// NewPingPacket can be used as a shortcut for creating ping packets instead of packet Builder.
+func NewPingPacket(sender, receiver *node.Node) *Packet {
+	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypePing,
 	}
 }
 
-// NewRelayMessage uses for send a command to target node to make it as relay.
-func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message {
-	return &Message{
+// NewRelayPacket uses for send a command to target node to make it as relay.
+func NewRelayPacket(command CommandType, sender, receiver *node.Node) *Packet {
+	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeRelay,
@@ -91,9 +91,9 @@ func NewRelayMessage(command CommandType, sender, receiver *node.Node) *Message 
 	}
 }
 
-// NewAuthMessage uses for starting authentication.
-func NewAuthMessage(command CommandType, sender, receiver *node.Node) *Message {
-	return &Message{
+// NewAuthPacket uses for starting authentication.
+func NewAuthPacket(command CommandType, sender, receiver *node.Node) *Packet {
+	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeAuth,
@@ -101,9 +101,9 @@ func NewAuthMessage(command CommandType, sender, receiver *node.Node) *Message {
 	}
 }
 
-// NewCheckOriginMessage uses for check originality.
-func NewCheckOriginMessage(sender, receiver *node.Node) *Message {
-	return &Message{
+// NewCheckOriginPacket uses for check originality.
+func NewCheckOriginPacket(sender, receiver *node.Node) *Packet {
+	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeCheckOrigin,
@@ -111,9 +111,9 @@ func NewCheckOriginMessage(sender, receiver *node.Node) *Message {
 	}
 }
 
-// NewObtainIPMessage uses for get self IP.
-func NewObtainIPMessage(sender, receiver *node.Node) *Message {
-	return &Message{
+// NewObtainIPPacket uses for get self IP.
+func NewObtainIPPacket(sender, receiver *node.Node) *Packet {
+	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeObtainIP,
@@ -121,9 +121,9 @@ func NewObtainIPMessage(sender, receiver *node.Node) *Message {
 	}
 }
 
-// NewRelayOwnershipMessage uses for relay ownership request.
-func NewRelayOwnershipMessage(sender, receiver *node.Node, ready bool) *Message {
-	return &Message{
+// NewRelayOwnershipPacket uses for relay ownership request.
+func NewRelayOwnershipPacket(sender, receiver *node.Node, ready bool) *Packet {
+	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeRelayOwnership,
@@ -131,9 +131,9 @@ func NewRelayOwnershipMessage(sender, receiver *node.Node, ready bool) *Message 
 	}
 }
 
-// NewKnownOuterNodesMessage uses to notify all nodes in home subnet about known outer nodes.
-func NewKnownOuterNodesMessage(sender, receiver *node.Node, nodes int) *Message {
-	return &Message{
+// NewKnownOuterNodesPacket uses to notify all nodes in home subnet about known outer nodes.
+func NewKnownOuterNodesPacket(sender, receiver *node.Node, nodes int) *Packet {
+	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeKnownOuterNodes,
@@ -144,8 +144,8 @@ func NewKnownOuterNodesMessage(sender, receiver *node.Node, nodes int) *Message 
 	}
 }
 
-// IsValid checks if message data is a valid structure for current message type.
-func (m *Message) IsValid() (valid bool) {
+// IsValid checks if packet data is a valid structure for current packet type.
+func (m *Packet) IsValid() (valid bool) {
 	switch m.Type {
 	case TypePing:
 		valid = true
@@ -176,13 +176,13 @@ func (m *Message) IsValid() (valid bool) {
 	return valid
 }
 
-// IsForMe checks if message is addressed to our node.
-func (m *Message) IsForMe(origin node.Origin) bool {
+// IsForMe checks if packet is addressed to our node.
+func (m *Packet) IsForMe(origin node.Origin) bool {
 	return origin.Contains(m.Receiver) || m.Type == TypePing && origin.Address.Equal(*m.Receiver.Address)
 }
 
-// SerializeMessage converts message to byte slice.
-func SerializeMessage(q *Message) ([]byte, error) {
+// SerializePacket converts packet to byte slice.
+func SerializePacket(q *Packet) ([]byte, error) {
 	var msgBuffer bytes.Buffer
 	enc := gob.NewEncoder(&msgBuffer)
 	err := enc.Encode(q)
@@ -202,8 +202,8 @@ func SerializeMessage(q *Message) ([]byte, error) {
 	return result, nil
 }
 
-// DeserializeMessage reads message from io.Reader.
-func DeserializeMessage(conn io.Reader) (*Message, error) {
+// DeserializePacket reads packet from io.Reader.
+func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 	lengthBytes := make([]byte, 8)
 	_, err := conn.Read(lengthBytes)
@@ -225,7 +225,7 @@ func DeserializeMessage(conn io.Reader) (*Message, error) {
 		}
 	}
 
-	msg := &Message{}
+	msg := &Packet{}
 	dec := gob.NewDecoder(&reader)
 
 	err = dec.Decode(msg)

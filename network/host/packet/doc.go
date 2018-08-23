@@ -15,9 +15,9 @@
  */
 
 /*
-Package message provides network messaging protocol and serialization layer.
+Package packet provides network messaging protocol and serialization layer.
 
-Message can be created with shortcut:
+Packet can be created with shortcut:
 
 	senderAddr, _ := node.NewAddress("127.0.0.1:1337")
 	receiverAddr, _ := node.NewAddress("127.0.0.1:1338")
@@ -25,14 +25,14 @@ Message can be created with shortcut:
 	sender := node.NewNode(senderAddr)
 	receiver := node.NewNode(receiverAddr)
 
-	msg := message.NewPingMessage(sender, receiver)
+	msg := packet.NewPingPacket(sender, receiver)
 
-	// do something with message
+	// do something with packet
 
 
 Or with builder:
 
-	builder := message.NewBuilder()
+	builder := packet.NewBuilder()
 
 	senderAddr, _ := node.NewAddress("127.0.0.1:1337")
 	receiverAddr, _ := node.NewAddress("127.0.0.1:1338")
@@ -43,17 +43,17 @@ Or with builder:
 	msg := builder.
 		Sender(sender).
 		Receiver(receiver).
-		Type(message.TypeFindNode).
-		Request(&message.RequestDataFindNode{}).
+		Type(packet.TypeFindNode).
+		Request(&packet.RequestDataFindNode{}).
 		Build()
 
-	// do something with message
+	// do something with packet
 
 
-Message may be serialized:
+Packet may be serialized:
 
-	msg := &message.Message{}
-	serialized, err := message.SerializeMessage(msg)
+	msg := &packet.Packet{}
+	serialized, err := packet.SerializePacket(msg)
 
 	if err != nil {
 		panic(err.Error())
@@ -68,13 +68,13 @@ And deserialized therefore:
 
 	// Fill buffer somewhere
 
-	msg, err := message.DeserializeMessage(buffer)
+	msg, err := packet.DeserializePacket(buffer)
 
 	if err != nil {
 		panic(err.Error())
 	}
 
-	// do something with message
+	// do something with packet
 
 */
-package message
+package packet

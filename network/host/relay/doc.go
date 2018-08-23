@@ -25,7 +25,7 @@ Usage:
 	relay.AddClient(node)
 
 	if relay.NeedToRelay(node.Address()) {
-		//relay message
+		//relay packet
 	}
 
 	relay.RemoveClient(node)
@@ -37,7 +37,7 @@ Usage:
 
 	if proxy.ProxyNodesCount > 0 {
 		address := proxy.GetNextProxyAddress
-		//send message to next proxy
+		//send packet to next proxy
 	}
 
 	proxy.RemoveProxyNode(node.Address)

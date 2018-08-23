@@ -260,7 +260,7 @@ Options:
 
 func displayInteractiveHelp() {
 	fmt.Println(`
-help - This message
+help - This packet
 findnode <key> - Find node's real network address
 info - Display information about this node
 

@@ -16,7 +16,7 @@
 
 /*
 Package transport provides network transport interface. It allows to abstract our network from physical transport.
-It can either be IP based network or any other kind of message courier (e.g. an industrial message bus).
+It can either be IP based network or any other kind of packet courier (e.g. an industrial packet bus).
 
 Package exports simple interfaces for easily defining new transports.
 
@@ -30,7 +30,7 @@ Usage:
 	// get udp connection anywhere
 
 	tp, _ := transport.NewUTPTransport(conn)
-	msg := &message.Message{}
+	msg := &packet.Message{}
 
 	// Send the async queries and wait for a future
 	future, err := tp.SendRequest(msg)

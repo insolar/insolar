@@ -17,27 +17,27 @@
 package transport
 
 import (
-	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/node"
+	"github.com/insolar/insolar/network/host/packet"
 )
 
 // Future is network response future.
 type Future interface {
 
-	// ID returns message sequence number.
-	ID() message.RequestID
+	// ID returns packet sequence number.
+	ID() packet.RequestID
 
-	// Actor returns the initiator of the message.
+	// Actor returns the initiator of the packet.
 	Actor() *node.Node
 
 	// Request returns origin request.
-	Request() *message.Message
+	Request() *packet.Packet
 
 	// Result is a channel to listen for future result.
-	Result() <-chan *message.Message
+	Result() <-chan *packet.Packet
 
-	// SetResult makes message to appear in result channel.
-	SetResult(*message.Message)
+	// SetResult makes packet to appear in result channel.
+	SetResult(*packet.Packet)
 
 	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()
@@ -47,17 +47,17 @@ type Future interface {
 type CancelCallback func(Future)
 
 type future struct {
-	result         chan *message.Message
+	result         chan *packet.Packet
 	actor          *node.Node
-	request        *message.Message
-	requestID      message.RequestID
+	request        *packet.Packet
+	requestID      packet.RequestID
 	cancelCallback CancelCallback
 }
 
 // NewFuture creates new Future.
-func NewFuture(requestID message.RequestID, actor *node.Node, msg *message.Message, cancelCallback CancelCallback) Future {
+func NewFuture(requestID packet.RequestID, actor *node.Node, msg *packet.Packet, cancelCallback CancelCallback) Future {
 	return &future{
-		result:         make(chan *message.Message),
+		result:         make(chan *packet.Packet),
 		actor:          actor,
 		request:        msg,
 		requestID:      requestID,
@@ -65,28 +65,28 @@ func NewFuture(requestID message.RequestID, actor *node.Node, msg *message.Messa
 	}
 }
 
-// ID returns RequestID of message.
-func (future *future) ID() message.RequestID {
+// ID returns RequestID of packet.
+func (future *future) ID() packet.RequestID {
 	return future.requestID
 }
 
-// Actor returns Node address that was used to create message.
+// Actor returns Node address that was used to create packet.
 func (future *future) Actor() *node.Node {
 	return future.actor
 }
 
-// Request returns original request message.
-func (future *future) Request() *message.Message {
+// Request returns original request packet.
+func (future *future) Request() *packet.Packet {
 	return future.request
 }
 
-// Result returns result message channel.
-func (future *future) Result() <-chan *message.Message {
+// Result returns result packet channel.
+func (future *future) Result() <-chan *packet.Packet {
 	return future.result
 }
 
-// SetResult write message to the result channel.
-func (future *future) SetResult(msg *message.Message) {
+// SetResult write packet to the result channel.
+func (future *future) SetResult(msg *packet.Packet) {
 	future.result <- msg
 }
 

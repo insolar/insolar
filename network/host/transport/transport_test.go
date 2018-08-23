@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/network/host/connection"
-	"github.com/insolar/insolar/network/host/message"
 	"github.com/insolar/insolar/network/host/node"
+	"github.com/insolar/insolar/network/host/packet"
 	"github.com/insolar/insolar/network/host/relay"
 	"github.com/stretchr/testify/suite"
 )
@@ -69,29 +69,29 @@ func generateRandomBytes(n int) ([]byte, error) {
 }
 
 func (t *transportSuite) TestPingPong() {
-	future, err := t.transport.SendRequest(message.NewPingMessage(t.node, t.node))
+	future, err := t.transport.SendRequest(packet.NewPingPacket(t.node, t.node))
 	t.Assert().NoError(err)
 
 	requestMsg := <-t.transport.Messages()
 	t.Assert().True(requestMsg.IsValid())
-	t.Assert().Equal(message.TypePing, requestMsg.Type)
+	t.Assert().Equal(packet.TypePing, requestMsg.Type)
 	t.Assert().Equal(t.node, future.Actor())
 	t.Assert().False(requestMsg.IsResponse)
 
-	builder := message.NewBuilder().Sender(t.node).Receiver(requestMsg.Sender).Type(message.TypePing)
+	builder := packet.NewBuilder().Sender(t.node).Receiver(requestMsg.Sender).Type(packet.TypePing)
 	err = t.transport.SendResponse(requestMsg.RequestID, builder.Response(nil).Build())
 	t.Assert().NoError(err)
 
 	responseMsg := <-future.Result()
 	t.Assert().True(responseMsg.IsValid())
-	t.Assert().Equal(message.TypePing, responseMsg.Type)
+	t.Assert().Equal(packet.TypePing, responseMsg.Type)
 	t.Assert().True(responseMsg.IsResponse)
 }
 
 func (t *transportSuite) TestSendBigMessage() {
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
-	builder := message.NewBuilder().Sender(t.node).Receiver(t.node).Type(message.TypeStore)
-	requestMsg := builder.Request(&message.RequestDataStore{data, true}).Build()
+	builder := packet.NewBuilder().Sender(t.node).Receiver(t.node).Type(packet.TypeStore)
+	requestMsg := builder.Request(&packet.RequestDataStore{data, true}).Build()
 	t.Assert().True(requestMsg.IsValid())
 
 	_, err := t.transport.SendRequest(requestMsg)
@@ -99,13 +99,13 @@ func (t *transportSuite) TestSendBigMessage() {
 
 	msg := <-t.transport.Messages()
 	t.Assert().True(requestMsg.IsValid())
-	t.Assert().Equal(message.TypeStore, requestMsg.Type)
-	receivedData := msg.Data.(*message.RequestDataStore).Data
+	t.Assert().Equal(packet.TypeStore, requestMsg.Type)
+	receivedData := msg.Data.(*packet.RequestDataStore).Data
 	t.Assert().Equal(data, receivedData)
 }
 
 func (t *transportSuite) TestSendInvalidMessage() {
-	builder := message.NewBuilder().Sender(t.node).Receiver(t.node).Type(message.TypeRPC)
+	builder := packet.NewBuilder().Sender(t.node).Receiver(t.node).Type(packet.TypeRPC)
 	msg := builder.Build()
 	t.Assert().False(msg.IsValid())
 

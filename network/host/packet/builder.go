@@ -14,77 +14,77 @@
  *    limitations under the License.
  */
 
-package message
+package packet
 
 import (
 	"github.com/insolar/insolar/network/host/node"
 )
 
-// Builder allows lazy building of messages.
+// Builder allows lazy building of packets.
 // Each operation returns new copy of a builder.
 type Builder struct {
-	actions []func(message *Message)
+	actions []func(packet *Packet)
 }
 
-// NewBuilder returns empty message builder.
+// NewBuilder returns empty packet builder.
 func NewBuilder() Builder {
 	return Builder{}
 }
 
-// Build returns configured message.
-func (cb Builder) Build() (message *Message) {
-	message = &Message{}
+// Build returns configured packet.
+func (cb Builder) Build() (packet *Packet) {
+	packet = &Packet{}
 	for _, action := range cb.actions {
-		action(message)
+		action(packet)
 	}
 	return
 }
 
-// Sender sets message sender.
+// Sender sets packet sender.
 func (cb Builder) Sender(node *node.Node) Builder {
-	cb.actions = append(cb.actions, func(message *Message) {
-		message.Sender = node
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Sender = node
 	})
 	return cb
 }
 
-// Receiver sets message receiver.
+// Receiver sets packet receiver.
 func (cb Builder) Receiver(node *node.Node) Builder {
-	cb.actions = append(cb.actions, func(message *Message) {
-		message.Receiver = node
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Receiver = node
 	})
 	return cb
 }
 
-// Type sets message type.
-func (cb Builder) Type(messageType messageType) Builder {
-	cb.actions = append(cb.actions, func(message *Message) {
-		message.Type = messageType
+// Type sets packet type.
+func (cb Builder) Type(packetType packetType) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Type = packetType
 	})
 	return cb
 }
 
-// Request adds request data to message.
+// Request adds request data to packet.
 func (cb Builder) Request(request interface{}) Builder {
-	cb.actions = append(cb.actions, func(message *Message) {
-		message.Data = request
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Data = request
 	})
 	return cb
 }
 
-// Response adds response data to message
+// Response adds response data to packet
 func (cb Builder) Response(response interface{}) Builder {
-	cb.actions = append(cb.actions, func(message *Message) {
-		message.Data = response
-		message.IsResponse = true
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Data = response
+		packet.IsResponse = true
 	})
 	return cb
 }
 
-// Error adds error description to message.
+// Error adds error description to packet.
 func (cb Builder) Error(err error) Builder {
-	cb.actions = append(cb.actions, func(message *Message) {
-		message.Error = err
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Error = err
 	})
 	return cb
 }

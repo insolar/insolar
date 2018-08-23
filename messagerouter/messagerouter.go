@@ -40,7 +40,7 @@ type LogicRunner interface {
 	Execute(ref string, method string, args []byte) (data []byte, result []byte, err error)
 }
 
-// Message is a routable message, ATM just a method call
+// Message is a routable packet, ATM just a method call
 type Message struct {
 	Caller    struct{}
 	Reference string
@@ -112,7 +112,7 @@ func Serialize(value interface{}) ([]byte, error) {
 	return res, err
 }
 
-// DeserializeMessage reads message from byte slice.
+// DeserializeMessage reads packet from byte slice.
 func DeserializeMessage(data []byte) (msg Message, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&msg)
 	return msg, err

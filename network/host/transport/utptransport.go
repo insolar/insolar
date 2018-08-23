@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/network/host/message"
+	"github.com/insolar/insolar/network/host/packet"
 	"github.com/insolar/insolar/network/host/relay"
 
 	"github.com/anacrolix/utp"
@@ -35,14 +35,14 @@ import (
 type utpTransport struct {
 	socket *utp.Socket
 
-	received chan *message.Message
+	received chan *packet.Packet
 	sequence *uint64
 
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
 
 	mutex   *sync.RWMutex
-	futures map[message.RequestID]Future
+	futures map[packet.RequestID]Future
 
 	proxy relay.Proxy
 }
@@ -61,14 +61,14 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 	transport := &utpTransport{
 		socket: socket,
 
-		received: make(chan *message.Message),
+		received: make(chan *packet.Packet),
 		sequence: new(uint64),
 
 		disconnectStarted:  make(chan bool),
 		disconnectFinished: make(chan bool),
 
 		mutex:   &sync.RWMutex{},
-		futures: make(map[message.RequestID]Future),
+		futures: make(map[packet.RequestID]Future),
 
 		proxy: proxy,
 	}
@@ -76,10 +76,10 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 	return transport, nil
 }
 
-// SendRequest sends request message and returns future.
-func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
+// SendRequest sends request packet and returns future.
+func (t *utpTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	if !msg.IsValid() {
-		return nil, errors.New("invalid message")
+		return nil, errors.New("invalid packet")
 	}
 
 	msg.RequestID = t.generateID()
@@ -95,8 +95,8 @@ func (t *utpTransport) SendRequest(msg *message.Message) (Future, error) {
 	return future, nil
 }
 
-// SendResponse sends response message.
-func (t *utpTransport) SendResponse(requestID message.RequestID, msg *message.Message) error {
+// SendResponse sends response packet.
+func (t *utpTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
 	return t.sendMessage(msg)
@@ -130,7 +130,7 @@ func (t *utpTransport) Stop() {
 	}
 }
 
-// Close closes message channels.
+// Close closes packet channels.
 func (t *utpTransport) Close() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -140,7 +140,7 @@ func (t *utpTransport) Close() {
 }
 
 // Messages returns incoming messages channel.
-func (t *utpTransport) Messages() <-chan *message.Message {
+func (t *utpTransport) Messages() <-chan *packet.Packet {
 	return t.received
 }
 
@@ -156,12 +156,12 @@ func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (ne
 	return t.socket.DialContext(ctx, "", addr)
 }
 
-func (t *utpTransport) generateID() message.RequestID {
+func (t *utpTransport) generateID() packet.RequestID {
 	id := AtomicLoadAndIncrementUint64(t.sequence)
-	return message.RequestID(id)
+	return packet.RequestID(id)
 }
 
-func (t *utpTransport) createFuture(msg *message.Message) Future {
+func (t *utpTransport) createFuture(msg *packet.Packet) Future {
 	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
 		t.mutex.Lock()
 		defer t.mutex.Unlock()
@@ -176,14 +176,14 @@ func (t *utpTransport) createFuture(msg *message.Message) Future {
 	return newFuture
 }
 
-func (t *utpTransport) getFuture(msg *message.Message) Future {
+func (t *utpTransport) getFuture(msg *packet.Packet) Future {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
 	return t.futures[msg.RequestID]
 }
 
-func (t *utpTransport) sendMessage(msg *message.Message) error {
+func (t *utpTransport) sendMessage(msg *packet.Packet) error {
 	var recvAddress string
 	if t.proxy.ProxyNodesCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()
@@ -197,7 +197,7 @@ func (t *utpTransport) sendMessage(msg *message.Message) error {
 	}
 	defer conn.Close()
 
-	data, err := message.SerializeMessage(msg)
+	data, err := packet.SerializePacket(msg)
 	if err != nil {
 		return err
 	}
@@ -213,7 +213,7 @@ func (t *utpTransport) getRemoteAddress(conn net.Conn) string {
 func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 	for {
 		// Wait for Messages
-		msg, err := message.DeserializeMessage(conn)
+		msg, err := packet.DeserializePacket(conn)
 		if err != nil {
 			// TODO should we penalize this Node somehow ? Ban it ?
 			// if err.Error() != "EOF" {
@@ -225,7 +225,7 @@ func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 	}
 }
 
-func (t *utpTransport) handleMessage(msg *message.Message) {
+func (t *utpTransport) handleMessage(msg *packet.Packet) {
 	if msg.IsResponse {
 		t.processResponse(msg)
 	} else {
@@ -233,7 +233,7 @@ func (t *utpTransport) handleMessage(msg *message.Message) {
 	}
 }
 
-func (t *utpTransport) processResponse(msg *message.Message) {
+func (t *utpTransport) processResponse(msg *packet.Packet) {
 	future := t.getFuture(msg)
 	if future != nil && !shouldProcessMessage(future, msg) {
 		future.SetResult(msg)
@@ -241,14 +241,14 @@ func (t *utpTransport) processResponse(msg *message.Message) {
 	future.Cancel()
 }
 
-func (t *utpTransport) processRequest(msg *message.Message) {
+func (t *utpTransport) processRequest(msg *packet.Packet) {
 	if msg.IsValid() {
 		t.received <- msg
 	}
 }
 
-func shouldProcessMessage(future Future, msg *message.Message) bool {
-	return !future.Actor().Equal(*msg.Sender) && msg.Type != message.TypePing || msg.Type != future.Request().Type
+func shouldProcessMessage(future Future, msg *packet.Packet) bool {
+	return !future.Actor().Equal(*msg.Sender) && msg.Type != packet.TypePing || msg.Type != future.Request().Type
 }
 
 // AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.

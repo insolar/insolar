@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package packet
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewPingMessage(t *testing.T) {
+func TestNewPingPacket(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
@@ -34,91 +34,91 @@ func TestNewPingMessage(t *testing.T) {
 	receiver := node.NewNode(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
-	m := NewPingMessage(sender, receiver)
+	m := NewPingPacket(sender, receiver)
 
-	expectedMessage := &Message{
+	expectedPacket := &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypePing,
 	}
-	assert.Equal(t, expectedMessage, m)
+	assert.Equal(t, expectedPacket, m)
 }
 
-func TestMessage_IsValid(t *testing.T) {
+func TestPacket_IsValid(t *testing.T) {
 	builder := NewBuilder()
 
-	correctMessage := builder.Type(TypeRPC).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
-	assert.True(t, correctMessage.IsValid())
+	correctPacket := builder.Type(TypeRPC).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
+	assert.True(t, correctPacket.IsValid())
 
-	badtMessage := builder.Type(TypeStore).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
-	assert.False(t, badtMessage.IsValid())
+	badtPacket := builder.Type(TypeStore).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
+	assert.False(t, badtPacket.IsValid())
 }
 
-func TestNewAuthMessage(t *testing.T) {
+func TestNewAuthPacket(t *testing.T) {
 	addr1, _ := node.NewAddress("127.0.0.1:55551")
 	addr2, _ := node.NewAddress("127.0.0.1:55552")
 	sender := node.NewNode(addr1)
 	receiver := node.NewNode(addr2)
 
-	msg := NewAuthMessage(BeginAuth, sender, receiver)
+	msg := NewAuthPacket(BeginAuth, sender, receiver)
 	assert.True(t, msg.IsValid())
 }
 
-func TestNewCheckOriginMessage(t *testing.T) {
+func TestNewCheckOriginPacket(t *testing.T) {
 	addr1, _ := node.NewAddress("127.0.0.1:55551")
 	addr2, _ := node.NewAddress("127.0.0.1:55552")
 	sender := node.NewNode(addr1)
 	receiver := node.NewNode(addr2)
 
-	msg := NewCheckOriginMessage(sender, receiver)
+	msg := NewCheckOriginPacket(sender, receiver)
 	assert.True(t, msg.IsValid())
 }
 
-func TestNewKnownOuterNodesMessage(t *testing.T) {
+func TestNewKnownOuterNodesPacket(t *testing.T) {
 	addr1, _ := node.NewAddress("127.0.0.1:55551")
 	addr2, _ := node.NewAddress("127.0.0.1:55552")
 	sender := node.NewNode(addr1)
 	receiver := node.NewNode(addr2)
 
-	msg := NewKnownOuterNodesMessage(sender, receiver, 1)
+	msg := NewKnownOuterNodesPacket(sender, receiver, 1)
 	assert.True(t, msg.IsValid())
 }
 
-func TestNewObtainIPMessage(t *testing.T) {
+func TestNewObtainIPPacket(t *testing.T) {
 	addr1, _ := node.NewAddress("127.0.0.1:55551")
 	addr2, _ := node.NewAddress("127.0.0.1:55552")
 	sender := node.NewNode(addr1)
 	receiver := node.NewNode(addr2)
 
-	msg := NewObtainIPMessage(sender, receiver)
+	msg := NewObtainIPPacket(sender, receiver)
 	assert.True(t, msg.IsValid())
 }
 
-func TestNewRelayMessage(t *testing.T) {
+func TestNewRelayPacket(t *testing.T) {
 	addr1, _ := node.NewAddress("127.0.0.1:55551")
 	addr2, _ := node.NewAddress("127.0.0.1:55552")
 	sender := node.NewNode(addr1)
 	receiver := node.NewNode(addr2)
 
-	msg := NewRelayMessage(StartRelay, sender, receiver)
+	msg := NewRelayPacket(StartRelay, sender, receiver)
 	assert.True(t, msg.IsValid())
 }
 
-func TestNewRelayOwnershipMessage(t *testing.T) {
+func TestNewRelayOwnershipPacket(t *testing.T) {
 	addr1, _ := node.NewAddress("127.0.0.1:55551")
 	addr2, _ := node.NewAddress("127.0.0.1:55552")
 	sender := node.NewNode(addr1)
 	receiver := node.NewNode(addr2)
 
-	msg := NewRelayOwnershipMessage(sender, receiver, true)
+	msg := NewRelayOwnershipPacket(sender, receiver, true)
 	assert.True(t, msg.IsValid())
 }
 
-func TestMessage_IsValid_Ok(t *testing.T) {
+func TestPacket_IsValid_Ok(t *testing.T) {
 	tests := []struct {
-		name        string
-		messageType messageType
-		data        interface{}
+		name       string
+		packetType packetType
+		data       interface{}
 	}{
 		{"TypePing", TypePing, nil},
 		{"TypeFindNode", TypeFindNode, &RequestDataFindNode{}},
@@ -129,31 +129,31 @@ func TestMessage_IsValid_Ok(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			builder := NewBuilder()
-			message := builder.Type(test.messageType).Request(test.data).Build()
-			assert.True(t, message.IsValid())
+			packet := builder.Type(test.packetType).Request(test.data).Build()
+			assert.True(t, packet.IsValid())
 		})
 	}
 }
 
-func TestMessage_IsValid_Fail(t *testing.T) {
+func TestPacket_IsValid_Fail(t *testing.T) {
 	tests := []struct {
-		name        string
-		messageType messageType
-		data        interface{}
+		name       string
+		packetType packetType
+		data       interface{}
 	}{
 		{"incorrect request", TypeStore, &RequestDataRPC{"test", [][]byte{}}},
-		{"incorrect type", messageType(1337), &RequestDataFindNode{}},
+		{"incorrect type", packetType(1337), &RequestDataFindNode{}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			builder := NewBuilder()
-			message := builder.Type(test.messageType).Request(test.data).Build()
-			assert.False(t, message.IsValid())
+			packet := builder.Type(test.packetType).Request(test.data).Build()
+			assert.False(t, packet.IsValid())
 		})
 	}
 }
 
-func TestMessage_IsForMe(t *testing.T) {
+func TestPacket_IsForMe(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
@@ -163,14 +163,14 @@ func TestMessage_IsForMe(t *testing.T) {
 	builder := NewBuilder()
 	origin, _ := node.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
 
-	myMessage := builder.Receiver(receiver).Build()
-	notMyMessage := builder.Receiver(sender).Build()
+	myPacket := builder.Receiver(receiver).Build()
+	notMyPacket := builder.Receiver(sender).Build()
 
-	assert.True(t, myMessage.IsForMe(*origin))
-	assert.False(t, notMyMessage.IsForMe(*origin))
+	assert.True(t, myPacket.IsForMe(*origin))
+	assert.False(t, notMyPacket.IsForMe(*origin))
 }
 
-func TestSerializeMessage(t *testing.T) {
+func TestSerializePacket(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
@@ -180,12 +180,12 @@ func TestSerializeMessage(t *testing.T) {
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID.GetHash()}).Build()
 
-	_, err := SerializeMessage(msg)
+	_, err := SerializePacket(msg)
 
 	assert.NoError(t, err)
 }
 
-func TestDeserializeMessage(t *testing.T) {
+func TestDeserializePacket(t *testing.T) {
 	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
 	sender := node.NewNode(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
@@ -197,19 +197,19 @@ func TestDeserializeMessage(t *testing.T) {
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID.GetHash()}).Build()
 
-	serialized, _ := SerializeMessage(msg)
+	serialized, _ := SerializePacket(msg)
 
 	var buffer bytes.Buffer
 
 	buffer.Write(serialized)
 
-	deserialized, err := DeserializeMessage(&buffer)
+	deserialized, err := DeserializePacket(&buffer)
 
 	assert.NoError(t, err)
 	assert.Equal(t, deserialized, msg)
 }
 
-func TestDeserializeBigMessage(t *testing.T) {
+func TestDeserializeBigPacket(t *testing.T) {
 	address, _ := node.NewAddress("127.0.0.1:31337")
 	nodeOne := node.NewNode(address)
 
@@ -220,13 +220,13 @@ func TestDeserializeBigMessage(t *testing.T) {
 	msg := builder.Sender(nodeOne).Receiver(nodeOne).Type(TypeStore).Request(&RequestDataStore{data, true}).Build()
 	assert.True(t, msg.IsValid())
 
-	serialized, err := SerializeMessage(msg)
+	serialized, err := SerializePacket(msg)
 	assert.NoError(t, err)
 
 	var buffer bytes.Buffer
 	buffer.Write(serialized)
 
-	deserializedMsg, err := DeserializeMessage(&buffer)
+	deserializedMsg, err := DeserializePacket(&buffer)
 	assert.NoError(t, err)
 
 	deserializedData := deserializedMsg.Data.(*RequestDataStore).Data
