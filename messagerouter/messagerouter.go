@@ -21,8 +21,8 @@ import (
 	"encoding/gob"
 	"log"
 
-	"github.com/insolar/insolar/network/host"
-	"github.com/insolar/insolar/network/host/id"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/jbenet/go-base58"
 )
 
@@ -32,7 +32,7 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // e.g. glue between network and logic runner
 type MessageRouter struct {
 	LogicRunner LogicRunner
-	rpc         host.RPC
+	rpc         hostnetwork.RPC
 }
 
 // LogicRunner is an interface that should satisfy logic executor
@@ -40,7 +40,7 @@ type LogicRunner interface {
 	Execute(ref string, method string, args []byte) (data []byte, result []byte, err error)
 }
 
-// Message is a routable message, ATM just a method call
+// Message is a routable packet, ATM just a method call
 type Message struct {
 	Caller    struct{}
 	Reference string
@@ -57,14 +57,14 @@ type Response struct {
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr LogicRunner, rpc host.RPC) (*MessageRouter, error) {
+func New(lr LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc}
 	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return mr, nil
 }
 
-// Route a `Message` and get a `Response` or error from remote node
-func (r *MessageRouter) Route(ctx host.Context, msg Message) (response Response, err error) {
+// Route a `Message` and get a `Response` or error from remote host
+func (r *MessageRouter) Route(ctx hostnetwork.Context, msg Message) (response Response, err error) {
 	request, err := Serialize(msg)
 	if err != nil {
 		return response, err
@@ -78,7 +78,7 @@ func (r *MessageRouter) Route(ctx host.Context, msg Message) (response Response,
 	return DeserializeResponse(result)
 }
 
-// Deliver method calls LogicRunner.Execute on local node
+// Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
 func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 
@@ -112,7 +112,7 @@ func Serialize(value interface{}) ([]byte, error) {
 	return res, err
 }
 
-// DeserializeMessage reads message from byte slice.
+// DeserializeMessage reads packet from byte slice.
 func DeserializeMessage(data []byte) (msg Message, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&msg)
 	return msg, err

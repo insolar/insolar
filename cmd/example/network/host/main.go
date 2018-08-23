@@ -26,14 +26,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/network/host"
-	"github.com/insolar/insolar/network/host/connection"
-	"github.com/insolar/insolar/network/host/node"
-	"github.com/insolar/insolar/network/host/relay"
-	"github.com/insolar/insolar/network/host/resolver"
-	"github.com/insolar/insolar/network/host/rpc"
-	"github.com/insolar/insolar/network/host/store"
-	"github.com/insolar/insolar/network/host/transport"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/connection"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/insolar/insolar/network/hostnetwork/rpc"
+	"github.com/insolar/insolar/network/hostnetwork/store"
+	"github.com/insolar/insolar/network/hostnetwork/transport"
 
 	"github.com/chzyer/readline"
 )
@@ -51,18 +51,18 @@ func main() {
 		os.Exit(0)
 	}
 
-	bootstrapNodes := getBootstrapNodes(bootstrapAddress)
+	bootstrapHosts := getBootstrapHosts(bootstrapAddress)
 	proxy := relay.NewProxy()
 
-	configuration := host.NewNetworkConfiguration(
+	configuration := hostnetwork.NewNetworkConfiguration(
 		createResolver(*stun),
 		connection.NewConnectionFactory(),
 		transport.NewUTPTransportFactory(),
 		store.NewMemoryStoreFactory(),
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{"s": send}),
 		proxy)
-	dhtNetwork, err := configuration.CreateNetwork(*addr, &host.Options{
-		BootstrapNodes: bootstrapNodes,
+	dhtNetwork, err := configuration.CreateNetwork(*addr, &hostnetwork.Options{
+		BootstrapHosts: bootstrapHosts,
 	})
 	if err != nil {
 		log.Fatalln("Failed to create network:", err.Error())
@@ -73,7 +73,7 @@ func main() {
 	ctx := createContext(dhtNetwork)
 
 	go listen(dhtNetwork)
-	bootstrap(bootstrapNodes, dhtNetwork)
+	bootstrap(bootstrapHosts, dhtNetwork)
 
 	handleSignals(configuration)
 
@@ -88,7 +88,7 @@ func main() {
 	repl(dhtNetwork, ctx)
 }
 
-func handleSignals(configuration *host.Configuration) {
+func handleSignals(configuration *hostnetwork.Configuration) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -98,16 +98,16 @@ func handleSignals(configuration *host.Configuration) {
 	}()
 }
 
-func createContext(dhtNetwork *host.DHT) host.Context {
-	ctx, err := host.NewContextBuilder(dhtNetwork).SetDefaultNode().Build()
+func createContext(dhtNetwork *hostnetwork.DHT) hostnetwork.Context {
+	ctx, err := hostnetwork.NewContextBuilder(dhtNetwork).SetDefaultHost().Build()
 	if err != nil {
 		log.Fatalln("Failed to create context:", err.Error())
 	}
 	return ctx
 }
 
-func bootstrap(bootstrapNodes []*node.Node, dhtNetwork *host.DHT) {
-	if len(bootstrapNodes) > 0 {
+func bootstrap(bootstrapHosts []*host.Host, dhtNetwork *hostnetwork.DHT) {
+	if len(bootstrapHosts) > 0 {
 		err := dhtNetwork.Bootstrap()
 		if err != nil {
 			log.Fatalln("Failed to bootstrap network", err.Error())
@@ -115,7 +115,7 @@ func bootstrap(bootstrapNodes []*node.Node, dhtNetwork *host.DHT) {
 	}
 }
 
-func listen(dhtNetwork *host.DHT) {
+func listen(dhtNetwork *hostnetwork.DHT) {
 	func() {
 		err := dhtNetwork.Listen()
 		if err != nil {
@@ -124,7 +124,7 @@ func listen(dhtNetwork *host.DHT) {
 	}()
 }
 
-func closeNetwork(configuration *host.Configuration) {
+func closeNetwork(configuration *hostnetwork.Configuration) {
 	func() {
 		err := configuration.CloseNetwork()
 		if err != nil {
@@ -133,7 +133,7 @@ func closeNetwork(configuration *host.Configuration) {
 	}()
 }
 
-func repl(dhtNetwork *host.DHT, ctx host.Context) {
+func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	rl, err := readline.New("> ")
 	if err != nil {
 		panic(err)
@@ -154,8 +154,8 @@ func repl(dhtNetwork *host.DHT, ctx host.Context) {
 		switch input[0] {
 		case "help":
 			displayInteractiveHelp()
-		case "findnode":
-			doFindNode(input, dhtNetwork, ctx)
+		case "findhost":
+			doFindHost(input, dhtNetwork, ctx)
 		case "info":
 			doInfo(dhtNetwork, ctx)
 		case "relay":
@@ -166,17 +166,17 @@ func repl(dhtNetwork *host.DHT, ctx host.Context) {
 	}
 }
 
-func getBootstrapNodes(bootstrapAddress *string) []*node.Node {
-	var bootstrapNodes []*node.Node
+func getBootstrapHosts(bootstrapAddress *string) []*host.Host {
+	var bootstrapHosts []*host.Host
 	if *bootstrapAddress != "" {
-		address, err := node.NewAddress(*bootstrapAddress)
+		address, err := host.NewAddress(*bootstrapAddress)
 		if err != nil {
 			log.Fatalln("Failed to create bootstrap address:", err.Error())
 		}
-		bootstrapNode := node.NewNode(address)
-		bootstrapNodes = append(bootstrapNodes, bootstrapNode)
+		bootstrapHost := host.NewHost(address)
+		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
 	}
-	return bootstrapNodes
+	return bootstrapHosts
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {
@@ -189,38 +189,38 @@ func createResolver(stun bool) resolver.PublicAddressResolver {
 	return publicAddressResolver
 }
 
-func doFindNode(input []string, dhtNetwork *host.DHT, ctx host.Context) {
+func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	if len(input) != 2 {
 		displayInteractiveHelp()
 		return
 	}
-	fmt.Println("Searching for targetNode", input[1])
-	targetNode, exists, err := dhtNetwork.FindNode(ctx, input[1])
+	fmt.Println("Searching for targetHost", input[1])
+	targetHost, exists, err := dhtNetwork.FindHost(ctx, input[1])
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	if exists {
-		fmt.Println("..Found targetNode:", targetNode)
+		fmt.Println("..Found targetHost:", targetHost)
 	} else {
 		fmt.Println("..Nothing found for this id!")
 	}
 }
 
-func doInfo(dhtNetwork *host.DHT, ctx host.Context) {
-	nodes := dhtNetwork.NumNodes(ctx)
+func doInfo(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+	hosts := dhtNetwork.NumHosts(ctx)
 	originID := dhtNetwork.GetOriginID(ctx)
 	fmt.Println("ID: " + originID)
-	fmt.Println("Known nodes: " + strconv.Itoa(nodes))
+	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
 }
 
-func doSendRelay(command, relayAddr string, dhtNetwork *host.DHT, ctx host.Context) {
+func doSendRelay(command, relayAddr string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	err := dhtNetwork.RelayRequest(ctx, command, relayAddr)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-func doRPC(input []string, dhtNetwork *host.DHT, ctx host.Context) {
+func doRPC(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	if len(input) < 2 || len(input[0]) == 0 || len(input[1]) == 0 {
 		if len(input) > 0 && len(input[0]) > 0 {
 			displayInteractiveHelp()
@@ -260,14 +260,14 @@ Options:
 
 func displayInteractiveHelp() {
 	fmt.Println(`
-help - This message
-findnode <key> - Find node's real network address
-info - Display information about this node
+help - This packet
+findhost <key> - Find host's real network address
+info - Display information about this host
 
 <method> <target> <args...> - Remote procedure call`)
 }
 
-func send(sender *node.Node, args [][]byte) ([]byte, error) {
+func send(sender *host.Host, args [][]byte) ([]byte, error) {
 	bs := append([]byte{}, []byte(time.Now().Format(time.Kitchen))...)
 	bs = append(bs, ' ')
 	bs = append(bs, sender.ID.HashString()...)

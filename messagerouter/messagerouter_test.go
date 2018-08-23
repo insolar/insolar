@@ -20,14 +20,14 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/insolar/insolar/network/host"
-	"github.com/insolar/insolar/network/host/connection"
-	"github.com/insolar/insolar/network/host/id"
-	"github.com/insolar/insolar/network/host/node"
-	"github.com/insolar/insolar/network/host/relay"
-	"github.com/insolar/insolar/network/host/rpc"
-	"github.com/insolar/insolar/network/host/store"
-	"github.com/insolar/insolar/network/host/transport"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/connection"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/insolar/insolar/network/hostnetwork/rpc"
+	"github.com/insolar/insolar/network/hostnetwork/store"
+	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,22 +50,22 @@ type runner struct {
 
 const closedMessage = "closed" // "broken pipe" for kcpTransport
 
-func dhtParams(ids []id.ID, address string) (store.Store, *node.Origin, transport.Transport, rpc.RPC, error) {
+func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
 	st := store.NewMemoryStore()
-	addr, _ := node.NewAddress(address)
-	origin, _ := node.NewOrigin(ids, addr)
+	addr, _ := host.NewAddress(address)
+	origin, _ := host.NewOrigin(ids, addr)
 	conn, _ := connection.NewConnectionFactory().Create(address)
 	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
 
-func getDefaultCtx(dht *host.DHT) host.Context {
-	ctx, _ := host.NewContextBuilder(dht).SetDefaultNode().Build()
+func getDefaultCtx(dht *hostnetwork.DHT) hostnetwork.Context {
+	ctx, _ := hostnetwork.NewContextBuilder(dht).SetDefaultHost().Build()
 	return ctx
 }
 
-func NewNode() (*host.DHT, error) {
+func NewNode() (*hostnetwork.DHT, error) {
 	var ids []id.ID
 	id1, _ := id.NewID(nil)
 	ids = append(ids, id1)
@@ -74,17 +74,17 @@ func NewNode() (*host.DHT, error) {
 		return nil, err
 	}
 
-	return host.NewDHT(st, s, tp, r, &host.Options{}, relay.NewProxy())
+	return hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
 }
 
 type mockRpc struct {
 }
 
-func (r *mockRpc) RemoteProcedureCall(ctx host.Context, target string, method string, args [][]byte) (result []byte, err error) {
+func (r *mockRpc) RemoteProcedureCall(ctx hostnetwork.Context, target string, method string, args [][]byte) (result []byte, err error) {
 	return nil, errors.New("not implemented in mock")
 }
 
-func (r *mockRpc) RemoteProcedureRegister(name string, method host.RemoteProcedure) {
+func (r *mockRpc) RemoteProcedureRegister(name string, method hostnetwork.RemoteProcedure) {
 	return
 }
 
