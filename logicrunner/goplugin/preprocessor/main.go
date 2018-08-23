@@ -419,7 +419,7 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	}
 `
 
-	text += fmt.Sprintf("\t"+`_, res, err := ginsider.CurrentGoInsider.Exec(r.Reference, "%s", argsSerialized)`, method.Name.Name)
+	text += fmt.Sprintf("\t"+`res, err := ginsider.CurrentGoInsider.RouteCall(r.Reference, "%s", argsSerialized)`, method.Name.Name)
 
 	text += `
 	if err != nil {

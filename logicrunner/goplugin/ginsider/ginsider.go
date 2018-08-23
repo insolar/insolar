@@ -165,9 +165,26 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 	return path, nil
 }
 
-// Exec
-func (t *GoInsider) Exec(ref string, method string, args []byte) (data []byte, res []byte, err error) {
-	return data, res, err
+// RouteCall ...
+func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, error) {
+	client, err := t.Upstream()
+	if err != nil {
+		return nil, err
+	}
+
+	req := rpctypes.UpRouteReq{
+		Reference: logicrunner.Reference(ref),
+		Method:    method,
+		Arguments: args,
+	}
+
+	res := rpctypes.UpRouteResp{}
+	err = client.Call("RPC.RouteCall", req, &res)
+	if err != nil {
+		return nil, errors.Wrap(err, "on calling main API")
+	}
+
+	return []byte(res.Result), res.Err
 }
 
 // CurrentGoInsider - hackish way to give proxies access to the current environment

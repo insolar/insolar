@@ -36,3 +36,16 @@ type DownCallResp struct {
 	Ret  logicrunner.Arguments
 	Err  error
 }
+
+// UpRouteReq is a set of arguments for Route RPC in goplugin
+type UpRouteReq struct {
+	Reference logicrunner.Reference
+	Method    string
+	Arguments logicrunner.Arguments
+}
+
+// UpRouteResp is response from Route RPC in goplugin
+type UpRouteResp struct {
+	Result logicrunner.Arguments
+	Err    error
+}

@@ -73,6 +73,10 @@ func (gpr *RPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) 
 	return err
 }
 
+func (gpr *RPC) RouteCall(ref logicrunner.Reference, reply *logicrunner.Object) error {
+	return nil
+}
+
 // NewGoPlugin returns a new started GoPlugin
 func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error) {
 	gp := GoPlugin{
