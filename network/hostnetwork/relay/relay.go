@@ -17,8 +17,8 @@
 package relay
 
 import (
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 
 	"errors"
 )
@@ -35,35 +35,35 @@ const (
 	Stopped
 	// Error is relay type means error state change.
 	Error
-	// NoAuth - this error returns if node tries to send relay request but not authenticated.
+	// NoAuth - this error returns if host tries to send relay request but not authenticated.
 	NoAuth
 )
 
 // Relay Interface for relaying
 type Relay interface {
 	// AddClient add client to relay list.
-	AddClient(node *node.Node) error
+	AddClient(node *host.Host) error
 	// RemoveClient removes client from relay list.
-	RemoveClient(node *node.Node) error
+	RemoveClient(node *host.Host) error
 	// ClientsCount - clients count.
 	ClientsCount() int
-	// NeedToRelay returns true if origin node is proxy for target node.
+	// NeedToRelay returns true if origin host is proxy for target host.
 	NeedToRelay(targetAddress string) bool
 }
 
 type relay struct {
-	clients []*node.Node
+	clients []*host.Host
 }
 
 // NewRelay constructs relay list.
 func NewRelay() Relay {
 	return &relay{
-		clients: make([]*node.Node, 0),
+		clients: make([]*host.Host, 0),
 	}
 }
 
 // AddClient add client to relay list.
-func (r *relay) AddClient(node *node.Node) error {
+func (r *relay) AddClient(node *host.Host) error {
 	if _, n := r.findClient(node.ID); n != nil {
 		return errors.New("client exists already")
 	}
@@ -72,7 +72,7 @@ func (r *relay) AddClient(node *node.Node) error {
 }
 
 // RemoveClient removes client from relay list.
-func (r *relay) RemoveClient(node *node.Node) error {
+func (r *relay) RemoveClient(node *host.Host) error {
 	idx, n := r.findClient(node.ID)
 	if n == nil {
 		return errors.New("client not found")
@@ -86,7 +86,7 @@ func (r *relay) ClientsCount() int {
 	return len(r.clients)
 }
 
-// NeedToRelay returns true if origin node is proxy for target node.
+// NeedToRelay returns true if origin host is proxy for target host.
 func (r *relay) NeedToRelay(targetAddress string) bool {
 	for i := 0; i < r.ClientsCount(); i++ {
 		if r.clients[i].Address.String() == targetAddress {
@@ -96,7 +96,7 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 	return false
 }
 
-func (r *relay) findClient(id id.ID) (int, *node.Node) {
+func (r *relay) findClient(id id.ID) (int, *host.Host) {
 	for idx, nodeIterator := range r.clients {
 		if nodeIterator.ID.HashEqual(id.GetHash()) {
 			return idx, nodeIterator

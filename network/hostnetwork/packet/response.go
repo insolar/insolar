@@ -17,18 +17,18 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
 
 // ResponseDataFindNode is data for FindNode response.
 type ResponseDataFindNode struct {
-	Closest []*node.Node
+	Closest []*host.Host
 }
 
 // ResponseDataFindValue is data for FindValue response.
 type ResponseDataFindValue struct {
-	Closest []*node.Node
+	Closest []*host.Host
 	Value   []byte
 }
 
@@ -60,7 +60,7 @@ type ResponseCheckOrigin struct {
 	AuthUniqueKey []byte
 }
 
-// ResponseObtainIP is data for get a IP of requesting node.
+// ResponseObtainIP is data for get a IP of requesting host.
 type ResponseObtainIP struct {
 	IP string
 }
@@ -70,8 +70,8 @@ type ResponseRelayOwnership struct {
 	Accepted bool
 }
 
-// ResponseKnownOuterNodes is data to answer if origin node know more outer nodes.
+// ResponseKnownOuterNodes is data to answer if origin host know more outer nodes.
 type ResponseKnownOuterNodes struct {
-	ID         string //	id of node in which more known outer nodes
+	ID         string //	id of host in which more known outer nodes
 	OuterNodes int    // number of known outer nodes
 }

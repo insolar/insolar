@@ -24,7 +24,7 @@ import (
 )
 
 // Context type is localized for future purposes.
-// Network Node can have multiple IDs, but each action must be executed with only one ID.
+// Network Host can have multiple IDs, but each action must be executed with only one ID.
 // Context is used in all actions to select specific ID to work with.
 type Context context.Context
 
@@ -60,7 +60,7 @@ func (cb ContextBuilder) Build() (ctx Context, err error) {
 	return
 }
 
-// SetNodeByID sets node id in Context.
+// SetNodeByID sets host id in Context.
 func (cb ContextBuilder) SetNodeByID(nodeID id.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
 		for index, id := range cb.dht.origin.IDs {
@@ -68,12 +68,12 @@ func (cb ContextBuilder) SetNodeByID(nodeID id.ID) ContextBuilder {
 				return context.WithValue(ctx, ctxTableIndex, index), nil
 			}
 		}
-		return nil, errors.New("node requestID not found")
+		return nil, errors.New("host requestID not found")
 	})
 	return cb
 }
 
-// SetDefaultNode sets first node id in Context.
+// SetDefaultNode sets first host id in Context.
 func (cb ContextBuilder) SetDefaultNode() ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
 		return context.WithValue(ctx, ctxTableIndex, defaultNodeID), nil

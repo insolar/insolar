@@ -17,7 +17,7 @@
 package transport
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
@@ -28,7 +28,7 @@ type Future interface {
 	ID() packet.RequestID
 
 	// Actor returns the initiator of the packet.
-	Actor() *node.Node
+	Actor() *host.Host
 
 	// Request returns origin request.
 	Request() *packet.Packet
@@ -48,14 +48,14 @@ type CancelCallback func(Future)
 
 type future struct {
 	result         chan *packet.Packet
-	actor          *node.Node
+	actor          *host.Host
 	request        *packet.Packet
 	requestID      packet.RequestID
 	cancelCallback CancelCallback
 }
 
 // NewFuture creates new Future.
-func NewFuture(requestID packet.RequestID, actor *node.Node, msg *packet.Packet, cancelCallback CancelCallback) Future {
+func NewFuture(requestID packet.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
 	return &future{
 		result:         make(chan *packet.Packet),
 		actor:          actor,
@@ -70,8 +70,8 @@ func (future *future) ID() packet.RequestID {
 	return future.requestID
 }
 
-// Actor returns Node address that was used to create packet.
-func (future *future) Actor() *node.Node {
+// Actor returns Host address that was used to create packet.
+func (future *future) Actor() *host.Host {
 	return future.actor
 }
 

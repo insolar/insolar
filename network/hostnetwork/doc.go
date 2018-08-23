@@ -24,7 +24,7 @@ Usage:
 	import (
 		"github.com/insolar/insolar/network/hostnetwork"
 		"github.com/insolar/insolar/network/hostnetwork/connection"
-		"github.com/insolar/insolar/network/hostnetwork/node"
+		"github.com/insolar/insolar/network/hostnetwork/host"
 		"github.com/insolar/insolar/network/hostnetwork/relay"
 		"github.com/insolar/insolar/network/hostnetwork/resolver"
 		"github.com/insolar/insolar/network/hostnetwork/rpc"

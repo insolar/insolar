@@ -19,14 +19,14 @@ package transport
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewFuture(t *testing.T) {
-	addr, _ := node.NewAddress("127.0.0.1:8080")
-	n := node.NewNode(addr)
+	addr, _ := host.NewAddress("127.0.0.1:8080")
+	n := host.NewHost(addr)
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -35,8 +35,8 @@ func TestNewFuture(t *testing.T) {
 }
 
 func TestFuture_ID(t *testing.T) {
-	addr, _ := node.NewAddress("127.0.0.1:8080")
-	n := node.NewNode(addr)
+	addr, _ := host.NewAddress("127.0.0.1:8080")
+	n := host.NewHost(addr)
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -45,8 +45,8 @@ func TestFuture_ID(t *testing.T) {
 }
 
 func TestFuture_Actor(t *testing.T) {
-	addr, _ := node.NewAddress("127.0.0.1:8080")
-	n := node.NewNode(addr)
+	addr, _ := host.NewAddress("127.0.0.1:8080")
+	n := host.NewHost(addr)
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -55,8 +55,8 @@ func TestFuture_Actor(t *testing.T) {
 }
 
 func TestFuture_Result(t *testing.T) {
-	addr, _ := node.NewAddress("127.0.0.1:8080")
-	n := node.NewNode(addr)
+	addr, _ := host.NewAddress("127.0.0.1:8080")
+	n := host.NewHost(addr)
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -65,8 +65,8 @@ func TestFuture_Result(t *testing.T) {
 }
 
 func TestFuture_Request(t *testing.T) {
-	addr, _ := node.NewAddress("127.0.0.1:8080")
-	n := node.NewNode(addr)
+	addr, _ := host.NewAddress("127.0.0.1:8080")
+	n := host.NewHost(addr)
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -75,8 +75,8 @@ func TestFuture_Request(t *testing.T) {
 }
 
 func TestFuture_SetResult(t *testing.T) {
-	addr, _ := node.NewAddress("127.0.0.1:8080")
-	n := node.NewNode(addr)
+	addr, _ := host.NewAddress("127.0.0.1:8080")
+	n := host.NewHost(addr)
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
@@ -91,8 +91,8 @@ func TestFuture_SetResult(t *testing.T) {
 }
 
 func TestFuture_Cancel(t *testing.T) {
-	addr, _ := node.NewAddress("127.0.0.1:8080")
-	n := node.NewNode(addr)
+	addr, _ := host.NewAddress("127.0.0.1:8080")
+	n := host.NewHost(addr)
 
 	cbCalled := false
 

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package node
+package host
 
 import (
 	"net"

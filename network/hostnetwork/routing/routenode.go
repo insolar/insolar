@@ -17,25 +17,25 @@
 package routing
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
-// RouteNode represents a node in the network locally
+// RouteNode represents a host in the network locally
 // a separate struct due to the fact that we may want to add some metadata
 // here later such as RTT, or LastSeen time.
 type RouteNode struct {
-	*node.Node
+	*host.Host
 }
 
 // NewRouteNode creates new RouteNode.
-func NewRouteNode(node *node.Node) *RouteNode {
+func NewRouteNode(node *host.Host) *RouteNode {
 	return &RouteNode{
-		Node: node,
+		Host: node,
 	}
 }
 
 // RouteNodesFrom creates list of RouteNodes from a list of Nodes.
-func RouteNodesFrom(nodes []*node.Node) []*RouteNode {
+func RouteNodesFrom(nodes []*host.Host) []*RouteNode {
 	routeNodes := make([]*RouteNode, len(nodes))
 
 	for i, n := range nodes {

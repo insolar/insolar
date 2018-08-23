@@ -28,7 +28,7 @@ import (
 
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/connection"
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
@@ -106,7 +106,7 @@ func createContext(dhtNetwork *hostnetwork.DHT) hostnetwork.Context {
 	return ctx
 }
 
-func bootstrap(bootstrapNodes []*node.Node, dhtNetwork *hostnetwork.DHT) {
+func bootstrap(bootstrapNodes []*host.Host, dhtNetwork *hostnetwork.DHT) {
 	if len(bootstrapNodes) > 0 {
 		err := dhtNetwork.Bootstrap()
 		if err != nil {
@@ -166,14 +166,14 @@ func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	}
 }
 
-func getBootstrapNodes(bootstrapAddress *string) []*node.Node {
-	var bootstrapNodes []*node.Node
+func getBootstrapNodes(bootstrapAddress *string) []*host.Host {
+	var bootstrapNodes []*host.Host
 	if *bootstrapAddress != "" {
-		address, err := node.NewAddress(*bootstrapAddress)
+		address, err := host.NewAddress(*bootstrapAddress)
 		if err != nil {
 			log.Fatalln("Failed to create bootstrap address:", err.Error())
 		}
-		bootstrapNode := node.NewNode(address)
+		bootstrapNode := host.NewHost(address)
 		bootstrapNodes = append(bootstrapNodes, bootstrapNode)
 	}
 	return bootstrapNodes
@@ -261,13 +261,13 @@ Options:
 func displayInteractiveHelp() {
 	fmt.Println(`
 help - This packet
-findnode <key> - Find node's real network address
-info - Display information about this node
+findnode <key> - Find host's real network address
+info - Display information about this host
 
 <method> <target> <args...> - Remote procedure call`)
 }
 
-func send(sender *node.Node, args [][]byte) ([]byte, error) {
+func send(sender *host.Host, args [][]byte) ([]byte, error) {
 	bs := append([]byte{}, []byte(time.Now().Format(time.Kitchen))...)
 	bs = append(bs, ' ')
 	bs = append(bs, sender.ID.HashString()...)

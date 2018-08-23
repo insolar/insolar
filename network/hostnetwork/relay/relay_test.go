@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,12 +48,12 @@ func TestNewRelay(t *testing.T) {
 	assert.NotNil(t, relay)
 }
 
-func makeAddresses(count int, t *testing.T) []*node.Address {
+func makeAddresses(count int, t *testing.T) []*host.Address {
 	ip := "127.0.0.1:"
-	addresses := make([]*node.Address, 0)
+	addresses := make([]*host.Address, 0)
 
 	for i := 0; i < count; i++ {
-		address, err := node.NewAddress(ip + strconv.Itoa(i+20000))
+		address, err := host.NewAddress(ip + strconv.Itoa(i+20000))
 		if err != nil {
 			assert.Errorf(t, nil, "error: %s", err.Error())
 			continue
@@ -64,8 +64,8 @@ func makeAddresses(count int, t *testing.T) []*node.Address {
 	return addresses
 }
 
-func makeNodes(count int, t *testing.T) []*node.Node {
-	result := make([]*node.Node, 0)
+func makeNodes(count int, t *testing.T) []*host.Host {
+	result := make([]*host.Host, 0)
 	addresses := makeAddresses(count, t)
 
 	for i := 0; i < count; i++ {
@@ -76,7 +76,7 @@ func makeNodes(count int, t *testing.T) []*node.Node {
 			continue
 		}
 
-		result = append(result, &node.Node{ID: id, Address: addresses[i]})
+		result = append(result, &host.Host{ID: id, Address: addresses[i]})
 	}
 
 	return result
@@ -91,7 +91,7 @@ func TestRelay_AddClient(t *testing.T) {
 	for i := range nodes {
 		err := relay.AddClient(nodes[i])
 		assert.NoError(t, err)
-		err = relay.AddClient(nodes[i]) // adding existing node
+		err = relay.AddClient(nodes[i]) // adding existing host
 		assert.EqualError(t, err, "client exists already")
 	}
 
@@ -141,7 +141,7 @@ func TestRelay_NeedToRelay(t *testing.T) {
 	}
 
 	for i := 0; i < count; i++ {
-		address, err := node.NewAddress(ip + strconv.Itoa(i+20000))
+		address, err := host.NewAddress(ip + strconv.Itoa(i+20000))
 
 		if err != nil {
 			assert.Errorf(t, nil, "error: %s", err.Error())
@@ -172,7 +172,7 @@ func TestProxy_AddProxyNode(t *testing.T) {
 
 	for i := range addresses {
 		proxy.AddProxyNode(addresses[i].String())
-		proxy.AddProxyNode(addresses[i].String()) // adding existed node
+		proxy.AddProxyNode(addresses[i].String()) // adding existed host
 	}
 
 	assert.Equal(t, count, proxy.ProxyNodesCount())
@@ -191,7 +191,7 @@ func TestProxy_RemoveProxyNode(t *testing.T) {
 
 	for i := range addresses {
 		proxy.RemoveProxyNode(addresses[i].String())
-		proxy.RemoveProxyNode(addresses[i].String()) // remove removed node
+		proxy.RemoveProxyNode(addresses[i].String()) // remove removed host
 	}
 
 	assert.Equal(t, 0, proxy.ProxyNodesCount())

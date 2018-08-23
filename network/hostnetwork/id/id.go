@@ -23,7 +23,7 @@ import (
 	"github.com/jbenet/go-base58"
 )
 
-// ID is node id.
+// ID is host id.
 type ID struct {
 	key  []byte
 	hash []byte
@@ -66,7 +66,7 @@ func (id *ID) UnmarshalBinary(data []byte) error {
 	return err
 }
 
-// NewID returns random node id.
+// NewID returns random host id.
 func NewID(key []byte) (ID, error) {
 	hash := make([]byte, 20) // TODO: choose hash func
 	_, err := random.Read(hash)
@@ -84,7 +84,7 @@ func (id ID) KeyEqual(other []byte) bool {
 	return bytes.Equal(id.key, other)
 }
 
-// KeyString is a base58-encoded string representation of node public key.
+// KeyString is a base58-encoded string representation of host public key.
 func (id ID) KeyString() string {
 	return base58.Encode(id.key)
 }

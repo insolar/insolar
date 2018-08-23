@@ -16,31 +16,31 @@
 
 /*
 Package relay is an implementation of relay mechanism. Proxy contains info about nodes which can relaying packets.
-Relay contains info about nodes of which packets current node have to relay.
+Relay contains info about nodes of which packets current host have to relay.
 
 Usage:
 	package relay
 
 	relay := NewRelay()
-	relay.AddClient(node)
+	relay.AddClient(host)
 
-	if relay.NeedToRelay(node.Address()) {
+	if relay.NeedToRelay(host.Address()) {
 		//relay packet
 	}
 
-	relay.RemoveClient(node)
+	relay.RemoveClient(host)
 
 	//-----------------------------------
 
 	proxy := NewProxy()
-	proxy.AddProxyNode(node.Address())
+	proxy.AddProxyNode(host.Address())
 
 	if proxy.ProxyNodesCount > 0 {
 		address := proxy.GetNextProxyAddress
 		//send packet to next proxy
 	}
 
-	proxy.RemoveProxyNode(node.Address)
+	proxy.RemoveProxyNode(host.Address)
 
 */
 package relay

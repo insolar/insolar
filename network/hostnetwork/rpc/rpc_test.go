@@ -20,7 +20,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +45,7 @@ func TestRPC_RegisterMethod(t *testing.T) {
 	_, err := r.Invoke(nil, "test_method", nil)
 	assert.Error(t, err)
 
-	r.RegisterMethod("test_method", func(sender *node.Node, args [][]byte) ([]byte, error) {
+	r.RegisterMethod("test_method", func(sender *host.Host, args [][]byte) ([]byte, error) {
 		return []byte("hello world"), nil
 	})
 
@@ -56,7 +56,7 @@ func TestRPC_RegisterMethod(t *testing.T) {
 
 func TestRPC_Invoke_RecoversFromPanic(t *testing.T) {
 	r := NewRPC()
-	r.RegisterMethod("panic_method", func(sender *node.Node, args [][]byte) ([]byte, error) {
+	r.RegisterMethod("panic_method", func(sender *host.Host, args [][]byte) ([]byte, error) {
 		panic("test_panic")
 	})
 
@@ -67,7 +67,7 @@ func TestRPC_Invoke_RecoversFromPanic(t *testing.T) {
 
 func TestRPC_Invoke_ReturnsErrorFromMethod(t *testing.T) {
 	r := NewRPC()
-	r.RegisterMethod("error_method", func(sender *node.Node, args [][]byte) ([]byte, error) {
+	r.RegisterMethod("error_method", func(sender *host.Host, args [][]byte) ([]byte, error) {
 		return nil, errors.New("example error")
 	})
 

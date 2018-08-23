@@ -19,14 +19,14 @@ package routing
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewRouteNode(t *testing.T) {
-	testAddr, _ := node.NewAddress("127.0.0.1:31337")
-	testNode := node.NewNode(testAddr)
+	testAddr, _ := host.NewAddress("127.0.0.1:31337")
+	testNode := host.NewHost(testAddr)
 
 	expectedRouteNode := &RouteNode{testNode}
 	actualRouteNode := NewRouteNode(testNode)
@@ -35,9 +35,9 @@ func TestNewRouteNode(t *testing.T) {
 }
 
 func TestRouteNodesFrom(t *testing.T) {
-	testAddr1, _ := node.NewAddress("127.0.0.1:31337")
-	testAddr2, _ := node.NewAddress("10.10.11.11:31338")
-	nodes := []*node.Node{node.NewNode(testAddr1), node.NewNode(testAddr2)}
+	testAddr1, _ := host.NewAddress("127.0.0.1:31337")
+	testAddr2, _ := host.NewAddress("10.10.11.11:31338")
+	nodes := []*host.Host{host.NewHost(testAddr1), host.NewHost(testAddr2)}
 
 	routeNodes := RouteNodesFrom(nodes)
 

@@ -23,8 +23,8 @@ import (
 	"io"
 	"log"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 )
 
 type packetType int
@@ -44,13 +44,13 @@ const (
 	TypeRelay
 	// TypeAuth is packet type for authentication between nodes.
 	TypeAuth
-	// TypeCheckOrigin is packet to check originality of some node.
+	// TypeCheckOrigin is packet to check originality of some host.
 	TypeCheckOrigin
-	// TypeObtainIP is packet to get itself IP from another node.
+	// TypeObtainIP is packet to get itself IP from another host.
 	TypeObtainIP
-	// TypeRelayOwnership is packet to say all other nodes that current node have a static IP.
+	// TypeRelayOwnership is packet to say all other nodes that current host have a static IP.
 	TypeRelayOwnership
-	// TypeKnownOuterNodes is packet to say how much outer nodes current node know.
+	// TypeKnownOuterNodes is packet to say how much outer nodes current host know.
 	TypeKnownOuterNodes
 )
 
@@ -59,8 +59,8 @@ type RequestID uint64
 
 // Packet is DHT packet object.
 type Packet struct {
-	Sender        *node.Node
-	Receiver      *node.Node
+	Sender        *host.Host
+	Receiver      *host.Host
 	Type          packetType
 	RequestID     RequestID
 	RemoteAddress string
@@ -71,7 +71,7 @@ type Packet struct {
 }
 
 // NewPingPacket can be used as a shortcut for creating ping packets instead of packet Builder.
-func NewPingPacket(sender, receiver *node.Node) *Packet {
+func NewPingPacket(sender, receiver *host.Host) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
@@ -79,8 +79,8 @@ func NewPingPacket(sender, receiver *node.Node) *Packet {
 	}
 }
 
-// NewRelayPacket uses for send a command to target node to make it as relay.
-func NewRelayPacket(command CommandType, sender, receiver *node.Node) *Packet {
+// NewRelayPacket uses for send a command to target host to make it as relay.
+func NewRelayPacket(command CommandType, sender, receiver *host.Host) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
@@ -92,7 +92,7 @@ func NewRelayPacket(command CommandType, sender, receiver *node.Node) *Packet {
 }
 
 // NewAuthPacket uses for starting authentication.
-func NewAuthPacket(command CommandType, sender, receiver *node.Node) *Packet {
+func NewAuthPacket(command CommandType, sender, receiver *host.Host) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
@@ -102,7 +102,7 @@ func NewAuthPacket(command CommandType, sender, receiver *node.Node) *Packet {
 }
 
 // NewCheckOriginPacket uses for check originality.
-func NewCheckOriginPacket(sender, receiver *node.Node) *Packet {
+func NewCheckOriginPacket(sender, receiver *host.Host) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
@@ -112,7 +112,7 @@ func NewCheckOriginPacket(sender, receiver *node.Node) *Packet {
 }
 
 // NewObtainIPPacket uses for get self IP.
-func NewObtainIPPacket(sender, receiver *node.Node) *Packet {
+func NewObtainIPPacket(sender, receiver *host.Host) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
@@ -122,7 +122,7 @@ func NewObtainIPPacket(sender, receiver *node.Node) *Packet {
 }
 
 // NewRelayOwnershipPacket uses for relay ownership request.
-func NewRelayOwnershipPacket(sender, receiver *node.Node, ready bool) *Packet {
+func NewRelayOwnershipPacket(sender, receiver *host.Host, ready bool) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
@@ -132,7 +132,7 @@ func NewRelayOwnershipPacket(sender, receiver *node.Node, ready bool) *Packet {
 }
 
 // NewKnownOuterNodesPacket uses to notify all nodes in home subnet about known outer nodes.
-func NewKnownOuterNodesPacket(sender, receiver *node.Node, nodes int) *Packet {
+func NewKnownOuterNodesPacket(sender, receiver *host.Host, nodes int) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
@@ -176,8 +176,8 @@ func (m *Packet) IsValid() (valid bool) {
 	return valid
 }
 
-// IsForMe checks if packet is addressed to our node.
-func (m *Packet) IsForMe(origin node.Origin) bool {
+// IsForMe checks if packet is addressed to our host.
+func (m *Packet) IsForMe(origin host.Origin) bool {
 	return origin.Contains(m.Receiver) || m.Type == TypePing && origin.Address.Equal(*m.Receiver.Address)
 }
 

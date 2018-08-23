@@ -17,7 +17,7 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
 // Builder allows lazy building of packets.
@@ -41,7 +41,7 @@ func (cb Builder) Build() (packet *Packet) {
 }
 
 // Sender sets packet sender.
-func (cb Builder) Sender(node *node.Node) Builder {
+func (cb Builder) Sender(node *host.Host) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.Sender = node
 	})
@@ -49,7 +49,7 @@ func (cb Builder) Sender(node *node.Node) Builder {
 }
 
 // Receiver sets packet receiver.
-func (cb Builder) Receiver(node *node.Node) Builder {
+func (cb Builder) Receiver(node *host.Host) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.Receiver = node
 	})

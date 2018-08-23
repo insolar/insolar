@@ -63,7 +63,7 @@ func New(lr LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
 	return mr, nil
 }
 
-// Route a `Message` and get a `Response` or error from remote node
+// Route a `Message` and get a `Response` or error from remote host
 func (r *MessageRouter) Route(ctx hostnetwork.Context, msg Message) (response Response, err error) {
 	request, err := Serialize(msg)
 	if err != nil {
@@ -78,7 +78,7 @@ func (r *MessageRouter) Route(ctx hostnetwork.Context, msg Message) (response Re
 	return DeserializeResponse(result)
 }
 
-// Deliver method calls LogicRunner.Execute on local node
+// Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
 func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 

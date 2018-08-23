@@ -19,11 +19,11 @@ Package packet provides network messaging protocol and serialization layer.
 
 Packet can be created with shortcut:
 
-	senderAddr, _ := node.NewAddress("127.0.0.1:1337")
-	receiverAddr, _ := node.NewAddress("127.0.0.1:1338")
+	senderAddr, _ := host.NewAddress("127.0.0.1:1337")
+	receiverAddr, _ := host.NewAddress("127.0.0.1:1338")
 
-	sender := node.NewNode(senderAddr)
-	receiver := node.NewNode(receiverAddr)
+	sender := host.NewNode(senderAddr)
+	receiver := host.NewNode(receiverAddr)
 
 	msg := packet.NewPingPacket(sender, receiver)
 
@@ -34,11 +34,11 @@ Or with builder:
 
 	builder := packet.NewBuilder()
 
-	senderAddr, _ := node.NewAddress("127.0.0.1:1337")
-	receiverAddr, _ := node.NewAddress("127.0.0.1:1338")
+	senderAddr, _ := host.NewAddress("127.0.0.1:1337")
+	receiverAddr, _ := host.NewAddress("127.0.0.1:1338")
 
-	sender := node.NewNode(senderAddr)
-	receiver := node.NewNode(receiverAddr)
+	sender := host.NewNode(senderAddr)
+	receiver := host.NewNode(receiverAddr)
 
 	msg := builder.
 		Sender(sender).

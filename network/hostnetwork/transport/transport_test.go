@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/network/hostnetwork/connection"
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/stretchr/testify/suite"
@@ -33,12 +33,12 @@ type transportSuite struct {
 	factory    Factory
 	connection net.PacketConn
 	transport  Transport
-	node       *node.Node
+	node       *host.Host
 }
 
 func NewSuite(factory Factory) *transportSuite {
-	addr, _ := node.NewAddress("127.0.0.1:3012")
-	return &transportSuite{suite.Suite{}, factory, nil, nil, node.NewNode(addr)}
+	addr, _ := host.NewAddress("127.0.0.1:3012")
+	return &transportSuite{suite.Suite{}, factory, nil, nil, host.NewHost(addr)}
 }
 
 func (t *transportSuite) SetupTest() {

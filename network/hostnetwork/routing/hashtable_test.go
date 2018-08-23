@@ -20,15 +20,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewHashTable(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
-	addr, _ := node.NewAddress("127.0.0.1:3000")
+	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)
@@ -37,7 +37,7 @@ func TestNewHashTable(t *testing.T) {
 func TestHashTable_Lock(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
-	addr, _ := node.NewAddress("127.0.0.1:3000")
+	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)
@@ -48,7 +48,7 @@ func TestHashTable_Lock(t *testing.T) {
 func TestHashTable_Unlock(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
-	addr, _ := node.NewAddress("127.0.0.1:3000")
+	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)
@@ -59,7 +59,7 @@ func TestHashTable_Unlock(t *testing.T) {
 func TestHashTable_ResetRefreshTimeForBucket(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
-	addr, _ := node.NewAddress("127.0.0.1:3000")
+	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)
@@ -74,7 +74,7 @@ func TestHashTable_ResetRefreshTimeForBucket(t *testing.T) {
 func TestHashTable_TotalNodes(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
-	addr, _ := node.NewAddress("127.0.0.1:3000")
+	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)
@@ -85,7 +85,7 @@ func TestHashTable_TotalNodes(t *testing.T) {
 func TestHashTable_GetRandomIDFromBucket(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
-	addr, _ := node.NewAddress("127.0.0.1:3000")
+	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)
@@ -96,7 +96,7 @@ func TestHashTable_GetRandomIDFromBucket(t *testing.T) {
 func TestHashTable_GetTotalNodesInBucket(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
-	addr, _ := node.NewAddress("127.0.0.1:3000")
+	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)

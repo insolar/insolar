@@ -21,14 +21,14 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDistanceMetric(t *testing.T) {
-	n := NewRouteNode(&node.Node{})
+	n := NewRouteNode(&host.Host{})
 	n.ID = getIDWithValues(0)
 	assert.Equal(t, 20, len(n.ID.GetHash()))
 
@@ -70,12 +70,12 @@ func TestHasBit(t *testing.T) {
 func TestRouteSet(t *testing.T) {
 	nl := NewRouteSet()
 	comparator := getIDWithValues(0)
-	n1 := &node.Node{ID: getZerodIDWithNthByte(19, 1)}
-	n2 := &node.Node{ID: getZerodIDWithNthByte(18, 1)}
-	n3 := &node.Node{ID: getZerodIDWithNthByte(17, 1)}
-	n4 := &node.Node{ID: getZerodIDWithNthByte(16, 1)}
+	n1 := &host.Host{ID: getZerodIDWithNthByte(19, 1)}
+	n2 := &host.Host{ID: getZerodIDWithNthByte(18, 1)}
+	n3 := &host.Host{ID: getZerodIDWithNthByte(17, 1)}
+	n4 := &host.Host{ID: getZerodIDWithNthByte(16, 1)}
 
-	nl.nodes = []*node.Node{n3, n2, n4, n1}
+	nl.nodes = []*host.Host{n3, n2, n4, n1}
 	nl.comparator = comparator.GetHash()
 
 	sort.Sort(nl)

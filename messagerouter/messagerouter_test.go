@@ -22,8 +22,8 @@ import (
 
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/connection"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
@@ -50,10 +50,10 @@ type runner struct {
 
 const closedMessage = "closed" // "broken pipe" for kcpTransport
 
-func dhtParams(ids []id.ID, address string) (store.Store, *node.Origin, transport.Transport, rpc.RPC, error) {
+func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
 	st := store.NewMemoryStore()
-	addr, _ := node.NewAddress(address)
-	origin, _ := node.NewOrigin(ids, addr)
+	addr, _ := host.NewAddress(address)
+	origin, _ := host.NewOrigin(ids, addr)
 	conn, _ := connection.NewConnectionFactory().Create(address)
 	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
 	r := rpc.NewRPC()

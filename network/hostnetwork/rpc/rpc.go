@@ -20,16 +20,16 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
 // RemoteProcedure is remote procedure call function.
-type RemoteProcedure func(sender *node.Node, args [][]byte) ([]byte, error)
+type RemoteProcedure func(sender *host.Host, args [][]byte) ([]byte, error)
 
 // RPC is remote procedure call module.
 type RPC interface {
 	// Invoke is used to actually call remote procedure.
-	Invoke(sender *node.Node, method string, args [][]byte) ([]byte, error)
+	Invoke(sender *host.Host, method string, args [][]byte) ([]byte, error)
 	// RegisterMethod allows to register new function in RPC module.
 	RegisterMethod(name string, method RemoteProcedure)
 }
@@ -46,7 +46,7 @@ func NewRPC() RPC {
 }
 
 // Invoke calls registered function or returns error.
-func (rpc *rpc) Invoke(sender *node.Node, methodName string, args [][]byte) (result []byte, err error) {
+func (rpc *rpc) Invoke(sender *host.Host, methodName string, args [][]byte) (result []byte, err error) {
 	method, exist := rpc.methodTable[methodName]
 	if !exist {
 		return nil, errors.New("method does not exist")

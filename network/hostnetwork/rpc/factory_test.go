@@ -20,16 +20,16 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func rpcTestMethod1(sender *node.Node, args [][]byte) ([]byte, error) {
+func rpcTestMethod1(sender *host.Host, args [][]byte) ([]byte, error) {
 	return []byte("testMethod1"), nil
 }
 
-func rpcTestMethod2(sender *node.Node, args [][]byte) ([]byte, error) {
+func rpcTestMethod2(sender *host.Host, args [][]byte) ([]byte, error) {
 	return []byte("testMethod2"), nil
 }
 
@@ -52,7 +52,7 @@ func TestRpcFactory_Create(t *testing.T) {
 
 	assert.Implements(t, (*RPC)(nil), actualRPC)
 
-	address, _ := node.NewAddress("127.0.0.1:31337")
+	address, _ := host.NewAddress("127.0.0.1:31337")
 	tests := []struct {
 		name   string
 		result []byte
@@ -64,7 +64,7 @@ func TestRpcFactory_Create(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res, err := actualRPC.Invoke(node.NewNode(address), test.name, [][]byte{})
+			res, err := actualRPC.Invoke(host.NewHost(address), test.name, [][]byte{})
 			assert.Equal(t, test.result, res)
 			assert.Equal(t, test.err, err)
 		})

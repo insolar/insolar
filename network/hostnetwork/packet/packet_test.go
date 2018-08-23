@@ -21,17 +21,17 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewPingPacket(t *testing.T) {
-	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
-	sender := node.NewNode(senderAddress)
+	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
+	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
-	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
-	receiver := node.NewNode(receiverAddress)
+	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
+	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
 	m := NewPingPacket(sender, receiver)
@@ -55,60 +55,60 @@ func TestPacket_IsValid(t *testing.T) {
 }
 
 func TestNewAuthPacket(t *testing.T) {
-	addr1, _ := node.NewAddress("127.0.0.1:55551")
-	addr2, _ := node.NewAddress("127.0.0.1:55552")
-	sender := node.NewNode(addr1)
-	receiver := node.NewNode(addr2)
+	addr1, _ := host.NewAddress("127.0.0.1:55551")
+	addr2, _ := host.NewAddress("127.0.0.1:55552")
+	sender := host.NewHost(addr1)
+	receiver := host.NewHost(addr2)
 
 	msg := NewAuthPacket(BeginAuth, sender, receiver)
 	assert.True(t, msg.IsValid())
 }
 
 func TestNewCheckOriginPacket(t *testing.T) {
-	addr1, _ := node.NewAddress("127.0.0.1:55551")
-	addr2, _ := node.NewAddress("127.0.0.1:55552")
-	sender := node.NewNode(addr1)
-	receiver := node.NewNode(addr2)
+	addr1, _ := host.NewAddress("127.0.0.1:55551")
+	addr2, _ := host.NewAddress("127.0.0.1:55552")
+	sender := host.NewHost(addr1)
+	receiver := host.NewHost(addr2)
 
 	msg := NewCheckOriginPacket(sender, receiver)
 	assert.True(t, msg.IsValid())
 }
 
 func TestNewKnownOuterNodesPacket(t *testing.T) {
-	addr1, _ := node.NewAddress("127.0.0.1:55551")
-	addr2, _ := node.NewAddress("127.0.0.1:55552")
-	sender := node.NewNode(addr1)
-	receiver := node.NewNode(addr2)
+	addr1, _ := host.NewAddress("127.0.0.1:55551")
+	addr2, _ := host.NewAddress("127.0.0.1:55552")
+	sender := host.NewHost(addr1)
+	receiver := host.NewHost(addr2)
 
 	msg := NewKnownOuterNodesPacket(sender, receiver, 1)
 	assert.True(t, msg.IsValid())
 }
 
 func TestNewObtainIPPacket(t *testing.T) {
-	addr1, _ := node.NewAddress("127.0.0.1:55551")
-	addr2, _ := node.NewAddress("127.0.0.1:55552")
-	sender := node.NewNode(addr1)
-	receiver := node.NewNode(addr2)
+	addr1, _ := host.NewAddress("127.0.0.1:55551")
+	addr2, _ := host.NewAddress("127.0.0.1:55552")
+	sender := host.NewHost(addr1)
+	receiver := host.NewHost(addr2)
 
 	msg := NewObtainIPPacket(sender, receiver)
 	assert.True(t, msg.IsValid())
 }
 
 func TestNewRelayPacket(t *testing.T) {
-	addr1, _ := node.NewAddress("127.0.0.1:55551")
-	addr2, _ := node.NewAddress("127.0.0.1:55552")
-	sender := node.NewNode(addr1)
-	receiver := node.NewNode(addr2)
+	addr1, _ := host.NewAddress("127.0.0.1:55551")
+	addr2, _ := host.NewAddress("127.0.0.1:55552")
+	sender := host.NewHost(addr1)
+	receiver := host.NewHost(addr2)
 
 	msg := NewRelayPacket(StartRelay, sender, receiver)
 	assert.True(t, msg.IsValid())
 }
 
 func TestNewRelayOwnershipPacket(t *testing.T) {
-	addr1, _ := node.NewAddress("127.0.0.1:55551")
-	addr2, _ := node.NewAddress("127.0.0.1:55552")
-	sender := node.NewNode(addr1)
-	receiver := node.NewNode(addr2)
+	addr1, _ := host.NewAddress("127.0.0.1:55551")
+	addr2, _ := host.NewAddress("127.0.0.1:55552")
+	sender := host.NewHost(addr1)
+	receiver := host.NewHost(addr2)
 
 	msg := NewRelayOwnershipPacket(sender, receiver, true)
 	assert.True(t, msg.IsValid())
@@ -154,14 +154,14 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 }
 
 func TestPacket_IsForMe(t *testing.T) {
-	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
-	sender := node.NewNode(senderAddress)
+	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
+	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
-	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
-	receiver := node.NewNode(receiverAddress)
+	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
+	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 	builder := NewBuilder()
-	origin, _ := node.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
+	origin, _ := host.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
 
 	myPacket := builder.Receiver(receiver).Build()
 	notMyPacket := builder.Receiver(sender).Build()
@@ -171,11 +171,11 @@ func TestPacket_IsForMe(t *testing.T) {
 }
 
 func TestSerializePacket(t *testing.T) {
-	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
-	sender := node.NewNode(senderAddress)
+	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
+	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
-	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
-	receiver := node.NewNode(receiverAddress)
+	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
+	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindNode).Request(&RequestDataFindNode{receiver.ID.GetHash()}).Build()
@@ -186,12 +186,12 @@ func TestSerializePacket(t *testing.T) {
 }
 
 func TestDeserializePacket(t *testing.T) {
-	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
-	sender := node.NewNode(senderAddress)
+	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
+	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
 	sender.ID.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
-	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
-	receiver := node.NewNode(receiverAddress)
+	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
+	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 	receiver.ID.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 	builder := NewBuilder()
@@ -210,8 +210,8 @@ func TestDeserializePacket(t *testing.T) {
 }
 
 func TestDeserializeBigPacket(t *testing.T) {
-	address, _ := node.NewAddress("127.0.0.1:31337")
-	nodeOne := node.NewNode(address)
+	address, _ := host.NewAddress("127.0.0.1:31337")
+	nodeOne := host.NewHost(address)
 
 	data := make([]byte, 1024*1024*10)
 	rand.Read(data)

@@ -44,7 +44,7 @@ func newMemoryStore() *memoryStore {
 	}
 }
 
-// Store will store a key/value pair for the local node with the given
+// Store will store a key/value pair for the local host with the given
 // replication and expiration times.
 func (ms *memoryStore) Store(key Key, data []byte, replication time.Time, expiration time.Time, publisher bool) error {
 	ms.mutex.Lock()

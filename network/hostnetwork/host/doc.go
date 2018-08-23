@@ -16,24 +16,24 @@
 
 /*
 
-Package node is a fundamental part of networking system. Each node has:
+Package host is a fundamental part of networking system. Each host has:
 
  - one real network address (IP or any other transport protocol address)
- - multiple abstract network IDs (either node's own or ones belonging to relayed nodes)
+ - multiple abstract network IDs (either host's own or ones belonging to relayed hosts)
 
 Contains structures to describe network entities in code.
 
 Usage:
 
- 	originAddress, err := node.NewAddress(address)
+ 	originAddress, err := host.NewAddress(address)
 	if err != nil {
 		...
 	}
 
-	origin, err := node.NewOrigin(nil, originAddress)
+	origin, err := host.NewOrigin(nil, originAddress)
 	if err != nil {
 		...
 	}
 
 */
-package node
+package host

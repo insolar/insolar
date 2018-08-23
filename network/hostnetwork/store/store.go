@@ -23,7 +23,7 @@ import (
 // Store is the interface for implementing the storage mechanism for the
 // DHT.
 type Store interface {
-	// Store should store a key/value pair for the local node with the
+	// Store should store a key/value pair for the local host with the
 	// given replication and expiration times.
 	Store(key Key, data []byte, replication time.Time, expiration time.Time, publisher bool) error
 

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package node
+package host
 
 import (
 	"fmt"
@@ -22,8 +22,8 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/id"
 )
 
-// Node is the over-the-wire representation of a node.
-type Node struct {
+// Host is the over-the-wire representation of a host.
+type Host struct {
 	// ID is a 20 byte unique identifier.
 	ID id.ID
 
@@ -31,19 +31,19 @@ type Node struct {
 	Address *Address
 }
 
-// NewNode creates a new Node for bootstrapping.
-func NewNode(address *Address) *Node {
-	return &Node{
+// NewHost creates a new Host for bootstrapping.
+func NewHost(address *Address) *Host {
+	return &Host{
 		Address: address,
 	}
 }
 
-// String representation of Node.
-func (node Node) String() string {
-	return fmt.Sprintf("%s (%s)", node.ID.HashString(), node.Address.String())
+// String representation of Host.
+func (host Host) String() string {
+	return fmt.Sprintf("%s (%s)", host.ID.HashString(), host.Address.String())
 }
 
-// Equal checks if node equals to other node (e.g. nodes' IDs and network addresses match).
-func (node Node) Equal(other Node) bool {
-	return node.ID.HashEqual(other.ID.GetHash()) && other.Address != nil && node.Address.Equal(*other.Address)
+// Equal checks if host equals to other host (e.g. hosts' IDs and network addresses match).
+func (host Host) Equal(other Host) bool {
+	return host.ID.HashEqual(other.ID.GetHash()) && other.Address != nil && host.Address.Equal(*other.Address)
 }

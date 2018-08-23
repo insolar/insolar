@@ -14,13 +14,13 @@
  *    limitations under the License.
  */
 
-package node
+package host
 
 import (
 	"net"
 )
 
-// Address is node's real network address.
+// Address is host's real network address.
 type Address struct {
 	net.UDPAddr
 }

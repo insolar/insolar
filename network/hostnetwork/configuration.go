@@ -21,7 +21,7 @@ import (
 	"net"
 
 	"github.com/insolar/insolar/network/hostnetwork/connection"
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
@@ -81,12 +81,12 @@ func (cfg *Configuration) CreateNetwork(address string, options *Options) (*DHT,
 		return nil, err
 	}
 
-	originAddress, err := node.NewAddress(publicAddress)
+	originAddress, err := host.NewAddress(publicAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	origin, err := node.NewOrigin(nil, originAddress)
+	origin, err := host.NewOrigin(nil, originAddress)
 	if err != nil {
 		return nil, err
 	}

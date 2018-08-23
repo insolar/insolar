@@ -72,7 +72,7 @@ type RequestCheckOrigin struct {
 type RequestObtainIP struct {
 }
 
-// RequestRelayOwnership is data to notify that current node can be a relay.
+// RequestRelayOwnership is data to notify that current host can be a relay.
 type RequestRelayOwnership struct {
 	Ready bool
 }

@@ -20,8 +20,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,11 +40,11 @@ func TestBuilder_Build_EmptyPacket(t *testing.T) {
 
 func TestBuilder_Build_RequestPacket(t *testing.T) {
 	builder := NewBuilder()
-	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
-	sender := node.NewNode(senderAddress)
+	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
+	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
-	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
-	receiver := node.NewNode(receiverAddress)
+	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
+	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
@@ -62,11 +62,11 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 
 func TestBuilder_Build_ResponsePacket(t *testing.T) {
 	builder := NewBuilder()
-	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
-	sender := node.NewNode(senderAddress)
+	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
+	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
-	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
-	receiver := node.NewNode(receiverAddress)
+	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
+	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
@@ -84,11 +84,11 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 
 func TestBuilder_Build_ErrorPacket(t *testing.T) {
 	builder := NewBuilder()
-	senderAddress, _ := node.NewAddress("127.0.0.1:31337")
-	sender := node.NewNode(senderAddress)
+	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
+	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID(id.GetRandomKey())
-	receiverAddress, _ := node.NewAddress("127.0.0.2:31338")
-	receiver := node.NewNode(receiverAddress)
+	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
+	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID(id.GetRandomKey())
 
 	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()

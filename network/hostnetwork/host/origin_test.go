@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package node
+package host
 
 import (
 	"testing"
@@ -64,7 +64,7 @@ func TestOrigin_Contains(t *testing.T) {
 		if i < 10 {
 			contains = true
 		}
-		assert.Equal(t, contains, origin.Contains(&Node{ids[i], addr}))
-		assert.False(t, origin.Contains(&Node{ids[i], addr2}))
+		assert.Equal(t, contains, origin.Contains(&Host{ids[i], addr}))
+		assert.False(t, origin.Contains(&Host{ids[i], addr2}))
 	}
 }

@@ -20,15 +20,15 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func createRouteNode(addrString string) *RouteNode {
-	addr, _ := node.NewAddress(addrString)
-	newNode := node.NewNode(addr)
+	addr, _ := host.NewAddress(addrString)
+	newNode := host.NewHost(addr)
 	newNode.ID, _ = id.NewID(id.GetRandomKey())
 	return NewRouteNode(newNode)
 }
@@ -51,7 +51,7 @@ func TestRouteSet_Nodes(t *testing.T) {
 	rs.Append(node1)
 	rs.Append(node2)
 
-	assert.Equal(t, []*node.Node{node1.Node, node2.Node}, rs.Nodes())
+	assert.Equal(t, []*host.Host{node1.Host, node2.Host}, rs.Nodes())
 	assert.Equal(t, rs.nodes, rs.Nodes())
 }
 
@@ -73,7 +73,7 @@ func TestRouteSet_FirstNode(t *testing.T) {
 	rs.Append(node1)
 	rs.Append(node2)
 
-	assert.Equal(t, node1.Node, rs.FirstNode())
+	assert.Equal(t, node1.Host, rs.FirstNode())
 }
 
 func TestRouteSet_Contains(t *testing.T) {
@@ -100,7 +100,7 @@ func TestRouteSet_Append(t *testing.T) {
 	rs.Append(node1)
 	rs.Append(node2)
 
-	assert.Equal(t, []*node.Node{node1.Node, node2.Node}, rs.nodes)
+	assert.Equal(t, []*host.Host{node1.Host, node2.Host}, rs.nodes)
 }
 
 func TestRouteSet_Remove(t *testing.T) {
@@ -152,7 +152,7 @@ func TestRouteSet_AppendMany(t *testing.T) {
 
 	rs.AppendMany([]*RouteNode{node1, node2})
 
-	assert.Equal(t, []*node.Node{node1.Node, node2.Node}, rs.nodes)
+	assert.Equal(t, []*host.Host{node1.Host, node2.Host}, rs.nodes)
 }
 
 func TestRouteSet_Len(t *testing.T) {
@@ -180,18 +180,18 @@ func TestRouteSet_Swap(t *testing.T) {
 	rs.Append(node1)
 	rs.Append(node2)
 
-	assert.Equal(t, []*node.Node{node1.Node, node2.Node}, rs.nodes)
+	assert.Equal(t, []*host.Host{node1.Host, node2.Host}, rs.nodes)
 
 	rs.Swap(0, 1)
 
-	assert.Equal(t, []*node.Node{node2.Node, node1.Node}, rs.nodes)
+	assert.Equal(t, []*host.Host{node2.Host, node1.Host}, rs.nodes)
 }
 
 func TestRouteSet_Less(t *testing.T) {
-	addr, _ := node.NewAddress("127.0.0.1:31337")
-	node1 := node.NewNode(addr)
+	addr, _ := host.NewAddress("127.0.0.1:31337")
+	node1 := host.NewHost(addr)
 	node1.ID = getIDWithValues(5)
-	node2 := node.NewNode(addr)
+	node2 := host.NewHost(addr)
 	node2.ID = getIDWithValues(7)
 	rs := NewRouteSet()
 	rs.Append(NewRouteNode(node1))

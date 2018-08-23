@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package node
+package host
 
 import (
 	"testing"
@@ -23,22 +23,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewNode(t *testing.T) {
+func TestNewHost(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
-	actualNode := NewNode(addr)
+	actualHost := NewHost(addr)
 	id1, _ := id.NewID(nil)
 	id1.SetHash(nil)
-	expectedNode := &Node{
+	expectedHost := &Host{
 		ID:      id1,
 		Address: addr,
 	}
 
-	assert.Equal(t, expectedNode, actualNode)
+	assert.Equal(t, expectedHost, actualHost)
 }
 
-func TestNode_String(t *testing.T) {
+func TestHost_String(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
-	nd := NewNode(addr)
+	nd := NewHost(addr)
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 	nd.ID = id1
@@ -46,7 +46,7 @@ func TestNode_String(t *testing.T) {
 	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb (127.0.0.1:31337)", nd.String())
 }
 
-func TestNode_Equal(t *testing.T) {
+func TestHost_Equal(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id2, _ := id.NewID(id.GetRandomKey())
 	idNil, _ := id.NewID(id.GetRandomKey())
@@ -72,7 +72,7 @@ func TestNode_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.equal, Node{test.id1, test.addr1}.Equal(Node{test.id2, test.addr2}))
+			assert.Equal(t, test.equal, Host{test.id1, test.addr1}.Equal(Host{test.id2, test.addr2}))
 		})
 	}
 }

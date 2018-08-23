@@ -17,14 +17,14 @@
 package routing
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/node"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
 // RouteSet is used in order to sort a list of arbitrary nodes against a
 // comparator. These nodes are sorted by xor distance.
 type RouteSet struct {
 	// nodes are a list of nodes to be compared.
-	nodes []*node.Node
+	nodes []*host.Host
 
 	// comparator is the requestID to compare to.
 	comparator []byte
@@ -36,14 +36,14 @@ func NewRouteSet() *RouteSet {
 }
 
 // Nodes returns list of RouteSet nodes.
-func (rs *RouteSet) Nodes() []*node.Node {
-	nodes := make([]*node.Node, len(rs.nodes))
+func (rs *RouteSet) Nodes() []*host.Host {
+	nodes := make([]*host.Host, len(rs.nodes))
 	copy(nodes, rs.nodes)
 	return nodes
 }
 
-// FirstNode returns first Node from RouteSet.
-func (rs *RouteSet) FirstNode() *node.Node {
+// FirstNode returns first Host from RouteSet.
+func (rs *RouteSet) FirstNode() *host.Host {
 	return rs.nodes[0]
 }
 
@@ -61,11 +61,11 @@ func (rs *RouteSet) Contains(node *RouteNode) bool {
 // Append adds single RouteNode to RouteSet.
 func (rs *RouteSet) Append(node *RouteNode) {
 	if !rs.Contains(node) {
-		rs.nodes = append(rs.nodes, node.Node)
+		rs.nodes = append(rs.nodes, node.Host)
 	}
 }
 
-// Remove removes node from RouteSet.
+// Remove removes host from RouteSet.
 func (rs *RouteSet) Remove(node *RouteNode) {
 	for i, n := range rs.nodes {
 		if n.ID.HashEqual(node.ID.GetHash()) {

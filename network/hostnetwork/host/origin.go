@@ -14,20 +14,20 @@
  *    limitations under the License.
  */
 
-package node
+package host
 
 import (
 	"github.com/insolar/insolar/network/hostnetwork/id"
 )
 
-// Origin is “self” variant of Node.
-// Unlike ordinary node it can have multiple IDs.
+// Origin is “self” variant of Host.
+// Unlike ordinary host it can have multiple IDs.
 type Origin struct {
 	IDs     []id.ID
 	Address *Address
 }
 
-// NewOrigin creates origin node from list of ids and network address.
+// NewOrigin creates origin host from list of ids and network address.
 func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 	if len(ids) == 0 {
 		id1, err := id.NewID(id.GetRandomKey())
@@ -53,8 +53,8 @@ func (s *Origin) containsID(id id.ID) bool {
 	return false
 }
 
-// Contains checks if origin node “contains” network node.
-// It checks if node's and origin's addresses match and node's id is in origin's ids list.
-func (s *Origin) Contains(node *Node) bool {
-	return node.Address.Equal(*s.Address) && s.containsID(node.ID)
+// Contains checks if origin host “contains” network host.
+// It checks if host's and origin's addresses match and host's id is in origin's ids list.
+func (s *Origin) Contains(host *Host) bool {
+	return host.Address.Equal(*s.Address) && s.containsID(host.ID)
 }

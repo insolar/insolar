@@ -30,8 +30,8 @@ import (
 	"time"
 
 	"github.com/huandu/xstrings"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
@@ -50,12 +50,12 @@ type RPC interface {
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 }
 
-// DHT represents the state of the local node in the distributed hash table.
+// DHT represents the state of the local host in the distributed hash table.
 type DHT struct {
 	tables  []*routing.HashTable
 	options *Options
 
-	origin *node.Origin
+	origin *host.Origin
 
 	transport transport.Transport
 	store     store.Store
@@ -86,19 +86,19 @@ type Subnet struct {
 	HighKnownNodes   HighKnownOuterNodesNode
 }
 
-// HighKnownOuterNodesNode collects an information about node in home subnet which have a more known outer nodes.
+// HighKnownOuterNodesNode collects an information about host in home subnet which have a more known outer nodes.
 type HighKnownOuterNodesNode struct {
 	ID                  string
-	OuterNodes          int // high known outer nodes by ID node
+	OuterNodes          int // high known outer nodes by ID host
 	SelfKnownOuterNodes int
 }
 
-// Options contains configuration options for the local node.
+// Options contains configuration options for the local host.
 type Options struct {
 	// The nodes being used to bootstrap the network. Without a bootstrap
-	// node there is no way to connect to the network. NetworkNodes can be
-	// initialized via node.NewNode().
-	BootstrapNodes []*node.Node
+	// host there is no way to connect to the network. NetworkNodes can be
+	// initialized via host.NewHost().
+	BootstrapNodes []*host.Host
 
 	// The time after which a key/value pair expires;
 	// this is a time-to-live (TTL) from the original publication date.
@@ -107,7 +107,7 @@ type Options struct {
 	// Seconds after which an otherwise unaccessed bucket must be refreshed.
 	RefreshTime time.Duration
 
-	// The interval between Kademlia replication events, when a node is
+	// The interval between Kademlia replication events, when a host is
 	// required to publish its entire database.
 	ReplicateTime time.Duration
 
@@ -115,7 +115,7 @@ type Options struct {
 	// republish a key/value pair. Currently not implemented.
 	RepublishTime time.Duration
 
-	// The maximum time to wait for a response from a node before discarding
+	// The maximum time to wait for a response from a host before discarding
 	// it from the bucket.
 	PingTimeout time.Duration
 
@@ -123,8 +123,8 @@ type Options struct {
 	PacketTimeout time.Duration
 }
 
-// NewDHT initializes a new DHT node.
-func NewDHT(store store.Store, origin *node.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy) (dht *DHT, err error) {
+// NewDHT initializes a new DHT host.
+func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 	return dht, nil
 }
 
-func newTables(origin *node.Origin) ([]*routing.HashTable, error) {
+func newTables(origin *host.Origin) ([]*routing.HashTable, error) {
 	tables := make([]*routing.HashTable, len(origin.IDs))
 
 	for i, id1 := range origin.IDs {
@@ -257,8 +257,8 @@ func (dht *DHT) Get(ctx Context, key string) ([]byte, bool, error) {
 	return value, exists, nil
 }
 
-// FindNode returns target node's real network address.
-func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
+// FindNode returns target host's real network address.
+func (dht *DHT) FindNode(ctx Context, key string) (*host.Host, bool, error) {
 	keyBytes := base58.Decode(key)
 	if len(keyBytes) != routing.MaxContactsInBucket {
 		return nil, false, errors.New("invalid key")
@@ -269,7 +269,7 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 		return ht.Origin, true, nil
 	}
 
-	var targetNode *node.Node
+	var targetNode *host.Host
 	var exists = false
 	routeSet := ht.GetClosestContacts(1, keyBytes, nil)
 
@@ -277,14 +277,14 @@ func (dht *DHT) FindNode(ctx Context, key string) (*node.Node, bool, error) {
 		targetNode = routeSet.FirstNode()
 		exists = true
 	} else if dht.proxy.ProxyNodesCount() > 0 {
-		address, _ := node.NewAddress(dht.proxy.GetNextProxyAddress())
+		address, _ := host.NewAddress(dht.proxy.GetNextProxyAddress())
 		// TODO: current key insertion
 		id1, _ := id.NewID(id.GetRandomKey())
 		id1.SetHash(keyBytes)
-		targetNode = &node.Node{ID: id1, Address: address}
+		targetNode = &host.Host{ID: id1, Address: address}
 		return targetNode, true, nil
 	} else {
-		log.Println("Node not found in routing table. Iterating through network...")
+		log.Println("Host not found in routing table. Iterating through network...")
 		_, closest, err := dht.iterate(ctx, routing.IterateFindNode, keyBytes, nil)
 		if err != nil {
 			return nil, false, err
@@ -306,7 +306,7 @@ func (dht *DHT) NumNodes(ctx Context) int {
 	return ht.TotalNodes()
 }
 
-// GetOriginID returns the base58 encoded identifier of the local node.
+// GetOriginID returns the base58 encoded identifier of the local host.
 func (dht *DHT) GetOriginID(ctx Context) string {
 	ht := dht.htFromCtx(ctx)
 	return ht.Origin.ID.HashString()
@@ -417,25 +417,25 @@ func (dht *DHT) Disconnect() {
 // Iterate does an iterative search through the network. This can be done
 // for multiple reasons. These reasons include:
 //     iterateStore - Used to store new information in the network.
-//     iterateFindNode - Used to find node in the network given node abstract address.
+//     iterateFindNode - Used to find host in the network given host abstract address.
 //     iterateFindValue - Used to find a value among the network given a key.
 //     iterateBootstrap - Used to bootstrap the network.
-func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data []byte) (value []byte, closest []*node.Node, err error) {
+func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data []byte) (value []byte, closest []*host.Host, err error) {
 	ht := dht.htFromCtx(ctx)
-	routeSet := ht.GetClosestContacts(routing.ParallelCalls, target, []*node.Node{})
+	routeSet := ht.GetClosestContacts(routing.ParallelCalls, target, []*host.Host{})
 
-	// We keep track of nodes contacted so far. We don't contact the same node
+	// We keep track of nodes contacted so far. We don't contact the same host
 	// twice.
 	var contacted = make(map[string]bool)
 
 	// According to the Kademlia white paper, after a round of FIND_NODE RPCs
-	// fails to provide a node closer than closestNode, we should send a
+	// fails to provide a host closer than closestNode, we should send a
 	// FIND_NODE RPC to all remaining nodes in the route set that have not
 	// yet been contacted.
 	queryRest := false
 
 	// We keep a reference to the closestNode. If after performing a search
-	// we do not find a closer node, we stop searching.
+	// we do not find a closer host, we stop searching.
 	if routeSet.Len() == 0 {
 		return nil, nil, nil
 	}
@@ -444,7 +444,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 
 	checkAndRefreshTimeForBucket(t, ht, target)
 
-	var removeFromRouteSet []*node.Node
+	var removeFromRouteSet []*host.Host
 
 	for {
 		var futures []transport.Future
@@ -467,8 +467,8 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		sort.Sort(routeSet)
 
 		var tmpValue []byte
-		var tmpClosest []*node.Node
-		var tmpNode *node.Node
+		var tmpClosest []*host.Host
+		var tmpNode *host.Host
 		tmpValue, tmpClosest, tmpNode, err = dht.iterateIsDone(t, &queryRest, routeSet, data, ht, closestNode)
 		if err == nil {
 			return tmpValue, tmpClosest, err
@@ -484,8 +484,8 @@ func (dht *DHT) iterateIsDone(
 	routeSet *routing.RouteSet,
 	data []byte,
 	ht *routing.HashTable,
-	closestNode *node.Node,
-) (value []byte, closest []*node.Node, close *node.Node, err error) {
+	closestNode *host.Host,
+) (value []byte, closest []*host.Host, close *host.Host, err error) {
 
 	if routeSet.FirstNode().ID.HashEqual(closestNode.ID.GetHash()) || *(queryRest) {
 		switch t {
@@ -530,8 +530,8 @@ func (dht *DHT) checkFuturesCountAndGo(
 	futuresCount int,
 	resultChan chan *packet.Packet,
 	target []byte,
-	close []*node.Node,
-) ([]byte, []*node.Node, error) {
+	close []*host.Host,
+) ([]byte, []*host.Host, error) {
 
 	var err error
 	var results []*packet.Packet
@@ -563,7 +563,7 @@ func resultsIterate(
 	results []*packet.Packet,
 	routeSet *routing.RouteSet,
 	target []byte,
-) (value []byte, closest []*node.Node, err error) {
+) (value []byte, closest []*host.Host, err error) {
 
 	for _, result := range results {
 		if result.Error != nil {
@@ -649,8 +649,8 @@ func (dht *DHT) sendPacketToAlphaNodes(
 	contacted map[string]bool,
 	target []byte,
 	futures []transport.Future,
-	removeFromRouteSet []*node.Node,
-) (resultFutures []transport.Future, resultRouteSet []*node.Node) {
+	removeFromRouteSet []*host.Host,
+) (resultFutures []transport.Future, resultRouteSet []*host.Host) {
 	// Next we send Packets to the first (closest) alpha nodes in the
 	// route set and wait for a response
 
@@ -674,7 +674,7 @@ func (dht *DHT) sendPacketToAlphaNodes(
 		// Send the async queries and wait for a response
 		res, err := dht.transport.SendRequest(msg)
 		if err != nil {
-			// Node was unreachable for some reason. We will have to remove
+			// Host was unreachable for some reason. We will have to remove
 			// it from the route set, but we will keep it in our routing
 			// table in hopes that it might come back online in the f.
 			removeFromRouteSet = append(removeFromRouteSet, msg.Receiver)
@@ -699,14 +699,14 @@ func getPacketBuilder(t routing.IterateType, packetBuilder packet.Builder, targe
 	}
 }
 
-// addNode adds a node into the appropriate k bucket
+// addNode adds a host into the appropriate k bucket
 // we store these buckets in big-endian order so we look at the bits
 // from right to left in order to find the appropriate bucket
 func (dht *DHT) addNode(ctx Context, node *routing.RouteNode) {
 	ht := dht.htFromCtx(ctx)
 	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.GetHash(), node.ID.GetHash())
 
-	// Make sure node doesn't already exist
+	// Make sure host doesn't already exist
 	// If it does, mark it as seen
 	if ht.DoesNodeExistInBucket(index, node.ID.GetHash()) {
 		ht.MarkNodeAsSeen(node.ID.GetHash())
@@ -719,10 +719,10 @@ func (dht *DHT) addNode(ctx Context, node *routing.RouteNode) {
 	bucket := ht.RoutingTable[index]
 
 	if len(bucket) == routing.MaxContactsInBucket {
-		// If the bucket is full we need to ping the first node to find out
+		// If the bucket is full we need to ping the first host to find out
 		// if it responds back in a reasonable amount of time. If not -
 		// we may remove it
-		n := bucket[0].Node
+		n := bucket[0].Host
 		request := packet.NewPingPacket(ht.Origin, n)
 		future, err := dht.transport.SendRequest(request)
 		if err != nil {
@@ -832,11 +832,11 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 				if err != nil {
 					log.Println(err)
 				} else if !exist {
-					log.Printf("Target node addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.HashString())
+					log.Printf("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.HashString())
 				} else {
 					// need to relay incoming packet
-					request := &packet.Packet{Sender: &node.Node{Address: dht.origin.Address, ID: msg.Sender.ID},
-						Receiver:  &node.Node{ID: msg.Receiver.ID, Address: targetNode.Address},
+					request := &packet.Packet{Sender: &host.Host{Address: dht.origin.Address, ID: msg.Sender.ID},
+						Receiver:  &host.Host{ID: msg.Receiver.ID, Address: targetNode.Address},
 						Type:      msg.Type,
 						RequestID: msg.RequestID,
 						Data:      msg.Data}
@@ -949,7 +949,7 @@ func (dht *DHT) processFindNode(ctx Context, msg *packet.Packet, packetBuilder p
 	ht := dht.htFromCtx(ctx)
 	data := msg.Data.(*packet.RequestDataFindNode)
 	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
-	closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*node.Node{msg.Sender})
+	closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*host.Host{msg.Sender})
 	response := &packet.ResponseDataFindNode{
 		Closest: closest.Nodes(),
 	}
@@ -968,7 +968,7 @@ func (dht *DHT) processFindValue(ctx Context, msg *packet.Packet, packetBuilder 
 	if exists {
 		response.Value = value
 	} else {
-		closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*node.Node{msg.Sender})
+		closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*host.Host{msg.Sender})
 		response.Closest = closest.Nodes()
 	}
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
@@ -1019,7 +1019,7 @@ func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet
 func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	var err error
 	if !dht.auth.authenticatedNodes[msg.Sender.ID.HashString()] {
-		log.Print("relay request from unknown node rejected")
+		log.Print("relay request from unknown host rejected")
 		response := &packet.ResponseRelay{
 			State: relay.NoAuth,
 		}
@@ -1090,7 +1090,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, packetBui
 		if err != nil {
 			log.Println("Failed to send response:", err)
 		}
-		// TODO process verification msg.Sender node
+		// TODO process verification msg.Sender host
 		// confirmed
 		err = dht.CheckOriginRequest(ctx, msg.Sender.ID.HashString())
 		if err != nil {
@@ -1122,7 +1122,7 @@ func (dht *DHT) processCheckOriginRequest(ctx Context, msg *packet.Packet, packe
 			log.Println("Failed to send check origin response:", err)
 		}
 	} else {
-		log.Println("CheckOrigin request from unregistered node")
+		log.Println("CheckOrigin request from unregistered host")
 	}
 }
 
@@ -1135,7 +1135,7 @@ func (dht *DHT) processObtainIPRequest(ctx Context, msg *packet.Packet, packetBu
 }
 
 // RelayRequest sends relay request to target.
-func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error { // target - node ID
+func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error { // target - host ID
 	var typedCommand packet.CommandType
 	targetNode, exist, err := dht.FindNode(ctx, targetID)
 	if err != nil {
@@ -1197,7 +1197,7 @@ func (dht *DHT) handleRelayResponse(ctx Context, response *packet.ResponseRelay,
 		dht.proxy.AddProxyNode(targetID)
 		err = nil
 	case relay.NoAuth:
-		err = errors.New("unable to execute relay because this node not authenticated")
+		err = errors.New("unable to execute relay because this host not authenticated")
 	case relay.Unknown:
 		err = errors.New("unknown relay command")
 	case relay.Error:
@@ -1216,7 +1216,7 @@ func (dht *DHT) handleCheckOriginResponse(response *packet.ResponseCheckOrigin, 
 	}
 }
 
-// CheckOriginRequest send a request to check target node originality
+// CheckOriginRequest send a request to check target host originality
 func (dht *DHT) CheckOriginRequest(ctx Context, targetID string) error {
 	targetNode, exist, err := dht.FindNode(ctx, targetID)
 	if err != nil {
@@ -1378,7 +1378,7 @@ func (dht *DHT) handleObtainIPResponse(response *packet.ResponseObtainIP, target
 	return nil
 }
 
-// RemoteProcedureCall calls remote procedure on target node.
+// RemoteProcedureCall calls remote procedure on target host.
 func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error) {
 	targetNode, exists, err := dht.FindNode(ctx, target)
 	ht := dht.htFromCtx(ctx)
@@ -1430,9 +1430,9 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 	}
 }
 
-// RemoteProcedureRegister registers procedure for remote call on this node
+// RemoteProcedureRegister registers procedure for remote call on this host
 func (dht *DHT) RemoteProcedureRegister(name string, method RemoteProcedure) {
-	rp := func(sender *node.Node, args [][]byte) ([]byte, error) {
+	rp := func(sender *host.Host, args [][]byte) ([]byte, error) {
 		return method(args)
 	}
 
@@ -1474,7 +1474,7 @@ func (dht *DHT) getHomeSubnetKey(ctx Context) (string, error) {
 			if err != nil {
 				return "", err
 			} else if !exist {
-				return "", errors.New("couldn't find a node")
+				return "", errors.New("couldn't find a host")
 			}
 			if !strings.Contains(target.Address.IP.String(), first) {
 				result = ""
@@ -1515,7 +1515,7 @@ func (dht *DHT) AnalyzeNetwork(ctx Context) error {
 		}
 	}
 	if len(dht.subnet.SubnetIDs) == 1 {
-		if dht.subnet.HomeSubnetKey == "" { // current node have a static IP
+		if dht.subnet.HomeSubnetKey == "" { // current host have a static IP
 			for _, subnetIDs := range dht.subnet.SubnetIDs {
 				dht.sendRelayOwnership(subnetIDs)
 			}

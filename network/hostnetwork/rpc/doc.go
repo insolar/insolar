@@ -21,12 +21,12 @@ Usage:
 
 	r := rpc.NewRPC()
 
-	r.RegisterMethod("hello_world", func(sender *node.Node, args [][]byte) ([]byte, error) {
+	r.RegisterMethod("hello_world", func(sender *host.Host, args [][]byte) ([]byte, error) {
 		fmt.Println("Hello World")
 		return nil, nil
 	})
 
-	r.Invoke(&node.Node{}, "hello_world", [][]byte{})
+	r.Invoke(&host.Host{}, "hello_world", [][]byte{})
 
 */
 package rpc

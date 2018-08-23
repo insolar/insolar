@@ -220,7 +220,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 		// Wait for Packets
 		msg, err := packet.DeserializePacket(session)
 		if err != nil {
-			// TODO should we penalize this Node somehow ? Ban it ?
+			// TODO should we penalize this Host somehow ? Ban it ?
 			// if err.Error() != "EOF" {
 			// }
 			return

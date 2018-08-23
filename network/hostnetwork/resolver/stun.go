@@ -37,7 +37,7 @@ func newStunResolver(stunAddress string) *stunResolver {
 	}
 }
 
-// Resolve returns node's public network address as it seen from Internet.
+// Resolve returns host's public network address as it seen from Internet.
 func (sr *stunResolver) Resolve(conn net.PacketConn) (string, error) {
 	client := stun.NewClientWithConnection(conn)
 

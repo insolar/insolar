@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/node"
 )
 
 // IterateType is type of iteration.
@@ -61,8 +61,8 @@ const (
 
 // HashTable represents the hash-table state.
 type HashTable struct {
-	// The local node.
-	Origin *node.Node
+	// The local host.
+	Origin *host.Host
 
 	// Routing table a list of all known nodes in the network
 	// Nodes within buckets are sorted by least recently seen e.g.
@@ -79,14 +79,14 @@ type HashTable struct {
 }
 
 // NewHashTable creates new HashTable.
-func NewHashTable(id id.ID, address *node.Address) (*HashTable, error) {
+func NewHashTable(id id.ID, address *host.Address) (*HashTable, error) {
 	if id.GetHash() == nil {
 		return nil, errors.New("id required")
 	}
 
 	ht := &HashTable{
 		mutex: &sync.Mutex{},
-		Origin: &node.Node{
+		Origin: &host.Host{
 			ID:      id,
 			Address: address,
 		},
@@ -131,7 +131,7 @@ func (ht *HashTable) GetRefreshTimeForBucket(bucket int) time.Time {
 	return ht.refreshMap[bucket]
 }
 
-// MarkNodeAsSeen marks given Node as seen.
+// MarkNodeAsSeen marks given Host as seen.
 func (ht *HashTable) MarkNodeAsSeen(node []byte) {
 	ht.Lock()
 	defer ht.Unlock()
@@ -146,7 +146,7 @@ func (ht *HashTable) MarkNodeAsSeen(node []byte) {
 		}
 	}
 	if nodeIndex == -1 {
-		panic(errors.New("tried to mark nonexistent node as seen"))
+		panic(errors.New("tried to mark nonexistent host as seen"))
 	}
 
 	n := bucket[nodeIndex]
@@ -155,7 +155,7 @@ func (ht *HashTable) MarkNodeAsSeen(node []byte) {
 	ht.RoutingTable[index] = bucket
 }
 
-// DoesNodeExistInBucket checks if given Node exists in given bucket.
+// DoesNodeExistInBucket checks if given Host exists in given bucket.
 func (ht *HashTable) DoesNodeExistInBucket(bucket int, node []byte) bool {
 	ht.Lock()
 	defer ht.Unlock()
@@ -169,7 +169,7 @@ func (ht *HashTable) DoesNodeExistInBucket(bucket int, node []byte) bool {
 }
 
 // GetClosestContacts returns RouteSet with num closest Nodes to target.
-func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*node.Node) *RouteSet {
+func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*host.Host) *RouteSet {
 	ht.Lock()
 	defer ht.Unlock()
 	// First we need to build the list of adjacent indices to our target
@@ -203,7 +203,7 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*
 func (ht *HashTable) selectParallelCalls(
 	leftToAdd int,
 	indexList []int,
-	ignoredNodes []*node.Node,
+	ignoredNodes []*host.Host,
 	routeSet *RouteSet,
 ) {
 	var index int
@@ -228,7 +228,7 @@ func (ht *HashTable) selectParallelCalls(
 	}
 }
 
-// GetAllNodesInBucketCloserThan returns all nodes from given bucket that are closer to id then our node.
+// GetAllNodesInBucketCloserThan returns all nodes from given bucket that are closer to id then our host.
 func (ht *HashTable) GetAllNodesInBucketCloserThan(bucket int, id []byte) [][]byte {
 	b := ht.RoutingTable[bucket]
 	var nodes [][]byte
@@ -261,7 +261,7 @@ func (ht *HashTable) getDistance(id1, id2 []byte) *big.Int {
 	return ret.SetBytes(dst[:])
 }
 
-// GetRandomIDFromBucket returns random node ID from given bucket.
+// GetRandomIDFromBucket returns random host ID from given bucket.
 func (ht *HashTable) GetRandomIDFromBucket(bucket int) []byte {
 	ht.Lock()
 	defer ht.Unlock()
@@ -303,7 +303,7 @@ func (ht *HashTable) GetRandomIDFromBucket(bucket int) []byte {
 	return id1
 }
 
-// GetBucketIndexFromDifferingBit returns appropriate bucket number for two node IDs.
+// GetBucketIndexFromDifferingBit returns appropriate bucket number for two host IDs.
 func GetBucketIndexFromDifferingBit(id1, id2 []byte) int {
 	// Look at each byte from left to right
 	for j := 0; j < len(id1); j++ {

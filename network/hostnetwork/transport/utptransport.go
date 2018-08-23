@@ -215,7 +215,7 @@ func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 		// Wait for Packets
 		msg, err := packet.DeserializePacket(conn)
 		if err != nil {
-			// TODO should we penalize this Node somehow ? Ban it ?
+			// TODO should we penalize this Host somehow ? Ban it ?
 			// if err.Error() != "EOF" {
 			// }
 			return
