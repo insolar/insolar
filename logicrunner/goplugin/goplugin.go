@@ -30,6 +30,8 @@ import (
 
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/messagerouter"
+	"github.com/insolar/insolar/network/host"
 	"github.com/pkg/errors"
 )
 
@@ -49,10 +51,16 @@ type RunnerOptions struct {
 	CodeStoragePath string
 }
 
+// MessageRouter interface
+type MessageRouter interface {
+	Route(ctx host.Context, msg messagerouter.Message) (resp messagerouter.Response, err error)
+}
+
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	Options       Options
 	RunnerOptions RunnerOptions
+	MessageRouter MessageRouter
 	sock          net.Listener
 	runner        *exec.Cmd
 }
@@ -73,7 +81,28 @@ func (gpr *RPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) 
 	return err
 }
 
-func (gpr *RPC) RouteCall(ref logicrunner.Reference, reply *logicrunner.Object) error {
+// RouteCall routes call from a contract to a contract through message router
+func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) error {
+	if gpr.gp.MessageRouter == nil {
+		return errors.New("message router was not set during initialization")
+	}
+
+	msg := messagerouter.Message{
+		Reference: string(req.Reference),
+		Method:    req.Method,
+		Arguments: req.Arguments,
+	}
+
+	res, err := gpr.gp.MessageRouter.Route(nil, msg)
+	if err != nil {
+		return errors.Wrap(err, "couldn't route message")
+	}
+	if reply.Err != nil {
+		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
+	}
+
+	reply.Result = res.Result
+
 	return nil
 }
 
