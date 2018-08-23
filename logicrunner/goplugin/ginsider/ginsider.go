@@ -27,7 +27,7 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
 // GoInsider is an RPC interface to run code of plugins
@@ -49,7 +49,7 @@ type RPC struct {
 
 // Call is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) Call(args girpc.CallReq, reply *girpc.CallResp) error {
+func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) error {
 	path, err := t.GI.ObtainCode(args.Reference)
 	if err != nil {
 		return errors.Wrap(err, "couldn't obtain code")

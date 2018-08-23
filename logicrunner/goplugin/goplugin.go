@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
 
@@ -147,9 +147,9 @@ func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method stri
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
-	res := girpc.CallResp{}
+	res := rpctypes.DownCallResp{}
 
-	req := girpc.CallReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
+	req := rpctypes.DownCallReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
 
 	select {
 	case call := <-client.Go("RPC.Call", req, &res, nil).Done:
