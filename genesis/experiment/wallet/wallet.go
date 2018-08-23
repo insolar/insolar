@@ -25,8 +25,21 @@ func (w *Wallet) Receive(amount uint, from *foundation.Reference) {
 	//intr := foundation.GetObject(from)
 	fromWallet := foundation.GetImplementationFor(from, &TypeReference).(*Wallet)
 
-	Allowance := fromWallet.Allocate(amount, w.GetContext().Me)
-	w.balance += Allowance.TakeAmount()
+	a := fromWallet.Allocate(amount, w.GetContext().Me)
+	w.balance += a.TakeAmount()
+}
+
+func (w *Wallet) Transfer(amount uint, to *foundation.Reference) {
+	w.balance -= amount
+	a := allowance.Allowance{To: to, Amount: amount, ExpireTime: w.GetContext().Time.Unix() + 10}
+	w.AddChild(&a, &allowance.TypeReference)
+
+	toWallet := foundation.GetImplementationFor(to, &TypeReference).(*Wallet)
+	toWallet.Accept(&a)
+}
+
+func (w *Wallet) Accept(a *allowance.Allowance) {
+	w.balance += a.TakeAmount()
 }
 
 func (w *Wallet) GetTotalBalance() uint {
