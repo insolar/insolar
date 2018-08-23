@@ -44,9 +44,9 @@ type LevelLedger struct {
 }
 
 const (
-	scopeIDLifeline byte = iota
-	scopeIDRecord
-	scopeIDJetDrop
+	scopeIDLifeline byte = 1
+	scopeIDRecord   byte = 2
+	scopeIDJetDrop  byte = 3
 )
 
 // InitDB returns LevelDB ledger implementation.
