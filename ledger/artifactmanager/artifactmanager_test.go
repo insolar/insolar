@@ -31,17 +31,17 @@ func genRandomRef() *record.Reference {
 	return &record.Reference{Domain: record.ID{Pulse: record.PulseNum(rand.Int())}}
 }
 
-type preparedTestData struct {
+type preparedAMTestData struct {
 	ledger     storage.LedgerStorer
 	manager    ArtifactManager
 	domainRef  *record.Reference
 	requestRef *record.Reference
 }
 
-func prepareAMTestData(t *testing.T) (preparedTestData, func()) {
+func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 	ledger, cleaner := leveltestutils.TmpDB(t, "")
 
-	return preparedTestData{
+	return preparedAMTestData{
 		ledger:     ledger,
 		manager:    &LedgerArtifactManager{storer: ledger},
 		domainRef:  genRandomRef(),
