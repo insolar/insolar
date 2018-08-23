@@ -19,12 +19,10 @@ package configuration
 import (
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestConfiguration_Load(t *testing.T) {
-	cfg := new(Configuration)
-	cfg.viper = viper.New()
-	assert.Equal(t, "", cfg.address)
+	cfg := New()
+	assert.Equal(t, "", cfg.Host.Address)
 }

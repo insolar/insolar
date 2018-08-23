@@ -16,25 +16,16 @@
 
 package configuration
 
-import "github.com/spf13/viper"
-
-//TODO: generate default config method + test golden file
-
-type Configuration struct {
-	Host  HostNetwork
-	Node  NodeNetwork
-	log   Log
-	stats Stats
-
-	viper *viper.Viper
+type KeyPair struct {
+	PublicKey  string
+	PrivateKey string
 }
 
-func New() Configuration {
-	var cfg Configuration
-	cfg.viper = viper.New()
-	return cfg
+type Node struct {
+	keys KeyPair
+	role string
 }
 
-func (c *Configuration) Load() {
-
+type NodeNetwork struct {
+	nodes []Node
 }

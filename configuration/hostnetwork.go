@@ -16,25 +16,12 @@
 
 package configuration
 
-import "github.com/spf13/viper"
-
-//TODO: generate default config method + test golden file
-
-type Configuration struct {
-	Host  HostNetwork
-	Node  NodeNetwork
-	log   Log
-	stats Stats
-
-	viper *viper.Viper
-}
-
-func New() Configuration {
-	var cfg Configuration
-	cfg.viper = viper.New()
-	return cfg
-}
-
-func (c *Configuration) Load() {
-
+type HostNetwork struct {
+	Address       string
+	PublicAddress string
+	Bootstrap     string
+	UseStun       bool   // use stun to get public address
+	IsRelay       bool   // set if node must be relay explicit
+	Transport     string // transport type UTP or KCP
+	// EncriptionKeys
 }
