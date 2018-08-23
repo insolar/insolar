@@ -51,8 +51,10 @@ func TestFirst(t *testing.T) {
 	_, ok := fromMember.GetImplementationFor(&wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 
+	foundation.InjectFakeContext(3, &foundation.CallContext{Caller: toWalletRef})
+
 	toWallet.Receive(500, fromMemberRef)
 
-	assert.Equal(t, uint(1500), fromWallet.GetTotalBalance())
-	assert.Equal(t, uint(1500), toWallet.GetTotalBalance())
+	assert.Equal(t, 1500, int(fromWallet.GetTotalBalance()))
+	assert.Equal(t, 1500, int(toWallet.GetTotalBalance()))
 }

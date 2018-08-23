@@ -16,19 +16,16 @@ type Wallet struct {
 func (w *Wallet) Allocate(amount uint, to *foundation.Reference) *allowance.Allowance {
 	// TODO check balance is enough
 	w.balance -= amount
-	return &allowance.Allowance{To: to, Amount: amount, ExpireTime: w.GetContext().Time.Unix() + 10}
+	a := allowance.Allowance{To: to, Amount: amount, ExpireTime: w.GetContext().Time.Unix() + 10}
+	w.AddChild(&a, &allowance.TypeReference)
+	return &a
 }
 
 func (w *Wallet) Receive(amount uint, from *foundation.Reference) {
-	//fromMember := member.GetObject(from)
-	//fromWallet := fromMember.GetImplementationFor(&TypeReference).(*Wallet)
 	intr := foundation.GetObject(from)
 	fromWallet := intr.GetImplementationFor(&TypeReference).(*Wallet)
 
 	Allowance := fromWallet.Allocate(amount, w.GetContext().Me)
-	Allowance.SetContext(&foundation.CallContext{ // todo this is hack for testing
-		Caller: w.GetContext().Me,
-	})
 	w.balance += Allowance.TakeAmount()
 }
 

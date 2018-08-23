@@ -1,6 +1,7 @@
 package foundation
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/satori/go.uuid"
@@ -22,12 +23,23 @@ type BaseContract struct {
 }
 
 type BaseContractInterface interface {
-	GetContext() *CallContext
+	GetContext(debug ...string) *CallContext
 	GetImplementationFor(r *Reference) BaseContractInterface
+	SetContext(c *CallContext)
 }
 
-func (bc *BaseContract) GetContext() *CallContext {
-	return bc.context
+func (bc *BaseContract) GetContext(debug ...string) *CallContext {
+	contextStep++
+	if len(debug) > 0 && debug[0] != "" {
+		fmt.Printf("%s: %d\n", debug[0], contextStep)
+	}
+	if FakeContexts[contextStep] != nil {
+		return FakeContexts[contextStep]
+	}
+	if bc.context != nil {
+		return bc.context
+	}
+	return &CallContext{}
 }
 
 func (bc *BaseContract) SetContext(c *CallContext) {
@@ -40,6 +52,17 @@ func (bc *BaseContract) SetContext(c *CallContext) {
 var FakeLedger = make(map[*Reference]BaseContractInterface)
 var FakeDelegates = make(map[*Reference]map[*Reference]BaseContractInterface)
 var FakeChildren = make(map[*Reference]map[*Reference][]BaseContractInterface)
+
+var FakeContexts = make(map[uint]*CallContext)
+var contextStep uint = 0
+
+func InjectFakeContext(step uint, ctx *CallContext, reset ...bool) {
+	if len(reset) > 0 && reset[0] {
+		FakeContexts = make(map[uint]*CallContext)
+	}
+	contextStep = 0
+	FakeContexts[step] = ctx
+}
 
 func (bc *BaseContract) GetImplementationFor(r *Reference) BaseContractInterface {
 	return FakeDelegates[bc.context.Me][r]
@@ -60,11 +83,36 @@ func GetObject(ref *Reference) BaseContractInterface {
 	return FakeLedger[ref].(BaseContractInterface)
 }
 
+func (bc *BaseContract) AddChild(child BaseContractInterface, class *Reference) *Reference {
+	me := bc.context.Me
+	uid, _ := uuid.NewV4()
+	key := Reference(uid.String())
+
+	child.SetContext(&CallContext{
+		Me: &key,
+	})
+	FakeLedger[&key] = child
+
+	if FakeChildren[me] == nil {
+		FakeChildren[me] = make(map[*Reference][]BaseContractInterface)
+	}
+	/*if FakeChildren[me][class] == nil {
+		FakeChildren[me][class] = make([]BaseContractInterface, 1)
+	}*/
+
+	FakeChildren[me][class] = append(FakeChildren[me][class], child)
+
+	return &key
+}
+
 func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class *Reference) *Reference {
 	me := bc.context.Me
 	uid, _ := uuid.NewV4()
 	key := Reference(uid.String())
 
+	delegate.SetContext(&CallContext{
+		Me: &key,
+	})
 	FakeLedger[&key] = delegate
 
 	if FakeDelegates[me] == nil {
@@ -75,9 +123,9 @@ func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class *Refe
 	if FakeChildren[me] == nil {
 		FakeChildren[me] = make(map[*Reference][]BaseContractInterface)
 	}
-	if FakeChildren[me][class] == nil {
+	/*if FakeChildren[me][class] == nil {
 		FakeChildren[me][class] = make([]BaseContractInterface, 1)
-	}
+	}*/
 
 	FakeChildren[me][class] = append(FakeChildren[me][class], delegate)
 
