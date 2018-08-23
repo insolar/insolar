@@ -18,9 +18,6 @@ func (m *Member) GetName() string {
 func (m *Member) GetPublicKey() []byte {
 	return m.PublicKey
 }
-func GetObject(r *foundation.Reference) *Member {
-	return foundation.FakeLedger[r].(*Member)
-}
 
 func NewMember(name string) (*Member, *foundation.Reference) {
 	member := &Member{

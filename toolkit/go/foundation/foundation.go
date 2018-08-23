@@ -1,37 +1,67 @@
+/*
+ *    Copyright 2018 INS Ecosystem
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+// Package foundation is a base package for writing smartcontracts in go language.
+// This is client side to use in standalone tests. It have the same signatures
+// as a real realization, but all methods is intended to simulate real ledger behavior in tests.
 package foundation
 
 import (
 	"fmt"
 	"time"
-
-	"github.com/satori/go.uuid"
 )
 
+// Reference is an address of something on ledger.
 type Reference string
 
+// String - stringer interface
 func (r *Reference) String() string {
 	return string(*r)
 }
 
+// CallContext is a context of contract execution
 type CallContext struct {
-	Me     *Reference
-	Caller *Reference
-	Parent *Reference
-	Type   *Reference
-	Time   time.Time
-	Pulse  uint64
+	Me     *Reference // My Reference.
+	Caller *Reference // Reference of calling contract.
+	Parent *Reference // Reference to parent or container contract.
+	Type   *Reference // Reference to type record on ledger, we have just one type reference, yet.
+	Time   time.Time  // Time of Calling side made call.
+	Pulse  uint64     // Number of current pulse.
 }
 
+// BaseContract is a base class for all contracts.
 type BaseContract struct {
-	context *CallContext
+	context *CallContext // context is hidden from everyone and not presented in real implementation.
 }
 
+// BaseContractInterface is an interface to deal with any contract same way
 type BaseContractInterface interface {
-	GetContext(debug ...string) *CallContext
+	MyReference() *Reference
 	GetImplementationFor(r *Reference) BaseContractInterface
 	SetContext(c *CallContext)
 }
 
+// MyReference - Returns public reference of contract
+func (bc *BaseContract) MyReference() *Reference {
+	r := Reference(fmt.Sprintf("%x", bc))
+	return &r
+}
+
+// GetContext returns current calling context of this object.
+// It exists only for currently called contract.
 func (bc *BaseContract) GetContext(debug ...string) *CallContext {
 	contextStep++
 	if len(debug) > 0 && debug[0] != "" {
@@ -53,9 +83,9 @@ func (bc *BaseContract) SetContext(c *CallContext) {
 	bc.context = c
 }
 
-var FakeLedger = make(map[*Reference]BaseContractInterface)
-var FakeDelegates = make(map[*Reference]map[*Reference]BaseContractInterface)
-var FakeChildren = make(map[*Reference]map[*Reference][]BaseContractInterface)
+var FakeLedger = make(map[string]BaseContractInterface)
+var FakeDelegates = make(map[string]map[string]BaseContractInterface)
+var FakeChildren = make(map[string]map[string][]BaseContractInterface)
 
 var FakeContexts = make(map[uint]*CallContext)
 var contextStep uint = 0
@@ -69,94 +99,90 @@ func InjectFakeContext(step uint, ctx *CallContext, reset ...bool) {
 }
 
 func (bc *BaseContract) GetImplementationFor(r *Reference) BaseContractInterface {
-	return FakeDelegates[bc.context.Me][r]
+	return FakeDelegates[bc.MyReference().String()][r.String()]
 }
 
 func GetImplementationFor(o *Reference, r *Reference) BaseContractInterface {
-	return FakeDelegates[o][r]
+	return FakeDelegates[o.String()][r.String()]
 }
 
 func (bc *BaseContract) GetChildrenTyped(r *Reference) []BaseContractInterface {
-	return FakeChildren[bc.context.Me][r]
+	return FakeChildren[bc.MyReference().String()][r.String()]
 }
 
 func SaveToLedger(rec BaseContractInterface) *Reference {
-	u2, _ := uuid.NewV4()
-	key := Reference(u2.String())
-	FakeLedger[&key] = rec
-	return &key
+	key := rec.MyReference()
+	FakeLedger[key.String()] = rec
+	return key
 }
 
 func GetObject(ref *Reference) BaseContractInterface {
-	return FakeLedger[ref].(BaseContractInterface)
+	return FakeLedger[ref.String()].(BaseContractInterface)
 }
 
 func (bc *BaseContract) AddChild(child BaseContractInterface, class *Reference) *Reference {
-	me := bc.context.Me
-	uid, _ := uuid.NewV4()
-	key := Reference(uid.String())
-
+	me := bc.MyReference()
+	key := child.MyReference()
 	child.SetContext(&CallContext{
-		Me:     &key,
+		Me:     key,
 		Parent: me,
 		Type:   class,
 	})
-	FakeLedger[&key] = child
+	FakeLedger[key.String()] = child
 
-	if FakeChildren[me] == nil {
-		FakeChildren[me] = make(map[*Reference][]BaseContractInterface)
+	if FakeChildren[me.String()] == nil {
+		FakeChildren[me.String()] = make(map[string][]BaseContractInterface)
 	}
 	/*if FakeChildren[me][class] == nil {
 		FakeChildren[me][class] = make([]BaseContractInterface, 1)
 	}*/
 
-	FakeChildren[me][class] = append(FakeChildren[me][class], child)
+	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], child)
 
-	return &key
+	return key
 }
 
 func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class *Reference) *Reference {
-	me := bc.context.Me
-	uid, _ := uuid.NewV4()
-	key := Reference(uid.String())
+	me := bc.MyReference()
+	key := delegate.MyReference()
 
 	delegate.SetContext(&CallContext{
-		Me:     &key,
+		Me:     key,
 		Parent: me,
 		Type:   class,
 	})
-	FakeLedger[&key] = delegate
+	FakeLedger[key.String()] = delegate
 
-	if FakeDelegates[me] == nil {
-		FakeDelegates[me] = make(map[*Reference]BaseContractInterface)
+	if FakeDelegates[me.String()] == nil {
+		FakeDelegates[me.String()] = make(map[string]BaseContractInterface)
 	}
-	FakeDelegates[me][class] = delegate
+	FakeDelegates[me.String()][class.String()] = delegate
 
-	if FakeChildren[me] == nil {
-		FakeChildren[me] = make(map[*Reference][]BaseContractInterface)
+	if FakeChildren[me.String()] == nil {
+		FakeChildren[me.String()] = make(map[string][]BaseContractInterface)
 	}
 	/*if FakeChildren[me][class] == nil {
 		FakeChildren[me][class] = make([]BaseContractInterface, 1)
 	}*/
 
-	FakeChildren[me][class] = append(FakeChildren[me][class], delegate)
+	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], delegate)
 
-	return &key
+	return key
 }
 
 func (bc *BaseContract) SelfDestructRequest() {
-	me := bc.context.Me
-	delete(FakeLedger, me)
+	me := bc.MyReference()
+	delete(FakeLedger, me.String())
 	for _, v := range FakeDelegates {
-		delete(v, me)
+		delete(v, me.String())
 	}
 	for _, c := range FakeChildren {
 		arr := []BaseContractInterface{}
-		for _, v := range c[bc.context.Type] {
-			if v.(BaseContractInterface).GetContext().Me != me {
+		for _, v := range c[bc.context.Type.String()] {
+			if v.MyReference().String() != me.String() {
 				arr = append(arr, v)
 			}
 		}
-		c[bc.context.Type] = arr
+		c[bc.context.Type.String()] = arr
 	}
 }
