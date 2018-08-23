@@ -32,14 +32,15 @@ import (
 
 // GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
-	dir        string
-	RPCAddress string
+	dir                string
+	UpstreamRPCAddress string
+	UpstreamRPCClient  *rpc.Client
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
 func NewGoInsider(path string, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	return &GoInsider{dir: path, RPCAddress: address}
+	return &GoInsider{dir: path, UpstreamRPCAddress: address}
 }
 
 // RPC struct with methods representing RPC interface of this code runner
@@ -118,6 +119,21 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 	return nil
 }
 
+// Upstream returns RPC client connected to upstream server (goplugin)
+func (t *GoInsider) Upstream() (*rpc.Client, error) {
+	if t.UpstreamRPCClient != nil {
+		return t.UpstreamRPCClient, nil
+	}
+
+	client, err := rpc.DialHTTP("tcp", t.UpstreamRPCAddress)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", t.UpstreamRPCAddress)
+	}
+
+	t.UpstreamRPCClient = client
+	return t.UpstreamRPCClient, nil
+}
+
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
 func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
@@ -130,9 +146,9 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 		return "", errors.Wrap(err, "file !notexists()")
 	}
 
-	client, err := rpc.DialHTTP("tcp", t.RPCAddress)
+	client, err := t.Upstream()
 	if err != nil {
-		return "", errors.Wrapf(err, "couldn't dial '%s'", t.RPCAddress)
+		return "", err
 	}
 
 	res := logicrunner.Object{}
