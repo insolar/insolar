@@ -21,8 +21,8 @@ import (
 	"encoding/gob"
 	"log"
 
-	"github.com/insolar/insolar/network/host"
-	"github.com/insolar/insolar/network/host/id"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/jbenet/go-base58"
 )
 
@@ -32,7 +32,7 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // e.g. glue between network and logic runner
 type MessageRouter struct {
 	LogicRunner LogicRunner
-	rpc         host.RPC
+	rpc         hostnetwork.RPC
 }
 
 // LogicRunner is an interface that should satisfy logic executor
@@ -57,14 +57,14 @@ type Response struct {
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr LogicRunner, rpc host.RPC) (*MessageRouter, error) {
+func New(lr LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc}
 	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return mr, nil
 }
 
 // Route a `Message` and get a `Response` or error from remote node
-func (r *MessageRouter) Route(ctx host.Context, msg Message) (response Response, err error) {
+func (r *MessageRouter) Route(ctx hostnetwork.Context, msg Message) (response Response, err error) {
 	request, err := Serialize(msg)
 	if err != nil {
 		return response, err
