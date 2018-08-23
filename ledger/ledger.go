@@ -16,17 +16,15 @@
 
 package ledger
 
-import (
-	"github.com/insolar/insolar/ledger/storage"
-)
+// TODO: rename LedgerStorer -> Ledger
 
 // Ledger defines parameters for running ledger storer
 // TODO: should implements Ledgerer interface
-type Ledger struct {
-	Store storage.LedgerStorer
-}
+// type Ledger struct {
+// 	Store storage.LedgerStorer
+// }
 
-// NewLedger creates new Ledger
-func NewLedger() (Ledger, error) {
-	panic("implement me")
-}
+// // NewLedger creates new Ledger
+// func NewLedger() (Ledger, error) {
+// 	panic("implement me")
+// }
