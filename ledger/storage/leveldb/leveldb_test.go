@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,22 +29,14 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/leveldb"
+	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
 
 var dbDirPath = "_db"
 
-func TestMain(m *testing.M) {
-	if err := leveldb.DropDB(); err != nil {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
-
 func TestGetRecordNotFound(t *testing.T) {
-	ledger, err := leveldb.InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 
 	ref := &record.Reference{}
 	rec, err := ledger.GetRecord(ref)
@@ -99,12 +90,11 @@ func referenceWithHashes(domainhash, recordhash string) record.Reference {
 }
 
 func TestLevelLedger_SetRecord(t *testing.T) {
-	ledger, err := leveldb.InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
 	ledger.SetPulseFn(func() record.PulseNum { return pulse1 })
-	defer ledger.Close()
 
 	passRecPulse1 := &record.LockUnlockRequest{}
 	idPulse1 := pulse1.ID(passRecPulse1)
@@ -136,9 +126,8 @@ func TestLevelLedger_SetRecord(t *testing.T) {
 }
 
 func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	ledger, err := leveldb.InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 
 	ref := &record.Reference{
 		Record: record.ID{Pulse: 1},
@@ -150,9 +139,8 @@ func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := leveldb.InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 
 	zerodomain := record.ID{Hash: zerohash()}
 	refgen := func() record.Reference {
@@ -175,7 +163,7 @@ func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 			Hash: hexhash("122444"),
 		},
 	}
-	err = ledger.SetClassIndex(&zeroRef, &idx)
+	err := ledger.SetClassIndex(&zeroRef, &idx)
 	assert.Nil(t, err)
 
 	storedIndex, err := ledger.GetClassIndex(&zeroRef)
@@ -195,9 +183,8 @@ func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := leveldb.InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 
 	idx := index.ObjectLifeline{
 		ClassRef:       referenceWithHashes("50", "60"),
@@ -209,7 +196,7 @@ func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 		},
 	}
 	zeroref := referenceWithHashes("", "")
-	err = ledger.SetObjectIndex(&zeroref, &idx)
+	err := ledger.SetObjectIndex(&zeroref, &idx)
 	assert.Nil(t, err)
 
 	storedIndex, err := ledger.GetObjectIndex(&zeroref)
@@ -218,9 +205,8 @@ func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
-	ledger, err := leveldb.InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 
 	drop, err := ledger.GetDrop(1)
 	assert.Equal(t, err, storage.ErrNotFound)
@@ -228,15 +214,14 @@ func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 }
 
 func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := leveldb.InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 
 	drop := jetdrop.JetDrop{
 		PrevHash:     []byte{1, 2, 3},
 		RecordHashes: [][]byte{{4}, {5}, {6}},
 	}
-	err = ledger.SetDrop(42, &drop)
+	err := ledger.SetDrop(42, &drop)
 	assert.NoError(t, err)
 	restoredDrop, err := ledger.GetDrop(42)
 	assert.NoError(t, err)

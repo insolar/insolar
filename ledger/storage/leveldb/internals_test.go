@@ -16,8 +16,14 @@
 
 package leveldb
 
+// tests for non public stuff
+//
+// TODO:
+// refactor public API tests to check same things via public APIs and remove internals test.
+
 import (
 	"encoding/hex"
+	"os"
 	"strings"
 	"testing"
 
@@ -27,7 +33,13 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// TODO: refactor these tests and API and remove internals test
+func TestMain(m *testing.M) {
+	if err := DropDB(); err != nil {
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
 
 func MustDecodeHexString(s string) []byte {
 	b, err := hex.DecodeString(s)
