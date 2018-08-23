@@ -9,6 +9,10 @@ import (
 
 type Reference string
 
+func (r *Reference) String() string {
+	return string(*r)
+}
+
 type CallContext struct {
 	Me     *Reference
 	Caller *Reference
@@ -68,6 +72,10 @@ func (bc *BaseContract) GetImplementationFor(r *Reference) BaseContractInterface
 	return FakeDelegates[bc.context.Me][r]
 }
 
+func GetImplementationFor(o *Reference, r *Reference) BaseContractInterface {
+	return FakeDelegates[o][r]
+}
+
 func (bc *BaseContract) GetChildrenTyped(r *Reference) []BaseContractInterface {
 	return FakeChildren[bc.context.Me][r]
 }
@@ -89,7 +97,9 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class *Reference) 
 	key := Reference(uid.String())
 
 	child.SetContext(&CallContext{
-		Me: &key,
+		Me:     &key,
+		Parent: me,
+		Type:   class,
 	})
 	FakeLedger[&key] = child
 
@@ -111,7 +121,9 @@ func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class *Refe
 	key := Reference(uid.String())
 
 	delegate.SetContext(&CallContext{
-		Me: &key,
+		Me:     &key,
+		Parent: me,
+		Type:   class,
 	})
 	FakeLedger[&key] = delegate
 

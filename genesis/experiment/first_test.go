@@ -56,12 +56,12 @@ func TestFirst(t *testing.T) {
 	toMember.TakeDelegate(toWallet, &wallet.TypeReference)
 
 	// Get fromMember as wallet instance
-	fromMemberAsWallet, ok := fromMember.GetImplementationFor(&wallet.TypeReference).(*wallet.Wallet)
+	fromMemberAsWallet, ok := foundation.GetImplementationFor(fromMemberRef, &wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 	assert.NotNil(t, fromMemberAsWallet)
 
 	// Get toMember as wallet instance
-	toMemberAsWallet, ok := toMember.GetImplementationFor(&wallet.TypeReference).(*wallet.Wallet)
+	toMemberAsWallet, ok := foundation.GetImplementationFor(toMemberRef, &wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 	assert.NotNil(t, toMemberAsWallet)
 
