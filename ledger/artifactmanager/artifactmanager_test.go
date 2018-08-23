@@ -37,7 +37,7 @@ func prepareTestArtifactManager() (storage.LedgerStorer, ArtifactManager, *recor
 		os.Exit(1)
 	}
 
-	ledger, _ := leveldb.InitDB()
+	ledger, _ := leveldb.InitDB("_db", nil)
 	manager := LedgerArtifactManager{storer: ledger}
 
 	return ledger, &manager, genRandomRef(), genRandomRef()

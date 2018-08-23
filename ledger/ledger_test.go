@@ -55,7 +55,7 @@ func TestLedger_LevelDB_Init(t *testing.T) {
 
 func levelDBInit() storage.LedgerStorer {
 	// ledger, err := newLedger()
-	store, err := leveldb.InitDB()
+	store, err := leveldb.InitDB("_db", nil)
 	if err != nil {
 		panic(err)
 	}

@@ -46,7 +46,7 @@ func setRawRecord(ll *LevelLedger, ref *record.Reference, raw *record.Raw) error
 }
 
 func TestGetRecordNotFound(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -91,7 +91,7 @@ func TestPrefixkey(t *testing.T) {
 }
 
 func TestSetRawRecord(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -157,7 +157,7 @@ func referenceWithHashes(domainhash, recordhash string) record.Reference {
 }
 
 func TestLevelLedger_SetRecord(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
@@ -194,7 +194,7 @@ func TestLevelLedger_SetRecord(t *testing.T) {
 }
 
 func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -208,7 +208,7 @@ func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -242,7 +242,7 @@ func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -253,7 +253,7 @@ func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -276,7 +276,7 @@ func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -286,7 +286,7 @@ func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 }
 
 func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := InitDB()
+	ledger, err := InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 

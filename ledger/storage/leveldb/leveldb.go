@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -50,57 +49,16 @@ const (
 	scopeIDJetDrop
 )
 
-// InitDB returns LevelLedger with LevelDB initialized with default settings.
-func InitDB() (*LevelLedger, error) {
-	// Options struct doc: https://godoc.org/github.com/syndtr/goleveldb/leveldb/opt#Options.
-	opts := &opt.Options{
-		AltFilters:  nil,
-		BlockCacher: opt.LRUCacher,
-		// BlockCacheCapacity increased to 32MiB from default 8 MiB.
-		// BlockCacheCapacity defines the capacity of the 'sorted table' block caching.
-		BlockCacheCapacity:                    32 * 1024 * 1024,
-		BlockRestartInterval:                  16,
-		BlockSize:                             4 * 1024,
-		CompactionExpandLimitFactor:           25,
-		CompactionGPOverlapsFactor:            10,
-		CompactionL0Trigger:                   4,
-		CompactionSourceLimitFactor:           1,
-		CompactionTableSize:                   2 * 1024 * 1024,
-		CompactionTableSizeMultiplier:         1.0,
-		CompactionTableSizeMultiplierPerLevel: nil,
-		// CompactionTotalSize increased to 32MiB from default 10 MiB.
-		// CompactionTotalSize limits total size of 'sorted table' for each level.
-		// The limits for each level will be calculated as:
-		//   CompactionTotalSize * (CompactionTotalSizeMultiplier ^ Level)
-		CompactionTotalSize:                   32 * 1024 * 1024,
-		CompactionTotalSizeMultiplier:         10.0,
-		CompactionTotalSizeMultiplierPerLevel: nil,
-		Comparer:                     comparer.DefaultComparer,
-		Compression:                  opt.DefaultCompression,
-		DisableBufferPool:            false,
-		DisableBlockCache:            false,
-		DisableCompactionBackoff:     false,
-		DisableLargeBatchTransaction: false,
-		ErrorIfExist:                 false,
-		ErrorIfMissing:               false,
-		Filter:                       nil,
-		IteratorSamplingRate:         1 * 1024 * 1024,
-		NoSync:                       false,
-		NoWriteMerge:                 false,
-		OpenFilesCacher:              opt.LRUCacher,
-		OpenFilesCacheCapacity:       500,
-		ReadOnly:                     false,
-		Strict:                       opt.DefaultStrict,
-		WriteBuffer:                  16 * 1024 * 1024, // Default is 4 MiB
-		WriteL0PauseTrigger:          12,
-		WriteL0SlowdownTrigger:       8,
+// InitDB returns LevelDB ledger implementation.
+func InitDB(dir string, opts *opt.Options) (*LevelLedger, error) {
+	if dir == "" {
+		dir = dbDirPath
 	}
-
-	absPath, err := filepath.Abs(dbDirPath)
+	absPath, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
-	db, err := leveldb.OpenFile(absPath, opts)
+	db, err := leveldb.OpenFile(absPath, setOptions(opts))
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +82,8 @@ func InitDB() (*LevelLedger, error) {
 			return nil, err
 		}
 		return &ledger, nil
-	} else if err != nil {
+	}
+	if err != nil {
 		return nil, err
 	}
 	return &ledger, nil

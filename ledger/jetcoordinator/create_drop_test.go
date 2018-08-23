@@ -27,7 +27,7 @@ import (
 
 func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
 	// TODO: remove binding to leveldb here
-	ledger, _ := leveldb.InitDB()
+	ledger, _ := leveldb.InitDB("_db", nil)
 
 	prevDrop := jetdrop.JetDrop{PrevHash: []byte{4, 5}}
 	prevHash, _ := prevDrop.Hash()

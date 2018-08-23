@@ -32,7 +32,7 @@ func prepareObjectDescriptorTest() (
 	if err := leveldb.DropDB(); err != nil {
 		os.Exit(1)
 	}
-	ledger, _ := leveldb.InitDB()
+	ledger, _ := leveldb.InitDB("_db", nil)
 	manager := LedgerArtifactManager{
 		storer:   ledger,
 		archPref: []record.ArchType{1},
