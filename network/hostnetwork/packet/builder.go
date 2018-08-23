@@ -41,17 +41,17 @@ func (cb Builder) Build() (packet *Packet) {
 }
 
 // Sender sets packet sender.
-func (cb Builder) Sender(node *host.Host) Builder {
+func (cb Builder) Sender(host *host.Host) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Sender = node
+		packet.Sender = host
 	})
 	return cb
 }
 
 // Receiver sets packet receiver.
-func (cb Builder) Receiver(node *host.Host) Builder {
+func (cb Builder) Receiver(host *host.Host) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Receiver = node
+		packet.Receiver = host
 	})
 	return cb
 }

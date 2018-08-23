@@ -61,7 +61,7 @@ func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transpor
 }
 
 func getDefaultCtx(dht *hostnetwork.DHT) hostnetwork.Context {
-	ctx, _ := hostnetwork.NewContextBuilder(dht).SetDefaultNode().Build()
+	ctx, _ := hostnetwork.NewContextBuilder(dht).SetDefaultHost().Build()
 	return ctx
 }
 

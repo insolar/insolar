@@ -21,8 +21,8 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
 
-// ResponseDataFindNode is data for FindHost response.
-type ResponseDataFindNode struct {
+// ResponseDataFindHost is data for FindHost response.
+type ResponseDataFindHost struct {
 	Closest []*host.Host
 }
 
@@ -70,8 +70,8 @@ type ResponseRelayOwnership struct {
 	Accepted bool
 }
 
-// ResponseKnownOuterNodes is data to answer if origin host know more outer nodes.
-type ResponseKnownOuterNodes struct {
-	ID         string //	id of host in which more known outer nodes
-	OuterNodes int    // number of known outer nodes
+// ResponseKnownOuterHosts is data to answer if origin host know more outer hosts.
+type ResponseKnownOuterHosts struct {
+	ID         string //	id of host in which more known outer hosts
+	OuterHosts int    // number of known outer hosts
 }

@@ -42,16 +42,16 @@ const (
 	TypeRPC
 	// TypeRelay is packet type for request target to be a relay.
 	TypeRelay
-	// TypeAuth is packet type for authentication between nodes.
+	// TypeAuth is packet type for authentication between hosts.
 	TypeAuth
 	// TypeCheckOrigin is packet to check originality of some host.
 	TypeCheckOrigin
 	// TypeObtainIP is packet to get itself IP from another host.
 	TypeObtainIP
-	// TypeRelayOwnership is packet to say all other nodes that current host have a static IP.
+	// TypeRelayOwnership is packet to say all other hosts that current host have a static IP.
 	TypeRelayOwnership
-	// TypeKnownOuterNodes is packet to say how much outer nodes current host know.
-	TypeKnownOuterNodes
+	// TypeKnownOuterHosts is packet to say how much outer hosts current host know.
+	TypeKnownOuterHosts
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -131,15 +131,15 @@ func NewRelayOwnershipPacket(sender, receiver *host.Host, ready bool) *Packet {
 	}
 }
 
-// NewKnownOuterNodesPacket uses to notify all nodes in home subnet about known outer nodes.
-func NewKnownOuterNodesPacket(sender, receiver *host.Host, nodes int) *Packet {
+// NewKnownOuterHostsPacket uses to notify all hosts in home subnet about known outer hosts.
+func NewKnownOuterHostsPacket(sender, receiver *host.Host, hosts int) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
-		Type:     TypeKnownOuterNodes,
+		Type:     TypeKnownOuterHosts,
 		Data: &RequestKnownOuterHosts{
 			ID:         sender.ID.HashString(),
-			OuterHosts: nodes,
+			OuterHosts: hosts,
 		},
 	}
 }
@@ -167,7 +167,7 @@ func (m *Packet) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestObtainIP)
 	case TypeRelayOwnership:
 		_, valid = m.Data.(*RequestRelayOwnership)
-	case TypeKnownOuterNodes:
+	case TypeKnownOuterHosts:
 		_, valid = m.Data.(*RequestKnownOuterHosts)
 	default:
 		valid = false
@@ -248,7 +248,7 @@ func init() {
 	gob.Register(&RequestRelayOwnership{})
 	gob.Register(&RequestKnownOuterHosts{})
 
-	gob.Register(&ResponseDataFindNode{})
+	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
 	gob.Register(&ResponseDataStore{})
 	gob.Register(&ResponseDataRPC{})
@@ -257,7 +257,7 @@ func init() {
 	gob.Register(&ResponseCheckOrigin{})
 	gob.Register(&ResponseObtainIP{})
 	gob.Register(&ResponseRelayOwnership{})
-	gob.Register(&ResponseKnownOuterNodes{})
+	gob.Register(&ResponseKnownOuterHosts{})
 
 	gob.Register(&id.ID{})
 }

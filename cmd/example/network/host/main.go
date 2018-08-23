@@ -51,7 +51,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	bootstrapNodes := getBootstrapNodes(bootstrapAddress)
+	bootstrapHosts := getBootstrapHosts(bootstrapAddress)
 	proxy := relay.NewProxy()
 
 	configuration := hostnetwork.NewNetworkConfiguration(
@@ -62,7 +62,7 @@ func main() {
 		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{"s": send}),
 		proxy)
 	dhtNetwork, err := configuration.CreateNetwork(*addr, &hostnetwork.Options{
-		BootstrapNodes: bootstrapNodes,
+		BootstrapHosts: bootstrapHosts,
 	})
 	if err != nil {
 		log.Fatalln("Failed to create network:", err.Error())
@@ -73,7 +73,7 @@ func main() {
 	ctx := createContext(dhtNetwork)
 
 	go listen(dhtNetwork)
-	bootstrap(bootstrapNodes, dhtNetwork)
+	bootstrap(bootstrapHosts, dhtNetwork)
 
 	handleSignals(configuration)
 
@@ -99,15 +99,15 @@ func handleSignals(configuration *hostnetwork.Configuration) {
 }
 
 func createContext(dhtNetwork *hostnetwork.DHT) hostnetwork.Context {
-	ctx, err := hostnetwork.NewContextBuilder(dhtNetwork).SetDefaultNode().Build()
+	ctx, err := hostnetwork.NewContextBuilder(dhtNetwork).SetDefaultHost().Build()
 	if err != nil {
 		log.Fatalln("Failed to create context:", err.Error())
 	}
 	return ctx
 }
 
-func bootstrap(bootstrapNodes []*host.Host, dhtNetwork *hostnetwork.DHT) {
-	if len(bootstrapNodes) > 0 {
+func bootstrap(bootstrapHosts []*host.Host, dhtNetwork *hostnetwork.DHT) {
+	if len(bootstrapHosts) > 0 {
 		err := dhtNetwork.Bootstrap()
 		if err != nil {
 			log.Fatalln("Failed to bootstrap network", err.Error())
@@ -154,8 +154,8 @@ func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 		switch input[0] {
 		case "help":
 			displayInteractiveHelp()
-		case "findnode":
-			doFindNode(input, dhtNetwork, ctx)
+		case "findhost":
+			doFindHost(input, dhtNetwork, ctx)
 		case "info":
 			doInfo(dhtNetwork, ctx)
 		case "relay":
@@ -166,17 +166,17 @@ func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	}
 }
 
-func getBootstrapNodes(bootstrapAddress *string) []*host.Host {
-	var bootstrapNodes []*host.Host
+func getBootstrapHosts(bootstrapAddress *string) []*host.Host {
+	var bootstrapHosts []*host.Host
 	if *bootstrapAddress != "" {
 		address, err := host.NewAddress(*bootstrapAddress)
 		if err != nil {
 			log.Fatalln("Failed to create bootstrap address:", err.Error())
 		}
-		bootstrapNode := host.NewHost(address)
-		bootstrapNodes = append(bootstrapNodes, bootstrapNode)
+		bootstrapHost := host.NewHost(address)
+		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
 	}
-	return bootstrapNodes
+	return bootstrapHosts
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {
@@ -189,28 +189,28 @@ func createResolver(stun bool) resolver.PublicAddressResolver {
 	return publicAddressResolver
 }
 
-func doFindNode(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	if len(input) != 2 {
 		displayInteractiveHelp()
 		return
 	}
-	fmt.Println("Searching for targetNode", input[1])
-	targetNode, exists, err := dhtNetwork.FindHost(ctx, input[1])
+	fmt.Println("Searching for targetHost", input[1])
+	targetHost, exists, err := dhtNetwork.FindHost(ctx, input[1])
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	if exists {
-		fmt.Println("..Found targetNode:", targetNode)
+		fmt.Println("..Found targetHost:", targetHost)
 	} else {
 		fmt.Println("..Nothing found for this id!")
 	}
 }
 
 func doInfo(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
-	nodes := dhtNetwork.NumNodes(ctx)
+	hosts := dhtNetwork.NumHosts(ctx)
 	originID := dhtNetwork.GetOriginID(ctx)
 	fmt.Println("ID: " + originID)
-	fmt.Println("Known nodes: " + strconv.Itoa(nodes))
+	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
 }
 
 func doSendRelay(command, relayAddr string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
@@ -261,7 +261,7 @@ Options:
 func displayInteractiveHelp() {
 	fmt.Println(`
 help - This packet
-findnode <key> - Find host's real network address
+findhost <key> - Find host's real network address
 info - Display information about this host
 
 <method> <target> <args...> - Remote procedure call`)

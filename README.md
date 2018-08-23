@@ -38,9 +38,9 @@ Components
 ### [Network](network/hostnetwork)
 Kademlia DHT based blockchain network layer.
  - Support of heterogeneous network topology.
- - Network routing with a node or node group becoming relays for others nodes.
- - Ability to limit number of gateways to corporate node group via relays
-   to keep the node group secure.
+ - Network routing with a host or host group becoming relays for others hosts.
+ - Ability to limit number of gateways to corporate host group via relays
+   to keep the host group secure.
 
 See [package readme](network/hostnetwork) for more details.
 

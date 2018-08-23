@@ -71,7 +71,7 @@ func TestHashTable_ResetRefreshTimeForBucket(t *testing.T) {
 	assert.NotEqual(t, time1, time2)
 }
 
-func TestHashTable_TotalNodes(t *testing.T) {
+func TestHashTable_TotalHosts(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
 	addr, _ := host.NewAddress("127.0.0.1:3000")
@@ -79,7 +79,7 @@ func TestHashTable_TotalNodes(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)
 
-	assert.Equal(t, 0, ht.TotalNodes())
+	assert.Equal(t, 0, ht.TotalHosts())
 }
 
 func TestHashTable_GetRandomIDFromBucket(t *testing.T) {
@@ -93,7 +93,7 @@ func TestHashTable_GetRandomIDFromBucket(t *testing.T) {
 	assert.Equal(t, 20, len(rand))
 }
 
-func TestHashTable_GetTotalNodesInBucket(t *testing.T) {
+func TestHashTable_GetTotalHostsInBucket(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id1.SetHash(id.GetRandomKey())
 	addr, _ := host.NewAddress("127.0.0.1:3000")
@@ -101,5 +101,5 @@ func TestHashTable_GetTotalNodesInBucket(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, ht)
 
-	assert.Equal(t, 0, ht.GetTotalNodesInBucket(0))
+	assert.Equal(t, 0, ht.GetTotalHostsInBucket(0))
 }

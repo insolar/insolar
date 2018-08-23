@@ -29,10 +29,10 @@ func TestRelay_ClientsCount(t *testing.T) {
 	relay := NewRelay()
 	count := 20
 
-	nodes := makeNodes(count, t)
+	hosts := makeHosts(count, t)
 
-	for i := range nodes {
-		relay.AddClient(nodes[i])
+	for i := range hosts {
+		relay.AddClient(hosts[i])
 	}
 
 	assert.Equal(t, count, relay.ClientsCount())
@@ -64,7 +64,7 @@ func makeAddresses(count int, t *testing.T) []*host.Address {
 	return addresses
 }
 
-func makeNodes(count int, t *testing.T) []*host.Host {
+func makeHosts(count int, t *testing.T) []*host.Host {
 	result := make([]*host.Host, 0)
 	addresses := makeAddresses(count, t)
 
@@ -86,12 +86,12 @@ func TestRelay_AddClient(t *testing.T) {
 	relay := NewRelay()
 	count := 20
 
-	nodes := makeNodes(count, t)
+	hosts := makeHosts(count, t)
 
-	for i := range nodes {
-		err := relay.AddClient(nodes[i])
+	for i := range hosts {
+		err := relay.AddClient(hosts[i])
 		assert.NoError(t, err)
-		err = relay.AddClient(nodes[i]) // adding existing host
+		err = relay.AddClient(hosts[i]) // adding existing host
 		assert.EqualError(t, err, "client exists already")
 	}
 
@@ -102,20 +102,20 @@ func TestRelay_RemoveClient(t *testing.T) {
 	relay := NewRelay()
 	count := 20
 
-	nodes := makeNodes(count, t)
+	hosts := makeHosts(count, t)
 
-	for i := range nodes {
-		err := relay.AddClient(nodes[i])
+	for i := range hosts {
+		err := relay.AddClient(hosts[i])
 		if err != nil {
 			assert.Errorf(t, nil, "error: %s", err.Error())
 		}
 	}
 	assert.Equal(t, count, relay.ClientsCount())
 
-	for i := range nodes {
-		err := relay.RemoveClient(nodes[i])
+	for i := range hosts {
+		err := relay.RemoveClient(hosts[i])
 		assert.NoError(t, err)
-		err = relay.RemoveClient(nodes[i])
+		err = relay.RemoveClient(hosts[i])
 		assert.EqualError(t, err, "client not found")
 	}
 
@@ -127,16 +127,16 @@ func TestRelay_NeedToRelay(t *testing.T) {
 	count := 20
 	ip := "127.0.0.2:"
 
-	nodes := makeNodes(count, t)
+	hosts := makeHosts(count, t)
 
-	for i := range nodes {
-		relay.AddClient(nodes[i])
+	for i := range hosts {
+		relay.AddClient(hosts[i])
 	}
 
 	assert.Equal(t, count, relay.ClientsCount())
 
-	for i := range nodes {
-		res := relay.NeedToRelay(nodes[i].Address.String())
+	for i := range hosts {
+		res := relay.NeedToRelay(hosts[i].Address.String())
 		assert.Equal(t, true, res)
 	}
 
@@ -156,45 +156,45 @@ func TestRelay_Count(t *testing.T) {
 	relay := NewRelay()
 	count := 20
 
-	nodes := makeNodes(count, t)
+	hosts := makeHosts(count, t)
 
-	for i := range nodes {
-		relay.AddClient(nodes[i])
+	for i := range hosts {
+		relay.AddClient(hosts[i])
 	}
 
 	assert.Equal(t, count, relay.ClientsCount())
 }
 
-func TestProxy_AddProxyNode(t *testing.T) {
+func TestProxy_AddProxyHost(t *testing.T) {
 	count := 20
 	addresses := makeAddresses(count, t)
 	proxy := NewProxy()
 
 	for i := range addresses {
-		proxy.AddProxyNode(addresses[i].String())
-		proxy.AddProxyNode(addresses[i].String()) // adding existed host
+		proxy.AddProxyHost(addresses[i].String())
+		proxy.AddProxyHost(addresses[i].String()) // adding existed host
 	}
 
-	assert.Equal(t, count, proxy.ProxyNodesCount())
+	assert.Equal(t, count, proxy.ProxyHostsCount())
 }
 
-func TestProxy_RemoveProxyNode(t *testing.T) {
+func TestProxy_RemoveProxyHost(t *testing.T) {
 	count := 20
 	addresses := makeAddresses(count, t)
 	proxy := NewProxy()
 
 	for i := range addresses {
-		proxy.AddProxyNode(addresses[i].String())
+		proxy.AddProxyHost(addresses[i].String())
 	}
 
-	assert.Equal(t, count, proxy.ProxyNodesCount())
+	assert.Equal(t, count, proxy.ProxyHostsCount())
 
 	for i := range addresses {
-		proxy.RemoveProxyNode(addresses[i].String())
-		proxy.RemoveProxyNode(addresses[i].String()) // remove removed host
+		proxy.RemoveProxyHost(addresses[i].String())
+		proxy.RemoveProxyHost(addresses[i].String()) // remove removed host
 	}
 
-	assert.Equal(t, 0, proxy.ProxyNodesCount())
+	assert.Equal(t, 0, proxy.ProxyHostsCount())
 }
 
 func TestProxy_GetNextProxyAddress(t *testing.T) {
@@ -206,17 +206,17 @@ func TestProxy_GetNextProxyAddress(t *testing.T) {
 	assert.Equal(t, "", proxy.GetNextProxyAddress())
 
 	for i := range addresses {
-		proxy.AddProxyNode(addresses[i].String())
+		proxy.AddProxyHost(addresses[i].String())
 		idx[i] = addresses[i].String()
 	}
 
-	assert.Equal(t, count, proxy.ProxyNodesCount())
+	assert.Equal(t, count, proxy.ProxyHostsCount())
 	assert.Equal(t, count, len(idx))
 
-	for i := 0; i < proxy.ProxyNodesCount(); i++ {
+	for i := 0; i < proxy.ProxyHostsCount(); i++ {
 		assert.Equal(t, idx[i], proxy.GetNextProxyAddress())
 	}
-	for i := 0; i < proxy.ProxyNodesCount(); i++ {
+	for i := 0; i < proxy.ProxyHostsCount(); i++ {
 		assert.Equal(t, idx[i], proxy.GetNextProxyAddress())
 	}
 }
@@ -227,10 +227,10 @@ func TestProxy_Count(t *testing.T) {
 	proxy := NewProxy()
 
 	for i := range addresses {
-		proxy.AddProxyNode(addresses[i].String())
+		proxy.AddProxyHost(addresses[i].String())
 	}
 
-	assert.Equal(t, count, proxy.ProxyNodesCount())
+	assert.Equal(t, count, proxy.ProxyHostsCount())
 }
 
 func TestCreateProxy(t *testing.T) {

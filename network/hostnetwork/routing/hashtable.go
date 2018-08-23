@@ -65,11 +65,11 @@ type HashTable struct {
 	Origin *host.Host
 
 	// Routing table a list of all known hosts in the network
-	// Nodes within buckets are sorted by least recently seen e.g.
+	// Hosts within buckets are sorted by least recently seen e.g.
 	// [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
 	//  ^                                                           ^
 	//  └ Least recently seen                    Most recently seen ┘
-	RoutingTable [][]*RouteNode // 160x20
+	RoutingTable [][]*RouteHost // 160x20
 
 	mutex *sync.Mutex
 
@@ -99,7 +99,7 @@ func NewHashTable(id id.ID, address *host.Address) (*HashTable, error) {
 	}
 
 	for i := 0; i < KeyBitSize; i++ {
-		ht.RoutingTable = append(ht.RoutingTable, []*RouteNode{})
+		ht.RoutingTable = append(ht.RoutingTable, []*RouteHost{})
 	}
 
 	return ht, nil
@@ -131,45 +131,45 @@ func (ht *HashTable) GetRefreshTimeForBucket(bucket int) time.Time {
 	return ht.refreshMap[bucket]
 }
 
-// MarkNodeAsSeen marks given Host as seen.
-func (ht *HashTable) MarkNodeAsSeen(node []byte) {
+// MarkHostAsSeen marks given Host as seen.
+func (ht *HashTable) MarkHostAsSeen(host []byte) {
 	ht.Lock()
 	defer ht.Unlock()
 
-	index := GetBucketIndexFromDifferingBit(ht.Origin.ID.GetHash(), node)
+	index := GetBucketIndexFromDifferingBit(ht.Origin.ID.GetHash(), host)
 	bucket := ht.RoutingTable[index]
-	nodeIndex := -1
+	hostIndex := -1
 	for i, v := range bucket {
-		if bytes.Equal(v.ID.GetHash(), node) {
-			nodeIndex = i
+		if bytes.Equal(v.ID.GetHash(), host) {
+			hostIndex = i
 			break
 		}
 	}
-	if nodeIndex == -1 {
+	if hostIndex == -1 {
 		panic(errors.New("tried to mark nonexistent host as seen"))
 	}
 
-	n := bucket[nodeIndex]
-	bucket = append(bucket[:nodeIndex], bucket[nodeIndex+1:]...)
+	n := bucket[hostIndex]
+	bucket = append(bucket[:hostIndex], bucket[hostIndex+1:]...)
 	bucket = append(bucket, n)
 	ht.RoutingTable[index] = bucket
 }
 
-// DoesNodeExistInBucket checks if given Host exists in given bucket.
-func (ht *HashTable) DoesNodeExistInBucket(bucket int, node []byte) bool {
+// DoesHostExistInBucket checks if given Host exists in given bucket.
+func (ht *HashTable) DoesHostExistInBucket(bucket int, host []byte) bool {
 	ht.Lock()
 	defer ht.Unlock()
 
 	for _, v := range ht.RoutingTable[bucket] {
-		if bytes.Equal(v.ID.GetHash(), node) {
+		if bytes.Equal(v.ID.GetHash(), host) {
 			return true
 		}
 	}
 	return false
 }
 
-// GetClosestContacts returns RouteSet with num closest Nodes to target.
-func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*host.Host) *RouteSet {
+// GetClosestContacts returns RouteSet with num closest Hosts to target.
+func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredHosts []*host.Host) *RouteSet {
 	ht.Lock()
 	defer ht.Unlock()
 	// First we need to build the list of adjacent indices to our target
@@ -193,7 +193,7 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*
 	leftToAdd := num
 
 	// Next we select ParallelCalls contacts and add them to the route set
-	ht.selectParallelCalls(leftToAdd, indexList, ignoredNodes, routeSet)
+	ht.selectParallelCalls(leftToAdd, indexList, ignoredHosts, routeSet)
 
 	sort.Sort(routeSet)
 
@@ -203,7 +203,7 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredNodes []*
 func (ht *HashTable) selectParallelCalls(
 	leftToAdd int,
 	indexList []int,
-	ignoredNodes []*host.Host,
+	ignoredHosts []*host.Host,
 	routeSet *RouteSet,
 ) {
 	var index int
@@ -212,8 +212,8 @@ func (ht *HashTable) selectParallelCalls(
 		bucketContacts := len(ht.RoutingTable[index])
 		for i := 0; i < bucketContacts; i++ {
 			ignored := false
-			for j := 0; j < len(ignoredNodes); j++ {
-				if ht.RoutingTable[index][i].ID.HashEqual(ignoredNodes[j].ID.GetHash()) {
+			for j := 0; j < len(ignoredHosts); j++ {
+				if ht.RoutingTable[index][i].ID.HashEqual(ignoredHosts[j].ID.GetHash()) {
 					ignored = true
 				}
 			}
@@ -228,25 +228,25 @@ func (ht *HashTable) selectParallelCalls(
 	}
 }
 
-// GetAllNodesInBucketCloserThan returns all hosts from given bucket that are closer to id then our host.
-func (ht *HashTable) GetAllNodesInBucketCloserThan(bucket int, id []byte) [][]byte {
+// GetAllHostsInBucketCloserThan returns all hosts from given bucket that are closer to id then our host.
+func (ht *HashTable) GetAllHostsInBucketCloserThan(bucket int, id []byte) [][]byte {
 	b := ht.RoutingTable[bucket]
-	var nodes [][]byte
+	var hosts [][]byte
 	for _, v := range b {
 		d1 := ht.getDistance(id, ht.Origin.ID.GetHash())
 		d2 := ht.getDistance(id, v.ID.GetHash())
 
 		result := d1.Sub(d1, d2)
 		if result.Sign() > -1 {
-			nodes = append(nodes, v.ID.GetHash())
+			hosts = append(hosts, v.ID.GetHash())
 		}
 	}
 
-	return nodes
+	return hosts
 }
 
-// GetTotalNodesInBucket returns number of Nodes in bucket.
-func (ht *HashTable) GetTotalNodesInBucket(bucket int) int {
+// GetTotalHostsInBucket returns number of Hosts in bucket.
+func (ht *HashTable) GetTotalHostsInBucket(bucket int) int {
 	ht.Lock()
 	defer ht.Unlock()
 	return len(ht.RoutingTable[bucket])
@@ -325,8 +325,8 @@ func GetBucketIndexFromDifferingBit(id1, id2 []byte) int {
 	return 0
 }
 
-// TotalNodes returns total number of hosts in HashTable.
-func (ht *HashTable) TotalNodes() int {
+// TotalHosts returns total number of hosts in HashTable.
+func (ht *HashTable) TotalHosts() int {
 	ht.Lock()
 	defer ht.Unlock()
 

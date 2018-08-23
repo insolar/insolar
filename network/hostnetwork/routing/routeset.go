@@ -35,11 +35,11 @@ func NewRouteSet() *RouteSet {
 	return &RouteSet{}
 }
 
-// Nodes returns list of RouteSet hosts.
-func (rs *RouteSet) Nodes() []*host.Host {
-	nodes := make([]*host.Host, len(rs.hosts))
-	copy(nodes, rs.hosts)
-	return nodes
+// Hosts returns list of RouteSet hosts.
+func (rs *RouteSet) Hosts() []*host.Host {
+	hosts := make([]*host.Host, len(rs.hosts))
+	copy(hosts, rs.hosts)
+	return hosts
 }
 
 // FirstHost returns first Host from RouteSet.
@@ -47,44 +47,44 @@ func (rs *RouteSet) FirstHost() *host.Host {
 	return rs.hosts[0]
 }
 
-// Contains checks if RouteSet contains given RouteNode.
-func (rs *RouteSet) Contains(node *RouteNode) bool {
+// Contains checks if RouteSet contains given RouteHost.
+func (rs *RouteSet) Contains(host *RouteHost) bool {
 	exists := false
 	for _, n := range rs.hosts {
-		if node.ID.HashEqual(n.ID.GetHash()) {
+		if host.ID.HashEqual(n.ID.GetHash()) {
 			exists = true
 		}
 	}
 	return exists
 }
 
-// Append adds single RouteNode to RouteSet.
-func (rs *RouteSet) Append(node *RouteNode) {
-	if !rs.Contains(node) {
-		rs.hosts = append(rs.hosts, node.Host)
+// Append adds single RouteHost to RouteSet.
+func (rs *RouteSet) Append(host *RouteHost) {
+	if !rs.Contains(host) {
+		rs.hosts = append(rs.hosts, host.Host)
 	}
 }
 
 // Remove removes host from RouteSet.
-func (rs *RouteSet) Remove(node *RouteNode) {
+func (rs *RouteSet) Remove(host *RouteHost) {
 	for i, n := range rs.hosts {
-		if n.ID.HashEqual(node.ID.GetHash()) {
+		if n.ID.HashEqual(host.ID.GetHash()) {
 			rs.hosts = append(rs.hosts[:i], rs.hosts[i+1:]...)
 			return
 		}
 	}
 }
 
-// RemoveMany removes list of RoutNodes from RouteSet
-func (rs *RouteSet) RemoveMany(nodes []*RouteNode) {
-	for _, n := range nodes {
+// RemoveMany removes list of RoutHosts from RouteSet
+func (rs *RouteSet) RemoveMany(hosts []*RouteHost) {
+	for _, n := range hosts {
 		rs.Remove(n)
 	}
 }
 
-// AppendMany adds a list of RouteNodes to RouteSet.
-func (rs *RouteSet) AppendMany(nodes []*RouteNode) {
-	for _, n := range nodes {
+// AppendMany adds a list of RouteHosts to RouteSet.
+func (rs *RouteSet) AppendMany(hosts []*RouteHost) {
+	for _, n := range hosts {
 		rs.Append(n)
 	}
 }

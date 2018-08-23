@@ -32,7 +32,7 @@ type ctxKey string
 
 const (
 	ctxTableIndex = ctxKey("table_index")
-	defaultNodeID = 0
+	defaultHostID = 0
 )
 
 // ContextBuilder allows to lazy configure and build new Context.
@@ -60,11 +60,11 @@ func (cb ContextBuilder) Build() (ctx Context, err error) {
 	return
 }
 
-// SetNodeByID sets host id in Context.
-func (cb ContextBuilder) SetNodeByID(nodeID id.ID) ContextBuilder {
+// SetHostByID sets host id in Context.
+func (cb ContextBuilder) SetHostByID(hostID id.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
 		for index, id := range cb.dht.origin.IDs {
-			if nodeID.HashEqual(id.GetHash()) {
+			if hostID.HashEqual(id.GetHash()) {
 				return context.WithValue(ctx, ctxTableIndex, index), nil
 			}
 		}
@@ -73,10 +73,10 @@ func (cb ContextBuilder) SetNodeByID(nodeID id.ID) ContextBuilder {
 	return cb
 }
 
-// SetDefaultNode sets first host id in Context.
-func (cb ContextBuilder) SetDefaultNode() ContextBuilder {
+// SetDefaultHost sets first host id in Context.
+func (cb ContextBuilder) SetDefaultHost() ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
-		return context.WithValue(ctx, ctxTableIndex, defaultNodeID), nil
+		return context.WithValue(ctx, ctxTableIndex, defaultHostID), nil
 	})
 	return cb
 }

@@ -24,24 +24,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewRouteNode(t *testing.T) {
+func TestNewRouteHost(t *testing.T) {
 	testAddr, _ := host.NewAddress("127.0.0.1:31337")
-	testNode := host.NewHost(testAddr)
+	testHost := host.NewHost(testAddr)
 
-	expectedRouteNode := &RouteNode{testNode}
-	actualRouteNode := NewRouteNode(testNode)
+	expectedRouteHost := &RouteHost{testHost}
+	actualRouteHost := NewRouteHost(testHost)
 
-	assert.Equal(t, expectedRouteNode, actualRouteNode)
+	assert.Equal(t, expectedRouteHost, actualRouteHost)
 }
 
-func TestRouteNodesFrom(t *testing.T) {
+func TestRouteHostsFrom(t *testing.T) {
 	testAddr1, _ := host.NewAddress("127.0.0.1:31337")
 	testAddr2, _ := host.NewAddress("10.10.11.11:31338")
-	nodes := []*host.Host{host.NewHost(testAddr1), host.NewHost(testAddr2)}
+	hosts := []*host.Host{host.NewHost(testAddr1), host.NewHost(testAddr2)}
 
-	routeNodes := RouteNodesFrom(nodes)
+	routeHosts := RouteHostsFrom(hosts)
 
-	assert.Len(t, routeNodes, 2)
-	assert.Equal(t, nodes[0].String(), routeNodes[0].String())
-	assert.Equal(t, nodes[1].String(), routeNodes[1].String())
+	assert.Len(t, routeHosts, 2)
+	assert.Equal(t, hosts[0].String(), routeHosts[0].String())
+	assert.Equal(t, hosts[1].String(), routeHosts[1].String())
 }

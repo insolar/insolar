@@ -74,13 +74,13 @@ func TestNewCheckOriginPacket(t *testing.T) {
 	assert.True(t, msg.IsValid())
 }
 
-func TestNewKnownOuterNodesPacket(t *testing.T) {
+func TestNewKnownOuterHostsPacket(t *testing.T) {
 	addr1, _ := host.NewAddress("127.0.0.1:55551")
 	addr2, _ := host.NewAddress("127.0.0.1:55552")
 	sender := host.NewHost(addr1)
 	receiver := host.NewHost(addr2)
 
-	msg := NewKnownOuterNodesPacket(sender, receiver, 1)
+	msg := NewKnownOuterHostsPacket(sender, receiver, 1)
 	assert.True(t, msg.IsValid())
 }
 
@@ -211,13 +211,13 @@ func TestDeserializePacket(t *testing.T) {
 
 func TestDeserializeBigPacket(t *testing.T) {
 	address, _ := host.NewAddress("127.0.0.1:31337")
-	nodeOne := host.NewHost(address)
+	hostOne := host.NewHost(address)
 
 	data := make([]byte, 1024*1024*10)
 	rand.Read(data)
 
 	builder := NewBuilder()
-	msg := builder.Sender(nodeOne).Receiver(nodeOne).Type(TypeStore).Request(&RequestDataStore{data, true}).Build()
+	msg := builder.Sender(hostOne).Receiver(hostOne).Type(TypeStore).Request(&RequestDataStore{data, true}).Build()
 	assert.True(t, msg.IsValid())
 
 	serialized, err := SerializePacket(msg)

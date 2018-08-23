@@ -18,14 +18,14 @@ package relay
 
 // Proxy contains proxy addresses.
 type Proxy interface {
-	// AddProxyNode add an address to proxy list.
-	AddProxyNode(address string)
-	// RemoveProxyNode removes proxy address from proxy list.
-	RemoveProxyNode(address string)
+	// AddProxyHost add an address to proxy list.
+	AddProxyHost(address string)
+	// RemoveProxyHost removes proxy address from proxy list.
+	RemoveProxyHost(address string)
 	// GetNextProxyAddress returns a next address to send from proxy list.
 	GetNextProxyAddress() string
-	// ProxyNodesCount return added proxy count.
-	ProxyNodesCount() int
+	// ProxyHostsCount return added proxy count.
+	ProxyHostsCount() int
 }
 
 // Note: thread unsafe!!!
@@ -42,8 +42,8 @@ func NewProxy() Proxy {
 	}
 }
 
-// AddProxyNode add an address to proxy list.
-func (p *proxy) AddProxyNode(address string) {
+// AddProxyHost add an address to proxy list.
+func (p *proxy) AddProxyHost(address string) {
 	i := p.getProxyIndex(address)
 
 	if i != -1 {
@@ -52,8 +52,8 @@ func (p *proxy) AddProxyNode(address string) {
 	p.proxyList = append(p.proxyList, address)
 }
 
-// RemoveProxyNode removes proxy address from proxy list.
-func (p *proxy) RemoveProxyNode(address string) {
+// RemoveProxyHost removes proxy address from proxy list.
+func (p *proxy) RemoveProxyHost(address string) {
 	i := p.getProxyIndex(address)
 
 	if i == -1 {
@@ -86,7 +86,7 @@ func (p *proxy) GetNextProxyAddress() string {
 	return p.proxyList[p.iterator-1]
 }
 
-// ProxyNodesCount return added proxy count.
-func (p *proxy) ProxyNodesCount() int {
+// ProxyHostsCount return added proxy count.
+func (p *proxy) ProxyHostsCount() int {
 	return len(p.proxyList)
 }

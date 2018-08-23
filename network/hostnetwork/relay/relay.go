@@ -42,9 +42,9 @@ const (
 // Relay Interface for relaying
 type Relay interface {
 	// AddClient add client to relay list.
-	AddClient(node *host.Host) error
+	AddClient(host *host.Host) error
 	// RemoveClient removes client from relay list.
-	RemoveClient(node *host.Host) error
+	RemoveClient(host *host.Host) error
 	// ClientsCount - clients count.
 	ClientsCount() int
 	// NeedToRelay returns true if origin host is proxy for target host.
@@ -63,17 +63,17 @@ func NewRelay() Relay {
 }
 
 // AddClient add client to relay list.
-func (r *relay) AddClient(node *host.Host) error {
-	if _, n := r.findClient(node.ID); n != nil {
+func (r *relay) AddClient(host *host.Host) error {
+	if _, n := r.findClient(host.ID); n != nil {
 		return errors.New("client exists already")
 	}
-	r.clients = append(r.clients, node)
+	r.clients = append(r.clients, host)
 	return nil
 }
 
 // RemoveClient removes client from relay list.
-func (r *relay) RemoveClient(node *host.Host) error {
-	idx, n := r.findClient(node.ID)
+func (r *relay) RemoveClient(host *host.Host) error {
+	idx, n := r.findClient(host.ID)
 	if n == nil {
 		return errors.New("client not found")
 	}
@@ -97,9 +97,9 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 }
 
 func (r *relay) findClient(id id.ID) (int, *host.Host) {
-	for idx, nodeIterator := range r.clients {
-		if nodeIterator.ID.HashEqual(id.GetHash()) {
-			return idx, nodeIterator
+	for idx, hostIterator := range r.clients {
+		if hostIterator.ID.HashEqual(id.GetHash()) {
+			return idx, hostIterator
 		}
 	}
 	return -1, nil

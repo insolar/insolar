@@ -26,11 +26,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createRouteNode(addrString string) *RouteNode {
+func createRouteHost(addrString string) *RouteHost {
 	addr, _ := host.NewAddress(addrString)
-	newNode := host.NewHost(addr)
-	newNode.ID, _ = id.NewID(id.GetRandomKey())
-	return NewRouteNode(newNode)
+	newHost := host.NewHost(addr)
+	newHost.ID, _ = id.NewID(id.GetRandomKey())
+	return NewRouteHost(newHost)
 }
 
 func TestNewRouteSet(t *testing.T) {
@@ -40,53 +40,53 @@ func TestNewRouteSet(t *testing.T) {
 	assert.Implements(t, (*sort.Interface)(nil), rs)
 }
 
-func TestRouteSet_Nodes(t *testing.T) {
+func TestRouteSet_Hosts(t *testing.T) {
 	rs := NewRouteSet()
 
-	assert.Empty(t, rs.Nodes())
+	assert.Empty(t, rs.Hosts())
 
-	node1 := createRouteNode("127.0.0.1:31337")
-	node2 := createRouteNode("10.10.11.11:12345")
+	host1 := createRouteHost("127.0.0.1:31337")
+	host2 := createRouteHost("10.10.11.11:12345")
 
-	rs.Append(node1)
-	rs.Append(node2)
+	rs.Append(host1)
+	rs.Append(host2)
 
-	assert.Equal(t, []*host.Host{node1.Host, node2.Host}, rs.Nodes())
-	assert.Equal(t, rs.hosts, rs.Nodes())
+	assert.Equal(t, []*host.Host{host1.Host, host2.Host}, rs.Hosts())
+	assert.Equal(t, rs.hosts, rs.Hosts())
 }
 
-func TestRouteSet_Nodes_ReturnsCopy(t *testing.T) {
+func TestRouteSet_Hosts_ReturnsCopy(t *testing.T) {
 	rs := NewRouteSet()
-	rs.Append(createRouteNode("127.0.0.1:31337"))
-	rs.Append(createRouteNode("10.10.11.11:12345"))
+	rs.Append(createRouteHost("127.0.0.1:31337"))
+	rs.Append(createRouteHost("10.10.11.11:12345"))
 
-	nodesCopy := rs.Nodes()
-	nodesCopy[0] = nil
+	hostsCopy := rs.Hosts()
+	hostsCopy[0] = nil
 
 	assert.NotNil(t, rs.hosts[0])
 }
 
-func TestRouteSet_FirstNode(t *testing.T) {
+func TestRouteSet_FirstHost(t *testing.T) {
 	rs := NewRouteSet()
-	node1 := createRouteNode("127.0.0.1:31337")
-	node2 := createRouteNode("10.10.11.11:12345")
-	rs.Append(node1)
-	rs.Append(node2)
+	host1 := createRouteHost("127.0.0.1:31337")
+	host2 := createRouteHost("10.10.11.11:12345")
+	rs.Append(host1)
+	rs.Append(host2)
 
-	assert.Equal(t, node1.Host, rs.FirstHost())
+	assert.Equal(t, host1.Host, rs.FirstHost())
 }
 
 func TestRouteSet_Contains(t *testing.T) {
 	rs := NewRouteSet()
-	node1 := createRouteNode("127.0.0.1:31337")
-	node2 := createRouteNode("10.10.11.11:12345")
-	node3 := createRouteNode("192.168.1.1:13666")
-	rs.Append(node1)
-	rs.Append(node2)
+	host1 := createRouteHost("127.0.0.1:31337")
+	host2 := createRouteHost("10.10.11.11:12345")
+	host3 := createRouteHost("192.168.1.1:13666")
+	rs.Append(host1)
+	rs.Append(host2)
 
-	assert.True(t, rs.Contains(node1))
-	assert.True(t, rs.Contains(node2))
-	assert.False(t, rs.Contains(node3))
+	assert.True(t, rs.Contains(host1))
+	assert.True(t, rs.Contains(host2))
+	assert.False(t, rs.Contains(host3))
 }
 
 func TestRouteSet_Append(t *testing.T) {
@@ -94,52 +94,52 @@ func TestRouteSet_Append(t *testing.T) {
 
 	assert.Empty(t, rs.hosts)
 
-	node1 := createRouteNode("127.0.0.1:31337")
-	node2 := createRouteNode("10.10.11.11:12345")
+	host1 := createRouteHost("127.0.0.1:31337")
+	host2 := createRouteHost("10.10.11.11:12345")
 
-	rs.Append(node1)
-	rs.Append(node2)
+	rs.Append(host1)
+	rs.Append(host2)
 
-	assert.Equal(t, []*host.Host{node1.Host, node2.Host}, rs.hosts)
+	assert.Equal(t, []*host.Host{host1.Host, host2.Host}, rs.hosts)
 }
 
 func TestRouteSet_Remove(t *testing.T) {
 	rs := NewRouteSet()
-	node1 := createRouteNode("127.0.0.1:31337")
-	node2 := createRouteNode("10.10.11.11:12345")
-	node3 := createRouteNode("192.168.1.1:13666")
-	rs.Append(node1)
-	rs.Append(node2)
-	rs.Append(node3)
+	host1 := createRouteHost("127.0.0.1:31337")
+	host2 := createRouteHost("10.10.11.11:12345")
+	host3 := createRouteHost("192.168.1.1:13666")
+	rs.Append(host1)
+	rs.Append(host2)
+	rs.Append(host3)
 
-	assert.True(t, rs.Contains(node1))
-	assert.True(t, rs.Contains(node2))
-	assert.True(t, rs.Contains(node3))
+	assert.True(t, rs.Contains(host1))
+	assert.True(t, rs.Contains(host2))
+	assert.True(t, rs.Contains(host3))
 
-	rs.Remove(node2)
+	rs.Remove(host2)
 
-	assert.True(t, rs.Contains(node1))
-	assert.False(t, rs.Contains(node2))
-	assert.True(t, rs.Contains(node3))
+	assert.True(t, rs.Contains(host1))
+	assert.False(t, rs.Contains(host2))
+	assert.True(t, rs.Contains(host3))
 }
 
 func TestRouteSet_RemoveMany(t *testing.T) {
 	rs := NewRouteSet()
-	var nodes []*RouteNode
-	nodes = append(nodes, createRouteNode("127.0.0.1:31337"))
-	nodes = append(nodes, createRouteNode("10.10.11.11:12345"))
-	nodes = append(nodes, createRouteNode("192.168.1.1:13666"))
-	for _, n := range nodes {
+	var hosts []*RouteHost
+	hosts = append(hosts, createRouteHost("127.0.0.1:31337"))
+	hosts = append(hosts, createRouteHost("10.10.11.11:12345"))
+	hosts = append(hosts, createRouteHost("192.168.1.1:13666"))
+	for _, n := range hosts {
 		rs.Append(n)
 	}
 
-	for _, n := range nodes {
+	for _, n := range hosts {
 		assert.True(t, rs.Contains(n))
 	}
 
-	rs.RemoveMany(nodes)
+	rs.RemoveMany(hosts)
 
-	assert.Empty(t, rs.Nodes())
+	assert.Empty(t, rs.Hosts())
 }
 
 func TestRouteSet_AppendMany(t *testing.T) {
@@ -147,12 +147,12 @@ func TestRouteSet_AppendMany(t *testing.T) {
 
 	assert.Empty(t, rs.hosts)
 
-	node1 := createRouteNode("127.0.0.1:31337")
-	node2 := createRouteNode("10.10.11.11:12345")
+	host1 := createRouteHost("127.0.0.1:31337")
+	host2 := createRouteHost("10.10.11.11:12345")
 
-	rs.AppendMany([]*RouteNode{node1, node2})
+	rs.AppendMany([]*RouteHost{host1, host2})
 
-	assert.Equal(t, []*host.Host{node1.Host, node2.Host}, rs.hosts)
+	assert.Equal(t, []*host.Host{host1.Host, host2.Host}, rs.hosts)
 }
 
 func TestRouteSet_Len(t *testing.T) {
@@ -160,11 +160,11 @@ func TestRouteSet_Len(t *testing.T) {
 
 	assert.Equal(t, 0, rs.Len())
 
-	node1 := createRouteNode("127.0.0.1:31337")
-	node2 := createRouteNode("10.10.11.11:12345")
+	host1 := createRouteHost("127.0.0.1:31337")
+	host2 := createRouteHost("10.10.11.11:12345")
 
-	rs.Append(node1)
-	rs.Append(node2)
+	rs.Append(host1)
+	rs.Append(host2)
 
 	assert.Equal(t, 2, rs.Len())
 }
@@ -174,28 +174,28 @@ func TestRouteSet_Swap(t *testing.T) {
 
 	assert.Empty(t, rs.hosts)
 
-	node1 := createRouteNode("127.0.0.1:31337")
-	node2 := createRouteNode("10.10.11.11:12345")
+	host1 := createRouteHost("127.0.0.1:31337")
+	host2 := createRouteHost("10.10.11.11:12345")
 
-	rs.Append(node1)
-	rs.Append(node2)
+	rs.Append(host1)
+	rs.Append(host2)
 
-	assert.Equal(t, []*host.Host{node1.Host, node2.Host}, rs.hosts)
+	assert.Equal(t, []*host.Host{host1.Host, host2.Host}, rs.hosts)
 
 	rs.Swap(0, 1)
 
-	assert.Equal(t, []*host.Host{node2.Host, node1.Host}, rs.hosts)
+	assert.Equal(t, []*host.Host{host2.Host, host1.Host}, rs.hosts)
 }
 
 func TestRouteSet_Less(t *testing.T) {
 	addr, _ := host.NewAddress("127.0.0.1:31337")
-	node1 := host.NewHost(addr)
-	node1.ID = getIDWithValues(5)
-	node2 := host.NewHost(addr)
-	node2.ID = getIDWithValues(7)
+	host1 := host.NewHost(addr)
+	host1.ID = getIDWithValues(5)
+	host2 := host.NewHost(addr)
+	host2.ID = getIDWithValues(7)
 	rs := NewRouteSet()
-	rs.Append(NewRouteNode(node1))
-	rs.Append(NewRouteNode(node2))
+	rs.Append(NewRouteHost(host1))
+	rs.Append(NewRouteHost(host2))
 
 	assert.True(t, rs.Less(0, 1))
 	assert.False(t, rs.Less(1, 0))

@@ -15,7 +15,7 @@
  */
 
 /*
-Package rpc allows higher level components to register methods that can be called by other network nodes.
+Package rpc allows higher level components to register methods that can be called by other network hosts.
 
 Usage:
 

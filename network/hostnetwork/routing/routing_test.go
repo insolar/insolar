@@ -28,7 +28,7 @@ import (
 )
 
 func TestDistanceMetric(t *testing.T) {
-	n := NewRouteNode(&host.Host{})
+	n := NewRouteHost(&host.Host{})
 	n.ID = getIDWithValues(0)
 	assert.Equal(t, 20, len(n.ID.GetHash()))
 

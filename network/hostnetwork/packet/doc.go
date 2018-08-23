@@ -22,8 +22,8 @@ Packet can be created with shortcut:
 	senderAddr, _ := host.NewAddress("127.0.0.1:1337")
 	receiverAddr, _ := host.NewAddress("127.0.0.1:1338")
 
-	sender := host.NewNode(senderAddr)
-	receiver := host.NewNode(receiverAddr)
+	sender := host.NewHost(senderAddr)
+	receiver := host.NewHost(receiverAddr)
 
 	msg := packet.NewPingPacket(sender, receiver)
 
@@ -37,8 +37,8 @@ Or with builder:
 	senderAddr, _ := host.NewAddress("127.0.0.1:1337")
 	receiverAddr, _ := host.NewAddress("127.0.0.1:1338")
 
-	sender := host.NewNode(senderAddr)
-	receiver := host.NewNode(receiverAddr)
+	sender := host.NewHost(senderAddr)
+	receiver := host.NewHost(receiverAddr)
 
 	msg := builder.
 		Sender(sender).
