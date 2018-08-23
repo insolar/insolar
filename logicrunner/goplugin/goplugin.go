@@ -107,10 +107,11 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error) {
+func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr MessageRouter) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Options:       options,
 		RunnerOptions: runnerOptions,
+		MessageRouter: mr,
 	}
 
 	if gp.Options.Listen == "" {

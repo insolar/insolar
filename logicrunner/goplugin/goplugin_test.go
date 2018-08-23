@@ -112,6 +112,7 @@ func TestHelloWorld(t *testing.T) {
 			Listen:          "127.0.0.1:7777",
 			CodeStoragePath: dir,
 		},
+		nil,
 	)
 	if err != nil {
 		t.Fatal(err)
