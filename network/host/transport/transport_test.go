@@ -72,7 +72,7 @@ func (t *transportSuite) TestPingPong() {
 	future, err := t.transport.SendRequest(packet.NewPingPacket(t.node, t.node))
 	t.Assert().NoError(err)
 
-	requestMsg := <-t.transport.Messages()
+	requestMsg := <-t.transport.Packets()
 	t.Assert().True(requestMsg.IsValid())
 	t.Assert().Equal(packet.TypePing, requestMsg.Type)
 	t.Assert().Equal(t.node, future.Actor())
@@ -88,7 +88,7 @@ func (t *transportSuite) TestPingPong() {
 	t.Assert().True(responseMsg.IsResponse)
 }
 
-func (t *transportSuite) TestSendBigMessage() {
+func (t *transportSuite) TestSendBigPacket() {
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
 	builder := packet.NewBuilder().Sender(t.node).Receiver(t.node).Type(packet.TypeStore)
 	requestMsg := builder.Request(&packet.RequestDataStore{data, true}).Build()
@@ -97,14 +97,14 @@ func (t *transportSuite) TestSendBigMessage() {
 	_, err := t.transport.SendRequest(requestMsg)
 	t.Assert().NoError(err)
 
-	msg := <-t.transport.Messages()
+	msg := <-t.transport.Packets()
 	t.Assert().True(requestMsg.IsValid())
 	t.Assert().Equal(packet.TypeStore, requestMsg.Type)
 	receivedData := msg.Data.(*packet.RequestDataStore).Data
 	t.Assert().Equal(data, receivedData)
 }
 
-func (t *transportSuite) TestSendInvalidMessage() {
+func (t *transportSuite) TestSendInvalidPacket() {
 	builder := packet.NewBuilder().Sender(t.node).Receiver(t.node).Type(packet.TypeRPC)
 	msg := builder.Build()
 	t.Assert().False(msg.IsValid())

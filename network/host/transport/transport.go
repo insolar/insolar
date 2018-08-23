@@ -28,7 +28,7 @@ type Transport interface {
 	// SendResponse sends packet for request with passed request id.
 	SendResponse(packet.RequestID, *packet.Packet) error
 
-	// Start starts thread to listen incoming messages.
+	// Start starts thread to listen incoming packets.
 	Start() error
 
 	// Stop gracefully stops listening.
@@ -37,8 +37,8 @@ type Transport interface {
 	// Close disposing all transport underlying structures after stop are called.
 	Close()
 
-	// Messages returns channel to listen incoming messages.
-	Messages() <-chan *packet.Packet
+	// Packets returns channel to listen incoming packets.
+	Packets() <-chan *packet.Packet
 
 	// Stopped returns signal channel to support graceful shutdown.
 	Stopped() <-chan bool

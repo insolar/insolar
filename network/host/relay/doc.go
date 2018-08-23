@@ -15,8 +15,8 @@
  */
 
 /*
-Package relay is an implementation of relay mechanism. Proxy contains info about nodes which can relaying messages.
-Relay contains info about nodes of which messages current node have to relay.
+Package relay is an implementation of relay mechanism. Proxy contains info about nodes which can relaying packets.
+Relay contains info about nodes of which packets current node have to relay.
 
 Usage:
 	package relay

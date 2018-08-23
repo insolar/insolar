@@ -86,7 +86,7 @@ func (t *utpTransport) SendRequest(msg *packet.Packet) (Future, error) {
 
 	future := t.createFuture(msg)
 
-	err := t.sendMessage(msg)
+	err := t.sendPacket(msg)
 	if err != nil {
 		future.Cancel()
 		return nil, err
@@ -99,7 +99,7 @@ func (t *utpTransport) SendRequest(msg *packet.Packet) (Future, error) {
 func (t *utpTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
-	return t.sendMessage(msg)
+	return t.sendPacket(msg)
 }
 
 // Start starts networking.
@@ -139,8 +139,8 @@ func (t *utpTransport) Close() {
 	close(t.disconnectFinished)
 }
 
-// Messages returns incoming messages channel.
-func (t *utpTransport) Messages() <-chan *packet.Packet {
+// Packets returns incoming packets channel.
+func (t *utpTransport) Packets() <-chan *packet.Packet {
 	return t.received
 }
 
@@ -183,7 +183,7 @@ func (t *utpTransport) getFuture(msg *packet.Packet) Future {
 	return t.futures[msg.RequestID]
 }
 
-func (t *utpTransport) sendMessage(msg *packet.Packet) error {
+func (t *utpTransport) sendPacket(msg *packet.Packet) error {
 	var recvAddress string
 	if t.proxy.ProxyNodesCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()
@@ -212,7 +212,7 @@ func (t *utpTransport) getRemoteAddress(conn net.Conn) string {
 
 func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 	for {
-		// Wait for Messages
+		// Wait for Packets
 		msg, err := packet.DeserializePacket(conn)
 		if err != nil {
 			// TODO should we penalize this Node somehow ? Ban it ?
@@ -221,11 +221,11 @@ func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
 			return
 		}
 		msg.RemoteAddress = t.getRemoteAddress(conn)
-		t.handleMessage(msg)
+		t.handlePacket(msg)
 	}
 }
 
-func (t *utpTransport) handleMessage(msg *packet.Packet) {
+func (t *utpTransport) handlePacket(msg *packet.Packet) {
 	if msg.IsResponse {
 		t.processResponse(msg)
 	} else {
@@ -235,7 +235,7 @@ func (t *utpTransport) handleMessage(msg *packet.Packet) {
 
 func (t *utpTransport) processResponse(msg *packet.Packet) {
 	future := t.getFuture(msg)
-	if future != nil && !shouldProcessMessage(future, msg) {
+	if future != nil && !shouldProcessPacket(future, msg) {
 		future.SetResult(msg)
 	}
 	future.Cancel()
@@ -247,7 +247,7 @@ func (t *utpTransport) processRequest(msg *packet.Packet) {
 	}
 }
 
-func shouldProcessMessage(future Future, msg *packet.Packet) bool {
+func shouldProcessPacket(future Future, msg *packet.Packet) bool {
 	return !future.Actor().Equal(*msg.Sender) && msg.Type != packet.TypePing || msg.Type != future.Request().Type
 }
 

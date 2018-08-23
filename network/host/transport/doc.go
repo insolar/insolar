@@ -30,7 +30,7 @@ Usage:
 	// get udp connection anywhere
 
 	tp, _ := transport.NewUTPTransport(conn)
-	msg := &packet.Message{}
+	msg := &packet.Packet{}
 
 	// Send the async queries and wait for a future
 	future, err := tp.SendRequest(msg)

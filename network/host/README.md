@@ -26,7 +26,7 @@ Key components
 --------------
 ### [Transport](https://godoc.org/github.com/insolar/insolar/network/host/transport)
 Network transport interface. It allows to abstract our network from physical transport.
-It can either be IP based network or any other kind of message courier (e.g. an industrial message bus). 
+It can either be IP based network or any other kind of packet courier (e.g. an industrial packet bus). 
 
 ### [Node](https://godoc.org/github.com/insolar/insolar/network/host/node)
 Node is a fundamental part of networking system. Each node has:
@@ -39,12 +39,12 @@ See [Kademlia whitepaper](https://pdos.csail.mit.edu/~petar/papers/maymounkov-ka
 [XLattice design specification](http://xlattice.sourceforge.net/components/protocol/kademlia/specs.html) for details.
 
 
-### [Message](https://godoc.org/github.com/insolar/insolar/network/host/message)
+### [Packet](https://godoc.org/github.com/insolar/insolar/network/host/packet)
 A set of data transferred by this module between nodes.
- - Request message
- - Response message
+ - Request packet
+ - Response packet
  
- Now messages are serialized simply with encoding/gob.
+ Now packets are serialized simply with encoding/gob.
  In future there will be a powerful robust serialization system based on Google's Protocol Buffers.
 
 ### [RPC](https://godoc.org/github.com/insolar/insolar/network/host/rpc)

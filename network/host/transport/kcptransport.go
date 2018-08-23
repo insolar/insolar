@@ -91,7 +91,7 @@ func (t *kcpTransport) SendRequest(msg *packet.Packet) (Future, error) {
 
 	future := t.createFuture(msg)
 
-	err := t.sendMessage(msg)
+	err := t.sendPacket(msg)
 	if err != nil {
 		future.Cancel()
 		return nil, err
@@ -104,7 +104,7 @@ func (t *kcpTransport) SendRequest(msg *packet.Packet) (Future, error) {
 func (t *kcpTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
-	return t.sendMessage(msg)
+	return t.sendPacket(msg)
 }
 
 // Start starts networking.
@@ -142,8 +142,8 @@ func (t *kcpTransport) Close() {
 	close(t.disconnectFinished)
 }
 
-// Messages returns incoming messages channel.
-func (t *kcpTransport) Messages() <-chan *packet.Packet {
+// Packets returns incoming packets channel.
+func (t *kcpTransport) Packets() <-chan *packet.Packet {
 	return t.received
 }
 
@@ -183,7 +183,7 @@ func (t *kcpTransport) getFuture(msg *packet.Packet) Future {
 	return t.futures[msg.RequestID]
 }
 
-func (t *kcpTransport) sendMessage(msg *packet.Packet) error {
+func (t *kcpTransport) sendPacket(msg *packet.Packet) error {
 	var recvAddress string
 	if t.proxy.ProxyNodesCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()
@@ -217,7 +217,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 		if err != nil {
 			log.Println(err.Error())
 		}
-		// Wait for Messages
+		// Wait for Packets
 		msg, err := packet.DeserializePacket(session)
 		if err != nil {
 			// TODO should we penalize this Node somehow ? Ban it ?
@@ -226,11 +226,11 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 			return
 		}
 		msg.RemoteAddress = t.getRemoteAddress(session)
-		t.handleMessage(msg)
+		t.handlePacket(msg)
 	}
 }
 
-func (t *kcpTransport) handleMessage(msg *packet.Packet) {
+func (t *kcpTransport) handlePacket(msg *packet.Packet) {
 	if msg.IsResponse {
 		t.processResponse(msg)
 	} else {
@@ -240,7 +240,7 @@ func (t *kcpTransport) handleMessage(msg *packet.Packet) {
 
 func (t *kcpTransport) processResponse(msg *packet.Packet) {
 	future := t.getFuture(msg)
-	if future != nil && !shouldProcessMessage(future, msg) {
+	if future != nil && !shouldProcessPacket(future, msg) {
 		future.SetResult(msg)
 	}
 	future.Cancel()

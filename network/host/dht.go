@@ -120,7 +120,7 @@ type Options struct {
 	PingTimeout time.Duration
 
 	// The maximum time to wait for a response to any packet.
-	MessageTimeout time.Duration
+	PacketTimeout time.Duration
 }
 
 // NewDHT initializes a new DHT node.
@@ -163,8 +163,8 @@ func NewDHT(store store.Store, origin *node.Origin, transport transport.Transpor
 		options.PingTimeout = time.Second * 1
 	}
 
-	if options.MessageTimeout == 0 {
-		options.MessageTimeout = time.Second * 10
+	if options.PacketTimeout == 0 {
+		options.PacketTimeout = time.Second * 10
 	}
 
 	dht.auth.authenticatedNodes = make(map[string]bool)
@@ -312,13 +312,13 @@ func (dht *DHT) GetOriginID(ctx Context) string {
 	return ht.Origin.ID.HashString()
 }
 
-// Listen begins listening on the socket for incoming Messages.
+// Listen begins listening on the socket for incoming Packets.
 func (dht *DHT) Listen() error {
 	start := make(chan bool)
 	stop := make(chan bool)
 
 	go dht.handleDisconnect(start, stop)
-	go dht.handleMessages(start, stop)
+	go dht.handlePackets(start, stop)
 	go dht.handleStoreTimers(start, stop)
 
 	return dht.transport.Start()
@@ -354,7 +354,7 @@ func (dht *DHT) Bootstrap() error {
 				}
 				wg.Done()
 				return
-			case <-time.After(dht.options.MessageTimeout):
+			case <-time.After(dht.options.PacketTimeout):
 				future.Cancel()
 				wg.Done()
 				return
@@ -450,7 +450,7 @@ func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data 
 		var futures []transport.Future
 		var futuresCount int
 
-		futures, removeFromRouteSet = dht.sendMessageToAlphaNodes(routeSet, queryRest, t, ht, contacted, target, futures, removeFromRouteSet)
+		futures, removeFromRouteSet = dht.sendPacketToAlphaNodes(routeSet, queryRest, t, ht, contacted, target, futures, removeFromRouteSet)
 
 		routeSet.RemoveMany(routing.RouteNodesFrom(removeFromRouteSet))
 
@@ -614,7 +614,7 @@ func (dht *DHT) selectResultChan(
 			close(resultChan)
 			return results, true
 		}
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		close(resultChan)
 		return results, true
 	}
@@ -633,7 +633,7 @@ func (dht *DHT) setUpResultChan(futures []transport.Future, ctx Context, resultC
 				dht.addNode(ctx, routing.NewRouteNode(result.Sender))
 				resultChan <- result
 				return
-			case <-time.After(dht.options.MessageTimeout):
+			case <-time.After(dht.options.PacketTimeout):
 				future.Cancel()
 				return
 			}
@@ -641,7 +641,7 @@ func (dht *DHT) setUpResultChan(futures []transport.Future, ctx Context, resultC
 	}
 }
 
-func (dht *DHT) sendMessageToAlphaNodes(
+func (dht *DHT) sendPacketToAlphaNodes(
 	routeSet *routing.RouteSet,
 	queryRest bool,
 	t routing.IterateType,
@@ -651,7 +651,7 @@ func (dht *DHT) sendMessageToAlphaNodes(
 	futures []transport.Future,
 	removeFromRouteSet []*node.Node,
 ) (resultFutures []transport.Future, resultRouteSet []*node.Node) {
-	// Next we send Messages to the first (closest) alpha nodes in the
+	// Next we send Packets to the first (closest) alpha nodes in the
 	// route set and wait for a response
 
 	for i, receiver := range routeSet.Nodes() {
@@ -667,9 +667,9 @@ func (dht *DHT) sendMessageToAlphaNodes(
 
 		(contacted)[string(receiver.ID.GetHash())] = true
 
-		messageBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(receiver)
-		messageBuilder = getMessageBuilder(t, messageBuilder, target)
-		msg := messageBuilder.Build()
+		packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(receiver)
+		packetBuilder = getPacketBuilder(t, packetBuilder, target)
+		msg := packetBuilder.Build()
 
 		// Send the async queries and wait for a response
 		res, err := dht.transport.SendRequest(msg)
@@ -686,14 +686,14 @@ func (dht *DHT) sendMessageToAlphaNodes(
 	return futures, removeFromRouteSet
 }
 
-func getMessageBuilder(t routing.IterateType, messageBuilder packet.Builder, target []byte) packet.Builder {
+func getPacketBuilder(t routing.IterateType, packetBuilder packet.Builder, target []byte) packet.Builder {
 	switch t {
 	case routing.IterateBootstrap, routing.IterateFindNode:
-		return messageBuilder.Type(packet.TypeFindNode).Request(&packet.RequestDataFindNode{Target: target})
+		return packetBuilder.Type(packet.TypeFindNode).Request(&packet.RequestDataFindNode{Target: target})
 	case routing.IterateFindValue:
-		return messageBuilder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: target})
+		return packetBuilder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: target})
 	case routing.IterateStore:
-		return messageBuilder.Type(packet.TypeFindNode).Request(&packet.RequestDataFindNode{Target: target})
+		return packetBuilder.Type(packet.TypeFindNode).Request(&packet.RequestDataFindNode{Target: target})
 	default:
 		panic("Unknown iterate type")
 	}
@@ -810,13 +810,13 @@ func (dht *DHT) selectTicker(ticker *time.Ticker, cb *ContextBuilder, stop chan 
 	}
 }
 
-func (dht *DHT) handleMessages(start, stop chan bool) {
+func (dht *DHT) handlePackets(start, stop chan bool) {
 	start <- true
 
 	cb := NewContextBuilder(dht)
 	for {
 		select {
-		case msg := <-dht.transport.Messages():
+		case msg := <-dht.transport.Packets():
 			if msg == nil || !msg.IsForMe(*dht.origin) {
 				continue
 			}
@@ -826,7 +826,7 @@ func (dht *DHT) handleMessages(start, stop chan bool) {
 			ht := dht.htFromCtx(ctx)
 
 			if ht.Origin.ID.HashEqual(msg.Receiver.ID.GetHash()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
-				dht.dispatchMessageType(ctx, msg, ht)
+				dht.dispatchPacketType(ctx, msg, ht)
 			} else {
 				targetNode, exist, err := dht.FindNode(ctx, msg.Receiver.ID.HashString())
 				if err != nil {
@@ -867,7 +867,7 @@ func (dht *DHT) sendRelayedRequest(request *packet.Packet, ctx Context) {
 			log.Println(response.Result)
 		}
 		log.Println(response.Error)
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		log.Println("timeout")
 	}
@@ -888,35 +888,35 @@ func buildContext(cb ContextBuilder, msg *packet.Packet) Context {
 	return ctx
 }
 
-func (dht *DHT) dispatchMessageType(ctx Context, msg *packet.Packet, ht *routing.HashTable) {
-	messageBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
+func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.HashTable) {
+	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 	switch msg.Type {
 	case packet.TypeFindNode:
-		dht.processFindNode(ctx, msg, messageBuilder)
+		dht.processFindNode(ctx, msg, packetBuilder)
 	case packet.TypeFindValue:
-		dht.processFindValue(ctx, msg, messageBuilder)
+		dht.processFindValue(ctx, msg, packetBuilder)
 	case packet.TypeStore:
-		dht.processStore(ctx, msg, messageBuilder)
+		dht.processStore(ctx, msg, packetBuilder)
 	case packet.TypePing:
-		dht.processPing(ctx, msg, messageBuilder)
+		dht.processPing(ctx, msg, packetBuilder)
 	case packet.TypeRPC:
-		dht.processRPC(ctx, msg, messageBuilder)
+		dht.processRPC(ctx, msg, packetBuilder)
 	case packet.TypeRelay:
-		dht.processRelay(ctx, msg, messageBuilder)
+		dht.processRelay(ctx, msg, packetBuilder)
 	case packet.TypeCheckOrigin:
-		dht.processCheckOriginRequest(ctx, msg, messageBuilder)
+		dht.processCheckOriginRequest(ctx, msg, packetBuilder)
 	case packet.TypeAuth:
-		dht.processAuthentication(ctx, msg, messageBuilder)
+		dht.processAuthentication(ctx, msg, packetBuilder)
 	case packet.TypeObtainIP:
-		dht.processObtainIPRequest(ctx, msg, messageBuilder)
+		dht.processObtainIPRequest(ctx, msg, packetBuilder)
 	case packet.TypeRelayOwnership:
-		dht.processRelayOwnership(ctx, msg, messageBuilder)
+		dht.processRelayOwnership(ctx, msg, packetBuilder)
 	case packet.TypeKnownOuterNodes:
-		dht.processKnownOuterNodes(ctx, msg, messageBuilder)
+		dht.processKnownOuterNodes(ctx, msg, packetBuilder)
 	}
 }
 
-func (dht *DHT) processRelayOwnership(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processRelayOwnership(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	data := msg.Data.(*packet.RequestRelayOwnership)
 
 	if data.Ready {
@@ -939,13 +939,13 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *packet.Packet, messageBu
 	}
 	response := &packet.ResponseRelayOwnership{Accepted: true}
 
-	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
 }
 
-func (dht *DHT) processFindNode(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processFindNode(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	ht := dht.htFromCtx(ctx)
 	data := msg.Data.(*packet.RequestDataFindNode)
 	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
@@ -953,13 +953,13 @@ func (dht *DHT) processFindNode(ctx Context, msg *packet.Packet, messageBuilder 
 	response := &packet.ResponseDataFindNode{
 		Closest: closest.Nodes(),
 	}
-	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
 }
 
-func (dht *DHT) processFindValue(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processFindValue(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	ht := dht.htFromCtx(ctx)
 	data := msg.Data.(*packet.RequestDataFindValue)
 	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
@@ -971,13 +971,13 @@ func (dht *DHT) processFindValue(ctx Context, msg *packet.Packet, messageBuilder
 		closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*node.Node{msg.Sender})
 		response.Closest = closest.Nodes()
 	}
-	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
 }
 
-func (dht *DHT) processStore(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processStore(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	data := msg.Data.(*packet.RequestDataStore)
 	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
 	key := store.NewKey(data.Data)
@@ -989,14 +989,14 @@ func (dht *DHT) processStore(ctx Context, msg *packet.Packet, messageBuilder pac
 	}
 }
 
-func (dht *DHT) processPing(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
-	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(nil).Build())
+func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(nil).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
 }
 
-func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	data := msg.Data.(*packet.RequestDataRPC)
 	dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
 	result, err := dht.rpc.Invoke(msg.Sender, data.Method, data.Args)
@@ -1009,14 +1009,14 @@ func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, messageBuilder packe
 		response.Success = false
 		response.Error = err.Error()
 	}
-	err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
 }
 
 // Precess relay request.
-func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	var err error
 	if !dht.auth.authenticatedNodes[msg.Sender.ID.HashString()] {
 		log.Print("relay request from unknown node rejected")
@@ -1024,7 +1024,7 @@ func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, messageBuilder pac
 			State: relay.NoAuth,
 		}
 
-		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	} else {
 		data := msg.Data.(*packet.RequestRelay)
 		dht.addNode(ctx, routing.NewRouteNode(msg.Sender))
@@ -1050,14 +1050,14 @@ func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, messageBuilder pac
 			State: state,
 		}
 
-		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	}
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
 }
 
-func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	data := msg.Data.(*packet.RequestAuth)
 	switch data.Command {
 	case packet.BeginAuth:
@@ -1068,7 +1068,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, messageBu
 				AuthUniqueKey: nil,
 			}
 
-			err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+			err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 			if err != nil {
 				log.Println("Failed to send response:", err)
 			}
@@ -1086,7 +1086,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, messageBu
 			AuthUniqueKey: key,
 		}
 
-		err = dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 		if err != nil {
 			log.Println("Failed to send response:", err)
 		}
@@ -1103,7 +1103,7 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, messageBu
 			AuthUniqueKey: nil,
 		}
 
-		err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+		err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 		if err != nil {
 			log.Println("Failed to send response:", err)
 		}
@@ -1112,12 +1112,12 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, messageBu
 	}
 }
 
-func (dht *DHT) processCheckOriginRequest(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processCheckOriginRequest(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	dht.auth.mut.Lock()
 	defer dht.auth.mut.Unlock()
 	if key, ok := dht.auth.ReceivedKeys[msg.Sender.ID.HashString()]; ok {
 		response := &packet.ResponseCheckOrigin{AuthUniqueKey: key}
-		err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+		err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 		if err != nil {
 			log.Println("Failed to send check origin response:", err)
 		}
@@ -1126,9 +1126,9 @@ func (dht *DHT) processCheckOriginRequest(ctx Context, msg *packet.Packet, messa
 	}
 }
 
-func (dht *DHT) processObtainIPRequest(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processObtainIPRequest(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	response := &packet.ResponseObtainIP{IP: msg.RemoteAddress}
-	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send obtain IP response:", err)
 	}
@@ -1176,7 +1176,7 @@ func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error { // t
 			return err
 		}
 
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		err = errors.New("timeout")
 		return err
@@ -1245,7 +1245,7 @@ func (dht *DHT) CheckOriginRequest(ctx Context, targetID string) error {
 		response := rsp.Data.(*packet.ResponseCheckOrigin)
 		dht.handleCheckOriginResponse(response, targetID)
 
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		err = errors.New("timeout")
 		return err
@@ -1297,7 +1297,7 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 			return err
 		}
 
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		err = errors.New("timeout")
 		return err
@@ -1360,7 +1360,7 @@ func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
 			return err
 		}
 
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		err = errors.New("timeout")
 		return err
@@ -1424,7 +1424,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 			return response.Result, nil
 		}
 		return nil, errors.New(response.Error)
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		return nil, errors.New("timeout")
 	}
@@ -1568,7 +1568,7 @@ func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
 		response := rsp.Data.(*packet.ResponseRelayOwnership)
 		dht.handleRelayOwnership(response, target)
 
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		err = errors.New("timeout")
 		return err
@@ -1577,7 +1577,7 @@ func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
 	return nil
 }
 
-func (dht *DHT) processKnownOuterNodes(ctx Context, msg *packet.Packet, messageBuilder packet.Builder) {
+func (dht *DHT) processKnownOuterNodes(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	data := msg.Data.(*packet.RequestKnownOuterNodes)
 
 	ID := dht.subnet.HighKnownNodes.ID
@@ -1591,7 +1591,7 @@ func (dht *DHT) processKnownOuterNodes(ctx Context, msg *packet.Packet, messageB
 		OuterNodes: nodes,
 	}
 
-	err := dht.transport.SendResponse(msg.RequestID, messageBuilder.Response(response).Build())
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
@@ -1630,7 +1630,7 @@ func (dht *DHT) knownOuterNodesRequest(targetID string, nodes int) error {
 			return err
 		}
 
-	case <-time.After(dht.options.MessageTimeout):
+	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		err = errors.New("timeout")
 		return err
