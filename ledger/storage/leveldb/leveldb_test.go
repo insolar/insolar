@@ -14,39 +14,36 @@
  *    limitations under the License.
  */
 
-package leveldb
+package leveldb_test
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/leveldb"
 )
 
+var dbDirPath = "_db"
+
 func TestMain(m *testing.M) {
-	if err := DropDB(); err != nil {
+	if err := leveldb.DropDB(); err != nil {
 		os.Exit(1)
 	}
 
 	os.Exit(m.Run())
 }
 
-func setRawRecord(ll *LevelLedger, ref *record.Reference, raw *record.Raw) error {
-	k := prefixkey(scopeIDRecord, ref.Key())
-	return ll.ldb.Put(k, record.MustEncodeRaw(raw), nil)
-}
-
 func TestGetRecordNotFound(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
+	ledger, err := leveldb.InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -62,61 +59,6 @@ func MustDecodeHexString(s string) []byte {
 		panic(err)
 	}
 	return b
-}
-
-func TestPrefixkey(t *testing.T) {
-	passRecPulse0 := record.LockUnlockRequest{}
-	raw, err := record.EncodeToRaw(&passRecPulse0)
-	assert.Nil(t, err)
-	ref := &record.Reference{
-		Domain: record.ID{Pulse: 0, Hash: raw.Hash()},
-		Record: record.ID{Pulse: 0, Hash: raw.Hash()},
-	}
-	key := ref.Key()
-	keyP := prefixkey(0, key)
-	emptyHexStr := strings.Repeat("00", record.IDSize)
-	emptyKey := MustDecodeHexString(emptyHexStr + emptyHexStr)
-	emptyKeyPrefix := MustDecodeHexString("00" + emptyHexStr + emptyHexStr)
-
-	assert.NotEqual(t, emptyKey, key)
-	assert.NotEqual(t, emptyKeyPrefix, keyP)
-	// log.Printf("emptyKey:  %x\n", emptyKey)
-	// log.Printf("k:         %x\n", k)
-	// log.Printf("prefixk: %x\n", kPrefix)
-
-	expectHexKey := "00000000416ad5cadc41ad8829bdc099b3b20f04dce93217219487fb64cbced600000000416ad5cadc41ad8829bdc099b3b20f04dce93217219487fb64cbced6"
-	expectHexKeyP := "00" + expectHexKey
-	assert.Equal(t, MustDecodeHexString(expectHexKey), key)
-	assert.Equal(t, MustDecodeHexString(expectHexKeyP), keyP)
-}
-
-func TestSetRawRecord(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
-
-	// prepare record and it's raw representation
-	passRecPulse0 := record.LockUnlockRequest{}
-	raw, err := record.EncodeToRaw(&passRecPulse0)
-	assert.Nil(t, err)
-	ref := &record.Reference{
-		Domain: record.ID{Pulse: 0, Hash: raw.Hash()},
-		Record: record.ID{Pulse: 0, Hash: raw.Hash()},
-	}
-
-	// record should not exists
-	rec, err := ledger.GetRecord(ref)
-	assert.Equal(t, err, storage.ErrNotFound)
-	assert.Nil(t, rec)
-
-	// put record in storage by key
-	err = setRawRecord(ledger, ref, raw)
-	assert.Nil(t, err)
-
-	// get record from storage by key
-	gotrec, err := ledger.GetRecord(ref)
-	assert.Nil(t, err)
-	assert.Equal(t, &passRecPulse0, gotrec)
 }
 
 func zerohash() []byte {
@@ -157,11 +99,11 @@ func referenceWithHashes(domainhash, recordhash string) record.Reference {
 }
 
 func TestLevelLedger_SetRecord(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
+	ledger, err := leveldb.InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
-	ledger.pulseFn = func() record.PulseNum { return pulse1 }
+	ledger.SetPulseFn(func() record.PulseNum { return pulse1 })
 	defer ledger.Close()
 
 	passRecPulse1 := &record.LockUnlockRequest{}
@@ -194,7 +136,7 @@ func TestLevelLedger_SetRecord(t *testing.T) {
 }
 
 func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
+	ledger, err := leveldb.InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -208,7 +150,7 @@ func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
+	ledger, err := leveldb.InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -242,7 +184,7 @@ func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
+	ledger, err := leveldb.InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -253,7 +195,7 @@ func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
+	ledger, err := leveldb.InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -276,7 +218,7 @@ func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
+	ledger, err := leveldb.InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
@@ -286,7 +228,7 @@ func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 }
 
 func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
+	ledger, err := leveldb.InitDB(dbDirPath, nil)
 	assert.Nil(t, err)
 	defer ledger.Close()
 
