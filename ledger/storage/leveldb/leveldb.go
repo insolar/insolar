@@ -17,7 +17,6 @@
 package leveldb
 
 import (
-	"os"
 	"path/filepath"
 	"time"
 
@@ -237,18 +236,4 @@ func (ll *LevelLedger) SetDrop(pulse record.PulseNum, drop *jetdrop.JetDrop) err
 // Close terminates db connection
 func (ll *LevelLedger) Close() error {
 	return ll.ldb.Close()
-}
-
-// DropDB erases all data from storage.
-func DropDB() error {
-	absPath, err := filepath.Abs(dbDirPath)
-	if err != nil {
-		return err
-	}
-
-	if err = os.RemoveAll(absPath); err != nil {
-		return err
-	}
-
-	return nil
 }

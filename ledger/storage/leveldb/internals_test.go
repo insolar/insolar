@@ -23,6 +23,7 @@ package leveldb
 
 import (
 	"encoding/hex"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -32,14 +33,6 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
-
-func TestMain(m *testing.M) {
-	if err := DropDB(); err != nil {
-		os.Exit(1)
-	}
-
-	os.Exit(m.Run())
-}
 
 func MustDecodeHexString(s string) []byte {
 	b, err := hex.DecodeString(s)
@@ -80,9 +73,8 @@ func setRawRecord(ll *LevelLedger, ref *record.Reference, raw *record.Raw) error
 }
 
 func TestSetRawRecord(t *testing.T) {
-	ledger, err := InitDB(dbDirPath, nil)
-	assert.Nil(t, err)
-	defer ledger.Close()
+	ledger, cleaner := tmpDB(t, "")
+	defer cleaner()
 
 	// prepare record and it's raw representation
 	passRecPulse0 := record.LockUnlockRequest{}
@@ -106,4 +98,27 @@ func TestSetRawRecord(t *testing.T) {
 	gotrec, err := ledger.GetRecord(ref)
 	assert.Nil(t, err)
 	assert.Equal(t, &passRecPulse0, gotrec)
+}
+
+// copy of leveltestutils.TmpDB:
+// we can't use the original one, because of circular dependency on storage/leveldb
+func tmpDB(t *testing.T, dir string) (*LevelLedger, func()) {
+	tmpdir, err := ioutil.TempDir(dir, "ldb-test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledger, err := InitDB(tmpdir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ledger, func() {
+		closeErr := ledger.Close()
+		rmErr := os.RemoveAll(tmpdir)
+		if closeErr != nil {
+			t.Error("temporary db close failed", closeErr)
+		}
+		if rmErr != nil {
+			t.Fatal("temporary db dir cleanup failed", rmErr)
+		}
+	}
 }
