@@ -66,25 +66,28 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 	return resParsed[0].(string)
 }
 
-func compileBinaries() error {
-	d, _ := os.Getwd()
-
-	err := os.Chdir(d + "/ginsider-cli")
+func buildInciderCLI() error {
+	out, err := exec.Command("go", "build", "-o", "./ginsider-cli/ginsider-cli", "./ginsider-cli/").CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "couldn't chdir")
+		return errors.Wrap(err, "can't build ginsider: "+string(out))
 	}
+	return nil
+}
 
-	defer os.Chdir(d) // nolint: errcheck
-
-	err = exec.Command("go", "build", "-o", "ginsider-cli", "main.go").Run()
+func compileBinaries() error {
+	err := buildInciderCLI()
 	if err != nil {
 		return errors.Wrap(err, "can't build ginsider")
 	}
+
+	d, _ := os.Getwd()
 
 	err = os.Chdir(d + "/testplugins")
 	if err != nil {
 		return errors.Wrap(err, "couldn't chdir")
 	}
+
+	defer os.Chdir(d) // nolint: errcheck
 
 	out, err := exec.Command("make", "secondary.so").CombinedOutput()
 	if err != nil {
