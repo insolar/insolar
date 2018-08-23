@@ -36,10 +36,14 @@ const (
 	zeroRecordHash   = "" // TODO: Hash from zeroRecordBinary
 )
 
+// The PulseFn type is an adapter to allow set function produces
+// pulses for storage.
+type PulseFn func() record.PulseNum
+
 // LevelLedger represents ledger's LevelDB storage.
 type LevelLedger struct {
 	ldb     *leveldb.DB
-	pulseFn func() record.PulseNum
+	pulseFn PulseFn
 	zeroRef record.Reference
 }
 
@@ -99,6 +103,11 @@ func prefixkey(prefix byte, key []byte) []byte {
 // GetCurrentPulse return currently stored pulse.
 func (ll *LevelLedger) GetCurrentPulse() record.PulseNum {
 	return ll.pulseFn()
+}
+
+// SetPulseFn allows redefine pulse function.
+func (ll *LevelLedger) SetPulseFn(fn PulseFn) {
+	ll.pulseFn = fn
 }
 
 // GetRecord returns record from leveldb by *record.Reference.
