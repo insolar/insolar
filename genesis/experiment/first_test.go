@@ -28,27 +28,15 @@ import (
 func TestTransferViaReceive(t *testing.T) {
 	// Create member which balance will increase
 	toMember, toMemberRef := member.NewMember("Vasya")
-	/*toMember.SetContext(&foundation.CallContext{
-		Me: toMemberRef,
-	})*/
 
 	// Create member which balance will decrease
 	fromMember, fromMemberRef := member.NewMember("Petya")
-	/*fromMember.SetContext(&foundation.CallContext{
-		Me: fromMemberRef,
-	})*/
 
 	// Create wallet for toMember
 	toWallet, toWalletRef := wallet.NewWallet(1000)
-	/*toWallet.SetContext(&foundation.CallContext{
-		Me: toWalletRef,
-	})*/
 
 	// Create wallet for fromMember
-	fromWallet, _ /*fromWalletRef*/ := wallet.NewWallet(2000)
-	/*fromWallet.SetContext(&foundation.CallContext{
-		Me: fromWalletRef,
-	})*/
+	fromWallet, _ := wallet.NewWallet(2000)
 
 	// Make fromWallet delegate of fromMember
 	fromMember.TakeDelegate(fromWallet, wallet.TypeReference)
@@ -79,27 +67,15 @@ func TestTransferViaReceive(t *testing.T) {
 func TestTransferViaTransfer(t *testing.T) {
 	// Create member which balance will increase
 	toMember, toMemberRef := member.NewMember("Vasya")
-	toMember.SetContext(&foundation.CallContext{
-		Me: toMemberRef,
-	})
 
 	// Create member which balance will decrease
 	fromMember, fromMemberRef := member.NewMember("Petya")
-	fromMember.SetContext(&foundation.CallContext{
-		Me: fromMemberRef,
-	})
 
 	// Create wallet for toMember
 	toWallet, toWalletRef := wallet.NewWallet(1000)
-	toWallet.SetContext(&foundation.CallContext{
-		Me: toWalletRef,
-	})
 
 	// Create wallet for fromMember
-	fromWallet, fromWalletRef := wallet.NewWallet(2000)
-	fromWallet.SetContext(&foundation.CallContext{
-		Me: fromWalletRef,
-	})
+	fromWallet, _ := wallet.NewWallet(2000)
 
 	// Make fromWallet delegate of fromMember
 	fromMember.TakeDelegate(fromWallet, wallet.TypeReference)

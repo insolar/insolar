@@ -52,7 +52,7 @@ type BaseContract struct {
 type BaseContractInterface interface {
 	MyReference() Reference
 	GetImplementationFor(r Reference) BaseContractInterface
-	SetContext(c *CallContext)
+	TakeDelegate(delegate BaseContractInterface, class Reference) Reference
 }
 
 // MyReference - Returns public reference of contract
@@ -136,12 +136,8 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) R
 	if FakeChildren[me.String()] == nil {
 		FakeChildren[me.String()] = make(map[string][]BaseContractInterface)
 	}
-	/*if FakeChildren[me][class] == nil {
-		FakeChildren[me][class] = make([]BaseContractInterface, 1)
-	}*/
 
 	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], child)
-
 	return key
 }
 
@@ -161,12 +157,8 @@ func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class Refer
 	if FakeChildren[me.String()] == nil {
 		FakeChildren[me.String()] = make(map[string][]BaseContractInterface)
 	}
-	/*if FakeChildren[me][class] == nil {
-		FakeChildren[me][class] = make([]BaseContractInterface, 1)
-	}*/
 
 	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], delegate)
-
 	return key
 }
 

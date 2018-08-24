@@ -4,7 +4,7 @@ import (
 	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
-//var TypeReference = foundation.Reference("member")
+var TypeReference = foundation.Reference("member")
 
 type Member struct {
 	foundation.BaseContract
@@ -23,9 +23,6 @@ func NewMember(name string) (*Member, foundation.Reference) {
 	member := &Member{
 		Name: name,
 	}
-	//fmt.Printf("%x\n", &member)
-	//fmt.Printf("%x\n", &(member.BaseContract))
-	//fmt.Println(member.MyReference())
 	reference := foundation.SaveToLedger(member)
 	return member, reference
 }
