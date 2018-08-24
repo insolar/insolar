@@ -197,5 +197,14 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 	return []byte(res.Result), res.Err
 }
 
-// CurrentGoInsider - hackish way to give proxies access to the current environment
-var CurrentGoInsider *GoInsider
+// Serialize - CBOR serializer wrapper: `what` -> `to`
+func (t *GoInsider) Serialize(what interface{}, to *[]byte) error {
+	ch := new(codec.CborHandle)
+	return codec.NewEncoderBytes(to, ch).Encode(what)
+}
+
+// Deserialize - CBOR de-serializer wrapper: `from` -> `into`
+func (t *GoInsider) Deserialize(from []byte, into interface{}) error {
+	ch := new(codec.CborHandle)
+	return codec.NewDecoderBytes(from, ch).Decode(into)
+}
