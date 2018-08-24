@@ -27,6 +27,8 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/messagerouter"
+	"github.com/insolar/insolar/network/host"
 )
 
 func init() {
@@ -249,6 +251,21 @@ func buildContracts(root string, names ...string) error {
 	return nil
 }
 
+type testMessageRouter struct {
+	plugin *GoPlugin
+}
+
+func (r *testMessageRouter) Route(ctx host.Context, msg messagerouter.Message) (resp messagerouter.Response, err error) {
+	ch := new(codec.CborHandle)
+
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	resdata, reslist, err := r.plugin.Exec("two", data, msg.Method, msg.Arguments)
+	return messagerouter.Response{Data: resdata, Result: reslist, Error: err}, nil
+}
+
 func TestContractCallingContract(t *testing.T) {
 	err := buildInciderCLI()
 	if err != nil {
@@ -294,6 +311,8 @@ func TestContractCallingContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	mr := &testMessageRouter{}
+
 	gp, err := NewGoPlugin(
 		Options{
 			Listen:   "127.0.0.1:7778",
@@ -303,12 +322,14 @@ func TestContractCallingContract(t *testing.T) {
 			Listen:          "127.0.0.1:7777",
 			CodeStoragePath: insiderStorage,
 		},
-		nil,
+		mr,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer gp.Stop()
+
+	mr.plugin = gp
 
 	ch := new(codec.CborHandle)
 	var data []byte
