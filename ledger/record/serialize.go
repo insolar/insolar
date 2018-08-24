@@ -64,6 +64,7 @@ func EncodeRaw(raw *Raw) ([]byte, error) {
 	return b.Bytes(), err
 }
 
+// hashableBytes exists just to allow []byte implements hash.Writer
 type hashableBytes []byte
 
 func (b hashableBytes) WriteHash(w io.Writer) {
