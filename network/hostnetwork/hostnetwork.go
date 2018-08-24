@@ -17,6 +17,9 @@
 package hostnetwork
 
 import (
+	"errors"
+	"log"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -58,8 +61,17 @@ func NewHostNetwork(cfg configuration.HostNetwork) (*DHT, error) {
 	}
 
 	proxy := relay.NewProxy()
-	// TODO: choose transport from cfg
-	tp, err := transport.NewUTPTransportFactory().Create(conn, proxy)
+
+	var transportFactory transport.Factory
+	switch cfg.Transport {
+	case "UTP":
+		transportFactory = transport.NewUTPTransportFactory()
+	case "KCP":
+		transportFactory = transport.NewKCPTransportFactory()
+	default:
+		return nil, errors.New("invalid transport configuration")
+	}
+	tp, err := transportFactory.Create(conn, proxy)
 	if err != nil {
 		return nil, err
 	}
@@ -80,19 +92,16 @@ func NewHostNetwork(cfg configuration.HostNetwork) (*DHT, error) {
 	return network, nil
 }
 
-func getBootstrapHosts(bootstrapAddress []string) []*host.Host {
-	var bootstrapHosts []*host.Host
-	/* TODO:
-	if *bootstrapAddress != "" {
-		address, err := host.NewAddress(*bootstrapAddress)
+func getBootstrapHosts(addresses []string) []*host.Host {
+	var hosts []*host.Host
+	for _, a := range addresses {
+		address, err := host.NewAddress(a)
 		if err != nil {
 			log.Fatalln("Failed to create bootstrap address:", err.Error())
 		}
-		bootstrapHost := host.NewHost(address)
-		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
+		hosts = append(hosts, host.NewHost(address))
 	}
-	*/
-	return bootstrapHosts
+	return hosts
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {

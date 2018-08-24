@@ -16,165 +16,63 @@
 
 package hostnetwork
 
-/*
-type mockResolverOk struct{}
+import (
+	"testing"
 
-func (r *mockResolverOk) Resolve(conn net.PacketConn) (string, error) {
-	return "127.0.0.1:31337", nil
+	"github.com/insolar/insolar/configuration"
+	"github.com/stretchr/testify/assert"
+)
+
+func addressCfg(address string) configuration.HostNetwork {
+	cfg := configuration.NewConfiguration().Host
+	cfg.Address = address
+	return cfg
 }
 
-type mockResolverFail struct{}
-
-func (r *mockResolverFail) Resolve(conn net.PacketConn) (string, error) {
-	return "", errors.New("mock resolver error")
+func stunCfg(useStun bool) configuration.HostNetwork {
+	cfg := configuration.NewConfiguration().Host
+	cfg.UseStun = useStun
+	return cfg
 }
 
-type mockResolverInvalid struct{}
-
-func (r *mockResolverInvalid) Resolve(conn net.PacketConn) (string, error) {
-	return "invalid address", nil
+func transportCfg(tr string) configuration.HostNetwork {
+	cfg := configuration.NewConfiguration().Host
+	cfg.Transport = tr
+	return cfg
 }
 
-type mockConnFactoryOk struct{}
+func TestConfiguration_NewHostNetwork(t *testing.T) {
 
-func (cf *mockConnFactoryOk) Create(address string) (net.PacketConn, error) {
-	return nil, nil
-}
+	tests := map[string]struct {
+		cfg           configuration.HostNetwork
+		expectedError bool
+	}{
+		// negative
+		"InvalidAddress":   {addressCfg("invalid"), true},
+		"InvalidTransport": {transportCfg("invalid"), true},
 
-type mockConnFactoryFail struct{}
-
-func (cf *mockConnFactoryFail) Create(address string) (net.PacketConn, error) {
-	return nil, errors.New("mock conn factory error")
-}
-
-type mockTransportFactoryOk struct{}
-
-func (tf *mockTransportFactoryOk) Create(conn net.PacketConn, proxy relay.Proxy) (transport.Transport, error) {
-	return newMockTransport(), nil
-}
-
-type mockTransportFactoryFail struct{}
-
-func (tf *mockTransportFactoryFail) Create(conn net.PacketConn, proxy relay.Proxy) (transport.Transport, error) {
-	return nil, errors.New("mock transport factory error")
-}
-
-func TestNewNetworkConfiguration(t *testing.T) {
-	cfg := NewNetworkConfiguration(
-		&mockResolverOk{},
-		&mockConnFactoryOk{},
-		&mockTransportFactoryOk{},
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.NewProxy(),
-	)
-
-	expectedCfg := &TmpConfiguration{
-		addressResolver:   &mockResolverOk{},
-		connectionFactory: &mockConnFactoryOk{},
-		transportFactory:  &mockTransportFactoryOk{},
-		storeFactory:      store.NewMemoryStoreFactory(),
-		rpcFactory:        rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		proxy:             relay.NewProxy(),
+		// positive
+		//"DefaultConfiguration": {configuration.NewConfiguration().Host, false},
+		/*
+		"UseStun":              {stunCfg(true), false},
+		"NotUseStun":           {stunCfg(false), false},
+		"KCPTransport":         {transportCfg("KCP"), false},
+		//"UTPTransport":         {transportCfg("UTP"), false},
+		*/
+		// todo: bootstrap
 	}
 
-	assert.Equal(t, expectedCfg, cfg)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			network, err := NewHostNetwork(test.cfg)
+			if test.expectedError {
+				assert.Error(t, err)
+				assert.Nil(t, network)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, network)
+				//network.Disconnect()
+			}
+		})
+	}
 }
-
-func TestConfiguration_CreateNetwork(t *testing.T) {
-	cfg := NewNetworkConfiguration(
-		&mockResolverOk{},
-		&mockConnFactoryOk{},
-		&mockTransportFactoryOk{},
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.NewProxy(),
-	)
-
-	network, err := cfg.NewHostNetwork("127.0.0.1:31337", &Options{})
-
-	assert.NotNil(t, network)
-	assert.NoError(t, err)
-	assert.Equal(t, cfg.network, network)
-}
-
-func TestConfiguration_CreateNetwork_AlreadyCreated(t *testing.T) {
-	cfg := NewNetworkConfiguration(
-		&mockResolverOk{},
-		&mockConnFactoryOk{},
-		&mockTransportFactoryOk{},
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.NewProxy(),
-	)
-
-	dht, err := cfg.NewHostNetwork("127.0.0.1:31337", &Options{})
-
-	assert.NotNil(t, dht)
-	assert.NoError(t, err)
-
-	_, err = cfg.NewHostNetwork("127.0.0.1:31337", &Options{})
-
-	assert.EqualError(t, err, "already created")
-}
-
-func TestConfiguration_CreateNetwork_ConnFactoryFail(t *testing.T) {
-	cfg := NewNetworkConfiguration(
-		&mockResolverOk{},
-		&mockConnFactoryFail{},
-		&mockTransportFactoryOk{},
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.NewProxy(),
-	)
-
-	_, err := cfg.NewHostNetwork("127.0.0.1:31337", &Options{})
-
-	assert.EqualError(t, err, "mock conn factory error")
-}
-
-func TestConfiguration_CreateNetwork_ResolverFail(t *testing.T) {
-	cfg := NewNetworkConfiguration(
-		&mockResolverFail{},
-		&mockConnFactoryOk{},
-		&mockTransportFactoryOk{},
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.NewProxy(),
-	)
-
-	_, err := cfg.NewHostNetwork("127.0.0.1:31337", &Options{})
-
-	assert.EqualError(t, err, "mock resolver error")
-}
-
-func TestConfiguration_CreateNetwork_InvalidAddress(t *testing.T) {
-	cfg := NewNetworkConfiguration(
-		&mockResolverInvalid{},
-		&mockConnFactoryOk{},
-		&mockTransportFactoryOk{},
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.NewProxy(),
-	)
-
-	_, err := cfg.NewHostNetwork("127.0.0.1:31337", &Options{})
-
-	assert.EqualError(t, err, "address invalid address: missing port in address")
-}
-
-func TestConfiguration_CreateNetwork_TransportFactoryFail(t *testing.T) {
-	cfg := NewNetworkConfiguration(
-		&mockResolverOk{},
-		&mockConnFactoryOk{},
-		&mockTransportFactoryFail{},
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.NewProxy(),
-	)
-
-	_, err := cfg.NewHostNetwork("127.0.0.1:31337", &Options{})
-
-	assert.EqualError(t, err, "mock transport factory error")
-}
-*/
