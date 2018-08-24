@@ -35,10 +35,9 @@ func (m *Member) GetPublicKey() []byte {
 	return m.PublicKey
 }
 
-func NewMember(name string) (*Member, foundation.Reference) {
+func NewMember(name string) *Member {
 	member := &Member{
 		Name: name,
 	}
-	reference := foundation.SaveToLedger(member)
-	return member, reference
+	return member
 }

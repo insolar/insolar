@@ -76,10 +76,9 @@ func (w *Wallet) ReturnAndDeleteExpiriedAllowances() {
 	}
 }
 
-func NewWallet(balance uint) (*Wallet, foundation.Reference) {
+func NewWallet(balance uint) *Wallet {
 	wallet := &Wallet{
 		balance: balance,
 	}
-	reference := foundation.SaveToLedger(wallet)
-	return wallet, reference
+	return wallet
 }

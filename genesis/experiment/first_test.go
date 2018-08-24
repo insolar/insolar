@@ -27,16 +27,20 @@ import (
 
 func TestTransferViaReceive(t *testing.T) {
 	// Create member which balance will increase
-	toMember, toMemberRef := member.NewMember("Vasya")
+	toMember := member.NewMember("Vasya")
+	toMemberRef := foundation.SaveToLedger(toMember)
 
 	// Create member which balance will decrease
-	fromMember, fromMemberRef := member.NewMember("Petya")
+	fromMember := member.NewMember("Petya")
+	fromMemberRef := foundation.SaveToLedger(fromMember)
 
 	// Create wallet for toMember
-	toWallet, toWalletRef := wallet.NewWallet(1000)
+	toWallet := wallet.NewWallet(1000)
+	toWalletRef := foundation.SaveToLedger(toWallet)
 
 	// Create wallet for fromMember
-	fromWallet, _ := wallet.NewWallet(2000)
+	fromWallet := wallet.NewWallet(2000)
+	fromWalletRef := foundation.SaveToLedger(fromWallet)
 
 	// Make fromWallet delegate of fromMember
 	fromMember.TakeDelegate(fromWallet, wallet.TypeReference)
@@ -47,11 +51,13 @@ func TestTransferViaReceive(t *testing.T) {
 	fromMemberAsWallet, ok := foundation.GetImplementationFor(fromMemberRef, wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 	assert.NotNil(t, fromMemberAsWallet)
+	assert.Equal(t, fromWalletRef, fromMemberAsWallet.MyReference())
 
 	// Get toMember as wallet instance
 	toMemberAsWallet, ok := foundation.GetImplementationFor(toMemberRef, wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
-	assert.NotNil(t, toMemberAsWallet)
+	assert.Equal(t, toWallet, toMemberAsWallet)
+	assert.Equal(t, toWalletRef, toMemberAsWallet.MyReference())
 
 	// Inject fake context of Caller for test
 	foundation.InjectFakeContext(3, &foundation.CallContext{Caller: toWalletRef})
@@ -66,16 +72,20 @@ func TestTransferViaReceive(t *testing.T) {
 
 func TestTransferViaTransfer(t *testing.T) {
 	// Create member which balance will increase
-	toMember, toMemberRef := member.NewMember("Vasya")
+	toMember := member.NewMember("Vasya")
+	toMemberRef := foundation.SaveToLedger(toMember)
 
 	// Create member which balance will decrease
-	fromMember, fromMemberRef := member.NewMember("Petya")
+	fromMember := member.NewMember("Petya")
+	fromMemberRef := foundation.SaveToLedger(fromMember)
 
 	// Create wallet for toMember
-	toWallet, toWalletRef := wallet.NewWallet(1000)
+	toWallet := wallet.NewWallet(1000)
+	toWalletRef := foundation.SaveToLedger(toWallet)
 
 	// Create wallet for fromMember
-	fromWallet, _ := wallet.NewWallet(2000)
+	fromWallet := wallet.NewWallet(2000)
+	fromWalletRef := foundation.SaveToLedger(fromWallet)
 
 	// Make fromWallet delegate of fromMember
 	fromMember.TakeDelegate(fromWallet, wallet.TypeReference)
@@ -86,11 +96,13 @@ func TestTransferViaTransfer(t *testing.T) {
 	fromMemberAsWallet, ok := foundation.GetImplementationFor(fromMemberRef, wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 	assert.NotNil(t, fromMemberAsWallet)
+	assert.Equal(t, fromWalletRef, fromMemberAsWallet.MyReference())
 
 	// Get toMember as wallet instance
 	toMemberAsWallet, ok := foundation.GetImplementationFor(toMemberRef, wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
-	assert.NotNil(t, toMemberAsWallet)
+	assert.Equal(t, toWallet, toMemberAsWallet)
+	assert.Equal(t, toWalletRef, toMemberAsWallet.MyReference())
 
 	// Inject fake context of Caller for test
 	foundation.InjectFakeContext(2, &foundation.CallContext{Caller: toWalletRef})
