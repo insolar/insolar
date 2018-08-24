@@ -181,6 +181,7 @@ func (gp *GoPlugin) Stop() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	time.Sleep(200 * time.Millisecond)
 
 	if gp.sock != nil {
 		err = gp.sock.Close()

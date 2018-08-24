@@ -23,10 +23,15 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+}
 
 type HelloWorlder struct {
 	Greeted int
@@ -265,7 +270,8 @@ func TestContractCallingContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir) // nolint: errcheck
+	t.Log("tmp: " + tmpDir)
+	//defer os.RemoveAll(tmpDir) // nolint: errcheck
 
 	err = testutil.WriteFile(tmpDir+"/src/contract/one/", "main.go", contractOneCode)
 	if err != nil {
@@ -280,4 +286,57 @@ func TestContractCallingContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	insiderStorage := tmpDir + "/insider-storage/"
+
+	err = os.MkdirAll(insiderStorage, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gp, err := NewGoPlugin(
+		Options{
+			Listen:   "127.0.0.1:7778",
+			CodePath: tmpDir + "/plugins/",
+		},
+		RunnerOptions{
+			Listen:          "127.0.0.1:7777",
+			CodeStoragePath: insiderStorage,
+		},
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gp.Stop()
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(
+		[]interface{}{"ins"},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	_, res, err := gp.Exec("one", data, "Hello", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	var resParsed []interface{}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("res: %+v", resParsed)
 }

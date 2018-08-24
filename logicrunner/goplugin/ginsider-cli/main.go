@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
 	"net"
 	"net/http"
 	"net/rpc"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
@@ -17,6 +17,8 @@ func main() {
 	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	pflag.Parse()
+
+	log.SetLevel(log.DebugLevel)
 
 	insider := ginsider.NewGoInsider(*path, *rpcAddress)
 	ginsider.CurrentGoInsider = insider

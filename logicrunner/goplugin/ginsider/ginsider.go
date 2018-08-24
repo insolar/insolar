@@ -24,6 +24,7 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
@@ -56,11 +57,13 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 		return errors.Wrap(err, "couldn't obtain code")
 	}
 
+	log.Debugf("Opening plugin %q from file %q", args.Reference, path)
 	p, err := plugin.Open(path)
 	if err != nil {
 		return errors.Wrap(err, "couldn't open plugin")
 	}
 
+	log.Error("ttt")
 	export, err := p.Lookup("INSEXPORT")
 	if err != nil {
 		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
@@ -73,9 +76,10 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 		return errors.Wrapf(err, "couldn't decode data into %T", export)
 	}
 
+	log.Error("ttt")
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
-		return errors.New("wtf, no method " + args.Method + "in the plugin")
+		return errors.New("no method " + args.Method + " in the plugin")
 	}
 
 	inLen := method.Type().NumIn()
@@ -86,6 +90,7 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 		mask[i] = reflect.Zero(argType).Interface()
 	}
 
+	log.Error("ttt")
 	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
 	if err != nil {
 		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the method")
@@ -96,6 +101,10 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 		in[i] = reflect.ValueOf(mask[i])
 	}
 
+	log.Debugf(
+		"Calling method %q in contract %q with %d arguments",
+		args.Method, args.Reference, inLen,
+	)
 	resValues := method.Call(in)
 
 	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(export)
@@ -151,6 +160,7 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 		return "", err
 	}
 
+	log.Debugf("obtaining plugin %q", ref)
 	res := logicrunner.Object{}
 	err = client.Call("RPC.GetObject", ref, &res)
 	if err != nil {
