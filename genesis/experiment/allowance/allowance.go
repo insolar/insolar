@@ -44,3 +44,8 @@ func (a *Allowance) DeleteExpiredAllowance() uint {
 	}
 	return 0
 }
+
+func NewAllowance(to foundation.Reference, amount uint, expire int64) *Allowance {
+	return &Allowance{To: to, Amount: amount, ExpireTime: expire}
+
+}

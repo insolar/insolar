@@ -16,9 +16,9 @@ type Wallet struct {
 func (w *Wallet) Allocate(amount uint, to foundation.Reference) *allowance.Allowance {
 	// TODO check balance is enough
 	w.balance -= amount
-	a := allowance.Allowance{To: to, Amount: amount, ExpireTime: w.GetContext().Time.Unix() + 10}
-	w.AddChild(&a, allowance.TypeReference)
-	return &a
+	a := allowance.NewAllowance(to, amount, w.GetContext().Time.Unix()+10)
+	w.AddChild(a, allowance.TypeReference)
+	return a
 }
 
 func (w *Wallet) Receive(amount uint, from foundation.Reference) {
@@ -34,11 +34,11 @@ func (w *Wallet) Transfer(amount uint, to foundation.Reference) {
 	toWalletInt := foundation.GetImplementationFor(to, TypeReference).(*Wallet)
 	toWalletRef := toWalletInt.MyReference()
 
-	a := allowance.Allowance{To: toWalletRef, Amount: amount, ExpireTime: w.GetContext().Time.Unix() + 10}
-	w.AddChild(&a, allowance.TypeReference)
+	a := allowance.NewAllowance(toWalletRef, amount, w.GetContext().Time.Unix()+10)
+	w.AddChild(a, allowance.TypeReference)
 
 	toWallet := foundation.GetImplementationFor(to, TypeReference).(*Wallet)
-	toWallet.Accept(&a)
+	toWallet.Accept(a)
 }
 
 func (w *Wallet) Accept(a *allowance.Allowance) {
