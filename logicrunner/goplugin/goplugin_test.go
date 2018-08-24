@@ -28,7 +28,7 @@ import (
 
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/messagerouter"
-	"github.com/insolar/insolar/network/host"
+	"github.com/insolar/insolar/network/hostnetwork"
 )
 
 func init() {
@@ -255,7 +255,7 @@ type testMessageRouter struct {
 	plugin *GoPlugin
 }
 
-func (r *testMessageRouter) Route(ctx host.Context, msg messagerouter.Message) (resp messagerouter.Response, err error) {
+func (r *testMessageRouter) Route(ctx hostnetwork.Context, msg messagerouter.Message) (resp messagerouter.Response, err error) {
 	ch := new(codec.CborHandle)
 
 	var data []byte

@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/messagerouter"
-	"github.com/insolar/insolar/network/host"
+	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/pkg/errors"
 )
 
@@ -53,7 +53,7 @@ type RunnerOptions struct {
 
 // MessageRouter interface
 type MessageRouter interface {
-	Route(ctx host.Context, msg messagerouter.Message) (resp messagerouter.Response, err error)
+	Route(ctx hostnetwork.Context, msg messagerouter.Message) (resp messagerouter.Response, err error)
 }
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
