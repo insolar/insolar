@@ -86,7 +86,7 @@ var FakeDelegates = make(map[string]map[string]BaseContractInterface)
 var FakeChildren = make(map[string]map[string][]BaseContractInterface)
 
 var FakeContexts = make(map[uint]*CallContext)
-var contextStep uint = 0
+var contextStep uint
 
 // InjectFakeContext - add mocked context to queue for substitution
 func InjectFakeContext(step uint, ctx *CallContext, reset ...bool) {
