@@ -2,8 +2,8 @@ Insolar – Host Network
 ===============
 Physical networking layer
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar/network/hostnetwork)](https://goreportcard.com/report/github.com/insolar/insolar/network/host)
-[![GoDoc](https://godoc.org/github.com/insolar/insolar/network/hostnetwork?status.svg)](https://godoc.org/github.com/insolar/insolar/network/host)
+[![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar/network/hostnetwork)](https://goreportcard.com/report/github.com/insolar/insolar/network/hostnetwork)
+[![GoDoc](https://godoc.org/github.com/insolar/insolar/network/hostnetwork?status.svg)](https://godoc.org/github.com/insolar/insolar/network/hostnetwork)
 
 
 Overview
@@ -58,31 +58,20 @@ package main
 
 import (
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/connection"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
-	"github.com/insolar/insolar/network/hostnetwork/rpc"
-	"github.com/insolar/insolar/network/hostnetwork/store"
-	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/configuration"
 )
 
 func main() {
-	configuration := hostnetwork.NewNetworkConfiguration(
-		resolver.NewStunResolver(""),
-		connection.NewConnectionFactory(),
-		transport.NewUTPTransportFactory(),
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
-		relay.NewProxy())
+	cfg := configuration.NewConfiguration().Host
+	cfg.Address = "0.0.0.0:31337"
 
-	dhtNetwork, err := configuration.CreateNetwork("0.0.0.0:31337", &hostnetwork.Options{})
+	network, err := hostnetwork.NewHostNetwork(cfg)
 	if err != nil {
 		panic(err)
 	}
-	defer configuration.CloseNetwork()
+	defer network.Disconnect()
 
-	dhtNetwork.Listen()
+	network.Listen()
 }
 ```
 
