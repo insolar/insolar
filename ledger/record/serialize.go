@@ -99,7 +99,8 @@ func Bytes2ID(b []byte) ID {
 	}
 }
 
-func (pn PulseNum) mustWrite(w io.Writer) {
+// MustWrite writes binary representation of PulseNum to io.Writer.
+func (pn PulseNum) MustWrite(w io.Writer) {
 	err := binary.Write(w, binary.BigEndian, pn)
 	if err != nil {
 		panic("binary.Write failed to write PulseNum:" + err.Error())
@@ -110,7 +111,7 @@ func (pn PulseNum) mustWrite(w io.Writer) {
 func ID2Bytes(id ID) []byte {
 	var b = make([]byte, IDSize)
 	buf := bytes.NewBuffer(b[:0])
-	id.Pulse.mustWrite(buf)
+	id.Pulse.MustWrite(buf)
 	err := binary.Write(buf, binary.BigEndian, id.Hash)
 	if err != nil {
 		panic("binary.Write failed to write Hash:" + err.Error())
