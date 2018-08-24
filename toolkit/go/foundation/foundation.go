@@ -81,12 +81,6 @@ func (bc *BaseContract) GetContext(debug ...string) *CallContext {
 	return &CallContext{}
 }
 
-// SetContext sets context on contract in testing environment.
-// It is not supposed to use it from contracts.
-func (bc *BaseContract) SetContext(c *CallContext) {
-	bc.context = c
-}
-
 var FakeLedger = make(map[string]BaseContractInterface)
 var FakeDelegates = make(map[string]map[string]BaseContractInterface)
 var FakeChildren = make(map[string]map[string][]BaseContractInterface)
