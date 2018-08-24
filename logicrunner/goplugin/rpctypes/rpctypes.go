@@ -14,21 +14,38 @@
  *    limitations under the License.
  */
 
-package girpc
+package rpctypes
 
 import "github.com/insolar/insolar/logicrunner"
 
-// CallReq is a set of arguments for Call RPC in the runner
-type CallReq struct { // todo it may use foundation.Context
+// Types for RPC requests and responses between goplugin and goinsider.
+// Calls from goplugin to goinsider go "downwards" and names are
+// prefixed with "Down". Reverse calls go "upwards", so "Up" prefix
+
+// DownCallReq is a set of arguments for Call RPC in the runner
+type DownCallReq struct { // todo it may use foundation.Context
 	Reference logicrunner.Reference
 	Data      []byte
 	Method    string
 	Arguments logicrunner.Arguments
 }
 
-// CallResp is response from Call RPC in the runner
-type CallResp struct {
+// DownCallResp is response from Call RPC in the runner
+type DownCallResp struct {
 	Data []byte
 	Ret  logicrunner.Arguments
 	Err  error
+}
+
+// UpRouteReq is a set of arguments for Route RPC in goplugin
+type UpRouteReq struct {
+	Reference logicrunner.Reference
+	Method    string
+	Arguments logicrunner.Arguments
+}
+
+// UpRouteResp is response from Route RPC in goplugin
+type UpRouteResp struct {
+	Result logicrunner.Arguments
+	Err    error
 }

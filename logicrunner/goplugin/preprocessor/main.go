@@ -210,8 +210,7 @@ func generateContractProxy(fileName string, out io.Writer) error {
 	code := "package " + proxyPackageName + "\n\n"
 
 	code += `import (
-	"github.com/ugorji/go/codec"
-	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 `
@@ -227,7 +226,7 @@ type ` + parsed.contract + ` struct {
 
 	code += `// GetObject
 func GetObject(ref string) (r *` + parsed.contract + `) {
-	return &` + parsed.contract + `{}
+	return &` + parsed.contract + `{Reference: ref}
 }
 `
 
@@ -397,14 +396,6 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	}
 
 	text += ") {\n"
-	text += `
-	ch := new(codec.CborHandle)
-	var data []byte
-	err := codec.NewEncoderBytes(&data, ch).Encode(*r)
-	if err != nil {
-		panic(err)
-	}
-`
 
 	text += fmt.Sprintf("\tvar args [%d]interface{}\n", method.Type.Params.NumFields())
 	for i, arg := range method.Type.Params.List {
@@ -413,13 +404,13 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 
 	text += `
 	var argsSerialized []byte
-	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(args)
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
 		panic(err)
 	}
 `
 
-	text += fmt.Sprintf("\t"+`_, res, err := ginsider.CurrentGoInsider.Exec(r.Reference, "%s", argsSerialized)`, method.Name.Name)
+	text += fmt.Sprintf("\t"+`res, err := proxyctx.Current.RouteCall(r.Reference, "%s", argsSerialized)`, method.Name.Name)
 
 	text += `
 	if err != nil {
@@ -430,7 +421,7 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	text += resInit
 
 	text += `
-	err = codec.NewDecoderBytes(res, ch).Decode(resList)
+	err = proxyctx.Current.Deserialize(res, &resList)
 	if err != nil {
 		panic(err)
 	}

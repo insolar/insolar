@@ -18,11 +18,12 @@ package main
 
 import (
 	"bytes"
-	"go/build"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
 func Test_generateContractWrapper(t *testing.T) {
@@ -95,11 +96,7 @@ func TestCompileContractProxy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mainFh, err := os.OpenFile(tmpDir+"/test.go", os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = mainFh.Write([]byte(`
+	err = testutil.WriteFile(tmpDir, "/test.go", `
 package test
 
 import "secondary"
@@ -107,32 +104,18 @@ import "secondary"
 func main() {
 	_ = secondary.GetObject("some")
 }
-	`))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = mainFh.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	`)
 
 	err = os.Chdir(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	gopathOrigEnv := os.Getenv("GOPATH")
-	gopath := gopathOrigEnv
-	if gopath == "" {
-		gopath = build.Default.GOPATH
-	}
-
-	err = os.Setenv("GOPATH", tmpDir+":"+gopath)
+	origGoPath, err := testutil.ChangeGoPath(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Setenv("GOPATH", gopathOrigEnv) // nolint: errcheck
+	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
 
 	out, err := exec.Command("go", "build", "test.go").CombinedOutput()
 	if err != nil {
