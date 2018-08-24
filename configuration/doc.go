@@ -15,7 +15,8 @@
  */
 
 /*
-Package configuration blablabla
+Package configuration holds configuration for all components in Insolar host binary
+It allows to manage config resources, helps to components initialization
 
 Usage:
 

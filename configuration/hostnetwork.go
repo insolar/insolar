@@ -17,11 +17,22 @@
 package configuration
 
 type HostNetwork struct {
-	Address       string
-	PublicAddress string
-	Bootstrap     string
-	UseStun       bool   // use stun to get public address
-	IsRelay       bool   // set if node must be relay explicit
-	Transport     string // transport type UTP or KCP
+	Address        string
+	PublicAddress  string
+	BootstrapHosts []string
+	UseStun        bool   // use stun to get public address
+	IsRelay        bool   // set if node must be relay explicit
+	Transport      string // transport type UTP or KCP
 	// EncriptionKeys
+	//options hostnetwork.Options
+}
+
+// NewHostNetwork creates new default HostNetwork configuration
+func NewHostNetwork() HostNetwork {
+	return HostNetwork{
+		Address:   "0.0.0.0:17000",
+		UseStun:   true,
+		IsRelay:   false,
+		Transport: "UTP",
+	}
 }

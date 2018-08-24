@@ -29,3 +29,8 @@ type Node struct {
 type NodeNetwork struct {
 	nodes []Node
 }
+
+// NewNodeNetwork creates new default NodeNetwork configuration
+func NewNodeNetwork() NodeNetwork {
+	return NodeNetwork{}
+}

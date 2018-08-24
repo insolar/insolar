@@ -26,17 +26,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
-	"github.com/insolar/insolar/network/hostnetwork/rpc"
-	"github.com/insolar/insolar/network/hostnetwork/store"
-	"github.com/insolar/insolar/network/hostnetwork/transport"
 
 	"github.com/chzyer/readline"
 )
+
+var dhtNetwork *hostnetwork.DHT
 
 func main() {
 	var addr = flag.String("addr", "0.0.0.0:0", "IP Address and port to use")
@@ -51,31 +48,26 @@ func main() {
 		os.Exit(0)
 	}
 
-	bootstrapHosts := getBootstrapHosts(bootstrapAddress)
-	proxy := relay.NewProxy()
+	cfg := configuration.NewConfiguration()
+	cfg.Host.Address = *addr
+	cfg.Host.UseStun = *stun
 
-	configuration := hostnetwork.NewNetworkConfiguration(
-		createResolver(*stun),
-		connection.NewConnectionFactory(),
-		transport.NewUTPTransportFactory(),
-		store.NewMemoryStoreFactory(),
-		rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{"s": send}),
-		proxy)
-	dhtNetwork, err := configuration.CreateNetwork(*addr, &hostnetwork.Options{
-		BootstrapHosts: bootstrapHosts,
-	})
+	dhtNetwork, err := hostnetwork.NewHostNetwork(cfg.Host)
 	if err != nil {
 		log.Fatalln("Failed to create network:", err.Error())
 	}
 
-	defer closeNetwork(configuration)
+	defer closeNetwork()
 
 	ctx := createContext(dhtNetwork)
 
 	go listen(dhtNetwork)
-	bootstrap(bootstrapHosts, dhtNetwork)
 
-	handleSignals(configuration)
+	if len(*bootstrapAddress) > 0 {
+		bootstrap(dhtNetwork)
+	}
+
+	handleSignals()
 
 	err = dhtNetwork.ObtainIP(ctx)
 	if err != nil {
@@ -88,12 +80,12 @@ func main() {
 	repl(dhtNetwork, ctx)
 }
 
-func handleSignals(configuration *hostnetwork.Configuration) {
+func handleSignals() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for range c {
-			closeNetwork(configuration)
+			closeNetwork()
 		}
 	}()
 }
@@ -106,12 +98,10 @@ func createContext(dhtNetwork *hostnetwork.DHT) hostnetwork.Context {
 	return ctx
 }
 
-func bootstrap(bootstrapHosts []*host.Host, dhtNetwork *hostnetwork.DHT) {
-	if len(bootstrapHosts) > 0 {
-		err := dhtNetwork.Bootstrap()
-		if err != nil {
-			log.Fatalln("Failed to bootstrap network", err.Error())
-		}
+func bootstrap(dhtNetwork *hostnetwork.DHT) {
+	err := dhtNetwork.Bootstrap()
+	if err != nil {
+		log.Fatalln("Failed to bootstrap network", err.Error())
 	}
 }
 
@@ -124,12 +114,9 @@ func listen(dhtNetwork *hostnetwork.DHT) {
 	}()
 }
 
-func closeNetwork(configuration *hostnetwork.Configuration) {
+func closeNetwork() {
 	func() {
-		err := configuration.CloseNetwork()
-		if err != nil {
-			log.Fatalln("Failed to close network:", err.Error())
-		}
+		dhtNetwork.Disconnect()
 	}()
 }
 
@@ -164,29 +151,6 @@ func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 			doRPC(input, dhtNetwork, ctx)
 		}
 	}
-}
-
-func getBootstrapHosts(bootstrapAddress *string) []*host.Host {
-	var bootstrapHosts []*host.Host
-	if *bootstrapAddress != "" {
-		address, err := host.NewAddress(*bootstrapAddress)
-		if err != nil {
-			log.Fatalln("Failed to create bootstrap address:", err.Error())
-		}
-		bootstrapHost := host.NewHost(address)
-		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
-	}
-	return bootstrapHosts
-}
-
-func createResolver(stun bool) resolver.PublicAddressResolver {
-	var publicAddressResolver resolver.PublicAddressResolver
-	if stun {
-		publicAddressResolver = resolver.NewStunResolver("")
-	} else {
-		publicAddressResolver = resolver.NewExactResolver()
-	}
-	return publicAddressResolver
 }
 
 func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {

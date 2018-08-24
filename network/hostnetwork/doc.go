@@ -41,7 +41,7 @@ Usage:
 			rpc.NewRPCFactory(map[string]rpc.RemoteProcedure{}),
 			relay.NewProxy())
 
-		dhtNetwork, err := configuration.CreateNetwork("0.0.0.0:31337", &hostnetwork.Options{})
+		dhtNetwork, err := configuration.NewHostNetwork("0.0.0.0:31337", &hostnetwork.Options{})
 		if err != nil {
 			panic(err)
 		}

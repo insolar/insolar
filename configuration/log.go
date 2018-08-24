@@ -19,4 +19,10 @@ package configuration
 type Log struct {
 	Format string
 	Level  string
+	Output string
+}
+
+// NewLog creates new default configuration for logging
+func NewLog() Log {
+	return Log{Format: "", Level: "Info", Output: "insolar.log"}
 }

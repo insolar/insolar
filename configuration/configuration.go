@@ -16,25 +16,41 @@
 
 package configuration
 
-import "github.com/spf13/viper"
+import (
+	"errors"
 
+	"github.com/spf13/viper"
+)
+
+// TODO: interface for configuration
 //TODO: generate default config method + test golden file
 
 type Configuration struct {
 	Host  HostNetwork
 	Node  NodeNetwork
-	log   Log
-	stats Stats
+	Log   Log
+	Stats Stats
 
 	viper *viper.Viper
 }
 
-func New() Configuration {
-	var cfg Configuration
-	cfg.viper = viper.New()
-	return cfg
+// NewConfiguration creates new default configuration
+func NewConfiguration() Configuration {
+	return Configuration{
+		Host:  NewHostNetwork(),
+		Node:  NewNodeNetwork(),
+		Log:   NewLog(),
+		Stats: NewStats(),
+		viper: viper.New(),
+	}
 }
 
-func (c *Configuration) Load() {
+func (c *Configuration) Load() error {
+	return errors.New("not implemented")
+}
 
+func (c *Configuration) Save() error {
+	return errors.New("not implemented")
+
+	//viper.
 }

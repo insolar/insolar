@@ -23,6 +23,6 @@ import (
 )
 
 func TestConfiguration_Load(t *testing.T) {
-	cfg := New()
-	assert.Equal(t, "", cfg.Host.Address)
+	cfg := NewConfiguration()
+	assert.Equal(t, "0.0.0.0:17000", cfg.Host.Address)
 }
