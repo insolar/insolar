@@ -41,7 +41,8 @@ func MustDecodeHexString(s string) []byte {
 	}
 	return b
 }
-func TestPrefixkey(t *testing.T) {
+
+func TestLevelLedger_prefixkey(t *testing.T) {
 	passRecPulse0 := record.LockUnlockRequest{}
 	raw, err := record.EncodeToRaw(&passRecPulse0)
 	assert.Nil(t, err)
@@ -72,7 +73,7 @@ func setRawRecord(ll *LevelLedger, ref *record.Reference, raw *record.Raw) error
 	return ll.ldb.Put(k, record.MustEncodeRaw(raw), nil)
 }
 
-func TestSetRawRecord(t *testing.T) {
+func TestLevelLedger_setRawRecord(t *testing.T) {
 	ledger, cleaner := tmpDB(t, "")
 	defer cleaner()
 

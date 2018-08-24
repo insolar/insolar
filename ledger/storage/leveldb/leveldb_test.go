@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
 
-func TestGetRecordNotFound(t *testing.T) {
+func TestLevelLedger_GetRecordNotFound(t *testing.T) {
 	ledger, cleaner := leveltestutils.TmpDB(t, "")
 	defer cleaner()
 
