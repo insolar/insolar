@@ -10,7 +10,7 @@ var TypeReference = foundation.Reference("allowance")
 
 type Allowance struct {
 	foundation.BaseContract
-	To         *foundation.Reference
+	To         foundation.Reference
 	Amount     uint
 	ExpireTime int64
 }

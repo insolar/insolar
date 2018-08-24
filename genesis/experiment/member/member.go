@@ -19,10 +19,13 @@ func (m *Member) GetPublicKey() []byte {
 	return m.PublicKey
 }
 
-func NewMember(name string) (*Member, *foundation.Reference) {
+func NewMember(name string) (*Member, foundation.Reference) {
 	member := &Member{
 		Name: name,
 	}
+	//fmt.Printf("%x\n", &member)
+	//fmt.Printf("%x\n", &(member.BaseContract))
+	//fmt.Println(member.MyReference())
 	reference := foundation.SaveToLedger(member)
 	return member, reference
 }

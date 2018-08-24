@@ -28,40 +28,40 @@ import (
 func TestTransferViaReceive(t *testing.T) {
 	// Create member which balance will increase
 	toMember, toMemberRef := member.NewMember("Vasya")
-	toMember.SetContext(&foundation.CallContext{
+	/*toMember.SetContext(&foundation.CallContext{
 		Me: toMemberRef,
-	})
+	})*/
 
 	// Create member which balance will decrease
 	fromMember, fromMemberRef := member.NewMember("Petya")
-	fromMember.SetContext(&foundation.CallContext{
+	/*fromMember.SetContext(&foundation.CallContext{
 		Me: fromMemberRef,
-	})
+	})*/
 
 	// Create wallet for toMember
 	toWallet, toWalletRef := wallet.NewWallet(1000)
-	toWallet.SetContext(&foundation.CallContext{
+	/*toWallet.SetContext(&foundation.CallContext{
 		Me: toWalletRef,
-	})
+	})*/
 
 	// Create wallet for fromMember
-	fromWallet, fromWalletRef := wallet.NewWallet(2000)
-	fromWallet.SetContext(&foundation.CallContext{
+	fromWallet, _ /*fromWalletRef*/ := wallet.NewWallet(2000)
+	/*fromWallet.SetContext(&foundation.CallContext{
 		Me: fromWalletRef,
-	})
+	})*/
 
 	// Make fromWallet delegate of fromMember
-	fromMember.TakeDelegate(fromWallet, &wallet.TypeReference)
+	fromMember.TakeDelegate(fromWallet, wallet.TypeReference)
 	// Make toWallet delegate of toMember
-	toMember.TakeDelegate(toWallet, &wallet.TypeReference)
+	toMember.TakeDelegate(toWallet, wallet.TypeReference)
 
 	// Get fromMember as wallet instance
-	fromMemberAsWallet, ok := foundation.GetImplementationFor(fromMemberRef, &wallet.TypeReference).(*wallet.Wallet)
+	fromMemberAsWallet, ok := foundation.GetImplementationFor(fromMemberRef, wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 	assert.NotNil(t, fromMemberAsWallet)
 
 	// Get toMember as wallet instance
-	toMemberAsWallet, ok := foundation.GetImplementationFor(toMemberRef, &wallet.TypeReference).(*wallet.Wallet)
+	toMemberAsWallet, ok := foundation.GetImplementationFor(toMemberRef, wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 	assert.NotNil(t, toMemberAsWallet)
 
@@ -102,22 +102,22 @@ func TestTransferViaTransfer(t *testing.T) {
 	})
 
 	// Make fromWallet delegate of fromMember
-	fromMember.TakeDelegate(fromWallet, &wallet.TypeReference)
+	fromMember.TakeDelegate(fromWallet, wallet.TypeReference)
 	// Make toWallet delegate of toMember
-	toMember.TakeDelegate(toWallet, &wallet.TypeReference)
+	toMember.TakeDelegate(toWallet, wallet.TypeReference)
 
 	// Get fromMember as wallet instance
-	fromMemberAsWallet, ok := foundation.GetImplementationFor(fromMemberRef, &wallet.TypeReference).(*wallet.Wallet)
+	fromMemberAsWallet, ok := foundation.GetImplementationFor(fromMemberRef, wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 	assert.NotNil(t, fromMemberAsWallet)
 
 	// Get toMember as wallet instance
-	toMemberAsWallet, ok := foundation.GetImplementationFor(toMemberRef, &wallet.TypeReference).(*wallet.Wallet)
+	toMemberAsWallet, ok := foundation.GetImplementationFor(toMemberRef, wallet.TypeReference).(*wallet.Wallet)
 	assert.True(t, ok)
 	assert.NotNil(t, toMemberAsWallet)
 
 	// Inject fake context of Caller for test
-	foundation.InjectFakeContext(3, &foundation.CallContext{Caller: toWalletRef})
+	foundation.InjectFakeContext(2, &foundation.CallContext{Caller: toWalletRef})
 
 	// Call to get money from one member to another
 	fromMemberAsWallet.Transfer(500, toMemberRef)

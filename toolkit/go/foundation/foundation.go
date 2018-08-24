@@ -29,18 +29,18 @@ import (
 type Reference string
 
 // String - stringer interface
-func (r *Reference) String() string {
-	return string(*r)
+func (r Reference) String() string {
+	return string(r)
 }
 
 // CallContext is a context of contract execution
 type CallContext struct {
-	Me     *Reference // My Reference.
-	Caller *Reference // Reference of calling contract.
-	Parent *Reference // Reference to parent or container contract.
-	Type   *Reference // Reference to type record on ledger, we have just one type reference, yet.
-	Time   time.Time  // Time of Calling side made call.
-	Pulse  uint64     // Number of current pulse.
+	Me     Reference // My Reference.
+	Caller Reference // Reference of calling contract.
+	Parent Reference // Reference to parent or container contract.
+	Type   Reference // Reference to type record on ledger, we have just one type reference, yet.
+	Time   time.Time // Time of Calling side made call.
+	Pulse  uint64    // Number of current pulse.
 }
 
 // BaseContract is a base class for all contracts.
@@ -50,15 +50,19 @@ type BaseContract struct {
 
 // BaseContractInterface is an interface to deal with any contract same way
 type BaseContractInterface interface {
-	MyReference() *Reference
-	GetImplementationFor(r *Reference) BaseContractInterface
+	MyReference() Reference
+	GetImplementationFor(r Reference) BaseContractInterface
 	SetContext(c *CallContext)
 }
 
 // MyReference - Returns public reference of contract
-func (bc *BaseContract) MyReference() *Reference {
-	r := Reference(fmt.Sprintf("%x", reflect.ValueOf(bc).Pointer()))
-	return &r
+func (bc *BaseContract) MyReference() Reference {
+	if bc.context == nil {
+		bc.context = &CallContext{
+			Me: Reference(fmt.Sprintf("%x", reflect.ValueOf(bc).Pointer())),
+		}
+	}
+	return bc.context.Me
 }
 
 // GetContext returns current calling context of this object.
@@ -99,36 +103,34 @@ func InjectFakeContext(step uint, ctx *CallContext, reset ...bool) {
 	FakeContexts[step] = ctx
 }
 
-func (bc *BaseContract) GetImplementationFor(r *Reference) BaseContractInterface {
+func (bc *BaseContract) GetImplementationFor(r Reference) BaseContractInterface {
 	return FakeDelegates[bc.MyReference().String()][r.String()]
 }
 
-func GetImplementationFor(o *Reference, r *Reference) BaseContractInterface {
+func GetImplementationFor(o Reference, r Reference) BaseContractInterface {
 	return FakeDelegates[o.String()][r.String()]
 }
 
-func (bc *BaseContract) GetChildrenTyped(r *Reference) []BaseContractInterface {
+func (bc *BaseContract) GetChildrenTyped(r Reference) []BaseContractInterface {
 	return FakeChildren[bc.MyReference().String()][r.String()]
 }
 
-func SaveToLedger(rec BaseContractInterface) *Reference {
+func SaveToLedger(rec BaseContractInterface) Reference {
 	key := rec.MyReference()
 	FakeLedger[key.String()] = rec
 	return key
 }
 
-func GetObject(ref *Reference) BaseContractInterface {
+func GetObject(ref Reference) BaseContractInterface {
 	return FakeLedger[ref.String()].(BaseContractInterface)
 }
 
-func (bc *BaseContract) AddChild(child BaseContractInterface, class *Reference) *Reference {
+func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) Reference {
 	me := bc.MyReference()
 	key := child.MyReference()
-	child.SetContext(&CallContext{
-		Me:     key,
-		Parent: me,
-		Type:   class,
-	})
+
+	bc.context.Parent = me
+	bc.context.Type = class
 	FakeLedger[key.String()] = child
 
 	if FakeChildren[me.String()] == nil {
@@ -143,15 +145,12 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class *Reference) 
 	return key
 }
 
-func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class *Reference) *Reference {
+func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class Reference) Reference {
 	me := bc.MyReference()
 	key := delegate.MyReference()
 
-	delegate.SetContext(&CallContext{
-		Me:     key,
-		Parent: me,
-		Type:   class,
-	})
+	bc.context.Parent = me
+	bc.context.Type = class
 	FakeLedger[key.String()] = delegate
 
 	if FakeDelegates[me.String()] == nil {
