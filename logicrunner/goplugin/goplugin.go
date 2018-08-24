@@ -118,11 +118,44 @@ func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr MessageRouter)
 		gp.Options.Listen = "127.0.0.1:7777"
 	}
 
+	err := gp.StartRunner()
+	if err != nil {
+		return nil, err
+	}
+
+	go gp.Start()
+	return &gp, nil
+}
+
+var rpcService *RPC
+
+// Start starts RPC interface to help runner, note that NewGoPlugin does
+// this for you
+func (gp *GoPlugin) Start() {
+	if rpcService == nil {
+		rpcService = &RPC{}
+		_ = rpc.Register(rpcService)
+		rpc.HandleHTTP()
+	}
+	rpcService.gp = gp
+
+	l, e := net.Listen("tcp", gp.Options.Listen)
+	if e != nil {
+		log.Fatal("couldn't setup listener on '"+gp.Options.Listen+"': ", e)
+	}
+	gp.sock = l
+	log.Printf("starting goplugin RPC service on %q", gp.Options.Listen)
+	_ = http.Serve(l, nil)
+	log.Printf("STOP")
+}
+
+// StartRunner starts ginsider process
+func (gp *GoPlugin) StartRunner() error {
 	var runnerArguments []string
 	if gp.RunnerOptions.Listen != "" {
 		runnerArguments = append(runnerArguments, "-l", gp.RunnerOptions.Listen)
 	} else {
-		return nil, errors.New("listen is not optional in gp.RunnerOptions")
+		return errors.New("listen is not optional in gp.RunnerOptions")
 	}
 	if gp.RunnerOptions.CodeStoragePath != "" {
 		runnerArguments = append(runnerArguments, "-d", gp.RunnerOptions.CodeStoragePath)
@@ -134,28 +167,12 @@ func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr MessageRouter)
 	runner.Stderr = os.Stderr
 	err := runner.Start()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	time.Sleep(200 * time.Millisecond)
 	gp.runner = runner
-	go gp.Start()
-	return &gp, nil
-}
 
-// Start starts runner and RPC interface to help runner, note that NewGoPlugin does
-// this for you
-func (gp *GoPlugin) Start() {
-	r := RPC{gp: gp}
-	_ = rpc.Register(&r)
-	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", gp.Options.Listen)
-	if e != nil {
-		log.Fatal("listen error:", e)
-	}
-	gp.sock = l
-	log.Printf("START")
-	_ = http.Serve(l, nil)
-	log.Printf("STOP")
+	return nil
 }
 
 // Stop stops runner(s) and RPC service

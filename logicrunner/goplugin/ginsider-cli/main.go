@@ -29,12 +29,12 @@ func main() {
 
 	rpc.HandleHTTP()
 	listener, err := net.Listen("tcp", *listen)
-
-	log.Print("ginsider launched, listens " + *listen)
 	if err != nil {
-		log.Fatal("listen error:", err)
+		log.Fatal("couldn't setup listener on '"+*listen+"':", err)
 		os.Exit(1)
 	}
+
+	log.Print("ginsider launched, listens " + *listen)
 	err = http.Serve(listener, nil)
 	if err != nil {
 		log.Fatal("couldn't start server: ", err)
