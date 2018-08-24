@@ -30,10 +30,7 @@ import (
 
 func sorthashes(hashes [][]byte) {
 	sort.Slice(hashes, func(i, j int) bool {
-		if bytes.Compare(hashes[i], hashes[j]) == -1 {
-			return true
-		}
-		return false
+		return bytes.Compare(hashes[i], hashes[j]) == -1
 	})
 }
 

@@ -41,14 +41,6 @@ func TestLevelLedger_GetRecordNotFound(t *testing.T) {
 	assert.Nil(t, rec)
 }
 
-func MustDecodeHexString(s string) []byte {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
 func zerohash() []byte {
 	b := make([]byte, record.HashSize)
 	return b
