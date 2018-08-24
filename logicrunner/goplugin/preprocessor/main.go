@@ -421,7 +421,7 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	text += resInit
 
 	text += `
-	err = proxyctx.Current.Deserialize(res, resList)
+	err = proxyctx.Current.Deserialize(res, &resList)
 	if err != nil {
 		panic(err)
 	}

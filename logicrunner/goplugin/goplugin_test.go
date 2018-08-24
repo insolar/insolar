@@ -262,6 +262,9 @@ func (r *testMessageRouter) Route(ctx host.Context, msg messagerouter.Message) (
 	err = codec.NewEncoderBytes(&data, ch).Encode(
 		&struct{}{},
 	)
+	if err != nil {
+		return messagerouter.Response{}, err
+	}
 	resdata, reslist, err := r.plugin.Exec("two", data, msg.Method, msg.Arguments)
 	return messagerouter.Response{Data: resdata, Result: reslist, Error: err}, nil
 }
@@ -287,8 +290,7 @@ func TestContractCallingContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("tmp: " + tmpDir)
-	//defer os.RemoveAll(tmpDir) // nolint: errcheck
+	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
 	err = testutil.WriteFile(tmpDir+"/src/contract/one/", "main.go", contractOneCode)
 	if err != nil {
@@ -359,5 +361,7 @@ func TestContractCallingContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Logf("res: %+v", resParsed)
+	if resParsed[0].(string) != "Hi, ins! Two said: Hello you too, ins" {
+		t.Fatal("unexpected result")
+	}
 }

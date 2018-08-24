@@ -63,7 +63,6 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 		return errors.Wrap(err, "couldn't open plugin")
 	}
 
-	log.Error("ttt")
 	export, err := p.Lookup("INSEXPORT")
 	if err != nil {
 		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
@@ -76,7 +75,6 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 		return errors.Wrapf(err, "couldn't decode data into %T", export)
 	}
 
-	log.Error("ttt")
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
 		return errors.New("no method " + args.Method + " in the plugin")
@@ -90,7 +88,6 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 		mask[i] = reflect.Zero(argType).Interface()
 	}
 
-	log.Error("ttt")
 	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
 	if err != nil {
 		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the method")
@@ -200,11 +197,13 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (t *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
+	log.Printf("serializing %+v", what)
 	return codec.NewEncoderBytes(to, ch).Encode(what)
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
 func (t *GoInsider) Deserialize(from []byte, into interface{}) error {
 	ch := new(codec.CborHandle)
+	log.Printf("de-serializing %+v", from)
 	return codec.NewDecoderBytes(from, ch).Decode(into)
 }
