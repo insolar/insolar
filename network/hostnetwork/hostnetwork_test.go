@@ -52,7 +52,7 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 		"InvalidTransport": {transportCfg("invalid"), true},
 
 		// positive
-		//"DefaultConfiguration": {configuration.NewConfiguration().Host, false},
+		"DefaultConfiguration": {configuration.NewConfiguration().Host, false},
 		/*
 		"UseStun":              {stunCfg(true), false},
 		"NotUseStun":           {stunCfg(false), false},
