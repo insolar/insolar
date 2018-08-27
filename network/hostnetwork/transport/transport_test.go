@@ -18,33 +18,33 @@ package transport
 
 import (
 	"crypto/rand"
-	"net"
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/stretchr/testify/suite"
+	"github.com/insolar/insolar/configuration"
 )
 
 type transportSuite struct {
 	suite.Suite
-	factory    Factory
-	connection net.PacketConn
-	transport  Transport
-	node       *host.Host
+	Config    configuration.Transport
+	transport Transport
+	host      *host.Host
 }
 
-func NewSuite(factory Factory) *transportSuite {
-	addr, _ := host.NewAddress("127.0.0.1:3012")
-	return &transportSuite{suite.Suite{}, factory, nil, nil, host.NewHost(addr)}
+func NewSuite(cfg configuration.Transport) *transportSuite {
+	return &transportSuite{Suite: suite.Suite{}, Config: cfg}
 }
 
 func (t *transportSuite) SetupTest() {
-	t.connection, _ = connection.NewConnectionFactory().Create("127.0.0.1:3012")
-	var err error
-	t.transport, err = t.factory.Create(t.connection, relay.NewProxy(), "")
+	address, err := host.NewAddress(t.Config.Address)
+	t.Assert().NoError(err)
+
+	t.host = host.NewHost(address)
+
+	t.transport, err = NewTransport(t.Config, relay.NewProxy())
 	t.Assert().NoError(err)
 	t.Assert().Implements((*Transport)(nil), t.transport)
 }
@@ -69,16 +69,16 @@ func generateRandomBytes(n int) ([]byte, error) {
 }
 
 func (t *transportSuite) TestPingPong() {
-	future, err := t.transport.SendRequest(packet.NewPingPacket(t.node, t.node))
+	future, err := t.transport.SendRequest(packet.NewPingPacket(t.host, t.host))
 	t.Assert().NoError(err)
 
 	requestMsg := <-t.transport.Packets()
 	t.Assert().True(requestMsg.IsValid())
 	t.Assert().Equal(packet.TypePing, requestMsg.Type)
-	t.Assert().Equal(t.node, future.Actor())
+	t.Assert().Equal(t.host, future.Actor())
 	t.Assert().False(requestMsg.IsResponse)
 
-	builder := packet.NewBuilder().Sender(t.node).Receiver(requestMsg.Sender).Type(packet.TypePing)
+	builder := packet.NewBuilder().Sender(t.host).Receiver(requestMsg.Sender).Type(packet.TypePing)
 	err = t.transport.SendResponse(requestMsg.RequestID, builder.Response(nil).Build())
 	t.Assert().NoError(err)
 
@@ -90,7 +90,7 @@ func (t *transportSuite) TestPingPong() {
 
 func (t *transportSuite) TestSendBigPacket() {
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
-	builder := packet.NewBuilder().Sender(t.node).Receiver(t.node).Type(packet.TypeStore)
+	builder := packet.NewBuilder().Sender(t.host).Receiver(t.host).Type(packet.TypeStore)
 	requestMsg := builder.Request(&packet.RequestDataStore{data, true}).Build()
 	t.Assert().True(requestMsg.IsValid())
 
@@ -105,7 +105,7 @@ func (t *transportSuite) TestSendBigPacket() {
 }
 
 func (t *transportSuite) TestSendInvalidPacket() {
-	builder := packet.NewBuilder().Sender(t.node).Receiver(t.node).Type(packet.TypeRPC)
+	builder := packet.NewBuilder().Sender(t.host).Receiver(t.host).Type(packet.TypeRPC)
 	msg := builder.Build()
 	t.Assert().False(msg.IsValid())
 
@@ -115,9 +115,15 @@ func (t *transportSuite) TestSendInvalidPacket() {
 }
 
 func TestUTPTransport(t *testing.T) {
-	suite.Run(t, NewSuite(NewUTPTransportFactory()))
+	cfg := configuration.NewHostNetwork().Transport
+	cfg.Protocol = "UTP"
+	cfg.BehindNAT = false
+	suite.Run(t, NewSuite(cfg))
 }
 
 func TestKCPTransport(t *testing.T) {
-	suite.Run(t, NewSuite(NewKCPTransportFactory()))
+	cfg := configuration.NewHostNetwork().Transport
+	cfg.Protocol = "KCP"
+	cfg.BehindNAT = false
+	suite.Run(t, NewSuite(cfg))
 }
