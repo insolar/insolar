@@ -42,15 +42,7 @@ func NewConfiguration() Configuration {
 		Log:   NewLog(),
 		Stats: NewStats(),
 	}
-
-	holder := Holder{cfg, viper.New()}
-
-	holder.viper.SetConfigName("insolar")
-	holder.viper.AddConfigPath("$HOME/.insolar")
-	holder.viper.AddConfigPath(".")
-	holder.viper.SetConfigType("yml")
-
-	holder.viper.SetDefault("insolar", cfg)
+	
 	return cfg
 }
 
