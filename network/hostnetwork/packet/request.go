@@ -32,6 +32,11 @@ const (
 	RevokeAuth
 )
 
+// RequestCheckNodePriv is data for check node privileges.
+type RequestCheckNodePriv struct {
+	PrivKey string
+}
+
 // RequestDataFindHost is data for FindHost request.
 type RequestDataFindHost struct {
 	Target []byte
