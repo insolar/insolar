@@ -42,7 +42,7 @@ func NewConfiguration() Configuration {
 		Log:   NewLog(),
 		Stats: NewStats(),
 	}
-	
+
 	return cfg
 }
 

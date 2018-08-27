@@ -49,8 +49,8 @@ func main() {
 	}
 
 	cfg := configuration.NewConfiguration()
-	cfg.Host.Address = *addr
-	cfg.Host.UseStun = *stun
+	cfg.Host.Transport.Address = *addr
+	cfg.Host.Transport.BehindNAT = *stun
 
 	dhtNetwork, err := hostnetwork.NewHostNetwork(cfg.Host)
 	if err != nil {

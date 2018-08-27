@@ -23,8 +23,9 @@ import (
 )
 
 // Factory allows to create new Transport.
+// Deprecated and will be removed, use NewTransport with cfg instead
 type Factory interface {
-	Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error)
+	Create(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (Transport, error)
 }
 
 type utpTransportFactory struct{}
@@ -35,8 +36,8 @@ func NewUTPTransportFactory() Factory {
 }
 
 // Create creates new UTP Transport.
-func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
-	return NewUTPTransport(conn, proxy)
+func (utpTransportFactory *utpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (Transport, error) {
+	return NewUTPTransport(conn, proxy, publicAddress)
 }
 
 type kcpTransportFactory struct{}
@@ -47,6 +48,6 @@ func NewKCPTransportFactory( /* security params, keys, etc */ ) Factory {
 }
 
 // Create creates new KCP Transport.
-func (kcpTransportFactory *kcpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
-	return NewKCPTransport(conn, proxy)
+func (kcpTransportFactory *kcpTransportFactory) Create(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (Transport, error) {
+	return NewKCPTransport(conn, proxy, publicAddress)
 }

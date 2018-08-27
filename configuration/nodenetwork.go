@@ -35,5 +35,7 @@ type NodeNetwork struct {
 
 // NewNodeNetwork creates new default NodeNetwork configuration
 func NewNodeNetwork() NodeNetwork {
-	return NodeNetwork{}
+	return NodeNetwork{
+		Nodes: make([]Node, 0),
+	}
 }

@@ -1,12 +1,13 @@
 insolar:
   host:
-    address: 0.0.0.0:16000
-    publicaddress: ""
-    bootstraphosts: 
-    usestun: true
+    transport:
+      protocol: UTP
+      address: 0.0.0.0:17000
+      behindnat: true
+    bootstraphosts: []
     isrelay: false
-    transport: KCP
-  node: {}
+  node:
+    nodes: []
   log:
     format: ""
     level: Debug

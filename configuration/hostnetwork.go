@@ -16,22 +16,29 @@
 
 package configuration
 
+// Transport holds transport protocol configuration for HostNetwork
+type Transport struct {
+	// protocol type UTP or KCP
+	Protocol string
+	// Address to listen
+	Address string
+	// if true transport will use network traversal technique(like STUN) to get PublicAddress
+	BehindNAT bool
+}
+
 // HostNetwork holds configuration for HostNetwork
 type HostNetwork struct {
-	Address        string
-	PublicAddress  string
+	Transport Transport
 	BootstrapHosts []string
-	UseStun        bool   // use stun to get public address
 	IsRelay        bool   // set if node must be relay explicit
-	Transport      string // transport type UTP or KCP
 }
 
 // NewHostNetwork creates new default HostNetwork configuration
 func NewHostNetwork() HostNetwork {
+	transport := Transport{"UTP", "0.0.0.0:17000", true}
 	return HostNetwork{
-		Address:   "0.0.0.0:17000",
-		UseStun:   true,
+		Transport: transport,
 		IsRelay:   false,
-		Transport: "UTP",
+		BootstrapHosts: make([]string, 0),
 	}
 }

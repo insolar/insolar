@@ -81,6 +81,7 @@ type mockTransport struct {
 	msgChan  chan *packet.Packet
 	failNext bool
 	sequence *uint64
+	publicAddress string
 }
 
 func newMockTransport() *mockTransport {
@@ -141,6 +142,10 @@ func (t *mockTransport) SendResponse(requestID packet.RequestID, q *packet.Packe
 	return nil
 }
 
+func (t *mockTransport) PublicAddress() string {
+	return t.publicAddress
+}
+
 func mockFindHostResponse(request *packet.Packet, nextID []byte) *packet.Packet {
 	r := &packet.Packet{}
 	n := &host.Host{}
@@ -189,7 +194,7 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	addr, _ := host.NewAddress(address)
 	origin, _ := host.NewOrigin(ids, addr)
 	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
+	tp, err := transport.NewUTPTransport(conn, relay.NewProxy(), "") //TODO: use NewTransport with cfg
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }

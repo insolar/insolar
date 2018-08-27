@@ -55,7 +55,7 @@ func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transpor
 	addr, _ := host.NewAddress(address)
 	origin, _ := host.NewOrigin(ids, addr)
 	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
+	tp, err := transport.NewUTPTransport(conn, relay.NewProxy(), "") //todo: use NewTransport with cfg instead
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }

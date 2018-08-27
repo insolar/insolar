@@ -45,7 +45,7 @@ func TestUTPTransportFactory_Create(t *testing.T) {
 	assert.NoError(t, err)
 	defer conn.Close()
 
-	transport, err := NewUTPTransportFactory().Create(conn, relay.NewProxy())
+	transport, err := NewUTPTransportFactory().Create(conn, relay.NewProxy(), "")
 
 	assert.NoError(t, err)
 	assert.Implements(t, (*Transport)(nil), transport)

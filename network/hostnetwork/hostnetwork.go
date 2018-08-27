@@ -17,14 +17,11 @@
 package hostnetwork
 
 import (
-	"errors"
 	"log"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
@@ -40,38 +37,19 @@ type HostNetwork interface {
 // NewHostNetwork creates and returns DHT network.
 func NewHostNetwork(cfg configuration.HostNetwork) (*DHT, error) {
 
-	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
+	proxy := relay.NewProxy()
+
+	tp, err := transport.NewTransport(cfg.Transport, proxy)
 	if err != nil {
 		return nil, err
 	}
 
-	publicAddress, err := createResolver(cfg.UseStun).Resolve(conn)
-	if err != nil {
-		return nil, err
-	}
-
-	originAddress, err := host.NewAddress(publicAddress)
+	originAddress, err := host.NewAddress(tp.PublicAddress())
 	if err != nil {
 		return nil, err
 	}
 
 	origin, err := host.NewOrigin(nil, originAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	proxy := relay.NewProxy()
-
-	var transportFactory transport.Factory
-	switch cfg.Transport {
-	case "UTP":
-		transportFactory = transport.NewUTPTransportFactory()
-	case "KCP":
-		transportFactory = transport.NewKCPTransportFactory()
-	default:
-		return nil, errors.New("invalid transport configuration")
-	}
-	tp, err := transportFactory.Create(conn, proxy)
 	if err != nil {
 		return nil, err
 	}
@@ -104,9 +82,4 @@ func getBootstrapHosts(addresses []string) []*host.Host {
 	return hosts
 }
 
-func createResolver(stun bool) resolver.PublicAddressResolver {
-	if stun {
-		return resolver.NewStunResolver("")
-	}
-	return resolver.NewExactResolver()
-}
+

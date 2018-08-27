@@ -45,14 +45,15 @@ type utpTransport struct {
 	futures map[packet.RequestID]Future
 
 	proxy relay.Proxy
+	publicAddress string
 }
 
 // NewUTPTransport creates utpTransport.
-func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
-	return newUTPTransport(conn, proxy)
+func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (Transport, error) {
+	return newUTPTransport(conn, proxy, publicAddress)
 }
 
-func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, error) {
+func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*utpTransport, error) {
 	socket, err := utp.NewSocketFromPacketConn(conn)
 	if err != nil {
 		return nil, err
@@ -71,6 +72,7 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy) (*utpTransport, err
 		futures: make(map[packet.RequestID]Future),
 
 		proxy: proxy,
+		publicAddress: publicAddress,
 	}
 
 	return transport, nil
@@ -259,4 +261,8 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 			return val
 		}
 	}
+}
+
+func (t *utpTransport) PublicAddress() string {
+	return t.publicAddress
 }

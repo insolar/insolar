@@ -18,6 +18,11 @@ package transport
 
 import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/network/hostnetwork/connection"
+	"errors"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
 
 // Transport is an interface for network transport.
@@ -42,4 +47,39 @@ type Transport interface {
 
 	// Stopped returns signal channel to support graceful shutdown.
 	Stopped() <-chan bool
+
+	// PublicAddress returns PublicAddress
+	PublicAddress() string
+}
+
+// NewTransport creates new Transport with particular configuration
+func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
+	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
+	if err != nil {
+		return nil, err
+	}
+
+	var transportFactory Factory
+	switch cfg.Protocol {
+	case "UTP":
+		transportFactory = NewUTPTransportFactory()
+	case "KCP":
+		transportFactory = NewKCPTransportFactory()
+	default:
+		return nil, errors.New("invalid transport configuration")
+	}
+	return transportFactory.Create(conn, proxy, publicAddress)
+
+}
+
+func createResolver(stun bool) resolver.PublicAddressResolver {
+	if stun {
+		return resolver.NewStunResolver("")
+	}
+	return resolver.NewExactResolver()
 }

@@ -44,7 +44,7 @@ func NewSuite(factory Factory) *transportSuite {
 func (t *transportSuite) SetupTest() {
 	t.connection, _ = connection.NewConnectionFactory().Create("127.0.0.1:3012")
 	var err error
-	t.transport, err = t.factory.Create(t.connection, relay.NewProxy())
+	t.transport, err = t.factory.Create(t.connection, relay.NewProxy(), "")
 	t.Assert().NoError(err)
 	t.Assert().Implements((*Transport)(nil), t.transport)
 }
