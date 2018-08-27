@@ -19,16 +19,15 @@ package jetcoordinator
 import (
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
 )
 
-// CreateJetDrop creates jet drop for provided pulse number.
-func CreateJetDrop(storage storage.LedgerStorer, pulse record.PulseNum) (*jetdrop.JetDrop, error) {
-	prevDrop, err := storage.GetDrop(pulse - 1)
+// CreateDrop creates jet drop for provided pulse number.
+func (jc *JetCoordinator) CreateDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
+	prevDrop, err := jc.storage.GetDrop(pulse - 1)
 	if err != nil {
 		return nil, err
 	}
-	newDrop, err := storage.SetDrop(pulse, prevDrop)
+	newDrop, err := jc.storage.SetDrop(pulse, prevDrop)
 	if err != nil {
 		return nil, err
 	}
