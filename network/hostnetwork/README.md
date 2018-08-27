@@ -75,4 +75,4 @@ func main() {
 }
 ```
 
-For more detailed usage example see [cmd/example/network/hostnetwork/main.go](../../cmd/example/network/hostnetwork/main.go)
+For more detailed usage example see [cmd/example/network/hostnetwork/main.go](../../cmd/example/network/host/main.go)

@@ -16,6 +16,7 @@
 
 package configuration
 
+// Stats holds configuration for stats publishing
 type Stats struct {
 	ListenAddress string
 }

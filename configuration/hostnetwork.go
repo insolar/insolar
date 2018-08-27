@@ -16,6 +16,7 @@
 
 package configuration
 
+// HostNetwork holds configuration for HostNetwork
 type HostNetwork struct {
 	Address        string
 	PublicAddress  string
@@ -23,8 +24,6 @@ type HostNetwork struct {
 	UseStun        bool   // use stun to get public address
 	IsRelay        bool   // set if node must be relay explicit
 	Transport      string // transport type UTP or KCP
-	// EncriptionKeys
-	//options hostnetwork.Options
 }
 
 // NewHostNetwork creates new default HostNetwork configuration

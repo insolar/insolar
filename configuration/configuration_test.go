@@ -18,11 +18,41 @@ package configuration
 
 import (
 	"testing"
-
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConfiguration_Load(t *testing.T) {
+func TestConfiguration_Load_Default(t *testing.T) {
+	holder := NewHolder()
+	err := holder.LoadFromFile("testdata/default.yml")
+	assert.NoError(t, err)
+
 	cfg := NewConfiguration()
-	assert.Equal(t, "0.0.0.0:17000", cfg.Host.Address)
+	assert.Equal(t, cfg, holder.Configuration)
+}
+
+func TestConfiguration_Load_Changed(t *testing.T) {
+	holder := NewHolder()
+	err := holder.LoadFromFile("testdata/changed.yml")
+	assert.NoError(t, err)
+
+	cfg := NewConfiguration()
+	assert.NotEqual(t, cfg, holder.Configuration)
+
+	cfg.Host.Address = "0.0.0.0:16000"
+	cfg.Host.Transport = "KCP"
+	cfg.Log.Level = "Debug"
+	assert.Equal(t, cfg, holder.Configuration)
+}
+
+func TestConfiguration_Save_Default(t *testing.T) {
+	t.Skip("Skip until bugfix viper unmarshall arrays https://github.com/spf13/viper/issues/527")
+	holder := NewHolder()
+	err := holder.SaveAs("tmpconfig.yml")
+	assert.NoError(t, err)
+
+	holder2 := NewHolder()
+	err = holder2.LoadFromFile("tmpconfig.yml")
+	assert.NoError(t, err)
+
+	assert.Equal(t, holder.Configuration, holder2.Configuration)
 }

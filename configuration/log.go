@@ -16,6 +16,7 @@
 
 package configuration
 
+// Log holds configuration for logging
 type Log struct {
 	Format string
 	Level  string

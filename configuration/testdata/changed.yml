@@ -1,0 +1,15 @@
+insolar:
+  host:
+    address: 0.0.0.0:16000
+    publicaddress: ""
+    bootstraphosts: 
+    usestun: true
+    isrelay: false
+    transport: KCP
+  node: {}
+  log:
+    format: ""
+    level: Debug
+    output: insolar.log
+  stats:
+    listenaddress: 0.0.0.0:8080

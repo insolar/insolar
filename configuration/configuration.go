@@ -17,40 +17,78 @@
 package configuration
 
 import (
-	"errors"
-
 	"github.com/spf13/viper"
 )
 
-// TODO: interface for configuration
-//TODO: generate default config method + test golden file
-
+// Configuration contains configuration params for all Insolar components
 type Configuration struct {
 	Host  HostNetwork
 	Node  NodeNetwork
 	Log   Log
 	Stats Stats
+}
 
+// Holder provides methods to manage configuration
+type Holder struct {
+	Configuration Configuration
 	viper *viper.Viper
 }
 
 // NewConfiguration creates new default configuration
 func NewConfiguration() Configuration {
-	return Configuration{
+	cfg := Configuration{
 		Host:  NewHostNetwork(),
 		Node:  NewNodeNetwork(),
 		Log:   NewLog(),
 		Stats: NewStats(),
-		viper: viper.New(),
 	}
+
+	holder := Holder{cfg, viper.New()}
+
+	holder.viper.SetConfigName("insolar")
+	holder.viper.AddConfigPath("$HOME/.insolar")
+	holder.viper.AddConfigPath(".")
+	holder.viper.SetConfigType("yml")
+
+	holder.viper.SetDefault("insolar", cfg)
+	return cfg
 }
 
-func (c *Configuration) Load() error {
-	return errors.New("not implemented")
+// NewHolder creates new Holder with default configuration
+func NewHolder() Holder {
+	cfg := NewConfiguration()
+	holder := Holder{cfg, viper.New()}
+
+	holder.viper.SetConfigName("insolar")
+	holder.viper.AddConfigPath("$HOME/.insolar")
+	holder.viper.AddConfigPath(".")
+	holder.viper.SetConfigType("yml")
+
+	holder.viper.SetDefault("insolar", cfg)
+	return holder
 }
 
-func (c *Configuration) Save() error {
-	return errors.New("not implemented")
+// Load method reads configuration from default file path
+func (c *Holder) Load() error {
+	err := c.viper.ReadInConfig()
+	if err != nil {
+		return err
+	}
 
-	//viper.
+	return c.viper.UnmarshalKey("insolar", &c.Configuration)}
+
+// LoadFromFile method reads configuration from particular file path
+func (c *Holder) LoadFromFile(path string) error {
+	c.viper.SetConfigFile(path)
+	return c.Load()
+}
+
+// Save method writes configuration to default file path
+func (c *Holder) Save() error {
+	return c.viper.WriteConfig()
+}
+
+// SaveAs method writes configuration to particular file path
+func (c *Holder) SaveAs(path string) error {
+	return c.viper.WriteConfigAs(path)
 }
