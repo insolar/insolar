@@ -23,25 +23,31 @@ import (
 )
 
 func TestJetDrop_Hash(t *testing.T) {
-	drop1 := JetDrop{
-		PrevHash:     []byte{1, 2, 3},
-		RecordHashes: [][]byte{{4}, {5}, {6}},
+	drop1 := &JetDrop{
+		Pulse:    1,
+		PrevHash: []byte{1, 2, 3},
+		Hash:     []byte{4, 5, 6},
 	}
-	drop2 := JetDrop{
-		PrevHash:     []byte{1, 2, 3},
-		RecordHashes: [][]byte{{4}, {5}, {6}},
-	}
-	drop3 := JetDrop{
-		PrevHash:     []byte{1, 2, 3},
-		RecordHashes: [][]byte{{5}, {4}, {6}},
+	drop2 := &JetDrop{
+		Pulse:    2,
+		PrevHash: []byte{1, 2, 3},
+		Hash:     []byte{4, 5, 6},
 	}
 
-	h1, err := drop1.Hash()
+	b1, err := EncodeJetDrop(drop1)
 	assert.NoError(t, err)
-	h2, err := drop2.Hash()
+	assert.NotNil(t, b1)
+	drop1got, err := DecodeJetDrop(b1)
 	assert.NoError(t, err)
-	h3, err := drop3.Hash()
+	assert.Equal(t, drop1, drop1got)
+
+	b2, err := EncodeJetDrop(drop2)
 	assert.NoError(t, err)
-	assert.Equal(t, h1, h2)
-	assert.NotEqual(t, h1, h3)
+	assert.NotNil(t, b2)
+	drop2got, err := DecodeJetDrop(b2)
+	assert.NoError(t, err)
+	assert.Equal(t, drop2, drop2got)
+
+	assert.NotEqual(t, drop1got, drop2got)
+	assert.NotEqual(t, b1, b2)
 }

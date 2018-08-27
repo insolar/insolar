@@ -205,13 +205,15 @@ func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 	ledger, cleaner := leveltestutils.TmpDB(t, "")
 	defer cleaner()
 
-	drop := jetdrop.JetDrop{
-		PrevHash:     []byte{1, 2, 3},
-		RecordHashes: [][]byte{{4}, {5}, {6}},
+	// it references on 'fake' zero
+	fakeDrop := jetdrop.JetDrop{
+		Hash: []byte{0xFF},
 	}
-	err := ledger.SetDrop(42, &drop)
+
+	ledger.SetPulseFn(func() record.PulseNum { return 42 })
+	drop42, err := ledger.SetDrop(42, &fakeDrop)
 	assert.NoError(t, err)
-	restoredDrop, err := ledger.GetDrop(42)
+	got, err := ledger.GetDrop(42)
 	assert.NoError(t, err)
-	assert.Equal(t, *restoredDrop, drop)
+	assert.Equal(t, got, drop42)
 }
