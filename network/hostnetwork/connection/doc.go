@@ -21,7 +21,7 @@ Usage
 
 	factory := connection.NewConnectionFactory()
 
-	connection := factory.Create("127.0.0.1:8080")
+	connection := factory.create("127.0.0.1:8080")
 	defer connection.close()  // You have to manually close connection
 */
 package connection

@@ -64,17 +64,14 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 		return nil, err
 	}
 
-	var transportFactory Factory
 	switch cfg.Protocol {
 	case "UTP":
-		transportFactory = NewUTPTransportFactory()
+		return newUTPTransport(conn,proxy, publicAddress)
 	case "KCP":
-		transportFactory = NewKCPTransportFactory()
+		return newKCPTransport(conn,proxy, publicAddress)
 	default:
 		return nil, errors.New("invalid transport configuration")
 	}
-	return transportFactory.Create(conn, proxy, publicAddress)
-
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {

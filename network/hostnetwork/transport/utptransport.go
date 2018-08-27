@@ -48,11 +48,6 @@ type utpTransport struct {
 	publicAddress string
 }
 
-// NewUTPTransport creates utpTransport.
-func NewUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (Transport, error) {
-	return newUTPTransport(conn, proxy, publicAddress)
-}
-
 func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*utpTransport, error) {
 	socket, err := utp.NewSocketFromPacketConn(conn)
 	if err != nil {

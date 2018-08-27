@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
@@ -29,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/configuration"
 )
 
 type req struct {
@@ -54,8 +54,10 @@ func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transpor
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
 	origin, _ := host.NewOrigin(ids, addr)
-	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn, relay.NewProxy(), "") //todo: use NewTransport with cfg instead
+	cfg := configuration.NewConfiguration().Host.Transport
+	cfg.Address = address
+	cfg.BehindNAT = false
+	tp, err := transport.NewTransport(cfg,relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
@@ -116,7 +118,8 @@ func TestRoute(t *testing.T) {
 	r.requests = make([]req, 0)
 	r.responses = make([]resp, 0)
 
-	dht, _ := NewNode()
+	dht, err := NewNode()
+	assert.NoError(t, err)
 	ctx := getDefaultCtx(dht)
 
 	mr, _ := New(r, dht)

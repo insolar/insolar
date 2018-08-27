@@ -32,7 +32,7 @@ func NewRPCFactory(methods map[string]RemoteProcedure) Factory {
 	}
 }
 
-// Create creates and registers new remote procedure.
+// create creates and registers new remote procedure.
 func (rpcFactory *rpcFactory) Create() RPC {
 	newRPC := NewRPC()
 	for name, method := range rpcFactory.methods {

@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -36,6 +35,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/configuration"
 )
 
 const closedPacket = "closed" // "broken pipe" for kcpTransport
@@ -193,8 +193,10 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
 	origin, _ := host.NewOrigin(ids, addr)
-	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn, relay.NewProxy(), "") //TODO: use NewTransport with cfg
+	cfg := configuration.NewConfiguration().Host.Transport
+	cfg.Address = address
+	cfg.BehindNAT = false
+	tp, err := transport.NewTransport(cfg,relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
@@ -442,7 +444,7 @@ func TestBootstrapNoID(t *testing.T) {
 	<-done
 }
 
-// Create two DHTs have them connect and bootstrap, then disconnect. Repeat
+// create two DHTs have them connect and bootstrap, then disconnect. Repeat
 // 100 times to ensure that we can use the same IP and port without EADDRINUSE
 // errors.
 func TestReconnect(t *testing.T) {
@@ -499,7 +501,7 @@ func TestReconnect(t *testing.T) {
 	}
 }
 
-// Create two DHTs and have them connect. Send a store packet with 100mb
+// create two DHTs and have them connect. Send a store packet with 100mb
 // payload from one host to another. Ensure that the other host now has
 // this data in its store.
 func TestStoreAndFindLargeValue(t *testing.T) {
@@ -799,7 +801,7 @@ func TestStoreExpiration(t *testing.T) {
 	<-done
 }
 
-// Create a new host and bootstrap it. All hosts in the network know of a
+// create a new host and bootstrap it. All hosts in the network know of a
 // single host closer to the original host. This continues until every MaxContactsInBucket bucket
 // is occupied.
 func TestFindHostAllBuckets(t *testing.T) {
