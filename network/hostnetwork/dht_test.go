@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1374,6 +1374,75 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = dhts[0].AnalyzeNetwork(ctx)
+	assert.NoError(t, err)
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
+	<-done
+}
+
+func TestDHT_StartCheckNodesRole(t *testing.T) {
+	nodesCount := 5
+	port := 49000
+	var dhts []*DHT
+
+	done := make(chan bool)
+
+	ids1 := make([]id.ID, 0)
+	id1, _ := id.NewID(id.GetRandomKey())
+	ids1 = append(ids1, id1)
+	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
+	assert.NoError(t, err)
+
+	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
+	st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:16001")
+	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
+		BootstrapHosts: []*host.Host{
+			{
+				ID:      ids1[0],
+				Address: bootstrapAddr2,
+			},
+		},
+	},
+		relay.NewProxy())
+
+	dhts = append(dhts, dht1)
+	dhts = append(dhts, dht2)
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
+		assert.Equal(t, 0, dht.NumHosts(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, "closed", err.Error())
+			done <- true
+		}(dht)
+	}
+
+	for _, dht := range dhts {
+		err := dht.Bootstrap()
+		assert.NoError(t, err)
+	}
+
+	for i := 0; i < nodesCount; i++ {
+		port++
+		id1, _ := id.NewID(id.GetRandomKey())
+		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port))
+		host1 := host.NewHost(address)
+		node := nodenetwork.NewNode(id1, host1, "domain"+strconv.Itoa(port), "role"+strconv.Itoa(port))
+		err := dhts[1].AddNewNode(node)
+		assert.NoError(t, err)
+		err = dhts[1].AddNewNode(node)
+		assert.EqualError(t, err, "node already exist")
+		node.SetDomainID("")
+		err = dhts[1].AddNewNode(node)
+		assert.EqualError(t, err, "empty node data")
+	}
+
+	ctx, _ := NewContextBuilder(dhts[1]).SetDefaultHost().Build()
+	err = dhts[1].StartCheckNodesRole(ctx)
 	assert.NoError(t, err)
 
 	for _, dht := range dhts {

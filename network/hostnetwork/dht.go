@@ -957,15 +957,10 @@ func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuil
 	data := msg.Data.(*packet.RequestCheckNodePriv)
 	var response packet.ResponseCheckNodePriv
 
-	if dht.nodesMap[dht.nodesIDMap[data.PrivKey]] == nil {
-		response.State = packet.Error
-		response.Error = "couldn't find a node with this privilege key"
+	if dht.confirmNodeRole(data.PrivKey) {
+		response.State = packet.Confirmed
 	} else {
-		if dht.confirmNodeRole(data.PrivKey) {
-			response.State = packet.Confirmed
-		} else {
-			response.State = packet.Declined
-		}
+		response.State = packet.Declined
 	}
 
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
