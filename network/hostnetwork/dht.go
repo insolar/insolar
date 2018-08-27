@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/jbenet/go-base58"
 )
 
@@ -57,13 +58,15 @@ type DHT struct {
 
 	origin *host.Origin
 
-	transport transport.Transport
-	store     store.Store
-	rpc       rpc.RPC
-	relay     relay.Relay
-	proxy     relay.Proxy
-	auth      AuthInfo
-	subnet    Subnet
+	transport  transport.Transport
+	store      store.Store
+	rpc        rpc.RPC
+	relay      relay.Relay
+	proxy      relay.Proxy
+	auth       AuthInfo
+	subnet     Subnet
+	nodesMap   map[string]*nodenetwork.Node // key - node.id.Hash, value - node
+	nodesIDMap map[string]string            // key - node.domainID, value - node.id.Hash
 }
 
 // AuthInfo collects some information about authentication.
@@ -172,6 +175,8 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	dht.auth.ReceivedKeys = make(map[string][]byte)
 
 	dht.subnet.SubnetIDs = make(map[string][]string)
+	dht.nodesMap = make(map[string]*nodenetwork.Node)
+	dht.nodesIDMap = make(map[string]string)
 
 	return dht, nil
 }
@@ -888,6 +893,34 @@ func buildContext(cb ContextBuilder, msg *packet.Packet) Context {
 	return ctx
 }
 
+func (dht *DHT) confirmNodeRole(privKey string) bool {
+	// TODO implement this func
+	return true
+}
+
+// StartCheckNodesRole starting a check all known nodes.
+func (dht *DHT) StartCheckNodesRole(ctx Context) error {
+	var err error
+	for _, node := range dht.nodesMap {
+		// TODO: change or choose another auth host
+		err = dht.checkNodePrivRequest(ctx, dht.options.BootstrapHosts[0].ID.HashString(), node.GetDomainID())
+	}
+	return err
+}
+
+// AddNewNode adds a node to the dht.
+func (dht *DHT) AddNewNode(node *nodenetwork.Node) error {
+	if (node.GetNodeID().GetHash() == nil) ||
+		(node.GetDomainID() == "") {
+		return errors.New("empty node data")
+	} else if _, ok := dht.nodesMap[node.GetNodeID().HashString()]; ok {
+		return errors.New("node already exist")
+	} else {
+		dht.nodesMap[node.GetNodeID().HashString()] = node
+	}
+	return nil
+}
+
 func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.HashTable) {
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 	switch msg.Type {
@@ -913,6 +946,31 @@ func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.
 		dht.processRelayOwnership(ctx, msg, packetBuilder)
 	case packet.TypeKnownOuterHosts:
 		dht.processKnownOuterHosts(ctx, msg, packetBuilder)
+	case packet.TypeCheckNodePriv:
+		dht.processCheckNodePriv(ctx, msg, packetBuilder)
+	default:
+		log.Println("unknown request type")
+	}
+}
+
+func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
+	data := msg.Data.(*packet.RequestCheckNodePriv)
+	var response packet.ResponseCheckNodePriv
+
+	if dht.nodesMap[dht.nodesIDMap[data.PrivKey]] == nil {
+		response.State = packet.Error
+		response.Error = "couldn't find a node with this privilege key"
+	} else {
+		if dht.confirmNodeRole(data.PrivKey) {
+			response.State = packet.Confirmed
+		} else {
+			response.State = packet.Declined
+		}
+	}
+
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
+	if err != nil {
+		log.Println("Failed to send response:", err.Error())
 	}
 }
 
@@ -1303,6 +1361,59 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 		return err
 	}
 
+	return nil
+}
+
+func (dht *DHT) checkNodePrivRequest(ctx Context, targetID string, privKey string) error {
+	targetHost, exist, err := dht.FindHost(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("target for check node privileges request not found")
+		return err
+	}
+
+	origin := dht.htFromCtx(ctx).Origin
+	request := packet.NewCheckNodePrivPacket(origin, targetHost, privKey)
+	future, err := dht.transport.SendRequest(request)
+
+	if err != nil {
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*packet.ResponseCheckNodePriv)
+		err = dht.handleCheckNodePrivResponse(response, privKey)
+		if err != nil {
+			return err
+		}
+
+	case <-time.After(dht.options.PacketTimeout):
+		future.Cancel()
+		err = errors.New("timeout")
+		return err
+	}
+
+	return nil
+}
+
+func (dht *DHT) handleCheckNodePrivResponse(response *packet.ResponseCheckNodePriv, privKey string) error {
+	switch response.State {
+	case packet.Error:
+		return errors.New(response.Error)
+	case packet.Confirmed:
+		return nil
+	case packet.Declined:
+		// TODO: set default unconfirmed role
+		// dht.nodesMap[dht.nodesIDMap[privKey]].SetNodeRole("Unconfirmed default role")
+	}
 	return nil
 }
 
