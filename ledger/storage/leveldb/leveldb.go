@@ -217,7 +217,7 @@ func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) 
 		}
 		return nil, err
 	}
-	drop, err := jetdrop.DecodeJetDrop(buf)
+	drop, err := jetdrop.Decode(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (ll *LevelLedger) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop)
 		PrevHash: prevdrop.Hash,
 		Hash:     drophash,
 	}
-	encoded, err := jetdrop.EncodeJetDrop(drop)
+	encoded, err := jetdrop.Encode(drop)
 	if err != nil {
 		return nil, err
 	}

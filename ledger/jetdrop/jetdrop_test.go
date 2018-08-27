@@ -34,17 +34,17 @@ func TestJetDrop_Hash(t *testing.T) {
 		Hash:     []byte{4, 5, 6},
 	}
 
-	b1, err := EncodeJetDrop(drop1)
+	b1, err := Encode(drop1)
 	assert.NoError(t, err)
 	assert.NotNil(t, b1)
-	drop1got, err := DecodeJetDrop(b1)
+	drop1got, err := Decode(b1)
 	assert.NoError(t, err)
 	assert.Equal(t, drop1, drop1got)
 
-	b2, err := EncodeJetDrop(drop2)
+	b2, err := Encode(drop2)
 	assert.NoError(t, err)
 	assert.NotNil(t, b2)
-	drop2got, err := DecodeJetDrop(b2)
+	drop2got, err := Decode(b2)
 	assert.NoError(t, err)
 	assert.Equal(t, drop2, drop2got)
 
