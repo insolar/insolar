@@ -35,8 +35,6 @@ type LedgerStorer interface {
 	GetObjectIndex(*record.Reference) (*index.ObjectLifeline, error)
 	SetObjectIndex(*record.Reference, *index.ObjectLifeline) error
 
-	GetPulseKeys(record.PulseNum) ([][]byte, error)
-
 	// GetDrop return Jet's drop by pulse number.
 	GetDrop(record.PulseNum) (*jetdrop.JetDrop, error)
 	// SetDrop gets previous JetDrop, saves and returns the new one

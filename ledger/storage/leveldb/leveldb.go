@@ -201,12 +201,6 @@ func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLi
 	return ll.ldb.Put(k, encoded, nil)
 }
 
-// GetPulseKeys returns all record keys from slot after given pulse.
-func (ll *LevelLedger) GetPulseKeys(pulse record.PulseNum) ([][]byte, error) {
-	// TODO: implement me
-	return [][]byte{}, nil
-}
-
 // GetDrop returns jet drop for a given pulse number.
 func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
