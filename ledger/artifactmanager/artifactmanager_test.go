@@ -58,7 +58,7 @@ func TestLedgerArtifactManager_DeployCode(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	codeMap := map[core.MachineType][]byte{1: {1}}
-	coreRef, err := td.manager.DeployCode(td.domainRef.Key(), td.requestRef.Key(), codeMap)
+	coreRef, err := td.manager.DeployCode(td.domainRef.Bytes(), td.requestRef.Bytes(), codeMap)
 	assert.NoError(t, err)
 	ref := record.Bytes2Reference(coreRef[:])
 	codeRec, err := td.ledger.GetRecord(&ref)
@@ -80,11 +80,11 @@ func TestLedgerArtifactManager_ActivateClass_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	_, err := td.manager.ActivateClass(
-		td.domainRef.Key(), td.requestRef.Key(), genRandomRef().Key(), []byte{})
+		td.domainRef.Bytes(), td.requestRef.Bytes(), genRandomRef().Bytes(), []byte{})
 	assert.NotNil(t, err)
 	notCodeRef, _ := td.ledger.SetRecord(&record.ClassActivateRecord{})
 	_, err = td.manager.ActivateClass(
-		td.domainRef.Key(), td.requestRef.Key(), notCodeRef.Key(), []byte{},
+		td.domainRef.Bytes(), td.requestRef.Bytes(), notCodeRef.Bytes(), []byte{},
 	)
 	assert.NotNil(t, err)
 }
@@ -102,7 +102,7 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 			},
 		},
 	})
-	activateCoreRef, err := td.manager.ActivateClass(td.domainRef.Key(), td.requestRef.Key(), codeRef.Key(), memory)
+	activateCoreRef, err := td.manager.ActivateClass(td.domainRef.Bytes(), td.requestRef.Bytes(), codeRef.Bytes(), memory)
 	activateRef := record.Bytes2Reference(activateCoreRef[:])
 	assert.Nil(t, err)
 	activateRec, getErr := td.ledger.GetRecord(&activateRef)
@@ -124,11 +124,11 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 func TestLedgerArtifactManager_DeactivateClass_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
-	_, err := td.manager.DeactivateClass(td.domainRef.Key(), td.requestRef.Key(), genRandomRef().Key())
+	_, err := td.manager.DeactivateClass(td.domainRef.Bytes(), td.requestRef.Bytes(), genRandomRef().Bytes())
 	assert.NotNil(t, err)
 
 	notClassRef, _ := td.ledger.SetRecord(&record.CodeRecord{})
-	_, err = td.manager.DeactivateClass(td.domainRef.Key(), td.requestRef.Key(), notClassRef.Key())
+	_, err = td.manager.DeactivateClass(td.domainRef.Bytes(), td.requestRef.Bytes(), notClassRef.Bytes())
 	assert.NotNil(t, err)
 }
 
@@ -140,7 +140,7 @@ func TestLedgerArtifactManager_DeactivateClass_VerifiesClassIsActive(t *testing.
 	td.ledger.SetClassIndex(classRef, &index.ClassLifeline{
 		LatestStateRef: *deactivateRef,
 	})
-	_, err := td.manager.DeactivateClass(td.domainRef.Key(), td.requestRef.Key(), classRef.Key())
+	_, err := td.manager.DeactivateClass(td.domainRef.Bytes(), td.requestRef.Bytes(), classRef.Bytes())
 	assert.NotNil(t, err)
 }
 
@@ -160,7 +160,7 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 		LatestStateRef: *classRef,
 	})
 
-	deactivateCoreRef, err := td.manager.DeactivateClass(td.domainRef.Key(), td.requestRef.Key(), classRef.Key())
+	deactivateCoreRef, err := td.manager.DeactivateClass(td.domainRef.Bytes(), td.requestRef.Bytes(), classRef.Bytes())
 	assert.NoError(t, err)
 	deactivateRef := record.Bytes2Reference(deactivateCoreRef[:])
 	deactivateRec, err := td.ledger.GetRecord(&deactivateRef)
@@ -183,11 +183,11 @@ func TestLedgerArtifactManager_UpdateClass_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	_, err := td.manager.UpdateClass(
-		td.domainRef.Key(), td.requestRef.Key(), genRandomRef().Key(), genRandomRef().Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), genRandomRef().Bytes(), genRandomRef().Bytes(), nil)
 	assert.NotNil(t, err)
 	notClassRef, _ := td.ledger.SetRecord(&record.CodeRecord{})
 	_, err = td.manager.UpdateClass(
-		td.domainRef.Key(), td.requestRef.Key(), notClassRef.Key(), genRandomRef().Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), notClassRef.Bytes(), genRandomRef().Bytes(), nil)
 	assert.NotNil(t, err)
 }
 
@@ -201,7 +201,7 @@ func TestLedgerArtifactManager_UpdateClass_VerifiesClassIsActive(t *testing.T) {
 		LatestStateRef: *deactivateRef,
 	})
 	_, err := td.manager.UpdateClass(
-		td.domainRef.Key(), td.requestRef.Key(), classRef.Key(), codeRef.Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), classRef.Bytes(), codeRef.Bytes(), nil)
 	assert.NotNil(t, err)
 }
 
@@ -239,9 +239,9 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 		},
 	})
 	migrationRefs := []record.Reference{*migrationRef}
-	migrationCoreRefs := []core.RecordRef{migrationRef.Key()}
+	migrationCoreRefs := []core.RecordRef{migrationRef.Bytes()}
 	updateCoreRef, err := td.manager.UpdateClass(
-		td.domainRef.Key(), td.requestRef.Key(), classRef.Key(), codeRef.Key(), migrationCoreRefs)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), classRef.Bytes(), codeRef.Bytes(), migrationCoreRefs)
 	assert.NoError(t, err)
 	updateRef := record.Bytes2Reference(updateCoreRef[:])
 	updateRec, getErr := td.ledger.GetRecord(&updateRef)
@@ -266,11 +266,11 @@ func TestLedgerArtifactManager_ActivateObj_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	_, err := td.manager.ActivateObj(
-		td.domainRef.Key(), td.requestRef.Key(), genRandomRef().Key(), []byte{})
+		td.domainRef.Bytes(), td.requestRef.Bytes(), genRandomRef().Bytes(), []byte{})
 	assert.NotNil(t, err)
 	notClassRef, _ := td.ledger.SetRecord(&record.ObjectActivateRecord{})
 	_, err = td.manager.ActivateClass(
-		td.domainRef.Key(), td.requestRef.Key(), notClassRef.Key(), []byte{})
+		td.domainRef.Bytes(), td.requestRef.Bytes(), notClassRef.Bytes(), []byte{})
 	assert.NotNil(t, err)
 }
 
@@ -291,7 +291,7 @@ func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
 		LatestStateRef: *classRef,
 	})
 	activateCoreRef, err := td.manager.ActivateObj(
-		td.domainRef.Key(), td.requestRef.Key(), classRef.Key(), memory)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), classRef.Bytes(), memory)
 	assert.Nil(t, err)
 	activateRef := record.Bytes2Reference(activateCoreRef)
 	activateRec, err := td.ledger.GetRecord(&activateRef)
@@ -314,10 +314,10 @@ func TestLedgerArtifactManager_DeactivateObj_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	_, err := td.manager.DeactivateClass(
-		td.domainRef.Key(), td.requestRef.Key(), genRandomRef().Key())
+		td.domainRef.Bytes(), td.requestRef.Bytes(), genRandomRef().Bytes())
 	assert.NotNil(t, err)
 	notObjRef, _ := td.ledger.SetRecord(&record.ClassActivateRecord{})
-	_, err = td.manager.DeactivateClass(td.domainRef.Key(), td.requestRef.Key(), notObjRef.Key())
+	_, err = td.manager.DeactivateClass(td.domainRef.Bytes(), td.requestRef.Bytes(), notObjRef.Bytes())
 	assert.NotNil(t, err)
 }
 
@@ -329,7 +329,7 @@ func TestLedgerArtifactManager_DeactivateObj_VerifiesObjectIsActive(t *testing.T
 	td.ledger.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestStateRef: *deactivateRef,
 	})
-	_, err := td.manager.DeactivateObj(td.domainRef.Key(), td.requestRef.Key(), objRef.Key())
+	_, err := td.manager.DeactivateObj(td.domainRef.Bytes(), td.requestRef.Bytes(), objRef.Bytes())
 	assert.NotNil(t, err)
 }
 
@@ -348,7 +348,7 @@ func TestLedgerArtifactManager_DeactivateObj_CreatesCorrectRecord(t *testing.T) 
 	td.ledger.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestStateRef: *objRef,
 	})
-	deactivateCoreRef, err := td.manager.DeactivateObj(td.domainRef.Key(), td.requestRef.Key(), objRef.Key())
+	deactivateCoreRef, err := td.manager.DeactivateObj(td.domainRef.Bytes(), td.requestRef.Bytes(), objRef.Bytes())
 	assert.Nil(t, err)
 	deactivateRef := record.Bytes2Reference(deactivateCoreRef)
 	deactivateRec, err := td.ledger.GetRecord(&deactivateRef)
@@ -371,11 +371,11 @@ func TestLedgerArtifactManager_UpdateObj_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	_, err := td.manager.UpdateObj(
-		td.domainRef.Key(), td.requestRef.Key(), genRandomRef().Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), genRandomRef().Bytes(), nil)
 	assert.NotNil(t, err)
 	notObjRef, _ := td.ledger.SetRecord(&record.CodeRecord{})
 	_, err = td.manager.UpdateObj(
-		td.domainRef.Key(), td.requestRef.Key(), notObjRef.Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), notObjRef.Bytes(), nil)
 	assert.NotNil(t, err)
 }
 
@@ -388,7 +388,7 @@ func TestLedgerArtifactManager_UpdateObj_VerifiesObjectIsActive(t *testing.T) {
 		LatestStateRef: *deactivateRef,
 	})
 	_, err := td.manager.UpdateObj(
-		td.domainRef.Key(), td.requestRef.Key(), objRef.Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), objRef.Bytes(), nil)
 	assert.NotNil(t, err)
 }
 
@@ -409,7 +409,7 @@ func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
 	})
 	memory := []byte{1, 2, 3}
 	updateCoreRef, err := td.manager.UpdateObj(
-		td.domainRef.Key(), td.requestRef.Key(), objRef.Key(), memory)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), objRef.Bytes(), memory)
 	assert.Nil(t, err)
 	updateRef := record.Bytes2Reference(updateCoreRef)
 	updateRec, err := td.ledger.GetRecord(&updateRef)
@@ -433,11 +433,11 @@ func TestLedgerArtifactManager_AppendObjDelegate_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	_, err := td.manager.AppendObjDelegate(
-		td.domainRef.Key(), td.requestRef.Key(), genRandomRef().Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), genRandomRef().Bytes(), nil)
 	assert.NotNil(t, err)
 	notObjRef, _ := td.ledger.SetRecord(&record.CodeRecord{})
 	_, err = td.manager.AppendObjDelegate(
-		td.domainRef.Key(), td.requestRef.Key(), notObjRef.Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), notObjRef.Bytes(), nil)
 	assert.NotNil(t, err)
 }
 
@@ -450,7 +450,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_VerifiesClassIsActive(t *testin
 		LatestStateRef: *deactivateRef,
 	})
 	_, err := td.manager.AppendObjDelegate(
-		td.domainRef.Key(), td.requestRef.Key(), objRef.Key(), nil)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), objRef.Bytes(), nil)
 	assert.NotNil(t, err)
 }
 
@@ -471,7 +471,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing
 	})
 	memory := []byte{1, 2, 3}
 	appendCoreRef, err := td.manager.AppendObjDelegate(
-		td.domainRef.Key(), td.requestRef.Key(), objRef.Key(), memory)
+		td.domainRef.Bytes(), td.requestRef.Bytes(), objRef.Bytes(), memory)
 	assert.Nil(t, err)
 	appendRef := record.Bytes2Reference(appendCoreRef)
 	appendRec, _ := td.ledger.GetRecord(&appendRef)
@@ -498,17 +498,17 @@ func TestLedgerArtifactManager_GetLatestObj_VerifiesRecords(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	_, _, err := td.manager.GetLatestObj(
-		genRandomRef().Key(), genRandomRef().Key(), genRandomRef().Key())
+		genRandomRef().Bytes(), genRandomRef().Bytes(), genRandomRef().Bytes())
 	assert.NotNil(t, err)
 
 	classRef, _ := td.ledger.SetRecord(&record.ClassActivateRecord{})
 	objectRef, _ := td.ledger.SetRecord(&record.ObjectActivateRecord{})
 	wrongRef, _ := td.ledger.SetRecord(&record.CodeRecord{})
-	_, _, err = td.manager.GetLatestObj(wrongRef.Key(), classRef.Key(), objectRef.Key())
+	_, _, err = td.manager.GetLatestObj(wrongRef.Bytes(), classRef.Bytes(), objectRef.Bytes())
 	assert.NotNil(t, err)
-	_, _, err = td.manager.GetLatestObj(objectRef.Key(), wrongRef.Key(), objectRef.Key())
+	_, _, err = td.manager.GetLatestObj(objectRef.Bytes(), wrongRef.Bytes(), objectRef.Bytes())
 	assert.NotNil(t, err)
-	_, _, err = td.manager.GetLatestObj(objectRef.Key(), classRef.Key(), wrongRef.Key())
+	_, _, err = td.manager.GetLatestObj(objectRef.Bytes(), classRef.Bytes(), wrongRef.Bytes())
 	assert.NotNil(t, err)
 }
 
@@ -523,7 +523,7 @@ func TestLedgerArtifactManager_GetLatestObj_VerifiesClassIsActive(t *testing.T) 
 		LatestStateRef: *objectRef,
 		ClassRef:       *classRef,
 	})
-	_, _, err := td.manager.GetLatestObj(objectRef.Key(), classRef.Key(), objectRef.Key())
+	_, _, err := td.manager.GetLatestObj(objectRef.Bytes(), classRef.Bytes(), objectRef.Bytes())
 	assert.NotNil(t, err)
 }
 
@@ -576,7 +576,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsNilDescriptorsIfCurrentStateP
 		ClassRef:       *classRef,
 	})
 	classDesc, objDesc, err := td.manager.GetLatestObj(
-		objectRef.Key(), classAmendRef.Key(), objectAmendRef.Key())
+		objectRef.Bytes(), classAmendRef.Bytes(), objectAmendRef.Bytes())
 	assert.Nil(t, err)
 	assert.Nil(t, classDesc)
 	assert.Nil(t, objDesc)
@@ -628,7 +628,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 	td.ledger.SetObjectIndex(objectRef, &objectIndex)
 
 	classDesc, objectDesc, err := td.manager.GetLatestObj(
-		objectRef.Key(), classRef.Key(), objectRef.Key())
+		objectRef.Bytes(), classRef.Bytes(), objectRef.Bytes())
 	assert.NoError(t, err)
 	assert.Equal(t, classDesc, &ClassDescriptor{
 		StateRef: record.Reference{
@@ -658,7 +658,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 func TestLedgerArtifactManager_GetExactObj_VerifiesRecords(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
-	_, _, err := td.manager.GetExactObj(genRandomRef().Key(), genRandomRef().Key())
+	_, _, err := td.manager.GetExactObj(genRandomRef().Bytes(), genRandomRef().Bytes())
 	assert.Error(t, err)
 }
 
@@ -688,7 +688,7 @@ func TestLedgerArtifactManager_GetExactObj_ReturnsCorrectData(t *testing.T) {
 		},
 	})
 
-	_, _, err := td.manager.GetExactObj(classAmendRef.Key(), objectAmendRef.Key())
+	_, _, err := td.manager.GetExactObj(classAmendRef.Bytes(), objectAmendRef.Bytes())
 	assert.Error(t, err)
 
 	td.ledger.SetObjectIndex(objectRef, &index.ObjectLifeline{
@@ -696,7 +696,7 @@ func TestLedgerArtifactManager_GetExactObj_ReturnsCorrectData(t *testing.T) {
 		ClassRef:       *classRef,
 	})
 
-	code, memory, err := td.manager.GetExactObj(classAmendRef.Key(), objectAmendRef.Key())
+	code, memory, err := td.manager.GetExactObj(classAmendRef.Bytes(), objectAmendRef.Bytes())
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1}, code)
 	assert.Equal(t, memoryRec, memory)

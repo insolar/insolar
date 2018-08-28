@@ -160,7 +160,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
-	return codeRef.Key(), nil
+	return codeRef.Bytes(), nil
 }
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
@@ -206,7 +206,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return classRef.Key(), nil
+	return classRef.Bytes(), nil
 }
 
 // DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
@@ -252,7 +252,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return deactivationRef.Key(), nil
+	return deactivationRef.Bytes(), nil
 }
 
 // UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
@@ -318,7 +318,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return amendRef.Key(), nil
+	return amendRef.Bytes(), nil
 }
 
 // ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
@@ -367,7 +367,7 @@ func (m *LedgerArtifactManager) ActivateObj(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return objRef.Key(), nil
+	return objRef.Bytes(), nil
 }
 
 // DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -412,7 +412,7 @@ func (m *LedgerArtifactManager) DeactivateObj(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return deactivationRef.Key(), nil
+	return deactivationRef.Bytes(), nil
 }
 
 // UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -461,7 +461,7 @@ func (m *LedgerArtifactManager) UpdateObj(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return amendRef.Key(), nil
+	return amendRef.Bytes(), nil
 }
 
 // AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
@@ -510,7 +510,7 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return appendRef.Key(), nil
+	return appendRef.Bytes(), nil
 }
 
 // GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
