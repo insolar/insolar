@@ -17,6 +17,7 @@
 package ginsider
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -116,6 +117,69 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal new object data into cbor")
 	}
+
+	res := make([]interface{}, len(resValues))
+	for i, v := range resValues {
+		res[i] = v.Interface()
+	}
+
+	var resSerialized []byte
+	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res)
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal returned values into cbor")
+	}
+
+	reply.Ret = resSerialized
+
+	return nil
+}
+
+// CallConstructor is an RPC that runs a method on an object and
+// returns a new state of the object and result of the method
+func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) error {
+	p, err := t.GI.Plugin(args.Reference)
+	if err != nil {
+		return err
+	}
+
+	export, err := p.Lookup(args.Name)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't lookup symbol %q in plugin", args.Name)
+	}
+
+	method := reflect.ValueOf(export)
+	if !method.IsValid() {
+		return fmt.Errorf("%q is not valid symbol", args.Name)
+	}
+	if method.Kind() != reflect.Func {
+		return fmt.Errorf("%q is not a function", args.Name)
+	}
+
+	inLen := method.Type().NumIn()
+
+	mask := make([]interface{}, inLen)
+	for i := 0; i < inLen; i++ {
+		argType := method.Type().In(i)
+		mask[i] = reflect.Zero(argType).Interface()
+	}
+
+	ch := new(codec.CborHandle)
+
+	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
+	if err != nil {
+		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the constructor")
+	}
+
+	in := make([]reflect.Value, inLen)
+	for i := 0; i < inLen; i++ {
+		in[i] = reflect.ValueOf(mask[i])
+	}
+
+	log.Debugf(
+		"Calling constructor %q in contract %q with %d arguments",
+		args.Name, args.Reference, inLen,
+	)
+	resValues := method.Call(in)
 
 	res := make([]interface{}, len(resValues))
 	for i, v := range resValues {
