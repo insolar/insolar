@@ -164,14 +164,6 @@ func parseFile(fileName string) (*parsedFile, error) {
 	return &res, nil
 }
 
-type methodInfo struct {
-	Name              string
-	ArgumentsZeroList string
-	ResultsNum        int
-	Results           string
-	Arguments         string
-}
-
 func generateContractWrapper(fileName string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
@@ -183,7 +175,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		panic("Contract must be in main package")
 	}
 
-	var methods []methodInfo
+	var methods []map[string]interface{}
 	for _, method := range parsed.methods[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
 
@@ -193,11 +185,11 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		}
 		resultList := strings.Join(rets, ", ")
 
-		info := methodInfo{
-			Name:              method.Name.Name,
-			ArgumentsZeroList: argsInit,
-			Results:           resultList,
-			Arguments:         argsList,
+		info := map[string]interface{}{
+			"Name":              method.Name.Name,
+			"ArgumentsZeroList": argsInit,
+			"Results":           resultList,
+			"Arguments":         argsList,
 		}
 		methods = append(methods, info)
 	}
@@ -210,7 +202,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	data := struct {
 		PackageName  string
 		ContractType string
-		Methods      []methodInfo
+		Methods      []map[string]interface{}
 		ParsedCode   []byte
 	}{
 		packageName,
