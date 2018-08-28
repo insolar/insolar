@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork/connection"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,12 +74,13 @@ func (f *mockFuture) SetResult(msg *packet.Packet) {
 func (f *mockFuture) Cancel() {}
 
 type mockTransport struct {
-	recv     chan *packet.Packet
-	send     chan *packet.Packet
-	dc       chan bool
-	msgChan  chan *packet.Packet
-	failNext bool
-	sequence *uint64
+	recv          chan *packet.Packet
+	send          chan *packet.Packet
+	dc            chan bool
+	msgChan       chan *packet.Packet
+	failNext      bool
+	sequence      *uint64
+	publicAddress string
 }
 
 func newMockTransport() *mockTransport {
@@ -141,6 +141,10 @@ func (t *mockTransport) SendResponse(requestID packet.RequestID, q *packet.Packe
 	return nil
 }
 
+func (t *mockTransport) PublicAddress() string {
+	return t.publicAddress
+}
+
 func mockFindHostResponse(request *packet.Packet, nextID []byte) *packet.Packet {
 	r := &packet.Packet{}
 	n := &host.Host{}
@@ -188,8 +192,10 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
 	origin, _ := host.NewOrigin(ids, addr)
-	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
+	cfg := configuration.NewConfiguration().Host.Transport
+	cfg.Address = address
+	cfg.BehindNAT = false
+	tp, err := transport.NewTransport(cfg, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
@@ -437,7 +443,7 @@ func TestBootstrapNoID(t *testing.T) {
 	<-done
 }
 
-// Create two DHTs have them connect and bootstrap, then disconnect. Repeat
+// create two DHTs have them connect and bootstrap, then disconnect. Repeat
 // 100 times to ensure that we can use the same IP and port without EADDRINUSE
 // errors.
 func TestReconnect(t *testing.T) {
@@ -494,7 +500,7 @@ func TestReconnect(t *testing.T) {
 	}
 }
 
-// Create two DHTs and have them connect. Send a store packet with 100mb
+// create two DHTs and have them connect. Send a store packet with 100mb
 // payload from one host to another. Ensure that the other host now has
 // this data in its store.
 func TestStoreAndFindLargeValue(t *testing.T) {
@@ -794,7 +800,7 @@ func TestStoreExpiration(t *testing.T) {
 	<-done
 }
 
-// Create a new host and bootstrap it. All hosts in the network know of a
+// create a new host and bootstrap it. All hosts in the network know of a
 // single host closer to the original host. This continues until every MaxContactsInBucket bucket
 // is occupied.
 func TestFindHostAllBuckets(t *testing.T) {
@@ -1374,6 +1380,58 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = dhts[0].AnalyzeNetwork(ctx)
+	assert.NoError(t, err)
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
+	<-done
+}
+
+func TestDHT_StartCheckNodesRole(t *testing.T) {
+	var dhts []*DHT
+
+	done := make(chan bool)
+
+	ids1 := make([]id.ID, 0)
+	id1, _ := id.NewID(id.GetRandomKey())
+	ids1 = append(ids1, id1)
+	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
+	assert.NoError(t, err)
+
+	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
+	st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:16001")
+	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
+		BootstrapHosts: []*host.Host{
+			{
+				ID:      ids1[0],
+				Address: bootstrapAddr2,
+			},
+		},
+	},
+		relay.NewProxy())
+
+	dhts = append(dhts, dht1)
+	dhts = append(dhts, dht2)
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
+		assert.Equal(t, 0, dht.NumHosts(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, "closed", err.Error())
+			done <- true
+		}(dht)
+	}
+
+	for _, dht := range dhts {
+		err := dht.Bootstrap()
+		assert.NoError(t, err)
+	}
+
+	ctx, _ := NewContextBuilder(dhts[1]).SetDefaultHost().Build()
+	err = dhts[1].CheckNodeRole(ctx, "domain ID")
 	assert.NoError(t, err)
 
 	for _, dht := range dhts {

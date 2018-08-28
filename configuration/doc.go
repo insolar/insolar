@@ -15,29 +15,23 @@
  */
 
 /*
-Package hostnetwork is an implementation of Kademlia DHT. It is mostly based on original specification but has multiple backward-incompatible changes.
+Package configuration holds configuration for all components in Insolar host binary
+It allows also helps to manage config resources using Holder
 
 Usage:
 
 	package main
 
 	import (
-		"github.com/insolar/insolar/network/hostnetwork"
 		"github.com/insolar/insolar/configuration"
+		"fmt"
 	)
 
 	func main() {
-		cfg := configuration.NewConfiguration().Host
-		cfg.Address = "0.0.0.0:31337"
-
-		network, err := hostnetwork.NewHostNetwork(cfg)
-		if err != nil {
-			panic(err)
-		}
-		defer network.Disconnect()
-
-		network.Listen()
+		holder := configuration.NewHolder()
+		fmt.Printf("Default configuration:\n %+v\n", holder.Configuration)
+		holder.SaveAs("insolar.yml")
 	}
 
 */
-package hostnetwork
+package configuration

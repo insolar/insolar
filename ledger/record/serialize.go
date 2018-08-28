@@ -107,6 +107,8 @@ func Bytes2Reference(b []byte) Reference {
 }
 
 // MustWrite writes binary representation of PulseNum to io.Writer.
+//
+// Prefix 'Must' means it panics on write error.
 func (pn PulseNum) MustWrite(w io.Writer) {
 	err := binary.Write(w, binary.BigEndian, pn)
 	if err != nil {

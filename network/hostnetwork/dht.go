@@ -850,26 +850,9 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 }
 
 func (dht *DHT) sendRelayedRequest(request *packet.Packet, ctx Context) {
-	future, err := dht.transport.SendRequest(request)
+	_, err := dht.transport.SendRequest(request)
 	if err != nil {
 		log.Println(err)
-	}
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			// Channel was closed
-			log.Println("chanel closed unexpectedly")
-		}
-		dht.addHost(ctx, routing.NewRouteHost(rsp.Sender))
-
-		response := rsp.Data.(*packet.ResponseDataRPC)
-		if response.Success {
-			log.Println(response.Result)
-		}
-		log.Println(response.Error)
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		log.Println("timeout")
 	}
 }
 
@@ -886,6 +869,23 @@ func buildContext(cb ContextBuilder, msg *packet.Packet) Context {
 		log.Println(err) // don't return this error cuz don't know what to do with
 	}
 	return ctx
+}
+
+func (dht *DHT) confirmNodeRole(roleKey string) bool {
+	// TODO implement this func
+	return true
+}
+
+// CheckNodeRole starting a check all known nodes.
+func (dht *DHT) CheckNodeRole(ctx Context, domainID string) error {
+	var err error
+	// TODO: change or choose another auth host
+	if len(dht.options.BootstrapHosts) > 0 {
+		err = dht.checkNodePrivRequest(ctx, dht.options.BootstrapHosts[0].ID.HashString(), domainID)
+	} else {
+		err = errors.New("bootstrap node not exist")
+	}
+	return err
 }
 
 func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.HashTable) {
@@ -913,6 +913,26 @@ func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.
 		dht.processRelayOwnership(ctx, msg, packetBuilder)
 	case packet.TypeKnownOuterHosts:
 		dht.processKnownOuterHosts(ctx, msg, packetBuilder)
+	case packet.TypeCheckNodePriv:
+		dht.processCheckNodePriv(ctx, msg, packetBuilder)
+	default:
+		log.Println("unknown request type")
+	}
+}
+
+func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
+	data := msg.Data.(*packet.RequestCheckNodePriv)
+	var response packet.ResponseCheckNodePriv
+
+	if dht.confirmNodeRole(data.RoleKey) {
+		response.State = packet.Confirmed
+	} else {
+		response.State = packet.Declined
+	}
+
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
+	if err != nil {
+		log.Println("Failed to send response:", err.Error())
 	}
 }
 
@@ -1303,6 +1323,59 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 		return err
 	}
 
+	return nil
+}
+
+func (dht *DHT) checkNodePrivRequest(ctx Context, targetID string, roleKey string) error {
+	targetHost, exist, err := dht.FindHost(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("target for check node privileges request not found")
+		return err
+	}
+
+	origin := dht.htFromCtx(ctx).Origin
+	request := packet.NewCheckNodePrivPacket(origin, targetHost, roleKey)
+	future, err := dht.transport.SendRequest(request)
+
+	if err != nil {
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*packet.ResponseCheckNodePriv)
+		err = dht.handleCheckNodePrivResponse(response, roleKey)
+		if err != nil {
+			return err
+		}
+
+	case <-time.After(dht.options.PacketTimeout):
+		future.Cancel()
+		err = errors.New("timeout")
+		return err
+	}
+
+	return nil
+}
+
+func (dht *DHT) handleCheckNodePrivResponse(response *packet.ResponseCheckNodePriv, toleKey string) error {
+	switch response.State {
+	case packet.Error:
+		return errors.New(response.Error)
+	case packet.Confirmed:
+		return nil
+	case packet.Declined:
+		// TODO: set default unconfirmed role
+		// dht.nodesMap[dht.nodesIDMap[roleKey]].SetNodeRole("Unconfirmed default role")
+	}
 	return nil
 }
 
