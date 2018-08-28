@@ -16,7 +16,9 @@
 
 package logicrunner
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+)
 
 // Reference is a contract address
 type Reference string
