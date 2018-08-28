@@ -64,6 +64,8 @@ type DHT struct {
 	proxy     relay.Proxy
 	auth      AuthInfo
 	subnet    Subnet
+
+	receivedRPC chan *packet.Packet
 }
 
 // AuthInfo collects some information about authentication.
@@ -133,14 +135,15 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		options:   options,
-		origin:    origin,
-		rpc:       rpc,
-		transport: transport,
-		tables:    tables,
-		store:     store,
-		relay:     rel,
-		proxy:     proxy,
+		options:     options,
+		origin:      origin,
+		rpc:         rpc,
+		transport:   transport,
+		tables:      tables,
+		store:       store,
+		relay:       rel,
+		proxy:       proxy,
+		receivedRPC: make(chan *packet.Packet),
 	}
 
 	if options.ExpirationTime == 0 {
@@ -850,26 +853,9 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 }
 
 func (dht *DHT) sendRelayedRequest(request *packet.Packet, ctx Context) {
-	future, err := dht.transport.SendRequest(request)
+	_, err := dht.transport.SendRequest(request)
 	if err != nil {
 		log.Println(err)
-	}
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			// Channel was closed
-			log.Println("chanel closed unexpectedly")
-		}
-		dht.addHost(ctx, routing.NewRouteHost(rsp.Sender))
-
-		response := rsp.Data.(*packet.ResponseDataRPC)
-		if response.Success {
-			log.Println(response.Result)
-		}
-		log.Println(response.Error)
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		log.Println("timeout")
 	}
 }
 
@@ -1034,19 +1020,19 @@ func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packe
 }
 
 func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	data := msg.Data.(*packet.RequestDataRPC)
+	dht.receivedRPC <- msg
+	// data := msg.Data.(*packet.RequestDataRPC)
 	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
-	result, err := dht.rpc.Invoke(msg.Sender, data.Method, data.Args)
+	// result, err := dht.rpc.Invoke(msg.Sender, data.Method, data.Args)
 	response := &packet.ResponseDataRPC{
 		Success: true,
-		Result:  result,
 		Error:   "",
 	}
-	if err != nil {
-		response.Success = false
-		response.Error = err.Error()
-	}
-	err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
+	// if err != nil {
+	// 	response.Success = false
+	// 	response.Error = err.Error()
+	// }
+	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
@@ -1752,4 +1738,9 @@ func (dht *DHT) handleKnownOuterHosts(ctx Context, response *packet.ResponseKnow
 func (dht *DHT) htFromCtx(ctx Context) *routing.HashTable {
 	htIdx := ctx.Value(ctxTableIndex).(int)
 	return dht.tables[htIdx]
+}
+
+// RecvRPC returns received rcp request.
+func (dht *DHT) RecvRPC() <-chan *packet.Packet {
+	return dht.receivedRPC
 }

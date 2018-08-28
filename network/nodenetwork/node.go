@@ -21,25 +21,28 @@ import (
 
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
 // Node is an essence which provides communication between network level and MessageRouter.
 type Node struct {
-	id       id.ID
-	role     string
-	dht      *hostnetwork.DHT
-	domainID string
+	id          id.ID
+	role        string
+	dht         *hostnetwork.DHT
+	domainID    string
+	receivedRPC chan *packet.RequestDataRPC
 }
 
 // NewNode creates a node with given args.
 func NewNode(newID id.ID, newDHT *hostnetwork.DHT, newDomainID string, newRole string) (*Node, error) {
 	node := &Node{
-		id:       newID,
-		dht:      newDHT,
-		domainID: newDomainID,
-		role:     newRole,
+		id:          newID,
+		dht:         newDHT,
+		domainID:    newDomainID,
+		role:        newRole,
+		receivedRPC: make(chan *packet.RequestDataRPC),
 	}
-	err := node.dht.StartCheckNodesRole(node.CreateContext(), node.domainID)
+	err := node.dht.StartCheckNodesRole(node.createContext(), node.domainID)
 	return node, err
 }
 
@@ -79,17 +82,34 @@ func (node Node) GetDomainID() string {
 }
 
 // SendPacket sends packet from service to target.
-func (node Node) SendPacket(targetID string) error {
-	// TODO: implement it
-	return nil
+func (node Node) SendPacket(targetID, method string, args [][]byte) error {
+	// TODO: use result
+	_, err := node.dht.RemoteProcedureCall(node.createContext(), targetID, method, args)
+	return err
 }
 
-func (node Node) RecvFromDHT() {
-	// TODO: implement it
+// RecvRPC returns RPC request.
+func (node Node) RecvRPC() <-chan *packet.RequestDataRPC {
+	return node.receivedRPC
+}
+
+func (node Node) listenDHT(start, stop chan bool) {
+	start <- true
+
+	for {
+		select {
+		case msg := <-node.dht.RecvRPC():
+			if (msg != nil) && (msg.Type == packet.TypeRPC) {
+				node.receivedRPC <- msg.Data.(*packet.RequestDataRPC)
+			}
+		case <-stop:
+			return
+		}
+	}
 }
 
 // CreateContext returns a dht context.
-func (node Node) CreateContext() hostnetwork.Context {
+func (node Node) createContext() hostnetwork.Context {
 	ctx, err := hostnetwork.NewContextBuilder(node.dht).SetDefaultHost().Build()
 	if err != nil {
 		log.Fatalln("Failed to create context:", err.Error())
