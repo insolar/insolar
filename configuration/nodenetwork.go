@@ -14,30 +14,20 @@
  *    limitations under the License.
  */
 
-/*
-Package hostnetwork is an implementation of Kademlia DHT. It is mostly based on original specification but has multiple backward-incompatible changes.
+package configuration
 
-Usage:
+// Node holds configuration for one Node
+type Node struct {
+}
 
-	package main
+// NodeNetwork holds configuration for NodeNetwork
+type NodeNetwork struct {
+	Nodes []Node
+}
 
-	import (
-		"github.com/insolar/insolar/network/hostnetwork"
-		"github.com/insolar/insolar/configuration"
-	)
-
-	func main() {
-		cfg := configuration.NewConfiguration().Host
-		cfg.Address = "0.0.0.0:31337"
-
-		network, err := hostnetwork.NewHostNetwork(cfg)
-		if err != nil {
-			panic(err)
-		}
-		defer network.Disconnect()
-
-		network.Listen()
+// NewNodeNetwork creates new default NodeNetwork configuration
+func NewNodeNetwork() NodeNetwork {
+	return NodeNetwork{
+		Nodes: make([]Node, 0),
 	}
-
-*/
-package hostnetwork
+}

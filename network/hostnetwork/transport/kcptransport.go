@@ -43,14 +43,10 @@ type kcpTransport struct {
 
 	proxy      relay.Proxy
 	blockCrypt kcp.BlockCrypt
+	publicAddress string
 }
 
-// NewKCPTransport creates kcpTransport.
-func NewKCPTransport(conn net.PacketConn, proxy relay.Proxy) (Transport, error) {
-	return newKCPTransport(conn, proxy)
-}
-
-func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, error) {
+func newKCPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*kcpTransport, error) {
 	crypt, err := kcp.NewNoneBlockCrypt([]byte{})
 
 	if err != nil {
@@ -76,6 +72,7 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy) (*kcpTransport, err
 
 		proxy:      proxy,
 		blockCrypt: crypt,
+		publicAddress: publicAddress,
 	}
 
 	return transport, nil
@@ -250,4 +247,8 @@ func (t *kcpTransport) processRequest(msg *packet.Packet) {
 	if msg.IsValid() {
 		t.received <- msg
 	}
+}
+
+func (t *kcpTransport) PublicAddress() string {
+	return t.publicAddress
 }

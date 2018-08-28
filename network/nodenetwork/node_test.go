@@ -3,8 +3,8 @@ package nodenetwork
 import (
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
@@ -18,8 +18,10 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
 	origin, _ := host.NewOrigin(ids, addr)
-	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
+	cfg := configuration.NewConfiguration().Host.Transport
+	cfg.Address = address
+	cfg.BehindNAT = false
+	tp, err := transport.NewTransport(cfg, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
