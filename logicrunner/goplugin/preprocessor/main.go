@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"io"
 	"io/ioutil"
@@ -32,7 +33,12 @@ import (
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
+
+	"strconv"
 )
+
+var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
+var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
 
 type parsedFile struct {
 	name    string
@@ -50,6 +56,7 @@ func printUsage() {
 	fmt.Println("Commands: ")
 	fmt.Println(" wrapper   generate contract's wrapper")
 	fmt.Println(" proxy     generate contract's proxy")
+	fmt.Println(" imports   rewrite imports")
 }
 
 type outputFlag struct {
@@ -120,6 +127,23 @@ func main() {
 		}
 
 		err = generateContractProxy(fs.Arg(0), output.writer)
+		if err != nil {
+			panic(err)
+		}
+	case "imports":
+		fs := flag.NewFlagSet("imports", flag.ExitOnError)
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		err := fs.Parse(os.Args[2:])
+		if err != nil {
+			panic(err)
+		}
+
+		if fs.NArg() != 1 {
+			panic(errors.New("imports command should be followed by exactly one file name to process"))
+		}
+
+		err = cmdRewriteImports(fs.Arg(0), output.writer)
 		if err != nil {
 			panic(err)
 		}
@@ -329,6 +353,15 @@ func generateTypes(parsed *parsedFile) string {
 	return text
 }
 
+func generateWrappers(parsed *parsedFile) string {
+	text := `import ("` + foundationPath + `")` + "\n"
+
+	for _, method := range parsed.methods[parsed.contract] {
+		text += generateMethodWrapper(parsed, method) + "\n"
+	}
+	return text
+}
+
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
 	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
 
@@ -444,4 +477,39 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	text += "}\n"
 
 	return text
+}
+
+func cmdRewriteImports(fname string, w io.Writer) error {
+	parsed, err := parseFile(fname)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse")
+	}
+	rewriteImports(parsed)
+	if err := printer.Fprint(w, parsed.fileSet, parsed.node); err != nil {
+		return errors.Wrap(err, "couldn't save")
+	}
+	return nil
+}
+
+func rewriteImports(p *parsedFile) error {
+	quoted := strconv.Quote(clientFoundation)
+	for _, d := range p.node.Decls {
+		td, ok := d.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		if td.Tok != token.IMPORT {
+			continue
+		}
+		for _, s := range td.Specs {
+			is, ok := s.(*ast.ImportSpec)
+			if !ok {
+				continue
+			}
+			if is.Path.Value == quoted {
+				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
+			}
+		}
+	}
+	return nil
 }
