@@ -175,12 +175,6 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		panic("Contract must be in main package")
 	}
 
-	zeroListOfTypes := make(map[*ast.FuncDecl]string)
-	for _, method := range parsed.methods[parsed.contract] {
-		argsInit, _ := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-		zeroListOfTypes[method] = argsInit
-	}
-
 	var funcMap = template.FuncMap{
 		"byteSliceToString": func(s []byte, i, j token.Pos) string {
 			return string(s[i:j])
@@ -210,14 +204,14 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	}
 
 	data := struct {
-		PackageName     string
-		Contract        string
-		ZeroListOfTypes map[*ast.FuncDecl]string
-		ParsedCode      []byte
+		PackageName string
+		Contract    string
+		Methods     []*ast.FuncDecl
+		ParsedCode  []byte
 	}{
 		packageName,
 		parsed.contract,
-		zeroListOfTypes,
+		parsed.methods[parsed.contract],
 		parsed.code,
 	}
 	err = tmpl.Execute(out, data)

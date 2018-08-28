@@ -3,7 +3,7 @@ package {{ .PackageName}}
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
 	)
-{{ range $method, $zeroLofT := .ZeroListOfTypes}}
+{{ range $method := .Methods}}
 func (self *{{ $.Contract}}) INSWRAPER_{{ $method.Name.Name}}(cbor foundation.CBORMarshaler, data []byte) ([]byte) {
     args := [{{ $method.Type.Params.NumFields}}]interface{}{}
 {{- range $i, $arg := $method.Type.Params.List}}
@@ -17,7 +17,7 @@ func (self *{{ $.Contract}}) INSWRAPER_{{ $method.Name.Name}}(cbor foundation.CB
     {{ range $i, $ret := $method.Type.Results.List}}
         {{- if $i}}, {{- end}}ret{{ $i}}
     {{- end}}:= self.{{ $method.Name.Name}}(
-    {{ range $i, $arg := $method.Type.Params.List}}
+    {{- range $i, $arg := $method.Type.Params.List}}
         {{- if $i}}, {{- end}}
         {{- $pos:= minus $arg.Type.Pos 1}}
         {{- $end:= minus $arg.Type.End 1}}args[{{ $i}}].({{ byteSliceToString $.ParsedCode $pos $end }})
