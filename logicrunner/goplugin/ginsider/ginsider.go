@@ -37,12 +37,15 @@ type GoInsider struct {
 	dir                string
 	UpstreamRPCAddress string
 	UpstreamRPCClient  *rpc.Client
+	plugins            map[logicrunner.Reference]*plugin.Plugin
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
 func NewGoInsider(path string, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	return &GoInsider{dir: path, UpstreamRPCAddress: address}
+	res := GoInsider{dir: path, UpstreamRPCAddress: address}
+	res.plugins = make(map[logicrunner.Reference]*plugin.Plugin)
+	return &res
 }
 
 // RPC struct with methods representing RPC interface of this code runner
@@ -53,20 +56,14 @@ type RPC struct {
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
-	path, err := t.GI.ObtainCode(args.Reference)
+	p, err := t.GI.Plugin(args.Reference)
 	if err != nil {
-		return errors.Wrap(err, "couldn't obtain code")
-	}
-
-	log.Debugf("Opening plugin %q from file %q", args.Reference, path)
-	p, err := plugin.Open(path)
-	if err != nil {
-		return errors.Wrap(err, "couldn't open plugin")
+		return err
 	}
 
 	export, err := p.Lookup("INSEXPORT")
 	if err != nil {
-		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
+		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in plugin")
 	}
 
 	ch := new(codec.CborHandle)
@@ -181,6 +178,28 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 	}
 
 	return path, nil
+}
+
+// Plugin loads Go plugin by reference and returns `*plugin.Plugin`
+// ready to lookup symbols
+func (t *GoInsider) Plugin(ref logicrunner.Reference) (*plugin.Plugin, error) {
+	if t.plugins[ref] != nil {
+		return t.plugins[ref], nil
+	}
+
+	path, err := t.ObtainCode(ref)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't obtain code")
+	}
+
+	log.Debugf("Opening plugin %q from file %q", ref, path)
+	p, err := plugin.Open(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open plugin")
+	}
+
+	t.plugins[ref] = p
+	return p, nil
 }
 
 // RouteCall ...
