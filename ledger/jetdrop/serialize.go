@@ -22,8 +22,8 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// EncodeJetDrop serializes jet drop
-func EncodeJetDrop(drop *JetDrop) ([]byte, error) {
+// Encode serializes jet drop.
+func Encode(drop *JetDrop) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(drop)
@@ -33,8 +33,8 @@ func EncodeJetDrop(drop *JetDrop) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// DecodeJetDrop deserializes jet drop
-func DecodeJetDrop(buf []byte) (*JetDrop, error) {
+// Decode deserializes jet drop.
+func Decode(buf []byte) (*JetDrop, error) {
 	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
 	var drop JetDrop
 	err := dec.Decode(&drop)

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -200,12 +201,6 @@ func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLi
 	return ll.ldb.Put(k, encoded, nil)
 }
 
-// GetPulseKeys returns all record keys from slot after given pulse.
-func (ll *LevelLedger) GetPulseKeys(pulse record.PulseNum) ([][]byte, error) {
-	// TODO: implement me
-	return [][]byte{}, nil
-}
-
 // GetDrop returns jet drop for a given pulse number.
 func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
@@ -216,21 +211,50 @@ func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) 
 		}
 		return nil, err
 	}
-	drop, err := jetdrop.DecodeJetDrop(buf)
+	drop, err := jetdrop.Decode(buf)
 	if err != nil {
 		return nil, err
 	}
 	return drop, nil
 }
 
-// SetDrop stores given jet drop for given pulse number.
-func (ll *LevelLedger) SetDrop(pulse record.PulseNum, drop *jetdrop.JetDrop) error {
+// SetDrop stores jet drop for given pulse number.
+// Previous JetDrop should be provided.
+// On success returns saved drop hash.
+func (ll *LevelLedger) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
-	encoded, err := jetdrop.EncodeJetDrop(drop)
+
+	hw := hash.NewSHA3()
+	err := ll.ProcessSlotRecords(pulse, func(it HashIterator) error {
+		for i := 1; it.Next(); i++ {
+			b := it.ShallowHash()
+			_, err := hw.Write(b)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return ll.ldb.Put(k, encoded, nil)
+	drophash := hw.Sum(nil)
+
+	drop := &jetdrop.JetDrop{
+		Pulse:    pulse,
+		PrevHash: prevdrop.Hash,
+		Hash:     drophash,
+	}
+	encoded, err := jetdrop.Encode(drop)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ll.ldb.Put(k, encoded, nil)
+	if err != nil {
+		return nil, err
+	}
+	return drop, nil
 }
 
 // Close terminates db connection

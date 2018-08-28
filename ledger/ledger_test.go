@@ -19,11 +19,7 @@ package ledger
 import (
 	"os"
 	"testing"
-
-	"github.com/insolar/insolar/ledger/storage"
 )
-
-var storer storage.LedgerStorer
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())

@@ -17,25 +17,18 @@
 package jetdrop
 
 import (
-	"golang.org/x/crypto/sha3"
+	"github.com/insolar/insolar/ledger/record"
 )
 
-// JetDrop is a blockchain block. It contains hashes from all records from slot.
+// JetDrop is a blockchain block.
+// It contains hashes of the current block and the previous one.
 type JetDrop struct {
-	PrevHash     []byte
-	RecordHashes [][]byte // TODO: this should be a byte slice that represents the merkle tree root of records
-}
+	// Pulse number (probably we should save it too).
+	Pulse record.PulseNum
 
-// Hash calculates jet drop hash. Raw data for hash should contain previous hash and merkle tree hash from records.
-func (jd *JetDrop) Hash() ([]byte, error) {
-	encoded, err := EncodeJetDrop(jd)
-	if err != nil {
-		return nil, err
-	}
-	h := sha3.New224()
-	_, err = h.Write(encoded)
-	if err != nil {
-		return nil, err
-	}
-	return h.Sum(nil), nil
+	// PrevHash is a hash of all record hashes belongs to previous pulse.
+	PrevHash []byte
+
+	// Hash is a hash of all record hashes belongs to one pulse.
+	Hash []byte
 }
