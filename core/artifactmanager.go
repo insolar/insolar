@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2018 INS Ecosystem
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package core
 
 // ArtifactManager is a high level storage interface.
@@ -77,6 +93,7 @@ type ArtifactManager interface {
 	AppendObjDelegate(domain, request, obj RecordRef, memory []byte) (RecordRef, error)
 }
 
+// ClassDescriptor represents meta info required to fetch all class data.
 type ClassDescriptor interface {
 	// GetCode fetches the latest class code known to storage. Code will be fetched according to architecture preferences
 	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
@@ -87,6 +104,7 @@ type ClassDescriptor interface {
 	GetMigrations() ([][]byte, error)
 }
 
+// ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {
 	// GetMemory fetches latest memory of the object known to storage.
 	GetMemory() ([]byte, error)
