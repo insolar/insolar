@@ -34,7 +34,7 @@ func TestNewNode(t *testing.T) {
 	node, err := NewNode("id", nil, dht1, "domainID", "role")
 
 	assert.Error(t, err, "bootstrap node not exist")
-	assert.NotNil(t, node)
+	assert.Nil(t, node)
 }
 
 func TestNode_GetDomainID(t *testing.T) {
