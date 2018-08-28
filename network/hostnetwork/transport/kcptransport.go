@@ -26,6 +26,7 @@ import (
 
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/xtaci/kcp-go"
 )
 
 type kcpTransport struct {
