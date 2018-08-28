@@ -164,6 +164,14 @@ func parseFile(fileName string) (*parsedFile, error) {
 	return &res, nil
 }
 
+type methodInfo struct {
+	Name              string
+	ArgumentsZeroList string
+	ResultsNum        int
+	Results           string
+	Arguments         string
+}
+
 func generateContractWrapper(fileName string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
@@ -175,43 +183,39 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		panic("Contract must be in main package")
 	}
 
-	var funcMap = template.FuncMap{
-		"byteSliceToString": func(s []byte, i, j token.Pos) string {
-			return string(s[i:j])
-		},
-		"minus": func(a, b token.Pos) token.Pos {
-			return a - b
-		},
-		"constructInitializer": func(tname string, arg ast.Field) string {
-			switch tname {
-			case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
-				return tname + "(0)"
-			case "string":
-				return `""`
-			default:
-				switch td := arg.Type.(type) {
-				case *ast.StarExpr:
-					return "&" + string(parsed.code[td.X.Pos()-1:td.X.End()-1]) + "{}"
-				default:
-					return tname + "{}"
-				}
-			}
-		},
+	var methods []methodInfo
+	for _, method := range parsed.methods[parsed.contract] {
+		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
+
+		rets := []string{}
+		for i := range method.Type.Results.List {
+			rets = append(rets, fmt.Sprintf("ret%d", i))
+		}
+		resultList := strings.Join(rets, ", ")
+
+		info := methodInfo{
+			Name:              method.Name.Name,
+			ArgumentsZeroList: argsInit,
+			Results:           resultList,
+			Arguments:         argsList,
+		}
+		methods = append(methods, info)
 	}
-	tmpl, err := template.New("template.txt").Funcs(funcMap).ParseFiles("template.txt")
+
+	tmpl, err := template.ParseFiles("template.txt")
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse template for output")
 	}
 
 	data := struct {
-		PackageName string
-		Contract    string
-		Methods     []*ast.FuncDecl
-		ParsedCode  []byte
+		PackageName  string
+		ContractType string
+		Methods      []methodInfo
+		ParsedCode   []byte
 	}{
 		packageName,
 		parsed.contract,
-		parsed.methods[parsed.contract],
+		methods,
 		parsed.code,
 	}
 	err = tmpl.Execute(out, data)
@@ -324,7 +328,7 @@ func generateTypes(parsed *parsedFile) string {
 }
 
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
-	text := ""
+	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
 
 	for i, arg := range list.List {
 		initializer := ""
