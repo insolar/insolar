@@ -64,8 +64,6 @@ type DHT struct {
 	proxy     relay.Proxy
 	auth      AuthInfo
 	subnet    Subnet
-
-	receivedRPC chan *packet.Packet
 }
 
 // AuthInfo collects some information about authentication.
@@ -135,15 +133,14 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		options:     options,
-		origin:      origin,
-		rpc:         rpc,
-		transport:   transport,
-		tables:      tables,
-		store:       store,
-		relay:       rel,
-		proxy:       proxy,
-		receivedRPC: make(chan *packet.Packet),
+		options:   options,
+		origin:    origin,
+		rpc:       rpc,
+		transport: transport,
+		tables:    tables,
+		store:     store,
+		relay:     rel,
+		proxy:     proxy,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -1737,9 +1734,4 @@ func (dht *DHT) handleKnownOuterHosts(ctx Context, response *packet.ResponseKnow
 func (dht *DHT) htFromCtx(ctx Context) *routing.HashTable {
 	htIdx := ctx.Value(ctxTableIndex).(int)
 	return dht.tables[htIdx]
-}
-
-// RecvRPC returns received rcp request.
-func (dht *DHT) RecvRPC() <-chan *packet.Packet {
-	return dht.receivedRPC
 }
