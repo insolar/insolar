@@ -23,20 +23,18 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
 func Test_generateContractWrapper(t *testing.T) {
 	buf := bytes.Buffer{}
 	err := generateContractWrapper("../testplugins/secondary/main.go", &buf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	// io.Copy(os.Stdout, w)
 	code, err := ioutil.ReadAll(&buf)
-	if err != nil {
-		t.Fatal("reading from generated code", err)
-	}
+	assert.NoError(t, err)
 	if len(code) == 0 {
 		t.Fatal("generator returns zero length code")
 	}
@@ -45,13 +43,10 @@ func Test_generateContractWrapper(t *testing.T) {
 func Test_generateContractProxy(t *testing.T) {
 	buf := bytes.Buffer{}
 	err := generateContractProxy("../testplugins/secondary/main.go", &buf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	code, err := ioutil.ReadAll(&buf)
-	if err != nil {
-		t.Fatal("reading from generated code", err)
-	}
+	assert.NoError(t, err)
 	if len(code) == 0 {
 		t.Fatal("generator returns zero length code")
 	}
@@ -59,42 +54,28 @@ func Test_generateContractProxy(t *testing.T) {
 
 func TestCompileContractProxy(t *testing.T) {
 	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer os.Chdir(cwd) // nolint: errcheck
 
 	tmpDir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
 	err = os.MkdirAll(tmpDir+"/src/secondary/", 0777)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	// XXX: dirty hack to make `dep` installed packages available in generated code
 	err = os.Symlink(cwd+"/../../../vendor/", tmpDir+"/src/secondary/vendor")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	err = generateContractProxy("../testplugins/secondary/main.go", proxyFh)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	err = proxyFh.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	err = testutil.WriteFile(tmpDir, "/test.go", `
 package test
@@ -107,18 +88,12 @@ func main() {
 	`)
 
 	err = os.Chdir(tmpDir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	origGoPath, err := testutil.ChangeGoPath(tmpDir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
 
 	out, err := exec.Command("go", "build", "test.go").CombinedOutput()
-	if err != nil {
-		t.Fatal(err, string(out))
-	}
+	assert.NoError(t, err, string(out))
 }
