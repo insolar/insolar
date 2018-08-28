@@ -188,6 +188,21 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		"minus": func(a, b token.Pos) token.Pos {
 			return a - b
 		},
+		"constructInitializer": func(tname string, arg ast.Field) string {
+			switch tname {
+			case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
+				return tname + "(0)"
+			case "string":
+				return `""`
+			default:
+				switch td := arg.Type.(type) {
+				case *ast.StarExpr:
+					return "&" + string(parsed.code[td.X.Pos()-1:td.X.End()-1]) + "{}"
+				default:
+					return tname + "{}"
+				}
+			}
+		},
 	}
 	tmpl, err := template.New("template.txt").Funcs(funcMap).ParseFiles("template.txt")
 	if err != nil {

@@ -6,10 +6,26 @@ import (
 {{ range $method, $zeroLofT := .ZeroListOfTypes}}
 func (self *{{ $.Contract}}) INSWRAPER_{{ $method.Name.Name}}(cbor foundation.CBORMarshaler, data []byte) ([]byte) {
     args := [{{ $method.Type.Params.NumFields}}]interface{}{}
-{{ $zeroLofT}}
+{{- range $i, $arg := $method.Type.Params.List}}
+{{- $pos:= minus $arg.Type.Pos 1}}
+{{- $end:= minus $arg.Type.End 1}}
+{{- $typeName:=byteSliceToString $.ParsedCode $pos $end }}
+{{- $initializer:=constructInitializer $typeName $arg }}
+    args[{{ $i}}] = {{ $initializer}}
+{{- end}}
     cbor.Unmarshal(&args, data)
-    {{range $i, $ret := $method.Type.Results.List}}{{ if $i}}, {{ end}}ret{{ $i}}{{ end}}:= self.{{ $method.Name.Name}}({{ range $i, $arg := $method.Type.Params.List}}{{ if $i}}, {{ end}}{{ $pos:= minus $arg.Type.Pos 1}}{{ $end:= minus $arg.Type.End 1}}args[{{ $i}}].({{ byteSliceToString $.ParsedCode $pos $end }}){{ end}})
-    return cbor.Marshal( []interface{} { {{ range $i, $ret := $method.Type.Results.List}}{{ if $i}}, {{ end}}ret{{ $i}}{{ end}} })
+    {{ range $i, $ret := $method.Type.Results.List}}
+        {{- if $i}}, {{- end}}ret{{ $i}}
+    {{- end}}:= self.{{ $method.Name.Name}}(
+    {{ range $i, $arg := $method.Type.Params.List}}
+        {{- if $i}}, {{- end}}
+        {{- $pos:= minus $arg.Type.Pos 1}}
+        {{- $end:= minus $arg.Type.End 1}}args[{{ $i}}].({{ byteSliceToString $.ParsedCode $pos $end }})
+    {{- end}})
+    return cbor.Marshal( []interface{} {
+    {{- range $i, $ret := $method.Type.Results.List}}
+        {{- if $i}}, {{- end}}ret{{ $i}}
+    {{- end}} })
 }
 {{ end}}
 var INSEXPORT {{ .Contract}}
