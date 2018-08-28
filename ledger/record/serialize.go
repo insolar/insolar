@@ -64,6 +64,7 @@ func EncodeRaw(raw *Raw) ([]byte, error) {
 	return b.Bytes(), err
 }
 
+// hashableBytes exists just to allow []byte implements hash.Writer
 type hashableBytes []byte
 
 func (b hashableBytes) WriteHash(w io.Writer) {
@@ -98,16 +99,22 @@ func Bytes2ID(b []byte) ID {
 	}
 }
 
-// ID2Bytes converts ID struct to it's byte representation.
-func ID2Bytes(id ID) []byte {
-	var err error
-	var b = make([]byte, IDSize)
-	buf := bytes.NewBuffer(b[:0])
-	err = binary.Write(buf, binary.BigEndian, id.Pulse)
+// MustWrite writes binary representation of PulseNum to io.Writer.
+//
+// Prefix 'Must' means it panics on write error.
+func (pn PulseNum) MustWrite(w io.Writer) {
+	err := binary.Write(w, binary.BigEndian, pn)
 	if err != nil {
 		panic("binary.Write failed to write PulseNum:" + err.Error())
 	}
-	err = binary.Write(buf, binary.BigEndian, id.Hash)
+}
+
+// ID2Bytes converts ID struct to it's byte representation.
+func ID2Bytes(id ID) []byte {
+	var b = make([]byte, IDSize)
+	buf := bytes.NewBuffer(b[:0])
+	id.Pulse.MustWrite(buf)
+	err := binary.Write(buf, binary.BigEndian, id.Hash)
 	if err != nil {
 		panic("binary.Write failed to write Hash:" + err.Error())
 	}

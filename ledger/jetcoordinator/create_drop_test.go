@@ -19,27 +19,43 @@ package jetcoordinator
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage/leveldb"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
 
 func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
-	// TODO: remove binding to leveldb here
-	ledger, _ := leveldb.InitDB()
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
 
-	prevDrop := jetdrop.JetDrop{PrevHash: []byte{4, 5}}
-	prevHash, _ := prevDrop.Hash()
-	ledger.SetDrop(1, &prevDrop)
+	jc := &JetCoordinator{
+		storage: ledger,
+	}
+	var (
+		zeropulse record.PulseNum
+		pulse1    record.PulseNum = 1
+		pulse2    record.PulseNum = 2
+	)
+	// it references on 'fake' zero
+	fakeDrop := jetdrop.JetDrop{
+		Hash: []byte{0xFF},
+	}
+	// save zero drop, which references on 'fake' drop with '0xFF' hash.
+	dropz, err := ledger.SetDrop(zeropulse, &fakeDrop)
+	assert.NoError(t, err)
+	assert.NotNil(t, dropz)
+
+	// save pulse1 records
+	ledger.SetPulseFn(func() record.PulseNum { return pulse1 })
 	ledger.SetRecord(&record.CodeRecord{})
 	ledger.SetRecord(&record.ClassActivateRecord{})
 	ledger.SetRecord(&record.ObjectActivateRecord{})
-
-	drop, err := CreateJetDrop(ledger, 1, 2)
+	// trigger new pulse on coordinator
+	// (should save non zero Pulse)
+	drop1, err := jc.Pulse(pulse2)
 	assert.NoError(t, err)
-	assert.Equal(t, jetdrop.JetDrop{
-		PrevHash:     prevHash,
-		RecordHashes: [][]byte{}, // TODO: after implementing storage.GetPulseKeys should contain created records
-	}, *drop)
+	assert.NotNil(t, drop1)
+	assert.Equal(t, dropz.Hash, drop1.PrevHash)
 }

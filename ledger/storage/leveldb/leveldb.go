@@ -17,14 +17,13 @@
 package leveldb
 
 import (
-	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/comparer"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -37,70 +36,33 @@ const (
 	zeroRecordHash   = "" // TODO: Hash from zeroRecordBinary
 )
 
+// The PulseFn type is an adapter to allow set function produces
+// pulses for storage.
+type PulseFn func() record.PulseNum
+
 // LevelLedger represents ledger's LevelDB storage.
 type LevelLedger struct {
 	ldb     *leveldb.DB
-	pulseFn func() record.PulseNum
+	pulseFn PulseFn
 	zeroRef record.Reference
 }
 
 const (
-	scopeIDLifeline byte = iota
-	scopeIDRecord
-	scopeIDJetDrop
+	scopeIDLifeline byte = 1
+	scopeIDRecord   byte = 2
+	scopeIDJetDrop  byte = 3
 )
 
-// InitDB returns LevelLedger with LevelDB initialized with default settings.
-func InitDB() (*LevelLedger, error) {
-	// Options struct doc: https://godoc.org/github.com/syndtr/goleveldb/leveldb/opt#Options.
-	opts := &opt.Options{
-		AltFilters:  nil,
-		BlockCacher: opt.LRUCacher,
-		// BlockCacheCapacity increased to 32MiB from default 8 MiB.
-		// BlockCacheCapacity defines the capacity of the 'sorted table' block caching.
-		BlockCacheCapacity:                    32 * 1024 * 1024,
-		BlockRestartInterval:                  16,
-		BlockSize:                             4 * 1024,
-		CompactionExpandLimitFactor:           25,
-		CompactionGPOverlapsFactor:            10,
-		CompactionL0Trigger:                   4,
-		CompactionSourceLimitFactor:           1,
-		CompactionTableSize:                   2 * 1024 * 1024,
-		CompactionTableSizeMultiplier:         1.0,
-		CompactionTableSizeMultiplierPerLevel: nil,
-		// CompactionTotalSize increased to 32MiB from default 10 MiB.
-		// CompactionTotalSize limits total size of 'sorted table' for each level.
-		// The limits for each level will be calculated as:
-		//   CompactionTotalSize * (CompactionTotalSizeMultiplier ^ Level)
-		CompactionTotalSize:                   32 * 1024 * 1024,
-		CompactionTotalSizeMultiplier:         10.0,
-		CompactionTotalSizeMultiplierPerLevel: nil,
-		Comparer:                     comparer.DefaultComparer,
-		Compression:                  opt.DefaultCompression,
-		DisableBufferPool:            false,
-		DisableBlockCache:            false,
-		DisableCompactionBackoff:     false,
-		DisableLargeBatchTransaction: false,
-		ErrorIfExist:                 false,
-		ErrorIfMissing:               false,
-		Filter:                       nil,
-		IteratorSamplingRate:         1 * 1024 * 1024,
-		NoSync:                       false,
-		NoWriteMerge:                 false,
-		OpenFilesCacher:              opt.LRUCacher,
-		OpenFilesCacheCapacity:       500,
-		ReadOnly:                     false,
-		Strict:                       opt.DefaultStrict,
-		WriteBuffer:                  16 * 1024 * 1024, // Default is 4 MiB
-		WriteL0PauseTrigger:          12,
-		WriteL0SlowdownTrigger:       8,
+// InitDB returns LevelDB ledger implementation.
+func InitDB(dir string, opts *opt.Options) (*LevelLedger, error) {
+	if dir == "" {
+		dir = dbDirPath
 	}
-
-	absPath, err := filepath.Abs(dbDirPath)
+	absPath, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
-	db, err := leveldb.OpenFile(absPath, opts)
+	db, err := leveldb.OpenFile(absPath, setOptions(opts))
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +86,8 @@ func InitDB() (*LevelLedger, error) {
 			return nil, err
 		}
 		return &ledger, nil
-	} else if err != nil {
+	}
+	if err != nil {
 		return nil, err
 	}
 	return &ledger, nil
@@ -140,6 +103,11 @@ func prefixkey(prefix byte, key []byte) []byte {
 // GetCurrentPulse return currently stored pulse.
 func (ll *LevelLedger) GetCurrentPulse() record.PulseNum {
 	return ll.pulseFn()
+}
+
+// SetPulseFn allows redefine pulse function.
+func (ll *LevelLedger) SetPulseFn(fn PulseFn) {
+	ll.pulseFn = fn
 }
 
 // GetRecord returns record from leveldb by *record.Reference.
@@ -233,12 +201,6 @@ func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLi
 	return ll.ldb.Put(k, encoded, nil)
 }
 
-// GetPulseKeys returns all record keys from slot after given pulse.
-func (ll *LevelLedger) GetPulseKeys(pulse record.PulseNum) ([][]byte, error) {
-	// TODO: implement me
-	return [][]byte{}, nil
-}
-
 // GetDrop returns jet drop for a given pulse number.
 func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
@@ -249,38 +211,53 @@ func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) 
 		}
 		return nil, err
 	}
-	drop, err := jetdrop.DecodeJetDrop(buf)
+	drop, err := jetdrop.Decode(buf)
 	if err != nil {
 		return nil, err
 	}
 	return drop, nil
 }
 
-// SetDrop stores given jet drop for given pulse number.
-func (ll *LevelLedger) SetDrop(pulse record.PulseNum, drop *jetdrop.JetDrop) error {
+// SetDrop stores jet drop for given pulse number.
+// Previous JetDrop should be provided.
+// On success returns saved drop hash.
+func (ll *LevelLedger) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
-	encoded, err := jetdrop.EncodeJetDrop(drop)
+
+	hw := hash.NewSHA3()
+	err := ll.ProcessSlotRecords(pulse, func(it HashIterator) error {
+		for i := 1; it.Next(); i++ {
+			b := it.ShallowHash()
+			_, err := hw.Write(b)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return ll.ldb.Put(k, encoded, nil)
+	drophash := hw.Sum(nil)
+
+	drop := &jetdrop.JetDrop{
+		Pulse:    pulse,
+		PrevHash: prevdrop.Hash,
+		Hash:     drophash,
+	}
+	encoded, err := jetdrop.Encode(drop)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ll.ldb.Put(k, encoded, nil)
+	if err != nil {
+		return nil, err
+	}
+	return drop, nil
 }
 
 // Close terminates db connection
 func (ll *LevelLedger) Close() error {
 	return ll.ldb.Close()
-}
-
-// DropDB erases all data from storage.
-func DropDB() error {
-	absPath, err := filepath.Abs(dbDirPath)
-	if err != nil {
-		return err
-	}
-
-	if err = os.RemoveAll(absPath); err != nil {
-		return err
-	}
-
-	return nil
 }
