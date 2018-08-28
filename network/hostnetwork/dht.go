@@ -876,8 +876,8 @@ func (dht *DHT) confirmNodeRole(privKey string) bool {
 	return true
 }
 
-// StartCheckNodesRole starting a check all known nodes.
-func (dht *DHT) StartCheckNodesRole(ctx Context, domainID string) error {
+// CheckNodeRole starting a check all known nodes.
+func (dht *DHT) CheckNodeRole(ctx Context, domainID string) error {
 	var err error
 	// TODO: change or choose another auth host
 	if len(dht.options.BootstrapHosts) > 0 {

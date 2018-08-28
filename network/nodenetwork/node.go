@@ -41,7 +41,10 @@ func NewNode(ID string, host *host.Host, DHT *hostnetwork.DHT, domainID string, 
 		domainID: domainID,
 		role:     role,
 	}
-	err := node.dht.StartCheckNodesRole(node.createContext(), node.domainID)
+	err := node.dht.CheckNodeRole(node.createContext(), node.domainID)
+	if err != nil {
+		return nil, err
+	}
 	return node, err
 }
 

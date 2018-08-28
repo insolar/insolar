@@ -1424,7 +1424,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	}
 
 	ctx, _ := NewContextBuilder(dhts[1]).SetDefaultHost().Build()
-	err = dhts[1].StartCheckNodesRole(ctx, "domain ID")
+	err = dhts[1].CheckNodeRole(ctx, "domain ID")
 	assert.NoError(t, err)
 
 	for _, dht := range dhts {
