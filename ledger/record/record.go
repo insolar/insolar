@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/hash"
 )
 
@@ -50,9 +51,6 @@ type PulseNum uint32
 // SpecialPulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
 // It is only allowed for Storage.
 const SpecialPulseNumber PulseNum = 65536
-
-// ArchType is a virtual machine runtime type
-type ArchType uint32
 
 // TypeID encodes a record object type.
 type TypeID uint32
@@ -139,6 +137,12 @@ func (ref *Reference) Key() []byte {
 	_ = copy(b[:IDSize], ID2Bytes(ref.Record))
 	_ = copy(b[IDSize:], ID2Bytes(ref.Domain))
 	return b
+}
+
+// AsCoreRef converts reverence to the commonly used type.
+func (ref *Reference) AsCoreRef() *core.RecordRef {
+	var buff core.RecordRef = ref.Key()
+	return &buff
 }
 
 // IsEqual checks equality of References.

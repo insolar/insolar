@@ -99,6 +99,13 @@ func Bytes2ID(b []byte) ID {
 	}
 }
 
+func Bytes2Reference(b []byte) Reference {
+	return Reference{
+		Record: Bytes2ID(b[:IDSize]),
+		Domain: Bytes2ID(b[IDSize:]),
+	}
+}
+
 // MustWrite writes binary representation of PulseNum to io.Writer.
 func (pn PulseNum) MustWrite(w io.Writer) {
 	err := binary.Write(w, binary.BigEndian, pn)
