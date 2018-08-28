@@ -21,6 +21,24 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
 
+// CheckNodePrivState - state of check node privileges request.
+type CheckNodePrivState int
+
+const (
+	// Error - some error, see error string.
+	Error = CheckNodePrivState(iota + 1)
+	// Confirmed - state confirmed.
+	Confirmed
+	// Declined - state declined.
+	Declined
+)
+
+// ResponseCheckNodePriv is data for check node privileges response.
+type ResponseCheckNodePriv struct {
+	State CheckNodePrivState
+	Error string
+}
+
 // ResponseDataFindHost is data for FindHost response.
 type ResponseDataFindHost struct {
 	Closest []*host.Host
