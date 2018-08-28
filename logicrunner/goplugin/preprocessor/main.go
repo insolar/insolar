@@ -26,6 +26,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -174,11 +175,37 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		panic("Contract must be in main package")
 	}
 
-	code := "package " + packageName + "\n\n"
-	code += generateWrappers(parsed) + "\n"
-	code += generateExports(parsed) + "\n"
+	zeroListOfTypes := make(map[*ast.FuncDecl]string)
+	for _, method := range parsed.methods[parsed.contract] {
+		argsInit, _ := generateZeroListOfTypes(parsed, "args", method.Type.Params)
+		zeroListOfTypes[method] = argsInit
+	}
 
-	_, err = out.Write([]byte(code))
+	var funcMap = template.FuncMap{
+		"byteSliceToString": func(s []byte, i, j token.Pos) string {
+			return string(s[i:j])
+		},
+		"minus": func(a, b token.Pos) token.Pos {
+			return a - b
+		},
+	}
+	tmpl, err := template.New("template.txt").Funcs(funcMap).ParseFiles("template.txt")
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse template for output")
+	}
+
+	data := struct {
+		PackageName     string
+		Contract        string
+		ZeroListOfTypes map[*ast.FuncDecl]string
+		ParsedCode      []byte
+	}{
+		packageName,
+		parsed.contract,
+		zeroListOfTypes,
+		parsed.code,
+	}
+	err = tmpl.Execute(out, data)
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
 	}
@@ -287,19 +314,8 @@ func generateTypes(parsed *parsedFile) string {
 	return text
 }
 
-func generateWrappers(parsed *parsedFile) string {
-	text := `import (
-	"github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
-	)` + "\n"
-
-	for _, method := range parsed.methods[parsed.contract] {
-		text += generateMethodWrapper(parsed, method) + "\n"
-	}
-	return text
-}
-
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
-	text := fmt.Sprintf("\t%s := [%d]interface{}{}\n", name, list.NumFields())
+	text := ""
 
 	for i, arg := range list.List {
 		initializer := ""
@@ -329,27 +345,6 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 	}
 
 	return text, listCode
-}
-
-func generateMethodWrapper(parsed *parsedFile, method *ast.FuncDecl) string {
-	text := fmt.Sprintf("func (self *%s) INSWRAPER_%s(cbor foundation.CBORMarshaler, data []byte) ([]byte) {\n",
-		parsed.contract, method.Name.Name)
-
-	argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-	text += argsInit
-
-	text += "\tcbor.Unmarshal(&args, data)\n"
-
-	rets := []string{}
-	for i := range method.Type.Results.List {
-		rets = append(rets, fmt.Sprintf("ret%d", i))
-	}
-	ret := strings.Join(rets, ", ")
-	text += fmt.Sprintf("\t%s := self.%s(%s)\n", ret, method.Name.Name, argsList)
-
-	text += fmt.Sprintf("\treturn cbor.Marshal([]interface{}{%s})\n", strings.Join(rets, ", "))
-	text += "}\n"
-	return text
 }
 
 /* generated snipped must be something like this
