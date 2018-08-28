@@ -18,11 +18,14 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // @inscontract
 // nolint
 type HelloWorlder struct {
+	foundation.BaseContract
 	Greeted int
 }
 

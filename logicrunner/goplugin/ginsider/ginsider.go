@@ -84,7 +84,7 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 		Me: foundation.Reference("contract address"),
 		// fill me
 	}
-	setContext.Call([]reflect.Value{reflect.ValueOf(cc)})
+	setContext.Call([]reflect.Value{reflect.ValueOf(&cc)})
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
