@@ -20,7 +20,6 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/hash"
 )
 
@@ -137,12 +136,6 @@ func (ref *Reference) Key() []byte {
 	_ = copy(b[:IDSize], ID2Bytes(ref.Record))
 	_ = copy(b[IDSize:], ID2Bytes(ref.Domain))
 	return b
-}
-
-// AsCoreRef converts reverence to the commonly used type.
-func (ref *Reference) AsCoreRef() *core.RecordRef {
-	var buff core.RecordRef = ref.Key()
-	return &buff
 }
 
 // IsEqual checks equality of References.
