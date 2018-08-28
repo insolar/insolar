@@ -63,6 +63,7 @@ type GoPlugin struct {
 	MessageRouter MessageRouter
 	sock          net.Listener
 	runner        *exec.Cmd
+	client        *rpc.Client
 }
 
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
@@ -191,11 +192,26 @@ func (gp *GoPlugin) Stop() {
 	}
 }
 
+// Downstream returns a connection to `ginsider`
+func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
+	if gp.client != nil {
+		return gp.client, nil
+	}
+
+	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", gp.RunnerOptions.Listen)
+	}
+
+	gp.client = client
+	return gp.client, nil
+}
+
 const timeout = time.Second * 5
 
 // Exec runs a method on an object in controlled environment
 func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
-	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
+	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
