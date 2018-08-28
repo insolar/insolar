@@ -14,13 +14,30 @@
  *    limitations under the License.
  */
 
-package types
+package member
 
 import (
-	"testing"
+	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
-// Just to make Goland happy
-func TestStub(t *testing.T) {
+var TypeReference = foundation.Reference("member")
 
+type Member struct {
+	foundation.BaseContract
+	Name      string
+	PublicKey []byte
+}
+
+func (m *Member) GetName() string {
+	return m.Name
+}
+func (m *Member) GetPublicKey() []byte {
+	return m.PublicKey
+}
+
+func NewMember(name string) *Member {
+	member := &Member{
+		Name: name,
+	}
+	return member
 }

@@ -24,22 +24,24 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
 // GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
-	dir        string
-	RPCAddress string
+	dir                string
+	UpstreamRPCAddress string
+	UpstreamRPCClient  *rpc.Client
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
 func NewGoInsider(path string, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	return &GoInsider{dir: path, RPCAddress: address}
+	return &GoInsider{dir: path, UpstreamRPCAddress: address}
 }
 
 // RPC struct with methods representing RPC interface of this code runner
@@ -49,12 +51,13 @@ type RPC struct {
 
 // Call is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) Call(args girpc.CallReq, reply *girpc.CallResp) error {
+func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) error {
 	path, err := t.GI.ObtainCode(args.Reference)
 	if err != nil {
 		return errors.Wrap(err, "couldn't obtain code")
 	}
 
+	log.Debugf("Opening plugin %q from file %q", args.Reference, path)
 	p, err := plugin.Open(path)
 	if err != nil {
 		return errors.Wrap(err, "couldn't open plugin")
@@ -74,7 +77,7 @@ func (t *RPC) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
-		return errors.New("wtf, no method " + args.Method + "in the plugin")
+		return errors.New("no method " + args.Method + " in the plugin")
 	}
 
 	inLen := method.Type().NumIn()
@@ -95,6 +98,10 @@ func (t *RPC) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 		in[i] = reflect.ValueOf(mask[i])
 	}
 
+	log.Debugf(
+		"Calling method %q in contract %q with %d arguments",
+		args.Method, args.Reference, inLen,
+	)
 	resValues := method.Call(in)
 
 	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(export)
@@ -118,6 +125,21 @@ func (t *RPC) Call(args girpc.CallReq, reply *girpc.CallResp) error {
 	return nil
 }
 
+// Upstream returns RPC client connected to upstream server (goplugin)
+func (t *GoInsider) Upstream() (*rpc.Client, error) {
+	if t.UpstreamRPCClient != nil {
+		return t.UpstreamRPCClient, nil
+	}
+
+	client, err := rpc.DialHTTP("tcp", t.UpstreamRPCAddress)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", t.UpstreamRPCAddress)
+	}
+
+	t.UpstreamRPCClient = client
+	return t.UpstreamRPCClient, nil
+}
+
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
 func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
@@ -130,11 +152,12 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 		return "", errors.Wrap(err, "file !notexists()")
 	}
 
-	client, err := rpc.DialHTTP("tcp", t.RPCAddress)
+	client, err := t.Upstream()
 	if err != nil {
-		return "", errors.Wrapf(err, "couldn't dial '%s'", t.RPCAddress)
+		return "", err
 	}
 
+	log.Debugf("obtaining plugin %q", ref)
 	res := logicrunner.Object{}
 	err = client.Call("RPC.GetObject", ref, &res)
 	if err != nil {
@@ -149,10 +172,38 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 	return path, nil
 }
 
-// Exec
-func (t *GoInsider) Exec(ref string, method string, args []byte) (data []byte, res []byte, err error) {
-	return data, res, err
+// RouteCall ...
+func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, error) {
+	client, err := t.Upstream()
+	if err != nil {
+		return nil, err
+	}
+
+	req := rpctypes.UpRouteReq{
+		Reference: logicrunner.Reference(ref),
+		Method:    method,
+		Arguments: args,
+	}
+
+	res := rpctypes.UpRouteResp{}
+	err = client.Call("RPC.RouteCall", req, &res)
+	if err != nil {
+		return nil, errors.Wrap(err, "on calling main API")
+	}
+
+	return []byte(res.Result), res.Err
 }
 
-// CurrentGoInsider - hackish way to give proxies access to the current environment
-var CurrentGoInsider *GoInsider
+// Serialize - CBOR serializer wrapper: `what` -> `to`
+func (t *GoInsider) Serialize(what interface{}, to *[]byte) error {
+	ch := new(codec.CborHandle)
+	log.Printf("serializing %+v", what)
+	return codec.NewEncoderBytes(to, ch).Encode(what)
+}
+
+// Deserialize - CBOR de-serializer wrapper: `from` -> `into`
+func (t *GoInsider) Deserialize(from []byte, into interface{}) error {
+	ch := new(codec.CborHandle)
+	log.Printf("de-serializing %+v", from)
+	return codec.NewDecoderBytes(from, ch).Decode(into)
+}

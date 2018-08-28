@@ -52,6 +52,8 @@ const (
 	TypeRelayOwnership
 	// TypeKnownOuterHosts is packet to say how much outer hosts current host know.
 	TypeKnownOuterHosts
+	// TypeCheckNodePriv is packet to check preset node privileges.
+	TypeCheckNodePriv
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -68,6 +70,18 @@ type Packet struct {
 	Data       interface{}
 	Error      error
 	IsResponse bool
+}
+
+// NewCheckNodePrivPacket used to create message for check node privileges request.
+func NewCheckNodePrivPacket(sender, receiver *host.Host, roleKey string) *Packet {
+	return &Packet{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     TypeCheckNodePriv,
+		Data: &RequestCheckNodePriv{
+			RoleKey: roleKey,
+		},
+	}
 }
 
 // NewPingPacket can be used as a shortcut for creating ping packets instead of packet Builder.
@@ -169,6 +183,8 @@ func (m *Packet) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestRelayOwnership)
 	case TypeKnownOuterHosts:
 		_, valid = m.Data.(*RequestKnownOuterHosts)
+	case TypeCheckNodePriv:
+		_, valid = m.Data.(*RequestCheckNodePriv)
 	default:
 		valid = false
 	}
@@ -247,6 +263,7 @@ func init() {
 	gob.Register(&RequestObtainIP{})
 	gob.Register(&RequestRelayOwnership{})
 	gob.Register(&RequestKnownOuterHosts{})
+	gob.Register(&RequestCheckNodePriv{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -258,6 +275,7 @@ func init() {
 	gob.Register(&ResponseObtainIP{})
 	gob.Register(&ResponseRelayOwnership{})
 	gob.Register(&ResponseKnownOuterHosts{})
+	gob.Register(&ResponseCheckNodePriv{})
 
 	gob.Register(&id.ID{})
 }

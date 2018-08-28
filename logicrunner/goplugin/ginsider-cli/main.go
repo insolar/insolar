@@ -1,15 +1,16 @@
 package main
 
 import (
-	"log"
 	"net"
 	"net/http"
 	"net/rpc"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 func main() {
@@ -18,8 +19,10 @@ func main() {
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	pflag.Parse()
 
+	log.SetLevel(log.DebugLevel)
+
 	insider := ginsider.NewGoInsider(*path, *rpcAddress)
-	ginsider.CurrentGoInsider = insider
+	proxyctx.Current = insider
 
 	err := rpc.Register(&ginsider.RPC{GI: insider})
 	if err != nil {
@@ -29,12 +32,12 @@ func main() {
 
 	rpc.HandleHTTP()
 	listener, err := net.Listen("tcp", *listen)
-
-	log.Print("ginsider launched, listens " + *listen)
 	if err != nil {
-		log.Fatal("listen error:", err)
+		log.Fatal("couldn't setup listener on '"+*listen+"':", err)
 		os.Exit(1)
 	}
+
+	log.Print("ginsider launched, listens " + *listen)
 	err = http.Serve(listener, nil)
 	if err != nil {
 		log.Fatal("couldn't start server: ", err)

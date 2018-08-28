@@ -64,6 +64,16 @@ func TestNewAuthPacket(t *testing.T) {
 	assert.True(t, msg.IsValid())
 }
 
+func TestNewCheckNodePrivPacket(t *testing.T) {
+	addr1, _ := host.NewAddress("127.0.0.1:55551")
+	addr2, _ := host.NewAddress("127.0.0.1:55552")
+	sender := host.NewHost(addr1)
+	receiver := host.NewHost(addr2)
+
+	msg := NewCheckNodePrivPacket(sender, receiver, "test string")
+	assert.True(t, msg.IsValid())
+}
+
 func TestNewCheckOriginPacket(t *testing.T) {
 	addr1, _ := host.NewAddress("127.0.0.1:55551")
 	addr2, _ := host.NewAddress("127.0.0.1:55552")

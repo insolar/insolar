@@ -1387,3 +1387,55 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 	}
 	<-done
 }
+
+func TestDHT_StartCheckNodesRole(t *testing.T) {
+	var dhts []*DHT
+
+	done := make(chan bool)
+
+	ids1 := make([]id.ID, 0)
+	id1, _ := id.NewID(id.GetRandomKey())
+	ids1 = append(ids1, id1)
+	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
+	assert.NoError(t, err)
+
+	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
+	st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:16001")
+	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
+		BootstrapHosts: []*host.Host{
+			{
+				ID:      ids1[0],
+				Address: bootstrapAddr2,
+			},
+		},
+	},
+		relay.NewProxy())
+
+	dhts = append(dhts, dht1)
+	dhts = append(dhts, dht2)
+
+	for _, dht := range dhts {
+		ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
+		assert.Equal(t, 0, dht.NumHosts(ctx))
+		go func(dht *DHT) {
+			err := dht.Listen()
+			assert.Equal(t, "closed", err.Error())
+			done <- true
+		}(dht)
+	}
+
+	for _, dht := range dhts {
+		err := dht.Bootstrap()
+		assert.NoError(t, err)
+	}
+
+	ctx, _ := NewContextBuilder(dhts[1]).SetDefaultHost().Build()
+	err = dhts[1].CheckNodeRole(ctx, "domain ID")
+	assert.NoError(t, err)
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
+	<-done
+}
