@@ -38,7 +38,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/jbenet/go-base58"
 )
 
@@ -58,15 +57,13 @@ type DHT struct {
 
 	origin *host.Origin
 
-	transport  transport.Transport
-	store      store.Store
-	rpc        rpc.RPC
-	relay      relay.Relay
-	proxy      relay.Proxy
-	auth       AuthInfo
-	subnet     Subnet
-	nodesMap   map[string]*nodenetwork.Node // key - node.id.Hash, value - node
-	nodesIDMap map[string]string            // key - node.domainID, value - node.id.Hash
+	transport transport.Transport
+	store     store.Store
+	rpc       rpc.RPC
+	relay     relay.Relay
+	proxy     relay.Proxy
+	auth      AuthInfo
+	subnet    Subnet
 }
 
 // AuthInfo collects some information about authentication.
@@ -175,8 +172,6 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	dht.auth.ReceivedKeys = make(map[string][]byte)
 
 	dht.subnet.SubnetIDs = make(map[string][]string)
-	dht.nodesMap = make(map[string]*nodenetwork.Node)
-	dht.nodesIDMap = make(map[string]string)
 
 	return dht, nil
 }
@@ -899,26 +894,15 @@ func (dht *DHT) confirmNodeRole(privKey string) bool {
 }
 
 // StartCheckNodesRole starting a check all known nodes.
-func (dht *DHT) StartCheckNodesRole(ctx Context) error {
+func (dht *DHT) StartCheckNodesRole(ctx Context, domainID string) error {
 	var err error
-	for _, node := range dht.nodesMap {
-		// TODO: change or choose another auth host
-		err = dht.checkNodePrivRequest(ctx, dht.options.BootstrapHosts[0].ID.HashString(), node.GetDomainID())
+	// TODO: change or choose another auth host
+	if len(dht.options.BootstrapHosts) > 0 {
+		err = dht.checkNodePrivRequest(ctx, dht.options.BootstrapHosts[0].ID.HashString(), domainID)
+	} else {
+		err = errors.New("bootstrap node not exist")
 	}
 	return err
-}
-
-// AddNewNode adds a node to the dht.
-func (dht *DHT) AddNewNode(node *nodenetwork.Node) error {
-	if (node.GetNodeID().GetHash() == nil) ||
-		(node.GetDomainID() == "") {
-		return errors.New("empty node data")
-	} else if _, ok := dht.nodesMap[node.GetNodeID().HashString()]; ok {
-		return errors.New("node already exist")
-	} else {
-		dht.nodesMap[node.GetNodeID().HashString()] = node
-	}
-	return nil
 }
 
 func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.HashTable) {

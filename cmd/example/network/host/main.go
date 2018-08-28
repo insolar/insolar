@@ -85,10 +85,6 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-	err = dhtNetwork.StartCheckNodesRole(ctx)
-	if err != nil {
-		log.Println(err)
-	}
 	repl(dhtNetwork, ctx)
 }
 

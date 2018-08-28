@@ -17,7 +17,9 @@
 package nodenetwork
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/host"
+	"log"
+
+	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 )
 
@@ -25,18 +27,20 @@ import (
 type Node struct {
 	id       id.ID
 	role     string
-	host     *host.Host
+	dht      *hostnetwork.DHT
 	domainID string
 }
 
 // NewNode creates a node with given args.
-func NewNode(newID id.ID, newHost *host.Host, newDomainID string, newRole string) *Node {
-	return &Node{
+func NewNode(newID id.ID, newDHT *hostnetwork.DHT, newDomainID string, newRole string) (*Node, error) {
+	node := &Node{
 		id:       newID,
-		host:     newHost,
+		dht:      newDHT,
 		domainID: newDomainID,
 		role:     newRole,
 	}
+	err := node.dht.StartCheckNodesRole(node.CreateContext(), node.domainID)
+	return node, err
 }
 
 // SetNodeRole sets a new Node role.
@@ -49,9 +53,9 @@ func (node *Node) SetNodeID(newID id.ID) {
 	node.id = newID
 }
 
-// SetHost sets a new Node host.
-func (node *Node) SetHost(newHost *host.Host) {
-	node.host = newHost
+// SetDHT sets a new Node host.
+func (node *Node) SetDHT(newDHT *hostnetwork.DHT) {
+	node.dht = newDHT
 }
 
 // SetDomainID sets a new domain ID.
@@ -69,12 +73,26 @@ func (node Node) GetNodeID() id.ID {
 	return node.id
 }
 
-// GetNodeHost returns a Node host.
-func (node Node) GetNodeHost() *host.Host {
-	return node.host
-}
-
-// GetDomainID returns a Node domain ID.
+// GetDomainIDs returns a Node domain ID.
 func (node Node) GetDomainID() string {
 	return node.domainID
+}
+
+// SendPacket sends packet from service to target.
+func (node Node) SendPacket(targetID string) error {
+	// TODO: implement it
+	return nil
+}
+
+func (node Node) RecvFromDHT() {
+	// TODO: implement it
+}
+
+// CreateContext returns a dht context.
+func (node Node) CreateContext() hostnetwork.Context {
+	ctx, err := hostnetwork.NewContextBuilder(node.dht).SetDefaultHost().Build()
+	if err != nil {
+		log.Fatalln("Failed to create context:", err.Error())
+	}
+	return ctx
 }
