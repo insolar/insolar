@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -33,9 +34,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-
 	"github.com/stretchr/testify/assert"
-	"github.com/insolar/insolar/configuration"
 )
 
 const closedPacket = "closed" // "broken pipe" for kcpTransport
@@ -75,12 +74,12 @@ func (f *mockFuture) SetResult(msg *packet.Packet) {
 func (f *mockFuture) Cancel() {}
 
 type mockTransport struct {
-	recv     chan *packet.Packet
-	send     chan *packet.Packet
-	dc       chan bool
-	msgChan  chan *packet.Packet
-	failNext bool
-	sequence *uint64
+	recv          chan *packet.Packet
+	send          chan *packet.Packet
+	dc            chan bool
+	msgChan       chan *packet.Packet
+	failNext      bool
+	sequence      *uint64
 	publicAddress string
 }
 
@@ -196,7 +195,7 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	cfg := configuration.NewConfiguration().Host.Transport
 	cfg.Address = address
 	cfg.BehindNAT = false
-	tp, err := transport.NewTransport(cfg,relay.NewProxy())
+	tp, err := transport.NewTransport(cfg, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }

@@ -20,11 +20,11 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/stretchr/testify/suite"
-	"github.com/insolar/insolar/configuration"
 )
 
 type transportSuite struct {

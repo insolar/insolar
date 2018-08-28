@@ -16,16 +16,8 @@
 
 package configuration
 
-// KeyPair holds public and private key for Node
-type KeyPair struct {
-	PublicKey  string
-	PrivateKey string
-}
-
 // Node holds configuration for one Node
 type Node struct {
-	keys KeyPair
-	role string
 }
 
 // NodeNetwork holds configuration for NodeNetwork

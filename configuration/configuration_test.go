@@ -17,10 +17,11 @@
 package configuration
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConfiguration_Load_Default(t *testing.T) {

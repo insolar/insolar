@@ -28,7 +28,7 @@ func NewMemoryStoreFactory() Factory {
 	return &memoryStoreFactory{}
 }
 
-// create returns new memory storage.
+// Create returns new memory storage.
 func (memoryStoreFactory *memoryStoreFactory) Create() Store {
 	return NewMemoryStore()
 }

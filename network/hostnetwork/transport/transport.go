@@ -17,12 +17,13 @@
 package transport
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/connection"
-	"errors"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 )
 
 // Transport is an interface for network transport.
@@ -66,9 +67,9 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 
 	switch cfg.Protocol {
 	case "UTP":
-		return newUTPTransport(conn,proxy, publicAddress)
+		return newUTPTransport(conn, proxy, publicAddress)
 	case "KCP":
-		return newKCPTransport(conn,proxy, publicAddress)
+		return newKCPTransport(conn, proxy, publicAddress)
 	default:
 		return nil, errors.New("invalid transport configuration")
 	}
