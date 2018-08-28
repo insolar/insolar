@@ -34,7 +34,7 @@ const (
 
 // RequestCheckNodePriv is data for check node privileges.
 type RequestCheckNodePriv struct {
-	PrivKey string
+	RoleKey string
 }
 
 // RequestDataFindHost is data for FindHost request.

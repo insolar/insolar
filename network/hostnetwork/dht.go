@@ -871,7 +871,7 @@ func buildContext(cb ContextBuilder, msg *packet.Packet) Context {
 	return ctx
 }
 
-func (dht *DHT) confirmNodeRole(privKey string) bool {
+func (dht *DHT) confirmNodeRole(roleKey string) bool {
 	// TODO implement this func
 	return true
 }
@@ -924,7 +924,7 @@ func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuil
 	data := msg.Data.(*packet.RequestCheckNodePriv)
 	var response packet.ResponseCheckNodePriv
 
-	if dht.confirmNodeRole(data.PrivKey) {
+	if dht.confirmNodeRole(data.RoleKey) {
 		response.State = packet.Confirmed
 	} else {
 		response.State = packet.Declined
@@ -1326,7 +1326,7 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 	return nil
 }
 
-func (dht *DHT) checkNodePrivRequest(ctx Context, targetID string, privKey string) error {
+func (dht *DHT) checkNodePrivRequest(ctx Context, targetID string, roleKey string) error {
 	targetHost, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
 		return err
@@ -1337,7 +1337,7 @@ func (dht *DHT) checkNodePrivRequest(ctx Context, targetID string, privKey strin
 	}
 
 	origin := dht.htFromCtx(ctx).Origin
-	request := packet.NewCheckNodePrivPacket(origin, targetHost, privKey)
+	request := packet.NewCheckNodePrivPacket(origin, targetHost, roleKey)
 	future, err := dht.transport.SendRequest(request)
 
 	if err != nil {
@@ -1352,7 +1352,7 @@ func (dht *DHT) checkNodePrivRequest(ctx Context, targetID string, privKey strin
 		}
 
 		response := rsp.Data.(*packet.ResponseCheckNodePriv)
-		err = dht.handleCheckNodePrivResponse(response, privKey)
+		err = dht.handleCheckNodePrivResponse(response, roleKey)
 		if err != nil {
 			return err
 		}
@@ -1366,7 +1366,7 @@ func (dht *DHT) checkNodePrivRequest(ctx Context, targetID string, privKey strin
 	return nil
 }
 
-func (dht *DHT) handleCheckNodePrivResponse(response *packet.ResponseCheckNodePriv, privKey string) error {
+func (dht *DHT) handleCheckNodePrivResponse(response *packet.ResponseCheckNodePriv, toleKey string) error {
 	switch response.State {
 	case packet.Error:
 		return errors.New(response.Error)
@@ -1374,7 +1374,7 @@ func (dht *DHT) handleCheckNodePrivResponse(response *packet.ResponseCheckNodePr
 		return nil
 	case packet.Declined:
 		// TODO: set default unconfirmed role
-		// dht.nodesMap[dht.nodesIDMap[privKey]].SetNodeRole("Unconfirmed default role")
+		// dht.nodesMap[dht.nodesIDMap[roleKey]].SetNodeRole("Unconfirmed default role")
 	}
 	return nil
 }

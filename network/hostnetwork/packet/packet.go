@@ -73,13 +73,13 @@ type Packet struct {
 }
 
 // NewCheckNodePrivPacket used to create message for check node privileges request.
-func NewCheckNodePrivPacket(sender, receiver *host.Host, privKey string) *Packet {
+func NewCheckNodePrivPacket(sender, receiver *host.Host, roleKey string) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypeCheckNodePriv,
 		Data: &RequestCheckNodePriv{
-			PrivKey: privKey,
+			RoleKey: roleKey,
 		},
 	}
 }
