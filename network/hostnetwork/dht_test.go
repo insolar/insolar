@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1383,8 +1382,6 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 }
 
 func TestDHT_StartCheckNodesRole(t *testing.T) {
-	nodesCount := 5
-	port := 49000
 	var dhts []*DHT
 
 	done := make(chan bool)
@@ -1426,23 +1423,8 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	for i := 0; i < nodesCount; i++ {
-		port++
-		id1, _ := id.NewID(id.GetRandomKey())
-		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port))
-		host1 := host.NewHost(address)
-		node := nodenetwork.NewNode(id1, host1, "domain"+strconv.Itoa(port), "role"+strconv.Itoa(port))
-		err := dhts[1].AddNewNode(node)
-		assert.NoError(t, err)
-		err = dhts[1].AddNewNode(node)
-		assert.EqualError(t, err, "node already exist")
-		node.SetDomainID("")
-		err = dhts[1].AddNewNode(node)
-		assert.EqualError(t, err, "empty node data")
-	}
-
 	ctx, _ := NewContextBuilder(dhts[1]).SetDefaultHost().Build()
-	err = dhts[1].StartCheckNodesRole(ctx)
+	err = dhts[1].StartCheckNodesRole(ctx, "domain ID")
 	assert.NoError(t, err)
 
 	for _, dht := range dhts {
