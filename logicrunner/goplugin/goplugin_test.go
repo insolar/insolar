@@ -56,7 +56,7 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 		panic(err)
 	}
 
-	data, res, err := gp.Exec("secondary", data, "Echo", argsSerialized)
+	data, res, err := gp.CallMethod("secondary", data, "Echo", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -270,7 +270,7 @@ func (r *testMessageRouter) Route(ctx hostnetwork.Context, msg messagerouter.Mes
 	if err != nil {
 		return messagerouter.Response{}, err
 	}
-	resdata, reslist, err := r.plugin.Exec("two", data, msg.Method, msg.Arguments)
+	resdata, reslist, err := r.plugin.CallMethod("two", data, msg.Method, msg.Arguments)
 	return messagerouter.Response{Data: resdata, Result: reslist, Error: err}, nil
 }
 
@@ -355,7 +355,7 @@ func TestContractCallingContract(t *testing.T) {
 		panic(err)
 	}
 
-	_, res, err := gp.Exec("one", data, "Hello", argsSerialized)
+	_, res, err := gp.CallMethod("one", data, "Hello", argsSerialized)
 	if err != nil {
 		panic(err)
 	}

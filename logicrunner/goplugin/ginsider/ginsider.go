@@ -50,9 +50,9 @@ type RPC struct {
 	GI *GoInsider
 }
 
-// Call is an RPC that runs a method on an object and
+// CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) error {
+func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
 	path, err := t.GI.ObtainCode(args.Reference)
 	if err != nil {
 		return errors.Wrap(err, "couldn't obtain code")

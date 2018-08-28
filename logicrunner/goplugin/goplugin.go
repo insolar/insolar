@@ -209,18 +209,18 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 
 const timeout = time.Second * 5
 
-// Exec runs a method on an object in controlled environment
-func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
+// CallMethod runs a method on an object in controlled environment
+func (gp *GoPlugin) CallMethod(codeRef logicrunner.Reference, data []byte, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
-	res := rpctypes.DownCallResp{}
 
-	req := rpctypes.DownCallReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
+	res := rpctypes.DownCallMethodResp{}
+	req := rpctypes.DownCallMethodReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
 
 	select {
-	case call := <-client.Go("RPC.Call", req, &res, nil).Done:
+	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
 		if call.Error != nil {
 			return nil, nil, errors.Wrap(call.Error, "problem with API call")
 		}

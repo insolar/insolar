@@ -22,16 +22,16 @@ import "github.com/insolar/insolar/logicrunner"
 // Calls from goplugin to goinsider go "downwards" and names are
 // prefixed with "Down". Reverse calls go "upwards", so "Up" prefix
 
-// DownCallReq is a set of arguments for Call RPC in the runner
-type DownCallReq struct { // todo it may use foundation.Context
+// DownCallMethodReq is a set of arguments for CallMethod RPC in the runner
+type DownCallMethodReq struct { // todo it may use foundation.Context
 	Reference logicrunner.Reference
 	Data      []byte
 	Method    string
 	Arguments logicrunner.Arguments
 }
 
-// DownCallResp is response from Call RPC in the runner
-type DownCallResp struct {
+// DownCallMethodResp is response from CallMethod RPC in the runner
+type DownCallMethodResp struct {
 	Data []byte
 	Ret  logicrunner.Arguments
 	Err  error
