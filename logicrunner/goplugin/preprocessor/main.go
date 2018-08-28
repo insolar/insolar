@@ -166,18 +166,8 @@ func parseFile(fileName string) (*parsedFile, error) {
 	return &res, nil
 }
 
-func generateContractWrapper(fileName string, out io.Writer) error {
-	parsed, err := parseFile(fileName)
-	if err != nil {
-		return errors.Wrap(err, "couldn't parse")
-	}
-
-	packageName := parsed.node.Name.Name
-	if packageName != "main" {
-		panic("Contract must be in main package")
-	}
-
-	var methods []map[string]interface{}
+func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
+	var methodsInfo []map[string]interface{}
 	for _, method := range parsed.methods[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
 
@@ -193,7 +183,20 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 			"Results":           resultList,
 			"Arguments":         argsList,
 		}
-		methods = append(methods, info)
+		methodsInfo = append(methodsInfo, info)
+	}
+	return methodsInfo
+}
+
+func generateContractWrapper(fileName string, out io.Writer) error {
+	parsed, err := parseFile(fileName)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse")
+	}
+
+	packageName := parsed.node.Name.Name
+	if packageName != "main" {
+		panic("Contract must be in main package")
 	}
 
 	_, currentFile, _, ok := runtime.Caller(0)
@@ -214,7 +217,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	}{
 		packageName,
 		parsed.contract,
-		methods,
+		generateContractMethodsInfo(parsed),
 		parsed.code,
 	}
 	err = tmpl.Execute(out, data)
