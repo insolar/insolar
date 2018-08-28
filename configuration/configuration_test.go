@@ -59,3 +59,9 @@ func TestConfiguration_Save_Default(t *testing.T) {
 
 	assert.Equal(t, holder.Configuration, holder2.Configuration)
 }
+
+func TestConfiguration_Load_Invalid(t *testing.T) {
+	holder := NewHolder()
+	err := holder.LoadFromFile("testdata/invalid.yml")
+	assert.Error(t, err)
+}
