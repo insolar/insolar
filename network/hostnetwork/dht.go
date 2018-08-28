@@ -1019,11 +1019,12 @@ func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packe
 func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	data := msg.Data.(*packet.RequestDataRPC)
 	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
+	result, err := dht.rpc.Invoke(msg.Sender, data.Method, data.Args)
 	response := &packet.ResponseDataRPC{
 		Success: true,
+		Result:  result,
 		Error:   "",
 	}
-	_, err := dht.rpc.Invoke(msg.Sender, data.Method, data.Args)
 	if err != nil {
 		response.Success = false
 		response.Error = err.Error()

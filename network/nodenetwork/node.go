@@ -20,47 +20,29 @@ import (
 	"log"
 
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
 // Node is an essence which provides communication between network level and MessageRouter.
 type Node struct {
-	id       id.ID
+	id       string
+	host     *host.Host
 	role     string
 	dht      *hostnetwork.DHT
 	domainID string
 }
 
 // NewNode creates a node with given args.
-func NewNode(newID id.ID, newDHT *hostnetwork.DHT, newDomainID string, newRole string) (*Node, error) {
+func NewNode(ID string, host *host.Host, DHT *hostnetwork.DHT, domainID string, role string) (*Node, error) {
 	node := &Node{
-		id:       newID,
-		dht:      newDHT,
-		domainID: newDomainID,
-		role:     newRole,
+		id:       ID,
+		host:     host,
+		dht:      DHT,
+		domainID: domainID,
+		role:     role,
 	}
 	err := node.dht.StartCheckNodesRole(node.createContext(), node.domainID)
 	return node, err
-}
-
-// SetNodeRole sets a new Node role.
-func (node *Node) SetNodeRole(newRole string) {
-	node.role = newRole
-}
-
-// SetNodeID sets a new Node id.
-func (node *Node) SetNodeID(newID id.ID) {
-	node.id = newID
-}
-
-// SetDHT sets a new Node host.
-func (node *Node) SetDHT(newDHT *hostnetwork.DHT) {
-	node.dht = newDHT
-}
-
-// SetDomainID sets a new domain ID.
-func (node *Node) SetDomainID(newDomainID string) {
-	node.domainID = newDomainID
 }
 
 // GetNodeRole returns a Node role.
@@ -69,7 +51,7 @@ func (node Node) GetNodeRole() string {
 }
 
 // GetNodeID returns a Node ID.
-func (node Node) GetNodeID() id.ID {
+func (node Node) GetNodeID() string {
 	return node.id
 }
 

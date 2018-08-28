@@ -31,111 +31,45 @@ func TestNewNode(t *testing.T) {
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16001")
 	dht1, _ := hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
 	assert.NoError(t, err)
-	node, err := NewNode(id1, dht1, "domainID", "role")
+	node, err := NewNode("id", nil, dht1, "domainID", "role")
 
 	assert.Error(t, err, "bootstrap node not exist")
-	node.SetDHT(dht1)
+	assert.NotNil(t, node)
 }
 
 func TestNode_GetDomainID(t *testing.T) {
-	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID(id.GetRandomKey())
-	ids1 = append(ids1, id1)
-	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16002")
-	dht1, _ := hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
-	assert.NoError(t, err)
-	node := Node{id: id1,
+	expectedDomain := "domain id"
+	node := Node{
+		id:       "id",
 		role:     "role",
-		dht:      dht1,
-		domainID: "domain id",
+		dht:      nil,
+		domainID: expectedDomain,
 	}
 
-	args := []struct {
-		name     string
-		expected string
-		actual   string
-	}{
-		{"equal", "domain ID", "domain ID"},
-		{"not equal", "domain ID", "another domain ID"},
-		{"equal", "another domain ID", "another domain ID"},
-	}
-	for _, arg := range args {
-		t.Run(arg.name, func(t *testing.T) {
-			node.SetDomainID(arg.actual)
-			if arg.expected == arg.actual {
-				assert.Equal(t, arg.expected, node.GetDomainID())
-			} else {
-				assert.NotEqual(t, arg.expected, node.GetDomainID())
-			}
-		})
-	}
+	assert.Equal(t, expectedDomain, node.GetDomainID())
 }
 
 func TestNode_GetNodeID(t *testing.T) {
-	id2, _ := id.NewID(id.GetRandomKey())
-	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID(id.GetRandomKey())
-	ids1 = append(ids1, id1)
-	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16003")
-	dht1, _ := hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
-	assert.NoError(t, err)
-	node := Node{id: id1,
-		role:     "role",
-		dht:      dht1,
+	expectedID := "id"
+	node := Node{
 		domainID: "domain id",
+		id:       expectedID,
+		role:     "role",
+		dht:      nil,
+		host:     nil,
 	}
-
-	args := []struct {
-		name     string
-		expected id.ID
-		actual   id.ID
-	}{
-		{"equal", id1, id1},
-		{"not equal", id2, id1},
-		{"equal", id2, id2},
-	}
-	for _, arg := range args {
-		t.Run(arg.name, func(t *testing.T) {
-			node.SetNodeID(arg.actual)
-			if arg.expected.HashEqual(arg.actual.GetHash()) {
-				assert.Equal(t, arg.expected.GetHash(), node.GetNodeID().GetHash())
-			} else {
-				assert.NotEqual(t, arg.expected.GetHash(), node.GetNodeID().GetHash())
-			}
-		})
-	}
+	assert.Equal(t, expectedID, node.GetNodeID())
 }
 
 func TestNode_GetNodeRole(t *testing.T) {
-	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID(id.GetRandomKey())
-	ids1 = append(ids1, id1)
-	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16004")
-	dht1, _ := hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
-	assert.NoError(t, err)
-	node := Node{id: id1,
-		role:     "role",
-		dht:      dht1,
+	expectedRole := "role"
+	node := Node{
+		id:       "id",
+		role:     expectedRole,
+		dht:      nil,
 		domainID: "domain id",
+		host:     nil,
 	}
 
-	args := []struct {
-		name     string
-		expected string
-		actual   string
-	}{
-		{"equal", "node role", "node role"},
-		{"not equal", "node role", "another node role"},
-		{"equal", "another node role", "another node role"},
-	}
-	for _, arg := range args {
-		t.Run(arg.name, func(t *testing.T) {
-			node.SetNodeRole(arg.actual)
-			if arg.expected == arg.actual {
-				assert.Equal(t, arg.expected, node.GetNodeRole())
-			} else {
-				assert.NotEqual(t, arg.expected, node.GetNodeRole())
-			}
-		})
-	}
+	assert.Equal(t, expectedRole, node.GetNodeRole())
 }
