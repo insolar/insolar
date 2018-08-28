@@ -484,7 +484,9 @@ func cmdRewriteImports(fname string, w io.Writer) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
 	}
-	rewriteImports(parsed)
+	if err := rewriteImports(parsed); err != nil {
+		return errors.Wrap(err, "couldn't process")
+	}
 	if err := printer.Fprint(w, parsed.fileSet, parsed.node); err != nil {
 		return errors.Wrap(err, "couldn't save")
 	}
