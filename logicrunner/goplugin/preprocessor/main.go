@@ -38,7 +38,7 @@ import (
 )
 
 var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
-var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
+var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
 type parsedFile struct {
 	name    string

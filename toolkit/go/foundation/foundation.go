@@ -33,6 +33,11 @@ func (r Reference) String() string {
 	return string(r)
 }
 
+// Equal is equaler
+func (r Reference) Equal(o Reference) bool {
+	return r == o
+}
+
 // CallContext is a context of contract execution
 type CallContext struct {
 	Me     Reference // My Reference.
