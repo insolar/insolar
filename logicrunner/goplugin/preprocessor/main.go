@@ -24,7 +24,9 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"text/template"
 
@@ -194,7 +196,12 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		methods = append(methods, info)
 	}
 
-	tmpl, err := template.ParseFiles("template.txt")
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return errors.Wrap(err, "couldn't find info about current file")
+	}
+	templateDir := filepath.Join(filepath.Dir(currentFile), "templates/wrapper.go.tpl")
+	tmpl, err := template.ParseFiles(templateDir)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse template for output")
 	}
