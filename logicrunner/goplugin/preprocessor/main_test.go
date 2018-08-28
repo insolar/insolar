@@ -52,6 +52,42 @@ func Test_generateContractProxy(t *testing.T) {
 	}
 }
 
+func TestConstructorsParsing(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir) // nolint: errcheck
+
+	code := `
+package main
+
+// @inscontract
+type One struct {
+}
+
+func New() *One {
+	return &One{}
+}
+
+func NewFromString(s string) *One {
+	return &One{}
+}
+
+func NewWrong() {
+}
+`
+
+	err = testutil.WriteFile(tmpDir, "code1", code)
+	assert.NoError(t, err)
+
+	info, err := parseFile(tmpDir + "/code1")
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(info.constructors))
+	assert.Equal(t, 2, len(info.constructors["One"]))
+	assert.Equal(t, "New", info.constructors["One"][0].Name.Name)
+	assert.Equal(t, "NewFromString", info.constructors["One"][1].Name.Name)
+}
+
 func TestCompileContractProxy(t *testing.T) {
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)

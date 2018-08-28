@@ -32,6 +32,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 
 	"strconv"
@@ -46,9 +47,10 @@ type parsedFile struct {
 	fileSet *token.FileSet
 	node    *ast.File
 
-	types    map[string]*ast.TypeSpec
-	methods  map[string][]*ast.FuncDecl
-	contract string
+	types        map[string]*ast.TypeSpec
+	methods      map[string][]*ast.FuncDecl
+	constructors map[string][]*ast.FuncDecl
+	contract     string
 }
 
 func printUsage() {
@@ -311,9 +313,17 @@ func generateContractProxy(fileName string, out io.Writer) error {
 	return nil
 }
 
+func typeName(t ast.Expr) string {
+	if tmp, ok := t.(*ast.StarExpr); ok { // *type
+		t = tmp.X
+	}
+	return t.(*ast.Ident).Name
+}
+
 func getMethods(parsed *parsedFile) {
 	parsed.types = make(map[string]*ast.TypeSpec)
 	parsed.methods = make(map[string][]*ast.FuncDecl)
+	parsed.constructors = make(map[string][]*ast.FuncDecl)
 	for _, d := range parsed.node.Decls {
 		switch td := d.(type) {
 		case *ast.GenDecl:
@@ -335,15 +345,21 @@ func getMethods(parsed *parsedFile) {
 			}
 		case *ast.FuncDecl:
 			if td.Recv == nil || td.Recv.NumFields() == 0 {
-				continue // todo we must store it and use, it may be a constructor
-			}
+				if !strings.HasPrefix(td.Name.Name, "New") {
+					continue // doesn't look like a constructor
+				}
 
-			r := td.Recv.List[0].Type
-			if tr, ok := r.(*ast.StarExpr); ok { // *type
-				r = tr.X
+				if td.Type.Results.NumFields() < 1 {
+					log.Info("Ignored %q as constructor, not enought returned values", td.Name.Name)
+					continue
+				}
+
+				typename := typeName(td.Type.Results.List[0].Type)
+				parsed.constructors[typename] = append(parsed.constructors[typename], td)
+			} else {
+				typename := typeName(td.Recv.List[0].Type)
+				parsed.methods[typename] = append(parsed.methods[typename], td)
 			}
-			typename := r.(*ast.Ident).Name
-			parsed.methods[typename] = append(parsed.methods[typename], td)
 		}
 	}
 }
