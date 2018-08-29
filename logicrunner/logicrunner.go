@@ -22,6 +22,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Reference is a contract address
+type Reference string
+
+// Object is an inner representation of storage object for transfwering it over API
+type Object struct {
+	MachineType core.MachineType
+	Reference   Reference
+	Data        []byte
+}
+
+// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
+type Arguments []byte
+
 // Executor is an interface for implementers of one particular machine type
 type Executor interface {
 	Exec(codeRef Reference, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
