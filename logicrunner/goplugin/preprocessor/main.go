@@ -234,15 +234,17 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	}
 
 	data := struct {
-		PackageName  string
-		ContractType string
-		Methods      []map[string]interface{}
-		ParsedCode   []byte
+		PackageName    string
+		ContractType   string
+		Methods        []map[string]interface{}
+		ParsedCode     []byte
+		FoundationPath string
 	}{
 		packageName,
 		parsed.contract,
 		generateContractMethodsInfo(parsed),
 		parsed.code,
+		foundationPath,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -353,15 +355,6 @@ func generateTypes(parsed *parsedFile) string {
 	return text
 }
 
-func generateWrappers(parsed *parsedFile) string {
-	text := `import ("` + foundationPath + `")` + "\n"
-
-	for _, method := range parsed.methods[parsed.contract] {
-		text += generateMethodWrapper(parsed, method) + "\n"
-	}
-	return text
-}
-
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
 	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
 
@@ -394,17 +387,6 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 
 	return text, listCode
 }
-
-/* generated snipped must be something like this
-
-func (hw *HelloWorlder) INSWRAPER_Echo(cbor cborer, data []byte) ([]byte, error) {
-	args := [1]interface{}{}
-	args[0] = ""
-	cbor.Unmarshal(&args, data)
-	ret1, ret2 := hw.Echo(args[0].(string))
-	return cbor.Marshal([]interface{}{ret1, ret2}), nil
-}
-*/
 
 func generateExports(parsed *parsedFile) string {
 	text := "var INSEXPORT " + parsed.contract + "\n"
