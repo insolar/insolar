@@ -14,13 +14,16 @@
  *    limitations under the License.
  */
 
-package proxyctx
+package core
 
-type ProxyHelper interface {
-	RouteCall(ref string, method string, args []byte) ([]byte, error)
-	Serialize(what interface{}, to *[]byte) error
-	Deserialize(from []byte, into interface{}) error
+import (
+	"bytes"
+)
+
+// RecordRef is unified record reference.
+type RecordRef []byte
+
+func (left RecordRef) Equal(right RecordRef) bool {
+	// TODO: ignore special bits
+	return bytes.Equal(left, right)
 }
-
-// Current - hackish way to give proxies access to the current environment
-var Current ProxyHelper
