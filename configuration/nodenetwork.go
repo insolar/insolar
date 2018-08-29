@@ -18,6 +18,8 @@ package configuration
 
 // Node holds configuration for one Node
 type Node struct {
+	ID       string
+	DomainID string
 }
 
 // NodeNetwork holds configuration for NodeNetwork
