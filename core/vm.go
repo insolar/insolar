@@ -14,13 +14,15 @@
  *    limitations under the License.
  */
 
-package proxyctx
+package core
 
-type ProxyHelper interface {
-	RouteCall(ref string, method string, args []byte) ([]byte, error)
-	Serialize(what interface{}, to *[]byte) error
-	Deserialize(from []byte, into interface{}) error
-}
+// MachineType is a type of virtual machine
+type MachineType int
 
-// Current - hackish way to give proxies access to the current environment
-var Current ProxyHelper
+// Real constants of MachineType
+const (
+	MachineTypeBuiltin MachineType = iota
+	MachineTypeGoPlugin
+
+	MachineTypesTotalCount
+)

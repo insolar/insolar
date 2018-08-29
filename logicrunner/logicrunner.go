@@ -18,18 +18,8 @@
 package logicrunner
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
-)
-
-// MachineType is a type of virtual machine
-type MachineType int
-
-// Real constants of MachineType
-const (
-	MachineTypeBuiltin MachineType = iota
-	MachineTypeGoPlugin
-
-	MachineTypesTotalCount
 )
 
 // Executor is an interface for implementers of one particular machine type
@@ -44,7 +34,7 @@ type ArtifactManager interface {
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [MachineTypesTotalCount]Executor
+	Executors       [core.MachineTypesTotalCount]Executor
 	ArtifactManager ArtifactManager
 }
 
@@ -56,14 +46,14 @@ func NewLogicRunner(am ArtifactManager) (*LogicRunner, error) {
 }
 
 // RegisterExecutor registers an executor for particular `MachineType`
-func (r *LogicRunner) RegisterExecutor(t MachineType, e Executor) error {
+func (r *LogicRunner) RegisterExecutor(t core.MachineType, e Executor) error {
 	r.Executors[int(t)] = e
 	return nil
 }
 
 // GetExecutor returns an executor for the `MachineType` if it was registered (`RegisterExecutor`),
 // returns error otherwise
-func (r *LogicRunner) GetExecutor(t MachineType) (Executor, error) {
+func (r *LogicRunner) GetExecutor(t core.MachineType) (Executor, error) {
 	if res := r.Executors[int(t)]; res != nil {
 		return res, nil
 	}
@@ -78,7 +68,7 @@ func (r *LogicRunner) Execute(ref string, method string, args Arguments) ([]byte
 		return nil, nil, errors.Wrap(err, "couldn't ")
 	}
 
-	executor, err := r.GetExecutor(MachineTypeGoPlugin)
+	executor, err := r.GetExecutor(core.MachineTypeGoPlugin)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "no executer registered")
 	}

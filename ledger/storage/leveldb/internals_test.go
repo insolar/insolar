@@ -50,7 +50,7 @@ func TestLevelLedger_prefixkey(t *testing.T) {
 		Domain: record.ID{Pulse: 0, Hash: raw.Hash()},
 		Record: record.ID{Pulse: 0, Hash: raw.Hash()},
 	}
-	key := ref.Key()
+	key := ref.Bytes()
 	keyP := prefixkey(0, key)
 	emptyHexStr := strings.Repeat("00", record.IDSize)
 	emptyKey := MustDecodeHexString(emptyHexStr + emptyHexStr)
@@ -69,7 +69,7 @@ func TestLevelLedger_prefixkey(t *testing.T) {
 }
 
 func setRawRecord(ll *LevelLedger, ref *record.Reference, raw *record.Raw) error {
-	k := prefixkey(scopeIDRecord, ref.Key())
+	k := prefixkey(scopeIDRecord, ref.Bytes())
 	return ll.ldb.Put(k, record.MustEncodeRaw(raw), nil)
 }
 

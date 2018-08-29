@@ -33,7 +33,7 @@ type ObjectDescriptor struct {
 }
 
 // GetMemory fetches latest memory of the object known to storage.
-func (d *ObjectDescriptor) GetMemory() (record.Memory, error) {
+func (d *ObjectDescriptor) GetMemory() ([]byte, error) {
 	if d.latestAmendRecord != nil {
 		return d.latestAmendRecord.NewMemory, nil
 	}
@@ -44,8 +44,8 @@ func (d *ObjectDescriptor) GetMemory() (record.Memory, error) {
 // GetDelegates fetches unamended delegates from storage.
 //
 // VM is responsible for collecting all delegates and adding them to the object memory manually if its required.
-func (d *ObjectDescriptor) GetDelegates() ([]record.Memory, error) {
-	var delegates []record.Memory
+func (d *ObjectDescriptor) GetDelegates() ([][]byte, error) {
+	var delegates [][]byte
 	for _, appendRef := range d.lifelineIndex.AppendRefs {
 		rec, err := d.manager.storer.GetRecord(&appendRef)
 		if err != nil {

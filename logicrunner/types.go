@@ -16,12 +16,16 @@
 
 package logicrunner
 
+import (
+	"github.com/insolar/insolar/core"
+)
+
 // Reference is a contract address
 type Reference string
 
 // Object is an inner representation of storage object for transfwering it over API
 type Object struct {
-	MachineType MachineType
+	MachineType core.MachineType
 	Reference   Reference
 	Data        []byte
 }
