@@ -17,10 +17,7 @@
 package servicenetwork
 
 import (
-	"bufio"
 	"bytes"
-	"os"
-	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/record"
@@ -38,14 +35,11 @@ type Service struct {
 
 // NewService returns a new service.
 func NewService() *Service {
-	service := &Service{
+	return &Service{
 		nodes:        make(map[string]*nodenetwork.Node),
 		referenceMap: make(map[string]string),
 		references:   make([]core.RecordRef, 0),
 	}
-
-	service.readFile("../configuration/testdata/ids.txt")
-	return service
 }
 
 // AddNode adds a node to service.
@@ -57,24 +51,12 @@ func (service *Service) AddNode(node *nodenetwork.Node) {
 
 // SendMessage sends a message from MessageRouter.
 func (service Service) SendMessage(reference record.Reference, msg messagerouter.Message) {
-	args := make([][]byte, 0)
-	args[0] = msg.Arguments
 	domainID := string(reference.Domain.Hash[:bytes.IndexByte(reference.Domain.Hash, 0)])
-	service.nodes[service.referenceMap[domainID]].SendPacket(msg.Method, args)
-}
-
-func (service *Service) readFile(filename string) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
+	if ref, ok := service.referenceMap[domainID]; ok {
+		if node, ok := service.nodes[ref]; ok {
+			args := make([][]byte, 0)
+			args[0] = msg.Arguments
+			node.SendPacket(msg.Method, args)
+		}
 	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		line := strings.Split(scanner.Text(), " ")
-		service.referenceMap[line[0]] = line[1]
-	}
-
-	return nil
 }
