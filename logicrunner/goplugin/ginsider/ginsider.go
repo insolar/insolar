@@ -28,6 +28,7 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -74,6 +75,16 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 	if err != nil {
 		return errors.Wrapf(err, "couldn't decode data into %T", export)
 	}
+
+	setContext := reflect.ValueOf(export).MethodByName("SetContext")
+	if !setContext.IsValid() {
+		return errors.New("this is not a contract, it not supports SetContext method")
+	}
+	cc := foundation.CallContext{
+		Me: foundation.Reference("contract address"),
+		// fill me
+	}
+	setContext.Call([]reflect.Value{reflect.ValueOf(&cc)})
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {

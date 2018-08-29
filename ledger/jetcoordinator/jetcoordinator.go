@@ -26,7 +26,7 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	storage storage.LedgerStorer
+	storage storage.Store
 }
 
 // Pulse creates new jet drop and ends current slot.
@@ -36,6 +36,7 @@ func (jc *JetCoordinator) Pulse(new record.PulseNum) (*jetdrop.JetDrop, error) {
 	if new-current != 1 {
 		panic(fmt.Sprintf("Wrong pulse, got %v, but current is %v\n", new, current))
 	}
-	// TODO: increment stored pulse number and wait for all records from previous pulse to store
+	jc.storage.SetCurrentPulse(new)
+	// TODO: stop serving all requests (next node will be storage)
 	return jc.CreateDrop(current)
 }

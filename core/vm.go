@@ -14,25 +14,15 @@
  *    limitations under the License.
  */
 
-// Package foundation emulates foundation of types for golang contracts
-package foundation
+package core
 
-import "github.com/insolar/insolar/logicrunner"
+// MachineType is a type of virtual machine
+type MachineType int
 
-type CBORMarshaler interface {
-	Marshal(interface{}) []byte
-	Unmarshal(interface{}, []byte)
-}
+// Real constants of MachineType
+const (
+	MachineTypeBuiltin MachineType = iota
+	MachineTypeGoPlugin
 
-// Call other contract via network dispatcher
-func Call(Reference logicrunner.Reference, MethodName string, Arguments []interface{}) ([]interface{}, error) {
-	return nil, nil
-}
-
-func APICall() { // GetPulsar / GetNodeList / GetValidatorCandidates
-}
-
-// ???
-type CallContext struct {
-	Caller logicrunner.Reference
-}
+	MachineTypesTotalCount
+)

@@ -20,6 +20,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,20 +30,20 @@ func TestMain(m *testing.M) {
 
 func TestCodeRecord_GetCode(t *testing.T) {
 	rec := CodeRecord{
-		TargetedCode: map[ArchType][]byte{
+		TargetedCode: map[core.MachineType][]byte{
 			1: {1},
 			2: {2},
 		},
 	}
 
-	_, err := rec.GetCode([]ArchType{15})
+	_, err := rec.GetCode([]core.MachineType{15})
 	assert.Error(t, err)
 
-	code, err := rec.GetCode([]ArchType{3, 2, 1})
+	code, err := rec.GetCode([]core.MachineType{3, 2, 1})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{2}, code)
 
-	code, err = rec.GetCode([]ArchType{1})
+	code, err = rec.GetCode([]core.MachineType{1})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1}, code)
 }
@@ -74,8 +75,8 @@ func TestReference2Key(t *testing.T) {
 		Record: idPulse1,
 	}
 
-	k0 := refPulse0.Key()
-	k1 := refPulse1.Key()
+	k0 := refPulse0.Bytes()
+	k1 := refPulse1.Bytes()
 	assert.NotEqual(t, k0, k1)
 }
 
@@ -86,5 +87,5 @@ func TestReference_Key(t *testing.T) {
 		Domain: ID{Pulse: 1},
 		Record: ID{Pulse: 2},
 	}
-	assert.Equal(t, []byte{0, 0, 0, 2}, ref.Key()[:4])
+	assert.Equal(t, []byte{0, 0, 0, 2}, ref.Bytes()[:4])
 }

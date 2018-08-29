@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
@@ -28,7 +29,7 @@ import (
 )
 
 type preparedDOTestData struct {
-	ledger  storage.LedgerStorer
+	ledger  storage.Store
 	manager *LedgerArtifactManager
 	objRec  *record.ObjectActivateRecord
 	objRef  *record.Reference
@@ -37,7 +38,7 @@ type preparedDOTestData struct {
 func prepareDOTestData(t *testing.T) (preparedDOTestData, func()) {
 	ledger, cleaner := leveltestutils.TmpDB(t, "")
 
-	rec := record.ObjectActivateRecord{Memory: record.Memory{1}}
+	rec := record.ObjectActivateRecord{Memory: []byte{1}}
 	ref, err := ledger.SetRecord(&rec)
 	assert.NoError(t, err)
 
@@ -45,7 +46,7 @@ func prepareDOTestData(t *testing.T) (preparedDOTestData, func()) {
 		ledger: ledger,
 		manager: &LedgerArtifactManager{
 			storer:   ledger,
-			archPref: []record.ArchType{1},
+			archPref: []core.MachineType{1},
 		},
 		objRec: &rec,
 		objRef: ref,
@@ -56,7 +57,7 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 	td, cleaner := prepareDOTestData(t)
 	defer cleaner()
 
-	amendRec := record.ObjectAmendRecord{NewMemory: record.Memory{2}}
+	amendRec := record.ObjectAmendRecord{NewMemory: []byte{2}}
 	amendRef, _ := td.ledger.SetRecord(&amendRec)
 	idx := index.ObjectLifeline{
 		LatestStateRef: *amendRef,
@@ -71,7 +72,7 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 	}
 	mem, err := desc.GetMemory()
 	assert.NoError(t, err)
-	assert.Equal(t, record.Memory{1}, mem)
+	assert.Equal(t, []byte{1}, mem)
 
 	desc = ObjectDescriptor{
 		manager:           td.manager,
@@ -81,15 +82,15 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 	}
 	mem, err = desc.GetMemory()
 	assert.NoError(t, err)
-	assert.Equal(t, record.Memory{2}, mem)
+	assert.Equal(t, []byte{2}, mem)
 }
 
 func TestObjectDescriptor_GetDelegates(t *testing.T) {
 	td, cleaner := prepareDOTestData(t)
 	defer cleaner()
 
-	appendRec1 := record.ObjectAppendRecord{AppendMemory: record.Memory{2}}
-	appendRec2 := record.ObjectAppendRecord{AppendMemory: record.Memory{3}}
+	appendRec1 := record.ObjectAppendRecord{AppendMemory: []byte{2}}
+	appendRec2 := record.ObjectAppendRecord{AppendMemory: []byte{3}}
 	appendRef1, _ := td.ledger.SetRecord(&appendRec1)
 	appendRef2, _ := td.ledger.SetRecord(&appendRec2)
 	idx := index.ObjectLifeline{
@@ -107,5 +108,5 @@ func TestObjectDescriptor_GetDelegates(t *testing.T) {
 
 	appends, err := desc.GetDelegates()
 	assert.NoError(t, err)
-	assert.Equal(t, []record.Memory{{2}, {3}}, appends)
+	assert.Equal(t, [][]byte{{2}, {3}}, appends)
 }

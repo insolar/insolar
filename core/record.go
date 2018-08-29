@@ -14,4 +14,16 @@
  *    limitations under the License.
  */
 
-package ledger
+package core
+
+import (
+	"bytes"
+)
+
+// RecordRef is unified record reference.
+type RecordRef []byte
+
+func (left RecordRef) Equal(right RecordRef) bool {
+	// TODO: ignore special bits
+	return bytes.Equal(left, right)
+}

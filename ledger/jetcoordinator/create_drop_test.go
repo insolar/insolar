@@ -48,7 +48,7 @@ func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
 	assert.NotNil(t, dropz)
 
 	// save pulse1 records
-	ledger.SetPulseFn(func() record.PulseNum { return pulse1 })
+	ledger.SetCurrentPulse(pulse1)
 	ledger.SetRecord(&record.CodeRecord{})
 	ledger.SetRecord(&record.ClassActivateRecord{})
 	ledger.SetRecord(&record.ObjectActivateRecord{})

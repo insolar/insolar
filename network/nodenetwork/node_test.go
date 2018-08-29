@@ -33,17 +33,15 @@ func TestNewNode(t *testing.T) {
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16001")
 	dht1, _ := hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
 	assert.NoError(t, err)
-	node, err := NewNode("id", nil, dht1, "domainID", "role")
+	node := NewNode("id", nil, dht1, "domainID")
 
-	assert.Error(t, err, "bootstrap node not exist")
-	assert.Nil(t, node)
+	assert.NotNil(t, node)
 }
 
 func TestNode_GetDomainID(t *testing.T) {
 	expectedDomain := "domain id"
 	node := Node{
 		id:       "id",
-		role:     "role",
 		dht:      nil,
 		domainID: expectedDomain,
 	}
@@ -56,7 +54,6 @@ func TestNode_GetNodeID(t *testing.T) {
 	node := Node{
 		domainID: "domain id",
 		id:       expectedID,
-		role:     "role",
 		dht:      nil,
 		host:     nil,
 	}
@@ -67,11 +64,26 @@ func TestNode_GetNodeRole(t *testing.T) {
 	expectedRole := "role"
 	node := Node{
 		id:       "id",
-		role:     expectedRole,
 		dht:      nil,
 		domainID: "domain id",
 		host:     nil,
 	}
 
+	node.setRole(expectedRole)
 	assert.Equal(t, expectedRole, node.GetNodeRole())
+}
+
+func TestNode_SendPacket(t *testing.T) {
+	ids1 := make([]id.ID, 0)
+	id1, _ := id.NewID(id.GetRandomKey())
+	ids1 = append(ids1, id1)
+	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16002")
+	dht1, _ := hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
+	assert.NoError(t, err)
+	node := NewNode("id", nil, dht1, "domainID")
+
+	args := make([][]byte, 2)
+
+	err = node.SendPacket("target", "method", args)
+	assert.Error(t, err)
 }

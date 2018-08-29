@@ -99,6 +99,14 @@ func Bytes2ID(b []byte) ID {
 	}
 }
 
+// Bytes2Reference converts commonly used reference to Ledger-specific.
+func Bytes2Reference(b []byte) Reference {
+	return Reference{
+		Record: Bytes2ID(b[:IDSize]),
+		Domain: Bytes2ID(b[IDSize:]),
+	}
+}
+
 // MustWrite writes binary representation of PulseNum to io.Writer.
 //
 // Prefix 'Must' means it panics on write error.

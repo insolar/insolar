@@ -2,6 +2,8 @@ Insolar
 ===============
 Blockchain platform
 
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2150/badge)](https://bestpractices.coreinfrastructure.org/projects/2150)
+
 [![Build Status](https://travis-ci.org/insolar/insolar.svg?branch=master)](https://travis-ci.org/insolar/insolar)
 [![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar)](https://goreportcard.com/report/github.com/insolar/insolar)
 [![GoDoc](https://godoc.org/github.com/insolar/insolar?status.svg)](https://godoc.org/github.com/insolar/insolar)
@@ -71,9 +73,7 @@ Installation
 
 Contributing
 ------------
-Please feel free to submit issues, fork the repository and send pull requests!
-
-When submitting an issue, we ask that you please include a complete test function that demonstrates the issue.
+See [Contributing Guidelines](.github/CONTRIBUTING.md).
 
 License
 -------

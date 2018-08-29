@@ -19,6 +19,7 @@ package artifactmanager
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -28,7 +29,7 @@ import (
 )
 
 type preparedDCTestData struct {
-	ledger   storage.LedgerStorer
+	ledger   storage.Store
 	manager  *LedgerArtifactManager
 	classRec *record.ClassActivateRecord
 	classRef *record.Reference
@@ -45,7 +46,7 @@ func prepareDCTestData(t *testing.T) (preparedDCTestData, func()) {
 		ledger: ledger,
 		manager: &LedgerArtifactManager{
 			storer:   ledger,
-			archPref: []record.ArchType{1},
+			archPref: []core.MachineType{1},
 		},
 		classRec: &rec,
 		classRef: ref,
@@ -57,7 +58,7 @@ func TestClassDescriptor_GetCode(t *testing.T) {
 	defer cleaner()
 
 	codeRef, _ := td.ledger.SetRecord(&record.CodeRecord{
-		TargetedCode: map[record.ArchType][]byte{
+		TargetedCode: map[core.MachineType][]byte{
 			1: {1, 2, 3},
 		},
 	})
@@ -85,23 +86,23 @@ func TestClassDescriptor_GetMigrations(t *testing.T) {
 	defer cleaner()
 
 	codeRef1, _ := td.ledger.SetRecord(&record.CodeRecord{
-		TargetedCode: map[record.ArchType][]byte{
-			record.ArchType(1): {1},
+		TargetedCode: map[core.MachineType][]byte{
+			core.MachineType(1): {1},
 		},
 	})
 	codeRef2, _ := td.ledger.SetRecord(&record.CodeRecord{
-		TargetedCode: map[record.ArchType][]byte{
-			record.ArchType(1): {2},
+		TargetedCode: map[core.MachineType][]byte{
+			core.MachineType(1): {2},
 		},
 	})
 	codeRef3, _ := td.ledger.SetRecord(&record.CodeRecord{
-		TargetedCode: map[record.ArchType][]byte{
-			record.ArchType(1): {3},
+		TargetedCode: map[core.MachineType][]byte{
+			core.MachineType(1): {3},
 		},
 	})
 	codeRef4, _ := td.ledger.SetRecord(&record.CodeRecord{
-		TargetedCode: map[record.ArchType][]byte{
-			record.ArchType(1): {4},
+		TargetedCode: map[core.MachineType][]byte{
+			core.MachineType(1): {4},
 		},
 	})
 

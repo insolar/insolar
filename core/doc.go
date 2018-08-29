@@ -14,4 +14,5 @@
  *    limitations under the License.
  */
 
-package ledger
+// Package core contains common definitions used by other modules.
+package core
