@@ -19,6 +19,7 @@ package logicrunner
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/messagerouter/types"
 	"github.com/pkg/errors"
 )
 
@@ -75,16 +76,21 @@ func (r *LogicRunner) GetExecutor(t core.MachineType) (Executor, error) {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (r *LogicRunner) Execute(ref string, method string, args Arguments) ([]byte, []byte, error) {
-	data, codeRef, err := r.ArtifactManager.Get(ref)
+func (r *LogicRunner) Execute(msg types.Message) *types.Response {
+	data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't ")
+		return &types.Response{Error: errors.Wrap(err, "couldn't ")}
 	}
 
 	executor, err := r.GetExecutor(core.MachineTypeGoPlugin)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "no executer registered")
+		return &types.Response{Error: errors.Wrap(err, "no executer registered")}
 	}
 
-	return executor.Exec(codeRef, data, method, args)
+	newData, result, err := executor.Exec(codeRef, data, msg.Method, msg.Arguments)
+	if err != nil {
+		return &types.Response{Error: errors.Wrap(err, "executer error")}
+	}
+
+	return &types.Response{Data: newData, Result: result}
 }
