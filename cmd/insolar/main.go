@@ -21,7 +21,8 @@ import (
 	"os/signal"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 func main() {
@@ -40,6 +41,8 @@ func main() {
 			os.Exit(0)
 		}
 	*/
+	jww.SetStdoutThreshold(jww.LevelTrace)
+	jww.SetLogOutput(log.StandardLogger().Out)
 
 	cfgHolder := configuration.NewHolder()
 	cfgHolder.Load()
@@ -47,7 +50,7 @@ func main() {
 
 	network, err := StartNetwork(cfgHolder.Configuration)
 	if err != nil {
-		logrus.Fatalln("Failed to start network: ", err.Error())
+		log.Fatalln("Failed to start network: ", err.Error())
 	}
 
 	defer func() {
@@ -57,7 +60,7 @@ func main() {
 
 	handleStats(cfgHolder.Configuration.Stats, network)
 
-	//fmt.Println("Running interactive mode:")
+	//Println("Running interactive mode:")
 	//repl(dhtNetwork, ctx)
 }
 
