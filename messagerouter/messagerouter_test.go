@@ -20,6 +20,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -28,7 +29,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/stretchr/testify/assert"
-	"github.com/insolar/insolar/configuration"
 )
 
 type req struct {
@@ -48,8 +48,6 @@ type runner struct {
 	responses []resp
 }
 
-const closedMessage = "closed" // "broken pipe" for kcpTransport
-
 func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
@@ -57,7 +55,7 @@ func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transpor
 	cfg := configuration.NewConfiguration().Host.Transport
 	cfg.Address = address
 	cfg.BehindNAT = false
-	tp, err := transport.NewTransport(cfg,relay.NewProxy())
+	tp, err := transport.NewTransport(cfg, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
@@ -123,7 +121,7 @@ func TestRoute(t *testing.T) {
 	ctx := getDefaultCtx(dht)
 
 	mr, _ := New(r, dht)
-	reference := dht.GetOriginID(ctx)
+	reference := dht.GetOriginID(ctx).HashString()
 
 	t.Run("success", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})

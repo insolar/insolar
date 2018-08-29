@@ -173,7 +173,7 @@ func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 func doInfo(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	hosts := dhtNetwork.NumHosts(ctx)
 	originID := dhtNetwork.GetOriginID(ctx)
-	fmt.Println("ID: " + originID)
+	fmt.Println("ID: " + originID.HashString())
 	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
 }
 
