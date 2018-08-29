@@ -249,32 +249,33 @@ func generateContractProxy(fileName string, out io.Writer) error {
 		proxyPackageName = match[1]
 	}
 
-	code := "package " + proxyPackageName + "\n\n"
+	types := generateTypes(parsed) + "\n"
 
-	code += `import (
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
-)
+	methodsProxies := generateMethodsProxies(parsed) + "\n"
 
-`
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return errors.Wrap(err, "couldn't find info about current file")
+	}
+	templateDir := filepath.Join(filepath.Dir(currentFile), "templates/proxy.go.tpl")
+	tmpl, err := template.ParseFiles(templateDir)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse template for output")
+	}
 
-	code += generateTypes(parsed) + "\n"
-
-	code += `// Contract proxy type
-type ` + parsed.contract + ` struct {
-	Reference string
-}
-
-`
-
-	code += `// GetObject
-func GetObject(ref string) (r *` + parsed.contract + `) {
-	return &` + parsed.contract + `{Reference: ref}
-}
-`
-
-	code += generateMethodsProxies(parsed) + "\n"
-
-	_, err = out.Write([]byte(code))
+	data := struct {
+		PackageName    string
+		Types          string
+		ContractType   string
+		MethodsProxies string
+	}{
+		proxyPackageName,
+		types,
+		parsed.contract,
+		methodsProxies,
+	}
+	err = tmpl.Execute(out, data)
+	// _, err = out.Write([]byte(code))
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
 	}
