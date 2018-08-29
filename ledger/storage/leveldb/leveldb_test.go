@@ -234,6 +234,6 @@ func TestLevelLedger_SetEntropy(t *testing.T) {
 	entropy, err := ledger.GetEntropy(42)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1, 2, 3}, entropy)
-	entropy, err = ledger.GetEntropy(1)
+	_, err = ledger.GetEntropy(1)
 	assert.Error(t, err)
 }
