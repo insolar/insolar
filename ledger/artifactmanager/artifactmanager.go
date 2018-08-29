@@ -27,7 +27,7 @@ import (
 
 // LedgerArtifactManager provides concrete API to storage for processing module
 type LedgerArtifactManager struct {
-	storer   storage.LedgerStorer
+	storer   storage.Store
 	archPref []core.MachineType
 }
 

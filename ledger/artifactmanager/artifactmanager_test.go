@@ -30,14 +30,14 @@ import (
 )
 
 func genRandomRef() *record.Reference {
-	coreRef := make(core.RecordRef, record.RefIDSize, record.RefIDSize)
+	coreRef := make(core.RecordRef, record.RefIDSize)
 	coreRef[record.RefIDSize-1] = byte(rand.Int() % 256)
 	ref := record.Bytes2Reference(coreRef)
 	return &ref
 }
 
 type preparedAMTestData struct {
-	ledger     storage.LedgerStorer
+	ledger     storage.Store
 	manager    core.ArtifactManager
 	domainRef  *record.Reference
 	requestRef *record.Reference

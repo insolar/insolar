@@ -29,7 +29,7 @@ import (
 )
 
 type preparedDOTestData struct {
-	ledger  storage.LedgerStorer
+	ledger  storage.Store
 	manager *LedgerArtifactManager
 	objRec  *record.ObjectActivateRecord
 	objRef  *record.Reference

@@ -99,6 +99,7 @@ func Bytes2ID(b []byte) ID {
 	}
 }
 
+// Bytes2Reference converts commonly used reference to Ledger-specific.
 func Bytes2Reference(b []byte) Reference {
 	return Reference{
 		Record: Bytes2ID(b[:IDSize]),

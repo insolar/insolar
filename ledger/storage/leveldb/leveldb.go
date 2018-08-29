@@ -18,7 +18,6 @@ package leveldb
 
 import (
 	"path/filepath"
-	"time"
 
 	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -42,15 +41,16 @@ type PulseFn func() record.PulseNum
 
 // LevelLedger represents ledger's LevelDB storage.
 type LevelLedger struct {
-	ldb     *leveldb.DB
-	pulseFn PulseFn
-	zeroRef record.Reference
+	ldb          *leveldb.DB
+	currentPulse record.PulseNum
+	zeroRef      record.Reference
 }
 
 const (
 	scopeIDLifeline byte = 1
 	scopeIDRecord   byte = 2
 	scopeIDJetDrop  byte = 3
+	scopeIDEntropy  byte = 4
 )
 
 // InitDB returns LevelDB ledger implementation.
@@ -70,10 +70,6 @@ func InitDB(dir string, opts *opt.Options) (*LevelLedger, error) {
 	var zeroID record.ID
 	ledger := LevelLedger{
 		ldb: db,
-		// FIXME: temporary pulse implementation
-		pulseFn: func() record.PulseNum {
-			return record.PulseNum(time.Now().Unix() / 10)
-		},
 		zeroRef: record.Reference{
 			Domain: record.ID{}, // TODO: fill domain
 			Record: zeroID,
@@ -100,14 +96,14 @@ func prefixkey(prefix byte, key []byte) []byte {
 	return k
 }
 
-// GetCurrentPulse return currently stored pulse.
-func (ll *LevelLedger) GetCurrentPulse() record.PulseNum {
-	return ll.pulseFn()
+// SetCurrentPulse stores current pulse number in memory.
+func (ll *LevelLedger) SetCurrentPulse(pulse record.PulseNum) {
+	ll.currentPulse = pulse
 }
 
-// SetPulseFn allows redefine pulse function.
-func (ll *LevelLedger) SetPulseFn(fn PulseFn) {
-	ll.pulseFn = fn
+// GetCurrentPulse returns current pulse number.
+func (ll *LevelLedger) GetCurrentPulse() record.PulseNum {
+	return ll.currentPulse
 }
 
 // GetRecord returns record from leveldb by *record.Reference.
@@ -137,7 +133,7 @@ func (ll *LevelLedger) SetRecord(rec record.Record) (*record.Reference, error) {
 	}
 	ref := &record.Reference{
 		Domain: rec.Domain().Record,
-		Record: record.ID{Pulse: ll.pulseFn(), Hash: raw.Hash()},
+		Record: record.ID{Pulse: ll.GetCurrentPulse(), Hash: raw.Hash()},
 	}
 	k := prefixkey(scopeIDRecord, ref.Bytes())
 	err = ll.ldb.Put(k, record.MustEncodeRaw(raw), nil)
@@ -255,6 +251,22 @@ func (ll *LevelLedger) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop)
 		return nil, err
 	}
 	return drop, nil
+}
+
+// SetEntropy stores given entropy for given pulse in storage.
+//
+// Entropy is used for calculating node roles.
+func (ll *LevelLedger) SetEntropy(pulse record.PulseNum, entropy []byte) error {
+	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
+	return ll.ldb.Put(k, entropy, nil)
+}
+
+// GetEntropy returns entropy from storage for given pulse.
+//
+// Entropy is used for calculating node roles.
+func (ll *LevelLedger) GetEntropy(pulse record.PulseNum) ([]byte, error) {
+	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
+	return ll.ldb.Get(k, nil)
 }
 
 // Close terminates db connection
