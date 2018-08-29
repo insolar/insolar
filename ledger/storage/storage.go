@@ -22,8 +22,11 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 )
 
-// LedgerStorer represents append-only Ladger storage.
-type LedgerStorer interface {
+// Store represents append-only Ledger storage.
+type Store interface {
+	// SetCurrentPulse stores current pulse number in memory.
+	SetCurrentPulse(record.PulseNum)
+	// GetCurrentPulse returns current pulse number.
 	GetCurrentPulse() record.PulseNum
 
 	GetRecord(*record.Reference) (record.Record, error)
@@ -40,4 +43,14 @@ type LedgerStorer interface {
 	// SetDrop gets previous JetDrop, saves and returns the new one
 	// for provided PulseNum.
 	SetDrop(record.PulseNum, *jetdrop.JetDrop) (*jetdrop.JetDrop, error)
+
+	// SetEntropy stores given entropy for given pulse in storage.
+	//
+	// Entropy is used for calculating node roles.
+	SetEntropy(record.PulseNum, []byte) error
+
+	// GetEntropy returns entropy from storage for given pulse.
+	//
+	// Entropy is used for calculating node roles.
+	GetEntropy(record.PulseNum) ([]byte, error)
 }

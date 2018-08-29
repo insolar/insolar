@@ -28,7 +28,7 @@ import (
 )
 
 type preparedDCTestData struct {
-	ledger   storage.LedgerStorer
+	ledger   storage.Store
 	manager  *LedgerArtifactManager
 	classRec *record.ClassActivateRecord
 	classRef *record.Reference

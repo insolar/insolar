@@ -48,7 +48,7 @@ func TestLevelLedger_SlotIterate(t *testing.T) {
 
 	// save records set in different pulses
 	for _, pulse := range pulses {
-		ledger.SetPulseFn(func() record.PulseNum { return pulse })
+		ledger.SetCurrentPulse(pulse)
 
 		for _, rec := range recset {
 			ref, err := ledger.SetRecord(rec)

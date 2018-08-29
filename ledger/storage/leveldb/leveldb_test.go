@@ -83,7 +83,7 @@ func TestLevelLedger_SetRecord(t *testing.T) {
 	defer cleaner()
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
-	ledger.SetPulseFn(func() record.PulseNum { return pulse1 })
+	ledger.SetCurrentPulse(pulse1)
 
 	passRecPulse1 := &record.LockUnlockRequest{}
 	idPulse1 := pulse1.ID(passRecPulse1)
@@ -210,7 +210,7 @@ func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 		Hash: []byte{0xFF},
 	}
 
-	ledger.SetPulseFn(func() record.PulseNum { return 42 })
+	ledger.SetCurrentPulse(42)
 	drop42, err := ledger.SetDrop(42, &fakeDrop)
 	assert.NoError(t, err)
 	got, err := ledger.GetDrop(42)
