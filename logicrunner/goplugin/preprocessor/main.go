@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"io"
 	"io/ioutil"
@@ -32,7 +33,12 @@ import (
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
+
+	"strconv"
 )
+
+var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
+var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
 type parsedFile struct {
 	name    string
@@ -50,6 +56,7 @@ func printUsage() {
 	fmt.Println("Commands: ")
 	fmt.Println(" wrapper   generate contract's wrapper")
 	fmt.Println(" proxy     generate contract's proxy")
+	fmt.Println(" imports   rewrite imports")
 }
 
 type outputFlag struct {
@@ -120,6 +127,23 @@ func main() {
 		}
 
 		err = generateContractProxy(fs.Arg(0), output.writer)
+		if err != nil {
+			panic(err)
+		}
+	case "imports":
+		fs := flag.NewFlagSet("imports", flag.ExitOnError)
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		err := fs.Parse(os.Args[2:])
+		if err != nil {
+			panic(err)
+		}
+
+		if fs.NArg() != 1 {
+			panic(errors.New("imports command should be followed by exactly one file name to process"))
+		}
+
+		err = cmdRewriteImports(fs.Arg(0), output.writer)
 		if err != nil {
 			panic(err)
 		}
@@ -210,15 +234,17 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	}
 
 	data := struct {
-		PackageName  string
-		ContractType string
-		Methods      []map[string]interface{}
-		ParsedCode   []byte
+		PackageName    string
+		ContractType   string
+		Methods        []map[string]interface{}
+		ParsedCode     []byte
+		FoundationPath string
 	}{
 		packageName,
 		parsed.contract,
 		generateContractMethodsInfo(parsed),
 		parsed.code,
+		foundationPath,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -362,17 +388,6 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 	return text, listCode
 }
 
-/* generated snipped must be something like this
-
-func (hw *HelloWorlder) INSWRAPER_Echo(cbor cborer, data []byte) ([]byte, error) {
-	args := [1]interface{}{}
-	args[0] = ""
-	cbor.Unmarshal(&args, data)
-	ret1, ret2 := hw.Echo(args[0].(string))
-	return cbor.Marshal([]interface{}{ret1, ret2}), nil
-}
-*/
-
 func generateExports(parsed *parsedFile) string {
 	text := "var INSEXPORT " + parsed.contract + "\n"
 	return text
@@ -444,4 +459,41 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	text += "}\n"
 
 	return text
+}
+
+func cmdRewriteImports(fname string, w io.Writer) error {
+	parsed, err := parseFile(fname)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse")
+	}
+	if err := rewriteImports(parsed); err != nil {
+		return errors.Wrap(err, "couldn't process")
+	}
+	if err := printer.Fprint(w, parsed.fileSet, parsed.node); err != nil {
+		return errors.Wrap(err, "couldn't save")
+	}
+	return nil
+}
+
+func rewriteImports(p *parsedFile) error {
+	quoted := strconv.Quote(clientFoundation)
+	for _, d := range p.node.Decls {
+		td, ok := d.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		if td.Tok != token.IMPORT {
+			continue
+		}
+		for _, s := range td.Specs {
+			is, ok := s.(*ast.ImportSpec)
+			if !ok {
+				continue
+			}
+			if is.Path.Value == quoted {
+				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
+			}
+		}
+	}
+	return nil
 }

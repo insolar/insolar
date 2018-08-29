@@ -1,7 +1,7 @@
 package {{ .PackageName}}
 
 import (
-    "github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
+    "{{.FoundationPath}}"
 )
 
 {{ range $method := .Methods }}

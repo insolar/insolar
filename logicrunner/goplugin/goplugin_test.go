@@ -153,10 +153,12 @@ func TestHelloWorld(t *testing.T) {
 const contractOneCode = `
 package main
 
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
 
 // @inscontract
 type One struct {
+	foundation.BaseContract
 }
 
 func (r *One) Hello(s string) string {
@@ -170,8 +172,11 @@ func (r *One) Hello(s string) string {
 const contractTwoCode = `
 package main
 
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
 // @inscontract
 type Two struct {
+	foundation.BaseContract
 }
 
 func (r *Two) Hello(s string) string {
