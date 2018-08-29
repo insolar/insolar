@@ -54,6 +54,28 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 	}, cleaner
 }
 
+func TestLedgerArtifactManager_DeclareType(t *testing.T) {
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+	typeDec := []byte{1, 2, 3}
+	coreRef, err := td.manager.DeclareType(td.domainRef.Bytes(), td.requestRef.Bytes(), typeDec)
+	assert.NoError(t, err)
+	ref := record.Bytes2Reference(coreRef[:])
+	typeRec, err := td.ledger.GetRecord(&ref)
+	assert.NoError(t, err)
+	assert.Equal(t, typeRec, &record.TypeRecord{
+		StorageRecord: record.StorageRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
+				},
+			},
+		},
+		TypeDeclaration: typeDec,
+	})
+}
+
 func TestLedgerArtifactManager_DeployCode(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
