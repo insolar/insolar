@@ -249,9 +249,9 @@ func generateContractProxy(fileName string, out io.Writer) error {
 		proxyPackageName = match[1]
 	}
 
-	types := generateTypes(parsed) + "\n"
+	types := generateTypes(parsed)
 
-	methodsProxies := generateMethodsProxies(parsed) + "\n"
+	methodsProxies := generateMethodsProxies(parsed)
 
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -265,9 +265,9 @@ func generateContractProxy(fileName string, out io.Writer) error {
 
 	data := struct {
 		PackageName    string
-		Types          string
+		Types          []string
 		ContractType   string
-		MethodsProxies string
+		MethodsProxies []map[string]interface{}
 	}{
 		proxyPackageName,
 		types,
@@ -321,17 +321,21 @@ func getMethods(parsed *parsedFile) {
 }
 
 // nolint
-func generateTypes(parsed *parsedFile) string {
-	text := ""
+func generateTypes(parsed *parsedFile) []string {
+	var types []string
 	for _, t := range parsed.types {
-		text += "type " + string(parsed.code[t.Pos()-1:t.End()-1]) + "\n\n"
+		types = append(types, "type "+string(parsed.code[t.Pos()-1:t.End()-1]))
 	}
 
-	return text
+	return types
 }
 
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
 	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
+
+	if list == nil {
+		return text, ""
+	}
 
 	for i, arg := range list.List {
 		initializer := ""
@@ -379,13 +383,68 @@ func generateExports(parsed *parsedFile) string {
 	return text
 }
 
-func generateMethodsProxies(parsed *parsedFile) string {
-	text := ""
+func generateArguments(parsed *parsedFile, params *ast.FieldList) string {
+	args := ""
+	for i, arg := range params.List {
+		if i > 0 {
+			args += ", "
+		}
+		args += arg.Names[0].Name
+		args += " " + string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1])
+	}
+	return args
+}
+
+func generateResultsTypes(parsed *parsedFile, results *ast.FieldList) string {
+	resultsTypes := ""
+	if results.NumFields() > 0 {
+		for i, arg := range results.List {
+			if i > 0 {
+				resultsTypes += ", "
+			}
+			resultsTypes += string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
+		}
+	}
+	return resultsTypes
+}
+
+func generateInitArguments(list *ast.FieldList) string {
+	initArgs := ""
+	initArgs += fmt.Sprintf("var args [%d]interface{}\n", list.NumFields())
+	for i, arg := range list.List {
+		initArgs += fmt.Sprintf("\targs[%d] = %s\n", i, arg.Names[0].Name)
+	}
+	return initArgs
+}
+
+func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[string]interface{} {
+
+	args := generateArguments(parsed, method.Type.Params)
+
+	resultsTypes := generateResultsTypes(parsed, method.Type.Results)
+
+	initArgs := generateInitArguments(method.Type.Params)
+
+	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
+
+	info := map[string]interface{}{
+		"Name":           method.Name.Name,
+		"ResultZeroList": resInit,
+		"Results":        resList,
+		"Arguments":      args,
+		"ResultsTypes":   resultsTypes,
+		"InitArgs":       initArgs,
+	}
+	return info
+}
+
+func generateMethodsProxies(parsed *parsedFile) []map[string]interface{} {
+	var methodsProxies []map[string]interface{}
 
 	for _, method := range parsed.methods[parsed.contract] {
-		text += generateMethodProxy(parsed, method) + "\n"
+		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
 	}
-	return text
+	return methodsProxies
 }
 
 func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
