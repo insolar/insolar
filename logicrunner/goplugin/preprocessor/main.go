@@ -24,8 +24,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
+	"text/template"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -163,6 +166,28 @@ func parseFile(fileName string) (*parsedFile, error) {
 	return &res, nil
 }
 
+func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
+	var methodsInfo []map[string]interface{}
+	for _, method := range parsed.methods[parsed.contract] {
+		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
+
+		rets := []string{}
+		for i := range method.Type.Results.List {
+			rets = append(rets, fmt.Sprintf("ret%d", i))
+		}
+		resultList := strings.Join(rets, ", ")
+
+		info := map[string]interface{}{
+			"Name":              method.Name.Name,
+			"ArgumentsZeroList": argsInit,
+			"Results":           resultList,
+			"Arguments":         argsList,
+		}
+		methodsInfo = append(methodsInfo, info)
+	}
+	return methodsInfo
+}
+
 func generateContractWrapper(fileName string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
@@ -174,11 +199,28 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		panic("Contract must be in main package")
 	}
 
-	code := "package " + packageName + "\n\n"
-	code += generateWrappers(parsed) + "\n"
-	code += generateExports(parsed) + "\n"
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return errors.Wrap(err, "couldn't find info about current file")
+	}
+	templateDir := filepath.Join(filepath.Dir(currentFile), "templates/wrapper.go.tpl")
+	tmpl, err := template.ParseFiles(templateDir)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse template for output")
+	}
 
-	_, err = out.Write([]byte(code))
+	data := struct {
+		PackageName  string
+		ContractType string
+		Methods      []map[string]interface{}
+		ParsedCode   []byte
+	}{
+		packageName,
+		parsed.contract,
+		generateContractMethodsInfo(parsed),
+		parsed.code,
+	}
+	err = tmpl.Execute(out, data)
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
 	}
@@ -287,19 +329,8 @@ func generateTypes(parsed *parsedFile) string {
 	return text
 }
 
-func generateWrappers(parsed *parsedFile) string {
-	text := `import (
-	"github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
-	)` + "\n"
-
-	for _, method := range parsed.methods[parsed.contract] {
-		text += generateMethodWrapper(parsed, method) + "\n"
-	}
-	return text
-}
-
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
-	text := fmt.Sprintf("\t%s := [%d]interface{}{}\n", name, list.NumFields())
+	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
 
 	for i, arg := range list.List {
 		initializer := ""
@@ -329,27 +360,6 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 	}
 
 	return text, listCode
-}
-
-func generateMethodWrapper(parsed *parsedFile, method *ast.FuncDecl) string {
-	text := fmt.Sprintf("func (self *%s) INSWRAPER_%s(cbor foundation.CBORMarshaler, data []byte) ([]byte) {\n",
-		parsed.contract, method.Name.Name)
-
-	argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-	text += argsInit
-
-	text += "\tcbor.Unmarshal(&args, data)\n"
-
-	rets := []string{}
-	for i := range method.Type.Results.List {
-		rets = append(rets, fmt.Sprintf("ret%d", i))
-	}
-	ret := strings.Join(rets, ", ")
-	text += fmt.Sprintf("\t%s := self.%s(%s)\n", ret, method.Name.Name, argsList)
-
-	text += fmt.Sprintf("\treturn cbor.Marshal([]interface{}{%s})\n", strings.Join(rets, ", "))
-	text += "}\n"
-	return text
 }
 
 /* generated snipped must be something like this
