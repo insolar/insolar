@@ -307,9 +307,9 @@ func (dht *DHT) NumHosts(ctx Context) int {
 }
 
 // GetOriginID returns the base58 encoded identifier of the local host.
-func (dht *DHT) GetOriginID(ctx Context) id.ID {
+func (dht *DHT) GetOriginID(ctx Context) *host.Host {
 	ht := dht.htFromCtx(ctx)
-	return ht.Origin.ID
+	return ht.Origin
 }
 
 // Listen begins listening on the socket for incoming Packets.
@@ -1474,7 +1474,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 		},
 	}
 
-	if target == dht.GetOriginID(ctx).HashString() {
+	if target == dht.GetOriginID(ctx).ID.HashString() {
 		return dht.rpc.Invoke(request.Sender, method, args)
 	}
 

@@ -30,7 +30,7 @@ func TestNewNode(t *testing.T) {
 	ids1 := make([]id.ID, 0)
 	id1, _ := id.NewID(id.GetRandomKey())
 	ids1 = append(ids1, id1)
-	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16001")
+	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16002")
 	dht1, _ := hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
 	assert.NoError(t, err)
 	node := NewNode("id", nil, dht1, "domainID")
