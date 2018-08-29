@@ -304,7 +304,6 @@ func generateContractProxy(fileName string, out io.Writer) error {
 		methodsProxies,
 	}
 	err = tmpl.Execute(out, data)
-	// _, err = out.Write([]byte(code))
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
 	}
