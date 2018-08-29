@@ -84,6 +84,6 @@ func TestNode_SendPacket(t *testing.T) {
 
 	args := make([][]byte, 2)
 
-	err = node.SendPacket("target", "method", args)
+	err = node.SendPacket("method", args)
 	assert.Error(t, err)
 }
