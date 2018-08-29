@@ -27,7 +27,7 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
-	"github.com/insolar/insolar/messagerouter"
+	"github.com/insolar/insolar/messagerouter/types"
 	"github.com/insolar/insolar/network/hostnetwork"
 )
 
@@ -260,7 +260,7 @@ type testMessageRouter struct {
 	plugin *GoPlugin
 }
 
-func (r *testMessageRouter) Route(ctx hostnetwork.Context, msg messagerouter.Message) (resp messagerouter.Response, err error) {
+func (r *testMessageRouter) Route(ctx hostnetwork.Context, msg types.Message) (resp types.Response, err error) {
 	ch := new(codec.CborHandle)
 
 	var data []byte
@@ -268,10 +268,10 @@ func (r *testMessageRouter) Route(ctx hostnetwork.Context, msg messagerouter.Mes
 		&struct{}{},
 	)
 	if err != nil {
-		return messagerouter.Response{}, err
+		return types.Response{}, err
 	}
 	resdata, reslist, err := r.plugin.CallMethod("two", data, msg.Method, msg.Arguments)
-	return messagerouter.Response{Data: resdata, Result: reslist, Error: err}, nil
+	return types.Response{Data: resdata, Result: reslist, Error: err}, nil
 }
 
 func TestContractCallingContract(t *testing.T) {

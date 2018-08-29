@@ -16,6 +16,11 @@
 
 package types
 
+import (
+	// TODO: should go away, no imports in TYPES package
+	"github.com/insolar/insolar/network/hostnetwork"
+)
+
 // Message is a routable packet, ATM just a method call
 type Message struct {
 	Caller    struct{}
@@ -34,4 +39,9 @@ type Response struct {
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	Execute(msg Message) (res *Response)
+}
+
+// MessageRouter interface
+type MessageRouter interface {
+	Route(ctx hostnetwork.Context, msg Message) (resp Response, err error)
 }
