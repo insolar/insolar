@@ -17,6 +17,9 @@
 package configuration
 
 import (
+	"reflect"
+	"strings"
+
 	"github.com/spf13/viper"
 )
 
@@ -53,12 +56,17 @@ func NewHolder() Holder {
 	cfg := NewConfiguration()
 	holder := Holder{cfg, viper.New()}
 
-	holder.viper.SetConfigName("insolar")
-	holder.viper.AddConfigPath("$HOME/.insolar")
+	holder.viper.SetConfigName(".insolar")
+	holder.viper.AddConfigPath("$HOME/")
 	holder.viper.AddConfigPath(".")
 	holder.viper.SetConfigType("yml")
 
 	holder.viper.SetDefault("insolar", cfg)
+
+	holder.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	holder.viper.SetEnvPrefix("insolar")
+	//holder.viper.AutomaticEnv()
+
 	return holder
 }
 
@@ -69,7 +77,15 @@ func (c *Holder) Load() error {
 		return err
 	}
 
-	return c.viper.UnmarshalKey("insolar", &c.Configuration)
+	// workaround for AutomaticEnv issue https://github.com/spf13/viper/issues/188
+	bindEnvs(c.viper, c.Configuration)
+
+	err = c.viper.UnmarshalKey("insolar", &c.Configuration)
+	if err != nil {
+		return err
+	}
+
+	return c.viper.Unmarshal(&c.Configuration)
 }
 
 // LoadFromFile method reads configuration from particular file path
@@ -86,4 +102,25 @@ func (c *Holder) Save() error {
 // SaveAs method writes configuration to particular file path
 func (c *Holder) SaveAs(path string) error {
 	return c.viper.WriteConfigAs(path)
+}
+
+func bindEnvs(v *viper.Viper, iface interface{}, parts ...string) {
+	ifv := reflect.ValueOf(iface)
+	ift := reflect.TypeOf(iface)
+	for i := 0; i < ift.NumField(); i++ {
+		fieldv := ifv.Field(i)
+		t := ift.Field(i)
+		name := strings.ToLower(t.Name)
+		tag, ok := t.Tag.Lookup("mapstructure")
+		if ok {
+			name = tag
+		}
+		path := append(parts, name)
+		switch fieldv.Kind() {
+		case reflect.Struct:
+			bindEnvs(v, fieldv.Interface(), path...)
+		default:
+			v.BindEnv(strings.Join(path, "."))
+		}
+	}
 }
