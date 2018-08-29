@@ -411,29 +411,18 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 	return text, listCode
 }
 
-func generateArguments(parsed *parsedFile, params *ast.FieldList) string {
-	args := ""
-	for i, arg := range params.List {
+func genFieldList(parsed *parsedFile, params *ast.FieldList, withNames bool) string {
+	res := ""
+	for i, e := range params.List {
 		if i > 0 {
-			args += ", "
+			res += ", "
 		}
-		args += arg.Names[0].Name
-		args += " " + string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1])
-	}
-	return args
-}
-
-func generateResultsTypes(parsed *parsedFile, results *ast.FieldList) string {
-	resultsTypes := ""
-	if results.NumFields() > 0 {
-		for i, arg := range results.List {
-			if i > 0 {
-				resultsTypes += ", "
-			}
-			resultsTypes += string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
+		if withNames {
+			res += e.Names[0].Name + " "
 		}
+		res += string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
 	}
-	return resultsTypes
+	return res
 }
 
 func generateInitArguments(list *ast.FieldList) string {
@@ -447,23 +436,16 @@ func generateInitArguments(list *ast.FieldList) string {
 
 func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[string]interface{} {
 
-	args := generateArguments(parsed, method.Type.Params)
-
-	resultsTypes := generateResultsTypes(parsed, method.Type.Results)
-
-	initArgs := generateInitArguments(method.Type.Params)
-
 	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
 
-	info := map[string]interface{}{
+	return map[string]interface{}{
 		"Name":           method.Name.Name,
 		"ResultZeroList": resInit,
 		"Results":        resList,
-		"Arguments":      args,
-		"ResultsTypes":   resultsTypes,
-		"InitArgs":       initArgs,
+		"Arguments":      genFieldList(parsed, method.Type.Params, true),
+		"ResultsTypes":   genFieldList(parsed, method.Type.Results, false),
+		"InitArgs":       generateInitArguments(method.Type.Params),
 	}
-	return info
 }
 
 func generateMethodsProxies(parsed *parsedFile) []map[string]interface{} {
