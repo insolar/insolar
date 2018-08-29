@@ -43,9 +43,10 @@ func NewService() *Service {
 }
 
 // AddNode adds a node to service.
-func (service *Service) AddNode(node *nodenetwork.Node) {
+func (service *Service) AddNode(node *nodenetwork.Node, domainID string) {
 	if node != nil {
 		service.nodes[node.GetNodeID()] = node
+		service.referenceMap[domainID] = node.GetNodeID()
 	}
 }
 
