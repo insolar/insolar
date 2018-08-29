@@ -36,7 +36,73 @@ func (jc *JetCoordinator) Pulse(new record.PulseNum) (*jetdrop.JetDrop, error) {
 	if new-current != 1 {
 		panic(fmt.Sprintf("Wrong pulse, got %v, but current is %v\n", new, current))
 	}
-	jc.storage.SetCurrentPulse(new)
+
 	// TODO: stop serving all requests (next node will be storage)
-	return jc.CreateDrop(current)
+
+	drop, err := jc.createDrop(current)
+	if err != nil {
+		return nil, err
+	}
+	// nextExecutor, err := jc.getNextExecutor([][]byte{}) // TODO: fetch candidates from config
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// nextValidators, err := jc.getNextValidators([][]byte{}, 3) // TODO: fetch candidates and count from config
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// TODO: select next executor and validators. Send jet drop to current validators.
+
+	jc.storage.SetCurrentPulse(new)
+
+	return drop, nil
+}
+
+// CreateDrop creates jet drop for provided pulse number.
+func (jc *JetCoordinator) createDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
+	prevDrop, err := jc.storage.GetDrop(pulse - 1)
+	if err != nil {
+		return nil, err
+	}
+	newDrop, err := jc.storage.SetDrop(pulse, prevDrop)
+	if err != nil {
+		return nil, err
+	}
+	return newDrop, nil
+}
+
+func (jc *JetCoordinator) getCurrentEntropy() ([]byte, error) { // nolint: megacheck
+	return jc.storage.GetEntropy(jc.storage.GetCurrentPulse())
+}
+
+// TODO: real signature unknown
+func (jc *JetCoordinator) getNextExecutor(candidates [][]byte) ([]byte, error) { // nolint: megacheck
+	entropy, err := jc.getCurrentEntropy()
+	if err != nil {
+		return nil, err
+	}
+	idx, err := selectByEntropy(entropy, candidates, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	return candidates[idx[0]], nil
+}
+
+// TODO: real signature unknown
+func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][]byte, error) { // nolint: megacheck
+	entropy, err := jc.getCurrentEntropy()
+	if err != nil {
+		return nil, err
+	}
+	idx, err := selectByEntropy(entropy, candidates, 1)
+	if err != nil {
+		return nil, err
+	}
+	selected := make([][]byte, 0, count)
+	for _, i := range idx {
+		selected = append(selected, candidates[i])
+	}
+	return selected, nil
 }
