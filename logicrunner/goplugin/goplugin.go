@@ -225,7 +225,7 @@ func (gp *GoPlugin) CallMethod(codeRef core.RecordRef, data []byte, method strin
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
-func (gp *GoPlugin) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) (core.Arguments, error) {
+func (gp *GoPlugin) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) ([]byte, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with rpc connection")
@@ -237,7 +237,7 @@ func (gp *GoPlugin) CallConstructor(codeRef core.RecordRef, name string, args co
 	select {
 	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
 		if call.Error != nil {
-			return nil, errors.Wrap(err, "problem with API call")
+			return nil, errors.Wrap(call.Error, "problem with API call")
 		}
 	case <-time.After(timeout):
 		return nil, errors.New("timeout")

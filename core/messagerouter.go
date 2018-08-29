@@ -10,10 +10,11 @@ type Arguments []byte
 
 // Message is a routable packet, ATM just a method call
 type Message struct {
-	Caller    struct{}
-	Reference RecordRef
-	Method    string
-	Arguments Arguments
+	Caller      struct{}
+	Constructor bool
+	Reference   RecordRef
+	Method      string
+	Arguments   Arguments
 }
 
 // Response to a `Message`

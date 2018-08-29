@@ -31,7 +31,7 @@ type Object struct {
 
 // ArtifactManager interface
 type ArtifactManager interface {
-	Get(ref string) (data []byte, codeRef core.RecordRef, err error)
+	Get(ref core.RecordRef) (data []byte, codeRef core.RecordRef, err error)
 }
 
 // LogicRunner is a general interface of contract executor
@@ -65,7 +65,7 @@ func (r *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (r *LogicRunner) Execute(msg core.Message) *core.Response {
-	data, codeRef, err := r.ArtifactManager.Get(string(msg.Reference))
+	data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
 	if err != nil {
 		return &core.Response{Error: errors.Wrap(err, "couldn't ")}
 	}
@@ -73,6 +73,14 @@ func (r *LogicRunner) Execute(msg core.Message) *core.Response {
 	executor, err := r.GetExecutor(core.MachineTypeGoPlugin)
 	if err != nil {
 		return &core.Response{Error: errors.Wrap(err, "no executer registered")}
+	}
+
+	if msg.Constructor {
+		newData, err := executor.CallConstructor(codeRef, msg.Method, msg.Arguments)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "executer error")}
+		}
+		return &core.Response{Data: newData}
 	}
 
 	newData, result, err := executor.CallMethod(codeRef, data, msg.Method, msg.Arguments)
