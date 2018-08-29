@@ -31,6 +31,10 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 )
 
+func TestTypeCompatibility(t *testing.T) {
+	var _ types.MachineLogicExecutor = (*GoPlugin)(nil)
+}
+
 func init() {
 	log.SetLevel(log.DebugLevel)
 }

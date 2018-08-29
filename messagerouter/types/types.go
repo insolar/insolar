@@ -21,12 +21,18 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 )
 
+// Reference is a contract address
+type Reference string
+
+// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
+type Arguments []byte
+
 // Message is a routable packet, ATM just a method call
 type Message struct {
 	Caller    struct{}
-	Reference string
+	Reference Reference
 	Method    string
-	Arguments []byte
+	Arguments Arguments
 }
 
 // Response to a `Message`
@@ -39,6 +45,11 @@ type Response struct {
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	Execute(msg Message) (res *Response)
+}
+
+// MachineLogicExecutor is an interface for implementers of one particular machine type
+type MachineLogicExecutor interface {
+	CallMethod(codeRef Reference, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
 }
 
 // MessageRouter interface

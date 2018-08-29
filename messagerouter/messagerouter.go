@@ -72,12 +72,12 @@ func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 	return Serialize(res)
 }
 
-func (r *MessageRouter) getNodeID(reference string) id.ID {
+func (r *MessageRouter) getNodeID(reference types.Reference) id.ID {
 	// TODO: need help from teammates
 	log.Println("getNodeID: ", reference)
 
 	nodeID, _ := id.NewID(nil)
-	nodeID.SetHash(base58.Decode(reference))
+	nodeID.SetHash(base58.Decode(string(reference)))
 	return nodeID
 }
 

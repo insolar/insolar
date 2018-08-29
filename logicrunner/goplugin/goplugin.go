@@ -67,7 +67,7 @@ type RPC struct {
 
 // GetObject is an RPC retrieving an object by its reference, so far short circuted to return
 // code of the plugin
-func (gpr *RPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
+func (gpr *RPC) GetObject(ref types.Reference, reply *logicrunner.Object) error {
 	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	}
 
 	msg := types.Message{
-		Reference: string(req.Reference),
+		Reference: req.Reference,
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
@@ -204,7 +204,7 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 const timeout = time.Second * 5
 
 // CallMethod runs a method on an object in controlled environment
-func (gp *GoPlugin) CallMethod(codeRef logicrunner.Reference, data []byte, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
+func (gp *GoPlugin) CallMethod(codeRef types.Reference, data []byte, method string, args types.Arguments) ([]byte, types.Arguments, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
@@ -225,7 +225,7 @@ func (gp *GoPlugin) CallMethod(codeRef logicrunner.Reference, data []byte, metho
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
-func (gp *GoPlugin) CallConstructor(codeRef logicrunner.Reference, name string, args logicrunner.Arguments) (logicrunner.Arguments, error) {
+func (gp *GoPlugin) CallConstructor(codeRef types.Reference, name string, args types.Arguments) (types.Arguments, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with rpc connection")

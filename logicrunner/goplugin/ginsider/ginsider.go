@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/messagerouter/types"
 )
 
 // GoInsider is an RPC interface to run code of plugins
@@ -38,14 +39,14 @@ type GoInsider struct {
 	dir                string
 	UpstreamRPCAddress string
 	UpstreamRPCClient  *rpc.Client
-	plugins            map[logicrunner.Reference]*plugin.Plugin
+	plugins            map[types.Reference]*plugin.Plugin
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
 func NewGoInsider(path string, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
 	res := GoInsider{dir: path, UpstreamRPCAddress: address}
-	res.plugins = make(map[logicrunner.Reference]*plugin.Plugin)
+	res.plugins = make(map[types.Reference]*plugin.Plugin)
 	return &res
 }
 
@@ -214,7 +215,7 @@ func (t *GoInsider) Upstream() (*rpc.Client, error) {
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
-func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
+func (t *GoInsider) ObtainCode(ref types.Reference) (string, error) {
 	path := t.dir + "/" + string(ref)
 	_, err := os.Stat(path)
 
@@ -246,7 +247,7 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
-func (t *GoInsider) Plugin(ref logicrunner.Reference) (*plugin.Plugin, error) {
+func (t *GoInsider) Plugin(ref types.Reference) (*plugin.Plugin, error) {
 	if t.plugins[ref] != nil {
 		return t.plugins[ref], nil
 	}
@@ -274,7 +275,7 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 	}
 
 	req := rpctypes.UpRouteReq{
-		Reference: logicrunner.Reference(ref),
+		Reference: types.Reference(ref),
 		Method:    method,
 		Arguments: args,
 	}

@@ -88,7 +88,7 @@ func (r *runner) Execute(msg types.Message) *types.Response {
 		panic("no request expected")
 	}
 
-	r.requests = append(r.requests, req{msg.Reference, msg.Method, msg.Arguments})
+	r.requests = append(r.requests, req{string(msg.Reference), msg.Method, msg.Arguments})
 
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
@@ -120,7 +120,7 @@ func TestRoute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		r.responses = append(r.responses, types.Response{Data: []byte("data"), Result: []byte("result"), Error: nil})
-		resp, err := mr.Route(ctx, types.Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
+		resp, err := mr.Route(ctx, types.Message{Reference: types.Reference(reference), Method: "SomeMethod", Arguments: []byte("args")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -148,7 +148,7 @@ func TestRoute(t *testing.T) {
 	})
 	t.Run("error", func(t *testing.T) {
 		r.responses = append(r.responses, types.Response{Data: []byte{}, Result: []byte{}, Error: errors.New("wtf")})
-		_, err := mr.Route(ctx, types.Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
+		_, err := mr.Route(ctx, types.Message{Reference: types.Reference(reference), Method: "SomeMethod", Arguments: []byte("args")})
 		if err == nil {
 			t.Fatal("error expected")
 		}
