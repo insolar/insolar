@@ -20,16 +20,25 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
+	"text/template"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
+
+	"strconv"
 )
+
+var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
+var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
 type parsedFile struct {
 	name    string
@@ -47,6 +56,7 @@ func printUsage() {
 	fmt.Println("Commands: ")
 	fmt.Println(" wrapper   generate contract's wrapper")
 	fmt.Println(" proxy     generate contract's proxy")
+	fmt.Println(" imports   rewrite imports")
 }
 
 type outputFlag struct {
@@ -120,6 +130,23 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+	case "imports":
+		fs := flag.NewFlagSet("imports", flag.ExitOnError)
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		err := fs.Parse(os.Args[2:])
+		if err != nil {
+			panic(err)
+		}
+
+		if fs.NArg() != 1 {
+			panic(errors.New("imports command should be followed by exactly one file name to process"))
+		}
+
+		err = cmdRewriteImports(fs.Arg(0), output.writer)
+		if err != nil {
+			panic(err)
+		}
 	default:
 		printUsage()
 		fmt.Printf("\n\n%q is not valid command.\n", os.Args[1])
@@ -163,6 +190,28 @@ func parseFile(fileName string) (*parsedFile, error) {
 	return &res, nil
 }
 
+func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
+	var methodsInfo []map[string]interface{}
+	for _, method := range parsed.methods[parsed.contract] {
+		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
+
+		rets := []string{}
+		for i := range method.Type.Results.List {
+			rets = append(rets, fmt.Sprintf("ret%d", i))
+		}
+		resultList := strings.Join(rets, ", ")
+
+		info := map[string]interface{}{
+			"Name":              method.Name.Name,
+			"ArgumentsZeroList": argsInit,
+			"Results":           resultList,
+			"Arguments":         argsList,
+		}
+		methodsInfo = append(methodsInfo, info)
+	}
+	return methodsInfo
+}
+
 func generateContractWrapper(fileName string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
@@ -174,11 +223,30 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		panic("Contract must be in main package")
 	}
 
-	code := "package " + packageName + "\n\n"
-	code += generateWrappers(parsed) + "\n"
-	code += generateExports(parsed) + "\n"
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return errors.Wrap(err, "couldn't find info about current file")
+	}
+	templateDir := filepath.Join(filepath.Dir(currentFile), "templates/wrapper.go.tpl")
+	tmpl, err := template.ParseFiles(templateDir)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse template for output")
+	}
 
-	_, err = out.Write([]byte(code))
+	data := struct {
+		PackageName    string
+		ContractType   string
+		Methods        []map[string]interface{}
+		ParsedCode     []byte
+		FoundationPath string
+	}{
+		packageName,
+		parsed.contract,
+		generateContractMethodsInfo(parsed),
+		parsed.code,
+		foundationPath,
+	}
+	err = tmpl.Execute(out, data)
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
 	}
@@ -287,19 +355,8 @@ func generateTypes(parsed *parsedFile) string {
 	return text
 }
 
-func generateWrappers(parsed *parsedFile) string {
-	text := `import (
-	"github.com/insolar/insolar/logicrunner/goplugin/testplugins/foundation"
-	)` + "\n"
-
-	for _, method := range parsed.methods[parsed.contract] {
-		text += generateMethodWrapper(parsed, method) + "\n"
-	}
-	return text
-}
-
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
-	text := fmt.Sprintf("\t%s := [%d]interface{}{}\n", name, list.NumFields())
+	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
 
 	for i, arg := range list.List {
 		initializer := ""
@@ -330,38 +387,6 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 
 	return text, listCode
 }
-
-func generateMethodWrapper(parsed *parsedFile, method *ast.FuncDecl) string {
-	text := fmt.Sprintf("func (self *%s) INSWRAPER_%s(cbor foundation.CBORMarshaler, data []byte) ([]byte) {\n",
-		parsed.contract, method.Name.Name)
-
-	argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-	text += argsInit
-
-	text += "\tcbor.Unmarshal(&args, data)\n"
-
-	rets := []string{}
-	for i := range method.Type.Results.List {
-		rets = append(rets, fmt.Sprintf("ret%d", i))
-	}
-	ret := strings.Join(rets, ", ")
-	text += fmt.Sprintf("\t%s := self.%s(%s)\n", ret, method.Name.Name, argsList)
-
-	text += fmt.Sprintf("\treturn cbor.Marshal([]interface{}{%s})\n", strings.Join(rets, ", "))
-	text += "}\n"
-	return text
-}
-
-/* generated snipped must be something like this
-
-func (hw *HelloWorlder) INSWRAPER_Echo(cbor cborer, data []byte) ([]byte, error) {
-	args := [1]interface{}{}
-	args[0] = ""
-	cbor.Unmarshal(&args, data)
-	ret1, ret2 := hw.Echo(args[0].(string))
-	return cbor.Marshal([]interface{}{ret1, ret2}), nil
-}
-*/
 
 func generateExports(parsed *parsedFile) string {
 	text := "var INSEXPORT " + parsed.contract + "\n"
@@ -434,4 +459,41 @@ func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
 	text += "}\n"
 
 	return text
+}
+
+func cmdRewriteImports(fname string, w io.Writer) error {
+	parsed, err := parseFile(fname)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse")
+	}
+	if err := rewriteImports(parsed); err != nil {
+		return errors.Wrap(err, "couldn't process")
+	}
+	if err := printer.Fprint(w, parsed.fileSet, parsed.node); err != nil {
+		return errors.Wrap(err, "couldn't save")
+	}
+	return nil
+}
+
+func rewriteImports(p *parsedFile) error {
+	quoted := strconv.Quote(clientFoundation)
+	for _, d := range p.node.Decls {
+		td, ok := d.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		if td.Tok != token.IMPORT {
+			continue
+		}
+		for _, s := range td.Specs {
+			is, ok := s.(*ast.ImportSpec)
+			if !ok {
+				continue
+			}
+			if is.Path.Value == quoted {
+				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
+			}
+		}
+	}
+	return nil
 }

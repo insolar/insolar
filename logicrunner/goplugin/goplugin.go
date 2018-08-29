@@ -206,7 +206,7 @@ func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method stri
 	select {
 	case call := <-client.Go("RPC.Call", req, &res, nil).Done:
 		if call.Error != nil {
-			return nil, nil, errors.Wrap(err, "problem with API call")
+			return nil, nil, errors.Wrap(call.Error, "problem with API call")
 		}
 	case <-time.After(timeout):
 		return nil, nil, errors.New("timeout")

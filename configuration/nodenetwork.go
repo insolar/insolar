@@ -14,25 +14,20 @@
  *    limitations under the License.
  */
 
-// Package foundation emulates foundation of types for golang contracts
-package foundation
+package configuration
 
-import "github.com/insolar/insolar/logicrunner"
-
-type CBORMarshaler interface {
-	Marshal(interface{}) []byte
-	Unmarshal(interface{}, []byte)
+// Node holds configuration for one Node
+type Node struct {
 }
 
-// Call other contract via network dispatcher
-func Call(Reference logicrunner.Reference, MethodName string, Arguments []interface{}) ([]interface{}, error) {
-	return nil, nil
+// NodeNetwork holds configuration for NodeNetwork
+type NodeNetwork struct {
+	Nodes []Node
 }
 
-func APICall() { // GetPulsar / GetNodeList / GetValidatorCandidates
-}
-
-// ???
-type CallContext struct {
-	Caller logicrunner.Reference
+// NewNodeNetwork creates new default NodeNetwork configuration
+func NewNodeNetwork() NodeNetwork {
+	return NodeNetwork{
+		Nodes: make([]Node, 0),
+	}
 }

@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -24,87 +25,10 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// ArtifactManager is a high level storage interface.
-type ArtifactManager interface {
-	// SetArchPref stores a list of preferred VM architectures memory.
-	//
-	// When returning classes storage will return compiled code according to this preferences. VM is responsible for
-	// calling this method before fetching object in a new process. If preference is not provided, object getters will
-	// return an error.
-	SetArchPref(pref []record.ArchType)
-
-	// GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
-	// (e.g. object considered to be active).
-	//
-	// This method is used by validator to fetch the exact state of the object that was used by the executor.
-	GetExactObj(classRef, objectRef record.Reference) ([]byte, record.Memory, error)
-
-	// GetLatestObj returns descriptors for latest known state of the object/class known to the storage. The caller
-	// should provide latest known states of the object/class known to it. If the object or the class is deactivated,
-	// an error should be returned.
-	//
-	// Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
-	GetLatestObj(objectRef, storedClassState, storedObjState record.Reference) (
-		*ClassDescriptor, *ObjectDescriptor, error,
-	)
-
-	// DeployCode creates new code record in storage.
-	//
-	// Code records are used to activate class or as migration code for an object.
-	DeployCode(domainRef, requestRef record.Reference, codeMap map[record.ArchType][]byte) (*record.Reference, error)
-
-	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
-	// and memory as the default memory for class objects.
-	//
-	// Activation reference will be this class'es identifier and referred as "class head".
-	ActivateClass(domainRef, requestRef, codeRef record.Reference, memory record.Memory) (*record.Reference, error)
-
-	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
-	// the class. If class is already deactivated, an error should be returned.
-	//
-	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(domainRef, requestRef, classRef record.Reference) (*record.Reference, error)
-
-	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
-	// the class. Migrations are references to code records.
-	//
-	// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
-	UpdateClass(domainRef, requestRef, classRef, codeRef record.Reference, migrationRefs []record.Reference) (
-		*record.Reference, error,
-	)
-
-	// ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
-	// memory as memory of crated object. If memory is not provided, the class default memory will be used.
-	//
-	// Activation reference will be this object's identifier and referred as "object head".
-	ActivateObj(domainRef, requestRef, classRef record.Reference, memory record.Memory) (*record.Reference, error)
-
-	// DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
-	// of the object. If object is already deactivated, an error should be returned.
-	//
-	// Deactivated object cannot be changed.
-	DeactivateObj(domainRef, requestRef, objRef record.Reference) (*record.Reference, error)
-
-	// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
-	// object. Provided memory well be the new object memory.
-	//
-	// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
-	// them to the new memory manually if its required.
-	UpdateObj(domainRef, requestRef, objRef record.Reference, memory record.Memory) (*record.Reference, error)
-
-	// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
-	// of the object. Provided memory well be used as append delegate memory.
-	//
-	// Object's delegates will be provided by GetLatestObj. Any object update will nullify all the object's append
-	// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
-	// required.
-	AppendObjDelegate(domainRef, requestRef, objRef record.Reference, memory record.Memory) (*record.Reference, error)
-}
-
 // LedgerArtifactManager provides concrete API to storage for processing module
 type LedgerArtifactManager struct {
-	storer   storage.LedgerStorer
-	archPref []record.ArchType
+	storer   storage.Store
+	archPref []core.MachineType
 }
 
 func (m *LedgerArtifactManager) checkRequestRecord(requestRef *record.Reference) error {
@@ -203,7 +127,7 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 // When returning classes storage will return compiled code according to this preferences. VM is responsible for
 // calling this method before fetching object in a new process. If preference is not provided, object getters will
 // return an error.
-func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
+func (m *LedgerArtifactManager) SetArchPref(pref []core.MachineType) {
 	m.archPref = pref
 }
 
@@ -211,8 +135,11 @@ func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
 //
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
-	domainRef, requestRef record.Reference, codeMap map[record.ArchType][]byte,
-) (*record.Reference, error) {
+	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -233,7 +160,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
-	return codeRef, nil
+	return codeRef.Bytes(), nil
 }
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
@@ -241,8 +168,12 @@ func (m *LedgerArtifactManager) DeployCode(
 //
 // Activation reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	domainRef, requestRef, codeRef record.Reference, memory record.Memory,
-) (*record.Reference, error) {
+	domain, request, code core.RecordRef, memory []byte,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+	codeRef := record.Bytes2Reference(code)
+
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -275,7 +206,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return classRef, nil
+	return classRef.Bytes(), nil
 }
 
 // DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
@@ -283,8 +214,12 @@ func (m *LedgerArtifactManager) ActivateClass(
 //
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
-	domainRef, requestRef, classRef record.Reference,
-) (*record.Reference, error) {
+	domain, request, class core.RecordRef,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+	classRef := record.Bytes2Reference(class)
+
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -317,7 +252,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return deactivationRef, nil
+	return deactivationRef.Bytes(), nil
 }
 
 // UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
@@ -325,8 +260,17 @@ func (m *LedgerArtifactManager) DeactivateClass(
 //
 // Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
-	domainRef, requestRef, classRef, codeRef record.Reference, migrationRefs []record.Reference,
-) (*record.Reference, error) {
+	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+	classRef := record.Bytes2Reference(class)
+	codeRef := record.Bytes2Reference(code)
+	migrationRefs := make([]record.Reference, 0, len(migrations))
+	for _, migration := range migrations {
+		migrationRefs = append(migrationRefs, record.Bytes2Reference(migration))
+	}
+
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -374,7 +318,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return amendRef, nil
+	return amendRef.Bytes(), nil
 }
 
 // ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
@@ -382,8 +326,12 @@ func (m *LedgerArtifactManager) UpdateClass(
 //
 // Activation reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObj(
-	domainRef, requestRef, classRef record.Reference, memory record.Memory,
-) (*record.Reference, error) {
+	domain, request, class core.RecordRef, memory []byte,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+	classRef := record.Bytes2Reference(class)
+
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -419,7 +367,7 @@ func (m *LedgerArtifactManager) ActivateObj(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return objRef, nil
+	return objRef.Bytes(), nil
 }
 
 // DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -427,8 +375,12 @@ func (m *LedgerArtifactManager) ActivateObj(
 //
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObj(
-	domainRef, requestRef, objRef record.Reference,
-) (*record.Reference, error) {
+	domain, request, obj core.RecordRef,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+	objRef := record.Bytes2Reference(obj)
+
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -460,7 +412,7 @@ func (m *LedgerArtifactManager) DeactivateObj(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return deactivationRef, nil
+	return deactivationRef.Bytes(), nil
 }
 
 // UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -469,8 +421,12 @@ func (m *LedgerArtifactManager) DeactivateObj(
 // This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
 // them to the new memory manually if its required.
 func (m *LedgerArtifactManager) UpdateObj(
-	domainRef, requestRef, objRef record.Reference, memory record.Memory,
-) (*record.Reference, error) {
+	domain, request, obj core.RecordRef, memory []byte,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+	objRef := record.Bytes2Reference(obj)
+
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -505,7 +461,7 @@ func (m *LedgerArtifactManager) UpdateObj(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return amendRef, nil
+	return amendRef.Bytes(), nil
 }
 
 // AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
@@ -515,8 +471,12 @@ func (m *LedgerArtifactManager) UpdateObj(
 // delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
 // required.
 func (m *LedgerArtifactManager) AppendObjDelegate(
-	domainRef, requestRef, objRef record.Reference, memory record.Memory,
-) (*record.Reference, error) {
+	domain, request, obj core.RecordRef, memory []byte,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+	objRef := record.Bytes2Reference(obj)
+
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
@@ -550,7 +510,7 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return appendRef, nil
+	return appendRef.Bytes(), nil
 }
 
 // GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
@@ -558,10 +518,13 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 //
 // This method is used by validator to fetch the exact state of the object that was used by the executor.
 func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
-	classState, objectState record.Reference,
-) ([]byte, record.Memory, error) {
+	classState, objectState core.RecordRef,
+) ([]byte, []byte, error) {
+	classRef := record.Bytes2Reference(classState)
+	objRef := record.Bytes2Reference(objectState)
+
 	// Fetching class data
-	classRec, err := m.storer.GetRecord(&classState)
+	classRec, err := m.storer.GetRecord(&classRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to retrieve class record")
 	}
@@ -571,7 +534,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	switch rec := classRec.(type) {
 	case *record.ClassActivateRecord:
 		codeRef = rec.CodeRecord
-		classHeadRef = classState
+		classHeadRef = classRef
 	case *record.ClassAmendRecord:
 		codeRef = rec.NewCode
 		classHeadRef = rec.HeadRecord
@@ -585,17 +548,17 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	}
 
 	// Fetching object data
-	objectRec, err := m.storer.GetRecord(&objectState)
+	objectRec, err := m.storer.GetRecord(&objRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to retrieve object record")
 	}
 
-	var memory record.Memory
+	var memory []byte
 	var objectHeadRef record.Reference
 	switch rec := objectRec.(type) {
 	case *record.ObjectActivateRecord:
 		memory = rec.Memory
-		objectHeadRef = objectState
+		objectHeadRef = objRef
 	case *record.ObjectAmendRecord:
 		memory = rec.NewMemory
 		objectHeadRef = rec.HeadRecord
@@ -622,14 +585,18 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 //
 // Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
 func (m *LedgerArtifactManager) GetLatestObj(
-	objectRef, storedClassState, storedObjState record.Reference,
-) (*ClassDescriptor, *ObjectDescriptor, error) {
+	obj, storedClassState, storedObjState core.RecordRef,
+) (core.ClassDescriptor, core.ObjectDescriptor, error) {
+	objRef := record.Bytes2Reference(obj)
+	storedClassRef := record.Bytes2Reference(storedClassState)
+	storedObjRef := record.Bytes2Reference(storedObjState)
+
 	var (
 		class  *ClassDescriptor
 		object *ObjectDescriptor
 	)
 
-	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(objectRef)
+	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(objRef)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -639,12 +606,12 @@ func (m *LedgerArtifactManager) GetLatestObj(
 	}
 
 	// if provided reference is the last reference in the lifeline, we can return nil
-	if storedClassState.IsNotEqual(classIndex.LatestStateRef) {
+	if storedClassRef.IsNotEqual(classIndex.LatestStateRef) {
 		class = &ClassDescriptor{
 			StateRef: classIndex.LatestStateRef,
 
 			manager:           m,
-			fromState:         storedClassState,
+			fromState:         storedClassRef,
 			activateRecord:    classActivateRec,
 			latestAmendRecord: classStateRec,
 			lifelineIndex:     classIndex,
@@ -652,7 +619,7 @@ func (m *LedgerArtifactManager) GetLatestObj(
 	}
 
 	// if provided reference is the last reference in the lifeline, we can return nil
-	if storedObjState.IsNotEqual(objIndex.LatestStateRef) {
+	if storedObjRef.IsNotEqual(objIndex.LatestStateRef) {
 		object = &ObjectDescriptor{
 			StateRef: objIndex.LatestStateRef,
 

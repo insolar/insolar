@@ -83,7 +83,7 @@ func TestLevelLedger_SetRecord(t *testing.T) {
 	defer cleaner()
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
-	ledger.SetPulseFn(func() record.PulseNum { return pulse1 })
+	ledger.SetCurrentPulse(pulse1)
 
 	passRecPulse1 := &record.LockUnlockRequest{}
 	idPulse1 := pulse1.ID(passRecPulse1)
@@ -210,10 +210,30 @@ func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 		Hash: []byte{0xFF},
 	}
 
-	ledger.SetPulseFn(func() record.PulseNum { return 42 })
+	ledger.SetCurrentPulse(42)
 	drop42, err := ledger.SetDrop(42, &fakeDrop)
 	assert.NoError(t, err)
 	got, err := ledger.GetDrop(42)
 	assert.NoError(t, err)
 	assert.Equal(t, got, drop42)
+}
+
+func TestLevelLedger_SetCurrentPulse(t *testing.T) {
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
+
+	ledger.SetCurrentPulse(42)
+	assert.Equal(t, record.PulseNum(42), ledger.GetCurrentPulse())
+}
+
+func TestLevelLedger_SetEntropy(t *testing.T) {
+	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	defer cleaner()
+
+	ledger.SetEntropy(42, []byte{1, 2, 3})
+	entropy, err := ledger.GetEntropy(42)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{1, 2, 3}, entropy)
+	_, err = ledger.GetEntropy(1)
+	assert.Error(t, err)
 }

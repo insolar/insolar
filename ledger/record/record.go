@@ -51,9 +51,6 @@ type PulseNum uint32
 // It is only allowed for Storage.
 const SpecialPulseNumber PulseNum = 65536
 
-// ArchType is a virtual machine runtime type
-type ArchType uint32
-
 // TypeID encodes a record object type.
 type TypeID uint32
 
@@ -132,8 +129,8 @@ type Reference struct {
 	Record ID
 }
 
-// Key generates Reference byte representation (key without prefix).
-func (ref *Reference) Key() []byte {
+// Bytes generates Reference byte representation (key without prefix).
+func (ref *Reference) Bytes() []byte {
 	b := make([]byte, RefIDSize)
 	// Record part should go first so we can iterate keys of a certain slot
 	_ = copy(b[:IDSize], ID2Bytes(ref.Record))

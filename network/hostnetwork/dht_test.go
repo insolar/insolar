@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork/connection"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -74,12 +74,13 @@ func (f *mockFuture) SetResult(msg *packet.Packet) {
 func (f *mockFuture) Cancel() {}
 
 type mockTransport struct {
-	recv     chan *packet.Packet
-	send     chan *packet.Packet
-	dc       chan bool
-	msgChan  chan *packet.Packet
-	failNext bool
-	sequence *uint64
+	recv          chan *packet.Packet
+	send          chan *packet.Packet
+	dc            chan bool
+	msgChan       chan *packet.Packet
+	failNext      bool
+	sequence      *uint64
+	publicAddress string
 }
 
 func newMockTransport() *mockTransport {
@@ -140,6 +141,10 @@ func (t *mockTransport) SendResponse(requestID packet.RequestID, q *packet.Packe
 	return nil
 }
 
+func (t *mockTransport) PublicAddress() string {
+	return t.publicAddress
+}
+
 func mockFindHostResponse(request *packet.Packet, nextID []byte) *packet.Packet {
 	r := &packet.Packet{}
 	n := &host.Host{}
@@ -187,8 +192,10 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
 	origin, _ := host.NewOrigin(ids, addr)
-	conn, _ := connection.NewConnectionFactory().Create(address)
-	tp, err := transport.NewUTPTransport(conn, relay.NewProxy())
+	cfg := configuration.NewConfiguration().Host.Transport
+	cfg.Address = address
+	cfg.BehindNAT = false
+	tp, err := transport.NewTransport(cfg, relay.NewProxy())
 	r := rpc.NewRPC()
 	return st, origin, tp, r, err
 }
@@ -436,7 +443,7 @@ func TestBootstrapNoID(t *testing.T) {
 	<-done
 }
 
-// Create two DHTs have them connect and bootstrap, then disconnect. Repeat
+// create two DHTs have them connect and bootstrap, then disconnect. Repeat
 // 100 times to ensure that we can use the same IP and port without EADDRINUSE
 // errors.
 func TestReconnect(t *testing.T) {
@@ -493,7 +500,7 @@ func TestReconnect(t *testing.T) {
 	}
 }
 
-// Create two DHTs and have them connect. Send a store packet with 100mb
+// create two DHTs and have them connect. Send a store packet with 100mb
 // payload from one host to another. Ensure that the other host now has
 // this data in its store.
 func TestStoreAndFindLargeValue(t *testing.T) {
@@ -793,7 +800,7 @@ func TestStoreExpiration(t *testing.T) {
 	<-done
 }
 
-// Create a new host and bootstrap it. All hosts in the network know of a
+// create a new host and bootstrap it. All hosts in the network know of a
 // single host closer to the original host. This continues until every MaxContactsInBucket bucket
 // is occupied.
 func TestFindHostAllBuckets(t *testing.T) {
