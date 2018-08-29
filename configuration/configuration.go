@@ -22,25 +22,27 @@ import (
 
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
-	Host  HostNetwork
-	Node  NodeNetwork
-	Log   Log
-	Stats Stats
+	Host    HostNetwork
+	Node    NodeNetwork
+	Service ServiceNetwork
+	Log     Log
+	Stats   Stats
 }
 
 // Holder provides methods to manage configuration
 type Holder struct {
 	Configuration Configuration
-	viper *viper.Viper
+	viper         *viper.Viper
 }
 
 // NewConfiguration creates new default configuration
 func NewConfiguration() Configuration {
 	cfg := Configuration{
-		Host:  NewHostNetwork(),
-		Node:  NewNodeNetwork(),
-		Log:   NewLog(),
-		Stats: NewStats(),
+		Host:    NewHostNetwork(),
+		Node:    NewNodeNetwork(),
+		Service: NewServiceNetwork(),
+		Log:     NewLog(),
+		Stats:   NewStats(),
 	}
 
 	return cfg
@@ -67,7 +69,8 @@ func (c *Holder) Load() error {
 		return err
 	}
 
-	return c.viper.UnmarshalKey("insolar", &c.Configuration)}
+	return c.viper.UnmarshalKey("insolar", &c.Configuration)
+}
 
 // LoadFromFile method reads configuration from particular file path
 func (c *Holder) LoadFromFile(path string) error {
