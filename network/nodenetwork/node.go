@@ -33,19 +33,17 @@ type Node struct {
 }
 
 // NewNode creates a node with given args.
-func NewNode(ID string, host *host.Host, DHT *hostnetwork.DHT, domainID string, role string) (*Node, error) {
-	node := &Node{
+func NewNode(ID string, host *host.Host, DHT *hostnetwork.DHT, domainID string) *Node {
+	return &Node{
 		id:       ID,
 		host:     host,
 		dht:      DHT,
 		domainID: domainID,
-		role:     role,
 	}
-	err := node.dht.CheckNodeRole(node.createContext(), node.domainID)
-	if err != nil {
-		return nil, err
-	}
-	return node, err
+}
+
+func (node *Node) setRole(newRole string) {
+	node.role = newRole
 }
 
 // GetNodeRole returns a Node role.
