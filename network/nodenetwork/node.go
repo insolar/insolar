@@ -42,6 +42,7 @@ func NewNode(ID string, host *host.Host, DHT *hostnetwork.DHT, domainID string) 
 	}
 }
 
+// nolint
 func (node *Node) setRole(newRole string) {
 	node.role = newRole
 }
