@@ -28,9 +28,9 @@ import (
 
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/insolar/insolar/messagerouter/types"
 	"github.com/pkg/errors"
 )
 
@@ -54,7 +54,7 @@ type RunnerOptions struct {
 type GoPlugin struct {
 	Options       Options
 	RunnerOptions RunnerOptions
-	MessageRouter types.MessageRouter
+	MessageRouter core.MessageRouter
 	sock          net.Listener
 	runner        *exec.Cmd
 	client        *rpc.Client
@@ -67,7 +67,7 @@ type RPC struct {
 
 // GetObject is an RPC retrieving an object by its reference, so far short circuted to return
 // code of the plugin
-func (gpr *RPC) GetObject(ref types.Reference, reply *logicrunner.Object) error {
+func (gpr *RPC) GetObject(ref core.RecordRef, reply *logicrunner.Object) error {
 	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.New("message router was not set during initialization")
 	}
 
-	msg := types.Message{
+	msg := core.Message{
 		Reference: req.Reference,
 		Method:    req.Method,
 		Arguments: req.Arguments,
@@ -102,7 +102,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr types.MessageRouter) (*GoPlugin, error) {
+func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr core.MessageRouter) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Options:       options,
 		RunnerOptions: runnerOptions,
@@ -204,7 +204,7 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 const timeout = time.Second * 5
 
 // CallMethod runs a method on an object in controlled environment
-func (gp *GoPlugin) CallMethod(codeRef types.Reference, data []byte, method string, args types.Arguments) ([]byte, types.Arguments, error) {
+func (gp *GoPlugin) CallMethod(codeRef core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
@@ -225,7 +225,7 @@ func (gp *GoPlugin) CallMethod(codeRef types.Reference, data []byte, method stri
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
-func (gp *GoPlugin) CallConstructor(codeRef types.Reference, name string, args types.Arguments) (types.Arguments, error) {
+func (gp *GoPlugin) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) (core.Arguments, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with rpc connection")

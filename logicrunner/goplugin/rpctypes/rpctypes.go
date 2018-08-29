@@ -16,7 +16,7 @@
 
 package rpctypes
 
-import "github.com/insolar/insolar/messagerouter/types"
+import "github.com/insolar/insolar/core"
 
 // Types for RPC requests and responses between goplugin and goinsider.
 // Calls from goplugin to goinsider go "downwards" and names are
@@ -24,42 +24,42 @@ import "github.com/insolar/insolar/messagerouter/types"
 
 // DownCallMethodReq is a set of arguments for CallMethod RPC in the runner
 type DownCallMethodReq struct { // todo it may use foundation.Context
-	Reference types.Reference
+	Reference core.RecordRef
 	Data      []byte
 	Method    string
-	Arguments types.Arguments
+	Arguments core.Arguments
 }
 
 // DownCallMethodResp is response from CallMethod RPC in the runner
 type DownCallMethodResp struct {
 	Data []byte
-	Ret  types.Arguments
+	Ret  core.Arguments
 	Err  error
 }
 
 // DownCallConstructorReq is a set of arguments for CallConstructor RPC
 // in the runner
 type DownCallConstructorReq struct {
-	Reference types.Reference
+	Reference core.RecordRef
 	Name      string
-	Arguments types.Arguments
+	Arguments core.Arguments
 }
 
 // DownCallConstructorResp is response from CallConstructor RPC in the runner
 type DownCallConstructorResp struct {
-	Ret types.Arguments
+	Ret core.Arguments
 	Err error
 }
 
 // UpRouteReq is a set of arguments for Route RPC in goplugin
 type UpRouteReq struct {
-	Reference types.Reference
+	Reference core.RecordRef
 	Method    string
-	Arguments types.Arguments
+	Arguments core.Arguments
 }
 
 // UpRouteResp is response from Route RPC in goplugin
 type UpRouteResp struct {
-	Result types.Arguments
+	Result core.Arguments
 	Err    error
 }

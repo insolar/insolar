@@ -19,9 +19,9 @@ package logicrunner
 import (
 	"testing"
 
-	"github.com/insolar/insolar/messagerouter/types"
+	"github.com/insolar/insolar/core"
 )
 
 func TestTypeCompatibility(t *testing.T) {
-	var _ types.LogicRunner = (*LogicRunner)(nil)
+	var _ core.LogicRunner = (*LogicRunner)(nil)
 }

@@ -21,7 +21,7 @@ import (
 	"encoding/gob"
 	"log"
 
-	"github.com/insolar/insolar/messagerouter/types"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/jbenet/go-base58"
@@ -32,20 +32,20 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageRouter struct {
-	LogicRunner types.LogicRunner
+	LogicRunner core.LogicRunner
 	rpc         hostnetwork.RPC
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr types.LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
+func New(lr core.LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc}
 	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return mr, nil
 }
 
 // Route a `Message` and get a `Response` or error from remote host
-func (r *MessageRouter) Route(ctx hostnetwork.Context, msg types.Message) (response types.Response, err error) {
+func (r *MessageRouter) Route(ctx hostnetwork.Context, msg core.Message) (response core.Response, err error) {
 	request, err := Serialize(msg)
 	if err != nil {
 		return response, err
@@ -72,7 +72,7 @@ func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 	return Serialize(res)
 }
 
-func (r *MessageRouter) getNodeID(reference types.Reference) id.ID {
+func (r *MessageRouter) getNodeID(reference core.RecordRef) id.ID {
 	// TODO: need help from teammates
 	log.Println("getNodeID: ", reference)
 
@@ -94,18 +94,18 @@ func Serialize(value interface{}) ([]byte, error) {
 }
 
 // DeserializeMessage reads packet from byte slice.
-func DeserializeMessage(data []byte) (msg types.Message, err error) {
+func DeserializeMessage(data []byte) (msg core.Message, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&msg)
 	return msg, err
 }
 
 // DeserializeResponse reads response from byte slice.
-func DeserializeResponse(data []byte) (res types.Response, err error) {
+func DeserializeResponse(data []byte) (res core.Response, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&res)
 	return res, err
 }
 
 func init() {
-	gob.Register(&types.Message{})
-	gob.Register(&types.Response{})
+	gob.Register(&core.Message{})
+	gob.Register(&core.Response{})
 }
