@@ -30,3 +30,8 @@ type Response struct {
 	Result []byte
 	Error  error
 }
+
+// LogicRunner is an interface that should satisfy logic executor
+type LogicRunner interface {
+	Execute(msg Message) (res *Response)
+}

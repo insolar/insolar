@@ -32,18 +32,13 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageRouter struct {
-	LogicRunner LogicRunner
+	LogicRunner types.LogicRunner
 	rpc         hostnetwork.RPC
-}
-
-// LogicRunner is an interface that should satisfy logic executor
-type LogicRunner interface {
-	Execute(msg types.Message) (res *types.Response)
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
+func New(lr types.LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc}
 	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return mr, nil
