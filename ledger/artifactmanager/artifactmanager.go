@@ -156,7 +156,7 @@ func (m *LedgerArtifactManager) DeclareType(
 		},
 		TypeDeclaration: typeDec,
 	}
-	codeRef, err := m.storer.SetRecord(&rec)
+	codeRef, err := m.store.SetRecord(&rec)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
@@ -180,7 +180,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	typeRefs := make([]record.Reference, 0, len(types))
 	for _, tp := range types {
 		ref := record.Bytes2Reference(tp)
-		rec, tErr := m.storer.GetRecord(&ref)
+		rec, tErr := m.store.GetRecord(&ref)
 		if tErr != nil {
 			return nil, errors.Wrap(tErr, "failed to retrieve type record")
 		}
