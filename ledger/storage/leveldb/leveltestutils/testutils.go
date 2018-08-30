@@ -28,12 +28,12 @@ import (
 // TmpDB returns LevelDB's ledger implementation and cleanup function.
 //
 // Creates LevelDB in temporary directory and uses t for errors reporting.
-func TmpDB(t *testing.T, dir string) (*leveldb.LevelLedger, func()) {
+func TmpDB(t *testing.T, dir string) (*leveldb.Store, func()) {
 	tmpdir, err := ioutil.TempDir(dir, "ldb-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ledger, err := leveldb.NewLevelLedger(tmpdir, nil)
+	ledger, err := leveldb.NewStore(tmpdir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

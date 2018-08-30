@@ -34,7 +34,7 @@ func sorthashes(hashes [][]byte) {
 	})
 }
 
-func TestLevelLedger_SlotIterate(t *testing.T) {
+func TestStore_SlotIterate(t *testing.T) {
 	ledger, cleaner := leveltestutils.TmpDB(t, "")
 	defer cleaner()
 

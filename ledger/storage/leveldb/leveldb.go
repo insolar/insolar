@@ -39,8 +39,8 @@ const (
 // pulses for storage.
 type PulseFn func() record.PulseNum
 
-// LevelLedger represents ledger's LevelDB storage.
-type LevelLedger struct {
+// Store represents ledger's LevelDB storage.
+type Store struct {
 	ldb          *leveldb.DB
 	currentPulse record.PulseNum
 	zeroRef      record.Reference
@@ -53,8 +53,8 @@ const (
 	scopeIDEntropy  byte = 4
 )
 
-// NewLevelLedger returns LevelDB ledger implementation.
-func NewLevelLedger(dir string, opts *opt.Options) (*LevelLedger, error) {
+// NewStore returns LevelDB ledger implementation.
+func NewStore(dir string, opts *opt.Options) (*Store, error) {
 	if dir == "" {
 		dir = dbDirPath
 	}
@@ -68,7 +68,7 @@ func NewLevelLedger(dir string, opts *opt.Options) (*LevelLedger, error) {
 	}
 
 	var zeroID record.ID
-	ledger := LevelLedger{
+	ledger := Store{
 		ldb: db,
 		zeroRef: record.Reference{
 			Domain: record.ID{}, // TODO: fill domain
@@ -97,19 +97,19 @@ func prefixkey(prefix byte, key []byte) []byte {
 }
 
 // SetCurrentPulse stores current pulse number in memory.
-func (ll *LevelLedger) SetCurrentPulse(pulse record.PulseNum) {
+func (ll *Store) SetCurrentPulse(pulse record.PulseNum) {
 	ll.currentPulse = pulse
 }
 
 // GetCurrentPulse returns current pulse number.
-func (ll *LevelLedger) GetCurrentPulse() record.PulseNum {
+func (ll *Store) GetCurrentPulse() record.PulseNum {
 	return ll.currentPulse
 }
 
 // GetRecord returns record from leveldb by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contains the key.
-func (ll *LevelLedger) GetRecord(ref *record.Reference) (record.Record, error) {
+func (ll *Store) GetRecord(ref *record.Reference) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, ref.Bytes())
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
@@ -126,7 +126,7 @@ func (ll *LevelLedger) GetRecord(ref *record.Reference) (record.Record, error) {
 }
 
 // SetRecord stores record in leveldb
-func (ll *LevelLedger) SetRecord(rec record.Record) (*record.Reference, error) {
+func (ll *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 	raw, err := record.EncodeToRaw(rec)
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (ll *LevelLedger) SetRecord(rec record.Record) (*record.Reference, error) {
 }
 
 // GetClassIndex fetches lifeline index from leveldb
-func (ll *LevelLedger) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
+func (ll *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
 	k := prefixkey(scopeIDLifeline, ref.Bytes())
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
@@ -161,7 +161,7 @@ func (ll *LevelLedger) GetClassIndex(ref *record.Reference) (*index.ClassLifelin
 }
 
 // SetClassIndex stores lifeline index into leveldb
-func (ll *LevelLedger) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
+func (ll *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.Bytes())
 	encoded, err := index.EncodeClassLifeline(idx)
 	if err != nil {
@@ -171,7 +171,7 @@ func (ll *LevelLedger) SetClassIndex(ref *record.Reference, idx *index.ClassLife
 }
 
 // GetObjectIndex fetches lifeline index from leveldb
-func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
+func (ll *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
 	k := prefixkey(scopeIDLifeline, ref.Bytes())
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
@@ -188,7 +188,7 @@ func (ll *LevelLedger) GetObjectIndex(ref *record.Reference) (*index.ObjectLifel
 }
 
 // SetObjectIndex stores lifeline index into leveldb
-func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
+func (ll *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.Bytes())
 	encoded, err := index.EncodeObjectLifeline(idx)
 	if err != nil {
@@ -198,7 +198,7 @@ func (ll *LevelLedger) SetObjectIndex(ref *record.Reference, idx *index.ObjectLi
 }
 
 // GetDrop returns jet drop for a given pulse number.
-func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
+func (ll *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
@@ -217,7 +217,7 @@ func (ll *LevelLedger) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) 
 // SetDrop stores jet drop for given pulse number.
 // Previous JetDrop should be provided.
 // On success returns saved drop hash.
-func (ll *LevelLedger) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
+func (ll *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 
 	hw := hash.NewSHA3()
@@ -256,7 +256,7 @@ func (ll *LevelLedger) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop)
 // SetEntropy stores given entropy for given pulse in storage.
 //
 // Entropy is used for calculating node roles.
-func (ll *LevelLedger) SetEntropy(pulse record.PulseNum, entropy []byte) error {
+func (ll *Store) SetEntropy(pulse record.PulseNum, entropy []byte) error {
 	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
 	return ll.ldb.Put(k, entropy, nil)
 }
@@ -264,12 +264,12 @@ func (ll *LevelLedger) SetEntropy(pulse record.PulseNum, entropy []byte) error {
 // GetEntropy returns entropy from storage for given pulse.
 //
 // Entropy is used for calculating node roles.
-func (ll *LevelLedger) GetEntropy(pulse record.PulseNum) ([]byte, error) {
+func (ll *Store) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
 	return ll.ldb.Get(k, nil)
 }
 
 // Close terminates db connection
-func (ll *LevelLedger) Close() error {
+func (ll *Store) Close() error {
 	return ll.ldb.Close()
 }
