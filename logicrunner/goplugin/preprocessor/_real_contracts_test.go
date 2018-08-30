@@ -50,9 +50,7 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 
 			code, err := ioutil.ReadAll(&buf)
 			assert.NoError(t, err)
-			if len(code) == 0 {
-				t.Fatal("generator returns zero length code")
-			}
+			assert.NotEqual(t, len(code), 0)
 		})
 	}
 }
@@ -66,9 +64,7 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 
 			code, err := ioutil.ReadAll(&buf)
 			assert.NoError(t, err)
-			if len(code) == 0 {
-				t.Fatal("generator returns zero length code")
-			}
+			assert.NotEqual(t, len(code), 0)
 		})
 	}
 }

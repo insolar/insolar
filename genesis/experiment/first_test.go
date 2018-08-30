@@ -114,3 +114,8 @@ func TestTransferViaTransfer(t *testing.T) {
 	assert.Equal(t, 1500, int(fromWallet.GetTotalBalance()))
 	assert.Equal(t, 1500, int(toWallet.GetTotalBalance()))
 }
+
+func TestTest(t *testing.T) {
+	var arr [3]int
+	arr = append(arr, 1)
+}
