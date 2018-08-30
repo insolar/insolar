@@ -6,7 +6,7 @@ type HelloWorld struct {
 	Greeted int
 }
 
-func (HelloWorld) CodeRef() core.RecordRef {
+func CodeRef() core.RecordRef {
 	ret := make([]byte, 64)
 	ret[63] = 1
 	return ret
