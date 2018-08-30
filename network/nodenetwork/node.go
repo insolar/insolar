@@ -17,28 +17,22 @@
 package nodenetwork
 
 import (
-	"log"
-
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/pkg/errors"
 )
 
 // Node is an essence which provides communication between network level and MessageRouter.
 type Node struct {
 	host     *host.Host
-	dht      *hostnetwork.DHT
 	id       string
 	role     string
 	domainID string
 }
 
 // NewNode creates a node with given args.
-func NewNode(ID string, host *host.Host, DHT *hostnetwork.DHT, domainID string) *Node {
+func NewNode(ID string, host *host.Host, domainID string) *Node {
 	return &Node{
 		id:       ID,
 		host:     host,
-		dht:      DHT,
 		domainID: domainID,
 	}
 }
@@ -61,22 +55,4 @@ func (node Node) GetNodeID() string {
 // GetDomainIDs returns a Node domain ID.
 func (node Node) GetDomainID() string {
 	return node.domainID
-}
-
-// SendPacket sends packet from service to target.
-func (node Node) SendPacket(method string, args [][]byte) error {
-	if node.host == nil {
-		return errors.New("host doesn't exist")
-	}
-	_, err := node.dht.RemoteProcedureCall(node.createContext(), node.host.ID.HashString(), method, args)
-	return err
-}
-
-// CreateContext returns a dht context.
-func (node Node) createContext() hostnetwork.Context {
-	ctx, err := hostnetwork.NewContextBuilder(node.dht).SetDefaultHost().Build()
-	if err != nil {
-		log.Fatalln("Failed to create context:", err.Error())
-	}
-	return ctx
 }

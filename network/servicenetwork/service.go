@@ -20,44 +20,32 @@ import (
 	"bytes"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
 
 // Service provides a route between MessageRouter and Nodenetwork.
 type Service struct {
-	references []core.RecordRef
-
-	nodes        map[string]*nodenetwork.Node // key - node ID, value - node ptr.
-	referenceMap map[string]string            // key - reference ID, value - node ID.
+	network nodenetwork.Nodenetwork
 }
 
 // NewService returns a new service.
 func NewService() *Service {
-	return &Service{
-		nodes:        make(map[string]*nodenetwork.Node),
-		referenceMap: make(map[string]string),
-		references:   make([]core.RecordRef, 0),
-	}
+	return &Service{}
 }
 
 // AddNode adds a node to service.
-func (service *Service) AddNode(node *nodenetwork.Node, domainID string) {
-	if node != nil {
-		service.nodes[node.GetNodeID()] = node
-		service.referenceMap[domainID] = node.GetNodeID()
-	}
+func (service *Service) AddNode(hostAddress, hostID, domainID string) error {
+	return service.network.AddNode(hostAddress, hostID, domainID)
 }
 
 // SendMessage sends a message from MessageRouter.
-func (service Service) SendMessage(reference record.Reference, msg messagerouter.Message) error {
-	if ref, ok := service.referenceMap[string(reference.Domain.Hash[:bytes.IndexByte(reference.Domain.Hash, 0)])]; ok {
-		if node, ok := service.nodes[ref]; ok {
-			args := make([][]byte, 0)
-			args[0] = msg.Arguments
-			return node.SendPacket(msg.Method, args)
-		}
-	}
-	return nil
+func (service Service) SendMessage(reference core.RecordRef, msg messagerouter.Message) ([]byte, error) {
+	args := make([][]byte, 0)
+	args[0] = msg.Arguments
+	return service.network.SendPacket(getReferenceString(reference), msg.Method, args)
+}
+
+func getReferenceString(ref []byte) string {
+	return string(ref[:bytes.IndexByte(ref, 0)])
 }
