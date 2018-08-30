@@ -31,8 +31,12 @@ import (
 	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
 
+func tmpstore(t *testing.T) (storage.Store, func()) {
+	return leveltestutils.TmpDB(t, "")
+}
+
 func TestLevelLedger_GetRecordNotFound(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	ref := &record.Reference{}
@@ -79,7 +83,7 @@ func referenceWithHashes(domainhash, recordhash string) record.Reference {
 }
 
 func TestLevelLedger_SetRecord(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
@@ -115,7 +119,7 @@ func TestLevelLedger_SetRecord(t *testing.T) {
 }
 
 func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	ref := &record.Reference{
@@ -128,7 +132,7 @@ func TestLevelLedger_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	zerodomain := record.ID{Hash: zerohash()}
@@ -161,7 +165,7 @@ func TestLevelLedger_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	ref := referenceWithHashes("1000", "5000")
@@ -171,7 +175,7 @@ func TestLevelLedger_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
@@ -193,7 +197,7 @@ func TestLevelLedger_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	drop, err := ledger.GetDrop(1)
@@ -202,7 +206,7 @@ func TestLevelLedger_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 }
 
 func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	// it references on 'fake' zero
@@ -219,7 +223,7 @@ func TestLevelLedger_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestLevelLedger_SetCurrentPulse(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	ledger.SetCurrentPulse(42)
@@ -227,7 +231,7 @@ func TestLevelLedger_SetCurrentPulse(t *testing.T) {
 }
 
 func TestLevelLedger_SetEntropy(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := tmpstore(t)
 	defer cleaner()
 
 	ledger.SetEntropy(42, []byte{1, 2, 3})
