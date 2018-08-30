@@ -18,3 +18,7 @@ package core
 
 // RecordRef is unified record reference.
 type RecordRef []byte
+
+func (r RecordRef) String() string {
+	return string(r)
+}
