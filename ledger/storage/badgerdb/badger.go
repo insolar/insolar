@@ -130,7 +130,6 @@ func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 		},
 	}
 	k := prefixkey(scopeIDRecord, ref.Bytes())
-	log.Println("Try set record by ", k)
 	val := record.MustEncodeRaw(raw)
 	txerr := s.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(k, val)
