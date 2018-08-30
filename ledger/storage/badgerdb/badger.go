@@ -85,6 +85,39 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
+// Get gets value by key in BadgerDB storage.
+func (s *Store) Get(key []byte) ([]byte, error) {
+	var buf []byte
+	// TODO: handle transaction conflicts.
+	txerr := s.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				return storage.ErrNotFound
+			}
+			return err
+		}
+		buf, err = item.Value()
+		if err != nil {
+			return err
+		}
+		return err
+	})
+	if txerr != nil {
+		buf = nil
+	}
+	return buf, txerr
+}
+
+// Set stores value by key in BadgerDB.
+func (s *Store) Set(key, value []byte) error {
+	// TODO: handle transaction conflicts.
+	txerr := s.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(key, value)
+	})
+	return txerr
+}
+
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns storage.ErrNotFound if the DB does not contain the key.
