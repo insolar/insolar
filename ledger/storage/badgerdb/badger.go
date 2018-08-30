@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
@@ -188,12 +189,57 @@ func (s *Store) SetObjectIndex(*record.Reference, *index.ObjectLifeline) error {
 	panic("not implemented")
 }
 
-func (s *Store) GetDrop(record.PulseNum) (*jetdrop.JetDrop, error) {
-	panic("not implemented")
+// GetDrop returns jet drop for a given pulse number.
+func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+	buf, err := s.Get(k)
+	if err != nil {
+		return nil, err
+	}
+	drop, err := jetdrop.Decode(buf)
+	if err != nil {
+		return nil, err
+	}
+	return drop, nil
 }
 
-func (s *Store) SetDrop(record.PulseNum, *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
-	panic("not implemented")
+// SetDrop stores jet drop for given pulse number.
+// Previous JetDrop should be provided.
+// On success returns saved drop hash.
+func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+
+	hw := hash.NewSHA3()
+	err := s.ProcessSlotHashes(pulse, func(it HashIterator) error {
+		for i := 1; it.Next(); i++ {
+			b := it.ShallowHash()
+			_, err := hw.Write(b)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	drophash := hw.Sum(nil)
+
+	drop := &jetdrop.JetDrop{
+		Pulse:    pulse,
+		PrevHash: prevdrop.Hash,
+		Hash:     drophash,
+	}
+	encoded, err := jetdrop.Encode(drop)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.Set(k, encoded)
+	if err != nil {
+		drop = nil
+	}
+	return drop, err
 }
 
 // SetEntropy stores given entropy for given pulse in storage.
