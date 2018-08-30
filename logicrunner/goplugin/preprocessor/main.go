@@ -289,21 +289,25 @@ func generateContractProxy(fileName string, out io.Writer) error {
 
 	methodsProxies := generateMethodsProxies(parsed)
 
+	constructorProxies := generateConstructorProxies(parsed)
+
 	tmpl, err := openTemplate("templates/proxy.go.tpl")
 	if err != nil {
 		return errors.Wrap(err, "couldn't open template file for proxy")
 	}
 
 	data := struct {
-		PackageName    string
-		Types          []string
-		ContractType   string
-		MethodsProxies []map[string]interface{}
+		PackageName         string
+		Types               []string
+		ContractType        string
+		MethodsProxies      []map[string]interface{}
+		ConstructorsProxies []map[string]string
 	}{
 		proxyPackageName,
 		types,
 		parsed.contract,
 		methodsProxies,
+		constructorProxies,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -350,7 +354,12 @@ func getMethods(parsed *parsedFile) {
 				}
 
 				if td.Type.Results.NumFields() < 1 {
-					log.Info("Ignored %q as constructor, not enought returned values", td.Name.Name)
+					log.Infof("Ignored %q as constructor, not enought returned values", td.Name.Name)
+					continue
+				}
+
+				if td.Type.Results.NumFields() > 1 {
+					log.Errorf("Constructor %q returns more than one argument, not supported at the moment", td.Name.Name)
 					continue
 				}
 
@@ -455,6 +464,20 @@ func generateMethodsProxies(parsed *parsedFile) []map[string]interface{} {
 		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
 	}
 	return methodsProxies
+}
+
+func generateConstructorProxies(parsed *parsedFile) []map[string]string {
+	var res []map[string]string
+
+	for _, e := range parsed.constructors[parsed.contract] {
+		info := map[string]string{
+			"Name":      e.Name.Name,
+			"Arguments": genFieldList(parsed, e.Type.Params, true),
+			"InitArgs":  generateInitArguments(e.Type.Params),
+		}
+		res = append(res, info)
+	}
+	return res
 }
 
 func cmdRewriteImports(fname string, w io.Writer) error {

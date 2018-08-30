@@ -101,6 +101,35 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	return nil
 }
 
+// RouteConstructorCall routes call from a contract to a constructor of another contract
+func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *rpctypes.UpRouteConstructorResp) error {
+	if gpr.gp.MessageRouter == nil {
+		return errors.New("message router was not set during initialization")
+	}
+
+	msg := core.Message{
+		Constructor: true,
+		Reference:   req.Reference,
+		Method:      req.Constructor,
+		Arguments:   req.Arguments,
+	}
+
+	res, err := gpr.gp.MessageRouter.Route(nil, msg)
+	if err != nil {
+		return errors.Wrap(err, "couldn't route message")
+	}
+	if reply.Err != nil {
+		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
+	}
+
+	// TODO: store data on ledger via artifact manager
+	_ = res.Data
+
+	reply.Reference = core.RecordRef("some-ref")
+
+	return nil
+}
+
 // NewGoPlugin returns a new started GoPlugin
 func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr core.MessageRouter) (*GoPlugin, error) {
 	gp := GoPlugin{

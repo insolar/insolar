@@ -63,3 +63,16 @@ type UpRouteResp struct {
 	Result core.Arguments
 	Err    error
 }
+
+// UpRouteConstructorReq is a set of arguments for RouteConstructor RPC in goplugin
+type UpRouteConstructorReq struct {
+	Reference   core.RecordRef
+	Constructor string
+	Arguments   core.Arguments
+}
+
+// UpRouteConstructorResp is response from RouteConstructor RPC in goplugin
+type UpRouteConstructorResp struct {
+	Reference core.RecordRef
+	Err       error
+}
