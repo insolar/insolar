@@ -20,6 +20,8 @@ package buitin
 import (
 	"reflect"
 
+	"log"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/logicrunner"
@@ -59,15 +61,17 @@ func (bi *BuiltIn) Exec(codeRef core.RecordRef, data []byte, method string, args
 		return nil, nil, errors.New("Wrong reference for builtin contract")
 	}
 
-	zv := reflect.Zero(reflect.TypeOf(c))
+	zv := reflect.Zero(reflect.TypeOf(c).Elem()).Interface()
 	ch := new(codec.CborHandle)
 
-	err = codec.NewDecoderBytes(args, ch).Decode(zv)
+	log.Printf("%+v", zv)
+	log.Printf("%T", zv)
+	err = codec.NewDecoderBytes(args, ch).Decode(&zv)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "couldn't decode data into %T", zv)
 	}
 
-	m := reflect.ValueOf(zv).MethodByName(method)
+	m := reflect.ValueOf(&zv).MethodByName(method)
 	if !m.IsValid() {
 		return nil, nil, errors.New("no method " + method + " in the contract")
 	}
