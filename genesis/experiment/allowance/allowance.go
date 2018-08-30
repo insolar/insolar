@@ -24,6 +24,7 @@ import (
 
 var TypeReference = foundation.Reference("allowance")
 
+// @inscontract
 type Allowance struct {
 	foundation.BaseContract
 	To         foundation.Reference

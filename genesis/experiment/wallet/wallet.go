@@ -23,6 +23,7 @@ import (
 
 var TypeReference = foundation.Reference("wallet")
 
+// @inscontract
 type Wallet struct {
 	foundation.BaseContract
 	balance uint
