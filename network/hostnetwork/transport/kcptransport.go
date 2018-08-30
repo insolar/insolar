@@ -41,8 +41,8 @@ type kcpTransport struct {
 	mutex   *sync.RWMutex
 	futures map[packet.RequestID]Future
 
-	proxy      relay.Proxy
-	blockCrypt kcp.BlockCrypt
+	proxy         relay.Proxy
+	blockCrypt    kcp.BlockCrypt
 	publicAddress string
 }
 
@@ -70,8 +70,8 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 		mutex:   &sync.RWMutex{},
 		futures: make(map[packet.RequestID]Future),
 
-		proxy:      proxy,
-		blockCrypt: crypt,
+		proxy:         proxy,
+		blockCrypt:    crypt,
 		publicAddress: publicAddress,
 	}
 

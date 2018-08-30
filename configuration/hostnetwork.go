@@ -28,17 +28,17 @@ type Transport struct {
 
 // HostNetwork holds configuration for HostNetwork
 type HostNetwork struct {
-	Transport Transport
+	Transport      Transport
 	BootstrapHosts []string
-	IsRelay        bool   // set if node must be relay explicit
+	IsRelay        bool // set if node must be relay explicit
 }
 
 // NewHostNetwork creates new default HostNetwork configuration
 func NewHostNetwork() HostNetwork {
 	transport := Transport{"UTP", "0.0.0.0:17000", true}
 	return HostNetwork{
-		Transport: transport,
-		IsRelay:   false,
+		Transport:      transport,
+		IsRelay:        false,
 		BootstrapHosts: make([]string, 0),
 	}
 }

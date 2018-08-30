@@ -45,7 +45,7 @@ func prepareDCTestData(t *testing.T) (preparedDCTestData, func()) {
 	return preparedDCTestData{
 		ledger: ledger,
 		manager: &LedgerArtifactManager{
-			storer:   ledger,
+			store:    ledger,
 			archPref: []core.MachineType{1},
 		},
 		classRec: &rec,

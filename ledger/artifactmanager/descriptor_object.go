@@ -47,7 +47,7 @@ func (d *ObjectDescriptor) GetMemory() ([]byte, error) {
 func (d *ObjectDescriptor) GetDelegates() ([][]byte, error) {
 	var delegates [][]byte
 	for _, appendRef := range d.lifelineIndex.AppendRefs {
-		rec, err := d.manager.storer.GetRecord(&appendRef)
+		rec, err := d.manager.store.GetRecord(&appendRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "inconsistent object index")
 		}
