@@ -20,7 +20,7 @@ import (
 	"bytes"
 
 	"github.com/insolar/insolar/core"
-	"github.com/itchyny/base58-go"
+	"github.com/jbenet/go-base58"
 )
 
 func RefsEqual(first, target core.RecordRef) bool {
@@ -28,9 +28,5 @@ func RefsEqual(first, target core.RecordRef) bool {
 }
 
 func RefString(ref core.RecordRef) string {
-	encodedRef, err := base58.BitcoinEncoding.Encode(ref)
-	if err != nil {
-		return ""
-	}
-	return string(encodedRef)
+	return base58.Encode(ref)
 }

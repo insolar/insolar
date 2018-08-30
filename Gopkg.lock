@@ -99,14 +99,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a1b5bcf8ace0e61b609663c61579e1394fc205cd6a87f70b95a87f825054cca3"
-  name = "github.com/itchyny/base58-go"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "8739d1dc6e0ff8db2d786430b1862f2dff5f434b"
-
-[[projects]]
-  branch = "master"
   digest = "1:fa3a7dc0a780fb19838fb96d4e18c0b9a019d9bb618798308d7b6ca48fcb9876"
   name = "github.com/jbenet/go-base58"
   packages = ["."]
@@ -385,7 +377,6 @@
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
     "github.com/huandu/xstrings",
-    "github.com/itchyny/base58-go",
     "github.com/jbenet/go-base58",
     "github.com/pkg/errors",
     "github.com/satori/go.uuid",
