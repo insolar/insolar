@@ -26,10 +26,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
-	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/network/hostnetwork"
 )
+
+func TestTypeCompatibility(t *testing.T) {
+	var _ core.MachineLogicExecutor = (*GoPlugin)(nil)
+}
 
 func init() {
 	log.SetLevel(log.DebugLevel)
@@ -56,7 +60,7 @@ func (r *HelloWorlder) ProxyEcho(gp *GoPlugin, s string) string {
 		panic(err)
 	}
 
-	data, res, err := gp.Exec("secondary", data, "Echo", argsSerialized)
+	data, res, err := gp.CallMethod(core.RecordRef("secondary"), data, "Echo", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -260,7 +264,7 @@ type testMessageRouter struct {
 	plugin *GoPlugin
 }
 
-func (r *testMessageRouter) Route(ctx hostnetwork.Context, msg messagerouter.Message) (resp messagerouter.Response, err error) {
+func (r *testMessageRouter) Route(ctx hostnetwork.Context, msg core.Message) (resp core.Response, err error) {
 	ch := new(codec.CborHandle)
 
 	var data []byte
@@ -268,10 +272,10 @@ func (r *testMessageRouter) Route(ctx hostnetwork.Context, msg messagerouter.Mes
 		&struct{}{},
 	)
 	if err != nil {
-		return messagerouter.Response{}, err
+		return core.Response{}, err
 	}
-	resdata, reslist, err := r.plugin.Exec("two", data, msg.Method, msg.Arguments)
-	return messagerouter.Response{Data: resdata, Result: reslist, Error: err}, nil
+	resdata, reslist, err := r.plugin.CallMethod(core.RecordRef("two"), data, msg.Method, msg.Arguments)
+	return core.Response{Data: resdata, Result: reslist, Error: err}, nil
 }
 
 func TestContractCallingContract(t *testing.T) {
@@ -355,7 +359,7 @@ func TestContractCallingContract(t *testing.T) {
 		panic(err)
 	}
 
-	_, res, err := gp.Exec("one", data, "Hello", argsSerialized)
+	_, res, err := gp.CallMethod(core.RecordRef("one"), data, "Hello", argsSerialized)
 	if err != nil {
 		panic(err)
 	}

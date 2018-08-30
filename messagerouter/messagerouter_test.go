@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -37,15 +38,9 @@ type req struct {
 	args   []byte
 }
 
-type resp struct {
-	data []byte
-	res  []byte
-	err  error
-}
-
 type runner struct {
 	requests  []req
-	responses []resp
+	responses []core.Response
 }
 
 func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
@@ -88,17 +83,17 @@ func (r *mockRpc) RemoteProcedureRegister(name string, method hostnetwork.Remote
 	return
 }
 
-func (r *runner) Execute(ref string, method string, args []byte) ([]byte, []byte, error) {
+func (r *runner) Execute(msg core.Message) *core.Response {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
 
-	r.requests = append(r.requests, req{ref, method, args})
+	r.requests = append(r.requests, req{string(msg.Reference), msg.Method, msg.Arguments})
 
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 
-	return resp.data, resp.res, resp.err
+	return &resp
 }
 
 func TestNew(t *testing.T) {
@@ -114,7 +109,7 @@ func TestNew(t *testing.T) {
 func TestRoute(t *testing.T) {
 	r := new(runner)
 	r.requests = make([]req, 0)
-	r.responses = make([]resp, 0)
+	r.responses = make([]core.Response, 0)
 
 	dht, err := NewNode()
 	assert.NoError(t, err)
@@ -124,8 +119,8 @@ func TestRoute(t *testing.T) {
 	reference := dht.GetOriginHost(ctx).ID.HashString()
 
 	t.Run("success", func(t *testing.T) {
-		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
-		resp, err := mr.Route(ctx, Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
+		r.responses = append(r.responses, core.Response{Data: []byte("data"), Result: []byte("result"), Error: nil})
+		resp, err := mr.Route(ctx, core.Message{Reference: core.RecordRef(reference), Method: "SomeMethod", Arguments: []byte("args")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -152,8 +147,8 @@ func TestRoute(t *testing.T) {
 		}
 	})
 	t.Run("error", func(t *testing.T) {
-		r.responses = append(r.responses, resp{[]byte{}, []byte{}, errors.New("wtf")})
-		_, err := mr.Route(ctx, Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
+		r.responses = append(r.responses, core.Response{Data: []byte{}, Result: []byte{}, Error: errors.New("wtf")})
+		_, err := mr.Route(ctx, core.Message{Reference: core.RecordRef(reference), Method: "SomeMethod", Arguments: []byte("args")})
 		if err == nil {
 			t.Fatal("error expected")
 		}
@@ -176,7 +171,14 @@ func TestRoute(t *testing.T) {
 	})
 
 	t.Run("referenceNotFound", func(t *testing.T) {
-		_, err := mr.Route(ctx, Message{Reference: "refNotFound", Method: "SomeMethod", Arguments: []byte("args")})
+		_, err := mr.Route(
+			ctx,
+			core.Message{
+				Reference: core.RecordRef("refNotFound"),
+				Method:    "SomeMethod",
+				Arguments: []byte("args"),
+			},
+		)
 		assert.Error(t, err)
 	})
 }

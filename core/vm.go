@@ -26,3 +26,14 @@ const (
 
 	MachineTypesTotalCount
 )
+
+// MachineLogicExecutor is an interface for implementers of one particular machine type
+type MachineLogicExecutor interface {
+	CallMethod(codeRef RecordRef, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
+	CallConstructor(codeRef RecordRef, name string, args Arguments) (objectState []byte, err error)
+}
+
+// LogicRunner is an interface that should satisfy logic executor
+type LogicRunner interface {
+	Execute(msg Message) (res *Response)
+}

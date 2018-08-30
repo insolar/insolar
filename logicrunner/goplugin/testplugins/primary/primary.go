@@ -17,7 +17,7 @@
 package primary
 
 import (
-	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/core"
 )
 
 type INFHwRunner interface {
@@ -30,17 +30,12 @@ type HwRunner struct {
 	Runned int
 }
 
-//func (h *HwRunner) Run() string {
-//	hw := Hw.GetNewInstance(logicrunner.Reference("#1.#2"))
-//	return hw.Echo("Ooops")
-//}
-
 //
 type Hw struct {
-	Reference logicrunner.Reference
+	Reference core.RecordRef
 }
 
-func (Hw) GetNewInstance(r logicrunner.Reference) Hw {
+func (Hw) GetNewInstance(r core.RecordRef) Hw {
 	return Hw{Reference: r}
 }
 

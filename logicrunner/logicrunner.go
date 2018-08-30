@@ -22,19 +22,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Executor is an interface for implementers of one particular machine type
-type Executor interface {
-	Exec(codeRef Reference, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
+// Object is an inner representation of storage object for transfwering it over API
+type Object struct {
+	MachineType core.MachineType
+	Reference   core.RecordRef
+	Data        []byte
 }
 
 // ArtifactManager interface
 type ArtifactManager interface {
-	Get(ref string) (data []byte, codeRef Reference, err error)
+	Get(ref core.RecordRef) (data []byte, codeRef core.RecordRef, err error)
 }
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [core.MachineTypesTotalCount]Executor
+	Executors       [core.MachineTypesTotalCount]core.MachineLogicExecutor
 	ArtifactManager ArtifactManager
 }
 
@@ -46,14 +48,14 @@ func NewLogicRunner(am ArtifactManager) (*LogicRunner, error) {
 }
 
 // RegisterExecutor registers an executor for particular `MachineType`
-func (r *LogicRunner) RegisterExecutor(t core.MachineType, e Executor) error {
+func (r *LogicRunner) RegisterExecutor(t core.MachineType, e core.MachineLogicExecutor) error {
 	r.Executors[int(t)] = e
 	return nil
 }
 
 // GetExecutor returns an executor for the `MachineType` if it was registered (`RegisterExecutor`),
 // returns error otherwise
-func (r *LogicRunner) GetExecutor(t core.MachineType) (Executor, error) {
+func (r *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor, error) {
 	if res := r.Executors[int(t)]; res != nil {
 		return res, nil
 	}
@@ -62,16 +64,29 @@ func (r *LogicRunner) GetExecutor(t core.MachineType) (Executor, error) {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (r *LogicRunner) Execute(ref string, method string, args Arguments) ([]byte, []byte, error) {
-	data, codeRef, err := r.ArtifactManager.Get(ref)
+func (r *LogicRunner) Execute(msg core.Message) *core.Response {
+	data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't ")
+		return &core.Response{Error: errors.Wrap(err, "couldn't ")}
 	}
 
 	executor, err := r.GetExecutor(core.MachineTypeGoPlugin)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "no executer registered")
+		return &core.Response{Error: errors.Wrap(err, "no executer registered")}
 	}
 
-	return executor.Exec(codeRef, data, method, args)
+	if msg.Constructor {
+		newData, err := executor.CallConstructor(codeRef, msg.Method, msg.Arguments)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "executer error")}
+		}
+		return &core.Response{Data: newData}
+	}
+
+	newData, result, err := executor.CallMethod(codeRef, data, msg.Method, msg.Arguments)
+	if err != nil {
+		return &core.Response{Error: errors.Wrap(err, "executer error")}
+	}
+
+	return &core.Response{Data: newData, Result: result}
 }

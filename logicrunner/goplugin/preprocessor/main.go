@@ -32,6 +32,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 
 	"strconv"
@@ -46,9 +47,10 @@ type parsedFile struct {
 	fileSet *token.FileSet
 	node    *ast.File
 
-	types    map[string]*ast.TypeSpec
-	methods  map[string][]*ast.FuncDecl
-	contract string
+	types        map[string]*ast.TypeSpec
+	methods      map[string][]*ast.FuncDecl
+	constructors map[string][]*ast.FuncDecl
+	contract     string
 }
 
 func printUsage() {
@@ -287,21 +289,25 @@ func generateContractProxy(fileName string, out io.Writer) error {
 
 	methodsProxies := generateMethodsProxies(parsed)
 
+	constructorProxies := generateConstructorProxies(parsed)
+
 	tmpl, err := openTemplate("templates/proxy.go.tpl")
 	if err != nil {
 		return errors.Wrap(err, "couldn't open template file for proxy")
 	}
 
 	data := struct {
-		PackageName    string
-		Types          []string
-		ContractType   string
-		MethodsProxies []map[string]interface{}
+		PackageName         string
+		Types               []string
+		ContractType        string
+		MethodsProxies      []map[string]interface{}
+		ConstructorsProxies []map[string]string
 	}{
 		proxyPackageName,
 		types,
 		parsed.contract,
 		methodsProxies,
+		constructorProxies,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -311,9 +317,17 @@ func generateContractProxy(fileName string, out io.Writer) error {
 	return nil
 }
 
+func typeName(t ast.Expr) string {
+	if tmp, ok := t.(*ast.StarExpr); ok { // *type
+		t = tmp.X
+	}
+	return t.(*ast.Ident).Name
+}
+
 func getMethods(parsed *parsedFile) {
 	parsed.types = make(map[string]*ast.TypeSpec)
 	parsed.methods = make(map[string][]*ast.FuncDecl)
+	parsed.constructors = make(map[string][]*ast.FuncDecl)
 	for _, d := range parsed.node.Decls {
 		switch td := d.(type) {
 		case *ast.GenDecl:
@@ -335,15 +349,26 @@ func getMethods(parsed *parsedFile) {
 			}
 		case *ast.FuncDecl:
 			if td.Recv == nil || td.Recv.NumFields() == 0 {
-				continue // todo we must store it and use, it may be a constructor
-			}
+				if !strings.HasPrefix(td.Name.Name, "New") {
+					continue // doesn't look like a constructor
+				}
 
-			r := td.Recv.List[0].Type
-			if tr, ok := r.(*ast.StarExpr); ok { // *type
-				r = tr.X
+				if td.Type.Results.NumFields() < 1 {
+					log.Infof("Ignored %q as constructor, not enought returned values", td.Name.Name)
+					continue
+				}
+
+				if td.Type.Results.NumFields() > 1 {
+					log.Errorf("Constructor %q returns more than one argument, not supported at the moment", td.Name.Name)
+					continue
+				}
+
+				typename := typeName(td.Type.Results.List[0].Type)
+				parsed.constructors[typename] = append(parsed.constructors[typename], td)
+			} else {
+				typename := typeName(td.Recv.List[0].Type)
+				parsed.methods[typename] = append(parsed.methods[typename], td)
 			}
-			typename := r.(*ast.Ident).Name
-			parsed.methods[typename] = append(parsed.methods[typename], td)
 		}
 	}
 }
@@ -395,29 +420,18 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 	return text, listCode
 }
 
-func generateArguments(parsed *parsedFile, params *ast.FieldList) string {
-	args := ""
-	for i, arg := range params.List {
+func genFieldList(parsed *parsedFile, params *ast.FieldList, withNames bool) string {
+	res := ""
+	for i, e := range params.List {
 		if i > 0 {
-			args += ", "
+			res += ", "
 		}
-		args += arg.Names[0].Name
-		args += " " + string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1])
-	}
-	return args
-}
-
-func generateResultsTypes(parsed *parsedFile, results *ast.FieldList) string {
-	resultsTypes := ""
-	if results.NumFields() > 0 {
-		for i, arg := range results.List {
-			if i > 0 {
-				resultsTypes += ", "
-			}
-			resultsTypes += string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
+		if withNames {
+			res += e.Names[0].Name + " "
 		}
+		res += string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
 	}
-	return resultsTypes
+	return res
 }
 
 func generateInitArguments(list *ast.FieldList) string {
@@ -431,23 +445,16 @@ func generateInitArguments(list *ast.FieldList) string {
 
 func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[string]interface{} {
 
-	args := generateArguments(parsed, method.Type.Params)
-
-	resultsTypes := generateResultsTypes(parsed, method.Type.Results)
-
-	initArgs := generateInitArguments(method.Type.Params)
-
 	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
 
-	info := map[string]interface{}{
+	return map[string]interface{}{
 		"Name":           method.Name.Name,
 		"ResultZeroList": resInit,
 		"Results":        resList,
-		"Arguments":      args,
-		"ResultsTypes":   resultsTypes,
-		"InitArgs":       initArgs,
+		"Arguments":      genFieldList(parsed, method.Type.Params, true),
+		"ResultsTypes":   genFieldList(parsed, method.Type.Results, false),
+		"InitArgs":       generateInitArguments(method.Type.Params),
 	}
-	return info
 }
 
 func generateMethodsProxies(parsed *parsedFile) []map[string]interface{} {
@@ -457,6 +464,20 @@ func generateMethodsProxies(parsed *parsedFile) []map[string]interface{} {
 		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
 	}
 	return methodsProxies
+}
+
+func generateConstructorProxies(parsed *parsedFile) []map[string]string {
+	var res []map[string]string
+
+	for _, e := range parsed.constructors[parsed.contract] {
+		info := map[string]string{
+			"Name":      e.Name.Name,
+			"Arguments": genFieldList(parsed, e.Type.Params, true),
+			"InitArgs":  generateInitArguments(e.Type.Params),
+		}
+		res = append(res, info)
+	}
+	return res
 }
 
 func cmdRewriteImports(fname string, w io.Writer) error {

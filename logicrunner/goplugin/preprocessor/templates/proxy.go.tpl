@@ -18,6 +18,26 @@ func GetObject(ref string) (r *{{ .ContractType }}) {
     return &{{ .ContractType }}{Reference: ref}
 }
 
+{{ range $func := .ConstructorsProxies }}
+func {{ $func.Name }}( {{ $func.Arguments }} ) *{{ $.ContractType }} {
+    {{ $func.InitArgs }}
+
+    var argsSerialized []byte
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+	// TODO: type
+    ref, err := proxyctx.Current.RouteConstructorCall("typeRef", "{{ $func.Name }}", argsSerialized)
+    if err != nil {
+		panic(err)
+    }
+
+    return &{{ $.ContractType }}{Reference: ref}
+}
+{{ end }}
+
 {{ range $method := .MethodsProxies }}
 func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
     {{ $method.InitArgs }}
