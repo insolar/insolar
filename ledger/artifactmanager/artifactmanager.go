@@ -180,12 +180,12 @@ func (m *LedgerArtifactManager) DeployCode(
 	typeRefs := make([]record.Reference, 0, len(types))
 	for _, tp := range types {
 		ref := record.Bytes2Reference(tp)
-		rec, err := m.storer.GetRecord(&ref)
-		if err != nil {
-			return nil, errors.Wrap(err, "ailed to retrieve type record")
+		rec, tErr := m.storer.GetRecord(&ref)
+		if tErr != nil {
+			return nil, errors.Wrap(tErr, "failed to retrieve type record")
 		}
 		if _, ok := rec.(*record.TypeRecord); !ok {
-			return nil, errors.Wrap(ErrInvalidRef, "ailed to retrieve type record")
+			return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve type record")
 		}
 		typeRefs = append(typeRefs, ref)
 	}
