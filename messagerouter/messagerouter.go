@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/jbenet/go-base58"
 )
 
@@ -33,6 +34,7 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 type MessageRouter struct {
 	LogicRunner LogicRunner
 	rpc         hostnetwork.RPC
+	service     servicenetwork.Service
 }
 
 // LogicRunner is an interface that should satisfy logic executor
@@ -57,8 +59,8 @@ type Response struct {
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
-	mr := &MessageRouter{lr, rpc}
+func New(lr LogicRunner, rpc hostnetwork.RPC, service servicenetwork.Service) (*MessageRouter, error) {
+	mr := &MessageRouter{lr, rpc, service}
 	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return mr, nil
 }
