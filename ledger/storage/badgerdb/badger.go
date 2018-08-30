@@ -170,20 +170,44 @@ func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 	return ref, nil
 }
 
-func (s *Store) GetClassIndex(*record.Reference) (*index.ClassLifeline, error) {
-	panic("not implemented")
+// GetClassIndex fetches class lifeline's index.
+func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
+	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	buf, err := s.Get(k)
+	if err != nil {
+		return nil, err
+	}
+	return index.DecodeClassLifeline(buf)
 }
 
-func (s *Store) SetClassIndex(*record.Reference, *index.ClassLifeline) error {
-	panic("not implemented")
+// SetClassIndex stores class lifeline index.
+func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
+	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	encoded, err := index.EncodeClassLifeline(idx)
+	if err != nil {
+		return err
+	}
+	return s.Set(k, encoded)
 }
 
-func (s *Store) GetObjectIndex(*record.Reference) (*index.ObjectLifeline, error) {
-	panic("not implemented")
+// GetObjectIndex fetches object lifeline index.
+func (s *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
+	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	buf, err := s.Get(k)
+	if err != nil {
+		return nil, err
+	}
+	return index.DecodeObjectLifeline(buf)
 }
 
-func (s *Store) SetObjectIndex(*record.Reference, *index.ObjectLifeline) error {
-	panic("not implemented")
+// SetObjectIndex stores object lifeline index.
+func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
+	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	encoded, err := index.EncodeObjectLifeline(idx)
+	if err != nil {
+		return err
+	}
+	return s.Set(k, encoded)
 }
 
 // GetDrop returns jet drop for a given pulse number.
