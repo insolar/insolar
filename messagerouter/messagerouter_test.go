@@ -121,7 +121,7 @@ func TestRoute(t *testing.T) {
 	ctx := getDefaultCtx(dht)
 
 	mr, _ := New(r, dht)
-	reference := dht.GetOriginID(ctx).ID.HashString()
+	reference := dht.GetOriginHost(ctx).ID.HashString()
 
 	t.Run("success", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
