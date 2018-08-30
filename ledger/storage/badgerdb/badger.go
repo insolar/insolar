@@ -17,7 +17,6 @@
 package badgerdb
 
 import (
-	"log"
 	"path/filepath"
 
 	"github.com/dgraph-io/badger"
@@ -93,7 +92,6 @@ func (s *Store) GetRecord(ref *record.Reference) (record.Record, error) {
 	var raw *record.Raw
 
 	k := prefixkey(scopeIDRecord, ref.Bytes())
-	log.Println("Try got record by ", k)
 	txerr := s.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(k)
 		if err != nil {
