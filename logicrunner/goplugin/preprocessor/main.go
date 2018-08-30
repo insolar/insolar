@@ -190,6 +190,19 @@ func parseFile(fileName string) (*parsedFile, error) {
 	return &res, nil
 }
 
+func openTemplate(fileName string) (*template.Template, error) {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return nil, errors.Wrap(nil, "couldn't find info about current file")
+	}
+	templateDir := filepath.Join(filepath.Dir(currentFile), fileName)
+	tmpl, err := template.ParseFiles(templateDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't parse template for output")
+	}
+	return tmpl, nil
+}
+
 func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
 	var methodsInfo []map[string]interface{}
 	for _, method := range parsed.methods[parsed.contract] {
@@ -223,14 +236,9 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		panic("Contract must be in main package")
 	}
 
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		return errors.Wrap(err, "couldn't find info about current file")
-	}
-	templateDir := filepath.Join(filepath.Dir(currentFile), "templates/wrapper.go.tpl")
-	tmpl, err := template.ParseFiles(templateDir)
+	tmpl, err := openTemplate("templates/wrapper.go.tpl")
 	if err != nil {
-		return errors.Wrap(err, "couldn't parse template for output")
+		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
 
 	data := struct {
@@ -275,32 +283,27 @@ func generateContractProxy(fileName string, out io.Writer) error {
 		proxyPackageName = match[1]
 	}
 
-	code := "package " + proxyPackageName + "\n\n"
+	types := generateTypes(parsed)
 
-	code += `import (
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
-)
+	methodsProxies := generateMethodsProxies(parsed)
 
-`
+	tmpl, err := openTemplate("templates/proxy.go.tpl")
+	if err != nil {
+		return errors.Wrap(err, "couldn't open template file for proxy")
+	}
 
-	code += generateTypes(parsed) + "\n"
-
-	code += `// Contract proxy type
-type ` + parsed.contract + ` struct {
-	Reference string
-}
-
-`
-
-	code += `// GetObject
-func GetObject(ref string) (r *` + parsed.contract + `) {
-	return &` + parsed.contract + `{Reference: ref}
-}
-`
-
-	code += generateMethodsProxies(parsed) + "\n"
-
-	_, err = out.Write([]byte(code))
+	data := struct {
+		PackageName    string
+		Types          []string
+		ContractType   string
+		MethodsProxies []map[string]interface{}
+	}{
+		proxyPackageName,
+		types,
+		parsed.contract,
+		methodsProxies,
+	}
+	err = tmpl.Execute(out, data)
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
 	}
@@ -346,17 +349,21 @@ func getMethods(parsed *parsedFile) {
 }
 
 // nolint
-func generateTypes(parsed *parsedFile) string {
-	text := ""
+func generateTypes(parsed *parsedFile) []string {
+	var types []string
 	for _, t := range parsed.types {
-		text += "type " + string(parsed.code[t.Pos()-1:t.End()-1]) + "\n\n"
+		types = append(types, "type "+string(parsed.code[t.Pos()-1:t.End()-1]))
 	}
 
-	return text
+	return types
 }
 
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
 	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
+
+	if list == nil {
+		return text, ""
+	}
 
 	for i, arg := range list.List {
 		initializer := ""
@@ -388,77 +395,68 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 	return text, listCode
 }
 
-func generateExports(parsed *parsedFile) string {
-	text := "var INSEXPORT " + parsed.contract + "\n"
-	return text
+func generateArguments(parsed *parsedFile, params *ast.FieldList) string {
+	args := ""
+	for i, arg := range params.List {
+		if i > 0 {
+			args += ", "
+		}
+		args += arg.Names[0].Name
+		args += " " + string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1])
+	}
+	return args
 }
 
-func generateMethodsProxies(parsed *parsedFile) string {
-	text := ""
+func generateResultsTypes(parsed *parsedFile, results *ast.FieldList) string {
+	resultsTypes := ""
+	if results.NumFields() > 0 {
+		for i, arg := range results.List {
+			if i > 0 {
+				resultsTypes += ", "
+			}
+			resultsTypes += string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
+		}
+	}
+	return resultsTypes
+}
+
+func generateInitArguments(list *ast.FieldList) string {
+	initArgs := ""
+	initArgs += fmt.Sprintf("var args [%d]interface{}\n", list.NumFields())
+	for i, arg := range list.List {
+		initArgs += fmt.Sprintf("\targs[%d] = %s\n", i, arg.Names[0].Name)
+	}
+	return initArgs
+}
+
+func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[string]interface{} {
+
+	args := generateArguments(parsed, method.Type.Params)
+
+	resultsTypes := generateResultsTypes(parsed, method.Type.Results)
+
+	initArgs := generateInitArguments(method.Type.Params)
+
+	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
+
+	info := map[string]interface{}{
+		"Name":           method.Name.Name,
+		"ResultZeroList": resInit,
+		"Results":        resList,
+		"Arguments":      args,
+		"ResultsTypes":   resultsTypes,
+		"InitArgs":       initArgs,
+	}
+	return info
+}
+
+func generateMethodsProxies(parsed *parsedFile) []map[string]interface{} {
+	var methodsProxies []map[string]interface{}
 
 	for _, method := range parsed.methods[parsed.contract] {
-		text += generateMethodProxy(parsed, method) + "\n"
+		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
 	}
-	return text
-}
-
-func generateMethodProxy(parsed *parsedFile, method *ast.FuncDecl) string {
-	text := fmt.Sprintf("func (r *%s) %s(", parsed.contract, method.Name.Name)
-	for i, arg := range method.Type.Params.List {
-		if i > 0 {
-			text += ", "
-		}
-		text += arg.Names[0].Name
-		text += " " + string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1])
-	}
-	text += ") ("
-
-	for i, arg := range method.Type.Results.List {
-		if i > 0 {
-			text += ", "
-		}
-		text += string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
-	}
-
-	text += ") {\n"
-
-	text += fmt.Sprintf("\tvar args [%d]interface{}\n", method.Type.Params.NumFields())
-	for i, arg := range method.Type.Params.List {
-		text += fmt.Sprintf("\targs[%d] = %s\n", i, arg.Names[0].Name)
-	}
-
-	text += `
-	var argsSerialized []byte
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-`
-
-	text += fmt.Sprintf("\t"+`res, err := proxyctx.Current.RouteCall(r.Reference, "%s", argsSerialized)`, method.Name.Name)
-
-	text += `
-	if err != nil {
-		panic(err)
-	}
-`
-	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
-	text += resInit
-
-	text += `
-	err = proxyctx.Current.Deserialize(res, &resList)
-	if err != nil {
-		panic(err)
-	}
-`
-
-	if method.Type.Results.NumFields() > 0 {
-		text += "\treturn " + resList
-	}
-
-	text += "}\n"
-
-	return text
+	return methodsProxies
 }
 
 func cmdRewriteImports(fname string, w io.Writer) error {
