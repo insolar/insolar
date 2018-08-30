@@ -51,13 +51,13 @@ func (service *Service) AddNode(node *nodenetwork.Node, domainID string) {
 }
 
 // SendMessage sends a message from MessageRouter.
-func (service Service) SendMessage(reference record.Reference, msg messagerouter.Message) {
-	domainID := string(reference.Domain.Hash[:bytes.IndexByte(reference.Domain.Hash, 0)])
-	if ref, ok := service.referenceMap[domainID]; ok {
+func (service Service) SendMessage(reference record.Reference, msg messagerouter.Message) error {
+	if ref, ok := service.referenceMap[string(reference.Domain.Hash[:bytes.IndexByte(reference.Domain.Hash, 0)])]; ok {
 		if node, ok := service.nodes[ref]; ok {
 			args := make([][]byte, 0)
 			args[0] = msg.Arguments
-			node.SendPacket(msg.Method, args)
+			return node.SendPacket(msg.Method, args)
 		}
 	}
+	return nil
 }
