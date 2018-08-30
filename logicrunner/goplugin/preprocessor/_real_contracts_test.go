@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,9 +44,15 @@ func MakeTestName(file string, contractType string) string {
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 	for _, file := range GetContractsList() {
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
-			var b bytes.Buffer
-			err := generateContractProxy(file, &b)
+			var buf bytes.Buffer
+			err := generateContractProxy(file, &buf)
 			assert.NoError(t, err)
+
+			code, err := ioutil.ReadAll(&buf)
+			assert.NoError(t, err)
+			if len(code) == 0 {
+				t.Fatal("generator returns zero length code")
+			}
 		})
 	}
 }
@@ -53,9 +60,15 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 	for _, file := range GetContractsList() {
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
-			var b bytes.Buffer
-			err := generateContractWrapper(file, &b)
+			var buf bytes.Buffer
+			err := generateContractWrapper(file, &buf)
 			assert.NoError(t, err)
+
+			code, err := ioutil.ReadAll(&buf)
+			assert.NoError(t, err)
+			if len(code) == 0 {
+				t.Fatal("generator returns zero length code")
+			}
 		})
 	}
 }
