@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
 
@@ -51,7 +50,7 @@ func (service *Service) AddNode(node *nodenetwork.Node, domainID string) {
 }
 
 // SendMessage sends a message from MessageRouter.
-func (service Service) SendMessage(reference record.Reference, msg messagerouter.Message) error {
+func (service Service) SendMessage(reference record.Reference, msg core.Message) error {
 	if ref, ok := service.referenceMap[string(reference.Domain.Hash[:bytes.IndexByte(reference.Domain.Hash, 0)])]; ok {
 		if node, ok := service.nodes[ref]; ok {
 			args := make([][]byte, 0)
