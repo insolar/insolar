@@ -131,11 +131,11 @@ func (m *LedgerArtifactManager) SetArchPref(pref []core.MachineType) {
 	m.archPref = pref
 }
 
-// DeployCode creates new code record in storage.
+// DeclareType creates new type record in storage.
 //
-// Code records are used to activate class or as migration code for an object.
-func (m *LedgerArtifactManager) DeployCode(
-	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
+// Type is a contract interface. It contains one method signature.
+func (m *LedgerArtifactManager) DeclareType(
+	domain, request core.RecordRef, typeDec []byte,
 ) (core.RecordRef, error) {
 	domainRef := record.Bytes2Reference(domain)
 	requestRef := record.Bytes2Reference(request)
@@ -143,6 +143,51 @@ func (m *LedgerArtifactManager) DeployCode(
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
 		return nil, err
+	}
+
+	rec := record.TypeRecord{
+		StorageRecord: record.StorageRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord:  domainRef,
+					RequestRecord: requestRef,
+				},
+			},
+		},
+		TypeDeclaration: typeDec,
+	}
+	codeRef, err := m.storer.SetRecord(&rec)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to store record")
+	}
+	return codeRef.Bytes(), nil
+}
+
+// DeployCode creates new code record in storage.
+//
+// Code records are used to activate class or as migration code for an object.
+func (m *LedgerArtifactManager) DeployCode(
+	domain, request core.RecordRef, types []core.RecordRef, codeMap map[core.MachineType][]byte,
+) (core.RecordRef, error) {
+	domainRef := record.Bytes2Reference(domain)
+	requestRef := record.Bytes2Reference(request)
+
+	err := m.checkRequestRecord(&requestRef)
+	if err != nil {
+		return nil, err
+	}
+
+	typeRefs := make([]record.Reference, 0, len(types))
+	for _, tp := range types {
+		ref := record.Bytes2Reference(tp)
+		rec, tErr := m.storer.GetRecord(&ref)
+		if tErr != nil {
+			return nil, errors.Wrap(tErr, "failed to retrieve type record")
+		}
+		if _, ok := rec.(*record.TypeRecord); !ok {
+			return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve type record")
+		}
+		typeRefs = append(typeRefs, ref)
 	}
 
 	rec := record.CodeRecord{
@@ -154,6 +199,7 @@ func (m *LedgerArtifactManager) DeployCode(
 				},
 			},
 		},
+		Types:        typeRefs,
 		TargetedCode: codeMap,
 	}
 	codeRef, err := m.store.SetRecord(&rec)

@@ -144,9 +144,16 @@ type StorageRecord struct {
 type CodeRecord struct {
 	StorageRecord
 
-	Interfaces   []Reference
-	TargetedCode map[core.MachineType][]byte // []MachineBinaryCode
-	SourceCode   string                      // ObjectSourceCode
+	TargetedCode map[core.MachineType][]byte
+	SourceCode   string
+	Types        []Reference
+}
+
+// TypeRecord is a code interface declaration.
+type TypeRecord struct {
+	StorageRecord
+
+	TypeDeclaration []byte
 }
 
 // GetCode returns class code according to provided architecture preferences. If preferences are not provided or the

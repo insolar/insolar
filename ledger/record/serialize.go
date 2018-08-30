@@ -163,6 +163,7 @@ const (
 	statefulExceptionResultID   TypeID = 25
 	enforcedObjectAmendRecordID TypeID = 26
 	objectAppendRecordID        TypeID = 27
+	typeRecordID                TypeID = 28
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -224,6 +225,8 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 		return &EnforcedObjectAmendRecord{}
 	case objectAppendRecordID:
 		return &ObjectAppendRecord{}
+	case typeRecordID:
+		return &TypeRecord{}
 	default:
 		panic(fmt.Errorf("unknown record type id %v", id))
 	}
@@ -288,6 +291,8 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 		return enforcedObjectAmendRecordID
 	case *ObjectAppendRecord:
 		return objectAppendRecordID
+	case *TypeRecord:
+		return typeRecordID
 	default:
 		panic(fmt.Errorf("can't find record id by type %T", v))
 	}
