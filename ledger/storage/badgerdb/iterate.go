@@ -59,8 +59,7 @@ func pulseNumRecordPrefix(n record.PulseNum) []byte {
 func (s *Store) ProcessSlotHashes(n record.PulseNum, ifn func(it HashIterator) error) error {
 	prefix := pulseNumRecordPrefix(n)
 
-	var iopts badger.IteratorOptions
-	iopts = badger.DefaultIteratorOptions
+	iopts := badger.DefaultIteratorOptions
 	iopts.PrefetchValues = false
 
 	// TODO: add transaction conflict processing
