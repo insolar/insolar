@@ -15,3 +15,8 @@ func (HelloWorld) CodeRef() core.RecordRef {
 func NewHelloWorld() *HelloWorld {
 	return &HelloWorld{}
 }
+
+func (hw *HelloWorld) Greet(name string) string {
+	hw.Greeted++
+	return "Hello " + name + "'s world"
+}
