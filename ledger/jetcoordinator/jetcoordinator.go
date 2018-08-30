@@ -26,13 +26,13 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	storage storage.Store
+	store storage.Store
 }
 
 // Pulse creates new jet drop and ends current slot.
 // This should be called when receiving a new pulse from pulsar.
 func (jc *JetCoordinator) Pulse(new record.PulseNum) (*jetdrop.JetDrop, error) {
-	current := jc.storage.GetCurrentPulse()
+	current := jc.store.GetCurrentPulse()
 	if new-current != 1 {
 		panic(fmt.Sprintf("Wrong pulse, got %v, but current is %v\n", new, current))
 	}
@@ -54,18 +54,18 @@ func (jc *JetCoordinator) Pulse(new record.PulseNum) (*jetdrop.JetDrop, error) {
 
 	// TODO: select next executor and validators. Send jet drop to current validators.
 
-	jc.storage.SetCurrentPulse(new)
+	jc.store.SetCurrentPulse(new)
 
 	return drop, nil
 }
 
 // CreateDrop creates jet drop for provided pulse number.
 func (jc *JetCoordinator) createDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
-	prevDrop, err := jc.storage.GetDrop(pulse - 1)
+	prevDrop, err := jc.store.GetDrop(pulse - 1)
 	if err != nil {
 		return nil, err
 	}
-	newDrop, err := jc.storage.SetDrop(pulse, prevDrop)
+	newDrop, err := jc.store.SetDrop(pulse, prevDrop)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (jc *JetCoordinator) createDrop(pulse record.PulseNum) (*jetdrop.JetDrop, e
 }
 
 func (jc *JetCoordinator) getCurrentEntropy() ([]byte, error) { // nolint: megacheck
-	return jc.storage.GetEntropy(jc.storage.GetCurrentPulse())
+	return jc.store.GetEntropy(jc.store.GetCurrentPulse())
 }
 
 // TODO: real signature unknown
@@ -105,4 +105,9 @@ func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][
 		selected = append(selected, candidates[i])
 	}
 	return selected, nil
+}
+
+// NewJetCoordinator creates new coordinator instance.
+func NewJetCoordinator(store storage.Store) (*JetCoordinator, error) {
+	return &JetCoordinator{store: store}, nil
 }

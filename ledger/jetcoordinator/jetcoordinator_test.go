@@ -31,7 +31,7 @@ func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
 	defer cleaner()
 
 	jc := &JetCoordinator{
-		storage: ledger,
+		store: ledger,
 	}
 	var (
 		zeropulse record.PulseNum

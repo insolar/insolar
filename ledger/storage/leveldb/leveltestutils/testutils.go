@@ -33,7 +33,7 @@ func TmpDB(t *testing.T, dir string) (*leveldb.LevelLedger, func()) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ledger, err := leveldb.InitDB(tmpdir, nil)
+	ledger, err := leveldb.NewLevelLedger(tmpdir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

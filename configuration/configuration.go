@@ -31,7 +31,7 @@ type Configuration struct {
 // Holder provides methods to manage configuration
 type Holder struct {
 	Configuration Configuration
-	viper *viper.Viper
+	viper         *viper.Viper
 }
 
 // NewConfiguration creates new default configuration
@@ -67,7 +67,8 @@ func (c *Holder) Load() error {
 		return err
 	}
 
-	return c.viper.UnmarshalKey("insolar", &c.Configuration)}
+	return c.viper.UnmarshalKey("insolar", &c.Configuration)
+}
 
 // LoadFromFile method reads configuration from particular file path
 func (c *Holder) LoadFromFile(path string) error {

@@ -48,7 +48,7 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 
 	return preparedAMTestData{
 		ledger:     ledger,
-		manager:    &LedgerArtifactManager{storer: ledger},
+		manager:    &LedgerArtifactManager{store: ledger},
 		domainRef:  genRandomRef(),
 		requestRef: genRandomRef(),
 	}, cleaner

@@ -53,8 +53,8 @@ const (
 	scopeIDEntropy  byte = 4
 )
 
-// InitDB returns LevelDB ledger implementation.
-func InitDB(dir string, opts *opt.Options) (*LevelLedger, error) {
+// NewLevelLedger returns LevelDB ledger implementation.
+func NewLevelLedger(dir string, opts *opt.Options) (*LevelLedger, error) {
 	if dir == "" {
 		dir = dbDirPath
 	}
