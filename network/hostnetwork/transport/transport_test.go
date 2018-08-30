@@ -116,7 +116,7 @@ func (t *transportSuite) TestSendInvalidPacket() {
 
 func TestUTPTransport(t *testing.T) {
 	cfg := configuration.NewHostNetwork().Transport
-	cfg.Address = "127.0.0.1:17001"
+	cfg.Address = "127.0.0.1:17010"
 	cfg.Protocol = "UTP"
 	cfg.BehindNAT = false
 	suite.Run(t, NewSuite(cfg))
@@ -124,7 +124,7 @@ func TestUTPTransport(t *testing.T) {
 
 func TestKCPTransport(t *testing.T) {
 	cfg := configuration.NewHostNetwork().Transport
-	cfg.Address = "127.0.0.1:17002"
+	cfg.Address = "127.0.0.1:17012"
 	cfg.Protocol = "KCP"
 	cfg.BehindNAT = false
 	suite.Run(t, NewSuite(cfg))

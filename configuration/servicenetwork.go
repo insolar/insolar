@@ -16,20 +16,16 @@
 
 package configuration
 
-// Node holds configuration for one Node
-type Node struct {
-	ID       string
-	DomainID string
+// Service is configuration struct for servicenetwork.Service.
+type Service struct {
 }
 
-// NodeNetwork holds configuration for NodeNetwork
-type NodeNetwork struct {
-	Nodes []Node
+// ServiceNetwork is configuration for ServiceNetwork.
+type ServiceNetwork struct {
+	Service Service
 }
 
-// NewNodeNetwork creates new default NodeNetwork configuration
-func NewNodeNetwork() NodeNetwork {
-	return NodeNetwork{
-		Nodes: make([]Node, 0),
-	}
+// NewServiceNetwork creates a new ServiceNetwork configuration.
+func NewServiceNetwork() ServiceNetwork {
+	return ServiceNetwork{}
 }

@@ -48,8 +48,6 @@ type runner struct {
 	responses []resp
 }
 
-const closedMessage = "closed" // "broken pipe" for kcpTransport
-
 func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
@@ -123,7 +121,7 @@ func TestRoute(t *testing.T) {
 	ctx := getDefaultCtx(dht)
 
 	mr, _ := New(r, dht)
-	reference := dht.GetOriginID(ctx)
+	reference := dht.GetOriginHost(ctx).ID.HashString()
 
 	t.Run("success", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})

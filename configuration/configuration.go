@@ -22,10 +22,11 @@ import (
 
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
-	Host  HostNetwork
-	Node  NodeNetwork
-	Log   Log
-	Stats Stats
+	Host    HostNetwork
+	Node    NodeNetwork
+	Service ServiceNetwork
+	Log     Log
+	Stats   Stats
 }
 
 // Holder provides methods to manage configuration
@@ -37,10 +38,11 @@ type Holder struct {
 // NewConfiguration creates new default configuration
 func NewConfiguration() Configuration {
 	cfg := Configuration{
-		Host:  NewHostNetwork(),
-		Node:  NewNodeNetwork(),
-		Log:   NewLog(),
-		Stats: NewStats(),
+		Host:    NewHostNetwork(),
+		Node:    NewNodeNetwork(),
+		Service: NewServiceNetwork(),
+		Log:     NewLog(),
+		Stats:   NewStats(),
 	}
 
 	return cfg

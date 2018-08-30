@@ -21,14 +21,15 @@ import (
 
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/pkg/errors"
 )
 
 // Node is an essence which provides communication between network level and MessageRouter.
 type Node struct {
-	id       string
 	host     *host.Host
-	role     string
 	dht      *hostnetwork.DHT
+	id       string
+	role     string
 	domainID string
 }
 
@@ -63,8 +64,11 @@ func (node Node) GetDomainID() string {
 }
 
 // SendPacket sends packet from service to target.
-func (node Node) SendPacket(targetID, method string, args [][]byte) error {
-	_, err := node.dht.RemoteProcedureCall(node.createContext(), targetID, method, args)
+func (node Node) SendPacket(method string, args [][]byte) error {
+	if node.host == nil {
+		return errors.New("host doesn't exist")
+	}
+	_, err := node.dht.RemoteProcedureCall(node.createContext(), node.host.ID.HashString(), method, args)
 	return err
 }
 
