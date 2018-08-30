@@ -306,7 +306,7 @@ func (dht *DHT) NumHosts(ctx Context) int {
 	return ht.TotalHosts()
 }
 
-// GetOriginHost returns the base58 encoded identifier of the local host.
+// GetOriginHost returns the local host.
 func (dht *DHT) GetOriginHost(ctx Context) *host.Host {
 	ht := dht.htFromCtx(ctx)
 	return ht.Origin
