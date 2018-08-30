@@ -196,12 +196,20 @@ func (s *Store) SetDrop(record.PulseNum, *jetdrop.JetDrop) (*jetdrop.JetDrop, er
 	panic("not implemented")
 }
 
-func (s *Store) SetEntropy(record.PulseNum, []byte) error {
-	panic("not implemented")
+// SetEntropy stores given entropy for given pulse in storage.
+//
+// Entropy is used for calculating node roles.
+func (s *Store) SetEntropy(pulse record.PulseNum, entropy []byte) error {
+	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
+	return s.Set(k, entropy)
 }
 
-func (s *Store) GetEntropy(record.PulseNum) ([]byte, error) {
-	panic("not implemented")
+// GetEntropy returns entropy from storage for given pulse.
+//
+// Entropy is used for calculating node roles.
+func (s *Store) GetEntropy(pulse record.PulseNum) ([]byte, error) {
+	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
+	return s.Get(k)
 }
 
 // SetCurrentPulse sets current pulse number.
