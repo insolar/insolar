@@ -20,13 +20,14 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/index"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
+
+	. "github.com/insolar/insolar/ledger/storage/storagetestutils"
 )
 
 func genRandomRef() *record.Reference {
@@ -44,7 +45,7 @@ type preparedAMTestData struct {
 }
 
 func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := TmpStore(t)
 
 	return preparedAMTestData{
 		ledger:     ledger,
