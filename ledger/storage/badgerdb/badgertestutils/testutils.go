@@ -14,31 +14,31 @@
  *    limitations under the License.
  */
 
-// Package leveltestutils provides sharable utils for testing LevelDB ledger implementation.
-package leveltestutils
+// Package badgertestutils provides sharable utils for testing BadgerDB store implementation.
+package badgertestutils
 
 import (
 	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/storage/leveldb"
+	"github.com/insolar/insolar/ledger/storage/badgerdb"
 )
 
-// TmpDB returns LevelDB's ledger implementation and cleanup function.
+// TmpDB returns BadgerDB's store implementation and cleanup function.
 //
-// Creates LevelDB in temporary directory and uses t for errors reporting.
-func TmpDB(t *testing.T, dir string) (*leveldb.Store, func()) {
-	tmpdir, err := ioutil.TempDir(dir, "ldb-test-")
+// Creates BadgerDB in temporary directory and uses t for errors reporting.
+func TmpDB(t *testing.T, dir string) (*badgerdb.Store, func()) {
+	tmpdir, err := ioutil.TempDir(dir, "bdb-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ledger, err := leveldb.NewStore(tmpdir, nil)
+	store, err := badgerdb.NewStore(tmpdir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ledger, func() {
-		closeErr := ledger.Close()
+	return store, func() {
+		closeErr := store.Close()
 		rmErr := os.RemoveAll(tmpdir)
 		if closeErr != nil {
 			t.Error("temporary db close failed", closeErr)

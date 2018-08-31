@@ -14,13 +14,5 @@
  *    limitations under the License.
  */
 
-package storage
-
-import (
-	"os"
-	"testing"
-)
-
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
-}
+// Package badgerdb contains ledger store implementation on top of BadgerDB engine.
+package badgerdb

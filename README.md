@@ -48,7 +48,7 @@ See [package readme](network/hostnetwork) for more details.
 
 
 ### [Ledger](ledger)
-Record storage engine backed by [LevelDB](https://github.com/syndtr/goleveldb).
+Record storage engine backed by [BadgerDB](https://github.com/dgraph-io/badger).
 
 
 
