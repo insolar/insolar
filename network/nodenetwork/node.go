@@ -40,7 +40,6 @@ func NewNode(ID string, host *host.Host, DHT *hostnetwork.DHT, domainID string) 
 		host:     host,
 		dht:      DHT,
 		domainID: domainID,
-		role:     role,
 	}
 }
 

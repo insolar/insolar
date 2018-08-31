@@ -59,7 +59,7 @@ func StartNetwork(cfg configuration.Configuration) (Network, error) {
 		logrus.Errorln(err)
 	}
 
-	n.Node, err = nodenetwork.NewNode("123", nil, n.HostNetwork, "MyDomain")
+	n.Node = nodenetwork.NewNode("123", nil, n.HostNetwork, "MyDomain")
 	return n, nil
 }
 
@@ -71,7 +71,7 @@ func (n *Network) closeNetwork() {
 func (n *Network) bootstrap() {
 	err := n.HostNetwork.Bootstrap()
 	if err != nil {
-		logrus.Fatalln("Failed to bootstrap network", err.Error())
+		logrus.Errorln("Failed to bootstrap network", err.Error())
 	}
 }
 
@@ -80,7 +80,7 @@ func (n *Network) listen() {
 		logrus.Infoln("Network starts listening")
 		err := n.HostNetwork.Listen()
 		if err != nil {
-			logrus.Fatalln("Listen failed:", err.Error())
+			logrus.Errorln("Listen failed:", err.Error())
 		}
 	}()
 }

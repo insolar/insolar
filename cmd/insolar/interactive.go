@@ -28,6 +28,9 @@ import (
 )
 
 func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+	displayInteractiveHelp()
+	doInfo(dhtNetwork, ctx)
+
 	rl, err := readline.New("> ")
 	if err != nil {
 		panic(err)
@@ -83,8 +86,10 @@ func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 
 func doInfo(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	hosts := dhtNetwork.NumHosts(ctx)
-	originID := dhtNetwork.GetOriginID(ctx)
-	fmt.Println("ID: " + originID)
+	originID := dhtNetwork.GetOriginHost(ctx).ID
+	fmt.Println("======= Host info ======")
+	fmt.Println("ID key: " + originID.KeyString())
+	fmt.Println("ID hash: " + originID.HashString())
 	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
 }
 
@@ -124,6 +129,7 @@ func displayInteractiveHelp() {
 help - This message
 findnode <key> - Find node's real network address
 info - Display information about this node
+exit - Exit programm
 
 <method> <target> <args...> - Remote procedure call`)
 }

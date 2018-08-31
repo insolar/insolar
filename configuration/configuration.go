@@ -17,10 +17,13 @@
 package configuration
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 // Configuration contains configuration params for all Insolar components
@@ -28,6 +31,7 @@ type Configuration struct {
 	Host    HostNetwork
 	Node    NodeNetwork
 	Service ServiceNetwork
+	Ledger  Ledger
 	Log     Log
 	Stats   Stats
 }
@@ -44,6 +48,7 @@ func NewConfiguration() Configuration {
 		Host:    NewHostNetwork(),
 		Node:    NewNodeNetwork(),
 		Service: NewServiceNetwork(),
+		Ledger:  Ledger{},
 		Log:     NewLog(),
 		Stats:   NewStats(),
 	}
@@ -65,8 +70,6 @@ func NewHolder() Holder {
 
 	holder.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	holder.viper.SetEnvPrefix("insolar")
-	//holder.viper.AutomaticEnv()
-
 	return holder
 }
 
@@ -74,7 +77,7 @@ func NewHolder() Holder {
 func (c *Holder) Load() error {
 	err := c.viper.ReadInConfig()
 	if err != nil {
-		return err
+		log.Warnln(err.Error())
 	}
 
 	// workaround for AutomaticEnv issue https://github.com/spf13/viper/issues/188
@@ -96,6 +99,7 @@ func (c *Holder) LoadFromFile(path string) error {
 
 // Save method writes configuration to default file path
 func (c *Holder) Save() error {
+	c.viper.Set("insolar", c.Configuration)
 	return c.viper.WriteConfig()
 }
 
@@ -123,4 +127,13 @@ func bindEnvs(v *viper.Viper, iface interface{}, parts ...string) {
 			v.BindEnv(strings.Join(path, "."))
 		}
 	}
+}
+
+// ToString converts any configuration struct to yaml string
+func ToString(in interface{}) string {
+	d, err := yaml.Marshal(in)
+	if err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	return string(d)
 }

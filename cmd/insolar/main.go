@@ -17,8 +17,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
+	"strings"
+	"syscall"
 
 	"github.com/insolar/insolar/configuration"
 	log "github.com/sirupsen/logrus"
@@ -26,68 +29,56 @@ import (
 )
 
 func main() {
-	/*
-		var addr = flag.String("addr", "0.0.0.0:0", "IP Address and port to use")
-		var bootstrapAddress = flag.String("bootstrap", "", "IP Address and port to bootstrap against")
-		var help = flag.Bool("help", false, "Display Help")
-		var stun = flag.Bool("stun", true, "Use STUN")
-		var metrics = flag.Bool("metrics", false, "Prometheus metrics")
-		var transportType = flag.String("transport", "UTP", "Network transport protocol UTP or KCP")
-
-		flag.Parse()
-
-		if *help {
-			displayCLIHelp()
-			os.Exit(0)
-		}
-	*/
-	jww.SetStdoutThreshold(jww.LevelTrace)
-	jww.SetLogOutput(log.StandardLogger().Out)
-
+	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
 	cfgHolder.Load()
-	cfgHolder.Configuration.Host.Transport.BehindNAT = false
 
+	cfgHolder.Configuration.Host.Transport.BehindNAT = false
+	cfgHolder.Configuration.Ledger.DataDirectory = "./data"
+
+	initLogger(cfgHolder.Configuration.Log)
+
+	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 	network, err := StartNetwork(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("Failed to start network: ", err.Error())
 	}
 
-	defer func() {
-		network.closeNetwork()
-	}()
-	handleSignals()
+	var gracefulStop = make(chan os.Signal)
+	signal.Notify(gracefulStop, syscall.SIGTERM)
+	signal.Notify(gracefulStop, syscall.SIGINT)
 
-	handleStats(cfgHolder.Configuration.Stats, network)
-
-	//Println("Running interactive mode:")
-	//repl(dhtNetwork, ctx)
-}
-
-func handleSignals() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
 	go func() {
-		for range c {
-			//closeNetwork()
-		}
+		sig := <-gracefulStop
+		log.Debugln("caught sig: ", sig)
+		network.closeNetwork()
+		os.Exit(0)
 	}()
+
+	/*
+		ledger, err := ledger.NewLedger(cfgHolder.Configuration.Ledger)
+		if err != nil {
+			log.Fatalln("Failed to create ledger: ", err.Error())
+		}
+
+		ledger.GetManager()
+		//logicrunner.NewLogicRunner(ledger.GetManager())
+		//messagerouter.MessageRouter{}
+	*/
+
+	go handleStats(cfgHolder.Configuration.Stats, network)
+
+	fmt.Println("Running interactive mode:")
+	repl(network.HostNetwork, network.ctx)
 }
 
-/*
-func displayCLIHelp() {
-	fmt.Println(`example
+func initLogger(cfg configuration.Log) {
 
-Usage:
-	example --addr [addr]
-
-Options:
-	--help Show this screen.
-	--addr=<ip> Local IP and Port [default: 0.0.0.0]
-	--bootstrap=<ip> Bootstrap IP and Port
-	--stun=<bool> Use STUN protocol for public addr discovery [default: true]
-    --relay=<ip> send relay request
-	--metrics=<bool> [default: false]
-	--transport=<protocol> Network transport protocol UTP or KCP [default: UTP]`)
+	cfg.Level = "debug"
+	level, err := log.ParseLevel(strings.ToLower(cfg.Level))
+	if err != nil {
+		log.Warnln(err.Error())
+	}
+	jww.SetLogOutput(log.StandardLogger().Out)
+	log.SetLevel(level)
 }
-*/
