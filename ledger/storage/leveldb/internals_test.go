@@ -50,8 +50,8 @@ func TestStore_prefixkey(t *testing.T) {
 		Domain: record.ID{Pulse: 0, Hash: raw.Hash()},
 		Record: record.ID{Pulse: 0, Hash: raw.Hash()},
 	}
-	key := ref.Bytes()
-	keyP := prefixkey(0, key)
+	key := ref.CoreRef()
+	keyP := prefixkey(0, key[:])
 	emptyHexStr := strings.Repeat("00", record.IDSize)
 	emptyKey := MustDecodeHexString(emptyHexStr + emptyHexStr)
 	emptyKeyPrefix := MustDecodeHexString("00" + emptyHexStr + emptyHexStr)
@@ -64,12 +64,12 @@ func TestStore_prefixkey(t *testing.T) {
 
 	expectHexKey := "00000000416ad5cadc41ad8829bdc099b3b20f04dce93217219487fb64cbced600000000416ad5cadc41ad8829bdc099b3b20f04dce93217219487fb64cbced6"
 	expectHexKeyP := "00" + expectHexKey
-	assert.Equal(t, MustDecodeHexString(expectHexKey), key)
+	assert.Equal(t, MustDecodeHexString(expectHexKey), key[:])
 	assert.Equal(t, MustDecodeHexString(expectHexKeyP), keyP)
 }
 
 func setRawRecord(ll *Store, ref *record.Reference, raw *record.Raw) error {
-	k := prefixkey(scopeIDRecord, ref.Bytes())
+	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
 	return ll.ldb.Put(k, record.MustEncodeRaw(raw), nil)
 }
 

@@ -16,5 +16,9 @@
 
 package core
 
+const (
+	RecordRefSize = 64
+)
+
 // RecordRef is unified record reference.
-type RecordRef []byte
+type RecordRef [RecordRefSize]byte

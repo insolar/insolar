@@ -110,7 +110,7 @@ func (ll *Store) GetCurrentPulse() record.PulseNum {
 //
 // It returns ErrNotFound if the DB does not contains the key.
 func (ll *Store) GetRecord(ref *record.Reference) (record.Record, error) {
-	k := prefixkey(scopeIDRecord, ref.Bytes())
+	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
@@ -135,7 +135,7 @@ func (ll *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 		Domain: rec.Domain().Record,
 		Record: record.ID{Pulse: ll.GetCurrentPulse(), Hash: raw.Hash()},
 	}
-	k := prefixkey(scopeIDRecord, ref.Bytes())
+	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
 	err = ll.ldb.Put(k, record.MustEncodeRaw(raw), nil)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (ll *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 
 // GetClassIndex fetches lifeline index from leveldb
 func (ll *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
@@ -162,7 +162,7 @@ func (ll *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, err
 
 // SetClassIndex stores lifeline index into leveldb
 func (ll *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
 	encoded, err := index.EncodeClassLifeline(idx)
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (ll *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) 
 
 // GetObjectIndex fetches lifeline index from leveldb
 func (ll *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
 	buf, err := ll.ldb.Get(k, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
@@ -189,7 +189,7 @@ func (ll *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, e
 
 // SetObjectIndex stores lifeline index into leveldb
 func (ll *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
 	encoded, err := index.EncodeObjectLifeline(idx)
 	if err != nil {
 		return err
