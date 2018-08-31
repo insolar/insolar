@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package storage_test
+package badgerdb_test
 
 import (
 	"fmt"
@@ -27,11 +27,11 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 
-	. "github.com/insolar/insolar/ledger/storage/storagetestutils"
+	"github.com/insolar/insolar/ledger/storage/badgerdb/badgertestutils"
 )
 
 func TestStore_GetRecordNotFound(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	ref := &record.Reference{}
@@ -41,7 +41,7 @@ func TestStore_GetRecordNotFound(t *testing.T) {
 }
 
 func TestStore_SetRecord(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
@@ -77,7 +77,7 @@ func TestStore_SetRecord(t *testing.T) {
 }
 
 func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	ref := &record.Reference{
@@ -90,7 +90,7 @@ func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	zerodomain := record.ID{Hash: zerohash()}
@@ -123,7 +123,7 @@ func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	ref := referenceWithHashes("1000", "5000")
@@ -133,7 +133,7 @@ func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
@@ -155,7 +155,7 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	drop, err := store.GetDrop(1)
@@ -164,7 +164,7 @@ func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 }
 
 func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	// it references on 'fake' zero
@@ -181,7 +181,7 @@ func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestStore_SetCurrentPulse(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	store.SetCurrentPulse(42)
@@ -189,7 +189,7 @@ func TestStore_SetCurrentPulse(t *testing.T) {
 }
 
 func TestStore_SetEntropy(t *testing.T) {
-	store, cleaner := TmpStore(t)
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	store.SetEntropy(42, []byte{1, 2, 3})
