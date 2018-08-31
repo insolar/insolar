@@ -14,13 +14,16 @@
  *    limitations under the License.
  */
 
-package storage
+package storagetestutils
 
 import (
-	"errors"
+	"testing"
+
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/badgerdb/badgertestutils"
 )
 
-var (
-	// ErrNotFound returns if record/index not found in storage.
-	ErrNotFound = errors.New("storage object not found")
-)
+// TmpStore returns current store implementation and cleanup function.
+func TmpStore(t *testing.T) (storage.Store, func()) {
+	return badgertestutils.TmpDB(t, "")
+}
