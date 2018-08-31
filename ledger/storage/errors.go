@@ -21,6 +21,6 @@ import (
 )
 
 var (
-	// ErrNotFound returns if record/index not found in leveldb storage.
+	// ErrNotFound returns if record/index not found in storage.
 	ErrNotFound = errors.New("storage object not found")
 )

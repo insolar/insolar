@@ -17,28 +17,13 @@
 package storagetestutils
 
 import (
-	"log"
-	"os"
 	"testing"
 
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/badgerdb/badgertestutils"
-	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
 
 // TmpStore returns current store implementation and cleanup function.
 func TmpStore(t *testing.T) (storage.Store, func()) {
-	if os.Getenv("INSOLAR_STORAGE_ENGINE") == "level" {
-		log.Println("Use LevelDB implemenatation (Depricated)")
-		return tmpstoreLevel(t)
-	}
-	return tmpstoreBadger(t)
-}
-
-func tmpstoreLevel(t *testing.T) (storage.Store, func()) {
-	return leveltestutils.TmpDB(t, "")
-}
-
-func tmpstoreBadger(t *testing.T) (storage.Store, func()) {
 	return badgertestutils.TmpDB(t, "")
 }
