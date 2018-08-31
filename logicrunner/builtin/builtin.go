@@ -15,14 +15,14 @@
  */
 
 // Package builtin is implementation of builtin contracts engine
-package buitin
+package builtin
 
 import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/logicrunner/buitin/helloworld"
+	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )

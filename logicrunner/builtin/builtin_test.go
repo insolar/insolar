@@ -1,4 +1,4 @@
-package buitin
+package builtin
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger"
-	"github.com/insolar/insolar/logicrunner/buitin/helloworld"
+	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 )
