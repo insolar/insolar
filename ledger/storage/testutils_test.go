@@ -3,31 +3,9 @@ package storage_test
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"log"
-	"os"
-	"testing"
 
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/badgerdb/badgertestutils"
-	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
-
-func tmpstore(t *testing.T) (storage.Store, func()) {
-	if os.Getenv("INSOLAR_STORAGE_ENGINE") == "level" {
-		log.Println("Use LevelDB implemenatation (Depricated)")
-		return tmpstoreLevel(t)
-	}
-	return tmpstoreBadger(t)
-}
-
-func tmpstoreLevel(t *testing.T) (storage.Store, func()) {
-	return leveltestutils.TmpDB(t, "")
-}
-
-func tmpstoreBadger(t *testing.T) (storage.Store, func()) {
-	return badgertestutils.TmpDB(t, "")
-}
 
 func zerohash() []byte {
 	b := make([]byte, record.HashSize)

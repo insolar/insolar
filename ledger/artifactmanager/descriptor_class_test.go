@@ -19,13 +19,14 @@ package artifactmanager
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
+
+	. "github.com/insolar/insolar/ledger/storage/storagetestutils"
 )
 
 type preparedDCTestData struct {
@@ -36,7 +37,7 @@ type preparedDCTestData struct {
 }
 
 func prepareDCTestData(t *testing.T) (preparedDCTestData, func()) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := TmpStore(t)
 
 	rec := record.ClassActivateRecord{}
 	ref, err := ledger.SetRecord(&rec)
