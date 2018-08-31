@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/buitin/helloworld"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -53,7 +52,7 @@ func NewBuiltIn(am core.ArtifactManager, mr core.MessageRouter) *BuiltIn {
 }
 
 // Exec is an implementation for logicrunner Executor interface
-func (bi *BuiltIn) Exec(codeRef core.RecordRef, data []byte, method string, args logicrunner.Arguments) (newObjectState []byte, methodResults logicrunner.Arguments, err error) {
+func (bi *BuiltIn) Exec(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
 	c, ok := bi.registry[utils.RefString(codeRef)]
 	if !ok {
 		return nil, nil, errors.New("Wrong reference for builtin contract")
