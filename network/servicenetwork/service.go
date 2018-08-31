@@ -20,13 +20,20 @@ import (
 	"bytes"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
 
 // Service provides a route between MessageRouter and Nodenetwork.
 type Service struct {
 	network nodenetwork.Nodenetwork
+}
+
+// Message is a routable packet, ATM just a method call
+type Message struct {
+	Caller    struct{}
+	Reference string
+	Method    string
+	Arguments []byte
 }
 
 // NewService returns a new service.
@@ -40,7 +47,7 @@ func (service *Service) AddNode(hostAddress, hostID, domainID string) error {
 }
 
 // SendMessage sends a message from MessageRouter.
-func (service Service) SendMessage(reference core.RecordRef, msg messagerouter.Message) ([]byte, error) {
+func (service Service) SendMessage(reference core.RecordRef, msg Message) ([]byte, error) {
 	args := make([][]byte, 0)
 	args[0] = msg.Arguments
 	return service.network.SendPacket(getReferenceString(reference), msg.Method, args)

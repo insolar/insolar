@@ -34,20 +34,12 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 type MessageRouter struct {
 	LogicRunner LogicRunner
 	rpc         hostnetwork.RPC
-	service     servicenetwork.Service
+	service     *servicenetwork.Service
 }
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	Execute(ref string, method string, args []byte) (data []byte, result []byte, err error)
-}
-
-// Message is a routable packet, ATM just a method call
-type Message struct {
-	Caller    struct{}
-	Reference string
-	Method    string
-	Arguments []byte
 }
 
 // Response to a `Message`
@@ -59,14 +51,14 @@ type Response struct {
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr LogicRunner, rpc hostnetwork.RPC, service servicenetwork.Service) (*MessageRouter, error) {
+func New(lr LogicRunner, rpc hostnetwork.RPC, service *servicenetwork.Service) (*MessageRouter, error) {
 	mr := &MessageRouter{lr, rpc, service}
 	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return mr, nil
 }
 
 // Route a `Message` and get a `Response` or error from remote host
-func (r *MessageRouter) Route(ctx hostnetwork.Context, msg Message) (response Response, err error) {
+func (r *MessageRouter) Route(ctx hostnetwork.Context, msg servicenetwork.Message) (response Response, err error) {
 	request, err := Serialize(msg)
 	if err != nil {
 		return response, err
@@ -115,7 +107,7 @@ func Serialize(value interface{}) ([]byte, error) {
 }
 
 // DeserializeMessage reads packet from byte slice.
-func DeserializeMessage(data []byte) (msg Message, err error) {
+func DeserializeMessage(data []byte) (msg servicenetwork.Message, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&msg)
 	return msg, err
 }
@@ -127,6 +119,6 @@ func DeserializeResponse(data []byte) (res Response, err error) {
 }
 
 func init() {
-	gob.Register(&Message{})
+	gob.Register(&servicenetwork.Message{})
 	gob.Register(&Response{})
 }

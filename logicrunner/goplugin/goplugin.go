@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/messagerouter"
-	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/pkg/errors"
 )
 
@@ -53,7 +53,7 @@ type RunnerOptions struct {
 
 // MessageRouter interface
 type MessageRouter interface {
-	Route(ctx hostnetwork.Context, msg messagerouter.Message) (resp messagerouter.Response, err error)
+	Route(msg servicenetwork.Message) (resp messagerouter.Response, err error)
 }
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
@@ -87,13 +87,13 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.New("message router was not set during initialization")
 	}
 
-	msg := messagerouter.Message{
+	msg := servicenetwork.Message{
 		Reference: string(req.Reference),
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(nil, msg)
+	res, err := gpr.gp.MessageRouter.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
