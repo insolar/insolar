@@ -3,6 +3,8 @@ package storage_test
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/insolar/insolar/ledger/record"
@@ -11,11 +13,19 @@ import (
 	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
 
-func _tmpstore(t *testing.T) (storage.Store, func()) {
+func tmpstore(t *testing.T) (storage.Store, func()) {
+	if os.Getenv("INSOLAR_STORAGE_ENGINE") == "level" {
+		log.Println("Use LevelDB implemenatation (Depricated)")
+		return tmpstoreLevel(t)
+	}
+	return tmpstoreBadger(t)
+}
+
+func tmpstoreLevel(t *testing.T) (storage.Store, func()) {
 	return leveltestutils.TmpDB(t, "")
 }
 
-func tmpstore(t *testing.T) (storage.Store, func()) {
+func tmpstoreBadger(t *testing.T) (storage.Store, func()) {
 	return badgertestutils.TmpDB(t, "")
 }
 
