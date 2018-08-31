@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -102,7 +103,7 @@ func (r *runner) Execute(ref string, method string, args []byte) ([]byte, []byte
 }
 
 func TestNew(t *testing.T) {
-	mr, err := New(new(runner), new(mockRpc))
+	mr, err := New(new(runner), new(mockRpc), servicenetwork.NewService())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,12 +121,12 @@ func TestRoute(t *testing.T) {
 	assert.NoError(t, err)
 	ctx := getDefaultCtx(dht)
 
-	mr, _ := New(r, dht)
+	mr, _ := New(r, dht, servicenetwork.NewService())
 	reference := dht.GetOriginHost(ctx).ID.HashString()
 
 	t.Run("success", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte("data"), []byte("result"), nil})
-		resp, err := mr.Route(ctx, Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
+		resp, err := mr.Route(ctx, servicenetwork.Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -153,7 +154,7 @@ func TestRoute(t *testing.T) {
 	})
 	t.Run("error", func(t *testing.T) {
 		r.responses = append(r.responses, resp{[]byte{}, []byte{}, errors.New("wtf")})
-		_, err := mr.Route(ctx, Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
+		_, err := mr.Route(ctx, servicenetwork.Message{Reference: reference, Method: "SomeMethod", Arguments: []byte("args")})
 		if err == nil {
 			t.Fatal("error expected")
 		}
@@ -176,7 +177,7 @@ func TestRoute(t *testing.T) {
 	})
 
 	t.Run("referenceNotFound", func(t *testing.T) {
-		_, err := mr.Route(ctx, Message{Reference: "refNotFound", Method: "SomeMethod", Arguments: []byte("args")})
+		_, err := mr.Route(ctx, servicenetwork.Message{Reference: "refNotFound", Method: "SomeMethod", Arguments: []byte("args")})
 		assert.Error(t, err)
 	})
 }
