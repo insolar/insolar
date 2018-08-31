@@ -39,7 +39,6 @@ const (
 type Store struct {
 	db           *badger.DB
 	currentPulse record.PulseNum
-	zeroRef      record.Reference
 }
 
 func setOptions(o *badger.Options) *badger.Options {
