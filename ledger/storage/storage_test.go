@@ -17,8 +17,6 @@
 package storage_test
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -28,12 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
 )
-
-func tmpstore(t *testing.T) (storage.Store, func()) {
-	return leveltestutils.TmpDB(t, "")
-}
 
 func TestStore_GetRecordNotFound(t *testing.T) {
 	store, cleaner := tmpstore(t)
@@ -43,43 +36,6 @@ func TestStore_GetRecordNotFound(t *testing.T) {
 	rec, err := store.GetRecord(ref)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, rec)
-}
-
-func zerohash() []byte {
-	b := make([]byte, record.HashSize)
-	return b
-}
-
-func randhash() []byte {
-	b := zerohash()
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
-func hexhash(hash string) []byte {
-	b := zerohash()
-	if len(hash)%2 == 1 {
-		hash = "0" + hash
-	}
-	h, err := hex.DecodeString(hash)
-	if err != nil {
-		panic(err)
-	}
-	_ = copy(b, h)
-	return b
-}
-
-func referenceWithHashes(domainhash, recordhash string) record.Reference {
-	dh := hexhash(domainhash)
-	rh := hexhash(recordhash)
-
-	return record.Reference{
-		Domain: record.ID{Hash: dh},
-		Record: record.ID{Hash: rh},
-	}
 }
 
 func TestStore_SetRecord(t *testing.T) {
