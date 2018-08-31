@@ -52,10 +52,6 @@
   branch = "master"
   name = "github.com/stretchr/testify"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/syndtr/goleveldb"
-
 [prune]
   go-tests = true
   unused-packages = true
@@ -65,5 +61,5 @@
   version = "1.1.1"
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/itchyny/base58-go"
+  name = "github.com/dgraph-io/badger"
+  version = "1.5.3"

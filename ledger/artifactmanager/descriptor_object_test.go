@@ -25,7 +25,8 @@ import (
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
+
+	. "github.com/insolar/insolar/ledger/storage/storagetestutils"
 )
 
 type preparedDOTestData struct {
@@ -36,7 +37,7 @@ type preparedDOTestData struct {
 }
 
 func prepareDOTestData(t *testing.T) (preparedDOTestData, func()) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	ledger, cleaner := TmpStore(t)
 
 	rec := record.ObjectActivateRecord{Memory: []byte{1}}
 	ref, err := ledger.SetRecord(&rec)

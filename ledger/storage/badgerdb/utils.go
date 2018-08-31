@@ -14,5 +14,15 @@
  *    limitations under the License.
  */
 
-// Package leveldb contains ledger implementation on top of Go's LevelDB engine
-package leveldb
+package badgerdb
+
+import (
+	"github.com/insolar/insolar/ledger/record"
+)
+
+func prefixkey(prefix byte, key []byte) []byte {
+	k := make([]byte, record.RefIDSize+1)
+	k[0] = prefix
+	_ = copy(k[1:], key)
+	return k
+}
