@@ -19,6 +19,6 @@ package core
 type Components map[string]Component
 
 type Component interface {
-	Start(components Components) chan error
-	Stop() chan error
+	Start(components Components) error
+	Stop() error
 }

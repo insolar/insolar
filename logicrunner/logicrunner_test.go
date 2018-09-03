@@ -68,8 +68,11 @@ func (r *testExecutor) CallConstructor(ref core.RecordRef, name string, args cor
 }
 
 func TestBasics(t *testing.T) {
-	lr, err := NewLogicRunner(nil)
-	assert.NoError(t, err)
+	lr, err := NewLogicRunner()
+	comps := core.Components{
+		"core.ArtifactManager": nil,
+	}
+	assert.NoError(t, <-lr.Start(comps))
 	assert.IsType(t, &LogicRunner{}, lr)
 
 	_, err = lr.GetExecutor(core.MachineTypeGoPlugin)

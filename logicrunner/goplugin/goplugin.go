@@ -200,17 +200,17 @@ func (gp *GoPlugin) StartRunner() error {
 }
 
 // Stop stops runner(s) and RPC service
-func (gp *GoPlugin) Stop() {
+func (gp *GoPlugin) Stop() error {
 	err := gp.runner.Process.Kill()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	time.Sleep(200 * time.Millisecond)
 
 	if gp.sock != nil {
 		err = gp.sock.Close()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 }

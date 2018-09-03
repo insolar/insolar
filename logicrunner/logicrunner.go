@@ -20,6 +20,8 @@ package logicrunner
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
+	"github.com/derekparker/delve/pkg/config"
+	"github.com/insolar/insolar/logicrunner/builtin"
 )
 
 // Object is an inner representation of storage object for transfwering it over API
@@ -29,30 +31,45 @@ type Object struct {
 	Data        []byte
 }
 
-// ArtifactManager interface
-type ArtifactManager interface {
-	Get(ref core.RecordRef) (data []byte, codeRef core.RecordRef, err error)
-}
-
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesTotalCount]core.MachineLogicExecutor
-	ArtifactManager ArtifactManager
-}
-
-func (lr *LogicRunner) Start(components core.Components) chan error {
-	panic("implement me")
-}
-
-func (lr *LogicRunner) Stop() chan error {
-	panic("implement me")
+	ArtifactManager core.ArtifactManager
 }
 
 // NewLogicRunner is constructor for `LogicRunner`
-func NewLogicRunner(am ArtifactManager) (*LogicRunner, error) {
-	res := LogicRunner{ArtifactManager: am}
+func NewLogicRunner(config config.Config) (*LogicRunner, error) {
+	res := LogicRunner{ArtifactManager: nil}
 
 	return &res, nil
+}
+
+func (lr *LogicRunner) Start(c core.Components)  error {
+	lr.ArtifactManager = c["core.ArtifactManager"].(core.ArtifactManager)
+	mr := c["core.MessageRouter"].(core.MessageRouter)
+
+	bi, err := builtin.NewBuiltIn(lr.ArtifactManager)
+	if err != nil {
+		return err
+	}
+
+	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (lr *LogicRunner) Stop()  error {
+	ch := make(chan error)
+
+	for _,e := range lr.Executors {
+		e.
+	}
+
+	ch <- nil
+	return ch
+
 }
 
 // RegisterExecutor registers an executor for particular `MachineType`

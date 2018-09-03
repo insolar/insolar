@@ -33,6 +33,7 @@ const (
 type MachineLogicExecutor interface {
 	CallMethod(codeRef RecordRef, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
 	CallConstructor(codeRef RecordRef, name string, args Arguments) (objectState []byte, err error)
+	Stop() error
 }
 
 // LogicRunner is an interface that should satisfy logic executor
