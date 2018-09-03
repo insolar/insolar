@@ -42,7 +42,7 @@ func MustDecodeHexString(s string) []byte {
 	return b
 }
 
-func TestLevelLedger_prefixkey(t *testing.T) {
+func TestStore_prefixkey(t *testing.T) {
 	passRecPulse0 := record.LockUnlockRequest{}
 	raw, err := record.EncodeToRaw(&passRecPulse0)
 	assert.Nil(t, err)
@@ -68,12 +68,12 @@ func TestLevelLedger_prefixkey(t *testing.T) {
 	assert.Equal(t, MustDecodeHexString(expectHexKeyP), keyP)
 }
 
-func setRawRecord(ll *LevelLedger, ref *record.Reference, raw *record.Raw) error {
+func setRawRecord(ll *Store, ref *record.Reference, raw *record.Raw) error {
 	k := prefixkey(scopeIDRecord, ref.Bytes())
 	return ll.ldb.Put(k, record.MustEncodeRaw(raw), nil)
 }
 
-func TestLevelLedger_setRawRecord(t *testing.T) {
+func TestStore_setRawRecord(t *testing.T) {
 	ledger, cleaner := tmpDB(t, "")
 	defer cleaner()
 
@@ -103,12 +103,12 @@ func TestLevelLedger_setRawRecord(t *testing.T) {
 
 // copy of leveltestutils.TmpDB:
 // we can't use the original one, because of circular dependency on storage/leveldb
-func tmpDB(t *testing.T, dir string) (*LevelLedger, func()) {
+func tmpDB(t *testing.T, dir string) (*Store, func()) {
 	tmpdir, err := ioutil.TempDir(dir, "ldb-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ledger, err := InitDB(tmpdir, nil)
+	ledger, err := NewStore(tmpdir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

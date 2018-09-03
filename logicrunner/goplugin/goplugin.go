@@ -28,10 +28,9 @@ import (
 
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/insolar/insolar/messagerouter"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/pkg/errors"
 )
 
@@ -51,16 +50,11 @@ type RunnerOptions struct {
 	CodeStoragePath string
 }
 
-// MessageRouter interface
-type MessageRouter interface {
-	Route(msg servicenetwork.Message) (resp messagerouter.Response, err error)
-}
-
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	Options       Options
 	RunnerOptions RunnerOptions
-	MessageRouter MessageRouter
+	MessageRouter core.MessageRouter
 	sock          net.Listener
 	runner        *exec.Cmd
 }
@@ -72,7 +66,7 @@ type RPC struct {
 
 // GetObject is an RPC retrieving an object by its reference, so far short circuted to return
 // code of the plugin
-func (gpr *RPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
+func (gpr *RPC) GetObject(ref core.RecordRef, reply *logicrunner.Object) error {
 	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
 	if err != nil {
 		return err
@@ -87,8 +81,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.New("message router was not set during initialization")
 	}
 
-	msg := servicenetwork.Message{
-		Reference: string(req.Reference),
+	msg := core.Message{
+		Reference: req.Reference,
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
@@ -106,8 +100,37 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	return nil
 }
 
+// RouteConstructorCall routes call from a contract to a constructor of another contract
+func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *rpctypes.UpRouteConstructorResp) error {
+	if gpr.gp.MessageRouter == nil {
+		return errors.New("message router was not set during initialization")
+	}
+
+	msg := core.Message{
+		Constructor: true,
+		Reference:   req.Reference,
+		Method:      req.Constructor,
+		Arguments:   req.Arguments,
+	}
+
+	res, err := gpr.gp.MessageRouter.Route(msg)
+	if err != nil {
+		return errors.Wrap(err, "couldn't route message")
+	}
+	if reply.Err != nil {
+		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
+	}
+
+	// TODO: store data on ledger via artifact manager
+	_ = res.Data
+
+	reply.Reference = core.RecordRef("some-ref")
+
+	return nil
+}
+
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr MessageRouter) (*GoPlugin, error) {
+func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr core.MessageRouter) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Options:       options,
 		RunnerOptions: runnerOptions,
@@ -191,20 +214,36 @@ func (gp *GoPlugin) Stop() {
 	}
 }
 
+// Downstream returns a connection to `ginsider`
+func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
+	if gp.client != nil {
+		return gp.client, nil
+	}
+
+	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", gp.RunnerOptions.Listen)
+	}
+
+	gp.client = client
+	return gp.client, nil
+}
+
 const timeout = time.Second * 5
 
-// Exec runs a method on an object in controlled environment
-func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method string, args logicrunner.Arguments) ([]byte, logicrunner.Arguments, error) {
-	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
+// CallMethod runs a method on an object in controlled environment
+func (gp *GoPlugin) CallMethod(codeRef core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
 	res := rpctypes.DownCallResp{}
 
-	req := rpctypes.DownCallReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
+	res := rpctypes.DownCallMethodResp{}
+	req := rpctypes.DownCallMethodReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
 
 	select {
-	case call := <-client.Go("RPC.Call", req, &res, nil).Done:
+	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
 		if call.Error != nil {
 			return nil, nil, errors.Wrap(call.Error, "problem with API call")
 		}
@@ -212,4 +251,25 @@ func (gp *GoPlugin) Exec(codeRef logicrunner.Reference, data []byte, method stri
 		return nil, nil, errors.New("timeout")
 	}
 	return res.Data, res.Ret, res.Err
+}
+
+// CallConstructor runs a constructor of a contract in controlled environment
+func (gp *GoPlugin) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+	client, err := gp.Downstream()
+	if err != nil {
+		return nil, errors.Wrap(err, "problem with rpc connection")
+	}
+
+	res := rpctypes.DownCallConstructorResp{}
+	req := rpctypes.DownCallConstructorReq{Reference: codeRef, Name: name, Arguments: args}
+
+	select {
+	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
+		if call.Error != nil {
+			return nil, errors.Wrap(call.Error, "problem with API call")
+		}
+	case <-time.After(timeout):
+		return nil, errors.New("timeout")
+	}
+	return res.Ret, res.Err
 }

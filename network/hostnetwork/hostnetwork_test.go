@@ -54,8 +54,8 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 		// positive
 		"DefaultConfiguration": {configuration.NewConfiguration().Host, false},
 		/*
-		"UseStun":              {stunCfg(true), false},
-		"NotUseStun":           {stunCfg(false), false},
+			"UseStun":              {stunCfg(true), false},
+			"NotUseStun":           {stunCfg(false), false},
 		*/
 		// todo: bootstrap
 	}

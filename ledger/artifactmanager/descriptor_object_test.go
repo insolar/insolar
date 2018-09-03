@@ -45,7 +45,7 @@ func prepareDOTestData(t *testing.T) (preparedDOTestData, func()) {
 	return preparedDOTestData{
 		ledger: ledger,
 		manager: &LedgerArtifactManager{
-			storer:   ledger,
+			store:    ledger,
 			archPref: []core.MachineType{1},
 		},
 		objRec: &rec,

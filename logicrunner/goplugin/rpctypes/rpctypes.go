@@ -16,36 +16,63 @@
 
 package rpctypes
 
-import "github.com/insolar/insolar/logicrunner"
+import "github.com/insolar/insolar/core"
 
 // Types for RPC requests and responses between goplugin and goinsider.
 // Calls from goplugin to goinsider go "downwards" and names are
 // prefixed with "Down". Reverse calls go "upwards", so "Up" prefix
 
-// DownCallReq is a set of arguments for Call RPC in the runner
-type DownCallReq struct { // todo it may use foundation.Context
-	Reference logicrunner.Reference
+// DownCallMethodReq is a set of arguments for CallMethod RPC in the runner
+type DownCallMethodReq struct { // todo it may use foundation.Context
+	Reference core.RecordRef
 	Data      []byte
 	Method    string
-	Arguments logicrunner.Arguments
+	Arguments core.Arguments
 }
 
-// DownCallResp is response from Call RPC in the runner
-type DownCallResp struct {
+// DownCallMethodResp is response from CallMethod RPC in the runner
+type DownCallMethodResp struct {
 	Data []byte
-	Ret  logicrunner.Arguments
+	Ret  core.Arguments
 	Err  error
+}
+
+// DownCallConstructorReq is a set of arguments for CallConstructor RPC
+// in the runner
+type DownCallConstructorReq struct {
+	Reference core.RecordRef
+	Name      string
+	Arguments core.Arguments
+}
+
+// DownCallConstructorResp is response from CallConstructor RPC in the runner
+type DownCallConstructorResp struct {
+	Ret core.Arguments
+	Err error
 }
 
 // UpRouteReq is a set of arguments for Route RPC in goplugin
 type UpRouteReq struct {
-	Reference logicrunner.Reference
+	Reference core.RecordRef
 	Method    string
-	Arguments logicrunner.Arguments
+	Arguments core.Arguments
 }
 
 // UpRouteResp is response from Route RPC in goplugin
 type UpRouteResp struct {
-	Result logicrunner.Arguments
+	Result core.Arguments
 	Err    error
+}
+
+// UpRouteConstructorReq is a set of arguments for RouteConstructor RPC in goplugin
+type UpRouteConstructorReq struct {
+	Reference   core.RecordRef
+	Constructor string
+	Arguments   core.Arguments
+}
+
+// UpRouteConstructorResp is response from RouteConstructor RPC in goplugin
+type UpRouteConstructorResp struct {
+	Reference core.RecordRef
+	Err       error
 }

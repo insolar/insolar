@@ -51,7 +51,7 @@ type HashIterator interface {
 //
 // Error returned by the ProcessSlotRecords is based on iteration function
 // result or leveldb iterator error if any.
-func (ll *LevelLedger) ProcessSlotRecords(n record.PulseNum, ifn func(it HashIterator) error) error {
+func (ll *Store) ProcessSlotRecords(n record.PulseNum, ifn func(it HashIterator) error) error {
 	prefix := make([]byte, record.PulseNumSize+1)
 	prefix[0] = scopeIDRecord
 	buf := bytes.NewBuffer(prefix[1:1])
@@ -68,7 +68,7 @@ func (ll *LevelLedger) ProcessSlotRecords(n record.PulseNum, ifn func(it HashIte
 }
 
 // GetSlotHashes returns array of all record's hashes in provided PulseNum.
-func (ll *LevelLedger) GetSlotHashes(n record.PulseNum) ([][]byte, error) {
+func (ll *Store) GetSlotHashes(n record.PulseNum) ([][]byte, error) {
 	var hashes [][]byte
 	err := ll.ProcessSlotRecords(n, func(it HashIterator) error {
 		for i := 1; it.Next(); i++ {

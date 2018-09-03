@@ -59,7 +59,7 @@ func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 		if d.fromState.IsEqual(amendRef) {
 			break // Provided state is found. It means we now have all the amends we need.
 		}
-		rec, err := d.manager.storer.GetRecord(&amendRef)
+		rec, err := d.manager.store.GetRecord(&amendRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "inconsistent class index")
 		}

@@ -14,4 +14,8 @@
  *    limitations under the License.
  */
 
-package logicrunner
+package configuration
+
+type Ledger struct {
+	DataDirectory string
+}

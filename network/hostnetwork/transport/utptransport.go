@@ -44,7 +44,7 @@ type utpTransport struct {
 	mutex   *sync.RWMutex
 	futures map[packet.RequestID]Future
 
-	proxy relay.Proxy
+	proxy         relay.Proxy
 	publicAddress string
 }
 
@@ -66,7 +66,7 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 		mutex:   &sync.RWMutex{},
 		futures: make(map[packet.RequestID]Future),
 
-		proxy: proxy,
+		proxy:         proxy,
 		publicAddress: publicAddress,
 	}
 

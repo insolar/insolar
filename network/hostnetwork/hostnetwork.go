@@ -81,5 +81,3 @@ func getBootstrapHosts(addresses []string) []*host.Host {
 	}
 	return hosts
 }
-
-

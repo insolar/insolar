@@ -48,17 +48,65 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 
 	return preparedAMTestData{
 		ledger:     ledger,
-		manager:    &LedgerArtifactManager{storer: ledger},
+		manager:    &LedgerArtifactManager{store: ledger},
 		domainRef:  genRandomRef(),
 		requestRef: genRandomRef(),
 	}, cleaner
 }
 
-func TestLedgerArtifactManager_DeployCode(t *testing.T) {
+func TestLedgerArtifactManager_DeclareType(t *testing.T) {
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+	typeDec := []byte{1, 2, 3}
+	coreRef, err := td.manager.DeclareType(td.domainRef.Bytes(), td.requestRef.Bytes(), typeDec)
+	assert.NoError(t, err)
+	ref := record.Bytes2Reference(coreRef[:])
+	typeRec, err := td.ledger.GetRecord(&ref)
+	assert.NoError(t, err)
+	assert.Equal(t, typeRec, &record.TypeRecord{
+		StorageRecord: record.StorageRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
+				},
+			},
+		},
+		TypeDeclaration: typeDec,
+	})
+}
+
+func TestLedgerArtifactManager_DeployCode_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	codeMap := map[core.MachineType][]byte{1: {1}}
-	coreRef, err := td.manager.DeployCode(td.domainRef.Bytes(), td.requestRef.Bytes(), codeMap)
+	_, err := td.manager.DeployCode(
+		td.domainRef.Bytes(), td.requestRef.Bytes(), []core.RecordRef{genRandomRef().Bytes()}, codeMap,
+	)
+	assert.Error(t, err)
+	notTypeRef, _ := td.ledger.SetRecord(&record.CodeRecord{})
+	_, err = td.manager.DeployCode(
+		td.domainRef.Bytes(), td.requestRef.Bytes(), []core.RecordRef{notTypeRef.Bytes()}, codeMap,
+	)
+	assert.Error(t, err)
+}
+
+func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+	codeMap := map[core.MachineType][]byte{1: {1}}
+	typeRef, _ := td.ledger.SetRecord(&record.TypeRecord{
+		StorageRecord: record.StorageRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	coreRef, err := td.manager.DeployCode(
+		td.domainRef.Bytes(), td.requestRef.Bytes(), []core.RecordRef{typeRef.Bytes()}, codeMap,
+	)
 	assert.NoError(t, err)
 	ref := record.Bytes2Reference(coreRef[:])
 	codeRec, err := td.ledger.GetRecord(&ref)
@@ -72,6 +120,7 @@ func TestLedgerArtifactManager_DeployCode(t *testing.T) {
 				},
 			},
 		},
+		Types:        []record.Reference{*typeRef},
 		TargetedCode: codeMap,
 	})
 }

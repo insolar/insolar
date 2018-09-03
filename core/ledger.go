@@ -14,21 +14,10 @@
  *    limitations under the License.
  */
 
-package logicrunner
+package core
 
-import (
-	"github.com/insolar/insolar/core"
-)
-
-// Reference is a contract address
-type Reference string
-
-// Object is an inner representation of storage object for transfwering it over API
-type Object struct {
-	MachineType core.MachineType
-	Reference   Reference
-	Data        []byte
+// Ledger is the global ledger handler. Other system parts communicate with ledger through it.
+type Ledger interface {
+	// GetManager returns artifact manager to work with.
+	GetManager() ArtifactManager
 }
-
-// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
-type Arguments []byte

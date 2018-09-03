@@ -17,6 +17,7 @@
 package ginsider
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -27,6 +28,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
@@ -37,12 +39,15 @@ type GoInsider struct {
 	dir                string
 	UpstreamRPCAddress string
 	UpstreamRPCClient  *rpc.Client
+	plugins            map[string]*plugin.Plugin
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
 func NewGoInsider(path string, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	return &GoInsider{dir: path, UpstreamRPCAddress: address}
+	res := GoInsider{dir: path, UpstreamRPCAddress: address}
+	res.plugins = make(map[string]*plugin.Plugin)
+	return &res
 }
 
 // RPC struct with methods representing RPC interface of this code runner
@@ -50,23 +55,17 @@ type RPC struct {
 	GI *GoInsider
 }
 
-// Call is an RPC that runs a method on an object and
+// CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) error {
-	path, err := t.GI.ObtainCode(args.Reference)
+func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
+	p, err := t.GI.Plugin(args.Reference)
 	if err != nil {
-		return errors.Wrap(err, "couldn't obtain code")
-	}
-
-	log.Debugf("Opening plugin %q from file %q", args.Reference, path)
-	p, err := plugin.Open(path)
-	if err != nil {
-		return errors.Wrap(err, "couldn't open plugin")
+		return err
 	}
 
 	export, err := p.Lookup("INSEXPORT")
 	if err != nil {
-		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in '"+path+"'")
+		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in plugin")
 	}
 
 	ch := new(codec.CborHandle)
@@ -136,6 +135,69 @@ func (t *RPC) Call(args rpctypes.DownCallReq, reply *rpctypes.DownCallResp) erro
 	return nil
 }
 
+// CallConstructor is an RPC that runs a method on an object and
+// returns a new state of the object and result of the method
+func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) error {
+	p, err := t.GI.Plugin(args.Reference)
+	if err != nil {
+		return err
+	}
+
+	export, err := p.Lookup(args.Name)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't lookup symbol %q in plugin", args.Name)
+	}
+
+	method := reflect.ValueOf(export)
+	if !method.IsValid() {
+		return fmt.Errorf("%q is not valid symbol", args.Name)
+	}
+	if method.Kind() != reflect.Func {
+		return fmt.Errorf("%q is not a function", args.Name)
+	}
+
+	inLen := method.Type().NumIn()
+
+	mask := make([]interface{}, inLen)
+	for i := 0; i < inLen; i++ {
+		argType := method.Type().In(i)
+		mask[i] = reflect.Zero(argType).Interface()
+	}
+
+	ch := new(codec.CborHandle)
+
+	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
+	if err != nil {
+		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the constructor")
+	}
+
+	in := make([]reflect.Value, inLen)
+	for i := 0; i < inLen; i++ {
+		in[i] = reflect.ValueOf(mask[i])
+	}
+
+	log.Debugf(
+		"Calling constructor %q in contract %q with %d arguments",
+		args.Name, args.Reference, inLen,
+	)
+	resValues := method.Call(in)
+
+	res := make([]interface{}, len(resValues))
+	for i, v := range resValues {
+		res[i] = v.Interface()
+	}
+
+	var resSerialized []byte
+	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res)
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal returned values into cbor")
+	}
+
+	reply.Ret = resSerialized
+
+	return nil
+}
+
 // Upstream returns RPC client connected to upstream server (goplugin)
 func (t *GoInsider) Upstream() (*rpc.Client, error) {
 	if t.UpstreamRPCClient != nil {
@@ -153,7 +215,7 @@ func (t *GoInsider) Upstream() (*rpc.Client, error) {
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
-func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
+func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 	path := t.dir + "/" + string(ref)
 	_, err := os.Stat(path)
 
@@ -183,6 +245,29 @@ func (t *GoInsider) ObtainCode(ref logicrunner.Reference) (string, error) {
 	return path, nil
 }
 
+// Plugin loads Go plugin by reference and returns `*plugin.Plugin`
+// ready to lookup symbols
+func (t *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
+	key := string(ref)
+	if t.plugins[key] != nil {
+		return t.plugins[key], nil
+	}
+
+	path, err := t.ObtainCode(ref)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't obtain code")
+	}
+
+	log.Debugf("Opening plugin %q from file %q", ref, path)
+	p, err := plugin.Open(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open plugin")
+	}
+
+	t.plugins[key] = p
+	return p, nil
+}
+
 // RouteCall ...
 func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, error) {
 	client, err := t.Upstream()
@@ -191,7 +276,7 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 	}
 
 	req := rpctypes.UpRouteReq{
-		Reference: logicrunner.Reference(ref),
+		Reference: core.RecordRef(ref),
 		Method:    method,
 		Arguments: args,
 	}
@@ -203,6 +288,28 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 	}
 
 	return []byte(res.Result), res.Err
+}
+
+// RouteConstructorCall ...
+func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (string, error) {
+	client, err := t.Upstream()
+	if err != nil {
+		return "", err
+	}
+
+	req := rpctypes.UpRouteConstructorReq{
+		Reference:   core.RecordRef(ref),
+		Constructor: name,
+		Arguments:   args,
+	}
+
+	res := rpctypes.UpRouteConstructorResp{}
+	err = client.Call("RPC.RouteConstructorCall", req, &res)
+	if err != nil {
+		return "", errors.Wrap(err, "on calling main API")
+	}
+
+	return string(res.Reference), res.Err
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`

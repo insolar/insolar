@@ -40,10 +40,15 @@ type ArtifactManager interface {
 		ClassDescriptor, ObjectDescriptor, error,
 	)
 
+	// DeclareType creates new type record in storage.
+	//
+	// Type is a contract interface. It contains one method signature.
+	DeclareType(domain, request RecordRef, typeDec []byte) (RecordRef, error)
+
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate class or as migration code for an object.
-	DeployCode(domain, request RecordRef, codeMap map[MachineType][]byte) (RecordRef, error)
+	DeployCode(domain, request RecordRef, types []RecordRef, codeMap map[MachineType][]byte) (RecordRef, error)
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
 	// and memory as the default memory for class objects.

@@ -15,3 +15,44 @@
  */
 
 package ledger
+
+import (
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/storage/leveldb"
+	"github.com/pkg/errors"
+)
+
+// Ledger is the global ledger handler. Other system parts communicate with ledger through it.
+type Ledger struct {
+	manager     *artifactmanager.LedgerArtifactManager
+	coordinator *jetcoordinator.JetCoordinator
+}
+
+// GetManager returns artifact manager to work with.
+func (l *Ledger) GetManager() core.ArtifactManager {
+	return l.manager
+}
+
+// NewLedger creates new ledger instance.
+func NewLedger(conf configuration.Ledger) (core.Ledger, error) {
+	level, err := leveldb.NewStore(conf.DataDirectory, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "DB creation failed")
+	}
+	manager, err := artifactmanager.NewArtifactManger(level)
+	if err != nil {
+		return nil, errors.Wrap(err, "artifact manager creation failed")
+	}
+	coordinator, err := jetcoordinator.NewJetCoordinator(level)
+	if err != nil {
+		return nil, errors.Wrap(err, "jet coordinator creation failed")
+	}
+	ledger := Ledger{
+		manager:     manager,
+		coordinator: coordinator,
+	}
+	return &ledger, nil
+}
