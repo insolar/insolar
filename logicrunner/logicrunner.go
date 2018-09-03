@@ -26,7 +26,7 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [core.MachineTypesLastId - 1]core.MachineLogicExecutor
+	Executors       [core.MachineTypesLastID - 1]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	Cfg             configuration.LogicRunner
 }
@@ -54,10 +54,14 @@ func (lr *LogicRunner) Start(c core.Components) error {
 }
 
 func (lr *LogicRunner) Stop() error {
+	reterr := error(nil)
 	for _, e := range lr.Executors {
-		e.Stop()
+		err := e.Stop()
+		if err != nil {
+			reterr = errors.Wrap(reterr, err.Error())
+		}
 	}
-	return nil
+	return reterr
 }
 
 // RegisterExecutor registers an executor for particular `MachineType`

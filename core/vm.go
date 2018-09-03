@@ -24,7 +24,7 @@ const (
 	MachineTypeBuiltin MachineType = iota + 1
 	MachineTypeGoPlugin
 
-	MachineTypesLastId
+	MachineTypesLastID
 )
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
