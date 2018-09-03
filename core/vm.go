@@ -21,12 +21,10 @@ type MachineType int
 
 // Real constants of MachineType
 const (
-	MachineTypeUnexistent MachineType = iota
-
-	MachineTypeBuiltin
+	MachineTypeBuiltin MachineType = iota + 1
 	MachineTypeGoPlugin
 
-	MachineTypesTotalCount
+	MachineTypesLastId
 )
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
