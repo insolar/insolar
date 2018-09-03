@@ -42,7 +42,7 @@ func Test_generateContractWrapper(t *testing.T) {
 
 func Test_generateContractProxy(t *testing.T) {
 	buf := bytes.Buffer{}
-	err := generateContractProxy("../testplugins/secondary/main.go", &buf)
+	err := generateContractProxy("../testplugins/secondary/main.go", "testRef", &buf)
 	assert.NoError(t, err)
 
 	code, err := ioutil.ReadAll(&buf)
@@ -107,7 +107,7 @@ func TestCompileContractProxy(t *testing.T) {
 	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
 	assert.NoError(t, err)
 
-	err = generateContractProxy("../testplugins/secondary/main.go", proxyFh)
+	err = generateContractProxy("../testplugins/secondary/main.go", "testRef", proxyFh)
 	assert.NoError(t, err)
 
 	err = proxyFh.Close()
@@ -152,7 +152,7 @@ func ( A ) Get( b bool ) bool{
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), "resList[0] = bool(false)")
 
@@ -183,7 +183,7 @@ func ( A ) Get(){
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)

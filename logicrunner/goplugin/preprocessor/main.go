@@ -119,6 +119,8 @@ func main() {
 		fs := flag.NewFlagSet("proxy", flag.ExitOnError)
 		output := newOutputFlag()
 		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		var reference string
+		fs.StringVarP(&reference, "code-reference", "r", "testRef", "reference to code of")
 		err := fs.Parse(os.Args[2:])
 		if err != nil {
 			panic(err)
@@ -127,8 +129,7 @@ func main() {
 		if fs.NArg() != 1 {
 			panic(errors.New("proxy command should be followed by exactly one file name to process"))
 		}
-
-		err = generateContractProxy(fs.Arg(0), output.writer)
+		err = generateContractProxy(fs.Arg(0), reference, output.writer)
 		if err != nil {
 			panic(err)
 		}
@@ -272,7 +273,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	return nil
 }
 
-func generateContractProxy(fileName string, out io.Writer) error {
+func generateContractProxy(fileName string, classReference string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
@@ -310,12 +311,14 @@ func generateContractProxy(fileName string, out io.Writer) error {
 		ContractType        string
 		MethodsProxies      []map[string]interface{}
 		ConstructorsProxies []map[string]string
+		ClassReference      string
 	}{
 		proxyPackageName,
 		types,
 		parsed.contract,
 		methodsProxies,
 		constructorProxies,
+		classReference,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
