@@ -188,7 +188,13 @@ func parseFile(fileName string) (*parsedFile, error) {
 	}
 	res.node = node
 
-	getMethods(&res)
+	err = getMethods(&res)
+	if err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+	if res.contract == "" {
+		return nil, fmt.Errorf("Only one smart contract must exist")
+	}
 
 	return &res, nil
 }
@@ -212,8 +218,10 @@ func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
 
 		rets := []string{}
-		for i := range method.Type.Results.List {
-			rets = append(rets, fmt.Sprintf("ret%d", i))
+		if method.Type.Results != nil {
+			for i := range method.Type.Results.List {
+				rets = append(rets, fmt.Sprintf("ret%d", i))
+			}
 		}
 		resultList := strings.Join(rets, ", ")
 
@@ -278,7 +286,7 @@ func generateContractProxy(fileName string, classReference string, out io.Writer
 
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
-		panic("Contract must be in main package")
+		fmt.Errorf("Contract must be in main package")
 	}
 
 	proxyPackageName := match[2]
@@ -327,7 +335,30 @@ func typeName(t ast.Expr) string {
 	return t.(*ast.Ident).Name
 }
 
-func getMethods(parsed *parsedFile) {
+func IsContract(typeNode *ast.TypeSpec) bool {
+	baseContract := "foundation.BaseContract"
+	switch st := typeNode.Type.(type) {
+	case *ast.StructType:
+		if st.Fields == nil {
+			return false
+		}
+		for _, fd := range st.Fields.List {
+			selectField, ok := fd.Type.(*ast.SelectorExpr)
+			if !ok {
+				continue
+			}
+			pack := selectField.X.(*ast.Ident).Name
+			class := selectField.Sel.Name
+			if (baseContract == (pack + "." + class)) && len(fd.Names) == 0 {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func getMethods(parsed *parsedFile) error {
 	parsed.types = make(map[string]*ast.TypeSpec)
 	parsed.methods = make(map[string][]*ast.FuncDecl)
 	parsed.constructors = make(map[string][]*ast.FuncDecl)
@@ -341,9 +372,9 @@ func getMethods(parsed *parsedFile) {
 			for _, e := range td.Specs {
 				typeNode := e.(*ast.TypeSpec)
 
-				if strings.Contains(td.Doc.Text(), "@inscontract") {
+				if IsContract(typeNode) {
 					if parsed.contract != "" {
-						panic("more than one contract in a file")
+						return fmt.Errorf("more than one contract in a file")
 					}
 					parsed.contract = typeNode.Name.Name
 				} else {
@@ -374,6 +405,8 @@ func getMethods(parsed *parsedFile) {
 			}
 		}
 	}
+
+	return nil
 }
 
 // nolint
@@ -427,6 +460,9 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 
 func genFieldList(parsed *parsedFile, params *ast.FieldList, withNames bool) string {
 	res := ""
+	if params == nil {
+		return res
+	}
 	for i, e := range params.List {
 		if i > 0 {
 			res += ", "

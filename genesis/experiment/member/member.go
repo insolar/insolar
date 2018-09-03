@@ -22,7 +22,6 @@ import (
 
 var TypeReference = foundation.Reference("member")
 
-// @inscontract
 type Member struct {
 	foundation.BaseContract
 	Name      string
