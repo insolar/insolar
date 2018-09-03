@@ -9,7 +9,11 @@ func (self *{{ $.ContractType }}) INSWRAPER_{{ $method.Name }}(cbor foundation.C
     {{ $method.ArgumentsZeroList }}
     cbor.Unmarshal(&args, data)
 
+{{ if $method.Results }}
     {{ $method.Results }}:= self.{{ $method.Name }}( {{ $method.Arguments }} )
+{{ else }}
+    self.{{ $method.Name }}( {{ $method.Arguments }} )
+{{ end }}
 
     return cbor.Marshal([]interface{} { {{ $method.Results }}} )
 }

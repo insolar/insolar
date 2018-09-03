@@ -211,8 +211,10 @@ func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
 
 		rets := []string{}
-		for i := range method.Type.Results.List {
-			rets = append(rets, fmt.Sprintf("ret%d", i))
+		if method.Type.Results != nil {
+			for i := range method.Type.Results.List {
+				rets = append(rets, fmt.Sprintf("ret%d", i))
+			}
 		}
 		resultList := strings.Join(rets, ", ")
 
@@ -424,6 +426,9 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 
 func genFieldList(parsed *parsedFile, params *ast.FieldList, withNames bool) string {
 	res := ""
+	if params == nil {
+		return res
+	}
 	for i, e := range params.List {
 		if i > 0 {
 			res += ", "
