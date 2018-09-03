@@ -133,3 +133,28 @@ func main() {
 	out, err := exec.Command("go", "build", "test.go").CombinedOutput()
 	assert.NoError(t, err, string(out))
 }
+
+func TestGenerateProxyAndWrapperForBoolParams(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+// @inscontract
+type A struct{
+}
+
+func ( A ) Get( b bool ) bool{
+	return true
+}
+`)
+
+	var buf bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, &buf)
+	assert.NoError(t, err)
+
+	assert.Contains(t, buf.String(), "resList[0] = bool(false)")
+
+}

@@ -396,6 +396,8 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 		switch tname {
 		case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
 			initializer = tname + "(0)"
+		case "bool":
+			initializer = "bool(false)"
 		case "string":
 			initializer = `""`
 		default:
