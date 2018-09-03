@@ -19,40 +19,40 @@ package nodenetwork
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNode(t *testing.T) {
-	node := NewNode("id", "domainID")
+	node := NewNode("nodeID", "hostID", core.String2Ref("domainID"))
 	assert.NotNil(t, node)
 }
 
 func TestNode_GetDomainID(t *testing.T) {
-	expectedDomain := "domain id"
+	expectedDomain := core.String2Ref("domainID")
 	node := Node{
-		id:       []byte("id"),
-		domainID: expectedDomain,
+		id:        "id",
+		reference: core.String2Ref("domainID"),
 	}
 
-	assert.Equal(t, expectedDomain, node.GetDomainID())
+	assert.Equal(t, expectedDomain, node.GetReference())
 }
 
 func TestNode_GetNodeID(t *testing.T) {
-	expectedID := []byte("id")
 	node := Node{
-		domainID: "domain id",
-		id:       expectedID,
-		hostID:   "",
+		reference: core.String2Ref("domainID"),
+		id:        "id",
+		hostID:    "",
 	}
-	assert.Equal(t, expectedID, node.GetNodeID())
+	assert.Equal(t, "id", node.GetNodeID())
 }
 
 func TestNode_GetNodeRole(t *testing.T) {
 	expectedRole := "role"
 	node := Node{
-		id:       []byte("id"),
-		domainID: "domain id",
-		hostID:   "",
+		id:        "id",
+		reference: core.String2Ref("domainID"),
+		hostID:    "",
 	}
 
 	node.setRole(expectedRole)

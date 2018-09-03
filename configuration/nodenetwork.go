@@ -18,6 +18,7 @@ package configuration
 
 // Node holds configuration for one Node
 type Node struct {
+	NodeID      string
 	HostID      string
 	ReferenceID string
 }

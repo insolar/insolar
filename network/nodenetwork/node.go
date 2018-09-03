@@ -17,23 +17,23 @@
 package nodenetwork
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/core"
 )
 
 // Node is an essence which provides communication between network level and MessageRouter.
 type Node struct {
-	id       []byte
-	role     string
-	hostID   string
-	domainID string
+	id        string
+	role      string
+	hostID    string
+	reference core.RecordRef
 }
 
 // NewNode creates a node with given args.
-func NewNode(hostID, domainID string) *Node {
+func NewNode(nodeID, hostID string, domainID core.RecordRef) *Node {
 	return &Node{
-		id:       id.GetRandomKey(),
-		hostID:   hostID,
-		domainID: domainID,
+		id:        nodeID,
+		hostID:    hostID,
+		reference: domainID,
 	}
 }
 
@@ -48,11 +48,11 @@ func (node Node) GetNodeRole() string {
 }
 
 // GetNodeID returns a Node ID.
-func (node Node) GetNodeID() []byte {
+func (node Node) GetNodeID() string {
 	return node.id
 }
 
-// GetDomainIDs returns a Node domain ID.
-func (node Node) GetDomainID() string {
-	return node.domainID
+// GetReference returns a Node domain ID.
+func (node Node) GetReference() core.RecordRef {
+	return node.reference
 }

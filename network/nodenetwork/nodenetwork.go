@@ -17,11 +17,10 @@
 package nodenetwork
 
 import (
-	"bytes"
 	"errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/core"
 )
 
 // Nodenetwork is nodes manager.
@@ -33,7 +32,7 @@ type Nodenetwork struct {
 func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *Nodenetwork {
 	nodes := make(map[string]*Node)
 	for _, cfg := range nodeCfg.Nodes {
-		node := NewNode(cfg.HostID, cfg.ReferenceID)
+		node := NewNode(cfg.NodeID, cfg.HostID, core.String2Ref(cfg.ReferenceID))
 		nodes[cfg.ReferenceID] = node
 	}
 	network := &Nodenetwork{
@@ -43,8 +42,8 @@ func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *Nodenetwork {
 }
 
 // AddNode adds a new node to nodes map.
-func (network *Nodenetwork) AddNode(hostAddress, domainID string) error {
-	node, err := network.createNode(hostAddress, domainID)
+func (network *Nodenetwork) AddNode(nodeID, hostID, domainID string) error {
+	node, err := network.createNode(nodeID, hostID, domainID)
 	if err != nil {
 		return err
 	}
@@ -59,10 +58,8 @@ func (network *Nodenetwork) GetReferenceHostID(ref string) (string, error) {
 	return network.nodes[ref].hostID, nil
 }
 
-func (network *Nodenetwork) createNode(hostAddress, domainID string) (*Node, error) {
-	key := id.GetRandomKey()
-	stringID := string(key[:bytes.IndexByte(key, 0)])
-	node := NewNode(stringID, domainID)
+func (network *Nodenetwork) createNode(nodeID, hostID, domainID string) (*Node, error) {
+	node := NewNode(nodeID, hostID, core.String2Ref(domainID))
 	return node, nil
 }
 
@@ -70,6 +67,6 @@ func (network *Nodenetwork) addNode(node *Node) error {
 	if node == nil {
 		return errors.New("node is nil")
 	}
-	network.nodes[node.GetDomainID()] = node
+	network.nodes[node.GetReference().String()] = node
 	return nil
 }
