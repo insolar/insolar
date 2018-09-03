@@ -24,13 +24,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Object is an inner representation of storage object for transfwering it over API
-type Object struct {
-	MachineType core.MachineType
-	Reference   core.RecordRef
-	Data        []byte
-}
-
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesTotalCount]core.MachineLogicExecutor
@@ -82,7 +75,9 @@ func (r *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (r *LogicRunner) Execute(msg core.Message) *core.Response {
-	data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
+	data, codeRef, err := []byte{}, core.RecordRef{}, error(nil)
+	// todo right code will be used when we will have getcode in AM
+	// data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
 	if err != nil {
 		return &core.Response{Error: errors.Wrap(err, "couldn't ")}
 	}

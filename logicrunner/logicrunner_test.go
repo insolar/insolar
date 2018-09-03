@@ -72,7 +72,7 @@ func TestBasics(t *testing.T) {
 	comps := core.Components{
 		"core.ArtifactManager": nil,
 	}
-	assert.NoError(t, <-lr.Start(comps))
+	assert.NoError(t, lr.Start(comps))
 	assert.IsType(t, &LogicRunner{}, lr)
 
 	_, err = lr.GetExecutor(core.MachineTypeGoPlugin)

@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -67,7 +66,7 @@ type RPC struct {
 
 // GetObject is an RPC retrieving an object by its reference, so far short circuted to return
 // code of the plugin
-func (gpr *RPC) GetObject(ref core.RecordRef, reply *logicrunner.Object) error {
+func (gpr *RPC) GetObject(ref core.RecordRef, reply *rpctypes.Object) error {
 	f, err := os.Open(gpr.gp.Options.CodePath + ref.String() + ".so")
 	if err != nil {
 		return err
