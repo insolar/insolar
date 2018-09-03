@@ -160,7 +160,6 @@ package main
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
 
-// @inscontract
 type One struct {
 	foundation.BaseContract
 }
@@ -178,7 +177,6 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
-// @inscontract
 type Two struct {
 	foundation.BaseContract
 }

@@ -18,15 +18,16 @@ package primary
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type INFHwRunner interface {
 	Run() string
 }
 
-// @inscontract
 // nolint
 type HwRunner struct {
+	foundation.BaseContract
 	Runned int
 }
 
