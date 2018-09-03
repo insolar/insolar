@@ -162,3 +162,33 @@ func ( A ) Get( b bool ) bool{
 	assert.Contains(t, bufWrapper.String(), "args[0] = bool(false)")
 
 }
+
+func TestGenerateProxyAndWrapperWithoutReturnValue(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+// @inscontract
+type A struct{
+}
+
+func ( A ) Get(){
+	return
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	assert.NoError(t, err)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), "    self.Get(  )")
+}
