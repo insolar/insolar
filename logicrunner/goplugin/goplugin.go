@@ -68,7 +68,7 @@ type RPC struct {
 // GetObject is an RPC retrieving an object by its reference, so far short circuted to return
 // code of the plugin
 func (gpr *RPC) GetObject(ref core.RecordRef, reply *logicrunner.Object) error {
-	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
+	f, err := os.Open(gpr.gp.Options.CodePath + ref.String() + ".so")
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 	// TODO: store data on ledger via artifact manager
 	_ = res.Data
 
-	reply.Reference = core.RecordRef("some-ref")
+	reply.Reference = core.String2Ref("some-ref")
 
 	return nil
 }

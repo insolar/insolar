@@ -216,7 +216,7 @@ func (t *GoInsider) Upstream() (*rpc.Client, error) {
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
 func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
-	path := t.dir + "/" + string(ref)
+	path := t.dir + "/" + ref.String()
 	_, err := os.Stat(path)
 
 	if err == nil {
@@ -248,7 +248,7 @@ func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (t *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
-	key := string(ref)
+	key := ref.String()
 	if t.plugins[key] != nil {
 		return t.plugins[key], nil
 	}
@@ -276,7 +276,7 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 	}
 
 	req := rpctypes.UpRouteReq{
-		Reference: core.RecordRef(ref),
+		Reference: core.String2Ref(ref),
 		Method:    method,
 		Arguments: args,
 	}
@@ -298,7 +298,7 @@ func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (
 	}
 
 	req := rpctypes.UpRouteConstructorReq{
-		Reference:   core.RecordRef(ref),
+		Reference:   core.String2Ref(ref),
 		Constructor: name,
 		Arguments:   args,
 	}
@@ -309,7 +309,7 @@ func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (
 		return "", errors.Wrap(err, "on calling main API")
 	}
 
-	return string(res.Reference), res.Err
+	return res.Reference.String(), res.Err
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`
