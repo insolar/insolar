@@ -121,7 +121,7 @@ func (s *Store) Set(key, value []byte) error {
 func (s *Store) GetRecord(ref *record.Reference) (record.Record, error) {
 	var raw *record.Raw
 
-	k := prefixkey(scopeIDRecord, ref.Bytes())
+	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
 	txerr := s.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(k)
 		if err != nil {
@@ -157,7 +157,7 @@ func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 			Hash:  raw.Hash(),
 		},
 	}
-	k := prefixkey(scopeIDRecord, ref.Bytes())
+	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
 	val := record.MustEncodeRaw(raw)
 	txerr := s.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(k, val)
@@ -171,7 +171,7 @@ func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 
 // GetClassIndex fetches class lifeline's index.
 func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
 	buf, err := s.Get(k)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, erro
 
 // SetClassIndex stores class lifeline index.
 func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
 	encoded, err := index.EncodeClassLifeline(idx)
 	if err != nil {
 		return err
@@ -191,7 +191,7 @@ func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) e
 
 // GetObjectIndex fetches object lifeline index.
 func (s *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
 	buf, err := s.Get(k)
 	if err != nil {
 		return nil, err
@@ -201,7 +201,7 @@ func (s *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, er
 
 // SetObjectIndex stores object lifeline index.
 func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.Bytes())
+	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
 	encoded, err := index.EncodeObjectLifeline(idx)
 	if err != nil {
 		return err

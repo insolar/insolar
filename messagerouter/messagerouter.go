@@ -77,7 +77,7 @@ func (r *MessageRouter) getNodeID(reference core.RecordRef) id.ID {
 	log.Println("getNodeID: ", reference)
 
 	nodeID, _ := id.NewID(nil)
-	nodeID.SetHash(base58.Decode(string(reference)))
+	nodeID.SetHash(base58.Decode(reference.String()))
 	return nodeID
 }
 

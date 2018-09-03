@@ -75,8 +75,8 @@ func TestReference2Key(t *testing.T) {
 		Record: idPulse1,
 	}
 
-	k0 := refPulse0.Bytes()
-	k1 := refPulse1.Bytes()
+	k0 := refPulse0.CoreRef()
+	k1 := refPulse1.CoreRef()
 	assert.NotEqual(t, k0, k1)
 }
 
@@ -87,5 +87,5 @@ func TestReference_Key(t *testing.T) {
 		Domain: ID{Pulse: 1},
 		Record: ID{Pulse: 2},
 	}
-	assert.Equal(t, []byte{0, 0, 0, 2}, ref.Bytes()[:4])
+	assert.Equal(t, []byte{0, 0, 0, 2}, ref.CoreRef()[:4])
 }

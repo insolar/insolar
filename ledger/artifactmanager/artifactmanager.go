@@ -136,9 +136,9 @@ func (m *LedgerArtifactManager) SetArchPref(pref []core.MachineType) {
 // Type is a contract interface. It contains one method signature.
 func (m *LedgerArtifactManager) DeclareType(
 	domain, request core.RecordRef, typeDec []byte,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
 
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -160,7 +160,7 @@ func (m *LedgerArtifactManager) DeclareType(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
-	return codeRef.Bytes(), nil
+	return codeRef.CoreRef(), nil
 }
 
 // DeployCode creates new code record in storage.
@@ -168,9 +168,9 @@ func (m *LedgerArtifactManager) DeclareType(
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
 	domain, request core.RecordRef, types []core.RecordRef, codeMap map[core.MachineType][]byte,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
 
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -179,7 +179,7 @@ func (m *LedgerArtifactManager) DeployCode(
 
 	typeRefs := make([]record.Reference, 0, len(types))
 	for _, tp := range types {
-		ref := record.Bytes2Reference(tp)
+		ref := record.Core2Reference(tp)
 		rec, tErr := m.store.GetRecord(&ref)
 		if tErr != nil {
 			return nil, errors.Wrap(tErr, "failed to retrieve type record")
@@ -206,7 +206,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
-	return codeRef.Bytes(), nil
+	return codeRef.CoreRef(), nil
 }
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
@@ -215,10 +215,10 @@ func (m *LedgerArtifactManager) DeployCode(
 // Activation reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
 	domain, request, code core.RecordRef, memory []byte,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
-	codeRef := record.Bytes2Reference(code)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
+	codeRef := record.Core2Reference(code)
 
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -252,7 +252,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return classRef.Bytes(), nil
+	return classRef.CoreRef(), nil
 }
 
 // DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
@@ -261,10 +261,10 @@ func (m *LedgerArtifactManager) ActivateClass(
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
 	domain, request, class core.RecordRef,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
-	classRef := record.Bytes2Reference(class)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
+	classRef := record.Core2Reference(class)
 
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -298,7 +298,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return deactivationRef.Bytes(), nil
+	return deactivationRef.CoreRef(), nil
 }
 
 // UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
@@ -307,14 +307,14 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
 	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
-	classRef := record.Bytes2Reference(class)
-	codeRef := record.Bytes2Reference(code)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
+	classRef := record.Core2Reference(class)
+	codeRef := record.Core2Reference(code)
 	migrationRefs := make([]record.Reference, 0, len(migrations))
 	for _, migration := range migrations {
-		migrationRefs = append(migrationRefs, record.Bytes2Reference(migration))
+		migrationRefs = append(migrationRefs, record.Core2Reference(migration))
 	}
 
 	err := m.checkRequestRecord(&requestRef)
@@ -364,7 +364,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return amendRef.Bytes(), nil
+	return amendRef.CoreRef(), nil
 }
 
 // ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
@@ -373,10 +373,10 @@ func (m *LedgerArtifactManager) UpdateClass(
 // Activation reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObj(
 	domain, request, class core.RecordRef, memory []byte,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
-	classRef := record.Bytes2Reference(class)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
+	classRef := record.Core2Reference(class)
 
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -413,7 +413,7 @@ func (m *LedgerArtifactManager) ActivateObj(
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
 
-	return objRef.Bytes(), nil
+	return objRef.CoreRef(), nil
 }
 
 // DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
@@ -422,10 +422,10 @@ func (m *LedgerArtifactManager) ActivateObj(
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObj(
 	domain, request, obj core.RecordRef,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
-	objRef := record.Bytes2Reference(obj)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
+	objRef := record.Core2Reference(obj)
 
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -458,7 +458,7 @@ func (m *LedgerArtifactManager) DeactivateObj(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return deactivationRef.Bytes(), nil
+	return deactivationRef.CoreRef(), nil
 }
 
 // UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -468,10 +468,10 @@ func (m *LedgerArtifactManager) DeactivateObj(
 // them to the new memory manually if its required.
 func (m *LedgerArtifactManager) UpdateObj(
 	domain, request, obj core.RecordRef, memory []byte,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
-	objRef := record.Bytes2Reference(obj)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
+	objRef := record.Core2Reference(obj)
 
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -507,7 +507,7 @@ func (m *LedgerArtifactManager) UpdateObj(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return amendRef.Bytes(), nil
+	return amendRef.CoreRef(), nil
 }
 
 // AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
@@ -518,10 +518,10 @@ func (m *LedgerArtifactManager) UpdateObj(
 // required.
 func (m *LedgerArtifactManager) AppendObjDelegate(
 	domain, request, obj core.RecordRef, memory []byte,
-) (core.RecordRef, error) {
-	domainRef := record.Bytes2Reference(domain)
-	requestRef := record.Bytes2Reference(request)
-	objRef := record.Bytes2Reference(obj)
+) (*core.RecordRef, error) {
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
+	objRef := record.Core2Reference(obj)
 
 	err := m.checkRequestRecord(&requestRef)
 	if err != nil {
@@ -556,7 +556,7 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store lifeline index")
 	}
-	return appendRef.Bytes(), nil
+	return appendRef.CoreRef(), nil
 }
 
 // GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
@@ -566,8 +566,8 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	classState, objectState core.RecordRef,
 ) ([]byte, []byte, error) {
-	classRef := record.Bytes2Reference(classState)
-	objRef := record.Bytes2Reference(objectState)
+	classRef := record.Core2Reference(classState)
+	objRef := record.Core2Reference(objectState)
 
 	// Fetching class data
 	classRec, err := m.store.GetRecord(&classRef)
@@ -633,9 +633,9 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 func (m *LedgerArtifactManager) GetLatestObj(
 	obj, storedClassState, storedObjState core.RecordRef,
 ) (core.ClassDescriptor, core.ObjectDescriptor, error) {
-	objRef := record.Bytes2Reference(obj)
-	storedClassRef := record.Bytes2Reference(storedClassState)
-	storedObjRef := record.Bytes2Reference(storedObjState)
+	objRef := record.Core2Reference(obj)
+	storedClassRef := record.Core2Reference(storedClassState)
+	storedObjRef := record.Core2Reference(storedObjState)
 
 	var (
 		class  *ClassDescriptor

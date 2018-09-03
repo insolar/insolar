@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/hash"
 )
 
@@ -129,13 +130,13 @@ type Reference struct {
 	Record ID
 }
 
-// Bytes generates Reference byte representation (key without prefix).
-func (ref *Reference) Bytes() []byte {
-	b := make([]byte, RefIDSize)
+// CoreRef generates Reference byte representation (key without prefix).
+func (ref *Reference) CoreRef() *core.RecordRef {
+	var b core.RecordRef
 	// Record part should go first so we can iterate keys of a certain slot
 	_ = copy(b[:IDSize], ID2Bytes(ref.Record))
 	_ = copy(b[IDSize:], ID2Bytes(ref.Domain))
-	return b
+	return &b
 }
 
 // IsEqual checks equality of References.

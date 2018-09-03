@@ -7,9 +7,9 @@ type HelloWorld struct {
 }
 
 func CodeRef() core.RecordRef {
-	ret := make([]byte, 64)
-	ret[63] = 1
-	return ret
+	var ref core.RecordRef
+	ref[core.RecordRefSize-1] = 1
+	return ref
 }
 
 func NewHelloWorld() *HelloWorld {

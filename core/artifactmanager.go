@@ -43,51 +43,49 @@ type ArtifactManager interface {
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
-	DeclareType(domain, request RecordRef, typeDec []byte) (RecordRef, error)
+	DeclareType(domain, request RecordRef, typeDec []byte) (*RecordRef, error)
 
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate class or as migration code for an object.
-	DeployCode(domain, request RecordRef, types []RecordRef, codeMap map[MachineType][]byte) (RecordRef, error)
+	DeployCode(domain, request RecordRef, types []RecordRef, codeMap map[MachineType][]byte) (*RecordRef, error)
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
 	// and memory as the default memory for class objects.
 	//
 	// Activation reference will be this class'es identifier and referred as "class head".
-	ActivateClass(domain, request, code RecordRef, memory []byte) (RecordRef, error)
+	ActivateClass(domain, request, code RecordRef, memory []byte) (*RecordRef, error)
 
 	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
 	// the class. If class is already deactivated, an error should be returned.
 	//
 	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(domain, request, class RecordRef) (RecordRef, error)
+	DeactivateClass(domain, request, class RecordRef) (*RecordRef, error)
 
 	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 	// the class. Migrations are references to code records.
 	//
 	// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
-	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (
-		RecordRef, error,
-	)
+	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordRef, error)
 
 	// ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
 	// memory as memory of crated object. If memory is not provided, the class default memory will be used.
 	//
 	// Activation reference will be this object's identifier and referred as "object head".
-	ActivateObj(domain, request, class RecordRef, memory []byte) (RecordRef, error)
+	ActivateObj(domain, request, class RecordRef, memory []byte) (*RecordRef, error)
 
 	// DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObj(domain, request, obj RecordRef) (RecordRef, error)
+	DeactivateObj(domain, request, obj RecordRef) (*RecordRef, error)
 
 	// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
 	// them to the new memory manually if its required.
-	UpdateObj(domain, request, obj RecordRef, memory []byte) (RecordRef, error)
+	UpdateObj(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
 
 	// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
 	// of the object. Provided memory well be used as append delegate memory.
@@ -95,7 +93,7 @@ type ArtifactManager interface {
 	// Object's delegates will be provided by GetLatestObj. Any object update will nullify all the object's append
 	// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
 	// required.
-	AppendObjDelegate(domain, request, obj RecordRef, memory []byte) (RecordRef, error)
+	AppendObjDelegate(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
 }
 
 // ClassDescriptor represents meta info required to fetch all class data.

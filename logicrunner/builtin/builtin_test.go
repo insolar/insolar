@@ -8,7 +8,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 	"github.com/stretchr/testify/assert"
@@ -31,9 +30,9 @@ func TNewBuiltIn(t *testing.T, dir string) *BuiltIn {
 }
 
 func byteRecorRef(b byte) core.RecordRef {
-	ret := make([]byte, 64)
-	ret[63] = b
-	return ret
+	var ref core.RecordRef
+	ref[core.RecordRefSize-1] = b
+	return ref
 }
 
 func TestBareHelloworld(t *testing.T) {
@@ -53,7 +52,7 @@ func TestBareHelloworld(t *testing.T) {
 	request := byteRecorRef(3)
 	hwtype, err := am.DeclareType(domain, request, []byte{})
 	assert.NoError(t, err, "creating type on ledger")
-	coderef, err := am.DeployCode(domain, request, []core.RecordRef{hwtype}, map[core.MachineType][]byte{0: nil})
+	coderef, err := am.DeployCode(domain, request, []core.RecordRef{*hwtype}, map[core.MachineType][]byte{0: nil})
 	assert.NoError(t, err, "create code on ledger")
 
 	ch := new(codec.CborHandle)
@@ -61,20 +60,19 @@ func TestBareHelloworld(t *testing.T) {
 	err = codec.NewEncoderBytes(&data, ch).Encode(hw)
 	assert.NoError(t, err, "serialise new helloworld")
 
-	classref, err := am.ActivateClass(domain, request, coderef, data)
+	classref, err := am.ActivateClass(domain, request, *coderef, data)
 	assert.NoError(t, err, "create template for contract data")
 
-	contract, err := am.ActivateObj(request, domain, classref, data)
+	contract, err := am.ActivateObj(request, domain, *classref, data)
 	assert.NoError(t, err, "create actual contract")
 
 	assert.Equal(t, true, contract != nil)
 
-	bi.registry[utils.RefString(coderef)] = bi.registry[utils.RefString(helloworld.CodeRef())]
+	bi.registry[coderef.String()] = bi.registry[helloworld.CodeRef().String()]
 	var args []byte
 	err = codec.NewEncoderBytes(&args, ch).Encode([]interface{}{"Vany"})
 	assert.NoError(t, err, "serialise args")
-	state, res, err := bi.Exec(coderef, data, "Greet", args)
+	state, res, err := bi.Exec(*coderef, data, "Greet", args)
 	assert.NoError(t, err, "contract call")
 	t.Logf("%+v  %+v", state, res)
-
 }

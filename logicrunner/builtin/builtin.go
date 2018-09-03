@@ -21,7 +21,6 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -46,14 +45,14 @@ func NewBuiltIn(am core.ArtifactManager, mr core.MessageRouter) *BuiltIn {
 		registry: make(map[string]Contract),
 	}
 
-	bi.registry[utils.RefString(helloworld.CodeRef())] = helloworld.NewHelloWorld()
+	bi.registry[helloworld.CodeRef().String()] = helloworld.NewHelloWorld()
 
 	return &bi
 }
 
 // Exec is an implementation for logicrunner Executor interface
 func (bi *BuiltIn) Exec(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
-	c, ok := bi.registry[utils.RefString(codeRef)]
+	c, ok := bi.registry[codeRef.String()]
 	if !ok {
 		return nil, nil, errors.New("Wrong reference for builtin contract")
 	}
