@@ -181,7 +181,7 @@ func ( A ) Get(){
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
