@@ -31,6 +31,7 @@ import (
 )
 
 func TestStore_GetRecordNotFound(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
@@ -41,6 +42,7 @@ func TestStore_GetRecordNotFound(t *testing.T) {
 }
 
 func TestStore_SetRecord(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 	// mock pulse source
@@ -77,6 +79,7 @@ func TestStore_SetRecord(t *testing.T) {
 }
 
 func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
@@ -90,6 +93,7 @@ func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
@@ -123,6 +127,7 @@ func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
@@ -133,6 +138,7 @@ func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 }
 
 func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
@@ -155,6 +161,7 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
@@ -164,6 +171,7 @@ func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 }
 
 func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
@@ -181,6 +189,7 @@ func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 }
 
 func TestStore_SetCurrentPulse(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
@@ -189,6 +198,7 @@ func TestStore_SetCurrentPulse(t *testing.T) {
 }
 
 func TestStore_SetEntropy(t *testing.T) {
+	t.Parallel()
 	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 

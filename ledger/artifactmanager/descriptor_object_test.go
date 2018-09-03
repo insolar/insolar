@@ -55,6 +55,7 @@ func prepareDOTestData(t *testing.T) (preparedDOTestData, func()) {
 }
 
 func TestObjectDescriptor_GetMemory(t *testing.T) {
+	t.Parallel()
 	td, cleaner := prepareDOTestData(t)
 	defer cleaner()
 
@@ -87,6 +88,7 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 }
 
 func TestObjectDescriptor_GetDelegates(t *testing.T) {
+	t.Parallel()
 	td, cleaner := prepareDOTestData(t)
 	defer cleaner()
 
