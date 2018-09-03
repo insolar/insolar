@@ -42,7 +42,7 @@ func Test_generateContractWrapper(t *testing.T) {
 
 func Test_generateContractProxy(t *testing.T) {
 	buf := bytes.Buffer{}
-	err := generateContractProxy("../testplugins/secondary/main.go", &buf)
+	err := generateContractProxy("../testplugins/secondary/main.go", "testRef", &buf)
 	assert.NoError(t, err)
 
 	code, err := ioutil.ReadAll(&buf)
@@ -60,8 +60,8 @@ func TestConstructorsParsing(t *testing.T) {
 	code := `
 package main
 
-// @inscontract
 type One struct {
+foundation.BaseContract
 }
 
 func New() *One {
@@ -107,7 +107,7 @@ func TestCompileContractProxy(t *testing.T) {
 	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
 	assert.NoError(t, err)
 
-	err = generateContractProxy("../testplugins/secondary/main.go", proxyFh)
+	err = generateContractProxy("../testplugins/secondary/main.go", "testRef", proxyFh)
 	assert.NoError(t, err)
 
 	err = proxyFh.Close()
@@ -132,4 +132,139 @@ func main() {
 
 	out, err := exec.Command("go", "build", "test.go").CombinedOutput()
 	assert.NoError(t, err, string(out))
+}
+
+func TestGenerateProxyAndWrapperForBoolParams(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+type A struct{
+foundation.BaseContract
+}
+
+func ( A ) Get( b bool ) bool{
+	return true
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), "resList[0] = bool(false)")
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), "args[0] = bool(false)")
+
+}
+
+func TestGenerateProxyAndWrapperWithoutReturnValue(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+type A struct{
+	int C
+	foundation.BaseContract
+	int M
+}
+
+func ( A ) Get(){
+	return
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), "    self.Get(  )")
+}
+
+func TestFailIfThereAreNoContract(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+type A struct{
+	ttt ppp.TTT
+}
+`)
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
+}
+
+func TestContractOnlyIfEmbedBaseContract(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+// A contains object of type foundation.BaseContract, but it must embed it
+type A struct{
+	tt foundation.BaseContract
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
+
+}
+
+func TestOnlyOneSmartContractMustExist(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+
+type A struct{
+	foundation.BaseContract
+}
+
+type B struct{
+	foundation.BaseContract
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
 }

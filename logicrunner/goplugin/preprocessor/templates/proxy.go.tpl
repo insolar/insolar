@@ -8,6 +8,9 @@ import (
     {{- $typeStruct }}
 {{ end }}
 
+// Reference to class of this contract
+var ClassReference = "{{ .ClassReference }}"
+
 // Contract proxy type
 type {{ .ContractType }} struct {
     Reference string
@@ -29,7 +32,7 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *{{ $.ContractType }} {
     }
 
 	// TODO: type
-    ref, err := proxyctx.Current.RouteConstructorCall("typeRef", "{{ $func.Name }}", argsSerialized)
+    ref, err := proxyctx.Current.RouteConstructorCall(ClassReference, "{{ $func.Name }}", argsSerialized)
     if err != nil {
 		panic(err)
     }

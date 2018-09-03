@@ -160,7 +160,6 @@ package main
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
 
-// @inscontract
 type One struct {
 	foundation.BaseContract
 }
@@ -178,7 +177,6 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
-// @inscontract
 type Two struct {
 	foundation.BaseContract
 }
@@ -198,7 +196,7 @@ func generateContractProxy(root string, name string) error {
 
 	contractPath := root + "/src/contract/" + name + "/main.go"
 
-	out, err := exec.Command("./preprocessor/preprocessor", "proxy", "-o", dstDir+"/main.go", contractPath).CombinedOutput()
+	out, err := exec.Command("./preprocessor/preprocessor", "proxy", "-o", dstDir+"/main.go", "--code-reference", "testReference", contractPath).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't generate proxy: "+string(out))
 	}

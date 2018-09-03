@@ -119,6 +119,8 @@ func main() {
 		fs := flag.NewFlagSet("proxy", flag.ExitOnError)
 		output := newOutputFlag()
 		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		var reference string
+		fs.StringVarP(&reference, "code-reference", "r", "testRef", "reference to code of")
 		err := fs.Parse(os.Args[2:])
 		if err != nil {
 			panic(err)
@@ -127,8 +129,7 @@ func main() {
 		if fs.NArg() != 1 {
 			panic(errors.New("proxy command should be followed by exactly one file name to process"))
 		}
-
-		err = generateContractProxy(fs.Arg(0), output.writer)
+		err = generateContractProxy(fs.Arg(0), reference, output.writer)
 		if err != nil {
 			panic(err)
 		}
@@ -187,7 +188,13 @@ func parseFile(fileName string) (*parsedFile, error) {
 	}
 	res.node = node
 
-	getMethods(&res)
+	err = getMethods(&res)
+	if err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+	if res.contract == "" {
+		return nil, fmt.Errorf("Only one smart contract must exist")
+	}
 
 	return &res, nil
 }
@@ -211,8 +218,10 @@ func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
 
 		rets := []string{}
-		for i := range method.Type.Results.List {
-			rets = append(rets, fmt.Sprintf("ret%d", i))
+		if method.Type.Results != nil {
+			for i := range method.Type.Results.List {
+				rets = append(rets, fmt.Sprintf("ret%d", i))
+			}
 		}
 		resultList := strings.Join(rets, ", ")
 
@@ -264,7 +273,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	return nil
 }
 
-func generateContractProxy(fileName string, out io.Writer) error {
+func generateContractProxy(fileName string, classReference string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
@@ -277,7 +286,7 @@ func generateContractProxy(fileName string, out io.Writer) error {
 
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
-		panic("Contract must be in main package")
+		fmt.Errorf("Contract must be in main package")
 	}
 
 	proxyPackageName := match[2]
@@ -302,12 +311,14 @@ func generateContractProxy(fileName string, out io.Writer) error {
 		ContractType        string
 		MethodsProxies      []map[string]interface{}
 		ConstructorsProxies []map[string]string
+		ClassReference      string
 	}{
 		proxyPackageName,
 		types,
 		parsed.contract,
 		methodsProxies,
 		constructorProxies,
+		classReference,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -324,7 +335,30 @@ func typeName(t ast.Expr) string {
 	return t.(*ast.Ident).Name
 }
 
-func getMethods(parsed *parsedFile) {
+func IsContract(typeNode *ast.TypeSpec) bool {
+	baseContract := "foundation.BaseContract"
+	switch st := typeNode.Type.(type) {
+	case *ast.StructType:
+		if st.Fields == nil {
+			return false
+		}
+		for _, fd := range st.Fields.List {
+			selectField, ok := fd.Type.(*ast.SelectorExpr)
+			if !ok {
+				continue
+			}
+			pack := selectField.X.(*ast.Ident).Name
+			class := selectField.Sel.Name
+			if (baseContract == (pack + "." + class)) && len(fd.Names) == 0 {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func getMethods(parsed *parsedFile) error {
 	parsed.types = make(map[string]*ast.TypeSpec)
 	parsed.methods = make(map[string][]*ast.FuncDecl)
 	parsed.constructors = make(map[string][]*ast.FuncDecl)
@@ -338,9 +372,9 @@ func getMethods(parsed *parsedFile) {
 			for _, e := range td.Specs {
 				typeNode := e.(*ast.TypeSpec)
 
-				if strings.Contains(td.Doc.Text(), "@inscontract") {
+				if IsContract(typeNode) {
 					if parsed.contract != "" {
-						panic("more than one contract in a file")
+						return fmt.Errorf("more than one contract in a file")
 					}
 					parsed.contract = typeNode.Name.Name
 				} else {
@@ -371,6 +405,8 @@ func getMethods(parsed *parsedFile) {
 			}
 		}
 	}
+
+	return nil
 }
 
 // nolint
@@ -396,6 +432,8 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 		switch tname {
 		case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
 			initializer = tname + "(0)"
+		case "bool":
+			initializer = "bool(false)"
 		case "string":
 			initializer = `""`
 		default:
@@ -422,6 +460,9 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 
 func genFieldList(parsed *parsedFile, params *ast.FieldList, withNames bool) string {
 	res := ""
+	if params == nil {
+		return res
+	}
 	for i, e := range params.List {
 		if i > 0 {
 			res += ", "
