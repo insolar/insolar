@@ -25,20 +25,16 @@ type ArtifactManager interface {
 	// return an error.
 	SetArchPref(pref []MachineType)
 
-	// GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
-	// (e.g. object considered to be active).
+	// GetCode returns code from code record by provided reference.
 	//
-	// This method is used by validator to fetch the exact state of the object that was used by the executor.
-	GetExactObj(class, object RecordRef) ([]byte, []byte, error)
+	// This method is used by VM to fetch code for execution.
+	GetCode(code RecordRef) (CodeDescriptor, error)
 
-	// GetLatestObj returns descriptors for latest known state of the object/class known to the storage. The caller
-	// should provide latest known states of the object/class known to it. If the object or the class is deactivated,
-	// an error should be returned.
+	// GetLatestObj returns descriptors for latest known state of the object/class known to the storage.
+	// If the object or the class is deactivated, an error should be returned.
 	//
 	// Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
-	GetLatestObj(object, storedClassState, storedObjState RecordRef) (
-		ClassDescriptor, ObjectDescriptor, error,
-	)
+	GetLatestObj(head RecordRef) (ObjectDescriptor, error)
 
 	// DeclareType creates new type record in storage.
 	//
@@ -96,23 +92,23 @@ type ArtifactManager interface {
 	AppendObjDelegate(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
 }
 
-// ClassDescriptor represents meta info required to fetch all class data.
-type ClassDescriptor interface {
-	// GetCode fetches the latest class code known to storage. Code will be fetched according to architecture preferences
-	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
-	GetCode() ([]byte, error)
+// CodeDescriptor represents meta info required to fetch all class data.
+type CodeDescriptor interface {
+	Ref() RecordRef
 
-	// GetMigrations fetches all migrations from provided to artifact manager state to the last state known to storage. VM
-	// is responsible for applying these migrations and updating objects.
-	GetMigrations() ([][]byte, error)
+	// Code fetches the latest class code known to storage. Code will be fetched according to architecture preferences
+	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
+	Code() ([]byte, error)
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {
-	// GetMemory fetches latest memory of the object known to storage.
-	GetMemory() ([]byte, error)
-	// GetDelegates fetches unamended delegates from storage.
-	//
-	// VM is responsible for collecting all delegates and adding them to the object memory manually if its required.
-	GetDelegates() ([][]byte, error)
+	Ref() RecordRef
+
+	// Memory fetches latest memory of the object known to storage.
+	Memory() ([]byte, error)
+
+	// CodeDescriptor fetches the latest class code known to storage. Code will be fetched according to architecture preferences
+	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
+	CodeDescriptor() (CodeDescriptor, error)
 }
