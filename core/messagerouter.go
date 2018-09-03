@@ -1,9 +1,6 @@
 package core
 
-import (
-	// TODO: should go away, no imports in TYPES package
-	"github.com/insolar/insolar/network/hostnetwork"
-)
+// TODO: should go away, no imports in TYPES package
 
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
@@ -26,5 +23,5 @@ type Response struct {
 
 // MessageRouter interface
 type MessageRouter interface {
-	Route(ctx hostnetwork.Context, msg Message) (resp Response, err error)
+	Route(msg Message) (resp Response, err error)
 }
