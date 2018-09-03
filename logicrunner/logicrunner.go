@@ -18,7 +18,7 @@
 package logicrunner
 
 import (
-	"github.com/derekparker/delve/pkg/config"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/pkg/errors"
@@ -28,12 +28,15 @@ import (
 type LogicRunner struct {
 	Executors       [core.MachineTypesTotalCount]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
+	Cfg             configuration.LogicRunner
 }
 
 // NewLogicRunner is constructor for `LogicRunner`
-func NewLogicRunner(config config.Config) (*LogicRunner, error) {
-	res := LogicRunner{ArtifactManager: nil}
-
+func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
+	res := LogicRunner{
+		ArtifactManager: nil,
+		Cfg:             cfg,
+	}
 	return &res, nil
 }
 
