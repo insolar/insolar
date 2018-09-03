@@ -58,6 +58,7 @@ func TestNode_GetDomainID(t *testing.T) {
 	expectedDomain := "domain id"
 	node := Node{
 		id:       "id",
+		role:     "role",
 		dht:      nil,
 		domainID: expectedDomain,
 	}
@@ -70,6 +71,7 @@ func TestNode_GetNodeID(t *testing.T) {
 	node := Node{
 		domainID: "domain id",
 		id:       expectedID,
+		role:     "role",
 		dht:      nil,
 		host:     nil,
 	}
@@ -80,6 +82,7 @@ func TestNode_GetNodeRole(t *testing.T) {
 	expectedRole := "role"
 	node := Node{
 		id:       "id",
+		role:     expectedRole,
 		dht:      nil,
 		domainID: "domain id",
 		host:     nil,
