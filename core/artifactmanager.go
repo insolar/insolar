@@ -92,23 +92,27 @@ type ArtifactManager interface {
 	AppendObjDelegate(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
 }
 
-// CodeDescriptor represents meta info required to fetch all class data.
+// CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor interface {
-	Ref() RecordRef
+	// CodeRef returns reference to represented code record.
+	CodeRef() RecordRef
 
-	// Code fetches the latest class code known to storage. Code will be fetched according to architecture preferences
+	// Code fetches code from storage. Code will be fetched according to architecture preferences
 	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
 	Code() ([]byte, error)
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {
-	Ref() RecordRef
+	// ObjectRef returns reference to represented object record.
+	ObjectRef() RecordRef
 
-	// Memory fetches latest memory of the object known to storage.
+	// ClassRef returns reference to class of represented object record.
+	ClassRef() RecordRef
+
+	// Memory fetches object memory from storage.
 	Memory() ([]byte, error)
 
-	// CodeDescriptor fetches the latest class code known to storage. Code will be fetched according to architecture preferences
-	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
+	// CodeDescriptor returns descriptor for fetching code data.
 	CodeDescriptor() (CodeDescriptor, error)
 }
