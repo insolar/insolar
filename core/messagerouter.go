@@ -1,7 +1,5 @@
 package core
 
-// TODO: should go away, no imports in TYPES package
-
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
 
