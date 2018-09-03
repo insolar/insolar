@@ -1,0 +1,15 @@
+version: '3'
+services:
+  bootstrap:
+    image: "insolar:latest"
+    restart: always
+    ports:
+    - "17000:17001"
+  node:
+    image: "insolar:latest"
+    ports:
+    - "17000:17000"
+    links:
+    - bootstrap
+    environment:
+      INSOLAR_HOST_BOOTSTRAPHOSTS: bootstrap:17001

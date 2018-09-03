@@ -13,5 +13,6 @@ install:
   - "dep ensure"
 script:
   - "go test --race --coverprofile=coverage.txt --covermode=atomic ./..."
+  - "go build -o insolar cmd/insolar/*"
 after_success:
   - "bash <(curl -s https://codecov.io/bash)"

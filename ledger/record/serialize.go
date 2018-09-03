@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/hash"
 	"github.com/ugorji/go/codec"
 )
@@ -99,11 +100,11 @@ func Bytes2ID(b []byte) ID {
 	}
 }
 
-// Bytes2Reference converts commonly used reference to Ledger-specific.
-func Bytes2Reference(b []byte) Reference {
+// Core2Reference converts commonly used reference to Ledger-specific.
+func Core2Reference(cRef core.RecordRef) Reference {
 	return Reference{
-		Record: Bytes2ID(b[:IDSize]),
-		Domain: Bytes2ID(b[IDSize:]),
+		Record: Bytes2ID(cRef[:IDSize]),
+		Domain: Bytes2ID(cRef[IDSize:]),
 	}
 }
 

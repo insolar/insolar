@@ -14,23 +14,20 @@
  *    limitations under the License.
  */
 
-package leveldb
+package badgerdb
 
 import (
 	"bytes"
 
-	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/syndtr/goleveldb/leveldb/util"
-
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/ledger/record"
 )
 
-// HashIterator iterates overs a DB's keys.
-// An iterator provides methods for record hash extraction.
+// HashIterator iterates over a database record's hashes.
+// An iterator provides methods for record's hash access.
 //
-// HashIterator supposed to be used only in functions like ProcessSlotRecords.
-// Any release of iterator's resources like in native leveldb iterators
-// (see github.com/syndtr/goleveldb/leveldb/iterator) not needed.
+// HashIterator supposed to be used only in functions like ProcessSlotHashes.
+// Any release of iterator resources not needed.
 type HashIterator interface {
 	// Next moves the iterator to the next key/value pair.
 	// It returns false then iterator is exhausted.
@@ -46,58 +43,77 @@ type HashIterator interface {
 	ShallowHash() []byte
 }
 
-// ProcessSlotRecords executes a iteration function and provides HashIterator
-// to iterate all records with the same record.PulseNum.
-//
-// Error returned by the ProcessSlotRecords is based on iteration function
-// result or leveldb iterator error if any.
-func (ll *Store) ProcessSlotRecords(n record.PulseNum, ifn func(it HashIterator) error) error {
+func pulseNumRecordPrefix(n record.PulseNum) []byte {
 	prefix := make([]byte, record.PulseNumSize+1)
 	prefix[0] = scopeIDRecord
 	buf := bytes.NewBuffer(prefix[1:1])
 	n.MustWrite(buf)
+	return prefix
+}
 
-	ldbIter := ll.ldb.NewIterator(util.BytesPrefix(prefix), nil)
-	defer ldbIter.Release()
+// ProcessSlotHashes executes a iteration function ifn and provides HashIterator
+// inside it to iterate over all records hashes with the same record.PulseNum.
+//
+// Error returned by the ProcessSlotRecords is based on iteration function
+// result or BadgerDB iterator error if any.
+func (s *Store) ProcessSlotHashes(n record.PulseNum, ifn func(it HashIterator) error) error {
+	prefix := pulseNumRecordPrefix(n)
 
-	err := ifn(&iter{i: ldbIter})
-	if err != nil {
-		return err
-	}
-	return ldbIter.Error()
+	iopts := badger.DefaultIteratorOptions
+	iopts.PrefetchValues = false
+
+	// TODO: add transaction conflict processing
+	return s.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(iopts)
+		it.Seek(prefix)
+		defer it.Close()
+		return ifn(&iter{i: it, prefix: prefix})
+	})
 }
 
 // GetSlotHashes returns array of all record's hashes in provided PulseNum.
-func (ll *Store) GetSlotHashes(n record.PulseNum) ([][]byte, error) {
+func (s *Store) GetSlotHashes(n record.PulseNum) ([][]byte, error) {
 	var hashes [][]byte
-	err := ll.ProcessSlotRecords(n, func(it HashIterator) error {
-		for i := 1; it.Next(); i++ {
+	err := s.ProcessSlotHashes(n, func(it HashIterator) error {
+		for it.Next() {
 			hashes = append(hashes, it.Hash())
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		hashes = nil
 	}
-	return hashes, nil
+	return hashes, err
 }
 
-// levelDB iterator wrapper code
+// iter is a BadgerDB's iterator wrapper code.
 type iter struct {
-	i iterator.Iterator
+	i       *badger.Iterator
+	started bool
+	prefix  []byte
+}
+
+func (it *iter) valid() bool {
+	return it.i.Valid() && it.i.ValidForPrefix(it.prefix)
 }
 
 func (it *iter) Next() bool {
-	return it.i.Next()
+	if it.started {
+		it.i.Next()
+	}
+	it.started = true
+	return it.valid()
 }
 
 func (it *iter) Hash() []byte {
-	key := it.i.Key()
+	item := it.i.Item()
+	key := item.Key()
 	hash := make([]byte, len(key)-1)
 	_ = copy(hash, key[1:])
 	return hash
 }
 
 func (it *iter) ShallowHash() []byte {
-	return it.i.Key()[1:]
+	item := it.i.Item()
+	return item.Key()[1:]
 }

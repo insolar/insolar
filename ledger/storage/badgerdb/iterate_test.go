@@ -14,18 +14,17 @@
  *    limitations under the License.
  */
 
-package leveldb_test
+package badgerdb_test
 
 import (
 	"bytes"
 	"sort"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage/leveldb"
-	"github.com/insolar/insolar/ledger/storage/leveldb/leveltestutils"
+	"github.com/insolar/insolar/ledger/storage/badgerdb"
+	"github.com/insolar/insolar/ledger/storage/badgerdb/badgertestutils"
+	"github.com/stretchr/testify/assert"
 )
 
 func sorthashes(hashes [][]byte) {
@@ -35,7 +34,7 @@ func sorthashes(hashes [][]byte) {
 }
 
 func TestStore_SlotIterate(t *testing.T) {
-	ledger, cleaner := leveltestutils.TmpDB(t, "")
+	store, cleaner := badgertestutils.TmpDB(t, "")
 	defer cleaner()
 
 	var recset = []record.Record{
@@ -48,10 +47,10 @@ func TestStore_SlotIterate(t *testing.T) {
 
 	// save records set in different pulses
 	for _, pulse := range pulses {
-		ledger.SetCurrentPulse(pulse)
+		store.SetCurrentPulse(pulse)
 
 		for _, rec := range recset {
-			ref, err := ledger.SetRecord(rec)
+			ref, err := store.SetRecord(rec)
 			assert.NoError(t, err)
 			assert.NotNil(t, ref)
 		}
@@ -60,7 +59,7 @@ func TestStore_SlotIterate(t *testing.T) {
 	// iterate over pulse1
 	var iterErr error
 	var allhashes1expect [][]byte
-	iterErr = ledger.ProcessSlotRecords(pulse1, func(it leveldb.HashIterator) error {
+	iterErr = store.ProcessSlotHashes(pulse1, func(it badgerdb.HashIterator) error {
 		for i := 1; it.Next(); i++ {
 			h := it.Hash()
 			allhashes1expect = append(allhashes1expect, h)
@@ -69,25 +68,31 @@ func TestStore_SlotIterate(t *testing.T) {
 	})
 	assert.NoError(t, iterErr)
 
-	allhashes1got, err := ledger.GetSlotHashes(pulse1)
+	allhashes1got, err := store.GetSlotHashes(pulse1)
 	assert.NoError(t, err)
+	assert.Equalf(t, len(recset), len(allhashes1got), "hashes count the same as records count")
 	assert.Equalf(t, allhashes1expect, allhashes1got, "all hashes the same")
+
 	sorthashes(allhashes1expect)
 	assert.Equalf(t, allhashes1expect, allhashes1got, "GetSlotHashes returns sorted hashes")
 
 	// iterate over pulse2
 	var allhashes2expect [][]byte
-	iterErr = ledger.ProcessSlotRecords(pulse2, func(it leveldb.HashIterator) error {
+	iterErr = store.ProcessSlotHashes(pulse2, func(it badgerdb.HashIterator) error {
 		for i := 1; it.Next(); i++ {
-			allhashes2expect = append(allhashes2expect, it.Hash())
+			h := it.Hash()
+			// log.Printf("%v: got hash: %x\n", i, h)
+			allhashes2expect = append(allhashes2expect, h)
 		}
 		return nil
 	})
 	assert.NoError(t, iterErr)
 
-	allhashes2got, err := ledger.GetSlotHashes(pulse2)
+	allhashes2got, err := store.GetSlotHashes(pulse2)
 	assert.NoError(t, err)
+	assert.Equalf(t, len(recset), len(allhashes2got), "hashes count the same as records count")
 	assert.Equalf(t, allhashes2expect, allhashes2got, "all hashes the same")
+
 	sorthashes(allhashes2expect)
 	assert.Equalf(t, allhashes2expect, allhashes2got, "GetSlotHashes returns sorted hashes")
 

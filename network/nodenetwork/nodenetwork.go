@@ -52,15 +52,11 @@ func (network *Nodenetwork) AddNode(hostAddress, domainID string) error {
 }
 
 // GetReferenceHostID returns a host found by reference.
-func (network *Nodenetwork) GetReferenceHostID(ref []byte) (string, error) {
-	target := getReferenceString(ref)
-	if _, ok := network.nodes[target]; !ok {
-		return "", errors.New("reference doesn't exist")
-	}
-	if _, ok := network.nodes[target]; !ok {
+func (network *Nodenetwork) GetReferenceHostID(ref string) (string, error) {
+	if _, ok := network.nodes[ref]; !ok {
 		return "", errors.New("reference ID doesn't exist")
 	}
-	return network.nodes[target].hostID, nil
+	return network.nodes[ref].hostID, nil
 }
 
 func (network *Nodenetwork) createNode(hostAddress, domainID string) (*Node, error) {
@@ -76,11 +72,4 @@ func (network *Nodenetwork) addNode(node *Node) error {
 	}
 	network.nodes[node.GetDomainID()] = node
 	return nil
-}
-
-func getReferenceString(ref []byte) string {
-	if ref == nil {
-		return ""
-	}
-	return string(ref)
 }

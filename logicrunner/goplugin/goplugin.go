@@ -57,6 +57,7 @@ type GoPlugin struct {
 	MessageRouter core.MessageRouter
 	sock          net.Listener
 	runner        *exec.Cmd
+	client        *rpc.Client
 }
 
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
@@ -67,7 +68,7 @@ type RPC struct {
 // GetObject is an RPC retrieving an object by its reference, so far short circuted to return
 // code of the plugin
 func (gpr *RPC) GetObject(ref core.RecordRef, reply *logicrunner.Object) error {
-	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
+	f, err := os.Open(gpr.gp.Options.CodePath + ref.String() + ".so")
 	if err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 	// TODO: store data on ledger via artifact manager
 	_ = res.Data
 
-	reply.Reference = core.RecordRef("some-ref")
+	reply.Reference = core.String2Ref("some-ref")
 
 	return nil
 }
@@ -237,7 +238,6 @@ func (gp *GoPlugin) CallMethod(codeRef core.RecordRef, data []byte, method strin
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
-	res := rpctypes.DownCallResp{}
 
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{Reference: codeRef, Data: data, Method: method, Arguments: args}

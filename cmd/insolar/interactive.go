@@ -17,110 +17,20 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/host"
 
 	"github.com/chzyer/readline"
+	"github.com/insolar/insolar/network/hostnetwork"
 )
 
-var dhtNetwork *hostnetwork.DHT
-
-func main() {
-	var addr = flag.String("addr", "0.0.0.0:0", "IP Address and port to use")
-	var bootstrapAddress = flag.String("bootstrap", "", "IP Address and port to bootstrap against")
-	var help = flag.Bool("help", false, "Display Help")
-	var stun = flag.Bool("stun", true, "Use STUN")
-
-	flag.Parse()
-
-	if *help {
-		displayCLIHelp()
-		os.Exit(0)
-	}
-
-	cfg := configuration.NewConfiguration()
-	cfg.Host.Transport.Address = *addr
-	cfg.Host.Transport.BehindNAT = *stun
-
-	dhtNetwork, err := hostnetwork.NewHostNetwork(cfg.Host)
-	if err != nil {
-		log.Fatalln("Failed to create network:", err.Error())
-	}
-
-	defer closeNetwork()
-
-	ctx := createContext(dhtNetwork)
-
-	go listen(dhtNetwork)
-
-	if len(*bootstrapAddress) > 0 {
-		bootstrap(dhtNetwork)
-	}
-
-	handleSignals()
-
-	err = dhtNetwork.ObtainIP(ctx)
-	if err != nil {
-		log.Println(err)
-	}
-	err = dhtNetwork.AnalyzeNetwork(ctx)
-	if err != nil {
-		log.Println(err)
-	}
-	repl(dhtNetwork, ctx)
-}
-
-func handleSignals() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for range c {
-			closeNetwork()
-		}
-	}()
-}
-
-func createContext(dhtNetwork *hostnetwork.DHT) hostnetwork.Context {
-	ctx, err := hostnetwork.NewContextBuilder(dhtNetwork).SetDefaultHost().Build()
-	if err != nil {
-		log.Fatalln("Failed to create context:", err.Error())
-	}
-	return ctx
-}
-
-func bootstrap(dhtNetwork *hostnetwork.DHT) {
-	err := dhtNetwork.Bootstrap()
-	if err != nil {
-		log.Fatalln("Failed to bootstrap network", err.Error())
-	}
-}
-
-func listen(dhtNetwork *hostnetwork.DHT) {
-	func() {
-		err := dhtNetwork.Listen()
-		if err != nil {
-			log.Fatalln("Listen failed:", err.Error())
-		}
-	}()
-}
-
-func closeNetwork() {
-	func() {
-		dhtNetwork.Disconnect()
-	}()
-}
-
 func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+	displayInteractiveHelp()
+	doInfo(dhtNetwork, ctx)
+
 	rl, err := readline.New("> ")
 	if err != nil {
 		panic(err)
@@ -139,6 +49,10 @@ func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 		input := strings.Split(line, " ")
 
 		switch input[0] {
+		case "exit":
+			fallthrough
+		case "quit":
+			os.Exit(0)
 		case "help":
 			displayInteractiveHelp()
 		case "findhost":
@@ -172,8 +86,10 @@ func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 
 func doInfo(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	hosts := dhtNetwork.NumHosts(ctx)
-	originID := dhtNetwork.GetOriginHost(ctx).ID.HashString()
-	fmt.Println("ID: " + originID)
+	originID := dhtNetwork.GetOriginHost(ctx).ID
+	fmt.Println("======= Host info ======")
+	fmt.Println("ID key: " + originID.KeyString())
+	fmt.Println("ID hash: " + originID.HashString())
 	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
 }
 
@@ -208,40 +124,12 @@ func doRPC(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context)
 	}
 }
 
-func displayCLIHelp() {
-	fmt.Println(`example
-
-Usage:
-	example --addr [addr]
-
-Options:
-	--help Show this screen.
-	--addr=<ip> Local IP and Port [default: 0.0.0.0]
-	--bootstrap=<ip> Bootstrap IP and Port
-	--stun=<bool> Use STUN protocol for public addr discovery [default: true]
-    --relay=<ip> send relay request`)
-}
-
 func displayInteractiveHelp() {
 	fmt.Println(`
-help - This packet
-findhost <key> - Find host's real network address
-info - Display information about this host
+help - This message
+findnode <key> - Find node's real network address
+info - Display information about this node
+exit - Exit programm
 
 <method> <target> <args...> - Remote procedure call`)
-}
-
-func send(sender *host.Host, args [][]byte) ([]byte, error) {
-	bs := append([]byte{}, []byte(time.Now().Format(time.Kitchen))...)
-	bs = append(bs, ' ')
-	bs = append(bs, sender.ID.HashString()...)
-
-	for _, item := range args {
-		bs = append(bs, ' ')
-		bs = append(bs, item...)
-	}
-
-	fmt.Println(string(bs))
-
-	return bs, nil
 }

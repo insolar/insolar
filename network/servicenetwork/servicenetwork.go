@@ -65,7 +65,7 @@ func (network *ServiceNetwork) SendMessage(method string, msg *core.Message) ([]
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID, err := network.nodeNetwork.GetReferenceHostID(msg.Reference)
+	hostID, err := network.nodeNetwork.GetReferenceHostID(msg.Reference.String())
 	request, err := Serialize(msg)
 	if err != nil {
 		return nil, err
