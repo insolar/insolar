@@ -48,7 +48,7 @@ func (w *Wallet) Transfer(amount uint, to foundation.Reference) {
 	w.balance -= amount
 
 	toWalletInt := foundation.GetImplementationFor(to, TypeReference).(*Wallet)
-	toWalletRef := toWalletInt.MyReference()
+	toWalletRef := toWalletInt.GetReference()
 
 	a := allowance.NewAllowance(toWalletRef, amount, w.GetContext().Time.Unix()+10)
 	w.AddChild(a, allowance.TypeReference)

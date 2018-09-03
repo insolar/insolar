@@ -41,6 +41,16 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *{{ $.ContractType }} {
 }
 {{ end }}
 
+// GetReference
+func (r *{{ $.ContractType }}) GetReference() Reference {
+    return r.Reference
+}
+
+// GetClass
+func (r *{{ $.ContractType }}) GetClass() Reference {
+    return ClassReference
+}
+
 {{ range $method := .MethodsProxies }}
 func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
     {{ $method.InitArgs }}

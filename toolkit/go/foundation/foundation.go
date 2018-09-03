@@ -21,8 +21,9 @@ package foundation
 
 import (
 	"fmt"
-	"reflect"
 	"time"
+
+	"github.com/satori/go.uuid"
 )
 
 // Reference is an address of something on ledger.
@@ -43,7 +44,7 @@ type CallContext struct {
 	Me     Reference // My Reference.
 	Caller Reference // Reference of calling contract.
 	Parent Reference // Reference to parent or container contract.
-	Type   Reference // Reference to type record on ledger, we have just one type reference, yet.
+	Class  Reference // Reference to type record on ledger, we have just one type reference, yet.
 	Time   time.Time // Time of Calling side made call.
 	Pulse  uint64    // Number of current pulse.
 }
@@ -54,20 +55,26 @@ type BaseContract struct {
 }
 
 // BaseContractInterface is an interface to deal with any contract same way
-type BaseContractInterface interface {
-	MyReference() Reference
-	GetImplementationFor(r Reference) BaseContractInterface
-	TakeDelegate(delegate BaseContractInterface, class Reference) Reference
+type ProxyInterface interface {
+	GetReference() Reference
+	GetClass() Reference
 }
 
-// MyReference - Returns public reference of contract
-func (bc *BaseContract) MyReference() Reference {
-	if bc.context == nil {
-		bc.context = &CallContext{
-			Me: Reference(fmt.Sprintf("%x", reflect.ValueOf(bc).Pointer())),
-		}
-	}
+// BaseContractInterface is an interface to deal with any contract same way
+type BaseContractInterface interface {
+	SetContext(ctx *CallContext)
+	GetReference() Reference
+	GetClass() Reference
+}
+
+// GetReference - Returns public reference of contract
+func (bc *BaseContract) GetReference() Reference {
 	return bc.context.Me
+}
+
+// GetClass
+func (bc *BaseContract) GetClass() Reference {
+	return bc.context.Class
 }
 
 // GetContext returns current calling context of this object.
@@ -86,9 +93,13 @@ func (bc *BaseContract) GetContext(debug ...string) *CallContext {
 	return &CallContext{}
 }
 
-var FakeLedger = make(map[string]BaseContractInterface)
-var FakeDelegates = make(map[string]map[string]BaseContractInterface)
-var FakeChildren = make(map[string]map[string][]BaseContractInterface)
+func (bc *BaseContract) SetContext(ctx *CallContext) {
+	bc.context = ctx
+}
+
+var FakeLedger = make(map[string]ProxyInterface)
+var FakeDelegates = make(map[string]map[string]ProxyInterface)
+var FakeChildren = make(map[string]map[string][]ProxyInterface)
 
 var FakeContexts = make(map[uint]*CallContext)
 var contextStep uint
@@ -102,22 +113,22 @@ func InjectFakeContext(step uint, ctx *CallContext, reset ...bool) {
 	FakeContexts[step] = ctx
 }
 
-func (bc *BaseContract) GetImplementationFor(r Reference) BaseContractInterface {
-	return FakeDelegates[bc.MyReference().String()][r.String()]
-}
-
-func GetImplementationFor(o Reference, r Reference) BaseContractInterface {
+func GetImplementationFor(o Reference, r Reference) ProxyInterface {
 	return FakeDelegates[o.String()][r.String()]
 }
 
-func (bc *BaseContract) GetChildrenTyped(r Reference) []BaseContractInterface {
-	return FakeChildren[bc.MyReference().String()][r.String()]
+func (bc *BaseContract) GetChildrenTyped(r Reference) []ProxyInterface {
+	return FakeChildren[bc.GetReference().String()][r.String()]
 }
 
-func SaveToLedger(rec BaseContractInterface) Reference {
-	key := rec.MyReference()
-	FakeLedger[key.String()] = rec
-	return key
+func SaveToLedger(rec BaseContractInterface, class Reference) Reference {
+	key, _ := uuid.NewV4()
+	rec.SetContext(&CallContext{
+		Me:    Reference(key.String()),
+		Class: class,
+	})
+	FakeLedger[key.String()] = rec.(ProxyInterface)
+	return Reference(key.String())
 }
 
 func GetObject(ref Reference) BaseContractInterface {
@@ -125,55 +136,62 @@ func GetObject(ref Reference) BaseContractInterface {
 }
 
 func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) Reference {
-	me := bc.MyReference()
-	key := child.MyReference()
+	me := bc.GetReference()
+	key, _ := uuid.NewV4()
 
-	bc.context.Parent = me
-	bc.context.Type = class
-	FakeLedger[key.String()] = child
+	child.SetContext(&CallContext{
+		Parent: me,
+		Me:     Reference(key.String()),
+		Class:  class,
+	})
+	FakeLedger[key.String()] = child.(ProxyInterface)
 
 	if FakeChildren[me.String()] == nil {
-		FakeChildren[me.String()] = make(map[string][]BaseContractInterface)
+		FakeChildren[me.String()] = make(map[string][]ProxyInterface)
 	}
 
 	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], child)
-	return key
+	return Reference(key.String())
 }
 
-func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class Reference) Reference {
-	me := bc.MyReference()
-	key := delegate.MyReference()
+func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class Reference) Reference {
+	me := bc.GetReference()
+	key, _ := uuid.NewV4()
 
-	bc.context.Parent = me
-	bc.context.Type = class
-	FakeLedger[key.String()] = delegate
+	delegate.SetContext(&CallContext{
+		Parent: me,
+		Me:     Reference(key.String()),
+		Class:  class,
+	})
+
+	FakeLedger[key.String()] = delegate.(ProxyInterface)
 
 	if FakeDelegates[me.String()] == nil {
-		FakeDelegates[me.String()] = make(map[string]BaseContractInterface)
+		FakeDelegates[me.String()] = make(map[string]ProxyInterface)
 	}
-	FakeDelegates[me.String()][class.String()] = delegate
+	FakeDelegates[me.String()][class.String()] = delegate.(ProxyInterface)
 
 	if FakeChildren[me.String()] == nil {
-		FakeChildren[me.String()] = make(map[string][]BaseContractInterface)
+		FakeChildren[me.String()] = make(map[string][]ProxyInterface)
 	}
 
-	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], delegate)
-	return key
+	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], delegate.(ProxyInterface))
+	return Reference(key.String())
 }
 
 func (bc *BaseContract) SelfDestructRequest() {
-	me := bc.MyReference()
+	me := bc.GetReference()
 	delete(FakeLedger, me.String())
 	for _, v := range FakeDelegates {
 		delete(v, me.String())
 	}
 	for _, c := range FakeChildren {
-		arr := []BaseContractInterface{}
-		for _, v := range c[bc.context.Type.String()] {
-			if v.MyReference().String() != me.String() {
+		arr := []ProxyInterface{}
+		for _, v := range c[bc.context.Class.String()] {
+			if v.GetReference().String() != me.String() {
 				arr = append(arr, v)
 			}
 		}
-		c[bc.context.Type.String()] = arr
+		c[bc.context.Class.String()] = arr
 	}
 }
