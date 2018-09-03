@@ -151,10 +151,14 @@ func ( A ) Get( b bool ) bool{
 }
 `)
 
-	var buf bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, &buf)
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, &bufProxy)
 	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), "resList[0] = bool(false)")
 
-	assert.Contains(t, buf.String(), "resList[0] = bool(false)")
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), "args[0] = bool(false)")
 
 }
