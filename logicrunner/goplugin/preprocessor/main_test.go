@@ -208,7 +208,7 @@ type A struct{
 }
 `)
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	err = generateContractProxy(tmpDir+testContract, "test", &bufProxy)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
 
 	var bufWrapper bytes.Buffer
@@ -232,7 +232,7 @@ type A struct{
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	err = generateContractProxy(tmpDir+testContract, "test", &bufProxy)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
 
 	var bufWrapper bytes.Buffer
@@ -261,7 +261,7 @@ type B struct{
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, &bufProxy)
+	err = generateContractProxy(tmpDir+testContract, "test", &bufProxy)
 	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
 
 	var bufWrapper bytes.Buffer
