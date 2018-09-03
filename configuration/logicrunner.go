@@ -28,7 +28,6 @@ type Goplugin struct {
 	RunnerListen   string // ip:port of ginsider connectivity socket
 	RunnerCodePath string // path where ginsider caches code
 	MainListen     string // ip:port of main system connectivity socket
-	MainCodePath   string // path of main system code cache
 }
 
 func NewLogicRunner() LogicRunner {
@@ -38,7 +37,6 @@ func NewLogicRunner() LogicRunner {
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerCodePath: ".../TEMPDIR_CHANGE ME/...",
 			MainListen:     "127.0.0.1:7778",
-			MainCodePath:   "./testplugins/",
 		},
 	}
 }

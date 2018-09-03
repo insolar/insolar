@@ -128,14 +128,16 @@ func TestHelloWorld(t *testing.T) {
 	}
 	defer os.RemoveAll(dir) // nolint: errcheck
 
+	am := &testArtifactManager{codePath: "./testplugins/"}
+
 	gp, err := NewGoPlugin(
 		configuration.Goplugin{
 			MainListen:     "127.0.0.1:7778",
-			MainCodePath:   "./testplugins/",
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerCodePath: dir,
 		},
 		nil,
+		am,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -320,15 +322,16 @@ func TestContractCallingContract(t *testing.T) {
 	}
 
 	mr := &testMessageRouter{}
+	am := &testArtifactManager{codePath: tmpDir + "/plugins/"}
 
 	gp, err := NewGoPlugin(
 		configuration.Goplugin{
 			MainListen:     "127.0.0.1:7778",
-			MainCodePath:   tmpDir + "/plugins/",
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
+		am,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -368,4 +371,63 @@ func TestContractCallingContract(t *testing.T) {
 	if resParsed[0].(string) != "Hi, ins! Two said: Hello you too, ins" {
 		t.Fatal("unexpected result")
 	}
+}
+
+type testArtifactManager struct {
+	codePath string
+}
+
+func (t *testArtifactManager) SetArchPref(pref []core.MachineType) {
+}
+
+func (t *testArtifactManager) GetExactObj(class core.RecordRef, object core.RecordRef) ([]byte, []byte, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) GetLatestObj(object core.RecordRef) (core.ObjectDescriptor, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) DeclareType(domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, types []core.RecordRef, codeMap map[core.MachineType][]byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) GetCode(code core.RecordRef) ([]byte, error) {
+	file, err := os.Open(t.codePath + "/" + code.String() + ".so")
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadAll(file)
+}
+
+func (t *testArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) DeactivateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) UpdateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) DeactivateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) UpdateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+func (t *testArtifactManager) AppendObjDelegate(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
 }

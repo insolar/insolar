@@ -230,13 +230,13 @@ func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 	}
 
 	log.Debugf("obtaining plugin %q", ref)
-	res := rpctypes.Object{}
-	err = client.Call("RPC.GetObject", ref, &res)
+	res := rpctypes.UpGetCodeResp{}
+	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Reference: ref}, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}
 
-	err = ioutil.WriteFile(path, res.Data, 0666)
+	err = ioutil.WriteFile(path, res.Code, 0666)
 	if err != nil {
 		return "", errors.Wrap(err, "on writing file down")
 	}

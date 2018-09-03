@@ -51,6 +51,16 @@ type DownCallConstructorResp struct {
 	Err error
 }
 
+// UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
+type UpGetCodeReq struct {
+	Reference core.RecordRef
+}
+
+// UpGetCodeResp is response from GetCode RPC in goplugin
+type UpGetCodeResp struct {
+	Code []byte
+}
+
 // UpRouteReq is a set of arguments for Route RPC in goplugin
 type UpRouteReq struct {
 	Reference core.RecordRef
