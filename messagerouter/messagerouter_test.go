@@ -21,13 +21,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
-	"github.com/insolar/insolar/network/hostnetwork/rpc"
-	"github.com/insolar/insolar/network/hostnetwork/store"
-	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,35 +40,6 @@ type resp struct {
 type runner struct {
 	requests  []req
 	responses []resp
-}
-
-func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
-	st := store.NewMemoryStore()
-	addr, _ := host.NewAddress(address)
-	origin, _ := host.NewOrigin(ids, addr)
-	cfg := configuration.NewConfiguration().Host.Transport
-	cfg.Address = address
-	cfg.BehindNAT = false
-	tp, err := transport.NewTransport(cfg, relay.NewProxy())
-	r := rpc.NewRPC()
-	return st, origin, tp, r, err
-}
-
-func getDefaultCtx(dht *hostnetwork.DHT) hostnetwork.Context {
-	ctx, _ := hostnetwork.NewContextBuilder(dht).SetDefaultHost().Build()
-	return ctx
-}
-
-func NewNode() (*hostnetwork.DHT, error) {
-	var ids []id.ID
-	id1, _ := id.NewID(nil)
-	ids = append(ids, id1)
-	st, s, tp, r, err := dhtParams(ids, "127.0.0.1:16000")
-	if err != nil {
-		return nil, err
-	}
-
-	return hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
 }
 
 func (r *runner) Execute(ref core.RecordRef, method string, args []byte) ([]byte, []byte, error) {

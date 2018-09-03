@@ -30,7 +30,7 @@ type NodeNetwork struct {
 // NewNodeNetwork creates new default NodeNetwork configuration
 func NewNodeNetwork() NodeNetwork {
 	nodes := make([]*Node, 0)
-	newNode := &Node{"hostID", "referenceID"}
+	newNode := &Node{HostID: "hostID", ReferenceID: "referenceID"}
 	nodes = append(nodes, newNode)
 
 	return NodeNetwork{

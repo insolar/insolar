@@ -48,7 +48,7 @@ type Response struct {
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
 func New(lr LogicRunner, service *servicenetwork.ServiceNetwork) (*MessageRouter, error) {
-	mr := &MessageRouter{lr, service}
+	mr := &MessageRouter{LogicRunner: lr, service: service}
 	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return mr, nil
 }
@@ -73,7 +73,7 @@ func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 	}
 
 	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
-	return Serialize(Response{data, res, err})
+	return Serialize(Response{Data: data, Result: res, Error: err})
 }
 
 // Serialize converts Message or Response to byte slice.

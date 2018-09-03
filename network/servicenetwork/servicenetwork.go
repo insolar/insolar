@@ -48,7 +48,7 @@ func NewServiceNetwork(
 		return nil, errors.New("failed to create a node network")
 	}
 
-	return &ServiceNetwork{node, dht}, nil
+	return &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}, nil
 }
 
 // GetAddress returns host public address.
@@ -66,6 +66,9 @@ func (network *ServiceNetwork) SendMessage(method string, msg *core.Message) ([]
 		return nil, errors.New("message is nil")
 	}
 	hostID, err := network.nodeNetwork.GetReferenceHostID(msg.Reference.String())
+	if err != nil {
+		return nil, err
+	}
 	request, err := Serialize(msg)
 	if err != nil {
 		return nil, err
