@@ -31,7 +31,10 @@ import (
 func main() {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
-	cfgHolder.Load()
+	err := cfgHolder.Load()
+	if err != nil {
+		log.Warnln(err.Error())
+	}
 
 	cfgHolder.Configuration.Host.Transport.BehindNAT = false
 	cfgHolder.Configuration.Ledger.DataDirectory = "./data"

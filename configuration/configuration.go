@@ -21,7 +21,6 @@ import (
 	"reflect"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
@@ -77,7 +76,7 @@ func NewHolder() Holder {
 func (c *Holder) Load() error {
 	err := c.viper.ReadInConfig()
 	if err != nil {
-		log.Warnln(err.Error())
+		return err
 	}
 
 	// workaround for AutomaticEnv issue https://github.com/spf13/viper/issues/188
