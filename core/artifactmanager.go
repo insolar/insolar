@@ -28,7 +28,7 @@ type ArtifactManager interface {
 	// GetCode returns code from code record by provided reference.
 	//
 	// This method is used by VM to fetch code for execution.
-	GetCode(code RecordRef) (CodeDescriptor, error)
+	// GetCode(code RecordRef) (CodeDescriptor, error)
 
 	// GetLatestObj returns descriptors for latest known state of the object/class known to the storage.
 	// If the object or the class is deactivated, an error should be returned.
@@ -94,25 +94,40 @@ type ArtifactManager interface {
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor interface {
-	// CodeRef returns reference to represented code record.
-	CodeRef() RecordRef
+	// Ref returns reference to represented code record.
+	Ref() *RecordRef
 
 	// Code fetches code from storage. Code will be fetched according to architecture preferences
 	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
 	Code() ([]byte, error)
 }
 
+// ClassDescriptor represents meta info required to fetch all object data.
+type ClassDescriptor interface {
+	// HeadRef returns head reference to represented class record.
+	HeadRef() *RecordRef
+
+	// StateRef returns reference to represented class state record.
+	StateRef() *RecordRef
+
+	// CodeDescriptor returns descriptor for fetching class's code data.
+	CodeDescriptor() (CodeDescriptor, error)
+}
+
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {
-	// ObjectRef returns reference to represented object record.
-	ObjectRef() RecordRef
+	// HeadRef returns head reference to represented object record.
+	HeadRef() *RecordRef
 
-	// ClassRef returns reference to class of represented object record.
-	ClassRef() RecordRef
+	// StateRef returns reference to object state record.
+	StateRef() *RecordRef
 
 	// Memory fetches object memory from storage.
 	Memory() ([]byte, error)
 
-	// CodeDescriptor returns descriptor for fetching code data.
+	// CodeDescriptor returns descriptor for fetching object's code data.
 	CodeDescriptor() (CodeDescriptor, error)
+
+	// ClassDescriptor returns descriptor for fetching object's class data.
+	ClassDescriptor() (ClassDescriptor, error)
 }
