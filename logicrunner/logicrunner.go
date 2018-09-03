@@ -40,6 +40,14 @@ type LogicRunner struct {
 	ArtifactManager ArtifactManager
 }
 
+func (lr *LogicRunner) Start(components core.Components) chan error {
+	panic("implement me")
+}
+
+func (lr *LogicRunner) Stop() chan error {
+	panic("implement me")
+}
+
 // NewLogicRunner is constructor for `LogicRunner`
 func NewLogicRunner(am ArtifactManager) (*LogicRunner, error) {
 	res := LogicRunner{ArtifactManager: am}
