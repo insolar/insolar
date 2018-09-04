@@ -133,6 +133,9 @@ func NewTestArtifactManager() *TestArtifactManager {
 	}
 }
 
+func (t *TestArtifactManager) Start(components core.Components) error { return nil }
+func (t *TestArtifactManager) Stop() error                            { return nil }
+
 // SetArchPref implementation for tests
 func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
 }
