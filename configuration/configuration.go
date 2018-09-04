@@ -49,7 +49,7 @@ func NewConfiguration() Configuration {
 		Host:        NewHostNetwork(),
 		Node:        NewNodeNetwork(),
 		Service:     NewServiceNetwork(),
-		Ledger:      Ledger{},
+		Ledger:      NewLedger(),
 		Log:         NewLog(),
 		Stats:       NewStats(),
 		LogicRunner: NewLogicRunner(),

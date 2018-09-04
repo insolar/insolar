@@ -14,16 +14,21 @@
  *    limitations under the License.
  */
 
-package configuration
+package main
 
-// Ledger holds configuration for ledger.
-type Ledger struct {
-	DataDirectory string
-}
+import (
+	log "github.com/sirupsen/logrus"
 
-// NewLedger creates new default Ledger configuration.
-func NewLedger() Ledger {
-	return Ledger{
-		DataDirectory: "./data",
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger"
+)
+
+// StartLedger creates and starts ledger instance.
+func StartLedger(cfg configuration.Ledger) core.Ledger {
+	l, err := ledger.NewLedger(cfg)
+	if err != nil {
+		log.Fatalln("Failed to create ledger: ", err.Error())
 	}
+	return l
 }
