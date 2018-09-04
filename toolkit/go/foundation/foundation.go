@@ -135,22 +135,22 @@ func GetObject(ref Reference) BaseContractInterface {
 	return FakeLedger[ref.String()].(BaseContractInterface)
 }
 
-func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) Reference {
-	me := bc.GetReference()
+func (bc *BaseContract) AddAsChildTo(to BaseContractInterface, class Reference) Reference {
+	parent := to.GetReference()
 	key, _ := uuid.NewV4()
 
-	child.SetContext(&CallContext{
-		Parent: me,
+	bc.SetContext(&CallContext{
+		Parent: parent,
 		Me:     Reference(key.String()),
 		Class:  class,
 	})
-	FakeLedger[key.String()] = child.(ProxyInterface)
+	FakeLedger[key.String()] = bc
 
-	if FakeChildren[me.String()] == nil {
-		FakeChildren[me.String()] = make(map[string][]ProxyInterface)
+	if FakeChildren[parent.String()] == nil {
+		FakeChildren[parent.String()] = make(map[string][]ProxyInterface)
 	}
 
-	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], child)
+	FakeChildren[parent.String()][class.String()] = append(FakeChildren[parent.String()][class.String()], bc)
 	return Reference(key.String())
 }
 

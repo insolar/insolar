@@ -50,11 +50,15 @@ type BaseContract struct {
 	context *CallContext // Context hidden from anyone
 }
 
+type ProxyInterface interface {
+	GetReference() Reference
+	GetClass() Reference
+}
+
 // BaseContractInterface is an interface to deal with any contract same way
 type BaseContractInterface interface {
-	MyReference() Reference
-	GetImplementationFor(r Reference) BaseContractInterface
-	TakeDelegate(delegate BaseContractInterface, class Reference) Reference
+	GetReference() Reference
+	GetClass() Reference
 }
 
 // MyReference - Returns public reference of contract
@@ -80,40 +84,23 @@ func (bc *BaseContract) SetContext(cc *CallContext) {
 
 // GetImplementationFor finds delegate typed r in object and returns it
 // unimplemented
-func (bc *BaseContract) GetImplementationFor(r Reference) BaseContractInterface {
-	return nil
-}
-
-// GetImplementationFor finds delegate typed r in object and returns it
-// unimplemented
-func GetImplementationFor(o Reference, r Reference) BaseContractInterface {
+func GetImplementationFor(o Reference, r Reference) ProxyInterface {
 	return nil
 }
 
 // GetChildrenTyped returns set of children objects with corresponding type
-func (bc *BaseContract) GetChildrenTyped(r Reference) []BaseContractInterface {
-	return nil
-}
-
-// SaveToLedger saves builder to ledger
-// unimplemented
-func SaveToLedger(rec BaseContractInterface) Reference {
+func (bc *BaseContract) GetChildrenTyped(r Reference) []ProxyInterface {
 	return nil
 }
 
 // GetObject create proxy by address
 // unimplemented
-func GetObject(ref Reference) BaseContractInterface {
-	return nil
-}
-
-// AddChild adds child to contract
-func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) Reference {
+func GetObject(ref Reference) ProxyInterface {
 	return nil
 }
 
 // TakeDelegate injects delegate to object
-func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class Reference) Reference {
+func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class Reference) Reference {
 	return nil
 }
 
