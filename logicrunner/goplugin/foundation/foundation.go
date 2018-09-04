@@ -40,7 +40,7 @@ type CallContext struct {
 	Me     Reference // My Reference.
 	Caller Reference // Reference of calling contract.
 	Parent Reference // Reference to parent or container contract.
-	Type   Reference // Reference to type record on ledger, we have just one type reference, yet.
+	Class  Reference // Reference to type record on ledger, we have just one type reference, yet.
 	Time   time.Time // Time of Calling side made call.
 	Pulse  uint64    // Number of current pulse.
 }
@@ -61,12 +61,20 @@ type BaseContractInterface interface {
 	GetClass() Reference
 }
 
-// MyReference - Returns public reference of contract
-func (bc *BaseContract) MyReference() Reference {
+// GetReference - Returns public reference of contract
+func (bc *BaseContract) GetReference() Reference {
 	if bc.context == nil {
 		return nil
 	}
 	return bc.context.Me
+}
+
+// GetClass - Returns class of contract
+func (bc *BaseContract) GetClass() Reference {
+	if bc.context == nil {
+		return nil
+	}
+	return bc.context.Class
 }
 
 // GetContext returns current calling context of this object.
@@ -96,11 +104,6 @@ func (bc *BaseContract) GetChildrenTyped(r Reference) []ProxyInterface {
 // GetObject create proxy by address
 // unimplemented
 func GetObject(ref Reference) ProxyInterface {
-	return nil
-}
-
-// TakeDelegate injects delegate to object
-func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class Reference) Reference {
 	return nil
 }
 

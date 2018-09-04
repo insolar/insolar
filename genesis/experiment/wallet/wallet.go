@@ -32,7 +32,7 @@ func (w *Wallet) Allocate(amount uint, to foundation.Reference) *allowance.Allow
 	// TODO check balance is enough
 	w.balance -= amount
 	a := allowance.NewAllowance(to, amount, w.GetContext().Time.Unix()+10)
-	a.AddAsChildTo(w, allowance.TypeReference)
+	w.AddChild(a, allowance.TypeReference)
 	return a
 }
 
@@ -50,7 +50,7 @@ func (w *Wallet) Transfer(amount uint, to foundation.Reference) {
 	toWalletRef := toWalletInt.GetReference()
 
 	a := allowance.NewAllowance(toWalletRef, amount, w.GetContext().Time.Unix()+10)
-	a.AddAsChildTo(w, allowance.TypeReference)
+	w.AddChild(a, allowance.TypeReference)
 
 	toWallet := foundation.GetImplementationFor(to, TypeReference).(*Wallet)
 	toWallet.Accept(a)
