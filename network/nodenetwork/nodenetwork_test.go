@@ -14,16 +14,16 @@
  *    limitations under the License.
  */
 
-package configuration
+package nodenetwork
 
-// Ledger holds configuration for ledger.
-type Ledger struct {
-	DataDirectory string
-}
+import (
+	"testing"
+)
 
-// NewLedger creates new default Ledger configuration.
-func NewLedger() Ledger {
-	return Ledger{
-		DataDirectory: "./data",
-	}
+func TestNewNodeNetwork(t *testing.T) {
+	// cfg := configuration.NewConfiguration()
+	// network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
+	// assert.NoError(t, err)
+	// network := NewNodeNetwork(cfg.Host, )
+	// assert.NotNil(t, network)
 }

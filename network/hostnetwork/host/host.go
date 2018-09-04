@@ -26,7 +26,6 @@ import (
 type Host struct {
 	// ID is a 20 byte unique identifier.
 	ID id.ID
-
 	// Address is IP and port.
 	Address *Address
 }

@@ -2,7 +2,7 @@ insolar:
   host:
     transport:
       protocol: UTP
-      address: 0.0.0.0:17000
+      address: 0.0.0.0:0
       behindnat: true
     bootstraphosts: []
     isrelay: false

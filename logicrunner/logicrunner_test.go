@@ -22,7 +22,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
 func TestTypeCompatibility(t *testing.T) {
@@ -32,6 +34,10 @@ func TestTypeCompatibility(t *testing.T) {
 type testExecutor struct {
 	constructorResponses []*testResp
 	methodResponses      []*testResp
+}
+
+func (r *testExecutor) Stop() error {
+	return nil
 }
 
 type testResp struct {
@@ -68,8 +74,14 @@ func (r *testExecutor) CallConstructor(ref core.RecordRef, name string, args cor
 }
 
 func TestBasics(t *testing.T) {
-	lr, err := NewLogicRunner(nil)
+	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
+
+	comps := core.Components{
+		"core.Ledger":        &testLedger{am: testutil.NewTestArtifactManager()},
+		"core.MessageRouter": &testMessageRouter{},
+	}
+	assert.NoError(t, lr.Start(comps))
 	assert.IsType(t, &LogicRunner{}, lr)
 
 	_, err = lr.GetExecutor(core.MachineTypeGoPlugin)
@@ -85,17 +97,39 @@ func TestBasics(t *testing.T) {
 	assert.Equal(t, te, te2)
 }
 
-type testArtifactManager struct{}
+type testLedger struct {
+	am core.ArtifactManager
+}
 
-func (r *testArtifactManager) Get(ref core.RecordRef) ([]byte, core.RecordRef, error) {
-	return []byte{}, core.RecordRef{}, nil
+func (r *testLedger) Start(components core.Components) error { return nil }
+func (r *testLedger) Stop() error                            { return nil }
+func (r *testLedger) GetManager() core.ArtifactManager       { return r.am }
+
+type testMessageRouter struct{}
+
+func (testMessageRouter) Start(components core.Components) error { return nil }
+func (testMessageRouter) Stop() error                            { return nil }
+func (testMessageRouter) Route(msg core.Message) (resp core.Response, err error) {
+	panic("implement me")
 }
 
 func TestExecution(t *testing.T) {
-	am := &testArtifactManager{}
-
-	lr, err := NewLogicRunner(am)
+	am := testutil.NewTestArtifactManager()
+	ld := &testLedger{am: am}
+	mr := &testMessageRouter{}
+	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
+	lr.Start(core.Components{
+		"core.Ledger":        ld,
+		"core.MessageRouter": mr,
+	})
+
+	codeRef := core.String2Ref("someCode")
+	dataRef := core.String2Ref("someObject")
+	am.Objects[dataRef] = &testutil.TestObjectDescriptor{
+		Data: []byte("origData"),
+		Code: &testutil.TestCodeDescriptor{ARef: &codeRef},
+	}
 
 	te := newTestExecutor()
 	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
@@ -103,7 +137,7 @@ func TestExecution(t *testing.T) {
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
 	assert.NoError(t, err)
 
-	resp := lr.Execute(core.Message{Constructor: false})
+	resp := lr.Execute(core.Message{Constructor: false, Reference: dataRef})
 	assert.NoError(t, resp.Error)
 	assert.Equal(t, []byte("data"), resp.Data)
 	assert.Equal(t, []byte("res"), resp.Result)

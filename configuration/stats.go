@@ -23,5 +23,5 @@ type Stats struct {
 
 // NewStats creates new default configuration for stats publishing
 func NewStats() Stats {
-	return Stats{"0.0.0.0:8080"}
+	return Stats{ListenAddress: "0.0.0.0:8080"}
 }
