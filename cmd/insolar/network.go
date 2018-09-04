@@ -18,6 +18,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/sirupsen/logrus"
@@ -59,7 +60,7 @@ func StartNetwork(cfg configuration.Configuration) (Network, error) {
 		logrus.Errorln(err)
 	}
 
-	n.Node = nodenetwork.NewNode("123", nil, n.HostNetwork, "MyDomain")
+	n.Node = nodenetwork.NewNode("nodeID", "hostID", core.String2Ref("domainID"))
 	return n, nil
 }
 

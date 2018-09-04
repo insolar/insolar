@@ -18,18 +18,23 @@ package configuration
 
 // Node holds configuration for one Node
 type Node struct {
-	ID       string
-	DomainID string
+	NodeID      string
+	HostID      string
+	ReferenceID string
 }
 
 // NodeNetwork holds configuration for NodeNetwork
 type NodeNetwork struct {
-	Nodes []Node
+	Nodes []*Node
 }
 
 // NewNodeNetwork creates new default NodeNetwork configuration
 func NewNodeNetwork() NodeNetwork {
+	nodes := make([]*Node, 0)
+	newNode := &Node{HostID: "hostID", ReferenceID: "referenceID"}
+	nodes = append(nodes, newNode)
+
 	return NodeNetwork{
-		Nodes: make([]Node, 0),
+		Nodes: nodes,
 	}
 }

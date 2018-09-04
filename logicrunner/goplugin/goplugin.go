@@ -87,7 +87,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(nil, msg)
+	res, err := gpr.gp.MessageRouter.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
@@ -113,7 +113,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		Arguments:   req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(nil, msg)
+	res, err := gpr.gp.MessageRouter.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}

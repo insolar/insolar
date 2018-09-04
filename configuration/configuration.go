@@ -61,7 +61,7 @@ func NewConfiguration() Configuration {
 // NewHolder creates new Holder with default configuration
 func NewHolder() Holder {
 	cfg := NewConfiguration()
-	holder := Holder{cfg, viper.New()}
+	holder := Holder{Configuration: cfg, viper: viper.New()}
 
 	holder.viper.SetConfigName(".insolar")
 	holder.viper.AddConfigPath("$HOME/")

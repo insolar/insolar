@@ -14,14 +14,17 @@
  *    limitations under the License.
  */
 
-package configuration
+package core
 
-// Stats holds configuration for stats publishing
-type Stats struct {
-	ListenAddress string
-}
+// RemoteProcedure is remote procedure call function.
+type RemoteProcedure func(args [][]byte) ([]byte, error)
 
-// NewStats creates new default configuration for stats publishing
-func NewStats() Stats {
-	return Stats{ListenAddress: "0.0.0.0:8080"}
+// Network is interface for network modules facade.
+type Network interface {
+	// SendMessage sends a message.
+	SendMessage(method string, msg *Message) ([]byte, error)
+	// GetAddress returns an origin address.
+	GetAddress() string
+	// RemoteProcedureRegister is remote procedure register func.
+	RemoteProcedureRegister(name string, method RemoteProcedure)
 }

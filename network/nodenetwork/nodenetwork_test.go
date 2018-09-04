@@ -14,14 +14,16 @@
  *    limitations under the License.
  */
 
-package configuration
+package nodenetwork
 
-// Stats holds configuration for stats publishing
-type Stats struct {
-	ListenAddress string
-}
+import (
+	"testing"
+)
 
-// NewStats creates new default configuration for stats publishing
-func NewStats() Stats {
-	return Stats{ListenAddress: "0.0.0.0:8080"}
+func TestNewNodeNetwork(t *testing.T) {
+	// cfg := configuration.NewConfiguration()
+	// network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
+	// assert.NoError(t, err)
+	// network := NewNodeNetwork(cfg.Host, )
+	// assert.NotNil(t, network)
 }
