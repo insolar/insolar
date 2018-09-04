@@ -28,28 +28,111 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
-func Test_generateContractWrapper(t *testing.T) {
-	buf := bytes.Buffer{}
-	err := generateContractWrapper("../testplugins/secondary/main.go", &buf)
-	assert.NoError(t, err)
-	// io.Copy(os.Stdout, w)
-	code, err := ioutil.ReadAll(&buf)
-	assert.NoError(t, err)
-	if len(code) == 0 {
-		t.Fatal("generator returns zero length code")
+var randomTestCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type HelloWorlder struct {
+	foundation.BaseContract
+	Greeted int
+}
+
+type FullName struct {
+	First string
+	Last  string
+}
+
+type PersonalGreeting struct {
+	Name    FullName
+	Message string
+}
+
+type Error struct {
+	S string
+}
+
+func (e *Error) Error() string {
+	return e.S
+}
+
+func (hw *HelloWorlder) Hello() (string, *Error) {
+	hw.Greeted++
+	return "Hello world 2", nil
+}
+
+func (hw *HelloWorlder) Fail() (string, *Error) {
+	hw.Greeted++
+	return "", &Error{"We failed 2"}
+}
+
+func (hw *HelloWorlder) Echo(s string) (string, *Error) {
+	hw.Greeted++
+	return s, nil
+}
+
+func (hw *HelloWorlder) HelloHuman(Name FullName) PersonalGreeting {
+	hw.Greeted++
+	return PersonalGreeting{
+		Name:    Name,
+		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
 	}
 }
 
-func Test_generateContractProxy(t *testing.T) {
-	buf := bytes.Buffer{}
-	err := generateContractProxy("../testplugins/secondary/main.go", "testRef", &buf)
+func (hw *HelloWorlder) HelloHumanPointer(Name FullName) *PersonalGreeting {
+	hw.Greeted++
+	return &PersonalGreeting{
+		Name:    Name,
+		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
+	}
+}
+
+func (hw *HelloWorlder) MultiArgs(Name FullName, s string, i int) *PersonalGreeting {
+	hw.Greeted++
+	return &PersonalGreeting{
+		Name:    Name,
+		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
+	}
+}
+
+func (hw HelloWorlder) ConstEcho(s string) (string, *Error) {
+	return s, nil
+}
+
+func JustExportedStaticFunction(int, int) {}
+`
+
+func TestBasicGeneration(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir) // nolint: errcheck
+
+	err = testutil.WriteFile(tmpDir, "main.go", randomTestCode)
 	assert.NoError(t, err)
 
-	code, err := ioutil.ReadAll(&buf)
-	assert.NoError(t, err)
-	if len(code) == 0 {
-		t.Fatal("generator returns zero length code")
-	}
+	t.Run("wrapper", func(t *testing.T) {
+		buf := bytes.Buffer{}
+		err := generateContractWrapper(tmpDir+"/main.go", &buf)
+		assert.NoError(t, err)
+
+		code, err := ioutil.ReadAll(&buf)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, code)
+	})
+
+	t.Run("proxy", func(t *testing.T) {
+		buf := bytes.Buffer{}
+		err := generateContractProxy(tmpDir+"/main.go", "testRef", &buf)
+		assert.NoError(t, err)
+
+		code, err := ioutil.ReadAll(&buf)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, code)
+	})
 }
 
 func TestConstructorsParsing(t *testing.T) {
@@ -107,7 +190,10 @@ func TestCompileContractProxy(t *testing.T) {
 	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
 	assert.NoError(t, err)
 
-	err = generateContractProxy("../testplugins/secondary/main.go", "testRef", proxyFh)
+	err = testutil.WriteFile(tmpDir+"/contracts/secondary/", "main.go", randomTestCode)
+	assert.NoError(t, err)
+
+	err = generateContractProxy(tmpDir+"/contracts/secondary/main.go", "testRef", proxyFh)
 	assert.NoError(t, err)
 
 	err = proxyFh.Close()
