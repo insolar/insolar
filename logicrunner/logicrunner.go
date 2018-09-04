@@ -82,11 +82,20 @@ func (r *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (r *LogicRunner) Execute(msg core.Message) *core.Response {
-	data, codeRef, err := []byte{}, core.RecordRef{}, error(nil)
-	// todo right code will be used when we will have getcode in AM
-	// data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
+	r.ArtifactManager.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
+	objDesc, err := r.ArtifactManager.GetLatestObj(msg.Reference)
 	if err != nil {
-		return &core.Response{Error: errors.Wrap(err, "couldn't ")}
+		return &core.Response{Error: errors.Wrap(err, "couldn't get object")}
+	}
+
+	data, err := objDesc.Memory()
+	if err != nil {
+		return &core.Response{Error: errors.Wrap(err, "couldn't get object's data")}
+	}
+
+	codeDesc, err := objDesc.CodeDescriptor()
+	if err != nil {
+		return &core.Response{Error: errors.Wrap(err, "couldn't get object's code descriptor")}
 	}
 
 	executor, err := r.GetExecutor(core.MachineTypeGoPlugin)
@@ -95,14 +104,14 @@ func (r *LogicRunner) Execute(msg core.Message) *core.Response {
 	}
 
 	if msg.Constructor {
-		newData, err := executor.CallConstructor(codeRef, msg.Method, msg.Arguments)
+		newData, err := executor.CallConstructor(*codeDesc.Ref(), msg.Method, msg.Arguments)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}
 		return &core.Response{Data: newData}
 	}
 
-	newData, result, err := executor.CallMethod(codeRef, data, msg.Method, msg.Arguments)
+	newData, result, err := executor.CallMethod(*codeDesc.Ref(), data, msg.Method, msg.Arguments)
 	if err != nil {
 		return &core.Response{Error: errors.Wrap(err, "executer error")}
 	}
