@@ -76,3 +76,10 @@ type UpRouteConstructorResp struct {
 	Reference core.RecordRef
 	Err       error
 }
+
+// Object is an inner representation of storage object for transfering it over API
+type Object struct {
+	MachineType core.MachineType
+	Reference   core.RecordRef
+	Data        []byte
+}

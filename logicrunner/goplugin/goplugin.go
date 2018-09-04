@@ -28,8 +28,8 @@ import (
 
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -52,8 +52,7 @@ type RunnerOptions struct {
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
-	Options       Options
-	RunnerOptions RunnerOptions
+	Cfg           configuration.Goplugin
 	MessageRouter core.MessageRouter
 	sock          net.Listener
 	runner        *exec.Cmd
@@ -67,8 +66,8 @@ type RPC struct {
 
 // GetObject is an RPC retrieving an object by its reference, so far short circuted to return
 // code of the plugin
-func (gpr *RPC) GetObject(ref core.RecordRef, reply *logicrunner.Object) error {
-	f, err := os.Open(gpr.gp.Options.CodePath + ref.String() + ".so")
+func (gpr *RPC) GetObject(ref core.RecordRef, reply *rpctypes.Object) error {
+	f, err := os.Open(gpr.gp.Cfg.MainCodePath + ref.String() + ".so")
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(nil, msg)
+	res, err := gpr.gp.MessageRouter.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
@@ -114,7 +113,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		Arguments:   req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(nil, msg)
+	res, err := gpr.gp.MessageRouter.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
@@ -131,15 +130,13 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(options Options, runnerOptions RunnerOptions, mr core.MessageRouter) (*GoPlugin, error) {
+func NewGoPlugin(conf configuration.Goplugin, mr core.MessageRouter) (*GoPlugin, error) {
 	gp := GoPlugin{
-		Options:       options,
-		RunnerOptions: runnerOptions,
+		Cfg:           conf,
 		MessageRouter: mr,
 	}
-
-	if gp.Options.Listen == "" {
-		gp.Options.Listen = "127.0.0.1:7777"
+	if gp.Cfg.MainListen == "" {
+		gp.Cfg.MainListen = "127.0.0.1:7777"
 	}
 
 	err := gp.StartRunner()
@@ -163,12 +160,12 @@ func (gp *GoPlugin) Start() {
 	}
 	rpcService.gp = gp
 
-	l, e := net.Listen("tcp", gp.Options.Listen)
+	l, e := net.Listen("tcp", gp.Cfg.MainListen)
 	if e != nil {
-		log.Fatal("couldn't setup listener on '"+gp.Options.Listen+"': ", e)
+		log.Fatal("couldn't setup listener on '"+gp.Cfg.MainListen+"': ", e)
 	}
 	gp.sock = l
-	log.Printf("starting goplugin RPC service on %q", gp.Options.Listen)
+	log.Printf("starting goplugin RPC service on %q", gp.Cfg.MainListen)
 	_ = http.Serve(l, nil)
 	log.Printf("STOP")
 }
@@ -176,15 +173,15 @@ func (gp *GoPlugin) Start() {
 // StartRunner starts ginsider process
 func (gp *GoPlugin) StartRunner() error {
 	var runnerArguments []string
-	if gp.RunnerOptions.Listen != "" {
-		runnerArguments = append(runnerArguments, "-l", gp.RunnerOptions.Listen)
+	if gp.Cfg.RunnerListen != "" {
+		runnerArguments = append(runnerArguments, "-l", gp.Cfg.RunnerListen)
 	} else {
 		return errors.New("listen is not optional in gp.RunnerOptions")
 	}
-	if gp.RunnerOptions.CodeStoragePath != "" {
-		runnerArguments = append(runnerArguments, "-d", gp.RunnerOptions.CodeStoragePath)
+	if gp.Cfg.RunnerCodePath != "" {
+		runnerArguments = append(runnerArguments, "-d", gp.Cfg.RunnerCodePath)
 	}
-	runnerArguments = append(runnerArguments, "--rpc", gp.Options.Listen)
+	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
 
 	runner := exec.Command("ginsider-cli/ginsider-cli", runnerArguments...)
 	runner.Stdout = os.Stdout
@@ -200,19 +197,20 @@ func (gp *GoPlugin) StartRunner() error {
 }
 
 // Stop stops runner(s) and RPC service
-func (gp *GoPlugin) Stop() {
+func (gp *GoPlugin) Stop() error {
 	err := gp.runner.Process.Kill()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	time.Sleep(200 * time.Millisecond)
 
 	if gp.sock != nil {
 		err = gp.sock.Close()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
+	return nil
 }
 
 // Downstream returns a connection to `ginsider`
@@ -221,9 +219,9 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 		return gp.client, nil
 	}
 
-	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
+	client, err := rpc.DialHTTP("tcp", gp.Cfg.RunnerListen)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s'", gp.RunnerOptions.Listen)
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", gp.Cfg.RunnerListen)
 	}
 
 	gp.client = client

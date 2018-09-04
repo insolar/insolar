@@ -21,12 +21,14 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/badgerdb"
 	"github.com/pkg/errors"
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
+	store       storage.Store
 	manager     *artifactmanager.LedgerArtifactManager
 	coordinator *jetcoordinator.JetCoordinator
 }
@@ -50,9 +52,23 @@ func NewLedger(conf configuration.Ledger) (core.Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}
-	ledger := Ledger{
+	ledger := &Ledger{
+		store:       store,
 		manager:     manager,
 		coordinator: coordinator,
 	}
-	return &ledger, nil
+	return ledger, nil
+}
+
+// Start initializes external ledger dependencies.
+func (l *Ledger) Start(c core.Components) error {
+	// TODO: add links to network and maybe message router
+	// mr := c["core.MessageRouter"].(core.MessageRouter)
+	// l.messagerouter = mr
+	return nil
+}
+
+// Stop stops Ledger gracefully.
+func (l *Ledger) Stop() error {
+	return l.store.Close()
 }

@@ -14,16 +14,11 @@
  *    limitations under the License.
  */
 
-package configuration
+package core
 
-// Ledger holds configuration for ledger.
-type Ledger struct {
-	DataDirectory string
-}
+type Components map[string]Component
 
-// NewLedger creates new default Ledger configuration.
-func NewLedger() Ledger {
-	return Ledger{
-		DataDirectory: "./data",
-	}
+type Component interface {
+	Start(components Components) error
+	Stop() error
 }
