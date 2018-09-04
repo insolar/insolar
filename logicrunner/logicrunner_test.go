@@ -103,7 +103,7 @@ type testLedger struct {
 
 func (r *testLedger) Start(components core.Components) error { return nil }
 func (r *testLedger) Stop() error                            { return nil }
-func (r *testLedger) GetManager() core.ArtifactManager       { return &r.am }
+func (r *testLedger) GetManager() core.ArtifactManager       { return r.am }
 
 type testMessageRouter struct{}
 
