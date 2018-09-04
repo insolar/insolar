@@ -59,6 +59,7 @@ func printUsage() {
 	fmt.Println(" wrapper   generate contract's wrapper")
 	fmt.Println(" proxy     generate contract's proxy")
 	fmt.Println(" imports   rewrite imports")
+	fmt.Println(" package   rewrite package")
 }
 
 type outputFlag struct {
@@ -147,6 +148,18 @@ func main() {
 		}
 
 		err = cmdRewriteImports(fs.Arg(0), output.writer)
+		if err != nil {
+			panic(err)
+		}
+	case "package":
+		fs := flag.NewFlagSet("package", flag.ExitOnError)
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
+		err := fs.Parse(os.Args[2:])
+		if err != nil {
+			panic(err)
+		}
+		err = cmdRewritePackage(fs.Arg(0), output.writer)
 		if err != nil {
 			panic(err)
 		}
@@ -522,6 +535,20 @@ func generateConstructorProxies(parsed *parsedFile) []map[string]string {
 		res = append(res, info)
 	}
 	return res
+}
+
+func cmdRewritePackage(fname string, w io.Writer) error {
+	parsed, err := parseFile(fname)
+	if err != nil {
+		return errors.Wrap(err, "couldn't parse")
+	}
+
+	parsed.node.Name.Name = "main"
+
+	if err := printer.Fprint(w, parsed.fileSet, parsed.node); err != nil {
+		return errors.Wrap(err, "couldn't save")
+	}
+	return nil
 }
 
 func cmdRewriteImports(fname string, w io.Writer) error {
