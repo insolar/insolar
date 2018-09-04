@@ -66,7 +66,12 @@ type RPC struct {
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.gp.ArtifactManager
 	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
-	code, err := am.GetCode(req.Reference)
+	codeDescriptor, err := am.GetCode(req.Reference)
+	if err != nil {
+		return err
+	}
+
+	code, err := codeDescriptor.Code()
 	if err != nil {
 		return err
 	}
