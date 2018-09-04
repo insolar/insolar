@@ -75,8 +75,10 @@ func NewNode() (*hostnetwork.DHT, error) {
 	return hostnetwork.NewDHT(st, s, tp, r, &hostnetwork.Options{}, relay.NewProxy())
 }
 
-type mockRpc struct {
-}
+type mockRpc struct{}
+
+func (r *mockRpc) Start(components core.Components) error { return nil }
+func (r *mockRpc) Stop() error                            { return nil }
 
 func (r *mockRpc) RemoteProcedureCall(ctx hostnetwork.Context, target string, method string, args [][]byte) (result []byte, err error) {
 	return nil, errors.New("not implemented in mock")
@@ -100,7 +102,11 @@ func (r *runner) Execute(msg core.Message) *core.Response {
 }
 
 func TestNew(t *testing.T) {
-	mr, err := New(new(runner), new(mockRpc))
+	mr, err := New(configuration.Configuration{})
+	mr.Start(core.Components{
+		"core.LogicRunner": new(runner),
+		"hostnetwork.RPC":  new(mockRpc),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -26,5 +26,6 @@ type Response struct {
 
 // MessageRouter interface
 type MessageRouter interface {
+	Component
 	Route(ctx hostnetwork.Context, msg Message) (resp Response, err error)
 }
