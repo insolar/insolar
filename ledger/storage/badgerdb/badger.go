@@ -20,11 +20,9 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 )
 
@@ -85,141 +83,83 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-// Get gets value by key in BadgerDB storage.
-func (s *Store) Get(key []byte) ([]byte, error) {
-	var buf []byte
-	// TODO: handle transaction conflicts.
-	txerr := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(key)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return storage.ErrNotFound
-			}
-			return err
-		}
-		buf, err = item.Value()
-		return err
-	})
-	if txerr != nil {
-		buf = nil
-	}
-	return buf, txerr
-}
-
-// Set stores value by key in BadgerDB.
-func (s *Store) Set(key, value []byte) error {
-	// TODO: handle transaction conflicts.
-	txerr := s.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, value)
-	})
-	return txerr
-}
-
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns storage.ErrNotFound if the DB does not contain the key.
 func (s *Store) GetRecord(ref *record.Reference) (record.Record, error) {
-	var raw *record.Raw
-
-	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
-	txerr := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(k)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return storage.ErrNotFound
-			}
-			return err
-		}
-		buf, err := item.Value()
-		if err != nil {
-			return err
-		}
-		raw, err = record.DecodeToRaw(buf)
-		return err
-	})
-	// TODO: check transaction conflict
-	if txerr != nil {
-		return nil, txerr
+	tx := s.BeginTransaction(false)
+	rec, err := tx.GetRecord(ref)
+	if err != nil {
+		return nil, err
 	}
-	return raw.ToRecord(), nil
+	tx.Discard()
+	return rec, nil
 }
 
 // SetRecord stores record in BadgerDB and returns *record.Reference of new record.
 func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
-	raw, err := record.EncodeToRaw(rec)
+	tx := s.BeginTransaction(true)
+	ref, err := tx.SetRecord(rec)
 	if err != nil {
 		return nil, err
 	}
-	ref := &record.Reference{
-		Domain: rec.Domain().Record,
-		Record: record.ID{
-			Pulse: s.GetCurrentPulse(),
-			Hash:  raw.Hash(),
-		},
-	}
-	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
-	val := record.MustEncodeRaw(raw)
-	txerr := s.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(k, val)
-	})
-	// TODO: check transaction conflict
-	if txerr != nil {
-		return nil, txerr
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
 	}
 	return ref, nil
 }
 
 // GetClassIndex fetches class lifeline's index.
 func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
-	buf, err := s.Get(k)
+	tx := s.BeginTransaction(false)
+	idx, err := tx.GetClassIndex(ref)
 	if err != nil {
 		return nil, err
 	}
-	return index.DecodeClassLifeline(buf)
+	tx.Discard()
+	return idx, nil
 }
 
 // SetClassIndex stores class lifeline index.
 func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
-	encoded, err := index.EncodeClassLifeline(idx)
+	tx := s.BeginTransaction(true)
+	err := tx.SetClassIndex(ref, idx)
 	if err != nil {
 		return err
 	}
-	return s.Set(k, encoded)
+	return tx.Commit()
 }
 
 // GetObjectIndex fetches object lifeline index.
 func (s *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
-	buf, err := s.Get(k)
+	tx := s.BeginTransaction(false)
+	idx, err := tx.GetObjectIndex(ref)
 	if err != nil {
 		return nil, err
 	}
-	return index.DecodeObjectLifeline(buf)
+	tx.Discard()
+	return idx, nil
 }
 
 // SetObjectIndex stores object lifeline index.
 func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
-	encoded, err := index.EncodeObjectLifeline(idx)
+	tx := s.BeginTransaction(true)
+	err := tx.SetObjectIndex(ref, idx)
 	if err != nil {
 		return err
 	}
-	return s.Set(k, encoded)
+	return tx.Commit()
 }
 
 // GetDrop returns jet drop for a given pulse number.
 func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
-	buf, err := s.Get(k)
+	tx := s.BeginTransaction(false)
+	drop, err := tx.GetDrop(pulse)
 	if err != nil {
 		return nil, err
 	}
-	drop, err := jetdrop.Decode(buf)
-	if err != nil {
-		return nil, err
-	}
+	tx.Discard()
 	return drop, nil
 }
 
@@ -227,55 +167,41 @@ func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 // Previous JetDrop should be provided.
 // On success returns saved drop hash.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
-
-	hw := hash.NewSHA3()
-	err := s.ProcessSlotHashes(pulse, func(it HashIterator) error {
-		for i := 1; it.Next(); i++ {
-			b := it.ShallowHash()
-			_, err := hw.Write(b)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	tx := s.BeginTransaction(true)
+	drop, err := tx.SetDrop(pulse, prevdrop)
 	if err != nil {
 		return nil, err
 	}
-	drophash := hw.Sum(nil)
-
-	drop := &jetdrop.JetDrop{
-		Pulse:    pulse,
-		PrevHash: prevdrop.Hash,
-		Hash:     drophash,
-	}
-	encoded, err := jetdrop.Encode(drop)
+	err = tx.Commit()
 	if err != nil {
 		return nil, err
 	}
-
-	err = s.Set(k, encoded)
-	if err != nil {
-		drop = nil
-	}
-	return drop, err
+	return drop, nil
 }
 
 // SetEntropy stores given entropy for given pulse in storage.
 //
 // Entropy is used for calculating node roles.
 func (s *Store) SetEntropy(pulse record.PulseNum, entropy []byte) error {
-	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
-	return s.Set(k, entropy)
+	tx := s.BeginTransaction(true)
+	err := tx.SetEntropy(pulse, entropy)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // GetEntropy returns entropy from storage for given pulse.
 //
 // Entropy is used for calculating node roles.
 func (s *Store) GetEntropy(pulse record.PulseNum) ([]byte, error) {
-	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
-	return s.Get(k)
+	tx := s.BeginTransaction(false)
+	idx, err := tx.GetEntropy(pulse)
+	if err != nil {
+		return nil, err
+	}
+	tx.Discard()
+	return idx, nil
 }
 
 // SetCurrentPulse sets current pulse number.
@@ -286,4 +212,11 @@ func (s *Store) SetCurrentPulse(pulse record.PulseNum) {
 // GetCurrentPulse returns current pulse number.
 func (s *Store) GetCurrentPulse() record.PulseNum {
 	return s.currentPulse
+}
+
+func (s *Store) BeginTransaction(update bool) TransactionManager {
+	return TransactionManager{
+		store: s,
+		txn:   s.db.NewTransaction(update),
+	}
 }
