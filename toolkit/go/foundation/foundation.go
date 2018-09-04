@@ -21,6 +21,7 @@ package foundation
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/satori/go.uuid"
@@ -122,7 +123,11 @@ func (bc *BaseContract) GetChildrenTyped(r Reference) []ProxyInterface {
 }
 
 func SaveToLedger(rec BaseContractInterface, class Reference) Reference {
-	key, _ := uuid.NewV4()
+	key, err := uuid.NewV4()
+	if err != nil {
+		log.Fatal("uuid creting error", err.Error())
+	}
+
 	rec.SetContext(&CallContext{
 		Me:    Reference(key.String()),
 		Class: class,
@@ -137,7 +142,10 @@ func GetObject(ref Reference) BaseContractInterface {
 
 func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) Reference {
 	parent := bc.GetReference()
-	key, _ := uuid.NewV4()
+	key, err := uuid.NewV4()
+	if err != nil {
+		log.Fatal("uuid creting error", err.Error())
+	}
 
 	child.SetContext(&CallContext{
 		Parent: parent,
@@ -156,7 +164,10 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) R
 
 func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class Reference) Reference {
 	me := bc.GetReference()
-	key, _ := uuid.NewV4()
+	key, err := uuid.NewV4()
+	if err != nil {
+		log.Fatal("uuid creting error", err.Error())
+	}
 
 	delegate.SetContext(&CallContext{
 		Parent: me,
