@@ -18,33 +18,50 @@
 package logicrunner
 
 import (
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/pkg/errors"
 )
 
-// Object is an inner representation of storage object for transfwering it over API
-type Object struct {
-	MachineType core.MachineType
-	Reference   core.RecordRef
-	Data        []byte
-}
-
-// ArtifactManager interface
-type ArtifactManager interface {
-	Get(ref core.RecordRef) (data []byte, codeRef core.RecordRef, err error)
-}
-
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [core.MachineTypesTotalCount]core.MachineLogicExecutor
-	ArtifactManager ArtifactManager
+	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
+	ArtifactManager core.ArtifactManager
+	Cfg             configuration.LogicRunner
 }
 
 // NewLogicRunner is constructor for `LogicRunner`
-func NewLogicRunner(am ArtifactManager) (*LogicRunner, error) {
-	res := LogicRunner{ArtifactManager: am}
-
+func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
+	res := LogicRunner{
+		ArtifactManager: nil,
+		Cfg:             cfg,
+	}
 	return &res, nil
+}
+
+func (lr *LogicRunner) Start(c core.Components) error {
+	lr.ArtifactManager = c["core.ArtifactManager"].(core.ArtifactManager)
+	mr := c["core.MessageRouter"].(core.MessageRouter)
+
+	bi := builtin.NewBuiltIn(lr.ArtifactManager, mr)
+	err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (lr *LogicRunner) Stop() error {
+	reterr := error(nil)
+	for _, e := range lr.Executors {
+		err := e.Stop()
+		if err != nil {
+			reterr = errors.Wrap(reterr, err.Error())
+		}
+	}
+	return reterr
 }
 
 // RegisterExecutor registers an executor for particular `MachineType`
@@ -65,7 +82,9 @@ func (r *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (r *LogicRunner) Execute(msg core.Message) *core.Response {
-	data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
+	data, codeRef, err := []byte{}, core.RecordRef{}, error(nil)
+	// todo right code will be used when we will have getcode in AM
+	// data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
 	if err != nil {
 		return &core.Response{Error: errors.Wrap(err, "couldn't ")}
 	}
