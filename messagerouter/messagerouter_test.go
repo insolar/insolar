@@ -31,16 +31,14 @@ type req struct {
 	args   []byte
 }
 
-type resp struct {
-	data []byte
-	res  []byte
-	err  error
-}
-
 type runner struct {
 	requests  []req
-	responses []resp
+	responses []core.Response
 }
+
+func (r *runner) Start(components core.Components) error { return nil }
+
+func (r *runner) Stop() error { return nil }
 
 func (r *runner) Execute(ref core.RecordRef, method string, args []byte) ([]byte, []byte, error) {
 	if len(r.responses) == 0 {
@@ -51,13 +49,13 @@ func (r *runner) Execute(ref core.RecordRef, method string, args []byte) ([]byte
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 
-	return resp.data, resp.res, resp.err
+	return resp.Data, resp.Result, resp.Error
 }
 
 func TestNew(t *testing.T) {
 	r := new(runner)
 	r.requests = make([]req, 0)
-	r.responses = make([]resp, 0)
+	r.responses = make([]core.Response, 0)
 	cfg := configuration.NewConfiguration()
 	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)

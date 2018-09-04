@@ -563,6 +563,7 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 // (e.g. object considered to be active).
 //
 // This method is used by validator to fetch the exact state of the object that was used by the executor.
+// TODO: not used for now
 func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	classState, objectState core.RecordRef,
 ) ([]byte, []byte, error) {
@@ -625,58 +626,60 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	return code, memory, nil
 }
 
+// GetCode returns code from code record by provided reference.
+//
+// This method is used by VM to fetch code for execution.
+func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
+	codeRef := record.Core2Reference(code)
+
+	desc := CodeDescriptor{
+		ref:     &codeRef,
+		manager: m,
+	}
+
+	return &desc, nil
+}
+
 // GetLatestObj returns descriptors for latest known state of the object/class known to the storage. The caller
 // should provide latest known states of the object/class known to it. If the object or the class is deactivated,
 // an error should be returned.
 //
 // Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
-func (m *LedgerArtifactManager) GetLatestObj(
-	obj, storedClassState, storedObjState core.RecordRef,
-) (core.ClassDescriptor, core.ObjectDescriptor, error) {
-	objRef := record.Core2Reference(obj)
-	storedClassRef := record.Core2Reference(storedClassState)
-	storedObjRef := record.Core2Reference(storedObjState)
-
-	var (
-		class  *ClassDescriptor
-		object *ObjectDescriptor
-	)
+func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDescriptor, error) {
+	objRef := record.Core2Reference(head)
 
 	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(objRef)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	classActivateRec, classStateRec, classIndex, err := m.getActiveClass(objIndex.ClassRef)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	// if provided reference is the last reference in the lifeline, we can return nil
-	if storedClassRef.IsNotEqual(classIndex.LatestStateRef) {
-		class = &ClassDescriptor{
-			StateRef: classIndex.LatestStateRef,
+	class := &ClassDescriptor{
+		manager: m,
 
-			manager:           m,
-			fromState:         storedClassRef,
-			activateRecord:    classActivateRec,
-			latestAmendRecord: classStateRec,
-			lifelineIndex:     classIndex,
-		}
+		headRef:       &objIndex.ClassRef,
+		stateRef:      &classIndex.LatestStateRef,
+		headRecord:    classActivateRec,
+		stateRecord:   classStateRec,
+		lifelineIndex: classIndex,
 	}
 
-	// if provided reference is the last reference in the lifeline, we can return nil
-	if storedObjRef.IsNotEqual(objIndex.LatestStateRef) {
-		object = &ObjectDescriptor{
-			StateRef: objIndex.LatestStateRef,
+	object := &ObjectDescriptor{
+		manager: m,
 
-			manager:           m,
-			activateRecord:    objActivateRec,
-			latestAmendRecord: objStateRec,
-			lifelineIndex:     objIndex,
-		}
+		headRef:       &objRef,
+		stateRef:      &objIndex.LatestStateRef,
+		headRecord:    objActivateRec,
+		stateRecord:   objStateRec,
+		lifelineIndex: objIndex,
+
+		classDescriptor: class,
 	}
 
-	return class, object, nil
+	return object, nil
 }
 
 // NewArtifactManger creates new manager instance.
