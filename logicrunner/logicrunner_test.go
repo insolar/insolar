@@ -75,6 +75,8 @@ func (r *testExecutor) CallConstructor(ref core.RecordRef, name string, args cor
 
 func TestBasics(t *testing.T) {
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
+	assert.NoError(t, err)
+
 	comps := core.Components{
 		"core.Ledger":        &testLedger{am: testutil.NewTestArtifactManager()},
 		"core.MessageRouter": &testMessageRouter{},
