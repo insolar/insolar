@@ -48,6 +48,16 @@ func NewServiceNetwork(
 		return nil, errors.New("failed to create a node network")
 	}
 
+	err = dht.ObtainIP(createContext(dht))
+	if err != nil {
+		return nil, err
+	}
+
+	err = dht.AnalyzeNetwork(createContext(dht))
+	if err != nil {
+		return nil, err
+	}
+
 	return &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}, nil
 }
 
