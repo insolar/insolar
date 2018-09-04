@@ -244,7 +244,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
-		panic("Contract must be in main package")
+		return fmt.Errorf("Contract must be in main package")
 	}
 
 	tmpl, err := openTemplate("templates/wrapper.go.tpl")
@@ -253,17 +253,17 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	}
 
 	data := struct {
-		PackageName    string
-		ContractType   string
-		Methods        []map[string]interface{}
-		ParsedCode     []byte
-		FoundationPath string
+		PackageName  string
+		ContractType string
+		Methods      []map[string]interface{}
+		ParsedCode   []byte
+		Imports      []*ast.ImportSpec
 	}{
 		packageName,
 		parsed.contract,
 		generateContractMethodsInfo(parsed),
 		parsed.code,
-		foundationPath,
+		parsed.node.Imports,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -286,7 +286,7 @@ func generateContractProxy(fileName string, classReference string, out io.Writer
 
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
-		fmt.Errorf("Contract must be in main package")
+		return fmt.Errorf("Contract must be in main package")
 	}
 
 	proxyPackageName := match[2]

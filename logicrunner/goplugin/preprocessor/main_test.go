@@ -268,3 +268,39 @@ type B struct{
 	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
 }
+
+func TestImportsFromContractInWrapper(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"some/test/import/"
+)
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( A ) Get(){
+	return
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), "some/test/import/")
+	assert.Contains(t, bufWrapper.String(), "github.com/insolar/insolar/logicrunner/goplugin/foundation")
+}
