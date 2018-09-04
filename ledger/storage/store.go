@@ -86,17 +86,19 @@ func (s *Store) Close() error {
 // GetRecord wraps matching transaction manager method.
 func (s *Store) GetRecord(ref *record.Reference) (record.Record, error) {
 	tx := s.BeginTransaction(false)
+	defer tx.Discard()
 	rec, err := tx.GetRecord(ref)
 	if err != nil {
 		return nil, err
 	}
-	tx.Discard()
 	return rec, nil
 }
 
 // SetRecord wraps matching transaction manager method.
 func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
 	ref, err := tx.SetRecord(rec)
 	if err != nil {
 		return nil, err
@@ -111,17 +113,21 @@ func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 // GetClassIndex wraps matching transaction manager method.
 func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
 	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
 	idx, err := tx.GetClassIndex(ref)
 	if err != nil {
 		return nil, err
 	}
-	tx.Discard()
+
 	return idx, nil
 }
 
 // SetClassIndex wraps matching transaction manager method.
 func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
 	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
 	err := tx.SetClassIndex(ref, idx)
 	if err != nil {
 		return err
@@ -132,17 +138,20 @@ func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) e
 // GetObjectIndex wraps matching transaction manager method.
 func (s *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
 	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
 	idx, err := tx.GetObjectIndex(ref)
 	if err != nil {
 		return nil, err
 	}
-	tx.Discard()
 	return idx, nil
 }
 
 // SetObjectIndex wraps matching transaction manager method.
 func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
 	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
 	err := tx.SetObjectIndex(ref, idx)
 	if err != nil {
 		return err
@@ -153,17 +162,20 @@ func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline)
 // GetDrop wraps matching transaction manager method.
 func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
 	drop, err := tx.GetDrop(pulse)
 	if err != nil {
 		return nil, err
 	}
-	tx.Discard()
 	return drop, nil
 }
 
 // SetDrop wraps matching transaction manager method.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
 	drop, err := tx.SetDrop(pulse, prevdrop)
 	if err != nil {
 		return nil, err
@@ -178,17 +190,20 @@ func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetd
 // GetEntropy wraps matching transaction manager method.
 func (s *Store) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
 	idx, err := tx.GetEntropy(pulse)
 	if err != nil {
 		return nil, err
 	}
-	tx.Discard()
 	return idx, nil
 }
 
 // SetEntropy wraps matching transaction manager method.
 func (s *Store) SetEntropy(pulse record.PulseNum, entropy []byte) error {
 	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
 	err := tx.SetEntropy(pulse, entropy)
 	if err != nil {
 		return err
@@ -213,4 +228,26 @@ func (s *Store) BeginTransaction(update bool) TransactionManager {
 		store: s,
 		txn:   s.db.NewTransaction(update),
 	}
+}
+
+// View accepts transaction function. All calls to received transaction manager will be consistent.
+func (s *Store) View(fn func(*TransactionManager) error) error {
+	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
+	return fn(&tx)
+}
+
+// Update accepts transaction function and commits changes. All calls to received transaction manager will be
+// consistent and written tp disk or an error will be returned.
+func (s *Store) Update(fn func(*TransactionManager) error) error {
+	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
+	err := fn(&tx)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
