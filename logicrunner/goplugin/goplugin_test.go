@@ -160,7 +160,7 @@ func buildContracts(root string, names ...string) error {
 	return nil
 }
 
-func suckInContracts(am *testArtifactManager, root string, names ...string) {
+func suckInContracts(am *testutil.TestArtifactManager, root string, names ...string) {
 	for _, name := range names {
 		pluginBinary, err := ioutil.ReadFile(root + "/plugins/" + name + ".so")
 		if err != nil {
@@ -168,7 +168,7 @@ func suckInContracts(am *testArtifactManager, root string, names ...string) {
 		}
 
 		ref := core.String2Ref(name)
-		am.code[ref] = &testCodeDescriptor{ref: &ref, code: pluginBinary}
+		am.Codes[ref] = &testutil.TestCodeDescriptor{ARef: &ref, ACode: pluginBinary}
 	}
 }
 
@@ -235,7 +235,7 @@ func TestContractCallingContract(t *testing.T) {
 	}
 
 	mr := &testMessageRouter{}
-	am := newTestArtifactManager()
+	am := testutil.NewTestArtifactManager()
 
 	gp, err := NewGoPlugin(
 		configuration.Goplugin{
@@ -272,9 +272,9 @@ func TestContractCallingContract(t *testing.T) {
 
 	suckInContracts(am, tmpDir, "one", "two")
 
-	am.objects[core.String2Ref("some")] = &testObjectDescriptor{
-		data: []byte{},
-		code: am.code[core.String2Ref("two")],
+	am.Objects[core.String2Ref("some")] = &testutil.TestObjectDescriptor{
+		Data: []byte{},
+		Code: am.Codes[core.String2Ref("two")],
 	}
 
 	_, res, err := gp.CallMethod(core.String2Ref("one"), data, "Hello", argsSerialized)
@@ -291,116 +291,4 @@ func TestContractCallingContract(t *testing.T) {
 	if resParsed[0].(string) != "Hi, ins! Two said: Hello you too, ins" {
 		t.Fatal("unexpected result")
 	}
-}
-
-type testCodeDescriptor struct {
-	ref  *core.RecordRef
-	code []byte
-}
-
-func (t *testCodeDescriptor) Ref() *core.RecordRef {
-	return t.ref
-}
-
-func (t *testCodeDescriptor) Code() ([]byte, error) {
-	return t.code, nil
-}
-
-type testObjectDescriptor struct {
-	data []byte
-	code *testCodeDescriptor
-}
-
-func (t *testObjectDescriptor) HeadRef() *core.RecordRef {
-	panic("not implemented")
-}
-
-func (t *testObjectDescriptor) StateRef() *core.RecordRef {
-	panic("not implemented")
-}
-
-func (t *testObjectDescriptor) Memory() ([]byte, error) {
-	return t.data, nil
-}
-
-func (t *testObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
-	if t.code == nil {
-		return nil, errors.New("No code")
-	}
-	return t.code, nil
-}
-
-func (t *testObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
-	panic("not implemented")
-}
-
-type testArtifactManager struct {
-	code    map[core.RecordRef]*testCodeDescriptor
-	objects map[core.RecordRef]*testObjectDescriptor
-}
-
-func newTestArtifactManager() *testArtifactManager {
-	return &testArtifactManager{
-		code:    make(map[core.RecordRef]*testCodeDescriptor),
-		objects: make(map[core.RecordRef]*testObjectDescriptor),
-	}
-}
-
-func (t *testArtifactManager) SetArchPref(pref []core.MachineType) {
-}
-
-func (t *testArtifactManager) GetExactObj(class core.RecordRef, object core.RecordRef) ([]byte, []byte, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) GetLatestObj(object core.RecordRef) (core.ObjectDescriptor, error) {
-	res, ok := t.objects[object]
-	if !ok {
-		return nil, errors.New("No object")
-	}
-	return res, nil
-}
-
-func (t *testArtifactManager) DeclareType(domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, types []core.RecordRef, codeMap map[core.MachineType][]byte) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
-	res, ok := t.code[code]
-	if !ok {
-		return nil, errors.New("No code")
-	}
-	return res, nil
-}
-
-func (t *testArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) DeactivateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) UpdateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) DeactivateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) UpdateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
-func (t *testArtifactManager) AppendObjDelegate(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
 }
