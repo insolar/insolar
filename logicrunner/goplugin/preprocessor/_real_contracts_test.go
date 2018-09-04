@@ -45,7 +45,7 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 	for _, file := range GetContractsList() {
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
 			var buf bytes.Buffer
-			err := generateContractProxy(file, &buf)
+			err := generateContractProxy(file, "testRef", &buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)

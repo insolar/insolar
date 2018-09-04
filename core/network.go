@@ -14,16 +14,17 @@
  *    limitations under the License.
  */
 
-package configuration
+package core
 
-// Ledger holds configuration for ledger.
-type Ledger struct {
-	DataDirectory string
-}
+// RemoteProcedure is remote procedure call function.
+type RemoteProcedure func(args [][]byte) ([]byte, error)
 
-// NewLedger creates new default Ledger configuration.
-func NewLedger() Ledger {
-	return Ledger{
-		DataDirectory: "./data",
-	}
+// Network is interface for network modules facade.
+type Network interface {
+	// SendMessage sends a message.
+	SendMessage(method string, msg *Message) ([]byte, error)
+	// GetAddress returns an origin address.
+	GetAddress() string
+	// RemoteProcedureRegister is remote procedure register func.
+	RemoteProcedureRegister(name string, method RemoteProcedure)
 }
