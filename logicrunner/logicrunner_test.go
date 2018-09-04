@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/network/hostnetwork"
 )
 
 func TestTypeCompatibility(t *testing.T) {
@@ -110,7 +109,7 @@ type testMessageRouter struct{}
 
 func (testMessageRouter) Start(components core.Components) error { return nil }
 func (testMessageRouter) Stop() error                            { return nil }
-func (testMessageRouter) Route(ctx hostnetwork.Context, msg core.Message) (resp core.Response, err error) {
+func (testMessageRouter) Route(msg core.Message) (resp core.Response, err error) {
 	panic("implement me")
 }
 
