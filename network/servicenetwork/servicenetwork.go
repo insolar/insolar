@@ -35,12 +35,6 @@ type ServiceNetwork struct {
 	hostNetwork *hostnetwork.DHT
 }
 
-// Start imlements core.Component
-func (network *ServiceNetwork) Start(components core.Components) error { return nil }
-
-// Stop imlements core.Component
-func (network *ServiceNetwork) Stop() error { return nil }
-
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(
 	hostConf configuration.HostNetwork,
@@ -106,7 +100,7 @@ func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hostnetwork.C
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
 
-// Start method starts all network layers
+// Start imlements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
 	logrus.Infoln("Bootstrapping network...")
@@ -126,7 +120,7 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	return nil
 }
 
-// Stop method gracefully stop network layers
+// Stop imlements core.Component
 func (network *ServiceNetwork) Stop() error {
 	logrus.Infoln("Stop network")
 	network.hostNetwork.Disconnect()

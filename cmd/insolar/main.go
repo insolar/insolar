@@ -24,6 +24,10 @@ import (
 	"syscall"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/messagerouter"
+	"github.com/insolar/insolar/network/servicenetwork"
 	log "github.com/sirupsen/logrus"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -36,6 +40,8 @@ func main() {
 		log.Warnln(err.Error())
 	}
 
+	components := make(core.Components)
+
 	cfgHolder.Configuration.Host.Transport.BehindNAT = false
 
 	initLogger(cfgHolder.Configuration.Log)
@@ -45,9 +51,25 @@ func main() {
 	if err != nil {
 		log.Fatalln("Failed to start network: ", err.Error())
 	}
+	components["core.Network"] = network
+
 	ledger := StartLedger(cfgHolder.Configuration.Ledger)
-	//logicrunner.NewLogicRunner(ledger.GetManager()) ?
-	//messagerouter.MessageRouter{}
+	components["core.Ledger"] = ledger
+
+	logicrunner, err := logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
+	// todo: check err
+	components["core.LogicRunner"] = logicrunner
+
+	mr, err := messagerouter.New(cfgHolder.Configuration)
+	components["core.MessageRouter"] = mr
+
+	// start all components
+	for n, c := range components {
+		err := c.Start(components)
+		if err != nil {
+			log.Errorln("failed to start component ", n, " : ", err.Error())
+		}
+	}
 
 	// TODO: call Start() on all components.
 
