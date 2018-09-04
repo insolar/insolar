@@ -21,6 +21,7 @@ import (
 	"encoding/gob"
 	"log"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -38,11 +39,22 @@ type MessageRouter struct {
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr core.LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
-	mr := &MessageRouter{lr, rpc}
-	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+func New(cfg configuration.Configuration) (*MessageRouter, error) {
+	mr := &MessageRouter{nil, nil}
 	return mr, nil
+
 }
+
+// Start is a part of core.Component interface
+func (mr *MessageRouter) Start(c core.Components) error {
+	mr.LogicRunner = c["core.LogicRunner"].(core.LogicRunner)
+	mr.rpc = c["hostnetwork.RPC"].(hostnetwork.RPC)
+	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+	return nil
+}
+
+// Stop is a part of core.Component interface
+func (mr *MessageRouter) Stop() error { return nil }
 
 // Route a `Message` and get a `Response` or error from remote host
 func (r *MessageRouter) Route(ctx hostnetwork.Context, msg core.Message) (response core.Response, err error) {
