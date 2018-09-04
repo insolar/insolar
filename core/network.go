@@ -21,6 +21,7 @@ type RemoteProcedure func(args [][]byte) ([]byte, error)
 
 // Network is interface for network modules facade.
 type Network interface {
+	Component
 	// SendMessage sends a message.
 	SendMessage(method string, msg *Message) ([]byte, error)
 	// GetAddress returns an origin address.

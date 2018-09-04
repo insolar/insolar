@@ -24,7 +24,6 @@ import (
 	"syscall"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	log "github.com/sirupsen/logrus"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -59,7 +58,10 @@ func main() {
 	go func() {
 		sig := <-gracefulStop
 		log.Debugln("caught sig: ", sig)
-		network.closeNetwork()
+		err := network.Stop()
+		if err != nil {
+			log.Println(err.Error())
+		}
 		// TODO: call Stop() on all components.
 		lComp := ledger.(core.Component)
 		if err := lComp.Stop(); err != nil {
@@ -68,10 +70,10 @@ func main() {
 		os.Exit(0)
 	}()
 
-	go handleStats(cfgHolder.Configuration.Stats, network)
+	go handleStats(cfgHolder.Configuration.Stats)
 
 	fmt.Println("Running interactive mode:")
-	repl(network.HostNetwork, network.ctx)
+	repl(network.(*servicenetwork.ServiceNetwork).GetHostNetwork())
 }
 
 func initLogger(cfg configuration.Log) {
