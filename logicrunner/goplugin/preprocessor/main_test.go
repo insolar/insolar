@@ -208,6 +208,7 @@ func main() {
 	_ = secondary.GetObject("some")
 }
 	`)
+	assert.NoError(t, err)
 
 	err = os.Chdir(tmpDir)
 	assert.NoError(t, err)
@@ -223,7 +224,7 @@ func main() {
 func TestGenerateProxyAndWrapperForBoolParams(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
 	err = testutil.WriteFile(tmpDir, testContract, `
@@ -236,6 +237,7 @@ func ( A ) Get( b bool ) bool{
 	return true
 }
 `)
+	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
@@ -267,6 +269,7 @@ func ( A ) Get(){
 	return
 }
 `)
+	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
@@ -284,7 +287,7 @@ func ( A ) Get(){
 func TestFailIfThereAreNoContract(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
 	err = testutil.WriteFile(tmpDir, testContract, `
@@ -293,6 +296,8 @@ type A struct{
 	ttt ppp.TTT
 }
 `)
+	assert.NoError(t, err)
+
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
@@ -305,7 +310,7 @@ type A struct{
 func TestContractOnlyIfEmbedBaseContract(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
 
@@ -316,6 +321,7 @@ type A struct{
 	tt foundation.BaseContract
 }
 `)
+	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
@@ -330,7 +336,7 @@ type A struct{
 func TestOnlyOneSmartContractMustExist(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
 
@@ -345,6 +351,7 @@ type B struct{
 	foundation.BaseContract
 }
 `)
+	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
