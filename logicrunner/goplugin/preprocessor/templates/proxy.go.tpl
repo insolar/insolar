@@ -42,12 +42,12 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *{{ $.ContractType }} {
 {{ end }}
 
 // GetReference
-func (r *{{ $.ContractType }}) GetReference() Reference {
+func (r *{{ $.ContractType }}) GetReference() string {
     return r.Reference
 }
 
 // GetClass
-func (r *{{ $.ContractType }}) GetClass() Reference {
+func (r *{{ $.ContractType }}) GetClass() string {
     return ClassReference
 }
 
