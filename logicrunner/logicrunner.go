@@ -41,7 +41,7 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 func (lr *LogicRunner) Start(c core.Components) error {
-	lr.ArtifactManager = c["core.Ledger"].(core.Ledger).GetManager()
+	lr.ArtifactManager = c["core.ArtifactManager"].(core.ArtifactManager)
 	mr := c["core.MessageRouter"].(core.MessageRouter)
 
 	bi := builtin.NewBuiltIn(lr.ArtifactManager, mr)
