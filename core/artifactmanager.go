@@ -28,7 +28,7 @@ type ArtifactManager interface {
 	// GetCode returns code from code record by provided reference.
 	//
 	// This method is used by VM to fetch code for execution.
-	// GetCode(code RecordRef) (CodeDescriptor, error)
+	GetCode(code RecordRef) (CodeDescriptor, error)
 
 	// GetLatestObj returns descriptors for latest known state of the object/class known to the storage.
 	// If the object or the class is deactivated, an error should be returned.
