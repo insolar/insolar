@@ -51,8 +51,8 @@ func (mr *MessageRouter) Start(c core.Components) error {
 func (mr *MessageRouter) Stop() error { return nil }
 
 // Route a `Message` and get a `Response` or error from remote host
-func (r *MessageRouter) Route(msg core.Message) (response core.Response, err error) {
-	res, err := r.service.SendMessage(deliverRPCMethodName, &msg)
+func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err error) {
+	res, err := mr.service.SendMessage(deliverRPCMethodName, &msg)
 	if err != nil {
 		return response, err
 	}
