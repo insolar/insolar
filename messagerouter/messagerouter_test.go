@@ -31,16 +31,14 @@ type req struct {
 	args   []byte
 }
 
-type resp struct {
-	data []byte
-	res  []byte
-	err  error
-}
-
 type runner struct {
 	requests  []req
-	responses []resp
+	responses []core.Response
 }
+
+func (r *runner) Start(components core.Components) error { return nil }
+
+func (r *runner) Stop() error { return nil }
 
 func (r *runner) Execute(ref core.RecordRef, method string, args []byte) ([]byte, []byte, error) {
 	if len(r.responses) == 0 {

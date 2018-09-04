@@ -14,33 +14,11 @@
  *    limitations under the License.
  */
 
-package primary
+package core
 
-import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
+type Components map[string]Component
 
-type INFHwRunner interface {
-	Run() string
+type Component interface {
+	Start(components Components) error
+	Stop() error
 }
-
-// nolint
-type HwRunner struct {
-	foundation.BaseContract
-	Runned int
-}
-
-//
-type Hw struct {
-	Reference core.RecordRef
-}
-
-func (Hw) GetNewInstance(r core.RecordRef) Hw {
-	return Hw{Reference: r}
-}
-
-//func (_self *Hw) Echo(s string) string {
-//	foundation.APICall(_self.Reference, "Echo", s)
-//	return s
-//}
