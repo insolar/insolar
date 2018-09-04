@@ -26,7 +26,7 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [core.MachineTypesLastID - 1]core.MachineLogicExecutor
+	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	Cfg             configuration.LogicRunner
 }
