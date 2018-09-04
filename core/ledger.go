@@ -18,6 +18,7 @@ package core
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger interface {
+	Component
 	// GetManager returns artifact manager to work with.
 	GetManager() ArtifactManager
 }

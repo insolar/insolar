@@ -37,19 +37,18 @@ type runner struct {
 }
 
 func (r *runner) Start(components core.Components) error { return nil }
+func (r *runner) Stop() error                            { return nil }
 
-func (r *runner) Stop() error { return nil }
-
-func (r *runner) Execute(ref core.RecordRef, method string, args []byte) ([]byte, []byte, error) {
+func (r *runner) Execute(msg core.Message) (res *core.Response) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
 
-	r.requests = append(r.requests, req{ref, method, args})
+	r.requests = append(r.requests, req{msg.Reference, msg.Method, msg.Arguments})
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 
-	return resp.Data, resp.Result, resp.Error
+	return &core.Response{resp.Data, resp.Result, resp.Error}
 }
 
 func TestNew(t *testing.T) {
@@ -59,7 +58,11 @@ func TestNew(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
-	mr, err := New(r, network)
+	mr, err := New(configuration.Configuration{})
+	mr.Start(core.Components{
+		"core.LogicRunner":               r,
+		"*servicenetwork.ServiceNetwork": network,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

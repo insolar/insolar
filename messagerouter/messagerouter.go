@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"encoding/gob"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/servicenetwork"
 )
 
 const deliverRPCMethodName = "MessageRouter.Deliver"
@@ -29,33 +29,29 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageRouter struct {
-	LogicRunner LogicRunner
-	service     *servicenetwork.ServiceNetwork
-}
-
-// LogicRunner is an interface that should satisfy logic executor
-type LogicRunner interface {
-	Execute(ref core.RecordRef, method string, args []byte) (data []byte, result []byte, err error)
-}
-
-// Response to a `Message`
-type Response struct {
-	Data   []byte
-	Result []byte
-	Error  error
+	LogicRunner core.LogicRunner
+	service     core.Network
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr LogicRunner, service *servicenetwork.ServiceNetwork) (*MessageRouter, error) {
-	mr := &MessageRouter{LogicRunner: lr, service: service}
-	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+func New(cfg configuration.Configuration) (*MessageRouter, error) {
+	mr := &MessageRouter{LogicRunner: nil, service: nil}
 	return mr, nil
 }
 
+func (mr *MessageRouter) Start(c core.Components) error {
+	mr.LogicRunner = c["core.LogicRunner"].(core.LogicRunner)
+	mr.service = c["core.Network"].(core.Network)
+	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+	return nil
+}
+
+func (mr *MessageRouter) Stop() error { return nil }
+
 // Route a `Message` and get a `Response` or error from remote host
-func (r *MessageRouter) Route(msg *core.Message) (response Response, err error) {
-	res, err := r.service.SendMessage(deliverRPCMethodName, msg)
+func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err error) {
+	res, err := mr.service.SendMessage(deliverRPCMethodName, &msg)
 	if err != nil {
 		return response, err
 	}
@@ -72,8 +68,7 @@ func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	data, res, err := r.LogicRunner.Execute(msg.Reference, msg.Method, msg.Arguments)
-	return Serialize(Response{Data: data, Result: res, Error: err})
+	return Serialize(r.LogicRunner.Execute(msg))
 }
 
 // Serialize converts Message or Response to byte slice.
@@ -95,12 +90,12 @@ func DeserializeMessage(data []byte) (msg core.Message, err error) {
 }
 
 // DeserializeResponse reads response from byte slice.
-func DeserializeResponse(data []byte) (res Response, err error) {
+func DeserializeResponse(data []byte) (res core.Response, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&res)
 	return res, err
 }
 
 func init() {
 	gob.Register(&core.Message{})
-	gob.Register(&Response{})
+	gob.Register(&core.Response{})
 }

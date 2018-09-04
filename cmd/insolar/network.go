@@ -19,77 +19,21 @@ package main
 import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/sirupsen/logrus"
+	"github.com/insolar/insolar/network/servicenetwork"
+	log "github.com/sirupsen/logrus"
 )
 
-// Network contains all Insolar network layers
-type Network struct {
-	HostNetwork *hostnetwork.DHT
-	Node        *nodenetwork.Node
-	ctx         hostnetwork.Context
-}
-
 // StartNetwork creates and starts network
-func StartNetwork(cfg configuration.Configuration) (Network, error) {
-	var n Network
-	var err error
+func StartNetwork(cfg configuration.Configuration) (core.Network, error) {
+	log.Infoln("Starting network...")
 
-	logrus.Infoln("Starting network...")
-	n.HostNetwork, err = hostnetwork.NewHostNetwork(cfg.Host)
+	nw, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
 	if err != nil {
-		logrus.Errorln("Failed to create network:", err.Error())
+		return nil, err
 	}
 
-	n.ctx = n.createContext()
-	go n.listen()
+	err = nw.Start(nil)
 
-	if len(cfg.Host.BootstrapHosts) > 0 {
-		logrus.Infoln("Bootstrapping network...")
-		n.bootstrap()
-	}
-
-	err = n.HostNetwork.ObtainIP(n.ctx)
-	if err != nil {
-		logrus.Errorln(err)
-	}
-
-	err = n.HostNetwork.AnalyzeNetwork(n.ctx)
-	if err != nil {
-		logrus.Errorln(err)
-	}
-
-	n.Node = nodenetwork.NewNode("nodeID", "hostID", core.String2Ref("domainID"))
-	return n, nil
-}
-
-func (n *Network) closeNetwork() {
-	logrus.Infoln("Close network")
-	n.HostNetwork.Disconnect()
-}
-
-func (n *Network) bootstrap() {
-	err := n.HostNetwork.Bootstrap()
-	if err != nil {
-		logrus.Errorln("Failed to bootstrap network", err.Error())
-	}
-}
-
-func (n *Network) listen() {
-	func() {
-		logrus.Infoln("Network starts listening")
-		err := n.HostNetwork.Listen()
-		if err != nil {
-			logrus.Errorln("Listen failed:", err.Error())
-		}
-	}()
-}
-
-func (n *Network) createContext() hostnetwork.Context {
-	ctx, err := hostnetwork.NewContextBuilder(n.HostNetwork).SetDefaultHost().Build()
-	if err != nil {
-		logrus.Fatalln("Failed to create context:", err.Error())
-	}
-	return ctx
+	//n.Node = nodenetwork.NewNode("nodeID", "hostID", core.String2Ref("domainID"))
+	return nw, err
 }
