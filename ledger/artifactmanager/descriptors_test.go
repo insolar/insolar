@@ -26,18 +26,18 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 
-	. "github.com/insolar/insolar/ledger/storage/storagetestutils"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
 type preparedCodeDescriptorTestData struct {
-	ledger  storage.Store
+	ledger  *storage.Store
 	manager *LedgerArtifactManager
 	rec     *record.CodeRecord
 	ref     *record.Reference
 }
 
 func prepareCodeDescriptorTestData(t *testing.T) (preparedCodeDescriptorTestData, func()) {
-	ledger, cleaner := TmpStore(t)
+	ledger, cleaner := storagetest.TmpStore(t, "")
 
 	rec := record.CodeRecord{TargetedCode: map[core.MachineType][]byte{1: {1, 2, 3}}}
 	ref, err := ledger.SetRecord(&rec)
@@ -69,14 +69,14 @@ func TestCodeDescriptor_GetCode(t *testing.T) {
 }
 
 type preparedClassDescriptorTestData struct {
-	ledger   storage.Store
+	ledger   *storage.Store
 	manager  *LedgerArtifactManager
 	classRec *record.ClassActivateRecord
 	classRef *record.Reference
 }
 
 func prepareClassDescriptorTestData(t *testing.T) (preparedClassDescriptorTestData, func()) {
-	ledger, cleaner := TmpStore(t)
+	ledger, cleaner := storagetest.TmpStore(t, "")
 
 	rec := record.ClassActivateRecord{}
 	ref, err := ledger.SetRecord(&rec)
@@ -146,14 +146,14 @@ func TestClassDescriptor_GetMigrations(t *testing.T) {
 }
 
 type preparedObjectDescriptorTestData struct {
-	ledger  storage.Store
+	ledger  *storage.Store
 	manager *LedgerArtifactManager
 	objRec  *record.ObjectActivateRecord
 	objRef  *record.Reference
 }
 
 func prepareObjectDescriptorTestData(t *testing.T) (preparedObjectDescriptorTestData, func()) {
-	ledger, cleaner := TmpStore(t)
+	ledger, cleaner := storagetest.TmpStore(t, "")
 
 	rec := record.ObjectActivateRecord{Memory: []byte{1}}
 	ref, err := ledger.SetRecord(&rec)

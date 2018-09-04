@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package badgerdb
+package storage
 
 import (
 	"path/filepath"
@@ -49,7 +49,7 @@ func setOptions(o *badger.Options) *badger.Options {
 	return newo
 }
 
-// NewStore returns badgerdb.Store with BadgerDB instance initialized by opts.
+// NewStore returns storage.Store with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
 func NewStore(dir string, opts *badger.Options) (*Store, error) {
 	opts = setOptions(opts)
@@ -83,9 +83,7 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-// GetRecord returns record from BadgerDB by *record.Reference.
-//
-// It returns storage.ErrNotFound if the DB does not contain the key.
+// GetRecord wraps matching transaction manager method.
 func (s *Store) GetRecord(ref *record.Reference) (record.Record, error) {
 	tx := s.BeginTransaction(false)
 	rec, err := tx.GetRecord(ref)
@@ -96,7 +94,7 @@ func (s *Store) GetRecord(ref *record.Reference) (record.Record, error) {
 	return rec, nil
 }
 
-// SetRecord stores record in BadgerDB and returns *record.Reference of new record.
+// SetRecord wraps matching transaction manager method.
 func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 	tx := s.BeginTransaction(true)
 	ref, err := tx.SetRecord(rec)
@@ -110,7 +108,7 @@ func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
 	return ref, nil
 }
 
-// GetClassIndex fetches class lifeline's index.
+// GetClassIndex wraps matching transaction manager method.
 func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
 	tx := s.BeginTransaction(false)
 	idx, err := tx.GetClassIndex(ref)
@@ -121,7 +119,7 @@ func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, erro
 	return idx, nil
 }
 
-// SetClassIndex stores class lifeline index.
+// SetClassIndex wraps matching transaction manager method.
 func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
 	tx := s.BeginTransaction(true)
 	err := tx.SetClassIndex(ref, idx)
@@ -131,7 +129,7 @@ func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) e
 	return tx.Commit()
 }
 
-// GetObjectIndex fetches object lifeline index.
+// GetObjectIndex wraps matching transaction manager method.
 func (s *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
 	tx := s.BeginTransaction(false)
 	idx, err := tx.GetObjectIndex(ref)
@@ -142,7 +140,7 @@ func (s *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, er
 	return idx, nil
 }
 
-// SetObjectIndex stores object lifeline index.
+// SetObjectIndex wraps matching transaction manager method.
 func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
 	tx := s.BeginTransaction(true)
 	err := tx.SetObjectIndex(ref, idx)
@@ -152,7 +150,7 @@ func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline)
 	return tx.Commit()
 }
 
-// GetDrop returns jet drop for a given pulse number.
+// GetDrop wraps matching transaction manager method.
 func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	tx := s.BeginTransaction(false)
 	drop, err := tx.GetDrop(pulse)
@@ -163,9 +161,7 @@ func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	return drop, nil
 }
 
-// SetDrop stores jet drop for given pulse number.
-// Previous JetDrop should be provided.
-// On success returns saved drop hash.
+// SetDrop wraps matching transaction manager method.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	tx := s.BeginTransaction(true)
 	drop, err := tx.SetDrop(pulse, prevdrop)
@@ -179,21 +175,7 @@ func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetd
 	return drop, nil
 }
 
-// SetEntropy stores given entropy for given pulse in storage.
-//
-// Entropy is used for calculating node roles.
-func (s *Store) SetEntropy(pulse record.PulseNum, entropy []byte) error {
-	tx := s.BeginTransaction(true)
-	err := tx.SetEntropy(pulse, entropy)
-	if err != nil {
-		return err
-	}
-	return tx.Commit()
-}
-
-// GetEntropy returns entropy from storage for given pulse.
-//
-// Entropy is used for calculating node roles.
+// GetEntropy wraps matching transaction manager method.
 func (s *Store) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 	tx := s.BeginTransaction(false)
 	idx, err := tx.GetEntropy(pulse)
@@ -202,6 +184,16 @@ func (s *Store) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 	}
 	tx.Discard()
 	return idx, nil
+}
+
+// SetEntropy wraps matching transaction manager method.
+func (s *Store) SetEntropy(pulse record.PulseNum, entropy []byte) error {
+	tx := s.BeginTransaction(true)
+	err := tx.SetEntropy(pulse, entropy)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // SetCurrentPulse sets current pulse number.
@@ -214,6 +206,8 @@ func (s *Store) GetCurrentPulse() record.PulseNum {
 	return s.currentPulse
 }
 
+// BeginTransaction opens a new transaction. All methods called on returned transaction manager will commit changes to
+// disk only after "Commit" was called.
 func (s *Store) BeginTransaction(update bool) TransactionManager {
 	return TransactionManager{
 		store: s,

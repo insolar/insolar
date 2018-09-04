@@ -23,11 +23,11 @@ import (
 
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
-	. "github.com/insolar/insolar/ledger/storage/storagetestutils"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
 func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
-	ledger, cleaner := TmpStore(t)
+	ledger, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	jc := &JetCoordinator{

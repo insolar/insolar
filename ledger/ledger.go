@@ -21,7 +21,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
-	"github.com/insolar/insolar/ledger/storage/badgerdb"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 )
 
@@ -38,7 +38,7 @@ func (l *Ledger) GetManager() core.ArtifactManager {
 
 // NewLedger creates new ledger instance.
 func NewLedger(conf configuration.Ledger) (core.Ledger, error) {
-	store, err := badgerdb.NewStore(conf.DataDirectory, nil)
+	store, err := storage.NewStore(conf.DataDirectory, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
