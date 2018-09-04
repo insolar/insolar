@@ -56,7 +56,7 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 }
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -80,7 +80,7 @@ func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_DeployCode_VerifiesRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -97,7 +97,7 @@ func TestLedgerArtifactManager_DeployCode_VerifiesRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -133,7 +133,7 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_ActivateClass_VerifiesRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -148,7 +148,7 @@ func TestLedgerArtifactManager_ActivateClass_VerifiesRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -184,7 +184,7 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 }
 
 func TestLedgerArtifactManager_DeactivateClass_VerifiesRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -199,7 +199,7 @@ func TestLedgerArtifactManager_DeactivateClass_VerifiesRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_DeactivateClass_VerifiesClassIsActive(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -213,7 +213,7 @@ func TestLedgerArtifactManager_DeactivateClass_VerifiesClassIsActive(t *testing.
 }
 
 func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -252,7 +252,7 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 }
 
 func TestLedgerArtifactManager_UpdateClass_VerifiesRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -268,7 +268,7 @@ func TestLedgerArtifactManager_UpdateClass_VerifiesRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_UpdateClass_VerifiesClassIsActive(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -284,7 +284,7 @@ func TestLedgerArtifactManager_UpdateClass_VerifiesClassIsActive(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -343,7 +343,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_ActivateObj_VerifiesRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -357,7 +357,7 @@ func TestLedgerArtifactManager_ActivateObj_VerifiesRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -395,7 +395,7 @@ func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_DeactivateObj_VerifiesRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -408,7 +408,7 @@ func TestLedgerArtifactManager_DeactivateObj_VerifiesRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_DeactivateObj_VerifiesObjectIsActive(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -422,7 +422,7 @@ func TestLedgerArtifactManager_DeactivateObj_VerifiesObjectIsActive(t *testing.T
 }
 
 func TestLedgerArtifactManager_DeactivateObj_CreatesCorrectRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -460,7 +460,7 @@ func TestLedgerArtifactManager_DeactivateObj_CreatesCorrectRecord(t *testing.T) 
 }
 
 func TestLedgerArtifactManager_UpdateObj_VerifiesRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -475,7 +475,7 @@ func TestLedgerArtifactManager_UpdateObj_VerifiesRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_UpdateObj_VerifiesObjectIsActive(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -491,7 +491,7 @@ func TestLedgerArtifactManager_UpdateObj_VerifiesObjectIsActive(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -530,7 +530,7 @@ func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_AppendObjDelegate_VerifiesRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -546,7 +546,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_VerifiesRecord(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_AppendObjDelegate_VerifiesClassIsActive(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -562,7 +562,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_VerifiesClassIsActive(t *testin
 }
 
 func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -605,7 +605,7 @@ func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing
 }
 
 func TestLedgerArtifactManager_GetLatestObj_VerifiesRecords(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
@@ -614,7 +614,7 @@ func TestLedgerArtifactManager_GetLatestObj_VerifiesRecords(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_GetLatestObj_VerifiesClassIsActive(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
