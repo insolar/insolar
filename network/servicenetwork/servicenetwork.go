@@ -34,6 +34,12 @@ type ServiceNetwork struct {
 	hostNetwork *hostnetwork.DHT
 }
 
+// Start imlements core.Component
+func (network *ServiceNetwork) Start(components core.Components) error { return nil }
+
+// Stop imlements core.Component
+func (network *ServiceNetwork) Stop() error { return nil }
+
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(
 	hostConf configuration.HostNetwork,
