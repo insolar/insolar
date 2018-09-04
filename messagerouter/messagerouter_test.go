@@ -42,6 +42,10 @@ type runner struct {
 	responses []core.Response
 }
 
+func (r *runner) Start(components core.Components) error { return nil }
+
+func (r *runner) Stop() error { return nil }
+
 func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)

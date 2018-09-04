@@ -29,7 +29,6 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
@@ -231,7 +230,7 @@ func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 	}
 
 	log.Debugf("obtaining plugin %q", ref)
-	res := logicrunner.Object{}
+	res := rpctypes.Object{}
 	err = client.Call("RPC.GetObject", ref, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")

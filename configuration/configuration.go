@@ -28,12 +28,13 @@ import (
 
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
-	Host    HostNetwork
-	Node    NodeNetwork
-	Service ServiceNetwork
-	Ledger  Ledger
-	Log     Log
-	Stats   Stats
+	Host        HostNetwork
+	Node        NodeNetwork
+	Service     ServiceNetwork
+	Ledger      Ledger
+	Log         Log
+	Stats       Stats
+	LogicRunner LogicRunner
 }
 
 // Holder provides methods to manage configuration
@@ -45,12 +46,13 @@ type Holder struct {
 // NewConfiguration creates new default configuration
 func NewConfiguration() Configuration {
 	cfg := Configuration{
-		Host:    NewHostNetwork(),
-		Node:    NewNodeNetwork(),
-		Service: NewServiceNetwork(),
-		Ledger:  Ledger{},
-		Log:     NewLog(),
-		Stats:   NewStats(),
+		Host:        NewHostNetwork(),
+		Node:        NewNodeNetwork(),
+		Service:     NewServiceNetwork(),
+		Ledger:      Ledger{},
+		Log:         NewLog(),
+		Stats:       NewStats(),
+		LogicRunner: NewLogicRunner(),
 	}
 
 	return cfg
