@@ -53,4 +53,7 @@ type Store interface {
 	//
 	// Entropy is used for calculating node roles.
 	GetEntropy(record.PulseNum) ([]byte, error)
+
+	// Close() properly stops and closes storage.
+	Close() error
 }
