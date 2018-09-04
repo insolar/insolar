@@ -604,6 +604,21 @@ func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing
 	})
 }
 
+func TestLedgerArtifactManager_GetCode(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	codeRef := genRandomRef()
+
+	desc, err := td.manager.GetCode(*codeRef.CoreRef())
+	assert.NoError(t, err)
+	assert.Equal(t, CodeDescriptor{
+		manager: td.manager.(*LedgerArtifactManager),
+		ref:     codeRef,
+	}, *desc.(*CodeDescriptor))
+}
+
 func TestLedgerArtifactManager_GetLatestObj_VerifiesRecords(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)

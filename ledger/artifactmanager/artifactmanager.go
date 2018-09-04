@@ -629,7 +629,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 // GetCode returns code from code record by provided reference.
 //
 // This method is used by VM to fetch code for execution.
-func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (CodeDescriptor, error) {
+func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
 	codeRef := record.Core2Reference(code)
 
 	desc := CodeDescriptor{
@@ -637,7 +637,7 @@ func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (CodeDescriptor, er
 		manager: m,
 	}
 
-	return desc, nil
+	return &desc, nil
 }
 
 // GetLatestObj returns descriptors for latest known state of the object/class known to the storage. The caller
