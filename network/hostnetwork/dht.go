@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/huandu/xstrings"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -41,13 +42,10 @@ import (
 	"github.com/jbenet/go-base58"
 )
 
-// RemoteProcedure is remote procedure call function.
-type RemoteProcedure func(args [][]byte) ([]byte, error)
-
 // RPC is remote procedure call interface
 type RPC interface {
 	RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error)
-	RemoteProcedureRegister(name string, method RemoteProcedure)
+	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 }
 
 // DHT represents the state of the local host in the distributed hash table.
@@ -1504,7 +1502,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host
-func (dht *DHT) RemoteProcedureRegister(name string, method RemoteProcedure) {
+func (dht *DHT) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 	rp := func(sender *host.Host, args [][]byte) ([]byte, error) {
 		return method(args)
 	}

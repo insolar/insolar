@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/network/hostnetwork"
 )
 
 func TestTypeCompatibility(t *testing.T) {
@@ -77,8 +76,8 @@ func (r *testExecutor) CallConstructor(ref core.RecordRef, name string, args cor
 func TestBasics(t *testing.T) {
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	comps := core.Components{
-		"core.ArtifactManager": &testArtifactManager{},
-		"core.MessageRouter":   &testMessageRouter{},
+		"core.Ledger":        &testLedger{},
+		"core.MessageRouter": &testMessageRouter{},
 	}
 	assert.NoError(t, lr.Start(comps))
 	assert.IsType(t, &LogicRunner{}, lr)
@@ -96,12 +95,18 @@ func TestBasics(t *testing.T) {
 	assert.Equal(t, te, te2)
 }
 
+type testLedger struct {
+	artifactmanager.LedgerArtifactManager
+}
+
+func (r *testLedger) Start(components core.Components) error { return nil }
+func (r *testLedger) Stop() error                            { return nil }
+func (r *testLedger) GetManager() core.ArtifactManager       { return &r.LedgerArtifactManager }
+
 type testArtifactManager struct {
 	artifactmanager.LedgerArtifactManager
 }
 
-func (r *testArtifactManager) Start(components core.Components) error { return nil }
-func (r *testArtifactManager) Stop() error                            { return nil }
 func (r *testArtifactManager) Get(ref core.RecordRef) ([]byte, core.RecordRef, error) {
 	return []byte{}, core.RecordRef{}, nil
 }
@@ -110,18 +115,18 @@ type testMessageRouter struct{}
 
 func (testMessageRouter) Start(components core.Components) error { return nil }
 func (testMessageRouter) Stop() error                            { return nil }
-func (testMessageRouter) Route(ctx hostnetwork.Context, msg core.Message) (resp core.Response, err error) {
+func (testMessageRouter) Route(msg core.Message) (resp core.Response, err error) {
 	panic("implement me")
 }
 
 func TestExecution(t *testing.T) {
-	am := &testArtifactManager{}
+	ld := &testLedger{}
 	mr := &testMessageRouter{}
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
 	lr.Start(core.Components{
-		"core.ArtifactManager": am,
-		"core.MessageRouter":   mr,
+		"core.Ledger":        ld,
+		"core.MessageRouter": mr,
 	})
 
 	te := newTestExecutor()
