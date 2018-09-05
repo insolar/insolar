@@ -223,8 +223,8 @@ func (s *Store) GetCurrentPulse() record.PulseNum {
 
 // BeginTransaction opens a new transaction. All methods called on returned transaction manager will commit changes to
 // disk only after "Commit" was called.
-func (s *Store) BeginTransaction(update bool) TransactionManager {
-	return TransactionManager{
+func (s *Store) BeginTransaction(update bool) *TransactionManager {
+	return &TransactionManager{
 		store: s,
 		txn:   s.db.NewTransaction(update),
 	}
@@ -235,7 +235,7 @@ func (s *Store) View(fn func(*TransactionManager) error) error {
 	tx := s.BeginTransaction(false)
 	defer tx.Discard()
 
-	return fn(&tx)
+	return fn(tx)
 }
 
 // Update accepts transaction function and commits changes. All calls to received transaction manager will be
@@ -244,7 +244,7 @@ func (s *Store) Update(fn func(*TransactionManager) error) error {
 	tx := s.BeginTransaction(false)
 	defer tx.Discard()
 
-	err := fn(&tx)
+	err := fn(tx)
 	if err != nil {
 		return err
 	}
