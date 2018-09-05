@@ -18,6 +18,7 @@ package storage
 
 import (
 	"github.com/dgraph-io/badger"
+
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
@@ -65,7 +66,6 @@ func (m *TransactionManager) GetRecord(ref *record.Reference) (record.Record, er
 	if err != nil {
 		return nil, err
 	}
-
 	return raw.ToRecord(), nil
 }
 
@@ -88,7 +88,6 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, er
 	if err != nil {
 		return nil, err
 	}
-
 	return ref, nil
 }
 

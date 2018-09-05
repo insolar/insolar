@@ -147,7 +147,6 @@ func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, erro
 	if err != nil {
 		return nil, err
 	}
-
 	return idx, nil
 }
 
@@ -288,7 +287,6 @@ func (s *Store) BeginTransaction(update bool) *TransactionManager {
 func (s *Store) View(fn func(*TransactionManager) error) error {
 	tx := s.BeginTransaction(false)
 	defer tx.Discard()
-
 	return fn(tx)
 }
 
@@ -302,6 +300,5 @@ func (s *Store) Update(fn func(*TransactionManager) error) error {
 	if err != nil {
 		return err
 	}
-
 	return tx.Commit()
 }
