@@ -17,8 +17,11 @@
 package testutil
 
 import (
+	"errors"
 	"go/build"
 	"os"
+
+	"github.com/insolar/insolar/core"
 )
 
 // ChangeGoPath prepends `path` to GOPATH environment variable
@@ -64,4 +67,143 @@ func WriteFile(dir string, name string, text string) error {
 	}
 
 	return nil
+}
+
+// TestCodeDescriptor implementation for tests
+type TestCodeDescriptor struct {
+	ARef  *core.RecordRef
+	ACode []byte
+}
+
+// Ref implementation for tests
+func (t *TestCodeDescriptor) Ref() *core.RecordRef {
+	return t.ARef
+}
+
+// Code implementation for tests
+func (t *TestCodeDescriptor) Code() ([]byte, error) {
+	return t.ACode, nil
+}
+
+// TestObjectDescriptor implementation for tests
+type TestObjectDescriptor struct {
+	Data []byte
+	Code *TestCodeDescriptor
+}
+
+// HeadRef implementation for tests
+func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
+	panic("not implemented")
+}
+
+// StateRef implementation for tests
+func (t *TestObjectDescriptor) StateRef() *core.RecordRef {
+	panic("not implemented")
+}
+
+// Memory implementation for tests
+func (t *TestObjectDescriptor) Memory() ([]byte, error) {
+	return t.Data, nil
+}
+
+// CodeDescriptor implementation for tests
+func (t *TestObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
+	if t.Code == nil {
+		return nil, errors.New("No code")
+	}
+	return t.Code, nil
+}
+
+// ClassDescriptor implementation for tests
+func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
+	panic("not implemented")
+}
+
+// TestArtifactManager implementation for tests
+type TestArtifactManager struct {
+	Codes   map[core.RecordRef]*TestCodeDescriptor
+	Objects map[core.RecordRef]*TestObjectDescriptor
+}
+
+// NewTestArtifactManager implementation for tests
+func NewTestArtifactManager() *TestArtifactManager {
+	return &TestArtifactManager{
+		Codes:   make(map[core.RecordRef]*TestCodeDescriptor),
+		Objects: make(map[core.RecordRef]*TestObjectDescriptor),
+	}
+}
+
+func (t *TestArtifactManager) Start(components core.Components) error { return nil }
+func (t *TestArtifactManager) Stop() error                            { return nil }
+
+// SetArchPref implementation for tests
+func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
+}
+
+// GetExactObj implementation for tests
+func (t *TestArtifactManager) GetExactObj(class core.RecordRef, object core.RecordRef) ([]byte, []byte, error) {
+	panic("not implemented")
+}
+
+// GetLatestObj implementation for tests
+func (t *TestArtifactManager) GetLatestObj(object core.RecordRef) (core.ObjectDescriptor, error) {
+	res, ok := t.Objects[object]
+	if !ok {
+		return nil, errors.New("No object")
+	}
+	return res, nil
+}
+
+// DeclareType implementation for tests
+func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+// DeployCode implementation for tests
+func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, types []core.RecordRef, codeMap map[core.MachineType][]byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+// GetCode implementation for tests
+func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
+	res, ok := t.Codes[code]
+	if !ok {
+		return nil, errors.New("No code")
+	}
+	return res, nil
+}
+
+// ActivateClass implementation for tests
+func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+// DeactivateClass implementation for tests
+func (t *TestArtifactManager) DeactivateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+// UpdateClass implementation for tests
+func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+// ActivateObj implementation for tests
+func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+// DeactivateObj implementation for tests
+func (t *TestArtifactManager) DeactivateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+// UpdateObj implementation for tests
+func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
+// AppendObjDelegate implementation for tests
+func (t *TestArtifactManager) AppendObjDelegate(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
 }
