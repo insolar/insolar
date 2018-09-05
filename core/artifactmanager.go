@@ -99,7 +99,7 @@ type CodeDescriptor interface {
 
 	// Code fetches code from storage. Code will be fetched according to architecture preferences
 	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
-	Code() ([]byte, error)
+	Code() ([]byte, MachineType, error)
 }
 
 // ClassDescriptor represents meta info required to fetch all object data.

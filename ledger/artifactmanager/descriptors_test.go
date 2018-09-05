@@ -63,9 +63,10 @@ func TestCodeDescriptor_GetCode(t *testing.T) {
 		ref:     td.ref,
 	}
 
-	code, err := desc.Code()
+	code, mt, err := desc.Code()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1, 2, 3}, code)
+	assert.Equal(t, core.MachineType(1), mt)
 }
 
 type preparedClassDescriptorTestData struct {
