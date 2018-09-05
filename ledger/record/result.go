@@ -158,14 +158,14 @@ type TypeRecord struct {
 
 // GetCode returns class code according to provided architecture preferences. If preferences are not provided or the
 // record does not contain code for any of provided architectures an error will be returned.
-func (r *CodeRecord) GetCode(archPref []core.MachineType) ([]byte, error) {
+func (r *CodeRecord) GetCode(archPref []core.MachineType) ([]byte, core.MachineType, error) {
 	for _, arch := range archPref {
 		code, ok := r.TargetedCode[arch]
 		if ok {
-			return code, nil
+			return code, arch, nil
 		}
 	}
-	return nil, errors.New("code for preferred architectures not found")
+	return nil, 0, errors.New("code for preferred architectures not found")
 }
 
 // AmendRecord is produced when we modify another record in ledger.

@@ -99,6 +99,12 @@ type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *RecordRef
 
+	// MachineType fetches code from storage and returns first available machine type according to architecture
+	// preferences.
+	//
+	// Code for returned machine type will be fetched by Code method.
+	MachineType() (MachineType, error)
+
 	// Code fetches code from storage. Code will be fetched according to architecture preferences
 	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
 	Code() ([]byte, error)

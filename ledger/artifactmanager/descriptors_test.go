@@ -54,7 +54,21 @@ func prepareCodeDescriptorTestData(t *testing.T) (preparedCodeDescriptorTestData
 	}, cleaner
 }
 
-func TestCodeDescriptor_GetCode(t *testing.T) {
+func TestCodeDescriptor_MachineType(t *testing.T) {
+	td, cleaner := prepareCodeDescriptorTestData(t)
+	defer cleaner()
+
+	desc := CodeDescriptor{
+		manager: td.manager,
+		ref:     td.ref,
+	}
+
+	mt, err := desc.MachineType()
+	assert.NoError(t, err)
+	assert.Equal(t, core.MachineType(1), mt)
+}
+
+func TestCodeDescriptor_Code(t *testing.T) {
 	td, cleaner := prepareCodeDescriptorTestData(t)
 	defer cleaner()
 

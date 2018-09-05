@@ -71,13 +71,19 @@ func WriteFile(dir string, name string, text string) error {
 
 // TestCodeDescriptor implementation for tests
 type TestCodeDescriptor struct {
-	ARef  *core.RecordRef
-	ACode []byte
+	ARef         *core.RecordRef
+	ACode        []byte
+	AMachineType core.MachineType
 }
 
 // Ref implementation for tests
 func (t *TestCodeDescriptor) Ref() *core.RecordRef {
 	return t.ARef
+}
+
+// MachineType implementation for tests
+func (t *TestCodeDescriptor) MachineType() (core.MachineType, error) {
+	return t.AMachineType, nil
 }
 
 // Code implementation for tests

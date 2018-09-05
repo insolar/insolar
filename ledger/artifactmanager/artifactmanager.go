@@ -48,17 +48,17 @@ func (m *LedgerArtifactManager) getCodeRecord(codeRef record.Reference) (*record
 	return codeRec, nil
 }
 
-func (m *LedgerArtifactManager) getCodeRecordCode(codeRef record.Reference) ([]byte, error) {
+func (m *LedgerArtifactManager) getCodeRecordCode(codeRef record.Reference) ([]byte, core.MachineType, error) {
 	codeRec, err := m.getCodeRecord(codeRef)
 	if err != nil {
-		return nil, err
+		return nil, core.MachineTypeNotExist, err
 	}
-	code, err := codeRec.GetCode(m.archPref)
+	code, mt, err := codeRec.GetCode(m.archPref)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code")
+		return nil, mt, errors.Wrap(err, "failed to retrieve code")
 	}
 
-	return code, nil
+	return code, mt, nil
 }
 
 func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
@@ -591,7 +591,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
 	}
 
-	code, err := m.getCodeRecordCode(codeRef)
+	code, _, err := m.getCodeRecordCode(codeRef)
 	if err != nil {
 		return nil, nil, err
 	}
