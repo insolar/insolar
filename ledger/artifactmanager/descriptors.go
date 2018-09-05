@@ -34,15 +34,24 @@ func (d *CodeDescriptor) Ref() *core.RecordRef {
 	return d.ref.CoreRef()
 }
 
+// MachineType fetches code from storage and returns first available machine type according to architecture
+// preferences.
+//
+// Code for returned machine type will be fetched by Code method.
+func (d *CodeDescriptor) MachineType() (core.MachineType, error) {
+	_, mt, err := d.manager.getCodeRecordCode(*d.ref)
+	return mt, err
+}
+
 // Code fetches code from storage. Code will be fetched according to architecture preferences
 // set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
-func (d *CodeDescriptor) Code() ([]byte, core.MachineType, error) {
-	code, mt, err := d.manager.getCodeRecordCode(*d.ref)
+func (d *CodeDescriptor) Code() ([]byte, error) {
+	code, _, err := d.manager.getCodeRecordCode(*d.ref)
 	if err != nil {
-		return nil, mt, err
+		return nil, err
 	}
 
-	return code, mt, nil
+	return code, nil
 }
 
 // ClassDescriptor represents meta info required to fetch all class data.

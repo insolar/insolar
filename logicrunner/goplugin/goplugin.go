@@ -71,8 +71,7 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 		return err
 	}
 
-	// TODO: use machine type here
-	code, _, err := codeDescriptor.Code()
+	code, err := codeDescriptor.Code()
 	if err != nil {
 		return err
 	}

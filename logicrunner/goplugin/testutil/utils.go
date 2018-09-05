@@ -81,9 +81,14 @@ func (t *TestCodeDescriptor) Ref() *core.RecordRef {
 	return t.ARef
 }
 
+// MachineType implementation for tests
+func (t *TestCodeDescriptor) MachineType() (core.MachineType, error) {
+	return t.AMachineType, nil
+}
+
 // Code implementation for tests
-func (t *TestCodeDescriptor) Code() ([]byte, core.MachineType, error) {
-	return t.ACode, t.AMachineType, nil
+func (t *TestCodeDescriptor) Code() ([]byte, error) {
+	return t.ACode, nil
 }
 
 // TestObjectDescriptor implementation for tests
