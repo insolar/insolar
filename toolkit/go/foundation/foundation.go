@@ -122,17 +122,17 @@ func (bc *BaseContract) GetChildrenTyped(r Reference) []ProxyInterface {
 	return FakeChildren[bc.GetReference().String()][r.String()]
 }
 
-func SaveToLedger(rec BaseContractInterface, class Reference) Reference {
+func SaveToLedger(contract BaseContractInterface, class Reference) Reference {
 	key, err := uuid.NewV4()
 	if err != nil {
 		log.Fatal("uuid creting error", err.Error())
 	}
 
-	rec.SetContext(&CallContext{
+	contract.SetContext(&CallContext{
 		Me:    Reference(key.String()),
 		Class: class,
 	})
-	FakeLedger[key.String()] = rec.(ProxyInterface)
+	FakeLedger[key.String()] = contract.(ProxyInterface)
 	return Reference(key.String())
 }
 
@@ -163,30 +163,30 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) R
 }
 
 func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class Reference) Reference {
-	me := bc.GetReference()
+	selfRef := bc.GetReference()
 	key, err := uuid.NewV4()
 	if err != nil {
 		log.Fatal("uuid creting error", err.Error())
 	}
 
 	delegate.SetContext(&CallContext{
-		Parent: me,
+		Parent: selfRef,
 		Me:     Reference(key.String()),
 		Class:  class,
 	})
 
 	FakeLedger[key.String()] = delegate.(ProxyInterface)
 
-	if FakeDelegates[me.String()] == nil {
-		FakeDelegates[me.String()] = make(map[string]ProxyInterface)
+	if FakeDelegates[selfRef.String()] == nil {
+		FakeDelegates[selfRef.String()] = make(map[string]ProxyInterface)
 	}
-	FakeDelegates[me.String()][class.String()] = delegate.(ProxyInterface)
+	FakeDelegates[selfRef.String()][class.String()] = delegate.(ProxyInterface)
 
-	if FakeChildren[me.String()] == nil {
-		FakeChildren[me.String()] = make(map[string][]ProxyInterface)
+	if FakeChildren[selfRef.String()] == nil {
+		FakeChildren[selfRef.String()] = make(map[string][]ProxyInterface)
 	}
 
-	FakeChildren[me.String()][class.String()] = append(FakeChildren[me.String()][class.String()], delegate.(ProxyInterface))
+	FakeChildren[selfRef.String()][class.String()] = append(FakeChildren[selfRef.String()][class.String()], delegate.(ProxyInterface))
 	return Reference(key.String())
 }
 

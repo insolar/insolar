@@ -42,11 +42,13 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *{{ $.ContractType }} {
 {{ end }}
 
 // GetReference
+// TODO replace return to Reference
 func (r *{{ $.ContractType }}) GetReference() string {
     return r.Reference
 }
 
 // GetClass
+// TODO replace return to Reference
 func (r *{{ $.ContractType }}) GetClass() string {
     return ClassReference
 }
