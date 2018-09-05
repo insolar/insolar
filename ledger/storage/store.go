@@ -293,7 +293,7 @@ func (s *Store) View(fn func(*TransactionManager) error) error {
 // Update accepts transaction function and commits changes. All calls to received transaction manager will be
 // consistent and written tp disk or an error will be returned.
 func (s *Store) Update(fn func(*TransactionManager) error) error {
-	tx := s.BeginTransaction(false)
+	tx := s.BeginTransaction(true)
 	defer tx.Discard()
 
 	err := fn(tx)
