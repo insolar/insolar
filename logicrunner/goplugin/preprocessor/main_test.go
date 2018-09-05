@@ -290,11 +290,11 @@ func (w *A) Receive(amount uint, from foundation.Reference) foundation.Reference
 
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "test", &bufProxy)
-	assert.Contains(t, bufProxy.String(), "resList[0] = *new([64]byte)")
+	assert.Contains(t, bufProxy.String(), "resList[0] = foundation.Reference([64]byte{})")
 
 	var bufWrapper bytes.Buffer
 	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
-	assert.Contains(t, bufWrapper.String(), "args[1] = *new([64]byte)")
+	assert.Contains(t, bufWrapper.String(), "args[1] = foundation.Reference([64]byte{})")
 }
 
 func TestRewritePackage(t *testing.T) {
