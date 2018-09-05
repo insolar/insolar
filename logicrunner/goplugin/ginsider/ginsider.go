@@ -311,6 +311,28 @@ func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (
 	return res.Data, res.Err
 }
 
+// SaveAsChild ...
+func (t *GoInsider) SaveAsChild(parentRef, classRef string, data []byte) (string, error) {
+	client, err := t.Upstream()
+	if err != nil {
+		return "", err
+	}
+
+	req := rpctypes.UpSaveAsChildReq{
+		Parent: core.String2Ref(parentRef),
+		Class:  core.String2Ref(classRef),
+		Data:   data,
+	}
+
+	res := rpctypes.UpSaveAsChildResp{}
+	err = client.Call("RPC.SaveAsChild", req, &res)
+	if err != nil {
+		return "", errors.Wrap(err, "on calling main API")
+	}
+
+	return res.Reference.String(), nil
+}
+
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (t *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)

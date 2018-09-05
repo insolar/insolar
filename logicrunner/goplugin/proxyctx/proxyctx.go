@@ -20,6 +20,7 @@ package proxyctx
 type ProxyHelper interface {
 	RouteCall(ref string, method string, args []byte) ([]byte, error)
 	RouteConstructorCall(classRef string, name string, args []byte) ([]byte, error)
+	SaveAsChild(parentRef, classRef string, data []byte) (string, error)
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 }
