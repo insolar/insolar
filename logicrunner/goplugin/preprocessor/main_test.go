@@ -221,36 +221,6 @@ func main() {
 	assert.NoError(t, err, string(out))
 }
 
-func TestGenerateProxyAndWrapperForBoolParams(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir) //nolint: errcheck
-
-	testContract := "/test.go"
-	err = testutil.WriteFile(tmpDir, testContract, `
-package main
-type A struct{
-foundation.BaseContract
-}
-
-func ( A ) Get( b bool ) bool{
-	return true
-}
-`)
-	assert.NoError(t, err)
-
-	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
-	assert.NoError(t, err)
-	assert.Contains(t, bufProxy.String(), "resList[0] = bool(false)")
-
-	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
-	assert.NoError(t, err)
-	assert.Contains(t, bufWrapper.String(), "args[0] = bool(false)")
-
-}
-
 func TestGenerateProxyAndWrapperWithoutReturnValue(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
@@ -305,6 +275,80 @@ type A struct{
 	var bufWrapper bytes.Buffer
 	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
+}
+
+func TestInitializationFunctionParamsProxy(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir) // nolint: errcheck
+
+	testContract := "/test.go"
+
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool, string, foundation.Reference ){
+	return
+}
+`)
+
+	assert.NoError(t, err)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), "var a0 int")
+	assert.Contains(t, bufProxy.String(), "resList[0] = a0")
+
+	assert.Contains(t, bufProxy.String(), "var a1 bool")
+	assert.Contains(t, bufProxy.String(), "resList[1] = a1")
+
+	assert.Contains(t, bufProxy.String(), "var a2 string")
+	assert.Contains(t, bufProxy.String(), "resList[2] = a2")
+
+	assert.Contains(t, bufProxy.String(), "var a3 foundation.Reference")
+	assert.Contains(t, bufProxy.String(), "resList[3] = a3")
+}
+
+func TestInitializationFunctionParamsWrapper(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir) //nolint: errcheck
+
+	testContract := "/test.go"
+
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool, string, foundation.Reference ){
+	return
+}
+`)
+
+	assert.NoError(t, err)
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), "var a0 int")
+	assert.Contains(t, bufWrapper.String(), "args[0] = a0")
+
+	assert.Contains(t, bufWrapper.String(), "var a1 bool")
+	assert.Contains(t, bufWrapper.String(), "args[1] = a1")
+
+	assert.Contains(t, bufWrapper.String(), "var a2 string")
+	assert.Contains(t, bufWrapper.String(), "args[2] = a2")
+
+	assert.Contains(t, bufWrapper.String(), "var a3 foundation.Reference")
+	assert.Contains(t, bufWrapper.String(), "args[3] = a3")
 }
 
 func TestContractOnlyIfEmbedBaseContract(t *testing.T) {
