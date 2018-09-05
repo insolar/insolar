@@ -83,8 +83,8 @@ type UpRouteConstructorReq struct {
 
 // UpRouteConstructorResp is response from RouteConstructor RPC in goplugin
 type UpRouteConstructorResp struct {
-	Reference core.RecordRef
-	Err       error
+	Data []byte
+	Err  error
 }
 
 // Object is an inner representation of storage object for transfering it over API

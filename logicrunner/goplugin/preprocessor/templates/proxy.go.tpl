@@ -31,8 +31,7 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *{{ $.ContractType }} {
         panic(err)
     }
 
-	// TODO: type
-    ref, err := proxyctx.Current.RouteConstructorCall(ClassReference, "{{ $func.Name }}", argsSerialized)
+    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "{{ $func.Name }}", argsSerialized)
     if err != nil {
 		panic(err)
     }

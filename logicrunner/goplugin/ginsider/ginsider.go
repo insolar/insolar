@@ -290,10 +290,10 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 }
 
 // RouteConstructorCall ...
-func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (string, error) {
+func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) ([]byte, error) {
 	client, err := t.Upstream()
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
 	req := rpctypes.UpRouteConstructorReq{
@@ -305,10 +305,10 @@ func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (
 	res := rpctypes.UpRouteConstructorResp{}
 	err = client.Call("RPC.RouteConstructorCall", req, &res)
 	if err != nil {
-		return "", errors.Wrap(err, "on calling main API")
+		return []byte{}, errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference.String(), res.Err
+	return res.Data, res.Err
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`

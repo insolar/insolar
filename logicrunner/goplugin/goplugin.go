@@ -126,10 +126,8 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
 	}
 
-	// TODO: store data on ledger via artifact manager
-	_ = res.Data
+	reply.Data = res.Data
 
-	reply.Reference = core.String2Ref("some-ref")
 
 	return nil
 }

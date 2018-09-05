@@ -19,7 +19,7 @@ package proxyctx
 // ProxyHelper interface with methods that are needed by contract proxies
 type ProxyHelper interface {
 	RouteCall(ref string, method string, args []byte) ([]byte, error)
-	RouteConstructorCall(ref string, name string, args []byte) (string, error)
+	RouteConstructorCall(classRef string, name string, args []byte) ([]byte, error)
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 }
