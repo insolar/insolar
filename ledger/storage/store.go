@@ -18,6 +18,7 @@ package storage
 
 import (
 	"path/filepath"
+	"sync"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/ledger/hash"
@@ -38,6 +39,8 @@ const (
 type Store struct {
 	db           *badger.DB
 	currentPulse record.PulseNum
+
+	dropWG sync.WaitGroup
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -200,11 +203,16 @@ func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	return drop, nil
 }
 
+func (s *Store) waitinflight() {
+	s.dropWG.Wait()
+}
+
 // SetDrop stores jet drop for given pulse number.
 //
 // Previous JetDrop should be provided. On success returns saved drop hash.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+	// MAYBE: add select with panic on timeout?
+	s.waitinflight()
 
 	hw := hash.NewSHA3()
 	err := s.ProcessSlotHashes(pulse, func(it HashIterator) error {
@@ -232,6 +240,7 @@ func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetd
 		return nil, err
 	}
 
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 	err = s.Set(k, encoded)
 	if err != nil {
 		drop = nil
@@ -277,9 +286,13 @@ func (s *Store) GetCurrentPulse() record.PulseNum {
 // All methods called on returned transaction manager will persist changes
 // only after success on "Commit" call.
 func (s *Store) BeginTransaction(update bool) *TransactionManager {
+	if update {
+		s.dropWG.Add(1)
+	}
 	return &TransactionManager{
-		store: s,
-		txn:   s.db.NewTransaction(update),
+		store:  s,
+		txn:    s.db.NewTransaction(update),
+		update: update,
 	}
 }
 

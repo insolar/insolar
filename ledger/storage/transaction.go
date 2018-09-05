@@ -25,8 +25,9 @@ import (
 
 // TransactionManager is used to ensure persistent writes to disk.
 type TransactionManager struct {
-	store *Store
-	txn   *badger.Txn
+	store  *Store
+	txn    *badger.Txn
+	update bool
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
@@ -43,6 +44,9 @@ func (m *TransactionManager) Commit() error {
 
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
+	if m.update {
+		m.store.dropWG.Done()
+	}
 	m.txn.Discard()
 }
 
