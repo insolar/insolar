@@ -14,16 +14,18 @@
  *    limitations under the License.
  */
 
-package storagetest
+package storage_test
 
 import (
 	"bytes"
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
 func sorthashes(hashes [][]byte) {
@@ -33,7 +35,7 @@ func sorthashes(hashes [][]byte) {
 }
 
 func TestStore_SlotIterate(t *testing.T) {
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	var recset = []record.Record{

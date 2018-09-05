@@ -14,62 +14,24 @@
  *    limitations under the License.
  */
 
-package storagetest
+package storage_test
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
-
-func zerohash() []byte {
-	b := make([]byte, record.HashSize)
-	return b
-}
-
-func randhash() []byte {
-	b := zerohash()
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
-func hexhash(hash string) []byte {
-	b := zerohash()
-	if len(hash)%2 == 1 {
-		hash = "0" + hash
-	}
-	h, err := hex.DecodeString(hash)
-	if err != nil {
-		panic(err)
-	}
-	_ = copy(b, h)
-	return b
-}
-
-func referenceWithHashes(domainhash, recordhash string) record.Reference {
-	dh := hexhash(domainhash)
-	rh := hexhash(recordhash)
-
-	return record.Reference{
-		Domain: record.ID{Hash: dh},
-		Record: record.ID{Hash: rh},
-	}
-}
 
 func TestStore_GetRecordNotFound(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	ref := &record.Reference{}
@@ -80,7 +42,7 @@ func TestStore_GetRecordNotFound(t *testing.T) {
 
 func TestStore_SetRecord(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
@@ -117,7 +79,7 @@ func TestStore_SetRecord(t *testing.T) {
 
 func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	ref := &record.Reference{
@@ -131,7 +93,7 @@ func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 
 func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	zerodomain := record.ID{Hash: zerohash()}
@@ -165,7 +127,7 @@ func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 
 func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	ref := referenceWithHashes("1000", "5000")
@@ -176,7 +138,7 @@ func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 
 func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
@@ -199,7 +161,7 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 
 func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	drop, err := store.GetDrop(1)
@@ -209,7 +171,7 @@ func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 
 func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	// it references on 'fake' zero
@@ -227,7 +189,7 @@ func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 
 func TestStore_SetCurrentPulse(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	store.SetCurrentPulse(42)
@@ -236,7 +198,7 @@ func TestStore_SetCurrentPulse(t *testing.T) {
 
 func TestStore_SetEntropy(t *testing.T) {
 	t.Parallel()
-	store, cleaner := TmpStore(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	store.SetEntropy(42, []byte{1, 2, 3})
