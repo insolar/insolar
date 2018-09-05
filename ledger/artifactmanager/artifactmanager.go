@@ -51,7 +51,7 @@ func (m *LedgerArtifactManager) getCodeRecord(codeRef record.Reference) (*record
 func (m *LedgerArtifactManager) getCodeRecordCode(codeRef record.Reference) ([]byte, core.MachineType, error) {
 	codeRec, err := m.getCodeRecord(codeRef)
 	if err != nil {
-		return nil, 0, err
+		return nil, core.MachineTypeNotExist, err
 	}
 	code, mt, err := codeRec.GetCode(m.archPref)
 	if err != nil {
