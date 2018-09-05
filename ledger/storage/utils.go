@@ -14,16 +14,4 @@
  *    limitations under the License.
  */
 
-package storagetestutils
-
-import (
-	"testing"
-
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/badgerdb/badgertestutils"
-)
-
-// TmpStore returns current store implementation and cleanup function.
-func TmpStore(t *testing.T) (storage.Store, func()) {
-	return badgertestutils.TmpDB(t, "")
-}
+package storage

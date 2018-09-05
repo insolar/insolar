@@ -14,48 +14,36 @@
  *    limitations under the License.
  */
 
-package badgerdb_test
+package storagetest
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"io/ioutil"
+	"os"
+	"testing"
 
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage"
 )
 
-func zerohash() []byte {
-	b := make([]byte, record.HashSize)
-	return b
-}
-
-func randhash() []byte {
-	b := zerohash()
-	_, err := rand.Read(b)
+// TmpStore returns BadgerDB's store implementation and cleanup function.
+//
+// Creates BadgerDB in temporary directory and uses t for errors reporting.
+func TmpStore(t *testing.T, dir string) (*storage.Store, func()) {
+	tmpdir, err := ioutil.TempDir(dir, "bdb-test-")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	return b
-}
-
-func hexhash(hash string) []byte {
-	b := zerohash()
-	if len(hash)%2 == 1 {
-		hash = "0" + hash
-	}
-	h, err := hex.DecodeString(hash)
+	store, err := storage.NewStore(tmpdir, nil)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	_ = copy(b, h)
-	return b
-}
-
-func referenceWithHashes(domainhash, recordhash string) record.Reference {
-	dh := hexhash(domainhash)
-	rh := hexhash(recordhash)
-
-	return record.Reference{
-		Domain: record.ID{Hash: dh},
-		Record: record.ID{Hash: rh},
+	return store, func() {
+		closeErr := store.Close()
+		rmErr := os.RemoveAll(tmpdir)
+		if closeErr != nil {
+			t.Error("temporary db close failed", closeErr)
+		}
+		if rmErr != nil {
+			t.Fatal("temporary db dir cleanup failed", rmErr)
+		}
 	}
 }

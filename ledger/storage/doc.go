@@ -14,6 +14,5 @@
  *    limitations under the License.
  */
 
-// Package storage contains low level interfaces and common structures
-// for concrete ledger storage engine implementations
+// Package storage contains ledger store implementation on top of BadgerDB engine.
 package storage
