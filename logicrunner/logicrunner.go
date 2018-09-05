@@ -118,5 +118,12 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 		return &core.Response{Error: errors.Wrap(err, "executer error")}
 	}
 
+	_, err = lr.ArtifactManager.UpdateObj(
+		core.RecordRef{}, core.RecordRef{}, msg.Reference, newData,
+	)
+	if err != nil {
+		return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
+	}
+
 	return &core.Response{Data: newData, Result: result}
 }
