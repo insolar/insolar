@@ -39,14 +39,14 @@ func (d *CodeDescriptor) Ref() *core.RecordRef {
 //
 // Code for returned machine type will be fetched by Code method.
 func (d *CodeDescriptor) MachineType() (core.MachineType, error) {
-	_, mt, err := d.manager.getCodeRecordCode(*d.ref)
+	_, mt, err := d.manager.getCodeRecordCode(d.manager.store, *d.ref)
 	return mt, err
 }
 
 // Code fetches code from storage. Code will be fetched according to architecture preferences
 // set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
 func (d *CodeDescriptor) Code() ([]byte, error) {
-	code, _, err := d.manager.getCodeRecordCode(*d.ref)
+	code, _, err := d.manager.getCodeRecordCode(d.manager.store, *d.ref)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
 	var migrations [][]byte
 	for _, amendRec := range sortedAmends {
 		for _, codeRef := range amendRec.Migrations {
-			code, _, err := d.manager.getCodeRecordCode(codeRef)
+			code, _, err := d.manager.getCodeRecordCode(d.manager.store, codeRef)
 			if err != nil {
 				return nil, errors.Wrap(err, "invalid migration reference in amend record")
 			}
