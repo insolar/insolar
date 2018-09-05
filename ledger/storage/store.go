@@ -18,13 +18,15 @@ package storage
 
 import (
 	"path/filepath"
+	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -38,6 +40,8 @@ const (
 type Store struct {
 	db           *badger.DB
 	currentPulse record.PulseNum
+
+	dropWG sync.WaitGroup
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -95,7 +99,7 @@ func (s *Store) Get(key []byte) ([]byte, error) {
 			}
 			return err
 		}
-		buf, err = item.Value()
+		buf, err = item.ValueCopy(nil)
 		return err
 	})
 	if txerr != nil {
@@ -147,7 +151,6 @@ func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, erro
 	if err != nil {
 		return nil, err
 	}
-
 	return idx, nil
 }
 
@@ -187,7 +190,7 @@ func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline)
 	return tx.Commit()
 }
 
-// GetDrop wraps matching transaction manager method.
+// GetDrop returns jet drop for a given pulse number.
 func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 	buf, err := s.Get(k)
@@ -201,9 +204,15 @@ func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	return drop, nil
 }
 
-// SetDrop wraps matching transaction manager method.
+func (s *Store) waitinflight() {
+	s.dropWG.Wait()
+}
+
+// SetDrop stores jet drop for given pulse number.
+//
+// Previous JetDrop should be provided. On success returns saved drop hash.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+	s.waitinflight()
 
 	hw := hash.NewSHA3()
 	err := s.ProcessSlotHashes(pulse, func(it HashIterator) error {
@@ -231,6 +240,7 @@ func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetd
 		return nil, err
 	}
 
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 	err = s.Set(k, encoded)
 	if err != nil {
 		drop = nil
@@ -276,9 +286,13 @@ func (s *Store) GetCurrentPulse() record.PulseNum {
 // All methods called on returned transaction manager will persist changes
 // only after success on "Commit" call.
 func (s *Store) BeginTransaction(update bool) *TransactionManager {
+	if update {
+		s.dropWG.Add(1)
+	}
 	return &TransactionManager{
-		store: s,
-		txn:   s.db.NewTransaction(update),
+		store:  s,
+		txn:    s.db.NewTransaction(update),
+		update: update,
 	}
 }
 
@@ -286,20 +300,18 @@ func (s *Store) BeginTransaction(update bool) *TransactionManager {
 func (s *Store) View(fn func(*TransactionManager) error) error {
 	tx := s.BeginTransaction(false)
 	defer tx.Discard()
-
 	return fn(tx)
 }
 
 // Update accepts transaction function and commits changes. All calls to received transaction manager will be
 // consistent and written tp disk or an error will be returned.
 func (s *Store) Update(fn func(*TransactionManager) error) error {
-	tx := s.BeginTransaction(false)
+	tx := s.BeginTransaction(true)
 	defer tx.Discard()
 
 	err := fn(tx)
 	if err != nil {
 		return err
 	}
-
 	return tx.Commit()
 }
