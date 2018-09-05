@@ -28,13 +28,6 @@ type ID struct {
 	key []byte
 }
 
-// GetRandomKey generates and returns a random key for ID.
-func GetRandomKey() []byte {
-	key := make([]byte, 20)
-	_, _ = random.Read(key)
-	return key
-}
-
 // MarshalBinary is binary marshaler.
 func (id ID) MarshalBinary() ([]byte, error) {
 	var res bytes.Buffer
@@ -47,16 +40,15 @@ func (id ID) MarshalBinary() ([]byte, error) {
 func (id *ID) UnmarshalBinary(data []byte) error {
 	res := bytes.NewBuffer(data)
 	var key string
-	var hash string
-	_, err := fmt.Fscanln(res, &key, &hash)
+	_, err := fmt.Fscanln(res, &key)
 	id.key = base58.Decode(key)
 	return err
 }
 
 // NewID returns random host id.
-func NewID(key []byte) (ID, error) {
-	hash := make([]byte, 20) // TODO: choose hash func
-	_, err := random.Read(hash)
+func NewID() (ID, error) {
+	key := make([]byte, 20) // TODO: choose hash func
+	_, err := random.Read(key)
 	id := ID{key: key}
 	return id, err
 }

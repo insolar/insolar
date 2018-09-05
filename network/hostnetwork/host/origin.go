@@ -30,7 +30,7 @@ type Origin struct {
 // NewOrigin creates origin host from list of ids and network address.
 func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 	if len(ids) == 0 {
-		id1, err := id.NewID(id.GetRandomKey())
+		id1, err := id.NewID()
 		ids = append(ids, id1)
 
 		if err != nil {

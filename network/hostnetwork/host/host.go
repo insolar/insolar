@@ -44,5 +44,5 @@ func (host Host) String() string {
 
 // Equal checks if host equals to other host (e.g. hosts' IDs and network addresses match).
 func (host Host) Equal(other Host) bool {
-	return (other.Address != nil) && host.Address.Equal(*other.Address)
+	return host.ID.KeyEqual(other.ID.GetKey()) && (other.Address != nil) && host.Address.Equal(*other.Address)
 }

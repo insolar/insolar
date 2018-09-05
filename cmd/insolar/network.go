@@ -32,8 +32,5 @@ func StartNetwork(cfg configuration.Configuration) (core.Network, error) {
 		return nil, err
 	}
 
-	err = nw.Start(nil)
-
-	//n.Node = nodenetwork.NewNode("nodeID", "hostID", core.String2Ref("domainID"))
 	return nw, err
 }

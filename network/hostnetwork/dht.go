@@ -277,7 +277,7 @@ func (dht *DHT) FindHost(ctx Context, key string) (*host.Host, bool, error) {
 	} else if dht.proxy.ProxyHostsCount() > 0 {
 		address, _ := host.NewAddress(dht.proxy.GetNextProxyAddress())
 		// TODO: current key insertion
-		id1, _ := id.NewID(id.GetRandomKey())
+		id1, _ := id.NewID()
 		targetHost = &host.Host{ID: id1, Address: address}
 		return targetHost, true, nil
 	} else {
@@ -352,6 +352,7 @@ func (dht *DHT) Bootstrap() error {
 				wg.Done()
 				return
 			case <-time.After(dht.options.PacketTimeout):
+				log.Println("bootstrap response timeout")
 				future.Cancel()
 				wg.Done()
 				return
@@ -396,6 +397,7 @@ func (dht *DHT) iterateBootstrapHosts(
 			if err != nil {
 				continue
 			}
+			log.Println("sending ping to " + bn.Address.String())
 			wg.Add(1)
 			futures = append(futures, res)
 		} else {
@@ -1007,6 +1009,7 @@ func (dht *DHT) processStore(ctx Context, msg *packet.Packet, packetBuilder pack
 }
 
 func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
+	log.Println("recv ping message from " + msg.Sender.Address.String())
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(nil).Build())
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
@@ -1439,9 +1442,9 @@ func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
 	return nil
 }
 
-func (dht *DHT) handleObtainIPResponse(response *packet.ResponseObtainIP, target string) error {
+func (dht *DHT) handleObtainIPResponse(response *packet.ResponseObtainIP, targetID string) error {
 	if response.IP != "" {
-		dht.subnet.SubnetIDs[response.IP] = append(dht.subnet.SubnetIDs[response.IP], target)
+		dht.subnet.SubnetIDs[response.IP] = append(dht.subnet.SubnetIDs[response.IP], targetID)
 	} else {
 		return errors.New("received empty IP")
 	}
@@ -1449,8 +1452,8 @@ func (dht *DHT) handleObtainIPResponse(response *packet.ResponseObtainIP, target
 }
 
 // RemoteProcedureCall calls remote procedure on target host.
-func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error) {
-	targetHost, exists, err := dht.FindHost(ctx, target)
+func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+	targetHost, exists, err := dht.FindHost(ctx, targetID)
 	ht := dht.htFromCtx(ctx)
 
 	if err != nil {
@@ -1471,7 +1474,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, target string, method string, a
 		},
 	}
 
-	if target == dht.GetOriginHost(ctx).ID.KeyString() {
+	if targetID == dht.GetOriginHost(ctx).ID.KeyString() {
 		return dht.rpc.Invoke(request.Sender, method, args)
 	}
 
@@ -1608,12 +1611,12 @@ func (dht *DHT) handleRelayOwnership(response *packet.ResponseRelayOwnership, ta
 	}
 }
 
-func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
+func (dht *DHT) relayOwnershipRequest(targetID string, ready bool) error {
 	ctx, err := NewContextBuilder(dht).SetDefaultHost().Build()
 	if err != nil {
 		return err
 	}
-	targetHost, exist, err := dht.FindHost(ctx, target)
+	targetHost, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
@@ -1636,7 +1639,7 @@ func (dht *DHT) relayOwnershipRequest(target string, ready bool) error {
 		}
 
 		response := rsp.Data.(*packet.ResponseRelayOwnership)
-		dht.handleRelayOwnership(response, target)
+		dht.handleRelayOwnership(response, targetID)
 
 	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
