@@ -157,7 +157,6 @@ func mockFindHostResponse(request *packet.Packet, nextID []byte) *packet.Packet 
 	r.IsResponse = true
 	responseData := &packet.ResponseDataFindHost{}
 	id1, _ := id.NewID(id.GetRandomKey())
-	id1.SetHash(nextID)
 	responseData.Closest = []*host.Host{{ID: id1, Address: netAddr}}
 	r.Data = responseData
 	return r
@@ -631,7 +630,7 @@ func TestHostResponseSendError(t *testing.T) {
 				close(done)
 			} else {
 				queries++
-				res := mockFindHostResponse(request, getZerodIDWithNthByte(2, byte(255)).GetHash())
+				res := mockFindHostResponse(request, getZerodIDWithNthByte(2, byte(255)).GetKey())
 				mockTp.send <- res
 			}
 		}
@@ -835,7 +834,7 @@ func TestFindHostAllBuckets(t *testing.T) {
 				return
 			}
 
-			res := mockFindHostResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).GetHash())
+			res := mockFindHostResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).GetKey())
 
 			i--
 			if i < 0 {
@@ -905,17 +904,17 @@ func TestAddHostTimeout(t *testing.T) {
 				}
 
 				if hostsAdded == 1 {
-					firstHost = id1.GetHash()
+					firstHost = id1.GetKey()
 				}
 
 				if hostsAdded == routing.MaxContactsInBucket {
-					lastHost = id1.GetHash()
+					lastHost = id1.GetKey()
 				}
 
-				id1.GetHash()[1] = byte(255 - hostsAdded)
+				id1.GetKey()[1] = byte(255 - hostsAdded)
 				hostsAdded++
 
-				res := mockFindHostResponse(request, id1.GetHash())
+				res := mockFindHostResponse(request, id1.GetKey())
 				mockTp.send <- res
 			case packet.TypePing:
 				assert.Equal(t, packet.TypePing, request.Type)
@@ -929,8 +928,8 @@ func TestAddHostTimeout(t *testing.T) {
 
 	// ensure the first host in the table is the second host contacted, and the
 	// last is the last host contacted
-	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.GetHash(), firstHost))
-	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.GetHash(), lastHost))
+	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.GetKey(), firstHost))
+	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.GetKey(), lastHost))
 
 	dht.Disconnect()
 
@@ -966,13 +965,12 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
 	id1 := getIDWithValues(0)
-	id1.GetHash()[n] = v
+	id1.GetKey()[n] = v
 	return id1
 }
 
 func getIDWithValues(b byte) id.ID {
 	id1, _ := id.NewID(nil)
-	id1.SetHash([]byte{b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b, b})
 	return id1
 }
 
@@ -987,7 +985,7 @@ func TestDHT_FindHost(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
-		idx[i] = ids1[0].HashString()
+		idx[i] = ids1[0].KeyString()
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1163,7 +1161,7 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].HashString())
+		ids = append(ids, ids1[0].KeyString())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1232,7 +1230,7 @@ func TestDHT_RelayRequest(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].HashString())
+		ids = append(ids, ids1[0].KeyString())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1294,7 +1292,7 @@ func TestDHT_ObtainIP(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].HashString())
+		ids = append(ids, ids1[0].KeyString())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1345,7 +1343,7 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID(id.GetRandomKey())
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].HashString())
+		ids = append(ids, ids1[0].KeyString())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
