@@ -16,13 +16,25 @@ type {{ .ContractType }} struct {
     Reference string
 }
 
+type ContractHolder struct {
+	data []byte
+}
+
+func (r *ContractHolder)AsChild(objRef string) *{{ .ContractType }} {
+    panic("not implemented")
+}
+
+func (r *ContractHolder)AsDelegate(objRef string) *{{ .ContractType }} {
+    panic("not implemented")
+}
+
 // GetObject
 func GetObject(ref string) (r *{{ .ContractType }}) {
     return &{{ .ContractType }}{Reference: ref}
 }
 
 {{ range $func := .ConstructorsProxies }}
-func {{ $func.Name }}( {{ $func.Arguments }} ) *{{ $.ContractType }} {
+func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractHolder {
     {{ $func.InitArgs }}
 
     var argsSerialized []byte
@@ -36,7 +48,7 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *{{ $.ContractType }} {
 		panic(err)
     }
 
-    return &{{ $.ContractType }}{Reference: ref}
+    return &ContractHolder{Data: data}
 }
 {{ end }}
 
