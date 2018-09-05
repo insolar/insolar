@@ -19,12 +19,10 @@ package messagerouter
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/jbenet/go-base58"
+	"github.com/insolar/insolar/network/servicenetwork"
 )
 
 const deliverRPCMethodName = "MessageRouter.Deliver"
@@ -33,30 +31,33 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // e.g. glue between network and logic runner
 type MessageRouter struct {
 	LogicRunner core.LogicRunner
-	rpc         hostnetwork.RPC
+	service     *servicenetwork.ServiceNetwork
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
 // that satisfies `LogicRunner` interface
-func New(lr core.LogicRunner, rpc hostnetwork.RPC) (*MessageRouter, error) {
-	mr := &MessageRouter{lr, rpc}
-	mr.rpc.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+func New(cfg configuration.Configuration) (*MessageRouter, error) {
+	mr := &MessageRouter{LogicRunner: nil, service: nil}
 	return mr, nil
 }
 
+func (mr *MessageRouter) Start(c core.Components) error {
+	mr.LogicRunner = c["core.LogicRunner"].(core.LogicRunner)
+	mr.service = c["*servicenetwork.ServiceNetwork"].(*servicenetwork.ServiceNetwork)
+	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+	return nil
+}
+
+func (mr *MessageRouter) Stop() error { return nil }
+
 // Route a `Message` and get a `Response` or error from remote host
-func (r *MessageRouter) Route(ctx hostnetwork.Context, msg core.Message) (response core.Response, err error) {
-	request, err := Serialize(msg)
+func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err error) {
+	res, err := mr.service.SendMessage(deliverRPCMethodName, &msg)
 	if err != nil {
 		return response, err
 	}
 
-	result, err := r.rpc.RemoteProcedureCall(ctx, r.getNodeID(msg.Reference).HashString(), deliverRPCMethodName, [][]byte{request})
-	if err != nil {
-		return response, err
-	}
-
-	return DeserializeResponse(result)
+	return DeserializeResponse(res)
 }
 
 // Deliver method calls LogicRunner.Execute on local host
@@ -68,17 +69,7 @@ func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	res := r.LogicRunner.Execute(msg)
-	return Serialize(res)
-}
-
-func (r *MessageRouter) getNodeID(reference core.RecordRef) id.ID {
-	// TODO: need help from teammates
-	log.Println("getNodeID: ", reference)
-
-	nodeID, _ := id.NewID(nil)
-	nodeID.SetHash(base58.Decode(reference.String()))
-	return nodeID
+	return Serialize(r.LogicRunner.Execute(msg))
 }
 
 // Serialize converts Message or Response to byte slice.

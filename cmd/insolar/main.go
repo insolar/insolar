@@ -24,6 +24,7 @@ import (
 	"syscall"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	log "github.com/sirupsen/logrus"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -37,7 +38,6 @@ func main() {
 	}
 
 	cfgHolder.Configuration.Host.Transport.BehindNAT = false
-	cfgHolder.Configuration.Ledger.DataDirectory = "./data"
 
 	initLogger(cfgHolder.Configuration.Log)
 
@@ -46,6 +46,11 @@ func main() {
 	if err != nil {
 		log.Fatalln("Failed to start network: ", err.Error())
 	}
+	ledger := StartLedger(cfgHolder.Configuration.Ledger)
+	//logicrunner.NewLogicRunner(ledger.GetManager()) ?
+	//messagerouter.MessageRouter{}
+
+	// TODO: call Start() on all components.
 
 	var gracefulStop = make(chan os.Signal)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
@@ -55,19 +60,13 @@ func main() {
 		sig := <-gracefulStop
 		log.Debugln("caught sig: ", sig)
 		network.closeNetwork()
+		// TODO: call Stop() on all components.
+		lComp := ledger.(core.Component)
+		if err := lComp.Stop(); err != nil {
+			log.Warnln("ledger teardown failed:", err.Error())
+		}
 		os.Exit(0)
 	}()
-
-	/*
-		ledger, err := ledger.NewLedger(cfgHolder.Configuration.Ledger)
-		if err != nil {
-			log.Fatalln("Failed to create ledger: ", err.Error())
-		}
-
-		ledger.GetManager()
-		//logicrunner.NewLogicRunner(ledger.GetManager())
-		//messagerouter.MessageRouter{}
-	*/
 
 	go handleStats(cfgHolder.Configuration.Stats, network)
 

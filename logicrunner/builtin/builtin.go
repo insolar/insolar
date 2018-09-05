@@ -50,6 +50,18 @@ func NewBuiltIn(am core.ArtifactManager, mr core.MessageRouter) *BuiltIn {
 	return &bi
 }
 
+func (bi *BuiltIn) CallMethod(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
+	panic("implement me")
+}
+
+func (bi *BuiltIn) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) (objectState []byte, err error) {
+	panic("implement me")
+}
+
+func (bi *BuiltIn) Stop() error {
+	panic("implement me")
+}
+
 // Exec is an implementation for logicrunner Executor interface
 func (bi *BuiltIn) Exec(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
 	c, ok := bi.registry[codeRef.String()]
