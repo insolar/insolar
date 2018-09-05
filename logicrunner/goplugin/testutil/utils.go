@@ -133,8 +133,11 @@ func NewTestArtifactManager() *TestArtifactManager {
 	}
 }
 
+// Start implementation for tests
 func (t *TestArtifactManager) Start(components core.Components) error { return nil }
-func (t *TestArtifactManager) Stop() error                            { return nil }
+
+// Stop implementation for tests
+func (t *TestArtifactManager) Stop() error { return nil }
 
 // SetArchPref implementation for tests
 func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
@@ -200,7 +203,12 @@ func (t *TestArtifactManager) DeactivateObj(domain core.RecordRef, request core.
 
 // UpdateObj implementation for tests
 func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
+	_, ok := t.Objects[obj]
+	if !ok {
+		return nil, errors.New("No object to update")
+	}
+	// TODO: return real exact "ref"
+	return &core.RecordRef{}, nil
 }
 
 // AppendObjDelegate implementation for tests
