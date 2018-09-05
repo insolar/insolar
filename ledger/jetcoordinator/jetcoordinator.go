@@ -26,7 +26,7 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	store storage.Store
+	store *storage.Store
 }
 
 // Pulse creates new jet drop and ends current slot.
@@ -108,6 +108,6 @@ func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][
 }
 
 // NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator(store storage.Store) (*JetCoordinator, error) {
+func NewJetCoordinator(store *storage.Store) (*JetCoordinator, error) {
 	return &JetCoordinator{store: store}, nil
 }

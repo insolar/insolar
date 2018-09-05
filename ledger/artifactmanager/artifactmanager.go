@@ -27,7 +27,7 @@ import (
 
 // LedgerArtifactManager provides concrete API to storage for processing module
 type LedgerArtifactManager struct {
-	store    storage.Store
+	store    *storage.Store
 	archPref []core.MachineType
 }
 
@@ -683,6 +683,6 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(store storage.Store) (*LedgerArtifactManager, error) {
+func NewArtifactManger(store *storage.Store) (*LedgerArtifactManager, error) {
 	return &LedgerArtifactManager{store: store}, nil
 }

@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package badgerdb contains ledger store implementation on top of BadgerDB engine.
-package badgerdb
+// Package storagetest contains high level API tests and test utils for other modules.
+package storagetest

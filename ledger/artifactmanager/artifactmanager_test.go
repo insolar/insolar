@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 
-	. "github.com/insolar/insolar/ledger/storage/storagetestutils"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
 func genRandomRef() *record.Reference {
@@ -38,14 +38,14 @@ func genRandomRef() *record.Reference {
 }
 
 type preparedAMTestData struct {
-	ledger     storage.Store
+	ledger     *storage.Store
 	manager    core.ArtifactManager
 	domainRef  *record.Reference
 	requestRef *record.Reference
 }
 
 func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
-	ledger, cleaner := TmpStore(t)
+	ledger, cleaner := storagetest.TmpStore(t, "")
 
 	return preparedAMTestData{
 		ledger:     ledger,

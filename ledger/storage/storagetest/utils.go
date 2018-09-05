@@ -14,16 +14,36 @@
  *    limitations under the License.
  */
 
-package storagetestutils
+package storagetest
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/badgerdb/badgertestutils"
 )
 
-// TmpStore returns current store implementation and cleanup function.
-func TmpStore(t *testing.T) (storage.Store, func()) {
-	return badgertestutils.TmpDB(t, "")
+// TmpStore returns BadgerDB's store implementation and cleanup function.
+//
+// Creates BadgerDB in temporary directory and uses t for errors reporting.
+func TmpStore(t *testing.T, dir string) (*storage.Store, func()) {
+	tmpdir, err := ioutil.TempDir(dir, "bdb-test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := storage.NewStore(tmpdir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return store, func() {
+		closeErr := store.Close()
+		rmErr := os.RemoveAll(tmpdir)
+		if closeErr != nil {
+			t.Error("temporary db close failed", closeErr)
+		}
+		if rmErr != nil {
+			t.Fatal("temporary db dir cleanup failed", rmErr)
+		}
+	}
 }
