@@ -240,7 +240,7 @@ func TestContractCallingContract(t *testing.T) {
 	am := testutil.NewTestArtifactManager()
 
 	gp, err := NewGoPlugin(
-		configuration.Goplugin{
+		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerCodePath: insiderStorage,

@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/builtin"
+	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/pkg/errors"
 )
 
@@ -42,13 +43,25 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(c core.Components) error {
-	lr.ArtifactManager = c["core.Ledger"].(core.Ledger).GetManager()
+	am := c["core.Ledger"].(core.Ledger).GetManager()
 	mr := c["core.MessageRouter"].(core.MessageRouter)
+	lr.ArtifactManager = am
 
-	bi := builtin.NewBuiltIn(lr.ArtifactManager, mr)
-	err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi)
-	if err != nil {
-		return err
+	if lr.Cfg.BuiltIn != nil {
+		bi := builtin.NewBuiltIn(mr, am)
+		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
+			return err
+		}
+	}
+
+	if lr.Cfg.GoPlugin != nil {
+		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, mr, am)
+		if err != nil {
+			return err
+		}
+		if err := lr.RegisterExecutor(core.MachineTypeGoPlugin, gp); err != nil {
+			return err
+		}
 	}
 
 	return nil

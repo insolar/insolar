@@ -38,7 +38,7 @@ type BuiltIn struct {
 }
 
 // NewBuiltIn is an constructor
-func NewBuiltIn(am core.ArtifactManager, mr core.MessageRouter) *BuiltIn {
+func NewBuiltIn(mr core.MessageRouter, am core.ArtifactManager) *BuiltIn {
 	bi := BuiltIn{
 		AM:       am,
 		MR:       mr,

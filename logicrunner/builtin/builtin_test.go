@@ -38,7 +38,7 @@ func TNewBuiltIn(t *testing.T, dir string) *BuiltIn {
 	am := l.GetManager()
 	assert.Equal(t, true, am != nil)
 
-	bi := NewBuiltIn(am, nil)
+	bi := NewBuiltIn(nil, am)
 
 	assert.Equal(t, true, bi != nil)
 
