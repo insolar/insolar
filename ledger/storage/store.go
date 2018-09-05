@@ -187,7 +187,7 @@ func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline)
 	return tx.Commit()
 }
 
-// GetDrop wraps matching transaction manager method.
+// GetDrop returns jet drop for a given pulse number.
 func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 	buf, err := s.Get(k)
@@ -201,7 +201,9 @@ func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	return drop, nil
 }
 
-// SetDrop wraps matching transaction manager method.
+// SetDrop stores jet drop for given pulse number.
+//
+// Previous JetDrop should be provided. On success returns saved drop hash.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 
