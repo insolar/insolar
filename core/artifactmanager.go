@@ -61,7 +61,8 @@ type ArtifactManager interface {
 	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 	// the class. Migrations are references to code records.
 	//
-	// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
+	// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
+	// migrate objects memory in the order they appear in provided slice.
 	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordRef, error)
 
 	// ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
@@ -79,8 +80,9 @@ type ArtifactManager interface {
 	// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
-	// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
-	// them to the new memory manually if its required.
+	// Returned reference will be the latest object state (exact) reference. This will nullify all the object's append
+	// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
+	// required.
 	UpdateObj(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
 
 	// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
