@@ -71,8 +71,9 @@ func WriteFile(dir string, name string, text string) error {
 
 // TestCodeDescriptor implementation for tests
 type TestCodeDescriptor struct {
-	ARef  *core.RecordRef
-	ACode []byte
+	ARef         *core.RecordRef
+	ACode        []byte
+	AMachineType core.MachineType
 }
 
 // Ref implementation for tests
@@ -81,8 +82,8 @@ func (t *TestCodeDescriptor) Ref() *core.RecordRef {
 }
 
 // Code implementation for tests
-func (t *TestCodeDescriptor) Code() ([]byte, error) {
-	return t.ACode, nil
+func (t *TestCodeDescriptor) Code() ([]byte, core.MachineType, error) {
+	return t.ACode, t.AMachineType, nil
 }
 
 // TestObjectDescriptor implementation for tests
