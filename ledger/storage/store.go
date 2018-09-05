@@ -212,7 +212,6 @@ func (s *Store) waitinflight() {
 //
 // Previous JetDrop should be provided. On success returns saved drop hash.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
-	// MAYBE: add select with panic on timeout?
 	s.waitinflight()
 
 	hw := hash.NewSHA3()
