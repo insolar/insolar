@@ -437,7 +437,7 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 		case "string":
 			initializer = `""`
 		case "foundation.Reference":
-			initializer = `*new([64]byte)`
+			initializer = `foundation.Reference([64]byte{})`
 		default:
 			switch td := arg.Type.(type) {
 			case *ast.StarExpr:
