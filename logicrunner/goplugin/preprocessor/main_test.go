@@ -304,3 +304,22 @@ func ( A ) Get(){
 	assert.Contains(t, bufWrapper.String(), "some/test/import/")
 	assert.Contains(t, bufWrapper.String(), "github.com/insolar/insolar/logicrunner/goplugin/foundation")
 }
+
+func TestNotMatchFileNameForProxy(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test_not_go_file.test"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+
+type A struct{
+	foundation.BaseContract
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.EqualError(t, err, "couldn't match filename without extension and path")
+}

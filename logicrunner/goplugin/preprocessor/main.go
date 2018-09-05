@@ -193,7 +193,7 @@ func parseFile(fileName string) (*parsedFile, error) {
 		return nil, errors.Wrap(err, "")
 	}
 	if res.contract == "" {
-		return nil, fmt.Errorf("Only one smart contract must exist")
+		return nil, errors.New("Only one smart contract must exist")
 	}
 
 	return &res, nil
@@ -244,7 +244,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
-		return fmt.Errorf("Contract must be in main package")
+		return errors.New("Contract must be in main package")
 	}
 
 	tmpl, err := openTemplate("templates/wrapper.go.tpl")
@@ -281,12 +281,12 @@ func generateContractProxy(fileName string, classReference string, out io.Writer
 
 	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(fileName)
 	if match == nil {
-		return errors.Wrap(err, "couldn't match filename without extension and path")
+		return errors.New("couldn't match filename without extension and path")
 	}
 
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
-		return fmt.Errorf("Contract must be in main package")
+		return errors.New("Contract must be in main package")
 	}
 
 	proxyPackageName := match[2]
@@ -374,7 +374,7 @@ func getMethods(parsed *parsedFile) error {
 
 				if IsContract(typeNode) {
 					if parsed.contract != "" {
-						return fmt.Errorf("more than one contract in a file")
+						return errors.New("more than one contract in a file")
 					}
 					parsed.contract = typeNode.Name.Name
 				} else {
