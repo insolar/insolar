@@ -157,7 +157,7 @@ func (m *TransactionManager) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 		}
 		return nil, err
 	}
-	buf, err := item.Value()
+	buf, err := item.ValueCopy(nil)
 	if err != nil {
 		return nil, err
 	}

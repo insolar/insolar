@@ -95,7 +95,7 @@ func (s *Store) Get(key []byte) ([]byte, error) {
 			}
 			return err
 		}
-		buf, err = item.Value()
+		buf, err = item.ValueCopy(nil)
 		return err
 	})
 	if txerr != nil {
