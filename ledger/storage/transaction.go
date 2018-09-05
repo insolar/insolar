@@ -18,9 +18,7 @@ package storage
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 )
 
@@ -39,7 +37,6 @@ func prefixkey(prefix byte, key []byte) []byte {
 
 // Commit tries to write transaction on disk. Returns error on fail.
 func (m *TransactionManager) Commit() error {
-	// TODO: check transaction conflict
 	return m.txn.Commit(nil)
 }
 
@@ -147,66 +144,6 @@ func (m *TransactionManager) SetObjectIndex(ref *record.Reference, idx *index.Ob
 		return err
 	}
 	return m.txn.Set(k, encoded)
-}
-
-// GetDrop returns jet drop for a given pulse number.
-func (m *TransactionManager) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
-	item, err := m.txn.Get(k)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	buf, err := item.Value()
-	if err != nil {
-		return nil, err
-	}
-	drop, err := jetdrop.Decode(buf)
-	if err != nil {
-		return nil, err
-	}
-	return drop, nil
-}
-
-// SetDrop stores jet drop for given pulse number.
-// Previous JetDrop should be provided.
-// On success returns saved drop hash.
-func (m *TransactionManager) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
-
-	hw := hash.NewSHA3()
-	err := m.store.ProcessSlotHashes(pulse, func(it HashIterator) error {
-		for i := 1; it.Next(); i++ {
-			b := it.ShallowHash()
-			_, err := hw.Write(b)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	drophash := hw.Sum(nil)
-
-	drop := &jetdrop.JetDrop{
-		Pulse:    pulse,
-		PrevHash: prevdrop.Hash,
-		Hash:     drophash,
-	}
-	encoded, err := jetdrop.Encode(drop)
-	if err != nil {
-		return nil, err
-	}
-
-	err = m.txn.Set(k, encoded)
-	if err != nil {
-		drop = nil
-	}
-	return drop, err
 }
 
 // GetEntropy returns entropy from storage for given pulse.

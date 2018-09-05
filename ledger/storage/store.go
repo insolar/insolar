@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
@@ -81,6 +82,33 @@ func NewStore(dir string, opts *badger.Options) (*Store, error) {
 func (s *Store) Close() error {
 	// TODO: add close flag and mutex guard on Close method
 	return s.db.Close()
+}
+
+// Get gets value by key in BadgerDB storage.
+func (s *Store) Get(key []byte) ([]byte, error) {
+	var buf []byte
+	txerr := s.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				return ErrNotFound
+			}
+			return err
+		}
+		buf, err = item.Value()
+		return err
+	})
+	if txerr != nil {
+		buf = nil
+	}
+	return buf, txerr
+}
+
+// Set stores value by key.
+func (s *Store) Set(key, value []byte) error {
+	return s.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(key, value)
+	})
 }
 
 // GetRecord wraps matching transaction manager method.
@@ -161,10 +189,12 @@ func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline)
 
 // GetDrop wraps matching transaction manager method.
 func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
-	tx := s.BeginTransaction(false)
-	defer tx.Discard()
-
-	drop, err := tx.GetDrop(pulse)
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+	buf, err := s.Get(k)
+	if err != nil {
+		return nil, err
+	}
+	drop, err := jetdrop.Decode(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -173,18 +203,39 @@ func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 
 // SetDrop wraps matching transaction manager method.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
-	tx := s.BeginTransaction(true)
-	defer tx.Discard()
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 
-	drop, err := tx.SetDrop(pulse, prevdrop)
+	hw := hash.NewSHA3()
+	err := s.ProcessSlotHashes(pulse, func(it HashIterator) error {
+		for i := 1; it.Next(); i++ {
+			b := it.ShallowHash()
+			_, err := hw.Write(b)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	err = tx.Commit()
+	drophash := hw.Sum(nil)
+
+	drop := &jetdrop.JetDrop{
+		Pulse:    pulse,
+		PrevHash: prevdrop.Hash,
+		Hash:     drophash,
+	}
+	encoded, err := jetdrop.Encode(drop)
 	if err != nil {
 		return nil, err
 	}
-	return drop, nil
+
+	err = s.Set(k, encoded)
+	if err != nil {
+		drop = nil
+	}
+	return drop, err
 }
 
 // GetEntropy wraps matching transaction manager method.
@@ -221,8 +272,9 @@ func (s *Store) GetCurrentPulse() record.PulseNum {
 	return s.currentPulse
 }
 
-// BeginTransaction opens a new transaction. All methods called on returned transaction manager will commit changes to
-// disk only after "Commit" was called.
+// BeginTransaction opens a new transaction.
+// All methods called on returned transaction manager will persist changes
+// only after success on "Commit" call.
 func (s *Store) BeginTransaction(update bool) *TransactionManager {
 	return &TransactionManager{
 		store: s,
