@@ -304,7 +304,8 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 // the class. Migrations are references to code records.
 //
-// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
+// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
+// migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
 	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
 ) (*core.RecordRef, error) {
@@ -464,8 +465,9 @@ func (m *LedgerArtifactManager) DeactivateObj(
 // UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
 // object. Provided memory well be the new object memory.
 //
-// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
-// them to the new memory manually if its required.
+// Returned reference will be the latest object state (exact) reference. This will nullify all the object's append
+// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
+// required.
 func (m *LedgerArtifactManager) UpdateObj(
 	domain, request, obj core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
