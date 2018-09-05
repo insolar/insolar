@@ -53,17 +53,14 @@ func TestNewID(t *testing.T) {
 	id2, err := NewID(nil)
 
 	assert.NoError(t, err)
-	assert.Len(t, id2.GetHash(), 20)
+	assert.Len(t, id2.GetKey(), 20)
 	id1, _ := NewID(nil)
-	id1.SetHash([]byte("1234567890abcdefghij"))
-	assert.Equal(t, id1.GetHash(), id2.GetHash())
+	assert.Equal(t, id1.GetKey(), id2.GetKey())
 }
 
 func TestID_Equal(t *testing.T) {
 	id1, _ := NewID(GetRandomKey())
-	id1.SetHash([]byte("1234567890abcdefghij"))
 	id2, _ := NewID(GetRandomKey())
-	id2.SetHash([]byte("klmnopqrstuvwxyzABCD"))
 	tests := []struct {
 		id1, id2 ID
 		equal    bool
@@ -74,7 +71,7 @@ func TestID_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.equal, test.id1.HashEqual(test.id2.GetHash()))
+			assert.Equal(t, test.equal, test.id1.KeyEqual(test.id2.GetKey()))
 		})
 	}
 }
@@ -84,9 +81,7 @@ func TestID_MarshalBinary(t *testing.T) {
 
 	enc := gob.NewEncoder(&buf)
 	key := GetRandomKey()
-	hash := GetRandomKey()
 	id, _ := NewID(key)
-	id.SetHash(hash)
 	err := enc.Encode(id)
 	assert.NoError(t, err)
 
@@ -96,7 +91,7 @@ func TestID_MarshalBinary(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.True(t, id.KeyEqual(resID.key))
-	assert.Equal(t, id.HashString(), resID.HashString())
+	assert.Equal(t, id.KeyString(), resID.KeyString())
 }
 
 func TestID_KeyEqual(t *testing.T) {
@@ -113,7 +108,7 @@ func TestID_String(t *testing.T) {
 	random = newMockReader()
 	id, _ := NewID(nil)
 
-	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.HashString())
+	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.KeyString())
 }
 
 func TestCryptoReader_Read(t *testing.T) {

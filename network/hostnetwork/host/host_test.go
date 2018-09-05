@@ -27,7 +27,6 @@ func TestNewHost(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
 	actualHost := NewHost(addr)
 	id1, _ := id.NewID(nil)
-	id1.SetHash(nil)
 	expectedHost := &Host{
 		ID:      id1,
 		Address: addr,
@@ -40,7 +39,6 @@ func TestHost_String(t *testing.T) {
 	addr, _ := NewAddress("127.0.0.1:31337")
 	nd := NewHost(addr)
 	id1, _ := id.NewID(id.GetRandomKey())
-	id1.SetHash([]byte{49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106})
 	nd.ID = id1
 
 	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb (127.0.0.1:31337)", nd.String())
@@ -50,7 +48,6 @@ func TestHost_Equal(t *testing.T) {
 	id1, _ := id.NewID(id.GetRandomKey())
 	id2, _ := id.NewID(id.GetRandomKey())
 	idNil, _ := id.NewID(id.GetRandomKey())
-	idNil.SetHash(nil)
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
