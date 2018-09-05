@@ -244,11 +244,11 @@ func (m *LedgerArtifactManager) ActivateClass(
 
 	var classRef *record.Reference
 	err = m.store.Update(func(tx *storage.TransactionManager) error {
-		classRef, err = m.store.SetRecord(&rec)
+		classRef, err = tx.SetRecord(&rec)
 		if err != nil {
 			return errors.Wrap(err, "failed to store record")
 		}
-		err = m.store.SetClassIndex(classRef, &index.ClassLifeline{
+		err = tx.SetClassIndex(classRef, &index.ClassLifeline{
 			LatestStateRef: *classRef,
 		})
 		if err != nil {
@@ -301,12 +301,12 @@ func (m *LedgerArtifactManager) DeactivateClass(
 			},
 		}
 
-		deactivationRef, err = m.store.SetRecord(&rec)
+		deactivationRef, err = tx.SetRecord(&rec)
 		if err != nil {
 			return errors.Wrap(err, "failed to store record")
 		}
 		classIndex.LatestStateRef = *deactivationRef
-		err = m.store.SetClassIndex(&classRef, classIndex)
+		err = tx.SetClassIndex(&classRef, classIndex)
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
 		}
