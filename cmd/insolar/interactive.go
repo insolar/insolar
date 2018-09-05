@@ -24,12 +24,13 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
 )
 
-func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func repl(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	displayInteractiveHelp()
-	doInfo(dhtNetwork, ctx)
+	doInfo(service, dhtNetwork, ctx)
 
 	rl, err := readline.New("> ")
 	if err != nil {
@@ -58,7 +59,7 @@ func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 		case "findhost":
 			doFindHost(input, dhtNetwork, ctx)
 		case "info":
-			doInfo(dhtNetwork, ctx)
+			doInfo(service, dhtNetwork, ctx)
 		case "relay":
 			doSendRelay(input[2], input[1], dhtNetwork, ctx)
 		default:
@@ -84,13 +85,14 @@ func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 	}
 }
 
-func doInfo(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	hosts := dhtNetwork.NumHosts(ctx)
 	originID := dhtNetwork.GetOriginHost(ctx).ID
 	fmt.Println("======= Host info ======")
 	fmt.Println("ID key: " + originID.KeyString())
 	fmt.Println("ID hash: " + originID.HashString())
 	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
+	fmt.Println("Address: " + service.GetAddress())
 }
 
 func doSendRelay(command, relayAddr string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {

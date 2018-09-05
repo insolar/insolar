@@ -61,14 +61,14 @@ func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err er
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (r *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
+func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 
 	msg, err := DeserializeMessage(args[0]) // TODO: check empty args
 	if err != nil {
 		return nil, err
 	}
 
-	return Serialize(r.LogicRunner.Execute(msg))
+	return Serialize(mr.LogicRunner.Execute(msg))
 }
 
 // Serialize converts Message or Response to byte slice.

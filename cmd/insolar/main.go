@@ -56,9 +56,9 @@ func main() {
 	ledger := StartLedger(cfgHolder.Configuration.Ledger)
 	components["core.Ledger"] = ledger
 
-	logicrunner, err := logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
+	logicrunner1, err := logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
 	// todo: check err
-	components["core.LogicRunner"] = logicrunner
+	components["core.LogicRunner"] = logicrunner1
 
 	mr, err := messagerouter.New(cfgHolder.Configuration)
 	components["core.MessageRouter"] = mr
@@ -95,7 +95,8 @@ func main() {
 	go handleStats(cfgHolder.Configuration.Stats)
 
 	fmt.Println("Running interactive mode:")
-	repl(network.(*servicenetwork.ServiceNetwork).GetHostNetwork())
+	dht, ctx := network.(*servicenetwork.ServiceNetwork).GetHostNetwork()
+	repl(network, dht, ctx)
 }
 
 func initLogger(cfg configuration.Log) {
