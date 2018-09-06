@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package main
+package preprocessor
 
 import (
 	"fmt"
@@ -25,19 +25,15 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"text/template"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	flag "github.com/spf13/pflag"
-
-	"strconv"
 )
 
 var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
@@ -55,25 +51,25 @@ type parsedFile struct {
 	contract     string
 }
 
-func printUsage() {
+/*func printUsage() {
 	fmt.Println("usage: preprocessor <command> [<args>]")
 	fmt.Println("Commands: ")
 	fmt.Println(" wrapper   generate contract's wrapper")
 	fmt.Println(" proxy     generate contract's proxy")
 	fmt.Println(" compile   compile contract")
 	fmt.Println(" imports   rewrite imports")
-}
+}*/
 
-type outputFlag struct {
+/*type outputFlag struct {
 	path   string
 	writer io.Writer
-}
+}*/
 
-func newOutputFlag() *outputFlag {
+/*func newOutputFlag() *outputFlag {
 	return &outputFlag{path: "-", writer: os.Stdout}
-}
+}*/
 
-func (r *outputFlag) String() string {
+/*func (r *outputFlag) String() string {
 	return r.path
 }
 func (r *outputFlag) Set(arg string) error {
@@ -93,9 +89,9 @@ func (r *outputFlag) Set(arg string) error {
 }
 func (r *outputFlag) Type() string {
 	return "file"
-}
+}*/
 
-func main() {
+/*func main() {
 
 	if len(os.Args) == 1 {
 		printUsage()
@@ -187,7 +183,7 @@ func main() {
 		fmt.Printf("\n\n%q is not valid command.\n", os.Args[1])
 		os.Exit(2)
 	}
-}
+}*/
 
 func slurpFile(fileName string) ([]byte, error) {
 	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
@@ -268,7 +264,7 @@ func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
 	return methodsInfo
 }
 
-func generateContractWrapper(fileName string, out io.Writer) error {
+func GenerateContractWrapper(fileName string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
@@ -305,7 +301,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	return nil
 }
 
-func generateContractProxy(fileName string, classReference string, out io.Writer) error {
+func GenerateContractProxy(fileName string, classReference string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
@@ -553,7 +549,7 @@ func generateConstructorProxies(parsed *parsedFile) []map[string]string {
 	return res
 }
 
-func cmdRewriteImports(fname string, w io.Writer) error {
+func CmdRewriteImports(fname string, w io.Writer) error {
 	parsed, err := parseFile(fname)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
