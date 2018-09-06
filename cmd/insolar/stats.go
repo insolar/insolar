@@ -25,7 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func handleStats(cfg configuration.Stats, net Network) {
+func handleStats(cfg configuration.Stats) {
 	logrus.Println("handleStats")
 	var cpuTemp = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "cpu_temperature_celsius",
