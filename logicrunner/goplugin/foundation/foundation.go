@@ -40,7 +40,7 @@ type CallContext struct {
 	Me     Reference // My Reference.
 	Caller Reference // Reference of calling contract.
 	Parent Reference // Reference to parent or container contract.
-	Type   Reference // Reference to type record on ledger, we have just one type reference, yet.
+	Class  Reference // Reference to type record on ledger, we have just one type reference, yet.
 	Time   time.Time // Time of Calling side made call.
 	Pulse  uint64    // Number of current pulse.
 }
@@ -50,19 +50,31 @@ type BaseContract struct {
 	context *CallContext // Context hidden from anyone
 }
 
-// BaseContractInterface is an interface to deal with any contract same way
-type BaseContractInterface interface {
-	MyReference() Reference
-	GetImplementationFor(r Reference) BaseContractInterface
-	TakeDelegate(delegate BaseContractInterface, class Reference) Reference
+type ProxyInterface interface {
+	GetReference() Reference
+	GetClass() Reference
 }
 
-// MyReference - Returns public reference of contract
-func (bc *BaseContract) MyReference() Reference {
+// BaseContractInterface is an interface to deal with any contract same way
+type BaseContractInterface interface {
+	GetReference() Reference
+	GetClass() Reference
+}
+
+// GetReference - Returns public reference of contract
+func (bc *BaseContract) GetReference() Reference {
 	if bc.context == nil {
 		return nil
 	}
 	return bc.context.Me
+}
+
+// GetClass - Returns class of contract
+func (bc *BaseContract) GetClass() Reference {
+	if bc.context == nil {
+		return nil
+	}
+	return bc.context.Class
 }
 
 // GetContext returns current calling context of this object.
@@ -80,40 +92,18 @@ func (bc *BaseContract) SetContext(cc *CallContext) {
 
 // GetImplementationFor finds delegate typed r in object and returns it
 // unimplemented
-func (bc *BaseContract) GetImplementationFor(r Reference) BaseContractInterface {
-	return nil
-}
-
-// GetImplementationFor finds delegate typed r in object and returns it
-// unimplemented
-func GetImplementationFor(o Reference, r Reference) BaseContractInterface {
+func GetImplementationFor(o Reference, r Reference) ProxyInterface {
 	return nil
 }
 
 // GetChildrenTyped returns set of children objects with corresponding type
-func (bc *BaseContract) GetChildrenTyped(r Reference) []BaseContractInterface {
-	return nil
-}
-
-// SaveToLedger saves builder to ledger
-// unimplemented
-func SaveToLedger(rec BaseContractInterface) Reference {
+func (bc *BaseContract) GetChildrenTyped(r Reference) []ProxyInterface {
 	return nil
 }
 
 // GetObject create proxy by address
 // unimplemented
-func GetObject(ref Reference) BaseContractInterface {
-	return nil
-}
-
-// AddChild adds child to contract
-func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) Reference {
-	return nil
-}
-
-// TakeDelegate injects delegate to object
-func (bc *BaseContract) TakeDelegate(delegate BaseContractInterface, class Reference) Reference {
+func GetObject(ref Reference) ProxyInterface {
 	return nil
 }
 

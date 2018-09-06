@@ -30,23 +30,23 @@ import (
 )
 
 type preparedCodeDescriptorTestData struct {
-	ledger  *storage.Store
+	db      *storage.DB
 	manager *LedgerArtifactManager
 	rec     *record.CodeRecord
 	ref     *record.Reference
 }
 
 func prepareCodeDescriptorTestData(t *testing.T) (preparedCodeDescriptorTestData, func()) {
-	ledger, cleaner := storagetest.TmpStore(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 
 	rec := record.CodeRecord{TargetedCode: map[core.MachineType][]byte{1: {1, 2, 3}}}
-	ref, err := ledger.SetRecord(&rec)
+	ref, err := db.SetRecord(&rec)
 	assert.NoError(t, err)
 
 	return preparedCodeDescriptorTestData{
-		ledger: ledger,
+		db: db,
 		manager: &LedgerArtifactManager{
-			store:    ledger,
+			db:       db,
 			archPref: []core.MachineType{1},
 		},
 		rec: &rec,
@@ -83,23 +83,23 @@ func TestCodeDescriptor_Code(t *testing.T) {
 }
 
 type preparedClassDescriptorTestData struct {
-	ledger   *storage.Store
+	db       *storage.DB
 	manager  *LedgerArtifactManager
 	classRec *record.ClassActivateRecord
 	classRef *record.Reference
 }
 
 func prepareClassDescriptorTestData(t *testing.T) (preparedClassDescriptorTestData, func()) {
-	ledger, cleaner := storagetest.TmpStore(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 
 	rec := record.ClassActivateRecord{}
-	ref, err := ledger.SetRecord(&rec)
+	ref, err := db.SetRecord(&rec)
 	assert.NoError(t, err)
 
 	return preparedClassDescriptorTestData{
-		ledger: ledger,
+		db: db,
 		manager: &LedgerArtifactManager{
-			store:    ledger,
+			db:       db,
 			archPref: []core.MachineType{1},
 		},
 		classRec: &rec,
@@ -111,40 +111,40 @@ func TestClassDescriptor_GetMigrations(t *testing.T) {
 	td, cleaner := prepareClassDescriptorTestData(t)
 	defer cleaner()
 
-	codeRef1, _ := td.ledger.SetRecord(&record.CodeRecord{
+	codeRef1, _ := td.db.SetRecord(&record.CodeRecord{
 		TargetedCode: map[core.MachineType][]byte{
 			core.MachineType(1): {1},
 		},
 	})
-	codeRef2, _ := td.ledger.SetRecord(&record.CodeRecord{
+	codeRef2, _ := td.db.SetRecord(&record.CodeRecord{
 		TargetedCode: map[core.MachineType][]byte{
 			core.MachineType(1): {2},
 		},
 	})
-	codeRef3, _ := td.ledger.SetRecord(&record.CodeRecord{
+	codeRef3, _ := td.db.SetRecord(&record.CodeRecord{
 		TargetedCode: map[core.MachineType][]byte{
 			core.MachineType(1): {3},
 		},
 	})
-	codeRef4, _ := td.ledger.SetRecord(&record.CodeRecord{
+	codeRef4, _ := td.db.SetRecord(&record.CodeRecord{
 		TargetedCode: map[core.MachineType][]byte{
 			core.MachineType(1): {4},
 		},
 	})
 
 	amendRec3 := record.ClassAmendRecord{Migrations: []record.Reference{*codeRef4}}
-	amendRef1, _ := td.ledger.SetRecord(&record.ClassAmendRecord{
+	amendRef1, _ := td.db.SetRecord(&record.ClassAmendRecord{
 		Migrations: []record.Reference{*codeRef1},
 	})
-	amendRef2, _ := td.ledger.SetRecord(&record.ClassAmendRecord{
+	amendRef2, _ := td.db.SetRecord(&record.ClassAmendRecord{
 		Migrations: []record.Reference{*codeRef2, *codeRef3},
 	})
-	amendRef3, _ := td.ledger.SetRecord(&amendRec3)
+	amendRef3, _ := td.db.SetRecord(&amendRec3)
 	idx := index.ClassLifeline{
 		LatestStateRef: *amendRef2,
 		AmendRefs:      []record.Reference{*amendRef1, *amendRef2, *amendRef3},
 	}
-	td.ledger.SetClassIndex(td.classRef, &idx)
+	td.db.SetClassIndex(td.classRef, &idx)
 
 	desc := ClassDescriptor{
 		manager:       td.manager,
@@ -160,23 +160,23 @@ func TestClassDescriptor_GetMigrations(t *testing.T) {
 }
 
 type preparedObjectDescriptorTestData struct {
-	ledger  *storage.Store
+	db      *storage.DB
 	manager *LedgerArtifactManager
 	objRec  *record.ObjectActivateRecord
 	objRef  *record.Reference
 }
 
 func prepareObjectDescriptorTestData(t *testing.T) (preparedObjectDescriptorTestData, func()) {
-	ledger, cleaner := storagetest.TmpStore(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 
 	rec := record.ObjectActivateRecord{Memory: []byte{1}}
-	ref, err := ledger.SetRecord(&rec)
+	ref, err := db.SetRecord(&rec)
 	assert.NoError(t, err)
 
 	return preparedObjectDescriptorTestData{
-		ledger: ledger,
+		db: db,
 		manager: &LedgerArtifactManager{
-			store:    ledger,
+			db:       db,
 			archPref: []core.MachineType{1},
 		},
 		objRec: &rec,
@@ -190,11 +190,11 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 	defer cleaner()
 
 	amendRec := record.ObjectAmendRecord{NewMemory: []byte{2}}
-	amendRef, _ := td.ledger.SetRecord(&amendRec)
+	amendRef, _ := td.db.SetRecord(&amendRec)
 	idx := index.ObjectLifeline{
 		LatestStateRef: *amendRef,
 	}
-	td.ledger.SetObjectIndex(td.objRef, &idx)
+	td.db.SetObjectIndex(td.objRef, &idx)
 
 	desc := ObjectDescriptor{
 		manager:       td.manager,
@@ -224,13 +224,13 @@ func TestObjectDescriptor_GetDelegates(t *testing.T) {
 
 	appendRec1 := record.ObjectAppendRecord{AppendMemory: []byte{2}}
 	appendRec2 := record.ObjectAppendRecord{AppendMemory: []byte{3}}
-	appendRef1, _ := td.ledger.SetRecord(&appendRec1)
-	appendRef2, _ := td.ledger.SetRecord(&appendRec2)
+	appendRef1, _ := td.db.SetRecord(&appendRec1)
+	appendRef2, _ := td.db.SetRecord(&appendRec2)
 	idx := index.ObjectLifeline{
 		LatestStateRef: *td.objRef,
 		AppendRefs:     []record.Reference{*appendRef1, *appendRef2},
 	}
-	td.ledger.SetObjectIndex(td.objRef, &idx)
+	td.db.SetObjectIndex(td.objRef, &idx)
 
 	desc := ObjectDescriptor{
 		manager:       td.manager,
