@@ -56,14 +56,14 @@ func pulseNumRecordPrefix(n record.PulseNum) []byte {
 //
 // Error returned by the ProcessSlotRecords is based on iteration function
 // result or BadgerDB iterator error if any.
-func (s *Store) ProcessSlotHashes(n record.PulseNum, ifn func(it HashIterator) error) error {
+func (db *DB) ProcessSlotHashes(n record.PulseNum, ifn func(it HashIterator) error) error {
 	prefix := pulseNumRecordPrefix(n)
 
 	iopts := badger.DefaultIteratorOptions
 	iopts.PrefetchValues = false
 
 	// TODO: add transaction conflict processing
-	return s.db.View(func(txn *badger.Txn) error {
+	return db.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(iopts)
 		it.Seek(prefix)
 		defer it.Close()
@@ -72,9 +72,9 @@ func (s *Store) ProcessSlotHashes(n record.PulseNum, ifn func(it HashIterator) e
 }
 
 // GetSlotHashes returns array of all record's hashes in provided PulseNum.
-func (s *Store) GetSlotHashes(n record.PulseNum) ([][]byte, error) {
+func (db *DB) GetSlotHashes(n record.PulseNum) ([][]byte, error) {
 	var hashes [][]byte
-	err := s.ProcessSlotHashes(n, func(it HashIterator) error {
+	err := db.ProcessSlotHashes(n, func(it HashIterator) error {
 		for it.Next() {
 			hashes = append(hashes, it.Hash())
 		}

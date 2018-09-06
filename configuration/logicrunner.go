@@ -25,6 +25,7 @@ type BuiltIn struct{}
 
 type GoPlugin struct {
 	RunnerListen   string // ip:port of ginsider connectivity socket
+	RunnerPath     string // path to gincider executable
 	RunnerCodePath string // path where ginsider caches code
 	MainListen     string // ip:port of main system connectivity socket
 }
@@ -33,6 +34,7 @@ func NewLogicRunner() LogicRunner {
 	return LogicRunner{
 		BuiltIn: &BuiltIn{},
 		GoPlugin: &GoPlugin{
+			RunnerPath:     "ginsider-cli/ginsider-cli",
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerCodePath: ".../TEMPDIR_CHANGE ME/...",
 			MainListen:     "127.0.0.1:7778",

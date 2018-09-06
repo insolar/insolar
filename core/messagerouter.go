@@ -37,6 +37,5 @@ type Response struct {
 
 // MessageRouter interface
 type MessageRouter interface {
-	Component
 	Route(msg Message) (resp Response, err error)
 }

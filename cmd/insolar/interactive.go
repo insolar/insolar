@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 )
 
+// repl is deprecated
 func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 	displayInteractiveHelp()
 	doInfo(dhtNetwork, ctx)
@@ -52,7 +52,7 @@ func repl(dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
 		case "exit":
 			fallthrough
 		case "quit":
-			os.Exit(0)
+			return
 		case "help":
 			displayInteractiveHelp()
 		case "findhost":

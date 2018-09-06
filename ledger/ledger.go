@@ -27,7 +27,7 @@ import (
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	store       *storage.Store
+	db          *storage.DB
 	manager     *artifactmanager.LedgerArtifactManager
 	coordinator *jetcoordinator.JetCoordinator
 }
@@ -38,21 +38,21 @@ func (l *Ledger) GetManager() core.ArtifactManager {
 }
 
 // NewLedger creates new ledger instance.
-func NewLedger(conf configuration.Ledger) (core.Ledger, error) {
-	store, err := storage.NewStore(conf.DataDirectory, nil)
+func NewLedger(conf configuration.Ledger) (*Ledger, error) {
+	db, err := storage.NewDB(conf.DataDirectory, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
-	manager, err := artifactmanager.NewArtifactManger(store)
+	manager, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
 	}
-	coordinator, err := jetcoordinator.NewJetCoordinator(store)
+	coordinator, err := jetcoordinator.NewJetCoordinator(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}
 	ledger := &Ledger{
-		store:       store,
+		db:          db,
 		manager:     manager,
 		coordinator: coordinator,
 	}
@@ -69,5 +69,5 @@ func (l *Ledger) Start(c core.Components) error {
 
 // Stop stops Ledger gracefully.
 func (l *Ledger) Stop() error {
-	return l.store.Close()
+	return l.db.Close()
 }

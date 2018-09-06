@@ -25,7 +25,7 @@ import (
 
 // TransactionManager is used to ensure persistent writes to disk.
 type TransactionManager struct {
-	store  *Store
+	db     *DB
 	txn    *badger.Txn
 	update bool
 }
@@ -45,7 +45,7 @@ func (m *TransactionManager) Commit() error {
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
 	if m.update {
-		m.store.dropWG.Done()
+		m.db.dropWG.Done()
 	}
 	m.txn.Discard()
 }
@@ -82,7 +82,7 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, er
 	ref := &record.Reference{
 		Domain: rec.Domain().Record,
 		Record: record.ID{
-			Pulse: m.store.GetCurrentPulse(),
+			Pulse: m.db.GetCurrentPulse(),
 			Hash:  raw.Hash(),
 		},
 	}

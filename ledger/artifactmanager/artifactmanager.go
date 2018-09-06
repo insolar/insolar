@@ -27,17 +27,17 @@ import (
 
 // LedgerArtifactManager provides concrete API to storage for processing module
 type LedgerArtifactManager struct {
-	store    *storage.Store
+	db       *storage.DB
 	archPref []core.MachineType
 }
 
-func (m *LedgerArtifactManager) checkRequestRecord(l storage.Ledger, requestRef *record.Reference) error {
+func (m *LedgerArtifactManager) checkRequestRecord(s storage.Store, requestRef *record.Reference) error {
 	// TODO: implement request check
 	return nil
 }
 
-func (m *LedgerArtifactManager) getCodeRecord(l storage.Ledger, codeRef record.Reference) (*record.CodeRecord, error) {
-	rec, err := l.GetRecord(&codeRef)
+func (m *LedgerArtifactManager) getCodeRecord(s storage.Store, codeRef record.Reference) (*record.CodeRecord, error) {
+	rec, err := s.GetRecord(&codeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
 	}
@@ -48,8 +48,8 @@ func (m *LedgerArtifactManager) getCodeRecord(l storage.Ledger, codeRef record.R
 	return codeRec, nil
 }
 
-func (m *LedgerArtifactManager) getCodeRecordCode(l storage.Ledger, codeRef record.Reference) ([]byte, core.MachineType, error) {
-	codeRec, err := m.getCodeRecord(l, codeRef)
+func (m *LedgerArtifactManager) getCodeRecordCode(s storage.Store, codeRef record.Reference) ([]byte, core.MachineType, error) {
+	codeRec, err := m.getCodeRecord(s, codeRef)
 	if err != nil {
 		return nil, core.MachineTypeNotExist, err
 	}
@@ -61,10 +61,10 @@ func (m *LedgerArtifactManager) getCodeRecordCode(l storage.Ledger, codeRef reco
 	return code, mt, nil
 }
 
-func (m *LedgerArtifactManager) getActiveClass(l storage.Ledger, classRef record.Reference) (
+func (m *LedgerArtifactManager) getActiveClass(s storage.Store, classRef record.Reference) (
 	*record.ClassActivateRecord, *record.ClassAmendRecord, *index.ClassLifeline, error,
 ) {
-	classRecord, err := l.GetRecord(&classRef)
+	classRecord, err := s.GetRecord(&classRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to retrieve class record")
 	}
@@ -72,11 +72,11 @@ func (m *LedgerArtifactManager) getActiveClass(l storage.Ledger, classRef record
 	if !isClassRec {
 		return nil, nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
 	}
-	classIndex, err := l.GetClassIndex(&classRef)
+	classIndex, err := s.GetClassIndex(&classRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
-	latestClassRecord, err := l.GetRecord(&classIndex.LatestStateRef)
+	latestClassRecord, err := s.GetRecord(&classIndex.LatestStateRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
@@ -91,10 +91,10 @@ func (m *LedgerArtifactManager) getActiveClass(l storage.Ledger, classRef record
 	return activateRec, amendRecord, classIndex, nil
 }
 
-func (m *LedgerArtifactManager) getActiveObject(l storage.Ledger, objRef record.Reference) (
+func (m *LedgerArtifactManager) getActiveObject(s storage.Store, objRef record.Reference) (
 	*record.ObjectActivateRecord, *record.ObjectAmendRecord, *index.ObjectLifeline, error,
 ) {
-	objRecord, err := l.GetRecord(&objRef)
+	objRecord, err := s.GetRecord(&objRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to retrieve object record")
 	}
@@ -103,11 +103,11 @@ func (m *LedgerArtifactManager) getActiveObject(l storage.Ledger, objRef record.
 		return nil, nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve object record")
 	}
 
-	objIndex, err := l.GetObjectIndex(&objRef)
+	objIndex, err := s.GetObjectIndex(&objRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
-	latestObjRecord, err := l.GetRecord(&objIndex.LatestStateRef)
+	latestObjRecord, err := s.GetRecord(&objIndex.LatestStateRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
@@ -140,7 +140,7 @@ func (m *LedgerArtifactManager) DeclareType(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 
-	err := m.checkRequestRecord(m.store, &requestRef)
+	err := m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (m *LedgerArtifactManager) DeclareType(
 		},
 		TypeDeclaration: typeDec,
 	}
-	codeRef, err := m.store.SetRecord(&rec)
+	codeRef, err := m.db.SetRecord(&rec)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
@@ -172,7 +172,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 
-	err := m.checkRequestRecord(m.store, &requestRef)
+	err := m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	typeRefs := make([]record.Reference, 0, len(types))
 	for _, tp := range types {
 		ref := record.Core2Reference(tp)
-		rec, tErr := m.store.GetRecord(&ref)
+		rec, tErr := m.db.GetRecord(&ref)
 		if tErr != nil {
 			return nil, errors.Wrap(tErr, "failed to retrieve type record")
 		}
@@ -202,7 +202,7 @@ func (m *LedgerArtifactManager) DeployCode(
 		Types:        typeRefs,
 		TargetedCode: codeMap,
 	}
-	codeRef, err := m.store.SetRecord(&rec)
+	codeRef, err := m.db.SetRecord(&rec)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
@@ -220,11 +220,11 @@ func (m *LedgerArtifactManager) ActivateClass(
 	requestRef := record.Core2Reference(request)
 	codeRef := record.Core2Reference(code)
 
-	err := m.checkRequestRecord(m.store, &requestRef)
+	err := m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
-	_, err = m.getCodeRecord(m.store, codeRef)
+	_, err = m.getCodeRecord(m.db, codeRef)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 	}
 
 	var classRef *record.Reference
-	err = m.store.Update(func(tx *storage.TransactionManager) error {
+	err = m.db.Update(func(tx *storage.TransactionManager) error {
 		classRef, err = tx.SetRecord(&rec)
 		if err != nil {
 			return errors.Wrap(err, "failed to store record")
@@ -277,13 +277,13 @@ func (m *LedgerArtifactManager) DeactivateClass(
 	requestRef := record.Core2Reference(request)
 	classRef := record.Core2Reference(class)
 
-	err = m.checkRequestRecord(m.store, &requestRef)
+	err = m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
 	var deactivationRef *record.Reference
-	err = m.store.Update(func(tx *storage.TransactionManager) error {
+	err = m.db.Update(func(tx *storage.TransactionManager) error {
 		_, _, classIndex, err := m.getActiveClass(tx, classRef)
 		if err != nil {
 			return err
@@ -339,13 +339,13 @@ func (m *LedgerArtifactManager) UpdateClass(
 		migrationRefs = append(migrationRefs, record.Core2Reference(migration))
 	}
 
-	err = m.checkRequestRecord(m.store, &requestRef)
+	err = m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
 	var amendRef *record.Reference
-	err = m.store.Update(func(tx *storage.TransactionManager) error {
+	err = m.db.Update(func(tx *storage.TransactionManager) error {
 		_, _, classIndex, err := m.getActiveClass(tx, classRef)
 		if err != nil {
 			return err
@@ -409,13 +409,13 @@ func (m *LedgerArtifactManager) ActivateObj(
 	requestRef := record.Core2Reference(request)
 	classRef := record.Core2Reference(class)
 
-	err = m.checkRequestRecord(m.store, &requestRef)
+	err = m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
 	var objRef *record.Reference
-	err = m.store.Update(func(tx *storage.TransactionManager) error {
+	err = m.db.Update(func(tx *storage.TransactionManager) error {
 		_, _, _, err = m.getActiveClass(tx, classRef)
 		if err != nil {
 			return err
@@ -468,13 +468,13 @@ func (m *LedgerArtifactManager) DeactivateObj(
 	requestRef := record.Core2Reference(request)
 	objRef := record.Core2Reference(obj)
 
-	err = m.checkRequestRecord(m.store, &requestRef)
+	err = m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
 	var deactivationRef *record.Reference
-	err = m.store.Update(func(tx *storage.TransactionManager) error {
+	err = m.db.Update(func(tx *storage.TransactionManager) error {
 		_, _, objIndex, err := m.getActiveObject(tx, objRef)
 		if err != nil {
 			return err
@@ -526,13 +526,13 @@ func (m *LedgerArtifactManager) UpdateObj(
 	requestRef := record.Core2Reference(request)
 	objRef := record.Core2Reference(obj)
 
-	err = m.checkRequestRecord(m.store, &requestRef)
+	err = m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
 	var amendRef *record.Reference
-	err = m.store.Update(func(tx *storage.TransactionManager) error {
+	err = m.db.Update(func(tx *storage.TransactionManager) error {
 		_, _, objIndex, err := m.getActiveObject(tx, objRef)
 		if err != nil {
 			return err
@@ -587,13 +587,13 @@ func (m *LedgerArtifactManager) AppendObjDelegate(
 	requestRef := record.Core2Reference(request)
 	objRef := record.Core2Reference(obj)
 
-	err = m.checkRequestRecord(m.store, &requestRef)
+	err = m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
 	var appendRef *record.Reference
-	err = m.store.Update(func(tx *storage.TransactionManager) error {
+	err = m.db.Update(func(tx *storage.TransactionManager) error {
 		_, _, objIndex, err := m.getActiveObject(tx, objRef)
 		if err != nil {
 			return err
@@ -645,7 +645,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 	objRef := record.Core2Reference(objectState)
 
 	// Fetching class data
-	classRec, err := m.store.GetRecord(&classRef)
+	classRec, err := m.db.GetRecord(&classRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to retrieve class record")
 	}
@@ -663,13 +663,13 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
 	}
 
-	code, _, err := m.getCodeRecordCode(m.store, codeRef)
+	code, _, err := m.getCodeRecordCode(m.db, codeRef)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Fetching object data
-	objectRec, err := m.store.GetRecord(&objRef)
+	objectRec, err := m.db.GetRecord(&objRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to retrieve object record")
 	}
@@ -687,7 +687,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve object record")
 	}
 
-	objectIndex, err := m.store.GetObjectIndex(&objectHeadRef)
+	objectIndex, err := m.db.GetObjectIndex(&objectHeadRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
@@ -721,7 +721,7 @@ func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescripto
 func (m *LedgerArtifactManager) GetLatestClass(head core.RecordRef) (core.ClassDescriptor, error) {
 	classRef := record.Core2Reference(head)
 
-	classActivateRec, classStateRec, classIndex, err := m.getActiveClass(m.store, classRef)
+	classActivateRec, classStateRec, classIndex, err := m.getActiveClass(m.db, classRef)
 	if err != nil {
 		return nil, err
 	}
@@ -746,7 +746,7 @@ func (m *LedgerArtifactManager) GetLatestClass(head core.RecordRef) (core.ClassD
 func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDescriptor, error) {
 	objRef := record.Core2Reference(head)
 
-	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(m.store, objRef)
+	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(m.db, objRef)
 	if err != nil {
 		return nil, err
 	}
@@ -771,6 +771,6 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(store *storage.Store) (*LedgerArtifactManager, error) {
-	return &LedgerArtifactManager{store: store}, nil
+func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
+	return &LedgerArtifactManager{db: db}, nil
 }
