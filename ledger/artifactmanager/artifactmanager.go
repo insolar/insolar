@@ -27,16 +27,16 @@ import (
 
 // LedgerArtifactManager provides concrete API to storage for processing module
 type LedgerArtifactManager struct {
-	store    *storage.Store
+	store    *storage.DB
 	archPref []core.MachineType
 }
 
-func (m *LedgerArtifactManager) checkRequestRecord(l storage.Ledger, requestRef *record.Reference) error {
+func (m *LedgerArtifactManager) checkRequestRecord(l storage.Store, requestRef *record.Reference) error {
 	// TODO: implement request check
 	return nil
 }
 
-func (m *LedgerArtifactManager) getCodeRecord(l storage.Ledger, codeRef record.Reference) (*record.CodeRecord, error) {
+func (m *LedgerArtifactManager) getCodeRecord(l storage.Store, codeRef record.Reference) (*record.CodeRecord, error) {
 	rec, err := l.GetRecord(&codeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
@@ -48,7 +48,7 @@ func (m *LedgerArtifactManager) getCodeRecord(l storage.Ledger, codeRef record.R
 	return codeRec, nil
 }
 
-func (m *LedgerArtifactManager) getCodeRecordCode(l storage.Ledger, codeRef record.Reference) ([]byte, core.MachineType, error) {
+func (m *LedgerArtifactManager) getCodeRecordCode(l storage.Store, codeRef record.Reference) ([]byte, core.MachineType, error) {
 	codeRec, err := m.getCodeRecord(l, codeRef)
 	if err != nil {
 		return nil, core.MachineTypeNotExist, err
@@ -61,7 +61,7 @@ func (m *LedgerArtifactManager) getCodeRecordCode(l storage.Ledger, codeRef reco
 	return code, mt, nil
 }
 
-func (m *LedgerArtifactManager) getActiveClass(l storage.Ledger, classRef record.Reference) (
+func (m *LedgerArtifactManager) getActiveClass(l storage.Store, classRef record.Reference) (
 	*record.ClassActivateRecord, *record.ClassAmendRecord, *index.ClassLifeline, error,
 ) {
 	classRecord, err := l.GetRecord(&classRef)
@@ -91,7 +91,7 @@ func (m *LedgerArtifactManager) getActiveClass(l storage.Ledger, classRef record
 	return activateRec, amendRecord, classIndex, nil
 }
 
-func (m *LedgerArtifactManager) getActiveObject(l storage.Ledger, objRef record.Reference) (
+func (m *LedgerArtifactManager) getActiveObject(l storage.Store, objRef record.Reference) (
 	*record.ObjectActivateRecord, *record.ObjectAmendRecord, *index.ObjectLifeline, error,
 ) {
 	objRecord, err := l.GetRecord(&objRef)
@@ -771,6 +771,6 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(store *storage.Store) (*LedgerArtifactManager, error) {
+func NewArtifactManger(store *storage.DB) (*LedgerArtifactManager, error) {
 	return &LedgerArtifactManager{store: store}, nil
 }

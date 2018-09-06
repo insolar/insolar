@@ -25,7 +25,7 @@ import (
 
 // TransactionManager is used to ensure persistent writes to disk.
 type TransactionManager struct {
-	store  *Store
+	store  *DB
 	txn    *badger.Txn
 	update bool
 }
