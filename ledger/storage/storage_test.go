@@ -32,22 +32,22 @@ import (
 
 func TestStore_GetRecordNotFound(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	ref := &record.Reference{}
-	rec, err := store.GetRecord(ref)
+	rec, err := db.GetRecord(ref)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, rec)
 }
 
 func TestStore_SetRecord(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
-	store.SetCurrentPulse(pulse1)
+	db.SetCurrentPulse(pulse1)
 
 	passRecPulse1 := &record.LockUnlockRequest{}
 	idPulse1 := pulse1.ID(passRecPulse1)
@@ -56,16 +56,16 @@ func TestStore_SetRecord(t *testing.T) {
 		Domain: record.ID{},
 		Record: idPulse1,
 	}
-	rec, err := store.GetRecord(refPulse1)
+	rec, err := db.GetRecord(refPulse1)
 	assert.Nil(t, rec)
 	assert.Equal(t, storage.ErrNotFound, err)
 
-	gotRef, err := store.SetRecord(passRecPulse1)
+	gotRef, err := db.SetRecord(passRecPulse1)
 	assert.Nil(t, err)
 	assert.Equal(t, idPulse1, gotRef.Record)
 	assert.Equal(t, refPulse1, gotRef)
 
-	gotRec, err := store.GetRecord(gotRef)
+	gotRec, err := db.GetRecord(gotRef)
 	assert.Nil(t, err)
 	assert.Equal(t, passRecPulse1, gotRec)
 
@@ -80,21 +80,21 @@ func TestStore_SetRecord(t *testing.T) {
 
 func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	ref := &record.Reference{
 		Record: record.ID{Pulse: 1},
 	}
 
-	idx, err := store.GetClassIndex(ref)
+	idx, err := db.GetClassIndex(ref)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, idx)
 }
 
 func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	zerodomain := record.ID{Hash: zerohash()}
@@ -118,28 +118,28 @@ func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 			Hash: hexhash("122444"),
 		},
 	}
-	err := store.SetClassIndex(&zeroRef, &idx)
+	err := db.SetClassIndex(&zeroRef, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, err := store.GetClassIndex(&zeroRef)
+	storedIndex, err := db.GetClassIndex(&zeroRef)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }
 
 func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	ref := referenceWithHashes("1000", "5000")
-	idx, err := store.GetObjectIndex(&ref)
+	idx, err := db.GetObjectIndex(&ref)
 	assert.Equal(t, storage.ErrNotFound, err)
 	assert.Nil(t, idx)
 }
 
 func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
@@ -152,27 +152,27 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 		},
 	}
 	zeroref := referenceWithHashes("", "")
-	err := store.SetObjectIndex(&zeroref, &idx)
+	err := db.SetObjectIndex(&zeroref, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, err := store.GetObjectIndex(&zeroref)
+	storedIndex, err := db.GetObjectIndex(&zeroref)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }
 
 func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	drop, err := store.GetDrop(1)
+	drop, err := db.GetDrop(1)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, drop)
 }
 
 func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	// it references on 'fake' zero
@@ -180,32 +180,32 @@ func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 		Hash: []byte{0xFF},
 	}
 
-	store.SetCurrentPulse(42)
-	drop42, err := store.SetDrop(42, &fakeDrop)
+	db.SetCurrentPulse(42)
+	drop42, err := db.SetDrop(42, &fakeDrop)
 	assert.NoError(t, err)
-	got, err := store.GetDrop(42)
+	got, err := db.GetDrop(42)
 	assert.NoError(t, err)
 	assert.Equal(t, got, drop42)
 }
 
 func TestStore_SetCurrentPulse(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	store.SetCurrentPulse(42)
-	assert.Equal(t, record.PulseNum(42), store.GetCurrentPulse())
+	db.SetCurrentPulse(42)
+	assert.Equal(t, record.PulseNum(42), db.GetCurrentPulse())
 }
 
 func TestStore_SetEntropy(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	store.SetEntropy(42, []byte{1, 2, 3})
-	entropy, err := store.GetEntropy(42)
+	db.SetEntropy(42, []byte{1, 2, 3})
+	entropy, err := db.GetEntropy(42)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1, 2, 3}, entropy)
-	_, err = store.GetEntropy(1)
+	_, err = db.GetEntropy(1)
 	assert.Error(t, err)
 }

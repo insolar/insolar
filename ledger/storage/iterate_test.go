@@ -35,7 +35,7 @@ func sorthashes(hashes [][]byte) {
 }
 
 func TestStore_SlotIterate(t *testing.T) {
-	store, cleaner := storagetest.TmpDB(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	var recset = []record.Record{
@@ -48,10 +48,10 @@ func TestStore_SlotIterate(t *testing.T) {
 
 	// save records set in different pulses
 	for _, pulse := range pulses {
-		store.SetCurrentPulse(pulse)
+		db.SetCurrentPulse(pulse)
 
 		for _, rec := range recset {
-			ref, err := store.SetRecord(rec)
+			ref, err := db.SetRecord(rec)
 			assert.NoError(t, err)
 			assert.NotNil(t, ref)
 		}
@@ -60,7 +60,7 @@ func TestStore_SlotIterate(t *testing.T) {
 	// iterate over pulse1
 	var iterErr error
 	var allhashes1expect [][]byte
-	iterErr = store.ProcessSlotHashes(pulse1, func(it storage.HashIterator) error {
+	iterErr = db.ProcessSlotHashes(pulse1, func(it storage.HashIterator) error {
 		for i := 1; it.Next(); i++ {
 			h := it.Hash()
 			allhashes1expect = append(allhashes1expect, h)
@@ -69,7 +69,7 @@ func TestStore_SlotIterate(t *testing.T) {
 	})
 	assert.NoError(t, iterErr)
 
-	allhashes1got, err := store.GetSlotHashes(pulse1)
+	allhashes1got, err := db.GetSlotHashes(pulse1)
 	assert.NoError(t, err)
 	assert.Equalf(t, len(recset), len(allhashes1got), "hashes count the same as records count")
 	assert.Equalf(t, allhashes1expect, allhashes1got, "all hashes the same")
@@ -79,7 +79,7 @@ func TestStore_SlotIterate(t *testing.T) {
 
 	// iterate over pulse2
 	var allhashes2expect [][]byte
-	iterErr = store.ProcessSlotHashes(pulse2, func(it storage.HashIterator) error {
+	iterErr = db.ProcessSlotHashes(pulse2, func(it storage.HashIterator) error {
 		for i := 1; it.Next(); i++ {
 			h := it.Hash()
 			// log.Printf("%v: got hash: %x\n", i, h)
@@ -89,7 +89,7 @@ func TestStore_SlotIterate(t *testing.T) {
 	})
 	assert.NoError(t, iterErr)
 
-	allhashes2got, err := store.GetSlotHashes(pulse2)
+	allhashes2got, err := db.GetSlotHashes(pulse2)
 	assert.NoError(t, err)
 	assert.Equalf(t, len(recset), len(allhashes2got), "hashes count the same as records count")
 	assert.Equalf(t, allhashes2expect, allhashes2got, "all hashes the same")

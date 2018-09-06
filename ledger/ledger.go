@@ -39,20 +39,20 @@ func (l *Ledger) GetManager() core.ArtifactManager {
 
 // NewLedger creates new ledger instance.
 func NewLedger(conf configuration.Ledger) (core.Ledger, error) {
-	store, err := storage.NewDB(conf.DataDirectory, nil)
+	db, err := storage.NewDB(conf.DataDirectory, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
-	manager, err := artifactmanager.NewArtifactManger(store)
+	manager, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
 	}
-	coordinator, err := jetcoordinator.NewJetCoordinator(store)
+	coordinator, err := jetcoordinator.NewJetCoordinator(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}
 	ledger := &Ledger{
-		db:          store,
+		db:          db,
 		manager:     manager,
 		coordinator: coordinator,
 	}
