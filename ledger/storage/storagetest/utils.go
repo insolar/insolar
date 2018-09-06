@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// TmpDB returns BadgerDB's store implementation and cleanup function.
+// TmpDB returns BadgerDB's storage implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
 func TmpDB(t *testing.T, dir string) (*storage.DB, func()) {
@@ -32,12 +32,12 @@ func TmpDB(t *testing.T, dir string) (*storage.DB, func()) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store, err := storage.NewDB(tmpdir, nil)
+	db, err := storage.NewDB(tmpdir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return store, func() {
-		closeErr := store.Close()
+	return db, func() {
+		closeErr := db.Close()
 		rmErr := os.RemoveAll(tmpdir)
 		if closeErr != nil {
 			t.Error("temporary db close failed", closeErr)
