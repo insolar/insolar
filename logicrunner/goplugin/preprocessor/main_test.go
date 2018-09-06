@@ -361,3 +361,55 @@ type B struct{
 	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
 }
+
+func TestGenerateZeroValueForReference(t *testing.T) {
+
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+
+type A struct{
+	foundation.BaseContract
+}
+
+func (w *A) Receive(amount uint, from foundation.Reference) foundation.Reference {
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "test", &bufProxy)
+	assert.Contains(t, bufProxy.String(), "resList[0] = foundation.Reference([64]byte{})")
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.Contains(t, bufWrapper.String(), "args[1] = foundation.Reference([64]byte{})")
+}
+
+func TestRewritePackage(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+
+	err = testutil.WriteFile(tmpDir, testContract, `
+package TEST
+
+type A struct{
+	foundation.BaseContract
+}
+func (w *A) Receive(amount uint, from foundation.Reference) foundation.Reference {
+}
+`)
+
+	var buf bytes.Buffer
+	err = cmdRewritePackage(tmpDir+testContract, &buf)
+	assert.NoError(t, err)
+
+	assert.Contains(t, buf.String(), "package main")
+}
