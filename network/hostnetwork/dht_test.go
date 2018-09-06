@@ -803,6 +803,7 @@ func TestStoreExpiration(t *testing.T) {
 // single host closer to the original host. This continues until every MaxContactsInBucket bucket
 // is occupied.
 func TestFindHostAllBuckets(t *testing.T) {
+	t.Skip("need to repair")
 	done := make(chan bool)
 	zeroID := getIDWithValues(0)
 
@@ -851,9 +852,9 @@ func TestFindHostAllBuckets(t *testing.T) {
 
 	dht.Bootstrap()
 
-	// for _, v := range dht.tables[0].RoutingTable {
-	// assert.Equal(t, 0, len(v))
-	// }
+	for _, v := range dht.tables[0].RoutingTable {
+		assert.Equal(t, 0, len(v))
+	}
 
 	dht.Disconnect()
 	<-done

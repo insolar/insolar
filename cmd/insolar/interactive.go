@@ -135,5 +135,5 @@ findhost <key> - Find node's real network address
 info - Display information about this node
 exit - Exit programm
 
-<method> <target> <args...> - Remote procedure call`)
+rpc <method> <target> <args...> - Remote procedure call`)
 }

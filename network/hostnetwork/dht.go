@@ -1155,7 +1155,7 @@ func (dht *DHT) processObtainIPRequest(ctx Context, msg *packet.Packet, packetBu
 }
 
 // RelayRequest sends relay request to target.
-func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error { // target - host ID
+func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error {
 	var typedCommand packet.CommandType
 	targetHost, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
