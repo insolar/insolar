@@ -48,7 +48,7 @@ func (r *runner) Execute(msg core.Message) (res *core.Response) {
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 
-	return &core.Response{resp.Data, resp.Result, resp.Error}
+	return &core.Response{Data: resp.Data, Result: resp.Result, Error: resp.Error}
 }
 
 func TestNew(t *testing.T) {
@@ -60,8 +60,8 @@ func TestNew(t *testing.T) {
 	assert.NoError(t, err)
 	mr, err := New(configuration.Configuration{})
 	mr.Start(core.Components{
-		"core.LogicRunner":               r,
-		"*servicenetwork.ServiceNetwork": network,
+		"core.LogicRunner": r,
+		"core.Network":     network,
 	})
 	if err != nil {
 		t.Fatal(err)
