@@ -38,7 +38,7 @@ func (l *Ledger) GetManager() core.ArtifactManager {
 }
 
 // NewLedger creates new ledger instance.
-func NewLedger(conf configuration.Ledger) (core.Ledger, error) {
+func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	db, err := storage.NewDB(conf.DataDirectory, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")

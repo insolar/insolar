@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // ServiceNetwork is facade for network.
@@ -33,12 +34,6 @@ type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.Nodenetwork
 	hostNetwork *hostnetwork.DHT
 }
-
-// Start imlements core.Component
-func (network *ServiceNetwork) Start(components core.Components) error { return nil }
-
-// Stop imlements core.Component
-func (network *ServiceNetwork) Stop() error { return nil }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(
@@ -52,6 +47,16 @@ func NewServiceNetwork(
 	node := nodenetwork.NewNodeNetwork(nodeConf)
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
+	}
+
+	err = dht.ObtainIP(createContext(dht))
+	if err != nil {
+		return nil, err
+	}
+
+	err = dht.AnalyzeNetwork(createContext(dht))
+	if err != nil {
+		return nil, err
 	}
 
 	return &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}, nil
@@ -98,6 +103,55 @@ func Serialize(value interface{}) ([]byte, error) {
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 	network.hostNetwork.RemoteProcedureRegister(name, method)
+}
+
+// GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
+func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hostnetwork.Context) {
+	return network.hostNetwork, createContext(network.hostNetwork)
+}
+
+// Start imlements core.Component
+func (network *ServiceNetwork) Start(components core.Components) error {
+	go network.listen()
+	logrus.Infoln("Bootstrapping network...")
+	network.bootstrap()
+
+	ctx := createContext(network.hostNetwork)
+	err := network.hostNetwork.ObtainIP(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = network.hostNetwork.AnalyzeNetwork(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Stop imlements core.Component
+func (network *ServiceNetwork) Stop() error {
+	logrus.Infoln("Stop network")
+	network.hostNetwork.Disconnect()
+	return nil
+}
+
+func (network *ServiceNetwork) bootstrap() {
+	err := network.hostNetwork.Bootstrap()
+	if err != nil {
+		logrus.Errorln("Failed to bootstrap network", err.Error())
+	}
+}
+
+func (network *ServiceNetwork) listen() {
+	func() {
+		logrus.Infoln("Network starts listening")
+		err := network.hostNetwork.Listen()
+		if err != nil {
+			logrus.Errorln("Listen failed:", err.Error())
+		}
+	}()
 }
 
 func createContext(dht *hostnetwork.DHT) hostnetwork.Context {
