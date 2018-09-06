@@ -25,12 +25,14 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"text/template"
 
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
@@ -58,6 +60,7 @@ func printUsage() {
 	fmt.Println("Commands: ")
 	fmt.Println(" wrapper   generate contract's wrapper")
 	fmt.Println(" proxy     generate contract's proxy")
+	fmt.Println(" compile   compile contract")
 	fmt.Println(" imports   rewrite imports")
 }
 
@@ -149,6 +152,35 @@ func main() {
 		err = cmdRewriteImports(fs.Arg(0), output.writer)
 		if err != nil {
 			panic(err)
+		}
+	case "compile":
+		fs := flag.NewFlagSet("compile", flag.ExitOnError)
+		output := newOutputFlag()
+		fs.VarP(output, "output", "o", "output directory")
+		name := newOutputFlag()
+		fs.VarP(name, "name", "n", "contract's file name")
+		err := fs.Parse(os.Args[2:])
+		if err != nil {
+			panic(err)
+		}
+
+		dstDir := output.String() + "/plugins/"
+		err = os.MkdirAll(dstDir, 0777)
+		if err != nil {
+			panic(err)
+		}
+
+		origGoPath, err := testutil.ChangeGoPath(output.String())
+		if err != nil {
+			panic(err)
+		}
+		defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
+
+		//contractPath := root + "/src/contract/" + name + "/main.go"
+
+		out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name.String()+".so", "contract/"+name.String()).CombinedOutput()
+		if err != nil {
+			panic(errors.Wrap(err, "can't build contract: "+string(out)))
 		}
 	default:
 		printUsage()
