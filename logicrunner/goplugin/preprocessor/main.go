@@ -40,6 +40,7 @@ import (
 
 var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 
 type parsedFile struct {
 	name    string
@@ -217,8 +218,8 @@ func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, 
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
-		argsInit, argsList, importPaths := generateZeroListOfTypes(parsed, "args", method.Type.Params, imports)
-		imports = importPaths
+		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
+		imports = extendImportsMap(parsed, method.Type.Params, imports)
 		rets := []string{}
 		if method.Type.Results != nil {
 			for i := range method.Type.Results.List {
@@ -302,7 +303,7 @@ func generateContractProxy(fileName string, classReference string, out io.Writer
 
 	types := generateTypes(parsed)
 
-	methodsProxies := generateMethodsProxies(parsed)
+	methodsProxies, imports := generateMethodsProxies(parsed)
 
 	constructorProxies := generateConstructorProxies(parsed)
 
@@ -318,6 +319,7 @@ func generateContractProxy(fileName string, classReference string, out io.Writer
 		MethodsProxies      []map[string]interface{}
 		ConstructorsProxies []map[string]string
 		ClassReference      string
+		Imports             map[string]bool
 	}{
 		proxyPackageName,
 		types,
@@ -325,6 +327,7 @@ func generateContractProxy(fileName string, classReference string, out io.Writer
 		methodsProxies,
 		constructorProxies,
 		classReference,
+		imports,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -425,31 +428,12 @@ func generateTypes(parsed *parsedFile) []string {
 	return types
 }
 
-func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList, imports map[string]bool) (string, string, map[string]bool) {
-	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
-	if list == nil {
-		return text, "", imports
+func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[string]bool) map[string]bool {
+	if params == nil {
+		return imports
 	}
-
-	for i, arg := range list.List {
-		initializer := ""
-		tname := string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
-		switch tname {
-		case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
-			initializer = tname + "(0)"
-		case "bool":
-			initializer = "bool(false)"
-		case "string":
-			initializer = `""`
-		default:
-			switch td := arg.Type.(type) {
-			case *ast.StarExpr:
-				initializer = "&" + string(parsed.code[td.X.Pos()-1:td.X.End()-1]) + "{}"
-			default:
-				initializer = tname + "{}"
-			}
-		}
-		text += fmt.Sprintf("\t%s[%d] = %s\n", name, i, initializer)
+	for _, e := range params.List {
+		tname := string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
 		tname = strings.Trim(tname, "*")
 		tnameFrom := strings.Split(tname, ".")
 		if len(tnameFrom) > 1 {
@@ -472,16 +456,45 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 			}
 		}
 	}
+	return imports
+}
+
+func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
+	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
+	if list == nil {
+		return text, ""
+	}
+
+	for i, arg := range list.List {
+		initializer := ""
+		tname := string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
+		switch tname {
+		case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
+			initializer = tname + "(0)"
+		case "bool":
+			initializer = "bool(false)"
+		case "string":
+			initializer = `""`
+		default:
+			switch td := arg.Type.(type) {
+			case *ast.StarExpr:
+				initializer = "&" + string(parsed.code[td.X.Pos()-1:td.X.End()-1]) + "{}"
+			default:
+				initializer = tname + "{}"
+			}
+		}
+		text += fmt.Sprintf("\t%s[%d] = %s\n", name, i, initializer)
+	}
 
 	listCode := ""
 	for i, arg := range list.List {
+		tname := string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
 		if i > 0 {
 			listCode += ", "
 		}
-		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1]))
+		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, tname)
 	}
-
-	return text, listCode, imports
+	return text, listCode
 }
 
 func genFieldList(parsed *parsedFile, params *ast.FieldList, withNames bool) string {
@@ -511,9 +524,7 @@ func generateInitArguments(list *ast.FieldList) string {
 }
 
 func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[string]interface{} {
-
-	resInit, resList, _ := generateZeroListOfTypes(parsed, "resList", method.Type.Results, nil)
-
+	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
 	return map[string]interface{}{
 		"Name":           method.Name.Name,
 		"ResultZeroList": resInit,
@@ -524,13 +535,16 @@ func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[strin
 	}
 }
 
-func generateMethodsProxies(parsed *parsedFile) []map[string]interface{} {
+func generateMethodsProxies(parsed *parsedFile) ([]map[string]interface{}, map[string]bool) {
 	var methodsProxies []map[string]interface{}
-
+	imports := make(map[string]bool)
+	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
 		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
+		imports = extendImportsMap(parsed, method.Type.Params, imports)
+		imports = extendImportsMap(parsed, method.Type.Results, imports)
 	}
-	return methodsProxies
+	return methodsProxies, imports
 }
 
 func generateConstructorProxies(parsed *parsedFile) []map[string]string {

@@ -362,7 +362,7 @@ type B struct{
 	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
 }
 
-func TestImportsFromContractInWrapper(t *testing.T) {
+func TestImportsFromContract(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -392,6 +392,9 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufProxy.String(), `"some/test/import/pointerPath"`)
+	assert.NotContains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
@@ -404,7 +407,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
-func TestAliasImportsFromContractInWrapper(t *testing.T) {
+func TestAliasImportsFromContract(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -429,6 +432,8 @@ func ( A ) Get(i someAlias.SomeType){
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), `someAlias "some/test/import/path"`)
+	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
@@ -440,7 +445,7 @@ func ( A ) Get(i someAlias.SomeType){
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
-func TestImportsFromContractNotInWrapperIfNotInputValue(t *testing.T) {
+func TestImportsFromContractUseInsideFunc(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -466,6 +471,8 @@ func ( A ) Get() {
 	var bufProxy bytes.Buffer
 	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
+	assert.NotContains(t, bufProxy.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
@@ -473,7 +480,46 @@ func ( A ) Get() {
 	var bufWrapper bytes.Buffer
 	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
-	assert.NotContains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
+	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+}
+
+func TestImportsFromContractUseForReturnValue(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"some/test/import/path"
+)
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( A ) Get() path.SomeValue {
+	f := path.SomeMethod()
+	return f
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
