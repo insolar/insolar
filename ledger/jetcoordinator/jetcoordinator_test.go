@@ -27,11 +27,11 @@ import (
 )
 
 func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
-	ledger, cleaner := storagetest.TmpStore(t, "")
+	ledger, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	jc := &JetCoordinator{
-		store: ledger,
+		db: ledger,
 	}
 	var (
 		zeropulse record.PulseNum

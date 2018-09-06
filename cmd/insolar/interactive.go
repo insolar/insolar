@@ -19,17 +19,18 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/servicenetwork"
 )
 
-func repl(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func repl(service *servicenetwork.ServiceNetwork) {
 	displayInteractiveHelp()
+	dhtNetwork, ctx := service.GetHostNetwork()
 	doInfo(service, dhtNetwork, ctx)
 
 	rl, err := readline.New("> ")
@@ -53,7 +54,7 @@ func repl(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 		case "exit":
 			fallthrough
 		case "quit":
-			os.Exit(0)
+			return
 		case "help":
 			displayInteractiveHelp()
 		case "findhost":

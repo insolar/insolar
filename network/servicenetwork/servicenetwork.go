@@ -31,9 +31,8 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	nodeNetwork   *nodenetwork.Nodenetwork
-	hostNetwork   *hostnetwork.DHT
-	originAddress string
+	nodeNetwork *nodenetwork.Nodenetwork
+	hostNetwork *hostnetwork.DHT
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -48,6 +47,16 @@ func NewServiceNetwork(
 	node := nodenetwork.NewNodeNetwork(nodeConf)
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
+	}
+
+	err = dht.ObtainIP(createContext(dht))
+	if err != nil {
+		return nil, err
+	}
+
+	err = dht.AnalyzeNetwork(createContext(dht))
+	if err != nil {
+		return nil, err
 	}
 
 	return &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}, nil
@@ -96,7 +105,7 @@ func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.
 	network.hostNetwork.RemoteProcedureRegister(name, method)
 }
 
-// GetHostNetwork returns host network.
+// GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
 func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hostnetwork.Context) {
 	return network.hostNetwork, createContext(network.hostNetwork)
 }

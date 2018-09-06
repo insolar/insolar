@@ -187,7 +187,7 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 	}
 
 	var resSerialized []byte
-	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res)
+	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res[0])
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal returned values into cbor")
 	}
@@ -290,10 +290,10 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 }
 
 // RouteConstructorCall ...
-func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (string, error) {
+func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) ([]byte, error) {
 	client, err := t.Upstream()
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
 	req := rpctypes.UpRouteConstructorReq{
@@ -305,10 +305,32 @@ func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (
 	res := rpctypes.UpRouteConstructorResp{}
 	err = client.Call("RPC.RouteConstructorCall", req, &res)
 	if err != nil {
+		return []byte{}, errors.Wrap(err, "on calling main API")
+	}
+
+	return res.Data, res.Err
+}
+
+// SaveAsChild ...
+func (t *GoInsider) SaveAsChild(parentRef, classRef string, data []byte) (string, error) {
+	client, err := t.Upstream()
+	if err != nil {
+		return "", err
+	}
+
+	req := rpctypes.UpSaveAsChildReq{
+		Parent: core.String2Ref(parentRef),
+		Class:  core.String2Ref(classRef),
+		Data:   data,
+	}
+
+	res := rpctypes.UpSaveAsChildResp{}
+	err = client.Call("RPC.SaveAsChild", req, &res)
+	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference.String(), res.Err
+	return res.Reference.String(), nil
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`
