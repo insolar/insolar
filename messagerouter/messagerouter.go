@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/servicenetwork"
 )
 
 const deliverRPCMethodName = "MessageRouter.Deliver"
@@ -31,7 +30,7 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // e.g. glue between network and logic runner
 type MessageRouter struct {
 	LogicRunner core.LogicRunner
-	service     *servicenetwork.ServiceNetwork
+	service     core.Network
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
@@ -43,7 +42,7 @@ func New(cfg configuration.Configuration) (*MessageRouter, error) {
 
 func (mr *MessageRouter) Start(c core.Components) error {
 	mr.LogicRunner = c["core.LogicRunner"].(core.LogicRunner)
-	mr.service = c["*servicenetwork.ServiceNetwork"].(*servicenetwork.ServiceNetwork)
+	mr.service = c["core.Network"].(core.Network)
 	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return nil
 }
