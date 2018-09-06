@@ -372,14 +372,19 @@ func TestImportsFromContractInWrapper(t *testing.T) {
 package main
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"some/test/import/"
+	"some/test/import/path"
+	"some/test/import/pointerPath"
 )
 
 type A struct{
 	foundation.BaseContract
 }
 
-func ( A ) Get(){
+func ( A ) Get(i path.SomeType){
+	return
+}
+
+func ( A ) GetPointer(i *pointerPath.SomeType){
 	return
 }
 `)
@@ -394,8 +399,82 @@ func ( A ) Get(){
 	var bufWrapper bytes.Buffer
 	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
-	assert.Contains(t, bufWrapper.String(), "some/test/import/")
-	assert.Contains(t, bufWrapper.String(), "github.com/insolar/insolar/logicrunner/goplugin/foundation")
+	assert.Contains(t, bufWrapper.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufWrapper.String(), `"some/test/import/pointerPath"`)
+	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+}
+
+func TestAliasImportsFromContractInWrapper(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	someAlias "some/test/import/path"
+)
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( A ) Get(i someAlias.SomeType){
+	return
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
+	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+}
+
+func TestImportsFromContractNotInWrapperIfNotInputValue(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"some/test/import/path"
+)
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( A ) Get() {
+	path.SomeMethod()
+	return
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.NotContains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
+	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
 func TestNotMatchFileNameForProxy(t *testing.T) {

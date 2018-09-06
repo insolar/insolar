@@ -212,11 +212,13 @@ func openTemplate(fileName string) (*template.Template, error) {
 	return tmpl, nil
 }
 
-func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
+func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, map[string]bool) {
 	var methodsInfo []map[string]interface{}
+	imports := make(map[string]bool)
+	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
-		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-
+		argsInit, argsList, importPaths := generateZeroListOfTypes(parsed, "args", method.Type.Params, imports)
+		imports = importPaths
 		rets := []string{}
 		if method.Type.Results != nil {
 			for i := range method.Type.Results.List {
@@ -233,7 +235,7 @@ func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
 		}
 		methodsInfo = append(methodsInfo, info)
 	}
-	return methodsInfo
+	return methodsInfo, imports
 }
 
 func generateContractWrapper(fileName string, out io.Writer) error {
@@ -252,18 +254,22 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
 
+	methodsInfo, imports := generateContractMethodsInfo(parsed)
+
 	data := struct {
-		PackageName  string
-		ContractType string
-		Methods      []map[string]interface{}
-		ParsedCode   []byte
-		Imports      []*ast.ImportSpec
+		PackageName    string
+		ContractType   string
+		Methods        []map[string]interface{}
+		ParsedCode     []byte
+		FoundationPath string
+		Imports        map[string]bool
 	}{
 		packageName,
 		parsed.contract,
-		generateContractMethodsInfo(parsed),
+		methodsInfo,
 		parsed.code,
-		parsed.node.Imports,
+		foundationPath,
+		imports,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -419,11 +425,10 @@ func generateTypes(parsed *parsedFile) []string {
 	return types
 }
 
-func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
+func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList, imports map[string]bool) (string, string, map[string]bool) {
 	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
-
 	if list == nil {
-		return text, ""
+		return text, "", imports
 	}
 
 	for i, arg := range list.List {
@@ -445,6 +450,27 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 			}
 		}
 		text += fmt.Sprintf("\t%s[%d] = %s\n", name, i, initializer)
+		tname = strings.Trim(tname, "*")
+		tnameFrom := strings.Split(tname, ".")
+		if len(tnameFrom) > 1 {
+			for _, imp := range parsed.node.Imports {
+				importAlias := ""
+				impValue := ""
+				if imp.Name != nil {
+					importAlias = imp.Name.Name
+					impValue = fmt.Sprintf(`%s %s`, importAlias, imp.Path.Value)
+				} else {
+					impValue = imp.Path.Value
+					importString := strings.Trim(impValue, `"`)
+					importedPackage := strings.Split(importString, "/")
+					importAlias = importedPackage[len(importedPackage)-1]
+				}
+				if importAlias == tnameFrom[0] {
+					imports[impValue] = true
+					break
+				}
+			}
+		}
 	}
 
 	listCode := ""
@@ -455,7 +481,7 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1]))
 	}
 
-	return text, listCode
+	return text, listCode, imports
 }
 
 func genFieldList(parsed *parsedFile, params *ast.FieldList, withNames bool) string {
@@ -486,7 +512,7 @@ func generateInitArguments(list *ast.FieldList) string {
 
 func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[string]interface{} {
 
-	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
+	resInit, resList, _ := generateZeroListOfTypes(parsed, "resList", method.Type.Results, nil)
 
 	return map[string]interface{}{
 		"Name":           method.Name.Name,
