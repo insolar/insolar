@@ -26,7 +26,7 @@ import (
 )
 
 func TestNewHashTable(t *testing.T) {
-	id1, _ := id.NewID(id.GetRandomKey())
+	id1, _ := id.NewID()
 	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
@@ -34,7 +34,7 @@ func TestNewHashTable(t *testing.T) {
 }
 
 func TestHashTable_Lock(t *testing.T) {
-	id1, _ := id.NewID(id.GetRandomKey())
+	id1, _ := id.NewID()
 	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
@@ -44,7 +44,7 @@ func TestHashTable_Lock(t *testing.T) {
 }
 
 func TestHashTable_Unlock(t *testing.T) {
-	id1, _ := id.NewID(id.GetRandomKey())
+	id1, _ := id.NewID()
 	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
@@ -54,7 +54,7 @@ func TestHashTable_Unlock(t *testing.T) {
 }
 
 func TestHashTable_ResetRefreshTimeForBucket(t *testing.T) {
-	id1, _ := id.NewID(id.GetRandomKey())
+	id1, _ := id.NewID()
 	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
@@ -68,7 +68,7 @@ func TestHashTable_ResetRefreshTimeForBucket(t *testing.T) {
 }
 
 func TestHashTable_TotalHosts(t *testing.T) {
-	id1, _ := id.NewID(id.GetRandomKey())
+	id1, _ := id.NewID()
 	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
@@ -78,7 +78,7 @@ func TestHashTable_TotalHosts(t *testing.T) {
 }
 
 func TestHashTable_GetRandomIDFromBucket(t *testing.T) {
-	id1, _ := id.NewID(id.GetRandomKey())
+	id1, _ := id.NewID()
 	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)
@@ -88,7 +88,7 @@ func TestHashTable_GetRandomIDFromBucket(t *testing.T) {
 }
 
 func TestHashTable_GetTotalHostsInBucket(t *testing.T) {
-	id1, _ := id.NewID(id.GetRandomKey())
+	id1, _ := id.NewID()
 	addr, _ := host.NewAddress("127.0.0.1:3000")
 	ht, err := NewHashTable(id1, addr)
 	assert.NoError(t, err)

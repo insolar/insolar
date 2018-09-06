@@ -50,17 +50,17 @@ func (mr *mockReader) Read(b []byte) (n int, err error) {
 func TestNewID(t *testing.T) {
 	random = newMockReader()
 
-	id2, err := NewID(nil)
+	id2, err := NewID()
 
 	assert.NoError(t, err)
 	assert.Len(t, id2.GetKey(), 20)
-	id1, _ := NewID(nil)
-	assert.Equal(t, id1.GetKey(), id2.GetKey())
+	id1, _ := NewID()
+	assert.NotEqual(t, id1.GetKey(), id2.GetKey())
 }
 
 func TestID_Equal(t *testing.T) {
-	id1, _ := NewID(GetRandomKey())
-	id2, _ := NewID(GetRandomKey())
+	id1, _ := NewID()
+	id2, _ := NewID()
 	tests := []struct {
 		id1, id2 ID
 		equal    bool
@@ -80,8 +80,7 @@ func TestID_MarshalBinary(t *testing.T) {
 	var buf bytes.Buffer
 
 	enc := gob.NewEncoder(&buf)
-	key := GetRandomKey()
-	id, _ := NewID(key)
+	id, _ := NewID()
 	err := enc.Encode(id)
 	assert.NoError(t, err)
 
@@ -95,26 +94,16 @@ func TestID_MarshalBinary(t *testing.T) {
 }
 
 func TestID_KeyEqual(t *testing.T) {
-	key := GetRandomKey()
-	id1, _ := NewID(key)
-	id2, _ := NewID(key)
-	id3, _ := NewID(GetRandomKey())
+	id1, _ := NewID()
+	id2, _ := NewID()
 
-	assert.Equal(t, id1.KeyString(), id2.KeyString())
-	assert.NotEqual(t, id1.KeyString(), id3.KeyString())
+	assert.Equal(t, id1.KeyString(), id1.KeyString())
+	assert.NotEqual(t, id1.KeyString(), id2.KeyString())
 }
 
 func TestID_String(t *testing.T) {
 	random = newMockReader()
-	id, _ := NewID(nil)
+	id, _ := NewID()
 
 	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.KeyString())
-}
-
-func TestCryptoReader_Read(t *testing.T) {
-	var crypto cryptoReader
-	data := GetRandomKey()
-	n, err := crypto.Read(data)
-	assert.NoError(t, err)
-	assert.Equal(t, n, len(data))
 }

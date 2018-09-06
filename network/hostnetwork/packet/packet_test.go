@@ -29,10 +29,10 @@ import (
 func TestNewPingPacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID(id.GetRandomKey())
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID(id.GetRandomKey())
+	receiver.ID, _ = id.NewID()
 
 	m := NewPingPacket(sender, receiver)
 
@@ -166,10 +166,10 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 func TestPacket_IsForMe(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID(id.GetRandomKey())
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID(id.GetRandomKey())
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
 	origin, _ := host.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
 
@@ -183,10 +183,10 @@ func TestPacket_IsForMe(t *testing.T) {
 func TestSerializePacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID(id.GetRandomKey())
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID(id.GetRandomKey())
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.GetKey()}).Build()
 
@@ -198,10 +198,10 @@ func TestSerializePacket(t *testing.T) {
 func TestDeserializePacket(t *testing.T) {
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
-	sender.ID, _ = id.NewID(id.GetRandomKey())
+	sender.ID, _ = id.NewID()
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
-	receiver.ID, _ = id.NewID(id.GetRandomKey())
+	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
 	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.GetKey()}).Build()
 
