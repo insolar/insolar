@@ -14,18 +14,19 @@
  *    limitations under the License.
  */
 
-package badgerdb
+package storage
 
 import (
 	"path/filepath"
+	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -39,6 +40,8 @@ const (
 type Store struct {
 	db           *badger.DB
 	currentPulse record.PulseNum
+
+	dropWG sync.WaitGroup
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -51,7 +54,7 @@ func setOptions(o *badger.Options) *badger.Options {
 	return newo
 }
 
-// NewStore returns badgerdb.Store with BadgerDB instance initialized by opts.
+// NewStore returns storage.Store with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
 func NewStore(dir string, opts *badger.Options) (*Store, error) {
 	opts = setOptions(opts)
@@ -88,16 +91,15 @@ func (s *Store) Close() error {
 // Get gets value by key in BadgerDB storage.
 func (s *Store) Get(key []byte) ([]byte, error) {
 	var buf []byte
-	// TODO: handle transaction conflicts.
 	txerr := s.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
-				return storage.ErrNotFound
+				return ErrNotFound
 			}
 			return err
 		}
-		buf, err = item.Value()
+		buf, err = item.ValueCopy(nil)
 		return err
 	})
 	if txerr != nil {
@@ -106,107 +108,86 @@ func (s *Store) Get(key []byte) ([]byte, error) {
 	return buf, txerr
 }
 
-// Set stores value by key in BadgerDB.
+// Set stores value by key.
 func (s *Store) Set(key, value []byte) error {
-	// TODO: handle transaction conflicts.
-	txerr := s.db.Update(func(txn *badger.Txn) error {
+	return s.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(key, value)
 	})
-	return txerr
 }
 
-// GetRecord returns record from BadgerDB by *record.Reference.
-//
-// It returns storage.ErrNotFound if the DB does not contain the key.
+// GetRecord wraps matching transaction manager method.
 func (s *Store) GetRecord(ref *record.Reference) (record.Record, error) {
-	var raw *record.Raw
-
-	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
-	txerr := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(k)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return storage.ErrNotFound
-			}
-			return err
-		}
-		buf, err := item.Value()
-		if err != nil {
-			return err
-		}
-		raw, err = record.DecodeToRaw(buf)
-		return err
-	})
-	// TODO: check transaction conflict
-	if txerr != nil {
-		return nil, txerr
-	}
-	return raw.ToRecord(), nil
-}
-
-// SetRecord stores record in BadgerDB and returns *record.Reference of new record.
-func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
-	raw, err := record.EncodeToRaw(rec)
+	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+	rec, err := tx.GetRecord(ref)
 	if err != nil {
 		return nil, err
 	}
-	ref := &record.Reference{
-		Domain: rec.Domain().Record,
-		Record: record.ID{
-			Pulse: s.GetCurrentPulse(),
-			Hash:  raw.Hash(),
-		},
+	return rec, nil
+}
+
+// SetRecord wraps matching transaction manager method.
+func (s *Store) SetRecord(rec record.Record) (*record.Reference, error) {
+	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
+	ref, err := tx.SetRecord(rec)
+	if err != nil {
+		return nil, err
 	}
-	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
-	val := record.MustEncodeRaw(raw)
-	txerr := s.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(k, val)
-	})
-	// TODO: check transaction conflict
-	if txerr != nil {
-		return nil, txerr
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
 	}
 	return ref, nil
 }
 
-// GetClassIndex fetches class lifeline's index.
+// GetClassIndex wraps matching transaction manager method.
 func (s *Store) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
-	buf, err := s.Get(k)
+	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
+	idx, err := tx.GetClassIndex(ref)
 	if err != nil {
 		return nil, err
 	}
-	return index.DecodeClassLifeline(buf)
+	return idx, nil
 }
 
-// SetClassIndex stores class lifeline index.
+// SetClassIndex wraps matching transaction manager method.
 func (s *Store) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
-	encoded, err := index.EncodeClassLifeline(idx)
+	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
+	err := tx.SetClassIndex(ref, idx)
 	if err != nil {
 		return err
 	}
-	return s.Set(k, encoded)
+	return tx.Commit()
 }
 
-// GetObjectIndex fetches object lifeline index.
+// GetObjectIndex wraps matching transaction manager method.
 func (s *Store) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
-	buf, err := s.Get(k)
+	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
+	idx, err := tx.GetObjectIndex(ref)
 	if err != nil {
 		return nil, err
 	}
-	return index.DecodeObjectLifeline(buf)
+	return idx, nil
 }
 
-// SetObjectIndex stores object lifeline index.
+// SetObjectIndex wraps matching transaction manager method.
 func (s *Store) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
-	encoded, err := index.EncodeObjectLifeline(idx)
+	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
+	err := tx.SetObjectIndex(ref, idx)
 	if err != nil {
 		return err
 	}
-	return s.Set(k, encoded)
+	return tx.Commit()
 }
 
 // GetDrop returns jet drop for a given pulse number.
@@ -223,11 +204,15 @@ func (s *Store) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
 	return drop, nil
 }
 
+func (s *Store) waitinflight() {
+	s.dropWG.Wait()
+}
+
 // SetDrop stores jet drop for given pulse number.
-// Previous JetDrop should be provided.
-// On success returns saved drop hash.
+//
+// Previous JetDrop should be provided. On success returns saved drop hash.
 func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+	s.waitinflight()
 
 	hw := hash.NewSHA3()
 	err := s.ProcessSlotHashes(pulse, func(it HashIterator) error {
@@ -255,6 +240,7 @@ func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetd
 		return nil, err
 	}
 
+	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
 	err = s.Set(k, encoded)
 	if err != nil {
 		drop = nil
@@ -262,20 +248,28 @@ func (s *Store) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetd
 	return drop, err
 }
 
-// SetEntropy stores given entropy for given pulse in storage.
-//
-// Entropy is used for calculating node roles.
-func (s *Store) SetEntropy(pulse record.PulseNum, entropy []byte) error {
-	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
-	return s.Set(k, entropy)
+// GetEntropy wraps matching transaction manager method.
+func (s *Store) GetEntropy(pulse record.PulseNum) ([]byte, error) {
+	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+
+	idx, err := tx.GetEntropy(pulse)
+	if err != nil {
+		return nil, err
+	}
+	return idx, nil
 }
 
-// GetEntropy returns entropy from storage for given pulse.
-//
-// Entropy is used for calculating node roles.
-func (s *Store) GetEntropy(pulse record.PulseNum) ([]byte, error) {
-	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
-	return s.Get(k)
+// SetEntropy wraps matching transaction manager method.
+func (s *Store) SetEntropy(pulse record.PulseNum, entropy []byte) error {
+	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
+	err := tx.SetEntropy(pulse, entropy)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // SetCurrentPulse sets current pulse number.
@@ -286,4 +280,38 @@ func (s *Store) SetCurrentPulse(pulse record.PulseNum) {
 // GetCurrentPulse returns current pulse number.
 func (s *Store) GetCurrentPulse() record.PulseNum {
 	return s.currentPulse
+}
+
+// BeginTransaction opens a new transaction.
+// All methods called on returned transaction manager will persist changes
+// only after success on "Commit" call.
+func (s *Store) BeginTransaction(update bool) *TransactionManager {
+	if update {
+		s.dropWG.Add(1)
+	}
+	return &TransactionManager{
+		store:  s,
+		txn:    s.db.NewTransaction(update),
+		update: update,
+	}
+}
+
+// View accepts transaction function. All calls to received transaction manager will be consistent.
+func (s *Store) View(fn func(*TransactionManager) error) error {
+	tx := s.BeginTransaction(false)
+	defer tx.Discard()
+	return fn(tx)
+}
+
+// Update accepts transaction function and commits changes. All calls to received transaction manager will be
+// consistent and written tp disk or an error will be returned.
+func (s *Store) Update(fn func(*TransactionManager) error) error {
+	tx := s.BeginTransaction(true)
+	defer tx.Discard()
+
+	err := fn(tx)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }

@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 
-	. "github.com/insolar/insolar/ledger/storage/storagetestutils"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
 func genRandomRef() *record.Reference {
@@ -38,14 +38,14 @@ func genRandomRef() *record.Reference {
 }
 
 type preparedAMTestData struct {
-	ledger     storage.Store
+	ledger     *storage.Store
 	manager    core.ArtifactManager
 	domainRef  *record.Reference
 	requestRef *record.Reference
 }
 
 func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
-	ledger, cleaner := TmpStore(t)
+	ledger, cleaner := storagetest.TmpStore(t, "")
 
 	return preparedAMTestData{
 		ledger:     ledger,
@@ -643,6 +643,60 @@ func TestLedgerArtifactManager_GetLatestObj_VerifiesClassIsActive(t *testing.T) 
 	})
 	_, err := td.manager.GetLatestObj(*objectRef.CoreRef())
 	assert.NotNil(t, err)
+}
+
+func TestLedgerArtifactManager_GetLatestClass_ReturnsCorrectDescriptors(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	ledgerManager, _ := td.manager.(*LedgerArtifactManager)
+
+	classRef, _ := td.ledger.SetRecord(&record.ClassActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	classRec, _ := td.ledger.GetRecord(classRef)
+	classRecCasted, _ := classRec.(*record.ClassActivateRecord)
+	classAmendRef, _ := td.ledger.SetRecord(&record.ClassAmendRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
+				},
+			},
+		},
+	})
+	classAmendRec, _ := td.ledger.GetRecord(classAmendRef)
+	classAmendRecCasted, _ := classAmendRec.(*record.ClassAmendRecord)
+	classIndex := index.ClassLifeline{
+		LatestStateRef: *classAmendRef,
+	}
+	td.ledger.SetClassIndex(classRef, &classIndex)
+
+	classDesc, err := td.manager.GetLatestClass(*classRef.CoreRef())
+	assert.NoError(t, err)
+	expectedClassDesc := &ClassDescriptor{
+		manager: ledgerManager,
+
+		headRef: classRef,
+		stateRef: &record.Reference{
+			Domain: classRef.Domain,
+			Record: classAmendRef.Record,
+		},
+
+		headRecord:    classRecCasted,
+		stateRecord:   classAmendRecCasted,
+		lifelineIndex: &classIndex,
+	}
+
+	assert.Equal(t, *expectedClassDesc, *classDesc.(*ClassDescriptor))
 }
 
 func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing.T) {

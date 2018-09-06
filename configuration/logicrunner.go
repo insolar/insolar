@@ -17,14 +17,13 @@
 package configuration
 
 type LogicRunner struct {
-	BuiltIn  BuiltIn
-	GoPlugin Goplugin
+	BuiltIn  *BuiltIn
+	GoPlugin *GoPlugin
 }
 
-type BuiltIn struct {
-}
+type BuiltIn struct{}
 
-type Goplugin struct {
+type GoPlugin struct {
 	RunnerListen   string // ip:port of ginsider connectivity socket
 	RunnerCodePath string // path where ginsider caches code
 	MainListen     string // ip:port of main system connectivity socket
@@ -32,8 +31,8 @@ type Goplugin struct {
 
 func NewLogicRunner() LogicRunner {
 	return LogicRunner{
-		BuiltIn: BuiltIn{},
-		GoPlugin: Goplugin{
+		BuiltIn: &BuiltIn{},
+		GoPlugin: &GoPlugin{
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerCodePath: ".../TEMPDIR_CHANGE ME/...",
 			MainListen:     "127.0.0.1:7778",

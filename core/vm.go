@@ -21,7 +21,8 @@ type MachineType int
 
 // Real constants of MachineType
 const (
-	MachineTypeBuiltin MachineType = iota + 1
+	MachineTypeNotExist             = 0
+	MachineTypeBuiltin  MachineType = iota + 1
 	MachineTypeGoPlugin
 
 	MachineTypesLastID

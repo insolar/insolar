@@ -27,17 +27,17 @@ import (
 
 // LedgerArtifactManager provides concrete API to storage for processing module
 type LedgerArtifactManager struct {
-	store    storage.Store
+	store    *storage.Store
 	archPref []core.MachineType
 }
 
-func (m *LedgerArtifactManager) checkRequestRecord(requestRef *record.Reference) error {
+func (m *LedgerArtifactManager) checkRequestRecord(l storage.Ledger, requestRef *record.Reference) error {
 	// TODO: implement request check
 	return nil
 }
 
-func (m *LedgerArtifactManager) getCodeRecord(codeRef record.Reference) (*record.CodeRecord, error) {
-	rec, err := m.store.GetRecord(&codeRef)
+func (m *LedgerArtifactManager) getCodeRecord(l storage.Ledger, codeRef record.Reference) (*record.CodeRecord, error) {
+	rec, err := l.GetRecord(&codeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
 	}
@@ -48,23 +48,23 @@ func (m *LedgerArtifactManager) getCodeRecord(codeRef record.Reference) (*record
 	return codeRec, nil
 }
 
-func (m *LedgerArtifactManager) getCodeRecordCode(codeRef record.Reference) ([]byte, error) {
-	codeRec, err := m.getCodeRecord(codeRef)
+func (m *LedgerArtifactManager) getCodeRecordCode(l storage.Ledger, codeRef record.Reference) ([]byte, core.MachineType, error) {
+	codeRec, err := m.getCodeRecord(l, codeRef)
 	if err != nil {
-		return nil, err
+		return nil, core.MachineTypeNotExist, err
 	}
-	code, err := codeRec.GetCode(m.archPref)
+	code, mt, err := codeRec.GetCode(m.archPref)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code")
+		return nil, mt, errors.Wrap(err, "failed to retrieve code")
 	}
 
-	return code, nil
+	return code, mt, nil
 }
 
-func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
+func (m *LedgerArtifactManager) getActiveClass(l storage.Ledger, classRef record.Reference) (
 	*record.ClassActivateRecord, *record.ClassAmendRecord, *index.ClassLifeline, error,
 ) {
-	classRecord, err := m.store.GetRecord(&classRef)
+	classRecord, err := l.GetRecord(&classRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to retrieve class record")
 	}
@@ -72,11 +72,11 @@ func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
 	if !isClassRec {
 		return nil, nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
 	}
-	classIndex, err := m.store.GetClassIndex(&classRef)
+	classIndex, err := l.GetClassIndex(&classRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
-	latestClassRecord, err := m.store.GetRecord(&classIndex.LatestStateRef)
+	latestClassRecord, err := l.GetRecord(&classIndex.LatestStateRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
@@ -91,10 +91,10 @@ func (m *LedgerArtifactManager) getActiveClass(classRef record.Reference) (
 	return activateRec, amendRecord, classIndex, nil
 }
 
-func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
+func (m *LedgerArtifactManager) getActiveObject(l storage.Ledger, objRef record.Reference) (
 	*record.ObjectActivateRecord, *record.ObjectAmendRecord, *index.ObjectLifeline, error,
 ) {
-	objRecord, err := m.store.GetRecord(&objRef)
+	objRecord, err := l.GetRecord(&objRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to retrieve object record")
 	}
@@ -103,11 +103,11 @@ func (m *LedgerArtifactManager) getActiveObject(objRef record.Reference) (
 		return nil, nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve object record")
 	}
 
-	objIndex, err := m.store.GetObjectIndex(&objRef)
+	objIndex, err := l.GetObjectIndex(&objRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
-	latestObjRecord, err := m.store.GetRecord(&objIndex.LatestStateRef)
+	latestObjRecord, err := l.GetRecord(&objIndex.LatestStateRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
@@ -140,7 +140,7 @@ func (m *LedgerArtifactManager) DeclareType(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 
-	err := m.checkRequestRecord(&requestRef)
+	err := m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 
-	err := m.checkRequestRecord(&requestRef)
+	err := m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
@@ -220,11 +220,11 @@ func (m *LedgerArtifactManager) ActivateClass(
 	requestRef := record.Core2Reference(request)
 	codeRef := record.Core2Reference(code)
 
-	err := m.checkRequestRecord(&requestRef)
+	err := m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
-	_, err = m.getCodeRecord(codeRef)
+	_, err = m.getCodeRecord(m.store, codeRef)
 	if err != nil {
 		return nil, err
 	}
@@ -241,15 +241,25 @@ func (m *LedgerArtifactManager) ActivateClass(
 		CodeRecord:    codeRef,
 		DefaultMemory: memory,
 	}
-	classRef, err := m.store.SetRecord(&rec)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store record")
-	}
-	err = m.store.SetClassIndex(classRef, &index.ClassLifeline{
-		LatestStateRef: *classRef,
+
+	var classRef *record.Reference
+	err = m.store.Update(func(tx *storage.TransactionManager) error {
+		classRef, err = tx.SetRecord(&rec)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+		err = tx.SetClassIndex(classRef, &index.ClassLifeline{
+			LatestStateRef: *classRef,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		return nil
 	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to store lifeline index")
+		return nil, err
 	}
 
 	return classRef.CoreRef(), nil
@@ -262,40 +272,50 @@ func (m *LedgerArtifactManager) ActivateClass(
 func (m *LedgerArtifactManager) DeactivateClass(
 	domain, request, class core.RecordRef,
 ) (*core.RecordRef, error) {
+	var err error
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	classRef := record.Core2Reference(class)
 
-	err := m.checkRequestRecord(&requestRef)
+	err = m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _, classIndex, err := m.getActiveClass(classRef)
-	if err != nil {
-		return nil, err
-	}
-
-	rec := record.DeactivationRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
+	var deactivationRef *record.Reference
+	err = m.store.Update(func(tx *storage.TransactionManager) error {
+		_, _, classIndex, err := m.getActiveClass(tx, classRef)
+		if err != nil {
+			return err
+		}
+		rec := record.DeactivationRecord{
+			AmendRecord: record.AmendRecord{
+				StatefulResult: record.StatefulResult{
+					ResultRecord: record.ResultRecord{
+						DomainRecord:  domainRef,
+						RequestRecord: requestRef,
+					},
 				},
+				HeadRecord:    classRef,
+				AmendedRecord: classIndex.LatestStateRef,
 			},
-			HeadRecord:    classRef,
-			AmendedRecord: classIndex.LatestStateRef,
-		},
-	}
-	deactivationRef, err := m.store.SetRecord(&rec)
+		}
+
+		deactivationRef, err = tx.SetRecord(&rec)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+		classIndex.LatestStateRef = *deactivationRef
+		err = tx.SetClassIndex(&classRef, classIndex)
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to store record")
-	}
-	classIndex.LatestStateRef = *deactivationRef
-	err = m.store.SetClassIndex(&classRef, classIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store lifeline index")
+		return nil, err
 	}
 
 	return deactivationRef.CoreRef(), nil
@@ -304,10 +324,12 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 // the class. Migrations are references to code records.
 //
-// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
+// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
+// migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
 	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
 ) (*core.RecordRef, error) {
+	var err error
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	classRef := record.Core2Reference(class)
@@ -317,51 +339,59 @@ func (m *LedgerArtifactManager) UpdateClass(
 		migrationRefs = append(migrationRefs, record.Core2Reference(migration))
 	}
 
-	err := m.checkRequestRecord(&requestRef)
+	err = m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _, classIndex, err := m.getActiveClass(classRef)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = m.getCodeRecord(codeRef)
-	if err != nil {
-		return nil, err
-	}
-	for _, migrationRef := range migrationRefs {
-		_, err = m.getCodeRecord(migrationRef)
+	var amendRef *record.Reference
+	err = m.store.Update(func(tx *storage.TransactionManager) error {
+		_, _, classIndex, err := m.getActiveClass(tx, classRef)
 		if err != nil {
-			return nil, errors.Wrap(err, "invalid migrations")
+			return err
 		}
-	}
 
-	rec := record.ClassAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
+		_, err = m.getCodeRecord(tx, codeRef)
+		if err != nil {
+			return err
+		}
+		for _, migrationRef := range migrationRefs {
+			_, err = m.getCodeRecord(tx, migrationRef)
+			if err != nil {
+				return errors.Wrap(err, "invalid migrations")
+			}
+		}
+
+		rec := record.ClassAmendRecord{
+			AmendRecord: record.AmendRecord{
+				StatefulResult: record.StatefulResult{
+					ResultRecord: record.ResultRecord{
+						DomainRecord:  domainRef,
+						RequestRecord: requestRef,
+					},
 				},
+				HeadRecord:    classRef,
+				AmendedRecord: classIndex.LatestStateRef,
 			},
-			HeadRecord:    classRef,
-			AmendedRecord: classIndex.LatestStateRef,
-		},
-		NewCode:    codeRef,
-		Migrations: migrationRefs,
-	}
+			NewCode:    codeRef,
+			Migrations: migrationRefs,
+		}
 
-	amendRef, err := m.store.SetRecord(&rec)
+		amendRef, err = tx.SetRecord(&rec)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+		classIndex.LatestStateRef = *amendRef
+		classIndex.AmendRefs = append(classIndex.AmendRefs, *amendRef)
+		err = tx.SetClassIndex(&classRef, classIndex)
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+		return nil
+	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to store record")
-	}
-	classIndex.LatestStateRef = *amendRef
-	classIndex.AmendRefs = append(classIndex.AmendRefs, *amendRef)
-	err = m.store.SetClassIndex(&classRef, classIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store lifeline index")
+		return nil, err
 	}
 
 	return amendRef.CoreRef(), nil
@@ -374,43 +404,53 @@ func (m *LedgerArtifactManager) UpdateClass(
 func (m *LedgerArtifactManager) ActivateObj(
 	domain, request, class core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
+	var err error
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	classRef := record.Core2Reference(class)
 
-	err := m.checkRequestRecord(&requestRef)
+	err = m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _, _, err = m.getActiveClass(classRef)
-	if err != nil {
-		return nil, err
-	}
+	var objRef *record.Reference
+	err = m.store.Update(func(tx *storage.TransactionManager) error {
+		_, _, _, err = m.getActiveClass(tx, classRef)
+		if err != nil {
+			return err
+		}
 
-	rec := record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
+		rec := record.ObjectActivateRecord{
+			ActivationRecord: record.ActivationRecord{
+				StatefulResult: record.StatefulResult{
+					ResultRecord: record.ResultRecord{
+						DomainRecord:  domainRef,
+						RequestRecord: requestRef,
+					},
 				},
 			},
-		},
-		ClassActivateRecord: classRef,
-		Memory:              memory,
-	}
+			ClassActivateRecord: classRef,
+			Memory:              memory,
+		}
 
-	objRef, err := m.store.SetRecord(&rec)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store record")
-	}
-	err = m.store.SetObjectIndex(objRef, &index.ObjectLifeline{
-		ClassRef:       classRef,
-		LatestStateRef: *objRef,
+		objRef, err = tx.SetRecord(&rec)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+		err = tx.SetObjectIndex(objRef, &index.ObjectLifeline{
+			ClassRef:       classRef,
+			LatestStateRef: *objRef,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		return nil
 	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to store lifeline index")
+		return nil, err
 	}
 
 	return objRef.CoreRef(), nil
@@ -423,90 +463,113 @@ func (m *LedgerArtifactManager) ActivateObj(
 func (m *LedgerArtifactManager) DeactivateObj(
 	domain, request, obj core.RecordRef,
 ) (*core.RecordRef, error) {
+	var err error
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	objRef := record.Core2Reference(obj)
 
-	err := m.checkRequestRecord(&requestRef)
+	err = m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _, objIndex, err := m.getActiveObject(objRef)
-	if err != nil {
-		return nil, err
-	}
+	var deactivationRef *record.Reference
+	err = m.store.Update(func(tx *storage.TransactionManager) error {
+		_, _, objIndex, err := m.getActiveObject(tx, objRef)
+		if err != nil {
+			return err
+		}
 
-	rec := record.DeactivationRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
+		rec := record.DeactivationRecord{
+			AmendRecord: record.AmendRecord{
+				StatefulResult: record.StatefulResult{
+					ResultRecord: record.ResultRecord{
+						DomainRecord:  domainRef,
+						RequestRecord: requestRef,
+					},
 				},
+				HeadRecord:    objRef,
+				AmendedRecord: objIndex.LatestStateRef,
 			},
-			HeadRecord:    objRef,
-			AmendedRecord: objIndex.LatestStateRef,
-		},
-	}
-	deactivationRef, err := m.store.SetRecord(&rec)
+		}
+		deactivationRef, err = tx.SetRecord(&rec)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+		objIndex.LatestStateRef = *deactivationRef
+		err = tx.SetObjectIndex(&objRef, objIndex)
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to store record")
+		return nil, err
 	}
-	objIndex.LatestStateRef = *deactivationRef
-	err = m.store.SetObjectIndex(&objRef, objIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store lifeline index")
-	}
+
 	return deactivationRef.CoreRef(), nil
 }
 
 // UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
 // object. Provided memory well be the new object memory.
 //
-// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
-// them to the new memory manually if its required.
+// Returned reference will be the latest object state (exact) reference. This will nullify all the object's append
+// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
+// required.
 func (m *LedgerArtifactManager) UpdateObj(
 	domain, request, obj core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
+	var err error
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	objRef := record.Core2Reference(obj)
 
-	err := m.checkRequestRecord(&requestRef)
+	err = m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _, objIndex, err := m.getActiveObject(objRef)
-	if err != nil {
-		return nil, err
-	}
+	var amendRef *record.Reference
+	err = m.store.Update(func(tx *storage.TransactionManager) error {
+		_, _, objIndex, err := m.getActiveObject(tx, objRef)
+		if err != nil {
+			return err
+		}
 
-	rec := record.ObjectAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
+		rec := record.ObjectAmendRecord{
+			AmendRecord: record.AmendRecord{
+				StatefulResult: record.StatefulResult{
+					ResultRecord: record.ResultRecord{
+						DomainRecord:  domainRef,
+						RequestRecord: requestRef,
+					},
 				},
+				HeadRecord:    objRef,
+				AmendedRecord: objIndex.LatestStateRef,
 			},
-			HeadRecord:    objRef,
-			AmendedRecord: objIndex.LatestStateRef,
-		},
-		NewMemory: memory,
+			NewMemory: memory,
+		}
+
+		amendRef, err = tx.SetRecord(&rec)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+		objIndex.LatestStateRef = *amendRef
+		objIndex.AppendRefs = []record.Reference{}
+		err = tx.SetObjectIndex(&objRef, objIndex)
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	amendRef, err := m.store.SetRecord(&rec)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store record")
-	}
-	objIndex.LatestStateRef = *amendRef
-	objIndex.AppendRefs = []record.Reference{}
-	err = m.store.SetObjectIndex(&objRef, objIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store lifeline index")
-	}
 	return amendRef.CoreRef(), nil
 }
 
@@ -519,43 +582,54 @@ func (m *LedgerArtifactManager) UpdateObj(
 func (m *LedgerArtifactManager) AppendObjDelegate(
 	domain, request, obj core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
+	var err error
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	objRef := record.Core2Reference(obj)
 
-	err := m.checkRequestRecord(&requestRef)
+	err = m.checkRequestRecord(m.store, &requestRef)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _, objIndex, err := m.getActiveObject(objRef)
-	if err != nil {
-		return nil, err
-	}
+	var appendRef *record.Reference
+	err = m.store.Update(func(tx *storage.TransactionManager) error {
+		_, _, objIndex, err := m.getActiveObject(tx, objRef)
+		if err != nil {
+			return err
+		}
 
-	rec := record.ObjectAppendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
+		rec := record.ObjectAppendRecord{
+			AmendRecord: record.AmendRecord{
+				StatefulResult: record.StatefulResult{
+					ResultRecord: record.ResultRecord{
+						DomainRecord:  domainRef,
+						RequestRecord: requestRef,
+					},
 				},
+				HeadRecord:    objRef,
+				AmendedRecord: objIndex.LatestStateRef,
 			},
-			HeadRecord:    objRef,
-			AmendedRecord: objIndex.LatestStateRef,
-		},
-		AppendMemory: memory,
+			AppendMemory: memory,
+		}
+
+		appendRef, err = tx.SetRecord(&rec)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+		objIndex.AppendRefs = append(objIndex.AppendRefs, *appendRef)
+		err = tx.SetObjectIndex(&objRef, objIndex)
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	appendRef, err := m.store.SetRecord(&rec)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store record")
-	}
-	objIndex.AppendRefs = append(objIndex.AppendRefs, *appendRef)
-	err = m.store.SetObjectIndex(&objRef, objIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store lifeline index")
-	}
 	return appendRef.CoreRef(), nil
 }
 
@@ -589,7 +663,7 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
 	}
 
-	code, err := m.getCodeRecordCode(codeRef)
+	code, _, err := m.getCodeRecordCode(m.store, codeRef)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -640,19 +714,14 @@ func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescripto
 	return &desc, nil
 }
 
-// GetLatestObj returns descriptors for latest known state of the object/class known to the storage. The caller
-// should provide latest known states of the object/class known to it. If the object or the class is deactivated,
-// an error should be returned.
+// GetLatestClass returns descriptor for latest state of the class known to storage.
+// If the class is deactivated, an error should be returned.
 //
-// Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
-func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDescriptor, error) {
-	objRef := record.Core2Reference(head)
+// Returned descriptor will provide methods for fetching all related data.
+func (m *LedgerArtifactManager) GetLatestClass(head core.RecordRef) (core.ClassDescriptor, error) {
+	classRef := record.Core2Reference(head)
 
-	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(objRef)
-	if err != nil {
-		return nil, err
-	}
-	classActivateRec, classStateRec, classIndex, err := m.getActiveClass(objIndex.ClassRef)
+	classActivateRec, classStateRec, classIndex, err := m.getActiveClass(m.store, classRef)
 	if err != nil {
 		return nil, err
 	}
@@ -660,11 +729,30 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 	class := &ClassDescriptor{
 		manager: m,
 
-		headRef:       &objIndex.ClassRef,
+		headRef:       &classRef,
 		stateRef:      &classIndex.LatestStateRef,
 		headRecord:    classActivateRec,
 		stateRecord:   classStateRec,
 		lifelineIndex: classIndex,
+	}
+
+	return class, nil
+}
+
+// GetLatestObj returns descriptor for latest state of the object known to storage.
+// If the object or the class is deactivated, an error should be returned.
+//
+// Returned descriptor will provide methods for fetching all related data.
+func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDescriptor, error) {
+	objRef := record.Core2Reference(head)
+
+	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(m.store, objRef)
+	if err != nil {
+		return nil, err
+	}
+	class, err := m.GetLatestClass(*objIndex.ClassRef.CoreRef())
+	if err != nil {
+		return nil, err
 	}
 
 	object := &ObjectDescriptor{
@@ -676,13 +764,13 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 		stateRecord:   objStateRec,
 		lifelineIndex: objIndex,
 
-		classDescriptor: class,
+		classDescriptor: class.(*ClassDescriptor),
 	}
 
 	return object, nil
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(store storage.Store) (*LedgerArtifactManager, error) {
+func NewArtifactManger(store *storage.Store) (*LedgerArtifactManager, error) {
 	return &LedgerArtifactManager{store: store}, nil
 }

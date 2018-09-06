@@ -71,8 +71,9 @@ func WriteFile(dir string, name string, text string) error {
 
 // TestCodeDescriptor implementation for tests
 type TestCodeDescriptor struct {
-	ARef  *core.RecordRef
-	ACode []byte
+	ARef         *core.RecordRef
+	ACode        []byte
+	AMachineType core.MachineType
 }
 
 // Ref implementation for tests
@@ -80,9 +81,38 @@ func (t *TestCodeDescriptor) Ref() *core.RecordRef {
 	return t.ARef
 }
 
+// MachineType implementation for tests
+func (t *TestCodeDescriptor) MachineType() (core.MachineType, error) {
+	return t.AMachineType, nil
+}
+
 // Code implementation for tests
 func (t *TestCodeDescriptor) Code() ([]byte, error) {
 	return t.ACode, nil
+}
+
+// TestClassDescriptor implementation for tests
+type TestClassDescriptor struct {
+	Data []byte
+	Code *TestCodeDescriptor
+}
+
+// HeadRef implementation for tests
+func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
+	panic("not implemented")
+}
+
+// StateRef implementation for tests
+func (t *TestClassDescriptor) StateRef() *core.RecordRef {
+	panic("not implemented")
+}
+
+// CodeDescriptor implementation for tests
+func (t *TestClassDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
+	if t.Code == nil {
+		return nil, errors.New("No code")
+	}
+	return t.Code, nil
 }
 
 // TestObjectDescriptor implementation for tests
@@ -123,6 +153,7 @@ func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
 type TestArtifactManager struct {
 	Codes   map[core.RecordRef]*TestCodeDescriptor
 	Objects map[core.RecordRef]*TestObjectDescriptor
+	Classes map[core.RecordRef]*TestClassDescriptor
 }
 
 // NewTestArtifactManager implementation for tests
@@ -130,11 +161,15 @@ func NewTestArtifactManager() *TestArtifactManager {
 	return &TestArtifactManager{
 		Codes:   make(map[core.RecordRef]*TestCodeDescriptor),
 		Objects: make(map[core.RecordRef]*TestObjectDescriptor),
+		Classes: make(map[core.RecordRef]*TestClassDescriptor),
 	}
 }
 
+// Start implementation for tests
 func (t *TestArtifactManager) Start(components core.Components) error { return nil }
-func (t *TestArtifactManager) Stop() error                            { return nil }
+
+// Stop implementation for tests
+func (t *TestArtifactManager) Stop() error { return nil }
 
 // SetArchPref implementation for tests
 func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
@@ -143,6 +178,15 @@ func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
 // GetExactObj implementation for tests
 func (t *TestArtifactManager) GetExactObj(class core.RecordRef, object core.RecordRef) ([]byte, []byte, error) {
 	panic("not implemented")
+}
+
+// GetLatestClass implementation for tests
+func (t *TestArtifactManager) GetLatestClass(object core.RecordRef) (core.ClassDescriptor, error) {
+	res, ok := t.Classes[object]
+	if !ok {
+		return nil, errors.New("No object")
+	}
+	return res, nil
 }
 
 // GetLatestObj implementation for tests
@@ -200,7 +244,12 @@ func (t *TestArtifactManager) DeactivateObj(domain core.RecordRef, request core.
 
 // UpdateObj implementation for tests
 func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
+	_, ok := t.Objects[obj]
+	if !ok {
+		return nil, errors.New("No object to update")
+	}
+	// TODO: return real exact "ref"
+	return &core.RecordRef{}, nil
 }
 
 // AppendObjDelegate implementation for tests

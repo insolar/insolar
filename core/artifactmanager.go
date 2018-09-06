@@ -30,10 +30,16 @@ type ArtifactManager interface {
 	// This method is used by VM to fetch code for execution.
 	GetCode(code RecordRef) (CodeDescriptor, error)
 
-	// GetLatestObj returns descriptors for latest known state of the object/class known to the storage.
+	// GetLatestClass returns descriptor for latest state of the class known to storage.
+	// If the class is deactivated, an error should be returned.
+	//
+	// Returned descriptor will provide methods for fetching all related data.
+	GetLatestClass(head RecordRef) (ClassDescriptor, error)
+
+	// GetLatestObj returns descriptor for latest state of the object known to storage.
 	// If the object or the class is deactivated, an error should be returned.
 	//
-	// Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
+	// Returned descriptor will provide methods for fetching all related data.
 	GetLatestObj(head RecordRef) (ObjectDescriptor, error)
 
 	// DeclareType creates new type record in storage.
@@ -61,7 +67,8 @@ type ArtifactManager interface {
 	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 	// the class. Migrations are references to code records.
 	//
-	// Migration code will be executed by VM to migrate objects memory in the order they appear in provided slice.
+	// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
+	// migrate objects memory in the order they appear in provided slice.
 	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordRef, error)
 
 	// ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
@@ -79,8 +86,9 @@ type ArtifactManager interface {
 	// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
-	// This will nullify all the object's append delegates. VM is responsible for collecting all appends and adding
-	// them to the new memory manually if its required.
+	// Returned reference will be the latest object state (exact) reference. This will nullify all the object's append
+	// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
+	// required.
 	UpdateObj(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
 
 	// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
@@ -96,6 +104,12 @@ type ArtifactManager interface {
 type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *RecordRef
+
+	// MachineType fetches code from storage and returns first available machine type according to architecture
+	// preferences.
+	//
+	// Code for returned machine type will be fetched by Code method.
+	MachineType() (MachineType, error)
 
 	// Code fetches code from storage. Code will be fetched according to architecture preferences
 	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
