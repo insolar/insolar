@@ -21,6 +21,8 @@ import (
 	"encoding/gob"
 	"log"
 
+	"io/ioutil"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
@@ -72,19 +74,23 @@ func (network *ServiceNetwork) GetAddress() string {
 }
 
 // SendMessage sends a message from MessageRouter.
-func (network *ServiceNetwork) SendMessage(method string, msg *core.Message) ([]byte, error) {
+func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]byte, error) {
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID, err := network.nodeNetwork.GetReferenceHostID(msg.Reference.String())
+	hostID, err := network.nodeNetwork.GetReferenceHostID(msg.GetReference().String())
 	if err != nil {
 		return nil, err
 	}
-	request, err := Serialize(msg)
+	request, err := msg.Serialize()
 	if err != nil {
 		return nil, err
 	}
-	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{request})
+	buff, err := ioutil.ReadAll(request)
+	if err != nil {
+		return nil, err
+	}
+	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
 }
 
