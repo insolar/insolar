@@ -20,11 +20,15 @@ type ContractHolder struct {
 	data []byte
 }
 
-func (r *ContractHolder)AsChild(objRef string) *{{ .ContractType }} {
-    panic("not implemented")
+func (r *ContractHolder) AsChild(objRef string) *{{ .ContractType }} {
+    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
+    if err != nil {
+        panic(err)
+    }
+    return &{{ .ContractType }}{Reference: ref}
 }
 
-func (r *ContractHolder)AsDelegate(objRef string) *{{ .ContractType }} {
+func (r *ContractHolder) AsDelegate(objRef string) *{{ .ContractType }} {
     panic("not implemented")
 }
 
@@ -48,7 +52,7 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractHolder {
 		panic(err)
     }
 
-    return &ContractHolder{Data: data}
+    return &ContractHolder{data: data}
 }
 {{ end }}
 

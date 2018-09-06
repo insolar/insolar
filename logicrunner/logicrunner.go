@@ -18,11 +18,12 @@
 package logicrunner
 
 import (
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
-	"github.com/pkg/errors"
 )
 
 // LogicRunner is a general interface of contract executor
@@ -98,45 +99,57 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 	lr.ArtifactManager.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
-	objDesc, err := lr.ArtifactManager.GetLatestObj(msg.Reference)
-	if err != nil {
-		return &core.Response{Error: errors.Wrap(err, "couldn't get object")}
-	}
-
-	data, err := objDesc.Memory()
-	if err != nil {
-		return &core.Response{Error: errors.Wrap(err, "couldn't get object's data")}
-	}
-
-	codeDesc, err := objDesc.CodeDescriptor()
-	if err != nil {
-		return &core.Response{Error: errors.Wrap(err, "couldn't get object's code descriptor")}
-	}
 
 	executor, err := lr.GetExecutor(core.MachineTypeGoPlugin)
 	if err != nil {
 		return &core.Response{Error: errors.Wrap(err, "no executer registered")}
 	}
 
-	if msg.Constructor {
+	if !msg.Constructor {
+		objDesc, err := lr.ArtifactManager.GetLatestObj(msg.Reference)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't get object")}
+		}
+
+		data, err := objDesc.Memory()
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't get object's data")}
+		}
+
+		codeDesc, err := objDesc.CodeDescriptor()
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't get object's code descriptor")}
+		}
+
+		newData, result, err := executor.CallMethod(*codeDesc.Ref(), data, msg.Method, msg.Arguments)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "executer error")}
+		}
+
+		_, err = lr.ArtifactManager.UpdateObj(
+			core.RecordRef{}, core.RecordRef{}, msg.Reference, newData,
+		)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
+		}
+
+		return &core.Response{Data: newData, Result: result}
+	} else {
+		classDesc, err := lr.ArtifactManager.GetLatestClass(msg.Reference)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't get class")}
+		}
+
+		codeDesc, err := classDesc.CodeDescriptor()
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't get class's code descriptor")}
+		}
+
 		newData, err := executor.CallConstructor(*codeDesc.Ref(), msg.Method, msg.Arguments)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}
+
 		return &core.Response{Data: newData}
 	}
-
-	newData, result, err := executor.CallMethod(*codeDesc.Ref(), data, msg.Method, msg.Arguments)
-	if err != nil {
-		return &core.Response{Error: errors.Wrap(err, "executer error")}
-	}
-
-	_, err = lr.ArtifactManager.UpdateObj(
-		core.RecordRef{}, core.RecordRef{}, msg.Reference, newData,
-	)
-	if err != nil {
-		return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
-	}
-
-	return &core.Response{Data: newData, Result: result}
 }

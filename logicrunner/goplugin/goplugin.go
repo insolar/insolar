@@ -96,8 +96,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
-	if reply.Err != nil {
-		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
+	if res.Error != nil {
+		return errors.Wrap(res.Error, "couldn't route message (error in respone)")
 	}
 
 	reply.Result = res.Result
@@ -198,7 +198,12 @@ func (gp *GoPlugin) StartRunner() error {
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
 
-	runner := exec.Command("ginsider-cli/ginsider-cli", runnerArguments...)
+	execPath := "ginsider-cli/ginsider-cli"
+	if gp.Cfg.RunnerPath != "" {
+		execPath = gp.Cfg.RunnerPath
+	}
+
+	runner := exec.Command(execPath, runnerArguments...)
 	runner.Stdout = os.Stdout
 	runner.Stderr = os.Stderr
 	err := runner.Start()

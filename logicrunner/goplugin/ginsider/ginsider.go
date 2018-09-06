@@ -187,7 +187,7 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 	}
 
 	var resSerialized []byte
-	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res)
+	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res[0])
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal returned values into cbor")
 	}
