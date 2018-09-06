@@ -62,8 +62,11 @@ func repl(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 			doInfo(service, dhtNetwork, ctx)
 		case "relay":
 			doSendRelay(input[2], input[1], dhtNetwork, ctx)
-		default:
+		case "rpc":
+			input = input[1:]
 			doRPC(input, dhtNetwork, ctx)
+		default:
+			displayInteractiveHelp()
 		}
 	}
 }
@@ -128,7 +131,7 @@ func doRPC(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context)
 func displayInteractiveHelp() {
 	fmt.Println(`
 help - This message
-findnode <key> - Find node's real network address
+findhost <key> - Find node's real network address
 info - Display information about this node
 exit - Exit programm
 
