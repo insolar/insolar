@@ -30,7 +30,7 @@ import (
 
 func TestStore_DropWaitWrites(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	var (
@@ -40,7 +40,7 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	wgStart.Add(2)
 	wgEnd.Add(2)
 	go func() {
-		store.Update(func(tx *storage.TransactionManager) error {
+		db.Update(func(tx *storage.TransactionManager) error {
 			wgStart.Done()
 			// log.Println("start tx1")
 			return nil
@@ -50,7 +50,7 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	}()
 	tx2finish := make(chan bool)
 	go func() {
-		store.Update(func(tx *storage.TransactionManager) error {
+		db.Update(func(tx *storage.TransactionManager) error {
 			wgStart.Done()
 			// log.Println("start tx2")
 			<-tx2finish
@@ -66,7 +66,7 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	go func() {
 		prevdrop := &jetdrop.JetDrop{}
 		// log.Println("start SetDrop")
-		_, _ = store.SetDrop(0, prevdrop)
+		_, _ = db.SetDrop(0, prevdrop)
 		close(dropdone)
 	}()
 
