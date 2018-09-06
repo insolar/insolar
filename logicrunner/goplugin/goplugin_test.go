@@ -52,7 +52,11 @@ func buildInciderCLI() error {
 }
 
 func buildPreprocessor() error {
-	return buildCLI("preprocessor")
+	out, err := exec.Command("go", "build", "-o", "../../cmd/icc/icc", "../../cmd/icc/").CombinedOutput()
+	if err != nil {
+		return errors.Wrapf(err, "can't build ../../cmd/icc/icc: %s", string(out))
+	}
+	return nil
 }
 
 const contractOneCode = `
@@ -97,7 +101,7 @@ func generateContractProxy(root string, name string) error {
 
 	contractPath := root + "/src/contract/" + name + "/main.go"
 
-	out, err := exec.Command("./preprocessor/preprocessor", "proxy", "-o", dstDir+"/main.go", "--code-reference", "testReference", contractPath).CombinedOutput()
+	out, err := exec.Command("../../cmd/icc/icc", "proxy", "-o", dstDir+"/main.go", "--code-reference", "testReference", contractPath).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't generate proxy: "+string(out))
 	}
@@ -131,7 +135,7 @@ func generateContractWrapper(root string, name string) error {
 	contractPath := root + "/src/contract/" + name + "/main.go"
 	wrapperPath := root + "/src/contract/" + name + "/main_wrapper.go"
 
-	out, err := exec.Command("./preprocessor/preprocessor", "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
+	out, err := exec.Command("../../cmd/icc/icc", "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"': "+string(out))
 	}
