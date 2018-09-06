@@ -56,11 +56,11 @@ func main() {
 	ledger := StartLedger(cfgHolder.Configuration.Ledger)
 	components["core.Ledger"] = ledger
 
-	logicrunner1, err := logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
+	logicrunner1, _ := logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
 	// todo: check err
 	components["core.LogicRunner"] = logicrunner1
 
-	mr, err := messagerouter.New(cfgHolder.Configuration)
+	mr, _ := messagerouter.New(cfgHolder.Configuration)
 	components["core.MessageRouter"] = mr
 
 	// start all components
