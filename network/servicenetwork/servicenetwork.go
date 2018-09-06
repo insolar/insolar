@@ -31,8 +31,9 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	nodeNetwork *nodenetwork.Nodenetwork
-	hostNetwork *hostnetwork.DHT
+	nodeNetwork   *nodenetwork.Nodenetwork
+	hostNetwork   *hostnetwork.DHT
+	originAddress string
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -95,7 +96,7 @@ func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.
 	network.hostNetwork.RemoteProcedureRegister(name, method)
 }
 
-// GetHostNetwork bla bla
+// GetHostNetwork returns host network.
 func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hostnetwork.Context) {
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
