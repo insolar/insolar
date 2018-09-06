@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/builtin"
+	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/pkg/errors"
 )
 
@@ -40,19 +41,33 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 	return &res, nil
 }
 
+// Start starts logic runner component
 func (lr *LogicRunner) Start(c core.Components) error {
-	lr.ArtifactManager = c["core.Ledger"].(core.Ledger).GetManager()
+	am := c["core.Ledger"].(core.Ledger).GetManager()
 	mr := c["core.MessageRouter"].(core.MessageRouter)
+	lr.ArtifactManager = am
 
-	bi := builtin.NewBuiltIn(lr.ArtifactManager, mr)
-	err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi)
-	if err != nil {
-		return err
+	if lr.Cfg.BuiltIn != nil {
+		bi := builtin.NewBuiltIn(mr, am)
+		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
+			return err
+		}
+	}
+
+	if lr.Cfg.GoPlugin != nil {
+		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, mr, am)
+		if err != nil {
+			return err
+		}
+		if err := lr.RegisterExecutor(core.MachineTypeGoPlugin, gp); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
+// Stop stops logic runner component and its executors
 func (lr *LogicRunner) Stop() error {
 	reterr := error(nil)
 	for _, e := range lr.Executors {
@@ -65,15 +80,15 @@ func (lr *LogicRunner) Stop() error {
 }
 
 // RegisterExecutor registers an executor for particular `MachineType`
-func (r *LogicRunner) RegisterExecutor(t core.MachineType, e core.MachineLogicExecutor) error {
-	r.Executors[int(t)] = e
+func (lr *LogicRunner) RegisterExecutor(t core.MachineType, e core.MachineLogicExecutor) error {
+	lr.Executors[int(t)] = e
 	return nil
 }
 
 // GetExecutor returns an executor for the `MachineType` if it was registered (`RegisterExecutor`),
 // returns error otherwise
-func (r *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor, error) {
-	if res := r.Executors[int(t)]; res != nil {
+func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor, error) {
+	if res := lr.Executors[int(t)]; res != nil {
 		return res, nil
 	}
 
@@ -81,30 +96,46 @@ func (r *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (r *LogicRunner) Execute(msg core.Message) *core.Response {
-	data, codeRef, err := []byte{}, core.RecordRef{}, error(nil)
-	// todo right code will be used when we will have getcode in AM
-	// data, codeRef, err := r.ArtifactManager.Get(msg.Reference)
+func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
+	lr.ArtifactManager.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
+	objDesc, err := lr.ArtifactManager.GetLatestObj(msg.Reference)
 	if err != nil {
-		return &core.Response{Error: errors.Wrap(err, "couldn't ")}
+		return &core.Response{Error: errors.Wrap(err, "couldn't get object")}
 	}
 
-	executor, err := r.GetExecutor(core.MachineTypeGoPlugin)
+	data, err := objDesc.Memory()
+	if err != nil {
+		return &core.Response{Error: errors.Wrap(err, "couldn't get object's data")}
+	}
+
+	codeDesc, err := objDesc.CodeDescriptor()
+	if err != nil {
+		return &core.Response{Error: errors.Wrap(err, "couldn't get object's code descriptor")}
+	}
+
+	executor, err := lr.GetExecutor(core.MachineTypeGoPlugin)
 	if err != nil {
 		return &core.Response{Error: errors.Wrap(err, "no executer registered")}
 	}
 
 	if msg.Constructor {
-		newData, err := executor.CallConstructor(codeRef, msg.Method, msg.Arguments)
+		newData, err := executor.CallConstructor(*codeDesc.Ref(), msg.Method, msg.Arguments)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}
 		return &core.Response{Data: newData}
 	}
 
-	newData, result, err := executor.CallMethod(codeRef, data, msg.Method, msg.Arguments)
+	newData, result, err := executor.CallMethod(*codeDesc.Ref(), data, msg.Method, msg.Arguments)
 	if err != nil {
 		return &core.Response{Error: errors.Wrap(err, "executer error")}
+	}
+
+	_, err = lr.ArtifactManager.UpdateObj(
+		core.RecordRef{}, core.RecordRef{}, msg.Reference, newData,
+	)
+	if err != nil {
+		return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
 	}
 
 	return &core.Response{Data: newData, Result: result}

@@ -22,13 +22,12 @@ import (
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/badgerdb"
 	"github.com/pkg/errors"
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	store       storage.Store
+	store       *storage.Store
 	manager     *artifactmanager.LedgerArtifactManager
 	coordinator *jetcoordinator.JetCoordinator
 }
@@ -40,7 +39,7 @@ func (l *Ledger) GetManager() core.ArtifactManager {
 
 // NewLedger creates new ledger instance.
 func NewLedger(conf configuration.Ledger) (core.Ledger, error) {
-	store, err := badgerdb.NewStore(conf.DataDirectory, nil)
+	store, err := storage.NewStore(conf.DataDirectory, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}

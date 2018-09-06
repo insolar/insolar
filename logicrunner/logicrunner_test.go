@@ -24,7 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
 func TestTypeCompatibility(t *testing.T) {
@@ -75,8 +75,10 @@ func (r *testExecutor) CallConstructor(ref core.RecordRef, name string, args cor
 
 func TestBasics(t *testing.T) {
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
+	assert.NoError(t, err)
+
 	comps := core.Components{
-		"core.Ledger":        &testLedger{},
+		"core.Ledger":        &testLedger{am: testutil.NewTestArtifactManager()},
 		"core.MessageRouter": &testMessageRouter{},
 	}
 	assert.NoError(t, lr.Start(comps))
@@ -96,20 +98,12 @@ func TestBasics(t *testing.T) {
 }
 
 type testLedger struct {
-	artifactmanager.LedgerArtifactManager
+	am core.ArtifactManager
 }
 
 func (r *testLedger) Start(components core.Components) error { return nil }
 func (r *testLedger) Stop() error                            { return nil }
-func (r *testLedger) GetManager() core.ArtifactManager       { return &r.LedgerArtifactManager }
-
-type testArtifactManager struct {
-	artifactmanager.LedgerArtifactManager
-}
-
-func (r *testArtifactManager) Get(ref core.RecordRef) ([]byte, core.RecordRef, error) {
-	return []byte{}, core.RecordRef{}, nil
-}
+func (r *testLedger) GetManager() core.ArtifactManager       { return r.am }
 
 type testMessageRouter struct{}
 
@@ -120,7 +114,8 @@ func (testMessageRouter) Route(msg core.Message) (resp core.Response, err error)
 }
 
 func TestExecution(t *testing.T) {
-	ld := &testLedger{}
+	am := testutil.NewTestArtifactManager()
+	ld := &testLedger{am: am}
 	mr := &testMessageRouter{}
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
@@ -129,13 +124,20 @@ func TestExecution(t *testing.T) {
 		"core.MessageRouter": mr,
 	})
 
+	codeRef := core.String2Ref("someCode")
+	dataRef := core.String2Ref("someObject")
+	am.Objects[dataRef] = &testutil.TestObjectDescriptor{
+		Data: []byte("origData"),
+		Code: &testutil.TestCodeDescriptor{ARef: &codeRef},
+	}
+
 	te := newTestExecutor()
 	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
 
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
 	assert.NoError(t, err)
 
-	resp := lr.Execute(core.Message{Constructor: false})
+	resp := lr.Execute(core.Message{Constructor: false, Reference: dataRef})
 	assert.NoError(t, resp.Error)
 	assert.Equal(t, []byte("data"), resp.Data)
 	assert.Equal(t, []byte("res"), resp.Result)

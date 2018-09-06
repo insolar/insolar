@@ -18,7 +18,6 @@
 package goplugin
 
 import (
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -38,8 +37,6 @@ import (
 type Options struct {
 	// Listen  is address `GoPlugin` listens on and provides RPC interface for runner(s)
 	Listen string
-	// CodePath is path to directory with plugin's code, this should go away at some point
-	CodePath string
 }
 
 // RunnerOptions - set of options to control internal isolated code runner(s)
@@ -52,11 +49,12 @@ type RunnerOptions struct {
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
-	Cfg           configuration.Goplugin
-	MessageRouter core.MessageRouter
-	sock          net.Listener
-	runner        *exec.Cmd
-	client        *rpc.Client
+	Cfg             *configuration.GoPlugin
+	MessageRouter   core.MessageRouter
+	ArtifactManager core.ArtifactManager
+	sock            net.Listener
+	runner          *exec.Cmd
+	client          *rpc.Client
 }
 
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
@@ -64,15 +62,22 @@ type RPC struct {
 	gp *GoPlugin
 }
 
-// GetObject is an RPC retrieving an object by its reference, so far short circuted to return
-// code of the plugin
-func (gpr *RPC) GetObject(ref core.RecordRef, reply *rpctypes.Object) error {
-	f, err := os.Open(gpr.gp.Cfg.MainCodePath + ref.String() + ".so")
+// GetCode is an RPC retrieving a code by its reference
+func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
+	am := gpr.gp.ArtifactManager
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
+	codeDescriptor, err := am.GetCode(req.Reference)
 	if err != nil {
 		return err
 	}
-	reply.Data, err = ioutil.ReadAll(f)
-	return err
+
+	code, err := codeDescriptor.Code()
+	if err != nil {
+		return err
+	}
+
+	reply.Code = code
+	return nil
 }
 
 // RouteCall routes call from a contract to a contract through message router
@@ -130,10 +135,11 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf configuration.Goplugin, mr core.MessageRouter) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.GoPlugin, mr core.MessageRouter, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
-		Cfg:           conf,
-		MessageRouter: mr,
+		Cfg:             conf,
+		MessageRouter:   mr,
+		ArtifactManager: am,
 	}
 	if gp.Cfg.MainListen == "" {
 		gp.Cfg.MainListen = "127.0.0.1:7777"

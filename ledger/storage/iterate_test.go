@@ -14,17 +14,18 @@
  *    limitations under the License.
  */
 
-package badgerdb_test
+package storage_test
 
 import (
 	"bytes"
 	"sort"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage/badgerdb"
-	"github.com/insolar/insolar/ledger/storage/badgerdb/badgertestutils"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
 func sorthashes(hashes [][]byte) {
@@ -34,7 +35,7 @@ func sorthashes(hashes [][]byte) {
 }
 
 func TestStore_SlotIterate(t *testing.T) {
-	store, cleaner := badgertestutils.TmpDB(t, "")
+	store, cleaner := storagetest.TmpStore(t, "")
 	defer cleaner()
 
 	var recset = []record.Record{
@@ -59,7 +60,7 @@ func TestStore_SlotIterate(t *testing.T) {
 	// iterate over pulse1
 	var iterErr error
 	var allhashes1expect [][]byte
-	iterErr = store.ProcessSlotHashes(pulse1, func(it badgerdb.HashIterator) error {
+	iterErr = store.ProcessSlotHashes(pulse1, func(it storage.HashIterator) error {
 		for i := 1; it.Next(); i++ {
 			h := it.Hash()
 			allhashes1expect = append(allhashes1expect, h)
@@ -78,7 +79,7 @@ func TestStore_SlotIterate(t *testing.T) {
 
 	// iterate over pulse2
 	var allhashes2expect [][]byte
-	iterErr = store.ProcessSlotHashes(pulse2, func(it badgerdb.HashIterator) error {
+	iterErr = store.ProcessSlotHashes(pulse2, func(it storage.HashIterator) error {
 		for i := 1; it.Next(); i++ {
 			h := it.Hash()
 			// log.Printf("%v: got hash: %x\n", i, h)
