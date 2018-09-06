@@ -25,9 +25,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Ledger is the global ledger handler. Other system parts communicate with ledger through it.
+// Store is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	store       *storage.Store
+	store       *storage.DB
 	manager     *artifactmanager.LedgerArtifactManager
 	coordinator *jetcoordinator.JetCoordinator
 }
@@ -67,7 +67,7 @@ func (l *Ledger) Start(c core.Components) error {
 	return nil
 }
 
-// Stop stops Ledger gracefully.
+// Stop stops Store gracefully.
 func (l *Ledger) Stop() error {
 	return l.store.Close()
 }

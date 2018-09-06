@@ -30,7 +30,7 @@ import (
 )
 
 type preparedCodeDescriptorTestData struct {
-	ledger  *storage.Store
+	ledger  *storage.DB
 	manager *LedgerArtifactManager
 	rec     *record.CodeRecord
 	ref     *record.Reference
@@ -83,7 +83,7 @@ func TestCodeDescriptor_Code(t *testing.T) {
 }
 
 type preparedClassDescriptorTestData struct {
-	ledger   *storage.Store
+	ledger   *storage.DB
 	manager  *LedgerArtifactManager
 	classRec *record.ClassActivateRecord
 	classRef *record.Reference
@@ -160,7 +160,7 @@ func TestClassDescriptor_GetMigrations(t *testing.T) {
 }
 
 type preparedObjectDescriptorTestData struct {
-	ledger  *storage.Store
+	ledger  *storage.DB
 	manager *LedgerArtifactManager
 	objRec  *record.ObjectActivateRecord
 	objRef  *record.Reference

@@ -38,7 +38,7 @@ func genRandomRef() *record.Reference {
 }
 
 type preparedAMTestData struct {
-	ledger     *storage.Store
+	ledger     *storage.DB
 	manager    core.ArtifactManager
 	domainRef  *record.Reference
 	requestRef *record.Reference

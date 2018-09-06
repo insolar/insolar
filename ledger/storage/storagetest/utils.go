@@ -27,7 +27,7 @@ import (
 // TmpStore returns BadgerDB's store implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
-func TmpStore(t *testing.T, dir string) (*storage.Store, func()) {
+func TmpStore(t *testing.T, dir string) (*storage.DB, func()) {
 	tmpdir, err := ioutil.TempDir(dir, "bdb-test-")
 	if err != nil {
 		t.Fatal(err)
