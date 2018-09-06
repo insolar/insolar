@@ -123,6 +123,7 @@ func TestUTPTransport(t *testing.T) {
 }
 
 func TestKCPTransport(t *testing.T) {
+	t.Skip("skip unstable tests for KCP")
 	cfg := configuration.NewHostNetwork().Transport
 	cfg.Address = "127.0.0.1:17012"
 	cfg.Protocol = "KCP"
