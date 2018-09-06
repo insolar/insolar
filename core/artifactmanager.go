@@ -30,10 +30,16 @@ type ArtifactManager interface {
 	// This method is used by VM to fetch code for execution.
 	GetCode(code RecordRef) (CodeDescriptor, error)
 
-	// GetLatestObj returns descriptors for latest known state of the object/class known to the storage.
+	// GetLatestClass returns descriptor for latest state of the class known to storage.
+	// If the class is deactivated, an error should be returned.
+	//
+	// Returned descriptor will provide methods for fetching all related data.
+	GetLatestClass(head RecordRef) (ClassDescriptor, error)
+
+	// GetLatestObj returns descriptor for latest state of the object known to storage.
 	// If the object or the class is deactivated, an error should be returned.
 	//
-	// Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
+	// Returned descriptor will provide methods for fetching all related data.
 	GetLatestObj(head RecordRef) (ObjectDescriptor, error)
 
 	// DeclareType creates new type record in storage.
