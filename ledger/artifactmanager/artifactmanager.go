@@ -714,19 +714,14 @@ func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescripto
 	return &desc, nil
 }
 
-// GetLatestObj returns descriptors for latest known state of the object/class known to the storage. The caller
-// should provide latest known states of the object/class known to it. If the object or the class is deactivated,
-// an error should be returned.
+// GetLatestClass returns descriptor for latest state of the class known to storage.
+// If the class is deactivated, an error should be returned.
 //
-// Returned descriptors will provide methods for fetching migrations and appends relative to the provided states.
-func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDescriptor, error) {
-	objRef := record.Core2Reference(head)
+// Returned descriptor will provide methods for fetching all related data.
+func (m *LedgerArtifactManager) GetLatestClass(head core.RecordRef) (core.ClassDescriptor, error) {
+	classRef := record.Core2Reference(head)
 
-	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(m.store, objRef)
-	if err != nil {
-		return nil, err
-	}
-	classActivateRec, classStateRec, classIndex, err := m.getActiveClass(m.store, objIndex.ClassRef)
+	classActivateRec, classStateRec, classIndex, err := m.getActiveClass(m.store, classRef)
 	if err != nil {
 		return nil, err
 	}
@@ -734,11 +729,30 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 	class := &ClassDescriptor{
 		manager: m,
 
-		headRef:       &objIndex.ClassRef,
+		headRef:       &classRef,
 		stateRef:      &classIndex.LatestStateRef,
 		headRecord:    classActivateRec,
 		stateRecord:   classStateRec,
 		lifelineIndex: classIndex,
+	}
+
+	return class, nil
+}
+
+// GetLatestObj returns descriptor for latest state of the object known to storage.
+// If the object or the class is deactivated, an error should be returned.
+//
+// Returned descriptor will provide methods for fetching all related data.
+func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDescriptor, error) {
+	objRef := record.Core2Reference(head)
+
+	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(m.store, objRef)
+	if err != nil {
+		return nil, err
+	}
+	class, err := m.GetLatestClass(*objIndex.ClassRef.CoreRef())
+	if err != nil {
+		return nil, err
 	}
 
 	object := &ObjectDescriptor{
@@ -750,7 +764,7 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 		stateRecord:   objStateRec,
 		lifelineIndex: objIndex,
 
-		classDescriptor: class,
+		classDescriptor: class.(*ClassDescriptor),
 	}
 
 	return object, nil
