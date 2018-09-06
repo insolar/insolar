@@ -91,6 +91,30 @@ func (t *TestCodeDescriptor) Code() ([]byte, error) {
 	return t.ACode, nil
 }
 
+// TestClassDescriptor implementation for tests
+type TestClassDescriptor struct {
+	Data []byte
+	Code *TestCodeDescriptor
+}
+
+// HeadRef implementation for tests
+func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
+	panic("not implemented")
+}
+
+// StateRef implementation for tests
+func (t *TestClassDescriptor) StateRef() *core.RecordRef {
+	panic("not implemented")
+}
+
+// CodeDescriptor implementation for tests
+func (t *TestClassDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
+	if t.Code == nil {
+		return nil, errors.New("No code")
+	}
+	return t.Code, nil
+}
+
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
 	Data []byte
@@ -129,6 +153,7 @@ func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
 type TestArtifactManager struct {
 	Codes   map[core.RecordRef]*TestCodeDescriptor
 	Objects map[core.RecordRef]*TestObjectDescriptor
+	Classes map[core.RecordRef]*TestClassDescriptor
 }
 
 // NewTestArtifactManager implementation for tests
@@ -136,6 +161,7 @@ func NewTestArtifactManager() *TestArtifactManager {
 	return &TestArtifactManager{
 		Codes:   make(map[core.RecordRef]*TestCodeDescriptor),
 		Objects: make(map[core.RecordRef]*TestObjectDescriptor),
+		Classes: make(map[core.RecordRef]*TestClassDescriptor),
 	}
 }
 
@@ -152,6 +178,15 @@ func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
 // GetExactObj implementation for tests
 func (t *TestArtifactManager) GetExactObj(class core.RecordRef, object core.RecordRef) ([]byte, []byte, error) {
 	panic("not implemented")
+}
+
+// GetLatestClass implementation for tests
+func (t *TestArtifactManager) GetLatestClass(object core.RecordRef) (core.ClassDescriptor, error) {
+	res, ok := t.Classes[object]
+	if !ok {
+		return nil, errors.New("No object")
+	}
+	return res, nil
 }
 
 // GetLatestObj implementation for tests
