@@ -30,23 +30,23 @@ import (
 )
 
 type preparedCodeDescriptorTestData struct {
-	ledger  *storage.Store
+	db      *storage.DB
 	manager *LedgerArtifactManager
 	rec     *record.CodeRecord
 	ref     *record.Reference
 }
 
 func prepareCodeDescriptorTestData(t *testing.T) (preparedCodeDescriptorTestData, func()) {
-	ledger, cleaner := storagetest.TmpStore(t, "")
+	db, cleaner := storagetest.TmpDB(t, "")
 
 	rec := record.CodeRecord{TargetedCode: map[core.MachineType][]byte{1: {1, 2, 3}}}
-	ref, err := ledger.SetRecord(&rec)
+	ref, err := db.SetRecord(&rec)
 	assert.NoError(t, err)
 
 	return preparedCodeDescriptorTestData{
-		ledger: ledger,
+		db: db,
 		manager: &LedgerArtifactManager{
-			store:    ledger,
+			db:       db,
 			archPref: []core.MachineType{1},
 		},
 		rec: &rec,
@@ -83,14 +83,14 @@ func TestCodeDescriptor_Code(t *testing.T) {
 }
 
 type preparedClassDescriptorTestData struct {
-	ledger   *storage.Store
+	ledger   *storage.DB
 	manager  *LedgerArtifactManager
 	classRec *record.ClassActivateRecord
 	classRef *record.Reference
 }
 
 func prepareClassDescriptorTestData(t *testing.T) (preparedClassDescriptorTestData, func()) {
-	ledger, cleaner := storagetest.TmpStore(t, "")
+	ledger, cleaner := storagetest.TmpDB(t, "")
 
 	rec := record.ClassActivateRecord{}
 	ref, err := ledger.SetRecord(&rec)
@@ -99,7 +99,7 @@ func prepareClassDescriptorTestData(t *testing.T) (preparedClassDescriptorTestDa
 	return preparedClassDescriptorTestData{
 		ledger: ledger,
 		manager: &LedgerArtifactManager{
-			store:    ledger,
+			db:       ledger,
 			archPref: []core.MachineType{1},
 		},
 		classRec: &rec,
@@ -160,14 +160,14 @@ func TestClassDescriptor_GetMigrations(t *testing.T) {
 }
 
 type preparedObjectDescriptorTestData struct {
-	ledger  *storage.Store
+	ledger  *storage.DB
 	manager *LedgerArtifactManager
 	objRec  *record.ObjectActivateRecord
 	objRef  *record.Reference
 }
 
 func prepareObjectDescriptorTestData(t *testing.T) (preparedObjectDescriptorTestData, func()) {
-	ledger, cleaner := storagetest.TmpStore(t, "")
+	ledger, cleaner := storagetest.TmpDB(t, "")
 
 	rec := record.ObjectActivateRecord{Memory: []byte{1}}
 	ref, err := ledger.SetRecord(&rec)
@@ -176,7 +176,7 @@ func prepareObjectDescriptorTestData(t *testing.T) (preparedObjectDescriptorTest
 	return preparedObjectDescriptorTestData{
 		ledger: ledger,
 		manager: &LedgerArtifactManager{
-			store:    ledger,
+			db:       ledger,
 			archPref: []core.MachineType{1},
 		},
 		objRec: &rec,

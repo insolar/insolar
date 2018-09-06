@@ -35,7 +35,7 @@ func sorthashes(hashes [][]byte) {
 }
 
 func TestStore_SlotIterate(t *testing.T) {
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	var recset = []record.Record{

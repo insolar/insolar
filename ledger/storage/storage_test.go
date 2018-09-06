@@ -32,7 +32,7 @@ import (
 
 func TestStore_GetRecordNotFound(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	ref := &record.Reference{}
@@ -43,7 +43,7 @@ func TestStore_GetRecordNotFound(t *testing.T) {
 
 func TestStore_SetRecord(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 	// mock pulse source
 	pulse1 := record.PulseNum(1)
@@ -80,7 +80,7 @@ func TestStore_SetRecord(t *testing.T) {
 
 func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	ref := &record.Reference{
@@ -94,7 +94,7 @@ func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 
 func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	zerodomain := record.ID{Hash: zerohash()}
@@ -128,7 +128,7 @@ func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 
 func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	ref := referenceWithHashes("1000", "5000")
@@ -139,7 +139,7 @@ func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 
 func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
@@ -162,7 +162,7 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 
 func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	drop, err := store.GetDrop(1)
@@ -172,7 +172,7 @@ func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 
 func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	// it references on 'fake' zero
@@ -190,7 +190,7 @@ func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
 
 func TestStore_SetCurrentPulse(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	store.SetCurrentPulse(42)
@@ -199,7 +199,7 @@ func TestStore_SetCurrentPulse(t *testing.T) {
 
 func TestStore_SetEntropy(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	store.SetEntropy(42, []byte{1, 2, 3})

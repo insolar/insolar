@@ -30,7 +30,7 @@ import (
 
 func TestStore_DropWaitWrites(t *testing.T) {
 	t.Parallel()
-	store, cleaner := storagetest.TmpStore(t, "")
+	store, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
 	var (
