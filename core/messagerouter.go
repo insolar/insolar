@@ -16,16 +16,15 @@
 
 package core
 
+import "io"
+
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
 
 // Message is a routable packet, ATM just a method call
-type Message struct {
-	Caller      struct{}
-	Constructor bool
-	Reference   RecordRef
-	Method      string
-	Arguments   Arguments
+type Message interface {
+	Serialize() (io.Reader, error)
+	GetReference() RecordRef
 }
 
 // Response to a `Message`

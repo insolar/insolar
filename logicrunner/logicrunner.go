@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/messagerouter/message"
 )
 
 // LogicRunner is a general interface of contract executor
@@ -105,8 +106,9 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 		return &core.Response{Error: errors.Wrap(err, "no executer registered")}
 	}
 
-	if !msg.Constructor {
-		objDesc, err := lr.ArtifactManager.GetLatestObj(msg.Reference)
+	switch m := msg.(type) {
+	case *message.CallMethodMessage:
+		objDesc, err := lr.ArtifactManager.GetLatestObj(m.ObjectRef)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get object")}
 		}
@@ -121,21 +123,22 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get object's code descriptor")}
 		}
 
-		newData, result, err := executor.CallMethod(*codeDesc.Ref(), data, msg.Method, msg.Arguments)
+		newData, result, err := executor.CallMethod(*codeDesc.Ref(), data, m.Method, m.Arguments)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}
 
 		_, err = lr.ArtifactManager.UpdateObj(
-			core.RecordRef{}, core.RecordRef{}, msg.Reference, newData,
+			core.RecordRef{}, core.RecordRef{}, m.ObjectRef, newData,
 		)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
 		}
 
 		return &core.Response{Data: newData, Result: result}
-	} else {
-		classDesc, err := lr.ArtifactManager.GetLatestClass(msg.Reference)
+
+	case *message.CallConstructorMessage:
+		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get class")}
 		}
@@ -145,11 +148,15 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get class's code descriptor")}
 		}
 
-		newData, err := executor.CallConstructor(*codeDesc.Ref(), msg.Method, msg.Arguments)
+		newData, err := executor.CallConstructor(*codeDesc.Ref(), m.Name, m.Arguments)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}
 
 		return &core.Response{Data: newData}
+
+	default:
+		panic("Unknown message type")
 	}
+
 }

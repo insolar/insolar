@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/messagerouter/message"
 	"github.com/pkg/errors"
 )
 
@@ -86,8 +87,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.New("message router was not set during initialization")
 	}
 
-	msg := core.Message{
-		Reference: req.Reference,
+	msg := &message.CallMethodMessage{
+		ObjectRef: req.Reference,
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
@@ -111,11 +112,10 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.New("message router was not set during initialization")
 	}
 
-	msg := core.Message{
-		Constructor: true,
-		Reference:   req.Reference,
-		Method:      req.Constructor,
-		Arguments:   req.Arguments,
+	msg := &message.CallConstructorMessage{
+		ClassRef:  req.Reference,
+		Name:      req.Constructor,
+		Arguments: req.Arguments,
 	}
 
 	res, err := gpr.gp.MessageRouter.Route(msg)
