@@ -38,7 +38,7 @@ type HostNetwork interface {
 // NewHostNetwork creates and returns DHT network.
 func NewHostNetwork(cfg configuration.HostNetwork) (*DHT, error) {
 
-	if strings.Contains(cfg.Transport.Address, "0.0.0.0") {
+	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		log.Fatal("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")
 	}
 
