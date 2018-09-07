@@ -342,8 +342,7 @@ func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[str
 				} else {
 					impValue = imp.Path.Value
 					importString := strings.Trim(impValue, `"`)
-					importedPackage := strings.Split(importString, "/")
-					importAlias = importedPackage[len(importedPackage)-1]
+					importAlias = filepath.Base(importString)
 				}
 				if importAlias == tnameFrom[0] {
 					imports[impValue] = true
