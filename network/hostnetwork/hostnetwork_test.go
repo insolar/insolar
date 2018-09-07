@@ -73,4 +73,10 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 			}
 		})
 	}
+
+	panicConf := configuration.NewHostNetwork()
+	panicConf.Transport.BehindNAT = false
+	panicConf.Transport.Address = "0.0.0.0:0"
+
+	assert.PanicsWithValue(t, "hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0", func() { NewHostNetwork(panicConf) })
 }

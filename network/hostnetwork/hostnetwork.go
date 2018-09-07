@@ -39,7 +39,8 @@ type HostNetwork interface {
 func NewHostNetwork(cfg configuration.HostNetwork) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
-		log.Fatal("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")
+		log.Println("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")
+		panic("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")
 	}
 
 	proxy := relay.NewProxy()
