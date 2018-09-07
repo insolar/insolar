@@ -161,6 +161,7 @@ func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
 
 // TestArtifactManager implementation for tests
 type TestArtifactManager struct {
+	Types   []core.MachineType
 	Codes   map[core.RecordRef]*TestCodeDescriptor
 	Objects map[core.RecordRef]*TestObjectDescriptor
 	Classes map[core.RecordRef]*TestClassDescriptor
@@ -186,6 +187,7 @@ func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef
 
 // SetArchPref implementation for tests
 func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
+	t.Types = pref
 }
 
 // GetExactObj implementation for tests
