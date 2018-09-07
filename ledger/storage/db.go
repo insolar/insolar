@@ -136,31 +136,21 @@ func (db *DB) Close() error {
 	return db.db.Close()
 }
 
-// Get gets value by key in BadgerDB storage.
+// Get wraps matching transaction manager method.
 func (db *DB) Get(key []byte) ([]byte, error) {
-	var buf []byte
-	txerr := db.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(key)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return ErrNotFound
-			}
-			return err
-		}
-		buf, err = item.ValueCopy(nil)
-		return err
-	})
-	if txerr != nil {
-		buf = nil
-	}
-	return buf, txerr
+	tx := db.BeginTransaction(false)
+	defer tx.Discard()
+	return tx.Get(key)
 }
 
-// Set stores value by key.
+// Set wraps matching transaction manager method.
 func (db *DB) Set(key, value []byte) error {
-	return db.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, value)
-	})
+	tx := db.BeginTransaction(true)
+	defer tx.Discard()
+	if err := tx.Set(key, value); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // GetRecord wraps matching transaction manager method.
