@@ -47,6 +47,9 @@ type ArtifactManager interface {
 	// Returned descriptor will provide methods for fetching all related data.
 	GetLatestObj(head RecordRef) (ObjectDescriptor, error)
 
+	// GetObjChildren returns provided object's children references.
+	GetObjChildren(head RecordRef) ([]RecordRef, error)
+
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
