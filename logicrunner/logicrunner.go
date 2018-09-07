@@ -97,14 +97,37 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.New("No executor registered for machine")
 }
 
+type withCodeDescriptor interface {
+	CodeDescriptor() (core.CodeDescriptor, error)
+}
+
+func (lr *LogicRunner) executorFromDescriptor(from withCodeDescriptor) (core.MachineLogicExecutor, error) {
+	codeDesc, err := from.CodeDescriptor()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get code descriptor")
+	}
+
+	mt, err := codeDesc.MachineType()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get machine type")
+	}
+
+	executor, err := lr.GetExecutor(mt)
+	if err != nil {
+		return nil, errors.Wrap(err, "no executer registered")
+	}
+
+	return executor, nil
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
-	lr.ArtifactManager.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
-
-	executor, err := lr.GetExecutor(core.MachineTypeGoPlugin)
-	if err != nil {
-		return &core.Response{Error: errors.Wrap(err, "no executer registered")}
-	}
+	lr.ArtifactManager.SetArchPref(
+		[]core.MachineType{
+			core.MachineTypeBuiltin,
+			core.MachineTypeGoPlugin,
+		},
+	)
 
 	switch m := msg.(type) {
 	case *message.CallMethodMessage:
@@ -121,6 +144,11 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 		codeDesc, err := objDesc.CodeDescriptor()
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get object's code descriptor")}
+		}
+
+		executor, err := lr.executorFromDescriptor(objDesc)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't get executor")}
 		}
 
 		newData, result, err := executor.CallMethod(*codeDesc.Ref(), data, m.Method, m.Arguments)
@@ -148,6 +176,11 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get class's code descriptor")}
 		}
 
+		executor, err := lr.executorFromDescriptor(classDesc)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't get executor")}
+		}
+
 		newData, err := executor.CallConstructor(*codeDesc.Ref(), m.Name, m.Arguments)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
@@ -158,5 +191,4 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 	default:
 		panic("Unknown message type")
 	}
-
 }

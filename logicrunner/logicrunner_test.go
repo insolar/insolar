@@ -149,7 +149,7 @@ func TestExecution(t *testing.T) {
 		Code: &codeRef,
 	}
 	am.Classes[classRef] = &testutil.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
-	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef}
+	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef, AMachineType: core.MachineTypeGoPlugin}
 
 	te := newTestExecutor()
 	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
@@ -314,7 +314,11 @@ func suckInContracts(am *testutil.TestArtifactManager, root string, names ...str
 		}
 
 		ref := core.String2Ref(name)
-		am.Codes[ref] = &testutil.TestCodeDescriptor{ARef: &ref, ACode: pluginBinary}
+		am.Codes[ref] = &testutil.TestCodeDescriptor{
+			ARef:         &ref,
+			ACode:        pluginBinary,
+			AMachineType: core.MachineTypeGoPlugin,
+		}
 	}
 }
 
