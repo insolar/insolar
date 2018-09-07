@@ -811,3 +811,57 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 
 	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
 }
+
+func TestLedgerArtifactManager_GetObjChildren_VerifiesRecords(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	_, err := td.manager.GetObjChildren(*genRandomRef().CoreRef())
+	assert.NotNil(t, err)
+}
+
+func TestLedgerArtifactManager_GetObjChildren_VerifiesClassIsActive(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	classRef, _ := td.db.SetRecord(&record.ClassActivateRecord{})
+	classDeactivateRef, _ := td.db.SetRecord(&record.DeactivationRecord{})
+	td.db.SetClassIndex(classRef, &index.ClassLifeline{LatestStateRef: *classDeactivateRef})
+	objectRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
+	td.db.SetObjectIndex(objectRef, &index.ObjectLifeline{
+		LatestStateRef: *objectRef,
+		ClassRef:       *classRef,
+	})
+	_, err := td.manager.GetObjChildren(*objectRef.CoreRef())
+	assert.NotNil(t, err)
+}
+
+func TestLedgerArtifactManager_GetObjChildren_ReturnsCorrectRefs(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	refs := []record.Reference{*genRandomRef(), *genRandomRef(), *genRandomRef()}
+	objectRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	td.db.SetObjectIndex(objectRef, &index.ObjectLifeline{
+		LatestStateRef: *objectRef,
+		Children:       refs,
+	})
+	coreRefs := make([]core.RecordRef, 0, len(refs))
+	for _, r := range refs {
+		coreRefs = append(coreRefs, *r.CoreRef())
+	}
+	children, err := td.manager.GetObjChildren(*objectRef.CoreRef())
+	assert.NoError(t, err)
+	assert.Equal(t, coreRefs, children)
+}

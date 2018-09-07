@@ -791,6 +791,22 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 	return object, nil
 }
 
+// GetObjChildren returns provided object's children references.
+func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+	objRef := record.Core2Reference(head)
+	_, _, objIndex, err := m.getActiveObject(m.db, objRef)
+	if err != nil {
+		return nil, err
+	}
+
+	childRefs := make([]core.RecordRef, 0, len(objIndex.Children))
+	for _, ch := range objIndex.Children {
+		childRefs = append(childRefs, *ch.CoreRef())
+	}
+
+	return childRefs, nil
+}
+
 // NewArtifactManger creates new manager instance.
 func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
 	return &LedgerArtifactManager{db: db}, nil
