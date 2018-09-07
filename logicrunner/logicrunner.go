@@ -108,7 +108,7 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 
 	switch m := msg.(type) {
 	case *message.CallMethodMessage:
-		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Reference)
+		objDesc, err := lr.ArtifactManager.GetLatestObj(m.ObjectRef)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get object")}
 		}
@@ -129,7 +129,7 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 		}
 
 		_, err = lr.ArtifactManager.UpdateObj(
-			core.RecordRef{}, core.RecordRef{}, m.Reference, newData,
+			core.RecordRef{}, core.RecordRef{}, m.ObjectRef, newData,
 		)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
@@ -138,7 +138,7 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 		return &core.Response{Data: newData, Result: result}
 
 	case *message.CallConstructorMessage:
-		classDesc, err := lr.ArtifactManager.GetLatestClass(m.Reference)
+		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get class")}
 		}
@@ -148,7 +148,7 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get class's code descriptor")}
 		}
 
-		newData, err := executor.CallConstructor(*codeDesc.Ref(), m.Method, m.Arguments)
+		newData, err := executor.CallConstructor(*codeDesc.Ref(), m.Name, m.Arguments)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}

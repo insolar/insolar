@@ -88,9 +88,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	}
 
 	msg := &message.CallMethodMessage{
-		BaseMessage: message.BaseMessage{
-			Reference: req.Reference,
-		},
+		ObjectRef: req.Reference,
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
@@ -115,10 +113,8 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 	}
 
 	msg := &message.CallConstructorMessage{
-		BaseMessage: message.BaseMessage{
-			Reference: req.Reference,
-		},
-		Method:    req.Constructor,
+		ClassRef:  req.Reference,
+		Name:      req.Constructor,
 		Arguments: req.Arguments,
 	}
 
