@@ -18,9 +18,17 @@ package storage
 
 import (
 	"errors"
+
+	"github.com/dgraph-io/badger"
 )
 
 var (
 	// ErrNotFound returns if record/index not found in storage.
 	ErrNotFound = errors.New("storage object not found")
+
+	// ErrConflictRetriesOver is returned if Update transaction fails on all retry attempts.
+	ErrConflictRetriesOver = errors.New("Transaction Conflict retries exceeded")
+
+	// ErrConflict is the alias for badger.ErrConflict.
+	ErrConflict = badger.ErrConflict
 )

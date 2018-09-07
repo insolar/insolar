@@ -21,6 +21,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -32,7 +33,9 @@ func TmpDB(t *testing.T, dir string) (*storage.DB, func()) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := storage.NewDB(tmpdir, nil)
+	db, err := storage.NewDB(configuration.Ledger{
+		DataDirectory: tmpdir,
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

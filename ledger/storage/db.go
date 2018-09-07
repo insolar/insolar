@@ -17,6 +17,7 @@
 package storage
 
 import (
+	"log"
 	"path/filepath"
 	"sync"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -45,7 +47,18 @@ type DB struct {
 	currentPulse record.PulseNum
 	rootRef      *record.Reference
 
+	// dropWG guards inflight updates before jet drop calc.
 	dropWG sync.WaitGroup
+
+	// for BadgerDB it is normal to have transaction conflicts
+	// and these conflicts we should resolve by ourself
+	// so txretiries is our knob to tune up retry logic.
+	txretiries int
+}
+
+// SetTxRetiries sets number of retries on conflict in Update
+func (db *DB) SetTxRetiries(n int) {
+	db.txretiries = n
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -60,9 +73,9 @@ func setOptions(o *badger.Options) *badger.Options {
 
 // NewDB returns storage.DB with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
-func NewDB(dir string, opts *badger.Options) (*DB, error) {
+func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	opts = setOptions(opts)
-	dir, err := filepath.Abs(dir)
+	dir, err := filepath.Abs(conf.DataDirectory)
 	if err != nil {
 		return nil, err
 	}
@@ -70,16 +83,16 @@ func NewDB(dir string, opts *badger.Options) (*DB, error) {
 	opts.Dir = dir
 	opts.ValueDir = dir
 
-	db, err := badger.Open(*opts)
+	bdb, err := badger.Open(*opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "local database open failed")
 	}
 
-	bl := &DB{
-		db: db,
+	db := &DB{
+		db:         bdb,
+		txretiries: conf.TxRetriesOnConflict,
 	}
-
-	return bl, nil
+	return db, nil
 }
 
 // Bootstrap creates initial records in storage.
@@ -344,12 +357,34 @@ func (db *DB) View(fn func(*TransactionManager) error) error {
 // Update accepts transaction function and commits changes. All calls to received transaction manager will be
 // consistent and written tp disk or an error will be returned.
 func (db *DB) Update(fn func(*TransactionManager) error) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	err := fn(tx)
-	if err != nil {
-		return err
+	tries := db.txretiries
+	var tx *TransactionManager
+	var err error
+	for {
+		tx = db.BeginTransaction(true)
+		err = fn(tx)
+		if err != nil {
+			break
+		}
+		err = tx.Commit()
+		if err == nil {
+			break
+		}
+		if err != badger.ErrConflict {
+			break
+		}
+		if tries < 1 {
+			if db.txretiries > 0 {
+				err = ErrConflictRetriesOver
+			} else {
+				log.Println(">>> ErrConflict:", ErrConflict)
+				err = ErrConflict
+			}
+			break
+		}
+		tries--
+		tx.Discard()
 	}
-	return tx.Commit()
+	tx.Discard()
+	return err
 }
