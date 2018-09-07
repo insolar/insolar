@@ -269,11 +269,11 @@ type A struct{
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
 }
 
@@ -335,7 +335,7 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 	assert.NoError(t, err)
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), "var a0 int")
 	assert.Contains(t, bufWrapper.String(), "args[0] = a0")
