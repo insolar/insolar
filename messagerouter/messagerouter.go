@@ -20,8 +20,11 @@ import (
 	"bytes"
 	"encoding/gob"
 
+	"errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/messagerouter/message"
 )
 
 const deliverRPCMethodName = "MessageRouter.Deliver"
@@ -51,7 +54,7 @@ func (mr *MessageRouter) Stop() error { return nil }
 
 // Route a `Message` and get a `Response` or error from remote host
 func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err error) {
-	res, err := mr.service.SendMessage(deliverRPCMethodName, &msg)
+	res, err := mr.service.SendMessage(deliverRPCMethodName, msg)
 	if err != nil {
 		return response, err
 	}
@@ -62,8 +65,10 @@ func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err er
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
 func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
-
-	msg, err := DeserializeMessage(args[0]) // TODO: check empty args
+	if len(args) < 1 {
+		return nil, errors.New("need exactly one argument when mr.deliver()")
+	}
+	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
@@ -83,12 +88,6 @@ func Serialize(value interface{}) ([]byte, error) {
 	return res, err
 }
 
-// DeserializeMessage reads packet from byte slice.
-func DeserializeMessage(data []byte) (msg core.Message, err error) {
-	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&msg)
-	return msg, err
-}
-
 // DeserializeResponse reads response from byte slice.
 func DeserializeResponse(data []byte) (res core.Response, err error) {
 	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&res)
@@ -96,6 +95,5 @@ func DeserializeResponse(data []byte) (res core.Response, err error) {
 }
 
 func init() {
-	gob.Register(&core.Message{})
 	gob.Register(&core.Response{})
 }

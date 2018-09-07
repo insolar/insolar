@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/messagerouter/message"
 )
 
 var icc = "../cmd/icc/icc"
@@ -156,13 +157,13 @@ func TestExecution(t *testing.T) {
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
 	assert.NoError(t, err)
 
-	resp := lr.Execute(core.Message{Constructor: false, Reference: dataRef})
+	resp := lr.Execute(&message.CallMethodMessage{ObjectRef: dataRef})
 	assert.NoError(t, resp.Error)
 	assert.Equal(t, []byte("data"), resp.Data)
 	assert.Equal(t, []byte("res"), resp.Result)
 
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-	resp = lr.Execute(core.Message{Constructor: true, Reference: classRef})
+	resp = lr.Execute(&message.CallConstructorMessage{ClassRef: classRef})
 	assert.NoError(t, resp.Error)
 	assert.Equal(t, []byte("data"), resp.Data)
 	assert.Equal(t, []byte(nil), resp.Result)
