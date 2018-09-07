@@ -333,9 +333,10 @@ func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[str
 		tnameFrom := strings.Split(tname, ".")
 
 		if len(tnameFrom) > 1 {
+			var importAlias string
+			var impValue string
+
 			for _, imp := range parsed.node.Imports {
-				importAlias := ""
-				impValue := ""
 				if imp.Name != nil {
 					importAlias = imp.Name.Name
 					impValue = fmt.Sprintf(`%s %s`, importAlias, imp.Path.Value)
@@ -349,6 +350,7 @@ func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[str
 					break
 				}
 			}
+
 		}
 
 	}
