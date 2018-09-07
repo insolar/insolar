@@ -122,6 +122,13 @@ func (m *LedgerArtifactManager) getActiveObject(s storage.Store, objRef record.R
 	return activateRec, amendRecord, objIndex, nil
 }
 
+// RootRef returns the root record reference.
+//
+// Root record is the parent for all top-level records.
+func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
+	return m.db.RootRef().CoreRef()
+}
+
 // SetArchPref Stores a list of preferred VM architectures memory.
 //
 // When returning classes storage will return compiled code according to this preferences. VM is responsible for
@@ -402,12 +409,13 @@ func (m *LedgerArtifactManager) UpdateClass(
 //
 // Activation reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObj(
-	domain, request, class core.RecordRef, memory []byte,
+	domain, request, class, parent core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
 	var err error
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	classRef := record.Core2Reference(class)
+	parentRef := record.Core2Reference(parent)
 
 	err = m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
@@ -432,8 +440,10 @@ func (m *LedgerArtifactManager) ActivateObj(
 			},
 			ClassActivateRecord: classRef,
 			Memory:              memory,
+			Parent:              parentRef,
 		}
 
+		// save new record and it's index
 		objRef, err = tx.SetRecord(&rec)
 		if err != nil {
 			return errors.Wrap(err, "failed to store record")
@@ -442,6 +452,17 @@ func (m *LedgerArtifactManager) ActivateObj(
 			ClassRef:       classRef,
 			LatestStateRef: *objRef,
 		})
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		// append new record parent's children
+		parentIdx, err := tx.GetObjectIndex(&parentRef)
+		if err != nil {
+			return errors.Wrap(err, "inconsistent index")
+		}
+		parentIdx.Children = append(parentIdx.Children, *objRef)
+		err = tx.SetObjectIndex(&parentRef, parentIdx)
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
 		}

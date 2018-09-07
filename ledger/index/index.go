@@ -31,4 +31,5 @@ type ObjectLifeline struct {
 	ClassRef       record.Reference
 	LatestStateRef record.Reference   // Amend or activate record
 	AppendRefs     []record.Reference // ObjectAppendRecord
+	Children       []record.Reference
 }
