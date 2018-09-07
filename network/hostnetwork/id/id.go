@@ -25,33 +25,14 @@ import (
 
 // ID is host id.
 type ID struct {
-	key  []byte
-	hash []byte
-}
-
-// GetRandomKey generates and returns a random key for ID.
-func GetRandomKey() []byte {
-	key := make([]byte, 20)
-	_, _ = random.Read(key)
-	return key
-}
-
-// GetHash returns hash of key.
-func (id ID) GetHash() []byte {
-	return id.hash
-}
-
-// SetHash sets new hash.
-func (id *ID) SetHash(newHash []byte) {
-	id.hash = newHash
+	key []byte
 }
 
 // MarshalBinary is binary marshaler.
 func (id ID) MarshalBinary() ([]byte, error) {
 	var res bytes.Buffer
 	key := base58.Encode(id.key)
-	hash := base58.Encode(id.hash)
-	fmt.Fprintln(&res, key, hash)
+	fmt.Fprintln(&res, key)
 	return res.Bytes(), nil
 }
 
@@ -59,24 +40,17 @@ func (id ID) MarshalBinary() ([]byte, error) {
 func (id *ID) UnmarshalBinary(data []byte) error {
 	res := bytes.NewBuffer(data)
 	var key string
-	var hash string
-	_, err := fmt.Fscanln(res, &key, &hash)
+	_, err := fmt.Fscanln(res, &key)
 	id.key = base58.Decode(key)
-	id.hash = base58.Decode(hash)
 	return err
 }
 
 // NewID returns random host id.
-func NewID(key []byte) (ID, error) {
-	hash := make([]byte, 20) // TODO: choose hash func
-	_, err := random.Read(hash)
-	id := ID{hash: hash, key: key}
+func NewID() (ID, error) {
+	key := make([]byte, 20) // TODO: choose hash func
+	_, err := random.Read(key)
+	id := ID{key: key}
 	return id, err
-}
-
-// HashEqual checks if hash is equal to another.
-func (id ID) HashEqual(other []byte) bool {
-	return bytes.Equal(id.hash, other)
 }
 
 // KeyEqual checks if id is equal ot another.
@@ -89,7 +63,7 @@ func (id ID) KeyString() string {
 	return base58.Encode(id.key)
 }
 
-// HashString is a base58-encoded string representation hash of public key.
-func (id ID) HashString() string {
-	return base58.Encode(id.hash)
+// GetKey returns a raw key.
+func (id ID) GetKey() []byte {
+	return id.key
 }

@@ -69,7 +69,7 @@ func makeHosts(count int, t *testing.T) []*host.Host {
 	addresses := makeAddresses(count, t)
 
 	for i := 0; i < count; i++ {
-		id, err := id.NewID(id.GetRandomKey())
+		id, err := id.NewID()
 
 		if err != nil {
 			assert.Errorf(t, nil, "error: %s", err.Error())

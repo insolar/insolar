@@ -116,7 +116,7 @@ func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hostnetwork.C
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
 
-// Start imlements core.Component
+// Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
 	logrus.Infoln("Bootstrapping network...")
@@ -136,7 +136,7 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	return nil
 }
 
-// Stop imlements core.Component
+// Stop implements core.Component
 func (network *ServiceNetwork) Stop() error {
 	logrus.Infoln("Stop network")
 	network.hostNetwork.Disconnect()

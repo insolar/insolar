@@ -121,15 +121,15 @@ func main() {
 	go func() {
 		sig := <-gracefulStop
 		log.Debugln("caught sig: ", sig)
-		cm.stopAll()
 
+		cm.stopAll()
 		os.Exit(0)
 	}()
 
 	go handleStats(cfgHolder.Configuration.Stats)
 
 	fmt.Println("Running interactive mode:")
-	repl(nw.GetHostNetwork())
+	repl(nw)
 }
 
 func initLogger(cfg configuration.Log) {

@@ -152,7 +152,7 @@ func NewKnownOuterHostsPacket(sender, receiver *host.Host, hosts int) *Packet {
 		Receiver: receiver,
 		Type:     TypeKnownOuterHosts,
 		Data: &RequestKnownOuterHosts{
-			ID:         sender.ID.HashString(),
+			ID:         sender.ID.KeyString(),
 			OuterHosts: hosts,
 		},
 	}
