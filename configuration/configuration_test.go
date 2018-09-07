@@ -66,3 +66,14 @@ func TestConfiguration_Load_Invalid(t *testing.T) {
 	err := holder.LoadFromFile("testdata/invalid.yml")
 	assert.Error(t, err)
 }
+
+func TestConfiguration_LoadEnv(t *testing.T) {
+	holder := NewHolder()
+	defaultCfg := NewConfiguration()
+
+	os.Setenv("INSOLAR_HOST_TRANSPORT_ADDRESS", "127.0.0.2:5555")
+	err := holder.LoadEnv()
+	assert.NoError(t, err)
+	assert.NotEqual(t, defaultCfg, holder.Configuration)
+	assert.Equal(t, "127.0.0.2:5555", holder.Configuration.Host.Transport.Address)
+}
