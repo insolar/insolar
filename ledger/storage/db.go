@@ -158,12 +158,9 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 
 // Set wraps matching transaction manager method.
 func (db *DB) Set(key, value []byte) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-	if err := tx.Set(key, value); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.Set(key, value)
+	})
 }
 
 // GetRecord wraps matching transaction manager method.
@@ -178,19 +175,15 @@ func (db *DB) GetRecord(ref *record.Reference) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(rec record.Record) (*record.Reference, error) {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	ref, err := tx.SetRecord(rec)
+func (db *DB) SetRecord(rec record.Record) (ref *record.Reference, err error) {
+	err = db.Update(func(tx *TransactionManager) error {
+		ref, err = tx.SetRecord(rec)
+		return err
+	})
 	if err != nil {
-		return nil, err
+		ref = nil
 	}
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-	return ref, nil
+	return ref, err
 }
 
 // GetClassIndex wraps matching transaction manager method.
@@ -207,14 +200,9 @@ func (db *DB) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error)
 
 // SetClassIndex wraps matching transaction manager method.
 func (db *DB) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	err := tx.SetClassIndex(ref, idx)
-	if err != nil {
-		return err
-	}
-	return tx.Commit()
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.SetClassIndex(ref, idx)
+	})
 }
 
 // GetObjectIndex wraps matching transaction manager method.
@@ -231,14 +219,9 @@ func (db *DB) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, erro
 
 // SetObjectIndex wraps matching transaction manager method.
 func (db *DB) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	err := tx.SetObjectIndex(ref, idx)
-	if err != nil {
-		return err
-	}
-	return tx.Commit()
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.SetObjectIndex(ref, idx)
+	})
 }
 
 // GetDrop returns jet drop for a given pulse number.
@@ -313,14 +296,9 @@ func (db *DB) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 
 // SetEntropy wraps matching transaction manager method.
 func (db *DB) SetEntropy(pulse record.PulseNum, entropy []byte) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	err := tx.SetEntropy(pulse, entropy)
-	if err != nil {
-		return err
-	}
-	return tx.Commit()
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.SetEntropy(pulse, entropy)
+	})
 }
 
 // SetCurrentPulse sets current pulse number.
