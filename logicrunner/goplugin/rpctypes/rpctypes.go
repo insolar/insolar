@@ -83,8 +83,20 @@ type UpRouteConstructorReq struct {
 
 // UpRouteConstructorResp is response from RouteConstructor RPC in goplugin
 type UpRouteConstructorResp struct {
+	Data []byte
+	Err  error
+}
+
+// UpSaveAsChildReq is a set of arguments for SaveAsChild RPC in goplugin
+type UpSaveAsChildReq struct {
+	Parent core.RecordRef
+	Class  core.RecordRef
+	Data   []byte
+}
+
+// UpSaveAsChildResp is a set of arguments for SaveAsChild RPC in goplugin
+type UpSaveAsChildResp struct {
 	Reference core.RecordRef
-	Err       error
 }
 
 // Object is an inner representation of storage object for transfering it over API

@@ -18,14 +18,16 @@ package storage
 
 import (
 	"github.com/dgraph-io/badger"
+
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
 
 // TransactionManager is used to ensure persistent writes to disk.
 type TransactionManager struct {
-	store *Store
-	txn   *badger.Txn
+	db     *DB
+	txn    *badger.Txn
+	update bool
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
@@ -42,6 +44,9 @@ func (m *TransactionManager) Commit() error {
 
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
+	if m.update {
+		m.db.dropWG.Done()
+	}
 	m.txn.Discard()
 }
 
@@ -65,7 +70,6 @@ func (m *TransactionManager) GetRecord(ref *record.Reference) (record.Record, er
 	if err != nil {
 		return nil, err
 	}
-
 	return raw.ToRecord(), nil
 }
 
@@ -78,7 +82,7 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, er
 	ref := &record.Reference{
 		Domain: rec.Domain().Record,
 		Record: record.ID{
-			Pulse: m.store.GetCurrentPulse(),
+			Pulse: m.db.GetCurrentPulse(),
 			Hash:  raw.Hash(),
 		},
 	}
@@ -88,7 +92,6 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, er
 	if err != nil {
 		return nil, err
 	}
-
 	return ref, nil
 }
 
@@ -158,7 +161,7 @@ func (m *TransactionManager) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 		}
 		return nil, err
 	}
-	buf, err := item.Value()
+	buf, err := item.ValueCopy(nil)
 	if err != nil {
 		return nil, err
 	}

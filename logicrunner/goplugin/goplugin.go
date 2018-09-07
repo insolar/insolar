@@ -96,8 +96,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
-	if reply.Err != nil {
-		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
+	if res.Error != nil {
+		return errors.Wrap(res.Error, "couldn't route message (error in respone)")
 	}
 
 	reply.Result = res.Result
@@ -126,11 +126,20 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
 	}
 
-	// TODO: store data on ledger via artifact manager
-	_ = res.Data
+	reply.Data = res.Data
+	return nil
+}
 
-	reply.Reference = core.String2Ref("some-ref")
+// SaveAsChild is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
+	am := gpr.gp.ArtifactManager
+	// TODO: this is just Save, not as child
+	ref, err := am.ActivateObj(core.RecordRef{}, core.RecordRef{}, req.Class, req.Data)
+	if err != nil {
+		return err
+	}
 
+	reply.Reference = *ref
 	return nil
 }
 
@@ -189,7 +198,12 @@ func (gp *GoPlugin) StartRunner() error {
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
 
-	runner := exec.Command("ginsider-cli/ginsider-cli", runnerArguments...)
+	execPath := "ginsider-cli/ginsider-cli"
+	if gp.Cfg.RunnerPath != "" {
+		execPath = gp.Cfg.RunnerPath
+	}
+
+	runner := exec.Command(execPath, runnerArguments...)
 	runner.Stdout = os.Stdout
 	runner.Stderr = os.Stderr
 	err := runner.Start()

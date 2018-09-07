@@ -21,7 +21,8 @@ type MachineType int
 
 // Real constants of MachineType
 const (
-	MachineTypeBuiltin MachineType = iota + 1
+	MachineTypeNotExist             = 0
+	MachineTypeBuiltin  MachineType = iota + 1
 	MachineTypeGoPlugin
 
 	MachineTypesLastID
@@ -36,6 +37,5 @@ type MachineLogicExecutor interface {
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	Component
 	Execute(msg Message) (res *Response)
 }

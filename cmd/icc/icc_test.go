@@ -17,18 +17,8 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
-
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger"
+	"testing"
 )
 
-// StartLedger creates and starts ledger instance.
-func StartLedger(cfg configuration.Ledger) core.Ledger {
-	l, err := ledger.NewLedger(cfg)
-	if err != nil {
-		log.Fatalln("Failed to create ledger: ", err.Error())
-	}
-	return l
+func TestStub(t *testing.T) {
 }

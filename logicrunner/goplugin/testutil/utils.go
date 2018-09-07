@@ -17,9 +17,11 @@
 package testutil
 
 import (
-	"errors"
+	"crypto/rand"
 	"go/build"
 	"os"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 )
@@ -71,8 +73,9 @@ func WriteFile(dir string, name string, text string) error {
 
 // TestCodeDescriptor implementation for tests
 type TestCodeDescriptor struct {
-	ARef  *core.RecordRef
-	ACode []byte
+	ARef         *core.RecordRef
+	ACode        []byte
+	AMachineType core.MachineType
 }
 
 // Ref implementation for tests
@@ -80,15 +83,47 @@ func (t *TestCodeDescriptor) Ref() *core.RecordRef {
 	return t.ARef
 }
 
+// MachineType implementation for tests
+func (t *TestCodeDescriptor) MachineType() (core.MachineType, error) {
+	return t.AMachineType, nil
+}
+
 // Code implementation for tests
 func (t *TestCodeDescriptor) Code() ([]byte, error) {
 	return t.ACode, nil
 }
 
+// TestClassDescriptor ...
+type TestClassDescriptor struct {
+	AM    *TestArtifactManager
+	ARef  *core.RecordRef
+	ACode *core.RecordRef
+}
+
+// HeadRef ...
+func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
+	return t.ARef
+}
+
+// StateRef ...
+func (t *TestClassDescriptor) StateRef() *core.RecordRef {
+	panic("not implemented")
+}
+
+// CodeDescriptor ...
+func (t *TestClassDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
+	res, ok := t.AM.Codes[*t.ACode]
+	if !ok {
+		return nil, errors.New("No code")
+	}
+	return res, nil
+}
+
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
+	AM   *TestArtifactManager
 	Data []byte
-	Code *TestCodeDescriptor
+	Code *core.RecordRef
 }
 
 // HeadRef implementation for tests
@@ -111,7 +146,12 @@ func (t *TestObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
 	if t.Code == nil {
 		return nil, errors.New("No code")
 	}
-	return t.Code, nil
+
+	res, ok := t.AM.Codes[*t.Code]
+	if !ok {
+		return nil, errors.New("No code")
+	}
+	return res, nil
 }
 
 // ClassDescriptor implementation for tests
@@ -123,6 +163,7 @@ func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
 type TestArtifactManager struct {
 	Codes   map[core.RecordRef]*TestCodeDescriptor
 	Objects map[core.RecordRef]*TestObjectDescriptor
+	Classes map[core.RecordRef]*TestClassDescriptor
 }
 
 // NewTestArtifactManager implementation for tests
@@ -130,6 +171,7 @@ func NewTestArtifactManager() *TestArtifactManager {
 	return &TestArtifactManager{
 		Codes:   make(map[core.RecordRef]*TestCodeDescriptor),
 		Objects: make(map[core.RecordRef]*TestObjectDescriptor),
+		Classes: make(map[core.RecordRef]*TestClassDescriptor),
 	}
 }
 
@@ -146,6 +188,15 @@ func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
 // GetExactObj implementation for tests
 func (t *TestArtifactManager) GetExactObj(class core.RecordRef, object core.RecordRef) ([]byte, []byte, error) {
 	panic("not implemented")
+}
+
+// GetLatestClass implementation for tests
+func (t *TestArtifactManager) GetLatestClass(object core.RecordRef) (core.ClassDescriptor, error) {
+	res, ok := t.Classes[object]
+	if !ok {
+		return nil, errors.New("No object")
+	}
+	return res, nil
 }
 
 // GetLatestObj implementation for tests
@@ -193,7 +244,22 @@ func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.Re
 
 // ActivateObj implementation for tests
 func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
+	b := make([]byte, 64)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to generate ref")
+	}
+
+	codeRef := t.Classes[class].ACode
+
+	ref := core.RecordRef{}
+	copy(ref[:], b[0:64])
+	t.Objects[ref] = &TestObjectDescriptor{
+		AM:   t,
+		Data: memory,
+		Code: codeRef,
+	}
+	return &ref, nil
 }
 
 // DeactivateObj implementation for tests
