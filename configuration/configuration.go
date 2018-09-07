@@ -82,14 +82,13 @@ func (c *Holder) Load() error {
 		return err
 	}
 
+	return c.viper.UnmarshalKey("insolar", &c.Configuration)
+}
+
+// LoadEnv overrides configuration with env variables
+func (c *Holder) LoadEnv() error {
 	// workaround for AutomaticEnv issue https://github.com/spf13/viper/issues/188
 	bindEnvs(c.viper, c.Configuration)
-
-	err = c.viper.UnmarshalKey("insolar", &c.Configuration)
-	if err != nil {
-		return err
-	}
-
 	return c.viper.Unmarshal(&c.Configuration)
 }
 

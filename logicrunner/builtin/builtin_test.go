@@ -79,7 +79,7 @@ func TestBareHelloworld(t *testing.T) {
 	classref, err := am.ActivateClass(domain, request, *coderef, data)
 	assert.NoError(t, err, "create template for contract data")
 
-	contract, err := am.ActivateObj(request, domain, *classref, data)
+	contract, err := am.ActivateObj(request, domain, *classref, *am.RootRef(), data)
 	assert.NoError(t, err, "create actual contract")
 
 	assert.Equal(t, true, contract != nil)

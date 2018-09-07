@@ -181,6 +181,9 @@ func (t *TestArtifactManager) Start(components core.Components) error { return n
 // Stop implementation for tests
 func (t *TestArtifactManager) Stop() error { return nil }
 
+// RootRef implementation for tests
+func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef{} }
+
 // SetArchPref implementation for tests
 func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
 }
@@ -243,7 +246,7 @@ func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.Re
 }
 
 // ActivateObj implementation for tests
-func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, memory []byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
 	b := make([]byte, 64)
 	_, err := rand.Read(b)
 	if err != nil {
