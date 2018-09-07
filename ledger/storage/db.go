@@ -85,12 +85,12 @@ func NewDB(dir string, opts *badger.Options) (*DB, error) {
 // Bootstrap creates initial records in storage.
 func (db *DB) Bootstrap() error {
 	getRootRef := func() (*record.Reference, error) {
-		rootKey, err := db.Get([]byte(rootKey))
+		rootRefBuff, err := db.Get([]byte(rootKey))
 		if err != nil {
 			return nil, err
 		}
 		var coreRootRef core.RecordRef
-		copy(coreRootRef[:], rootKey)
+		copy(coreRootRef[:], rootRefBuff)
 		rootRef := record.Core2Reference(coreRootRef)
 		return &rootRef, nil
 	}
