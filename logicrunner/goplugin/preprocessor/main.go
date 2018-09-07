@@ -113,7 +113,7 @@ func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, 
 	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-		imports = extendImportsMap(parsed, method.Type.Params, imports)
+		extendImportsMap(parsed, method.Type.Params, imports)
 		rets := []string{}
 		if method.Type.Results != nil {
 			for i := range method.Type.Results.List {
@@ -322,9 +322,9 @@ func generateTypes(parsed *parsedFile) []string {
 	return types
 }
 
-func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[string]bool) map[string]bool {
+func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[string]bool) {
 	if params == nil {
-		return imports
+		return
 	}
 
 	for _, e := range params.List {
@@ -354,7 +354,6 @@ func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[str
 
 	}
 
-	return imports
 }
 
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
@@ -443,8 +442,8 @@ func generateMethodsProxies(parsed *parsedFile) ([]map[string]interface{}, map[s
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
 		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
-		imports = extendImportsMap(parsed, method.Type.Params, imports)
-		imports = extendImportsMap(parsed, method.Type.Results, imports)
+		extendImportsMap(parsed, method.Type.Params, imports)
+		extendImportsMap(parsed, method.Type.Results, imports)
 	}
 	return methodsProxies, imports
 }
