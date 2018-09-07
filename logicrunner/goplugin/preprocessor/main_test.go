@@ -390,7 +390,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/pointerPath"`)
@@ -400,7 +400,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/pointerPath"`)
@@ -430,7 +430,7 @@ func ( A ) Get(i someAlias.SomeType){
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `someAlias "some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -439,7 +439,7 @@ func ( A ) Get(i someAlias.SomeType){
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
@@ -469,7 +469,7 @@ func ( A ) Get() {
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -478,7 +478,7 @@ func ( A ) Get() {
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
@@ -508,7 +508,7 @@ func ( A ) Get() path.SomeValue {
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -517,7 +517,7 @@ func ( A ) Get() path.SomeValue {
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
@@ -538,6 +538,6 @@ type A struct{
 `)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't match filename without extension and path")
 }
