@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/ledger/hash"
@@ -34,12 +35,15 @@ const (
 	scopeIDRecord   byte = 2
 	scopeIDJetDrop  byte = 3
 	scopeIDEntropy  byte = 4
+
+	rootKey = "0"
 )
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
 	db           *badger.DB
 	currentPulse record.PulseNum
+	rootRef      *record.Reference
 
 	dropWG sync.WaitGroup
 }
@@ -76,6 +80,50 @@ func NewDB(dir string, opts *badger.Options) (*DB, error) {
 	}
 
 	return bl, nil
+}
+
+// Bootstrap creates initial records in storage.
+func (db *DB) Bootstrap() error {
+	getRootRef := func() (*record.Reference, error) {
+		rootKey, err := db.Get([]byte(rootKey))
+		if err != nil {
+			return nil, err
+		}
+		var coreRootRef core.RecordRef
+		copy(coreRootRef[:], rootKey)
+		rootRef := record.Core2Reference(coreRootRef)
+		return &rootRef, nil
+	}
+
+	createRootRecord := func() (*record.Reference, error) {
+		rootRef, err := db.SetRecord(&record.ObjectActivateRecord{})
+		if err != nil {
+			return nil, err
+		}
+		err = db.SetObjectIndex(rootRef, &index.ObjectLifeline{LatestStateRef: *rootRef})
+		if err != nil {
+			return nil, err
+		}
+		return rootRef, db.Set([]byte(rootKey), rootRef.CoreRef()[:])
+	}
+
+	var err error
+	db.rootRef, err = getRootRef()
+	if err == ErrNotFound {
+		db.rootRef, err = createRootRecord()
+	}
+	if err != nil {
+		return errors.Wrap(err, "bootstrap failed")
+	}
+
+	return nil
+}
+
+// RootRef returns the root record reference.
+//
+// Root record is the parent for all top-level records.
+func (db *DB) RootRef() *record.Reference {
+	return db.rootRef
 }
 
 // Close wraps BadgerDB Close method.

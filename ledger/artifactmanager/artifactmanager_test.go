@@ -348,7 +348,9 @@ func TestLedgerArtifactManager_ActivateObj_VerifiesRecord(t *testing.T) {
 	defer cleaner()
 
 	_, err := td.manager.ActivateObj(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(), []byte{})
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(), *genRandomRef().CoreRef(),
+		[]byte{},
+	)
 	assert.NotNil(t, err)
 	notClassRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
 	_, err = td.manager.ActivateClass(
@@ -374,8 +376,20 @@ func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
 	td.db.SetClassIndex(classRef, &index.ClassLifeline{
 		LatestStateRef: *classRef,
 	})
+	parentRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	td.db.SetObjectIndex(parentRef, &index.ObjectLifeline{})
+
 	activateCoreRef, err := td.manager.ActivateObj(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *classRef.CoreRef(), memory)
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *classRef.CoreRef(), *parentRef.CoreRef(), memory,
+	)
 	assert.Nil(t, err)
 	activateRef := record.Core2Reference(*activateCoreRef)
 	activateRec, err := td.db.GetRecord(&activateRef)
@@ -391,6 +405,7 @@ func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
 		},
 		ClassActivateRecord: *classRef,
 		Memory:              memory,
+		Parent:              *parentRef,
 	})
 }
 

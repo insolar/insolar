@@ -18,6 +18,11 @@ package core
 
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
+	// RootRef returns the root record reference.
+	//
+	// Root record is the parent for all top-level records.
+	RootRef() *RecordRef
+
 	// SetArchPref stores a list of preferred VM architectures memory.
 	//
 	// When returning classes storage will return compiled code according to this preferences. VM is responsible for
@@ -75,7 +80,7 @@ type ArtifactManager interface {
 	// memory as memory of crated object. If memory is not provided, the class default memory will be used.
 	//
 	// Activation reference will be this object's identifier and referred as "object head".
-	ActivateObj(domain, request, class RecordRef, memory []byte) (*RecordRef, error)
+	ActivateObj(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
 
 	// DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
