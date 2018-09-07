@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package main
+package preprocessor
 
 import (
 	"fmt"
@@ -28,14 +28,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	flag "github.com/spf13/pflag"
-
-	"strconv"
 )
 
 var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
@@ -52,110 +50,6 @@ type parsedFile struct {
 	methods      map[string][]*ast.FuncDecl
 	constructors map[string][]*ast.FuncDecl
 	contract     string
-}
-
-func printUsage() {
-	fmt.Println("usage: preprocessor <command> [<args>]")
-	fmt.Println("Commands: ")
-	fmt.Println(" wrapper   generate contract's wrapper")
-	fmt.Println(" proxy     generate contract's proxy")
-	fmt.Println(" imports   rewrite imports")
-}
-
-type outputFlag struct {
-	path   string
-	writer io.Writer
-}
-
-func newOutputFlag() *outputFlag {
-	return &outputFlag{path: "-", writer: os.Stdout}
-}
-
-func (r *outputFlag) String() string {
-	return r.path
-}
-func (r *outputFlag) Set(arg string) error {
-	var res io.Writer
-	if arg == "-" {
-		res = os.Stdout
-	} else {
-		var err error
-		res, err = os.OpenFile(arg, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
-			return errors.Wrap(err, "couldn't open file for writing")
-		}
-	}
-	r.path = arg
-	r.writer = res
-	return nil
-}
-func (r *outputFlag) Type() string {
-	return "file"
-}
-
-func main() {
-
-	if len(os.Args) == 1 {
-		printUsage()
-		return
-	}
-
-	switch os.Args[1] {
-	case "wrapper":
-		fs := flag.NewFlagSet("wrapper", flag.ExitOnError)
-		output := newOutputFlag()
-		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
-		err := fs.Parse(os.Args[2:])
-		if err != nil {
-			panic(err)
-		}
-
-		for _, fn := range fs.Args() {
-			err := generateContractWrapper(fn, output.writer)
-			if err != nil {
-				panic(err)
-			}
-		}
-	case "proxy":
-		fs := flag.NewFlagSet("proxy", flag.ExitOnError)
-		output := newOutputFlag()
-		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
-		var reference string
-		fs.StringVarP(&reference, "code-reference", "r", "testRef", "reference to code of")
-		err := fs.Parse(os.Args[2:])
-		if err != nil {
-			panic(err)
-		}
-
-		if fs.NArg() != 1 {
-			panic(errors.New("proxy command should be followed by exactly one file name to process"))
-		}
-		err = generateContractProxy(fs.Arg(0), reference, output.writer)
-		if err != nil {
-			panic(err)
-		}
-	case "imports":
-		fs := flag.NewFlagSet("imports", flag.ExitOnError)
-		output := newOutputFlag()
-		fs.VarP(output, "output", "o", "output file (use - for STDOUT)")
-		err := fs.Parse(os.Args[2:])
-		if err != nil {
-			panic(err)
-		}
-
-		if fs.NArg() != 1 {
-			panic(errors.New("imports command should be followed by exactly one file name to process"))
-		}
-
-		err = cmdRewriteImports(fs.Arg(0), output.writer)
-		if err != nil {
-			panic(err)
-		}
-	default:
-		printUsage()
-		fmt.Printf("\n\n%q is not valid command.\n", os.Args[1])
-		os.Exit(2)
-	}
 }
 
 func slurpFile(fileName string) ([]byte, error) {
@@ -239,7 +133,7 @@ func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, 
 	return methodsInfo, imports
 }
 
-func generateContractWrapper(fileName string, out io.Writer) error {
+func GenerateContractWrapper(fileName string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
@@ -280,7 +174,7 @@ func generateContractWrapper(fileName string, out io.Writer) error {
 	return nil
 }
 
-func generateContractProxy(fileName string, classReference string, out io.Writer) error {
+func GenerateContractProxy(fileName string, classReference string, out io.Writer) error {
 	parsed, err := parseFile(fileName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
@@ -569,7 +463,7 @@ func generateConstructorProxies(parsed *parsedFile) []map[string]string {
 	return res
 }
 
-func cmdRewriteImports(fname string, w io.Writer) error {
+func CmdRewriteImports(fname string, w io.Writer) error {
 	parsed, err := parseFile(fname)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
