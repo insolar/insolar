@@ -217,6 +217,11 @@ func (t *TestArtifactManager) GetLatestObj(object core.RecordRef) (core.ObjectDe
 	return res, nil
 }
 
+// GetObjChildren implementation for tests
+func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+	panic("not implemented")
+}
+
 // DeclareType implementation for tests
 func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
 	panic("not implemented")
