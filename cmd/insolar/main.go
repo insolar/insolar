@@ -70,7 +70,12 @@ func main() {
 	cfgHolder := configuration.NewHolder()
 	err := cfgHolder.Load()
 	if err != nil {
-		log.Warnln(err.Error())
+		log.Warnln("Falied to load configuration from file: ", err.Error())
+	}
+
+	err = cfgHolder.LoadEnv()
+	if err != nil {
+		log.Warnln("Falied to load configuration from env:", err.Error())
 	}
 
 	cfgHolder.Configuration.Host.Transport.BehindNAT = false

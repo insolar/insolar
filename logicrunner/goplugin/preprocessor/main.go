@@ -365,24 +365,10 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 	}
 
 	for i, arg := range list.List {
-		initializer := ""
 		tname := string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
-		switch tname {
-		case "uint", "int", "int8", "uint8", "int32", "uint32", "int64", "uint64":
-			initializer = tname + "(0)"
-		case "bool":
-			initializer = "bool(false)"
-		case "string":
-			initializer = `""`
-		default:
-			switch td := arg.Type.(type) {
-			case *ast.StarExpr:
-				initializer = "&" + string(parsed.code[td.X.Pos()-1:td.X.End()-1]) + "{}"
-			default:
-				initializer = tname + "{}"
-			}
-		}
-		text += fmt.Sprintf("\t%s[%d] = %s\n", name, i, initializer)
+
+		text += fmt.Sprintf("\tvar a%d %s\n", i, tname)
+		text += fmt.Sprintf("\t%s[%d] = a%d\n", name, i, i)
 	}
 
 	listCode := ""

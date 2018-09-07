@@ -133,6 +133,7 @@ type ObjectActivateRecord struct {
 
 	ClassActivateRecord Reference
 	Memory              Memory
+	Parent              Reference
 }
 
 // StorageRecord is produced when we store something in ledger. Code, data etc.
