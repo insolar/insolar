@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package main
+package preprocessor
 
 import (
 	"bytes"
@@ -116,7 +116,7 @@ func TestBasicGeneration(t *testing.T) {
 
 	t.Run("wrapper", func(t *testing.T) {
 		buf := bytes.Buffer{}
-		err := generateContractWrapper(tmpDir+"/main.go", &buf)
+		err := GenerateContractWrapper(tmpDir+"/main.go", &buf)
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -126,7 +126,7 @@ func TestBasicGeneration(t *testing.T) {
 
 	t.Run("proxy", func(t *testing.T) {
 		buf := bytes.Buffer{}
-		err := generateContractProxy(tmpDir+"/main.go", "testRef", &buf)
+		err := GenerateContractProxy(tmpDir+"/main.go", "testRef", &buf)
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -193,7 +193,7 @@ func TestCompileContractProxy(t *testing.T) {
 	err = testutil.WriteFile(tmpDir+"/contracts/secondary/", "main.go", randomTestCode)
 	assert.NoError(t, err)
 
-	err = generateContractProxy(tmpDir+"/contracts/secondary/main.go", "testRef", proxyFh)
+	err = GenerateContractProxy(tmpDir+"/contracts/secondary/main.go", "testRef", proxyFh)
 	assert.NoError(t, err)
 
 	err = proxyFh.Close()
@@ -240,12 +240,12 @@ func ( A ) Get( b bool ) bool{
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), "resList[0] = bool(false)")
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), "args[0] = bool(false)")
 
@@ -272,14 +272,14 @@ func ( A ) Get(){
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), "    self.Get(  )")
 }
@@ -299,11 +299,11 @@ type A struct{
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
 }
 
@@ -324,11 +324,11 @@ type A struct{
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
 
 }
@@ -354,10 +354,10 @@ type B struct{
 	assert.NoError(t, err)
 
 	var bufProxy bytes.Buffer
-	err = generateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
 
 	var bufWrapper bytes.Buffer
-	err = generateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
 }
