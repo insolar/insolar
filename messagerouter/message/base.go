@@ -18,8 +18,6 @@
 package message
 
 import (
-	"fmt"
-
 	"encoding/gob"
 	"io"
 
@@ -28,36 +26,39 @@ import (
 )
 
 // BaseMessage base of message class family, do not use it standalone
-type BaseMessage struct {
+type baseMessage struct {
 	Request core.RecordRef
 	Domain  core.RecordRef
 }
 
-func (m *BaseMessage) Serialize() (io.Reader, error) {
-	panic("BaseMessage is not usable object")
+func (baseMessage) Serialize() (io.Reader, error) {
+	panic("Do not use base")
+}
+
+func (baseMessage) GetReference() core.RecordRef {
+	panic("Do not use base")
 }
 
 // MessageType is a enum type of message
 type MessageType byte
 
 const (
-	BaseMessageType MessageType = iota
-	CallMethodMessageType
-	CallConstructorMessageType
-	MessageTypesCount
+	baseMessageType            = MessageType(iota)
+	CallMethodMessageType      // CallMethodMessage - Simply call method and return result
+	CallConstructorMessageType // CallConstructorMessage is a message for calling constructor and obtain its response
 )
 
 // GetEmptyMessage constructs specified message
-func GetEmptyMessage(mt MessageType) core.Message {
+func getEmptyMessage(mt MessageType) (core.Message, error) {
 	switch mt {
-	case 0:
-		panic("working with message type == 0 is prohibited")
+	case baseMessageType:
+		return nil, errors.New("working with message type == 0 is prohibited")
 	case CallMethodMessageType:
-		return &CallMethodMessage{}
+		return &CallMethodMessage{}, nil
 	case CallConstructorMessageType:
-		return &CallConstructorMessage{}
+		return &CallConstructorMessage{}, nil
 	default:
-		panic(fmt.Sprintf("unimplemented messagetype %d", mt))
+		return nil, errors.Errorf("unimplemented messagetype %d", mt)
 	}
 }
 
@@ -69,7 +70,10 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 		return nil, errors.New("too short slice for deserialize message")
 	}
 
-	m := GetEmptyMessage(MessageType(b[0]))
+	m, err := getEmptyMessage(MessageType(b[0]))
+	if err != nil {
+		return nil, err
+	}
 	enc := gob.NewDecoder(buff)
 	err = enc.Decode(m)
 	return m, err

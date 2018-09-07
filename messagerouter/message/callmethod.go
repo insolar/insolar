@@ -26,7 +26,7 @@ import (
 
 // CallMethodMessage - Simply call method and return result
 type CallMethodMessage struct {
-	BaseMessage
+	baseMessage
 	ObjectRef core.RecordRef
 	Request   core.RecordRef
 	Method    string

@@ -26,7 +26,7 @@ import (
 
 // CallConstructorMessage is a message for calling constructor and obtain its response
 type CallConstructorMessage struct {
-	BaseMessage
+	baseMessage
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments

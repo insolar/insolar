@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"encoding/gob"
 
+	"errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter/message"
@@ -63,8 +65,10 @@ func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err er
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
 func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
+	if len(args) < 1 {
+		return nil, errors.New("need exactly one argument when mr.deliver()")
+	}
 	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
-	// TODO: check empty args
 	if err != nil {
 		return nil, err
 	}

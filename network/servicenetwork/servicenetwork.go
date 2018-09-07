@@ -82,11 +82,11 @@ func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]b
 	if err != nil {
 		return nil, err
 	}
-	request, err := msg.Serialize()
+	reqBuff, err := msg.Serialize()
 	if err != nil {
 		return nil, err
 	}
-	buff, err := ioutil.ReadAll(request)
+	buff, err := ioutil.ReadAll(reqBuff)
 	if err != nil {
 		return nil, err
 	}
