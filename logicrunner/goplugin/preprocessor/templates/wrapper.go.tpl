@@ -1,7 +1,9 @@
 package {{ .PackageName}}
 
 import (
-    "{{.FoundationPath}}"
+    {{- range $import, $i := .Imports }}
+        {{$import}}
+    {{- end }}
 )
 
 {{ range $method := .Methods }}

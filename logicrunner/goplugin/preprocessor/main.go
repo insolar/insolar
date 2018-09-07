@@ -38,6 +38,7 @@ import (
 
 var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 
 type parsedFile struct {
 	name    string
@@ -87,7 +88,7 @@ func parseFile(fileName string) (*parsedFile, error) {
 		return nil, errors.Wrap(err, "")
 	}
 	if res.contract == "" {
-		return nil, fmt.Errorf("Only one smart contract must exist")
+		return nil, errors.New("Only one smart contract must exist")
 	}
 
 	return &res, nil
@@ -106,11 +107,13 @@ func openTemplate(fileName string) (*template.Template, error) {
 	return tmpl, nil
 }
 
-func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
+func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, map[string]bool) {
 	var methodsInfo []map[string]interface{}
+	imports := make(map[string]bool)
+	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-
+		extendImportsMap(parsed, method.Type.Params, imports)
 		rets := []string{}
 		if method.Type.Results != nil {
 			for i := range method.Type.Results.List {
@@ -127,7 +130,7 @@ func generateContractMethodsInfo(parsed *parsedFile) []map[string]interface{} {
 		}
 		methodsInfo = append(methodsInfo, info)
 	}
-	return methodsInfo
+	return methodsInfo, imports
 }
 
 func GenerateContractWrapper(fileName string, out io.Writer) error {
@@ -138,7 +141,7 @@ func GenerateContractWrapper(fileName string, out io.Writer) error {
 
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
-		panic("Contract must be in main package")
+		return errors.New("Contract must be in main package")
 	}
 
 	tmpl, err := openTemplate("templates/wrapper.go.tpl")
@@ -146,18 +149,22 @@ func GenerateContractWrapper(fileName string, out io.Writer) error {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
 
+	methodsInfo, imports := generateContractMethodsInfo(parsed)
+
 	data := struct {
 		PackageName    string
 		ContractType   string
 		Methods        []map[string]interface{}
 		ParsedCode     []byte
 		FoundationPath string
+		Imports        map[string]bool
 	}{
 		packageName,
 		parsed.contract,
-		generateContractMethodsInfo(parsed),
+		methodsInfo,
 		parsed.code,
 		foundationPath,
+		imports,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -175,12 +182,12 @@ func GenerateContractProxy(fileName string, classReference string, out io.Writer
 
 	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(fileName)
 	if match == nil {
-		return errors.Wrap(err, "couldn't match filename without extension and path")
+		return errors.New("couldn't match filename without extension and path")
 	}
 
 	packageName := parsed.node.Name.Name
 	if packageName != "main" {
-		fmt.Errorf("Contract must be in main package")
+		return errors.New("Contract must be in main package")
 	}
 
 	proxyPackageName := match[2]
@@ -190,7 +197,7 @@ func GenerateContractProxy(fileName string, classReference string, out io.Writer
 
 	types := generateTypes(parsed)
 
-	methodsProxies := generateMethodsProxies(parsed)
+	methodsProxies, imports := generateMethodsProxies(parsed)
 
 	constructorProxies := generateConstructorProxies(parsed)
 
@@ -206,6 +213,7 @@ func GenerateContractProxy(fileName string, classReference string, out io.Writer
 		MethodsProxies      []map[string]interface{}
 		ConstructorsProxies []map[string]string
 		ClassReference      string
+		Imports             map[string]bool
 	}{
 		proxyPackageName,
 		types,
@@ -213,6 +221,7 @@ func GenerateContractProxy(fileName string, classReference string, out io.Writer
 		methodsProxies,
 		constructorProxies,
 		classReference,
+		imports,
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
@@ -268,7 +277,7 @@ func getMethods(parsed *parsedFile) error {
 
 				if IsContract(typeNode) {
 					if parsed.contract != "" {
-						return fmt.Errorf("more than one contract in a file")
+						return errors.New("more than one contract in a file")
 					}
 					parsed.contract = typeNode.Name.Name
 				} else {
@@ -311,6 +320,41 @@ func generateTypes(parsed *parsedFile) []string {
 	}
 
 	return types
+}
+
+func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[string]bool) {
+	if params == nil {
+		return
+	}
+
+	for _, e := range params.List {
+		tname := string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
+		tname = strings.Trim(tname, "*")
+		tnameFrom := strings.Split(tname, ".")
+
+		if len(tnameFrom) > 1 {
+			var importAlias string
+			var impValue string
+
+			for _, imp := range parsed.node.Imports {
+				if imp.Name != nil {
+					importAlias = imp.Name.Name
+					impValue = fmt.Sprintf(`%s %s`, importAlias, imp.Path.Value)
+				} else {
+					impValue = imp.Path.Value
+					importString := strings.Trim(impValue, `"`)
+					importAlias = filepath.Base(importString)
+				}
+				if importAlias == tnameFrom[0] {
+					imports[impValue] = true
+					break
+				}
+			}
+
+		}
+
+	}
+
 }
 
 func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
@@ -378,13 +422,17 @@ func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[strin
 	}
 }
 
-func generateMethodsProxies(parsed *parsedFile) []map[string]interface{} {
+func generateMethodsProxies(parsed *parsedFile) ([]map[string]interface{}, map[string]bool) {
 	var methodsProxies []map[string]interface{}
 
+	imports := make(map[string]bool)
+	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
 		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
+		extendImportsMap(parsed, method.Type.Params, imports)
+		extendImportsMap(parsed, method.Type.Results, imports)
 	}
-	return methodsProxies
+	return methodsProxies, imports
 }
 
 func generateConstructorProxies(parsed *parsedFile) []map[string]string {

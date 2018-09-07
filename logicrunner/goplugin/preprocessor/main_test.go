@@ -404,3 +404,183 @@ type B struct{
 	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
 	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
 }
+
+func TestImportsFromContract(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"some/test/import/path"
+	"some/test/import/pointerPath"
+)
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( A ) Get(i path.SomeType){
+	return
+}
+
+func ( A ) GetPointer(i *pointerPath.SomeType){
+	return
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufProxy.String(), `"some/test/import/pointerPath"`)
+	assert.NotContains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufWrapper.String(), `"some/test/import/pointerPath"`)
+	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+}
+
+func TestAliasImportsFromContract(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	someAlias "some/test/import/path"
+)
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( A ) Get(i someAlias.SomeType){
+	return
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), `someAlias "some/test/import/path"`)
+	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.Contains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
+	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+}
+
+func TestImportsFromContractUseInsideFunc(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"some/test/import/path"
+)
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( A ) Get() {
+	path.SomeMethod()
+	return
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	assert.NotContains(t, bufProxy.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+}
+
+func TestImportsFromContractUseForReturnValue(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"some/test/import/path"
+)
+
+type A struct{
+	foundation.BaseContract
+}
+
+func ( A ) Get() path.SomeValue {
+	f := path.SomeMethod()
+	return f
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.NoError(t, err)
+	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	code, err := ioutil.ReadAll(&bufProxy)
+	assert.NoError(t, err)
+	assert.NotEqual(t, len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	assert.NoError(t, err)
+	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
+	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+}
+
+func TestNotMatchFileNameForProxy(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test_not_go_file.test"
+	err = testutil.WriteFile(tmpDir, testContract, `
+package main
+
+type A struct{
+	foundation.BaseContract
+}
+`)
+
+	var bufProxy bytes.Buffer
+	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	assert.EqualError(t, err, "couldn't match filename without extension and path")
+}

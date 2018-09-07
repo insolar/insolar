@@ -1,7 +1,9 @@
 package {{ .PackageName }}
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+    {{- range $import, $i := .Imports }}
+        {{$import}}
+    {{- end }}
 )
 
 {{ range $typeStruct := .Types }}
