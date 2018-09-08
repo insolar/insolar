@@ -140,9 +140,6 @@ func GenerateContractWrapper(fileName string, out io.Writer) error {
 	}
 
 	packageName := parsed.node.Name.Name
-	if packageName != "main" {
-		return errors.New("Contract must be in main package")
-	}
 
 	tmpl, err := openTemplate("templates/wrapper.go.tpl")
 	if err != nil {

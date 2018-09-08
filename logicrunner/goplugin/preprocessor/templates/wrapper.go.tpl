@@ -1,4 +1,4 @@
-package {{ .PackageName}}
+package main
 
 import (
     {{- range $import, $i := .Imports }}
