@@ -183,11 +183,11 @@ func GenerateContractProxy(fileName string, classReference string, out io.Writer
 	}
 
 	packageName := parsed.node.Name.Name
-	if packageName != "main" {
-		return errors.New("Contract must be in main package")
-	}
 
-	proxyPackageName := match[2]
+	proxyPackageName := packageName
+	if proxyPackageName == "main" {
+		proxyPackageName = match[2]
+	}
 	if proxyPackageName == "main" {
 		proxyPackageName = match[1]
 	}
