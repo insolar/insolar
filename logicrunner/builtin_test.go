@@ -57,7 +57,9 @@ func TestBareHelloworld(t *testing.T) {
 	request := byteRecorRef(3)
 	hwtype, err := am.DeclareType(domain, request, []byte{})
 	assert.NoError(t, err, "creating type on ledger")
-	coderef, err := am.DeployCode(domain, request, []core.RecordRef{*hwtype}, map[core.MachineType][]byte{0: nil})
+	coderef, err := am.DeployCode(
+		domain, request, []core.RecordRef{*hwtype}, map[core.MachineType][]byte{core.MachineTypeBuiltin: nil},
+	)
 	assert.NoError(t, err, "create code on ledger")
 
 	ch := new(codec.CborHandle)
