@@ -198,24 +198,24 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 }
 
 // Upstream returns RPC client connected to upstream server (goplugin)
-func (t *GoInsider) Upstream() (*rpc.Client, error) {
-	if t.UpstreamRPCClient != nil {
-		return t.UpstreamRPCClient, nil
+func (gi *GoInsider) Upstream() (*rpc.Client, error) {
+	if gi.UpstreamRPCClient != nil {
+		return gi.UpstreamRPCClient, nil
 	}
 
-	client, err := rpc.DialHTTP("tcp", t.UpstreamRPCAddress)
+	client, err := rpc.DialHTTP("tcp", gi.UpstreamRPCAddress)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s'", t.UpstreamRPCAddress)
+		return nil, errors.Wrapf(err, "couldn'gi dial '%s'", gi.UpstreamRPCAddress)
 	}
 
-	t.UpstreamRPCClient = client
-	return t.UpstreamRPCClient, nil
+	gi.UpstreamRPCClient = client
+	return gi.UpstreamRPCClient, nil
 }
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
-func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
-	path := t.dir + "/" + ref.String()
+func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
+	path := gi.dir + "/" + ref.String()
 	_, err := os.Stat(path)
 
 	if err == nil {
@@ -224,7 +224,7 @@ func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 		return "", errors.Wrap(err, "file !notexists()")
 	}
 
-	client, err := t.Upstream()
+	client, err := gi.Upstream()
 	if err != nil {
 		return "", err
 	}
@@ -246,30 +246,30 @@ func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
-func (t *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
+func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 	key := ref.String()
-	if t.plugins[key] != nil {
-		return t.plugins[key], nil
+	if gi.plugins[key] != nil {
+		return gi.plugins[key], nil
 	}
 
-	path, err := t.ObtainCode(ref)
+	path, err := gi.ObtainCode(ref)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't obtain code")
+		return nil, errors.Wrap(err, "couldn'gi obtain code")
 	}
 
 	log.Debugf("Opening plugin %q from file %q", ref, path)
 	p, err := plugin.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't open plugin")
+		return nil, errors.Wrap(err, "couldn'gi open plugin")
 	}
 
-	t.plugins[key] = p
+	gi.plugins[key] = p
 	return p, nil
 }
 
 // RouteCall ...
-func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, error) {
-	client, err := t.Upstream()
+func (gi *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, error) {
+	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
@@ -290,8 +290,8 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 }
 
 // RouteConstructorCall ...
-func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) ([]byte, error) {
-	client, err := t.Upstream()
+func (gi *GoInsider) RouteConstructorCall(ref string, name string, args []byte) ([]byte, error) {
+	client, err := gi.Upstream()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -312,8 +312,8 @@ func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (
 }
 
 // SaveAsChild ...
-func (t *GoInsider) SaveAsChild(parentRef, classRef string, data []byte) (string, error) {
-	client, err := t.Upstream()
+func (gi *GoInsider) SaveAsChild(parentRef, classRef string, data []byte) (string, error) {
+	client, err := gi.Upstream()
 	if err != nil {
 		return "", err
 	}
@@ -334,8 +334,8 @@ func (t *GoInsider) SaveAsChild(parentRef, classRef string, data []byte) (string
 }
 
 // SaveAsDelegate ...
-func (t *GoInsider) SaveAsDelegate(intoRef, classRef string, data []byte) (string, error) {
-	client, err := t.Upstream()
+func (gi *GoInsider) SaveAsDelegate(intoRef, classRef string, data []byte) (string, error) {
+	client, err := gi.Upstream()
 	if err != nil {
 		return "", err
 	}
@@ -356,14 +356,14 @@ func (t *GoInsider) SaveAsDelegate(intoRef, classRef string, data []byte) (strin
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`
-func (t *GoInsider) Serialize(what interface{}, to *[]byte) error {
+func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
 	log.Printf("serializing %+v", what)
 	return codec.NewEncoderBytes(to, ch).Encode(what)
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
-func (t *GoInsider) Deserialize(from []byte, into interface{}) error {
+func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 	ch := new(codec.CborHandle)
 	log.Printf("de-serializing %+v", from)
 	return codec.NewDecoderBytes(from, ch).Decode(into)
