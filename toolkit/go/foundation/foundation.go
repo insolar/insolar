@@ -24,30 +24,19 @@ import (
 	"log"
 	"time"
 
+	"github.com/insolar/insolar/core"
+	"github.com/jbenet/go-base58"
 	"github.com/satori/go.uuid"
 )
 
-// Reference is an address of something on ledger.
-type Reference string
-
-// String - stringer interface
-func (r Reference) String() string {
-	return string(r)
-}
-
-// Equal is equaler
-func (r Reference) Equal(o Reference) bool {
-	return r == o
-}
-
 // CallContext is a context of contract execution
 type CallContext struct {
-	Me     Reference // My Reference.
-	Caller Reference // Reference of calling contract.
-	Parent Reference // Reference to parent or container contract.
-	Class  Reference // Reference to type record on ledger, we have just one type reference, yet.
-	Time   time.Time // Time of Calling side made call.
-	Pulse  uint64    // Number of current pulse.
+	Me     core.RecordRef // My Reference.
+	Caller core.RecordRef // Reference of calling contract.
+	Parent core.RecordRef // Reference to parent or container contract.
+	Class  core.RecordRef // Reference to type record on ledger, we have just one type reference, yet.
+	Time   time.Time      // Time of Calling side made call.
+	Pulse  uint64         // Number of current pulse.
 }
 
 // BaseContract is a base class for all contracts.
@@ -57,24 +46,24 @@ type BaseContract struct {
 
 // BaseContractInterface is an interface to deal with any contract same way
 type ProxyInterface interface {
-	GetReference() Reference
-	GetClass() Reference
+	GetReference() core.RecordRef
+	GetClass() core.RecordRef
 }
 
 // BaseContractInterface is an interface to deal with any contract same way
 type BaseContractInterface interface {
 	SetContext(ctx *CallContext)
-	GetReference() Reference
-	GetClass() Reference
+	GetReference() core.RecordRef
+	GetClass() core.RecordRef
 }
 
 // GetReference - Returns public reference of contract
-func (bc *BaseContract) GetReference() Reference {
+func (bc *BaseContract) GetReference() core.RecordRef {
 	return bc.context.Me
 }
 
 // GetClass
-func (bc *BaseContract) GetClass() Reference {
+func (bc *BaseContract) GetClass() core.RecordRef {
 	return bc.context.Class
 }
 
@@ -114,33 +103,34 @@ func InjectFakeContext(step uint, ctx *CallContext, reset ...bool) {
 	FakeContexts[step] = ctx
 }
 
-func GetImplementationFor(o Reference, r Reference) ProxyInterface {
+func GetImplementationFor(o core.RecordRef, r core.RecordRef) ProxyInterface {
 	return FakeDelegates[o.String()][r.String()]
 }
 
-func (bc *BaseContract) GetChildrenTyped(r Reference) []ProxyInterface {
+func (bc *BaseContract) GetChildrenTyped(r core.RecordRef) []ProxyInterface {
 	return FakeChildren[bc.GetReference().String()][r.String()]
 }
 
-func SaveToLedger(contract BaseContractInterface, class Reference) Reference {
+func SaveToLedger(contract BaseContractInterface, class core.RecordRef) core.RecordRef {
 	key, err := uuid.NewV4()
 	if err != nil {
 		log.Fatal("uuid creting error", err.Error())
 	}
 
 	contract.SetContext(&CallContext{
-		Me:    Reference(key.String()),
+		Me:    core.String2Ref(base58.Encode([]byte(key.String()))),
 		Class: class,
 	})
 	FakeLedger[key.String()] = contract.(ProxyInterface)
-	return Reference(key.String())
+	key.String()
+	return core.String2Ref(base58.Encode([]byte(key.String())))
 }
 
-func GetObject(ref Reference) BaseContractInterface {
+func GetObject(ref core.RecordRef) BaseContractInterface {
 	return FakeLedger[ref.String()].(BaseContractInterface)
 }
 
-func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) Reference {
+func (bc *BaseContract) AddChild(child BaseContractInterface, class core.RecordRef) core.RecordRef {
 	parent := bc.GetReference()
 	key, err := uuid.NewV4()
 	if err != nil {
@@ -149,7 +139,7 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) R
 
 	child.SetContext(&CallContext{
 		Parent: parent,
-		Me:     Reference(key.String()),
+		Me:     core.String2Ref(base58.Encode([]byte(key.String()))),
 		Class:  class,
 	})
 	FakeLedger[key.String()] = child
@@ -159,10 +149,10 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class Reference) R
 	}
 
 	FakeChildren[parent.String()][class.String()] = append(FakeChildren[parent.String()][class.String()], child)
-	return Reference(key.String())
+	return core.String2Ref(base58.Encode([]byte(key.String())))
 }
 
-func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class Reference) Reference {
+func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class core.RecordRef) core.RecordRef {
 	selfRef := bc.GetReference()
 	key, err := uuid.NewV4()
 	if err != nil {
@@ -171,7 +161,7 @@ func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class Ref
 
 	delegate.SetContext(&CallContext{
 		Parent: selfRef,
-		Me:     Reference(key.String()),
+		Me:     core.String2Ref(base58.Encode([]byte(key.String()))),
 		Class:  class,
 	})
 
@@ -187,7 +177,7 @@ func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class Ref
 	}
 
 	FakeChildren[selfRef.String()][class.String()] = append(FakeChildren[selfRef.String()][class.String()], delegate.(ProxyInterface))
-	return Reference(key.String())
+	return core.String2Ref(base58.Encode([]byte(key.String())))
 }
 
 func (bc *BaseContract) SelfDestructRequest() {
