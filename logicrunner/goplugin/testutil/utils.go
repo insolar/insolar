@@ -222,6 +222,11 @@ func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) ([]core.Record
 	panic("not implemented")
 }
 
+// GetObjDelegate implementation for tests
+func (t *TestArtifactManager) GetObjDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+	panic("not implemented")
+}
+
 // DeclareType implementation for tests
 func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
 	panic("not implemented")
@@ -274,6 +279,11 @@ func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.Re
 		Code: codeRef,
 	}
 	return &ref, nil
+}
+
+// ActivateObjDelegate implementation for tests
+func (t *TestArtifactManager) ActivateObjDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	panic("not implemented")
 }
 
 // DeactivateObj implementation for tests
