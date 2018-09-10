@@ -247,7 +247,7 @@ func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor,
 }
 
 // ActivateClass implementation for tests
-func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef, memory []byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
@@ -301,11 +301,6 @@ func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.Reco
 	return &core.RecordRef{}, nil
 }
 
-// AppendObjDelegate implementation for tests
-func (t *TestArtifactManager) AppendObjDelegate(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
-}
-
 // CBORMarshal - testing serialize helper
 func CBORMarshal(t *testing.T, o interface{}) []byte {
 	ch := new(codec.CborHandle)
@@ -346,7 +341,7 @@ func AMPublishCode(
 	)
 	assert.NoError(t, err, "create code on ledger")
 
-	classRef, err = am.ActivateClass(domain, request, *codeRef, nil)
+	classRef, err = am.ActivateClass(domain, request, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, classRef, err
