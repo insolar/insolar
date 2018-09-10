@@ -451,6 +451,7 @@ func (m *LedgerArtifactManager) ActivateObj(
 		err = tx.SetObjectIndex(objRef, &index.ObjectLifeline{
 			ClassRef:       classRef,
 			LatestStateRef: *objRef,
+			Delegates:      map[core.RecordRef]record.Reference{},
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -462,6 +463,81 @@ func (m *LedgerArtifactManager) ActivateObj(
 			return errors.Wrap(err, "inconsistent index")
 		}
 		parentIdx.Children = append(parentIdx.Children, *objRef)
+		err = tx.SetObjectIndex(&parentRef, parentIdx)
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return objRef.CoreRef(), nil
+}
+
+// ActivateObjDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
+func (m *LedgerArtifactManager) ActivateObjDelegate(
+	domain, request, class, parent core.RecordRef, memory []byte,
+) (*core.RecordRef, error) {
+	var err error
+	domainRef := record.Core2Reference(domain)
+	requestRef := record.Core2Reference(request)
+	classRef := record.Core2Reference(class)
+	parentRef := record.Core2Reference(parent)
+
+	err = m.checkRequestRecord(m.db, &requestRef)
+	if err != nil {
+		return nil, err
+	}
+
+	var objRef *record.Reference
+	err = m.db.Update(func(tx *storage.TransactionManager) error {
+		_, _, _, err = m.getActiveClass(tx, classRef)
+		if err != nil {
+			return err
+		}
+
+		rec := record.ObjectActivateRecord{
+			ActivationRecord: record.ActivationRecord{
+				StatefulResult: record.StatefulResult{
+					ResultRecord: record.ResultRecord{
+						DomainRecord:  domainRef,
+						RequestRecord: requestRef,
+					},
+				},
+			},
+			ClassActivateRecord: classRef,
+			Memory:              memory,
+			Parent:              parentRef,
+			Delegate:            true,
+		}
+
+		// save new record and it's index
+		objRef, err = tx.SetRecord(&rec)
+		if err != nil {
+			return errors.Wrap(err, "failed to store record")
+		}
+		err = tx.SetObjectIndex(objRef, &index.ObjectLifeline{
+			ClassRef:       classRef,
+			LatestStateRef: *objRef,
+			Delegates:      map[core.RecordRef]record.Reference{},
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to store lifeline index")
+		}
+
+		// append new record parent's delegates
+		parentIdx, err := tx.GetObjectIndex(&parentRef)
+		if err != nil {
+			return errors.Wrap(err, "inconsistent index")
+		}
+		if _, ok := parentIdx.Delegates[class]; ok {
+			return errors.New("delegate for this class already exists")
+		}
+		parentIdx.Delegates[class] = *objRef
 		err = tx.SetObjectIndex(&parentRef, parentIdx)
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -789,6 +865,42 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 	}
 
 	return object, nil
+}
+
+// GetObjChildren returns provided object's children references.
+func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+	objRef := record.Core2Reference(head)
+	_, _, objIndex, err := m.getActiveObject(m.db, objRef)
+	if err != nil {
+		return nil, err
+	}
+
+	childRefs := make([]core.RecordRef, 0, len(objIndex.Children))
+	for _, ch := range objIndex.Children {
+		childRefs = append(childRefs, *ch.CoreRef())
+	}
+
+	return childRefs, nil
+}
+
+// GetObjDelegate returns provided object's delegate reference for provided class.
+//
+// Object delegate should be previously created for this object. If object delegate does not exist, an error will
+// be returned.
+func (m *LedgerArtifactManager) GetObjDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+	objRef := record.Core2Reference(head)
+
+	_, _, objIndex, err := m.getActiveObject(m.db, objRef)
+	if err != nil {
+		return nil, err
+	}
+
+	delegateRef, ok := objIndex.Delegates[asClass]
+	if !ok {
+		return nil, ErrNotFound
+	}
+
+	return delegateRef.CoreRef(), nil
 }
 
 // NewArtifactManger creates new manager instance.

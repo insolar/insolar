@@ -17,6 +17,7 @@
 package index
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/record"
 )
 
@@ -31,5 +32,6 @@ type ObjectLifeline struct {
 	ClassRef       record.Reference
 	LatestStateRef record.Reference   // Amend or activate record
 	AppendRefs     []record.Reference // ObjectAppendRecord
-	Children       []record.Reference
+	Children       []record.Reference // ActivateObjectRecord
+	Delegates      map[core.RecordRef]record.Reference
 }

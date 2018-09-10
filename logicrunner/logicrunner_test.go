@@ -149,7 +149,7 @@ func TestExecution(t *testing.T) {
 		Code: &codeRef,
 	}
 	am.Classes[classRef] = &testutil.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
-	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef}
+	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef, AMachineType: core.MachineTypeGoPlugin}
 
 	te := newTestExecutor()
 	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
@@ -189,50 +189,6 @@ func buildPreprocessor() error {
 	return nil
 
 }
-
-const contractOneCode = `
-package main
-
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
-
-type One struct {
-	foundation.BaseContract
-}
-
-func (r *One) Hello(s string) string {
-	holder := two.New()
-	friend := holder.AsChild("")
-
-	res := friend.Hello(s)
-
-	return "Hi, " + s + "! Two said: " + res
-}
-`
-
-const contractTwoCode = `
-package main
-
-import (
-	"fmt"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
-
-type Two struct {
-	foundation.BaseContract
-	X int
-}
-
-func New() *Two {
-	return &Two{X:322};
-}
-
-func (r *Two) Hello(s string) string {
-	r.X *= 2
-	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
-}
-`
 
 func generateContractProxy(root string, name string) error {
 	dstDir := root + "/src/contract-proxy/" + name
@@ -285,9 +241,13 @@ func generateContractWrapper(root string, name string) error {
 	return nil
 }
 
-func buildContracts(root string, names ...string) error {
-	for _, name := range names {
-		err := generateContractProxy(root, name)
+func buildContracts(root string, contracts map[string]string) error {
+	for name, code := range contracts {
+		err := testutil.WriteFile(root+"/src/contract/"+name+"/", "main.go", code)
+		if err != nil {
+			return err
+		}
+		err = generateContractProxy(root, name)
 		if err != nil {
 			return err
 		}
@@ -297,7 +257,7 @@ func buildContracts(root string, names ...string) error {
 		}
 	}
 
-	for _, name := range names {
+	for name := range contracts {
 		err := buildContractPlugin(root, name)
 		if err != nil {
 			return err
@@ -314,50 +274,100 @@ func suckInContracts(am *testutil.TestArtifactManager, root string, names ...str
 		}
 
 		ref := core.String2Ref(name)
-		am.Codes[ref] = &testutil.TestCodeDescriptor{ARef: &ref, ACode: pluginBinary}
+		am.Codes[ref] = &testutil.TestCodeDescriptor{
+			ARef:         &ref,
+			ACode:        pluginBinary,
+			AMachineType: core.MachineTypeGoPlugin,
+		}
 	}
 }
 
-func TestContractCallingContract(t *testing.T) {
+func setupContracts(contracts map[string]string) (string, error) {
 	err := buildInciderCLI()
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 
 	err = buildPreprocessor()
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	defer os.Chdir(cwd) // nolint: errcheck
 
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir) // nolint: errcheck
-
-	err = testutil.WriteFile(tmpDir+"/src/contract/one/", "main.go", contractOneCode)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = testutil.WriteFile(tmpDir+"/src/contract/two/", "main.go", contractTwoCode)
-	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 
-	err = buildContracts(tmpDir, "one", "two")
+	err = buildContracts(tmpDir, contracts)
 	if err != nil {
-		t.Fatal(err)
+		return tmpDir, err
 	}
 
 	insiderStorage := tmpDir + "/insider-storage/"
 
 	err = os.MkdirAll(insiderStorage, 0777)
+	if err != nil {
+		return tmpDir, err
+	}
+
+	return tmpDir, nil
+}
+
+func TestContractCallingContract(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello(s string) string {
+	holder := two.New()
+	friend := holder.AsChild("")
+
+	res := friend.Hello(s)
+
+	return "Hi, " + s + "! Two said: " + res
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() *Two {
+	return &Two{X:322};
+}
+
+func (r *Two) Hello(s string) string {
+	r.X *= 2
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
+}
+`
+
+	tmpDir, err := setupContracts(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	if tmpDir != "" {
+		defer os.RemoveAll(tmpDir) // nolint: errcheck
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -374,7 +384,121 @@ func TestContractCallingContract(t *testing.T) {
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
-			RunnerCodePath: insiderStorage,
+			RunnerCodePath: tmpDir + "/insider-storage/",
+		},
+		mr,
+		am,
+	)
+	assert.NoError(t, err)
+	defer gp.Stop()
+
+	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
+	assert.NoError(t, err)
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(
+		[]interface{}{"ins"},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	suckInContracts(am, tmpDir, "one", "two")
+
+	codeRef := core.String2Ref("two")
+	am.Classes[core.String2Ref("Classtwo")] = &testutil.TestClassDescriptor{
+		AM:    am,
+		ACode: &codeRef,
+	}
+
+	_, res, err := gp.CallMethod(core.String2Ref("one"), data, "Hello", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	var resParsed []interface{}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+}
+
+func TestInjectingDelegate(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello(s string) string {
+	holder := two.New()
+	friend := holder.AsDelegate("")
+
+	res := friend.Hello(s)
+
+	return "Hi, " + s + "! Two said: " + res
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() *Two {
+	return &Two{X:322};
+}
+
+func (r *Two) Hello(s string) string {
+	r.X *= 2
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
+}
+`
+
+	tmpDir, err := setupContracts(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	if tmpDir != "" {
+		defer os.RemoveAll(tmpDir) // nolint: errcheck
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lr, err := NewLogicRunner(configuration.LogicRunner{})
+	assert.NoError(t, err)
+
+	mr := &testMessageRouter{LogicRunner: lr}
+	am := testutil.NewTestArtifactManager()
+	lr.ArtifactManager = am
+
+	gp, err := goplugin.NewGoPlugin(
+		&configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerCodePath: tmpDir + "/insider-storage/",
 		},
 		mr,
 		am,

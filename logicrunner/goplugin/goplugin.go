@@ -142,6 +142,27 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 	return nil
 }
 
+// SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
+	msg := &message.DelegateMessage{
+		Into:  req.Into,
+		Class: req.Class,
+		Body:  req.Data,
+	}
+
+	res, err := gpr.gp.MessageRouter.Route(msg)
+	if err != nil {
+		return errors.Wrap(err, "couldn't route message")
+	}
+	if res.Error != nil {
+		return errors.Wrap(res.Error, "couldn't route message (error in response)")
+	}
+
+	reply.Reference = core.String2Ref(string(res.Data))
+
+	return nil
+}
+
 // NewGoPlugin returns a new started GoPlugin
 func NewGoPlugin(conf *configuration.GoPlugin, mr core.MessageRouter, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
