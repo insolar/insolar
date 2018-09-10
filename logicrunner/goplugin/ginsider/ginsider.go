@@ -205,7 +205,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 
 	client, err := rpc.DialHTTP("tcp", gi.UpstreamRPCAddress)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn'gi dial '%s'", gi.UpstreamRPCAddress)
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", gi.UpstreamRPCAddress)
 	}
 
 	gi.UpstreamRPCClient = client
@@ -254,13 +254,13 @@ func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 
 	path, err := gi.ObtainCode(ref)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn'gi obtain code")
+		return nil, errors.Wrap(err, "couldn't obtain code")
 	}
 
 	log.Debugf("Opening plugin %q from file %q", ref, path)
 	p, err := plugin.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn'gi open plugin")
+		return nil, errors.Wrap(err, "couldn't open plugin")
 	}
 
 	gi.plugins[key] = p
