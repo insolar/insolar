@@ -40,7 +40,7 @@ var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 
-type parsedFile struct {
+type ParsedFile struct {
 	name    string
 	code    []byte
 	fileSet *token.FileSet
@@ -66,8 +66,8 @@ func slurpFile(fileName string) ([]byte, error) {
 	return res, nil
 }
 
-func ParseFile(fileName string) (*parsedFile, error) {
-	res := parsedFile{
+func ParseFile(fileName string) (*ParsedFile, error) {
+	res := ParsedFile{
 		name: fileName,
 	}
 	sourceCode, err := slurpFile(fileName)
@@ -119,7 +119,7 @@ func numberedVars(list *ast.FieldList, name string) string {
 	return strings.Join(rets, ", ")
 }
 
-func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, map[string]bool) {
+func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, map[string]bool) {
 	var methodsInfo []map[string]interface{}
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
@@ -138,7 +138,7 @@ func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, 
 	return methodsInfo, imports
 }
 
-func GenerateContractWrapper(parsed *parsedFile, out io.Writer) error {
+func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 	packageName := parsed.node.Name.Name
 
 	tmpl, err := openTemplate("templates/wrapper.go.tpl")
@@ -171,7 +171,7 @@ func GenerateContractWrapper(parsed *parsedFile, out io.Writer) error {
 	return nil
 }
 
-func GenerateContractProxy(parsed *parsedFile, classReference string, out io.Writer) error {
+func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
 	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(parsed.name)
 	if match == nil {
 		return errors.New("couldn't match filename without extension and path")
@@ -253,7 +253,7 @@ func IsContract(typeNode *ast.TypeSpec) bool {
 	return false
 }
 
-func getMethods(parsed *parsedFile) error {
+func getMethods(parsed *ParsedFile) error {
 	parsed.types = make(map[string]*ast.TypeSpec)
 	parsed.methods = make(map[string][]*ast.FuncDecl)
 	parsed.constructors = make(map[string][]*ast.FuncDecl)
@@ -305,7 +305,7 @@ func getMethods(parsed *parsedFile) error {
 }
 
 // nolint
-func generateTypes(parsed *parsedFile) []string {
+func generateTypes(parsed *ParsedFile) []string {
 	var types []string
 	for _, t := range parsed.types {
 		types = append(types, "type "+string(parsed.code[t.Pos()-1:t.End()-1]))
@@ -314,7 +314,7 @@ func generateTypes(parsed *parsedFile) []string {
 	return types
 }
 
-func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[string]bool) {
+func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[string]bool) {
 	if params == nil {
 		return
 	}
@@ -349,7 +349,7 @@ func extendImportsMap(parsed *parsedFile, params *ast.FieldList, imports map[str
 
 }
 
-func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldList) (string, string) {
+func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldList) (string, string) {
 	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
 
 	if list == nil {
@@ -374,7 +374,7 @@ func generateZeroListOfTypes(parsed *parsedFile, name string, list *ast.FieldLis
 	return text, listCode
 }
 
-func genFieldList(parsed *parsedFile, params *ast.FieldList, withNames bool) string {
+func genFieldList(parsed *ParsedFile, params *ast.FieldList, withNames bool) string {
 	res := ""
 	if params == nil {
 		return res
@@ -400,7 +400,7 @@ func generateInitArguments(list *ast.FieldList) string {
 	return initArgs
 }
 
-func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[string]interface{} {
+func generateMethodProxyInfo(parsed *ParsedFile, method *ast.FuncDecl) map[string]interface{} {
 
 	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
 
@@ -414,7 +414,7 @@ func generateMethodProxyInfo(parsed *parsedFile, method *ast.FuncDecl) map[strin
 	}
 }
 
-func generateMethodsProxies(parsed *parsedFile) ([]map[string]interface{}, map[string]bool) {
+func generateMethodsProxies(parsed *ParsedFile) ([]map[string]interface{}, map[string]bool) {
 	var methodsProxies []map[string]interface{}
 
 	imports := make(map[string]bool)
@@ -427,7 +427,7 @@ func generateMethodsProxies(parsed *parsedFile) ([]map[string]interface{}, map[s
 	return methodsProxies, imports
 }
 
-func generateConstructorProxies(parsed *parsedFile) []map[string]string {
+func generateConstructorProxies(parsed *ParsedFile) []map[string]string {
 	var res []map[string]string
 
 	for _, e := range parsed.constructors[parsed.contract] {
@@ -441,7 +441,7 @@ func generateConstructorProxies(parsed *parsedFile) []map[string]string {
 	return res
 }
 
-func CmdRewriteImports(parsed *parsedFile, w io.Writer) error {
+func CmdRewriteImports(parsed *ParsedFile, w io.Writer) error {
 	if err := rewriteImports(parsed); err != nil {
 		return errors.Wrap(err, "couldn't process")
 	}
@@ -451,7 +451,7 @@ func CmdRewriteImports(parsed *parsedFile, w io.Writer) error {
 	return nil
 }
 
-func rewriteImports(p *parsedFile) error {
+func rewriteImports(p *ParsedFile) error {
 	quoted := strconv.Quote(clientFoundation)
 	for _, d := range p.node.Decls {
 		td, ok := d.(*ast.GenDecl)
