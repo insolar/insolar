@@ -64,11 +64,21 @@ Domains define the visibility scope for the child contracts and their interactio
 
 See [package readme](genesis) for more details.
 
+### [Configuration](configuration)
+
+Provides configuration params for all Insolar components and helper for config resources management.
+
 
 Installation
 ------------
 
     go get github.com/insolar/insolar
+    
+Docker container
+------------
+
+    docker pull insolar/insolar
+    docker run -ti insolar/insolar
 
 
 Contributing
