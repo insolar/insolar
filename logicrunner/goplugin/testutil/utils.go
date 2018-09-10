@@ -261,29 +261,38 @@ func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.Re
 	panic("not implemented")
 }
 
-// ActivateObj implementation for tests
-func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
+func randomRef() (*core.RecordRef, error) {
 	b := make([]byte, 64)
 	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+
+	ref := core.RecordRef{}
+	copy(ref[:], b[0:64])
+	return &ref, nil
+}
+
+// ActivateObj implementation for tests
+func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	codeRef := t.Classes[class].ACode
+
+	ref, err := randomRef()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to generate ref")
 	}
 
-	codeRef := t.Classes[class].ACode
-
-	ref := core.RecordRef{}
-	copy(ref[:], b[0:64])
-	t.Objects[ref] = &TestObjectDescriptor{
+	t.Objects[*ref] = &TestObjectDescriptor{
 		AM:   t,
 		Data: memory,
 		Code: codeRef,
 	}
-	return &ref, nil
+	return ref, nil
 }
 
 // ActivateObjDelegate implementation for tests
 func (t *TestArtifactManager) ActivateObjDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
+	return t.ActivateObj(domain, request, class, parent, memory)
 }
 
 // DeactivateObj implementation for tests
