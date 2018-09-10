@@ -19,14 +19,16 @@ package allowance
 import (
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/toolkit/go/foundation"
+	"github.com/jbenet/go-base58"
 )
 
-var TypeReference = foundation.Reference("allowance")
+var TypeReference = core.String2Ref(base58.Encode([]byte("allowance")))
 
 type Allowance struct {
 	foundation.BaseContract
-	To         foundation.Reference
+	To         core.RecordRef
 	Amount     uint
 	ExpireTime int64
 }
@@ -61,7 +63,7 @@ func (a *Allowance) DeleteExpiredAllowance() uint {
 	return 0
 }
 
-func NewAllowance(to foundation.Reference, amount uint, expire int64) *Allowance {
+func NewAllowance(to core.RecordRef, amount uint, expire int64) *Allowance {
 	return &Allowance{To: to, Amount: amount, ExpireTime: expire}
 
 }

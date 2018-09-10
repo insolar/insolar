@@ -17,10 +17,12 @@
 package member
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/toolkit/go/foundation"
+	"github.com/jbenet/go-base58"
 )
 
-var TypeReference = foundation.Reference("member")
+var TypeReference = core.String2Ref(base58.Encode([]byte("member")))
 
 type Member struct {
 	foundation.BaseContract
