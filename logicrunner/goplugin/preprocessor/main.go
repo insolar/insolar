@@ -107,6 +107,18 @@ func openTemplate(fileName string) (*template.Template, error) {
 	return tmpl, nil
 }
 
+func numberedVars(list *ast.FieldList, name string) string {
+	if list == nil || list.NumFields() == 0 {
+		return ""
+	}
+
+	rets := make([]string, list.NumFields())
+	for i := range list.List {
+		rets[i] = fmt.Sprintf("%s%d", name, i)
+	}
+	return strings.Join(rets, ", ")
+}
+
 func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, map[string]bool) {
 	var methodsInfo []map[string]interface{}
 	imports := make(map[string]bool)
@@ -114,19 +126,12 @@ func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, 
 	for _, method := range parsed.methods[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
 		extendImportsMap(parsed, method.Type.Params, imports)
-		rets := []string{}
-		if method.Type.Results != nil {
-			for i := range method.Type.Results.List {
-				rets = append(rets, fmt.Sprintf("ret%d", i))
-			}
-		}
-		resultList := strings.Join(rets, ", ")
 
 		info := map[string]interface{}{
 			"Name":              method.Name.Name,
 			"ArgumentsZeroList": argsInit,
-			"Results":           resultList,
 			"Arguments":         argsList,
+			"Results":           numberedVars(method.Type.Results, "ret"),
 		}
 		methodsInfo = append(methodsInfo, info)
 	}
