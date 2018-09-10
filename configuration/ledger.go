@@ -20,7 +20,8 @@ package configuration
 type Ledger struct {
 	// DataDirectory is a directory where database's files live.
 	DataDirectory string
-	// TxRetriesOnConflict defines how many retries on transaction conflicts storage should do.
+	// TxRetriesOnConflict defines how many retries on transaction conflicts
+	// storage update methods should do.
 	TxRetriesOnConflict int
 }
 

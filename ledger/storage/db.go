@@ -47,7 +47,7 @@ type DB struct {
 	currentPulse record.PulseNum
 	rootRef      *record.Reference
 
-	// dropWG guards inflight updates before jet drop calc.
+	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
 
 	// for BadgerDB it is normal to have transaction conflicts
