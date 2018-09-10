@@ -47,7 +47,7 @@ func (id *ID) UnmarshalBinary(data []byte) error {
 
 // NewID returns random host id.
 func NewID() (ID, error) {
-	key := make([]byte, 20) // TODO: choose hash func
+	key := make([]byte, 20)
 	_, err := random.Read(key)
 	id := ID{key: key}
 	return id, err
