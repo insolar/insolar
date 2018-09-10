@@ -139,11 +139,6 @@ func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, 
 }
 
 func GenerateContractWrapper(parsed *parsedFile, out io.Writer) error {
-	/*parsed, err := ParseFile(fileName)
-	if err != nil {
-		return errors.Wrap(err, "couldn't parse")
-	}*/
-
 	packageName := parsed.node.Name.Name
 
 	tmpl, err := openTemplate("templates/wrapper.go.tpl")
@@ -177,11 +172,6 @@ func GenerateContractWrapper(parsed *parsedFile, out io.Writer) error {
 }
 
 func GenerateContractProxy(parsed *parsedFile, classReference string, out io.Writer) error {
-	/*parsed, err := parseFile(fileName)
-	if err != nil {
-		return errors.Wrap(err, "couldn't parse")
-	}*/
-
 	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(parsed.name)
 	if match == nil {
 		return errors.New("couldn't match filename without extension and path")
