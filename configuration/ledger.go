@@ -18,12 +18,17 @@ package configuration
 
 // Ledger holds configuration for ledger.
 type Ledger struct {
+	// DataDirectory is a directory where database's files live.
 	DataDirectory string
+	// TxRetriesOnConflict defines how many retries on transaction conflicts
+	// storage update methods should do.
+	TxRetriesOnConflict int
 }
 
 // NewLedger creates new default Ledger configuration.
 func NewLedger() Ledger {
 	return Ledger{
-		DataDirectory: "./data",
+		DataDirectory:       "./data",
+		TxRetriesOnConflict: 3,
 	}
 }

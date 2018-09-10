@@ -175,3 +175,21 @@ func (m *TransactionManager) SetEntropy(pulse record.PulseNum, entropy []byte) e
 	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
 	return m.txn.Set(k, entropy)
 }
+
+// Get returns value by key.
+func (m *TransactionManager) Get(key []byte) ([]byte, error) {
+	// var buf []byte
+	item, err := m.txn.Get(key)
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return item.ValueCopy(nil)
+}
+
+// Set stores value by key.
+func (m *TransactionManager) Set(key, value []byte) error {
+	return m.txn.Set(key, value)
+}
