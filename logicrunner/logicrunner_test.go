@@ -207,7 +207,11 @@ func generateContractProxy(root string, name string) error {
 		return errors.Wrap(err, "Cannot create proxy file")
 	}
 	defer file.Close()
-	err = preprocessor.GenerateContractProxy(contractPath, "Class"+name, file)
+	parsed, err := preprocessor.ParseFile(contractPath)
+	if err != nil {
+		return errors.Wrap(err, "can't generate proxy")
+	}
+	err = preprocessor.GenerateContractProxy(parsed, "Class"+name, file)
 
 	if err != nil {
 		return errors.Wrap(err, "can't generate proxy")
@@ -224,7 +228,11 @@ func generateContractWrapper(root string, name string) error {
 		return errors.Wrap(err, "Cannot create proxy file")
 	}
 	defer file.Close()
-	err = preprocessor.GenerateContractWrapper(contractPath, file)
+	parsed, err := preprocessor.ParseFile(contractPath)
+	if err != nil {
+		return errors.Wrap(err, "can't generate wrapper")
+	}
+	err = preprocessor.GenerateContractWrapper(parsed, file)
 
 	if err != nil {
 		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"'")
