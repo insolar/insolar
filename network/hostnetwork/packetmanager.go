@@ -14,8 +14,13 @@
  *    limitations under the License.
  */
 
-package packet
+package hostnetwork
 
-// Manager manages incoming/outgoing packets.
-type Manager struct {
+import (
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+)
+
+// ParseIncomingPacket detects a packet type.
+func ParseIncomingPacket(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+	return DispatchPacketType(dht, ctx, msg, packetBuilder)
 }
