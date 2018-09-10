@@ -179,6 +179,7 @@ func processRPC(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.
 // Precess relay request.
 func processRelay(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	var err error
+	var state relay.State
 	if !dht.Auth.AuthenticatedHosts[msg.Sender.ID.KeyString()] {
 		log.Print("relay request from unknown host rejected")
 		response := &packet.ResponseRelay{
@@ -189,8 +190,6 @@ func processRelay(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packe
 	} else {
 		data := msg.Data.(*packet.RequestRelay)
 		dht.AddHost(ctx, routing.NewRouteHost(msg.Sender))
-
-		var state relay.State
 
 		switch data.Command {
 		case packet.StartRelay:
@@ -206,13 +205,11 @@ func processRelay(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packe
 		if err != nil {
 			state = relay.Error
 		}
-
-		response := &packet.ResponseRelay{
-			State: state,
-		}
-
-		return packetBuilder.Response(response).Build(), nil
 	}
+	response := &packet.ResponseRelay{
+		State: state,
+	}
+	return packetBuilder.Response(response).Build(), nil
 }
 
 func processAuthentication(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
@@ -265,9 +262,8 @@ func processCheckOriginRequest(dht *DHT, msg *packet.Packet, packetBuilder packe
 	if key, ok := dht.Auth.ReceivedKeys[msg.Sender.ID.KeyString()]; ok {
 		response := &packet.ResponseCheckOrigin{AuthUniqueKey: key}
 		return packetBuilder.Response(response).Build(), nil
-	} else {
-		return nil, errors.New("CheckOrigin request from unregistered host")
 	}
+	return nil, errors.New("CheckOrigin request from unregistered host")
 }
 
 func processObtainIPRequest(msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
