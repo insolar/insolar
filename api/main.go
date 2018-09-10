@@ -102,7 +102,7 @@ func (rh *RequestHandler) ProcessCreateMember() map[string]interface{} {
 func (rh *RequestHandler) ProcessDumpUserInfo() map[string]interface{} {
 	result := make(map[string]interface{})
 	result["DumpUserInfo"] = true
-	result["Putin"] = 222
+	result["QQ"] = 222
 
 	return result
 }
@@ -127,7 +127,7 @@ func (rh *RequestHandler) ProcessSendMoney() map[string]interface{} {
 func (rh *RequestHandler) ProcessDumpAllUsers() map[string]interface{} {
 	result := make(map[string]interface{})
 	result["AllUsers"] = true
-	result["Putin"] = 555
+	result["QQQ"] = 555
 
 	return result
 }
