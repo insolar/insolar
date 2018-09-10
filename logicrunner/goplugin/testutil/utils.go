@@ -323,3 +323,31 @@ func CBORUnMarshal(t *testing.T, data []byte) interface{} {
 	assert.NoError(t, err, "serialise")
 	return ret
 }
+
+// Publish code on ledger
+func AMPublishCode(
+	t *testing.T,
+	am core.ArtifactManager,
+	domain core.RecordRef,
+	request core.RecordRef,
+	mtype core.MachineType,
+	code []byte,
+) (
+	typeRef *core.RecordRef,
+	codeRef *core.RecordRef,
+	classRef *core.RecordRef,
+	err error,
+) {
+	typeRef, err = am.DeclareType(domain, request, []byte{})
+	assert.NoError(t, err, "creating type on ledger")
+
+	codeRef, err = am.DeployCode(
+		domain, request, []core.RecordRef{*typeRef}, map[core.MachineType][]byte{mtype: code},
+	)
+	assert.NoError(t, err, "create code on ledger")
+
+	classRef, err = am.ActivateClass(domain, request, *codeRef, nil)
+	assert.NoError(t, err, "create template for contract data")
+
+	return typeRef, codeRef, classRef, err
+}

@@ -45,7 +45,7 @@ func NewBuiltIn(mr core.MessageRouter, am core.ArtifactManager) *BuiltIn {
 		Registry: make(map[string]Contract),
 	}
 
-	bi.Registry[helloworld.CodeRef().String()] = helloworld.NewHelloWorld()
+	bi.Registry["helloworld"] = helloworld.NewHelloWorld()
 
 	return &bi
 }
@@ -64,7 +64,18 @@ func (bi *BuiltIn) Stop() error {
 
 // Exec is an implementation for logicrunner Executor interface
 func (bi *BuiltIn) Exec(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
-	c, ok := bi.Registry[codeRef.String()]
+	am := bi.AM
+	am.SetArchPref([]core.MachineType{core.MachineTypeBuiltin})
+	codeDescriptor, err := am.GetCode(codeRef)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Can't find code")
+	}
+	code, err := codeDescriptor.Code()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Can't get code")
+	}
+
+	c, ok := bi.Registry[string(code)]
 	if !ok {
 		return nil, nil, errors.New("Wrong reference for builtin contract")
 	}
