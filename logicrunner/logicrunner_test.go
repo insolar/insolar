@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/insolar/insolar/cmd/icc/compile"
+	"github.com/insolar/insolar/cmd/insgocc/compile"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -36,7 +36,7 @@ import (
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = "../cmd/icc/icc"
+var icc = "../cmd/insgocc/insgocc"
 
 func init() {
 	log.SetLevel(log.DebugLevel)
@@ -184,7 +184,7 @@ func buildInciderCLI() error {
 }
 
 func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", icc, "../cmd/icc/").CombinedOutput()
+	out, err := exec.Command("go", "build", "-o", icc, "../cmd/insgocc/").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "can't build %s: %s", icc, string(out))
 	}

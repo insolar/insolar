@@ -21,14 +21,14 @@ import (
 	"io"
 	"os"
 
-	"github.com/insolar/insolar/cmd/icc/compile"
+	"github.com/insolar/insolar/cmd/insgocc/compile"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 )
 
 func printUsage() {
-	fmt.Println("usage: icc <command> [<args>]")
+	fmt.Println("usage: insgocc <command> [<args>]")
 	fmt.Println("Commands: ")
 	fmt.Println(" wrapper   generate contract's wrapper")
 	fmt.Println(" proxy     generate contract's proxy")
