@@ -17,6 +17,11 @@
 package storage_test
 
 import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -130,7 +135,7 @@ func TestStore_TransactionConflict(t *testing.T) {
 		checkfn(tx1err, tx2err, string(vGot), tries)
 	}
 
-	t.Run("tx1 conflict", func(t *testing.T) {
+	t.Run("no retry", func(t *testing.T) {
 		testconflict(t, func(tx1err error, tx2err error, value string, retries int) {
 			assert.Error(t, tx1err)
 			assert.NoError(t, tx2err)
@@ -139,7 +144,7 @@ func TestStore_TransactionConflict(t *testing.T) {
 			assert.Equal(t, "v2", value)
 		})
 	})
-	t.Run("tx1 no conflict", func(t *testing.T) {
+	t.Run("with retry", func(t *testing.T) {
 		db.SetTxRetiries(2)
 		testconflict(t, func(tx1err error, tx2err error, value string, retries int) {
 			assert.NoError(t, tx1err)
@@ -148,4 +153,100 @@ func TestStore_TransactionConflict(t *testing.T) {
 			assert.Equal(t, "v1", value)
 		})
 	})
+}
+
+func TestStore_TransactionRetryOver(t *testing.T) {
+	t.Parallel()
+	db, cleaner := storagetest.TmpDB(t, "")
+	defer cleaner()
+	tlog := log.New(ioutil.Discard, "", log.LstdFlags)
+	if os.Getenv("INSOLAR_TESTS_CONFLICTS_DEBUG") != "" {
+		tlog = log.New(os.Stderr, "", log.LstdFlags)
+	}
+
+	conflictK := []byte("k")
+	var valcounter int32
+	newvalue := func() []byte {
+		return []byte(fmt.Sprintf("%v", atomic.AddInt32(&valcounter, 1)-1))
+	}
+	seterr := db.Set(conflictK, newvalue())
+	assert.NoError(t, seterr)
+
+	tx1tries := 0
+	tx1triesExpect := 3
+	db.SetTxRetiries(tx1triesExpect - 1)
+	inflightTx1 := make(chan bool)
+	endTx1 := make(chan bool)
+	doneTx1 := make(chan bool)
+	var tx1err error
+	go func() {
+		v1 := newvalue()
+		tx1err = db.Update(func(tx *storage.TransactionManager) error {
+			tx1tries++
+			tlog.Printf("tx1 [%v]: start", tx1tries)
+			vgot, geterr := tx.Get(conflictK)
+			if geterr != nil {
+				return geterr
+			}
+			tlog.Printf("tx1 [%v]: got '%v'\n", tx1tries, string(vgot))
+
+			seterr := tx.Set(conflictK, v1)
+			if seterr != nil {
+				return seterr
+			}
+			tlog.Printf("tx1 [%v]: set '%v'\n", tx1tries, string(v1))
+			inflightTx1 <- true
+			<-endTx1
+			return seterr
+		})
+		tlog.Printf("tx1 [%v]: done", tx1tries)
+		close(doneTx1)
+	}()
+
+	tx2fn := func() {
+		iter := 0
+		v2 := newvalue()
+		tx2err := db.Update(func(tx *storage.TransactionManager) error {
+			iter++
+			tlog.Printf("tx2 [%v]: start", iter)
+
+			vgot, geterr := tx.Get(conflictK)
+			if geterr != nil {
+				return geterr
+			}
+			tlog.Printf("tx2 [%v]: got '%v'", iter, string(vgot))
+
+			seterr := tx.Set(conflictK, v2)
+			if seterr == nil {
+				tlog.Printf("tx2 [%v]: set '%v'\n", iter, string(v2))
+			}
+			return seterr
+		})
+		tlog.Printf("tx2 [%v]: done (error=%v)\n", iter, tx2err)
+	}
+
+	go func() {
+		for {
+			select {
+			case <-inflightTx1:
+				// tx1 conflicts on every iteration with tx2 results here
+				tx2fn()
+				endTx1 <- true
+			case <-doneTx1:
+				tlog.Println("goroutine with cycle done")
+				return
+			}
+		}
+	}()
+	// tx1 give up
+	<-doneTx1
+
+	tlog.Printf("tx1err: %v", tx1err)
+	vGot, err := db.Get(conflictK)
+	assert.NoError(t, err)
+	tlog.Println("result key:", string(vGot))
+
+	assert.Error(t, tx1err)
+	assert.Equal(t, tx1err, storage.ErrConflictRetriesOver)
+	assert.Equal(t, tx1triesExpect, tx1tries)
 }
