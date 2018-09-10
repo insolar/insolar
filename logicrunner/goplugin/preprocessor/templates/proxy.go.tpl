@@ -31,7 +31,11 @@ func (r *ContractHolder) AsChild(objRef string) *{{ .ContractType }} {
 }
 
 func (r *ContractHolder) AsDelegate(objRef string) *{{ .ContractType }} {
-    panic("not implemented")
+    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
+    if err != nil {
+        panic(err)
+    }
+    return &{{ .ContractType }}{Reference: ref}
 }
 
 // GetObject

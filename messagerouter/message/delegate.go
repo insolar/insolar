@@ -14,17 +14,34 @@
  *    limitations under the License.
  */
 
-package proxyctx
+package message
 
-// ProxyHelper interface with methods that are needed by contract proxies
-type ProxyHelper interface {
-	RouteCall(ref string, method string, args []byte) ([]byte, error)
-	RouteConstructorCall(classRef string, name string, args []byte) ([]byte, error)
-	SaveAsChild(parentRef, classRef string, data []byte) (string, error)
-	SaveAsDelegate(parentRef, classRef string, data []byte) (string, error)
-	Serialize(what interface{}, to *[]byte) error
-	Deserialize(from []byte, into interface{}) error
+import (
+	"bytes"
+	"encoding/gob"
+	"io"
+
+	"github.com/insolar/insolar/core"
+)
+
+// DelegateMessage is a message for saving contract's body as a delegate
+type DelegateMessage struct {
+	baseMessage
+	Into  core.RecordRef
+	Class core.RecordRef
+	Body  []byte
 }
 
-// Current - hackish way to give proxies access to the current environment
-var Current ProxyHelper
+// GetReference implements core.Message
+func (m *DelegateMessage) GetReference() core.RecordRef {
+	return m.Into
+}
+
+// Serialize serializes message
+func (m *DelegateMessage) Serialize() (io.Reader, error) {
+	buff := &bytes.Buffer{}
+	buff.Write([]byte{byte(CallConstructorMessageType)})
+	enc := gob.NewEncoder(buff)
+	err := enc.Encode(m)
+	return buff, err
+}

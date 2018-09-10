@@ -170,7 +170,7 @@ func (d *ObjectDescriptor) Memory() ([]byte, error) {
 
 // CodeDescriptor returns descriptor for fetching object's code data.
 func (d *ObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
-	return d.classDescriptor.codeDescriptor, nil
+	return d.classDescriptor.CodeDescriptor()
 }
 
 // ClassDescriptor returns descriptor for fetching object's class data.
