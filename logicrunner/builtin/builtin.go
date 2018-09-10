@@ -34,7 +34,7 @@ type Contract interface {
 type BuiltIn struct {
 	AM       core.ArtifactManager
 	MR       core.MessageRouter
-	registry map[string]Contract
+	Registry map[string]Contract
 }
 
 // NewBuiltIn is an constructor
@@ -42,10 +42,10 @@ func NewBuiltIn(mr core.MessageRouter, am core.ArtifactManager) *BuiltIn {
 	bi := BuiltIn{
 		AM:       am,
 		MR:       mr,
-		registry: make(map[string]Contract),
+		Registry: make(map[string]Contract),
 	}
 
-	bi.registry[helloworld.CodeRef().String()] = helloworld.NewHelloWorld()
+	bi.Registry[helloworld.CodeRef().String()] = helloworld.NewHelloWorld()
 
 	return &bi
 }
@@ -64,7 +64,7 @@ func (bi *BuiltIn) Stop() error {
 
 // Exec is an implementation for logicrunner Executor interface
 func (bi *BuiltIn) Exec(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
-	c, ok := bi.registry[codeRef.String()]
+	c, ok := bi.Registry[codeRef.String()]
 	if !ok {
 		return nil, nil, errors.New("Wrong reference for builtin contract")
 	}
