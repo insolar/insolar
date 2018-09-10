@@ -333,6 +333,28 @@ func (t *GoInsider) SaveAsChild(parentRef, classRef string, data []byte) (string
 	return res.Reference.String(), nil
 }
 
+// SaveAsDelegate ...
+func (t *GoInsider) SaveAsDelegate(intoRef, classRef string, data []byte) (string, error) {
+	client, err := t.Upstream()
+	if err != nil {
+		return "", err
+	}
+
+	req := rpctypes.UpSaveAsDelegateReq{
+		Into:  core.String2Ref(intoRef),
+		Class: core.String2Ref(classRef),
+		Data:  data,
+	}
+
+	res := rpctypes.UpSaveAsDelegateResp{}
+	err = client.Call("RPC.SaveAsDelegate", req, &res)
+	if err != nil {
+		return "", errors.Wrap(err, "on calling main API")
+	}
+
+	return res.Reference.String(), nil
+}
+
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (t *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)

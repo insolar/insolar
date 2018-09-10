@@ -99,6 +99,18 @@ type UpSaveAsChildResp struct {
 	Reference core.RecordRef
 }
 
+// UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin
+type UpSaveAsDelegateReq struct {
+	Into  core.RecordRef
+	Class core.RecordRef
+	Data  []byte
+}
+
+// UpSaveAsDelegateResp is a set of arguments for SaveAsDelegate RPC in goplugin
+type UpSaveAsDelegateResp struct {
+	Reference core.RecordRef
+}
+
 // Object is an inner representation of storage object for transfering it over API
 type Object struct {
 	MachineType core.MachineType

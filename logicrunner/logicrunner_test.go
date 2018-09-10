@@ -432,3 +432,117 @@ func (r *Two) Hello(s string) string {
 	}
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
 }
+
+func TestInjectingDelegate(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello(s string) string {
+	holder := two.New()
+	friend := holder.AsDelegate("")
+
+	res := friend.Hello(s)
+
+	return "Hi, " + s + "! Two said: " + res
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() *Two {
+	return &Two{X:322};
+}
+
+func (r *Two) Hello(s string) string {
+	r.X *= 2
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
+}
+`
+
+	tmpDir, err := setupContracts(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	if tmpDir != "" {
+		defer os.RemoveAll(tmpDir) // nolint: errcheck
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lr, err := NewLogicRunner(configuration.LogicRunner{})
+	assert.NoError(t, err)
+
+	mr := &testMessageRouter{LogicRunner: lr}
+	am := testutil.NewTestArtifactManager()
+	lr.ArtifactManager = am
+
+	gp, err := goplugin.NewGoPlugin(
+		&configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerCodePath: tmpDir + "/insider-storage/",
+		},
+		mr,
+		am,
+	)
+	assert.NoError(t, err)
+	defer gp.Stop()
+
+	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
+	assert.NoError(t, err)
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(
+		[]interface{}{"ins"},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	suckInContracts(am, tmpDir, "one", "two")
+
+	codeRef := core.String2Ref("two")
+	am.Classes[core.String2Ref("Classtwo")] = &testutil.TestClassDescriptor{
+		AM:    am,
+		ACode: &codeRef,
+	}
+
+	_, res, err := gp.CallMethod(core.String2Ref("one"), data, "Hello", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	var resParsed []interface{}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+}

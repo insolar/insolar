@@ -188,6 +188,16 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 
 		return &core.Response{Data: newData}
 
+	case *message.DelegateMessage:
+		// TODO: should be InjectDelegate
+		ref, err := lr.ArtifactManager.ActivateObj(
+			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
+		)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't save new object")}
+		}
+		return &core.Response{Data: []byte(ref.String())}
+
 	default:
 		panic("Unknown message type")
 	}
