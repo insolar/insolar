@@ -22,7 +22,6 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/insolar/insolar/cmd/insgocc/compile"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -257,7 +256,7 @@ func buildContracts(root string, contracts map[string]string) error {
 	}
 
 	for name := range contracts {
-		err := compile.Compile(root, name)
+		err := preprocessor.Compile(root, name)
 		if err != nil {
 			return err
 		}

@@ -21,7 +21,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/insolar/insolar/cmd/insgocc/compile"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -168,7 +167,7 @@ func main() {
 			panic(err)
 		}
 
-		err = compile.Compile(output.String(), name.String())
+		err = preprocessor.Compile(output.String(), name.String())
 		if err != nil {
 			panic(err)
 		}
