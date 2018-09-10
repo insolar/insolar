@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-// Package Message represents message that messagerouter can route
+// Package message represents message that messagerouter can route
 package message
 
 import (
@@ -46,6 +46,7 @@ const (
 	baseMessageType            = MessageType(iota)
 	CallMethodMessageType      // CallMethodMessage - Simply call method and return result
 	CallConstructorMessageType // CallConstructorMessage is a message for calling constructor and obtain its response
+	DelegateMessageType        // DelegateMessage is a message for injecting a delegate
 )
 
 // GetEmptyMessage constructs specified message
@@ -57,6 +58,8 @@ func getEmptyMessage(mt MessageType) (core.Message, error) {
 		return &CallMethodMessage{}, nil
 	case CallConstructorMessageType:
 		return &CallConstructorMessage{}, nil
+	case DelegateMessageType:
+		return &DelegateMessage{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented messagetype %d", mt)
 	}
