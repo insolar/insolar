@@ -36,7 +36,7 @@ func TestStore_TransactionConflict(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	conflictK := []byte("k")
+	conflictK := genuniqkey()
 	v0, v1, v2 := []byte("v0"), []byte("v1"), []byte("v2")
 	seterr := db.Set(conflictK, v0)
 	assert.NoError(t, seterr)
@@ -164,7 +164,7 @@ func TestStore_TransactionRetryOver(t *testing.T) {
 		tlog = log.New(os.Stderr, "", log.LstdFlags)
 	}
 
-	conflictK := []byte("k")
+	conflictK := genuniqkey()
 	var valcounter int32
 	newvalue := func() []byte {
 		return []byte(fmt.Sprintf("%v", atomic.AddInt32(&valcounter, 1)-1))
@@ -249,4 +249,11 @@ func TestStore_TransactionRetryOver(t *testing.T) {
 	assert.Error(t, tx1err)
 	assert.Equal(t, tx1err, storage.ErrConflictRetriesOver)
 	assert.Equal(t, tx1triesExpect, tx1tries)
+}
+
+var keycounter int32
+
+func genuniqkey() []byte {
+	keycounter++
+	return []byte(fmt.Sprintf("k%v", atomic.AddInt32(&keycounter, 1)))
 }
