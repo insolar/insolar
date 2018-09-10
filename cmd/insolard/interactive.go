@@ -99,7 +99,7 @@ func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.C
 }
 
 func doSendRelay(command, relayAddr string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
-	err := dhtNetwork.RelayRequest(ctx, command, relayAddr)
+	err := hostnetwork.RelayRequest(dhtNetwork, ctx, command, relayAddr)
 	if err != nil {
 		log.Println(err)
 	}

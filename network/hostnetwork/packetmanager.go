@@ -17,10 +17,28 @@
 package hostnetwork
 
 import (
+	"log"
+
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
 // ParseIncomingPacket detects a packet type.
 func ParseIncomingPacket(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	return DispatchPacketType(dht, ctx, msg, packetBuilder)
+}
+
+// BuildContext builds a context for packet.
+func BuildContext(cb ContextBuilder, msg *packet.Packet) Context {
+	var ctx Context
+	var err error
+	if msg.Receiver.ID.GetKey() == nil {
+		ctx, err = cb.SetDefaultHost().Build()
+	} else {
+		ctx, err = cb.SetHostByID(msg.Receiver.ID).Build()
+	}
+	if err != nil {
+		// TODO: Do something sane with error!
+		log.Println(err) // don't return this error cuz don't know what to do with
+	}
+	return ctx
 }

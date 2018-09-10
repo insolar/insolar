@@ -100,11 +100,11 @@ func processRelayOwnership(dht *DHT, ctx Context, msg *packet.Packet, packetBuil
 		for i, j := range dht.Subnet.PossibleProxyIDs {
 			if j == msg.Sender.ID.KeyString() {
 				dht.Subnet.PossibleProxyIDs = append(dht.Subnet.PossibleProxyIDs[:i], dht.Subnet.PossibleProxyIDs[i+1:]...)
-				err := dht.AuthenticationRequest(ctx, "begin", msg.Sender.ID.KeyString())
+				err := AuthenticationRequest(dht, ctx, "begin", msg.Sender.ID.KeyString())
 				if err != nil {
 					return nil, err
 				}
-				err = dht.RelayRequest(ctx, "start", msg.Sender.ID.KeyString())
+				err = RelayRequest(dht, ctx, "start", msg.Sender.ID.KeyString())
 				if err != nil {
 					return nil, err
 				}
@@ -241,7 +241,7 @@ func processAuthentication(dht *DHT, ctx Context, msg *packet.Packet, packetBuil
 
 		// TODO process verification msg.Sender host
 		// confirmed
-		err = dht.CheckOriginRequest(ctx, msg.Sender.ID.KeyString())
+		err = CheckOriginRequest(dht, ctx, msg.Sender.ID.KeyString())
 		if err != nil {
 			return nil, err
 		}

@@ -1199,7 +1199,7 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 
 	for _, arg := range args {
 		t.Run(arg.name, func(t *testing.T) {
-			err := dhts[0].AuthenticationRequest(ctx, arg.first, ids[1])
+			err := AuthenticationRequest(dhts[0], ctx, arg.first, ids[1])
 			assert.Equal(t, err, arg.second)
 			time.Sleep(time.Millisecond * 200)
 		})
@@ -1271,10 +1271,10 @@ func TestDHT_RelayRequest(t *testing.T) {
 	for _, arg := range args {
 		t.Run(arg.name, func(t *testing.T) {
 			if strings.Contains(arg.name, "begin auth") {
-				err = dhts[0].AuthenticationRequest(ctx, arg.first, ids[1])
+				err = AuthenticationRequest(dhts[0], ctx, arg.first, ids[1])
 			} else {
 
-				err = dhts[0].RelayRequest(ctx, arg.first, ids[1])
+				err = RelayRequest(dhts[0], ctx, arg.first, ids[1])
 			}
 			assert.Equal(t, err, arg.second)
 			time.Sleep(time.Millisecond * 200)
