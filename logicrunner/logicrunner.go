@@ -94,7 +94,7 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 		return res, nil
 	}
 
-	return nil, errors.New("No executor registered for machine")
+	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
 type withCodeDescriptor interface {

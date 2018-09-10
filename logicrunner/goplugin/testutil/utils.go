@@ -23,7 +23,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	"testing"
+
 	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/assert"
+	"github.com/ugorji/go/codec"
 )
 
 // ChangeGoPath prepends `path` to GOPATH environment variable
@@ -285,4 +289,22 @@ func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.Reco
 // AppendObjDelegate implementation for tests
 func (t *TestArtifactManager) AppendObjDelegate(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
 	panic("not implemented")
+}
+
+// CBORMarshal - testing serialize helper
+func CBORMarshal(t *testing.T, o interface{}) []byte {
+	ch := new(codec.CborHandle)
+	var data []byte
+	err := codec.NewEncoderBytes(&data, ch).Encode(o)
+	assert.NoError(t, err, "Marshal")
+	return data
+}
+
+// CBORUnMarshal - testing deserialize helper
+func CBORUnMarshal(t *testing.T, data []byte) interface{} {
+	ch := new(codec.CborHandle)
+	var ret interface{}
+	err := codec.NewDecoderBytes(data, ch).Decode(&ret)
+	assert.NoError(t, err, "serialise")
+	return ret
 }
