@@ -177,24 +177,3 @@ func (d *ObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
 func (d *ObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
 	return d.classDescriptor, nil
 }
-
-// GetDelegates fetches unamended delegates from storage.
-//
-// VM is responsible for collecting all delegates and adding them to the object memory manually if its required.
-// TODO: not used for now
-func (d *ObjectDescriptor) GetDelegates() ([][]byte, error) {
-	var delegates [][]byte
-	for _, appendRef := range d.lifelineIndex.AppendRefs {
-		rec, err := d.manager.db.GetRecord(&appendRef)
-		if err != nil {
-			return nil, errors.Wrap(err, "inconsistent object index")
-		}
-		appendRec, ok := rec.(*record.ObjectAppendRecord)
-		if !ok {
-			return nil, errors.Wrap(ErrInvalidRef, "inconsistent object index")
-		}
-		delegates = append(delegates, appendRec.AppendMemory)
-	}
-
-	return delegates, nil
-}
