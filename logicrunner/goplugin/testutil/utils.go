@@ -292,7 +292,7 @@ func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.Re
 
 // ActivateObjDelegate implementation for tests
 func (t *TestArtifactManager) ActivateObjDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	panic("not implemented")
+	return t.ActivateObj(domain, request, class, parent, memory)
 }
 
 // DeactivateObj implementation for tests
