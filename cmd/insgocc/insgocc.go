@@ -101,7 +101,12 @@ func main() {
 		}
 
 		for _, fn := range fs.Args() {
-			err := preprocessor.GenerateContractWrapper(fn, output.writer)
+			parsed, err := preprocessor.ParseFile(fn)
+			if err != nil {
+				panic(errors.Wrap(err, "couldn't parse"))
+			}
+
+			err = preprocessor.GenerateContractWrapper(parsed, output.writer)
 			if err != nil {
 				panic(err)
 			}
@@ -120,7 +125,13 @@ func main() {
 		if fs.NArg() != 1 {
 			panic(errors.New("proxy command should be followed by exactly one file name to process"))
 		}
-		err = preprocessor.GenerateContractProxy(fs.Arg(0), reference, output.writer)
+
+		parsed, err := preprocessor.ParseFile(fs.Arg(0))
+		if err != nil {
+			panic(errors.Wrap(err, "couldn't parse"))
+		}
+
+		err = preprocessor.GenerateContractProxy(parsed, reference, output.writer)
 		if err != nil {
 			panic(err)
 		}
@@ -137,7 +148,12 @@ func main() {
 			panic(errors.New("imports command should be followed by exactly one file name to process"))
 		}
 
-		err = preprocessor.CmdRewriteImports(fs.Arg(0), output.writer)
+		parsed, err := preprocessor.ParseFile(fs.Arg(0))
+		if err != nil {
+			panic(errors.Wrap(err, "couldn't parse"))
+		}
+
+		err = preprocessor.CmdRewriteImports(parsed, output.writer)
 		if err != nil {
 			panic(err)
 		}

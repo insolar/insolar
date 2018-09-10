@@ -66,7 +66,7 @@ func slurpFile(fileName string) ([]byte, error) {
 	return res, nil
 }
 
-func parseFile(fileName string) (*parsedFile, error) {
+func ParseFile(fileName string) (*parsedFile, error) {
 	res := parsedFile{
 		name: fileName,
 	}
@@ -138,11 +138,11 @@ func generateContractMethodsInfo(parsed *parsedFile) ([]map[string]interface{}, 
 	return methodsInfo, imports
 }
 
-func GenerateContractWrapper(fileName string, out io.Writer) error {
-	parsed, err := parseFile(fileName)
+func GenerateContractWrapper(parsed *parsedFile, out io.Writer) error {
+	/*parsed, err := ParseFile(fileName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
-	}
+	}*/
 
 	packageName := parsed.node.Name.Name
 
@@ -176,13 +176,13 @@ func GenerateContractWrapper(fileName string, out io.Writer) error {
 	return nil
 }
 
-func GenerateContractProxy(fileName string, classReference string, out io.Writer) error {
-	parsed, err := parseFile(fileName)
+func GenerateContractProxy(parsed *parsedFile, classReference string, out io.Writer) error {
+	/*parsed, err := parseFile(fileName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't parse")
-	}
+	}*/
 
-	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(fileName)
+	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(parsed.name)
 	if match == nil {
 		return errors.New("couldn't match filename without extension and path")
 	}
@@ -451,11 +451,7 @@ func generateConstructorProxies(parsed *parsedFile) []map[string]string {
 	return res
 }
 
-func CmdRewriteImports(fname string, w io.Writer) error {
-	parsed, err := parseFile(fname)
-	if err != nil {
-		return errors.Wrap(err, "couldn't parse")
-	}
+func CmdRewriteImports(parsed *parsedFile, w io.Writer) error {
 	if err := rewriteImports(parsed); err != nil {
 		return errors.Wrap(err, "couldn't process")
 	}
