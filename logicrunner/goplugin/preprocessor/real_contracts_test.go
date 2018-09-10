@@ -25,8 +25,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var contractNames []string = []string{"member", "wallet", "allowance"}
-var pathWithContracts string = "../../../genesis/experiment/"
+var contractNames = []string{"member", "wallet", "allowance"}
+var pathWithContracts = "../../../genesis/experiment/"
 
 func GetContractsList() []string {
 	var result []string
@@ -45,7 +45,7 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 	for _, file := range GetContractsList() {
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
 			var buf bytes.Buffer
-			err := generateContractProxy(file, "testRef", &buf)
+			err := GenerateContractProxy(file, "testRef", &buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)
@@ -59,7 +59,7 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 	for _, file := range GetContractsList() {
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
 			var buf bytes.Buffer
-			err := generateContractWrapper(file, &buf)
+			err := GenerateContractWrapper(file, &buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)
