@@ -90,5 +90,5 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err, "serialise args")
 	state, res, err := bi.Exec(*coderef, data, "Greet", args)
 	assert.NoError(t, err, "contract call")
-	t.Logf("%+v  %+v", state, res)
+
 }

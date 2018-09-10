@@ -51,7 +51,7 @@ func NewBuiltIn(mr core.MessageRouter, am core.ArtifactManager) *BuiltIn {
 }
 
 func (bi *BuiltIn) CallMethod(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
-	panic("implement me")
+	return bi.Exec(codeRef, data, method, args)
 }
 
 func (bi *BuiltIn) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) (objectState []byte, err error) {

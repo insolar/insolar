@@ -10,6 +10,7 @@ import (
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/messagerouter/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
@@ -77,16 +78,32 @@ func TestBareHelloworld(t *testing.T) {
 
 	bi := lr.Executors[core.MachineTypeBuiltin].(*builtin.BuiltIn)
 	bi.Registry[coderef.String()] = bi.Registry[helloworld.CodeRef().String()]
-	var args []byte
-	err = codec.NewEncoderBytes(&args, ch).Encode([]interface{}{"Vany"})
-	assert.NoError(t, err, "serialise args")
 
+	// #1
 	resp := lr.Execute(&message.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
-		Arguments: args,
+		Arguments: testutil.CBORMarshal(t, []interface{}{"Vany"}),
 	})
 	assert.NoError(t, resp.Error, "contract call")
-	t.Logf("%+v", resp)
+
+	d := testutil.CBORUnMarshal(t, resp.Data)
+	r := testutil.CBORUnMarshal(t, resp.Result)
+	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
+
+	// #2
+	resp = lr.Execute(&message.CallMethodMessage{
+		Request:   request,
+		ObjectRef: *contract,
+		Method:    "Greet",
+		Arguments: testutil.CBORMarshal(t, []interface{}{"Ruz"}),
+	})
+	assert.NoError(t, resp.Error, "contract call")
+
+	d = testutil.CBORUnMarshal(t, resp.Data)
+	r = testutil.CBORUnMarshal(t, resp.Result)
+	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
+	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }
