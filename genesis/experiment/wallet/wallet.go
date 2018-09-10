@@ -25,12 +25,12 @@ var TypeReference = foundation.Reference("wallet")
 
 type Wallet struct {
 	foundation.BaseContract
-	balance uint
+	Balance uint
 }
 
 func (w *Wallet) Allocate(amount uint, to foundation.Reference) *allowance.Allowance {
 	// TODO check balance is enough
-	w.balance -= amount
+	w.Balance -= amount
 	a := allowance.NewAllowance(to, amount, w.GetContext().Time.Unix()+10)
 	w.AddChild(a, allowance.TypeReference)
 	return a
@@ -40,11 +40,11 @@ func (w *Wallet) Receive(amount uint, from foundation.Reference) {
 	fromWallet := foundation.GetImplementationFor(from, TypeReference).(*Wallet)
 
 	a := fromWallet.Allocate(amount, w.GetContext().Me)
-	w.balance += a.TakeAmount()
+	w.Balance += a.TakeAmount()
 }
 
 func (w *Wallet) Transfer(amount uint, to foundation.Reference) {
-	w.balance -= amount
+	w.Balance -= amount
 
 	toWallet := foundation.GetImplementationFor(to, TypeReference).(*Wallet)
 	toWalletRef := toWallet.GetReference()
@@ -56,7 +56,7 @@ func (w *Wallet) Transfer(amount uint, to foundation.Reference) {
 }
 
 func (w *Wallet) Accept(a *allowance.Allowance) {
-	w.balance += a.TakeAmount()
+	w.Balance += a.TakeAmount()
 }
 
 func (w *Wallet) GetTotalBalance() uint {
@@ -65,19 +65,19 @@ func (w *Wallet) GetTotalBalance() uint {
 		Allowance := c.(*allowance.Allowance)
 		totalAllowanced += Allowance.GetBalanceForOwner()
 	}
-	return w.balance + totalAllowanced
+	return w.Balance + totalAllowanced
 }
 
 func (w *Wallet) ReturnAndDeleteExpiriedAllowances() {
 	for _, c := range w.GetChildrenTyped(allowance.TypeReference) {
 		Allowance := c.(*allowance.Allowance)
-		w.balance += Allowance.DeleteExpiredAllowance()
+		w.Balance += Allowance.DeleteExpiredAllowance()
 	}
 }
 
 func NewWallet(balance uint) *Wallet {
 	wallet := &Wallet{
-		balance: balance,
+		Balance: balance,
 	}
 	return wallet
 }
