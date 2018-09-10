@@ -50,6 +50,12 @@ type ArtifactManager interface {
 	// GetObjChildren returns provided object's children references.
 	GetObjChildren(head RecordRef) ([]RecordRef, error)
 
+	// GetObjDelegate returns provided object's delegate reference for provided class.
+	//
+	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
+	// be returned.
+	GetObjDelegate(head, asClass RecordRef) (*RecordRef, error)
+
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
@@ -79,11 +85,14 @@ type ArtifactManager interface {
 	// migrate objects memory in the order they appear in provided slice.
 	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordRef, error)
 
-	// ActivateObj creates activate object record in storage. Provided class reference will be used as objects class
-	// memory as memory of crated object. If memory is not provided, the class default memory will be used.
+	// ActivateObj creates activate object record in storage. Provided class reference will be used as object's class.
+	// If memory is not provided, the class default memory will be used.
 	//
 	// Activation reference will be this object's identifier and referred as "object head".
 	ActivateObj(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
+
+	// ActivateObjDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
+	ActivateObjDelegate(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
 
 	// DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
