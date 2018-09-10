@@ -91,7 +91,7 @@ func WriteError(message string, code int) map[string]interface{} {
 	return errJson
 }
 
-func ProcessCreateMember(w http.ResponseWriter, r *http.Request) map[string]interface{} {
+func (rh *RequestHandler) ProcessCreateMember() map[string]interface{} {
 	result := make(map[string]interface{})
 	result["CreateUser"] = true
 	result["reference"] = "123123-234234234-345345345"
@@ -99,7 +99,7 @@ func ProcessCreateMember(w http.ResponseWriter, r *http.Request) map[string]inte
 	return result
 }
 
-func ProcessDumpUserInfo(w http.ResponseWriter, r *http.Request) map[string]interface{} {
+func (rh *RequestHandler) ProcessDumpUserInfo() map[string]interface{} {
 	result := make(map[string]interface{})
 	result["DumpUserInfo"] = true
 	result["Putin"] = 222
@@ -107,7 +107,7 @@ func ProcessDumpUserInfo(w http.ResponseWriter, r *http.Request) map[string]inte
 	return result
 }
 
-func ProcessGetBalance(w http.ResponseWriter, r *http.Request) map[string]interface{} {
+func (rh *RequestHandler) ProcessGetBalance() map[string]interface{} {
 	result := make(map[string]interface{})
 	result["GetBalance"] = true
 	result["amount"] = 333
@@ -116,7 +116,7 @@ func ProcessGetBalance(w http.ResponseWriter, r *http.Request) map[string]interf
 	return result
 }
 
-func ProcessSendMoney(w http.ResponseWriter, r *http.Request) map[string]interface{} {
+func (rh *RequestHandler) ProcessSendMoney() map[string]interface{} {
 	result := make(map[string]interface{})
 	result["SendMoney"] = true
 	result["success"] = true
@@ -124,7 +124,7 @@ func ProcessSendMoney(w http.ResponseWriter, r *http.Request) map[string]interfa
 	return result
 }
 
-func ProcessDumpAllUsers(w http.ResponseWriter, r *http.Request) map[string]interface{} {
+func (rh *RequestHandler) ProcessDumpAllUsers() map[string]interface{} {
 	result := make(map[string]interface{})
 	result["AllUsers"] = true
 	result["Putin"] = 555
@@ -140,9 +140,20 @@ func MakeHandlerMarshalErrorJson() []byte {
 
 var handlerMarshalErrorJson = MakeHandlerMarshalErrorJson()
 
+type RequestHandler struct {
+	qid  string
+	resp http.ResponseWriter
+	req  *http.Request
+}
+
 func ApiV1Handler(w http.ResponseWriter, r *http.Request) {
 	answer := make(map[string]interface{})
 	qid := GenQID()
+	rh := RequestHandler{
+		qid:  qid,
+		resp: w,
+		req:  r,
+	}
 	defer func() {
 		answer["qid"] = qid
 		serJson, err := json.MarshalIndent(answer, "", "    ")
@@ -154,21 +165,24 @@ func ApiV1Handler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	r.ParseForm()
+	log.Printf("[QID=%s] Query: %s\n", qid, r.RequestURI)
 	qTypeStr := r.FormValue("query_type")
 	qtype := QTypeFromString(qTypeStr)
 	switch qtype {
 	case CreateMember:
-		answer = ProcessCreateMember(w, r)
+		answer = rh.ProcessCreateMember()
 	case DumpUserInfo:
-		answer = ProcessDumpUserInfo(w, r)
+		answer = rh.ProcessDumpUserInfo()
 	case GetBalance:
-		answer = ProcessGetBalance(w, r)
+		answer = rh.ProcessGetBalance()
 	case SendMoney:
-		answer = ProcessSendMoney(w, r)
+		answer = rh.ProcessSendMoney()
 	case DumpAllUsers:
-		answer = ProcessDumpAllUsers(w, r)
+		answer = rh.ProcessDumpAllUsers()
 	default:
-		answer = WriteError(fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr), -2)
+		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
+		answer = WriteError(msg, -2)
+		log.Printf("[QID=%s] %s\n", qid, msg)
 		return
 	}
 }
@@ -179,19 +193,21 @@ type ApiRunner struct {
 }
 
 func (ar *ApiRunner) Start(c core.Components) error {
+
 	//ar.messageRouter = c["core.MessageRouter"].(*messagerouter.MessageRouter)
 
 	ar.server = &http.Server{Addr: ":" + fmt.Sprint(cmdParams.port)}
 	http.HandleFunc("/api/v1", ApiV1Handler)
 	go func() {
 		if err := ar.server.ListenAndServe(); err != nil {
-			log.Printf("Httpserver: ListenAndServe() error: %s", err)
+			log.Printf("Httpserver: ListenAndServe() error: %s\n", err)
 		}
 	}()
 	return nil
 }
 
 func (ar *ApiRunner) Stop() error {
+	log.Println("Shutting down server")
 	ar.server.Shutdown(nil)
 	return nil
 }
@@ -201,5 +217,6 @@ func main() {
 	api := ApiRunner{}
 	cs := core.Components{}
 	api.Start(cs)
-	time.Sleep(100 * time.Second)
+	time.Sleep(10 * time.Second)
+	api.Stop()
 }
