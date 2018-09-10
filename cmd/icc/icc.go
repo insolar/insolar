@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 
+	"github.com/insolar/insolar/cmd/icc/compile"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 )
@@ -35,6 +34,22 @@ func printUsage() {
 	fmt.Println(" proxy     generate contract's proxy")
 	fmt.Println(" compile   compile contract")
 	fmt.Println(" imports   rewrite imports")
+}
+
+type stringFlag struct {
+	value string
+}
+
+func (r *stringFlag) String() string {
+	return r.value
+}
+func (r *stringFlag) Set(arg string) error {
+	r.value = arg
+	return nil
+}
+
+func (r *stringFlag) Type() string {
+	return "string"
 }
 
 type outputFlag struct {
@@ -128,7 +143,7 @@ func main() {
 		}
 	case "compile":
 		fs := flag.NewFlagSet("compile", flag.ExitOnError)
-		output := newOutputFlag()
+		output := &stringFlag{}
 		fs.VarP(output, "output", "o", "output directory")
 		name := newOutputFlag()
 		fs.VarP(name, "name", "n", "contract's file name")
@@ -137,23 +152,9 @@ func main() {
 			panic(err)
 		}
 
-		dstDir := output.String() + "/plugins/"
-		err = os.MkdirAll(dstDir, 0777)
+		err = compile.Compile(output.String(), name.String())
 		if err != nil {
 			panic(err)
-		}
-
-		origGoPath, err := testutil.ChangeGoPath(output.String())
-		if err != nil {
-			panic(err)
-		}
-		defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
-
-		//contractPath := root + "/src/contract/" + name + "/main.go"
-
-		out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name.String()+".so", "contract/"+name.String()).CombinedOutput()
-		if err != nil {
-			panic(errors.Wrap(err, "can't build contract: "+string(out)))
 		}
 	default:
 		printUsage()

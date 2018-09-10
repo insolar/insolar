@@ -22,6 +22,8 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/insolar/insolar/cmd/icc/compile"
+	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -244,32 +246,15 @@ func generateContractProxy(root string, name string) error {
 
 	contractPath := root + "/src/contract/" + name + "/main.go"
 
-	out, err := exec.Command(icc, "proxy", "-o", dstDir+"/main.go", "--code-reference", "Class"+name, contractPath).CombinedOutput()
+	file, err := os.Create(dstDir + "/main.go")
 	if err != nil {
-		return errors.Wrap(err, "can't generate proxy: "+string(out))
+		return errors.Wrap(err, "Cannot create proxy file")
 	}
-	return nil
-}
+	defer file.Close()
+	err = preprocessor.GenerateContractProxy(contractPath, "Class"+name, file)
 
-func buildContractPlugin(root string, name string) error {
-	dstDir := root + "/plugins/"
-
-	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
-		return err
-	}
-
-	origGoPath, err := testutil.ChangeGoPath(root)
-	if err != nil {
-		return err
-	}
-	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
-
-	//contractPath := root + "/src/contract/" + name + "/main.go"
-
-	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", "contract/"+name).CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, "can't build contract: "+string(out))
+		return errors.Wrap(err, "can't generate proxy")
 	}
 	return nil
 }
@@ -278,9 +263,15 @@ func generateContractWrapper(root string, name string) error {
 	contractPath := root + "/src/contract/" + name + "/main.go"
 	wrapperPath := root + "/src/contract/" + name + "/main_wrapper.go"
 
-	out, err := exec.Command(icc, "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
+	file, err := os.Create(wrapperPath)
 	if err != nil {
-		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"': "+string(out))
+		return errors.Wrap(err, "Cannot create proxy file")
+	}
+	defer file.Close()
+	err = preprocessor.GenerateContractWrapper(contractPath, file)
+
+	if err != nil {
+		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"'")
 	}
 	return nil
 }
@@ -298,7 +289,7 @@ func buildContracts(root string, names ...string) error {
 	}
 
 	for _, name := range names {
-		err := buildContractPlugin(root, name)
+		err := compile.Compile(root, name)
 		if err != nil {
 			return err
 		}
