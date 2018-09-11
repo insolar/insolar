@@ -105,38 +105,13 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 	})
 }
 
-func TestLedgerArtifactManager_ActivateClass_VerifiesRecord(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-
-	_, err := td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(),
-	)
-	assert.NotNil(t, err)
-	notCodeRef, _ := td.db.SetRecord(&record.ClassActivateRecord{})
-	_, err = td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notCodeRef.CoreRef(),
-	)
-	assert.NotNil(t, err)
-}
-
 func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
-	codeRef, _ := td.db.SetRecord(&record.CodeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(),
-				},
-			},
-		},
-	})
 	activateCoreRef, err := td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *codeRef.CoreRef(),
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(),
 	)
 	activateRef := record.Core2Reference(*activateCoreRef)
 	assert.Nil(t, err)
@@ -151,7 +126,6 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 				},
 			},
 		},
-		CodeRecord: *codeRef,
 	})
 }
 
@@ -325,8 +299,8 @@ func TestLedgerArtifactManager_ActivateObj_VerifiesRecord(t *testing.T) {
 	)
 	assert.NotNil(t, err)
 	notClassRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
-	_, err = td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notClassRef.CoreRef(),
+	_, err = td.manager.ActivateObj(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notClassRef.CoreRef(), *genRandomRef().CoreRef(), []byte{},
 	)
 	assert.NotNil(t, err)
 }
@@ -393,9 +367,17 @@ func TestLedgerArtifactManager_ActivateObjDelegate_VerifiesRecord(t *testing.T) 
 		[]byte{},
 	)
 	assert.NotNil(t, err)
-	notClassRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
-	_, err = td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notClassRef.CoreRef(),
+	notClassRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	_, err = td.manager.ActivateObjDelegate(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notClassRef.CoreRef(), *notClassRef.CoreRef(), []byte{},
 	)
 	assert.NotNil(t, err)
 }

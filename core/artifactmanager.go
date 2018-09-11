@@ -69,7 +69,7 @@ type ArtifactManager interface {
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 	//
 	// Activation reference will be this class'es identifier and referred as "class head".
-	ActivateClass(domain, request, code RecordRef) (*RecordRef, error)
+	ActivateClass(domain, request RecordRef) (*RecordRef, error)
 
 	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
 	// the class. If class is already deactivated, an error should be returned.

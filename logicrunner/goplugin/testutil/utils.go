@@ -247,7 +247,7 @@ func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor,
 }
 
 // ActivateClass implementation for tests
-func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordRef, error) {
+func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef) (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
@@ -347,7 +347,9 @@ func AMPublishCode(
 	)
 	assert.NoError(t, err, "create code on ledger")
 
-	classRef, err = am.ActivateClass(domain, request, *codeRef)
+	classRef, err = am.ActivateClass(domain, request)
+	assert.NoError(t, err, "create template for contract data")
+	_, err = am.UpdateClass(domain, request, *classRef, *codeRef, nil)
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, classRef, err

@@ -206,17 +206,12 @@ func (m *LedgerArtifactManager) DeployCode(
 //
 // Activation reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	domain, request, code core.RecordRef,
+	domain, request core.RecordRef,
 ) (*core.RecordRef, error) {
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
-	codeRef := record.Core2Reference(code)
 
 	err := m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
-	_, err = m.getCodeRecord(m.db, codeRef)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +225,6 @@ func (m *LedgerArtifactManager) ActivateClass(
 				},
 			},
 		},
-		CodeRecord: codeRef,
 	}
 
 	var classRef *record.Reference
