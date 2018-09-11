@@ -19,10 +19,13 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"os/exec"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
+	"github.com/prometheus/common/log"
 	flag "github.com/spf13/pflag"
 )
 
@@ -156,21 +159,56 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+	// use compile <smart-contract-file> [<output-directory>]
 	case "compile":
-		fs := flag.NewFlagSet("compile", flag.ExitOnError)
-		output := &stringFlag{}
-		fs.VarP(output, "output", "o", "output directory")
-		name := newOutputFlag()
-		fs.VarP(name, "name", "n", "contract's file name")
-		err := fs.Parse(os.Args[2:])
+		parsed, err := preprocessor.ParseFile(os.Args[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// make temporary dir
+		tmpDir, err := ioutil.TempDir("", "test-")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer os.RemoveAll(tmpDir) // nolint: errcheck
+
+		name := preprocessor.GetContractName(parsed)
+
+		contract, err := os.Create(tmpDir + "/" + name + ".go")
+		if err != nil {
+			panic(err)
+		}
+		defer contract.Close()
+
+		preprocessor.RewriteContractPackage(parsed, contract)
+
+		wrapper, err := os.Create(tmpDir + "/" + name + ".wrapper.go")
+		if err != nil {
+			panic(err)
+		}
+		defer wrapper.Close()
+
+		err = preprocessor.GenerateContractWrapper(parsed, wrapper)
 		if err != nil {
 			panic(err)
 		}
 
-		err = preprocessor.Compile(output.String(), name.String())
-		if err != nil {
-			panic(err)
+		var dir string
+		if len(os.Args) > 3 {
+			dir = os.Args[3]
+		} else {
+			dir, err = os.Getwd()
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
+		os.Chdir(tmpDir)
+		out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dir+"/"+name+".so").CombinedOutput()
+		if err != nil {
+			log.Fatal(errors.Wrap(err, "can't build contract: "+string(out)))
+		}
+
 	default:
 		printUsage()
 		fmt.Printf("\n\n%q is not valid command.\n", os.Args[1])

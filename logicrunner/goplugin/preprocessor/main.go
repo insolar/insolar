@@ -497,3 +497,12 @@ func Compile(output string, name string) error {
 	}
 	return nil
 }
+
+func GetContractName(p *ParsedFile) string {
+	return p.node.Name.Name
+}
+
+func RewriteContractPackage(p *ParsedFile, w io.Writer) {
+	p.node.Name.Name = "main"
+	printer.Fprint(w, p.fileSet, p.node)
+}
