@@ -16,12 +16,12 @@
 
 package pulsar
 
-//Base data object which contains info about current pulsar
-type Pulsar struct {
-	Id      string
-	Address string
+//Ba
+type Pulse struct {
+	PulseNumber uint64
+	Entropy     [8]byte
 }
 
-func NewPulsar(id string, address string) *Pulsar {
-	return &Pulsar{Id: id, Address: address}
+func NewPulse() *Pulse {
+	return &Pulse{}
 }
