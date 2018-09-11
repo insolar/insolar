@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -96,33 +95,13 @@ func (b *Hello) String() string {
 
 	_, res, err := gp.CallMethod(
 		*cb.Codes["hello"],
-		mustEncodeCBOR(t, &struct{}{}),
+		testutil.CBORMarshal(t, &struct{}{}),
 		"String",
-		mustEncodeCBOR(t, []interface{}{}),
+		testutil.CBORMarshal(t, []interface{}{}),
 	)
 	if err != nil {
 		panic(err)
 	}
-	resParsed := mustDecodeCBOR(t, res)
+	resParsed := testutil.CBORUnMarshalToSlice(t, res)
 	assert.Equal(t, "Hello, Go is there!", resParsed[0])
-}
-
-func mustDecodeCBOR(t *testing.T, in []byte) []interface{} {
-	ch := new(codec.CborHandle)
-	var resParsed []interface{}
-	err := codec.NewDecoderBytes(in, ch).Decode(&resParsed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return resParsed
-}
-
-func mustEncodeCBOR(t *testing.T, in interface{}) []byte {
-	ch := new(codec.CborHandle)
-	var data []byte
-	err := codec.NewEncoderBytes(&data, ch).Encode(in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return data
 }
