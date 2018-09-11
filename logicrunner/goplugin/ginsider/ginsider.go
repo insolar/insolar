@@ -229,7 +229,7 @@ func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 		return "", err
 	}
 
-	log.Debugf("obtaining plugin %q", ref)
+	log.Debugf("obtaining code %q", ref)
 	res := rpctypes.UpGetCodeResp{}
 	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Reference: ref}, &res)
 	if err != nil {
