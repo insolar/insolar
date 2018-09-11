@@ -9,7 +9,7 @@ Package provides configuration params for all Insolar components and helper for 
 ### Configuration
 
 Configuration struct is a root registry for all components config.
-It provides constructor method NewConfiguration() which creates new instance of configuration object filled with default values.
+It provides constructor method `NewConfiguration()` which creates new instance of configuration object filled with default values.
 
 Each root level Insolar component has a constructor with config as argument.
 Each components should have its own config struct with the same name in this package.
