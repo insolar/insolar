@@ -19,7 +19,9 @@ package testutil
 import (
 	"crypto/rand"
 	"go/build"
+	"io/ioutil"
 	"os"
+	"os/exec"
 
 	"github.com/pkg/errors"
 
@@ -218,7 +220,7 @@ func (t *TestArtifactManager) GetLatestObj(object core.RecordRef) (core.ObjectDe
 }
 
 // GetObjChildren implementation for tests
-func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) (core.RefIterator, error) {
 	panic("not implemented")
 }
 
@@ -234,7 +236,16 @@ func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.Re
 
 // DeployCode implementation for tests
 func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, codeMap map[core.MachineType][]byte) (*core.RecordRef, error) {
-	panic("not implemented")
+	ref, err := randomRef()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to generate ref")
+	}
+	t.Codes[*ref] = &TestCodeDescriptor{
+		ARef:         ref,
+		ACode:        codeMap[core.MachineTypeGoPlugin],
+		AMachineType: core.MachineTypeGoPlugin,
+	}
+	return ref, nil
 }
 
 // GetCode implementation for tests
@@ -248,7 +259,15 @@ func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor,
 
 // ActivateClass implementation for tests
 func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef) (*core.RecordRef, error) {
-	panic("not implemented")
+	ref, err := randomRef()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to generate ref")
+	}
+	t.Classes[*ref] = &TestClassDescriptor{
+		AM:   t,
+		ARef: ref,
+	}
+	return ref, nil
 }
 
 // DeactivateClass implementation for tests
@@ -258,7 +277,12 @@ func (t *TestArtifactManager) DeactivateClass(domain core.RecordRef, request cor
 
 // UpdateClass implementation for tests
 func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordRef, error) {
-	panic("not implemented")
+	classDesc, ok := t.Classes[class]
+	if !ok {
+		return nil, errors.New("wrong class")
+	}
+	classDesc.ACode = &code
+	return randomRef()
 }
 
 func randomRef() (*core.RecordRef, error) {
@@ -328,7 +352,7 @@ func CBORUnMarshal(t *testing.T, data []byte) interface{} {
 	return ret
 }
 
-// Publish code on ledger
+// AMPublishCode publishes code on ledger
 func AMPublishCode(
 	t *testing.T,
 	am core.ArtifactManager,
@@ -353,4 +377,148 @@ func AMPublishCode(
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, classRef, err
+}
+
+// ContractsBuilder for tests
+type ContractsBuilder struct {
+	root string
+
+	ArtifactManager core.ArtifactManager
+	IccPath         string
+	Classes         map[string]*core.RecordRef
+	Codes           map[string]*core.RecordRef
+}
+
+// NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
+// artifact manager, ...
+func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
+	return &ContractsBuilder{ArtifactManager: am, IccPath: icc}
+}
+
+// Build ...
+func (cb *ContractsBuilder) Build(contracts map[string]string) error {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	if err != nil {
+		return err
+	}
+	cb.root = tmpDir
+	defer os.RemoveAll(cb.root) // nolint: errcheck
+
+	cb.Classes = make(map[string]*core.RecordRef)
+	for name := range contracts {
+		class, err := cb.ArtifactManager.ActivateClass(
+			core.RecordRef{}, core.RecordRef{},
+		)
+		if err != nil {
+			return err
+		}
+
+		cb.Classes[name] = class
+	}
+
+	for name, code := range contracts {
+		err := WriteFile(cb.root+"/src/contract/"+name+"/", "main.go", code)
+		if err != nil {
+			return err
+		}
+		err = cb.proxy(name)
+		if err != nil {
+			return err
+		}
+		err = cb.wrapper(name)
+		if err != nil {
+			return err
+		}
+	}
+
+	cb.Codes = make(map[string]*core.RecordRef)
+	for name := range contracts {
+		err := cb.plugin(name)
+		if err != nil {
+			return err
+		}
+
+		pluginBinary, err := ioutil.ReadFile(cb.root + "/plugins/" + name + ".so")
+		if err != nil {
+			return err
+		}
+
+		code, err := cb.ArtifactManager.DeployCode(
+			core.RecordRef{}, core.RecordRef{},
+			map[core.MachineType][]byte{core.MachineTypeGoPlugin: pluginBinary},
+		)
+		if err != nil {
+			return err
+		}
+		cb.Codes[name] = code
+
+		_, err = cb.ArtifactManager.UpdateClass(
+			core.RecordRef{}, core.RecordRef{},
+			*cb.Classes[name],
+			*code,
+			[]core.RecordRef{},
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (cb *ContractsBuilder) proxy(name string) error {
+	dstDir := cb.root + "/src/contract-proxy/" + name
+
+	err := os.MkdirAll(dstDir, 0777)
+	if err != nil {
+		return err
+	}
+
+	contractPath := cb.root + "/src/contract/" + name + "/main.go"
+
+	out, err := exec.Command(
+		cb.IccPath, "proxy",
+		"-o", dstDir+"/main.go",
+		"--code-reference", cb.Classes[name].String(),
+		contractPath,
+	).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "can't generate proxy: "+string(out))
+	}
+	return nil
+}
+
+func (cb *ContractsBuilder) wrapper(name string) error {
+	contractPath := cb.root + "/src/contract/" + name + "/main.go"
+	wrapperPath := cb.root + "/src/contract/" + name + "/main_wrapper.go"
+
+	out, err := exec.Command(cb.IccPath, "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"': "+string(out))
+	}
+	return nil
+}
+
+// Plugin ...
+func (cb *ContractsBuilder) plugin(name string) error {
+	dstDir := cb.root + "/plugins/"
+
+	err := os.MkdirAll(dstDir, 0777)
+	if err != nil {
+		return err
+	}
+
+	origGoPath, err := ChangeGoPath(cb.root)
+	if err != nil {
+		return err
+	}
+	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
+
+	//contractPath := root + "/src/contract/" + name + "/main.go"
+
+	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", "contract/"+name).CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "can't build contract: "+string(out))
+	}
+	return nil
 }

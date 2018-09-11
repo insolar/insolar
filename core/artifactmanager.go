@@ -48,7 +48,7 @@ type ArtifactManager interface {
 	GetLatestObj(head RecordRef) (ObjectDescriptor, error)
 
 	// GetObjChildren returns provided object's children references.
-	GetObjChildren(head RecordRef) ([]RecordRef, error)
+	GetObjChildren(head RecordRef) (RefIterator, error)
 
 	// GetObjDelegate returns provided object's delegate reference for provided class.
 	//
@@ -150,4 +150,9 @@ type ObjectDescriptor interface {
 
 	// ClassDescriptor returns descriptor for fetching object's class data.
 	ClassDescriptor() (ClassDescriptor, error)
+}
+
+type RefIterator interface {
+	Next() (RecordRef, error)
+	HasNext() bool
 }
