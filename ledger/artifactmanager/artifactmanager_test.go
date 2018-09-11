@@ -138,11 +138,12 @@ func TestLedgerArtifactManager_ActivateClass_VerifiesRecord(t *testing.T) {
 	defer cleaner()
 
 	_, err := td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(), []byte{})
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(),
+	)
 	assert.NotNil(t, err)
 	notCodeRef, _ := td.db.SetRecord(&record.ClassActivateRecord{})
 	_, err = td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notCodeRef.CoreRef(), []byte{},
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notCodeRef.CoreRef(),
 	)
 	assert.NotNil(t, err)
 }
@@ -152,7 +153,6 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
-	memory := []byte{1, 2, 3}
 	codeRef, _ := td.db.SetRecord(&record.CodeRecord{
 		StorageRecord: record.StorageRecord{
 			StatefulResult: record.StatefulResult{
@@ -163,7 +163,7 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 		},
 	})
 	activateCoreRef, err := td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *codeRef.CoreRef(), memory,
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *codeRef.CoreRef(),
 	)
 	activateRef := record.Core2Reference(*activateCoreRef)
 	assert.Nil(t, err)
@@ -178,8 +178,7 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 				},
 			},
 		},
-		CodeRecord:    *codeRef,
-		DefaultMemory: memory,
+		CodeRecord: *codeRef,
 	})
 }
 
@@ -354,7 +353,8 @@ func TestLedgerArtifactManager_ActivateObj_VerifiesRecord(t *testing.T) {
 	assert.NotNil(t, err)
 	notClassRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
 	_, err = td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notClassRef.CoreRef(), []byte{})
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notClassRef.CoreRef(),
+	)
 	assert.NotNil(t, err)
 }
 
@@ -422,7 +422,8 @@ func TestLedgerArtifactManager_ActivateObjDelegate_VerifiesRecord(t *testing.T) 
 	assert.NotNil(t, err)
 	notClassRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
 	_, err = td.manager.ActivateClass(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notClassRef.CoreRef(), []byte{})
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notClassRef.CoreRef(),
+	)
 	assert.NotNil(t, err)
 }
 
@@ -617,81 +618,6 @@ func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
 			AmendedRecord: *objRef,
 		},
 		NewMemory: memory,
-	})
-}
-
-func TestLedgerArtifactManager_AppendObjDelegate_VerifiesRecord(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-
-	_, err := td.manager.AppendObjDelegate(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(), nil,
-	)
-	assert.NotNil(t, err)
-	notObjRef, _ := td.db.SetRecord(&record.CodeRecord{})
-	_, err = td.manager.AppendObjDelegate(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *notObjRef.CoreRef(), nil,
-	)
-	assert.NotNil(t, err)
-}
-
-func TestLedgerArtifactManager_AppendObjDelegate_VerifiesClassIsActive(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-
-	objRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
-	deactivateRef, _ := td.db.SetRecord(&record.DeactivationRecord{})
-	td.db.SetObjectIndex(objRef, &index.ObjectLifeline{
-		LatestStateRef: *deactivateRef,
-	})
-	_, err := td.manager.AppendObjDelegate(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *objRef.CoreRef(), nil,
-	)
-	assert.NotNil(t, err)
-}
-
-func TestLedgerArtifactManager_AppendObjDelegate_CreatesCorrectRecord(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-
-	objRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(),
-				},
-			},
-		},
-	})
-	td.db.SetObjectIndex(objRef, &index.ObjectLifeline{
-		LatestStateRef: *objRef,
-	})
-	memory := []byte{1, 2, 3}
-	appendCoreRef, err := td.manager.AppendObjDelegate(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *objRef.CoreRef(), memory,
-	)
-	assert.Nil(t, err)
-	appendRef := record.Core2Reference(*appendCoreRef)
-	appendRec, _ := td.db.GetRecord(&appendRef)
-	objIndex, err := td.db.GetObjectIndex(objRef)
-	assert.NoError(t, err)
-	assert.Equal(t, objIndex.AppendRefs, []record.Reference{appendRef})
-	assert.Nil(t, err)
-	assert.Equal(t, appendRec, &record.ObjectAppendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  *td.domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
-			HeadRecord:    *objRef,
-			AmendedRecord: *objRef,
-		},
-		AppendMemory: memory,
 	})
 }
 
