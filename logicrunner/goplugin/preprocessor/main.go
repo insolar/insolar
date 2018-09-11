@@ -41,6 +41,7 @@ import (
 var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+var corePath = "github.com/insolar/insolar/core"
 
 type ParsedFile struct {
 	name    string
@@ -421,6 +422,7 @@ func generateMethodsProxies(parsed *ParsedFile) ([]map[string]interface{}, map[s
 
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
+	imports[fmt.Sprintf(`"%s"`, corePath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
 		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
 		extendImportsMap(parsed, method.Type.Params, imports)
