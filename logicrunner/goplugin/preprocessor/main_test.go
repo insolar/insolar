@@ -18,6 +18,7 @@ package preprocessor
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -300,6 +301,7 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 
 	var bufProxy bytes.Buffer
 	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	fmt.Println(bufProxy.String())
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), "var a0 int")
 	assert.Contains(t, bufProxy.String(), "resList[0] = a0")
