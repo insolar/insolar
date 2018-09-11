@@ -177,13 +177,14 @@ func processRPC(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, ms
 func processRelay(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	var err error
 	var state relay.State
+	var packet1 *packet.Packet
 	if !hostHandler.HostIsAuthenticated(msg.Sender.ID.KeyString()) {
 		log.Print("relay request from unknown host rejected")
 		response := &packet.ResponseRelay{
 			State: relay.NoAuth,
 		}
 
-		return packetBuilder.Response(response).Build(), nil
+		packet1, err = packetBuilder.Response(response).Build(), nil
 	} else {
 		data := msg.Data.(*packet.RequestRelay)
 		hostHandler.AddHost(ctx, routing.NewRouteHost(msg.Sender))
@@ -202,11 +203,13 @@ func processRelay(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		if err != nil {
 			state = relay.Error
 		}
+
+		response := &packet.ResponseRelay{
+			State: state,
+		}
+		packet1, err = packetBuilder.Response(response).Build(), nil
 	}
-	response := &packet.ResponseRelay{
-		State: state,
-	}
-	return packetBuilder.Response(response).Build(), nil
+	return packet1, err
 }
 
 func processAuthentication(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
