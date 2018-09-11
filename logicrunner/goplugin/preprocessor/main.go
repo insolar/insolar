@@ -477,7 +477,7 @@ func rewriteImports(p *ParsedFile) error {
 }
 
 func Compile(output string, name string) error {
-	dstDir := output + "/plugins/"
+	dstDir := output + "/plugins"
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
 		return err
@@ -491,7 +491,7 @@ func Compile(output string, name string) error {
 
 	//contractPath := root + "/src/contract/" + name + "/main.go"
 
-	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", name).CombinedOutput()
+	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", "contract/"+name).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))
 	}
