@@ -16,6 +16,10 @@
 
 package configuration
 
+import (
+	"fmt"
+)
+
 type ApiRunner struct {
 	Port     uint
 	Location string
@@ -26,4 +30,9 @@ func NewApiRunner() *ApiRunner {
 		Port:     8080,
 		Location: "/api/v1",
 	}
+}
+
+func (ar *ApiRunner) String() string {
+	res := fmt.Sprintln("Port ->", ar.Port, ", Location ->", ar.Location)
+	return res
 }

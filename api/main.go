@@ -149,6 +149,8 @@ func (ar *ApiRunner) Start(c core.Components) error {
 
 	fw := WrapApiV1Handler(ar.messageRouter)
 	http.HandleFunc(ar.cfg.Location, fw)
+	log.Println("Starting ApiRunner ...")
+	log.Println("Config: ", ar.cfg)
 	go func() {
 		if err := ar.server.ListenAndServe(); err != nil {
 			log.Printf("Httpserver: ListenAndServe() error: %s\n", err)
