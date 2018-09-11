@@ -57,7 +57,6 @@ func (w *Wallet) Transfer(amount uint, to core.RecordRef) {
 }
 
 func (w *Wallet) Accept(a *allowance.Allowance) {
-	// w.balance += uint(100)
 	w.balance += a.TakeAmount()
 }
 

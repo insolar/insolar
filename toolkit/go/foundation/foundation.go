@@ -122,7 +122,6 @@ func SaveToLedger(contract BaseContractInterface, class core.RecordRef) core.Rec
 		Class: class,
 	})
 	FakeLedger[key.String()] = contract.(ProxyInterface)
-	key.String()
 	return core.String2Ref(base58.Encode([]byte(key.String())))
 }
 
