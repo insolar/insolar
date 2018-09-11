@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -112,7 +113,7 @@ func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.
 }
 
 // GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
-func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hostnetwork.Context) {
+func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hosthandler.Context) {
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
 
@@ -160,7 +161,7 @@ func (network *ServiceNetwork) listen() {
 	}()
 }
 
-func createContext(dht *hostnetwork.DHT) hostnetwork.Context {
+func createContext(dht *hostnetwork.DHT) hosthandler.Context {
 
 	ctx, err := hostnetwork.NewContextBuilder(dht).SetDefaultHost().Build()
 	if err != nil {

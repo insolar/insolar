@@ -25,6 +25,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/servicenetwork"
 )
 
@@ -72,7 +73,7 @@ func repl(service *servicenetwork.ServiceNetwork) {
 	}
 }
 
-func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Context) {
 	if len(input) != 2 {
 		displayInteractiveHelp()
 		return
@@ -89,7 +90,7 @@ func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 	}
 }
 
-func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Context) {
 	hosts := dhtNetwork.NumHosts(ctx)
 	originID := dhtNetwork.GetOriginHost(ctx).ID
 	fmt.Println("======= Host info ======")
@@ -98,14 +99,14 @@ func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.C
 	fmt.Println("Address: " + service.GetAddress())
 }
 
-func doSendRelay(command, relayAddr string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doSendRelay(command, relayAddr string, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Context) {
 	err := hostnetwork.RelayRequest(dhtNetwork, ctx, command, relayAddr)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-func doRPC(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doRPC(input []string, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Context) {
 	if len(input) < 2 || len(input[0]) == 0 || len(input[1]) == 0 {
 		if len(input) > 0 && len(input[0]) > 0 {
 			displayInteractiveHelp()

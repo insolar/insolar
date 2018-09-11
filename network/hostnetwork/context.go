@@ -20,13 +20,9 @@ import (
 	"context"
 	"errors"
 
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 )
-
-// Context type is localized for future purposes.
-// Network Host can have multiple IDs, but each action must be executed with only one ID.
-// Context is used in all actions to select specific ID to work with.
-type Context context.Context
 
 type ctxKey string
 
@@ -38,7 +34,7 @@ const (
 // ContextBuilder allows to lazy configure and build new Context.
 type ContextBuilder struct {
 	dht     *DHT
-	actions []func(ctx Context) (Context, error)
+	actions []func(ctx hosthandler.Context) (hosthandler.Context, error)
 }
 
 // NewContextBuilder creates new ContextBuilder.
@@ -49,7 +45,7 @@ func NewContextBuilder(dht *DHT) ContextBuilder {
 }
 
 // Build builds and returns new Context.
-func (cb ContextBuilder) Build() (ctx Context, err error) {
+func (cb ContextBuilder) Build() (ctx hosthandler.Context, err error) {
 	ctx = context.Background()
 	for _, action := range cb.actions {
 		ctx, err = action(ctx)
@@ -62,7 +58,7 @@ func (cb ContextBuilder) Build() (ctx Context, err error) {
 
 // SetHostByID sets host id in Context.
 func (cb ContextBuilder) SetHostByID(hostID id.ID) ContextBuilder {
-	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
+	cb.actions = append(cb.actions, func(ctx hosthandler.Context) (hosthandler.Context, error) {
 		for index, id := range cb.dht.origin.IDs {
 			if hostID.KeyEqual(id.GetKey()) {
 				return context.WithValue(ctx, ctxTableIndex, index), nil
@@ -75,7 +71,7 @@ func (cb ContextBuilder) SetHostByID(hostID id.ID) ContextBuilder {
 
 // SetDefaultHost sets first host id in Context.
 func (cb ContextBuilder) SetDefaultHost() ContextBuilder {
-	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
+	cb.actions = append(cb.actions, func(ctx hosthandler.Context) (hosthandler.Context, error) {
 		return context.WithValue(ctx, ctxTableIndex, defaultHostID), nil
 	})
 	return cb

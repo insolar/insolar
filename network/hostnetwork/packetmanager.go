@@ -19,17 +19,18 @@ package hostnetwork
 import (
 	"log"
 
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
 // ParseIncomingPacket detects a packet type.
-func ParseIncomingPacket(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	return DispatchPacketType(dht, ctx, msg, packetBuilder)
+func ParseIncomingPacket(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+	return DispatchPacketType(hostHandler, ctx, msg, packetBuilder)
 }
 
 // BuildContext builds a context for packet.
-func BuildContext(cb ContextBuilder, msg *packet.Packet) Context {
-	var ctx Context
+func BuildContext(cb ContextBuilder, msg *packet.Packet) hosthandler.Context {
+	var ctx hosthandler.Context
 	var err error
 	if msg.Receiver.ID.GetKey() == nil {
 		ctx, err = cb.SetDefaultHost().Build()
