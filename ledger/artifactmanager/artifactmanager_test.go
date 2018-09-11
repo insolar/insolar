@@ -818,7 +818,13 @@ func TestLedgerArtifactManager_GetObjChildren_ReturnsCorrectRefs(t *testing.T) {
 	for _, r := range refs {
 		coreRefs = append(coreRefs, *r.CoreRef())
 	}
-	children, err := td.manager.GetObjChildren(*objectRef.CoreRef())
+	iter, err := td.manager.GetObjChildren(*objectRef.CoreRef())
 	assert.NoError(t, err)
-	assert.Equal(t, coreRefs, children)
+	i := 0
+	for iter.HasNext() {
+		child, err := iter.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, coreRefs[i], child)
+		i++
+	}
 }

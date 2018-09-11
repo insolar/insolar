@@ -783,19 +783,14 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 }
 
 // GetObjChildren returns provided object's children references.
-func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) (core.RefIterator, error) {
 	objRef := record.Core2Reference(head)
 	_, _, objIndex, err := m.getActiveObject(m.db, objRef)
 	if err != nil {
 		return nil, err
 	}
 
-	childRefs := make([]core.RecordRef, 0, len(objIndex.Children))
-	for _, ch := range objIndex.Children {
-		childRefs = append(childRefs, *ch.CoreRef())
-	}
-
-	return childRefs, nil
+	return &RefIterator{elements: objIndex.Children}, nil
 }
 
 // GetObjDelegate returns provided object's delegate reference for provided class.
