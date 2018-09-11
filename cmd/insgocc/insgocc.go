@@ -38,22 +38,6 @@ func printUsage() {
 	fmt.Println(" imports   rewrite imports")
 }
 
-type stringFlag struct {
-	value string
-}
-
-func (r *stringFlag) String() string {
-	return r.value
-}
-func (r *stringFlag) Set(arg string) error {
-	r.value = arg
-	return nil
-}
-
-func (r *stringFlag) Type() string {
-	return "string"
-}
-
 type outputFlag struct {
 	path   string
 	writer io.Writer
@@ -163,13 +147,13 @@ func main() {
 	case "compile":
 		parsed, err := preprocessor.ParseFile(os.Args[2])
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 
 		// make temporary dir
 		tmpDir, err := ioutil.TempDir("", "test-")
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		defer os.RemoveAll(tmpDir) // nolint: errcheck
 
@@ -203,10 +187,14 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-		os.Chdir(tmpDir)
+		err = os.Chdir(tmpDir)
+		if err != nil {
+			panic(err)
+		}
+
 		out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dir+"/"+name+".so").CombinedOutput()
 		if err != nil {
-			log.Fatal(errors.Wrap(err, "can't build contract: "+string(out)))
+			panic(errors.Wrap(err, "can't build contract: "+string(out)))
 		}
 
 	default:
