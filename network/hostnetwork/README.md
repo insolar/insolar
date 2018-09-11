@@ -50,6 +50,24 @@ A set of data transferred by this module between hosts.
 ### [RPC](https://godoc.org/github.com/insolar/insolar/network/hostnetwork/rpc)
 RPC module allows higher level components to register methods that can be called by other network hosts.
 
+Configuration
+-----
+
+Default Host Network config:
+```yaml
+host:
+  transport:
+    protocol: UTP
+    address: 127.0.0.1:0
+    behindnat: true
+  bootstraphosts: []
+  isrelay: false
+```
+
+The listen port is zero(which means random) for unit test purpose.
+For host bootstrapping you need to fill bootstraphosts slice.
+See [godoc](https://godoc.org/github.com/insolar/insolar/configuration#HostNetwork) for more details.
+
 Usage
 -----
 
