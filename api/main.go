@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -31,16 +30,6 @@ import (
 	"github.com/insolar/insolar/messagerouter"
 	"github.com/pkg/errors"
 )
-
-type CmdParams struct {
-	port uint
-}
-
-var cmdParams CmdParams
-
-func ParseInputParams() {
-	flag.UintVar(&cmdParams.port, "port", 8080, "listening port")
-}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -172,7 +161,6 @@ func (ar *ApiRunner) Stop() error {
 }
 
 func main() {
-	ParseInputParams()
 	cfg := configuration.NewApiRunner()
 	api, err := NewApiRunner(cfg)
 	if err != nil {
