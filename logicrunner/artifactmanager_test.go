@@ -60,18 +60,17 @@ func (b *Hello) String() string {
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err, "Initialize runner")
 
-	am := l.GetManager()
-	lr.ArtifactManager = am
+	lr.ArtifactManager = l.GetManager()
+	assert.NoError(t, lr.Start(core.Components{
+		"core.Ledger":        l,
+		"core.MessageRouter": &testMessageRouter{},
+	}), "starting logicrunner")
+
 	mr := &testMessageRouter{LogicRunner: lr}
 
 	insiderStorage, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
-
-	// assert.NoError(t, lr.Start(core.Components{
-	// 	"core.Ledger":        l,
-	// 	"core.MessageRouter": &testMessageRouter{},
-	// }), "starting logicrunner")
 
 	gp, err := goplugin.NewGoPlugin(
 		&configuration.GoPlugin{
@@ -81,7 +80,7 @@ func (b *Hello) String() string {
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
-		am,
+		l.GetManager(),
 	)
 	assert.NoError(t, err)
 	defer gp.Stop()
@@ -89,7 +88,7 @@ func (b *Hello) String() string {
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
 	assert.NoError(t, err)
 
-	cb := testutil.NewContractBuilder(am, icc)
+	cb := testutil.NewContractBuilder(l.GetManager(), icc)
 	err = cb.Build(map[string]string{"hello": helloCode})
 	assert.NoError(t, err)
 
