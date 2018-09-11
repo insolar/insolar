@@ -17,34 +17,34 @@
 package hostnetwork
 
 import (
-	"bytes"
 	"log"
 	"time"
 
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/pkg/errors"
 )
 
-func handleRelayOwnership(dht *DHT, response *packet.ResponseRelayOwnership, target string) {
+func handleRelayOwnership(hostHandler hosthandler.HostHandler, response *packet.ResponseRelayOwnership, target string) {
 	if response.Accepted {
-		dht.Subnet.PossibleRelayIDs = append(dht.Subnet.PossibleRelayIDs, target)
+		hostHandler.AddPossibleRelayID(target)
 	}
 }
 
-func handleKnownOuterHosts(dht *DHT, ctx Context, response *packet.ResponseKnownOuterHosts, targetID string) error {
+func handleKnownOuterHosts(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, response *packet.ResponseKnownOuterHosts, targetID string) error {
 	var err error
-	if response.OuterHosts > dht.Subnet.HighKnownHosts.OuterHosts { // update data
-		dht.Subnet.HighKnownHosts.OuterHosts = response.OuterHosts
-		dht.Subnet.HighKnownHosts.ID = response.ID
+	if response.OuterHosts > hostHandler.GetOuterHostsCount() { // update data
+		hostHandler.SetOuterHostsCount(response.OuterHosts)
+		hostHandler.SetHighKnownHostID(response.ID)
 	}
-	if (response.OuterHosts > dht.Subnet.HighKnownHosts.SelfKnownOuterHosts) &&
-		(dht.proxy.ProxyHostsCount() == 0) {
-		err = AuthenticationRequest(dht, ctx, "begin", targetID)
+	if (response.OuterHosts > hostHandler.GetSelfKnownOuterHosts()) &&
+		(hostHandler.GetProxyHostsCount() == 0) {
+		err = AuthenticationRequest(hostHandler, ctx, "begin", targetID)
 		if err != nil {
 			return err
 		}
-		err = RelayRequest(dht, ctx, "start", targetID)
+		err = RelayRequest(hostHandler, ctx, "start", targetID)
 		if err != nil {
 			return err
 		}
@@ -52,16 +52,16 @@ func handleKnownOuterHosts(dht *DHT, ctx Context, response *packet.ResponseKnown
 	return nil
 }
 
-func handleRelayResponse(dht *DHT, ctx Context, response *packet.ResponseRelay, targetID string) error {
+func handleRelayResponse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, response *packet.ResponseRelay, targetID string) error {
 	var err error
 	switch response.State {
 	case relay.Stopped:
 		// stop use this address as relay
-		dht.proxy.RemoveProxyHost(targetID)
+		hostHandler.RemoveProxyHost(targetID)
 		err = nil
 	case relay.Started:
 		// start use this address as relay
-		dht.proxy.AddProxyHost(targetID)
+		hostHandler.AddProxyHost(targetID)
 		err = nil
 	case relay.NoAuth:
 		err = errors.New("unable to execute relay because this host not authenticated")
@@ -76,14 +76,14 @@ func handleRelayResponse(dht *DHT, ctx Context, response *packet.ResponseRelay, 
 	return err
 }
 
-func handleCheckOriginResponse(dht *DHT, response *packet.ResponseCheckOrigin, targetID string) {
-	if bytes.Equal(response.AuthUniqueKey, dht.Auth.SentKeys[targetID]) {
-		delete(dht.Auth.SentKeys, targetID)
-		dht.Auth.AuthenticatedHosts[targetID] = true
+func handleCheckOriginResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckOrigin, targetID string) {
+	if hostHandler.EqualAuthSentKey(targetID, response.AuthUniqueKey) {
+		hostHandler.RemoveAuthSentKeys(targetID)
+		hostHandler.SetAuthStatus(targetID, true)
 	}
 }
 
-func handleCheckNodePrivResponse(dht *DHT, response *packet.ResponseCheckNodePriv, toleKey string) error {
+func handleCheckNodePrivResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckNodePriv, toleKey string) error {
 	switch response.State {
 	case packet.Error:
 		return errors.New(response.Error)
@@ -96,12 +96,12 @@ func handleCheckNodePrivResponse(dht *DHT, response *packet.ResponseCheckNodePri
 	return nil
 }
 
-func handleAuthResponse(dht *DHT, response *packet.ResponseAuth, target string) error {
+func handleAuthResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuth, target string) error {
 	var err error
 	if (len(response.AuthUniqueKey) != 0) && response.Success {
-		dht.Auth.Mut.Lock()
-		defer dht.Auth.Mut.Unlock()
-		dht.Auth.ReceivedKeys[target] = response.AuthUniqueKey
+		// dht.Auth.Mut.Lock()
+		// defer dht.Auth.Mut.Unlock()
+		hostHandler.AddReceivedKey(target, response.AuthUniqueKey)
 		err = nil
 	} else {
 		if response.Success && (len(response.AuthUniqueKey) == 0) { // revoke success
@@ -116,9 +116,9 @@ func handleAuthResponse(dht *DHT, response *packet.ResponseAuth, target string) 
 	return err
 }
 
-func handleObtainIPResponse(dht *DHT, response *packet.ResponseObtainIP, targetID string) error {
+func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseObtainIP, targetID string) error {
 	if response.IP != "" {
-		dht.Subnet.SubnetIDs[response.IP] = append(dht.Subnet.SubnetIDs[response.IP], targetID)
+		hostHandler.AddSubnetID(response.IP, targetID)
 	} else {
 		return errors.New("received empty IP")
 	}
@@ -126,9 +126,9 @@ func handleObtainIPResponse(dht *DHT, response *packet.ResponseObtainIP, targetI
 }
 
 // RelayRequest sends relay request to target.
-func RelayRequest(dht *DHT, ctx Context, command, targetID string) error {
+func RelayRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, command, targetID string) error {
 	var typedCommand packet.CommandType
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
+	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
@@ -146,8 +146,8 @@ func RelayRequest(dht *DHT, ctx Context, command, targetID string) error {
 		err = errors.New("unknown command")
 		return err
 	}
-	request := packet.NewRelayPacket(typedCommand, dht.HtFromCtx(ctx).Origin, targetHost)
-	future, err := dht.transport.SendRequest(request)
+	request := packet.NewRelayPacket(typedCommand, hostHandler.HtFromCtx(ctx).Origin, targetHost)
+	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
 		log.Println(err.Error())
@@ -162,12 +162,12 @@ func RelayRequest(dht *DHT, ctx Context, command, targetID string) error {
 		}
 
 		response := rsp.Data.(*packet.ResponseRelay)
-		err = handleRelayResponse(dht, ctx, response, targetID)
+		err = handleRelayResponse(hostHandler, ctx, response, targetID)
 		if err != nil {
 			return err
 		}
 
-	case <-time.After(dht.options.PacketTimeout):
+	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
 		err = errors.New("timeout")
 		return err
@@ -176,8 +176,8 @@ func RelayRequest(dht *DHT, ctx Context, command, targetID string) error {
 	return nil
 }
 
-func sendRelayedRequest(dht *DHT, request *packet.Packet, ctx Context) {
-	_, err := dht.transport.SendRequest(request)
+func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet, ctx hosthandler.Context) {
+	_, err := hostHandler.SendRequest(request)
 	if err != nil {
 		log.Println(err)
 	}
