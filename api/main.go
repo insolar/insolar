@@ -160,14 +160,14 @@ func (ar *ApiRunner) Stop() error {
 	return nil
 }
 
-func main() {
-	cfg := configuration.NewApiRunner()
-	api, err := NewApiRunner(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cs := core.Components{}
-	api.Start(cs)
-	time.Sleep(60 * time.Second)
-	api.Stop()
-}
+// func main() {
+// 	cfg := configuration.NewApiRunner()
+// 	api, err := NewApiRunner(cfg)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	cs := core.Components{}
+// 	api.Start(cs)
+// 	time.Sleep(60 * time.Second)
+// 	api.Stop()
+// }
