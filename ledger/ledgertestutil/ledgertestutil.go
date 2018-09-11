@@ -14,27 +14,24 @@
  *    limitations under the License.
  */
 
-package core
+package ledgertestutil
 
-import "io"
+import (
+	"testing"
 
-// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
-type Arguments []byte
+	"github.com/stretchr/testify/assert"
 
-// Message is a routable packet, ATM just a method call
-type Message interface {
-	Serialize() (io.Reader, error)
-	GetReference() RecordRef
-}
+	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
+)
 
-// Response to a `Message`
-type Response struct {
-	Data   []byte
-	Result []byte
-	Error  error
-}
-
-// MessageRouter interface
-type MessageRouter interface {
-	Route(msg Message) (resp Response, err error)
+// TmpLedger crteates ledger on top of temporary database.
+// Returns *ledger.Ledger andh cleanup function.
+func TmpLedger(t *testing.T, dir string) (*ledger.Ledger, func()) {
+	db, dbcancel := storagetest.TmpDB(t, dir)
+	l, err := ledger.NewLedgerWithDB(db)
+	assert.NoError(t, err)
+	am := l.GetManager()
+	assert.NotNil(t, am)
+	return l, dbcancel
 }

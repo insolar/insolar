@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -229,7 +229,7 @@ func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 		return "", err
 	}
 
-	log.Debugf("obtaining plugin %q", ref)
+	log.Debugf("obtaining code %q", ref)
 	res := rpctypes.UpGetCodeResp{}
 	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Reference: ref}, &res)
 	if err != nil {

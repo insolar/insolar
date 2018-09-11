@@ -41,3 +41,6 @@ logicrunner/goplugin/preprocessor/preprocessor
 cmd/icc/icc
 cmd/insgocc/insgocc
 *_generated.go
+
+
+cmd/icc/icc

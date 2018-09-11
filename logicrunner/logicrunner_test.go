@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -39,6 +38,7 @@ var icc = "../cmd/insgocc/insgocc"
 
 func init() {
 	log.SetLevel(log.DebugLevel)
+	build()
 }
 
 func TestTypeCompatibility(t *testing.T) {
@@ -191,130 +191,17 @@ func buildPreprocessor() error {
 
 }
 
-func generateContractProxy(root string, name string) error {
-	dstDir := root + "/src/contract-proxy/" + name
-
-	err := os.MkdirAll(dstDir, 0777)
+func build() error {
+	err := buildInciderCLI()
 	if err != nil {
 		return err
 	}
 
-	contractPath := root + "/src/contract/" + name + "/main.go"
-
-	file, err := os.Create(dstDir + "/main.go")
-	if err != nil {
-		return errors.Wrap(err, "Cannot create proxy file")
-	}
-	defer file.Close()
-	parsed, err := preprocessor.ParseFile(contractPath)
-	if err != nil {
-		return errors.Wrap(err, "can't generate proxy")
-	}
-	err = preprocessor.GenerateContractProxy(parsed, "Class"+name, file)
-
-	if err != nil {
-		return errors.Wrap(err, "can't generate proxy")
-	}
-	return nil
-}
-
-func generateContractWrapper(root string, name string) error {
-	contractPath := root + "/src/contract/" + name + "/main.go"
-	wrapperPath := root + "/src/contract/" + name + "/main_wrapper.go"
-
-	file, err := os.Create(wrapperPath)
-	if err != nil {
-		return errors.Wrap(err, "Cannot create proxy file")
-	}
-	defer file.Close()
-	parsed, err := preprocessor.ParseFile(contractPath)
-	if err != nil {
-		return errors.Wrap(err, "can't generate wrapper")
-	}
-	err = preprocessor.GenerateContractWrapper(parsed, file)
-
-	if err != nil {
-		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"'")
-	}
-	return nil
-}
-
-func buildContracts(root string, contracts map[string]string) error {
-	for name, code := range contracts {
-		err := testutil.WriteFile(root+"/src/contract/"+name+"/", "main.go", code)
-		if err != nil {
-			return err
-		}
-		err = generateContractProxy(root, name)
-		if err != nil {
-			return err
-		}
-		err = generateContractWrapper(root, name)
-		if err != nil {
-			return err
-		}
-	}
-
-	for name := range contracts {
-		err := preprocessor.Compile(root, name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func suckInContracts(am *testutil.TestArtifactManager, root string, names ...string) {
-	for _, name := range names {
-		pluginBinary, err := ioutil.ReadFile(root + "/plugins/" + name + ".so")
-		if err != nil {
-			panic(err)
-		}
-
-		ref := core.String2Ref(name)
-		am.Codes[ref] = &testutil.TestCodeDescriptor{
-			ARef:         &ref,
-			ACode:        pluginBinary,
-			AMachineType: core.MachineTypeGoPlugin,
-		}
-	}
-}
-
-func setupContracts(contracts map[string]string) (string, error) {
-	err := buildInciderCLI()
-	if err != nil {
-		return "", err
-	}
-
 	err = buildPreprocessor()
 	if err != nil {
-		return "", err
+		return errors.Wrap(err, "can't generate proxy")
 	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	defer os.Chdir(cwd) // nolint: errcheck
-
-	tmpDir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		return "", err
-	}
-
-	err = buildContracts(tmpDir, contracts)
-	if err != nil {
-		return tmpDir, err
-	}
-
-	insiderStorage := tmpDir + "/insider-storage/"
-
-	err = os.MkdirAll(insiderStorage, 0777)
-	if err != nil {
-		return tmpDir, err
-	}
-
-	return tmpDir, nil
+	return nil
 }
 
 func TestContractCallingContract(t *testing.T) {
@@ -362,14 +249,6 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	tmpDir, err := setupContracts(map[string]string{"one": contractOneCode, "two": contractTwoCode})
-	if tmpDir != "" {
-		defer os.RemoveAll(tmpDir) // nolint: errcheck
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
 
@@ -377,12 +256,16 @@ func (r *Two) Hello(s string) string {
 	am := testutil.NewTestArtifactManager()
 	lr.ArtifactManager = am
 
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
 	gp, err := goplugin.NewGoPlugin(
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
-			RunnerCodePath: tmpDir + "/insider-storage/",
+			RunnerCodePath: insiderStorage,
 		},
 		mr,
 		am,
@@ -410,15 +293,11 @@ func (r *Two) Hello(s string) string {
 		panic(err)
 	}
 
-	suckInContracts(am, tmpDir, "one", "two")
+	cb := testutil.NewContractBuilder(am, icc)
+	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
 
-	codeRef := core.String2Ref("two")
-	am.Classes[core.String2Ref("Classtwo")] = &testutil.TestClassDescriptor{
-		AM:    am,
-		ACode: &codeRef,
-	}
-
-	_, res, err := gp.CallMethod(core.String2Ref("one"), data, "Hello", argsSerialized)
+	_, res, err := gp.CallMethod(*cb.Codes["one"], data, "Hello", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -476,14 +355,6 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	tmpDir, err := setupContracts(map[string]string{"one": contractOneCode, "two": contractTwoCode})
-	if tmpDir != "" {
-		defer os.RemoveAll(tmpDir) // nolint: errcheck
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
 
@@ -491,12 +362,16 @@ func (r *Two) Hello(s string) string {
 	am := testutil.NewTestArtifactManager()
 	lr.ArtifactManager = am
 
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
 	gp, err := goplugin.NewGoPlugin(
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
-			RunnerCodePath: tmpDir + "/insider-storage/",
+			RunnerCodePath: insiderStorage,
 		},
 		mr,
 		am,
@@ -524,15 +399,11 @@ func (r *Two) Hello(s string) string {
 		panic(err)
 	}
 
-	suckInContracts(am, tmpDir, "one", "two")
+	cb := testutil.NewContractBuilder(am, icc)
+	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
 
-	codeRef := core.String2Ref("two")
-	am.Classes[core.String2Ref("Classtwo")] = &testutil.TestClassDescriptor{
-		AM:    am,
-		ACode: &codeRef,
-	}
-
-	_, res, err := gp.CallMethod(core.String2Ref("one"), data, "Hello", argsSerialized)
+	_, res, err := gp.CallMethod(*cb.Codes["one"], data, "Hello", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
