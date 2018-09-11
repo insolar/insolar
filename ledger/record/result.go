@@ -148,7 +148,6 @@ type CodeRecord struct {
 
 	TargetedCode map[core.MachineType][]byte
 	SourceCode   string
-	Types        []Reference
 }
 
 // TypeRecord is a code interface declaration.

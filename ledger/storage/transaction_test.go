@@ -254,6 +254,5 @@ func TestStore_TransactionRetryOver(t *testing.T) {
 var keycounter int32
 
 func genuniqkey() []byte {
-	keycounter++
 	return []byte(fmt.Sprintf("k%v", atomic.AddInt32(&keycounter, 1)))
 }

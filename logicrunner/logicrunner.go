@@ -190,7 +190,7 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 
 	case *message.DelegateMessage:
 		// TODO: should be InjectDelegate
-		ref, err := lr.ArtifactManager.ActivateObj(
+		ref, err := lr.ArtifactManager.ActivateObjDelegate(
 			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
 		)
 		if err != nil {

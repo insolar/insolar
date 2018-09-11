@@ -216,30 +216,3 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{2}, mem)
 }
-
-func TestObjectDescriptor_GetDelegates(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareObjectDescriptorTestData(t)
-	defer cleaner()
-
-	appendRec1 := record.ObjectAppendRecord{AppendMemory: []byte{2}}
-	appendRec2 := record.ObjectAppendRecord{AppendMemory: []byte{3}}
-	appendRef1, _ := td.db.SetRecord(&appendRec1)
-	appendRef2, _ := td.db.SetRecord(&appendRec2)
-	idx := index.ObjectLifeline{
-		LatestStateRef: *td.objRef,
-		AppendRefs:     []record.Reference{*appendRef1, *appendRef2},
-	}
-	td.db.SetObjectIndex(td.objRef, &idx)
-
-	desc := ObjectDescriptor{
-		manager:       td.manager,
-		headRecord:    td.objRec,
-		stateRecord:   nil,
-		lifelineIndex: &idx,
-	}
-
-	appends, err := desc.GetDelegates()
-	assert.NoError(t, err)
-	assert.Equal(t, [][]byte{{2}, {3}}, appends)
-}
