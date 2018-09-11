@@ -44,6 +44,11 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
+	return NewLedgerWithDB(db)
+}
+
+// NewLedgerWithDB creates new ledger with preconfigured storage.DB instance.
+func NewLedgerWithDB(db *storage.DB) (*Ledger, error) {
 	manager, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
@@ -58,12 +63,11 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 		return nil, err
 	}
 
-	ledger := &Ledger{
+	return &Ledger{
 		db:          db,
 		manager:     manager,
 		coordinator: coordinator,
-	}
-	return ledger, nil
+	}, nil
 }
 
 // Start initializes external ledger dependencies.

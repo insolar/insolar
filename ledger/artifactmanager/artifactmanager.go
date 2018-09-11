@@ -174,7 +174,7 @@ func (m *LedgerArtifactManager) DeclareType(
 //
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
-	domain, request core.RecordRef, types []core.RecordRef, codeMap map[core.MachineType][]byte,
+	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
 ) (*core.RecordRef, error) {
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
@@ -182,19 +182,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	err := m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
-	}
-
-	typeRefs := make([]record.Reference, 0, len(types))
-	for _, tp := range types {
-		ref := record.Core2Reference(tp)
-		rec, tErr := m.db.GetRecord(&ref)
-		if tErr != nil {
-			return nil, errors.Wrap(tErr, "failed to retrieve type record")
-		}
-		if _, ok := rec.(*record.TypeRecord); !ok {
-			return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve type record")
-		}
-		typeRefs = append(typeRefs, ref)
 	}
 
 	rec := record.CodeRecord{
@@ -206,7 +193,6 @@ func (m *LedgerArtifactManager) DeployCode(
 				},
 			},
 		},
-		Types:        typeRefs,
 		TargetedCode: codeMap,
 	}
 	codeRef, err := m.db.SetRecord(&rec)
@@ -216,22 +202,16 @@ func (m *LedgerArtifactManager) DeployCode(
 	return codeRef.CoreRef(), nil
 }
 
-// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
-// and memory as the default memory for class objects.
+// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 //
 // Activation reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	domain, request, code core.RecordRef, memory []byte,
+	domain, request core.RecordRef,
 ) (*core.RecordRef, error) {
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
-	codeRef := record.Core2Reference(code)
 
 	err := m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
-	_, err = m.getCodeRecord(m.db, codeRef)
 	if err != nil {
 		return nil, err
 	}
@@ -245,8 +225,6 @@ func (m *LedgerArtifactManager) ActivateClass(
 				},
 			},
 		},
-		CodeRecord:    codeRef,
-		DefaultMemory: memory,
 	}
 
 	var classRef *record.Reference
@@ -612,9 +590,7 @@ func (m *LedgerArtifactManager) DeactivateObj(
 // UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
 // object. Provided memory well be the new object memory.
 //
-// Returned reference will be the latest object state (exact) reference. This will nullify all the object's append
-// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
-// required.
+// Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdateObj(
 	domain, request, obj core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
@@ -654,7 +630,6 @@ func (m *LedgerArtifactManager) UpdateObj(
 			return errors.Wrap(err, "failed to store record")
 		}
 		objIndex.LatestStateRef = *amendRef
-		objIndex.AppendRefs = []record.Reference{}
 		err = tx.SetObjectIndex(&objRef, objIndex)
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -668,66 +643,6 @@ func (m *LedgerArtifactManager) UpdateObj(
 	}
 
 	return amendRef.CoreRef(), nil
-}
-
-// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
-// of the object. Provided memory well be used as append delegate memory.
-//
-// Object's delegates will be provided by GetLatestObj. Any object update will nullify all the object's append
-// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
-// required.
-func (m *LedgerArtifactManager) AppendObjDelegate(
-	domain, request, obj core.RecordRef, memory []byte,
-) (*core.RecordRef, error) {
-	var err error
-	domainRef := record.Core2Reference(domain)
-	requestRef := record.Core2Reference(request)
-	objRef := record.Core2Reference(obj)
-
-	err = m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
-
-	var appendRef *record.Reference
-	err = m.db.Update(func(tx *storage.TransactionManager) error {
-		_, _, objIndex, err := m.getActiveObject(tx, objRef)
-		if err != nil {
-			return err
-		}
-
-		rec := record.ObjectAppendRecord{
-			AmendRecord: record.AmendRecord{
-				StatefulResult: record.StatefulResult{
-					ResultRecord: record.ResultRecord{
-						DomainRecord:  domainRef,
-						RequestRecord: requestRef,
-					},
-				},
-				HeadRecord:    objRef,
-				AmendedRecord: objIndex.LatestStateRef,
-			},
-			AppendMemory: memory,
-		}
-
-		appendRef, err = tx.SetRecord(&rec)
-		if err != nil {
-			return errors.Wrap(err, "failed to store record")
-		}
-		objIndex.AppendRefs = append(objIndex.AppendRefs, *appendRef)
-		err = tx.SetObjectIndex(&objRef, objIndex)
-		if err != nil {
-			return errors.Wrap(err, "failed to store lifeline index")
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return appendRef.CoreRef(), nil
 }
 
 // GetExactObj returns code and memory of provided object/class state. Deactivation records should be ignored
@@ -868,19 +783,14 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 }
 
 // GetObjChildren returns provided object's children references.
-func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) (core.RefIterator, error) {
 	objRef := record.Core2Reference(head)
 	_, _, objIndex, err := m.getActiveObject(m.db, objRef)
 	if err != nil {
 		return nil, err
 	}
 
-	childRefs := make([]core.RecordRef, 0, len(objIndex.Children))
-	for _, ch := range objIndex.Children {
-		childRefs = append(childRefs, *ch.CoreRef())
-	}
-
-	return childRefs, nil
+	return &RefIterator{elements: objIndex.Children}, nil
 }
 
 // GetObjDelegate returns provided object's delegate reference for provided class.

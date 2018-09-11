@@ -1,30 +1,18 @@
 package logicrunner
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger"
-	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/stretchr/testify/assert"
-	"github.com/ugorji/go/codec"
-)
 
-func TNewAmL(t *testing.T, dir string) (core.ArtifactManager, *ledger.Ledger) {
-	l, err := ledger.NewLedger(configuration.Ledger{
-		DataDirectory: dir,
-	})
-	assert.NoError(t, err)
-	am := l.GetManager()
-	assert.Equal(t, true, am != nil)
-	return am, l
-}
+	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+)
 
 func byteRecorRef(b byte) core.RecordRef {
 	var ref core.RecordRef
@@ -33,13 +21,10 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir) // nolint: errcheck
+	l, cleaner := ledgertestutil.TmpLedger(t, "")
+	defer cleaner()
 
-	am, l := TNewAmL(t, tmpDir)
+	am := l.GetManager()
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -48,36 +33,18 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, lr.Start(core.Components{
 		"core.Ledger":        l,
 		"core.MessageRouter": &testMessageRouter{},
-	}))
+	}), "starting logicrunner")
 
 	hw := helloworld.NewHelloWorld()
 
-	am.SetArchPref([]core.MachineType{0})
+	am.SetArchPref([]core.MachineType{core.MachineTypeBuiltin})
 
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
-	hwtype, err := am.DeclareType(domain, request, []byte{})
-	assert.NoError(t, err, "creating type on ledger")
-	coderef, err := am.DeployCode(
-		domain, request, []core.RecordRef{*hwtype}, map[core.MachineType][]byte{core.MachineTypeBuiltin: nil},
-	)
-	assert.NoError(t, err, "create code on ledger")
+	_, _, classRef, err := testutil.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 
-	ch := new(codec.CborHandle)
-	var data []byte
-	err = codec.NewEncoderBytes(&data, ch).Encode(hw)
-	assert.NoError(t, err, "serialise new helloworld")
-
-	classref, err := am.ActivateClass(domain, request, *coderef, data)
-	assert.NoError(t, err, "create template for contract data")
-
-	contract, err := am.ActivateObj(request, domain, *classref, *am.RootRef(), data)
-	assert.NoError(t, err, "create actual contract")
-
-	assert.Equal(t, true, contract != nil)
-
-	bi := lr.Executors[core.MachineTypeBuiltin].(*builtin.BuiltIn)
-	bi.Registry[coderef.String()] = bi.Registry[helloworld.CodeRef().String()]
+	contract, err := am.ActivateObj(request, domain, *classRef, *am.RootRef(), testutil.CBORMarshal(t, hw))
+	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
 	resp := lr.Execute(&message.CallMethodMessage{

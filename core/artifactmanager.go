@@ -48,7 +48,7 @@ type ArtifactManager interface {
 	GetLatestObj(head RecordRef) (ObjectDescriptor, error)
 
 	// GetObjChildren returns provided object's children references.
-	GetObjChildren(head RecordRef) ([]RecordRef, error)
+	GetObjChildren(head RecordRef) (RefIterator, error)
 
 	// GetObjDelegate returns provided object's delegate reference for provided class.
 	//
@@ -64,13 +64,12 @@ type ArtifactManager interface {
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate class or as migration code for an object.
-	DeployCode(domain, request RecordRef, types []RecordRef, codeMap map[MachineType][]byte) (*RecordRef, error)
+	DeployCode(domain, request RecordRef, codeMap map[MachineType][]byte) (*RecordRef, error)
 
-	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code
-	// and memory as the default memory for class objects.
+	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 	//
 	// Activation reference will be this class'es identifier and referred as "class head".
-	ActivateClass(domain, request, code RecordRef, memory []byte) (*RecordRef, error)
+	ActivateClass(domain, request RecordRef) (*RecordRef, error)
 
 	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
 	// the class. If class is already deactivated, an error should be returned.
@@ -103,18 +102,8 @@ type ArtifactManager interface {
 	// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
-	// Returned reference will be the latest object state (exact) reference. This will nullify all the object's append
-	// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
-	// required.
+	// Returned reference will be the latest object state (exact) reference.
 	UpdateObj(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
-
-	// AppendObjDelegate creates append object record in storage. Provided reference should be a reference to the head
-	// of the object. Provided memory well be used as append delegate memory.
-	//
-	// Object's delegates will be provided by GetLatestObj. Any object update will nullify all the object's append
-	// delegates. VM is responsible for collecting all appends and adding them to the new memory manually if its
-	// required.
-	AppendObjDelegate(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
@@ -161,4 +150,9 @@ type ObjectDescriptor interface {
 
 	// ClassDescriptor returns descriptor for fetching object's class data.
 	ClassDescriptor() (ClassDescriptor, error)
+}
+
+type RefIterator interface {
+	Next() (RecordRef, error)
+	HasNext() bool
 }

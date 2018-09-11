@@ -14,23 +14,24 @@
  *    limitations under the License.
  */
 
-package index
+package ledgertestutil
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
-// ClassLifeline represents meta information for record object
-type ClassLifeline struct {
-	LatestStateRef record.Reference   // Amend or activate record
-	AmendRefs      []record.Reference // ClassAmendRecord
-}
-
-// ObjectLifeline represents meta information for record object
-type ObjectLifeline struct {
-	ClassRef       record.Reference
-	LatestStateRef record.Reference   // Amend or activate record
-	Children       []record.Reference // ActivateObjectRecord
-	Delegates      map[core.RecordRef]record.Reference
+// TmpLedger crteates ledger on top of temporary database.
+// Returns *ledger.Ledger andh cleanup function.
+func TmpLedger(t *testing.T, dir string) (*ledger.Ledger, func()) {
+	db, dbcancel := storagetest.TmpDB(t, dir)
+	l, err := ledger.NewLedgerWithDB(db)
+	assert.NoError(t, err)
+	am := l.GetManager()
+	assert.NotNil(t, am)
+	return l, dbcancel
 }

@@ -14,23 +14,5 @@
  *    limitations under the License.
  */
 
-package index
-
-import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
-)
-
-// ClassLifeline represents meta information for record object
-type ClassLifeline struct {
-	LatestStateRef record.Reference   // Amend or activate record
-	AmendRefs      []record.Reference // ClassAmendRecord
-}
-
-// ObjectLifeline represents meta information for record object
-type ObjectLifeline struct {
-	ClassRef       record.Reference
-	LatestStateRef record.Reference   // Amend or activate record
-	Children       []record.Reference // ActivateObjectRecord
-	Delegates      map[core.RecordRef]record.Reference
-}
+// Package ledgertestutil contains high level API tests and test utils for other modules.
+package ledgertestutil
