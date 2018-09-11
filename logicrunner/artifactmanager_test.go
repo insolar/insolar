@@ -36,36 +36,9 @@ func TestGoPlugin(t *testing.T) {
 	if err := testutil.Build(); err != nil {
 		t.Fatal("Logic runner build failed, skip tests:", err.Error())
 	}
-	t.Run("Hello", func(t *testing.T) {
-		hello(t)
-	})
-}
 
-func hello(t *testing.T) {
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	defer cleaner()
-
-	var helloCode = `
-package main
-
-import (
-	"fmt"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
-
-type Hello struct {
-	foundation.BaseContract
-}
-
-func New() *Hello {
-	return &Hello{};
-}
-
-func (b *Hello) String() string {
-	return fmt.Sprint("Hello, Go is there!")
-}
-	`
 
 	lr, err := logicrunner.NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err, "Initialize runner")
@@ -97,8 +70,37 @@ func (b *Hello) String() string {
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
 	assert.NoError(t, err)
 
+	t.Run("Hello", func(t *testing.T) {
+		hello(t, l, gp)
+	})
+}
+
+func hello(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
+
+	var helloCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Hello struct {
+	foundation.BaseContract
+}
+
+func New() *Hello {
+	return &Hello{};
+}
+
+func (b *Hello) String() string {
+	return fmt.Sprint("Hello, Go is there!")
+}
+	`
+
 	cb := testutil.NewContractBuilder(l.GetManager(), testutil.ICC)
-	err = cb.Build(map[string]string{"hello": helloCode})
+	err := cb.Build(map[string]string{"hello": helloCode})
 	assert.NoError(t, err)
 
 	_, res, err := gp.CallMethod(
