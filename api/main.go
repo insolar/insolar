@@ -117,22 +117,53 @@ func (rh *RequestHandler) RouteCall(ref core.RecordRef, method string, args core
 	return &res, nil
 }
 
-func Serialize(what interface{}, to *[]byte) error {
+func CBORMarshal(o interface{}) ([]byte, error) {
 	ch := new(codec.CborHandle)
-	return codec.NewEncoderBytes(to, ch).Encode(what)
+	var data []byte
+	err := codec.NewEncoderBytes(&data, ch).Encode(o)
+	return data, err
+}
+
+// CBORUnMarshal - testing deserialize helper
+func CBORUnMarshal(data []byte) (interface{}, error) {
+	ch := new(codec.CborHandle)
+	var ret interface{}
+	err := codec.NewDecoderBytes(data, ch).Decode(&ret)
+	return ret, errors.Wrap(err, "[ CBORUnMarshal ]")
 }
 
 func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	var argsSerialized []byte
 
-	err := Serialize(args, &argsSerialized)
+	argsSerialized, err := CBORMarshal(args)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't marshal args")
+		return nil, errors.Wrap(err, "[ MarshalArgs ]")
 	}
 
 	result := core.Arguments(argsSerialized)
 
 	return result, nil
+}
+
+func ExtractCreateMemberResponse(data []byte) (*string, error) {
+	var marshRes interface{}
+	marshRes, err := CBORUnMarshal(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ExtractCreateMemberResponse ]")
+	}
+
+	refOrig, ok := marshRes.([1]interface{})
+	if !ok || len(refOrig) < 0 {
+		return nil, errors.New("[ ExtractCreateMemberResponse ] Problem with extracting result")
+	}
+
+	reference, ok := refOrig[0].(string)
+	if !ok {
+		msg := fmt.Sprintf("Can't cast response to string. orig: %T", refOrig[0])
+		return nil, errors.New(msg)
+	}
+
+	return &reference, nil
 }
 
 func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) {
@@ -147,7 +178,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 
 	args, err := MarshalArgs(name)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ProcessCreateMember]")
+		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
 	routResult, err := rh.RouteCall(rh.rootDomainReference, "CreateMember", args)
@@ -155,7 +186,14 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	_ = routResult
+	memberRef, err := ExtractCreateMemberResponse(routResult.Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
+	}
+
+	if len(*memberRef) != 0 {
+		result["reference"] = memberRef
+	}
 
 	return result, nil
 }
@@ -256,7 +294,6 @@ func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseW
 		var handlerError error
 		switch qtype {
 		case CreateMember:
-			// TODO: check err and nil in answer
 			answer, handlerError = rh.ProcessCreateMember()
 		case DumpUserInfo:
 			answer = rh.ProcessDumpUserInfo()
@@ -274,7 +311,7 @@ func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseW
 		}
 		if handlerError != nil {
 			errMsg := "Handler error: " + handlerError.Error()
-			log.Println(errMsg)
+			log.Printf("[QID=%s] %s\n", qid, errMsg)
 			answer = WriteError(errMsg, -3)
 		}
 	}
