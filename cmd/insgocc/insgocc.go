@@ -22,10 +22,10 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 	flag "github.com/spf13/pflag"
 )
 
@@ -145,7 +145,19 @@ func main() {
 		}
 	// use compile <smart-contract-file> [<output-directory>]
 	case "compile":
-		parsed, err := preprocessor.ParseFile(os.Args[2])
+		fs := flag.NewFlagSet("compile", flag.ExitOnError)
+		dir, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		var output string
+		fs.StringVarP(&output, "output", "o", dir, "output directory (default .)")
+		err = fs.Parse(os.Args[2:])
+		if err != nil {
+			panic(err)
+		}
+
+		parsed, err := preprocessor.ParseFile(fs.Arg(0))
 		if err != nil {
 			panic(err)
 		}
@@ -178,21 +190,12 @@ func main() {
 			panic(err)
 		}
 
-		var dir string
-		if len(os.Args) > 3 {
-			dir = os.Args[3]
-		} else {
-			dir, err = os.Getwd()
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
 		err = os.Chdir(tmpDir)
 		if err != nil {
 			panic(err)
 		}
 
-		out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dir+"/"+name+".so").CombinedOutput()
+		out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, output, name+".so")).CombinedOutput()
 		if err != nil {
 			panic(errors.Wrap(err, "can't build contract: "+string(out)))
 		}
