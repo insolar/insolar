@@ -17,6 +17,7 @@
 package logicrunner
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -36,9 +37,13 @@ import (
 
 var icc = "../cmd/insgocc/insgocc"
 
-func init() {
+func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
-	build()
+	if err := build(); err != nil {
+		fmt.Println("Logic runner build failed, skip tests:", err.Error())
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
 }
 
 func TestTypeCompatibility(t *testing.T) {
