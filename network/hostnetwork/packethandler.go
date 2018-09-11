@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
@@ -30,42 +31,42 @@ import (
 )
 
 // DispatchPacketType checks message type.
-func DispatchPacketType(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	switch msg.Type {
 	case packet.TypeFindHost:
-		return processFindHost(dht, ctx, msg, packetBuilder)
+		return processFindHost(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeFindValue:
-		return processFindValue(dht, ctx, msg, packetBuilder)
+		return processFindValue(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeStore:
-		return processStore(dht, ctx, msg)
+		return processStore(hostHandler, ctx, msg)
 	case packet.TypePing:
 		return processPing(msg, packetBuilder)
 	case packet.TypeRPC:
-		return processRPC(dht, ctx, msg, packetBuilder)
+		return processRPC(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeRelay:
-		return processRelay(dht, ctx, msg, packetBuilder)
+		return processRelay(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeCheckOrigin:
-		return processCheckOriginRequest(dht, msg, packetBuilder)
+		return processCheckOriginRequest(hostHandler, msg, packetBuilder)
 	case packet.TypeAuth:
-		return processAuthentication(dht, ctx, msg, packetBuilder)
+		return processAuthentication(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeObtainIP:
 		return processObtainIPRequest(msg, packetBuilder)
 	case packet.TypeRelayOwnership:
-		return processRelayOwnership(dht, ctx, msg, packetBuilder)
+		return processRelayOwnership(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeKnownOuterHosts:
-		return processKnownOuterHosts(dht, msg, packetBuilder)
+		return processKnownOuterHosts(hostHandler, msg, packetBuilder)
 	case packet.TypeCheckNodePriv:
-		return processCheckNodePriv(dht, msg, packetBuilder)
+		return processCheckNodePriv(hostHandler, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
 }
 
-func processKnownOuterHosts(dht *DHT, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processKnownOuterHosts(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestKnownOuterHosts)
 
-	ID := dht.Subnet.HighKnownHosts.ID
-	hosts := dht.Subnet.HighKnownHosts.OuterHosts
+	ID := hostHandler.GetHighKnownHostID()
+	hosts := hostHandler.GetOuterHostsCount()
 	if data.OuterHosts > hosts {
 		ID = data.ID
 		hosts = data.OuterHosts
@@ -78,11 +79,11 @@ func processKnownOuterHosts(dht *DHT, msg *packet.Packet, packetBuilder packet.B
 	return packetBuilder.Response(response).Build(), nil
 }
 
-func processCheckNodePriv(dht *DHT, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processCheckNodePriv(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestCheckNodePriv)
 	var response packet.ResponseCheckNodePriv
 
-	if dht.ConfirmNodeRole(data.RoleKey) {
+	if hostHandler.ConfirmNodeRole(data.RoleKey) {
 		response.State = packet.Confirmed
 	} else {
 		response.State = packet.Declined
@@ -91,35 +92,31 @@ func processCheckNodePriv(dht *DHT, msg *packet.Packet, packetBuilder packet.Bui
 	return packetBuilder.Response(response).Build(), nil
 }
 
-func processRelayOwnership(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processRelayOwnership(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestRelayOwnership)
 
 	if data.Ready {
-		dht.Subnet.PossibleProxyIDs = append(dht.Subnet.PossibleProxyIDs, msg.Sender.ID.KeyString())
+
+		hostHandler.AddPossibleProxyID(msg.Sender.ID.KeyString())
 	} else {
-		for i, j := range dht.Subnet.PossibleProxyIDs {
-			if j == msg.Sender.ID.KeyString() {
-				dht.Subnet.PossibleProxyIDs = append(dht.Subnet.PossibleProxyIDs[:i], dht.Subnet.PossibleProxyIDs[i+1:]...)
-				err := AuthenticationRequest(dht, ctx, "begin", msg.Sender.ID.KeyString())
-				if err != nil {
-					return nil, err
-				}
-				err = RelayRequest(dht, ctx, "start", msg.Sender.ID.KeyString())
-				if err != nil {
-					return nil, err
-				}
-				break
-			}
+		hostHandler.RemovePossibleProxyID(msg.Sender.ID.KeyString())
+		err := AuthenticationRequest(hostHandler, ctx, "begin", msg.Sender.ID.KeyString())
+		if err != nil {
+			return nil, err
+		}
+		err = RelayRequest(hostHandler, ctx, "start", msg.Sender.ID.KeyString())
+		if err != nil {
+			return nil, err
 		}
 	}
 	response := &packet.ResponseRelayOwnership{Accepted: true}
 	return packetBuilder.Response(response).Build(), nil
 }
 
-func processFindHost(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	ht := dht.HtFromCtx(ctx)
+func processFindHost(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+	ht := hostHandler.HtFromCtx(ctx)
 	data := msg.Data.(*packet.RequestDataFindHost)
-	dht.AddHost(ctx, routing.NewRouteHost(msg.Sender))
+	hostHandler.AddHost(ctx, routing.NewRouteHost(msg.Sender))
 	closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*host.Host{msg.Sender})
 	response := &packet.ResponseDataFindHost{
 		Closest: closest.Hosts(),
@@ -127,11 +124,11 @@ func processFindHost(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder pa
 	return packetBuilder.Response(response).Build(), nil
 }
 
-func processFindValue(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	ht := dht.HtFromCtx(ctx)
+func processFindValue(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+	ht := hostHandler.HtFromCtx(ctx)
 	data := msg.Data.(*packet.RequestDataFindValue)
-	dht.AddHost(ctx, routing.NewRouteHost(msg.Sender))
-	value, exists := dht.Store.Retrieve(data.Target)
+	hostHandler.AddHost(ctx, routing.NewRouteHost(msg.Sender))
+	value, exists := hostHandler.StoreRetrieve(data.Target)
 	response := &packet.ResponseDataFindValue{}
 	if exists {
 		response.Value = value
@@ -142,13 +139,13 @@ func processFindValue(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder p
 	return packetBuilder.Response(response).Build(), nil
 }
 
-func processStore(dht *DHT, ctx Context, msg *packet.Packet) (*packet.Packet, error) {
+func processStore(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestDataStore)
-	dht.AddHost(ctx, routing.NewRouteHost(msg.Sender))
+	hostHandler.AddHost(ctx, routing.NewRouteHost(msg.Sender))
 	key := store.NewKey(data.Data)
-	expiration := dht.GetExpirationTime(ctx, key)
-	replication := time.Now().Add(dht.GetReplicationTime())
-	err := dht.Store.Store(key, data.Data, replication, expiration, false)
+	expiration := hostHandler.GetExpirationTime(ctx, key)
+	replication := time.Now().Add(hostHandler.GetReplicationTime())
+	err := hostHandler.Store(key, data.Data, replication, expiration, false)
 	if err != nil {
 		return nil, err
 	}
@@ -160,10 +157,10 @@ func processPing(msg *packet.Packet, packetBuilder packet.Builder) (*packet.Pack
 	return packetBuilder.Response(nil).Build(), nil
 }
 
-func processRPC(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processRPC(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestDataRPC)
-	dht.AddHost(ctx, routing.NewRouteHost(msg.Sender))
-	result, err := dht.InvokeRPC(msg.Sender, data.Method, data.Args)
+	hostHandler.AddHost(ctx, routing.NewRouteHost(msg.Sender))
+	result, err := hostHandler.InvokeRPC(msg.Sender, data.Method, data.Args)
 	response := &packet.ResponseDataRPC{
 		Success: true,
 		Result:  result,
@@ -177,10 +174,10 @@ func processRPC(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.
 }
 
 // Precess relay request.
-func processRelay(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processRelay(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	var err error
 	var state relay.State
-	if !dht.Auth.AuthenticatedHosts[msg.Sender.ID.KeyString()] {
+	if !hostHandler.HostIsAuthenticated(msg.Sender.ID.KeyString()) {
 		log.Print("relay request from unknown host rejected")
 		response := &packet.ResponseRelay{
 			State: relay.NoAuth,
@@ -189,14 +186,14 @@ func processRelay(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packe
 		return packetBuilder.Response(response).Build(), nil
 	} else {
 		data := msg.Data.(*packet.RequestRelay)
-		dht.AddHost(ctx, routing.NewRouteHost(msg.Sender))
+		hostHandler.AddHost(ctx, routing.NewRouteHost(msg.Sender))
 
 		switch data.Command {
 		case packet.StartRelay:
-			err = dht.Relay.AddClient(msg.Sender)
+			err = hostHandler.AddRelayClient(msg.Sender)
 			state = relay.Started
 		case packet.StopRelay:
-			err = dht.Relay.RemoveClient(msg.Sender)
+			err = hostHandler.RemoveRelayClient(msg.Sender)
 			state = relay.Stopped
 		default:
 			state = relay.Unknown
@@ -212,11 +209,11 @@ func processRelay(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packe
 	return packetBuilder.Response(response).Build(), nil
 }
 
-func processAuthentication(dht *DHT, ctx Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processAuthentication(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestAuth)
 	switch data.Command {
 	case packet.BeginAuth:
-		if dht.Auth.AuthenticatedHosts[msg.Sender.ID.KeyString()] {
+		if hostHandler.HostIsAuthenticated(msg.Sender.ID.KeyString()) {
 			// TODO: whats next?
 			response := &packet.ResponseAuth{
 				Success:       false,
@@ -230,7 +227,7 @@ func processAuthentication(dht *DHT, ctx Context, msg *packet.Packet, packetBuil
 		if err != nil {
 			return nil, err
 		}
-		dht.Auth.SentKeys[msg.Sender.ID.KeyString()] = key
+		hostHandler.AddAuthSentKey(msg.Sender.ID.KeyString(), key)
 		response := &packet.ResponseAuth{
 			Success:       true,
 			AuthUniqueKey: key,
@@ -238,14 +235,14 @@ func processAuthentication(dht *DHT, ctx Context, msg *packet.Packet, packetBuil
 
 		// TODO process verification msg.Sender host
 		// confirmed
-		err = CheckOriginRequest(dht, ctx, msg.Sender.ID.KeyString())
+		err = CheckOriginRequest(hostHandler, ctx, msg.Sender.ID.KeyString())
 		if err != nil {
 			return nil, err
 		}
 
 		return packetBuilder.Response(response).Build(), nil
 	case packet.RevokeAuth:
-		delete(dht.Auth.AuthenticatedHosts, msg.Sender.ID.KeyString())
+		hostHandler.RemoveAuthHost(msg.Sender.ID.KeyString())
 		response := &packet.ResponseAuth{
 			Success:       true,
 			AuthUniqueKey: nil,
@@ -256,10 +253,10 @@ func processAuthentication(dht *DHT, ctx Context, msg *packet.Packet, packetBuil
 	return nil, errors.New("unknown auth command")
 }
 
-func processCheckOriginRequest(dht *DHT, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	dht.Auth.Mut.Lock()
-	defer dht.Auth.Mut.Unlock()
-	if key, ok := dht.Auth.ReceivedKeys[msg.Sender.ID.KeyString()]; ok {
+func processCheckOriginRequest(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+	// dht.Auth.Mut.Lock()
+	// defer dht.Auth.Mut.Unlock()
+	if key, ok := hostHandler.KeyIsReceived(msg.Sender.ID.KeyString()); ok {
 		response := &packet.ResponseCheckOrigin{AuthUniqueKey: key}
 		return packetBuilder.Response(response).Build(), nil
 	}
