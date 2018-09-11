@@ -134,7 +134,10 @@ func (rh *RequestHandler) ProcessDumpAllUsers() map[string]interface{} {
 
 func MakeHandlerMarshalErrorJson() []byte {
 	jsonErr := WriteError("Invalid data from handler", -1)
-	serJson, _ := json.Marshal(jsonErr)
+	serJson, err := json.Marshal(jsonErr)
+	if err != nil {
+		log.Fatal("Can't marshal base error")
+	}
 	return serJson
 }
 
@@ -168,6 +171,7 @@ func ApiV1Handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[QID=%s] Query: %s\n", qid, r.RequestURI)
 	qTypeStr := r.FormValue("query_type")
 	qtype := QTypeFromString(qTypeStr)
+	time.Sleep(10 * time.Second)
 	switch qtype {
 	case CreateMember:
 		answer = rh.ProcessCreateMember()
@@ -207,7 +211,7 @@ func (ar *ApiRunner) Start(c core.Components) error {
 }
 
 func (ar *ApiRunner) Stop() error {
-	log.Println("Shutting down server")
+	log.Println("Shutting down server gracefully =)")
 	ar.server.Shutdown(nil)
 	return nil
 }
@@ -217,6 +221,6 @@ func main() {
 	api := ApiRunner{}
 	cs := core.Components{}
 	api.Start(cs)
-	time.Sleep(10 * time.Second)
+	time.Sleep(100 * time.Second)
 	api.Stop()
 }
