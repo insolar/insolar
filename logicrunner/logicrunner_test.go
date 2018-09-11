@@ -38,6 +38,7 @@ var icc = "../cmd/icc/icc"
 
 func init() {
 	log.SetLevel(log.DebugLevel)
+	build()
 }
 
 func TestTypeCompatibility(t *testing.T) {
@@ -291,9 +292,6 @@ func (r *Two) Hello(s string) string {
 		panic(err)
 	}
 
-	err = build()
-	assert.NoError(t, err)
-
 	cb := testutil.NewContractBuilder(am, icc)
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
@@ -399,9 +397,6 @@ func (r *Two) Hello(s string) string {
 	if err != nil {
 		panic(err)
 	}
-
-	err = build()
-	assert.NoError(t, err)
 
 	cb := testutil.NewContractBuilder(am, icc)
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
