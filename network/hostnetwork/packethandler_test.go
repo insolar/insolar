@@ -17,10 +17,12 @@
 package hostnetwork
 
 import (
+	"testing"
 	"time"
 
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
@@ -29,6 +31,10 @@ import (
 )
 
 type mockHostHandler struct {
+}
+
+func newMockHostHandler() *mockHostHandler {
+	return &mockHostHandler{}
 }
 
 func (hh *mockHostHandler) GetHighKnownHostID() string {
@@ -43,7 +49,7 @@ func (hh *mockHostHandler) ConfirmNodeRole(role string) bool {
 	return false
 }
 
-func (hh *mockHostHandler) toreRetrieve(key store.Key) ([]byte, bool) {
+func (hh *mockHostHandler) StoreRetrieve(key store.Key) ([]byte, bool) {
 	return nil, false
 }
 
@@ -156,4 +162,21 @@ func (hh *mockHostHandler) KeyIsReceived(targetID string) ([]byte, bool) {
 
 func (hh *mockHostHandler) HostIsAuthenticated(targetID string) bool {
 	return false
+}
+
+func TestDispatchPacketType(t *testing.T) {
+	senderAddress, _ := host.NewAddress("0.0.0.0:0")
+	sender := host.NewHost(senderAddress)
+	sender.ID, _ = id.NewID()
+	receiverAddress, _ := host.NewAddress("0.0.0.0:0")
+	receiver := host.NewHost(receiverAddress)
+	receiver.ID, _ = id.NewID()
+	hh := newMockHostHandler()
+
+	pckt := &packet.Packet{
+		Sender:   sender,
+		Receiver: receiver,
+		Type:     packet.TypePing,
+	}
+	DispatchPacketType(hh, getDefaultCtx(nil), pckt, packet.NewBuilder())
 }
