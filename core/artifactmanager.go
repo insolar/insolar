@@ -64,12 +64,12 @@ type ArtifactManager interface {
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate class or as migration code for an object.
-	DeployCode(domain, request RecordRef, types []RecordRef, codeMap map[MachineType][]byte) (*RecordRef, error)
+	DeployCode(domain, request RecordRef, codeMap map[MachineType][]byte) (*RecordRef, error)
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 	//
 	// Activation reference will be this class'es identifier and referred as "class head".
-	ActivateClass(domain, request, code RecordRef) (*RecordRef, error)
+	ActivateClass(domain, request RecordRef) (*RecordRef, error)
 
 	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
 	// the class. If class is already deactivated, an error should be returned.
