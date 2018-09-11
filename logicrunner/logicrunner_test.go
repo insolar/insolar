@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -35,11 +34,11 @@ import (
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = "../cmd/insgocc/insgocc"
+var icc = testutil.ICC
 
 func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
-	if err := build(); err != nil {
+	if err := testutil.Build(); err != nil {
 		fmt.Println("Logic runner build failed, skip tests:", err.Error())
 		os.Exit(1)
 	}
@@ -174,40 +173,6 @@ func TestExecution(t *testing.T) {
 	assert.NoError(t, resp.Error)
 	assert.Equal(t, []byte("data"), resp.Data)
 	assert.Equal(t, []byte(nil), resp.Result)
-}
-
-func buildCLI(name string) error {
-	out, err := exec.Command("go", "build", "-o", "./goplugin/"+name+"/"+name, "./goplugin/"+name+"/").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", name, string(out))
-	}
-	return nil
-}
-
-func buildInciderCLI() error {
-	return buildCLI("ginsider-cli")
-}
-
-func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", icc, "../cmd/insgocc/").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", icc, string(out))
-	}
-	return nil
-
-}
-
-func build() error {
-	err := buildInciderCLI()
-	if err != nil {
-		return err
-	}
-
-	err = buildPreprocessor()
-	if err != nil {
-		return errors.Wrap(err, "can't generate proxy")
-	}
-	return nil
 }
 
 func TestContractCallingContract(t *testing.T) {

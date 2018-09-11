@@ -32,8 +32,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
-var icc = "../cmd/icc/icc"
-
 func TestGoPlugin_Hello(t *testing.T) {
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	defer cleaner()
@@ -90,7 +88,7 @@ func (b *Hello) String() string {
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
 	assert.NoError(t, err)
 
-	cb := testutil.NewContractBuilder(l.GetManager(), icc)
+	cb := testutil.NewContractBuilder(l.GetManager(), testutil.ICC)
 	err = cb.Build(map[string]string{"hello": helloCode})
 	assert.NoError(t, err)
 
