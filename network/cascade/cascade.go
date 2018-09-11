@@ -51,12 +51,46 @@ func calcHash(nodeId string, entropy uint64) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, entropy)
 	for i, d := range data {
-		data[i] = b[i % 8] ^ d
+		data[i] = b[i%8] ^ d
 	}
 
 	hash := sha3.New224()
 	hash.Write(data)
 	return hash.Sum(nil)
+}
+
+func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicationFactor uint) (startIndex, endIndex int) {
+	depth := 0
+	j := 0
+	layerWidth := replicationFactor
+	found := false
+	for _, nodeId := range nodeIds {
+		if nodeId == currentNode {
+			found = true
+			break
+		}
+		j++
+		if j == int(layerWidth) {
+			layerWidth *= replicationFactor
+			depth++
+			j = 0
+		}
+	}
+
+	if !found {
+		return len(nodeIds), len(nodeIds)
+	}
+
+	n := int(replicationFactor)
+	var layerWeight int
+	if n == 1 {
+		layerWeight = depth + 1
+	} else {
+		layerWeight = geometricProgressionSum(n, n, depth+1)
+	}
+	startIndex = layerWeight + j*n
+	endIndex = startIndex + n
+	return
 }
 
 func CalculateNextNodes(data CascadeSendData, findCurrentNode bool, currentNode string) (nextNodeIds []string) {
@@ -74,33 +108,11 @@ func CalculateNextNodes(data CascadeSendData, findCurrentNode bool, currentNode 
 		return nodeIds[:l]
 	}
 
-	depth := 0
-	j := 0
-	layerWidth := data.ReplicationFactor
-	for _, nodeId := range nodeIds {
-		if nodeId == currentNode {
-			break
-		}
-		j++
-		if j == int(layerWidth) {
-			layerWidth *= data.ReplicationFactor
-			depth++
-			j = 0
-		}
-	}
-	n := int(data.ReplicationFactor)
-	var layerWeight int
-	if n == 1 {
-		layerWeight = depth + 1
-	} else {
-		layerWeight = geometricProgressionSum(n, n, depth + 1)
-	}
-	startIndex := layerWeight + j * n
-	endIndex := startIndex + n
+	startIndex, endIndex := getNextCascadeLayerIndexes(nodeIds, currentNode, data.ReplicationFactor)
 
 	if startIndex >= len(nodeIds) {
 		return nil
 	} else {
-		return nodeIds[startIndex : min(endIndex, len(nodeIds))]
+		return nodeIds[startIndex:min(endIndex, len(nodeIds))]
 	}
 }
