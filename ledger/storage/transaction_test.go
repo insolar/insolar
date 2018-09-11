@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -254,6 +254,5 @@ func TestStore_TransactionRetryOver(t *testing.T) {
 var keycounter int32
 
 func genuniqkey() []byte {
-	keycounter++
 	return []byte(fmt.Sprintf("k%v", atomic.AddInt32(&keycounter, 1)))
 }

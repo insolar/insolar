@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -190,7 +190,7 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 
 	case *message.DelegateMessage:
 		// TODO: should be InjectDelegate
-		ref, err := lr.ArtifactManager.ActivateObj(
+		ref, err := lr.ArtifactManager.ActivateObjDelegate(
 			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
 		)
 		if err != nil {
