@@ -26,7 +26,7 @@ func CBORMarshal(o interface{}) ([]byte, error) {
 	ch := new(codec.CborHandle)
 	var data []byte
 	err := codec.NewEncoderBytes(&data, ch).Encode(o)
-	return data, err
+	return data, errors.Wrap(err, "[ CBORMarshal ]")
 }
 
 func CBORUnMarshal(data []byte) (interface{}, error) {
