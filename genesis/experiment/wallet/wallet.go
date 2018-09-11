@@ -20,10 +20,9 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/genesis/experiment/allowance"
 	"github.com/insolar/insolar/toolkit/go/foundation"
-	"github.com/jbenet/go-base58"
 )
 
-var TypeReference = core.String2Ref(base58.Encode([]byte("wallet")))
+var TypeReference = core.String2Ref("w")
 
 type Wallet struct {
 	foundation.BaseContract
