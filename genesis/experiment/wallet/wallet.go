@@ -17,18 +17,19 @@
 package wallet
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/genesis/experiment/allowance"
 	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
-var TypeReference = foundation.Reference("wallet")
+var TypeReference = core.String2Ref("w")
 
 type Wallet struct {
 	foundation.BaseContract
 	balance uint
 }
 
-func (w *Wallet) Allocate(amount uint, to foundation.Reference) *allowance.Allowance {
+func (w *Wallet) Allocate(amount uint, to core.RecordRef) *allowance.Allowance {
 	// TODO check balance is enough
 	w.balance -= amount
 	a := allowance.NewAllowance(to, amount, w.GetContext().Time.Unix()+10)
@@ -36,14 +37,14 @@ func (w *Wallet) Allocate(amount uint, to foundation.Reference) *allowance.Allow
 	return a
 }
 
-func (w *Wallet) Receive(amount uint, from foundation.Reference) {
+func (w *Wallet) Receive(amount uint, from core.RecordRef) {
 	fromWallet := foundation.GetImplementationFor(from, TypeReference).(*Wallet)
 
 	a := fromWallet.Allocate(amount, w.GetContext().Me)
 	w.balance += a.TakeAmount()
 }
 
-func (w *Wallet) Transfer(amount uint, to foundation.Reference) {
+func (w *Wallet) Transfer(amount uint, to core.RecordRef) {
 	w.balance -= amount
 
 	toWallet := foundation.GetImplementationFor(to, TypeReference).(*Wallet)

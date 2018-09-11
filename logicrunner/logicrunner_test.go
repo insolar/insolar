@@ -209,6 +209,7 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
+import "github.com/insolar/insolar/core"
 
 type One struct {
 	foundation.BaseContract
@@ -216,7 +217,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsChild("")
+	friend := holder.AsChild(core.String2Ref(""))
 
 	res := friend.Hello(s)
 
@@ -315,6 +316,7 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
+import "github.com/insolar/insolar/core"
 
 type One struct {
 	foundation.BaseContract
@@ -322,7 +324,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsDelegate("")
+	friend := holder.AsDelegate(core.String2Ref(""))
 
 	res := friend.Hello(s)
 

@@ -18,31 +18,19 @@
 package foundation
 
 import (
-	"bytes"
 	"time"
+
+	"github.com/insolar/insolar/core"
 )
-
-// Reference is an address of something on ledger.
-type Reference []byte
-
-// String - stringer interface
-func (r Reference) String() string {
-	return string(r)
-}
-
-// Equal is equaler
-func (r Reference) Equal(o Reference) bool {
-	return bytes.Equal(r, o)
-}
 
 // CallContext is a context of contract execution
 type CallContext struct {
-	Me     Reference // My Reference.
-	Caller Reference // Reference of calling contract.
-	Parent Reference // Reference to parent or container contract.
-	Class  Reference // Reference to type record on ledger, we have just one type reference, yet.
-	Time   time.Time // Time of Calling side made call.
-	Pulse  uint64    // Number of current pulse.
+	Me     core.RecordRef // My Reference.
+	Caller core.RecordRef // Reference of calling contract.
+	Parent core.RecordRef // Reference to parent or container contract.
+	Class  core.RecordRef // Reference to type record on ledger, we have just one type reference, yet.
+	Time   time.Time      // Time of Calling side made call.
+	Pulse  uint64         // Number of current pulse.
 }
 
 // BaseContract is a base class for all contracts.
@@ -51,28 +39,28 @@ type BaseContract struct {
 }
 
 type ProxyInterface interface {
-	GetReference() Reference
-	GetClass() Reference
+	GetReference() core.RecordRef
+	GetClass() core.RecordRef
 }
 
 // BaseContractInterface is an interface to deal with any contract same way
 type BaseContractInterface interface {
-	GetReference() Reference
-	GetClass() Reference
+	GetReference() core.RecordRef
+	GetClass() core.RecordRef
 }
 
 // GetReference - Returns public reference of contract
-func (bc *BaseContract) GetReference() Reference {
+func (bc *BaseContract) GetReference() core.RecordRef {
 	if bc.context == nil {
-		return nil
+		return core.String2Ref("")
 	}
 	return bc.context.Me
 }
 
 // GetClass - Returns class of contract
-func (bc *BaseContract) GetClass() Reference {
+func (bc *BaseContract) GetClass() core.RecordRef {
 	if bc.context == nil {
-		return nil
+		return core.String2Ref("")
 	}
 	return bc.context.Class
 }
@@ -92,18 +80,18 @@ func (bc *BaseContract) SetContext(cc *CallContext) {
 
 // GetImplementationFor finds delegate typed r in object and returns it
 // unimplemented
-func GetImplementationFor(o Reference, r Reference) ProxyInterface {
+func GetImplementationFor(o core.RecordRef, r core.RecordRef) ProxyInterface {
 	return nil
 }
 
 // GetChildrenTyped returns set of children objects with corresponding type
-func (bc *BaseContract) GetChildrenTyped(r Reference) []ProxyInterface {
+func (bc *BaseContract) GetChildrenTyped(r core.RecordRef) []ProxyInterface {
 	return nil
 }
 
 // GetObject create proxy by address
 // unimplemented
-func GetObject(ref Reference) ProxyInterface {
+func GetObject(ref core.RecordRef) ProxyInterface {
 	return nil
 }
 
@@ -120,6 +108,6 @@ type CBORMarshaler interface {
 }
 
 // Call other contract via network dispatcher
-func Call(Reference Reference, MethodName string, Arguments []interface{}) ([]interface{}, error) {
+func Call(Reference core.RecordRef, MethodName string, Arguments []interface{}) ([]interface{}, error) {
 	return nil, nil
 }
