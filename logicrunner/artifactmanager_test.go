@@ -32,7 +32,16 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
-func TestGoPlugin_Hello(t *testing.T) {
+func TestGoPlugin(t *testing.T) {
+	if err := testutil.Build(); err != nil {
+		t.Fatal("Logic runner build failed, skip tests:", err.Error())
+	}
+	t.Run("Hello", func(t *testing.T) {
+		hello(t)
+	})
+}
+
+func hello(t *testing.T) {
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	defer cleaner()
 
