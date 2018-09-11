@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter"
 	"github.com/pkg/errors"
@@ -121,15 +122,33 @@ func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseW
 type ApiRunner struct {
 	messageRouter *messagerouter.MessageRouter
 	server        *http.Server
+	cfg           *configuration.ApiRunner
+}
+
+func NewApiRunner(cfg *configuration.ApiRunner) (*ApiRunner, error) {
+	if cfg.Port == 0 {
+		return nil, errors.New("[ NewApiRunner ] Port must not be 0")
+	}
+	if len(cfg.Location) == 0 {
+		return nil, errors.New("[ NewApiRunner ] Location must exist")
+	}
+
+	portStr := fmt.Sprint(cfg.Port)
+	ar := ApiRunner{
+		server: &http.Server{Addr: ":" + portStr},
+		cfg:    cfg,
+	}
+
+	return &ar, nil
 }
 
 func (ar *ApiRunner) Start(c core.Components) error {
 
+	// TODO: init message router
 	//ar.messageRouter = c["core.MessageRouter"].(*messagerouter.MessageRouter)
 
-	ar.server = &http.Server{Addr: ":" + fmt.Sprint(cmdParams.port)}
 	fw := WrapApiV1Handler(ar.messageRouter)
-	http.HandleFunc("/api/v1", fw)
+	http.HandleFunc(ar.cfg.Location, fw)
 	go func() {
 		if err := ar.server.ListenAndServe(); err != nil {
 			log.Printf("Httpserver: ListenAndServe() error: %s\n", err)
@@ -152,7 +171,11 @@ func (ar *ApiRunner) Stop() error {
 
 func main() {
 	ParseInputParams()
-	api := ApiRunner{}
+	cfg := configuration.NewApiRunner()
+	api, err := NewApiRunner(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 	cs := core.Components{}
 	api.Start(cs)
 	time.Sleep(60 * time.Second)
