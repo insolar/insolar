@@ -79,40 +79,14 @@ func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 	})
 }
 
-func TestLedgerArtifactManager_DeployCode_VerifiesRecord(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-
-	codeMap := map[core.MachineType][]byte{1: {1}}
-	_, err := td.manager.DeployCode(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), []core.RecordRef{*genRandomRef().CoreRef()}, codeMap,
-	)
-	assert.Error(t, err)
-	notTypeRef, _ := td.db.SetRecord(&record.CodeRecord{})
-	_, err = td.manager.DeployCode(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), []core.RecordRef{*notTypeRef.CoreRef()}, codeMap,
-	)
-	assert.Error(t, err)
-}
-
 func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
 	codeMap := map[core.MachineType][]byte{1: {1}}
-	typeRef, _ := td.db.SetRecord(&record.TypeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(),
-				},
-			},
-		},
-	})
 	coreRef, err := td.manager.DeployCode(
-		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), []core.RecordRef{*typeRef.CoreRef()}, codeMap,
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), codeMap,
 	)
 	assert.NoError(t, err)
 	ref := record.Core2Reference(*coreRef)
@@ -127,7 +101,6 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 				},
 			},
 		},
-		Types:        []record.Reference{*typeRef},
 		TargetedCode: codeMap,
 	})
 }

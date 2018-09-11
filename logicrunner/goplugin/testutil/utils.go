@@ -233,7 +233,7 @@ func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.Re
 }
 
 // DeployCode implementation for tests
-func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, types []core.RecordRef, codeMap map[core.MachineType][]byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, codeMap map[core.MachineType][]byte) (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
@@ -342,11 +342,8 @@ func AMPublishCode(
 	classRef *core.RecordRef,
 	err error,
 ) {
-	typeRef, err = am.DeclareType(domain, request, []byte{})
-	assert.NoError(t, err, "creating type on ledger")
-
 	codeRef, err = am.DeployCode(
-		domain, request, []core.RecordRef{*typeRef}, map[core.MachineType][]byte{mtype: code},
+		domain, request, map[core.MachineType][]byte{mtype: code},
 	)
 	assert.NoError(t, err, "create code on ledger")
 
