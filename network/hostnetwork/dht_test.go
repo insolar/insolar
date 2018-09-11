@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
@@ -39,7 +40,7 @@ import (
 
 const closedPacket = "closed" // "broken pipe" for kcpTransport
 
-func getDefaultCtx(dht *DHT) Context {
+func getDefaultCtx(dht *DHT) hosthandler.Context {
 	ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
 	return ctx
 }
