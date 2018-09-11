@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package rootdomain
+package _rootdomain
 
 import (
 	"encoding/json"
