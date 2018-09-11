@@ -218,7 +218,7 @@ func (t *TestArtifactManager) GetLatestObj(object core.RecordRef) (core.ObjectDe
 }
 
 // GetObjChildren implementation for tests
-func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) (core.RefIterator, error) {
 	panic("not implemented")
 }
 

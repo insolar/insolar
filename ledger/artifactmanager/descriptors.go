@@ -177,3 +177,18 @@ func (d *ObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
 func (d *ObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
 	return d.classDescriptor, nil
 }
+
+type RefIterator struct {
+	elements     []record.Reference
+	currentIndex int
+}
+
+func (i *RefIterator) HasNext() bool {
+	return len(i.elements) > i.currentIndex
+}
+
+func (i *RefIterator) Next() (core.RecordRef, error) {
+	el := i.elements[i.currentIndex]
+	i.currentIndex++
+	return *el.CoreRef(), nil
+}
