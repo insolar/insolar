@@ -20,19 +20,24 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-type testMessageRouter struct {
+// TestMessageRouter can execute messages on LogicRunner.
+type TestMessageRouter struct {
 	LogicRunner core.LogicRunner
 }
 
-func (*testMessageRouter) Start(components core.Components) error { return nil }
-func (*testMessageRouter) Stop() error                            { return nil }
-func (r *testMessageRouter) Route(msg core.Message) (resp core.Response, err error) {
+// Start is the dummy mock of Start method.
+func (*TestMessageRouter) Start(components core.Components) error { return nil }
+
+// Stop is the dummy mock of Stop method.
+func (*TestMessageRouter) Stop() error { return nil }
+
+// Route executes message on LogicRunner.
+func (r *TestMessageRouter) Route(msg core.Message) (resp core.Response, err error) {
 	res := r.LogicRunner.Execute(msg)
 	return *res, nil
 }
 
-// NewTestMessageRouter creates MessageRouter which can execute messages on
-// passed LogicRunner.
-func NewTestMessageRouter(lr core.LogicRunner) *testMessageRouter {
-	return &testMessageRouter{LogicRunner: lr}
+// NewTestMessageRouter creates TestMessageRouter which mocks the real one.
+func NewTestMessageRouter(lr core.LogicRunner) *TestMessageRouter {
+	return &TestMessageRouter{LogicRunner: lr}
 }
