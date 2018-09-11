@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package logicrunner
+package logicrunner_test
 
 import (
 	"io/ioutil"
@@ -25,11 +25,14 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
+
+var icc = "../cmd/icc/icc"
 
 func TestGoPlugin_Hello(t *testing.T) {
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
@@ -57,16 +60,15 @@ func (b *Hello) String() string {
 }
 	`
 
-	lr, err := NewLogicRunner(configuration.LogicRunner{})
+	lr, err := logicrunner.NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err, "Initialize runner")
 
 	lr.ArtifactManager = l.GetManager()
+	mr := testutil.NewTestMessageRouter(lr)
 	assert.NoError(t, lr.Start(core.Components{
 		"core.Ledger":        l,
-		"core.MessageRouter": &testMessageRouter{},
+		"core.MessageRouter": mr,
 	}), "starting logicrunner")
-
-	mr := &testMessageRouter{LogicRunner: lr}
 
 	insiderStorage, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
