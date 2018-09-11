@@ -19,12 +19,13 @@ package servicenetwork
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
-
 	"io/ioutil"
+	"log"
+	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
@@ -82,16 +83,64 @@ func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]b
 	if err != nil {
 		return nil, err
 	}
-	reqBuff, err := msg.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	buff, err := ioutil.ReadAll(reqBuff)
+	buff, err := messageToBytes(msg)
 	if err != nil {
 		return nil, err
 	}
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
+}
+
+// SendCascadeMessage sends a message from MessageRouter to a cascade of nodes. Message reference is ignored
+func (network *ServiceNetwork) SendCascadeMessage(data cascade.CascadeSendData, method string, msg core.Message) error {
+	if msg == nil {
+		return errors.New("message is nil")
+	}
+	if len(data.NodeIds) == 0 {
+		return errors.New("node IDs list should not be empty")
+	}
+	if data.ReplicationFactor == 0 {
+		return errors.New("replication factor should not be zero")
+	}
+	nextNodes := cascade.CalculateNextNodes(data, false, "")
+	if len(nextNodes) == 0 {
+		return nil
+	}
+
+	buff, err := messageToBytes(msg)
+	if err != nil {
+		return err
+	}
+
+	var failedNodes []string
+	for _, nextNode := range nextNodes {
+		hostID, err := network.nodeNetwork.GetReferenceHostID(nextNode)
+		if err != nil {
+			logrus.Debugln("failed to resolve nodeID -> hostID: ", err)
+			failedNodes = append(failedNodes, nextNode)
+			continue
+		}
+
+		err = network.hostNetwork.CascadeSendMessage(data, createContext(network.hostNetwork), hostID, method, [][]byte{buff})
+		if err != nil {
+			logrus.Debugln("failed to send cascade message: ", err)
+			failedNodes = append(failedNodes, nextNode)
+		}
+	}
+
+	if len(failedNodes) > 0 {
+		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
+	}
+
+	return nil
+}
+
+func messageToBytes(msg core.Message) ([]byte, error) {
+	reqBuff, err := msg.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadAll(reqBuff)
 }
 
 // Serialize converts Message or Response to byte slice.

@@ -31,6 +31,7 @@ import (
 
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -914,9 +915,31 @@ func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.
 		dht.processKnownOuterHosts(ctx, msg, packetBuilder)
 	case packet.TypeCheckNodePriv:
 		dht.processCheckNodePriv(ctx, msg, packetBuilder)
+	case packet.TypeCascadeSend:
+		dht.processCascadeSend(ctx, msg, packetBuilder)
 	default:
 		log.Println("unknown request type")
 	}
+}
+
+func (dht *DHT) processCascadeSend(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
+	data := msg.Data.(*packet.RequestCascadeSend)
+
+	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
+	_, err := dht.rpc.Invoke(msg.Sender, data.Rpc.Method, data.Rpc.Args)
+	response := &packet.ResponseCascadeSend{
+		Success: true,
+		Error:   "",
+	}
+	if err != nil {
+		response.Success = false
+		response.Error = err.Error()
+	}
+	err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
+	if err != nil {
+		log.Println("Failed to send response:", err.Error())
+	}
+	// TODO: send data to next cascade layers
 }
 
 func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
@@ -1451,17 +1474,26 @@ func (dht *DHT) handleObtainIPResponse(response *packet.ResponseObtainIP, target
 	return nil
 }
 
-// RemoteProcedureCall calls remote procedure on target host.
-func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+func (dht *DHT) getRoutingForSend(ctx Context, targetID string) (*host.Host, *routing.HashTable, error) {
 	targetHost, exists, err := dht.FindHost(ctx, targetID)
 	ht := dht.htFromCtx(ctx)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if !exists {
-		return nil, errors.New("targetHost not found")
+		return nil, nil, errors.New("targetHost not found")
+	}
+
+	return targetHost, ht, nil
+}
+
+// RemoteProcedureCall calls remote procedure on target host.
+func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
+	if err != nil {
+		return nil, err
 	}
 
 	request := &packet.Packet{
@@ -1488,7 +1520,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string,
 	case rsp := <-future.Result():
 		if rsp == nil {
 			// Channel was closed
-			return nil, errors.New("chanel closed unexpectedly")
+			return nil, errors.New("channel closed unexpectedly")
 		}
 		dht.addHost(ctx, routing.NewRouteHost(rsp.Sender))
 
@@ -1500,6 +1532,50 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string,
 	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		return nil, errors.New("timeout")
+	}
+}
+
+// CascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
+func (dht *DHT) CascadeSendMessage(data cascade.CascadeSendData, ctx Context, targetID string, method string, args [][]byte) error {
+	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
+	if err != nil {
+		return err
+	}
+
+	request := &packet.Packet{
+		Sender:   ht.Origin,
+		Receiver: targetHost,
+		Type:     packet.TypeCascadeSend,
+		Data: &packet.RequestCascadeSend{
+			Data: data,
+			Rpc: packet.RequestDataRPC{
+				Method: method,
+				Args:   args,
+			},
+		},
+	}
+
+	future, err := dht.transport.SendRequest(request)
+	if err != nil {
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			// Channel was closed
+			return errors.New("channel closed unexpectedly")
+		}
+		dht.addHost(ctx, routing.NewRouteHost(rsp.Sender))
+
+		response := rsp.Data.(*packet.ResponseCascadeSend)
+		if !response.Success {
+			return errors.New(response.Error)
+		}
+		return nil
+	case <-time.After(dht.options.PacketTimeout):
+		future.Cancel()
+		return errors.New("timeout")
 	}
 }
 
