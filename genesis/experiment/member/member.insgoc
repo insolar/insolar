@@ -17,11 +17,8 @@
 package member
 
 import (
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/toolkit/go/foundation"
 )
-
-var TypeReference = core.String2Ref("member")
 
 type Member struct {
 	foundation.BaseContract
@@ -36,9 +33,8 @@ func (m *Member) GetPublicKey() []byte {
 	return m.PublicKey
 }
 
-func NewMember(name string) *Member {
-	member := &Member{
+func New(name string) *Member {
+	return &Member{
 		Name: name,
 	}
-	return member
 }

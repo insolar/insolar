@@ -173,7 +173,7 @@ func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 }
 
 func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
-	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(parsed.name)
+	match := regexp.MustCompile("([^/]+)/([^/]+).(go|insgoc)$").FindStringSubmatch(parsed.name)
 	if match == nil {
 		return errors.New("couldn't match filename without extension and path")
 	}
@@ -190,9 +190,11 @@ func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Wri
 
 	types := generateTypes(parsed)
 
-	methodsProxies, imports := generateMethodsProxies(parsed)
+	methodsProxies := generateMethodsProxies(parsed)
 
 	constructorProxies := generateConstructorProxies(parsed)
+
+	imports := generateImports(parsed)
 
 	tmpl, err := openTemplate("templates/proxy.go.tpl")
 	if err != nil {
@@ -316,7 +318,7 @@ func generateTypes(parsed *ParsedFile) []string {
 }
 
 func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[string]bool) {
-	if params == nil {
+	if params == nil || params.NumFields() == 0 {
 		return
 	}
 
@@ -325,29 +327,29 @@ func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[str
 		tname = strings.Trim(tname, "*")
 		tnameFrom := strings.Split(tname, ".")
 
-		if len(tnameFrom) > 1 {
+		if len(tnameFrom) < 2 {
+			continue
+		}
+
+		for _, imp := range parsed.node.Imports {
 			var importAlias string
 			var impValue string
 
-			for _, imp := range parsed.node.Imports {
-				if imp.Name != nil {
-					importAlias = imp.Name.Name
-					impValue = fmt.Sprintf(`%s %s`, importAlias, imp.Path.Value)
-				} else {
-					impValue = imp.Path.Value
-					importString := strings.Trim(impValue, `"`)
-					importAlias = filepath.Base(importString)
-				}
-				if importAlias == tnameFrom[0] {
-					imports[impValue] = true
-					break
-				}
+			if imp.Name != nil {
+				importAlias = imp.Name.Name
+				impValue = fmt.Sprintf(`%s %s`, importAlias, imp.Path.Value)
+			} else {
+				impValue = imp.Path.Value
+				importString := strings.Trim(impValue, `"`)
+				importAlias = filepath.Base(importString)
 			}
 
+			if importAlias == tnameFrom[0] {
+				imports[impValue] = true
+				break
+			}
 		}
-
 	}
-
 }
 
 func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldList) (string, string) {
@@ -415,18 +417,29 @@ func generateMethodProxyInfo(parsed *ParsedFile, method *ast.FuncDecl) map[strin
 	}
 }
 
-func generateMethodsProxies(parsed *ParsedFile) ([]map[string]interface{}, map[string]bool) {
+func generateMethodsProxies(parsed *ParsedFile) []map[string]interface{} {
 	var methodsProxies []map[string]interface{}
 
+	for _, method := range parsed.methods[parsed.contract] {
+		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
+	}
+
+	return methodsProxies
+}
+
+func generateImports(parsed *ParsedFile) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
 	imports[fmt.Sprintf(`"%s"`, corePath)] = true
 	for _, method := range parsed.methods[parsed.contract] {
-		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
 		extendImportsMap(parsed, method.Type.Params, imports)
 		extendImportsMap(parsed, method.Type.Results, imports)
 	}
-	return methodsProxies, imports
+	for _, fun := range parsed.constructors[parsed.contract] {
+		extendImportsMap(parsed, fun.Type.Params, imports)
+		extendImportsMap(parsed, fun.Type.Results, imports)
+	}
+	return imports
 }
 
 func generateConstructorProxies(parsed *ParsedFile) []map[string]string {

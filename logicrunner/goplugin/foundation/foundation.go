@@ -18,24 +18,12 @@
 package foundation
 
 import (
-	"time"
-
 	"github.com/insolar/insolar/core"
 )
 
-// CallContext is a context of contract execution
-type CallContext struct {
-	Me     core.RecordRef // My Reference.
-	Caller core.RecordRef // Reference of calling contract.
-	Parent core.RecordRef // Reference to parent or container contract.
-	Class  core.RecordRef // Reference to type record on ledger, we have just one type reference, yet.
-	Time   time.Time      // Time of Calling side made call.
-	Pulse  uint64         // Number of current pulse.
-}
-
 // BaseContract is a base class for all contracts.
 type BaseContract struct {
-	context *CallContext // Context hidden from anyone
+	context *core.LogicCallContext // Context hidden from anyone
 }
 
 type ProxyInterface interface {
@@ -52,47 +40,51 @@ type BaseContractInterface interface {
 // GetReference - Returns public reference of contract
 func (bc *BaseContract) GetReference() core.RecordRef {
 	if bc.context == nil {
-		return core.String2Ref("")
+		panic("object has no context set before first use")
 	}
-	return bc.context.Me
+	if bc.context.Callee == nil {
+		panic("context has no callee set")
+	}
+	return *bc.context.Callee
 }
 
 // GetClass - Returns class of contract
 func (bc *BaseContract) GetClass() core.RecordRef {
 	if bc.context == nil {
-		return core.String2Ref("")
+		panic("object has no context set before first use")
 	}
-	return bc.context.Class
+	return *bc.context.Class
 }
 
 // GetContext returns current calling context of this object.
 // It exists only for currently called contract.
-func (bc *BaseContract) GetContext() *CallContext {
-	return bc.context
+func (bc *BaseContract) GetContext() core.LogicCallContext {
+	return *bc.context
 }
 
 // SetContext - do not use it in smartcontracts
-func (bc *BaseContract) SetContext(cc *CallContext) {
+func (bc *BaseContract) SetContext(cc *core.LogicCallContext) {
 	if bc.context == nil {
 		bc.context = cc
+	} else {
+		panic("context can not be set twice")
 	}
 }
 
 // GetImplementationFor finds delegate typed r in object and returns it
-// unimplemented
 func GetImplementationFor(o core.RecordRef, r core.RecordRef) ProxyInterface {
-	return nil
+	panic("not implemented")
 }
 
 // GetChildrenTyped returns set of children objects with corresponding type
 func (bc *BaseContract) GetChildrenTyped(r core.RecordRef) []ProxyInterface {
-	return nil
+	panic("not implemented")
 }
 
 // GetObject create proxy by address
 // unimplemented
 func GetObject(ref core.RecordRef) ProxyInterface {
-	return nil
+	panic("not implemented")
 }
 
 // SelfDestructRequest contract will be marked as deleted after call finishes
