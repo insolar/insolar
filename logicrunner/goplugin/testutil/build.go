@@ -23,7 +23,7 @@ import (
 )
 
 // ICC shared path to compiler binary.
-var ICC = "../cmd/icc/icc"
+var ICC = "../cmd/insgocc/insgocc"
 
 func buildCLI(name string) error {
 	out, err := exec.Command("go", "build", "-o", "./goplugin/"+name+"/"+name, "./goplugin/"+name+"/").CombinedOutput()
@@ -38,7 +38,7 @@ func buildInciderCLI() error {
 }
 
 func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", ICC, "../cmd/icc/").CombinedOutput()
+	out, err := exec.Command("go", "build", "-o", ICC, "../cmd/insgocc/").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "can't build %s: %s", ICC, string(out))
 	}
