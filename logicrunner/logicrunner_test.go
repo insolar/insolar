@@ -67,7 +67,7 @@ func newTestExecutor() *testExecutor {
 	}
 }
 
-func (r *testExecutor) CallMethod(ref core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+func (r *testExecutor) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
 	if len(r.methodResponses) < 1 {
 		panic(errors.New("no expected 'CallMethod' calls"))
 	}
@@ -77,7 +77,7 @@ func (r *testExecutor) CallMethod(ref core.RecordRef, data []byte, method string
 	return res.data, res.res, res.err
 }
 
-func (r *testExecutor) CallConstructor(ref core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
 	if len(r.constructorResponses) < 1 {
 		panic(errors.New("no expected 'CallConstructor' calls"))
 	}
@@ -145,9 +145,10 @@ func TestExecution(t *testing.T) {
 	dataRef := core.String2Ref("someObject")
 	classRef := core.String2Ref("someClass")
 	am.Objects[dataRef] = &testutil.TestObjectDescriptor{
-		AM:   am,
-		Data: []byte("origData"),
-		Code: &codeRef,
+		AM:    am,
+		Data:  []byte("origData"),
+		Code:  &codeRef,
+		Class: &classRef,
 	}
 	am.Classes[classRef] = &testutil.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
 	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef, AMachineType: core.MachineTypeGoPlugin}
@@ -298,7 +299,10 @@ func (r *Two) Hello(s string) string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	_, res, err := gp.CallMethod(*cb.Codes["one"], data, "Hello", argsSerialized)
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"]}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -405,7 +409,10 @@ func (r *Two) Hello(s string) string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	_, res, err := gp.CallMethod(*cb.Codes["one"], data, "Hello", argsSerialized)
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"]}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
 	if err != nil {
 		panic(err)
 	}

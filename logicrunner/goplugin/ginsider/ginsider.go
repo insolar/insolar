@@ -29,7 +29,6 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -78,8 +77,9 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	if !setContext.IsValid() {
 		return errors.New("this is not a contract, it not supports SetContext method")
 	}
-	cc := foundation.CallContext{
-		Me: core.String2Ref("contract address"),
+	ref := core.String2Ref("contract address")
+	cc := core.LogicCallContext{
+		Callee: &ref,
 		// fill me
 	}
 	setContext.Call([]reflect.Value{reflect.ValueOf(&cc)})

@@ -36,7 +36,7 @@ func (a *Allowance) IsExpired() bool {
 
 func (a *Allowance) TakeAmount() uint {
 	caller := a.GetContext().Caller
-	if caller == a.To && !a.IsExpired() {
+	if *caller == a.To && !a.IsExpired() {
 		a.SelfDestructRequest()
 		r := a.Amount
 		a.Amount = 0

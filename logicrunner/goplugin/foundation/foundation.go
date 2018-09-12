@@ -18,24 +18,12 @@
 package foundation
 
 import (
-	"time"
-
 	"github.com/insolar/insolar/core"
 )
 
-// CallContext is a context of contract execution
-type CallContext struct {
-	Me     core.RecordRef // My Reference.
-	Caller core.RecordRef // Reference of calling contract.
-	Parent core.RecordRef // Reference to parent or container contract.
-	Class  core.RecordRef // Reference to type record on ledger, we have just one type reference, yet.
-	Time   time.Time      // Time of Calling side made call.
-	Pulse  uint64         // Number of current pulse.
-}
-
 // BaseContract is a base class for all contracts.
 type BaseContract struct {
-	context *CallContext // Context hidden from anyone
+	context *core.LogicCallContext // Context hidden from anyone
 }
 
 type ProxyInterface interface {
@@ -54,7 +42,7 @@ func (bc *BaseContract) GetReference() core.RecordRef {
 	if bc.context == nil {
 		panic("object has no context set before first use")
 	}
-	return bc.context.Me
+	return *bc.context.Callee
 }
 
 // GetClass - Returns class of contract
@@ -62,17 +50,17 @@ func (bc *BaseContract) GetClass() core.RecordRef {
 	if bc.context == nil {
 		panic("object has no context set before first use")
 	}
-	return bc.context.Class
+	return *bc.context.Class
 }
 
 // GetContext returns current calling context of this object.
 // It exists only for currently called contract.
-func (bc *BaseContract) GetContext() CallContext {
+func (bc *BaseContract) GetContext() core.LogicCallContext {
 	return *bc.context
 }
 
 // SetContext - do not use it in smartcontracts
-func (bc *BaseContract) SetContext(cc *CallContext) {
+func (bc *BaseContract) SetContext(cc *core.LogicCallContext) {
 	if bc.context == nil {
 		bc.context = cc
 	} else {
