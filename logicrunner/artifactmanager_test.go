@@ -75,7 +75,7 @@ func TestGoPlugin(t *testing.T) {
 		}
 	}
 
-	t.Run("Hello", func(t *testing.T) {
+	t.Run("hello", func(t *testing.T) {
 		gp, stop := initgoplugin()
 		defer stop()
 		hello(t, l, gp)
