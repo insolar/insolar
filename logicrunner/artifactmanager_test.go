@@ -73,6 +73,12 @@ func TestGoPlugin(t *testing.T) {
 	t.Run("Hello", func(t *testing.T) {
 		hello(t, l, gp)
 	})
+	t.Run("callingContract", func(t *testing.T) {
+		callingContract(t, l, gp)
+	})
+	// t.Run("injectingDelegate", func(t *testing.T) {
+	// 	injectingDelegate(t, l, gp)
+	// })
 }
 
 func hello(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
@@ -114,4 +120,136 @@ func (b *Hello) String() string {
 	}
 	resParsed := testutil.CBORUnMarshalToSlice(t, res)
 	assert.Equal(t, "Hello, Go is there!", resParsed[0])
+}
+
+func callingContract(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello(s string) string {
+	holder := two.New()
+	friend := holder.AsChild("")
+
+	res := friend.Hello(s)
+
+	return "Hi, " + s + "! Two said: " + res
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() *Two {
+	return &Two{X:322};
+}
+
+func (r *Two) Hello(s string) string {
+	r.X *= 2
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
+}
+`
+
+	cb := testutil.NewContractBuilder(l.GetManager(), testutil.ICC)
+	err := cb.Build(map[string]string{
+		"one": contractOneCode,
+		"two": contractTwoCode,
+	})
+	assert.NoError(t, err)
+
+	_, res, err := gp.CallMethod(
+		*cb.Codes["one"],
+		testutil.CBORMarshal(t, &struct{}{}),
+		"Hello",
+		testutil.CBORMarshal(t, []interface{}{"ins"}),
+	)
+	if err != nil {
+		panic("gp.CallMethod: " + err.Error())
+	}
+
+	resParsed := testutil.CBORUnMarshalToSlice(t, res)
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+}
+
+func injectingDelegate(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello(s string) string {
+	holder := two.New()
+	friend := holder.AsDelegate("")
+
+	res := friend.Hello(s)
+
+	return "Hi, " + s + "! Two said: " + res
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() *Two {
+	return &Two{X:322};
+}
+
+func (r *Two) Hello(s string) string {
+	r.X *= 2
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
+}
+`
+
+	cb := testutil.NewContractBuilder(l.GetManager(), testutil.ICC)
+	err := cb.Build(map[string]string{
+		"one": contractOneCode,
+		"two": contractTwoCode,
+	})
+	assert.NoError(t, err)
+
+	_, res, err := gp.CallMethod(
+		*cb.Codes["one"],
+		testutil.CBORMarshal(t, &struct{}{}),
+		"Hello",
+		testutil.CBORMarshal(t, []interface{}{"ins"}),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	resParsed := testutil.CBORUnMarshalToSlice(t, res)
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
 }
