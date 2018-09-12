@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -783,19 +783,14 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 }
 
 // GetObjChildren returns provided object's children references.
-func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) (core.RefIterator, error) {
 	objRef := record.Core2Reference(head)
 	_, _, objIndex, err := m.getActiveObject(m.db, objRef)
 	if err != nil {
 		return nil, err
 	}
 
-	childRefs := make([]core.RecordRef, 0, len(objIndex.Children))
-	for _, ch := range objIndex.Children {
-		childRefs = append(childRefs, *ch.CoreRef())
-	}
-
-	return childRefs, nil
+	return &RefIterator{elements: objIndex.Children}, nil
 }
 
 // GetObjDelegate returns provided object's delegate reference for provided class.

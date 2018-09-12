@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return errors.New("this is not a contract, it not supports SetContext method")
 	}
 	cc := foundation.CallContext{
-		Me: foundation.Reference("contract address"),
+		Me: core.String2Ref("contract address"),
 		// fill me
 	}
 	setContext.Call([]reflect.Value{reflect.ValueOf(&cc)})
@@ -268,14 +268,14 @@ func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 }
 
 // RouteCall ...
-func (gi *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, error) {
+func (gi *GoInsider) RouteCall(ref core.RecordRef, method string, args []byte) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
 
 	req := rpctypes.UpRouteReq{
-		Reference: core.String2Ref(ref),
+		Reference: ref,
 		Method:    method,
 		Arguments: args,
 	}
@@ -290,14 +290,14 @@ func (gi *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, 
 }
 
 // RouteConstructorCall ...
-func (gi *GoInsider) RouteConstructorCall(ref string, name string, args []byte) ([]byte, error) {
+func (gi *GoInsider) RouteConstructorCall(ref core.RecordRef, name string, args []byte) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return []byte{}, err
 	}
 
 	req := rpctypes.UpRouteConstructorReq{
-		Reference:   core.String2Ref(ref),
+		Reference:   ref,
 		Constructor: name,
 		Arguments:   args,
 	}
@@ -312,47 +312,47 @@ func (gi *GoInsider) RouteConstructorCall(ref string, name string, args []byte) 
 }
 
 // SaveAsChild ...
-func (gi *GoInsider) SaveAsChild(parentRef, classRef string, data []byte) (string, error) {
+func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return "", err
+		return core.String2Ref(""), err
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
-		Parent: core.String2Ref(parentRef),
-		Class:  core.String2Ref(classRef),
+		Parent: parentRef,
+		Class:  classRef,
 		Data:   data,
 	}
 
 	res := rpctypes.UpSaveAsChildResp{}
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
-		return "", errors.Wrap(err, "on calling main API")
+		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference.String(), nil
+	return res.Reference, nil
 }
 
 // SaveAsDelegate ...
-func (gi *GoInsider) SaveAsDelegate(intoRef, classRef string, data []byte) (string, error) {
+func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return "", err
+		return core.String2Ref(""), err
 	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
-		Into:  core.String2Ref(intoRef),
-		Class: core.String2Ref(classRef),
+		Into:  intoRef,
+		Class: classRef,
 		Data:  data,
 	}
 
 	res := rpctypes.UpSaveAsDelegateResp{}
 	err = client.Call("RPC.SaveAsDelegate", req, &res)
 	if err != nil {
-		return "", errors.Wrap(err, "on calling main API")
+		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference.String(), nil
+	return res.Reference, nil
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`

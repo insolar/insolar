@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -202,10 +202,13 @@ func TestCompileContractProxy(t *testing.T) {
 	err = testutil.WriteFile(tmpDir, "/test.go", `
 package test
 
-import "secondary"
+import (
+	"secondary"
+	"github.com/insolar/insolar/core"
+)
 
 func main() {
-	_ = secondary.GetObject("some")
+	_ = secondary.GetObject(core.String2Ref("some"))
 }
 	`)
 	assert.NoError(t, err)

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -818,7 +818,13 @@ func TestLedgerArtifactManager_GetObjChildren_ReturnsCorrectRefs(t *testing.T) {
 	for _, r := range refs {
 		coreRefs = append(coreRefs, *r.CoreRef())
 	}
-	children, err := td.manager.GetObjChildren(*objectRef.CoreRef())
+	iter, err := td.manager.GetObjChildren(*objectRef.CoreRef())
 	assert.NoError(t, err)
-	assert.Equal(t, coreRefs, children)
+	i := 0
+	for iter.HasNext() {
+		child, err := iter.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, coreRefs[i], child)
+		i++
+	}
 }
