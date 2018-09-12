@@ -18,11 +18,12 @@ package configuration
 
 // Stats holds configuration for pulsar node
 type Pulsar struct {
+	Type           string
 	ListenAddress  string
 	NodesAddresses []string
 }
 
 // NewPulsar creates new default configuration for pulsar node
 func NewPulsar() Pulsar {
-	return Pulsar{ListenAddress: "0.0.0.0:8090", NodesAddresses: []string{}}
+	return Pulsar{ListenAddress: "0.0.0.0:8090", Type: "tcp", NodesAddresses: []string{}}
 }

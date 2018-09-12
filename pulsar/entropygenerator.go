@@ -16,14 +16,19 @@
 
 package pulsar
 
-//Base data struct for a pulse
-type Pulse struct {
-	PulseNumber uint64
-	Entropy     [8]byte
+import "math/rand"
+
+type EntropyGenerator interface {
+	GenerateEntropy() [8]byte
 }
 
-//Create a new pulse with using of custom Entropy Generator
-func NewPulse(previousPulseNumber uint64, entropyGenerator EntropyGenerator) *Pulse {
-	previousPulseNumber++
-	return &Pulse{PulseNumber: previousPulseNumber, Entropy: entropyGenerator.GenerateEntropy()}
+type StandardEntropyGenerator struct {
+}
+
+func (generator *StandardEntropyGenerator) GenerateEntropy() [8]byte {
+	entropy := make([]byte, 8)
+	rand.Read(entropy)
+	var result [8]byte
+	copy(result[:], entropy[:8])
+	return result
 }
