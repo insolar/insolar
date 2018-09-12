@@ -65,13 +65,13 @@ func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 	case CreateMember:
 		answer, handlerError = rh.ProcessCreateMember()
 	case DumpUserInfo:
-		answer, handlerError = rh.ProcessDumpUserInfo()
+		answer, handlerError = rh.ProcessDumpUsers(false)
+	case DumpAllUsers:
+		answer, handlerError = rh.ProcessDumpUsers(true)
 	case GetBalance:
 		answer, handlerError = rh.ProcessGetBalance()
 	case SendMoney:
 		answer, handlerError = rh.ProcessSendMoney()
-	case DumpAllUsers:
-		answer, handlerError = rh.ProcessDumpAllUsers()
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = WriteError(msg, -2)

@@ -37,7 +37,7 @@ func QTypeFromString(strQType string) QueryType {
 		return GetBalance
 	case "send_money":
 		return SendMoney
-	case "dump_all_user":
+	case "dump_all_users":
 		return DumpAllUsers
 	}
 

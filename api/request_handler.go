@@ -114,14 +114,6 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 	return result, nil
 }
 
-func (rh *RequestHandler) ProcessDumpUserInfo() (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	result["DumpUserInfo"] = true
-	result["QQ"] = 222
-
-	return result, nil
-}
-
 func extractGetBalanceResponse(data []byte) (uint, error) {
 	dataUnmarsh, err := UnMarshalResponse(data)
 	if err != nil {
@@ -244,25 +236,31 @@ func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
 	return dumpJson, nil
 }
 
-func (rh *RequestHandler) ProcessDumpAllUsers() (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	result["CreateUser"] = true
 	result["reference"] = "123123-234234234-345345345"
 
-	const ReferenceField = "reference"
-	name := rh.req.FormValue(ReferenceField)
-	if len(name) == 0 {
-		return nil, errors.New("field is required: " + ReferenceField)
+	var err error
+	var routResult *core.Response
+	if all {
+		routResult, err = rh.SendRequest("DumpAllUsers", []interface{}{})
+	} else {
+		const ReferenceField = "reference"
+		name := rh.req.FormValue(ReferenceField)
+		if len(name) == 0 {
+			return nil, errors.New("field is required: " + ReferenceField)
+		}
+		routResult, err = rh.SendRequest("DumpUserInfo", []interface{}{name})
 	}
 
-	routResult, err := rh.SendRequest("DumpAllUsers", []interface{}{name})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessDumpAllUsers ]")
+		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
 	serJsonDump, err := extractDumpAllUsersResponse(routResult.Result)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessDumpAllUsers ]")
+		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
 	var dd interface{}
