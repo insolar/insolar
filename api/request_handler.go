@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -92,17 +93,13 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 	result["CreateUser"] = true
 	result["reference"] = "123123-234234234-345345345"
 
-	name := rh.req.FormValue("name")
+	const NameField = "name"
+	name := rh.req.FormValue(NameField)
 	if len(name) == 0 {
-		return nil, errors.New("field 'name' is required")
+		return nil, errors.New("field is required: " + NameField)
 	}
 
-	args, err := MarshalArgs(name)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
-	}
-
-	routResult, err := rh.RouteCall(rh.rootDomainReference, "CreateMember", args)
+	routResult, err := rh.SendRequest("CreateMember", []interface{}{name})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -112,42 +109,165 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	if len(*memberRef) != 0 {
-		result["reference"] = memberRef
-	}
+	result["reference"] = memberRef
 
 	return result, nil
 }
 
-func (rh *RequestHandler) ProcessDumpUserInfo() map[string]interface{} {
+func (rh *RequestHandler) ProcessDumpUserInfo() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	result["DumpUserInfo"] = true
 	result["QQ"] = 222
 
-	return result
+	return result, nil
 }
 
-func (rh *RequestHandler) ProcessGetBalance() map[string]interface{} {
+func extractGetBalanceResponse(data []byte) (uint, error) {
+	dataUnmarsh, err := UnMarshalResponse(data)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ extractGetBalanceResponse ]")
+	}
+
+	balance, ok := dataUnmarsh[0].(uint)
+	if !ok {
+		msg := fmt.Sprintf("Can't cast response to uint. orig: %T", dataUnmarsh)
+		return 0, errors.New(msg)
+	}
+
+	return balance, nil
+}
+
+func (rh *RequestHandler) SendRequest(method string, argsIn []interface{}) (*core.Response, error) {
+	args, err := MarshalArgs(argsIn...)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SendRequest ]")
+	}
+
+	routResult, err := rh.RouteCall(rh.rootDomainReference, method, args)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SendRequest ]")
+	}
+
+	return routResult, nil
+}
+
+func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	result["GetBalance"] = true
 	result["amount"] = 333
 	result["currency"] = "RUB"
 
-	return result
+	const ReferenceField = "reference"
+	name := rh.req.FormValue(ReferenceField)
+	if len(name) == 0 {
+		return nil, errors.New("field is required: " + ReferenceField)
+	}
+
+	routResult, err := rh.SendRequest("GetBalance", []interface{}{name})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
+	}
+
+	amount, err := extractGetBalanceResponse(routResult.Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
+	}
+
+	result["amount"] = amount
+
+	return result, nil
 }
 
-func (rh *RequestHandler) ProcessSendMoney() map[string]interface{} {
+func extractSendMoneyResponse(data []byte) (bool, error) {
+	dataUnmarsh, err := UnMarshalResponse(data)
+	if err != nil {
+		return false, errors.Wrap(err, "[ extractSendMoneyResponse ]")
+	}
+
+	isSent, ok := dataUnmarsh[0].(bool)
+	if !ok {
+		msg := fmt.Sprintf("Can't cast response to bool. orig: %T", dataUnmarsh)
+		return false, errors.New(msg)
+	}
+
+	return isSent, nil
+}
+
+func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	result["SendMoney"] = true
 	result["success"] = true
 
-	return result
+	const FromField = "from"
+	const ToField = "to"
+	const AmountField = "to"
+	from := rh.req.FormValue(FromField)
+	if len(from) == 0 {
+		return nil, errors.New("field is required: " + FromField)
+	}
+	to := rh.req.FormValue(ToField)
+	if len(from) == 0 {
+		return nil, errors.New("field is required: " + ToField)
+	}
+	amount := rh.req.FormValue(AmountField)
+	if len(from) == 0 {
+		return nil, errors.New("field is required: " + AmountField)
+	}
+
+	routResult, err := rh.SendRequest("SendMoney", []interface{}{from, to, amount})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
+	}
+
+	isSent, err := extractSendMoneyResponse(routResult.Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
+	}
+
+	result["success"] = isSent
+
+	return result, nil
 }
 
-func (rh *RequestHandler) ProcessDumpAllUsers() map[string]interface{} {
-	result := make(map[string]interface{})
-	result["AllUsers"] = true
-	result["QQQ"] = 555
+func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
+	dataUnmarsh, err := UnMarshalResponse(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ extractDumpAllUsersResponse ]")
+	}
 
-	return result
+	dumpJson, ok := dataUnmarsh[0].([]byte)
+	if !ok {
+		msg := fmt.Sprintf("Can't cast response to string. orig: %T", dataUnmarsh)
+		return nil, errors.New(msg)
+	}
+
+	return dumpJson, nil
+}
+
+func (rh *RequestHandler) ProcessDumpAllUsers() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	result["CreateUser"] = true
+	result["reference"] = "123123-234234234-345345345"
+
+	const ReferenceField = "reference"
+	name := rh.req.FormValue(ReferenceField)
+	if len(name) == 0 {
+		return nil, errors.New("field is required: " + ReferenceField)
+	}
+
+	routResult, err := rh.SendRequest("DumpAllUsers", []interface{}{name})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessDumpAllUsers ]")
+	}
+
+	serJsonDump, err := extractDumpAllUsersResponse(routResult.Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessDumpAllUsers ]")
+	}
+
+	var dd interface{}
+	json.Unmarshal(serJsonDump, &dd)
+	result["dump_info"] = dd
+
+	return result, nil
 }
