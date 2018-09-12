@@ -427,7 +427,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		cb.Classes[name] = class
 	}
 
-	re := regexp.MustCompile("package\\s+\\S+")
+	re := regexp.MustCompile(`package\s+\S+`)
 	for name, code := range contracts {
 		code = re.ReplaceAllString(code, "package main")
 		err := WriteFile(cb.root+"/src/contract/"+name+"/", "main.go", code)
