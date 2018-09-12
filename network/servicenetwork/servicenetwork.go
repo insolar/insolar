@@ -19,10 +19,6 @@ package servicenetwork
 import (
 	"bytes"
 	"encoding/gob"
-	"io/ioutil"
-	"log"
-	"strings"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
@@ -30,6 +26,8 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"log"
 )
 
 // ServiceNetwork is facade for network.
@@ -96,42 +94,12 @@ func (network *ServiceNetwork) SendCascadeMessage(data cascade.CascadeSendData, 
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	if len(data.NodeIds) == 0 {
-		return errors.New("node IDs list should not be empty")
-	}
-	if data.ReplicationFactor == 0 {
-		return errors.New("replication factor should not be zero")
-	}
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return err
 	}
 
-	nextNodes := cascade.CalculateNextNodes(data, false, "")
-	if len(nextNodes) == 0 {
-		return nil
-	}
-	var failedNodes []string
-	for _, nextNode := range nextNodes {
-		hostID, err := network.nodeNetwork.GetReferenceHostID(nextNode)
-		if err != nil {
-			logrus.Debugln("failed to resolve nodeID -> hostID: ", err)
-			failedNodes = append(failedNodes, nextNode)
-			continue
-		}
-
-		err = network.hostNetwork.CascadeSendMessage(data, createContext(network.hostNetwork), hostID, method, [][]byte{buff})
-		if err != nil {
-			logrus.Debugln("failed to send cascade message: ", err)
-			failedNodes = append(failedNodes, nextNode)
-		}
-	}
-
-	if len(failedNodes) > 0 {
-		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
-	}
-
-	return nil
+	return network.hostNetwork.InitCascadeSendMessage(data, "", createContext(network.hostNetwork), method, [][]byte{buff})
 }
 
 func messageToBytes(msg core.Message) ([]byte, error) {

@@ -29,9 +29,9 @@ func TestCalculateNextNodes(t *testing.T) {
 		Entropy:           0,
 		ReplicationFactor: 2,
 	}
-	assert.Equal(t, []string{"J", "F"}, CalculateNextNodes(c, false, ""))
-	assert.Equal(t, []string{"H", "D"}, CalculateNextNodes(c, true, "J"))
-	assert.Equal(t, []string{"C", "L"}, CalculateNextNodes(c, true, "H"))
+	assert.Equal(t, []string{"J", "F"}, CalculateNextNodes(c, ""))
+	assert.Equal(t, []string{"H", "D"}, CalculateNextNodes(c, "J"))
+	assert.Equal(t, []string{"C", "L"}, CalculateNextNodes(c, "H"))
 }
 
 func Test_geometricProgressionSum(t *testing.T) {

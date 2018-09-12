@@ -93,7 +93,7 @@ func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicatio
 	return
 }
 
-func CalculateNextNodes(data CascadeSendData, findCurrentNode bool, currentNode string) (nextNodeIds []string) {
+func CalculateNextNodes(data CascadeSendData, currentNode string) (nextNodeIds []string) {
 	nodeIds := make([]string, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
 
@@ -103,7 +103,7 @@ func CalculateNextNodes(data CascadeSendData, findCurrentNode bool, currentNode 
 			calcHash(nodeIds[j], data.Entropy)) < 0
 	})
 
-	if !findCurrentNode {
+	if currentNode == "" {
 		l := min(len(nodeIds), int(data.ReplicationFactor))
 		return nodeIds[:l]
 	}

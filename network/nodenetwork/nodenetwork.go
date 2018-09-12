@@ -70,3 +70,7 @@ func (network *Nodenetwork) addNode(node *Node) error {
 	network.nodes[node.GetReference().String()] = node
 	return nil
 }
+
+func (network *Nodenetwork) GetCurrentReferenceId() string {
+	return ""
+}

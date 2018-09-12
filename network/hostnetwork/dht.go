@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"github.com/sirupsen/logrus"
 	"log"
 	"math"
 	"math/big"
@@ -51,6 +52,7 @@ type RPC interface {
 
 type HostIdResolver interface {
 	GetReferenceHostID(ref string) (string, error)
+	GetCurrentReferenceId() string
 }
 
 // DHT represents the state of the local host in the distributed hash table.
@@ -945,7 +947,7 @@ func (dht *DHT) processCascadeSend(ctx Context, msg *packet.Packet, packetBuilde
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
-	// TODO: send data to next cascade layers
+	dht.InitCascadeSendMessage(data.Data, dht.idResolver.GetCurrentReferenceId(), ctx, data.Rpc.Method, data.Rpc.Args)
 }
 
 func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
@@ -1541,8 +1543,43 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string,
 	}
 }
 
-// CascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
-func (dht *DHT) CascadeSendMessage(data cascade.CascadeSendData, ctx Context, targetID string, method string, args [][]byte) error {
+// InitCascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
+func (dht *DHT) InitCascadeSendMessage(data cascade.CascadeSendData, currentNode string, ctx Context, method string, args [][]byte) error {
+	if len(data.NodeIds) == 0 {
+		return errors.New("node IDs list should not be empty")
+	}
+	if data.ReplicationFactor == 0 {
+		return errors.New("replication factor should not be zero")
+	}
+
+	nextNodes := cascade.CalculateNextNodes(data, currentNode)
+	if len(nextNodes) == 0 {
+		return nil
+	}
+	var failedNodes []string
+	for _, nextNode := range nextNodes {
+		hostID, err := dht.idResolver.GetReferenceHostID(nextNode)
+		if err != nil {
+			logrus.Debugln("failed to resolve nodeID -> hostID: ", err)
+			failedNodes = append(failedNodes, nextNode)
+			continue
+		}
+
+		err = dht.cascadeSendMessage(data, ctx, hostID, method, args)
+		if err != nil {
+			logrus.Debugln("failed to send cascade message: ", err)
+			failedNodes = append(failedNodes, nextNode)
+		}
+	}
+
+	if len(failedNodes) > 0 {
+		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
+	}
+
+	return nil
+}
+
+func (dht *DHT) cascadeSendMessage(data cascade.CascadeSendData, ctx Context, targetID string, method string, args [][]byte) error {
 	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
 	if err != nil {
 		return err
