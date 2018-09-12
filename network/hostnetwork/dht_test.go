@@ -19,6 +19,7 @@ package hostnetwork
 import (
 	"bytes"
 	"errors"
+	"github.com/insolar/insolar/network/cascade"
 	"math"
 	"strconv"
 	"strings"
@@ -1438,5 +1439,130 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	for _, dht := range dhts {
 		dht.Disconnect()
 	}
+	<-done
+}
+
+type mockHostIdResolver struct {
+	refToHost  map[string]string
+	currentRef string
+}
+
+func (m *mockHostIdResolver) GetReferenceHostID(ref string) (string, error) {
+	return m.refToHost[ref], nil
+}
+
+func (m *mockHostIdResolver) GetCurrentReferenceId() string {
+	return m.currentRef
+}
+
+type mockCascadeTransport struct {
+	routing       map[string]*mockCascadeTransport
+	recv          chan *packet.Packet
+	send          chan *packet.Packet
+	dc            chan bool
+	msgChan       chan *packet.Packet
+	sequence      *uint64
+	publicAddress string
+}
+
+func newMockCascadeTransport(r map[string]*mockCascadeTransport) *mockCascadeTransport {
+	net := &mockCascadeTransport{
+		routing:  r,
+		recv:     make(chan *packet.Packet),
+		send:     make(chan *packet.Packet),
+		dc:       make(chan bool),
+		msgChan:  make(chan *packet.Packet),
+		sequence: new(uint64),
+	}
+	return net
+}
+
+func (t *mockCascadeTransport) Start() error {
+	return nil
+}
+
+func (t *mockCascadeTransport) Stop() {
+	close(t.dc)
+}
+
+func (t *mockCascadeTransport) Close() {
+	close(t.recv)
+	close(t.send)
+	close(t.msgChan)
+}
+
+func (t *mockCascadeTransport) Stopped() <-chan bool {
+	return t.dc
+}
+
+func (t *mockCascadeTransport) Packets() <-chan *packet.Packet {
+	return t.msgChan
+}
+
+func (t *mockCascadeTransport) SendRequest(q *packet.Packet) (transport.Future, error) {
+	sequenceNumber := transport.AtomicLoadAndIncrementUint64(t.sequence)
+	t.routing[q.Receiver.ID.KeyString()].recv <- q
+	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: packet.RequestID(sequenceNumber)}, nil
+}
+
+func (t *mockCascadeTransport) SendResponse(requestID packet.RequestID, q *packet.Packet) error {
+	return nil
+}
+
+func (t *mockCascadeTransport) PublicAddress() string {
+	return t.publicAddress
+}
+
+func TestDHT_InitCascadeSendMessage(t *testing.T) {
+	// does not work because we need to init routing table on each node properly
+	t.Skip()
+	transports := make(map[string]*mockCascadeTransport)
+	dhts_size := 6
+	transportsByIndex := make([]*mockCascadeTransport, dhts_size)
+	dhts := make([]*DHT, dhts_size)
+	refToHost := make(map[string]string)
+
+	port := 20000
+	for i := 0; i < dhts_size; i++ {
+		ids := make([]id.ID, 0)
+		id, _ := id.NewID()
+		ids = append(ids, id)
+
+		port++
+		address := "127.0.0.1" + strconv.Itoa(port)
+
+		st := store.NewMemoryStore()
+		addr, _ := host.NewAddress(address)
+		origin, _ := host.NewOrigin(ids, addr)
+		t := newMockCascadeTransport(transports)
+		transports[id.KeyString()] = t
+		transportsByIndex[i] = t
+		r := rpc.NewRPC()
+
+		ref := "A" + strconv.Itoa(i)
+		refToHost[ref] = id.KeyString()
+		idResolver := &mockHostIdResolver{
+			refToHost:  refToHost,
+			currentRef: ref,
+		}
+
+		dhts[i], _ = NewDHT(st, origin, t, r, &Options{}, relay.NewProxy(), idResolver)
+	}
+	done := make(chan bool)
+
+	d := cascade.CascadeSendData{
+		NodeIds:           []string{"A0", "A1", "A2", "A3", "A4", "A5"},
+		Entropy:           0,
+		ReplicationFactor: 2,
+	}
+
+	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultHost().Build()
+	dhts[0].InitCascadeSendMessage(d, "", ctx, "method", [][]byte{})
+
+	go func() {
+		<-transportsByIndex[3].recv
+		done <- true
+	}()
+
 	<-done
 }
