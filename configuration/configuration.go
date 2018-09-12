@@ -35,6 +35,7 @@ type Configuration struct {
 	Log         Log
 	Stats       Stats
 	LogicRunner LogicRunner
+	Pulsar      Pulsar
 }
 
 // Holder provides methods to manage configuration
@@ -53,6 +54,7 @@ func NewConfiguration() Configuration {
 		Log:         NewLog(),
 		Stats:       NewStats(),
 		LogicRunner: NewLogicRunner(),
+		Pulsar:      NewPulsar(),
 	}
 
 	return cfg
