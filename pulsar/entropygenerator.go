@@ -18,7 +18,7 @@ package pulsar
 
 import "crypto/rand"
 
-type Entropy [8]byte
+type Entropy [64]byte
 
 type EntropyGenerator interface {
 	GenerateEntropy() Entropy
@@ -28,12 +28,12 @@ type StandardEntropyGenerator struct {
 }
 
 func (generator *StandardEntropyGenerator) GenerateEntropy() Entropy {
-	entropy := make([]byte, 8)
+	entropy := make([]byte, len(Entropy{}))
 	_, err := rand.Read(entropy)
 	if err != nil {
 		panic(err)
 	}
-	var result [8]byte
-	copy(result[:], entropy[:8])
+	var result Entropy
+	copy(result[:], entropy[:len(Entropy{})])
 	return result
 }
