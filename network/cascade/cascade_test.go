@@ -18,20 +18,25 @@ package cascade
 
 import (
 	"encoding/hex"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCalculateNextNodes(t *testing.T) {
 	nodeIds := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"}
 	c := SendData{
 		NodeIds:           nodeIds,
-		Entropy:           0,
+		Entropy:           core.Entropy{0},
 		ReplicationFactor: 2,
 	}
-	assert.Equal(t, []string{"J", "F"}, CalculateNextNodes(c, ""))
-	assert.Equal(t, []string{"H", "D"}, CalculateNextNodes(c, "J"))
-	assert.Equal(t, []string{"C", "L"}, CalculateNextNodes(c, "H"))
+	r, _ := CalculateNextNodes(c, "")
+	assert.Equal(t, []string{"J", "F"}, r)
+	r, _ = CalculateNextNodes(c, "J")
+	assert.Equal(t, []string{"H", "D"}, r)
+	r, _ = CalculateNextNodes(c, "H")
+	assert.Equal(t, []string{"C", "L"}, r)
 }
 
 func Test_geometricProgressionSum(t *testing.T) {
@@ -42,9 +47,7 @@ func Test_geometricProgressionSum(t *testing.T) {
 func Test_calcHash(t *testing.T) {
 	str := "AAAAAAAAAAAAAAAA"
 	c, _ := hex.DecodeString("445215f965178aa7bb7dda56286fe51e45b6e4724dd6a33d4872057c")
-	assert.Equal(t, c, calcHash(str, 0))
-	c, _ = hex.DecodeString("bd19699e96d7c4f2e363b4ada17d91b78cd1103067dbbf11b40c738b")
-	assert.Equal(t, c, calcHash(str, 2))
+	assert.Equal(t, c, calcHash(str, core.Entropy{0}))
 }
 
 func Test_getNextCascadeLayerIndexes(t *testing.T) {

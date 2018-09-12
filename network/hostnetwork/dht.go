@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"github.com/sirupsen/logrus"
 	"log"
 	"math"
 	"math/big"
@@ -29,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
@@ -50,6 +51,7 @@ type RPC interface {
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 }
 
+// HostIdResolver interface provides means of getting host IDs for other hosts and reference ID for current host
 type HostIDResolver interface {
 	GetReferenceHostID(ref string) (string, error)
 	GetCurrentReferenceID() string
@@ -1555,7 +1557,10 @@ func (dht *DHT) InitCascadeSendMessage(data cascade.SendData, currentNode string
 		return errors.New("replication factor should not be zero")
 	}
 
-	nextNodes := cascade.CalculateNextNodes(data, currentNode)
+	nextNodes, err := cascade.CalculateNextNodes(data, currentNode)
+	if err != nil {
+		return err
+	}
 	if len(nextNodes) == 0 {
 		return nil
 	}
@@ -1588,18 +1593,14 @@ func (dht *DHT) cascadeSendMessage(data cascade.SendData, ctx Context, targetID 
 		return err
 	}
 
-	request := &packet.Packet{
-		Sender:   ht.Origin,
-		Receiver: targetHost,
-		Type:     packet.TypeCascadeSend,
-		Data: &packet.RequestCascadeSend{
+	request := packet.NewBuilder().Sender(ht.Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
+		Request(&packet.RequestCascadeSend{
 			Data: data,
 			RPC: packet.RequestDataRPC{
 				Method: method,
 				Args:   args,
 			},
-		},
-	}
+		}).Build()
 
 	future, err := dht.transport.SendRequest(request)
 	if err != nil {

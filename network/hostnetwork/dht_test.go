@@ -19,12 +19,14 @@ package hostnetwork
 import (
 	"bytes"
 	"errors"
-	"github.com/insolar/insolar/network/cascade"
 	"math"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -1552,7 +1554,7 @@ func TestDHT_InitCascadeSendMessage(t *testing.T) {
 
 	d := cascade.SendData{
 		NodeIds:           []string{"A0", "A1", "A2", "A3", "A4", "A5"},
-		Entropy:           0,
+		Entropy:           core.Entropy{0},
 		ReplicationFactor: 2,
 	}
 

@@ -14,14 +14,12 @@
  *    limitations under the License.
  */
 
-package pulsar
+package core
 
-import (
-	"github.com/insolar/insolar/core"
-)
+type Entropy [64]byte
 
-//Create a new pulse with using of custom Entropy Generator
-func NewPulse(previousPulseNumber uint64, entropyGenerator EntropyGenerator) *core.Pulse {
-	previousPulseNumber++
-	return &core.Pulse{PulseNumber: previousPulseNumber, Entropy: entropyGenerator.GenerateEntropy()}
+// Base data struct for a pulse
+type Pulse struct {
+	PulseNumber uint64
+	Entropy     Entropy
 }

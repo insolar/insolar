@@ -18,15 +18,21 @@ package cascade
 
 import (
 	"bytes"
-	"encoding/binary"
-	"golang.org/x/crypto/sha3"
+	"fmt"
 	"math"
 	"sort"
+
+	"github.com/insolar/insolar/core"
+	"golang.org/x/crypto/sha3"
 )
 
+// SendData contains routing data for cascade sending
 type SendData struct {
-	NodeIds           []string
-	Entropy           uint64
+	// NodeIds contains the slice of node identifiers that will receive the message
+	NodeIds []string
+	// Entropy is used for pseudorandom cascade building
+	Entropy core.Entropy
+	// Replication factor is the number of children nodes of the each node of the cascade
 	ReplicationFactor uint
 }
 
@@ -45,17 +51,17 @@ func geometricProgressionSum(a int, r int, n int) int {
 	return a * (1 - S) / (1 - r)
 }
 
-func calcHash(nodeID string, entropy uint64) []byte {
+func calcHash(nodeID string, entropy core.Entropy) []byte {
 	data := []byte(nodeID)
-
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, entropy)
 	for i, d := range data {
-		data[i] = b[i%8] ^ d
+		data[i] = entropy[i%64] ^ d
 	}
 
 	hash := sha3.New224()
-	hash.Write(data)
+	_, err := hash.Write(data)
+	if err != nil {
+		panic(err)
+	}
 	return hash.Sum(nil)
 }
 
@@ -64,6 +70,7 @@ func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicatio
 	j := 0
 	layerWidth := replicationFactor
 	found := false
+	// iterate to find current node in the nodes slice, incrementing j and depth according to replicationFactor
 	for _, nodeID := range nodeIds {
 		if nodeID == currentNode {
 			found = true
@@ -81,6 +88,7 @@ func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicatio
 		return len(nodeIds), len(nodeIds)
 	}
 
+	// calculate count of the all nodes that have depth less or equal to the current node
 	n := int(replicationFactor)
 	var layerWeight int
 	if n == 1 {
@@ -88,14 +96,23 @@ func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicatio
 	} else {
 		layerWeight = geometricProgressionSum(n, n, depth+1)
 	}
+	// calculate children subtree of the current node
 	startIndex = layerWeight + j*n
 	endIndex = startIndex + n
 	return
 }
 
-func CalculateNextNodes(data SendData, currentNode string) (nextNodeIds []string) {
+// get nodes of the next cascade layer from the input nodes slice
+func CalculateNextNodes(data SendData, currentNode string) (nextNodeIds []string, err error) {
 	nodeIds := make([]string, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
+
+	// catching possible panic from calcHash
+	defer func() {
+		if r := recover(); r != nil {
+			nextNodeIds, err = nil, fmt.Errorf("panic: %s", r)
+		}
+	}()
 
 	sort.SliceStable(nodeIds, func(i, j int) bool {
 		return bytes.Compare(
@@ -105,13 +122,14 @@ func CalculateNextNodes(data SendData, currentNode string) (nextNodeIds []string
 
 	if currentNode == "" {
 		l := min(len(nodeIds), int(data.ReplicationFactor))
-		return nodeIds[:l]
+		return nodeIds[:l], nil
 	}
 
+	// get indexes of the next layer nodes from the sorted nodes slice
 	startIndex, endIndex := getNextCascadeLayerIndexes(nodeIds, currentNode, data.ReplicationFactor)
 
 	if startIndex >= len(nodeIds) {
-		return nil
+		return nil, nil
 	}
-	return nodeIds[startIndex:min(endIndex, len(nodeIds))]
+	return nodeIds[startIndex:min(endIndex, len(nodeIds))], nil
 }

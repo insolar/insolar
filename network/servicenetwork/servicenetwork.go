@@ -19,6 +19,9 @@ package servicenetwork
 import (
 	"bytes"
 	"encoding/gob"
+	"io/ioutil"
+	"log"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
@@ -26,8 +29,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"log"
 )
 
 // ServiceNetwork is facade for network.
