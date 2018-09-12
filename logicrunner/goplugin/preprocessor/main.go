@@ -173,7 +173,7 @@ func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 }
 
 func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
-	match := regexp.MustCompile("([^/]+)/([^/]+).go$").FindStringSubmatch(parsed.name)
+	match := regexp.MustCompile("([^/]+)/([^/]+).(go|insgoc)$").FindStringSubmatch(parsed.name)
 	if match == nil {
 		return errors.New("couldn't match filename without extension and path")
 	}

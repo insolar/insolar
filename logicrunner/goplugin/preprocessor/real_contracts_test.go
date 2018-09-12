@@ -31,7 +31,7 @@ var contractNames = []string{"wallet", "member", "allowance"}
 var pathWithContracts = "../../../genesis/experiment/"
 
 func contractPath(name string) string {
-	return pathWithContracts + name + "/" + name + ".go"
+	return pathWithContracts + name + "/" + name + ".insgoc"
 }
 
 func MakeTestName(file string, contractType string) string {
