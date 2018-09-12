@@ -94,7 +94,10 @@ func handleRequest(conn net.Conn) {
 	message += "\" ! Honestly I have no clue about what to do with your messages, so Bye Bye!\n"
 
 	// Write the message in the connection channel.
-	conn.Write([]byte(message))
+	_, err = conn.Write([]byte(message))
+	if err != nil {
+		fmt.Println("Error reading:", err.Error())
+	}
 	// Close the connection when you're done with it.
 	conn.Close()
 }
