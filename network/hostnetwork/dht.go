@@ -234,12 +234,6 @@ func (dht *DHT) NumHosts(ctx hosthandler.Context) int {
 	return ht.TotalHosts()
 }
 
-// GetOriginHost returns the local host.
-func (dht *DHT) GetOriginHost(ctx hosthandler.Context) *host.Host {
-	ht := dht.HtFromCtx(ctx)
-	return ht.Origin
-}
-
 // Listen begins listening on the socket for incoming Packets.
 func (dht *DHT) Listen() error {
 	start := make(chan bool)
@@ -782,7 +776,7 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 		},
 	}
 
-	if targetID == dht.GetOriginHost(ctx).ID.KeyString() {
+	if targetID == dht.GetOriginHost().IDs[0].KeyString() {
 		return dht.rpc.Invoke(request.Sender, method, args)
 	}
 
@@ -1180,4 +1174,9 @@ func (dht *DHT) HostIsAuthenticated(targetID string) bool {
 
 func (dht *DHT) AddPossibleRelayID(id string) {
 	dht.subnet.PossibleRelayIDs = append(dht.subnet.PossibleRelayIDs, id)
+}
+
+// GetOriginHost returns the local host.
+func (dht *DHT) GetOriginHost() *host.Origin {
+	return dht.origin
 }

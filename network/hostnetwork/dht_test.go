@@ -40,8 +40,8 @@ import (
 
 const closedPacket = "closed" // "broken pipe" for kcpTransport
 
-func getDefaultCtx(dht *DHT) hosthandler.Context {
-	ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
+func getDefaultCtx(hostHandler hosthandler.HostHandler) hosthandler.Context {
+	ctx, _ := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	return ctx
 }
 

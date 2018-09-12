@@ -33,14 +33,14 @@ const (
 
 // ContextBuilder allows to lazy configure and build new Context.
 type ContextBuilder struct {
-	dht     *DHT
-	actions []func(ctx hosthandler.Context) (hosthandler.Context, error)
+	hostHandler hosthandler.HostHandler
+	actions     []func(ctx hosthandler.Context) (hosthandler.Context, error)
 }
 
 // NewContextBuilder creates new ContextBuilder.
-func NewContextBuilder(dht *DHT) ContextBuilder {
+func NewContextBuilder(hostHandler hosthandler.HostHandler) ContextBuilder {
 	return ContextBuilder{
-		dht: dht,
+		hostHandler: hostHandler,
 	}
 }
 
@@ -59,7 +59,7 @@ func (cb ContextBuilder) Build() (ctx hosthandler.Context, err error) {
 // SetHostByID sets host id in Context.
 func (cb ContextBuilder) SetHostByID(hostID id.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx hosthandler.Context) (hosthandler.Context, error) {
-		for index, id := range cb.dht.origin.IDs {
+		for index, id := range cb.hostHandler.GetOriginHost().IDs {
 			if hostID.KeyEqual(id.GetKey()) {
 				return context.WithValue(ctx, ctxTableIndex, index), nil
 			}

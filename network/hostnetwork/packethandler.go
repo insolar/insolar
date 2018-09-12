@@ -96,7 +96,6 @@ func processRelayOwnership(hostHandler hosthandler.HostHandler, ctx hosthandler.
 	data := msg.Data.(*packet.RequestRelayOwnership)
 
 	if data.Ready {
-
 		hostHandler.AddPossibleProxyID(msg.Sender.ID.KeyString())
 	} else {
 		hostHandler.RemovePossibleProxyID(msg.Sender.ID.KeyString())
