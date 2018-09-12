@@ -143,7 +143,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-	// use compile <smart-contract-file> [<output-directory>]
+	// use compile [-o <output-directory>] <smart-contract-file>
 	case "compile":
 		fs := flag.NewFlagSet("compile", flag.ExitOnError)
 		dir, err := os.Getwd()

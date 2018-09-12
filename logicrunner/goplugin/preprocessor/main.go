@@ -25,7 +25,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -33,7 +32,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -474,28 +472,6 @@ func rewriteImports(p *ParsedFile) error {
 				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
 			}
 		}
-	}
-	return nil
-}
-
-func Compile(output string, name string) error {
-	dstDir := output + "/plugins"
-	err := os.MkdirAll(dstDir, 0777)
-	if err != nil {
-		return err
-	}
-
-	origGoPath, err := testutil.ChangeGoPath(output)
-	if err != nil {
-		return err
-	}
-	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
-
-	//contractPath := root + "/src/contract/" + name + "/main.go"
-
-	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", "contract/"+name).CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, "can't build contract: "+string(out))
 	}
 	return nil
 }
