@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter"
@@ -52,15 +51,15 @@ func extractCreateMemberResponse(data []byte) (*string, error) {
 
 type RequestHandler struct {
 	qid                 string
-	req                 *http.Request
+	params              *Params
 	messageRouter       *messagerouter.MessageRouter
 	rootDomainReference core.RecordRef
 }
 
-func NewRequestHandler(r *http.Request, router *messagerouter.MessageRouter) *RequestHandler {
+func NewRequestHandler(params *Params, router *messagerouter.MessageRouter) *RequestHandler {
 	return &RequestHandler{
-		qid:                 r.FormValue("qid"),
-		req:                 r,
+		qid:                 params.QID,
+		params:              params,
 		messageRouter:       router,
 		rootDomainReference: RootDomainReference,
 	}
@@ -93,13 +92,11 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 	result["CreateUser"] = true
 	result["reference"] = "123123-234234234-345345345"
 
-	const NameField = "name"
-	name := rh.req.FormValue(NameField)
-	if len(name) == 0 {
-		return nil, errors.New("field is required: " + NameField)
+	if len(rh.params.Name) == 0 {
+		return nil, errors.New("field 'name' is required")
 	}
 
-	routResult, err := rh.SendRequest("CreateMember", []interface{}{name})
+	routResult, err := rh.SendRequest("CreateMember", []interface{}{rh.params.Name})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -149,13 +146,11 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 	result["amount"] = 333
 	result["currency"] = "RUB"
 
-	const ReferenceField = "reference"
-	name := rh.req.FormValue(ReferenceField)
-	if len(name) == 0 {
-		return nil, errors.New("field is required: " + ReferenceField)
+	if len(rh.params.Reference) == 0 {
+		return nil, errors.New("field 'reference' is required")
 	}
 
-	routResult, err := rh.SendRequest("GetBalance", []interface{}{name})
+	routResult, err := rh.SendRequest("GetBalance", []interface{}{rh.params.Reference})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -190,23 +185,18 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 	result["SendMoney"] = true
 	result["success"] = true
 
-	const FromField = "from"
-	const ToField = "to"
-	const AmountField = "to"
-	from := rh.req.FormValue(FromField)
-	if len(from) == 0 {
-		return nil, errors.New("field is required: " + FromField)
-	}
-	to := rh.req.FormValue(ToField)
-	if len(from) == 0 {
-		return nil, errors.New("field is required: " + ToField)
-	}
-	amount := rh.req.FormValue(AmountField)
-	if len(from) == 0 {
-		return nil, errors.New("field is required: " + AmountField)
+	if len(rh.params.From) == 0 {
+		return nil, errors.New("field 'from' is required")
 	}
 
-	routResult, err := rh.SendRequest("SendMoney", []interface{}{from, to, amount})
+	if len(rh.params.To) == 0 {
+		return nil, errors.New("field 'from' is required")
+	}
+	if rh.params.Amount == 0 {
+		return nil, errors.New("field 'amount' is required")
+	}
+
+	routResult, err := rh.SendRequest("SendMoney", []interface{}{rh.params.From, rh.params.To, rh.params.Amount})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
@@ -246,12 +236,10 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	if all {
 		routResult, err = rh.SendRequest("DumpAllUsers", []interface{}{})
 	} else {
-		const ReferenceField = "reference"
-		name := rh.req.FormValue(ReferenceField)
-		if len(name) == 0 {
-			return nil, errors.New("field is required: " + ReferenceField)
+		if len(rh.params.Name) == 0 {
+			return nil, errors.New("field 'name' is required")
 		}
-		routResult, err = rh.SendRequest("DumpUserInfo", []interface{}{name})
+		routResult, err = rh.SendRequest("DumpUserInfo", []interface{}{rh.params.Name})
 	}
 
 	if err != nil {

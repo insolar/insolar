@@ -43,3 +43,13 @@ func QTypeFromString(strQType string) QueryType {
 
 	return UNDEFINED
 }
+
+type Params struct {
+	QType     string `json:"query_type"`
+	Name      string `json:"name"`
+	Reference string `json:"reference"`
+	From      string `json:"from"`
+	To        string `json:"to"`
+	QID       string `json:"qid"`
+	Amount    int    `json:"amount"`
+}

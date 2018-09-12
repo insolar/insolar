@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -89,41 +90,53 @@ func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 
 const QIDQueryParam = "qid"
 
-func PreprocessRequest(req *http.Request) {
-	req.ParseForm()
-	qid := req.Form.Get(QIDQueryParam)
-	if len(qid) == 0 {
-		qid := GenQID()
-		req.Form.Add(QIDQueryParam, qid)
+func PreprocessRequest(req *http.Request) (*Params, error) {
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		log.Println("Can't read body. So strange")
+		return nil, errors.Wrap(err, "[ PreprocessRequest ]")
 	}
-}
 
-func getQID(req *http.Request) string {
-	return req.Form.Get(QIDQueryParam)
+	var params Params
+	err = json.Unmarshal(body, &params)
+	if err != nil {
+		msg := "Can't parse input params"
+		log.Println(msg)
+		return nil, errors.Wrap(err, "[ PreprocessRequest ] "+msg)
+	}
+
+	if len(params.QID) == 0 {
+		params.QID = GenQID()
+	}
+
+	log.Printf("[QID=%s] Query: %s\n", params.QID, string(body))
+
+	return &params, nil
 }
 
 func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
-		PreprocessRequest(req)
-		log.Printf("[QID=%s] Query: %s\n", getQID(req), req.RequestURI)
-		rh := NewRequestHandler(req, router)
+		params, err := PreprocessRequest(req)
+		if err != nil {
+			// TODO: RETURN ERROR
+		}
+		rh := NewRequestHandler(params, router)
 		defer func() {
 			if answer == nil {
 				answer = make(map[string]interface{})
 			}
-			answer[QIDQueryParam] = getQID(req)
+			answer[QIDQueryParam] = params.QID
 			serJson, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
 				serJson = handlerMarshalErrorJson
 			}
 			var newLine byte = '\n'
 			w.Write(append(serJson, newLine))
-			log.Printf("[QID=%s] Request completed\n", getQID(req))
+			log.Printf("[QID=%s] Request completed\n", params.QID)
 		}()
 
-		qTypeStr := req.FormValue("query_type")
-		answer = ProcessQueryType(rh, qTypeStr)
+		answer = ProcessQueryType(rh, params.QType)
 	}
 }
 
