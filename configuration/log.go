@@ -18,12 +18,11 @@ package configuration
 
 // Log holds configuration for logging
 type Log struct {
-	Format string
-	Level  string
-	Output string
+	Level   string
+	Adapter string
 }
 
 // NewLog creates new default configuration for logging
 func NewLog() Log {
-	return Log{Format: "", Level: "Info", Output: "insolar.log"}
+	return Log{Level: "Info", Adapter: "logrus"}
 }
