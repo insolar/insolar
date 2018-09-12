@@ -19,7 +19,6 @@ package logicrunner_test
 import (
 	"bytes"
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 	"text/template"
@@ -57,29 +56,38 @@ func TestGoPlugin(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
-	gp, err := goplugin.NewGoPlugin(
-		&configuration.GoPlugin{
+	initgoplugin := func() (*goplugin.GoPlugin, func()) {
+		gopluginconfig := &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
 			RunnerCodePath: insiderStorage,
-		},
-		mr,
-		l.GetManager(),
-	)
-	assert.NoError(t, err)
-	defer gp.Stop()
+		}
 
-	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
-	assert.NoError(t, err)
+		gp, err := goplugin.NewGoPlugin(gopluginconfig, mr, l.GetManager())
+		assert.NoError(t, err)
+		// defer gp.Stop()
+		err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
+		assert.NoError(t, err)
+
+		return gp, func() {
+			_ = gp.Stop()
+		}
+	}
 
 	t.Run("Hello", func(t *testing.T) {
+		gp, stop := initgoplugin()
+		defer stop()
 		hello(t, l, gp)
 	})
 	t.Run("callingContract", func(t *testing.T) {
+		gp, stop := initgoplugin()
+		defer stop()
 		callingContract(t, l, gp)
 	})
 	t.Run("injectingDelegate", func(t *testing.T) {
+		gp, stop := initgoplugin()
+		defer stop()
 		injectingDelegate(t, l, gp)
 	})
 }
@@ -132,7 +140,7 @@ func templateContract(t *testing.T, l core.Ledger, name string, codetemplate str
 		RootRefStr: l.GetManager().RootRef().String(),
 	})
 	assert.NoError(t, err, "contract one template should compile")
-	log.Println("contract", name, ":", tplbuf.String())
+	// log.Println("contract", name, ":", tplbuf.String())
 	return tplbuf.String()
 }
 
