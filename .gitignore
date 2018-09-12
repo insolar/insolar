@@ -38,6 +38,7 @@ vm/wasm/test/data/*.wat
 
 logicrunner/goplugin/ginsider-cli/ginsider-cli
 logicrunner/goplugin/preprocessor/preprocessor
+cmd/insgocc/insgocc
 *_generated.go
 
 

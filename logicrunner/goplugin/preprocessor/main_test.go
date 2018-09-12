@@ -116,7 +116,11 @@ func TestBasicGeneration(t *testing.T) {
 
 	t.Run("wrapper", func(t *testing.T) {
 		buf := bytes.Buffer{}
-		err := GenerateContractWrapper(tmpDir+"/main.go", &buf)
+
+		parsed, err := ParseFile(tmpDir + "/main.go")
+		assert.NoError(t, err)
+
+		err = GenerateContractWrapper(parsed, &buf)
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -126,7 +130,11 @@ func TestBasicGeneration(t *testing.T) {
 
 	t.Run("proxy", func(t *testing.T) {
 		buf := bytes.Buffer{}
-		err := GenerateContractProxy(tmpDir+"/main.go", "testRef", &buf)
+
+		parsed, err := ParseFile(tmpDir + "/main.go")
+		assert.NoError(t, err)
+
+		err = GenerateContractProxy(parsed, "testRef", &buf)
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -162,7 +170,7 @@ func NewWrong() {
 	err = testutil.WriteFile(tmpDir, "code1", code)
 	assert.NoError(t, err)
 
-	info, err := parseFile(tmpDir + "/code1")
+	info, err := ParseFile(tmpDir + "/code1")
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(info.constructors))
@@ -193,7 +201,10 @@ func TestCompileContractProxy(t *testing.T) {
 	err = testutil.WriteFile(tmpDir+"/contracts/secondary/", "main.go", randomTestCode)
 	assert.NoError(t, err)
 
-	err = GenerateContractProxy(tmpDir+"/contracts/secondary/main.go", "testRef", proxyFh)
+	parsed, err := ParseFile(tmpDir + "/contracts/secondary/main.go")
+	assert.NoError(t, err)
+
+	err = GenerateContractProxy(parsed, "testRef", proxyFh)
 	assert.NoError(t, err)
 
 	err = proxyFh.Close()
@@ -244,15 +255,18 @@ func ( A ) Get(){
 `)
 	assert.NoError(t, err)
 
+	parsed, err := ParseFile(tmpDir + testContract)
+	assert.NoError(t, err)
+
 	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), "    self.Get(  )")
 }
@@ -271,13 +285,8 @@ type A struct{
 `)
 	assert.NoError(t, err)
 
-	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
-	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
-
-	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
-	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
+	_, err = ParseFile(tmpDir + testContract)
+	assert.EqualError(t, err, "Only one smart contract must exist")
 }
 
 func TestInitializationFunctionParamsProxy(t *testing.T) {
@@ -301,8 +310,11 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 
 	assert.NoError(t, err)
 
+	parsed, err := ParseFile(tmpDir + testContract)
+	assert.NoError(t, err)
+
 	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), "var a0 int")
 	assert.Contains(t, bufProxy.String(), "resList[0] = a0")
@@ -337,8 +349,11 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 `)
 	assert.NoError(t, err)
 
+	parsed, err := ParseFile(tmpDir + testContract)
+	assert.NoError(t, err)
+
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), "var a0 int")
 	assert.Contains(t, bufWrapper.String(), "args[0] = a0")
@@ -369,14 +384,8 @@ type A struct{
 `)
 	assert.NoError(t, err)
 
-	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
-	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
-
-	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
-	assert.EqualError(t, err, "couldn't parse: Only one smart contract must exist")
-
+	_, err = ParseFile(tmpDir + testContract)
+	assert.EqualError(t, err, "Only one smart contract must exist")
 }
 
 func TestOnlyOneSmartContractMustExist(t *testing.T) {
@@ -399,13 +408,8 @@ type B struct{
 `)
 	assert.NoError(t, err)
 
-	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
-	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
-
-	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
-	assert.EqualError(t, err, "couldn't parse: : more than one contract in a file")
+	_, err = ParseFile(tmpDir + testContract)
+	assert.EqualError(t, err, ": more than one contract in a file")
 }
 
 func TestImportsFromContract(t *testing.T) {
@@ -435,8 +439,11 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 }
 `)
 
+	parsed, err := ParseFile(tmpDir + testContract)
+	assert.NoError(t, err)
+
 	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/pointerPath"`)
@@ -446,7 +453,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/pointerPath"`)
@@ -475,8 +482,11 @@ func ( A ) Get(i someAlias.SomeType){
 }
 `)
 
+	parsed, err := ParseFile(tmpDir + testContract)
+	assert.NoError(t, err)
+
 	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `someAlias "some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -485,7 +495,7 @@ func ( A ) Get(i someAlias.SomeType){
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
@@ -514,8 +524,11 @@ func ( A ) Get() {
 }
 `)
 
+	parsed, err := ParseFile(tmpDir + testContract)
+	assert.NoError(t, err)
+
 	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -524,7 +537,7 @@ func ( A ) Get() {
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
@@ -553,8 +566,11 @@ func ( A ) Get() path.SomeValue {
 }
 `)
 
+	parsed, err := ParseFile(tmpDir + testContract)
+	assert.NoError(t, err)
+
 	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -563,7 +579,7 @@ func ( A ) Get() path.SomeValue {
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(tmpDir+testContract, &bufWrapper)
+	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
@@ -583,7 +599,10 @@ type A struct{
 }
 `)
 
+	parsed, err := ParseFile(tmpDir + testContract)
+	assert.NoError(t, err)
+
 	var bufProxy bytes.Buffer
-	err = GenerateContractProxy(tmpDir+testContract, "testRef", &bufProxy)
+	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't match filename without extension and path")
 }
