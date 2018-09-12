@@ -23,7 +23,7 @@ import (
 	"contract-proxy/wallet"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/toolkit/go/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type RootDomain struct {
@@ -31,9 +31,9 @@ type RootDomain struct {
 }
 
 func (rd *RootDomain) CreateMember(name string) string {
-	memberHolder := member.NewMember(name)
+	memberHolder := member.New(name)
 	m := memberHolder.AsChild(rd.GetReference())
-	wHolder := wallet.NewWallet(1000)
+	wHolder := wallet.New(1000)
 	wHolder.AsDelegate(m.GetReference())
 	return m.GetReference().String()
 }
