@@ -366,11 +366,8 @@ func CBORUnMarshal(t *testing.T, data []byte) interface{} {
 // CBORUnMarshalToSlice - wrapper for CBORUnMarshal, expects slice
 func CBORUnMarshalToSlice(t *testing.T, in []byte) []interface{} {
 	r := CBORUnMarshal(t, in)
-	resParsed, ok := r.([]interface{})
-	if !ok {
-		t.Fatal("expect slice in deserialized data")
-	}
-	return resParsed
+	assert.IsType(t, []interface{}{}, r)
+	return r.([]interface{})
 }
 
 // AMPublishCode publishes code on ledger
