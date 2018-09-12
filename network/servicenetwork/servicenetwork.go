@@ -67,11 +67,7 @@ func NewServiceNetwork(
 
 // GetAddress returns host public address.
 func (network *ServiceNetwork) GetAddress() string {
-	ctx, err := hostnetwork.NewContextBuilder(network.hostNetwork).SetDefaultHost().Build()
-	if err != nil {
-		log.Fatalln("Failed to create context:", err.Error())
-	}
-	return network.hostNetwork.GetOriginHost(ctx).Address.String()
+	return network.hostNetwork.GetOriginHost().Address.String()
 }
 
 // SendMessage sends a message from MessageRouter.
