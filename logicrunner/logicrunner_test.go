@@ -424,3 +424,62 @@ func (r *Two) Hello(s string) string {
 	}
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
 }
+
+func TestContextPassing(t *testing.T) {
+	var code = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() string {
+	return r.GetClass().String()
+}
+`
+
+	am := testutil.NewTestArtifactManager()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	gp, err := goplugin.NewGoPlugin(
+		&configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerCodePath: insiderStorage,
+		},
+		nil,
+		am,
+	)
+	assert.NoError(t, err)
+	defer gp.Stop()
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(&struct{}{})
+	assert.NoError(t, err)
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode([]interface{}{})
+	assert.NoError(t, err)
+
+	cb := testutil.NewContractBuilder(am, icc)
+	err = cb.Build(map[string]string{"one": code})
+	assert.NoError(t, err)
+
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"]}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
+	assert.NoError(t, err)
+
+	resParsed := []interface{}{""}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	assert.NoError(t, err)
+	assert.Equal(t, cb.Classes["one"].String(), resParsed[0])
+}

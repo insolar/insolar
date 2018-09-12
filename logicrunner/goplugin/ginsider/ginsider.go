@@ -77,12 +77,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	if !setContext.IsValid() {
 		return errors.New("this is not a contract, it not supports SetContext method")
 	}
-	ref := core.String2Ref("contract address")
-	cc := core.LogicCallContext{
-		Callee: &ref,
-		// fill me
-	}
-	setContext.Call([]reflect.Value{reflect.ValueOf(&cc)})
+	setContext.Call([]reflect.Value{reflect.ValueOf(args.Context)})
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {

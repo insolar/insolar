@@ -24,6 +24,7 @@ import "github.com/insolar/insolar/core"
 
 // DownCallMethodReq is a set of arguments for CallMethod RPC in the runner
 type DownCallMethodReq struct { // todo it may use foundation.Context
+	Context   *core.LogicCallContext
 	Code      core.RecordRef
 	Data      []byte
 	Method    string

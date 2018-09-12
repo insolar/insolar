@@ -278,7 +278,13 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 	}
 
 	res := rpctypes.DownCallMethodResp{}
-	req := rpctypes.DownCallMethodReq{Code: code, Data: data, Method: method, Arguments: args}
+	req := rpctypes.DownCallMethodReq{
+		Context:   ctx,
+		Code:      code,
+		Data:      data,
+		Method:    method,
+		Arguments: args,
+	}
 
 	select {
 	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
