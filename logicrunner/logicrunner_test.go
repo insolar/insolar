@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = "../cmd/icc/icc"
+var icc = "../cmd/insgocc/insgocc"
 
 func init() {
 	log.SetLevel(log.DebugLevel)
@@ -183,11 +183,12 @@ func buildInciderCLI() error {
 }
 
 func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", icc, "../cmd/icc/").CombinedOutput()
+	out, err := exec.Command("go", "build", "-o", icc, "../cmd/insgocc/").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "can't build %s: %s", icc, string(out))
 	}
 	return nil
+
 }
 
 func build() error {
@@ -198,7 +199,7 @@ func build() error {
 
 	err = buildPreprocessor()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "can't generate proxy")
 	}
 	return nil
 }
