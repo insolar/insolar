@@ -112,7 +112,7 @@ func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseW
 			if answer == nil {
 				answer = make(map[string]interface{})
 			}
-			answer["qid"] = getQID(req)
+			answer[QIDQueryParam] = getQID(req)
 			serJson, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
 				serJson = handlerMarshalErrorJson
