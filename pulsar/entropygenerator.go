@@ -16,7 +16,7 @@
 
 package pulsar
 
-import "math/rand"
+import "crypto/rand"
 
 type EntropyGenerator interface {
 	GenerateEntropy() [8]byte
