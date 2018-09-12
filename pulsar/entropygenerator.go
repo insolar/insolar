@@ -27,7 +27,10 @@ type StandardEntropyGenerator struct {
 
 func (generator *StandardEntropyGenerator) GenerateEntropy() [8]byte {
 	entropy := make([]byte, 8)
-	rand.Read(entropy)
+	_, err := rand.Read(entropy)
+	if err != nil {
+		panic(err)
+	}
 	var result [8]byte
 	copy(result[:], entropy[:8])
 	return result
