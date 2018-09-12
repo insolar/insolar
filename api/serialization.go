@@ -22,14 +22,14 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-func CBORMarshal(o interface{}) ([]byte, error) {
+func cborMarshal(o interface{}) ([]byte, error) {
 	ch := new(codec.CborHandle)
 	var data []byte
 	err := codec.NewEncoderBytes(&data, ch).Encode(o)
 	return data, errors.Wrap(err, "[ CBORMarshal ]")
 }
 
-func CBORUnMarshal(data []byte) (interface{}, error) {
+func cborUnMarshal(data []byte) (interface{}, error) {
 	ch := new(codec.CborHandle)
 	var ret interface{}
 	err := codec.NewDecoderBytes(data, ch).Decode(&ret)
@@ -39,7 +39,7 @@ func CBORUnMarshal(data []byte) (interface{}, error) {
 func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	var argsSerialized []byte
 
-	argsSerialized, err := CBORMarshal(args)
+	argsSerialized, err := cborMarshal(args)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MarshalArgs ]")
 	}
@@ -47,4 +47,19 @@ func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	result := core.Arguments(argsSerialized)
 
 	return result, nil
+}
+
+func UnMarshalResponse(resp []byte) ([]interface{}, error) {
+	var marshRes interface{}
+	marshRes, err := cborUnMarshal(resp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ UnMarshalResponse ]")
+	}
+
+	respArray, ok := marshRes.([]interface{})
+	if !ok || len(respArray) < 0 {
+		return nil, errors.New("[ UnMarshalResponse ] Problem with extracting result")
+	}
+
+	return respArray, nil
 }

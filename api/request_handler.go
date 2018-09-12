@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/messagerouter/message"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -35,20 +35,14 @@ func makeRootDomainReference() core.RecordRef {
 var RootDomainReference = makeRootDomainReference()
 
 func extractCreateMemberResponse(data []byte) (*string, error) {
-	var marshRes interface{}
-	marshRes, err := CBORUnMarshal(data)
+	refOrig, err := UnMarshalResponse(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractCreateMemberResponse ]")
 	}
 
-	refOrig, ok := marshRes.([1]interface{})
-	if !ok || len(refOrig) < 0 {
-		return nil, errors.New("[ extractCreateMemberResponse ] Problem with extracting result")
-	}
-
 	reference, ok := refOrig[0].(string)
 	if !ok {
-		msg := fmt.Sprintf("Can't cast response to string. orig: %T", refOrig[0])
+		msg := fmt.Sprintf("Can't cast response to string. orig: %T", refOrig)
 		return nil, errors.New(msg)
 	}
 
