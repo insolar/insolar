@@ -53,11 +53,11 @@ func extractCreateMemberResponse(data []byte) (*string, error) {
 type RequestHandler struct {
 	qid                 string
 	params              *Params
-	messageRouter       *core.MessageRouter
+	messageRouter       core.MessageRouter
 	rootDomainReference core.RecordRef
 }
 
-func NewRequestHandler(params *Params, router *core.MessageRouter) *RequestHandler {
+func NewRequestHandler(params *Params, router core.MessageRouter) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
@@ -77,7 +77,7 @@ func (rh *RequestHandler) RouteCall(ref core.RecordRef, method string, args core
 		Arguments: args,
 	}
 
-	res, err := (*rh.messageRouter).Route(msg)
+	res, err := rh.messageRouter.Route(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route message")
 	}

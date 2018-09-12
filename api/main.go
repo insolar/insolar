@@ -113,7 +113,7 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func WrapApiV1Handler(router *core.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
+func WrapApiV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
 		var params *Params
@@ -148,7 +148,7 @@ func WrapApiV1Handler(router *core.MessageRouter) func(w http.ResponseWriter, r 
 }
 
 type ApiRunner struct {
-	messageRouter *core.MessageRouter
+	messageRouter core.MessageRouter
 	server        *http.Server
 	cfg           *configuration.ApiRunner
 }
@@ -176,7 +176,12 @@ func NewApiRunner(cfg *configuration.ApiRunner) (*ApiRunner, error) {
 func (ar *ApiRunner) Start(c core.Components) error {
 
 	// TODO: init message router
-	//ar.messageRouter = c["core.MessageRouter"].(*core.MessageRouter)
+	_, ok := c["core.MessageRouter"]
+	if !ok {
+		log.Println("Working in demo mode: without MessageRouter")
+	} else {
+		ar.messageRouter = c["core.MessageRouter"].(core.MessageRouter)
+	}
 
 	fw := WrapApiV1Handler(ar.messageRouter)
 	http.HandleFunc(ar.cfg.Location, fw)

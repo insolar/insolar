@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -120,5 +121,57 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 
 	cfg.Location = "test"
 	_, err = NewApiRunner(&cfg)
+	assert.NoError(t, err)
+}
+
+type TestsMessageRouter struct {
+}
+
+func (ar *TestsMessageRouter) Start(c core.Components) error {
+	return nil
+}
+
+func (ar *TestsMessageRouter) Stop() error {
+	return nil
+}
+
+const TestBalance = 100500
+
+func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
+	data, _ := MarshalArgs(TestBalance)
+
+	resp := core.Response{
+		Result: data,
+	}
+
+	return resp, nil
+}
+
+func TestWithFakeMessageRouter(t *testing.T) {
+	cfg := configuration.NewApiRunner()
+	cfg.Location = "/test/test"
+	api, err := NewApiRunner(cfg)
+	assert.NoError(t, err)
+
+	mr := TestsMessageRouter{}
+	cs := core.Components{}
+	cs["core.MessageRouter"] = &mr
+
+	err = api.Start(cs)
+	assert.NoError(t, err)
+
+	const TestUrl = "http://localhost:8080/test/test?query_type=LOL"
+
+	{
+		postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
+		jsonValue, _ := json.Marshal(postParams)
+		postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
+		assert.NoError(t, err)
+		body, err := ioutil.ReadAll(postResp.Body)
+		assert.NoError(t, err)
+		assert.Contains(t, string(body[:]), `"amount": `+strconv.Itoa(TestBalance))
+	}
+
+	api.Stop()
 	assert.NoError(t, err)
 }
