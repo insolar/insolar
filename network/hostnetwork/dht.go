@@ -49,10 +49,15 @@ type RPC interface {
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 }
 
+type HostIdResolver interface {
+	GetReferenceHostID(ref string) (string, error)
+}
+
 // DHT represents the state of the local host in the distributed hash table.
 type DHT struct {
-	tables  []*routing.HashTable
-	options *Options
+	idResolver HostIdResolver
+	tables     []*routing.HashTable
+	options    *Options
 
 	origin *host.Origin
 
@@ -123,7 +128,7 @@ type Options struct {
 }
 
 // NewDHT initializes a new DHT host.
-func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy) (dht *DHT, err error) {
+func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy, h HostIdResolver) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
 		return nil, err
@@ -132,14 +137,15 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		options:   options,
-		origin:    origin,
-		rpc:       rpc,
-		transport: transport,
-		tables:    tables,
-		store:     store,
-		relay:     rel,
-		proxy:     proxy,
+		idResolver: h,
+		options:    options,
+		origin:     origin,
+		rpc:        rpc,
+		transport:  transport,
+		tables:     tables,
+		store:      store,
+		relay:      rel,
+		proxy:      proxy,
 	}
 
 	if options.ExpirationTime == 0 {

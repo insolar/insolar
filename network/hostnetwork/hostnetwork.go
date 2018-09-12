@@ -36,7 +36,7 @@ type HostNetwork interface {
 */
 
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork) (*DHT, error) {
+func NewHostNetwork(cfg configuration.HostNetwork, h HostIdResolver) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		log.Fatal("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")
@@ -67,7 +67,8 @@ func NewHostNetwork(cfg configuration.HostNetwork) (*DHT, error) {
 		tp,
 		rpc.NewRPCFactory(nil).Create(),
 		options,
-		proxy)
+		proxy,
+		h)
 	if err != nil {
 		return nil, err
 	}

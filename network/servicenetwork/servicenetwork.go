@@ -43,13 +43,13 @@ func NewServiceNetwork(
 	hostConf configuration.HostNetwork,
 	nodeConf configuration.NodeNetwork) (*ServiceNetwork, error) {
 
-	dht, err := hostnetwork.NewHostNetwork(hostConf)
-	if err != nil {
-		return nil, err
-	}
 	node := nodenetwork.NewNodeNetwork(nodeConf)
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
+	}
+	dht, err := hostnetwork.NewHostNetwork(hostConf, node)
+	if err != nil {
+		return nil, err
 	}
 
 	err = dht.ObtainIP(createContext(dht))
@@ -102,16 +102,15 @@ func (network *ServiceNetwork) SendCascadeMessage(data cascade.CascadeSendData, 
 	if data.ReplicationFactor == 0 {
 		return errors.New("replication factor should not be zero")
 	}
-	nextNodes := cascade.CalculateNextNodes(data, false, "")
-	if len(nextNodes) == 0 {
-		return nil
-	}
-
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return err
 	}
 
+	nextNodes := cascade.CalculateNextNodes(data, false, "")
+	if len(nextNodes) == 0 {
+		return nil
+	}
 	var failedNodes []string
 	for _, nextNode := range nextNodes {
 		hostID, err := network.nodeNetwork.GetReferenceHostID(nextNode)
