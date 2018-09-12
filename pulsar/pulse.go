@@ -19,7 +19,7 @@ package pulsar
 //Base data struct for a pulse
 type Pulse struct {
 	PulseNumber uint64
-	Entropy     [8]byte
+	Entropy     Entropy
 }
 
 //Create a new pulse with using of custom Entropy Generator

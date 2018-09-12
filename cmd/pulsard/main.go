@@ -18,11 +18,12 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/pulsar"
 	log "github.com/sirupsen/logrus"
 	jww "github.com/spf13/jwalterweatherman"
-	"strings"
 )
 
 func main() {

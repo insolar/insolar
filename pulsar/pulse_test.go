@@ -26,7 +26,7 @@ var mockEntropy = [8]byte{1, 2, 3, 4, 5, 6, 7, 8}
 type MockEntropyGenerator struct {
 }
 
-func (generator *MockEntropyGenerator) GenerateEntropy() [8]byte {
+func (generator *MockEntropyGenerator) GenerateEntropy() Entropy {
 	return mockEntropy
 }
 

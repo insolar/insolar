@@ -18,14 +18,16 @@ package pulsar
 
 import "crypto/rand"
 
+type Entropy [8]byte
+
 type EntropyGenerator interface {
-	GenerateEntropy() [8]byte
+	GenerateEntropy() Entropy
 }
 
 type StandardEntropyGenerator struct {
 }
 
-func (generator *StandardEntropyGenerator) GenerateEntropy() [8]byte {
+func (generator *StandardEntropyGenerator) GenerateEntropy() Entropy {
 	entropy := make([]byte, 8)
 	_, err := rand.Read(entropy)
 	if err != nil {
