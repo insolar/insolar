@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,11 +14,27 @@
  *    limitations under the License.
  */
 
+/*
+Package log contains adapter for third-party loggers
+
+Example:
+
 package main
 
-import (
-	"testing"
-)
+	import (
+		"github.com/insolar/insolar/configuration"
+		"github.com/insolar/insolar/log"
+	)
 
-func TestStub(t *testing.T) {
-}
+	func main() {
+		// global logger
+		log.SetLevel("Debug")
+		log.Debugln("debug log message")
+
+		// local logger
+		logger, _ := log.NewLog(configuration.Log{Level: "Warning", Adapter: "logrus"})
+		logger.Warnln("warning log message")
+	}
+
+*/
+package log

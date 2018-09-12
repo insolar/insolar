@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -44,8 +44,11 @@ func MakeTestName(file string, contractType string) string {
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 	for _, file := range GetContractsList() {
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
+			parsed, err := ParseFile(file)
+			assert.NoError(t, err)
+
 			var buf bytes.Buffer
-			err := GenerateContractProxy(file, "testRef", &buf)
+			err = GenerateContractProxy(parsed, "testRef", &buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)
@@ -58,8 +61,11 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 	for _, file := range GetContractsList() {
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
+			parsed, err := ParseFile(file)
+			assert.NoError(t, err)
+
 			var buf bytes.Buffer
-			err := GenerateContractWrapper(file, &buf)
+			err = GenerateContractWrapper(parsed, &buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = "../cmd/icc/icc"
+var icc = "../cmd/insgocc/insgocc"
 
 func init() {
 	log.SetLevel(log.DebugLevel)
@@ -183,11 +183,12 @@ func buildInciderCLI() error {
 }
 
 func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", icc, "../cmd/icc/").CombinedOutput()
+	out, err := exec.Command("go", "build", "-o", icc, "../cmd/insgocc/").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "can't build %s: %s", icc, string(out))
 	}
 	return nil
+
 }
 
 func build() error {
@@ -198,7 +199,7 @@ func build() error {
 
 	err = buildPreprocessor()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "can't generate proxy")
 	}
 	return nil
 }
@@ -209,6 +210,7 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
+import "github.com/insolar/insolar/core"
 
 type One struct {
 	foundation.BaseContract
@@ -216,7 +218,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsChild("")
+	friend := holder.AsChild(core.String2Ref(""))
 
 	res := friend.Hello(s)
 
@@ -315,6 +317,7 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
+import "github.com/insolar/insolar/core"
 
 type One struct {
 	foundation.BaseContract
@@ -322,7 +325,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsDelegate("")
+	friend := holder.AsDelegate(core.String2Ref(""))
 
 	res := friend.Hello(s)
 

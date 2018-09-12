@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,17 +19,18 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 )
 
 func printUsage() {
-	fmt.Println("usage: icc <command> [<args>]")
+	fmt.Println("usage: insgocc <command> [<args>]")
 	fmt.Println("Commands: ")
 	fmt.Println(" wrapper   generate contract's wrapper")
 	fmt.Println(" proxy     generate contract's proxy")
@@ -86,7 +87,12 @@ func main() {
 		}
 
 		for _, fn := range fs.Args() {
-			err := preprocessor.GenerateContractWrapper(fn, output.writer)
+			parsed, err := preprocessor.ParseFile(fn)
+			if err != nil {
+				panic(errors.Wrap(err, "couldn't parse"))
+			}
+
+			err = preprocessor.GenerateContractWrapper(parsed, output.writer)
 			if err != nil {
 				panic(err)
 			}
@@ -105,7 +111,13 @@ func main() {
 		if fs.NArg() != 1 {
 			panic(errors.New("proxy command should be followed by exactly one file name to process"))
 		}
-		err = preprocessor.GenerateContractProxy(fs.Arg(0), reference, output.writer)
+
+		parsed, err := preprocessor.ParseFile(fs.Arg(0))
+		if err != nil {
+			panic(errors.Wrap(err, "couldn't parse"))
+		}
+
+		err = preprocessor.GenerateContractProxy(parsed, reference, output.writer)
 		if err != nil {
 			panic(err)
 		}
@@ -122,39 +134,72 @@ func main() {
 			panic(errors.New("imports command should be followed by exactly one file name to process"))
 		}
 
-		err = preprocessor.CmdRewriteImports(fs.Arg(0), output.writer)
+		parsed, err := preprocessor.ParseFile(fs.Arg(0))
+		if err != nil {
+			panic(errors.Wrap(err, "couldn't parse"))
+		}
+
+		err = preprocessor.CmdRewriteImports(parsed, output.writer)
 		if err != nil {
 			panic(err)
 		}
+	// use compile [-o <output-directory>] <smart-contract-file>
 	case "compile":
 		fs := flag.NewFlagSet("compile", flag.ExitOnError)
-		output := newOutputFlag()
-		fs.VarP(output, "output", "o", "output directory")
-		name := newOutputFlag()
-		fs.VarP(name, "name", "n", "contract's file name")
-		err := fs.Parse(os.Args[2:])
+		dir, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		var output string
+		fs.StringVarP(&output, "output", "o", dir, "output directory (default .)")
+		err = fs.Parse(os.Args[2:])
 		if err != nil {
 			panic(err)
 		}
 
-		dstDir := output.String() + "/plugins/"
-		err = os.MkdirAll(dstDir, 0777)
+		parsed, err := preprocessor.ParseFile(fs.Arg(0))
 		if err != nil {
 			panic(err)
 		}
 
-		origGoPath, err := testutil.ChangeGoPath(output.String())
+		// make temporary dir
+		tmpDir, err := ioutil.TempDir("", "test-")
 		if err != nil {
 			panic(err)
 		}
-		defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
+		defer os.RemoveAll(tmpDir) // nolint: errcheck
 
-		//contractPath := root + "/src/contract/" + name + "/main.go"
+		name := preprocessor.GetContractName(parsed)
 
-		out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name.String()+".so", "contract/"+name.String()).CombinedOutput()
+		contract, err := os.Create(tmpDir + "/" + name + ".go")
+		if err != nil {
+			panic(err)
+		}
+		defer contract.Close()
+
+		preprocessor.RewriteContractPackage(parsed, contract)
+
+		wrapper, err := os.Create(tmpDir + "/" + name + ".wrapper.go")
+		if err != nil {
+			panic(err)
+		}
+		defer wrapper.Close()
+
+		err = preprocessor.GenerateContractWrapper(parsed, wrapper)
+		if err != nil {
+			panic(err)
+		}
+
+		err = os.Chdir(tmpDir)
+		if err != nil {
+			panic(err)
+		}
+
+		out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, output, name+".so")).CombinedOutput()
 		if err != nil {
 			panic(errors.Wrap(err, "can't build contract: "+string(out)))
 		}
+
 	default:
 		printUsage()
 		fmt.Printf("\n\n%q is not valid command.\n", os.Args[1])
