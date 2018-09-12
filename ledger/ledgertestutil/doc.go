@@ -14,27 +14,5 @@
  *    limitations under the License.
  */
 
-package core
-
-import "io"
-
-// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
-type Arguments []byte
-
-// Message is a routable packet, ATM just a method call
-type Message interface {
-	Serialize() (io.Reader, error)
-	GetReference() RecordRef
-}
-
-// Response to a `Message`
-type Response struct {
-	Data   []byte
-	Result []byte
-	Error  error
-}
-
-// MessageRouter interface
-type MessageRouter interface {
-	Route(msg Message) (resp Response, err error)
-}
+// Package ledgertestutil contains high level API tests and test utils for other modules.
+package ledgertestutil

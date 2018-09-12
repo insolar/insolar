@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -174,7 +174,7 @@ func (m *LedgerArtifactManager) DeclareType(
 //
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
-	domain, request core.RecordRef, types []core.RecordRef, codeMap map[core.MachineType][]byte,
+	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
 ) (*core.RecordRef, error) {
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
@@ -182,19 +182,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	err := m.checkRequestRecord(m.db, &requestRef)
 	if err != nil {
 		return nil, err
-	}
-
-	typeRefs := make([]record.Reference, 0, len(types))
-	for _, tp := range types {
-		ref := record.Core2Reference(tp)
-		rec, tErr := m.db.GetRecord(&ref)
-		if tErr != nil {
-			return nil, errors.Wrap(tErr, "failed to retrieve type record")
-		}
-		if _, ok := rec.(*record.TypeRecord); !ok {
-			return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve type record")
-		}
-		typeRefs = append(typeRefs, ref)
 	}
 
 	rec := record.CodeRecord{
@@ -206,7 +193,6 @@ func (m *LedgerArtifactManager) DeployCode(
 				},
 			},
 		},
-		Types:        typeRefs,
 		TargetedCode: codeMap,
 	}
 	codeRef, err := m.db.SetRecord(&rec)
@@ -220,17 +206,12 @@ func (m *LedgerArtifactManager) DeployCode(
 //
 // Activation reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	domain, request, code core.RecordRef,
+	domain, request core.RecordRef,
 ) (*core.RecordRef, error) {
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
-	codeRef := record.Core2Reference(code)
 
 	err := m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
-	_, err = m.getCodeRecord(m.db, codeRef)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +225,6 @@ func (m *LedgerArtifactManager) ActivateClass(
 				},
 			},
 		},
-		CodeRecord: codeRef,
 	}
 
 	var classRef *record.Reference
@@ -803,19 +783,14 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 }
 
 // GetObjChildren returns provided object's children references.
-func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) ([]core.RecordRef, error) {
+func (m *LedgerArtifactManager) GetObjChildren(head core.RecordRef) (core.RefIterator, error) {
 	objRef := record.Core2Reference(head)
 	_, _, objIndex, err := m.getActiveObject(m.db, objRef)
 	if err != nil {
 		return nil, err
 	}
 
-	childRefs := make([]core.RecordRef, 0, len(objIndex.Children))
-	for _, ch := range objIndex.Children {
-		childRefs = append(childRefs, *ch.CoreRef())
-	}
-
-	return childRefs, nil
+	return &RefIterator{elements: objIndex.Children}, nil
 }
 
 // GetObjDelegate returns provided object's delegate reference for provided class.

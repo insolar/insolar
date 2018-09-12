@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,12 +16,16 @@
 
 package proxyctx
 
+import (
+	"github.com/insolar/insolar/core"
+)
+
 // ProxyHelper interface with methods that are needed by contract proxies
 type ProxyHelper interface {
-	RouteCall(ref string, method string, args []byte) ([]byte, error)
-	RouteConstructorCall(classRef string, name string, args []byte) ([]byte, error)
-	SaveAsChild(parentRef, classRef string, data []byte) (string, error)
-	SaveAsDelegate(parentRef, classRef string, data []byte) (string, error)
+	RouteCall(ref core.RecordRef, method string, args []byte) ([]byte, error)
+	RouteConstructorCall(classRef core.RecordRef, name string, args []byte) ([]byte, error)
+	SaveAsChild(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error)
+	SaveAsDelegate(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error)
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 }
