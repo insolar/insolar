@@ -67,8 +67,8 @@ func (bc *BaseContract) GetClass() core.RecordRef {
 
 // GetContext returns current calling context of this object.
 // It exists only for currently called contract.
-func (bc *BaseContract) GetContext() *CallContext {
-	return bc.context
+func (bc *BaseContract) GetContext() CallContext {
+	return *bc.context
 }
 
 // SetContext - do not use it in smartcontracts
