@@ -17,9 +17,12 @@
 package logicrunner_test
 
 import (
+	"bytes"
 	"io/ioutil"
+	"log"
 	"os"
 	"testing"
+	"text/template"
 
 	"github.com/stretchr/testify/assert"
 
@@ -76,9 +79,9 @@ func TestGoPlugin(t *testing.T) {
 	t.Run("callingContract", func(t *testing.T) {
 		callingContract(t, l, gp)
 	})
-	// t.Run("injectingDelegate", func(t *testing.T) {
-	// 	injectingDelegate(t, l, gp)
-	// })
+	t.Run("injectingDelegate", func(t *testing.T) {
+		injectingDelegate(t, l, gp)
+	})
 }
 
 func hello(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
@@ -122,8 +125,19 @@ func (b *Hello) String() string {
 	assert.Equal(t, "Hello, Go is there!", resParsed[0])
 }
 
+func templateContract(t *testing.T, l core.Ledger, name string, codetemplate string) string {
+	tpl := template.Must(template.New(name).Parse(codetemplate))
+	var tplbuf bytes.Buffer
+	err := tpl.Execute(&tplbuf, struct{ RootRefStr string }{
+		RootRefStr: l.GetManager().RootRef().String(),
+	})
+	assert.NoError(t, err, "contract one template should compile")
+	log.Println("contract", name, ":", tplbuf.String())
+	return tplbuf.String()
+}
+
 func callingContract(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
-	var contractOneCode = `
+	var contractOneCodeTpl = `
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -136,13 +150,14 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsChild(core.String2Ref(""))
+	friend := holder.AsChild(core.String2Ref("{{ .RootRefStr }}"))
 
 	res := friend.Hello(s)
 
 	return "Hi, " + s + "! Two said: " + res
 }
 `
+	contractOneCode := templateContract(t, l, "one", contractOneCodeTpl)
 
 	var contractTwoCode = `
 package main
@@ -190,7 +205,7 @@ func (r *Two) Hello(s string) string {
 }
 
 func injectingDelegate(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
-	var contractOneCode = `
+	var contractOneCodeTpl = `
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -203,13 +218,14 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsDelegate(core.String2Ref(""))
+	friend := holder.AsDelegate(core.String2Ref("{{ .RootRefStr }}"))
 
 	res := friend.Hello(s)
 
 	return "Hi, " + s + "! Two said: " + res
 }
 `
+	contractOneCode := templateContract(t, l, "one", contractOneCodeTpl)
 
 	var contractTwoCode = `
 package main
