@@ -435,6 +435,10 @@ func generateImports(parsed *ParsedFile) map[string]bool {
 		extendImportsMap(parsed, method.Type.Params, imports)
 		extendImportsMap(parsed, method.Type.Results, imports)
 	}
+	for _, fun := range parsed.constructors[parsed.contract] {
+		extendImportsMap(parsed, fun.Type.Params, imports)
+		extendImportsMap(parsed, fun.Type.Results, imports)
+	}
 	return imports
 }
 
