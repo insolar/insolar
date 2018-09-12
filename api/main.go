@@ -87,26 +87,39 @@ func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 	return answer
 }
 
+const QIDQueryParam = "qid"
+
+func PreprocessRequest(req *http.Request) {
+	req.ParseForm()
+	qid := req.Form.Get(QIDQueryParam)
+	if len(qid) == 0 {
+		qid := GenQID()
+		req.Form.Add(QIDQueryParam, qid)
+	}
+}
+
+func getQID(req *http.Request) string {
+	return req.Form.Get(QIDQueryParam)
+}
+
 func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
-		qid := GenQID()
-		req.ParseForm()
-		req.Form.Add("qid", qid)
-		log.Printf("[QID=%s] Query: %s\n", qid, req.RequestURI)
+		PreprocessRequest(req)
+		log.Printf("[QID=%s] Query: %s\n", getQID(req), req.RequestURI)
 		rh := NewRequestHandler(req, router)
 		defer func() {
 			if answer == nil {
 				answer = make(map[string]interface{})
 			}
-			answer["qid"] = qid
+			answer["qid"] = getQID(req)
 			serJson, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
 				serJson = handlerMarshalErrorJson
 			}
 			var newLine byte = '\n'
 			w.Write(append(serJson, newLine))
-			log.Printf("[QID=%s] Request completed\n", qid)
+			log.Printf("[QID=%s] Request completed\n", getQID(req))
 		}()
 
 		qTypeStr := req.FormValue("query_type")
