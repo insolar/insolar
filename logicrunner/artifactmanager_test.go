@@ -121,6 +121,7 @@ func (b *Hello) String() string {
 	assert.NoError(t, err)
 
 	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{},
 		*cb.Codes["hello"],
 		testutil.CBORMarshal(t, &struct{}{}),
 		"String",
@@ -199,6 +200,7 @@ func (r *Two) Hello(s string) string {
 	assert.NoError(t, err)
 
 	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{},
 		*cb.Codes["one"],
 		testutil.CBORMarshal(t, &struct{}{}),
 		"Hello",
@@ -267,6 +269,7 @@ func (r *Two) Hello(s string) string {
 	assert.NoError(t, err)
 
 	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{},
 		*cb.Codes["one"],
 		testutil.CBORMarshal(t, &struct{}{}),
 		"Hello",
