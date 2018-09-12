@@ -42,6 +42,9 @@ func (bc *BaseContract) GetReference() core.RecordRef {
 	if bc.context == nil {
 		panic("object has no context set before first use")
 	}
+	if bc.context.Callee == nil {
+		panic("context has no callee set")
+	}
 	return *bc.context.Callee
 }
 

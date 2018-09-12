@@ -211,7 +211,6 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
-import "github.com/insolar/insolar/core"
 
 type One struct {
 	foundation.BaseContract
@@ -219,7 +218,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsChild(core.String2Ref(""))
+	friend := holder.AsChild(r.GetReference())
 
 	res := friend.Hello(s)
 
@@ -283,24 +282,28 @@ func (r *Two) Hello(s string) string {
 	err = codec.NewEncoderBytes(&data, ch).Encode(
 		&struct{}{},
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	var argsSerialized []byte
 	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(
 		[]interface{}{"ins"},
 	)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	cb := testutil.NewContractBuilder(am, icc)
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
+	obj, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["one"],
+		*am.RootRef(),
+		data,
+	)
+	assert.NoError(t, err)
+
 	_, res, err := gp.CallMethod(
-		&core.LogicCallContext{Class: cb.Classes["one"]}, *cb.Codes["one"],
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
 		data, "Hello", argsSerialized,
 	)
 	if err != nil {
@@ -321,7 +324,6 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/two"
-import "github.com/insolar/insolar/core"
 
 type One struct {
 	foundation.BaseContract
@@ -329,7 +331,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsDelegate(core.String2Ref(""))
+	friend := holder.AsDelegate(r.GetReference())
 
 	res := friend.Hello(s)
 
@@ -409,8 +411,16 @@ func (r *Two) Hello(s string) string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
+	obj, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["one"],
+		*am.RootRef(),
+		data,
+	)
+	assert.NoError(t, err)
+
 	_, res, err := gp.CallMethod(
-		&core.LogicCallContext{Class: cb.Classes["one"]}, *cb.Codes["one"],
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
 		data, "Hello", argsSerialized,
 	)
 	if err != nil {
