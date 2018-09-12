@@ -67,7 +67,7 @@ type RPC struct {
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.gp.ArtifactManager
 	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
-	codeDescriptor, err := am.GetCode(req.Reference)
+	codeDescriptor, err := am.GetCode(req.Code)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	}
 
 	msg := &message.CallMethodMessage{
-		ObjectRef: req.Reference,
+		ObjectRef: req.Object,
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
@@ -278,7 +278,7 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 	}
 
 	res := rpctypes.DownCallMethodResp{}
-	req := rpctypes.DownCallMethodReq{Reference: code, Data: data, Method: method, Arguments: args}
+	req := rpctypes.DownCallMethodReq{Code: code, Data: data, Method: method, Arguments: args}
 
 	select {
 	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
@@ -299,7 +299,7 @@ func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.Record
 	}
 
 	res := rpctypes.DownCallConstructorResp{}
-	req := rpctypes.DownCallConstructorReq{Reference: code, Name: name, Arguments: args}
+	req := rpctypes.DownCallConstructorReq{Code: code, Name: name, Arguments: args}
 
 	select {
 	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
