@@ -75,6 +75,9 @@ func (lr *LogicRunner) Start(c core.Components) error {
 func (lr *LogicRunner) Stop() error {
 	reterr := error(nil)
 	for _, e := range lr.Executors {
+		if e == nil {
+			continue
+		}
 		err := e.Stop()
 		if err != nil {
 			reterr = errors.Wrap(reterr, err.Error())
