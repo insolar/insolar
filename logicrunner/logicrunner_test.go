@@ -34,11 +34,13 @@ import (
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = testutil.ICC
+var icc = ""
+var runnerbin = ""
 
 func TestMain(m *testing.M) {
+	var err error
 	log.SetLevel(log.DebugLevel)
-	if err := testutil.Build(); err != nil {
+	if runnerbin, icc, err = testutil.Build(); err != nil {
 		fmt.Println("Logic runner build failed, skip tests:", err.Error())
 		os.Exit(1)
 	}
@@ -235,7 +237,7 @@ func (r *Two) Hello(s string) string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
@@ -348,7 +350,7 @@ func (r *Two) Hello(s string) string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
@@ -430,7 +432,7 @@ func (r *One) Hello() string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		nil,

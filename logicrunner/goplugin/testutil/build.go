@@ -17,44 +17,65 @@
 package testutil
 
 import (
+	"go/build"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 )
 
-// ICC shared path to compiler binary.
-var ICC = "../cmd/insgocc/insgocc"
+const insolarImportPath = "github.com/insolar/insolar"
 
-func buildCLI(name string) error {
-	out, err := exec.Command("go", "build", "-o", "./goplugin/"+name+"/"+name, "./goplugin/"+name+"/").CombinedOutput()
+var testdataDir = testdataPath()
+
+func buildCLI(name string) (string, error) {
+	clipath := filepath.Join(testdataDir, name)
+	out, err := exec.Command(
+		"go", "build",
+		"-o", clipath,
+		insolarImportPath+"/logicrunner/goplugin/"+name,
+	).CombinedOutput()
 	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", name, string(out))
+		return "", errors.Wrapf(err, "can't build %s: %s", name, string(out))
 	}
-	return nil
+	return clipath, nil
 }
 
-func buildInciderCLI() error {
+func buildInciderCLI() (string, error) {
 	return buildCLI("ginsider-cli")
 }
 
-func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", ICC, "../cmd/insgocc/").CombinedOutput()
+func buildPreprocessor() (string, error) {
+	insgocc := filepath.Join(testdataDir, "insgocc")
+	out, err := exec.Command(
+		"go", "build",
+		"-o", insgocc,
+		insolarImportPath+"/cmd/insgocc",
+	).CombinedOutput()
 	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", ICC, string(out))
+		return "", errors.Wrapf(err, "can't build preprocessor. Build output: %s", string(out))
 	}
-	return nil
+	return insgocc, nil
 }
 
-// Build compiles ginsider-cli
-func Build() error {
-	err := buildInciderCLI()
+func testdataPath() string {
+	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
 	if err != nil {
-		return err
+		panic(err)
+	}
+	return filepath.Join(p.Dir, "testdata", "logicrunner")
+}
+
+// Build compiles and return path to ginsider-cli and insgocc binaries.
+func Build() (string, string, error) {
+	icc, err := buildInciderCLI()
+	if err != nil {
+		return "", "", err
 	}
 
-	err = buildPreprocessor()
+	insgocc, err := buildPreprocessor()
 	if err != nil {
-		return err
+		return "", "", err
 	}
-	return nil
+	return icc, insgocc, nil
 }

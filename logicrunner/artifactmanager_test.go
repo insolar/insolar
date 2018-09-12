@@ -34,8 +34,15 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
 
+type testGoPluginCtx struct {
+	preprocessor string
+	ledger       core.Ledger
+	goplugin     *goplugin.GoPlugin
+}
+
 func TestGoPlugin(t *testing.T) {
-	if err := testutil.Build(); err != nil {
+	runnerbin, preprocessorbin, err := testutil.Build()
+	if err != nil {
 		t.Fatal("Logic runner build failed, skip tests:", err.Error())
 	}
 
@@ -56,11 +63,12 @@ func TestGoPlugin(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
+	// TODO: don't reuse ports here
 	initgoplugin := func() (*goplugin.GoPlugin, func()) {
 		gopluginconfig := &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		}
 
@@ -75,24 +83,34 @@ func TestGoPlugin(t *testing.T) {
 		}
 	}
 
+	tctx := &testGoPluginCtx{
+		preprocessor: preprocessorbin,
+		ledger:       l,
+	}
+
 	t.Run("hello", func(t *testing.T) {
 		gp, stop := initgoplugin()
+		tctx.goplugin = gp
 		defer stop()
-		hello(t, l, gp)
+		tctx.hello(t)
 	})
 	t.Run("callingContract", func(t *testing.T) {
 		gp, stop := initgoplugin()
+		tctx.goplugin = gp
 		defer stop()
-		callingContract(t, l, gp)
+		tctx.callingContract(t)
 	})
 	t.Run("injectingDelegate", func(t *testing.T) {
 		gp, stop := initgoplugin()
+		tctx.goplugin = gp
 		defer stop()
-		injectingDelegate(t, l, gp)
+		tctx.injectingDelegate(t)
 	})
 }
 
-func hello(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
+func (tctx *testGoPluginCtx) hello(t *testing.T) {
+	l := tctx.ledger
+	gp := tctx.goplugin
 
 	var helloCode = `
 package main
@@ -115,8 +133,7 @@ func (b *Hello) String() string {
 	return fmt.Sprint("Hello, Go is there!")
 }
 	`
-
-	cb := testutil.NewContractBuilder(l.GetManager(), testutil.ICC)
+	cb := testutil.NewContractBuilder(l.GetManager(), tctx.preprocessor)
 	err := cb.Build(map[string]string{"hello": helloCode})
 	assert.NoError(t, err)
 
@@ -145,7 +162,10 @@ func templateContract(t *testing.T, l core.Ledger, name string, codetemplate str
 	return tplbuf.String()
 }
 
-func callingContract(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
+func (tctx *testGoPluginCtx) callingContract(t *testing.T) {
+	l := tctx.ledger
+	gp := tctx.goplugin
+
 	var contractOneCodeTpl = `
 package main
 
@@ -192,7 +212,7 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	cb := testutil.NewContractBuilder(l.GetManager(), testutil.ICC)
+	cb := testutil.NewContractBuilder(l.GetManager(), tctx.preprocessor)
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
@@ -214,7 +234,10 @@ func (r *Two) Hello(s string) string {
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
 }
 
-func injectingDelegate(t *testing.T, l core.Ledger, gp *goplugin.GoPlugin) {
+func (tctx *testGoPluginCtx) injectingDelegate(t *testing.T) {
+	l := tctx.ledger
+	gp := tctx.goplugin
+
 	var contractOneCodeTpl = `
 package main
 
@@ -261,7 +284,7 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	cb := testutil.NewContractBuilder(l.GetManager(), testutil.ICC)
+	cb := testutil.NewContractBuilder(l.GetManager(), tctx.preprocessor)
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
