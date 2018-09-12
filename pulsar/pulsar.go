@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package pulsar
 
 import (
@@ -10,7 +26,8 @@ import (
 )
 
 type Pulsar struct {
-	Sock net.Listener
+	Sock       net.Listener
+	Neighbours map[string]net.Conn
 }
 
 func NewPulsar(configuration configuration.Pulsar) *Pulsar {
@@ -21,7 +38,7 @@ func NewPulsar(configuration configuration.Pulsar) *Pulsar {
 		os.Exit(1)
 	}
 
-	return &Pulsar{Sock: l}
+	return &Pulsar{Sock: l, Neighbours: map[string]net.Conn{}}
 }
 
 func (pulsar *Pulsar) Listen() {
@@ -35,6 +52,28 @@ func (pulsar *Pulsar) Listen() {
 		// Handle connections in a new goroutine.
 		go handleRequest(conn)
 	}
+}
+
+func (pulsar *Pulsar) ConnectToNeighbour(address string, connectionType string) error {
+	conn, err := net.Dial(connectionType, address)
+	if err != nil {
+		fmt.Println("Error accepting: ", err.Error())
+		return err
+	}
+	pulsar.Neighbours[address] = conn
+
+	return nil
+}
+
+func (pulsar *Pulsar) Send(address string, data interface{}) {
+}
+
+func (pulsar *Pulsar) Close() {
+	for _, connection := range pulsar.Neighbours {
+		connection.Close()
+	}
+
+	pulsar.Sock.Close()
 }
 
 // Handles incoming requests.
