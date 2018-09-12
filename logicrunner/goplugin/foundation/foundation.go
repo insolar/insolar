@@ -52,7 +52,7 @@ type BaseContractInterface interface {
 // GetReference - Returns public reference of contract
 func (bc *BaseContract) GetReference() core.RecordRef {
 	if bc.context == nil {
-		return core.String2Ref("")
+		panic("object has no context set before first use")
 	}
 	return bc.context.Me
 }
@@ -60,7 +60,7 @@ func (bc *BaseContract) GetReference() core.RecordRef {
 // GetClass - Returns class of contract
 func (bc *BaseContract) GetClass() core.RecordRef {
 	if bc.context == nil {
-		return core.String2Ref("")
+		panic("object has no context set before first use")
 	}
 	return bc.context.Class
 }
@@ -75,24 +75,25 @@ func (bc *BaseContract) GetContext() *CallContext {
 func (bc *BaseContract) SetContext(cc *CallContext) {
 	if bc.context == nil {
 		bc.context = cc
+	} else {
+		panic("context can not be set twice")
 	}
 }
 
 // GetImplementationFor finds delegate typed r in object and returns it
-// unimplemented
 func GetImplementationFor(o core.RecordRef, r core.RecordRef) ProxyInterface {
-	return nil
+	panic("not implemented")
 }
 
 // GetChildrenTyped returns set of children objects with corresponding type
 func (bc *BaseContract) GetChildrenTyped(r core.RecordRef) []ProxyInterface {
-	return nil
+	panic("not implemented")
 }
 
 // GetObject create proxy by address
 // unimplemented
 func GetObject(ref core.RecordRef) ProxyInterface {
-	return nil
+	panic("not implemented")
 }
 
 // SelfDestructRequest contract will be marked as deleted after call finishes
