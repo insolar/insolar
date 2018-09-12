@@ -1451,7 +1451,7 @@ func (m *mockHostIdResolver) GetReferenceHostID(ref string) (string, error) {
 	return m.refToHost[ref], nil
 }
 
-func (m *mockHostIdResolver) GetCurrentReferenceId() string {
+func (m *mockHostIdResolver) GetCurrentReferenceID() string {
 	return m.currentRef
 }
 
