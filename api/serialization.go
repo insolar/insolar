@@ -29,11 +29,10 @@ func cborMarshal(o interface{}) ([]byte, error) {
 	return data, errors.Wrap(err, "[ CBORMarshal ]")
 }
 
-func cborUnMarshal(data []byte) (interface{}, error) {
+func cborUnMarshal(data []byte, to interface{}) (interface{}, error) {
 	ch := new(codec.CborHandle)
-	var ret interface{}
-	err := codec.NewDecoderBytes(data, ch).Decode(&ret)
-	return ret, errors.Wrap(err, "[ CBORUnMarshal ]")
+	err := codec.NewDecoderBytes(data, ch).Decode(&to)
+	return to, errors.Wrap(err, "[ CBORUnMarshal ]")
 }
 
 func MarshalArgs(args ...interface{}) (core.Arguments, error) {
@@ -49,17 +48,14 @@ func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	return result, nil
 }
 
-func UnMarshalResponse(resp []byte) ([]interface{}, error) {
-	var marshRes interface{}
-	marshRes, err := cborUnMarshal(resp)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ UnMarshalResponse ]")
+func UnMarshalResponse(resp []byte, typeHolders []interface{}) ([]interface{}, error) {
+	var marshRes []interface{}
+	for _, el := range typeHolders {
+		marshRes = append(marshRes, el)
 	}
+	var in interface{}
+	in = marshRes
+	cborUnMarshal(resp, in)
 
-	respArray, ok := marshRes.([]interface{})
-	if !ok || len(respArray) < 0 {
-		return nil, errors.New("[ UnMarshalResponse ] Problem with extracting result")
-	}
-
-	return respArray, nil
+	return marshRes, nil
 }

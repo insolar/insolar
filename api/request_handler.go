@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter"
@@ -35,7 +36,8 @@ func makeRootDomainReference() core.RecordRef {
 var RootDomainReference = makeRootDomainReference()
 
 func extractCreateMemberResponse(data []byte) (*string, error) {
-	refOrig, err := UnMarshalResponse(data)
+	var typeHolder string
+	refOrig, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractCreateMemberResponse ]")
 	}
@@ -89,8 +91,6 @@ func (rh *RequestHandler) RouteCall(ref core.RecordRef, method string, args core
 
 func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	result["CreateUser"] = true
-	result["reference"] = "123123-234234234-345345345"
 
 	if len(rh.params.Name) == 0 {
 		return nil, errors.New("field 'name' is required")
@@ -112,14 +112,15 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 }
 
 func extractGetBalanceResponse(data []byte) (uint, error) {
-	dataUnmarsh, err := UnMarshalResponse(data)
+	var typeHolder uint
+	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return 0, errors.Wrap(err, "[ extractGetBalanceResponse ]")
 	}
 
 	balance, ok := dataUnmarsh[0].(uint)
 	if !ok {
-		msg := fmt.Sprintf("Can't cast response to uint. orig: %T", dataUnmarsh)
+		msg := fmt.Sprintf("Can't cast response to uint. orig: %s", reflect.TypeOf(dataUnmarsh[0]).String())
 		return 0, errors.New(msg)
 	}
 
@@ -142,8 +143,6 @@ func (rh *RequestHandler) SendRequest(method string, argsIn []interface{}) (*cor
 
 func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	result["GetBalance"] = true
-	result["amount"] = 333
 	result["currency"] = "RUB"
 
 	if len(rh.params.Reference) == 0 {
@@ -166,7 +165,8 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 }
 
 func extractSendMoneyResponse(data []byte) (bool, error) {
-	dataUnmarsh, err := UnMarshalResponse(data)
+	var typeHolder bool
+	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return false, errors.Wrap(err, "[ extractSendMoneyResponse ]")
 	}
@@ -182,8 +182,6 @@ func extractSendMoneyResponse(data []byte) (bool, error) {
 
 func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	result["SendMoney"] = true
-	result["success"] = true
 
 	if len(rh.params.From) == 0 {
 		return nil, errors.New("field 'from' is required")
@@ -212,14 +210,15 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 }
 
 func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
-	dataUnmarsh, err := UnMarshalResponse(data)
+	var typeHolder []byte
+	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractDumpAllUsersResponse ]")
 	}
 
 	dumpJson, ok := dataUnmarsh[0].([]byte)
 	if !ok {
-		msg := fmt.Sprintf("Can't cast response to string. orig: %T", dataUnmarsh)
+		msg := fmt.Sprintf("Can't cast response to []byte. orig: %s", reflect.TypeOf(dataUnmarsh[0]))
 		return nil, errors.New(msg)
 	}
 
@@ -228,8 +227,6 @@ func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
 
 func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	result["CreateUser"] = true
-	result["reference"] = "123123-234234234-345345345"
 
 	var err error
 	var routResult *core.Response
@@ -251,9 +248,9 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	var dd interface{}
-	json.Unmarshal(serJsonDump, &dd)
-	result["dump_info"] = dd
+	var dumpInfo interface{}
+	json.Unmarshal(serJsonDump, &dumpInfo)
+	result["dump_info"] = dumpInfo
 
 	return result, nil
 }

@@ -93,16 +93,16 @@ const QIDQueryParam = "qid"
 func PreprocessRequest(req *http.Request) (*Params, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		log.Println("Can't read body. So strange")
-		return nil, errors.Wrap(err, "[ PreprocessRequest ]")
+		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't read body. So strange")
+	}
+	if len(body) == 0 {
+		return nil, errors.New("[ PreprocessRequest ] Empty body")
 	}
 
 	var params Params
 	err = json.Unmarshal(body, &params)
 	if err != nil {
-		msg := "Can't parse input params"
-		log.Println(msg)
-		return nil, errors.Wrap(err, "[ PreprocessRequest ] "+msg)
+		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't parse input params")
 	}
 
 	if len(params.QID) == 0 {
@@ -115,26 +115,34 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 }
 
 func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, req *http.Request) {
+	return func(response http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
-		params, err := PreprocessRequest(req)
-		if err != nil {
-			// TODO: RETURN ERROR
-		}
-		rh := NewRequestHandler(params, router)
+		var params *Params
 		defer func() {
 			if answer == nil {
 				answer = make(map[string]interface{})
+			}
+			if params == nil {
+				params = &Params{}
 			}
 			answer[QIDQueryParam] = params.QID
 			serJson, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
 				serJson = handlerMarshalErrorJson
 			}
+			response.Header().Add("Content-Type", "application/json")
 			var newLine byte = '\n'
-			w.Write(append(serJson, newLine))
+			response.Write(append(serJson, newLine))
 			log.Printf("[QID=%s] Request completed\n", params.QID)
 		}()
+
+		params, err := PreprocessRequest(req)
+		if err != nil {
+			answer = WriteError("Bad request", -3)
+			log.Println("[QID=]Can't parse input request:", err, req.RequestURI)
+			return
+		}
+		rh := NewRequestHandler(params, router)
 
 		answer = ProcessQueryType(rh, params.QType)
 	}
@@ -147,6 +155,9 @@ type ApiRunner struct {
 }
 
 func NewApiRunner(cfg *configuration.ApiRunner) (*ApiRunner, error) {
+	if cfg == nil {
+		return nil, errors.New("[ NewApiRunner ] config is nil")
+	}
 	if cfg.Port == 0 {
 		return nil, errors.New("[ NewApiRunner ] Port must not be 0")
 	}
