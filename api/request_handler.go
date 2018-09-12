@@ -22,7 +22,6 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/messagerouter/message"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
@@ -54,11 +53,11 @@ func extractCreateMemberResponse(data []byte) (*string, error) {
 type RequestHandler struct {
 	qid                 string
 	params              *Params
-	messageRouter       *messagerouter.MessageRouter
+	messageRouter       *core.MessageRouter
 	rootDomainReference core.RecordRef
 }
 
-func NewRequestHandler(params *Params, router *messagerouter.MessageRouter) *RequestHandler {
+func NewRequestHandler(params *Params, router *core.MessageRouter) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
@@ -78,7 +77,7 @@ func (rh *RequestHandler) RouteCall(ref core.RecordRef, method string, args core
 		Arguments: args,
 	}
 
-	res, err := rh.messageRouter.Route(msg)
+	res, err := (*rh.messageRouter).Route(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route message")
 	}
