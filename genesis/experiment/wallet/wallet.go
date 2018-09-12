@@ -18,67 +18,68 @@ package wallet
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis/experiment/allowance"
-	"github.com/insolar/insolar/toolkit/go/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+	"contract-proxy/allowance"
+	"contract-proxy/wallet"
 )
 
-var TypeReference = core.String2Ref("w")
-
+// Wallet - basic wallet contract
 type Wallet struct {
 	foundation.BaseContract
 	Balance uint
 }
 
-func (w *Wallet) Allocate(amount uint, to core.RecordRef) *allowance.Allowance {
+// Allocate - returns reference to a new allowance
+func (w *Wallet) Allocate(amount uint, to core.RecordRef) core.RecordRef {
 	// TODO check balance is enough
 	w.Balance -= amount
-	a := allowance.NewAllowance(to, amount, w.GetContext().Time.Unix()+10)
-	w.AddChild(a, allowance.TypeReference)
-	return a
+	ah := allowance.New(to, amount, w.GetContext().Time.Unix()+10)
+	a := ah.AsChild(w.GetReference())
+	return a.GetReference()
 }
 
 func (w *Wallet) Receive(amount uint, from core.RecordRef) {
-	fromWallet := foundation.GetImplementationFor(from, TypeReference).(*Wallet)
+	fromWallet := foundation.GetImplementationFor(from, w.GetClass()).(*wallet.Wallet)
 
-	a := fromWallet.Allocate(amount, w.GetContext().Me)
-	w.Balance += a.TakeAmount()
+	aRef := fromWallet.Allocate(amount, w.GetReference())
+	w.Balance += allowance.GetObject(aRef).TakeAmount()
 }
 
 func (w *Wallet) Transfer(amount uint, to core.RecordRef) {
 	w.Balance -= amount
 
-	toWallet := foundation.GetImplementationFor(to, TypeReference).(*Wallet)
+	toWallet := foundation.GetImplementationFor(to, w.GetClass()).(*wallet.Wallet)
 	toWalletRef := toWallet.GetReference()
 
-	a := allowance.NewAllowance(toWalletRef, amount, w.GetContext().Time.Unix()+10)
-	w.AddChild(a, allowance.TypeReference)
+	ah := allowance.New(toWalletRef, amount, w.GetContext().Time.Unix()+10)
+	a := ah.AsChild(w.GetReference())
 
-	toWallet.Accept(a)
+	toWallet.Accept(a.GetReference())
 }
 
-func (w *Wallet) Accept(a *allowance.Allowance) {
-	w.Balance += a.TakeAmount()
+func (w *Wallet) Accept(aRef core.RecordRef) {
+	w.Balance += allowance.GetObject(aRef).TakeAmount()
 }
 
 func (w *Wallet) GetTotalBalance() uint {
 	var totalAllowanced uint
-	for _, c := range w.GetChildrenTyped(allowance.TypeReference) {
-		Allowance := c.(*allowance.Allowance)
-		totalAllowanced += Allowance.GetBalanceForOwner()
+	for _, c := range w.GetChildrenTyped(allowance.GetClass()) {
+		a := c.(*allowance.Allowance)
+		totalAllowanced += a.GetBalanceForOwner()
 	}
 	return w.Balance + totalAllowanced
 }
 
 func (w *Wallet) ReturnAndDeleteExpiriedAllowances() {
-	for _, c := range w.GetChildrenTyped(allowance.TypeReference) {
+	for _, c := range w.GetChildrenTyped(allowance.GetClass()) {
 		Allowance := c.(*allowance.Allowance)
 		w.Balance += Allowance.DeleteExpiredAllowance()
 	}
 }
 
-func NewWallet(balance uint) *Wallet {
-	wallet := &Wallet{
+func New(balance uint) *Wallet {
+	return &Wallet{
 		Balance: balance,
 	}
-	return wallet
 }

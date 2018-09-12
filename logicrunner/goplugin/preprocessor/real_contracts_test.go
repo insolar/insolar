@@ -20,21 +20,18 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os/exec"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-var contractNames = []string{"member", "wallet", "allowance"}
+var contractNames = []string{"wallet", "member", "allowance"}
 var pathWithContracts = "../../../genesis/experiment/"
 
-func GetContractsList() []string {
-	var result []string
-	for i := 0; i < len(contractNames); i++ {
-		result = append(result, pathWithContracts+contractNames[i]+"/"+contractNames[i]+".go")
-	}
-
-	return result
+func contractPath(name string) string {
+	return pathWithContracts + name + "/" + name + ".go"
 }
 
 func MakeTestName(file string, contractType string) string {
@@ -42,7 +39,8 @@ func MakeTestName(file string, contractType string) string {
 }
 
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
-	for _, file := range GetContractsList() {
+	for _, name := range contractNames {
+		file := contractPath(name)
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
 			parsed, err := ParseFile(file)
 			assert.NoError(t, err)
@@ -59,7 +57,8 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 }
 
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
-	for _, file := range GetContractsList() {
+	for _, name := range contractNames {
+		file := contractPath(name)
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
 			parsed, err := ParseFile(file)
 			assert.NoError(t, err)
@@ -73,4 +72,23 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 			assert.NotEqual(t, len(code), 0)
 		})
 	}
+}
+
+func TestCompilingRealSmartContracts(t *testing.T) {
+	iccDir := "../../../cmd/insgocc"
+
+	_, err := exec.Command("go", "build", "-o", iccDir+"/insgocc", iccDir).CombinedOutput()
+	assert.NoError(t, err)
+
+	contracts := make(map[string]string)
+	for _, name := range contractNames {
+		code, err := ioutil.ReadFile(contractPath(name))
+		assert.NoError(t, err)
+		contracts[name] = string(code)
+	}
+
+	am := testutil.NewTestArtifactManager()
+	cb := testutil.NewContractBuilder(am, iccDir+"/insgocc")
+	err = cb.Build(contracts)
+	assert.NoError(t, err)
 }
