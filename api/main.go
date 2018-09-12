@@ -56,10 +56,44 @@ func makeHandlerMarshalErrorJson() []byte {
 
 var handlerMarshalErrorJson = makeHandlerMarshalErrorJson()
 
+func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{} {
+	qtype := QTypeFromString(qTypeStr)
+	answer := make(map[string]interface{})
+
+	var handlerError error
+	switch qtype {
+	case CreateMember:
+		answer, handlerError = rh.ProcessCreateMember()
+	case DumpUserInfo:
+		answer = rh.ProcessDumpUserInfo()
+	case GetBalance:
+		answer = rh.ProcessGetBalance()
+	case SendMoney:
+		answer = rh.ProcessSendMoney()
+	case DumpAllUsers:
+		answer = rh.ProcessDumpAllUsers()
+	default:
+		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
+		answer = WriteError(msg, -2)
+		log.Printf("[QID=%s] %s\n", rh.qid, msg)
+		return answer
+	}
+	if handlerError != nil {
+		errMsg := "Handler error: " + handlerError.Error()
+		log.Printf("[QID=%s] %s\n", rh.qid, errMsg)
+		answer = WriteError(errMsg, -3)
+	}
+
+	return answer
+}
+
 func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
 		qid := GenQID()
+		req.ParseForm()
+		req.Form.Add("qid", qid)
+		log.Printf("[QID=%s] Query: %s\n", qid, req.RequestURI)
 		rh := NewRequestHandler(req, router)
 		defer func() {
 			if answer == nil {
@@ -75,36 +109,8 @@ func WrapApiV1Handler(router *messagerouter.MessageRouter) func(w http.ResponseW
 			log.Printf("[QID=%s] Request completed\n", qid)
 		}()
 
-		req.ParseForm()
-		req.Form.Add("qid", qid)
-		log.Printf("[QID=%s] Query: %s\n", qid, req.RequestURI)
-
 		qTypeStr := req.FormValue("query_type")
-		qtype := QTypeFromString(qTypeStr)
-
-		var handlerError error
-		switch qtype {
-		case CreateMember:
-			answer, handlerError = rh.ProcessCreateMember()
-		case DumpUserInfo:
-			answer = rh.ProcessDumpUserInfo()
-		case GetBalance:
-			answer = rh.ProcessGetBalance()
-		case SendMoney:
-			answer = rh.ProcessSendMoney()
-		case DumpAllUsers:
-			answer = rh.ProcessDumpAllUsers()
-		default:
-			msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
-			answer = WriteError(msg, -2)
-			log.Printf("[QID=%s] %s\n", qid, msg)
-			return
-		}
-		if handlerError != nil {
-			errMsg := "Handler error: " + handlerError.Error()
-			log.Printf("[QID=%s] %s\n", qid, errMsg)
-			answer = WriteError(errMsg, -3)
-		}
+		answer = ProcessQueryType(rh, qTypeStr)
 	}
 }
 
@@ -160,14 +166,14 @@ func (ar *ApiRunner) Stop() error {
 	return nil
 }
 
-// func main() {
-// 	cfg := configuration.NewApiRunner()
-// 	api, err := NewApiRunner(cfg)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	cs := core.Components{}
-// 	api.Start(cs)
-// 	time.Sleep(60 * time.Second)
-// 	api.Stop()
-// }
+func main() {
+	cfg := configuration.NewApiRunner()
+	api, err := NewApiRunner(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	cs := core.Components{}
+	api.Start(cs)
+	time.Sleep(60 * time.Second)
+	api.Stop()
+}

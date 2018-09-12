@@ -23,12 +23,13 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/messagerouter/message"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
 func makeRootDomainReference() core.RecordRef {
 	const ref = "1111111-1111111-11111111-1111111"
-	return core.String2Ref(ref)
+	return core.String2Ref(base58.Encode([]byte(ref)))
 }
 
 var RootDomainReference = makeRootDomainReference()
