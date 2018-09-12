@@ -65,8 +65,8 @@ type RequestDataRPC struct {
 
 // RequestCascadeSend is data for cascade sending feature
 type RequestCascadeSend struct {
-	Rpc  RequestDataRPC
-	Data cascade.CascadeSendData
+	RPC  RequestDataRPC
+	Data cascade.SendData
 }
 
 // RequestRelay is data for relay request (commands: start/stop relay).

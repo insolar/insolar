@@ -50,14 +50,14 @@ type RPC interface {
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 }
 
-type HostIdResolver interface {
+type HostIDResolver interface {
 	GetReferenceHostID(ref string) (string, error)
-	GetCurrentReferenceId() string
+	GetCurrentReferenceID() string
 }
 
 // DHT represents the state of the local host in the distributed hash table.
 type DHT struct {
-	idResolver HostIdResolver
+	idResolver HostIDResolver
 	tables     []*routing.HashTable
 	options    *Options
 
@@ -130,7 +130,7 @@ type Options struct {
 }
 
 // NewDHT initializes a new DHT host.
-func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy, h HostIdResolver) (dht *DHT, err error) {
+func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy, h HostIDResolver) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
 		return nil, err
@@ -934,7 +934,7 @@ func (dht *DHT) processCascadeSend(ctx Context, msg *packet.Packet, packetBuilde
 	data := msg.Data.(*packet.RequestCascadeSend)
 
 	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
-	_, err := dht.rpc.Invoke(msg.Sender, data.Rpc.Method, data.Rpc.Args)
+	_, err := dht.rpc.Invoke(msg.Sender, data.RPC.Method, data.RPC.Args)
 	response := &packet.ResponseCascadeSend{
 		Success: true,
 		Error:   "",
@@ -947,7 +947,10 @@ func (dht *DHT) processCascadeSend(ctx Context, msg *packet.Packet, packetBuilde
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
-	dht.InitCascadeSendMessage(data.Data, dht.idResolver.GetCurrentReferenceId(), ctx, data.Rpc.Method, data.Rpc.Args)
+	err = dht.InitCascadeSendMessage(data.Data, dht.idResolver.GetCurrentReferenceID(), ctx, data.RPC.Method, data.RPC.Args)
+	if err != nil {
+		log.Println("Failed to send message to next cascade layers:", err.Error())
+	}
 }
 
 func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
@@ -1544,7 +1547,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string,
 }
 
 // InitCascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
-func (dht *DHT) InitCascadeSendMessage(data cascade.CascadeSendData, currentNode string, ctx Context, method string, args [][]byte) error {
+func (dht *DHT) InitCascadeSendMessage(data cascade.SendData, currentNode string, ctx Context, method string, args [][]byte) error {
 	if len(data.NodeIds) == 0 {
 		return errors.New("node IDs list should not be empty")
 	}
@@ -1579,7 +1582,7 @@ func (dht *DHT) InitCascadeSendMessage(data cascade.CascadeSendData, currentNode
 	return nil
 }
 
-func (dht *DHT) cascadeSendMessage(data cascade.CascadeSendData, ctx Context, targetID string, method string, args [][]byte) error {
+func (dht *DHT) cascadeSendMessage(data cascade.SendData, ctx Context, targetID string, method string, args [][]byte) error {
 	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
 	if err != nil {
 		return err
@@ -1591,7 +1594,7 @@ func (dht *DHT) cascadeSendMessage(data cascade.CascadeSendData, ctx Context, ta
 		Type:     packet.TypeCascadeSend,
 		Data: &packet.RequestCascadeSend{
 			Data: data,
-			Rpc: packet.RequestDataRPC{
+			RPC: packet.RequestDataRPC{
 				Method: method,
 				Args:   args,
 			},

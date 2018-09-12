@@ -73,6 +73,6 @@ func (network *Nodenetwork) addNode(node *Node) error {
 }
 
 // TODO: get reference ID from configuration
-func (network *Nodenetwork) GetCurrentReferenceId() string {
+func (network *Nodenetwork) GetCurrentReferenceID() string {
 	return ""
 }

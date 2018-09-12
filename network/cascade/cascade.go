@@ -24,7 +24,7 @@ import (
 	"sort"
 )
 
-type CascadeSendData struct {
+type SendData struct {
 	NodeIds           []string
 	Entropy           uint64
 	ReplicationFactor uint
@@ -45,8 +45,8 @@ func geometricProgressionSum(a int, r int, n int) int {
 	return a * (1 - S) / (1 - r)
 }
 
-func calcHash(nodeId string, entropy uint64) []byte {
-	data := []byte(nodeId)
+func calcHash(nodeID string, entropy uint64) []byte {
+	data := []byte(nodeID)
 
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, entropy)
@@ -64,8 +64,8 @@ func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicatio
 	j := 0
 	layerWidth := replicationFactor
 	found := false
-	for _, nodeId := range nodeIds {
-		if nodeId == currentNode {
+	for _, nodeID := range nodeIds {
+		if nodeID == currentNode {
 			found = true
 			break
 		}
@@ -93,7 +93,7 @@ func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicatio
 	return
 }
 
-func CalculateNextNodes(data CascadeSendData, currentNode string) (nextNodeIds []string) {
+func CalculateNextNodes(data SendData, currentNode string) (nextNodeIds []string) {
 	nodeIds := make([]string, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
 
@@ -112,7 +112,6 @@ func CalculateNextNodes(data CascadeSendData, currentNode string) (nextNodeIds [
 
 	if startIndex >= len(nodeIds) {
 		return nil
-	} else {
-		return nodeIds[startIndex:min(endIndex, len(nodeIds))]
 	}
+	return nodeIds[startIndex:min(endIndex, len(nodeIds))]
 }

@@ -24,7 +24,7 @@ import (
 
 func TestCalculateNextNodes(t *testing.T) {
 	nodeIds := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"}
-	c := CascadeSendData{
+	c := SendData{
 		NodeIds:           nodeIds,
 		Entropy:           0,
 		ReplicationFactor: 2,

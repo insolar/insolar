@@ -1550,7 +1550,7 @@ func TestDHT_InitCascadeSendMessage(t *testing.T) {
 	}
 	done := make(chan bool)
 
-	d := cascade.CascadeSendData{
+	d := cascade.SendData{
 		NodeIds:           []string{"A0", "A1", "A2", "A3", "A4", "A5"},
 		Entropy:           0,
 		ReplicationFactor: 2,

@@ -90,7 +90,7 @@ func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]b
 }
 
 // SendCascadeMessage sends a message from MessageRouter to a cascade of nodes. Message reference is ignored
-func (network *ServiceNetwork) SendCascadeMessage(data cascade.CascadeSendData, method string, msg core.Message) error {
+func (network *ServiceNetwork) SendCascadeMessage(data cascade.SendData, method string, msg core.Message) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
