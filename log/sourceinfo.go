@@ -31,8 +31,8 @@ type callInfo struct {
 	line        int
 }
 
-func getCallInfo() *callInfo {
-	pc, file, line, _ := runtime.Caller(4)
+func getCallInfo(skipCallNumber int) *callInfo {
+	pc, file, line, _ := runtime.Caller(skipCallNumber)
 	_, fileName := path.Split(file)
 	parts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
 	pl := len(parts)
@@ -47,9 +47,18 @@ func getCallInfo() *callInfo {
 	}
 
 	return &callInfo{
-		packageName: packageName,
+		packageName: stripPackageName(packageName),
 		fileName:    fileName,
 		funcName:    funcName,
 		line:        line,
 	}
+}
+
+func stripPackageName(packageName string) string {
+	result := strings.TrimPrefix(packageName, "github.com/insolar/insolar/")
+	i := strings.Index(result, ".")
+	if result == packageName || i == -1 {
+		return result
+	}
+	return result[:i]
 }
