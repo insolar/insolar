@@ -3,7 +3,7 @@ insolar:
     transport:
       protocol: UTP
       address: 127.0.0.1:0
-      behindnat: true
+      behindnat: false
     bootstraphosts: []
     isrelay: false
   node:
