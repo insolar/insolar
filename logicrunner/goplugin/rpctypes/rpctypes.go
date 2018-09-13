@@ -112,6 +112,17 @@ type UpSaveAsDelegateResp struct {
 	Reference core.RecordRef
 }
 
+// UpGetDelegateReq is a set of arguments for GetDelegate RPC in goplugin
+type UpGetDelegateReq struct {
+	Object core.RecordRef
+	OfType core.RecordRef
+}
+
+// UpGetDelegateResp is a set of arguments for GetDelegate RPC in goplugin
+type UpGetDelegateResp struct {
+	Object core.RecordRef
+}
+
 // Object is an inner representation of storage object for transfering it over API
 type Object struct {
 	MachineType core.MachineType

@@ -19,6 +19,7 @@ package foundation
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 // BaseContract is a base class for all contracts.
@@ -26,6 +27,7 @@ type BaseContract struct {
 	context *core.LogicCallContext // Context hidden from anyone
 }
 
+// ProxyInterface interface any proxy of a contract implements
 type ProxyInterface interface {
 	GetReference() core.RecordRef
 	GetClass() core.RecordRef
@@ -72,8 +74,8 @@ func (bc *BaseContract) SetContext(cc *core.LogicCallContext) {
 }
 
 // GetImplementationFor finds delegate typed r in object and returns it
-func GetImplementationFor(o core.RecordRef, r core.RecordRef) ProxyInterface {
-	panic("not implemented")
+func GetImplementationFor(object, ofType core.RecordRef) (core.RecordRef, error) {
+	return proxyctx.Current.GetDelegate(object, ofType)
 }
 
 // GetChildrenTyped returns set of children objects with corresponding type
