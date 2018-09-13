@@ -185,6 +185,7 @@ func NewAPIRunner(cfg *configuration.APIRunner) (*APIRunner, error) {
 	return &ar, nil
 }
 
+// Start runs api server
 func (ar *APIRunner) Start(c core.Components) error {
 
 	// TODO: init message router
@@ -207,6 +208,7 @@ func (ar *APIRunner) Start(c core.Components) error {
 	return nil
 }
 
+// Stop stops api server
 func (ar *APIRunner) Stop() error {
 	const timeOut = 5
 	logrus.Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
