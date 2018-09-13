@@ -31,19 +31,19 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageRouter struct {
-	LogicRunner core.LogicRunner
+	logicRunner core.LogicRunner
 	service     core.Network
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
-// that satisfies `LogicRunner` interface
+// that satisfies `logicRunner` interface
 func New(cfg configuration.Configuration) (*MessageRouter, error) {
-	mr := &MessageRouter{LogicRunner: nil, service: nil}
+	mr := &MessageRouter{logicRunner: nil, service: nil}
 	return mr, nil
 }
 
 func (mr *MessageRouter) Start(c core.Components) error {
-	mr.LogicRunner = c["core.LogicRunner"].(core.LogicRunner)
+	mr.logicRunner = c["core.logicRunner"].(core.LogicRunner)
 	mr.service = c["core.Network"].(core.Network)
 	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return nil
@@ -61,7 +61,7 @@ func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err er
 	return DeserializeResponse(res)
 }
 
-// Deliver method calls LogicRunner.Execute on local host
+// Deliver method calls logicRunner.Execute on local host
 // this method is registered as RPC stub
 func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
@@ -72,7 +72,7 @@ func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	return Serialize(mr.LogicRunner.Execute(msg))
+	return Serialize(mr.logicRunner.Execute(msg))
 }
 
 // Serialize converts Message or Response to byte slice.

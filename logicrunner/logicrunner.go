@@ -29,14 +29,14 @@ import (
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-// LogicRunner is a general interface of contract executor
+// logicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	Cfg             configuration.LogicRunner
 }
 
-// NewLogicRunner is constructor for `LogicRunner`
+// NewLogicRunner is constructor for `logicRunner`
 func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,

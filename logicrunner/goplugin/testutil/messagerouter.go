@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// TestMessageRouter can execute messages on LogicRunner.
+// TestMessageRouter can execute messages on logicRunner.
 type TestMessageRouter struct {
 	LogicRunner core.LogicRunner
 }
@@ -31,7 +31,7 @@ func (*TestMessageRouter) Start(components core.Components) error { return nil }
 // Stop is the dummy mock of Stop method.
 func (*TestMessageRouter) Stop() error { return nil }
 
-// Route executes message on LogicRunner.
+// Route executes message on logicRunner.
 func (r *TestMessageRouter) Route(msg core.Message) (resp core.Response, err error) {
 	res := r.LogicRunner.Execute(msg)
 	return *res, nil

@@ -95,18 +95,18 @@ func main() {
 
 	lr, err := logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
 	if err != nil {
-		log.Fatalln("Failed to start LogicRunner: ", err.Error())
+		log.Fatalln("Failed to start logicRunner: ", err.Error())
 	}
 
 	mr, err := messagerouter.New(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("Failed to start LogicRunner: ", err.Error())
+		log.Fatalln("Failed to start logicRunner: ", err.Error())
 	}
 
 	cm := componentManager{components: make(core.Components), interfaceNames: make([]string, 0)}
 	cm.register("core.Network", nw)
 	cm.register("core.Ledger", l)
-	cm.register("core.LogicRunner", lr)
+	cm.register("core.logicRunner", lr)
 	cm.register("core.MessageRouter", mr)
 	cm.linkAll()
 
