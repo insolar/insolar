@@ -17,9 +17,9 @@
 package logicrunner
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -491,7 +491,6 @@ func TestGetChildren(t *testing.T) {
 	goContract := `
 package main
 
-//import "fmt"
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "contract-proxy/child"
 
@@ -500,17 +499,22 @@ type Contract struct {
 }
 
 func (c *Contract) NewChilds(cnt int) int {
-	//ctx := c.GetContext()
-	summ := 0
+	s := 0
 	for i := 1; i < cnt; i++ {
 		farsh := child.New(i)
         farsh.AsChild(c.GetReference())
-		summ += i
-	}
-	return summ
+		s += i
+	} 
+	return s
 }
 
-// testchilds here
+func (c *Contract) SumChilds() int {
+	s := 0
+	for _, chref := range c.GetChildrenTyped(child.GetClass()) {
+		s += child.GetObject(chref).GetNum()
+	}
+	return s
+}
 `
 
 	goChild := `
