@@ -34,7 +34,7 @@ func (generator *MockEntropyGenerator) GenerateEntropy() core.Entropy {
 
 func TestNewPulse(t *testing.T) {
 	generator := &MockEntropyGenerator{}
-	previousPulse := uint64(876)
+	previousPulse := uint32(876)
 	expectedPulse := previousPulse + 1
 
 	result := NewPulse(previousPulse, generator)
@@ -43,7 +43,7 @@ func TestNewPulse(t *testing.T) {
 		t.Errorf("Expeced and actual entropies are different, got: %v, want: %v", result.Entropy, mockEntropy)
 	}
 
-	if result.PulseNumber != expectedPulse {
+	if result.PulseNumber != core.PulseNumber(expectedPulse) {
 		t.Errorf("Expeced and actual pulse numbers are different, got: %v, want: %v", result.PulseNumber, expectedPulse)
 	}
 }
