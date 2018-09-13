@@ -17,13 +17,13 @@
 package pulsar
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/gob"
 	"fmt"
+	"io"
 	"net"
 	"os"
-	"strconv"
 
 	"github.com/insolar/insolar/configuration"
 )
@@ -34,16 +34,10 @@ type Pulsar struct {
 	PrivateKey *rsa.PrivateKey
 }
 
-type Neighbour struct {
-	ConnectionType configuration.ConnectionType
-	Connection     net.Conn
-	PublicKey      *rsa.PublicKey
-}
-
-//Listen(network, address string) (Listener, error)
+// Creation new pulsar-node
 func NewPulsar(configuration configuration.Pulsar, listener func(string, string) (net.Listener, error)) *Pulsar {
 	// Listen for incoming connections.
-	l, err := listener(configuration.ConnectionType.String(), configuration.ListenAddress) //net.Listen(configuration.ConnectionType.String(), configuration.ListenAddress)
+	l, err := listener(configuration.ConnectionType.String(), configuration.ListenAddress)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
@@ -66,6 +60,7 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 	return pulsar
 }
 
+// Listen port for input connections
 func (pulsar *Pulsar) Listen() {
 	for {
 		// Listen for an incoming connection.
@@ -75,10 +70,11 @@ func (pulsar *Pulsar) Listen() {
 			os.Exit(1)
 		}
 		// Handle connections in a new goroutine.
-		go handleRequest(conn)
+		go pulsar.handleNewRequest(conn)
 	}
 }
 
+// Connect to all known nodes
 func (pulsar *Pulsar) ConnectToAllNeighbours() error {
 	for key, neighbour := range pulsar.Neighbours {
 		err := pulsar.ConnectToNeighbour(key, neighbour.ConnectionType.String())
@@ -90,20 +86,26 @@ func (pulsar *Pulsar) ConnectToAllNeighbours() error {
 	return nil
 }
 
+// Connect to the concrete member
 func (pulsar *Pulsar) ConnectToNeighbour(address string, connectionType string) error {
 	conn, err := net.Dial(connectionType, address)
 	if err != nil {
 		fmt.Println("Error accepting: ", err.Error())
 		return err
 	}
+	conn.(*net.TCPConn).SetKeepAlive(true)
 	pulsar.Neighbours[address].Connection = conn
+	pulsar.Send(address, &HandshakeMessageBody{PublicKey: pulsar.PrivateKey.PublicKey})
+	go pulsar.handleNewRequest(conn)
 
 	return nil
 }
 
-func (pulsar *Pulsar) Send(address string, data interface{}) {
+func (pulsar *Pulsar) Send(address string, data interface{}) error {
+	return gob.NewEncoder(pulsar.Neighbours[address].Connection).Encode(data)
 }
 
+// Close all connections
 func (pulsar *Pulsar) Close() {
 	for _, neighbour := range pulsar.Neighbours {
 		neighbour.Connection.Close()
@@ -113,27 +115,31 @@ func (pulsar *Pulsar) Close() {
 }
 
 // Handles incoming requests.
-func handleRequest(conn net.Conn) {
-	// Make a buffer to hold incoming data.
-	buf := make([]byte, 1024)
-	// Read the incoming connection into the buffer.
-	reqLen, err := conn.Read(buf)
-	if err != nil {
-		fmt.Println("Error reading:", err.Error())
+func (pulsar *Pulsar) handleNewRequest(conn net.Conn) {
+	dec := gob.NewDecoder(conn)
+	message := &Message{}
+	err := dec.Decode(message)
+	if err == io.EOF {
+		remoteAddr := conn.RemoteAddr().String()
+		pulsar.ConnectToNeighbour(remoteAddr, pulsar.Neighbours[remoteAddr].ConnectionType.String())
+		return
 	}
-	// Builds the message.
-	message := "Hi, I received your message! It was "
-	message += strconv.Itoa(reqLen)
-	message += " bytes long and that's what it said: \""
-	n := bytes.Index(buf, []byte{0})
-	message += string(buf[:n-1])
-	message += "\" ! Honestly I have no clue about what to do with your messages, so Bye Bye!\n"
 
-	// Write the message in the connection channel.
-	_, err = conn.Write([]byte(message))
-	if err != nil {
-		fmt.Println("Error reading:", err.Error())
+	switch message.Type {
+	case Handshake:
+		{
+			remoteAddr := conn.RemoteAddr()
+			if savedConn, ok := pulsar.Neighbours[remoteAddr.String()]; ok {
+				if savedConn.Connection != nil {
+					savedConn.Connection.Close()
+				}
+				conn.(*net.TCPConn).SetKeepAlive(true)
+				pulsar.Neighbours[remoteAddr.String()].Connection = conn
+				messageBody := message.Data.(HandshakeMessageBody)
+				pulsar.Neighbours[remoteAddr.String()].PublicKey = &messageBody.PublicKey
+				pulsar.Send(remoteAddr.String(), &HandshakeMessageBody{PublicKey: pulsar.PrivateKey.PublicKey})
+				go pulsar.handleNewRequest(conn)
+			}
+		}
 	}
-	// Close the connection when you're done with it.
-	conn.Close()
 }

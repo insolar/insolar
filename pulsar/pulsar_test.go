@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package pulsar
 
 import (
@@ -26,7 +42,7 @@ func (mock *mockListener) Addr() net.Addr {
 }
 
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
-	assert := assert.New(t)
+	assertObj := assert.New(t)
 	config := configuration.Pulsar{ConnectionType: "testType", ListenAddress: "listedAddress"}
 	actualConnectionType := ""
 	actualAddress := ""
@@ -37,14 +53,14 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		return &mockListener{}, nil
 	})
 
-	assert.Equal("testType", actualConnectionType)
-	assert.Equal("listedAddress", actualAddress)
-	assert.IsType(result.Sock, &mockListener{})
-	assert.NotNil(result.PrivateKey)
+	assertObj.Equal("testType", actualConnectionType)
+	assertObj.Equal("listedAddress", actualAddress)
+	assertObj.IsType(result.Sock, &mockListener{})
+	assertObj.NotNil(result.PrivateKey)
 }
 
 func TestNewPulsar_WithtNeighbours(t *testing.T) {
-	assert := assert.New(t)
+	assertObj := assert.New(t)
 	config := configuration.Pulsar{
 		ConnectionType: "testType",
 		ListenAddress:  "listedAddress",
@@ -58,8 +74,8 @@ func TestNewPulsar_WithtNeighbours(t *testing.T) {
 		return &mockListener{}, nil
 	})
 
-	assert.Equal(2, len(result.Neighbours))
+	assertObj.Equal(2, len(result.Neighbours))
 
-	assert.Equal("tcp", result.Neighbours["first"].ConnectionType.String())
-	assert.Equal("pct", result.Neighbours["second"].ConnectionType.String())
+	assertObj.Equal("tcp", result.Neighbours["first"].ConnectionType.String())
+	assertObj.Equal("pct", result.Neighbours["second"].ConnectionType.String())
 }
