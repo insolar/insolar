@@ -144,9 +144,7 @@ func (b *Hello) String() string {
 		"String",
 		testutil.CBORMarshal(t, []interface{}{}),
 	)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 	resParsed := testutil.CBORUnMarshalToSlice(t, res)
 	assert.Equal(t, "Hello, Go is there!", resParsed[0])
 }
@@ -226,9 +224,7 @@ func (r *Two) Hello(s string) string {
 		"Hello",
 		testutil.CBORMarshal(t, []interface{}{"ins"}),
 	)
-	if err != nil {
-		panic("gp.CallMethod: " + err.Error())
-	}
+	assert.NoError(t, err)
 
 	resParsed := testutil.CBORUnMarshalToSlice(t, res)
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
@@ -298,9 +294,7 @@ func (r *Two) Hello(s string) string {
 		"Hello",
 		testutil.CBORMarshal(t, []interface{}{"ins"}),
 	)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	resParsed := testutil.CBORUnMarshalToSlice(t, res)
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
