@@ -70,8 +70,12 @@ func (rd *RootDomain) DumpUserInfo(reference string) []byte {
 
 func (rd *RootDomain) DumpAllUsers() []byte {
 	res := []map[string]interface{}{}
-	for _, c := range rd.GetChildrenTyped(member.ClassReference) {
-		m := c.(*member.Member)
+	crefs, err  := rd.GetChildrenTyped(member.ClassReference)
+	if err != nil {
+	    panic(err)
+	}
+	for _, cref := range crefs {
+		m := member.GetObject(cref)
 		userInfo := rd.getUserInfoMap(m)
 		res = append(res, userInfo)
 	}

@@ -79,8 +79,8 @@ func GetImplementationFor(object, ofType core.RecordRef) (core.RecordRef, error)
 }
 
 // GetChildrenTyped returns set of children objects with corresponding type
-func (bc *BaseContract) GetChildrenTyped(r core.RecordRef) []ProxyInterface {
-	panic("not implemented")
+func (bc *BaseContract) GetChildrenTyped(r core.RecordRef) ([]core.RecordRef, error) {
+	return proxyctx.Current.GetObjChildren(bc.GetReference(), r)
 }
 
 // GetObject create proxy by address
