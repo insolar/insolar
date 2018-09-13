@@ -116,6 +116,10 @@ type testLedger struct {
 	am core.ArtifactManager
 }
 
+func (r *testLedger) GetJetCoordinator() core.JetCoordinator {
+	panic("implement me")
+}
+
 func (r *testLedger) Start(components core.Components) error { return nil }
 func (r *testLedger) Stop() error                            { return nil }
 func (r *testLedger) GetManager() core.ArtifactManager       { return r.am }
