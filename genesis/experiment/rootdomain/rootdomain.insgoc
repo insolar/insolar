@@ -64,9 +64,10 @@ func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
 	memberAsWallet := foundation.GetImplementationFor(wallet.ClassReference, m.GetReference())
 	w, _ := memberAsWallet.(*wallet.Wallet)
-	res := map[string]interface{}{}
-	res["member"] = m
-	res["wallet"] = w
+	res := map[string]interface{}{
+        "member": m,
+        "wallet": w,
+    }
 	return res
 }
 
