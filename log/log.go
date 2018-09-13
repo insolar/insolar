@@ -72,6 +72,16 @@ func Errorln(args ...interface{}) {
 	globalLogger.Errorln(args...)
 }
 
+// Fatal logs a message at level Fatal to the global logger.
+func Fatal(args ...interface{}) {
+	globalLogger.Fatal(args...)
+}
+
+// Fatalln logs a message at level Fatal to the global logger.
+func Fatalln(args ...interface{}) {
+	globalLogger.Fatalln(args...)
+}
+
 // Panic logs a message at level Panic to the global logger.
 func Panic(args ...interface{}) {
 	globalLogger.Panic(args...)
