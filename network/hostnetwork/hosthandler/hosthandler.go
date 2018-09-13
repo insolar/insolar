@@ -62,6 +62,7 @@ type HostHandler interface {
 	SetOuterHostsCount(hosts int)
 	SetAuthStatus(targetID string, status bool)
 
+	GetOriginHost() *host.Origin
 	GetProxyHostsCount() int
 	GetOuterHostsCount() int
 	GetSelfKnownOuterHosts() int
