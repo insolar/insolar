@@ -26,16 +26,6 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// SendData contains routing data for cascade sending
-type SendData struct {
-	// NodeIds contains the slice of node identifiers that will receive the message
-	NodeIds []string
-	// Entropy is used for pseudorandom cascade building
-	Entropy core.Entropy
-	// Replication factor is the number of children nodes of the each node of the cascade
-	ReplicationFactor uint
-}
-
 func min(a, b int) int {
 	if a >= b {
 		return b
@@ -66,7 +56,7 @@ func calcHash(nodeID core.RecordRef, entropy core.Entropy) []byte {
 	return hash.Sum(nil)
 }
 
-func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicationFactor uint) (startIndex, endIndex int) {
+func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.RecordRef, replicationFactor uint) (startIndex, endIndex int) {
 	depth := 0
 	j := 0
 	layerWidth := replicationFactor
@@ -104,8 +94,8 @@ func getNextCascadeLayerIndexes(nodeIds []string, currentNode string, replicatio
 }
 
 // get nodes of the next cascade layer from the input nodes slice
-func CalculateNextNodes(data SendData, currentNode string) (nextNodeIds []string, err error) {
-	nodeIds := make([]string, len(data.NodeIds))
+func CalculateNextNodes(data core.Cascade, currentNode *core.RecordRef) (nextNodeIds []core.RecordRef, err error) {
+	nodeIds := make([]core.RecordRef, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
 
 	// catching possible panic from calcHash
@@ -121,13 +111,13 @@ func CalculateNextNodes(data SendData, currentNode string) (nextNodeIds []string
 			calcHash(nodeIds[j], data.Entropy)) < 0
 	})
 
-	if currentNode == "" {
+	if currentNode == nil {
 		l := min(len(nodeIds), int(data.ReplicationFactor))
 		return nodeIds[:l], nil
 	}
 
 	// get indexes of the next layer nodes from the sorted nodes slice
-	startIndex, endIndex := getNextCascadeLayerIndexes(nodeIds, currentNode, data.ReplicationFactor)
+	startIndex, endIndex := getNextCascadeLayerIndexes(nodeIds, *currentNode, data.ReplicationFactor)
 
 	if startIndex >= len(nodeIds) {
 		return nil, nil
