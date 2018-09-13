@@ -26,6 +26,7 @@ type ProxyHelper interface {
 	RouteConstructorCall(classRef core.RecordRef, name string, args []byte) ([]byte, error)
 	SaveAsChild(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error)
 	SaveAsDelegate(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error)
+	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 }

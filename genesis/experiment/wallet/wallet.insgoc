@@ -40,7 +40,7 @@ func (w *Wallet) Allocate(amount uint, to core.RecordRef) core.RecordRef {
 }
 
 func (w *Wallet) Receive(amount uint, from core.RecordRef) {
-	fromWallet := foundation.GetImplementationFor(from, w.GetClass()).(*wallet.Wallet)
+	fromWallet := wallet.GetImplementationFrom(from)
 
 	aRef := fromWallet.Allocate(amount, w.GetReference())
 	w.Balance += allowance.GetObject(aRef).TakeAmount()
@@ -49,7 +49,7 @@ func (w *Wallet) Receive(amount uint, from core.RecordRef) {
 func (w *Wallet) Transfer(amount uint, to core.RecordRef) {
 	w.Balance -= amount
 
-	toWallet := foundation.GetImplementationFor(to, w.GetClass()).(*wallet.Wallet)
+	toWallet := wallet.GetImplementationFrom(to)
 	toWalletRef := toWallet.GetReference()
 
 	ah := allowance.New(toWalletRef, amount, w.GetContext().Time.Unix()+10)

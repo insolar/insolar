@@ -29,8 +29,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -48,10 +51,17 @@ type RPC interface {
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 }
 
+// HostIdResolver interface provides means of getting host IDs for other hosts and reference ID for current host
+type HostIDResolver interface {
+	GetReferenceHostID(ref string) (string, error)
+	GetCurrentReferenceID() string
+}
+
 // DHT represents the state of the local host in the distributed hash table.
 type DHT struct {
-	tables  []*routing.HashTable
-	options *Options
+	idResolver HostIDResolver
+	tables     []*routing.HashTable
+	options    *Options
 
 	origin *host.Origin
 
@@ -122,7 +132,7 @@ type Options struct {
 }
 
 // NewDHT initializes a new DHT host.
-func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy) (dht *DHT, err error) {
+func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy, h HostIDResolver) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
 		return nil, err
@@ -131,14 +141,15 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		options:   options,
-		origin:    origin,
-		rpc:       rpc,
-		transport: transport,
-		tables:    tables,
-		store:     store,
-		relay:     rel,
-		proxy:     proxy,
+		idResolver: h,
+		options:    options,
+		origin:     origin,
+		rpc:        rpc,
+		transport:  transport,
+		tables:     tables,
+		store:      store,
+		relay:      rel,
+		proxy:      proxy,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -914,8 +925,33 @@ func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.
 		dht.processKnownOuterHosts(ctx, msg, packetBuilder)
 	case packet.TypeCheckNodePriv:
 		dht.processCheckNodePriv(ctx, msg, packetBuilder)
+	case packet.TypeCascadeSend:
+		dht.processCascadeSend(ctx, msg, packetBuilder)
 	default:
 		log.Println("unknown request type")
+	}
+}
+
+func (dht *DHT) processCascadeSend(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
+	data := msg.Data.(*packet.RequestCascadeSend)
+
+	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
+	_, err := dht.rpc.Invoke(msg.Sender, data.RPC.Method, data.RPC.Args)
+	response := &packet.ResponseCascadeSend{
+		Success: true,
+		Error:   "",
+	}
+	if err != nil {
+		response.Success = false
+		response.Error = err.Error()
+	}
+	err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
+	if err != nil {
+		log.Println("Failed to send response:", err.Error())
+	}
+	err = dht.InitCascadeSendMessage(data.Data, dht.idResolver.GetCurrentReferenceID(), ctx, data.RPC.Method, data.RPC.Args)
+	if err != nil {
+		log.Println("Failed to send message to next cascade layers:", err.Error())
 	}
 }
 
@@ -1451,17 +1487,26 @@ func (dht *DHT) handleObtainIPResponse(response *packet.ResponseObtainIP, target
 	return nil
 }
 
-// RemoteProcedureCall calls remote procedure on target host.
-func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+func (dht *DHT) getRoutingForSend(ctx Context, targetID string) (*host.Host, *routing.HashTable, error) {
 	targetHost, exists, err := dht.FindHost(ctx, targetID)
 	ht := dht.htFromCtx(ctx)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if !exists {
-		return nil, errors.New("targetHost not found")
+		return nil, nil, errors.New("targetHost not found")
+	}
+
+	return targetHost, ht, nil
+}
+
+// RemoteProcedureCall calls remote procedure on target host.
+func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
+	if err != nil {
+		return nil, err
 	}
 
 	request := &packet.Packet{
@@ -1488,7 +1533,7 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string,
 	case rsp := <-future.Result():
 		if rsp == nil {
 			// Channel was closed
-			return nil, errors.New("chanel closed unexpectedly")
+			return nil, errors.New("channel closed unexpectedly")
 		}
 		dht.addHost(ctx, routing.NewRouteHost(rsp.Sender))
 
@@ -1500,6 +1545,84 @@ func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string,
 	case <-time.After(dht.options.PacketTimeout):
 		future.Cancel()
 		return nil, errors.New("timeout")
+	}
+}
+
+// InitCascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
+func (dht *DHT) InitCascadeSendMessage(data cascade.SendData, currentNode string, ctx Context, method string, args [][]byte) error {
+	if len(data.NodeIds) == 0 {
+		return errors.New("node IDs list should not be empty")
+	}
+	if data.ReplicationFactor == 0 {
+		return errors.New("replication factor should not be zero")
+	}
+
+	nextNodes, err := cascade.CalculateNextNodes(data, currentNode)
+	if err != nil {
+		return err
+	}
+	if len(nextNodes) == 0 {
+		return nil
+	}
+	var failedNodes []string
+	for _, nextNode := range nextNodes {
+		hostID, err := dht.idResolver.GetReferenceHostID(nextNode)
+		if err != nil {
+			logrus.Debugln("failed to resolve nodeID -> hostID: ", err)
+			failedNodes = append(failedNodes, nextNode)
+			continue
+		}
+
+		err = dht.cascadeSendMessage(data, ctx, hostID, method, args)
+		if err != nil {
+			logrus.Debugln("failed to send cascade message: ", err)
+			failedNodes = append(failedNodes, nextNode)
+		}
+	}
+
+	if len(failedNodes) > 0 {
+		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
+	}
+
+	return nil
+}
+
+func (dht *DHT) cascadeSendMessage(data cascade.SendData, ctx Context, targetID string, method string, args [][]byte) error {
+	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
+	if err != nil {
+		return err
+	}
+
+	request := packet.NewBuilder().Sender(ht.Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
+		Request(&packet.RequestCascadeSend{
+			Data: data,
+			RPC: packet.RequestDataRPC{
+				Method: method,
+				Args:   args,
+			},
+		}).Build()
+
+	future, err := dht.transport.SendRequest(request)
+	if err != nil {
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			// Channel was closed
+			return errors.New("channel closed unexpectedly")
+		}
+		dht.addHost(ctx, routing.NewRouteHost(rsp.Sender))
+
+		response := rsp.Data.(*packet.ResponseCascadeSend)
+		if !response.Success {
+			return errors.New(response.Error)
+		}
+		return nil
+	case <-time.After(dht.options.PacketTimeout):
+		future.Cancel()
+		return errors.New("timeout")
 	}
 }
 

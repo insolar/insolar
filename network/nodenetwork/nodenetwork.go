@@ -51,6 +51,7 @@ func (network *Nodenetwork) AddNode(nodeID, hostID, domainID string) error {
 }
 
 // GetReferenceHostID returns a host found by reference.
+// TODO: calculate host id from reference id (no maps)
 func (network *Nodenetwork) GetReferenceHostID(ref string) (string, error) {
 	if _, ok := network.nodes[ref]; !ok {
 		return "", errors.New("reference ID doesn't exist")
@@ -69,4 +70,9 @@ func (network *Nodenetwork) addNode(node *Node) error {
 	}
 	network.nodes[node.GetReference().String()] = node
 	return nil
+}
+
+// TODO: get reference ID from configuration
+func (network *Nodenetwork) GetCurrentReferenceID() string {
+	return ""
 }

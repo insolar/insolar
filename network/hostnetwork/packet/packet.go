@@ -54,6 +54,8 @@ const (
 	TypeKnownOuterHosts
 	// TypeCheckNodePriv is packet to check preset node privileges.
 	TypeCheckNodePriv
+	// TypeCascadeSend is the packet type for the cascade send message feature
+	TypeCascadeSend
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -185,6 +187,8 @@ func (m *Packet) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestKnownOuterHosts)
 	case TypeCheckNodePriv:
 		_, valid = m.Data.(*RequestCheckNodePriv)
+	case TypeCascadeSend:
+		_, valid = m.Data.(*RequestCascadeSend)
 	default:
 		valid = false
 	}
@@ -264,6 +268,7 @@ func init() {
 	gob.Register(&RequestRelayOwnership{})
 	gob.Register(&RequestKnownOuterHosts{})
 	gob.Register(&RequestCheckNodePriv{})
+	gob.Register(&RequestCascadeSend{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -276,6 +281,7 @@ func init() {
 	gob.Register(&ResponseRelayOwnership{})
 	gob.Register(&ResponseKnownOuterHosts{})
 	gob.Register(&ResponseCheckNodePriv{})
+	gob.Register(&ResponseCascadeSend{})
 
 	gob.Register(&id.ID{})
 }

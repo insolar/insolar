@@ -39,22 +39,13 @@ func (rd *RootDomain) CreateMember(name string) string {
 }
 
 func (rd *RootDomain) GetBalance(reference string) uint {
-	memberAsWallet := foundation.GetImplementationFor(wallet.ClassReference, core.String2Ref(reference))
-	w, _ := memberAsWallet.(*wallet.Wallet)
+	w := wallet.GetImplementationFrom(core.String2Ref(reference))
 	return w.GetTotalBalance()
 }
 
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
-	memberFrom := foundation.GetImplementationFor(wallet.ClassReference, core.String2Ref(from))
-	walletFrom, ok := memberFrom.(*wallet.Wallet)
-	if !ok {
-		return false
-	}
-	memberTo := foundation.GetImplementationFor(wallet.ClassReference, core.String2Ref(to))
-	walletTo, ok := memberTo.(*wallet.Wallet)
-	if !ok {
-		return false
-	}
+	walletFrom := wallet.GetImplementationFrom(core.String2Ref(from))
+	walletTo := wallet.GetImplementationFrom(core.String2Ref(to))
 
 	walletFrom.Transfer(amount, walletTo.GetReference())
 
@@ -62,8 +53,7 @@ func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 }
 
 func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
-	memberAsWallet := foundation.GetImplementationFor(wallet.ClassReference, m.GetReference())
-	w, _ := memberAsWallet.(*wallet.Wallet)
+	w := wallet.GetImplementationFrom(m.GetReference())
 	res := map[string]interface{}{
         "member": m,
         "wallet": w,

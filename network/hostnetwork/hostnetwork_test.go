@@ -62,7 +62,7 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			network, err := NewHostNetwork(test.cfg)
+			network, err := NewHostNetwork(test.cfg, nil)
 			if test.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, network)

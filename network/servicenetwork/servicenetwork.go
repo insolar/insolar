@@ -19,12 +19,12 @@ package servicenetwork
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
-
 	"io/ioutil"
+	"log"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
@@ -42,13 +42,13 @@ func NewServiceNetwork(
 	hostConf configuration.HostNetwork,
 	nodeConf configuration.NodeNetwork) (*ServiceNetwork, error) {
 
-	dht, err := hostnetwork.NewHostNetwork(hostConf)
-	if err != nil {
-		return nil, err
-	}
 	node := nodenetwork.NewNodeNetwork(nodeConf)
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
+	}
+	dht, err := hostnetwork.NewHostNetwork(hostConf, node)
+	if err != nil {
+		return nil, err
 	}
 
 	err = dht.ObtainIP(createContext(dht))
@@ -82,16 +82,33 @@ func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]b
 	if err != nil {
 		return nil, err
 	}
-	reqBuff, err := msg.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	buff, err := ioutil.ReadAll(reqBuff)
+	buff, err := messageToBytes(msg)
 	if err != nil {
 		return nil, err
 	}
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
+}
+
+// SendCascadeMessage sends a message from MessageRouter to a cascade of nodes. Message reference is ignored
+func (network *ServiceNetwork) SendCascadeMessage(data cascade.SendData, method string, msg core.Message) error {
+	if msg == nil {
+		return errors.New("message is nil")
+	}
+	buff, err := messageToBytes(msg)
+	if err != nil {
+		return err
+	}
+
+	return network.hostNetwork.InitCascadeSendMessage(data, "", createContext(network.hostNetwork), method, [][]byte{buff})
+}
+
+func messageToBytes(msg core.Message) ([]byte, error) {
+	reqBuff, err := msg.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadAll(reqBuff)
 }
 
 // Serialize converts Message or Response to byte slice.

@@ -163,6 +163,18 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 	return nil
 }
 
+// GetDelegate is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGetDelegateResp) error {
+	am := gpr.gp.ArtifactManager
+	ref, err := am.GetObjDelegate(req.Object, req.OfType)
+	if err != nil {
+		return err
+	}
+
+	reply.Object = *ref
+	return nil
+}
+
 // NewGoPlugin returns a new started GoPlugin
 func NewGoPlugin(conf *configuration.GoPlugin, mr core.MessageRouter, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{

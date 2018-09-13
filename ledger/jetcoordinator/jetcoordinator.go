@@ -19,6 +19,7 @@ package jetcoordinator
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
@@ -26,7 +27,8 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db *storage.DB
+	db          *storage.DB
+	rootJetNode *JetNode
 }
 
 // Pulse creates new jet drop and ends current slot.
@@ -107,7 +109,23 @@ func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][
 	return selected, nil
 }
 
+func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
+	return jc.rootJetNode.GetContaining(&objRef)
+}
+
 // NewJetCoordinator creates new coordinator instance.
 func NewJetCoordinator(db *storage.DB) (*JetCoordinator, error) {
-	return &JetCoordinator{db: db}, nil
+	// TODO: temporary jet tree (later will be fetched fom config or ledger)
+	rootJetNode := &JetNode{
+		ref: core.RecordRef{},
+		left: &JetNode{
+			left:  &JetNode{ref: core.RecordRef{}},
+			right: &JetNode{ref: core.RecordRef{}},
+		},
+		right: &JetNode{
+			left:  &JetNode{ref: core.RecordRef{}},
+			right: &JetNode{ref: core.RecordRef{}},
+		},
+	}
+	return &JetCoordinator{db: db, rootJetNode: rootJetNode}, nil
 }

@@ -47,6 +47,14 @@ func GetClass() core.RecordRef {
     return ClassReference
 }
 
+func GetImplementationFrom(object core.RecordRef) *{{ .ContractType }} {
+    ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
+    if err != nil {
+        panic(err)
+    }
+    return GetObject(ref)
+}
+
 {{ range $func := .ConstructorsProxies }}
 func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractHolder {
     {{ $func.InitArgs }}

@@ -128,10 +128,11 @@ func (t *TestClassDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
 
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
-	AM    *TestArtifactManager
-	Data  []byte
-	Code  *core.RecordRef
-	Class *core.RecordRef
+	AM        *TestArtifactManager
+	Data      []byte
+	Code      *core.RecordRef
+	Class     *core.RecordRef
+	Delegates map[core.RecordRef]core.RecordRef
 }
 
 // HeadRef implementation for tests
@@ -236,7 +237,17 @@ func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) (core.RefItera
 
 // GetObjDelegate implementation for tests
 func (t *TestArtifactManager) GetObjDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
-	panic("not implemented")
+	obj, ok := t.Objects[head]
+	if !ok {
+		return nil, errors.New("No object")
+	}
+
+	res, ok := obj.Delegates[asClass]
+	if !ok {
+		return nil, errors.New("No delegate")
+	}
+
+	return &res, nil
 }
 
 // DeclareType implementation for tests
@@ -317,17 +328,29 @@ func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.Re
 	}
 
 	t.Objects[*ref] = &TestObjectDescriptor{
-		AM:    t,
-		Data:  memory,
-		Code:  codeRef,
-		Class: &class,
+		AM:        t,
+		Data:      memory,
+		Code:      codeRef,
+		Class:     &class,
+		Delegates: make(map[core.RecordRef]core.RecordRef),
 	}
 	return ref, nil
 }
 
 // ActivateObjDelegate implementation for tests
 func (t *TestArtifactManager) ActivateObjDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	return t.ActivateObj(domain, request, class, parent, memory)
+	ref, err := t.ActivateObj(domain, request, class, parent, memory)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to generate ref")
+	}
+
+	pObj, ok := t.Objects[parent]
+	if !ok {
+		return nil, errors.New("No parent to inject delegate into")
+	}
+
+	pObj.Delegates[class] = *ref
+	return ref, nil
 }
 
 // DeactivateObj implementation for tests
@@ -337,10 +360,13 @@ func (t *TestArtifactManager) DeactivateObj(domain core.RecordRef, request core.
 
 // UpdateObj implementation for tests
 func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	_, ok := t.Objects[obj]
+	objDesc, ok := t.Objects[obj]
 	if !ok {
 		return nil, errors.New("No object to update")
 	}
+
+	objDesc.Data = memory
+
 	// TODO: return real exact "ref"
 	return &core.RecordRef{}, nil
 }
@@ -402,20 +428,26 @@ type ContractsBuilder struct {
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
-	return &ContractsBuilder{ArtifactManager: am, IccPath: icc}
+func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder, func()) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	if err != nil {
+		return nil, nil
+	}
+
+	cb := &ContractsBuilder{
+		root:            tmpDir,
+		Classes:         make(map[string]*core.RecordRef),
+		Codes:           make(map[string]*core.RecordRef),
+		ArtifactManager: am,
+		IccPath:         icc}
+	return cb, func() {
+		os.RemoveAll(cb.root) // nolint: errcheck
+	}
 }
 
 // Build ...
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
-	tmpDir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		return err
-	}
-	cb.root = tmpDir
-	defer os.RemoveAll(cb.root) // nolint: errcheck
 
-	cb.Classes = make(map[string]*core.RecordRef)
 	for name := range contracts {
 		class, err := cb.ArtifactManager.ActivateClass(
 			core.RecordRef{}, core.RecordRef{},
@@ -444,7 +476,6 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 	}
 
-	cb.Codes = make(map[string]*core.RecordRef)
 	for name := range contracts {
 		err := cb.plugin(name)
 		if err != nil {
