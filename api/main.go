@@ -198,7 +198,8 @@ func (ar *ApiRunner) Start(c core.Components) error {
 func (ar *ApiRunner) Stop() error {
 	const timeOut = 5
 	log.Printf("Shutting down server gracefully ...(waiting for %d seconds)\n", timeOut)
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(timeOut)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeOut)*time.Second)
+	defer cancel()
 	err := ar.server.Shutdown(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Can't gracefully stop API server")
