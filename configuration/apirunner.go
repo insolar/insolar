@@ -27,7 +27,7 @@ type APIRunner struct {
 
 func NewAPIRunner() APIRunner {
 	return APIRunner{
-		Port:     8080,
+		Port:     7777,
 		Location: "/api/v1",
 	}
 }
