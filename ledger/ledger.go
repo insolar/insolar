@@ -32,6 +32,10 @@ type Ledger struct {
 	coordinator *jetcoordinator.JetCoordinator
 }
 
+func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
+	panic("implement me")
+}
+
 // GetManager returns artifact manager to work with.
 func (l *Ledger) GetManager() core.ArtifactManager {
 	return l.manager
