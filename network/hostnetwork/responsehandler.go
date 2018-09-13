@@ -51,7 +51,7 @@ func handleKnownOuterHosts(hostHandler hosthandler.HostHandler, response *packet
 	return nil
 }
 
-func handleRelayResponse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, response *packet.ResponseRelay, targetID string) error {
+func handleRelayResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseRelay, targetID string) error {
 	var err error
 	switch response.State {
 	case relay.Stopped:
@@ -82,7 +82,7 @@ func handleCheckOriginResponse(hostHandler hosthandler.HostHandler, response *pa
 	}
 }
 
-func handleCheckNodePrivResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckNodePriv, toleKey string) error {
+func handleCheckNodePrivResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckNodePriv) error {
 	switch response.State {
 	case packet.Error:
 		return errors.New(response.Error)
