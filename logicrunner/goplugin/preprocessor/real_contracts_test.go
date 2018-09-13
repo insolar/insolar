@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var contractNames = []string{"wallet", "member", "allowance"}
+var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
 var pathWithContracts = "../../../genesis/experiment/"
 
 func contractPath(name string) string {
