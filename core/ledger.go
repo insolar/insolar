@@ -48,7 +48,7 @@ type JetCoordinator interface {
 
 type PulseManager interface {
 	// TODO: docs
-	Current() (PulseNumber, error)
+	Current() (Pulse, error)
 
 	// TODO: docs
 	Set(pulse Pulse) error
