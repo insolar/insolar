@@ -61,7 +61,7 @@ func NewLedgerWithDB(db *storage.DB, jetCoordinatorConf configuration.JetCoordin
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
 	}
-	coordinator, err := jetcoordinator.NewJetCoordinator(db)
+	coordinator, err := jetcoordinator.NewJetCoordinator(db, jetCoordinatorConf)
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}

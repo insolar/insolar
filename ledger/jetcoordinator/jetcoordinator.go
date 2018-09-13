@@ -19,15 +19,64 @@ package jetcoordinator
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
+type mockHolder struct {
+	virtualExecutor core.RecordRef
+	lightExecutor   core.RecordRef
+	heavyExecutor   core.RecordRef
+
+	virtualValidators []core.RecordRef
+	lightValidators   []core.RecordRef
+}
+
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db *storage.DB
+	db   *storage.DB
+	mock *mockHolder
+}
+
+// NewJetCoordinator creates new coordinator instance.
+func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) (*JetCoordinator, error) {
+	mock, err := createMock(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &JetCoordinator{
+		db:   db,
+		mock: mock,
+	}, nil
+}
+
+func createMock(conf configuration.JetCoordinator) (*mockHolder, error) {
+	virtualExecutor := core.String2Ref(conf.VirtualExecutor)
+	lightExecutor := core.String2Ref(conf.LightExecutor)
+	heavyExecutor := core.String2Ref(conf.HeavyExecutor)
+
+	virtualValidators := make([]core.RecordRef, len(conf.VirtualValidators))
+	for i, vv := range conf.VirtualValidators {
+		virtualValidators[i] = core.String2Ref(vv)
+	}
+
+	lightValidators := make([]core.RecordRef, len(conf.LightValidators))
+	for i, lv := range conf.VirtualValidators {
+		lightValidators[i] = core.String2Ref(lv)
+	}
+
+	return &mockHolder{
+		virtualExecutor: virtualExecutor,
+		lightExecutor:   lightExecutor,
+		heavyExecutor:   heavyExecutor,
+
+		virtualValidators: virtualValidators,
+		lightValidators:   lightValidators,
+	}, nil
 }
 
 func (jc *JetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
@@ -114,9 +163,4 @@ func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][
 		selected = append(selected, candidates[i])
 	}
 	return selected, nil
-}
-
-// NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator(db *storage.DB) (*JetCoordinator, error) {
-	return &JetCoordinator{db: db}, nil
 }
