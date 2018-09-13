@@ -35,7 +35,7 @@ import (
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.Nodenetwork
-	hostNetwork *hostnetwork.DHT
+	hostNetwork hosthandler.HostHandler
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -50,16 +50,6 @@ func NewServiceNetwork(
 	node := nodenetwork.NewNodeNetwork(nodeConf)
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
-	}
-
-	err = dht.ObtainIP(createContext(dht))
-	if err != nil {
-		return nil, err
-	}
-
-	err = dht.AnalyzeNetwork(createContext(dht))
-	if err != nil {
-		return nil, err
 	}
 
 	return &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}, nil
@@ -109,7 +99,7 @@ func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.
 }
 
 // GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
-func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hosthandler.Context) {
+func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
 
@@ -120,7 +110,7 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	network.bootstrap()
 
 	ctx := createContext(network.hostNetwork)
-	err := network.hostNetwork.ObtainIP(ctx)
+	err := network.hostNetwork.ObtainIP()
 	if err != nil {
 		return err
 	}
@@ -157,9 +147,9 @@ func (network *ServiceNetwork) listen() {
 	}()
 }
 
-func createContext(dht *hostnetwork.DHT) hosthandler.Context {
+func createContext(handler hosthandler.HostHandler) hosthandler.Context {
 
-	ctx, err := hostnetwork.NewContextBuilder(dht).SetDefaultHost().Build()
+	ctx, err := hostnetwork.NewContextBuilder(handler).SetDefaultHost().Build()
 	if err != nil {
 		log.Fatalln("Failed to create context:", err.Error())
 	}
