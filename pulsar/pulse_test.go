@@ -19,6 +19,8 @@ package pulsar
 import (
 	"bytes"
 	"testing"
+
+	"github.com/insolar/insolar/core"
 )
 
 var mockEntropy = [64]byte{1, 2, 3, 4, 5, 6, 7, 8}
@@ -26,7 +28,7 @@ var mockEntropy = [64]byte{1, 2, 3, 4, 5, 6, 7, 8}
 type MockEntropyGenerator struct {
 }
 
-func (generator *MockEntropyGenerator) GenerateEntropy() Entropy {
+func (generator *MockEntropyGenerator) GenerateEntropy() core.Entropy {
 	return mockEntropy
 }
 
