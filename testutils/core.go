@@ -22,8 +22,9 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// RandomRef generates random RecordRef
 func RandomRef() core.RecordRef {
 	ref := [64]byte{}
-	rand.Read(ref[:])
+	rand.Read(ref[:]) // nolint
 	return ref
 }
