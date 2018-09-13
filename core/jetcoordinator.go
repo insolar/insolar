@@ -19,36 +19,17 @@ package core
 type JetRole int
 
 const (
-	NoRole = JetRole(iota)
-	VirtualExecutor
-	VirtualValidator
-	HeavyExecutor
-	LightExecutor
-	LightValidator
+	RoleVirtualExecutor  = JetRole(iota + 1) // Role responsible for current CPU operations
+	RoleVirtualValidator                     // Role responsible for past CPU operations
+	RoleLightExecutor                        // TODO: add docs
+	RoleLightValidator                       // TODO: add docs
+	RoleHeavyExecutor                        // TODO: add docs
 )
 
-type NetworkAddress string
-
-type PulseNumber uint32
-
-type JetID RecordRef
-
 type JetCoordinator interface {
-	Component
-	// AmI Checks Me for role on concrete pulse for this address
-	AmI(role JetRole, ref RecordRef, number PulseNumber) bool
-	IsIt(role JetRole, ref RecordRef, number PulseNumber) bool
+	// IsAuthorized checks for role on concrete pulse for the address
+	IsAuthorized(role JetRole, obj RecordRef, pulse PulseNumber, node RecordRef) bool
 
-	GetVirtualExecutor(pulse PulseNumber, ref RecordRef) NetworkAddress
-	GetVirtualValidators(pulse PulseNumber, ref RecordRef) []NetworkAddress
-
-	// TODO: depends on JetTree
-	//GetJetID(ref RecordRef) JetID
-
-	// TODO: calc JetID from RecordRef inside
-	GetLightExecutor(pulse PulseNumber, ref RecordRef) NetworkAddress
-	GetLightValidators(pulse PulseNumber, ref RecordRef) []NetworkAddress
-
-	// TODO: calc JetID from RecordRef inside
-	GetHeavyExecutor(pulse PulseNumber, ref RecordRef) NetworkAddress
+	// TODO: add docs
+	QueryRole(role JetRole, obj RecordRef, pulse PulseNumber) []RecordRef
 }
