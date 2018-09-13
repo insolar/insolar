@@ -18,10 +18,13 @@ package bootstrap
 
 import (
 	"io/ioutil"
+	"path/filepath"
+	"runtime"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
 
@@ -38,10 +41,17 @@ func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	return bootstrapper, nil
 }
 
-var pathWithContracts = "genesis/experiment/"
+var pathToContracts = "genesis/experiment/"
 
-func contractPath(name string) string {
-	return pathWithContracts + name + "/" + name + ".insgoc"
+func getContractPath(name string) (string, error) {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", errors.Wrap(nil, "couldn't find info about current file")
+	}
+	rootDir := filepath.Dir(filepath.Dir(currentFile))
+	contractDir := filepath.Join(rootDir, pathToContracts)
+	contractFile := name + ".insgoc"
+	return filepath.Join(contractDir, name, contractFile), nil
 }
 
 func (b *Bootstrapper) Start(c core.Components) error {
@@ -51,7 +61,8 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
 	contracts := make(map[string]string)
 	for _, name := range contractNames {
-		code, err := ioutil.ReadFile(contractPath(name))
+		contractPath, _ := getContractPath(name)
+		code, err := ioutil.ReadFile(contractPath)
 		if err != nil {
 			return err
 		}
@@ -61,29 +72,14 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	if err != nil {
 		return err
 	}
-	// Create code for member
-	// Set code for member on ledger
-	// Create code for allowance
-	// Set code for allowance on ledger
-	// Create proxy for member
-	// Create proxy for allowance
-	// Create code for wallet
-	// Set code for wallet on ledger
-	// Create proxy for wallet
-	// Create code for rootDomain
-	// Set code for rootDomain on ledger
-	// Create instance of rootDomain with ArtifactManager.RootRef as parent
-	// Ref to rootDomain instance return to user
-
-	// This is just for showing idea, will be remove
 	var data []byte
+	ch := new(codec.CborHandle)
 	err = codec.NewEncoderBytes(&data, ch).Encode(
 		&struct{}{},
 	)
 	if err != nil {
 		return err
 	}
-	b.rootDomainRef = am.RootRef()
 	contract, err := am.ActivateObj(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["rootdomain"],
@@ -93,6 +89,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	if contract == nil {
 		return err
 	}
+	b.rootDomainRef = contract
 
 	return nil
 }
