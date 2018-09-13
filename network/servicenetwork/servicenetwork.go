@@ -46,6 +46,7 @@ func NewServiceNetwork(
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
 	}
+
 	dht, err := hostnetwork.NewHostNetwork(hostConf, node)
 	if err != nil {
 		return nil, err

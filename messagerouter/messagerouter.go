@@ -19,7 +19,6 @@ package messagerouter
 import (
 	"bytes"
 	"encoding/gob"
-
 	"errors"
 
 	"github.com/insolar/insolar/configuration"

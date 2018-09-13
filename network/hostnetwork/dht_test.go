@@ -634,7 +634,7 @@ func TestHostResponseSendError(t *testing.T) {
 				close(done)
 			} else {
 				queries++
-				res := mockFindHostResponse(request, getZerodIDWithNthByte(2, byte(255)).GetKey())
+				res := mockFindHostResponse(request, getZerodIDWithNthByte(2, byte(255)).Bytes())
 				mockTp.send <- res
 			}
 		}
@@ -839,7 +839,7 @@ func TestFindHostAllBuckets(t *testing.T) {
 				return
 			}
 
-			res := mockFindHostResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).GetKey())
+			res := mockFindHostResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).Bytes())
 
 			i--
 			if i < 0 {
@@ -910,17 +910,17 @@ func TestFindHostAllBuckets(t *testing.T) {
 // 				}
 //
 // 				if hostsAdded == 1 {
-// 					firstHost = id1.GetKey()
+// 					firstHost = id1.Bytes()
 // 				}
 //
 // 				if hostsAdded == routing.MaxContactsInBucket {
-// 					lastHost = id1.GetKey()
+// 					lastHost = id1.Bytes()
 // 				}
 //
-// 				id1.GetKey()[1] = byte(255 - hostsAdded)
+// 				id1.Bytes()[1] = byte(255 - hostsAdded)
 // 				hostsAdded++
 //
-// 				res := mockFindHostResponse(request, id1.GetKey())
+// 				res := mockFindHostResponse(request, id1.Bytes())
 // 				mockTp.send <- res
 // 			case packet.TypePing:
 // 				assert.Equal(t, packet.TypePing, request.Type)
@@ -934,8 +934,8 @@ func TestFindHostAllBuckets(t *testing.T) {
 //
 // 	// ensure the first host in the table is the second host contacted, and the
 // 	// last is the last host contacted
-// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.GetKey(), firstHost))
-// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.GetKey(), lastHost))
+// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.Bytes(), firstHost))
+// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.Bytes(), lastHost))
 //
 // 	dht.Disconnect()
 //
@@ -971,7 +971,7 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
 	id1 := getIDWithValues(0)
-	id1.GetKey()[n] = v
+	id1.Bytes()[n] = v
 	return id1
 }
 
@@ -991,7 +991,7 @@ func TestDHT_FindHost(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID()
 		ids1 = append(ids1, id1)
-		idx[i] = ids1[0].KeyString()
+		idx[i] = ids1[0].String()
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1167,7 +1167,7 @@ func TestDHT_AuthenticationRequest(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID()
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].KeyString())
+		ids = append(ids, ids1[0].String())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1236,7 +1236,7 @@ func TestDHT_RelayRequest(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID()
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].KeyString())
+		ids = append(ids, ids1[0].String())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1298,7 +1298,7 @@ func TestDHT_ObtainIP(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID()
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].KeyString())
+		ids = append(ids, ids1[0].String())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1349,7 +1349,7 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID()
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].KeyString())
+		ids = append(ids, ids1[0].String())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1503,7 +1503,7 @@ func (t *mockCascadeTransport) Packets() <-chan *packet.Packet {
 
 func (t *mockCascadeTransport) SendRequest(q *packet.Packet) (transport.Future, error) {
 	sequenceNumber := transport.AtomicLoadAndIncrementUint64(t.sequence)
-	t.routing[q.Receiver.ID.KeyString()].recv <- q
+	t.routing[q.Receiver.ID.String()].recv <- q
 	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: packet.RequestID(sequenceNumber)}, nil
 }
 
@@ -1537,12 +1537,12 @@ func TestDHT_InitCascadeSendMessage(t *testing.T) {
 		addr, _ := host.NewAddress(address)
 		origin, _ := host.NewOrigin(ids, addr)
 		t := newMockCascadeTransport(transports)
-		transports[id.KeyString()] = t
+		transports[id.String()] = t
 		transportsByIndex[i] = t
 		r := rpc.NewRPC()
 
 		ref := "A" + strconv.Itoa(i)
-		refToHost[ref] = id.KeyString()
+		refToHost[ref] = id.String()
 		idResolver := &mockHostIdResolver{
 			refToHost:  refToHost,
 			currentRef: ref,
