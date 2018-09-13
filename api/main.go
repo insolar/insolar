@@ -26,6 +26,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -75,7 +77,7 @@ func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = WriteError(msg, -2)
-		log.Printf("[QID=%s] %s\n", rh.qid, msg)
+		logrus.Printf("[QID=%s] %s\n", rh.qid, msg)
 		return answer
 	}
 	if handlerError != nil {
@@ -108,7 +110,7 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 		params.QID = GenQID()
 	}
 
-	log.Printf("[QID=%s] Query: %s\n", params.QID, string(body))
+	logrus.Printf("[QID=%s] Query: %s\n", params.QID, string(body))
 
 	return &params, nil
 }
@@ -133,15 +135,15 @@ func WrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *
 			var newLine byte = '\n'
 			_, err = response.Write(append(serJSON, newLine))
 			if err != nil {
-				log.Printf("[QID=%s] Can't write response\n", params.QID)
+				logrus.Printf("[QID=%s] Can't write response\n", params.QID)
 			}
-			log.Printf("[QID=%s] Request completed\n", params.QID)
+			logrus.Infof("[QID=%s] Request completed\n", params.QID)
 		}()
 
 		params, err := PreprocessRequest(req)
 		if err != nil {
 			answer = WriteError("Bad request", -3)
-			log.Println("[QID=]Can't parse input request:", err, req.RequestURI)
+			logrus.Errorf("[QID=]Can't parse input request: %s\n", err, req.RequestURI)
 			return
 		}
 		rh := NewRequestHandler(params, router)
@@ -181,18 +183,18 @@ func (ar *APIRunner) Start(c core.Components) error {
 	// TODO: init message router
 	_, ok := c["core.MessageRouter"]
 	if !ok {
-		log.Println("Working in demo mode: without MessageRouter")
+		logrus.Warnln("Working in demo mode: without MessageRouter")
 	} else {
 		ar.messageRouter = c["core.MessageRouter"].(core.MessageRouter)
 	}
 
 	fw := WrapAPIV1Handler(ar.messageRouter)
 	http.HandleFunc(ar.cfg.Location, fw)
-	log.Println("Starting ApiRunner ...")
-	log.Println("Config: ", ar.cfg)
+	logrus.Info("Starting ApiRunner ...")
+	logrus.Info("Config: ", ar.cfg)
 	go func() {
 		if err := ar.server.ListenAndServe(); err != nil {
-			log.Printf("Httpserver: ListenAndServe() error: %s\n", err)
+			logrus.Errorln("Httpserver: ListenAndServe() error: ", err)
 		}
 	}()
 	return nil
@@ -200,7 +202,7 @@ func (ar *APIRunner) Start(c core.Components) error {
 
 func (ar *APIRunner) Stop() error {
 	const timeOut = 5
-	log.Printf("Shutting down server gracefully ...(waiting for %d seconds)\n", timeOut)
+	logrus.Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeOut)*time.Second)
 	defer cancel()
 	err := ar.server.Shutdown(ctx)
