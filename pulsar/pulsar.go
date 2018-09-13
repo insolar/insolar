@@ -21,10 +21,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"github.com/insolar/insolar/configuration"
 	"net"
 	"os"
 	"strconv"
+
+	"github.com/insolar/insolar/configuration"
 )
 
 type Pulsar struct {
