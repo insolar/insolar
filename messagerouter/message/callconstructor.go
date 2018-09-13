@@ -36,12 +36,12 @@ func (m *CallConstructorMessage) GetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
-// GetReference implements core.Message
+// Get reference returns referenced object.
 func (m *CallConstructorMessage) GetReference() core.RecordRef {
 	return m.ClassRef
 }
 
-// Serialize serializes message
+// Serialize serializes message.
 func (m *CallConstructorMessage) Serialize() (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	buff.Write([]byte{byte(CallConstructorMessageType)})

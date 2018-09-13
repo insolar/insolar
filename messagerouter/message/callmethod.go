@@ -37,7 +37,7 @@ func (m *CallMethodMessage) GetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
-// GetReference implements core.Message
+// Get reference returns referenced object.
 func (m *CallMethodMessage) GetReference() core.RecordRef {
 	return m.ObjectRef
 }
