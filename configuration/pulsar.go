@@ -16,14 +16,29 @@
 
 package configuration
 
+type ConnectionType string
+
+const (
+	Tcp ConnectionType = "tcp"
+)
+
+func (ct ConnectionType) String() string {
+	return string(ct)
+}
+
 // Stats holds configuration for pulsar node
 type Pulsar struct {
-	Type           string
+	ConnectionType ConnectionType
 	ListenAddress  string
-	NodesAddresses []string
+	NodesAddresses []*PulsarNodeAddress
+}
+
+type PulsarNodeAddress struct {
+	Address        string
+	ConnectionType ConnectionType
 }
 
 // NewPulsar creates new default configuration for pulsar node
 func NewPulsar() Pulsar {
-	return Pulsar{ListenAddress: "0.0.0.0:8090", Type: "tcp", NodesAddresses: []string{}}
+	return Pulsar{ListenAddress: "0.0.0.0:8090", ConnectionType: Tcp, NodesAddresses: []*PulsarNodeAddress{}}
 }

@@ -18,6 +18,8 @@ package pulsar
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"github.com/insolar/insolar/configuration"
 	"net"
@@ -27,18 +29,40 @@ import (
 
 type Pulsar struct {
 	Sock       net.Listener
-	Neighbours map[string]net.Conn
+	Neighbours map[string]*Neighbour
+	PrivateKey *rsa.PrivateKey
 }
 
-func NewPulsar(configuration configuration.Pulsar) *Pulsar {
+type Neighbour struct {
+	ConnectionType configuration.ConnectionType
+	Connection     net.Conn
+	PublicKey      *rsa.PublicKey
+}
+
+//Listen(network, address string) (Listener, error)
+func NewPulsar(configuration configuration.Pulsar, listener func(string, string) (net.Listener, error)) *Pulsar {
 	// Listen for incoming connections.
-	l, err := net.Listen(configuration.Type, configuration.ListenAddress)
+	l, err := listener(configuration.ConnectionType.String(), configuration.ListenAddress) //net.Listen(configuration.ConnectionType.String(), configuration.ListenAddress)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
 	}
 
-	return &Pulsar{Sock: l, Neighbours: map[string]net.Conn{}}
+	reader := rand.Reader
+	bitSize := 2048
+
+	privateKey, err := rsa.GenerateKey(reader, bitSize)
+	if err != nil {
+		panic(err)
+	}
+	pulsar := &Pulsar{Sock: l, Neighbours: map[string]*Neighbour{}}
+	pulsar.PrivateKey = privateKey
+
+	for _, neighbour := range configuration.NodesAddresses {
+		pulsar.Neighbours[neighbour.Address] = &Neighbour{ConnectionType: neighbour.ConnectionType}
+	}
+
+	return pulsar
 }
 
 func (pulsar *Pulsar) Listen() {
@@ -54,13 +78,24 @@ func (pulsar *Pulsar) Listen() {
 	}
 }
 
+func (pulsar *Pulsar) ConnectToAllNeighbours() error {
+	for key, neighbour := range pulsar.Neighbours {
+		err := pulsar.ConnectToNeighbour(key, neighbour.ConnectionType.String())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (pulsar *Pulsar) ConnectToNeighbour(address string, connectionType string) error {
 	conn, err := net.Dial(connectionType, address)
 	if err != nil {
 		fmt.Println("Error accepting: ", err.Error())
 		return err
 	}
-	pulsar.Neighbours[address] = conn
+	pulsar.Neighbours[address].Connection = conn
 
 	return nil
 }
@@ -69,8 +104,8 @@ func (pulsar *Pulsar) Send(address string, data interface{}) {
 }
 
 func (pulsar *Pulsar) Close() {
-	for _, connection := range pulsar.Neighbours {
-		connection.Close()
+	for _, neighbour := range pulsar.Neighbours {
+		neighbour.Connection.Close()
 	}
 
 	pulsar.Sock.Close()

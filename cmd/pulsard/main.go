@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
@@ -42,7 +43,7 @@ func main() {
 	initLogger(cfgHolder.Configuration.Log)
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	pulsar := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar)
+	pulsar := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, net.Listen)
 	pulsar.Listen()
 }
 
