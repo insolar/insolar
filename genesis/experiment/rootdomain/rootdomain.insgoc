@@ -73,8 +73,8 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
 func (rd *RootDomain) DumpUserInfo(reference string) []byte {
 	m := member.GetObject(core.String2Ref(reference))
 	res := rd.getUserInfoMap(m)
-	resJson, _ := json.Marshal(res)
-	return resJson
+	resJSON, _ := json.Marshal(res)
+	return resJSON
 }
 
 func (rd *RootDomain) DumpAllUsers() []byte {
@@ -84,8 +84,8 @@ func (rd *RootDomain) DumpAllUsers() []byte {
 		userInfo := rd.getUserInfoMap(m)
 		res = append(res, userInfo)
 	}
-	resJson, _ := json.Marshal(res)
-	return resJson
+	resJSON, _ := json.Marshal(res)
+	return resJSON
 }
 
 func NewRootDomain() *RootDomain {
