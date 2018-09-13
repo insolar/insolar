@@ -56,6 +56,7 @@ func NewMockJetCoordinator(conf configuration.JetCoordinator) (core.JetCoordinat
 	}, nil
 }
 
+// TODO: add docs
 func (jc *mockJetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber) []core.RecordRef {
 	switch role {
 	case core.RoleVirtualExecutor:
@@ -73,6 +74,7 @@ func (jc *mockJetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, p
 	}
 }
 
+// IsAuthorized checks for role on concrete pulse for the address.
 func (jc *mockJetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
 	nodes := jc.QueryRole(role, obj, pulse)
 	for _, n := range nodes {
