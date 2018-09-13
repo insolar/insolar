@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
@@ -89,7 +88,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 }
 
 // SendCascadeMessage sends a message from MessageRouter to a cascade of nodes. Message reference is ignored
-func (network *ServiceNetwork) SendCascadeMessage(data cascade.SendData, method string, msg core.Message) error {
+func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
@@ -98,7 +97,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data cascade.SendData, method 
 		return err
 	}
 
-	return network.hostNetwork.InitCascadeSendMessage(data, "", createContext(network.hostNetwork), method, [][]byte{buff})
+	return network.hostNetwork.InitCascadeSendMessage(data, nil, createContext(network.hostNetwork), method, [][]byte{buff})
 }
 
 func messageToBytes(msg core.Message) ([]byte, error) {
