@@ -591,11 +591,11 @@ func New(n int) *Child {
 		Request:   core.String2Ref("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
-		Arguments: testutil.CBORMarshal(t, []interface{}{100}),
+		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
 	})
 	assert.NoError(t, resp.Error, "contract call")
 	r := testutil.CBORUnMarshal(t, resp.Result)
-	assert.Equal(t, []interface{}([]interface{}{uint64(4950)}), r)
+	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 	resp = lr.Execute(&message.CallMethodMessage{
 		Request:   core.String2Ref("r3"),
@@ -605,6 +605,6 @@ func New(n int) *Child {
 	})
 	assert.NoError(t, resp.Error, "contract call")
 	r = testutil.CBORUnMarshal(t, resp.Result)
-	assert.Equal(t, []interface{}([]interface{}{uint64(4950)}), r)
+	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 }
