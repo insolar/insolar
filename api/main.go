@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"time"
 
+	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/insolar/insolar/configuration"
@@ -33,11 +33,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+type ResponseCode int
 
-func WriteError(message string, code int) map[string]interface{} {
+const (
+	Ok           ResponseCode = 0
+	HandlerError              = -1
+	BadRequest                = -2
+)
+
+func writeError(message string, code int) map[string]interface{} {
 	errJSON := map[string]interface{}{
 		"error": map[string]interface{}{
 			"message": message,
@@ -48,7 +52,7 @@ func WriteError(message string, code int) map[string]interface{} {
 }
 
 func makeHandlerMarshalErrorJSON() []byte {
-	jsonErr := WriteError("Invalid data from handler", -1)
+	jsonErr := writeError("Invalid data from handler", HandlerError)
 	serJSON, err := json.Marshal(jsonErr)
 	if err != nil {
 		log.Fatal("Can't marshal base error")
@@ -58,7 +62,7 @@ func makeHandlerMarshalErrorJSON() []byte {
 
 var handlerMarshalErrorJSON = makeHandlerMarshalErrorJSON()
 
-func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{} {
+func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{} {
 	qtype := QTypeFromString(qTypeStr)
 	var answer map[string]interface{}
 
@@ -76,14 +80,14 @@ func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 		answer, handlerError = rh.ProcessSendMoney()
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
-		answer = WriteError(msg, -2)
+		answer = writeError(msg, BadRequest)
 		logrus.Printf("[QID=%s] %s\n", rh.qid, msg)
 		return answer
 	}
 	if handlerError != nil {
 		errMsg := "Handler error: " + handlerError.Error()
 		log.Printf("[QID=%s] %s\n", rh.qid, errMsg)
-		answer = WriteError(errMsg, -3)
+		answer = writeError(errMsg, HandlerError)
 	}
 
 	return answer
@@ -91,7 +95,7 @@ func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 
 const QIDQueryParam = "qid"
 
-func PreprocessRequest(req *http.Request) (*Params, error) {
+func preprocessRequest(req *http.Request) (*Params, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't read body. So strange")
@@ -107,7 +111,10 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 	}
 
 	if len(params.QID) == 0 {
-		params.QID = GenQID()
+		qid, err := uuid.NewV1()
+		if err == nil {
+			params.QID = qid.String()
+		}
 	}
 
 	logrus.Printf("[QID=%s] Query: %s\n", params.QID, string(body))
@@ -115,7 +122,7 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func WrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
+func wrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
 		var params *Params
@@ -140,15 +147,15 @@ func WrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *
 			logrus.Infof("[QID=%s] Request completed\n", params.QID)
 		}()
 
-		params, err := PreprocessRequest(req)
+		params, err := preprocessRequest(req)
 		if err != nil {
-			answer = WriteError("Bad request", -3)
+			answer = writeError("Bad request", BadRequest)
 			logrus.Errorf("[QID=]Can't parse input request: %s\n", err, req.RequestURI)
 			return
 		}
 		rh := NewRequestHandler(params, router)
 
-		answer = ProcessQueryType(rh, params.QType)
+		answer = processQueryType(rh, params.QType)
 	}
 }
 
@@ -188,7 +195,7 @@ func (ar *APIRunner) Start(c core.Components) error {
 		ar.messageRouter = c["core.MessageRouter"].(core.MessageRouter)
 	}
 
-	fw := WrapAPIV1Handler(ar.messageRouter)
+	fw := wrapAPIV1Handler(ar.messageRouter)
 	http.HandleFunc(ar.cfg.Location, fw)
 	logrus.Info("Starting ApiRunner ...")
 	logrus.Info("Config: ", ar.cfg)
@@ -212,15 +219,3 @@ func (ar *APIRunner) Stop() error {
 
 	return nil
 }
-
-// func example() {
-// 	cfg := configuration.NewAPIRunner()
-// 	api, err := NewAPIRunner(&cfg)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	cs := core.Components{}
-// 	_ = api.Start(cs)
-// 	time.Sleep(60 * time.Second)
-// 	_ = api.Stop()
-// }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ func cborUnMarshal(data []byte, to interface{}) error {
 	return errors.Wrap(err, "[ CBORUnMarshal ]")
 }
 
+// Marshal arguments by cbor
 func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	var argsSerialized []byte
 
@@ -48,6 +49,7 @@ func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	return result, nil
 }
 
+// Unmarshal return values by cbor
 func UnMarshalResponse(resp []byte, typeHolders []interface{}) ([]interface{}, error) {
 	var marshRes []interface{}
 	marshRes = append(marshRes, typeHolders...)

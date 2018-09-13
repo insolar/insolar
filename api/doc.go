@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,16 +16,23 @@
 
 package api
 
-import (
-	"math/rand"
-)
+/*
+Package api provides http/json APIto interact with our system
 
-const letterBytes = "0123456789abcdef"
+	// Create api configuration
+	cfg := configuration.NewAPIRunner()
 
-func GenQID() string {
-	b := [16]byte{}
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b[:])
-}
+	// Create api runner
+	api, _ := NewAPIRunner(&cfg)
+
+	// Create empty component map
+	cs := core.Components{}
+
+	// Run api server
+	_ = api.Start(cs)
+
+	time.Sleep(60 * time.Second)
+
+	// Gracefully stop api server
+	_ = api.Stop()
+*/

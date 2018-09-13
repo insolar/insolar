@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -94,15 +94,6 @@ func TestSerialization(t *testing.T) {
 	assert.Equal(t, a, rowResp[0].(uint))
 	assert.Equal(t, b, rowResp[1].(bool))
 	assert.Equal(t, c, rowResp[2].(string))
-}
-
-func TestGetQid(t *testing.T) {
-	exists := make(map[string]bool)
-	const NumIters = 1500
-	for i := 0; i < NumIters; i++ {
-		exists[GenQID()] = true
-	}
-	assert.Len(t, exists, NumIters)
 }
 
 func TestNewApiRunnerNilConfig(t *testing.T) {

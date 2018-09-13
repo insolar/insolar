@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ func makeRootDomainReference() core.RecordRef {
 	return core.String2Ref(base58.Encode([]byte(ref)))
 }
 
-var RootDomainReference = makeRootDomainReference()
+var rootDomainReference = makeRootDomainReference()
 
 func extractCreateMemberResponse(data []byte) (*string, error) {
 	var typeHolder string
@@ -57,16 +57,17 @@ type RequestHandler struct {
 	rootDomainReference core.RecordRef
 }
 
+// Creates new query handler
 func NewRequestHandler(params *Params, router core.MessageRouter) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
 		messageRouter:       router,
-		rootDomainReference: RootDomainReference,
+		rootDomainReference: rootDomainReference,
 	}
 }
 
-func (rh *RequestHandler) RouteCall(ref core.RecordRef, method string, args core.Arguments) (*core.Response, error) {
+func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (*core.Response, error) {
 	if rh.messageRouter == nil {
 		return nil, errors.New("[ RouteCall ] message router was not set during initialization")
 	}
@@ -88,6 +89,7 @@ func (rh *RequestHandler) RouteCall(ref core.RecordRef, method string, args core
 	return &res, nil
 }
 
+// Process CreateMember query type
 func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
@@ -95,7 +97,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.New("field 'name' is required")
 	}
 
-	routResult, err := rh.SendRequest("CreateMember", []interface{}{rh.params.Name})
+	routResult, err := rh.sendRequest("CreateMember", []interface{}{rh.params.Name})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -126,13 +128,13 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 	return balance, nil
 }
 
-func (rh *RequestHandler) SendRequest(method string, argsIn []interface{}) (*core.Response, error) {
+func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (*core.Response, error) {
 	args, err := MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
 	}
 
-	routResult, err := rh.RouteCall(rh.rootDomainReference, method, args)
+	routResult, err := rh.routeCall(rh.rootDomainReference, method, args)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
 	}
@@ -140,6 +142,7 @@ func (rh *RequestHandler) SendRequest(method string, argsIn []interface{}) (*cor
 	return routResult, nil
 }
 
+// Process GetBalance query type
 func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	result["currency"] = "RUB"
@@ -148,7 +151,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 		return nil, errors.New("field 'reference' is required")
 	}
 
-	routResult, err := rh.SendRequest("GetBalance", []interface{}{rh.params.Reference})
+	routResult, err := rh.sendRequest("GetBalance", []interface{}{rh.params.Reference})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -179,6 +182,7 @@ func extractSendMoneyResponse(data []byte) (bool, error) {
 	return isSent, nil
 }
 
+// Process SendMoney query type
 func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
@@ -193,7 +197,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.New("field 'amount' is required")
 	}
 
-	routResult, err := rh.SendRequest("SendMoney", []interface{}{rh.params.From, rh.params.To, rh.params.Amount})
+	routResult, err := rh.sendRequest("SendMoney", []interface{}{rh.params.From, rh.params.To, rh.params.Amount})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
@@ -224,18 +228,19 @@ func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
 	return dumpJSON, nil
 }
 
+// Process Dump users query type
 func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	var err error
 	var routResult *core.Response
 	if all {
-		routResult, err = rh.SendRequest("DumpAllUsers", []interface{}{})
+		routResult, err = rh.sendRequest("DumpAllUsers", []interface{}{})
 	} else {
 		if len(rh.params.Name) == 0 {
 			return nil, errors.New("field 'name' is required")
 		}
-		routResult, err = rh.SendRequest("DumpUserInfo", []interface{}{rh.params.Name})
+		routResult, err = rh.sendRequest("DumpUserInfo", []interface{}{rh.params.Name})
 	}
 
 	if err != nil {
