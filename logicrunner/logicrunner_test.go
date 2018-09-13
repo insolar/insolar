@@ -495,7 +495,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 //	"github.com/insolar/insolar/core"
 	"contract-proxy/child"
-	"log"
 )
 
 type Contract struct {
@@ -505,9 +504,7 @@ type Contract struct {
 func (c *Contract) NewChilds(cnt int) int {
 	s := 0
 	for i := 1; i < cnt; i++ {
-		farsh := child.New(i)
-        ref:= farsh.AsChild(c.GetReference())
-		log.Print("REF: ", ref)
+        child.New(i).AsChild(c.GetReference())
 		s += i
 	} 
 	return s
@@ -520,10 +517,7 @@ func (c *Contract) SumChilds() int {
 		panic(err)
 	}
 	for _, chref := range childs {
-		log.Print("chref: ", chref.String())
 		o := child.GetObject(chref)
-		log.Printf("o: %+v", o)
-
 		s += o.GetNum()
 	}
 	return s
