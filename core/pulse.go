@@ -14,14 +14,16 @@
  *    limitations under the License.
  */
 
-package pulsar
+package core
 
-import (
-	"github.com/insolar/insolar/core"
-)
+// Entropy is 64 random bytes used in every pseudo-random calculations.
+type Entropy [64]byte
 
-// Create a new pulse with using of custom Entropy Generator
-func NewPulse(previousPulseNumber uint32, entropyGenerator EntropyGenerator) *core.Pulse {
-	previousPulseNumber++
-	return &core.Pulse{PulseNumber: core.PulseNumber(previousPulseNumber), Entropy: entropyGenerator.GenerateEntropy()}
+// PulseNumber is current time slot number.
+type PulseNumber uint32
+
+// Pulse is base data structure for a pulse.
+type Pulse struct {
+	PulseNumber PulseNumber
+	Entropy     Entropy
 }

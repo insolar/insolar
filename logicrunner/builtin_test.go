@@ -40,7 +40,7 @@ func TestBareHelloworld(t *testing.T) {
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	defer cleaner()
 
-	am := l.GetManager()
+	am := l.GetArtifactManager()
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})

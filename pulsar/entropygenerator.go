@@ -16,24 +16,26 @@
 
 package pulsar
 
-import "crypto/rand"
+import (
+	"crypto/rand"
 
-type Entropy [64]byte
+	"github.com/insolar/insolar/core"
+)
 
 type EntropyGenerator interface {
-	GenerateEntropy() Entropy
+	GenerateEntropy() core.Entropy
 }
 
 type StandardEntropyGenerator struct {
 }
 
-func (generator *StandardEntropyGenerator) GenerateEntropy() Entropy {
-	entropy := make([]byte, len(Entropy{}))
+func (generator *StandardEntropyGenerator) GenerateEntropy() core.Entropy {
+	entropy := make([]byte, len(core.Entropy{}))
 	_, err := rand.Read(entropy)
 	if err != nil {
 		panic(err)
 	}
-	var result Entropy
-	copy(result[:], entropy[:len(Entropy{})])
+	var result core.Entropy
+	copy(result[:], entropy[:len(core.Entropy{})])
 	return result
 }

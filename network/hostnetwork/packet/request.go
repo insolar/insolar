@@ -16,6 +16,10 @@
 
 package packet
 
+import (
+	"github.com/insolar/insolar/network/cascade"
+)
+
 // CommandType - type for commands.
 type CommandType int
 
@@ -57,6 +61,12 @@ type RequestDataStore struct {
 type RequestDataRPC struct {
 	Method string
 	Args   [][]byte
+}
+
+// RequestCascadeSend is data for cascade sending feature
+type RequestCascadeSend struct {
+	RPC  RequestDataRPC
+	Data cascade.SendData
 }
 
 // RequestRelay is data for relay request (commands: start/stop relay).

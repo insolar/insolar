@@ -66,20 +66,21 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in plugin")
 	}
 
-	ch := new(codec.CborHandle)
+	obj := reflect.New(reflect.ValueOf(export).Elem().Type()).Interface()
 
-	err = codec.NewDecoderBytes(args.Data, ch).Decode(export)
+	ch := new(codec.CborHandle)
+	err = codec.NewDecoderBytes(args.Data, ch).Decode(obj)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't decode data into %T", export)
+		return errors.Wrapf(err, "couldn't decode data into %T", obj)
 	}
 
-	setContext := reflect.ValueOf(export).MethodByName("SetContext")
+	setContext := reflect.ValueOf(obj).MethodByName("SetContext")
 	if !setContext.IsValid() {
 		return errors.New("this is not a contract, it not supports SetContext method")
 	}
 	setContext.Call([]reflect.Value{reflect.ValueOf(args.Context)})
 
-	method := reflect.ValueOf(export).MethodByName(args.Method)
+	method := reflect.ValueOf(obj).MethodByName(args.Method)
 	if !method.IsValid() {
 		return errors.New("no method " + args.Method + " in the plugin")
 	}
@@ -108,7 +109,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	)
 	resValues := method.Call(in)
 
-	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(export)
+	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(obj)
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal new object data into cbor")
 	}
@@ -348,6 +349,27 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byt
 	}
 
 	return res.Reference, nil
+}
+
+// GetDelegate ...
+func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error) {
+	client, err := gi.Upstream()
+	if err != nil {
+		return core.String2Ref(""), err
+	}
+
+	req := rpctypes.UpGetDelegateReq{
+		Object: object,
+		OfType: ofType,
+	}
+
+	res := rpctypes.UpGetDelegateResp{}
+	err = client.Call("RPC.GetDelegate", req, &res)
+	if err != nil {
+		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
+	}
+
+	return res.Object, nil
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`

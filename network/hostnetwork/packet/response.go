@@ -62,6 +62,12 @@ type ResponseDataRPC struct {
 	Error   string
 }
 
+// ResponseCascadeSend is the response data of a cascade sending call
+type ResponseCascadeSend struct {
+	Success bool
+	Error   string
+}
+
 // ResponseRelay is data for relay request response.
 type ResponseRelay struct {
 	State relay.State

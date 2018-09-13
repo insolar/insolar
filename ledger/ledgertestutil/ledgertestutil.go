@@ -19,6 +19,7 @@ package ledgertestutil
 import (
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger"
@@ -29,9 +30,9 @@ import (
 // Returns *ledger.Ledger andh cleanup function.
 func TmpLedger(t *testing.T, dir string) (*ledger.Ledger, func()) {
 	db, dbcancel := storagetest.TmpDB(t, dir)
-	l, err := ledger.NewLedgerWithDB(db)
+	l, err := ledger.NewLedgerWithDB(db, configuration.NewLedger())
 	assert.NoError(t, err)
-	am := l.GetManager()
+	am := l.GetArtifactManager()
 	assert.NotNil(t, am)
 	return l, dbcancel
 }

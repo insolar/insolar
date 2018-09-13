@@ -17,9 +17,9 @@
 package logicrunner
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -29,16 +29,23 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = "../cmd/insgocc/insgocc"
+var icc = ""
+var runnerbin = ""
 
-func init() {
+func TestMain(m *testing.M) {
+	var err error
 	log.SetLevel(log.DebugLevel)
-	build()
+	if runnerbin, icc, err = testutil.Build(); err != nil {
+		fmt.Println("Logic runner build failed, skip tests:", err.Error())
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
 }
 
 func TestTypeCompatibility(t *testing.T) {
@@ -115,9 +122,17 @@ type testLedger struct {
 	am core.ArtifactManager
 }
 
-func (r *testLedger) Start(components core.Components) error { return nil }
-func (r *testLedger) Stop() error                            { return nil }
-func (r *testLedger) GetManager() core.ArtifactManager       { return r.am }
+func (r *testLedger) GetPulseManager() core.PulseManager {
+	panic("implement me")
+}
+
+func (r *testLedger) GetJetCoordinator() core.JetCoordinator {
+	panic("implement me")
+}
+
+func (r *testLedger) Start(components core.Components) error   { return nil }
+func (r *testLedger) Stop() error                              { return nil }
+func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
 
 type testMessageRouter struct {
 	LogicRunner core.LogicRunner
@@ -169,40 +184,6 @@ func TestExecution(t *testing.T) {
 	assert.NoError(t, resp.Error)
 	assert.Equal(t, []byte("data"), resp.Data)
 	assert.Equal(t, []byte(nil), resp.Result)
-}
-
-func buildCLI(name string) error {
-	out, err := exec.Command("go", "build", "-o", "./goplugin/"+name+"/"+name, "./goplugin/"+name+"/").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", name, string(out))
-	}
-	return nil
-}
-
-func buildInciderCLI() error {
-	return buildCLI("ginsider-cli")
-}
-
-func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", icc, "../cmd/insgocc/").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", icc, string(out))
-	}
-	return nil
-
-}
-
-func build() error {
-	err := buildInciderCLI()
-	if err != nil {
-		return err
-	}
-
-	err = buildPreprocessor()
-	if err != nil {
-		return errors.Wrap(err, "can't generate proxy")
-	}
-	return nil
 }
 
 func TestContractCallingContract(t *testing.T) {
@@ -265,7 +246,7 @@ func (r *Two) Hello(s string) string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
@@ -290,7 +271,8 @@ func (r *Two) Hello(s string) string {
 	)
 	assert.NoError(t, err)
 
-	cb := testutil.NewContractBuilder(am, icc)
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -306,9 +288,7 @@ func (r *Two) Hello(s string) string {
 		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
 		data, "Hello", argsSerialized,
 	)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	var resParsed []interface{}
 	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
@@ -336,6 +316,11 @@ func (r *One) Hello(s string) string {
 	res := friend.Hello(s)
 
 	return "Hi, " + s + "! Two said: " + res
+}
+
+func (r *One) HelloFromDelegate(s string) string {
+	friend := two.GetImplementationFrom(r.GetReference())
+	return friend.Hello(s)
 }
 `
 
@@ -378,7 +363,7 @@ func (r *Two) Hello(s string) string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
@@ -407,7 +392,8 @@ func (r *Two) Hello(s string) string {
 		panic(err)
 	}
 
-	cb := testutil.NewContractBuilder(am, icc)
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -423,16 +409,22 @@ func (r *Two) Hello(s string) string {
 		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
 		data, "Hello", argsSerialized,
 	)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	var resParsed []interface{}
 	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+
+	_, res, err = gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "HelloFromDelegate", argsSerialized,
+	)
+	assert.NoError(t, err)
+
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hello you too, ins. 1288 times!", resParsed[0])
 }
 
 func TestContextPassing(t *testing.T) {
@@ -460,7 +452,7 @@ func (r *One) Hello() string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		nil,
@@ -478,7 +470,8 @@ func (r *One) Hello() string {
 	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode([]interface{}{})
 	assert.NoError(t, err)
 
-	cb := testutil.NewContractBuilder(am, icc)
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
 	err = cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
@@ -492,4 +485,98 @@ func (r *One) Hello() string {
 	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
 	assert.NoError(t, err)
 	assert.Equal(t, cb.Classes["one"].String(), resParsed[0])
+}
+
+func TestGetChildren(t *testing.T) {
+	goContract := `
+package main
+
+//import "fmt"
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/child"
+
+type Contract struct {
+	foundation.BaseContract
+}
+
+func (c *Contract) NewChilds(cnt int) int {
+	//ctx := c.GetContext()
+	summ := 0
+	for i := 1; i < cnt; i++ {
+		farsh := child.New(i)
+        farsh.AsChild(c.GetReference())
+		summ += i
+	} 
+	return summ
+}
+
+// testchilds here
+`
+
+	goChild := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type Child struct {
+	foundation.BaseContract
+	Num int
+}
+
+func (c *Child) GetNum() int {
+	return c.Num
+}
+
+
+func New(n int) *Child {
+	return &Child{Num: n};
+}
+`
+	l, cleaner := ledgertestutil.TmpLedger(t, "")
+	defer cleaner()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	am := l.GetArtifactManager()
+	lr, err := NewLogicRunner(configuration.LogicRunner{
+		GoPlugin: &configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerCodePath: insiderStorage,
+		}})
+	assert.NoError(t, err, "Initialize runner")
+
+	assert.NoError(t, lr.Start(core.Components{
+		"core.Ledger":        l,
+		"core.MessageRouter": &testMessageRouter{LogicRunner: lr},
+	}), "starting logicrunner")
+	defer lr.Stop()
+
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
+	err = cb.Build(map[string]string{"child": goChild})
+	assert.NoError(t, err)
+	err = cb.Build(map[string]string{"contract": goContract})
+	assert.NoError(t, err)
+
+	t.Logf("XX %+v", cb)
+
+	domain := core.String2Ref("c1")
+	request := core.String2Ref("c2")
+	contract, err := am.ActivateObj(request, domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	resp := lr.Execute(&message.CallMethodMessage{
+		Request:   request,
+		ObjectRef: *contract,
+		Method:    "NewChilds",
+		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
+	})
+	assert.NoError(t, resp.Error, "contract call")
+
+	r := testutil.CBORUnMarshal(t, resp.Result)
+	t.Logf("ret is %+v", r)
 }

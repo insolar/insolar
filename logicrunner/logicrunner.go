@@ -47,7 +47,7 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(c core.Components) error {
-	am := c["core.Ledger"].(core.Ledger).GetManager()
+	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
 	mr := c["core.MessageRouter"].(core.MessageRouter)
 	lr.ArtifactManager = am
 
@@ -75,6 +75,9 @@ func (lr *LogicRunner) Start(c core.Components) error {
 func (lr *LogicRunner) Stop() error {
 	reterr := error(nil)
 	for _, e := range lr.Executors {
+		if e == nil {
+			continue
+		}
 		err := e.Stop()
 		if err != nil {
 			reterr = errors.Wrap(reterr, err.Error())
