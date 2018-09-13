@@ -52,11 +52,11 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
-	return NewLedgerWithDB(db)
+	return NewLedgerWithDB(db, conf.JetCoordinator)
 }
 
 // NewLedgerWithDB creates new ledger with preconfigured storage.DB instance.
-func NewLedgerWithDB(db *storage.DB) (*Ledger, error) {
+func NewLedgerWithDB(db *storage.DB, jetCoordinatorConf configuration.JetCoordinator) (*Ledger, error) {
 	manager, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
