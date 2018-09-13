@@ -17,9 +17,9 @@
 package logicrunner
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -35,11 +35,17 @@ import (
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = "../cmd/insgocc/insgocc"
+var icc = ""
+var runnerbin = ""
 
-func init() {
+func TestMain(m *testing.M) {
+	var err error
 	log.SetLevel(log.DebugLevel)
-	build()
+	if runnerbin, icc, err = testutil.Build(); err != nil {
+		fmt.Println("Logic runner build failed, skip tests:", err.Error())
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
 }
 
 func TestTypeCompatibility(t *testing.T) {
@@ -180,40 +186,6 @@ func TestExecution(t *testing.T) {
 	assert.Equal(t, []byte(nil), resp.Result)
 }
 
-func buildCLI(name string) error {
-	out, err := exec.Command("go", "build", "-o", "./goplugin/"+name+"/"+name, "./goplugin/"+name+"/").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", name, string(out))
-	}
-	return nil
-}
-
-func buildInciderCLI() error {
-	return buildCLI("ginsider-cli")
-}
-
-func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", icc, "../cmd/insgocc/").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", icc, string(out))
-	}
-	return nil
-
-}
-
-func build() error {
-	err := buildInciderCLI()
-	if err != nil {
-		return err
-	}
-
-	err = buildPreprocessor()
-	if err != nil {
-		return errors.Wrap(err, "can't generate proxy")
-	}
-	return nil
-}
-
 func TestContractCallingContract(t *testing.T) {
 	var contractOneCode = `
 package main
@@ -274,7 +246,7 @@ func (r *Two) Hello(s string) string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
@@ -391,7 +363,7 @@ func (r *Two) Hello(s string) string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
@@ -480,7 +452,7 @@ func (r *One) Hello() string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		nil,

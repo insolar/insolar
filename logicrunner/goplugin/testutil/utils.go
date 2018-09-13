@@ -389,6 +389,13 @@ func CBORUnMarshal(t *testing.T, data []byte) interface{} {
 	return ret
 }
 
+// CBORUnMarshalToSlice - wrapper for CBORUnMarshal, expects slice
+func CBORUnMarshalToSlice(t *testing.T, in []byte) []interface{} {
+	r := CBORUnMarshal(t, in)
+	assert.IsType(t, []interface{}{}, r)
+	return r.([]interface{})
+}
+
 // AMPublishCode publishes code on ledger
 func AMPublishCode(
 	t *testing.T,
