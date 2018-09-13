@@ -39,7 +39,7 @@ type Ledger interface {
 }
 
 type JetCoordinator interface {
-	// IsAuthorized checks for role on concrete pulse for the address
+	// IsAuthorized checks for role on concrete pulse for the address.
 	IsAuthorized(role JetRole, obj RecordRef, pulse PulseNumber, node RecordRef) bool
 
 	// TODO: add docs
@@ -47,10 +47,10 @@ type JetCoordinator interface {
 }
 
 type PulseManager interface {
-	// TODO: docs
+	// Current returns current pulse structure.
 	Current() (Pulse, error)
 
-	// TODO: docs
+	// Set set's new pulse.
 	Set(pulse Pulse) error
 }
 
