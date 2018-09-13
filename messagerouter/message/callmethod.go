@@ -33,8 +33,8 @@ type CallMethodMessage struct {
 	Arguments core.Arguments
 }
 
-// GetRole returns operating jet role for given message type.
-func (m *CallMethodMessage) GetRole() core.JetRole {
+// GetOperatingRole returns operating jet role for given message type.
+func (m *CallMethodMessage) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 

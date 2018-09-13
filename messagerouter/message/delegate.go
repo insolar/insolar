@@ -32,8 +32,8 @@ type DelegateMessage struct {
 	Body  []byte
 }
 
-// GetRole returns operating jet role for given message type.
-func (m *DelegateMessage) GetRole() core.JetRole {
+// GetOperatingRole returns operating jet role for given message type.
+func (m *DelegateMessage) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
