@@ -18,7 +18,6 @@ package hostnetwork
 
 import (
 	"log"
-	"time"
 
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -32,7 +31,7 @@ func handleRelayOwnership(hostHandler hosthandler.HostHandler, response *packet.
 	}
 }
 
-func handleKnownOuterHosts(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, response *packet.ResponseKnownOuterHosts, targetID string) error {
+func handleKnownOuterHosts(hostHandler hosthandler.HostHandler, response *packet.ResponseKnownOuterHosts, targetID string) error {
 	var err error
 	if response.OuterHosts > hostHandler.GetOuterHostsCount() { // update data
 		hostHandler.SetOuterHostsCount(response.OuterHosts)
@@ -40,11 +39,11 @@ func handleKnownOuterHosts(hostHandler hosthandler.HostHandler, ctx hosthandler.
 	}
 	if (response.OuterHosts > hostHandler.GetSelfKnownOuterHosts()) &&
 		(hostHandler.GetProxyHostsCount() == 0) {
-		err = AuthenticationRequest(hostHandler, ctx, "begin", targetID)
+		err = AuthenticationRequest(hostHandler, "begin", targetID)
 		if err != nil {
 			return err
 		}
-		err = RelayRequest(hostHandler, ctx, "start", targetID)
+		err = RelayRequest(hostHandler, "start", targetID)
 		if err != nil {
 			return err
 		}
@@ -99,8 +98,6 @@ func handleCheckNodePrivResponse(hostHandler hosthandler.HostHandler, response *
 func handleAuthResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuth, target string) error {
 	var err error
 	if (len(response.AuthUniqueKey) != 0) && response.Success {
-		// dht.Auth.Mut.Lock()
-		// defer dht.Auth.Mut.Unlock()
 		hostHandler.AddReceivedKey(target, response.AuthUniqueKey)
 		err = nil
 	} else {
@@ -122,57 +119,6 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 	} else {
 		return errors.New("received empty IP")
 	}
-	return nil
-}
-
-// RelayRequest sends relay request to target.
-func RelayRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, command, targetID string) error {
-	var typedCommand packet.CommandType
-	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for relay request not found")
-		return err
-	}
-
-	switch command {
-	case "start":
-		typedCommand = packet.StartRelay
-	case "stop":
-		typedCommand = packet.StopRelay
-	default:
-		err = errors.New("unknown command")
-		return err
-	}
-	request := packet.NewRelayPacket(typedCommand, hostHandler.HtFromCtx(ctx).Origin, targetHost)
-	future, err := hostHandler.SendRequest(request)
-
-	if err != nil {
-		log.Println(err.Error())
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseRelay)
-		err = handleRelayResponse(hostHandler, ctx, response, targetID)
-		if err != nil {
-			return err
-		}
-
-	case <-time.After(hostHandler.GetPacketTimeout()):
-		future.Cancel()
-		err = errors.New("timeout")
-		return err
-	}
-
 	return nil
 }
 

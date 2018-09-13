@@ -48,11 +48,11 @@ func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	case packet.TypeCheckOrigin:
 		return processCheckOriginRequest(hostHandler, msg, packetBuilder)
 	case packet.TypeAuth:
-		return processAuthentication(hostHandler, ctx, msg, packetBuilder)
+		return processAuthentication(hostHandler, msg, packetBuilder)
 	case packet.TypeObtainIP:
 		return processObtainIPRequest(msg, packetBuilder)
 	case packet.TypeRelayOwnership:
-		return processRelayOwnership(hostHandler, ctx, msg, packetBuilder)
+		return processRelayOwnership(hostHandler, msg, packetBuilder)
 	case packet.TypeKnownOuterHosts:
 		return processKnownOuterHosts(hostHandler, msg, packetBuilder)
 	case packet.TypeCheckNodePriv:
@@ -92,18 +92,18 @@ func processCheckNodePriv(hostHandler hosthandler.HostHandler, msg *packet.Packe
 	return packetBuilder.Response(response).Build(), nil
 }
 
-func processRelayOwnership(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processRelayOwnership(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestRelayOwnership)
 
 	if data.Ready {
 		hostHandler.AddPossibleProxyID(msg.Sender.ID.KeyString())
 	} else {
 		hostHandler.RemovePossibleProxyID(msg.Sender.ID.KeyString())
-		err := AuthenticationRequest(hostHandler, ctx, "begin", msg.Sender.ID.KeyString())
+		err := AuthenticationRequest(hostHandler, "begin", msg.Sender.ID.KeyString())
 		if err != nil {
 			return nil, err
 		}
-		err = RelayRequest(hostHandler, ctx, "start", msg.Sender.ID.KeyString())
+		err = RelayRequest(hostHandler, "start", msg.Sender.ID.KeyString())
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +211,7 @@ func processRelay(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	return packet1, err
 }
 
-func processAuthentication(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestAuth)
 	switch data.Command {
 	case packet.BeginAuth:
@@ -237,7 +237,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, ctx hosthandler.
 
 		// TODO process verification msg.Sender host
 		// confirmed
-		err = CheckOriginRequest(hostHandler, ctx, msg.Sender.ID.KeyString())
+		err = CheckOriginRequest(hostHandler, msg.Sender.ID.KeyString())
 		if err != nil {
 			return nil, err
 		}

@@ -25,14 +25,66 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CheckOriginRequest send a request to check target host originality
-func CheckOriginRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, targetID string) error {
+// RelayRequest sends relay request to target.
+func RelayRequest(hostHandler hosthandler.HostHandler, command, targetID string) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	var typedCommand packet.CommandType
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
 	if !exist {
-		err = errors.New("dht.CheckOriginRequest: target for relay request not found")
+		err = errors.New("RelayRequest: target for relay request not found")
+		return err
+	}
+
+	switch command {
+	case "start":
+		typedCommand = packet.StartRelay
+	case "stop":
+		typedCommand = packet.StopRelay
+	default:
+		err = errors.New("RelayRequest: unknown command")
+		return err
+	}
+	request := packet.NewRelayPacket(typedCommand, hostHandler.HtFromCtx(ctx).Origin, targetHost)
+	future, err := hostHandler.SendRequest(request)
+
+	if err != nil {
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("RelayRequest: chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*packet.ResponseRelay)
+		err = handleRelayResponse(hostHandler, ctx, response, targetID)
+		if err != nil {
+			return err
+		}
+
+	case <-time.After(hostHandler.GetPacketTimeout()):
+		future.Cancel()
+		err = errors.New("RelayRequest: timeout")
+		return err
+	}
+
+	return nil
+}
+
+// CheckOriginRequest send a request to check target host originality
+func CheckOriginRequest(hostHandler hosthandler.HostHandler, targetID string) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("CheckOriginRequest: target for relay request not found")
 		return err
 	}
 
@@ -47,7 +99,7 @@ func CheckOriginRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	select {
 	case rsp := <-future.Result():
 		if rsp == nil {
-			err = errors.New("dht.CheckOriginRequest: chanel closed unexpectedly")
+			err = errors.New("CheckOriginRequest: chanel closed unexpectedly")
 			return err
 		}
 
@@ -56,7 +108,7 @@ func CheckOriginRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 
 	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
-		err = errors.New("dht.CheckOriginRequest: timeout")
+		err = errors.New("CheckOriginRequest: timeout")
 		return err
 	}
 
@@ -64,13 +116,14 @@ func CheckOriginRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 }
 
 // AuthenticationRequest sends an authentication request.
-func AuthenticationRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, command, targetID string) error {
+func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetID string) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
 	if !exist {
-		err = errors.New("dht.AuthenticationRequest: target for auth request not found")
+		err = errors.New("AuthenticationRequest: target for auth request not found")
 		return err
 	}
 
@@ -82,7 +135,7 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.
 	case "revoke":
 		authCommand = packet.RevokeAuth
 	default:
-		err = errors.New("dht.AuthenticationRequest: unknown command")
+		err = errors.New("AuthenticationRequest: unknown command")
 		return err
 	}
 	request := packet.NewAuthPacket(authCommand, origin, targetHost)
@@ -96,7 +149,7 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.
 	select {
 	case rsp := <-future.Result():
 		if rsp == nil {
-			err = errors.New("dht.AuthenticationRequest: chanel closed unexpectedly")
+			err = errors.New("AuthenticationRequest: chanel closed unexpectedly")
 			return err
 		}
 
@@ -108,47 +161,7 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.
 
 	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
-		err = errors.New("dht.AuthenticationRequest: timeout")
-		return err
-	}
-
-	return nil
-}
-
-func checkNodePrivRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, targetID string, roleKey string) error {
-	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for check node privileges request not found")
-		return err
-	}
-
-	origin := hostHandler.HtFromCtx(ctx).Origin
-	request := packet.NewCheckNodePrivPacket(origin, targetHost, roleKey)
-	future, err := hostHandler.SendRequest(request)
-
-	if err != nil {
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseCheckNodePriv)
-		err = handleCheckNodePrivResponse(hostHandler, response, roleKey)
-		if err != nil {
-			return err
-		}
-
-	case <-time.After(hostHandler.GetPacketTimeout()):
-		future.Cancel()
-		err = errors.New("timeout")
+		err = errors.New("AuthenticationRequest: timeout")
 		return err
 	}
 
@@ -156,13 +169,14 @@ func checkNodePrivRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.C
 }
 
 // ObtainIPRequest is request to self IP obtaining.
-func ObtainIPRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, targetID string) error {
+func ObtainIPRequest(hostHandler hosthandler.HostHandler, targetID string) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
 		return err
 	}
 	if !exist {
-		err = errors.New("target for relay request not found")
+		err = errors.New("ObtainIPRequest: target for relay request not found")
 		return err
 	}
 
@@ -179,7 +193,7 @@ func ObtainIPRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Contex
 	select {
 	case rsp := <-future.Result():
 		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
+			err = errors.New("ObtainIPRequest: chanel closed unexpectedly")
 			return err
 		}
 
@@ -191,15 +205,16 @@ func ObtainIPRequest(hostHandler hosthandler.HostHandler, ctx hosthandler.Contex
 
 	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
-		err = errors.New("timeout")
+		err = errors.New("ObtainIPRequest: timeout")
 		return err
 	}
 
 	return nil
 }
 
-func relayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string) error {
-	ctx, err := NewContextBuilder(hostHandler.(*DHT)).SetDefaultHost().Build()
+// RelayOwnershipRequest sends a relay ownership request.
+func RelayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
 		return err
 	}
@@ -208,7 +223,7 @@ func relayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 		return err
 	}
 	if !exist {
-		err = errors.New("target for relay request not found")
+		err = errors.New("relayOwnershipRequest: target for relay request not found")
 		return err
 	}
 
@@ -230,7 +245,48 @@ func relayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 
 	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
-		err = errors.New("timeout")
+		err = errors.New("relayOwnershipRequest: timeout")
+		return err
+	}
+
+	return nil
+}
+
+func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string, roleKey string) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = errors.New("checkNodePrivRequest: target for check node privileges request not found")
+		return err
+	}
+
+	origin := hostHandler.HtFromCtx(ctx).Origin
+	request := packet.NewCheckNodePrivPacket(origin, targetHost, roleKey)
+	future, err := hostHandler.SendRequest(request)
+
+	if err != nil {
+		return err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			err = errors.New("checkNodePrivRequest: chanel closed unexpectedly")
+			return err
+		}
+
+		response := rsp.Data.(*packet.ResponseCheckNodePriv)
+		err = handleCheckNodePrivResponse(hostHandler, response, roleKey)
+		if err != nil {
+			return err
+		}
+
+	case <-time.After(hostHandler.GetPacketTimeout()):
+		future.Cancel()
+		err = errors.New("checkNodePrivRequest: timeout")
 		return err
 	}
 
@@ -238,7 +294,7 @@ func relayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 }
 
 func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string, hosts int) error {
-	ctx, err := NewContextBuilder(hostHandler.(*DHT)).SetDefaultHost().Build()
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
 		return err
 	}
@@ -247,7 +303,7 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 		return err
 	}
 	if !exist {
-		err = errors.New("target for relay request not found")
+		err = errors.New("knownOuterHostsRequest: target for relay request not found")
 		return err
 	}
 
@@ -265,14 +321,14 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 		}
 
 		response := rsp.Data.(*packet.ResponseKnownOuterHosts)
-		err = handleKnownOuterHosts(hostHandler, ctx, response, targetID)
+		err = handleKnownOuterHosts(hostHandler, response, targetID)
 		if err != nil {
 			return err
 		}
 
 	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
-		err = errors.New("timeout")
+		err = errors.New("knownOuterHostsRequest: timeout")
 		return err
 	}
 
