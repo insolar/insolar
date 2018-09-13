@@ -34,7 +34,7 @@ func (generator *MockEntropyGenerator) GenerateEntropy() core.Entropy {
 
 func TestNewPulse(t *testing.T) {
 	generator := &MockEntropyGenerator{}
-	previousPulse := uint64(876)
+	previousPulse := core.PulseNumber(876)
 	expectedPulse := previousPulse + 1
 
 	result := NewPulse(previousPulse, generator)

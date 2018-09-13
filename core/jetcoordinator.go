@@ -29,8 +29,6 @@ const (
 
 type NetworkAddress string
 
-type PulseNumber uint32
-
 type JetID RecordRef
 
 type JetCoordinator interface {
