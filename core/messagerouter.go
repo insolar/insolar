@@ -23,7 +23,9 @@ type Arguments []byte
 
 // Message is a routable packet, ATM just a method call
 type Message interface {
+	// Serialize serializes message.
 	Serialize() (io.Reader, error)
+	// Get reference returns referenced object.
 	GetReference() RecordRef
 	GetRole() JetRole
 }
