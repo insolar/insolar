@@ -14,15 +14,27 @@
  *    limitations under the License.
  */
 
-package configuration
+package member
 
-// Log holds configuration for logging
-type Log struct {
-	Level   string
-	Adapter string
+import (
+	"github.com/insolar/insolar/toolkit/go/foundation"
+)
+
+type Member struct {
+	foundation.BaseContract
+	Name      string
+	PublicKey []byte
 }
 
-// NewLog creates new default configuration for logging
-func NewLog() Log {
-	return Log{Level: "Info", Adapter: "logrus"}
+func (m *Member) GetName() string {
+	return m.Name
+}
+func (m *Member) GetPublicKey() []byte {
+	return m.PublicKey
+}
+
+func New(name string) *Member {
+	return &Member{
+		Name: name,
+	}
 }

@@ -14,15 +14,16 @@
  *    limitations under the License.
  */
 
-package configuration
+package pulsar
 
-// Log holds configuration for logging
-type Log struct {
-	Level   string
-	Adapter string
+//Base data struct for a pulse
+type Pulse struct {
+	PulseNumber uint64
+	Entropy     Entropy
 }
 
-// NewLog creates new default configuration for logging
-func NewLog() Log {
-	return Log{Level: "Info", Adapter: "logrus"}
+//Create a new pulse with using of custom Entropy Generator
+func NewPulse(previousPulseNumber uint64, entropyGenerator EntropyGenerator) *Pulse {
+	previousPulseNumber++
+	return &Pulse{PulseNumber: previousPulseNumber, Entropy: entropyGenerator.GenerateEntropy()}
 }

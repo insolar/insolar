@@ -14,15 +14,26 @@
  *    limitations under the License.
  */
 
-package configuration
+package pulsar
 
-// Log holds configuration for logging
-type Log struct {
-	Level   string
-	Adapter string
+import "crypto/rand"
+
+type Entropy [64]byte
+
+type EntropyGenerator interface {
+	GenerateEntropy() Entropy
 }
 
-// NewLog creates new default configuration for logging
-func NewLog() Log {
-	return Log{Level: "Info", Adapter: "logrus"}
+type StandardEntropyGenerator struct {
+}
+
+func (generator *StandardEntropyGenerator) GenerateEntropy() Entropy {
+	entropy := make([]byte, len(Entropy{}))
+	_, err := rand.Read(entropy)
+	if err != nil {
+		panic(err)
+	}
+	var result Entropy
+	copy(result[:], entropy[:len(Entropy{})])
+	return result
 }

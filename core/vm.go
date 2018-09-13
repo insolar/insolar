@@ -16,6 +16,10 @@
 
 package core
 
+import (
+	"time"
+)
+
 // MachineType is a type of virtual machine
 type MachineType int
 
@@ -30,12 +34,22 @@ const (
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
 type MachineLogicExecutor interface {
-	CallMethod(codeRef RecordRef, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
-	CallConstructor(codeRef RecordRef, name string, args Arguments) (objectState []byte, err error)
+	CallMethod(ctx *LogicCallContext, code RecordRef, data []byte, method string, args Arguments) (newObjectState []byte, methodResults Arguments, err error)
+	CallConstructor(ctx *LogicCallContext, code RecordRef, name string, args Arguments) (objectState []byte, err error)
 	Stop() error
 }
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	Execute(msg Message) (res *Response)
+}
+
+// LogicCallContext is a context of contract execution
+type LogicCallContext struct {
+	Callee *RecordRef // Contract that was called
+	Class  *RecordRef // Class of the callee
+	Parent *RecordRef // Parent of the callee
+	Caller *RecordRef // Contract that made the call
+	Time   time.Time  // Time when call was made
+	Pulse  uint64     // Number of the pulse
 }

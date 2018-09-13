@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 
 	"github.com/pkg/errors"
 
@@ -127,9 +128,10 @@ func (t *TestClassDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
 
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
-	AM   *TestArtifactManager
-	Data []byte
-	Code *core.RecordRef
+	AM    *TestArtifactManager
+	Data  []byte
+	Code  *core.RecordRef
+	Class *core.RecordRef
 }
 
 // HeadRef implementation for tests
@@ -162,7 +164,15 @@ func (t *TestObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
 
 // ClassDescriptor implementation for tests
 func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
-	panic("not implemented")
+	if t.Class == nil {
+		return nil, errors.New("No class")
+	}
+
+	res, ok := t.AM.Classes[*t.Class]
+	if !ok {
+		return nil, errors.New("No class")
+	}
+	return res, nil
 }
 
 // TestArtifactManager implementation for tests
@@ -307,9 +317,10 @@ func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.Re
 	}
 
 	t.Objects[*ref] = &TestObjectDescriptor{
-		AM:   t,
-		Data: memory,
-		Code: codeRef,
+		AM:    t,
+		Data:  memory,
+		Code:  codeRef,
+		Class: &class,
 	}
 	return ref, nil
 }
@@ -416,7 +427,9 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		cb.Classes[name] = class
 	}
 
+	re := regexp.MustCompile(`package\s+\S+`)
 	for name, code := range contracts {
+		code = re.ReplaceAllString(code, "package main")
 		err := WriteFile(cb.root+"/src/contract/"+name+"/", "main.go", code)
 		if err != nil {
 			return err

@@ -14,31 +14,31 @@
  *    limitations under the License.
  */
 
-package member
+package pulsar
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/toolkit/go/foundation"
+	"bytes"
+	"testing"
 )
 
-var TypeReference = core.String2Ref("member")
+func TestStandardEntropyGenerator_GenerateEntropy_EntropySize(t *testing.T) {
+	generator := &StandardEntropyGenerator{}
 
-type Member struct {
-	foundation.BaseContract
-	Name      string
-	PublicKey []byte
-}
+	first := generator.GenerateEntropy()
 
-func (m *Member) GetName() string {
-	return m.Name
-}
-func (m *Member) GetPublicKey() []byte {
-	return m.PublicKey
-}
-
-func NewMember(name string) *Member {
-	member := &Member{
-		Name: name,
+	if len(first) != 64 {
+		t.Errorf("Length of entropy should be equal to 8, got %v", len(first))
 	}
-	return member
+}
+
+func TestStandardEntropyGenerator_GenerateEntropy_EntropyShouldBeUnique(t *testing.T) {
+	generator := &StandardEntropyGenerator{}
+	first := generator.GenerateEntropy()
+	second := generator.GenerateEntropy()
+
+	result := bytes.Equal(first[:], second[:])
+
+	if result {
+		t.Errorf("Entropies shouldn't be the same, got - %v, wanted - %v", first, second)
+	}
 }

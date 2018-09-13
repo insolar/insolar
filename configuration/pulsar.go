@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2018 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 package configuration
 
-// Log holds configuration for logging
-type Log struct {
-	Level   string
-	Adapter string
+// Stats holds configuration for pulsar node
+type Pulsar struct {
+	Type           string
+	ListenAddress  string
+	NodesAddresses []string
 }
 
-// NewLog creates new default configuration for logging
-func NewLog() Log {
-	return Log{Level: "Info", Adapter: "logrus"}
+// NewPulsar creates new default configuration for pulsar node
+func NewPulsar() Pulsar {
+	return Pulsar{ListenAddress: "0.0.0.0:8090", Type: "tcp", NodesAddresses: []string{}}
 }

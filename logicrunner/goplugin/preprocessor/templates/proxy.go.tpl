@@ -43,6 +43,10 @@ func GetObject(ref core.RecordRef) (r *{{ .ContractType }}) {
     return &{{ .ContractType }}{Reference: ref}
 }
 
+func GetClass() core.RecordRef {
+    return ClassReference
+}
+
 {{ range $func := .ConstructorsProxies }}
 func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractHolder {
     {{ $func.InitArgs }}
