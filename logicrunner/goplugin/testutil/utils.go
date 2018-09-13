@@ -402,20 +402,26 @@ type ContractsBuilder struct {
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
-	return &ContractsBuilder{ArtifactManager: am, IccPath: icc}
+func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder, func()) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	if err != nil {
+		return nil, nil
+	}
+
+	cb := &ContractsBuilder{
+		root:            tmpDir,
+		Classes:         make(map[string]*core.RecordRef),
+		Codes:           make(map[string]*core.RecordRef),
+		ArtifactManager: am,
+		IccPath:         icc}
+	return cb, func() {
+		os.RemoveAll(cb.root) // nolint: errcheck
+	}
 }
 
 // Build ...
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
-	tmpDir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		return err
-	}
-	cb.root = tmpDir
-	defer os.RemoveAll(cb.root) // nolint: errcheck
 
-	cb.Classes = make(map[string]*core.RecordRef)
 	for name := range contracts {
 		class, err := cb.ArtifactManager.ActivateClass(
 			core.RecordRef{}, core.RecordRef{},
@@ -444,7 +450,6 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 	}
 
-	cb.Codes = make(map[string]*core.RecordRef)
 	for name := range contracts {
 		err := cb.plugin(name)
 		if err != nil {
