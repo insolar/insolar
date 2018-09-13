@@ -20,4 +20,7 @@ package core
 type Ledger interface {
 	// GetManager returns artifact manager to work with.
 	GetManager() ArtifactManager
+
+	// GetJetCoordinator returns jet coordinator to work with.
+	GetJetCoordinator() JetCoordinator
 }
