@@ -1,0 +1,16 @@
+invalid:
+  most
+    transport:
+      protocol: UTP
+      address: 0.0.0.0:0
+      behindnat: true
+    bootstraphosts: []
+    isrelay: false
+  code:
+    nodes: []
+  dog:
+    format: ""
+    level: Info
+    output: insolar.log
+  stats:
+    listenaddress: 0.0.0.0:8080
