@@ -31,8 +31,8 @@ import (
 )
 
 func TestLaunchApi(t *testing.T) {
-	cfg := configuration.NewApiRunner()
-	api, err := NewApiRunner(&cfg)
+	cfg := configuration.NewAPIRunner()
+	api, err := NewAPIRunner(&cfg)
 	assert.NoError(t, err)
 
 	cs := core.Components{}
@@ -106,21 +106,21 @@ func TestGetQid(t *testing.T) {
 }
 
 func TestNewApiRunnerNilConfig(t *testing.T) {
-	_, err := NewApiRunner(nil)
-	assert.EqualError(t, err, "[ NewApiRunner ] config is nil")
+	_, err := NewAPIRunner(nil)
+	assert.EqualError(t, err, "[ NewAPIRunner ] config is nil")
 }
 
 func TestNewApiRunnerNoRequiredParams(t *testing.T) {
-	cfg := configuration.ApiRunner{}
-	_, err := NewApiRunner(&cfg)
-	assert.EqualError(t, err, "[ NewApiRunner ] Port must not be 0")
+	cfg := configuration.APIRunner{}
+	_, err := NewAPIRunner(&cfg)
+	assert.EqualError(t, err, "[ NewAPIRunner ] Port must not be 0")
 
 	cfg.Port = 100
-	_, err = NewApiRunner(&cfg)
-	assert.EqualError(t, err, "[ NewApiRunner ] Location must exist")
+	_, err = NewAPIRunner(&cfg)
+	assert.EqualError(t, err, "[ NewAPIRunner ] Location must exist")
 
 	cfg.Location = "test"
-	_, err = NewApiRunner(&cfg)
+	_, err = NewAPIRunner(&cfg)
 	assert.NoError(t, err)
 }
 
@@ -148,9 +148,9 @@ func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
 }
 
 func TestWithFakeMessageRouter(t *testing.T) {
-	cfg := configuration.NewApiRunner()
+	cfg := configuration.NewAPIRunner()
 	cfg.Location = "/test/test"
-	api, err := NewApiRunner(&cfg)
+	api, err := NewAPIRunner(&cfg)
 	assert.NoError(t, err)
 
 	mr := TestsMessageRouter{}

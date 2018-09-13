@@ -36,29 +36,29 @@ func init() {
 }
 
 func WriteError(message string, code int) map[string]interface{} {
-	errJson := map[string]interface{}{
+	errJSON := map[string]interface{}{
 		"error": map[string]interface{}{
 			"message": message,
 			"code":    code,
 		},
 	}
-	return errJson
+	return errJSON
 }
 
-func makeHandlerMarshalErrorJson() []byte {
+func makeHandlerMarshalErrorJSON() []byte {
 	jsonErr := WriteError("Invalid data from handler", -1)
-	serJson, err := json.Marshal(jsonErr)
+	serJSON, err := json.Marshal(jsonErr)
 	if err != nil {
 		log.Fatal("Can't marshal base error")
 	}
-	return serJson
+	return serJSON
 }
 
-var handlerMarshalErrorJson = makeHandlerMarshalErrorJson()
+var handlerMarshalErrorJSON = makeHandlerMarshalErrorJSON()
 
 func ProcessQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{} {
 	qtype := QTypeFromString(qTypeStr)
-	answer := make(map[string]interface{})
+	var answer map[string]interface{}
 
 	var handlerError error
 	switch qtype {
@@ -113,7 +113,7 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func WrapApiV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
+func WrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
 		var params *Params
@@ -125,13 +125,16 @@ func WrapApiV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *
 				params = &Params{}
 			}
 			answer[QIDQueryParam] = params.QID
-			serJson, err := json.MarshalIndent(answer, "", "    ")
+			serJSON, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
-				serJson = handlerMarshalErrorJson
+				serJSON = handlerMarshalErrorJSON
 			}
 			response.Header().Add("Content-Type", "application/json")
 			var newLine byte = '\n'
-			response.Write(append(serJson, newLine))
+			_, err = response.Write(append(serJSON, newLine))
+			if err != nil {
+				log.Printf("[QID=%s] Can't write response\n", params.QID)
+			}
 			log.Printf("[QID=%s] Request completed\n", params.QID)
 		}()
 
@@ -147,25 +150,25 @@ func WrapApiV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *
 	}
 }
 
-type ApiRunner struct {
+type APIRunner struct {
 	messageRouter core.MessageRouter
 	server        *http.Server
-	cfg           *configuration.ApiRunner
+	cfg           *configuration.APIRunner
 }
 
-func NewApiRunner(cfg *configuration.ApiRunner) (*ApiRunner, error) {
+func NewAPIRunner(cfg *configuration.APIRunner) (*APIRunner, error) {
 	if cfg == nil {
-		return nil, errors.New("[ NewApiRunner ] config is nil")
+		return nil, errors.New("[ NewAPIRunner ] config is nil")
 	}
 	if cfg.Port == 0 {
-		return nil, errors.New("[ NewApiRunner ] Port must not be 0")
+		return nil, errors.New("[ NewAPIRunner ] Port must not be 0")
 	}
 	if len(cfg.Location) == 0 {
-		return nil, errors.New("[ NewApiRunner ] Location must exist")
+		return nil, errors.New("[ NewAPIRunner ] Location must exist")
 	}
 
 	portStr := fmt.Sprint(cfg.Port)
-	ar := ApiRunner{
+	ar := APIRunner{
 		server: &http.Server{Addr: ":" + portStr},
 		cfg:    cfg,
 	}
@@ -173,7 +176,7 @@ func NewApiRunner(cfg *configuration.ApiRunner) (*ApiRunner, error) {
 	return &ar, nil
 }
 
-func (ar *ApiRunner) Start(c core.Components) error {
+func (ar *APIRunner) Start(c core.Components) error {
 
 	// TODO: init message router
 	_, ok := c["core.MessageRouter"]
@@ -183,7 +186,7 @@ func (ar *ApiRunner) Start(c core.Components) error {
 		ar.messageRouter = c["core.MessageRouter"].(core.MessageRouter)
 	}
 
-	fw := WrapApiV1Handler(ar.messageRouter)
+	fw := WrapAPIV1Handler(ar.messageRouter)
 	http.HandleFunc(ar.cfg.Location, fw)
 	log.Println("Starting ApiRunner ...")
 	log.Println("Config: ", ar.cfg)
@@ -195,7 +198,7 @@ func (ar *ApiRunner) Start(c core.Components) error {
 	return nil
 }
 
-func (ar *ApiRunner) Stop() error {
+func (ar *APIRunner) Stop() error {
 	const timeOut = 5
 	log.Printf("Shutting down server gracefully ...(waiting for %d seconds)\n", timeOut)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeOut)*time.Second)
@@ -208,14 +211,14 @@ func (ar *ApiRunner) Stop() error {
 	return nil
 }
 
-func main() {
-	cfg := configuration.NewApiRunner()
-	api, err := NewApiRunner(&cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cs := core.Components{}
-	api.Start(cs)
-	time.Sleep(60 * time.Second)
-	api.Stop()
-}
+// func example() {
+// 	cfg := configuration.NewAPIRunner()
+// 	api, err := NewAPIRunner(&cfg)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	cs := core.Components{}
+// 	_ = api.Start(cs)
+// 	time.Sleep(60 * time.Second)
+// 	_ = api.Stop()
+// }

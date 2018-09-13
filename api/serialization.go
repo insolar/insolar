@@ -29,10 +29,10 @@ func cborMarshal(o interface{}) ([]byte, error) {
 	return data, errors.Wrap(err, "[ CBORMarshal ]")
 }
 
-func cborUnMarshal(data []byte, to interface{}) (interface{}, error) {
+func cborUnMarshal(data []byte, to interface{}) error {
 	ch := new(codec.CborHandle)
 	err := codec.NewDecoderBytes(data, ch).Decode(&to)
-	return to, errors.Wrap(err, "[ CBORUnMarshal ]")
+	return errors.Wrap(err, "[ CBORUnMarshal ]")
 }
 
 func MarshalArgs(args ...interface{}) (core.Arguments, error) {
@@ -50,12 +50,12 @@ func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 
 func UnMarshalResponse(resp []byte, typeHolders []interface{}) ([]interface{}, error) {
 	var marshRes []interface{}
-	for _, el := range typeHolders {
-		marshRes = append(marshRes, el)
+	marshRes = append(marshRes, typeHolders...)
+
+	err := cborUnMarshal(resp, marshRes)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ UnMarshalResponse ]")
 	}
-	var in interface{}
-	in = marshRes
-	cborUnMarshal(resp, in)
 
 	return marshRes, nil
 }

@@ -215,13 +215,13 @@ func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ extractDumpAllUsersResponse ]")
 	}
 
-	dumpJson, ok := dataUnmarsh[0].([]byte)
+	dumpJSON, ok := dataUnmarsh[0].([]byte)
 	if !ok {
 		msg := fmt.Sprintf("Can't cast response to []byte. orig: %s", reflect.TypeOf(dataUnmarsh[0]))
 		return nil, errors.New(msg)
 	}
 
-	return dumpJson, nil
+	return dumpJSON, nil
 }
 
 func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, error) {
@@ -242,13 +242,16 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	serJsonDump, err := extractDumpAllUsersResponse(routResult.Result)
+	serJSONDump, err := extractDumpAllUsersResponse(routResult.Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
 	var dumpInfo interface{}
-	json.Unmarshal(serJsonDump, &dumpInfo)
+	err = json.Unmarshal(serJSONDump, &dumpInfo)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
+	}
 	result["dump_info"] = dumpInfo
 
 	return result, nil

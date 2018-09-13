@@ -35,7 +35,7 @@ type Configuration struct {
 	Log         Log
 	Stats       Stats
 	LogicRunner LogicRunner
-	ApiRunner   ApiRunner
+	APIRunner   APIRunner
 	Pulsar      Pulsar
 }
 
@@ -55,7 +55,7 @@ func NewConfiguration() Configuration {
 		Log:         NewLog(),
 		Stats:       NewStats(),
 		LogicRunner: NewLogicRunner(),
-		ApiRunner:   NewApiRunner(),
+		APIRunner:   NewAPIRunner(),
 		Pulsar:      NewPulsar(),
 	}
 

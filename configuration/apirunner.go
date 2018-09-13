@@ -20,19 +20,19 @@ import (
 	"fmt"
 )
 
-type ApiRunner struct {
+type APIRunner struct {
 	Port     uint
 	Location string
 }
 
-func NewApiRunner() ApiRunner {
-	return ApiRunner{
+func NewAPIRunner() APIRunner {
+	return APIRunner{
 		Port:     8080,
 		Location: "/api/v1",
 	}
 }
 
-func (ar *ApiRunner) String() string {
+func (ar *APIRunner) String() string {
 	res := fmt.Sprintln("Port ->", ar.Port, ", Location ->", ar.Location)
 	return res
 }
