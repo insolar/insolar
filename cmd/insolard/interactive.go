@@ -73,7 +73,7 @@ func repl(service *servicenetwork.ServiceNetwork) {
 	}
 }
 
-func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Context) {
+func doFindHost(input []string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
 	if len(input) != 2 {
 		displayInteractiveHelp()
 		return
@@ -90,7 +90,7 @@ func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Con
 	}
 }
 
-func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Context) {
+func doInfo(service core.Network, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
 	hosts := dhtNetwork.NumHosts(ctx)
 	originID := dhtNetwork.GetOriginHost().IDs[0]
 	fmt.Println("======= Host info ======")
@@ -99,14 +99,14 @@ func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hosthandler.C
 	fmt.Println("Address: " + service.GetAddress())
 }
 
-func doSendRelay(command, relayAddr string, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Context) {
-	err := hostnetwork.RelayRequest(dhtNetwork, ctx, command, relayAddr)
+func doSendRelay(command, relayAddr string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
+	err := hostnetwork.RelayRequest(dhtNetwork, command, relayAddr)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-func doRPC(input []string, dhtNetwork *hostnetwork.DHT, ctx hosthandler.Context) {
+func doRPC(input []string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
 	if len(input) < 2 || len(input[0]) == 0 || len(input[1]) == 0 {
 		if len(input) > 0 && len(input[0]) > 0 {
 			displayInteractiveHelp()

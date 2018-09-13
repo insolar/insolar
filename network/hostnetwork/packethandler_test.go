@@ -67,6 +67,10 @@ func (hh *mockHostHandler) ObtainIP() error {
 	return nil
 }
 
+func (hh *mockHostHandler) NumHosts(ctx hosthandler.Context) int {
+	return 0
+}
+
 func (hh *mockHostHandler) AnalyzeNetwork(ctx hosthandler.Context) error {
 	return nil
 }
@@ -207,7 +211,7 @@ func (hh *mockHostHandler) GetPacketTimeout() time.Duration {
 }
 
 func (hh *mockHostHandler) GetReplicationTime() time.Duration {
-	return 1
+	return 2
 }
 
 func (hh *mockHostHandler) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time {

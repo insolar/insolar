@@ -37,8 +37,9 @@ type Context context.Context
 type HostHandler interface {
 	Disconnect()
 	Listen() error
-	Bootstrap() error
 	ObtainIP() error
+	Bootstrap() error
+	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
 	StoreRetrieve(key store.Key) ([]byte, bool)
