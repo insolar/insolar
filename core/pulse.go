@@ -18,8 +18,10 @@ package core
 
 type Entropy [64]byte
 
+type PulseNumber uint32
+
 // Base data struct for a pulse
 type Pulse struct {
-	PulseNumber uint64
+	PulseNumber PulseNumber
 	Entropy     Entropy
 }
