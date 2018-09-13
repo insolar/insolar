@@ -73,6 +73,12 @@ func (jc *mockJetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, p
 	}
 }
 
-func (mockJetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
-	panic("implement me")
+func (jc *mockJetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
+	nodes := jc.QueryRole(role, obj, pulse)
+	for _, n := range nodes {
+		if n == node {
+			return true
+		}
+	}
+	return false
 }
