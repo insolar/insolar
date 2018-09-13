@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/record"
 )
 
 type JetNode struct {
@@ -17,12 +18,9 @@ func (jn *JetNode) GetContaining(objRef *core.RecordRef) *core.RecordRef {
 		return &jn.ref
 	}
 
-	switch bytes.Compare(objRef[:], jn.ref[:]) {
-	case 0:
-		return &jn.ref
-	case -1:
+	// Ignore pulse number when selecting jet affinity. Object reference can be generated without knowing its pulse.
+	if bytes.Compare(objRef[record.PulseNumSize:], jn.ref[record.PulseNumSize:]) < 0 {
 		return jn.left.GetContaining(objRef)
-	default:
-		return jn.right.GetContaining(objRef)
 	}
+	return jn.right.GetContaining(objRef)
 }
