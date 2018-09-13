@@ -26,6 +26,7 @@ type BaseContract struct {
 	context *core.LogicCallContext // Context hidden from anyone
 }
 
+// ProxyInterface interface any proxy of a contract implements
 type ProxyInterface interface {
 	GetReference() core.RecordRef
 	GetClass() core.RecordRef
