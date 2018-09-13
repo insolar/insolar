@@ -16,8 +16,10 @@
 
 package core
 
+// TODO: add docs
 type Entropy [64]byte
 
+// TODO: add docs
 type PulseNumber uint32
 
 // Base data struct for a pulse
