@@ -1552,14 +1552,19 @@ func TestDHT_InitCascadeSendMessage(t *testing.T) {
 	}
 	done := make(chan bool)
 
-	d := cascade.SendData{
-		NodeIds:           []string{"A0", "A1", "A2", "A3", "A4", "A5"},
+	nodeIds := make([]core.RecordRef, 6)
+	for i := 0; i < 6; i++ {
+		nodeIds[i] = testutils.RandomRef()
+	}
+
+	d := core.Cascade{
+		NodeIds:           nodeIds,
 		Entropy:           core.Entropy{0},
 		ReplicationFactor: 2,
 	}
 
 	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultHost().Build()
-	dhts[0].InitCascadeSendMessage(d, "", ctx, "method", [][]byte{})
+	dhts[0].InitCascadeSendMessage(d, nil, ctx, "method", [][]byte{})
 
 	go func() {
 		<-transportsByIndex[3].recv
