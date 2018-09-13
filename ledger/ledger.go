@@ -37,7 +37,7 @@ func (l *Ledger) GetPulseManager() core.PulseManager {
 }
 
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
-	panic("implement me")
+	return l.coordinator
 }
 
 // GetArtifactManager returns artifact manager to work with.
