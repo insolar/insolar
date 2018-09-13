@@ -19,7 +19,6 @@ package logicrunner
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -27,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 
+	"fmt"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
