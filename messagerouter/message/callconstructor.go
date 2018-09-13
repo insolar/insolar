@@ -32,6 +32,7 @@ type CallConstructorMessage struct {
 	Arguments core.Arguments
 }
 
+// GetRole returns operating jet role for given message type.
 func (m *CallConstructorMessage) GetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
