@@ -18,7 +18,6 @@ package record
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -95,39 +94,25 @@ func (raw *Raw) ToRecord() Record {
 // Bytes2ID converts ID from byte representation to struct.
 func Bytes2ID(b []byte) ID {
 	return ID{
-		Pulse: PulseNum(binary.BigEndian.Uint32(b[:PulseNumSize])),
-		Hash:  b[PulseNumSize:],
+		Pulse: core.Bytes2PulseNumber(b[:core.PulseNumberSize]),
+		Hash:  b[core.PulseNumberSize:],
 	}
 }
 
 // Core2Reference converts commonly used reference to Ledger-specific.
 func Core2Reference(cRef core.RecordRef) Reference {
 	return Reference{
-		Record: Bytes2ID(cRef[:IDSize]),
-		Domain: Bytes2ID(cRef[IDSize:]),
-	}
-}
-
-// MustWrite writes binary representation of PulseNum to io.Writer.
-//
-// Prefix 'Must' means it panics on write error.
-func (pn PulseNum) MustWrite(w io.Writer) {
-	err := binary.Write(w, binary.BigEndian, pn)
-	if err != nil {
-		panic("binary.Write failed to write PulseNum:" + err.Error())
+		Record: Bytes2ID(cRef[:core.RecordIDSize]),
+		Domain: Bytes2ID(cRef[core.RecordIDSize:]),
 	}
 }
 
 // ID2Bytes converts ID struct to it's byte representation.
 func ID2Bytes(id ID) []byte {
-	var b = make([]byte, IDSize)
-	buf := bytes.NewBuffer(b[:0])
-	id.Pulse.MustWrite(buf)
-	err := binary.Write(buf, binary.BigEndian, id.Hash)
-	if err != nil {
-		panic("binary.Write failed to write Hash:" + err.Error())
-	}
-	return b
+	var buf = make([]byte, core.RecordIDSize)
+	copy(buf[:core.PulseNumberSize], id.Pulse.Bytes())
+	copy(buf[core.PulseNumberSize:], id.Hash)
+	return buf
 }
 
 // record type ids for record types
@@ -327,16 +312,4 @@ func EncodeToRaw(rec Record) (*Raw, error) {
 		Type: getTypeIDbyRecord(rec),
 		Data: b,
 	}, nil
-}
-
-// EncodePulseNum serializes pulse number.
-func EncodePulseNum(pulse PulseNum) []byte {
-	buff := make([]byte, 4)
-	binary.LittleEndian.PutUint32(buff, uint32(pulse))
-	return buff
-}
-
-// DecodePulseNum deserializes pulse number.
-func DecodePulseNum(buff []byte) PulseNum {
-	return PulseNum(binary.LittleEndian.Uint32(buff))
 }
