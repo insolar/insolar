@@ -42,7 +42,7 @@ func (m *CallMethodMessage) GetReference() core.RecordRef {
 	return m.ObjectRef
 }
 
-// GetReference implements core.Message
+// Serialize serializes message.
 func (m *CallMethodMessage) Serialize() (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	buff.Write([]byte{byte(CallMethodMessageType)})
