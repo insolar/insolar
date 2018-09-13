@@ -23,4 +23,7 @@ type Ledger interface {
 
 	// GetJetCoordinator returns jet coordinator to work with.
 	GetJetCoordinator() JetCoordinator
+
+	// GetPulseManager returns pulse manager to work with.
+	GetPulseManager() PulseManager
 }
