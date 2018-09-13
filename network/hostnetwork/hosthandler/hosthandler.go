@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
@@ -34,14 +35,21 @@ type Context context.Context
 
 // HostHandler is an interface which uses for host network implementation.
 type HostHandler interface {
+	Disconnect()
+	Listen() error
+	Bootstrap() error
+	ObtainIP() error
+	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
 	StoreRetrieve(key store.Key) ([]byte, bool)
 	HtFromCtx(ctx Context) *routing.HashTable
 	EqualAuthSentKey(targetID string, key []byte) bool
 	SendRequest(packet *packet.Packet) (transport.Future, error)
 	FindHost(ctx Context, targetID string) (*host.Host, bool, error)
+	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 	InvokeRPC(sender *host.Host, method string, args [][]byte) ([]byte, error)
 	Store(key store.Key, data []byte, replication time.Time, expiration time.Time, publisher bool) error
+	RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error)
 
 	AddPossibleProxyID(id string)
 	AddPossibleRelayID(id string)
