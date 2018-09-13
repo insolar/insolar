@@ -17,11 +17,8 @@
 package servicenetwork
 
 import (
-	"bytes"
-	"encoding/gob"
-	"log"
-
 	"io/ioutil"
+	"log"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -78,18 +75,6 @@ func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]b
 		return nil, err
 	}
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
-	return res, err
-}
-
-// Serialize converts Message or Response to byte slice.
-func Serialize(value interface{}) ([]byte, error) {
-	var buffer bytes.Buffer
-	enc := gob.NewEncoder(&buffer)
-	err := enc.Encode(value)
-	if err != nil {
-		return nil, err
-	}
-	res := buffer.Bytes()
 	return res, err
 }
 

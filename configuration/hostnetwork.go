@@ -40,6 +40,6 @@ func NewHostNetwork() HostNetwork {
 	return HostNetwork{
 		Transport:      transport,
 		IsRelay:        false,
-		BootstrapHosts: make([]string, 0),
+		BootstrapHosts: make([]string, 1),
 	}
 }
