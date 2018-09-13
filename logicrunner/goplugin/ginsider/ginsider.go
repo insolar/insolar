@@ -351,6 +351,27 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byt
 	return res.Reference, nil
 }
 
+// GetDelegate ...
+func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error) {
+	client, err := gi.Upstream()
+	if err != nil {
+		return core.String2Ref(""), err
+	}
+
+	req := rpctypes.UpGetDelegateReq{
+		Object: object,
+		OfType: ofType,
+	}
+
+	res := rpctypes.UpGetDelegateResp{}
+	err = client.Call("RPC.GetDelegate", req, &res)
+	if err != nil {
+		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
+	}
+
+	return res.Object, nil
+}
+
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
