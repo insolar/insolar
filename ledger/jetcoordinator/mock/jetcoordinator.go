@@ -21,6 +21,12 @@ import (
 )
 
 type mockJetCoordinator struct {
+	virtualExecutor core.RecordRef
+	lightExecutor   core.RecordRef
+	heavyExecutor   core.RecordRef
+
+	virtualValidators []core.RecordRef
+	lightValidators   []core.RecordRef
 }
 
 func (mockJetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
