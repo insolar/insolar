@@ -36,14 +36,14 @@ type MessageRouter struct {
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
-// that satisfies `logicRunner` interface
+// that satisfies LogicRunner interface
 func New(cfg configuration.Configuration) (*MessageRouter, error) {
 	mr := &MessageRouter{logicRunner: nil, service: nil}
 	return mr, nil
 }
 
 func (mr *MessageRouter) Start(c core.Components) error {
-	mr.logicRunner = c["core.logicRunner"].(core.LogicRunner)
+	mr.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
 	mr.service = c["core.Network"].(core.Network)
 	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
 	return nil
@@ -61,7 +61,7 @@ func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err er
 	return DeserializeResponse(res)
 }
 
-// Deliver method calls logicRunner.Execute on local host
+// Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
 func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {

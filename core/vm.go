@@ -39,7 +39,7 @@ type MachineLogicExecutor interface {
 	Stop() error
 }
 
-// logicRunner is an interface that should satisfy logic executor
+// LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	Execute(msg Message) (res *Response)
 }

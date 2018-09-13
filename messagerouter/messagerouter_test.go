@@ -62,7 +62,7 @@ func TestNew(t *testing.T) {
 	assert.NoError(t, err)
 	mr, err := New(configuration.Configuration{})
 	mr.Start(core.Components{
-		"core.logicRunner": r,
+		"core.LogicRunner": r,
 		"core.Network":     network,
 	})
 	if err != nil {
