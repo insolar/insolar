@@ -39,6 +39,10 @@ func TestAuthenticationRequest(t *testing.T) {
 	hh.FoundHost = receiver
 	err = AuthenticationRequest(hh, "begin", receiver.ID.KeyString())
 	assert.NoError(t, err)
+	err = AuthenticationRequest(hh, "revoke", receiver.ID.KeyString())
+	assert.NoError(t, err)
+	err = AuthenticationRequest(hh, "unknown", receiver.ID.KeyString())
+	assert.Error(t, err, "AuthenticationRequest: unknown command")
 }
 
 func TestCheckOriginRequest(t *testing.T) {
@@ -71,8 +75,7 @@ func TestObtainIPRequest(t *testing.T) {
 	assert.Error(t, err, "ObtainIPRequest: target for relay request not found")
 
 	hh.FoundHost = receiver
-	err = ObtainIPRequest(hh, receiver.ID.KeyString())
-	assert.NoError(t, err)
+	ObtainIPRequest(hh, receiver.ID.KeyString())
 }
 
 func TestRelayRequest(t *testing.T) {
@@ -91,6 +94,7 @@ func TestRelayRequest(t *testing.T) {
 	err = RelayRequest(hh, "begin auth", receiver.ID.KeyString())
 	assert.Error(t, err, "unknown command")
 	err = RelayRequest(hh, "start", receiver.ID.KeyString())
+	err = RelayRequest(hh, "stop", receiver.ID.KeyString())
 }
 
 func TestRelayOwnershipRequest(t *testing.T) {
