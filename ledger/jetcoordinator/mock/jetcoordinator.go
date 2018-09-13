@@ -56,10 +56,23 @@ func NewMockJetCoordinator(conf configuration.JetCoordinator) (core.JetCoordinat
 	}, nil
 }
 
-func (mockJetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
-	panic("implement me")
+func (jc *mockJetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber) []core.RecordRef {
+	switch role {
+	case core.RoleVirtualExecutor:
+		return []core.RecordRef{jc.virtualExecutor}
+	case core.RoleLightExecutor:
+		return []core.RecordRef{jc.lightExecutor}
+	case core.RoleHeavyExecutor:
+		return []core.RecordRef{jc.heavyExecutor}
+	case core.RoleVirtualValidator:
+		return jc.virtualValidators
+	case core.RoleLightValidator:
+		return jc.lightValidators
+	default:
+		panic("Unknown role")
+	}
 }
 
-func (mockJetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber) []core.RecordRef {
+func (mockJetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
 	panic("implement me")
 }
