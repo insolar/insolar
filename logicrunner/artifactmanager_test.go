@@ -52,7 +52,7 @@ func TestGoPlugin(t *testing.T) {
 	lr, err := logicrunner.NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err, "Initialize runner")
 
-	lr.ArtifactManager = l.GetManager()
+	lr.ArtifactManager = l.GetArtifactManager()
 	mr := testutil.NewTestMessageRouter(lr)
 	assert.NoError(t, lr.Start(core.Components{
 		"core.Ledger":        l,
@@ -72,7 +72,7 @@ func TestGoPlugin(t *testing.T) {
 			RunnerCodePath: insiderStorage,
 		}
 
-		gp, err := goplugin.NewGoPlugin(gopluginconfig, mr, l.GetManager())
+		gp, err := goplugin.NewGoPlugin(gopluginconfig, mr, l.GetArtifactManager())
 		assert.NoError(t, err)
 		// defer gp.Stop()
 		err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
@@ -133,7 +133,8 @@ func (b *Hello) String() string {
 	return fmt.Sprint("Hello, Go is there!")
 }
 	`
-	cb := testutil.NewContractBuilder(l.GetManager(), tctx.preprocessor)
+	cb, cleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
+	defer cleaner()
 	err := cb.Build(map[string]string{"hello": helloCode})
 	assert.NoError(t, err)
 
@@ -153,7 +154,7 @@ func templateContract(t *testing.T, l core.Ledger, name string, codetemplate str
 	tpl := template.Must(template.New(name).Parse(codetemplate))
 	var tplbuf bytes.Buffer
 	err := tpl.Execute(&tplbuf, struct{ RootRefStr string }{
-		RootRefStr: l.GetManager().RootRef().String(),
+		RootRefStr: l.GetArtifactManager().RootRef().String(),
 	})
 	assert.NoError(t, err, "contract one template should compile")
 	// log.Println("contract", name, ":", tplbuf.String())
@@ -210,7 +211,8 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	cb := testutil.NewContractBuilder(l.GetManager(), tctx.preprocessor)
+	cb, cleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
+	defer cleaner()
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
@@ -280,7 +282,8 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	cb := testutil.NewContractBuilder(l.GetManager(), tctx.preprocessor)
+	cb, cleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
+	defer cleaner()
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
