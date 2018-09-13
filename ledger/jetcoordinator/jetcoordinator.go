@@ -37,8 +37,10 @@ type mockHolder struct {
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db   *storage.DB
-	mock *mockHolder
+	db          *storage.DB
+	rootJetNode *JetNode
+
+	mock *mockHolder // TODO: remove after actual implementation is ready
 }
 
 // NewJetCoordinator creates new coordinator instance.
@@ -48,9 +50,22 @@ func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) (*JetC
 		return nil, err
 	}
 
+	rootJetNode := &JetNode{
+		ref: core.RecordRef{},
+		left: &JetNode{
+			left:  &JetNode{ref: core.RecordRef{}},
+			right: &JetNode{ref: core.RecordRef{}},
+		},
+		right: &JetNode{
+			left:  &JetNode{ref: core.RecordRef{}},
+			right: &JetNode{ref: core.RecordRef{}},
+		},
+	}
+
 	return &JetCoordinator{
-		db:   db,
-		mock: mock,
+		db:          db,
+		mock:        mock,
+		rootJetNode: rootJetNode,
 	}, nil
 }
 
@@ -182,4 +197,8 @@ func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][
 		selected = append(selected, candidates[i])
 	}
 	return selected, nil
+}
+
+func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
+	return jc.rootJetNode.GetContaining(&objRef)
 }
