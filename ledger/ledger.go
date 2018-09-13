@@ -32,6 +32,10 @@ type Ledger struct {
 	coordinator *jetcoordinator.JetCoordinator
 }
 
+func (l *Ledger) GetPulseManager() core.PulseManager {
+	panic("implement me")
+}
+
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
 	panic("implement me")
 }
