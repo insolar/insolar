@@ -46,7 +46,7 @@ func (rd *RootDomain) GetBalance(reference string) uint {
 
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	memberFrom := foundation.GetImplementationFor(wallet.ClassReference, core.String2Ref(from))
-	walletfrom, ok := memberFrom.(*wallet.Wallet)
+	walletFrom, ok := memberFrom.(*wallet.Wallet)
 	if !ok {
 		return false
 	}
@@ -56,7 +56,7 @@ func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 		return false
 	}
 
-	walletfrom.Transfer(amount, walletTo.GetReference())
+	walletFrom.Transfer(amount, walletTo.GetReference())
 
 	return true
 }
