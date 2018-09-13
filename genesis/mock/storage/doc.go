@@ -25,6 +25,6 @@ Usage:
 	key := s.Set(obj)
 
 	s.Get(key)
-	s.GetKey()
+	s.Bytes()
 */
 package storage

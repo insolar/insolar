@@ -14,21 +14,17 @@
  *    limitations under the License.
  */
 
-package configuration
+package testutils
 
-// Node holds configuration for one Node
-type Node struct {
-	ID string
-}
+import (
+	"crypto/rand"
 
-// NodeNetwork holds configuration for NodeNetwork
-type NodeNetwork struct {
-	Node *Node
-}
+	"github.com/insolar/insolar/core"
+)
 
-// NewNodeNetwork creates new default NodeNetwork configuration
-func NewNodeNetwork() NodeNetwork {
-	return NodeNetwork{
-		Node: &Node{ID: "referenceID"},
-	}
+// RandomRef generates random RecordRef
+func RandomRef() core.RecordRef {
+	ref := [64]byte{}
+	rand.Read(ref[:]) // nolint
+	return ref
 }

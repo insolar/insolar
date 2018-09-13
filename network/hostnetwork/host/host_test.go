@@ -38,7 +38,7 @@ func TestHost_String(t *testing.T) {
 	nd := NewHost(addr)
 	id1, _ := id.NewID()
 	nd.ID = id1
-	string := nd.ID.KeyString() + " (" + nd.Address.String() + ")"
+	string := nd.ID.String() + " (" + nd.Address.String() + ")"
 
 	assert.Equal(t, string, nd.String())
 }
