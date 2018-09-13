@@ -16,9 +16,7 @@
 
 package packet
 
-import (
-	"github.com/insolar/insolar/network/cascade"
-)
+import "github.com/insolar/insolar/core"
 
 // CommandType - type for commands.
 type CommandType int
@@ -66,7 +64,7 @@ type RequestDataRPC struct {
 // RequestCascadeSend is data for cascade sending feature
 type RequestCascadeSend struct {
 	RPC  RequestDataRPC
-	Data cascade.SendData
+	Data core.Cascade
 }
 
 // RequestRelay is data for relay request (commands: start/stop relay).

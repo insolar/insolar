@@ -17,62 +17,35 @@
 package nodenetwork
 
 import (
-	"errors"
+	"crypto/sha1"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"golang.org/x/crypto/sha3"
 )
 
-// Nodenetwork is nodes manager.
-type Nodenetwork struct {
-	nodes map[string]*Node // key - reference ID, value - node ID.
+// NodeNetwork is node manager.
+type NodeNetwork struct {
+	node *Node
 }
 
-// NewNodeNetwork creates a new nodenetwork.
-func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *Nodenetwork {
-	nodes := make(map[string]*Node)
-	for _, cfg := range nodeCfg.Nodes {
-		node := NewNode(cfg.NodeID, cfg.HostID, core.String2Ref(cfg.ReferenceID))
-		nodes[cfg.ReferenceID] = node
-	}
-	network := &Nodenetwork{
-		nodes: nodes,
+// NewNodeNetwork creates a new node network.
+func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *NodeNetwork {
+	node := NewNode(core.String2Ref(nodeCfg.Node.ID))
+	network := &NodeNetwork{
+		node: node,
 	}
 	return network
 }
 
-// AddNode adds a new node to nodes map.
-func (network *Nodenetwork) AddNode(nodeID, hostID, domainID string) error {
-	node, err := network.createNode(nodeID, hostID, domainID)
-	if err != nil {
-		return err
-	}
-	return network.addNode(node)
+// ResolveHostID returns a host found by reference.
+func (network *NodeNetwork) ResolveHostID(ref core.RecordRef) string {
+	sha3digest := sha3.Sum512(ref[:])
+	sha1digest := sha1.Sum(sha3digest[:])
+	return string(sha1digest[:])
 }
 
-// GetReferenceHostID returns a host found by reference.
-// TODO: calculate host id from reference id (no maps)
-func (network *Nodenetwork) GetReferenceHostID(ref string) (string, error) {
-	if _, ok := network.nodes[ref]; !ok {
-		return "", errors.New("reference ID doesn't exist")
-	}
-	return network.nodes[ref].hostID, nil
-}
-
-func (network *Nodenetwork) createNode(nodeID, hostID, domainID string) (*Node, error) {
-	node := NewNode(nodeID, hostID, core.String2Ref(domainID))
-	return node, nil
-}
-
-func (network *Nodenetwork) addNode(node *Node) error {
-	if node == nil {
-		return errors.New("node is nil")
-	}
-	network.nodes[node.GetReference().String()] = node
-	return nil
-}
-
-// TODO: get reference ID from configuration
-func (network *Nodenetwork) GetCurrentReferenceID() string {
-	return ""
+// GetID returns current node id
+func (network *NodeNetwork) GetID() core.RecordRef {
+	return network.node.GetID()
 }

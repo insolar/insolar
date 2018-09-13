@@ -32,12 +32,17 @@ type CallConstructorMessage struct {
 	Arguments core.Arguments
 }
 
-// GetReference implements core.Message
+// GetOperatingRole returns operating jet role for given message type.
+func (m *CallConstructorMessage) GetOperatingRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
+// Get reference returns referenced object.
 func (m *CallConstructorMessage) GetReference() core.RecordRef {
 	return m.ClassRef
 }
 
-// Serialize serializes message
+// Serialize serializes message.
 func (m *CallConstructorMessage) Serialize() (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	buff.Write([]byte{byte(CallConstructorMessageType)})
