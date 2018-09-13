@@ -80,11 +80,30 @@ func createMock(conf configuration.JetCoordinator) (*mockHolder, error) {
 }
 
 func (jc *JetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
-	panic("implement me")
+	nodes := jc.QueryRole(role, obj, pulse)
+	for _, n := range nodes {
+		if n == node {
+			return true
+		}
+	}
+	return false
 }
 
 func (jc *JetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber) []core.RecordRef {
-	panic("implement me")
+	switch role {
+	case core.RoleVirtualExecutor:
+		return []core.RecordRef{jc.mock.virtualExecutor}
+	case core.RoleLightExecutor:
+		return []core.RecordRef{jc.mock.lightExecutor}
+	case core.RoleHeavyExecutor:
+		return []core.RecordRef{jc.mock.heavyExecutor}
+	case core.RoleVirtualValidator:
+		return jc.mock.virtualValidators
+	case core.RoleLightValidator:
+		return jc.mock.lightValidators
+	default:
+		panic("Unknown role")
+	}
 }
 
 // Pulse creates new jet drop and ends current slot.
