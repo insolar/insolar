@@ -19,6 +19,7 @@ package jetcoordinator
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
@@ -27,6 +28,14 @@ import (
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
 	db *storage.DB
+}
+
+func (jc *JetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
+	panic("implement me")
+}
+
+func (jc *JetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber) []core.RecordRef {
+	panic("implement me")
 }
 
 // Pulse creates new jet drop and ends current slot.
