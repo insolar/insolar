@@ -45,3 +45,11 @@ type JetCoordinator interface {
 	// TODO: add docs
 	QueryRole(role JetRole, obj RecordRef, pulse PulseNumber) []RecordRef
 }
+
+type PulseManager interface {
+	// TODO: docs
+	Current() (PulseNumber, error)
+
+	// TODO: docs
+	Set(pulse Pulse) error
+}
