@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package main
+package api
 
 import (
 	"context"
@@ -209,7 +209,7 @@ func (ar *ApiRunner) Stop() error {
 
 func main() {
 	cfg := configuration.NewApiRunner()
-	api, err := NewApiRunner(cfg)
+	api, err := NewApiRunner(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package main
+package api
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ import (
 
 func TestLaunchApi(t *testing.T) {
 	cfg := configuration.NewApiRunner()
-	api, err := NewApiRunner(cfg)
+	api, err := NewApiRunner(&cfg)
 	assert.NoError(t, err)
 
 	cs := core.Components{}
@@ -150,7 +150,7 @@ func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
 func TestWithFakeMessageRouter(t *testing.T) {
 	cfg := configuration.NewApiRunner()
 	cfg.Location = "/test/test"
-	api, err := NewApiRunner(cfg)
+	api, err := NewApiRunner(&cfg)
 	assert.NoError(t, err)
 
 	mr := TestsMessageRouter{}

@@ -25,8 +25,8 @@ type ApiRunner struct {
 	Location string
 }
 
-func NewApiRunner() *ApiRunner {
-	return &ApiRunner{
+func NewApiRunner() ApiRunner {
+	return ApiRunner{
 		Port:     8080,
 		Location: "/api/v1",
 	}
