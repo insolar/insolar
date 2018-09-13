@@ -29,7 +29,6 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -57,7 +56,7 @@ type RPC struct {
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
-	p, err := t.GI.Plugin(args.Reference)
+	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
 		return err
 	}
@@ -78,11 +77,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	if !setContext.IsValid() {
 		return errors.New("this is not a contract, it not supports SetContext method")
 	}
-	cc := foundation.CallContext{
-		Me: core.String2Ref("contract address"),
-		// fill me
-	}
-	setContext.Call([]reflect.Value{reflect.ValueOf(&cc)})
+	setContext.Call([]reflect.Value{reflect.ValueOf(args.Context)})
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
@@ -109,7 +104,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 
 	log.Debugf(
 		"Calling method %q in contract %q with %d arguments",
-		args.Method, args.Reference, inLen,
+		args.Method, args.Code, inLen,
 	)
 	resValues := method.Call(in)
 
@@ -137,7 +132,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) error {
-	p, err := t.GI.Plugin(args.Reference)
+	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
 		return err
 	}
@@ -177,7 +172,7 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 
 	log.Debugf(
 		"Calling constructor %q in contract %q with %d arguments",
-		args.Name, args.Reference, inLen,
+		args.Name, args.Code, inLen,
 	)
 	resValues := method.Call(in)
 
@@ -231,7 +226,7 @@ func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 
 	log.Debugf("obtaining code %q", ref)
 	res := rpctypes.UpGetCodeResp{}
-	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Reference: ref}, &res)
+	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Code: ref}, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}
@@ -275,7 +270,7 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, method string, args []byte) (
 	}
 
 	req := rpctypes.UpRouteReq{
-		Reference: ref,
+		Object:    ref,
 		Method:    method,
 		Arguments: args,
 	}

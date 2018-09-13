@@ -24,7 +24,8 @@ import "github.com/insolar/insolar/core"
 
 // DownCallMethodReq is a set of arguments for CallMethod RPC in the runner
 type DownCallMethodReq struct { // todo it may use foundation.Context
-	Reference core.RecordRef
+	Context   *core.LogicCallContext
+	Code      core.RecordRef
 	Data      []byte
 	Method    string
 	Arguments core.Arguments
@@ -40,7 +41,7 @@ type DownCallMethodResp struct {
 // DownCallConstructorReq is a set of arguments for CallConstructor RPC
 // in the runner
 type DownCallConstructorReq struct {
-	Reference core.RecordRef
+	Code      core.RecordRef
 	Name      string
 	Arguments core.Arguments
 }
@@ -53,7 +54,7 @@ type DownCallConstructorResp struct {
 
 // UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
 type UpGetCodeReq struct {
-	Reference core.RecordRef
+	Code core.RecordRef
 }
 
 // UpGetCodeResp is response from GetCode RPC in goplugin
@@ -63,7 +64,7 @@ type UpGetCodeResp struct {
 
 // UpRouteReq is a set of arguments for Route RPC in goplugin
 type UpRouteReq struct {
-	Reference core.RecordRef
+	Object    core.RecordRef
 	Method    string
 	Arguments core.Arguments
 }

@@ -18,6 +18,8 @@
 package logicrunner
 
 import (
+	"time"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -129,12 +131,23 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 		},
 	)
 
+	ctx := core.LogicCallContext{
+		Time: time.Now(), // TODO: probably we should take it from msg
+	}
+
 	switch m := msg.(type) {
 	case *message.CallMethodMessage:
 		objDesc, err := lr.ArtifactManager.GetLatestObj(m.ObjectRef)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get object")}
 		}
+		ctx.Callee = &m.ObjectRef
+
+		classDesc, err := objDesc.ClassDescriptor()
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't get object's class")}
+		}
+		ctx.Class = classDesc.HeadRef()
 
 		data, err := objDesc.Memory()
 		if err != nil {
@@ -151,7 +164,9 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get executor")}
 		}
 
-		newData, result, err := executor.CallMethod(*codeDesc.Ref(), data, m.Method, m.Arguments)
+		newData, result, err := executor.CallMethod(
+			&ctx, *codeDesc.Ref(), data, m.Method, m.Arguments,
+		)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}
@@ -170,6 +185,7 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get class")}
 		}
+		ctx.Class = classDesc.HeadRef()
 
 		codeDesc, err := classDesc.CodeDescriptor()
 		if err != nil {
@@ -181,7 +197,7 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 			return &core.Response{Error: errors.Wrap(err, "couldn't get executor")}
 		}
 
-		newData, err := executor.CallConstructor(*codeDesc.Ref(), m.Name, m.Arguments)
+		newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}

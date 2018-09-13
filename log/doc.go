@@ -14,15 +14,27 @@
  *    limitations under the License.
  */
 
-package configuration
+/*
+Package log contains adapter for third-party loggers
 
-// Log holds configuration for logging
-type Log struct {
-	Level   string
-	Adapter string
-}
+Example:
 
-// NewLog creates new default configuration for logging
-func NewLog() Log {
-	return Log{Level: "Info", Adapter: "logrus"}
-}
+package main
+
+	import (
+		"github.com/insolar/insolar/configuration"
+		"github.com/insolar/insolar/log"
+	)
+
+	func main() {
+		// global logger
+		log.SetLevel("Debug")
+		log.Debugln("debug log message")
+
+		// local logger
+		logger, _ := log.NewLog(configuration.Log{Level: "Warning", Adapter: "logrus"})
+		logger.Warnln("warning log message")
+	}
+
+*/
+package log
