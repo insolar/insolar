@@ -42,7 +42,7 @@ type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
 	IsAuthorized(role JetRole, obj RecordRef, pulse PulseNumber, node RecordRef) bool
 
-	// TODO: add docs
+	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
 	QueryRole(role JetRole, obj RecordRef, pulse PulseNumber) []RecordRef
 }
 
