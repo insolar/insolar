@@ -100,6 +100,17 @@ type UpSaveAsChildResp struct {
 	Reference core.RecordRef
 }
 
+// UpSaveAsChildResp is a set of arguments for GetObjChildren RPC in goplugin
+type UpGetObjChildrenReq struct {
+	Obj   core.RecordRef
+	Class core.RecordRef
+}
+
+// UpSaveAsChildResp is a set of arguments for GetObjChildren RPC in goplugin
+type UpGetObjChildrenResp struct {
+	Children []core.RecordRef
+}
+
 // UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateReq struct {
 	Into  core.RecordRef
