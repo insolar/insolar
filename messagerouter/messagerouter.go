@@ -33,6 +33,7 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 type MessageRouter struct {
 	logicRunner core.LogicRunner
 	service     core.Network
+	ledger      core.Ledger
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
@@ -46,6 +47,8 @@ func (mr *MessageRouter) Start(c core.Components) error {
 	mr.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
 	mr.service = c["core.Network"].(core.Network)
 	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+
+	mr.ledger = c["core.Ledger"].(core.Ledger)
 	return nil
 }
 

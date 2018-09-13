@@ -51,8 +51,9 @@ func geometricProgressionSum(a int, r int, n int) int {
 	return a * (1 - S) / (1 - r)
 }
 
-func calcHash(nodeID string, entropy core.Entropy) []byte {
-	data := []byte(nodeID)
+func calcHash(nodeID core.RecordRef, entropy core.Entropy) []byte {
+	data := make([]byte, core.RecordRefSize)
+	copy(data, nodeID[:])
 	for i, d := range data {
 		data[i] = entropy[i%64] ^ d
 	}

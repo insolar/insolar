@@ -33,7 +33,7 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	nodeNetwork *nodenetwork.Nodenetwork
+	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork *hostnetwork.DHT
 }
 
@@ -75,14 +75,11 @@ func (network *ServiceNetwork) GetAddress() string {
 }
 
 // SendMessage sends a message from MessageRouter.
-func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]byte, error) {
+func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID, err := network.nodeNetwork.GetReferenceHostID(msg.GetReference().String())
-	if err != nil {
-		return nil, err
-	}
+	hostID := network.nodeNetwork.ResolveHostID(nodeID)
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return nil, err

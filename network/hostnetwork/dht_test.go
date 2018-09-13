@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -1445,15 +1445,15 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 }
 
 type mockHostIdResolver struct {
-	refToHost  map[string]string
-	currentRef string
+	refToHost  map[core.RecordRef]string
+	currentRef core.RecordRef
 }
 
-func (m *mockHostIdResolver) GetReferenceHostID(ref string) (string, error) {
-	return m.refToHost[ref], nil
+func (m *mockHostIdResolver) ResolveHostID(ref core.RecordRef) string {
+	return m.refToHost[ref]
 }
 
-func (m *mockHostIdResolver) GetCurrentReferenceID() string {
+func (m *mockHostIdResolver) GetID() core.RecordRef {
 	return m.currentRef
 }
 
@@ -1522,7 +1522,7 @@ func TestDHT_InitCascadeSendMessage(t *testing.T) {
 	dhts_size := 6
 	transportsByIndex := make([]*mockCascadeTransport, dhts_size)
 	dhts := make([]*DHT, dhts_size)
-	refToHost := make(map[string]string)
+	refToHost := make(map[core.RecordRef]string)
 
 	port := 20000
 	for i := 0; i < dhts_size; i++ {
@@ -1541,7 +1541,7 @@ func TestDHT_InitCascadeSendMessage(t *testing.T) {
 		transportsByIndex[i] = t
 		r := rpc.NewRPC()
 
-		ref := "A" + strconv.Itoa(i)
+		ref := testutils.RandomRef()
 		refToHost[ref] = id.String()
 		idResolver := &mockHostIdResolver{
 			refToHost:  refToHost,

@@ -16,9 +16,7 @@
 
 package packet
 
-import (
-	"github.com/insolar/insolar/network/cascade"
-)
+import "github.com/insolar/insolar/core"
 
 // CommandType - type for commands.
 type CommandType int

@@ -51,17 +51,11 @@ type RPC interface {
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 }
 
-// HostIdResolver interface provides means of getting host IDs for other hosts and reference ID for current host
-type HostIDResolver interface {
-	GetReferenceHostID(ref string) (string, error)
-	GetCurrentReferenceID() string
-}
-
 // DHT represents the state of the local host in the distributed hash table.
 type DHT struct {
-	idResolver HostIDResolver
-	tables     []*routing.HashTable
-	options    *Options
+	nodeNetwork NodeNetwork
+	tables      []*routing.HashTable
+	options     *Options
 
 	origin *host.Origin
 
@@ -132,7 +126,7 @@ type Options struct {
 }
 
 // NewDHT initializes a new DHT host.
-func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy, h HostIDResolver) (dht *DHT, err error) {
+func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy, nn NodeNetwork) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
 		return nil, err
@@ -141,15 +135,15 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		idResolver: h,
-		options:    options,
-		origin:     origin,
-		rpc:        rpc,
-		transport:  transport,
-		tables:     tables,
-		store:      store,
-		relay:      rel,
-		proxy:      proxy,
+		nodeNetwork: nn,
+		options:     options,
+		origin:      origin,
+		rpc:         rpc,
+		transport:   transport,
+		tables:      tables,
+		store:       store,
+		relay:       rel,
+		proxy:       proxy,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -949,7 +943,8 @@ func (dht *DHT) processCascadeSend(ctx Context, msg *packet.Packet, packetBuilde
 	if err != nil {
 		log.Println("Failed to send response:", err.Error())
 	}
-	err = dht.InitCascadeSendMessage(data.Data, dht.idResolver.GetCurrentReferenceID(), ctx, data.RPC.Method, data.RPC.Args)
+	currentNodeID := dht.nodeNetwork.GetID()
+	err = dht.InitCascadeSendMessage(data.Data, &currentNodeID, ctx, data.RPC.Method, data.RPC.Args)
 	if err != nil {
 		log.Println("Failed to send message to next cascade layers:", err.Error())
 	}
@@ -1564,15 +1559,9 @@ func (dht *DHT) InitCascadeSendMessage(data cascade.SendData, currentNode string
 	if len(nextNodes) == 0 {
 		return nil
 	}
-	var failedNodes []string
+	var failedNodes []core.RecordRef
 	for _, nextNode := range nextNodes {
-		hostID, err := dht.idResolver.GetReferenceHostID(nextNode)
-		if err != nil {
-			logrus.Debugln("failed to resolve nodeID -> hostID: ", err)
-			failedNodes = append(failedNodes, nextNode)
-			continue
-		}
-
+		hostID := dht.nodeNetwork.ResolveHostID(nextNode)
 		err = dht.cascadeSendMessage(data, ctx, hostID, method, args)
 		if err != nil {
 			logrus.Debugln("failed to send cascade message: ", err)
