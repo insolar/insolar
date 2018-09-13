@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package mock
+package jetcoordinator
 
 import (
 	"github.com/insolar/insolar/configuration"
