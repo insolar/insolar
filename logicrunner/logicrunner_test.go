@@ -506,7 +506,7 @@ func (c *Contract) NewChilds(cnt int) int {
 		farsh := child.New(i)
         farsh.AsChild(c.GetReference())
 		summ += i
-	} 
+	}
 	return summ
 }
 
@@ -543,7 +543,7 @@ func New(n int) *Child {
 		GoPlugin: &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		}})
 	assert.NoError(t, err, "Initialize runner")
