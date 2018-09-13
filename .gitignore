@@ -43,3 +43,5 @@ cmd/insgocc/insgocc
 
 
 cmd/icc/icc
+testdata
+data
