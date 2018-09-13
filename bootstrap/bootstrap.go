@@ -17,8 +17,12 @@
 package bootstrap
 
 import (
+	"io/ioutil"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/ugorji/go/codec"
 )
 
 type Bootstrapper struct {
@@ -34,8 +38,29 @@ func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	return bootstrapper, nil
 }
 
+var pathWithContracts = "genesis/experiment/"
+
+func contractPath(name string) string {
+	return pathWithContracts + name + "/" + name + ".insgoc"
+}
+
 func (b *Bootstrapper) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetManager()
+	iccDir := "cmd/insgocc"
+	cb := testutil.NewContractBuilder(am, iccDir+"/insgocc")
+	var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
+	contracts := make(map[string]string)
+	for _, name := range contractNames {
+		code, err := ioutil.ReadFile(contractPath(name))
+		if err != nil {
+			return err
+		}
+		contracts[name] = string(code)
+	}
+	err := cb.Build(contracts)
+	if err != nil {
+		return err
+	}
 	// Create code for member
 	// Set code for member on ledger
 	// Create code for allowance
@@ -51,7 +76,24 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	// Ref to rootDomain instance return to user
 
 	// This is just for showing idea, will be remove
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	if err != nil {
+		return err
+	}
 	b.rootDomainRef = am.RootRef()
+	contract, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["rootdomain"],
+		*am.RootRef(),
+		data,
+	)
+	if contract == nil {
+		return err
+	}
+
 	return nil
 }
 
