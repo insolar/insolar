@@ -18,12 +18,33 @@ package nodenetwork
 
 import (
 	"testing"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNodeNetwork(t *testing.T) {
-	// cfg := configuration.NewConfiguration()
-	// network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
-	// assert.NoError(t, err)
-	// network := NewNodeNetwork(cfg.Host, )
-	// assert.NotNil(t, network)
+	cfg := configuration.NewConfiguration()
+	network := NewNodeNetwork(cfg.Node)
+	assert.NotNil(t, network)
+}
+
+func TestNodenetwork_AddNode(t *testing.T) {
+	cfg := configuration.NewConfiguration()
+	network := NewNodeNetwork(cfg.Node)
+	err := network.AddNode("test", "test", "test")
+	assert.NoError(t, err)
+}
+
+func TestNodenetwork_GetReferenceHostID(t *testing.T) {
+	cfg := configuration.NewConfiguration()
+	network := NewNodeNetwork(cfg.Node)
+	ref := core.String2Ref("ref")
+	node := NewNode("test", "test", ref)
+	err := network.addNode(node)
+	assert.NoError(t, err)
+	exp, err := network.GetReferenceHostID(ref.String())
+	assert.NoError(t, err)
+	assert.Equal(t, exp, node.GetNodeID())
 }

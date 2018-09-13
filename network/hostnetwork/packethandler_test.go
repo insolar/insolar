@@ -21,10 +21,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
@@ -34,10 +36,43 @@ import (
 type mockHostHandler struct {
 	AuthenticatedHost string
 	ReceivedKey       string
+	FoundHost         *host.Host
 }
 
 func newMockHostHandler() *mockHostHandler {
 	return &mockHostHandler{}
+}
+
+func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+
+}
+
+func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+	return nil, nil
+}
+
+func (hh *mockHostHandler) Disconnect() {
+
+}
+
+func (hh *mockHostHandler) Listen() error {
+	return nil
+}
+
+func (hh *mockHostHandler) Bootstrap() error {
+	return nil
+}
+
+func (hh *mockHostHandler) ObtainIP() error {
+	return nil
+}
+
+func (hh *mockHostHandler) NumHosts(ctx hosthandler.Context) int {
+	return 0
+}
+
+func (hh *mockHostHandler) AnalyzeNetwork(ctx hosthandler.Context) error {
+	return nil
 }
 
 func (hh *mockHostHandler) GetHighKnownHostID() string {
@@ -67,20 +102,38 @@ func (hh *mockHostHandler) EqualAuthSentKey(targetID string, key []byte) bool {
 	return false
 }
 
-func (hh *mockHostHandler) SendRequest(packet1 *packet.Packet) (transport.Future, error) {
+func (hh *mockHostHandler) SendRequest(request *packet.Packet) (transport.Future, error) {
 	t := newMockTransport()
 	sequenceNumber := transport.AtomicLoadAndIncrementUint64(t.sequence)
 
-	if t.failNext {
-		t.failNext = false
-		return nil, errors.New("MockNetworking Error")
-	}
-	t.recv <- packet1
+	future := &mockFuture{result: t.send, request: request, actor: request.Receiver, requestID: packet.RequestID(sequenceNumber)}
+	var response *packet.Packet
+	builder := packet.NewBuilder()
 
-	return &mockFuture{result: t.send, request: packet1, actor: packet1.Receiver, requestID: packet.RequestID(sequenceNumber)}, nil
+	switch request.Type {
+	case packet.TypeRelay:
+		response = builder.Response(&packet.ResponseRelay{State: relay.Started}).Build()
+	case packet.TypeObtainIP:
+		response = builder.Response(&packet.ResponseObtainIP{IP: "0.0.0.0"}).Build()
+	case packet.TypeCheckOrigin:
+		response = builder.Response(&packet.ResponseCheckOrigin{AuthUniqueKey: []byte("asd")}).Build()
+	case packet.TypeAuth:
+		response = builder.Response(&packet.ResponseAuth{Success: true, AuthUniqueKey: []byte("asd")}).Build()
+	case packet.TypeRelayOwnership:
+		response = builder.Response(&packet.ResponseRelayOwnership{Accepted: true}).Build()
+	}
+
+	go future.SetResult(response)
+	return future, nil
 }
 
 func (hh *mockHostHandler) FindHost(ctx hosthandler.Context, targetID string) (*host.Host, bool, error) {
+	if hh.FoundHost == nil {
+		return nil, false, nil
+	}
+	if strings.EqualFold(targetID, hh.FoundHost.ID.KeyString()) {
+		return hh.FoundHost, true, nil
+	}
 	return nil, false, nil
 }
 
@@ -158,7 +211,7 @@ func (hh *mockHostHandler) GetPacketTimeout() time.Duration {
 }
 
 func (hh *mockHostHandler) GetReplicationTime() time.Duration {
-	return 0
+	return 2
 }
 
 func (hh *mockHostHandler) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time {

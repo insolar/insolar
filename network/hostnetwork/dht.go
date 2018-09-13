@@ -742,11 +742,11 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 }
 
 // CheckNodeRole starting a check all known nodes.
-func (dht *DHT) CheckNodeRole(ctx hosthandler.Context, domainID string) error {
+func (dht *DHT) CheckNodeRole(domainID string) error {
 	var err error
 	// TODO: change or choose another auth host
 	if len(dht.options.BootstrapHosts) > 0 {
-		err = checkNodePrivRequest(dht, ctx, dht.options.BootstrapHosts[0].ID.KeyString(), domainID)
+		err = checkNodePrivRequest(dht, dht.options.BootstrapHosts[0].ID.KeyString(), domainID)
 	} else {
 		err = errors.New("bootstrap node not exist")
 	}
@@ -815,11 +815,11 @@ func (dht *DHT) RemoteProcedureRegister(name string, method core.RemoteProcedure
 }
 
 // ObtainIP starts to self IP obtaining.
-func (dht *DHT) ObtainIP(ctx hosthandler.Context) error {
+func (dht *DHT) ObtainIP() error {
 	for _, table := range dht.tables {
 		for i := range table.RoutingTable {
 			for j := range table.RoutingTable[i] {
-				err := ObtainIPRequest(dht, ctx, table.RoutingTable[i][j].ID.KeyString())
+				err := ObtainIPRequest(dht, table.RoutingTable[i][j].ID.KeyString())
 				if err != nil {
 					return err
 				}
@@ -895,7 +895,7 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 
 func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
 	for _, id1 := range subnetIDs {
-		err := relayOwnershipRequest(dht, id1)
+		err := RelayOwnershipRequest(dht, id1)
 		log.Println(err.Error())
 	}
 }

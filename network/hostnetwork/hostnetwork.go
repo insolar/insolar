@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
@@ -36,7 +37,7 @@ type HostNetwork interface {
 */
 
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork) (*DHT, error) {
+func NewHostNetwork(cfg configuration.HostNetwork) (hosthandler.HostHandler, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		log.Fatal("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")

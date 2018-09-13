@@ -21,7 +21,6 @@ import (
 	"errors"
 	"math"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -504,7 +503,6 @@ func TestReconnect(t *testing.T) {
 // payload from one host to another. Ensure that the other host now has
 // this data in its store.
 func TestStoreAndFindLargeValue(t *testing.T) {
-	t.Skip("need to repair")
 	done := make(chan bool)
 
 	ids1 := make([]id.ID, 0)
@@ -805,12 +803,12 @@ func TestStoreExpiration(t *testing.T) {
 // single host closer to the original host. This continues until every MaxContactsInBucket bucket
 // is occupied.
 func TestFindHostAllBuckets(t *testing.T) {
-	t.Skip("need to repair")
+	t.Skip()
 	done := make(chan bool)
 	zeroID := getIDWithValues(0)
 
-	bootstrapAddr, _ := host.NewAddress("0.0.0.0:26001")
-	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:26000")
+	bootstrapAddr, _ := host.NewAddress("127.0.0.1:26011")
+	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "127.0.0.1:26010")
 	assert.NoError(t, err)
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
@@ -862,85 +860,6 @@ func TestFindHostAllBuckets(t *testing.T) {
 	<-done
 }
 
-// TODO: delete or repair
-// Tests timing out of hosts in a bucket. DHT bootstraps networks and learns
-// about 20 subsequent hosts in the same bucket. Upon attempting to add the 21st
-// host to the now full bucket, we should receive a ping to the very first host
-// added in order to determine if it is still alive.
-// func TestAddHostTimeout(t *testing.T) {
-// 	zeroID := getIDWithValues(0)
-// 	done := make(chan int)
-// 	pinged := make(chan int)
-//
-// 	bootstrapAddr, _ := host.NewAddress("0.0.0.0:27001")
-// 	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:27000")
-// 	assert.NoError(t, err)
-//
-// 	dht, _ := NewDHT(st, s, tp, r, &Options{
-// 		BootstrapHosts: []*host.Host{{
-// 			ID:      getZerodIDWithNthByte(1, byte(255)),
-// 			Address: bootstrapAddr,
-// 		}},
-// 	},
-// 		relay.NewProxy())
-// 	mockTp := tp.(*mockTransport)
-//
-// 	go func() {
-// 		dht.Listen()
-// 	}()
-//
-// 	var hostsAdded = 1
-// 	var firstHost []byte
-// 	var lastHost []byte
-//
-// 	go func() {
-// 		for {
-// 			request := <-mockTp.recv
-// 			if request == nil {
-// 				return
-// 			}
-// 			switch request.Type {
-// 			case packet.TypeFindHost:
-// 				id1 := getIDWithValues(0)
-// 				if hostsAdded > routing.MaxContactsInBucket+1 {
-// 					close(done)
-// 					return
-// 				}
-//
-// 				if hostsAdded == 1 {
-// 					firstHost = id1.GetKey()
-// 				}
-//
-// 				if hostsAdded == routing.MaxContactsInBucket {
-// 					lastHost = id1.GetKey()
-// 				}
-//
-// 				id1.GetKey()[1] = byte(255 - hostsAdded)
-// 				hostsAdded++
-//
-// 				res := mockFindHostResponse(request, id1.GetKey())
-// 				mockTp.send <- res
-// 			case packet.TypePing:
-// 				assert.Equal(t, packet.TypePing, request.Type)
-// 				assert.Equal(t, getZerodIDWithNthByte(1, byte(255)), request.Receiver.ID)
-// 				close(pinged)
-// 			}
-// 		}
-// 	}()
-//
-// 	dht.Bootstrap()
-//
-// 	// ensure the first host in the table is the second host contacted, and the
-// 	// last is the last host contacted
-// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.GetKey(), firstHost))
-// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.GetKey(), lastHost))
-//
-// 	dht.Disconnect()
-//
-// 	<-done
-// 	<-pinged
-// }
-
 func TestGetRandomIDFromBucket(t *testing.T) {
 	zeroID := getIDWithValues(0)
 	st, s, tp, r, err := realDhtParams([]id.ID{zeroID}, "0.0.0.0:28000")
@@ -976,67 +895,6 @@ func getZerodIDWithNthByte(n int, v byte) id.ID {
 func getIDWithValues(b byte) id.ID {
 	id1, _ := id.NewID()
 	return id1
-}
-
-func TestDHT_FindHost(t *testing.T) {
-	t.Skip("refactoring")
-	count := 5
-	port := 6000
-	var dhts []*DHT
-	idx := make(map[int]string, count)
-	done := make(chan bool)
-
-	for i := 0; i < count; i++ {
-		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID()
-		ids1 = append(ids1, id1)
-		idx[i] = ids1[0].KeyString()
-		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
-		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
-		bootstrapHost := host.NewHost(address)
-		dht, err := NewDHT(st, s, tp, r, &Options{
-			BootstrapHosts: []*host.Host{
-				bootstrapHost,
-			},
-		},
-			relay.NewProxy())
-		port++
-		dhts = append(dhts, dht)
-		assert.NoError(t, err)
-	}
-
-	for _, dht := range dhts {
-		ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
-		assert.Equal(t, 0, dht.NumHosts(ctx))
-		go func(dht *DHT) {
-			err := dht.Listen()
-			assert.Equal(t, closedPacket, err.Error())
-			done <- true
-		}(dht)
-		go func(dht *DHT) {
-			err := dht.Bootstrap()
-			assert.NoError(t, err)
-		}(dht)
-		time.Sleep(time.Millisecond * 200)
-	}
-
-	time.Sleep(time.Millisecond * 3000)
-
-	for _, dht := range dhts {
-		for i := range idx {
-			ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
-			_, exist, err := dht.FindHost(ctx, idx[i])
-			assert.NoError(t, err)
-			assert.Equal(t, true, exist)
-			time.Sleep(time.Millisecond * 200)
-		}
-	}
-
-	for _, dht := range dhts {
-		assert.Equal(t, count-1, dht.NumHosts(getDefaultCtx(dht)))
-		dht.Disconnect()
-	}
-	<-done
 }
 
 func TestDHT_Listen(t *testing.T) {
@@ -1144,204 +1002,7 @@ func TestNewDHT(t *testing.T) {
 	<-done
 }
 
-func TestDHT_AuthenticationRequest(t *testing.T) {
-	t.Skip("refactoring")
-	count := 2
-	port := 46000
-	var dhts []*DHT
-	done := make(chan bool)
-	var ids []string
-	args := []struct {
-		first  string
-		second error
-		name   string
-	}{
-		{"wrong command", errors.New("dht.AuthenticationRequest: unknown command"), "undefined command"},
-		{"begin", nil, "begin auth"},
-		{"begin", errors.New("authentication unsuccessful"), "begin auth second time"},
-		{"revoke", nil, "revoke auth"},
-		{"begin", nil, "begin auth"},
-	}
-
-	for i := 0; i < count; i++ {
-		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID()
-		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].KeyString())
-		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
-		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
-		bootstrapHost := host.NewHost(address)
-		dht, err := NewDHT(st, s, tp, r, &Options{
-			BootstrapHosts: []*host.Host{
-				bootstrapHost,
-			},
-		},
-			relay.NewProxy())
-		port++
-		dhts = append(dhts, dht)
-		assert.NoError(t, err)
-	}
-
-	for _, dht := range dhts {
-		ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
-		assert.Equal(t, 0, dht.NumHosts(ctx))
-		go func(dht *DHT) {
-			err := dht.Listen()
-			assert.Equal(t, closedPacket, err.Error())
-			done <- true
-		}(dht)
-	}
-
-	for _, dht := range dhts {
-		dht.Bootstrap()
-	}
-
-	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultHost().Build()
-
-	for _, arg := range args {
-		t.Run(arg.name, func(t *testing.T) {
-			err := AuthenticationRequest(dhts[0], ctx, arg.first, ids[1])
-			assert.Equal(t, err, arg.second)
-			time.Sleep(time.Millisecond * 200)
-		})
-	}
-
-	for _, dht := range dhts {
-		dht.Disconnect()
-	}
-	<-done
-}
-
-func TestDHT_RelayRequest(t *testing.T) {
-	t.Skip("refactoring")
-	count := 2
-	port := 45000
-	var dhts []*DHT
-	done := make(chan bool)
-	var ids []string
-	args := []struct {
-		first  string
-		second error
-		name   string
-	}{
-		{"start", errors.New("unable to execute relay because this host not authenticated"), "start relay w/o auth"},
-		{"begin", nil, "begin auth"},
-		{"wrong command", errors.New("unknown command"), "undefined command"},
-		{"start", nil, "start relay"},
-		{"start", errors.New("relay request error"), "start relay twice"},
-		{"stop", nil, "stop relay"},
-		{"start", nil, "start relay"},
-	}
-
-	for i := 0; i < count; i++ {
-		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID()
-		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].KeyString())
-		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
-		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
-		bootstrapHost := host.NewHost(address)
-		dht, err := NewDHT(st, s, tp, r, &Options{
-			BootstrapHosts: []*host.Host{
-				bootstrapHost,
-			},
-		},
-			relay.NewProxy())
-		port++
-		dhts = append(dhts, dht)
-		assert.NoError(t, err)
-	}
-
-	for _, dht := range dhts {
-		ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
-		assert.Equal(t, 0, dht.NumHosts(ctx))
-		go func(dht *DHT) {
-			err := dht.Listen()
-			assert.Equal(t, closedPacket, err.Error())
-			done <- true
-		}(dht)
-	}
-
-	for _, dht := range dhts {
-		dht.Bootstrap()
-	}
-
-	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultHost().Build()
-
-	var err error
-	for _, arg := range args {
-		t.Run(arg.name, func(t *testing.T) {
-			if strings.Contains(arg.name, "begin auth") {
-				err = AuthenticationRequest(dhts[0], ctx, arg.first, ids[1])
-			} else {
-
-				err = RelayRequest(dhts[0], ctx, arg.first, ids[1])
-			}
-			assert.Equal(t, err, arg.second)
-			time.Sleep(time.Millisecond * 200)
-		})
-	}
-
-	for _, dht := range dhts {
-		dht.Disconnect()
-	}
-	<-done
-}
-
-func TestDHT_ObtainIP(t *testing.T) {
-	t.Skip("refactoring")
-	count := 2
-	port := 47000
-	var dhts []*DHT
-	done := make(chan bool)
-	var ids []string
-
-	for i := 0; i < count; i++ {
-		ids1 := make([]id.ID, 0)
-		id1, _ := id.NewID()
-		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].KeyString())
-		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
-		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
-		bootstrapHost := host.NewHost(address)
-		dht, err := NewDHT(st, s, tp, r, &Options{
-			BootstrapHosts: []*host.Host{
-				bootstrapHost,
-			},
-		},
-			relay.NewProxy())
-		port++
-		dhts = append(dhts, dht)
-		assert.NoError(t, err)
-	}
-
-	for _, dht := range dhts {
-		ctx, _ := NewContextBuilder(dht).SetDefaultHost().Build()
-		assert.Equal(t, 0, dht.NumHosts(ctx))
-		go func(dht *DHT) {
-			err := dht.Listen()
-			assert.Equal(t, "closed", err.Error())
-			done <- true
-		}(dht)
-	}
-
-	for _, dht := range dhts {
-		dht.Bootstrap()
-	}
-
-	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultHost().Build()
-
-	err := dhts[0].ObtainIP(ctx)
-	assert.NoError(t, err)
-
-	for _, dht := range dhts {
-		dht.Disconnect()
-	}
-	<-done
-}
-
 func TestDHT_AnalyzeNetwork(t *testing.T) {
-	t.Skip("refactoring")
 	count := 2
 	port := 48000
 	var dhts []*DHT
@@ -1383,7 +1044,7 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 
 	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultHost().Build()
 
-	err := dhts[0].ObtainIP(ctx)
+	err := dhts[0].ObtainIP()
 	assert.NoError(t, err)
 
 	err = dhts[0].AnalyzeNetwork(ctx)
@@ -1396,7 +1057,6 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 }
 
 func TestDHT_StartCheckNodesRole(t *testing.T) {
-	t.Skip("refactoring")
 	var dhts []*DHT
 
 	done := make(chan bool)
@@ -1438,8 +1098,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	ctx, _ := NewContextBuilder(dhts[1]).SetDefaultHost().Build()
-	err = dhts[1].CheckNodeRole(ctx, "domain ID")
+	err = dhts[1].CheckNodeRole("domain ID")
 	assert.NoError(t, err)
 
 	for _, dht := range dhts {
