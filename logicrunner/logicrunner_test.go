@@ -493,7 +493,6 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-//	"github.com/insolar/insolar/core"
 	"contract-proxy/child"
 )
 
@@ -577,7 +576,7 @@ func New(n int) *Child {
 	defer lr.Stop()
 
 	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	//	defer cleaner()
+	defer cleaner()
 	err = cb.Build(map[string]string{"child": goChild})
 	assert.NoError(t, err)
 	err = cb.Build(map[string]string{"contract": goContract})
