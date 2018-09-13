@@ -316,9 +316,7 @@ func (r *Two) Hello(s string) string {
 		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
 		data, "Hello", argsSerialized,
 	)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	var resParsed []interface{}
 	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
@@ -346,6 +344,11 @@ func (r *One) Hello(s string) string {
 	res := friend.Hello(s)
 
 	return "Hi, " + s + "! Two said: " + res
+}
+
+func (r *One) HelloFromDelegate(s string) string {
+	friend := two.GetImplementationFrom(r.GetReference())
+	return friend.Hello(s)
 }
 `
 
@@ -434,16 +437,22 @@ func (r *Two) Hello(s string) string {
 		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
 		data, "Hello", argsSerialized,
 	)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	var resParsed []interface{}
 	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+
+	_, res, err = gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "HelloFromDelegate", argsSerialized,
+	)
+	assert.NoError(t, err)
+
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hello you too, ins. 1288 times!", resParsed[0])
 }
 
 func TestContextPassing(t *testing.T) {
