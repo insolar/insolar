@@ -31,7 +31,7 @@ func TmpLedger(t *testing.T, dir string) (*ledger.Ledger, func()) {
 	db, dbcancel := storagetest.TmpDB(t, dir)
 	l, err := ledger.NewLedgerWithDB(db)
 	assert.NoError(t, err)
-	am := l.GetManager()
+	am := l.GetArtifactManager()
 	assert.NotNil(t, am)
 	return l, dbcancel
 }

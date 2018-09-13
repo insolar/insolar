@@ -18,8 +18,8 @@ package core
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger interface {
-	// GetManager returns artifact manager to work with.
-	GetManager() ArtifactManager
+	// GetArtifactManager returns artifact manager to work with.
+	GetArtifactManager() ArtifactManager
 
 	// GetJetCoordinator returns jet coordinator to work with.
 	GetJetCoordinator() JetCoordinator
