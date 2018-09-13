@@ -56,7 +56,27 @@ func (mr *MessageRouter) Stop() error { return nil }
 
 // Route a `Message` and get a `Response` or error from remote host
 func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err error) {
-	res, err := mr.service.SendMessage(deliverRPCMethodName, msg)
+	jc := mr.ledger.GetJetCoordinator()
+	pm := mr.ledger.GetPulseManager()
+	pulse, err := pm.Current()
+	if err != nil {
+		return response, err
+	}
+
+	nodes := jc.QueryRole(msg.GetRole(), msg.GetReference(), pulse.PulseNumber)
+
+	if len(nodes) == 0 {
+		err = errors.New("wtf")
+		return
+	}
+
+	if len(nodes) > 1 {
+		// res, err := mr.service.SendCascadeMessage(...)
+
+		return
+	}
+
+	res, err := mr.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
 	if err != nil {
 		return response, err
 	}

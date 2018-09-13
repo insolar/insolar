@@ -25,6 +25,7 @@ type Arguments []byte
 type Message interface {
 	Serialize() (io.Reader, error)
 	GetReference() RecordRef
+	GetRole() JetRole
 }
 
 // Response to a `Message`

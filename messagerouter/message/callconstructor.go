@@ -32,6 +32,10 @@ type CallConstructorMessage struct {
 	Arguments core.Arguments
 }
 
+func (m *CallConstructorMessage) GetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
 // GetReference implements core.Message
 func (m *CallConstructorMessage) GetReference() core.RecordRef {
 	return m.ClassRef

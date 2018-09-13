@@ -32,6 +32,10 @@ type DelegateMessage struct {
 	Body  []byte
 }
 
+func (m *DelegateMessage) GetRole() core.JetRole {
+	return core.RoleLightExecutor
+}
+
 // GetReference implements core.Message
 func (m *DelegateMessage) GetReference() core.RecordRef {
 	return m.Into
