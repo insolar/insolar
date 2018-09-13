@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -34,10 +34,11 @@ import (
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = "../cmd/icc/icc"
+var icc = "../cmd/insgocc/insgocc"
 
 func init() {
 	log.SetLevel(log.DebugLevel)
+	build()
 }
 
 func TestTypeCompatibility(t *testing.T) {
@@ -66,7 +67,7 @@ func newTestExecutor() *testExecutor {
 	}
 }
 
-func (r *testExecutor) CallMethod(ref core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+func (r *testExecutor) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
 	if len(r.methodResponses) < 1 {
 		panic(errors.New("no expected 'CallMethod' calls"))
 	}
@@ -76,7 +77,7 @@ func (r *testExecutor) CallMethod(ref core.RecordRef, data []byte, method string
 	return res.data, res.res, res.err
 }
 
-func (r *testExecutor) CallConstructor(ref core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
 	if len(r.constructorResponses) < 1 {
 		panic(errors.New("no expected 'CallConstructor' calls"))
 	}
@@ -144,9 +145,10 @@ func TestExecution(t *testing.T) {
 	dataRef := core.String2Ref("someObject")
 	classRef := core.String2Ref("someClass")
 	am.Objects[dataRef] = &testutil.TestObjectDescriptor{
-		AM:   am,
-		Data: []byte("origData"),
-		Code: &codeRef,
+		AM:    am,
+		Data:  []byte("origData"),
+		Code:  &codeRef,
+		Class: &classRef,
 	}
 	am.Classes[classRef] = &testutil.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
 	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef, AMachineType: core.MachineTypeGoPlugin}
@@ -182,7 +184,7 @@ func buildInciderCLI() error {
 }
 
 func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", icc, "../cmd/icc/").CombinedOutput()
+	out, err := exec.Command("go", "build", "-o", icc, "../cmd/insgocc/").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "can't build %s: %s", icc, string(out))
 	}
@@ -190,7 +192,21 @@ func buildPreprocessor() error {
 
 }
 
-const contractOneCode = `
+func build() error {
+	err := buildInciderCLI()
+	if err != nil {
+		return err
+	}
+
+	err = buildPreprocessor()
+	if err != nil {
+		return errors.Wrap(err, "can't generate proxy")
+	}
+	return nil
+}
+
+func TestContractCallingContract(t *testing.T) {
+	var contractOneCode = `
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -202,7 +218,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsChild("")
+	friend := holder.AsChild(r.GetReference())
 
 	res := friend.Hello(s)
 
@@ -210,7 +226,7 @@ func (r *One) Hello(s string) string {
 }
 `
 
-const contractTwoCode = `
+	var contractTwoCode = `
 package main
 
 import (
@@ -234,137 +250,118 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-func generateContractProxy(root string, name string) error {
-	dstDir := root + "/src/contract-proxy/" + name
+	lr, err := NewLogicRunner(configuration.LogicRunner{})
+	assert.NoError(t, err)
 
-	err := os.MkdirAll(dstDir, 0777)
+	mr := &testMessageRouter{LogicRunner: lr}
+	am := testutil.NewTestArtifactManager()
+	lr.ArtifactManager = am
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	gp, err := goplugin.NewGoPlugin(
+		&configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerCodePath: insiderStorage,
+		},
+		mr,
+		am,
+	)
+	assert.NoError(t, err)
+	defer gp.Stop()
+
+	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
+	assert.NoError(t, err)
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	assert.NoError(t, err)
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(
+		[]interface{}{"ins"},
+	)
+	assert.NoError(t, err)
+
+	cb := testutil.NewContractBuilder(am, icc)
+	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
+
+	obj, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["one"],
+		*am.RootRef(),
+		data,
+	)
+	assert.NoError(t, err)
+
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
-	contractPath := root + "/src/contract/" + name + "/main.go"
-
-	out, err := exec.Command(icc, "proxy", "-o", dstDir+"/main.go", "--code-reference", "Class"+name, contractPath).CombinedOutput()
+	var resParsed []interface{}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
 	if err != nil {
-		return errors.Wrap(err, "can't generate proxy: "+string(out))
+		t.Fatal(err)
 	}
-	return nil
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
 }
 
-func buildContractPlugin(root string, name string) error {
-	dstDir := root + "/plugins/"
+func TestInjectingDelegate(t *testing.T) {
+	var contractOneCode = `
+package main
 
-	err := os.MkdirAll(dstDir, 0777)
-	if err != nil {
-		return err
-	}
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/two"
 
-	origGoPath, err := testutil.ChangeGoPath(root)
-	if err != nil {
-		return err
-	}
-	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
-
-	//contractPath := root + "/src/contract/" + name + "/main.go"
-
-	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", "contract/"+name).CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, "can't build contract: "+string(out))
-	}
-	return nil
+type One struct {
+	foundation.BaseContract
 }
 
-func generateContractWrapper(root string, name string) error {
-	contractPath := root + "/src/contract/" + name + "/main.go"
-	wrapperPath := root + "/src/contract/" + name + "/main_wrapper.go"
+func (r *One) Hello(s string) string {
+	holder := two.New()
+	friend := holder.AsDelegate(r.GetReference())
 
-	out, err := exec.Command(icc, "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"': "+string(out))
-	}
-	return nil
+	res := friend.Hello(s)
+
+	return "Hi, " + s + "! Two said: " + res
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
 }
 
-func buildContracts(root string, names ...string) error {
-	for _, name := range names {
-		err := generateContractProxy(root, name)
-		if err != nil {
-			return err
-		}
-		err = generateContractWrapper(root, name)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, name := range names {
-		err := buildContractPlugin(root, name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func New() *Two {
+	return &Two{X:322};
 }
 
-func suckInContracts(am *testutil.TestArtifactManager, root string, names ...string) {
-	for _, name := range names {
-		pluginBinary, err := ioutil.ReadFile(root + "/plugins/" + name + ".so")
-		if err != nil {
-			panic(err)
-		}
-
-		ref := core.String2Ref(name)
-		am.Codes[ref] = &testutil.TestCodeDescriptor{
-			ARef:         &ref,
-			ACode:        pluginBinary,
-			AMachineType: core.MachineTypeGoPlugin,
-		}
-	}
+func (r *Two) Hello(s string) string {
+	r.X *= 2
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
 }
-
-func TestContractCallingContract(t *testing.T) {
-	err := buildInciderCLI()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = buildPreprocessor()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(cwd) // nolint: errcheck
-
-	tmpDir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir) // nolint: errcheck
-
-	err = testutil.WriteFile(tmpDir+"/src/contract/one/", "main.go", contractOneCode)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = testutil.WriteFile(tmpDir+"/src/contract/two/", "main.go", contractTwoCode)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = buildContracts(tmpDir, "one", "two")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	insiderStorage := tmpDir + "/insider-storage/"
-
-	err = os.MkdirAll(insiderStorage, 0777)
-	if err != nil {
-		t.Fatal(err)
-	}
+`
 
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
@@ -372,6 +369,10 @@ func TestContractCallingContract(t *testing.T) {
 	mr := &testMessageRouter{LogicRunner: lr}
 	am := testutil.NewTestArtifactManager()
 	lr.ArtifactManager = am
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	gp, err := goplugin.NewGoPlugin(
 		&configuration.GoPlugin{
@@ -406,15 +407,22 @@ func TestContractCallingContract(t *testing.T) {
 		panic(err)
 	}
 
-	suckInContracts(am, tmpDir, "one", "two")
+	cb := testutil.NewContractBuilder(am, icc)
+	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
 
-	codeRef := core.String2Ref("two")
-	am.Classes[core.String2Ref("Classtwo")] = &testutil.TestClassDescriptor{
-		AM:    am,
-		ACode: &codeRef,
-	}
+	obj, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["one"],
+		*am.RootRef(),
+		data,
+	)
+	assert.NoError(t, err)
 
-	_, res, err := gp.CallMethod(core.String2Ref("one"), data, "Hello", argsSerialized)
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -425,4 +433,63 @@ func TestContractCallingContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+}
+
+func TestContextPassing(t *testing.T) {
+	var code = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() string {
+	return r.GetClass().String()
+}
+`
+
+	am := testutil.NewTestArtifactManager()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	gp, err := goplugin.NewGoPlugin(
+		&configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerCodePath: insiderStorage,
+		},
+		nil,
+		am,
+	)
+	assert.NoError(t, err)
+	defer gp.Stop()
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(&struct{}{})
+	assert.NoError(t, err)
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode([]interface{}{})
+	assert.NoError(t, err)
+
+	cb := testutil.NewContractBuilder(am, icc)
+	err = cb.Build(map[string]string{"one": code})
+	assert.NoError(t, err)
+
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"]}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
+	assert.NoError(t, err)
+
+	resParsed := []interface{}{""}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	assert.NoError(t, err)
+	assert.Equal(t, cb.Classes["one"].String(), resParsed[0])
 }

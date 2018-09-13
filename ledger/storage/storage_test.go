@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -145,7 +145,7 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	idx := index.ObjectLifeline{
 		ClassRef:       referenceWithHashes("50", "60"),
 		LatestStateRef: referenceWithHashes("10", "20"),
-		AppendRefs: []record.Reference{
+		Children: []record.Reference{
 			referenceWithHashes("", "1"),
 			referenceWithHashes("", "2"),
 			referenceWithHashes("", "3"),

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -178,23 +178,17 @@ func (d *ObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
 	return d.classDescriptor, nil
 }
 
-// GetDelegates fetches unamended delegates from storage.
-//
-// VM is responsible for collecting all delegates and adding them to the object memory manually if its required.
-// TODO: not used for now
-func (d *ObjectDescriptor) GetDelegates() ([][]byte, error) {
-	var delegates [][]byte
-	for _, appendRef := range d.lifelineIndex.AppendRefs {
-		rec, err := d.manager.db.GetRecord(&appendRef)
-		if err != nil {
-			return nil, errors.Wrap(err, "inconsistent object index")
-		}
-		appendRec, ok := rec.(*record.ObjectAppendRecord)
-		if !ok {
-			return nil, errors.Wrap(ErrInvalidRef, "inconsistent object index")
-		}
-		delegates = append(delegates, appendRec.AppendMemory)
-	}
+type RefIterator struct {
+	elements     []record.Reference
+	currentIndex int
+}
 
-	return delegates, nil
+func (i *RefIterator) HasNext() bool {
+	return len(i.elements) > i.currentIndex
+}
+
+func (i *RefIterator) Next() (core.RecordRef, error) {
+	el := i.elements[i.currentIndex]
+	i.currentIndex++
+	return *el.CoreRef(), nil
 }

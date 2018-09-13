@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -27,4 +27,5 @@ var (
 	ErrObjectDeactivated = errors.New("object is deactivated")
 	ErrInconsistentIndex = errors.New("inconsistent index")
 	ErrWrongObject       = errors.New("provided object is not and instance of provided class")
+	ErrNotFound          = errors.New("object not found")
 )

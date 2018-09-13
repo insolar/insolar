@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -32,7 +33,9 @@ func TmpDB(t *testing.T, dir string) (*storage.DB, func()) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := storage.NewDB(tmpdir, nil)
+	db, err := storage.NewDB(configuration.Ledger{
+		DataDirectory: tmpdir,
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

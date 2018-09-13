@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -45,16 +45,12 @@ func NewBuiltIn(mr core.MessageRouter, am core.ArtifactManager) *BuiltIn {
 		Registry: make(map[string]Contract),
 	}
 
-	bi.Registry[helloworld.CodeRef().String()] = helloworld.NewHelloWorld()
+	bi.Registry["helloworld"] = helloworld.NewHelloWorld()
 
 	return &bi
 }
 
-func (bi *BuiltIn) CallMethod(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
-	return bi.Exec(codeRef, data, method, args)
-}
-
-func (bi *BuiltIn) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) (objectState []byte, err error) {
+func (bi *BuiltIn) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) (objectState []byte, err error) {
 	panic("implement me")
 }
 
@@ -62,9 +58,20 @@ func (bi *BuiltIn) Stop() error {
 	panic("implement me")
 }
 
-// Exec is an implementation for logicrunner Executor interface
-func (bi *BuiltIn) Exec(codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
-	c, ok := bi.Registry[codeRef.String()]
+// CallMethod runs a method on contract
+func (bi *BuiltIn) CallMethod(ctx *core.LogicCallContext, codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
+	am := bi.AM
+	am.SetArchPref([]core.MachineType{core.MachineTypeBuiltin})
+	codeDescriptor, err := am.GetCode(codeRef)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Can't find code")
+	}
+	code, err := codeDescriptor.Code()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Can't get code")
+	}
+
+	c, ok := bi.Registry[string(code)]
 	if !ok {
 		return nil, nil, errors.New("Wrong reference for builtin contract")
 	}

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ type RPC struct {
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.gp.ArtifactManager
 	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
-	codeDescriptor, err := am.GetCode(req.Reference)
+	codeDescriptor, err := am.GetCode(req.Code)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	}
 
 	msg := &message.CallMethodMessage{
-		ObjectRef: req.Reference,
+		ObjectRef: req.Object,
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
@@ -139,6 +139,27 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 	}
 
 	reply.Reference = *ref
+	return nil
+}
+
+// SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
+	msg := &message.DelegateMessage{
+		Into:  req.Into,
+		Class: req.Class,
+		Body:  req.Data,
+	}
+
+	res, err := gpr.gp.MessageRouter.Route(msg)
+	if err != nil {
+		return errors.Wrap(err, "couldn't route message")
+	}
+	if res.Error != nil {
+		return errors.Wrap(res.Error, "couldn't route message (error in response)")
+	}
+
+	reply.Reference = core.String2Ref(string(res.Data))
+
 	return nil
 }
 
@@ -250,14 +271,20 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 const timeout = time.Second * 5
 
 // CallMethod runs a method on an object in controlled environment
-func (gp *GoPlugin) CallMethod(codeRef core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
 
 	res := rpctypes.DownCallMethodResp{}
-	req := rpctypes.DownCallMethodReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
+	req := rpctypes.DownCallMethodReq{
+		Context:   ctx,
+		Code:      code,
+		Data:      data,
+		Method:    method,
+		Arguments: args,
+	}
 
 	select {
 	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
@@ -271,14 +298,14 @@ func (gp *GoPlugin) CallMethod(codeRef core.RecordRef, data []byte, method strin
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
-func (gp *GoPlugin) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with rpc connection")
 	}
 
 	res := rpctypes.DownCallConstructorResp{}
-	req := rpctypes.DownCallConstructorReq{Reference: codeRef, Name: name, Arguments: args}
+	req := rpctypes.DownCallConstructorReq{Code: code, Name: name, Arguments: args}
 
 	select {
 	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:

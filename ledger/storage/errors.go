@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -18,9 +18,17 @@ package storage
 
 import (
 	"errors"
+
+	"github.com/dgraph-io/badger"
 )
 
 var (
 	// ErrNotFound returns if record/index not found in storage.
 	ErrNotFound = errors.New("storage object not found")
+
+	// ErrConflictRetriesOver is returned if Update transaction fails on all retry attempts.
+	ErrConflictRetriesOver = errors.New("Transaction Conflict retries exceeded")
+
+	// ErrConflict is the alias for badger.ErrConflict.
+	ErrConflict = badger.ErrConflict
 )

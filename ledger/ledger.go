@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -40,10 +40,15 @@ func (l *Ledger) GetManager() core.ArtifactManager {
 // NewLedger creates new ledger instance.
 func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	var err error
-	db, err := storage.NewDB(conf.DataDirectory, nil)
+	db, err := storage.NewDB(conf, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
+	return NewLedgerWithDB(db)
+}
+
+// NewLedgerWithDB creates new ledger with preconfigured storage.DB instance.
+func NewLedgerWithDB(db *storage.DB) (*Ledger, error) {
 	manager, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
@@ -58,12 +63,11 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 		return nil, err
 	}
 
-	ledger := &Ledger{
+	return &Ledger{
 		db:          db,
 		manager:     manager,
 		coordinator: coordinator,
-	}
-	return ledger, nil
+	}, nil
 }
 
 // Start initializes external ledger dependencies.

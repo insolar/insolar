@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -57,7 +56,7 @@ type RPC struct {
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
-	p, err := t.GI.Plugin(args.Reference)
+	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
 		return err
 	}
@@ -78,11 +77,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	if !setContext.IsValid() {
 		return errors.New("this is not a contract, it not supports SetContext method")
 	}
-	cc := foundation.CallContext{
-		Me: foundation.Reference("contract address"),
-		// fill me
-	}
-	setContext.Call([]reflect.Value{reflect.ValueOf(&cc)})
+	setContext.Call([]reflect.Value{reflect.ValueOf(args.Context)})
 
 	method := reflect.ValueOf(export).MethodByName(args.Method)
 	if !method.IsValid() {
@@ -109,7 +104,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 
 	log.Debugf(
 		"Calling method %q in contract %q with %d arguments",
-		args.Method, args.Reference, inLen,
+		args.Method, args.Code, inLen,
 	)
 	resValues := method.Call(in)
 
@@ -137,7 +132,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) error {
-	p, err := t.GI.Plugin(args.Reference)
+	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
 		return err
 	}
@@ -177,7 +172,7 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 
 	log.Debugf(
 		"Calling constructor %q in contract %q with %d arguments",
-		args.Name, args.Reference, inLen,
+		args.Name, args.Code, inLen,
 	)
 	resValues := method.Call(in)
 
@@ -198,24 +193,24 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 }
 
 // Upstream returns RPC client connected to upstream server (goplugin)
-func (t *GoInsider) Upstream() (*rpc.Client, error) {
-	if t.UpstreamRPCClient != nil {
-		return t.UpstreamRPCClient, nil
+func (gi *GoInsider) Upstream() (*rpc.Client, error) {
+	if gi.UpstreamRPCClient != nil {
+		return gi.UpstreamRPCClient, nil
 	}
 
-	client, err := rpc.DialHTTP("tcp", t.UpstreamRPCAddress)
+	client, err := rpc.DialHTTP("tcp", gi.UpstreamRPCAddress)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s'", t.UpstreamRPCAddress)
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", gi.UpstreamRPCAddress)
 	}
 
-	t.UpstreamRPCClient = client
-	return t.UpstreamRPCClient, nil
+	gi.UpstreamRPCClient = client
+	return gi.UpstreamRPCClient, nil
 }
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
-func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
-	path := t.dir + "/" + ref.String()
+func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
+	path := gi.dir + "/" + ref.String()
 	_, err := os.Stat(path)
 
 	if err == nil {
@@ -224,14 +219,14 @@ func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 		return "", errors.Wrap(err, "file !notexists()")
 	}
 
-	client, err := t.Upstream()
+	client, err := gi.Upstream()
 	if err != nil {
 		return "", err
 	}
 
-	log.Debugf("obtaining plugin %q", ref)
+	log.Debugf("obtaining code %q", ref)
 	res := rpctypes.UpGetCodeResp{}
-	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Reference: ref}, &res)
+	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Code: ref}, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}
@@ -246,13 +241,13 @@ func (t *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
-func (t *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
+func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 	key := ref.String()
-	if t.plugins[key] != nil {
-		return t.plugins[key], nil
+	if gi.plugins[key] != nil {
+		return gi.plugins[key], nil
 	}
 
-	path, err := t.ObtainCode(ref)
+	path, err := gi.ObtainCode(ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't obtain code")
 	}
@@ -263,19 +258,19 @@ func (t *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 		return nil, errors.Wrap(err, "couldn't open plugin")
 	}
 
-	t.plugins[key] = p
+	gi.plugins[key] = p
 	return p, nil
 }
 
 // RouteCall ...
-func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, error) {
-	client, err := t.Upstream()
+func (gi *GoInsider) RouteCall(ref core.RecordRef, method string, args []byte) ([]byte, error) {
+	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
 
 	req := rpctypes.UpRouteReq{
-		Reference: core.String2Ref(ref),
+		Object:    ref,
 		Method:    method,
 		Arguments: args,
 	}
@@ -290,14 +285,14 @@ func (t *GoInsider) RouteCall(ref string, method string, args []byte) ([]byte, e
 }
 
 // RouteConstructorCall ...
-func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) ([]byte, error) {
-	client, err := t.Upstream()
+func (gi *GoInsider) RouteConstructorCall(ref core.RecordRef, name string, args []byte) ([]byte, error) {
+	client, err := gi.Upstream()
 	if err != nil {
 		return []byte{}, err
 	}
 
 	req := rpctypes.UpRouteConstructorReq{
-		Reference:   core.String2Ref(ref),
+		Reference:   ref,
 		Constructor: name,
 		Arguments:   args,
 	}
@@ -312,36 +307,58 @@ func (t *GoInsider) RouteConstructorCall(ref string, name string, args []byte) (
 }
 
 // SaveAsChild ...
-func (t *GoInsider) SaveAsChild(parentRef, classRef string, data []byte) (string, error) {
-	client, err := t.Upstream()
+func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error) {
+	client, err := gi.Upstream()
 	if err != nil {
-		return "", err
+		return core.String2Ref(""), err
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
-		Parent: core.String2Ref(parentRef),
-		Class:  core.String2Ref(classRef),
+		Parent: parentRef,
+		Class:  classRef,
 		Data:   data,
 	}
 
 	res := rpctypes.UpSaveAsChildResp{}
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
-		return "", errors.Wrap(err, "on calling main API")
+		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference.String(), nil
+	return res.Reference, nil
+}
+
+// SaveAsDelegate ...
+func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byte) (core.RecordRef, error) {
+	client, err := gi.Upstream()
+	if err != nil {
+		return core.String2Ref(""), err
+	}
+
+	req := rpctypes.UpSaveAsDelegateReq{
+		Into:  intoRef,
+		Class: classRef,
+		Data:  data,
+	}
+
+	res := rpctypes.UpSaveAsDelegateResp{}
+	err = client.Call("RPC.SaveAsDelegate", req, &res)
+	if err != nil {
+		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
+	}
+
+	return res.Reference, nil
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`
-func (t *GoInsider) Serialize(what interface{}, to *[]byte) error {
+func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
 	log.Printf("serializing %+v", what)
 	return codec.NewEncoderBytes(to, ch).Encode(what)
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
-func (t *GoInsider) Deserialize(from []byte, into interface{}) error {
+func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 	ch := new(codec.CborHandle)
 	log.Printf("de-serializing %+v", from)
 	return codec.NewDecoderBytes(from, ch).Decode(into)

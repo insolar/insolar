@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package storage
 
 import (
+	"log"
 	"path/filepath"
 	"sync"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -45,7 +47,18 @@ type DB struct {
 	currentPulse record.PulseNum
 	rootRef      *record.Reference
 
+	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
+
+	// for BadgerDB it is normal to have transaction conflicts
+	// and these conflicts we should resolve by ourself
+	// so txretiries is our knob to tune up retry logic.
+	txretiries int
+}
+
+// SetTxRetiries sets number of retries on conflict in Update
+func (db *DB) SetTxRetiries(n int) {
+	db.txretiries = n
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -60,9 +73,9 @@ func setOptions(o *badger.Options) *badger.Options {
 
 // NewDB returns storage.DB with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
-func NewDB(dir string, opts *badger.Options) (*DB, error) {
+func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	opts = setOptions(opts)
-	dir, err := filepath.Abs(dir)
+	dir, err := filepath.Abs(conf.DataDirectory)
 	if err != nil {
 		return nil, err
 	}
@@ -70,16 +83,16 @@ func NewDB(dir string, opts *badger.Options) (*DB, error) {
 	opts.Dir = dir
 	opts.ValueDir = dir
 
-	db, err := badger.Open(*opts)
+	bdb, err := badger.Open(*opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "local database open failed")
 	}
 
-	bl := &DB{
-		db: db,
+	db := &DB{
+		db:         bdb,
+		txretiries: conf.TxRetriesOnConflict,
 	}
-
-	return bl, nil
+	return db, nil
 }
 
 // Bootstrap creates initial records in storage.
@@ -136,30 +149,17 @@ func (db *DB) Close() error {
 	return db.db.Close()
 }
 
-// Get gets value by key in BadgerDB storage.
+// Get wraps matching transaction manager method.
 func (db *DB) Get(key []byte) ([]byte, error) {
-	var buf []byte
-	txerr := db.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(key)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return ErrNotFound
-			}
-			return err
-		}
-		buf, err = item.ValueCopy(nil)
-		return err
-	})
-	if txerr != nil {
-		buf = nil
-	}
-	return buf, txerr
+	tx := db.BeginTransaction(false)
+	defer tx.Discard()
+	return tx.Get(key)
 }
 
-// Set stores value by key.
+// Set wraps matching transaction manager method.
 func (db *DB) Set(key, value []byte) error {
-	return db.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, value)
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.Set(key, value)
 	})
 }
 
@@ -175,19 +175,15 @@ func (db *DB) GetRecord(ref *record.Reference) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(rec record.Record) (*record.Reference, error) {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	ref, err := tx.SetRecord(rec)
+func (db *DB) SetRecord(rec record.Record) (ref *record.Reference, err error) {
+	err = db.Update(func(tx *TransactionManager) error {
+		ref, err = tx.SetRecord(rec)
+		return err
+	})
 	if err != nil {
-		return nil, err
+		ref = nil
 	}
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-	return ref, nil
+	return ref, err
 }
 
 // GetClassIndex wraps matching transaction manager method.
@@ -204,14 +200,9 @@ func (db *DB) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error)
 
 // SetClassIndex wraps matching transaction manager method.
 func (db *DB) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	err := tx.SetClassIndex(ref, idx)
-	if err != nil {
-		return err
-	}
-	return tx.Commit()
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.SetClassIndex(ref, idx)
+	})
 }
 
 // GetObjectIndex wraps matching transaction manager method.
@@ -228,14 +219,9 @@ func (db *DB) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, erro
 
 // SetObjectIndex wraps matching transaction manager method.
 func (db *DB) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	err := tx.SetObjectIndex(ref, idx)
-	if err != nil {
-		return err
-	}
-	return tx.Commit()
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.SetObjectIndex(ref, idx)
+	})
 }
 
 // GetDrop returns jet drop for a given pulse number.
@@ -310,14 +296,9 @@ func (db *DB) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 
 // SetEntropy wraps matching transaction manager method.
 func (db *DB) SetEntropy(pulse record.PulseNum, entropy []byte) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	err := tx.SetEntropy(pulse, entropy)
-	if err != nil {
-		return err
-	}
-	return tx.Commit()
+	return db.Update(func(tx *TransactionManager) error {
+		return tx.SetEntropy(pulse, entropy)
+	})
 }
 
 // SetCurrentPulse sets current pulse number.
@@ -354,12 +335,34 @@ func (db *DB) View(fn func(*TransactionManager) error) error {
 // Update accepts transaction function and commits changes. All calls to received transaction manager will be
 // consistent and written tp disk or an error will be returned.
 func (db *DB) Update(fn func(*TransactionManager) error) error {
-	tx := db.BeginTransaction(true)
-	defer tx.Discard()
-
-	err := fn(tx)
-	if err != nil {
-		return err
+	tries := db.txretiries
+	var tx *TransactionManager
+	var err error
+	for {
+		tx = db.BeginTransaction(true)
+		err = fn(tx)
+		if err != nil {
+			break
+		}
+		err = tx.Commit()
+		if err == nil {
+			break
+		}
+		if err != badger.ErrConflict {
+			break
+		}
+		if tries < 1 {
+			if db.txretiries > 0 {
+				err = ErrConflictRetriesOver
+			} else {
+				log.Println(">>> ErrConflict:", ErrConflict)
+				err = ErrConflict
+			}
+			break
+		}
+		tries--
+		tx.Discard()
 	}
-	return tx.Commit()
+	tx.Discard()
+	return err
 }

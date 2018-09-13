@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -174,4 +174,22 @@ func (m *TransactionManager) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 func (m *TransactionManager) SetEntropy(pulse record.PulseNum, entropy []byte) error {
 	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
 	return m.txn.Set(k, entropy)
+}
+
+// Get returns value by key.
+func (m *TransactionManager) Get(key []byte) ([]byte, error) {
+	// var buf []byte
+	item, err := m.txn.Get(key)
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return item.ValueCopy(nil)
+}
+
+// Set stores value by key.
+func (m *TransactionManager) Set(key, value []byte) error {
+	return m.txn.Set(key, value)
 }

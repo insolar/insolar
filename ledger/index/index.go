@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package index
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/record"
 )
 
@@ -30,6 +31,6 @@ type ClassLifeline struct {
 type ObjectLifeline struct {
 	ClassRef       record.Reference
 	LatestStateRef record.Reference   // Amend or activate record
-	AppendRefs     []record.Reference // ObjectAppendRecord
-	Children       []record.Reference
+	Children       []record.Reference // ActivateObjectRecord
+	Delegates      map[core.RecordRef]record.Reference
 }
