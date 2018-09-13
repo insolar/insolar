@@ -456,8 +456,9 @@ func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder,
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 	for name := range contracts {
+		rr, _ := randomRef()
 		class, err := cb.ArtifactManager.ActivateClass(
-			core.RecordRef{}, core.RecordRef{},
+			core.RecordRef{}, *rr,
 		)
 		if err != nil {
 			return err

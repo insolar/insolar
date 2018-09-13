@@ -506,9 +506,8 @@ func (c *Contract) NewChilds(cnt int) int {
 	s := 0
 	for i := 1; i < cnt; i++ {
 		farsh := child.New(i)
-		log.Print("farsh: ", farsh)
         ref:= farsh.AsChild(c.GetReference())
-		log.Print(ref)
+		log.Print("REF: ", ref)
 		s += i
 	} 
 	return s
@@ -521,7 +520,10 @@ func (c *Contract) SumChilds() int {
 		panic(err)
 	}
 	for _, chref := range childs {
+		log.Print("chref: ", chref.String())
 		o := child.GetObject(chref)
+		log.Printf("o: %+v", o)
+
 		s += o.GetNum()
 	}
 	return s
@@ -596,21 +598,20 @@ func New(n int) *Child {
 		Request:   core.String2Ref("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
-		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
+		Arguments: testutil.CBORMarshal(t, []interface{}{100}),
 	})
 	assert.NoError(t, resp.Error, "contract call")
 	r := testutil.CBORUnMarshal(t, resp.Result)
-	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
+	assert.Equal(t, []interface{}([]interface{}{uint64(4950)}), r)
 
 	resp = lr.Execute(&message.CallMethodMessage{
 		Request:   core.String2Ref("r3"),
 		ObjectRef: *contract,
-		Method:    "GetChildRefs",
+		Method:    "SumChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, resp.Error, "contract call")
 	r = testutil.CBORUnMarshal(t, resp.Result)
-	//assert.Equal(t, []interface{}([]interface{}{uint64(45), 7}), r)
-	t.Log("done")
+	assert.Equal(t, []interface{}([]interface{}{uint64(4950)}), r)
 
 }
