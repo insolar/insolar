@@ -584,7 +584,7 @@ func New(n int) *Child {
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "NewChilds",
-		Arguments: testutil.CBORMarshal(t, []interface{}{100}),
+		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
 	})
 	assert.NoError(t, resp.Error, "contract call")
 
