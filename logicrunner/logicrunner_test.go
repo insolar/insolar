@@ -116,6 +116,10 @@ type testLedger struct {
 	am core.ArtifactManager
 }
 
+func (r *testLedger) GetPulseManager() core.PulseManager {
+	panic("implement me")
+}
+
 func (r *testLedger) GetJetCoordinator() core.JetCoordinator {
 	panic("implement me")
 }
