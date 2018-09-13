@@ -17,8 +17,6 @@
 package nodenetwork
 
 import (
-	"crypto/sha1"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"golang.org/x/crypto/sha3"
@@ -40,9 +38,9 @@ func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *NodeNetwork {
 
 // ResolveHostID returns a host found by reference.
 func (network *NodeNetwork) ResolveHostID(ref core.RecordRef) string {
-	sha3digest := sha3.Sum512(ref[:])
-	sha1digest := sha1.Sum(sha3digest[:])
-	return string(sha1digest[:])
+	hash := make([]byte, 20)
+	sha3.ShakeSum128(hash, ref[:])
+	return string(hash)
 }
 
 // GetID returns current node id
