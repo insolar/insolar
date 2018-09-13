@@ -19,11 +19,11 @@ package core
 type JetRole int
 
 const (
-	RoleVirtualExecutor  = JetRole(iota + 1) // Role responsible for current CPU operations
-	RoleVirtualValidator                     // Role responsible for past CPU operations
-	RoleLightExecutor                        // TODO: add docs
-	RoleLightValidator                       // TODO: add docs
-	RoleHeavyExecutor                        // TODO: add docs
+	RoleVirtualExecutor  = JetRole(iota + 1) // Role responsible for current pulse CPU operations.
+	RoleVirtualValidator                     // Role responsible for previous pulse CPU operations.
+	RoleLightExecutor                        // Role responsible for current pulse Disk operations.
+	RoleLightValidator                       // Role responsible for previous pulse Disk operations.
+	RoleHeavyExecutor                        // Role responsible for permanent Disk operations.
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
