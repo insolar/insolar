@@ -17,6 +17,7 @@
 package mock
 
 import (
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 )
 
@@ -27,6 +28,31 @@ type mockJetCoordinator struct {
 
 	virtualValidators []core.RecordRef
 	lightValidators   []core.RecordRef
+}
+
+func NewMockJetCoordinator(conf configuration.JetCoordinator) (core.JetCoordinator, error) {
+	virtualExecutor := core.String2Ref(conf.VirtualExecutor)
+	lightExecutor := core.String2Ref(conf.LightExecutor)
+	heavyExecutor := core.String2Ref(conf.HeavyExecutor)
+
+	virtualValidators := make([]core.RecordRef, len(conf.VirtualValidators))
+	for i, vv := range conf.VirtualValidators {
+		virtualValidators[i] = core.String2Ref(vv)
+	}
+
+	lightValidators := make([]core.RecordRef, len(conf.LightValidators))
+	for i, lv := range conf.VirtualValidators {
+		lightValidators[i] = core.String2Ref(lv)
+	}
+
+	return &mockJetCoordinator{
+		virtualExecutor: virtualExecutor,
+		lightExecutor:   lightExecutor,
+		heavyExecutor:   heavyExecutor,
+
+		virtualValidators: virtualValidators,
+		lightValidators:   lightValidators,
+	}, nil
 }
 
 func (mockJetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
