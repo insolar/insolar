@@ -30,6 +30,7 @@ type mockJetCoordinator struct {
 	lightValidators   []core.RecordRef
 }
 
+// NewMockJetCoordinator returns new JetCoordinator which use configuration as backend logic.
 func NewMockJetCoordinator(conf configuration.JetCoordinator) (core.JetCoordinator, error) {
 	virtualExecutor := core.String2Ref(conf.VirtualExecutor)
 	lightExecutor := core.String2Ref(conf.LightExecutor)
