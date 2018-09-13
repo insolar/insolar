@@ -116,9 +116,17 @@ type testLedger struct {
 	am core.ArtifactManager
 }
 
-func (r *testLedger) Start(components core.Components) error { return nil }
-func (r *testLedger) Stop() error                            { return nil }
-func (r *testLedger) GetManager() core.ArtifactManager       { return r.am }
+func (r *testLedger) GetPulseManager() core.PulseManager {
+	panic("implement me")
+}
+
+func (r *testLedger) GetJetCoordinator() core.JetCoordinator {
+	panic("implement me")
+}
+
+func (r *testLedger) Start(components core.Components) error   { return nil }
+func (r *testLedger) Stop() error                              { return nil }
+func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
 
 type testMessageRouter struct {
 	LogicRunner core.LogicRunner
@@ -558,7 +566,7 @@ func New(n int) *Child {
 	assert.NoError(t, err)
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
-	am := l.GetManager()
+	am := l.GetArtifactManager()
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
