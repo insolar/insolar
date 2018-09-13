@@ -27,6 +27,7 @@ type Message interface {
 	Serialize() (io.Reader, error)
 	// Get reference returns referenced object.
 	GetReference() RecordRef
+	// GetRole returns operating jet role for given message type.
 	GetRole() JetRole
 }
 
