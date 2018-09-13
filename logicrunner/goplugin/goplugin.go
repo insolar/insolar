@@ -137,7 +137,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 	if err != nil {
 		return err
 	}
-
+	log.Printf("SAVED CHILD HAVE REF: %s, DATA: %+v", ref, req.Data)
 	reply.Reference = *ref
 	return nil
 }
