@@ -36,7 +36,7 @@ const TestUrl = HOST + "/api/v1?query_type=LOL"
 
 func TestMain(m *testing.M) {
 	cfg := configuration.NewAPIRunner()
-	api, _ := NewAPIRunner(&cfg)
+	api, _ := NewRunner(&cfg)
 
 	cs := core.Components{}
 	api.Start(cs)
@@ -100,21 +100,21 @@ func TestSerialization(t *testing.T) {
 }
 
 func TestNewApiRunnerNilConfig(t *testing.T) {
-	_, err := NewAPIRunner(nil)
+	_, err := NewRunner(nil)
 	assert.EqualError(t, err, "[ NewAPIRunner ] config is nil")
 }
 
 func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	cfg := configuration.APIRunner{}
-	_, err := NewAPIRunner(&cfg)
+	_, err := NewRunner(&cfg)
 	assert.EqualError(t, err, "[ NewAPIRunner ] Port must not be 0")
 
 	cfg.Port = 100
-	_, err = NewAPIRunner(&cfg)
+	_, err = NewRunner(&cfg)
 	assert.EqualError(t, err, "[ NewAPIRunner ] Location must exist")
 
 	cfg.Location = "test"
-	_, err = NewAPIRunner(&cfg)
+	_, err = NewRunner(&cfg)
 	assert.NoError(t, err)
 }
 

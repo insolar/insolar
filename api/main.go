@@ -34,9 +34,9 @@ import (
 )
 
 const (
-	Ok           int = 0
-	HandlerError int = -1
-	BadRequest   int = -2
+	_            int = 0
+	handlerError int = -1
+	badRequest   int = -2
 )
 
 func writeError(message string, code int) map[string]interface{} {
@@ -50,7 +50,7 @@ func writeError(message string, code int) map[string]interface{} {
 }
 
 func makeHandlerMarshalErrorJSON() []byte {
-	jsonErr := writeError("Invalid data from handler", HandlerError)
+	jsonErr := writeError("Invalid data from handler", handlerError)
 	serJSON, err := json.Marshal(jsonErr)
 	if err != nil {
 		log.Fatal("Can't marshal base error")
@@ -64,28 +64,28 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 	qtype := QTypeFromString(qTypeStr)
 	var answer map[string]interface{}
 
-	var handlerError error
+	var hError error
 	switch qtype {
 	case CreateMember:
-		answer, handlerError = rh.ProcessCreateMember()
+		answer, hError = rh.ProcessCreateMember()
 	case DumpUserInfo:
-		answer, handlerError = rh.ProcessDumpUsers(false)
+		answer, hError = rh.ProcessDumpUsers(false)
 	case DumpAllUsers:
-		answer, handlerError = rh.ProcessDumpUsers(true)
+		answer, hError = rh.ProcessDumpUsers(true)
 	case GetBalance:
-		answer, handlerError = rh.ProcessGetBalance()
+		answer, hError = rh.ProcessGetBalance()
 	case SendMoney:
-		answer, handlerError = rh.ProcessSendMoney()
+		answer, hError = rh.ProcessSendMoney()
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
-		answer = writeError(msg, BadRequest)
+		answer = writeError(msg, badRequest)
 		logrus.Printf("[QID=%s] %s\n", rh.qid, msg)
 		return answer
 	}
-	if handlerError != nil {
-		errMsg := "Handler error: " + handlerError.Error()
+	if hError != nil {
+		errMsg := "Handler error: " + hError.Error()
 		log.Printf("[QID=%s] %s\n", rh.qid, errMsg)
-		answer = writeError(errMsg, HandlerError)
+		answer = writeError(errMsg, handlerError)
 	}
 
 	return answer
@@ -147,7 +147,7 @@ func wrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *
 
 		params, err := preprocessRequest(req)
 		if err != nil {
-			answer = writeError("Bad request", BadRequest)
+			answer = writeError("Bad request", badRequest)
 			logrus.Errorf("[QID=]Can't parse input request: %s\n", err, req.RequestURI)
 			return
 		}
@@ -157,13 +157,15 @@ func wrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *
 	}
 }
 
+// Runner implements Component for API
 type Runner struct {
 	messageRouter core.MessageRouter
 	server        *http.Server
 	cfg           *configuration.APIRunner
 }
 
-func NewAPIRunner(cfg *configuration.APIRunner) (*Runner, error) {
+// C-tor for API Runner
+func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	if cfg == nil {
 		return nil, errors.New("[ NewAPIRunner ] config is nil")
 	}

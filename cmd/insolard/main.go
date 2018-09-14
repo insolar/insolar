@@ -104,7 +104,7 @@ func main() {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
 
-	api, err := api2.NewAPIRunner(&cfgHolder.Configuration.APIRunner)
+	api, err := api2.NewRunner(&cfgHolder.Configuration.APIRunner)
 	if err != nil {
 		log.Fatalln("Failed to start ApiRunner: ", err.Error())
 	}

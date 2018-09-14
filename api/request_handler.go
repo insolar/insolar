@@ -50,6 +50,7 @@ func extractCreateMemberResponse(data []byte) (*string, error) {
 	return &reference, nil
 }
 
+// RequestHandler encapsulate processing of request
 type RequestHandler struct {
 	qid                 string
 	params              *Params

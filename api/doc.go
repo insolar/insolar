@@ -23,7 +23,7 @@ Package api provides http/json APIto interact with our system
 	cfg := configuration.NewAPIRunner()
 
 	// Create api runner
-	api, _ := NewAPIRunner(&cfg)
+	api, _ := NewRunner(&cfg)
 
 	// Create empty component map
 	cs := core.Components{}
