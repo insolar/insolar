@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2018 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,13 +14,8 @@
  *    limitations under the License.
  */
 
-package main
+package core
 
-import (
-	"testing"
-)
-
-// Just to make Goland happy
-func TestStub(t *testing.T) {
-
+type Bootstrapper interface {
+	GetRootDomainRef() *RecordRef
 }

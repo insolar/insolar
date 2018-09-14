@@ -54,7 +54,8 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork) (*DHT, error)
 		return nil, err
 	}
 
-	originID := id.ID(nn.ResolveHostID(nn.GetID()))
+	encodedOriginID := nn.ResolveHostID(nn.GetID())
+	originID := id.FromBase58(encodedOriginID)
 	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
 		return nil, err

@@ -50,38 +50,6 @@ func TestCodeRecord_GetCode(t *testing.T) {
 	assert.Equal(t, core.MachineType(1), mt)
 }
 
-func TestPulseNumID(t *testing.T) {
-	pulse0 := PulseNum(0)
-	pulse1 := PulseNum(1)
-
-	rec := &LockUnlockRequest{}
-	idPulse0 := pulse0.ID(rec)
-	idPulse1 := pulse1.ID(rec)
-	assert.NotEqual(t, idPulse0, idPulse1)
-}
-
-func TestReference2Key(t *testing.T) {
-	pulse0 := PulseNum(0)
-	pulse1 := PulseNum(1)
-
-	rec0 := &LockUnlockRequest{}
-	rec1 := &LockUnlockRequest{}
-
-	idPulse0 := pulse0.ID(rec0)
-	idPulse1 := pulse1.ID(rec1)
-
-	refPulse0 := &Reference{
-		Record: idPulse0,
-	}
-	refPulse1 := &Reference{
-		Record: idPulse1,
-	}
-
-	k0 := refPulse0.CoreRef()
-	k1 := refPulse1.CoreRef()
-	assert.NotEqual(t, k0, k1)
-}
-
 // This ensures serialized reference has Record prefix and Domain suffix.
 // It's required for selecting records by record pulse
 func TestReference_Key(t *testing.T) {

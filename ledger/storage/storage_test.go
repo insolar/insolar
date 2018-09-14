@@ -17,9 +17,9 @@
 package storage_test
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -45,37 +45,18 @@ func TestStore_SetRecord(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
-	// mock pulse source
-	pulse1 := record.PulseNum(1)
-	db.SetCurrentPulse(pulse1)
 
-	passRecPulse1 := &record.LockUnlockRequest{}
-	idPulse1 := pulse1.ID(passRecPulse1)
-
-	refPulse1 := &record.Reference{
-		Domain: record.ID{},
-		Record: idPulse1,
-	}
-	rec, err := db.GetRecord(refPulse1)
+	rec, err := db.GetRecord(&record.Reference{})
 	assert.Nil(t, rec)
 	assert.Equal(t, storage.ErrNotFound, err)
 
-	gotRef, err := db.SetRecord(passRecPulse1)
+	rec = &record.LockUnlockRequest{}
+	gotRef, err := db.SetRecord(rec)
 	assert.Nil(t, err)
-	assert.Equal(t, idPulse1, gotRef.Record)
-	assert.Equal(t, refPulse1, gotRef)
 
 	gotRec, err := db.GetRecord(gotRef)
 	assert.Nil(t, err)
-	assert.Equal(t, passRecPulse1, gotRec)
-
-	// check is record IDs in different pulses are not the same
-	pulse0 := record.PulseNum(0)
-	idPulse0 := pulse0.ID(gotRec)
-
-	idPulse0Hex := fmt.Sprintf("%x", idPulse0)
-	idPulse1Hex := fmt.Sprintf("%x", idPulse1)
-	assert.NotEqual(t, idPulse1Hex, idPulse0Hex, "got hash")
+	assert.Equal(t, rec, gotRec)
 }
 
 func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
@@ -194,7 +175,7 @@ func TestStore_SetCurrentPulse(t *testing.T) {
 	defer cleaner()
 
 	db.SetCurrentPulse(42)
-	assert.Equal(t, record.PulseNum(42), db.GetCurrentPulse())
+	assert.Equal(t, core.PulseNumber(42), db.GetCurrentPulse())
 }
 
 func TestStore_SetEntropy(t *testing.T) {
@@ -202,10 +183,10 @@ func TestStore_SetEntropy(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	db.SetEntropy(42, []byte{1, 2, 3})
+	db.SetEntropy(42, core.Entropy{1, 2, 3})
 	entropy, err := db.GetEntropy(42)
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{1, 2, 3}, entropy)
+	assert.Equal(t, core.Entropy{1, 2, 3}, *entropy)
 	_, err = db.GetEntropy(1)
 	assert.Error(t, err)
 }

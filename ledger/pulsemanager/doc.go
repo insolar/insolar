@@ -14,13 +14,5 @@
  *    limitations under the License.
  */
 
-package main
-
-import (
-	"testing"
-)
-
-// Just to make Goland happy
-func TestStub(t *testing.T) {
-
-}
+// Package pulsemanager is responsible for all pulse operations.
+package pulsemanager

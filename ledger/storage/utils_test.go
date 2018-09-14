@@ -20,11 +20,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/record"
 )
 
 func zerohash() []byte {
-	b := make([]byte, record.HashSize)
+	b := make([]byte, core.RecordHashSize)
 	return b
 }
 

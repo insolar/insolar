@@ -282,7 +282,7 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, method string, args []byte) (
 		return nil, errors.Wrap(err, "on calling main API")
 	}
 
-	return []byte(res.Result), res.Err
+	return []byte(res.Result), nil
 }
 
 // RouteConstructorCall ...
@@ -304,7 +304,7 @@ func (gi *GoInsider) RouteConstructorCall(ref core.RecordRef, name string, args 
 		return []byte{}, errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Data, res.Err
+	return res.Data, nil
 }
 
 // SaveAsChild ...

@@ -35,7 +35,6 @@ type DownCallMethodReq struct { // todo it may use foundation.Context
 type DownCallMethodResp struct {
 	Data []byte
 	Ret  core.Arguments
-	Err  error
 }
 
 // DownCallConstructorReq is a set of arguments for CallConstructor RPC
@@ -49,7 +48,6 @@ type DownCallConstructorReq struct {
 // DownCallConstructorResp is response from CallConstructor RPC in the runner
 type DownCallConstructorResp struct {
 	Ret core.Arguments
-	Err error
 }
 
 // UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
@@ -72,7 +70,6 @@ type UpRouteReq struct {
 // UpRouteResp is response from Route RPC in goplugin
 type UpRouteResp struct {
 	Result core.Arguments
-	Err    error
 }
 
 // UpRouteConstructorReq is a set of arguments for RouteConstructor RPC in goplugin
@@ -85,7 +82,6 @@ type UpRouteConstructorReq struct {
 // UpRouteConstructorResp is response from RouteConstructor RPC in goplugin
 type UpRouteConstructorResp struct {
 	Data []byte
-	Err  error
 }
 
 // UpSaveAsChildReq is a set of arguments for SaveAsChild RPC in goplugin

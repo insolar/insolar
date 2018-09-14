@@ -46,14 +46,6 @@ type JetCoordinator interface {
 	QueryRole(role JetRole, obj RecordRef, pulse PulseNumber) []RecordRef
 }
 
-type PulseManager interface {
-	// Current returns current pulse structure.
-	Current() (Pulse, error)
-
-	// Set set's new pulse.
-	Set(pulse Pulse) error
-}
-
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
 	// RootRef returns the root record reference.

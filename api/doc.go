@@ -14,13 +14,25 @@
  *    limitations under the License.
  */
 
-package main
+package api
 
-import (
-	"testing"
-)
+/*
+Package api provides http/json APIto interact with our system
 
-// Just to make Goland happy
-func TestStub(t *testing.T) {
+	// Create api configuration
+	cfg := configuration.NewAPIRunner()
 
-}
+	// Create api runner
+	api, _ := NewRunner(&cfg)
+
+	// Create empty component map
+	cs := core.Components{}
+
+	// Run api server
+	_ = api.Start(cs)
+
+	time.Sleep(60 * time.Second)
+
+	// Gracefully stop api server
+	_ = api.Stop()
+*/
