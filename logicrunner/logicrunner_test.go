@@ -17,6 +17,8 @@
 package logicrunner
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -26,7 +28,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 
-	"fmt"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
@@ -607,4 +608,106 @@ func New(n int) *Child {
 	r = testutil.CBORUnMarshal(t, resp.Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
+}
+
+func TestRootDomainContract(t *testing.T) {
+	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.insgoc")
+	if err != nil {
+		fmt.Print(err)
+	}
+	memberCode, err := ioutil.ReadFile("../genesis/experiment/member/member.insgoc")
+	if err != nil {
+		fmt.Print(err)
+	}
+	allowanceCode, err := ioutil.ReadFile("../genesis/experiment/allowance/allowance.insgoc")
+	if err != nil {
+		fmt.Print(err)
+	}
+	walletCode, err := ioutil.ReadFile("../genesis/experiment/wallet/wallet.insgoc")
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	l, cleaner := ledgertestutil.TmpLedger(t, "")
+	defer cleaner()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	am := l.GetArtifactManager()
+	fmt.Println("RUNNERPATH", runnerbin)
+	lr, err := NewLogicRunner(configuration.LogicRunner{
+		GoPlugin: &configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     runnerbin,
+			RunnerCodePath: insiderStorage,
+		}})
+	assert.NoError(t, err, "Initialize runner")
+
+	assert.NoError(t, lr.Start(core.Components{
+		"core.Ledger":        l,
+		"core.MessageRouter": &testMessageRouter{LogicRunner: lr},
+	}), "starting logicrunner")
+	defer lr.Stop()
+
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
+	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootDomain": string(rootDomainCode)})
+	assert.NoError(t, err)
+
+	t.Logf("XX %+v", cb)
+
+	domain := core.String2Ref("c1")
+	request := core.String2Ref("c2")
+	contract, err := am.ActivateObj(domain, request, *cb.Classes["rootDomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	resp1 := lr.Execute(&message.CallMethodMessage{
+		Request:   request,
+		ObjectRef: *contract,
+		Method:    "CreateMember",
+		Arguments: testutil.CBORMarshal(t, []interface{}{"member1"}),
+	})
+	assert.NoError(t, resp1.Error, "contract call")
+	r1 := testutil.CBORUnMarshal(t, resp1.Result)
+	member1Ref := r1.([]interface{})[0].(string)
+
+	resp2 := lr.Execute(&message.CallMethodMessage{
+		Request:   request,
+		ObjectRef: *contract,
+		Method:    "CreateMember",
+		Arguments: testutil.CBORMarshal(t, []interface{}{"member2"}),
+	})
+	assert.NoError(t, resp2.Error, "contract call")
+	r2 := testutil.CBORUnMarshal(t, resp2.Result)
+	member2Ref := r2.([]interface{})[0].(string)
+
+	resp3 := lr.Execute(&message.CallMethodMessage{
+		Request:   request,
+		ObjectRef: *contract,
+		Method:    "SendMoney",
+		Arguments: testutil.CBORMarshal(t, []interface{}{member1Ref, member2Ref, 1}),
+	})
+	assert.NoError(t, resp3.Error, "contract call")
+
+	resp4 := lr.Execute(&message.CallMethodMessage{
+		Request:   request,
+		ObjectRef: *contract,
+		Method:    "DumpAllUsers",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, resp4.Error, "contract call")
+	r := testutil.CBORUnMarshal(t, resp4.Result)
+
+	var res []map[string]interface{}
+	var expected = map[interface{}]float64{"member1": 999, "member2": 1001}
+
+	err = json.Unmarshal(r.([]interface{})[0].([]byte), &res)
+	assert.NoError(t, err)
+	for _, member := range res {
+		assert.Equal(t, expected[member["member"]], member["wallet"])
+	}
 }
