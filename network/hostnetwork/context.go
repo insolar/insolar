@@ -64,7 +64,7 @@ func (cb ContextBuilder) Build() (ctx Context, err error) {
 func (cb ContextBuilder) SetHostByID(hostID id.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx Context) (Context, error) {
 		for index, id := range cb.dht.origin.IDs {
-			if hostID.KeyEqual(id.GetKey()) {
+			if hostID.Equal(id.Bytes()) {
 				return context.WithValue(ctx, ctxTableIndex, index), nil
 			}
 		}

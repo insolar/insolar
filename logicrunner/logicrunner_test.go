@@ -17,7 +17,6 @@
 package logicrunner
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -27,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 
+	"fmt"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
@@ -491,28 +491,49 @@ func TestGetChildren(t *testing.T) {
 	goContract := `
 package main
 
-//import "fmt"
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/child"
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"contract-proxy/child"
+)
 
 type Contract struct {
 	foundation.BaseContract
 }
 
 func (c *Contract) NewChilds(cnt int) int {
-	//ctx := c.GetContext()
-	summ := 0
+	s := 0
 	for i := 1; i < cnt; i++ {
-		farsh := child.New(i)
-        farsh.AsChild(c.GetReference())
-		summ += i
+        child.New(i).AsChild(c.GetReference())
+		s += i
 	} 
-	return summ
+	return s
 }
 
-// testchilds here
-`
+func (c *Contract) SumChilds() int {
+	s := 0
+	childs, err := c.GetChildrenTyped(child.GetClass())
+	if err != nil {
+		panic(err)
+	}
+	for _, chref := range childs {
+		o := child.GetObject(chref)
+		s += o.GetNum()
+	}
+	return s
+}
 
+func (c *Contract) GetChildRefs() (ret []string) {
+	childs, err := c.GetChildrenTyped(child.GetClass())
+	if err != nil {
+		panic(err)
+	}
+
+	for _, chref := range childs {
+		ret = append(ret, chref.String())
+	}
+	return ret
+}
+`
 	goChild := `
 package main
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -543,7 +564,7 @@ func New(n int) *Child {
 		GoPlugin: &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		}})
 	assert.NoError(t, err, "Initialize runner")
@@ -561,22 +582,29 @@ func New(n int) *Child {
 	err = cb.Build(map[string]string{"contract": goContract})
 	assert.NoError(t, err)
 
-	t.Logf("XX %+v", cb)
-
 	domain := core.String2Ref("c1")
-	request := core.String2Ref("c2")
-	contract, err := am.ActivateObj(request, domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.ActivateObj(core.String2Ref("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp := lr.Execute(&message.CallMethodMessage{
-		Request:   request,
+		Request:   core.String2Ref("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
 	})
 	assert.NoError(t, resp.Error, "contract call")
-
 	r := testutil.CBORUnMarshal(t, resp.Result)
-	t.Logf("ret is %+v", r)
+	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
+
+	resp = lr.Execute(&message.CallMethodMessage{
+		Request:   core.String2Ref("r3"),
+		ObjectRef: *contract,
+		Method:    "SumChilds",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, resp.Error, "contract call")
+	r = testutil.CBORUnMarshal(t, resp.Result)
+	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
+
 }

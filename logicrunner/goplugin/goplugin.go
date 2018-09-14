@@ -137,8 +137,36 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 	if err != nil {
 		return err
 	}
-
 	reply.Reference = *ref
+	return nil
+}
+
+// GetObjChildren is an RPC returns set of object children
+func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes.UpGetObjChildrenResp) error {
+	// TODO: INS-408
+	am := gpr.gp.ArtifactManager
+	i, err := am.GetObjChildren(req.Obj)
+	if err != nil {
+		return errors.Wrap(err, "am.GetObjChildren failed")
+	}
+	for i.HasNext() {
+		r, err := i.Next()
+		if err != nil {
+			return err
+		}
+		o, err := am.GetLatestObj(r)
+		if err != nil {
+			return errors.Wrap(err, "Have ref, have no object")
+		}
+		cd, err := o.ClassDescriptor()
+		if err != nil {
+			return errors.Wrap(err, "Have ref, have no object")
+		}
+		ref := cd.HeadRef()
+		if ref.Equal(req.Class) {
+			reply.Children = append(reply.Children, r)
+		}
+	}
 	return nil
 }
 
@@ -230,7 +258,7 @@ func (gp *GoPlugin) StartRunner() error {
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
 
-	execPath := "ginsider-cli/ginsider-cli"
+	execPath := "logicrunner/goplugin/ginsider-cli/ginsider-cli"
 	if gp.Cfg.RunnerPath != "" {
 		execPath = gp.Cfg.RunnerPath
 	}

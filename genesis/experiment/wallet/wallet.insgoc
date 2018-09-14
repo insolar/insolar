@@ -64,16 +64,24 @@ func (w *Wallet) Accept(aRef core.RecordRef) {
 
 func (w *Wallet) GetTotalBalance() uint {
 	var totalAllowanced uint
-	for _, c := range w.GetChildrenTyped(allowance.GetClass()) {
-		a := c.(*allowance.Allowance)
+	crefs, err := w.GetChildrenTyped(allowance.GetClass())
+	if err != nil {
+	    panic(err)
+	}
+	for _, cref := range crefs {
+	    a := allowance.GetObject(cref)
 		totalAllowanced += a.GetBalanceForOwner()
 	}
 	return w.Balance + totalAllowanced
 }
 
 func (w *Wallet) ReturnAndDeleteExpiriedAllowances() {
-	for _, c := range w.GetChildrenTyped(allowance.GetClass()) {
-		Allowance := c.(*allowance.Allowance)
+	crefs, err := w.GetChildrenTyped(allowance.GetClass())
+	if err != nil {
+	    panic(err)
+	}
+	for _, cref := range crefs {
+		Allowance := allowance.GetObject(cref)
 		w.Balance += Allowance.DeleteExpiredAllowance()
 	}
 }

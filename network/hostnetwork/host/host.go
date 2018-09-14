@@ -39,10 +39,10 @@ func NewHost(address *Address) *Host {
 
 // String representation of Host.
 func (host Host) String() string {
-	return fmt.Sprintf("%s (%s)", host.ID.KeyString(), host.Address.String())
+	return fmt.Sprintf("%s (%s)", host.ID.String(), host.Address.String())
 }
 
 // Equal checks if host equals to other host (e.g. hosts' IDs and network addresses match).
 func (host Host) Equal(other Host) bool {
-	return host.ID.KeyEqual(other.ID.GetKey()) && (other.Address != nil) && host.Address.Equal(*other.Address)
+	return host.ID.Equal(other.ID.Bytes()) && (other.Address != nil) && host.Address.Equal(*other.Address)
 }

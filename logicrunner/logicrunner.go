@@ -36,7 +36,7 @@ type LogicRunner struct {
 	Cfg             configuration.LogicRunner
 }
 
-// NewLogicRunner is constructor for `LogicRunner`
+// NewLogicRunner is constructor for LogicRunner
 func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
