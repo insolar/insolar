@@ -25,12 +25,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/satori/go.uuid"
-	"github.com/sirupsen/logrus"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -148,7 +147,7 @@ func wrapAPIV1Handler(router core.MessageRouter, rootDomainReference core.Record
 		params, err := preprocessRequest(req)
 		if err != nil {
 			answer = writeError("Bad request", badRequest)
-			logrus.Errorf("[QID=]Can't parse input request: %s\n", err, req.RequestURI)
+			logrus.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
 		rh := NewRequestHandler(params, router, rootDomainReference)
