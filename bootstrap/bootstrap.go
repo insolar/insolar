@@ -37,6 +37,7 @@ func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 
 func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
+	bootstrapper.rootDomainRef = &core.RecordRef{}
 	return bootstrapper, nil
 }
 
