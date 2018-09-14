@@ -36,7 +36,7 @@ type GoPlugin struct {
 
 func NewLogicRunner() LogicRunner {
 	insiderStorage := "contractstorage"
-	_ := os.Mkdir(insiderStorage, os.ModePerm)
+	_ = os.Mkdir(insiderStorage, os.ModePerm)
 	return LogicRunner{
 		BuiltIn: &BuiltIn{},
 		GoPlugin: &GoPlugin{
