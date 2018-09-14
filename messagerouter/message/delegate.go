@@ -45,7 +45,7 @@ func (m *DelegateMessage) GetReference() core.RecordRef {
 // Serialize serializes message.
 func (m *DelegateMessage) Serialize() (io.Reader, error) {
 	buff := &bytes.Buffer{}
-	buff.Write([]byte{byte(CallConstructorMessageType)})
+	buff.Write([]byte{byte(DelegateMessageType)})
 	enc := gob.NewEncoder(buff)
 	err := enc.Encode(m)
 	return buff, err
