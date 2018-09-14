@@ -18,7 +18,6 @@ package allowance
 
 import (
 	"time"
-	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -36,10 +35,7 @@ func (a *Allowance) IsExpired() bool {
 }
 
 func (a *Allowance) TakeAmount() uint {
-	caller := a.GetContext().Caller
-	fmt.Println(a.GetContext())
-	fmt.Println("CALLER", caller)
-	fmt.Println("TO", a.To)
+	//caller := a.GetContext().Caller
 	//if *caller == a.To && !a.IsExpired() {
 
 		a.SelfDestructRequest()

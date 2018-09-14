@@ -18,7 +18,6 @@ package rootdomain
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"contract-proxy/member"
 	"contract-proxy/wallet"
@@ -46,7 +45,6 @@ func (rd *RootDomain) GetBalance(reference string) uint {
 
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	walletFrom := wallet.GetImplementationFrom(core.String2Ref(from))
-	fmt.Println(walletFrom.GetReference())
 
     v := core.String2Ref(to)
 	walletFrom.Transfer(amount, &v)

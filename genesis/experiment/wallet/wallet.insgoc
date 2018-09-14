@@ -17,7 +17,6 @@
 package wallet
 
 import (
-"fmt"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
@@ -54,7 +53,6 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) {
 	toWalletRef := toWallet.GetReference()
 
 	ah := allowance.New(&toWalletRef, amount, w.GetContext().Time.Unix()+10)
-	fmt.Println("WALLET", w.GetReference())
 	a := ah.AsChild(w.GetReference())
 
     r := a.GetReference()
