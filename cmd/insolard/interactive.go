@@ -93,7 +93,7 @@ func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.C
 	hosts := dhtNetwork.NumHosts(ctx)
 	originID := dhtNetwork.GetOriginHost(ctx).ID
 	fmt.Println("======= Host info ======")
-	fmt.Println("ID key: " + originID.KeyString())
+	fmt.Println("ID key: " + originID.String())
 	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
 	fmt.Println("Address: " + service.GetAddress())
 }

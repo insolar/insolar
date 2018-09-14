@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
@@ -33,7 +32,7 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	nodeNetwork *nodenetwork.Nodenetwork
+	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork *hostnetwork.DHT
 }
 
@@ -46,6 +45,7 @@ func NewServiceNetwork(
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
 	}
+
 	dht, err := hostnetwork.NewHostNetwork(hostConf, node)
 	if err != nil {
 		return nil, err
@@ -74,14 +74,11 @@ func (network *ServiceNetwork) GetAddress() string {
 }
 
 // SendMessage sends a message from MessageRouter.
-func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]byte, error) {
+func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID, err := network.nodeNetwork.GetReferenceHostID(msg.GetReference().String())
-	if err != nil {
-		return nil, err
-	}
+	hostID := network.nodeNetwork.ResolveHostID(nodeID)
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return nil, err
@@ -91,7 +88,7 @@ func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]b
 }
 
 // SendCascadeMessage sends a message from MessageRouter to a cascade of nodes. Message reference is ignored
-func (network *ServiceNetwork) SendCascadeMessage(data cascade.SendData, method string, msg core.Message) error {
+func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
@@ -100,7 +97,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data cascade.SendData, method 
 		return err
 	}
 
-	return network.hostNetwork.InitCascadeSendMessage(data, "", createContext(network.hostNetwork), method, [][]byte{buff})
+	return network.hostNetwork.InitCascadeSendMessage(data, nil, createContext(network.hostNetwork), method, [][]byte{buff})
 }
 
 func messageToBytes(msg core.Message) ([]byte, error) {

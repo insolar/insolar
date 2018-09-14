@@ -16,10 +16,14 @@
 
 package core
 
+// Entropy is 64 random bytes used in every pseudo-random calculations.
 type Entropy [64]byte
 
-// Base data struct for a pulse
+// PulseNumber is current time slot number.
+type PulseNumber uint32
+
+// Pulse is base data structure for a pulse.
 type Pulse struct {
-	PulseNumber uint64
+	PulseNumber PulseNumber
 	Entropy     Entropy
 }
