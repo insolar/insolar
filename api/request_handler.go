@@ -230,10 +230,10 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	if all {
 		routResult, err = rh.sendRequest("DumpAllUsers", []interface{}{})
 	} else {
-		if len(rh.params.Name) == 0 {
-			return nil, errors.New("field 'name' is required")
+		if len(rh.params.Reference) == 0 {
+			return nil, errors.New("field 'reference' is required")
 		}
-		routResult, err = rh.sendRequest("DumpUserInfo", []interface{}{rh.params.Name})
+		routResult, err = rh.sendRequest("DumpUserInfo", []interface{}{rh.params.Reference})
 	}
 
 	if err != nil {
