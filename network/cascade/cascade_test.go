@@ -26,7 +26,7 @@ import (
 )
 
 func TestCalculateNextNodes(t *testing.T) {
-	t.Skip()
+	//	t.Skip()
 	nodeIds := []core.RecordRef{
 		core.String2Ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
 		core.String2Ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"),
@@ -46,11 +46,11 @@ func TestCalculateNextNodes(t *testing.T) {
 		Entropy:           core.Entropy{0},
 		ReplicationFactor: 2,
 	}
-	r, _ := CalculateNextNodes(c, core.RecordRef{})
+	r, _ := CalculateNextNodes(c, nil)
 	assert.Equal(t, []core.RecordRef{nodeIds[5], nodeIds[8]}, r)
-	r, _ = CalculateNextNodes(c, nodeIds[5])
+	r, _ = CalculateNextNodes(c, &nodeIds[5])
 	assert.Equal(t, []core.RecordRef{nodeIds[10], nodeIds[6]}, r)
-	r, _ = CalculateNextNodes(c, nodeIds[10])
+	r, _ = CalculateNextNodes(c, &nodeIds[10])
 	assert.Equal(t, []core.RecordRef{nodeIds[0], nodeIds[4]}, r)
 }
 

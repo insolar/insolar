@@ -54,7 +54,7 @@ func calcHash(nodeID core.RecordRef, entropy core.Entropy) []byte {
 	data := make([]byte, core.RecordRefSize)
 	copy(data, nodeID[:])
 	for i, d := range data {
-		data[i] = entropy[i%64] ^ d
+		data[i] = entropy[i%core.EntropySize] ^ d
 	}
 
 	hash := sha3.New224()
@@ -103,7 +103,7 @@ func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.Recor
 }
 
 // CalculateNextNodes get nodes of the next cascade layer from the input nodes slice
-func CalculateNextNodes(data core.Cascade, currentNode core.RecordRef) (nextNodeIds []core.RecordRef, err error) {
+func CalculateNextNodes(data core.Cascade, currentNode *core.RecordRef) (nextNodeIds []core.RecordRef, err error) {
 	nodeIds := make([]core.RecordRef, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
 
@@ -120,8 +120,12 @@ func CalculateNextNodes(data core.Cascade, currentNode core.RecordRef) (nextNode
 			calcHash(nodeIds[j], data.Entropy)) < 0
 	})
 
+	if currentNode == nil {
+		return nodeIds[:data.ReplicationFactor], nil
+	}
+
 	// get indexes of the next layer nodes from the sorted nodes slice
-	startIndex, endIndex := getNextCascadeLayerIndexes(nodeIds, currentNode, data.ReplicationFactor)
+	startIndex, endIndex := getNextCascadeLayerIndexes(nodeIds, *currentNode, data.ReplicationFactor)
 
 	if startIndex >= len(nodeIds) {
 		return nil, nil

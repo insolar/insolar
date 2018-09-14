@@ -65,7 +65,7 @@ func NewServiceNetwork(
 
 	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
 	f := func(data core.Cascade, method string, args [][]byte) {
-		service.initCascadeSendMessage(data, method, args)
+		service.initCascadeSendMessage(data, true, method, args)
 	}
 	cascade1.SendMessage = f
 	return service, nil
@@ -100,7 +100,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 		return err
 	}
 
-	return network.initCascadeSendMessage(data, method, [][]byte{buff})
+	return network.initCascadeSendMessage(data, false, method, [][]byte{buff})
 }
 
 func messageToBytes(msg core.Message) ([]byte, error) {
@@ -174,7 +174,7 @@ func createContext(handler hosthandler.HostHandler) hosthandler.Context {
 }
 
 // InitCascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
-func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, method string, args [][]byte) error {
+func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCurrentNode bool, method string, args [][]byte) error {
 	if len(data.NodeIds) == 0 {
 		return errors.New("node IDs list should not be empty")
 	}
@@ -182,13 +182,22 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, method 
 		return errors.New("replication factor should not be zero")
 	}
 
-	nextNodes, err := cascade.CalculateNextNodes(data, network.nodeNetwork.GetID())
+	var nextNodes []core.RecordRef
+	var err error
+
+	if findCurrentNode {
+		nodeId := network.nodeNetwork.GetID()
+		nextNodes, err = cascade.CalculateNextNodes(data, &nodeId)
+	} else {
+		nextNodes, err = cascade.CalculateNextNodes(data, nil)
+	}
 	if err != nil {
 		return err
 	}
 	if len(nextNodes) == 0 {
 		return nil
 	}
+
 	var failedNodes []core.RecordRef
 	for _, nextNode := range nextNodes {
 		hostID := network.nodeNetwork.ResolveHostID(nextNode)

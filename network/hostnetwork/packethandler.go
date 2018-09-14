@@ -283,9 +283,6 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 		response.Success = false
 		response.Error = err.Error()
 	}
-	// currentNodeID := hostHandler.HtFromCtx(ctx).Origin
-	// hostHandler.InitCascadeSendMessage(hostHandler, data.Data, currentNodeID, data.RPC.Method, data.RPC.Args)
-
 	hostHandler.GetNetworkCommonFacade().GetCascade().SendToNextLayer(data.Data, data.RPC.Method, data.RPC.Args)
 
 	return packetBuilder.Response(response).Build(), err
