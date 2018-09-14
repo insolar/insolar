@@ -33,6 +33,11 @@ func NewID() (ID, error) {
 	return id, err
 }
 
+// FromBase58 returns decoded host id.
+func FromBase58(encoded string) ID {
+	return ID(base58.Decode(encoded))
+}
+
 // Equal checks if id is equal ot another.
 func (id ID) Equal(other []byte) bool {
 	return bytes.Equal(id, other)
