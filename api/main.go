@@ -117,7 +117,7 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 		}
 	}
 
-	logrus.Printf("[QID=%s] Query: %s\n", params.QID, string(body))
+	logrus.Printf("[QID=%s] Query: %s. Url: %s\n", params.QID, string(body), req.URL)
 
 	return &params, nil
 }
@@ -185,16 +185,19 @@ func NewAPIRunner(cfg *configuration.APIRunner) (*APIRunner, error) {
 	return &ar, nil
 }
 
-// Start runs api server
-func (ar *APIRunner) Start(c core.Components) error {
-
-	// TODO: init message router
+func (ar *APIRunner) reloadMessageRouter(c core.Components) {
 	_, ok := c["core.MessageRouter"]
 	if !ok {
 		logrus.Warnln("Working in demo mode: without MessageRouter")
 	} else {
 		ar.messageRouter = c["core.MessageRouter"].(core.MessageRouter)
 	}
+}
+
+// Start runs api server
+func (ar *APIRunner) Start(c core.Components) error {
+
+	ar.reloadMessageRouter(c)
 
 	fw := wrapAPIV1Handler(ar.messageRouter)
 	http.HandleFunc(ar.cfg.Location, fw)

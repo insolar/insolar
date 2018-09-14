@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"testing"
@@ -30,47 +31,49 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLaunchApi(t *testing.T) {
+const HOST = "http://localhost:7777"
+const TestUrl = HOST + "/api/v1?query_type=LOL"
+
+func TestMain(m *testing.M) {
 	cfg := configuration.NewAPIRunner()
-	api, err := NewAPIRunner(&cfg)
-	assert.NoError(t, err)
+	api, _ := NewAPIRunner(&cfg)
 
 	cs := core.Components{}
-	err = api.Start(cs)
-	assert.NoError(t, err)
+	api.Start(cs)
 
-	const TestUrl = "http://localhost:8080/api/v1?query_type=LOL"
-
-	{
-		resp, err := http.Get(TestUrl)
-		assert.NoError(t, err)
-		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
-		assert.Contains(t, string(body[:]), `"message": "Bad request"`)
-	}
-
-	{
-		postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
-		jsonValue, _ := json.Marshal(postParams)
-		postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-		assert.NoError(t, err)
-		body, err := ioutil.ReadAll(postResp.Body)
-		assert.NoError(t, err)
-		assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] message`)
-	}
-
-	{
-		postParams := map[string]string{"query_type": "TEST", "reference": "test"}
-		jsonValue, _ := json.Marshal(postParams)
-		postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-		assert.NoError(t, err)
-		body, err := ioutil.ReadAll(postResp.Body)
-		assert.NoError(t, err)
-		assert.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
-	}
+	code := m.Run()
 
 	api.Stop()
+
+	os.Exit(code)
+}
+
+func TestWrongQueryParam(t *testing.T) {
+	postParams := map[string]string{"query_type": "TEST", "reference": "test"}
+	jsonValue, _ := json.Marshal(postParams)
+	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(postResp.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
+}
+
+func TestHandlerError(t *testing.T) {
+	postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
+	jsonValue, _ := json.Marshal(postParams)
+	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(postResp.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] message`)
+}
+
+func TestBadRequest(t *testing.T) {
+	resp, err := http.Get(TestUrl)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body[:]), `"message": "Bad request"`)
 }
 
 func TestSerialization(t *testing.T) {
@@ -139,30 +142,20 @@ func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
 }
 
 func TestWithFakeMessageRouter(t *testing.T) {
-	cfg := configuration.NewAPIRunner()
-	cfg.Location = "/test/test"
-	api, err := NewAPIRunner(&cfg)
-	assert.NoError(t, err)
-
 	mr := TestsMessageRouter{}
-	cs := core.Components{}
-	cs["core.MessageRouter"] = &mr
 
-	err = api.Start(cs)
+	const LOCATION = "/test/test"
+
+	fw := wrapAPIV1Handler(&mr)
+	http.HandleFunc(LOCATION, fw)
+
+	const TestUrl2 = HOST + LOCATION + "?query_type=PPPPPPPP"
+
+	postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
+	jsonValue, _ := json.Marshal(postParams)
+	postResp, err := http.Post(TestUrl2, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
-
-	const TestUrl = "http://localhost:8080/test/test?query_type=LOL"
-
-	{
-		postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
-		jsonValue, _ := json.Marshal(postParams)
-		postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-		assert.NoError(t, err)
-		body, err := ioutil.ReadAll(postResp.Body)
-		assert.NoError(t, err)
-		assert.Contains(t, string(body[:]), `"amount": `+strconv.Itoa(TestBalance))
-	}
-
-	api.Stop()
+	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
+	assert.Contains(t, string(body[:]), `"amount": `+strconv.Itoa(TestBalance))
 }
