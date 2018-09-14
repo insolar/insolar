@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -31,25 +32,43 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	nodeNetwork *nodenetwork.Nodenetwork
+	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(
 	hostConf configuration.HostNetwork,
-	nodeConf configuration.NodeNetwork) (*ServiceNetwork, error) {
+	nodeConf configuration.NodeNetwork,
+) (*ServiceNetwork, error) {
 
-	dht, err := hostnetwork.NewHostNetwork(hostConf)
-	if err != nil {
-		return nil, err
-	}
 	node := nodenetwork.NewNodeNetwork(nodeConf)
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
 	}
 
-	return &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}, nil
+	cascade1 := &cascade.Cascade{}
+	dht, err := hostnetwork.NewHostNetwork(hostConf, node, cascade1)
+	if err != nil {
+		return nil, err
+	}
+
+	err = dht.ObtainIP()
+	if err != nil {
+		return nil, err
+	}
+
+	err = dht.AnalyzeNetwork(createContext(dht))
+	if err != nil {
+		return nil, err
+	}
+
+	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
+	f := func(data core.Cascade, method string, args [][]byte) {
+		service.initCascadeSendMessage(data, method, args)
+	}
+	cascade1.SendMessage = f
+	return service, nil
 }
 
 // GetAddress returns host public address.
@@ -58,24 +77,38 @@ func (network *ServiceNetwork) GetAddress() string {
 }
 
 // SendMessage sends a message from MessageRouter.
-func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]byte, error) {
+func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID, err := network.nodeNetwork.GetReferenceHostID(msg.GetReference().String())
-	if err != nil {
-		return nil, err
-	}
-	reqBuff, err := msg.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	buff, err := ioutil.ReadAll(reqBuff)
+	hostID := network.nodeNetwork.ResolveHostID(nodeID)
+	buff, err := messageToBytes(msg)
 	if err != nil {
 		return nil, err
 	}
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
+}
+
+// SendCascadeMessage sends a message from MessageRouter to a cascade of nodes. Message reference is ignored
+func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
+	if msg == nil {
+		return errors.New("message is nil")
+	}
+	buff, err := messageToBytes(msg)
+	if err != nil {
+		return err
+	}
+
+	return network.initCascadeSendMessage(data, method, [][]byte{buff})
+}
+
+func messageToBytes(msg core.Message) ([]byte, error) {
+	reqBuff, err := msg.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadAll(reqBuff)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
@@ -133,10 +166,42 @@ func (network *ServiceNetwork) listen() {
 }
 
 func createContext(handler hosthandler.HostHandler) hosthandler.Context {
-
 	ctx, err := hostnetwork.NewContextBuilder(handler).SetDefaultHost().Build()
 	if err != nil {
 		log.Fatalln("Failed to create context:", err.Error())
 	}
 	return ctx
+}
+
+// InitCascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
+func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, method string, args [][]byte) error {
+	if len(data.NodeIds) == 0 {
+		return errors.New("node IDs list should not be empty")
+	}
+	if data.ReplicationFactor == 0 {
+		return errors.New("replication factor should not be zero")
+	}
+
+	nextNodes, err := cascade.CalculateNextNodes(data, network.nodeNetwork.GetID())
+	if err != nil {
+		return err
+	}
+	if len(nextNodes) == 0 {
+		return nil
+	}
+	var failedNodes []core.RecordRef
+	for _, nextNode := range nextNodes {
+		hostID := network.nodeNetwork.ResolveHostID(nextNode)
+		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
+		if err != nil {
+			logrus.Debugln("failed to send cascade message: ", err)
+			failedNodes = append(failedNodes, nextNode)
+		}
+	}
+
+	if len(failedNodes) > 0 {
+		return errors.New("failed to send cascade message to nodes")
+	}
+
+	return nil
 }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,30 +14,27 @@
  *    limitations under the License.
  */
 
-package member
+/*
+Package log contains adapter for third-party loggers
 
-import (
-	"github.com/insolar/insolar/toolkit/go/foundation"
-)
+Example:
 
-var TypeReference = foundation.Reference("member")
+package main
 
-type Member struct {
-	foundation.BaseContract
-	Name      string
-	PublicKey []byte
-}
+	import (
+		"github.com/insolar/insolar/configuration"
+		"github.com/insolar/insolar/log"
+	)
 
-func (m *Member) GetName() string {
-	return m.Name
-}
-func (m *Member) GetPublicKey() []byte {
-	return m.PublicKey
-}
+	func main() {
+		// global logger
+		log.SetLevel("Debug")
+		log.Debugln("debug log message")
 
-func NewMember(name string) *Member {
-	member := &Member{
-		Name: name,
+		// local logger
+		logger, _ := log.NewLog(configuration.Log{Level: "Warning", Adapter: "logrus"})
+		logger.Warnln("warning log message")
 	}
-	return member
-}
+
+*/
+package log

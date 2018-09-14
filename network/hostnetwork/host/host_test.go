@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ func TestHost_String(t *testing.T) {
 	nd := NewHost(addr)
 	id1, _ := id.NewID()
 	nd.ID = id1
-	string := nd.ID.KeyString() + " (" + nd.Address.String() + ")"
+	string := nd.ID.String() + " (" + nd.Address.String() + ")"
 
 	assert.Equal(t, string, nd.String())
 }

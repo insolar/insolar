@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -33,12 +33,17 @@ type CallMethodMessage struct {
 	Arguments core.Arguments
 }
 
-// GetReference implements core.Message
+// GetOperatingRole returns operating jet role for given message type.
+func (m *CallMethodMessage) GetOperatingRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
+// Get reference returns referenced object.
 func (m *CallMethodMessage) GetReference() core.RecordRef {
 	return m.ObjectRef
 }
 
-// GetReference implements core.Message
+// Serialize serializes message.
 func (m *CallMethodMessage) Serialize() (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	buff.Write([]byte{byte(CallMethodMessageType)})

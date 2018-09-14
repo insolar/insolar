@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package logicrunner
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -27,18 +26,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 
+	"fmt"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/messagerouter/message"
 )
 
-var icc = "../cmd/icc/icc"
+var icc = ""
+var runnerbin = ""
 
-func init() {
+func TestMain(m *testing.M) {
+	var err error
 	log.SetLevel(log.DebugLevel)
-	build()
+	if runnerbin, icc, err = testutil.Build(); err != nil {
+		fmt.Println("Logic runner build failed, skip tests:", err.Error())
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
 }
 
 func TestTypeCompatibility(t *testing.T) {
@@ -67,7 +74,7 @@ func newTestExecutor() *testExecutor {
 	}
 }
 
-func (r *testExecutor) CallMethod(ref core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+func (r *testExecutor) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
 	if len(r.methodResponses) < 1 {
 		panic(errors.New("no expected 'CallMethod' calls"))
 	}
@@ -77,7 +84,7 @@ func (r *testExecutor) CallMethod(ref core.RecordRef, data []byte, method string
 	return res.data, res.res, res.err
 }
 
-func (r *testExecutor) CallConstructor(ref core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
 	if len(r.constructorResponses) < 1 {
 		panic(errors.New("no expected 'CallConstructor' calls"))
 	}
@@ -115,9 +122,17 @@ type testLedger struct {
 	am core.ArtifactManager
 }
 
-func (r *testLedger) Start(components core.Components) error { return nil }
-func (r *testLedger) Stop() error                            { return nil }
-func (r *testLedger) GetManager() core.ArtifactManager       { return r.am }
+func (r *testLedger) GetPulseManager() core.PulseManager {
+	panic("implement me")
+}
+
+func (r *testLedger) GetJetCoordinator() core.JetCoordinator {
+	panic("implement me")
+}
+
+func (r *testLedger) Start(components core.Components) error   { return nil }
+func (r *testLedger) Stop() error                              { return nil }
+func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
 
 type testMessageRouter struct {
 	LogicRunner core.LogicRunner
@@ -145,9 +160,10 @@ func TestExecution(t *testing.T) {
 	dataRef := core.String2Ref("someObject")
 	classRef := core.String2Ref("someClass")
 	am.Objects[dataRef] = &testutil.TestObjectDescriptor{
-		AM:   am,
-		Data: []byte("origData"),
-		Code: &codeRef,
+		AM:    am,
+		Data:  []byte("origData"),
+		Code:  &codeRef,
+		Class: &classRef,
 	}
 	am.Classes[classRef] = &testutil.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
 	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef, AMachineType: core.MachineTypeGoPlugin}
@@ -170,39 +186,6 @@ func TestExecution(t *testing.T) {
 	assert.Equal(t, []byte(nil), resp.Result)
 }
 
-func buildCLI(name string) error {
-	out, err := exec.Command("go", "build", "-o", "./goplugin/"+name+"/"+name, "./goplugin/"+name+"/").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", name, string(out))
-	}
-	return nil
-}
-
-func buildInciderCLI() error {
-	return buildCLI("ginsider-cli")
-}
-
-func buildPreprocessor() error {
-	out, err := exec.Command("go", "build", "-o", icc, "../cmd/icc/").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "can't build %s: %s", icc, string(out))
-	}
-	return nil
-}
-
-func build() error {
-	err := buildInciderCLI()
-	if err != nil {
-		return err
-	}
-
-	err = buildPreprocessor()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func TestContractCallingContract(t *testing.T) {
 	var contractOneCode = `
 package main
@@ -216,7 +199,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsChild("")
+	friend := holder.AsChild(r.GetReference())
 
 	res := friend.Hello(s)
 
@@ -263,7 +246,7 @@ func (r *Two) Hello(s string) string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
@@ -280,26 +263,32 @@ func (r *Two) Hello(s string) string {
 	err = codec.NewEncoderBytes(&data, ch).Encode(
 		&struct{}{},
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	var argsSerialized []byte
 	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(
 		[]interface{}{"ins"},
 	)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
-	cb := testutil.NewContractBuilder(am, icc)
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	_, res, err := gp.CallMethod(*cb.Codes["one"], data, "Hello", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
+	obj, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["one"],
+		*am.RootRef(),
+		data,
+	)
+	assert.NoError(t, err)
+
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
+	assert.NoError(t, err)
 
 	var resParsed []interface{}
 	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
@@ -322,11 +311,16 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsDelegate("")
+	friend := holder.AsDelegate(r.GetReference())
 
 	res := friend.Hello(s)
 
 	return "Hi, " + s + "! Two said: " + res
+}
+
+func (r *One) HelloFromDelegate(s string) string {
+	friend := two.GetImplementationFrom(r.GetReference())
+	return friend.Hello(s)
 }
 `
 
@@ -369,7 +363,7 @@ func (r *Two) Hello(s string) string {
 		&configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     "./goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     runnerbin,
 			RunnerCodePath: insiderStorage,
 		},
 		mr,
@@ -398,19 +392,219 @@ func (r *Two) Hello(s string) string {
 		panic(err)
 	}
 
-	cb := testutil.NewContractBuilder(am, icc)
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	_, res, err := gp.CallMethod(*cb.Codes["one"], data, "Hello", argsSerialized)
+	obj, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["one"],
+		*am.RootRef(),
+		data,
+	)
+	assert.NoError(t, err)
+
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
+	assert.NoError(t, err)
+
+	var resParsed []interface{}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+
+	_, res, err = gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "HelloFromDelegate", argsSerialized,
+	)
+	assert.NoError(t, err)
+
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hello you too, ins. 1288 times!", resParsed[0])
+}
+
+func TestContextPassing(t *testing.T) {
+	var code = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() string {
+	return r.GetClass().String()
+}
+`
+
+	am := testutil.NewTestArtifactManager()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	gp, err := goplugin.NewGoPlugin(
+		&configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     runnerbin,
+			RunnerCodePath: insiderStorage,
+		},
+		nil,
+		am,
+	)
+	assert.NoError(t, err)
+	defer gp.Stop()
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(&struct{}{})
+	assert.NoError(t, err)
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode([]interface{}{})
+	assert.NoError(t, err)
+
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
+	err = cb.Build(map[string]string{"one": code})
+	assert.NoError(t, err)
+
+	_, res, err := gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"]}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
+	assert.NoError(t, err)
+
+	resParsed := []interface{}{""}
+	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
+	assert.NoError(t, err)
+	assert.Equal(t, cb.Classes["one"].String(), resParsed[0])
+}
+
+func TestGetChildren(t *testing.T) {
+	goContract := `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"contract-proxy/child"
+)
+
+type Contract struct {
+	foundation.BaseContract
+}
+
+func (c *Contract) NewChilds(cnt int) int {
+	s := 0
+	for i := 1; i < cnt; i++ {
+        child.New(i).AsChild(c.GetReference())
+		s += i
+	} 
+	return s
+}
+
+func (c *Contract) SumChilds() int {
+	s := 0
+	childs, err := c.GetChildrenTyped(child.GetClass())
+	if err != nil {
+		panic(err)
+	}
+	for _, chref := range childs {
+		o := child.GetObject(chref)
+		s += o.GetNum()
+	}
+	return s
+}
+
+func (c *Contract) GetChildRefs() (ret []string) {
+	childs, err := c.GetChildrenTyped(child.GetClass())
 	if err != nil {
 		panic(err)
 	}
 
-	var resParsed []interface{}
-	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
-	if err != nil {
-		t.Fatal(err)
+	for _, chref := range childs {
+		ret = append(ret, chref.String())
 	}
-	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+	return ret
+}
+`
+	goChild := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type Child struct {
+	foundation.BaseContract
+	Num int
+}
+
+func (c *Child) GetNum() int {
+	return c.Num
+}
+
+
+func New(n int) *Child {
+	return &Child{Num: n};
+}
+`
+	l, cleaner := ledgertestutil.TmpLedger(t, "")
+	defer cleaner()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	am := l.GetArtifactManager()
+	lr, err := NewLogicRunner(configuration.LogicRunner{
+		GoPlugin: &configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     runnerbin,
+			RunnerCodePath: insiderStorage,
+		}})
+	assert.NoError(t, err, "Initialize runner")
+
+	assert.NoError(t, lr.Start(core.Components{
+		"core.Ledger":        l,
+		"core.MessageRouter": &testMessageRouter{LogicRunner: lr},
+	}), "starting logicrunner")
+	defer lr.Stop()
+
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
+	err = cb.Build(map[string]string{"child": goChild})
+	assert.NoError(t, err)
+	err = cb.Build(map[string]string{"contract": goContract})
+	assert.NoError(t, err)
+
+	domain := core.String2Ref("c1")
+	contract, err := am.ActivateObj(core.String2Ref("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	resp := lr.Execute(&message.CallMethodMessage{
+		Request:   core.String2Ref("r2"),
+		ObjectRef: *contract,
+		Method:    "NewChilds",
+		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
+	})
+	assert.NoError(t, resp.Error, "contract call")
+	r := testutil.CBORUnMarshal(t, resp.Result)
+	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
+
+	resp = lr.Execute(&message.CallMethodMessage{
+		Request:   core.String2Ref("r3"),
+		ObjectRef: *contract,
+		Method:    "SumChilds",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, resp.Error, "contract call")
+	r = testutil.CBORUnMarshal(t, resp.Result)
+	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
+
 }

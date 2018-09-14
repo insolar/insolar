@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ func (rs *RouteSet) FirstHost() *host.Host {
 func (rs *RouteSet) Contains(host *RouteHost) bool {
 	exists := false
 	for _, n := range rs.hosts {
-		if host.ID.KeyEqual(n.ID.GetKey()) {
+		if host.ID.Equal(n.ID.Bytes()) {
 			exists = true
 		}
 	}
@@ -68,7 +68,7 @@ func (rs *RouteSet) Append(host *RouteHost) {
 // Remove removes host from RouteSet.
 func (rs *RouteSet) Remove(host *RouteHost) {
 	for i, n := range rs.hosts {
-		if n.ID.KeyEqual(host.ID.GetKey()) {
+		if n.ID.Equal(host.ID.Bytes()) {
 			rs.hosts = append(rs.hosts[:i], rs.hosts[i+1:]...)
 			return
 		}
@@ -101,8 +101,8 @@ func (rs *RouteSet) Swap(i, j int) {
 
 // Less is a sorting function for RouteSet.
 func (rs *RouteSet) Less(i, j int) bool {
-	iDist := getDistance(rs.hosts[i].ID.GetKey(), rs.comparator)
-	jDist := getDistance(rs.hosts[j].ID.GetKey(), rs.comparator)
+	iDist := getDistance(rs.hosts[i].ID.Bytes(), rs.comparator)
+	jDist := getDistance(rs.hosts[j].ID.Bytes(), rs.comparator)
 
 	return iDist.Cmp(jDist) == -1
 }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package storage
 import (
 	"github.com/dgraph-io/badger"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
@@ -142,6 +143,9 @@ func (m *TransactionManager) GetObjectIndex(ref *record.Reference) (*index.Objec
 // SetObjectIndex stores object lifeline index.
 func (m *TransactionManager) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
+	if idx.Delegates == nil {
+		idx.Delegates = map[core.RecordRef]record.Reference{}
+	}
 	encoded, err := index.EncodeObjectLifeline(idx)
 	if err != nil {
 		return err

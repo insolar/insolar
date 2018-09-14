@@ -57,6 +57,8 @@ func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 		return processKnownOuterHosts(hostHandler, msg, packetBuilder)
 	case packet.TypeCheckNodePriv:
 		return processCheckNodePriv(hostHandler, msg, packetBuilder)
+	case packet.TypeCascadeSend:
+		return processCascadeSend(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
@@ -96,14 +98,14 @@ func processRelayOwnership(hostHandler hosthandler.HostHandler, msg *packet.Pack
 	data := msg.Data.(*packet.RequestRelayOwnership)
 
 	if data.Ready {
-		hostHandler.AddPossibleProxyID(msg.Sender.ID.KeyString())
+		hostHandler.AddPossibleProxyID(msg.Sender.ID.String())
 	} else {
-		hostHandler.RemovePossibleProxyID(msg.Sender.ID.KeyString())
-		err := AuthenticationRequest(hostHandler, "begin", msg.Sender.ID.KeyString())
+		hostHandler.RemovePossibleProxyID(msg.Sender.ID.String())
+		err := AuthenticationRequest(hostHandler, "begin", msg.Sender.ID.String())
 		if err != nil {
 			return nil, err
 		}
-		err = RelayRequest(hostHandler, "start", msg.Sender.ID.KeyString())
+		err = RelayRequest(hostHandler, "start", msg.Sender.ID.String())
 		if err != nil {
 			return nil, err
 		}
@@ -177,7 +179,7 @@ func processRelay(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	var err error
 	var state relay.State
 	var packet1 *packet.Packet
-	if !hostHandler.HostIsAuthenticated(msg.Sender.ID.KeyString()) {
+	if !hostHandler.HostIsAuthenticated(msg.Sender.ID.String()) {
 		log.Print("relay request from unknown host rejected")
 		response := &packet.ResponseRelay{
 			State: relay.NoAuth,
@@ -215,7 +217,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 	data := msg.Data.(*packet.RequestAuth)
 	switch data.Command {
 	case packet.BeginAuth:
-		if hostHandler.HostIsAuthenticated(msg.Sender.ID.KeyString()) {
+		if hostHandler.HostIsAuthenticated(msg.Sender.ID.String()) {
 			// TODO: whats next?
 			response := &packet.ResponseAuth{
 				Success:       false,
@@ -229,7 +231,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		if err != nil {
 			return nil, err
 		}
-		hostHandler.AddAuthSentKey(msg.Sender.ID.KeyString(), key)
+		hostHandler.AddAuthSentKey(msg.Sender.ID.String(), key)
 		response := &packet.ResponseAuth{
 			Success:       true,
 			AuthUniqueKey: key,
@@ -237,14 +239,14 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 
 		// TODO process verification msg.Sender host
 		// confirmed
-		err = CheckOriginRequest(hostHandler, msg.Sender.ID.KeyString())
+		err = CheckOriginRequest(hostHandler, msg.Sender.ID.String())
 		if err != nil {
 			return nil, err
 		}
 
 		return packetBuilder.Response(response).Build(), nil
 	case packet.RevokeAuth:
-		hostHandler.RemoveAuthHost(msg.Sender.ID.KeyString())
+		hostHandler.RemoveAuthHost(msg.Sender.ID.String())
 		response := &packet.ResponseAuth{
 			Success:       true,
 			AuthUniqueKey: nil,
@@ -256,9 +258,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 }
 
 func processCheckOriginRequest(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	// dht.Auth.Mut.Lock()
-	// defer dht.Auth.Mut.Unlock()
-	if key, ok := hostHandler.KeyIsReceived(msg.Sender.ID.KeyString()); ok {
+	if key, ok := hostHandler.KeyIsReceived(msg.Sender.ID.String()); ok {
 		response := &packet.ResponseCheckOrigin{AuthUniqueKey: key}
 		return packetBuilder.Response(response).Build(), nil
 	}
@@ -268,4 +268,25 @@ func processCheckOriginRequest(hostHandler hosthandler.HostHandler, msg *packet.
 func processObtainIPRequest(msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	response := &packet.ResponseObtainIP{IP: msg.RemoteAddress}
 	return packetBuilder.Response(response).Build(), nil
+}
+
+func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+	data := msg.Data.(*packet.RequestCascadeSend)
+
+	hostHandler.AddHost(ctx, routing.NewRouteHost(msg.Sender))
+	_, err := hostHandler.InvokeRPC(msg.Sender, data.RPC.Method, data.RPC.Args)
+	response := &packet.ResponseCascadeSend{
+		Success: true,
+		Error:   "",
+	}
+	if err != nil {
+		response.Success = false
+		response.Error = err.Error()
+	}
+	// currentNodeID := hostHandler.HtFromCtx(ctx).Origin
+	// hostHandler.InitCascadeSendMessage(hostHandler, data.Data, currentNodeID, data.RPC.Method, data.RPC.Args)
+
+	hostHandler.GetNetworkCommonFacade().GetCascade().SendToNextLayer(data.Data, data.RPC.Method, data.RPC.Args)
+
+	return packetBuilder.Response(response).Build(), err
 }

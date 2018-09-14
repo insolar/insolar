@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 
 func (s *Origin) containsID(id id.ID) bool {
 	for _, myID := range s.IDs {
-		if id.KeyEqual(myID.GetKey()) {
+		if id.Equal(myID.Bytes()) {
 			return true
 		}
 	}

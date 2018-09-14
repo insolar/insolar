@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -25,6 +25,6 @@ Usage:
 	key := s.Set(obj)
 
 	s.Get(key)
-	s.GetKey()
+	s.Bytes()
 */
 package storage

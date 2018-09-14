@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ func doInfo(service core.Network, dhtNetwork hosthandler.HostHandler, ctx hostha
 	hosts := dhtNetwork.NumHosts(ctx)
 	originID := dhtNetwork.GetOriginHost().IDs[0]
 	fmt.Println("======= Host info ======")
-	fmt.Println("ID key: " + originID.KeyString())
+	fmt.Println("ID key: " + originID.String())
 	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
 	fmt.Println("Address: " + service.GetAddress())
 }

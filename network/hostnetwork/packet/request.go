@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package packet
+
+import "github.com/insolar/insolar/core"
 
 // CommandType - type for commands.
 type CommandType int
@@ -57,6 +59,12 @@ type RequestDataStore struct {
 type RequestDataRPC struct {
 	Method string
 	Args   [][]byte
+}
+
+// RequestCascadeSend is data for cascade sending feature
+type RequestCascadeSend struct {
+	RPC  RequestDataRPC
+	Data core.Cascade
 }
 
 // RequestRelay is data for relay request (commands: start/stop relay).

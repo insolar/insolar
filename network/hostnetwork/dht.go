@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -34,17 +34,10 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
-	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/jbenet/go-base58"
 )
-
-// RPC is remote procedure call interface
-type RPC interface {
-	RemoteProcedureCall(ctx hosthandler.Context, target string, method string, args [][]byte) (result []byte, err error)
-	RemoteProcedureRegister(name string, method core.RemoteProcedure)
-}
 
 // DHT represents the state of the local host in the distributed hash table.
 type DHT struct {
@@ -55,7 +48,7 @@ type DHT struct {
 
 	transport transport.Transport
 	store     store.Store
-	rpc       rpc.RPC
+	ncf       hosthandler.NetworkCommonFacade
 	relay     relay.Relay
 	proxy     relay.Proxy
 	auth      AuthInfo
@@ -69,8 +62,6 @@ type AuthInfo struct {
 	ReceivedKeys map[string][]byte
 
 	AuthenticatedHosts map[string]bool
-
-	Mut sync.Mutex
 }
 
 // Subnet collects some information about self network part
@@ -120,7 +111,14 @@ type Options struct {
 }
 
 // NewDHT initializes a new DHT host.
-func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy) (dht *DHT, err error) {
+func NewDHT(
+	store store.Store,
+	origin *host.Origin,
+	transport transport.Transport,
+	ncf hosthandler.NetworkCommonFacade,
+	options *Options,
+	proxy relay.Proxy,
+) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
 		return nil, err
@@ -131,7 +129,7 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	dht = &DHT{
 		options:   options,
 		origin:    origin,
-		rpc:       rpc,
+		ncf:       ncf,
 		transport: transport,
 		tables:    tables,
 		store:     store,
@@ -297,7 +295,7 @@ func (dht *DHT) iterateHt(cb ContextBuilder) error {
 		}
 
 		if dht.NumHosts(ctx) > 0 {
-			_, _, err = dht.iterate(ctx, routing.IterateBootstrap, ht.Origin.ID.GetKey(), nil)
+			_, _, err = dht.iterate(ctx, routing.IterateBootstrap, ht.Origin.ID.Bytes(), nil)
 			return err
 		}
 	}
@@ -317,7 +315,7 @@ func (dht *DHT) iterateBootstrapHosts(
 	for _, bn := range dht.options.BootstrapHosts {
 		request := packet.NewPingPacket(ht.Origin, bn)
 
-		if bn.ID.GetKey() == nil {
+		if bn.ID.Bytes() == nil {
 			res, err := dht.transport.SendRequest(request)
 			if err != nil {
 				continue
@@ -411,7 +409,7 @@ func (dht *DHT) iterateIsDone(
 	closestHost *host.Host,
 ) (value []byte, closest []*host.Host, close *host.Host, err error) {
 
-	if routeSet.FirstHost().ID.KeyEqual(closestHost.ID.GetKey()) || *(queryRest) {
+	if routeSet.FirstHost().ID.Equal(closestHost.ID.Bytes()) || *(queryRest) {
 		switch t {
 		case routing.IterateBootstrap:
 			if !(*queryRest) {
@@ -497,7 +495,7 @@ func resultsIterate(
 		switch t {
 		case routing.IterateBootstrap, routing.IterateFindHost, routing.IterateStore:
 			responseData := result.Data.(*packet.ResponseDataFindHost)
-			if len(responseData.Closest) > 0 && responseData.Closest[0].ID.KeyEqual(target) {
+			if len(responseData.Closest) > 0 && responseData.Closest[0].ID.Equal(target) {
 				return nil, responseData.Closest, nil
 			}
 			routeSet.AppendMany(routing.RouteHostsFrom(responseData.Closest))
@@ -517,7 +515,7 @@ func resultsIterate(
 
 func checkAndRefreshTimeForBucket(t routing.IterateType, ht *routing.HashTable, target []byte) {
 	if t == routing.IterateBootstrap {
-		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID.GetKey())
+		bucket := routing.GetBucketIndexFromDifferingBit(target, ht.Origin.ID.Bytes())
 		ht.ResetRefreshTimeForBucket(bucket)
 	}
 }
@@ -585,11 +583,11 @@ func (dht *DHT) sendPacketToAlphaHosts(
 		}
 
 		// Don't contact hosts already contacted
-		if (contacted)[string(receiver.ID.GetKey())] {
+		if (contacted)[string(receiver.ID.Bytes())] {
 			continue
 		}
 
-		(contacted)[string(receiver.ID.GetKey())] = true
+		(contacted)[string(receiver.ID.Bytes())] = true
 
 		packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(receiver)
 		packetBuilder = getPacketBuilder(t, packetBuilder, target)
@@ -704,14 +702,14 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 			ctx = BuildContext(cb, msg)
 			ht := dht.HtFromCtx(ctx)
 
-			if ht.Origin.ID.KeyEqual(msg.Receiver.ID.GetKey()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
+			if ht.Origin.ID.Equal(msg.Receiver.ID.Bytes()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
 				dht.dispatchPacketType(ctx, msg, ht)
 			} else {
-				targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.KeyString())
+				targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.String())
 				if err != nil {
 					log.Println(err)
 				} else if !exist {
-					log.Printf("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.KeyString())
+					log.Printf("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
 				} else {
 					// need to relay incoming packet
 					request := &packet.Packet{Sender: &host.Host{Address: dht.origin.Address, ID: msg.Sender.ID},
@@ -746,63 +744,11 @@ func (dht *DHT) CheckNodeRole(domainID string) error {
 	var err error
 	// TODO: change or choose another auth host
 	if len(dht.options.BootstrapHosts) > 0 {
-		err = checkNodePrivRequest(dht, dht.options.BootstrapHosts[0].ID.KeyString(), domainID)
+		err = checkNodePrivRequest(dht, dht.options.BootstrapHosts[0].ID.String(), domainID)
 	} else {
 		err = errors.New("bootstrap node not exist")
 	}
 	return err
-}
-
-// RemoteProcedureCall calls remote procedure on target host.
-func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
-	targetHost, exists, err := dht.FindHost(ctx, targetID)
-	ht := dht.HtFromCtx(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, errors.New("targetHost not found")
-	}
-
-	request := &packet.Packet{
-		Sender:   ht.Origin,
-		Receiver: targetHost,
-		Type:     packet.TypeRPC,
-		Data: &packet.RequestDataRPC{
-			Method: method,
-			Args:   args,
-		},
-	}
-
-	if targetID == dht.GetOriginHost().IDs[0].KeyString() {
-		return dht.rpc.Invoke(request.Sender, method, args)
-	}
-
-	// Send the async queries and wait for a future
-	future, err := dht.transport.SendRequest(request)
-	if err != nil {
-		return nil, err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			// Channel was closed
-			return nil, errors.New("chanel closed unexpectedly")
-		}
-		dht.AddHost(ctx, routing.NewRouteHost(rsp.Sender))
-
-		response := rsp.Data.(*packet.ResponseDataRPC)
-		if response.Success {
-			return response.Result, nil
-		}
-		return nil, errors.New(response.Error)
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		return nil, errors.New("timeout")
-	}
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host
@@ -811,7 +757,7 @@ func (dht *DHT) RemoteProcedureRegister(name string, method core.RemoteProcedure
 		return method(args)
 	}
 
-	dht.rpc.RegisterMethod(name, rp)
+	dht.ncf.GetRPC().RegisterMethod(name, rp)
 }
 
 // ObtainIP starts to self IP obtaining.
@@ -819,7 +765,7 @@ func (dht *DHT) ObtainIP() error {
 	for _, table := range dht.tables {
 		for i := range table.RoutingTable {
 			for j := range table.RoutingTable[i] {
-				err := ObtainIPRequest(dht, table.RoutingTable[i][j].ID.KeyString())
+				err := ObtainIPRequest(dht, table.RoutingTable[i][j].ID.String())
 				if err != nil {
 					return err
 				}
@@ -827,6 +773,10 @@ func (dht *DHT) ObtainIP() error {
 		}
 	}
 	return nil
+}
+
+func (dht *DHT) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
+	return dht.ncf
 }
 
 func (dht *DHT) getHomeSubnetKey(ctx hosthandler.Context) (string, error) {
@@ -920,7 +870,7 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 	}
 	ht := dht.HtFromCtx(ctx)
 
-	if ht.Origin.ID.KeyEqual(keyBytes) {
+	if ht.Origin.ID.Equal(keyBytes) {
 		return ht.Origin, true, nil
 	}
 
@@ -928,7 +878,7 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 	var exists = false
 	routeSet := ht.GetClosestContacts(1, keyBytes, nil)
 
-	if routeSet.Len() > 0 && routeSet.FirstHost().ID.KeyEqual(keyBytes) {
+	if routeSet.Len() > 0 && routeSet.FirstHost().ID.Equal(keyBytes) {
 		targetHost = routeSet.FirstHost()
 		exists = true
 	} else if dht.proxy.ProxyHostsCount() > 0 {
@@ -944,7 +894,7 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 			return nil, false, err
 		}
 		for i := range closest {
-			if closest[i].ID.KeyEqual(keyBytes) {
+			if closest[i].ID.Equal(keyBytes) {
 				targetHost = closest[i]
 				exists = true
 			}
@@ -956,7 +906,7 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 
 // InvokeRPC - invoke a method to rpc.
 func (dht *DHT) InvokeRPC(sender *host.Host, method string, args [][]byte) ([]byte, error) {
-	return dht.rpc.Invoke(sender, method, args)
+	return dht.ncf.GetRPC().Invoke(sender, method, args)
 }
 
 // AddHost adds a host into the appropriate k bucket
@@ -964,12 +914,12 @@ func (dht *DHT) InvokeRPC(sender *host.Host, method string, args [][]byte) ([]by
 // from right to left in order to find the appropriate bucket
 func (dht *DHT) AddHost(ctx hosthandler.Context, host *routing.RouteHost) {
 	ht := dht.HtFromCtx(ctx)
-	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.GetKey(), host.ID.GetKey())
+	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.Bytes(), host.ID.Bytes())
 
 	// Make sure host doesn't already exist
 	// If it does, mark it as seen
-	if ht.DoesHostExistInBucket(index, host.ID.GetKey()) {
-		ht.MarkHostAsSeen(host.ID.GetKey())
+	if ht.DoesHostExistInBucket(index, host.ID.Bytes()) {
+		ht.MarkHostAsSeen(host.ID.Bytes())
 		return
 	}
 
@@ -1013,7 +963,7 @@ func (dht *DHT) GetReplicationTime() time.Duration {
 func (dht *DHT) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time {
 	ht := dht.HtFromCtx(ctx)
 
-	bucket := routing.GetBucketIndexFromDifferingBit(key, ht.Origin.ID.GetKey())
+	bucket := routing.GetBucketIndexFromDifferingBit(key, ht.Origin.ID.Bytes())
 	var total int
 	for i := 0; i < bucket; i++ {
 		total += ht.GetTotalHostsInBucket(i)
@@ -1079,6 +1029,86 @@ func (dht *DHT) AddAuthSentKey(id string, key []byte) {
 // AddRelayClient adds a new relay client.
 func (dht *DHT) AddRelayClient(host *host.Host) error {
 	return dht.relay.AddClient(host)
+}
+
+// RemoteProcedureCall calls remote procedure on target host.
+func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+	targetHost, exists, err := dht.FindHost(ctx, targetID)
+	ht := dht.HtFromCtx(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New("targetHost not found")
+	}
+
+	request := &packet.Packet{
+		Sender:   ht.Origin,
+		Receiver: targetHost,
+		Type:     packet.TypeRPC,
+		Data: &packet.RequestDataRPC{
+			Method: method,
+			Args:   args,
+		},
+	}
+
+	if targetID == dht.GetOriginHost().IDs[0].String() {
+		return dht.ncf.GetRPC().Invoke(request.Sender, method, args)
+	}
+
+	// Send the async queries and wait for a future
+	future, err := dht.transport.SendRequest(request)
+	if err != nil {
+		return nil, err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			// Channel was closed
+			return nil, errors.New("chanel closed unexpectedly")
+		}
+		dht.AddHost(ctx, routing.NewRouteHost(rsp.Sender))
+
+		response := rsp.Data.(*packet.ResponseDataRPC)
+		if response.Success {
+			return response.Result, nil
+		}
+		return nil, errors.New(response.Error)
+	case <-time.After(dht.options.PacketTimeout):
+		future.Cancel()
+		return nil, errors.New("timeout")
+	}
+}
+
+// CascadeSendMessage sends a message to the next cascade layer.
+func (dht *DHT) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
+	ctx, err := NewContextBuilder(dht).SetDefaultHost().Build()
+	targetHost, exist, err := dht.FindHost(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return errors.New("cascadeSendMessage: couldn't find a target host")
+	}
+
+	request := packet.NewBuilder().Sender(dht.HtFromCtx(ctx).Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
+		Request(&packet.RequestCascadeSend{
+			Data: data,
+			RPC: packet.RequestDataRPC{
+				Method: method,
+				Args:   args,
+			},
+		}).Build()
+
+	future, err := dht.SendRequest(request)
+	if err != nil {
+		return err
+	}
+
+	return checkResponse(dht, future, targetID, request)
 }
 
 // AddReceivedKey adds a new received key from target.

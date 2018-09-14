@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -21,23 +21,24 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 )
 
-/*
-//todo: interface for HostNetwork
-type HostNetwork interface {
-	RPC
+type NodeNetwork interface {
+	ResolveHostID(ref core.RecordRef) string
+	GetID() core.RecordRef
 }
-*/
 
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork) (hosthandler.HostHandler, error) {
+func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		log.Fatal("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")
@@ -55,20 +56,23 @@ func NewHostNetwork(cfg configuration.HostNetwork) (hosthandler.HostHandler, err
 		return nil, err
 	}
 
-	origin, err := host.NewOrigin(nil, originAddress)
+	originID := id.ID(nn.ResolveHostID(nn.GetID()))
+	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
 		return nil, err
 	}
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
+	ncf := hosthandler.NewFacade(rpc.NewRPCFactory(nil).Create(), cascade)
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),
 		origin,
 		tp,
-		rpc.NewRPCFactory(nil).Create(),
+		ncf,
 		options,
-		proxy)
+		proxy,
+	)
 	if err != nil {
 		return nil, err
 	}

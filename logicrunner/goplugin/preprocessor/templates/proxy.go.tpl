@@ -11,18 +11,18 @@ import (
 {{ end }}
 
 // Reference to class of this contract
-var ClassReference = "{{ .ClassReference }}"
+var ClassReference = core.String2Ref("{{ .ClassReference }}")
 
 // Contract proxy type
 type {{ .ContractType }} struct {
-    Reference string
+    Reference core.RecordRef
 }
 
 type ContractHolder struct {
 	data []byte
 }
 
-func (r *ContractHolder) AsChild(objRef string) *{{ .ContractType }} {
+func (r *ContractHolder) AsChild(objRef core.RecordRef) *{{ .ContractType }} {
     ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
     if err != nil {
         panic(err)
@@ -30,7 +30,7 @@ func (r *ContractHolder) AsChild(objRef string) *{{ .ContractType }} {
     return &{{ .ContractType }}{Reference: ref}
 }
 
-func (r *ContractHolder) AsDelegate(objRef string) *{{ .ContractType }} {
+func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *{{ .ContractType }} {
     ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
     if err != nil {
         panic(err)
@@ -39,8 +39,20 @@ func (r *ContractHolder) AsDelegate(objRef string) *{{ .ContractType }} {
 }
 
 // GetObject
-func GetObject(ref string) (r *{{ .ContractType }}) {
+func GetObject(ref core.RecordRef) (r *{{ .ContractType }}) {
     return &{{ .ContractType }}{Reference: ref}
+}
+
+func GetClass() core.RecordRef {
+    return ClassReference
+}
+
+func GetImplementationFrom(object core.RecordRef) *{{ .ContractType }} {
+    ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
+    if err != nil {
+        panic(err)
+    }
+    return GetObject(ref)
 }
 
 {{ range $func := .ConstructorsProxies }}
@@ -63,14 +75,12 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractHolder {
 {{ end }}
 
 // GetReference
-// TODO replace return to Reference
-func (r *{{ $.ContractType }}) GetReference() string {
+func (r *{{ $.ContractType }}) GetReference() core.RecordRef {
     return r.Reference
 }
 
 // GetClass
-// TODO replace return to Reference
-func (r *{{ $.ContractType }}) GetClass() string {
+func (r *{{ $.ContractType }}) GetClass() core.RecordRef {
     return ClassReference
 }
 

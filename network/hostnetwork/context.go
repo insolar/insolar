@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -59,8 +59,8 @@ func (cb ContextBuilder) Build() (ctx hosthandler.Context, err error) {
 // SetHostByID sets host id in Context.
 func (cb ContextBuilder) SetHostByID(hostID id.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx hosthandler.Context) (hosthandler.Context, error) {
-		for index, id := range cb.hostHandler.GetOriginHost().IDs {
-			if hostID.KeyEqual(id.GetKey()) {
+		for index, id1 := range cb.hostHandler.GetOriginHost().IDs {
+			if hostID.Equal(id1.Bytes()) {
 				return context.WithValue(ctx, ctxTableIndex, index), nil
 			}
 		}

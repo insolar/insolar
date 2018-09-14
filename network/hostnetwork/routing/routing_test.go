@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -30,23 +30,23 @@ import (
 func TestDistanceMetric(t *testing.T) {
 	n := NewRouteHost(&host.Host{})
 	n.ID = getIDWithValues()
-	assert.Equal(t, 20, len(n.ID.GetKey()))
+	assert.Equal(t, 20, len(n.ID.Bytes()))
 
-	value := getDistance(n.ID.GetKey(), getIDWithValues().GetKey())
+	value := getDistance(n.ID.Bytes(), getIDWithValues().Bytes())
 	assert.NotEqual(t, 0, value.Cmp(new(big.Int).SetInt64(int64(0))))
 
 	v := getIDWithValues()
-	v.GetKey()[19] = byte(1)
-	value = getDistance(n.ID.GetKey(), v.GetKey())
+	v.Bytes()[19] = byte(1)
+	value = getDistance(n.ID.Bytes(), v.Bytes())
 	assert.NotEqual(t, big.NewInt(1), value)
 
 	v = getIDWithValues()
-	v.GetKey()[18] = byte(1)
-	value = getDistance(n.ID.GetKey(), v.GetKey())
+	v.Bytes()[18] = byte(1)
+	value = getDistance(n.ID.Bytes(), v.Bytes())
 	assert.NotEqual(t, big.NewInt(256), value)
 
 	v = getIDWithValues()
-	value = getDistance(n.ID.GetKey(), v.GetKey())
+	value = getDistance(n.ID.Bytes(), v.Bytes())
 
 	// (2^160)-1 = max possible distance
 	maxDistance := new(big.Int).Exp(big.NewInt(2), big.NewInt(160), nil)
@@ -76,7 +76,7 @@ func TestRouteSet(t *testing.T) {
 	n4 := &host.Host{ID: getZerodIDWithNthByte(16, 1)}
 
 	nl.hosts = []*host.Host{n3, n2, n4, n1}
-	nl.comparator = comparator.GetKey()
+	nl.comparator = comparator.Bytes()
 
 	sort.Sort(nl)
 
@@ -88,7 +88,7 @@ func TestRouteSet(t *testing.T) {
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
 	id1 := getIDWithValues()
-	id1.GetKey()[n] = v
+	id1.Bytes()[n] = v
 	return id1
 }
 

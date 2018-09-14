@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package ledgertestutil
 import (
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger"
@@ -29,9 +30,9 @@ import (
 // Returns *ledger.Ledger andh cleanup function.
 func TmpLedger(t *testing.T, dir string) (*ledger.Ledger, func()) {
 	db, dbcancel := storagetest.TmpDB(t, dir)
-	l, err := ledger.NewLedgerWithDB(db)
+	l, err := ledger.NewLedgerWithDB(db, configuration.NewLedger())
 	assert.NoError(t, err)
-	am := l.GetManager()
+	am := l.GetArtifactManager()
 	assert.NotNil(t, am)
 	return l, dbcancel
 }

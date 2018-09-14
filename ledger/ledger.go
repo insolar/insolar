@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -32,8 +32,16 @@ type Ledger struct {
 	coordinator *jetcoordinator.JetCoordinator
 }
 
-// GetManager returns artifact manager to work with.
-func (l *Ledger) GetManager() core.ArtifactManager {
+func (l *Ledger) GetPulseManager() core.PulseManager {
+	panic("implement me")
+}
+
+func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
+	return l.coordinator
+}
+
+// GetArtifactManager returns artifact manager to work with.
+func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.manager
 }
 
@@ -44,16 +52,16 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
-	return NewLedgerWithDB(db)
+	return NewLedgerWithDB(db, conf)
 }
 
 // NewLedgerWithDB creates new ledger with preconfigured storage.DB instance.
-func NewLedgerWithDB(db *storage.DB) (*Ledger, error) {
+func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error) {
 	manager, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
 	}
-	coordinator, err := jetcoordinator.NewJetCoordinator(db)
+	coordinator, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}

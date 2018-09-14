@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ type Configuration struct {
 	Log         Log
 	Stats       Stats
 	LogicRunner LogicRunner
+	Pulsar      Pulsar
 }
 
 // Holder provides methods to manage configuration
@@ -53,6 +54,7 @@ func NewConfiguration() Configuration {
 		Log:         NewLog(),
 		Stats:       NewStats(),
 		LogicRunner: NewLogicRunner(),
+		Pulsar:      NewPulsar(),
 	}
 
 	return cfg

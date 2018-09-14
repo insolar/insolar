@@ -241,6 +241,11 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		case packet.TypeRelay:
 			response := rsp.Data.(*packet.ResponseRelay)
 			err = handleRelayResponse(hostHandler, response, targetID)
+		case packet.TypeCascadeSend:
+			response := rsp.Data.(*packet.ResponseCascadeSend)
+			if !response.Success {
+				err = errors.New(response.Error)
+			}
 		}
 
 		if err != nil {

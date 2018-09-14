@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,14 +19,108 @@ package jetcoordinator
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
+type mockHolder struct {
+	virtualExecutor core.RecordRef
+	lightExecutor   core.RecordRef
+	heavyExecutor   core.RecordRef
+
+	virtualValidators []core.RecordRef
+	lightValidators   []core.RecordRef
+}
+
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db *storage.DB
+	db          *storage.DB
+	rootJetNode *JetNode
+
+	mock *mockHolder // TODO: remove after actual implementation is ready
+}
+
+// NewJetCoordinator creates new coordinator instance.
+func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) (*JetCoordinator, error) {
+	mock, err := createMock(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	rootJetNode := &JetNode{
+		ref: core.RecordRef{},
+		left: &JetNode{
+			left:  &JetNode{ref: core.RecordRef{}},
+			right: &JetNode{ref: core.RecordRef{}},
+		},
+		right: &JetNode{
+			left:  &JetNode{ref: core.RecordRef{}},
+			right: &JetNode{ref: core.RecordRef{}},
+		},
+	}
+
+	return &JetCoordinator{
+		db:          db,
+		mock:        mock,
+		rootJetNode: rootJetNode,
+	}, nil
+}
+
+func createMock(conf configuration.JetCoordinator) (*mockHolder, error) {
+	virtualExecutor := core.String2Ref(conf.VirtualExecutor)
+	lightExecutor := core.String2Ref(conf.LightExecutor)
+	heavyExecutor := core.String2Ref(conf.HeavyExecutor)
+
+	virtualValidators := make([]core.RecordRef, len(conf.VirtualValidators))
+	for i, vv := range conf.VirtualValidators {
+		virtualValidators[i] = core.String2Ref(vv)
+	}
+
+	lightValidators := make([]core.RecordRef, len(conf.LightValidators))
+	for i, lv := range conf.VirtualValidators {
+		lightValidators[i] = core.String2Ref(lv)
+	}
+
+	return &mockHolder{
+		virtualExecutor: virtualExecutor,
+		lightExecutor:   lightExecutor,
+		heavyExecutor:   heavyExecutor,
+
+		virtualValidators: virtualValidators,
+		lightValidators:   lightValidators,
+	}, nil
+}
+
+// IsAuthorized checks for role on concrete pulse for the address.
+func (jc *JetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
+	nodes := jc.QueryRole(role, obj, pulse)
+	for _, n := range nodes {
+		if n == node {
+			return true
+		}
+	}
+	return false
+}
+
+// QueryRole returns node refs responsible for role bound operations for given object and pulse.
+func (jc *JetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber) []core.RecordRef {
+	switch role {
+	case core.RoleVirtualExecutor:
+		return []core.RecordRef{jc.mock.virtualExecutor}
+	case core.RoleLightExecutor:
+		return []core.RecordRef{jc.mock.lightExecutor}
+	case core.RoleHeavyExecutor:
+		return []core.RecordRef{jc.mock.heavyExecutor}
+	case core.RoleVirtualValidator:
+		return jc.mock.virtualValidators
+	case core.RoleLightValidator:
+		return jc.mock.lightValidators
+	default:
+		panic("Unknown role")
+	}
 }
 
 // Pulse creates new jet drop and ends current slot.
@@ -107,7 +201,6 @@ func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][
 	return selected, nil
 }
 
-// NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator(db *storage.DB) (*JetCoordinator, error) {
-	return &JetCoordinator{db: db}, nil
+func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
+	return jc.rootJetNode.GetContaining(&objRef)
 }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ func TestNew(t *testing.T) {
 // 	ctx := getDefaultCtx(dht)
 //
 // 	mr, _ := New(r, dht)
-// 	reference := dht.GetOriginHost(ctx).ID.KeyString()
+// 	reference := dht.GetOriginHost(ctx).ID.String()
 //
 // 	t.Run("success", func(t *testing.T) {
 // 		r.responses = append(r.responses, core.Response{Data: []byte("data"), Result: []byte("result"), Error: nil})

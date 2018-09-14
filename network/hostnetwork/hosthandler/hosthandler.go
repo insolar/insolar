@@ -21,9 +21,11 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
+	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 )
@@ -32,6 +34,29 @@ import (
 // Network Host can have multiple IDs, but each action must be executed with only one ID.
 // Context is used in all actions to select specific ID to work with.
 type Context context.Context
+
+// NetworkCommonFacade is used for implementation of rpc and cascade.
+type NetworkCommonFacade interface {
+	GetRPC() rpc.RPC
+	GetCascade() *cascade.Cascade
+}
+
+type CommonFacade struct {
+	rpcPtr  rpc.RPC
+	cascade *cascade.Cascade
+}
+
+func NewFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
+	return &CommonFacade{r, casc}
+}
+
+func (fac *CommonFacade) GetRPC() rpc.RPC {
+	return fac.rpcPtr
+}
+
+func (fac *CommonFacade) GetCascade() *cascade.Cascade {
+	return fac.cascade
+}
 
 // HostHandler is an interface which uses for host network implementation.
 type HostHandler interface {
@@ -49,6 +74,7 @@ type HostHandler interface {
 	FindHost(ctx Context, targetID string) (*host.Host, bool, error)
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
 	InvokeRPC(sender *host.Host, method string, args [][]byte) ([]byte, error)
+	CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error
 	Store(key store.Key, data []byte, replication time.Time, expiration time.Time, publisher bool) error
 	RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error)
 
@@ -71,14 +97,15 @@ type HostHandler interface {
 	SetOuterHostsCount(hosts int)
 	SetAuthStatus(targetID string, status bool)
 
-	GetOriginHost() *host.Origin
 	GetProxyHostsCount() int
 	GetOuterHostsCount() int
-	GetSelfKnownOuterHosts() int
 	GetHighKnownHostID() string
+	GetSelfKnownOuterHosts() int
+	GetOriginHost() *host.Origin
 	GetPacketTimeout() time.Duration
 	GetReplicationTime() time.Duration
-	GetExpirationTime(ctx Context, key []byte) time.Time
-	KeyIsReceived(targetID string) ([]byte, bool)
 	HostIsAuthenticated(targetID string) bool
+	KeyIsReceived(targetID string) ([]byte, bool)
+	GetNetworkCommonFacade() NetworkCommonFacade
+	GetExpirationTime(ctx Context, key []byte) time.Time
 }

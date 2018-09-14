@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,37 +22,17 @@ import (
 
 // Node is an essence which provides communication between network level and MessageRouter.
 type Node struct {
-	id        string
-	role      string
-	hostID    string
-	reference core.RecordRef
+	id core.RecordRef
 }
 
 // NewNode creates a node with given args.
-func NewNode(nodeID, hostID string, domainID core.RecordRef) *Node {
+func NewNode(nodeID core.RecordRef) *Node {
 	return &Node{
-		id:        nodeID,
-		hostID:    hostID,
-		reference: domainID,
+		id: nodeID,
 	}
 }
 
-// nolint
-func (node *Node) setRole(newRole string) {
-	node.role = newRole
-}
-
-// GetNodeRole returns a Node role.
-func (node Node) GetNodeRole() string {
-	return node.role
-}
-
-// GetNodeID returns a Node ID.
-func (node Node) GetNodeID() string {
+// GetID returns a Node ID.
+func (node Node) GetID() core.RecordRef {
 	return node.id
-}
-
-// GetReference returns a Node domain ID.
-func (node Node) GetReference() core.RecordRef {
-	return node.reference
 }

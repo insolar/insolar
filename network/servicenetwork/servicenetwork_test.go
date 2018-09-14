@@ -86,7 +86,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	network.SendMessage("test", msg)
+	network.SendMessage(core.String2Ref("test"), "test", msg)
 }
 
 func TestServiceNetwork_Start(t *testing.T) {

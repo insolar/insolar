@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 
 	"github.com/pkg/errors"
 
@@ -127,9 +128,11 @@ func (t *TestClassDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
 
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
-	AM   *TestArtifactManager
-	Data []byte
-	Code *core.RecordRef
+	AM        *TestArtifactManager
+	Data      []byte
+	Code      *core.RecordRef
+	Class     *core.RecordRef
+	Delegates map[core.RecordRef]core.RecordRef
 }
 
 // HeadRef implementation for tests
@@ -162,7 +165,15 @@ func (t *TestObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
 
 // ClassDescriptor implementation for tests
 func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
-	panic("not implemented")
+	if t.Class == nil {
+		return nil, errors.New("No class")
+	}
+
+	res, ok := t.AM.Classes[*t.Class]
+	if !ok {
+		return nil, errors.New("No class")
+	}
+	return res, nil
 }
 
 // TestArtifactManager implementation for tests
@@ -226,7 +237,17 @@ func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) (core.RefItera
 
 // GetObjDelegate implementation for tests
 func (t *TestArtifactManager) GetObjDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
-	panic("not implemented")
+	obj, ok := t.Objects[head]
+	if !ok {
+		return nil, errors.New("No object")
+	}
+
+	res, ok := obj.Delegates[asClass]
+	if !ok {
+		return nil, errors.New("No delegate")
+	}
+
+	return &res, nil
 }
 
 // DeclareType implementation for tests
@@ -307,16 +328,29 @@ func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.Re
 	}
 
 	t.Objects[*ref] = &TestObjectDescriptor{
-		AM:   t,
-		Data: memory,
-		Code: codeRef,
+		AM:        t,
+		Data:      memory,
+		Code:      codeRef,
+		Class:     &class,
+		Delegates: make(map[core.RecordRef]core.RecordRef),
 	}
 	return ref, nil
 }
 
 // ActivateObjDelegate implementation for tests
 func (t *TestArtifactManager) ActivateObjDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	return t.ActivateObj(domain, request, class, parent, memory)
+	ref, err := t.ActivateObj(domain, request, class, parent, memory)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to generate ref")
+	}
+
+	pObj, ok := t.Objects[parent]
+	if !ok {
+		return nil, errors.New("No parent to inject delegate into")
+	}
+
+	pObj.Delegates[class] = *ref
+	return ref, nil
 }
 
 // DeactivateObj implementation for tests
@@ -326,10 +360,13 @@ func (t *TestArtifactManager) DeactivateObj(domain core.RecordRef, request core.
 
 // UpdateObj implementation for tests
 func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	_, ok := t.Objects[obj]
+	objDesc, ok := t.Objects[obj]
 	if !ok {
 		return nil, errors.New("No object to update")
 	}
+
+	objDesc.Data = memory
+
 	// TODO: return real exact "ref"
 	return &core.RecordRef{}, nil
 }
@@ -350,6 +387,13 @@ func CBORUnMarshal(t *testing.T, data []byte) interface{} {
 	err := codec.NewDecoderBytes(data, ch).Decode(&ret)
 	assert.NoError(t, err, "serialise")
 	return ret
+}
+
+// CBORUnMarshalToSlice - wrapper for CBORUnMarshal, expects slice
+func CBORUnMarshalToSlice(t *testing.T, in []byte) []interface{} {
+	r := CBORUnMarshal(t, in)
+	assert.IsType(t, []interface{}{}, r)
+	return r.([]interface{})
 }
 
 // AMPublishCode publishes code on ledger
@@ -391,23 +435,30 @@ type ContractsBuilder struct {
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
-	return &ContractsBuilder{ArtifactManager: am, IccPath: icc}
+func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder, func()) {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	if err != nil {
+		return nil, nil
+	}
+
+	cb := &ContractsBuilder{
+		root:            tmpDir,
+		Classes:         make(map[string]*core.RecordRef),
+		Codes:           make(map[string]*core.RecordRef),
+		ArtifactManager: am,
+		IccPath:         icc}
+	return cb, func() {
+		os.RemoveAll(cb.root) // nolint: errcheck
+	}
 }
 
 // Build ...
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
-	tmpDir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		return err
-	}
-	cb.root = tmpDir
-	defer os.RemoveAll(cb.root) // nolint: errcheck
 
-	cb.Classes = make(map[string]*core.RecordRef)
 	for name := range contracts {
+		rr, _ := randomRef()
 		class, err := cb.ArtifactManager.ActivateClass(
-			core.RecordRef{}, core.RecordRef{},
+			core.RecordRef{}, *rr,
 		)
 		if err != nil {
 			return err
@@ -416,7 +467,9 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		cb.Classes[name] = class
 	}
 
+	re := regexp.MustCompile(`package\s+\S+`)
 	for name, code := range contracts {
+		code = re.ReplaceAllString(code, "package main")
 		err := WriteFile(cb.root+"/src/contract/"+name+"/", "main.go", code)
 		if err != nil {
 			return err
@@ -431,7 +484,6 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 	}
 
-	cb.Codes = make(map[string]*core.RecordRef)
 	for name := range contracts {
 		err := cb.plugin(name)
 		if err != nil {

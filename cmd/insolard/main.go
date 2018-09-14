@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -70,12 +70,12 @@ func main() {
 	cfgHolder := configuration.NewHolder()
 	err := cfgHolder.Load()
 	if err != nil {
-		log.Warnln("Falied to load configuration from file: ", err.Error())
+		log.Warnln("Failed to load configuration from file: ", err.Error())
 	}
 
 	err = cfgHolder.LoadEnv()
 	if err != nil {
-		log.Warnln("Falied to load configuration from env:", err.Error())
+		log.Warnln("Failed to load configuration from env:", err.Error())
 	}
 
 	initLogger(cfgHolder.Configuration.Log)

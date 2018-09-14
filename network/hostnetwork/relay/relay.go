@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 
 func (r *relay) findClient(id id.ID) (int, *host.Host) {
 	for idx, hostIterator := range r.clients {
-		if hostIterator.ID.KeyEqual(id.GetKey()) {
+		if hostIterator.ID.Equal(id.Bytes()) {
 			return idx, hostIterator
 		}
 	}

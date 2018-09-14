@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,11 +14,17 @@
  *    limitations under the License.
  */
 
-package main
+package testutils
 
 import (
-	"testing"
+	"crypto/rand"
+
+	"github.com/insolar/insolar/core"
 )
 
-func TestStub(t *testing.T) {
+// RandomRef generates random RecordRef
+func RandomRef() core.RecordRef {
+	ref := [64]byte{}
+	rand.Read(ref[:]) // nolint
+	return ref
 }

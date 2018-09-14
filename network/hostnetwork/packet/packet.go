@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -54,6 +54,8 @@ const (
 	TypeKnownOuterHosts
 	// TypeCheckNodePriv is packet to check preset node privileges.
 	TypeCheckNodePriv
+	// TypeCascadeSend is the packet type for the cascade send message feature
+	TypeCascadeSend
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -152,7 +154,7 @@ func NewKnownOuterHostsPacket(sender, receiver *host.Host, hosts int) *Packet {
 		Receiver: receiver,
 		Type:     TypeKnownOuterHosts,
 		Data: &RequestKnownOuterHosts{
-			ID:         sender.ID.KeyString(),
+			ID:         sender.ID.String(),
 			OuterHosts: hosts,
 		},
 	}
@@ -185,6 +187,8 @@ func (m *Packet) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestKnownOuterHosts)
 	case TypeCheckNodePriv:
 		_, valid = m.Data.(*RequestCheckNodePriv)
+	case TypeCascadeSend:
+		_, valid = m.Data.(*RequestCascadeSend)
 	default:
 		valid = false
 	}
@@ -264,6 +268,7 @@ func init() {
 	gob.Register(&RequestRelayOwnership{})
 	gob.Register(&RequestKnownOuterHosts{})
 	gob.Register(&RequestCheckNodePriv{})
+	gob.Register(&RequestCascadeSend{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -276,6 +281,7 @@ func init() {
 	gob.Register(&ResponseRelayOwnership{})
 	gob.Register(&ResponseKnownOuterHosts{})
 	gob.Register(&ResponseCheckNodePriv{})
+	gob.Register(&ResponseCascadeSend{})
 
 	gob.Register(&id.ID{})
 }

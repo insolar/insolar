@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -23,8 +23,12 @@ type Arguments []byte
 
 // Message is a routable packet, ATM just a method call
 type Message interface {
+	// Serialize serializes message.
 	Serialize() (io.Reader, error)
+	// Get reference returns referenced object.
 	GetReference() RecordRef
+	// GetOperatingRole returns operating jet role for given message type.
+	GetOperatingRole() JetRole
 }
 
 // Response to a `Message`

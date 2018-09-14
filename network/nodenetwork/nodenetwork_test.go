@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -30,21 +30,8 @@ func TestNewNodeNetwork(t *testing.T) {
 	assert.NotNil(t, network)
 }
 
-func TestNodenetwork_AddNode(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	network := NewNodeNetwork(cfg.Node)
-	err := network.AddNode("test", "test", "test")
-	assert.NoError(t, err)
-}
-
 func TestNodenetwork_GetReferenceHostID(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	network := NewNodeNetwork(cfg.Node)
 	ref := core.String2Ref("ref")
-	node := NewNode("test", "test", ref)
-	err := network.addNode(node)
-	assert.NoError(t, err)
-	exp, err := network.GetReferenceHostID(ref.String())
-	assert.NoError(t, err)
-	assert.Equal(t, exp, node.GetNodeID())
+	node := NewNode(ref)
+	assert.Equal(t, node.GetID(), ref)
 }

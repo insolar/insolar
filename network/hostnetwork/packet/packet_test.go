@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -188,7 +188,7 @@ func TestSerializePacket(t *testing.T) {
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
-	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.GetKey()}).Build()
+	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
 
 	_, err := SerializePacket(msg)
 
@@ -203,7 +203,7 @@ func TestDeserializePacket(t *testing.T) {
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 	builder := NewBuilder()
-	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.GetKey()}).Build()
+	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
 
 	serialized, _ := SerializePacket(msg)
 

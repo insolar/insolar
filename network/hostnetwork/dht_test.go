@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -23,6 +23,9 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -178,16 +181,17 @@ func mockFindHostResponseEmpty(request *packet.Packet) *packet.Packet {
 	return r
 }
 
-func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
+func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, hosthandler.NetworkCommonFacade, error) {
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
 	origin, err := host.NewOrigin(ids, addr)
 	tp := newMockTransport()
-	r := rpc.NewRPC()
-	return st, origin, tp, r, err
+	cascade1 := &cascade.Cascade{}
+	ncf := hosthandler.NewFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
+	return st, origin, tp, ncf, err
 }
 
-func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, rpc.RPC, error) {
+func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transport.Transport, hosthandler.NetworkCommonFacade, error) {
 	st := store.NewMemoryStore()
 	addr, _ := host.NewAddress(address)
 	origin, _ := host.NewOrigin(ids, addr)
@@ -195,8 +199,9 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	cfg.Address = address
 	cfg.BehindNAT = false
 	tp, err := transport.NewTransport(cfg, relay.NewProxy())
-	r := rpc.NewRPC()
-	return st, origin, tp, r, err
+	cascade1 := &cascade.Cascade{}
+	ncf := hosthandler.NewFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
+	return st, origin, tp, ncf, err
 }
 
 // Creates twenty DHTs and bootstraps each with the previous
@@ -630,7 +635,7 @@ func TestHostResponseSendError(t *testing.T) {
 				close(done)
 			} else {
 				queries++
-				res := mockFindHostResponse(request, getZerodIDWithNthByte(2, byte(255)).GetKey())
+				res := mockFindHostResponse(request, getZerodIDWithNthByte(2, byte(255)).Bytes())
 				mockTp.send <- res
 			}
 		}
@@ -835,7 +840,7 @@ func TestFindHostAllBuckets(t *testing.T) {
 				return
 			}
 
-			res := mockFindHostResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).GetKey())
+			res := mockFindHostResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).Bytes())
 
 			i--
 			if i < 0 {
@@ -859,6 +864,85 @@ func TestFindHostAllBuckets(t *testing.T) {
 	dht.Disconnect()
 	<-done
 }
+
+// TODO: delete or repair
+// Tests timing out of hosts in a bucket. DHT bootstraps networks and learns
+// about 20 subsequent hosts in the same bucket. Upon attempting to add the 21st
+// host to the now full bucket, we should receive a ping to the very first host
+// added in order to determine if it is still alive.
+// func TestAddHostTimeout(t *testing.T) {
+// 	zeroID := getIDWithValues(0)
+// 	done := make(chan int)
+// 	pinged := make(chan int)
+//
+// 	bootstrapAddr, _ := host.NewAddress("0.0.0.0:27001")
+// 	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:27000")
+// 	assert.NoError(t, err)
+//
+// 	dht, _ := NewDHT(st, s, tp, r, &Options{
+// 		BootstrapHosts: []*host.Host{{
+// 			ID:      getZerodIDWithNthByte(1, byte(255)),
+// 			Address: bootstrapAddr,
+// 		}},
+// 	},
+// 		relay.NewProxy())
+// 	mockTp := tp.(*mockTransport)
+//
+// 	go func() {
+// 		dht.Listen()
+// 	}()
+//
+// 	var hostsAdded = 1
+// 	var firstHost []byte
+// 	var lastHost []byte
+//
+// 	go func() {
+// 		for {
+// 			request := <-mockTp.recv
+// 			if request == nil {
+// 				return
+// 			}
+// 			switch request.Type {
+// 			case packet.TypeFindHost:
+// 				id1 := getIDWithValues(0)
+// 				if hostsAdded > routing.MaxContactsInBucket+1 {
+// 					close(done)
+// 					return
+// 				}
+//
+// 				if hostsAdded == 1 {
+// 					firstHost = id1.Bytes()
+// 				}
+//
+// 				if hostsAdded == routing.MaxContactsInBucket {
+// 					lastHost = id1.Bytes()
+// 				}
+//
+// 				id1.Bytes()[1] = byte(255 - hostsAdded)
+// 				hostsAdded++
+//
+// 				res := mockFindHostResponse(request, id1.Bytes())
+// 				mockTp.send <- res
+// 			case packet.TypePing:
+// 				assert.Equal(t, packet.TypePing, request.Type)
+// 				assert.Equal(t, getZerodIDWithNthByte(1, byte(255)), request.Receiver.ID)
+// 				close(pinged)
+// 			}
+// 		}
+// 	}()
+//
+// 	dht.Bootstrap()
+//
+// 	// ensure the first host in the table is the second host contacted, and the
+// 	// last is the last host contacted
+// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.Bytes(), firstHost))
+// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.Bytes(), lastHost))
+//
+// 	dht.Disconnect()
+//
+// 	<-done
+// 	<-pinged
+// }
 
 func TestGetRandomIDFromBucket(t *testing.T) {
 	zeroID := getIDWithValues(0)
@@ -888,7 +972,7 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
 	id1 := getIDWithValues(0)
-	id1.GetKey()[n] = v
+	id1.Bytes()[n] = v
 	return id1
 }
 
@@ -1013,7 +1097,7 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 		ids1 := make([]id.ID, 0)
 		id1, _ := id.NewID()
 		ids1 = append(ids1, id1)
-		ids = append(ids, ids1[0].KeyString())
+		ids = append(ids, ids1[0].String())
 		st, s, tp, r, _ := realDhtParams(ids1, "127.0.0.1:"+strconv.Itoa(port))
 		address, _ := host.NewAddress("127.0.0.1:" + strconv.Itoa(port-1))
 		bootstrapHost := host.NewHost(address)
@@ -1105,4 +1189,75 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 		dht.Disconnect()
 	}
 	<-done
+}
+
+type mockHostIdResolver struct {
+	refToHost  map[core.RecordRef]string
+	currentRef core.RecordRef
+}
+
+func (m *mockHostIdResolver) ResolveHostID(ref core.RecordRef) string {
+	return m.refToHost[ref]
+}
+
+func (m *mockHostIdResolver) GetID() core.RecordRef {
+	return m.currentRef
+}
+
+type mockCascadeTransport struct {
+	routing       map[string]*mockCascadeTransport
+	recv          chan *packet.Packet
+	send          chan *packet.Packet
+	dc            chan bool
+	msgChan       chan *packet.Packet
+	sequence      *uint64
+	publicAddress string
+}
+
+func newMockCascadeTransport(r map[string]*mockCascadeTransport) *mockCascadeTransport {
+	net := &mockCascadeTransport{
+		routing:  r,
+		recv:     make(chan *packet.Packet),
+		send:     make(chan *packet.Packet),
+		dc:       make(chan bool),
+		msgChan:  make(chan *packet.Packet),
+		sequence: new(uint64),
+	}
+	return net
+}
+
+func (t *mockCascadeTransport) Start() error {
+	return nil
+}
+
+func (t *mockCascadeTransport) Stop() {
+	close(t.dc)
+}
+
+func (t *mockCascadeTransport) Close() {
+	close(t.recv)
+	close(t.send)
+	close(t.msgChan)
+}
+
+func (t *mockCascadeTransport) Stopped() <-chan bool {
+	return t.dc
+}
+
+func (t *mockCascadeTransport) Packets() <-chan *packet.Packet {
+	return t.msgChan
+}
+
+func (t *mockCascadeTransport) SendRequest(q *packet.Packet) (transport.Future, error) {
+	sequenceNumber := transport.AtomicLoadAndIncrementUint64(t.sequence)
+	t.routing[q.Receiver.ID.String()].recv <- q
+	return &mockFuture{result: t.send, request: q, actor: q.Receiver, requestID: packet.RequestID(sequenceNumber)}, nil
+}
+
+func (t *mockCascadeTransport) SendResponse(requestID packet.RequestID, q *packet.Packet) error {
+	return nil
+}
+
+func (t *mockCascadeTransport) PublicAddress() string {
+	return t.publicAddress
 }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -59,6 +59,12 @@ type ResponseDataStore struct {
 type ResponseDataRPC struct {
 	Success bool
 	Result  []byte
+	Error   string
+}
+
+// ResponseCascadeSend is the response data of a cascade sending call
+type ResponseCascadeSend struct {
+	Success bool
 	Error   string
 }
 

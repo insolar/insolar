@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,6 +16,28 @@
 
 package configuration
 
+// JetCoordinator holds configuration for JetCoordinator.
+type JetCoordinator struct {
+	VirtualExecutor string
+	LightExecutor   string
+	HeavyExecutor   string
+
+	VirtualValidators []string
+	LightValidators   []string
+}
+
+// JetCoordinator creates new default JetCoordinator configuration.
+func NewJetCoordinator() JetCoordinator {
+	return JetCoordinator{
+		VirtualExecutor: "",
+		LightExecutor:   "",
+		HeavyExecutor:   "",
+
+		VirtualValidators: make([]string, 0),
+		LightValidators:   make([]string, 0),
+	}
+}
+
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// DataDirectory is a directory where database's files live.
@@ -23,6 +45,8 @@ type Ledger struct {
 	// TxRetriesOnConflict defines how many retries on transaction conflicts
 	// storage update methods should do.
 	TxRetriesOnConflict int
+	// JetCoordinator defines jet coordinator configuration.
+	JetCoordinator JetCoordinator
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -30,5 +54,6 @@ func NewLedger() Ledger {
 	return Ledger{
 		DataDirectory:       "./data",
 		TxRetriesOnConflict: 3,
+		JetCoordinator:      NewJetCoordinator(),
 	}
 }

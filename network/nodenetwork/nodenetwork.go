@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,56 +17,33 @@
 package nodenetwork
 
 import (
-	"errors"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"golang.org/x/crypto/sha3"
 )
 
-// Nodenetwork is nodes manager.
-type Nodenetwork struct {
-	nodes map[string]*Node // key - reference ID, value - node ID.
+// NodeNetwork is node manager.
+type NodeNetwork struct {
+	node *Node
 }
 
-// NewNodeNetwork creates a new nodenetwork.
-func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *Nodenetwork {
-	nodes := make(map[string]*Node)
-	for _, cfg := range nodeCfg.Nodes {
-		node := NewNode(cfg.NodeID, cfg.HostID, core.String2Ref(cfg.ReferenceID))
-		nodes[cfg.ReferenceID] = node
-	}
-	network := &Nodenetwork{
-		nodes: nodes,
+// NewNodeNetwork creates a new node network.
+func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *NodeNetwork {
+	node := NewNode(core.String2Ref(nodeCfg.Node.ID))
+	network := &NodeNetwork{
+		node: node,
 	}
 	return network
 }
 
-// AddNode adds a new node to nodes map.
-func (network *Nodenetwork) AddNode(nodeID, hostID, domainID string) error {
-	node, err := network.createNode(nodeID, hostID, domainID)
-	if err != nil {
-		return err
-	}
-	return network.addNode(node)
+// ResolveHostID returns a host found by reference.
+func (network *NodeNetwork) ResolveHostID(ref core.RecordRef) string {
+	hash := make([]byte, 20)
+	sha3.ShakeSum128(hash, ref[:])
+	return string(hash)
 }
 
-// GetReferenceHostID returns a host found by reference.
-func (network *Nodenetwork) GetReferenceHostID(ref string) (string, error) {
-	if _, ok := network.nodes[ref]; !ok {
-		return "", errors.New("reference ID doesn't exist")
-	}
-	return network.nodes[ref].hostID, nil
-}
-
-func (network *Nodenetwork) createNode(nodeID, hostID, domainID string) (*Node, error) {
-	node := NewNode(nodeID, hostID, core.String2Ref(domainID))
-	return node, nil
-}
-
-func (network *Nodenetwork) addNode(node *Node) error {
-	if node == nil {
-		return errors.New("node is nil")
-	}
-	network.nodes[node.GetReference().String()] = node
-	return nil
+// GetID returns current node id
+func (network *NodeNetwork) GetID() core.RecordRef {
+	return network.node.GetID()
 }

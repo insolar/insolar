@@ -33,15 +33,15 @@ func TestAuthenticationRequest(t *testing.T) {
 	receiver.ID, _ = id.NewID()
 	hh := newMockHostHandler()
 
-	err := AuthenticationRequest(hh, "begin", receiver.ID.KeyString())
+	err := AuthenticationRequest(hh, "begin", receiver.ID.String())
 	assert.Error(t, err, "AuthenticationRequest: target for auth request not found")
 
 	hh.FoundHost = receiver
-	err = AuthenticationRequest(hh, "begin", receiver.ID.KeyString())
+	err = AuthenticationRequest(hh, "begin", receiver.ID.String())
 	assert.NoError(t, err)
-	err = AuthenticationRequest(hh, "revoke", receiver.ID.KeyString())
+	err = AuthenticationRequest(hh, "revoke", receiver.ID.String())
 	assert.NoError(t, err)
-	err = AuthenticationRequest(hh, "unknown", receiver.ID.KeyString())
+	err = AuthenticationRequest(hh, "unknown", receiver.ID.String())
 	assert.Error(t, err, "AuthenticationRequest: unknown command")
 }
 
@@ -54,11 +54,11 @@ func TestCheckOriginRequest(t *testing.T) {
 	receiver.ID, _ = id.NewID()
 	hh := newMockHostHandler()
 
-	err := CheckOriginRequest(hh, receiver.ID.KeyString())
+	err := CheckOriginRequest(hh, receiver.ID.String())
 	assert.Error(t, err, "CheckOriginRequest: target for relay request not found")
 
 	hh.FoundHost = receiver
-	err = CheckOriginRequest(hh, receiver.ID.KeyString())
+	err = CheckOriginRequest(hh, receiver.ID.String())
 	assert.NoError(t, err)
 }
 
@@ -71,11 +71,11 @@ func TestObtainIPRequest(t *testing.T) {
 	receiver.ID, _ = id.NewID()
 	hh := newMockHostHandler()
 
-	err := ObtainIPRequest(hh, receiver.ID.KeyString())
+	err := ObtainIPRequest(hh, receiver.ID.String())
 	assert.Error(t, err, "ObtainIPRequest: target for relay request not found")
 
 	hh.FoundHost = receiver
-	ObtainIPRequest(hh, receiver.ID.KeyString())
+	ObtainIPRequest(hh, receiver.ID.String())
 }
 
 func TestRelayRequest(t *testing.T) {
@@ -87,14 +87,14 @@ func TestRelayRequest(t *testing.T) {
 	receiver.ID, _ = id.NewID()
 	hh := newMockHostHandler()
 
-	err := RelayRequest(hh, "begin auth", receiver.ID.KeyString())
+	err := RelayRequest(hh, "begin auth", receiver.ID.String())
 	assert.Error(t, err, "RelayRequest: target for relay request not found")
 
 	hh.FoundHost = receiver
-	err = RelayRequest(hh, "begin auth", receiver.ID.KeyString())
+	err = RelayRequest(hh, "begin auth", receiver.ID.String())
 	assert.Error(t, err, "unknown command")
-	err = RelayRequest(hh, "start", receiver.ID.KeyString())
-	err = RelayRequest(hh, "stop", receiver.ID.KeyString())
+	err = RelayRequest(hh, "start", receiver.ID.String())
+	err = RelayRequest(hh, "stop", receiver.ID.String())
 }
 
 func TestRelayOwnershipRequest(t *testing.T) {
@@ -106,9 +106,9 @@ func TestRelayOwnershipRequest(t *testing.T) {
 	receiver.ID, _ = id.NewID()
 	hh := newMockHostHandler()
 
-	err := RelayOwnershipRequest(hh, receiver.ID.KeyString())
+	err := RelayOwnershipRequest(hh, receiver.ID.String())
 	assert.Error(t, err, "RelayRequest: target for relay request not found")
 
 	hh.FoundHost = receiver
-	err = RelayOwnershipRequest(hh, receiver.ID.KeyString())
+	err = RelayOwnershipRequest(hh, receiver.ID.String())
 }

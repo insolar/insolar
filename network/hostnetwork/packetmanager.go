@@ -32,7 +32,7 @@ func ParseIncomingPacket(hostHandler hosthandler.HostHandler, ctx hosthandler.Co
 func BuildContext(cb ContextBuilder, msg *packet.Packet) hosthandler.Context {
 	var ctx hosthandler.Context
 	var err error
-	if msg.Receiver.ID.GetKey() == nil {
+	if msg.Receiver.ID.Bytes() == nil {
 		ctx, err = cb.SetDefaultHost().Build()
 	} else {
 		ctx, err = cb.SetHostByID(msg.Receiver.ID).Build()

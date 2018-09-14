@@ -44,7 +44,10 @@ func newMockHostHandler() *mockHostHandler {
 }
 
 func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+}
 
+func (hh *mockHostHandler) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
+	return nil
 }
 
 func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
@@ -91,6 +94,10 @@ func (hh *mockHostHandler) StoreRetrieve(key store.Key) ([]byte, bool) {
 	return nil, false
 }
 
+func (hh *mockHostHandler) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
+	return nil
+}
+
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
 	address, _ := host.NewAddress("0.0.0.0:0")
 	id1, _ := id.NewID()
@@ -131,7 +138,7 @@ func (hh *mockHostHandler) FindHost(ctx hosthandler.Context, targetID string) (*
 	if hh.FoundHost == nil {
 		return nil, false, nil
 	}
-	if strings.EqualFold(targetID, hh.FoundHost.ID.KeyString()) {
+	if strings.EqualFold(targetID, hh.FoundHost.ID.String()) {
 		return hh.FoundHost, true, nil
 	}
 	return nil, false, nil
@@ -253,8 +260,8 @@ func TestDispatchPacketType(t *testing.T) {
 	authenticatedSenderAddress, _ := host.NewAddress("0.0.0.0:0")
 	authenticatedSender := host.NewHost(authenticatedSenderAddress)
 	authenticatedSender.ID, _ = id.NewID()
-	hh.AuthenticatedHost = authenticatedSender.ID.KeyString()
-	hh.ReceivedKey = authenticatedSender.ID.KeyString()
+	hh.AuthenticatedHost = authenticatedSender.ID.String()
+	hh.ReceivedKey = authenticatedSender.ID.String()
 
 	t.Run("ping", func(t *testing.T) {
 		pckt := packet.NewPingPacket(sender, receiver)
@@ -327,12 +334,12 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("find host", func(t *testing.T) {
-		pckt := builder.Type(packet.TypeFindHost).Request(&packet.RequestDataFindHost{Target: receiver.ID.GetKey()}).Build()
+		pckt := builder.Type(packet.TypeFindHost).Request(&packet.RequestDataFindHost{Target: receiver.ID.Bytes()}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("find value", func(t *testing.T) {
-		pckt := builder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: sender.ID.GetKey()}).Build()
+		pckt := builder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: sender.ID.Bytes()}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 }

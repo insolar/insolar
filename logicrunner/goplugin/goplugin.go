@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ type RPC struct {
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.gp.ArtifactManager
 	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
-	codeDescriptor, err := am.GetCode(req.Reference)
+	codeDescriptor, err := am.GetCode(req.Code)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	}
 
 	msg := &message.CallMethodMessage{
-		ObjectRef: req.Reference,
+		ObjectRef: req.Object,
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
@@ -137,8 +137,36 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 	if err != nil {
 		return err
 	}
-
 	reply.Reference = *ref
+	return nil
+}
+
+// GetObjChildren is an RPC returns set of object children
+func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes.UpGetObjChildrenResp) error {
+	// TODO: INS-408
+	am := gpr.gp.ArtifactManager
+	i, err := am.GetObjChildren(req.Obj)
+	if err != nil {
+		return errors.Wrap(err, "am.GetObjChildren failed")
+	}
+	for i.HasNext() {
+		r, err := i.Next()
+		if err != nil {
+			return err
+		}
+		o, err := am.GetLatestObj(r)
+		if err != nil {
+			return errors.Wrap(err, "Have ref, have no object")
+		}
+		cd, err := o.ClassDescriptor()
+		if err != nil {
+			return errors.Wrap(err, "Have ref, have no object")
+		}
+		ref := cd.HeadRef()
+		if ref.Equal(req.Class) {
+			reply.Children = append(reply.Children, r)
+		}
+	}
 	return nil
 }
 
@@ -160,6 +188,18 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 
 	reply.Reference = core.String2Ref(string(res.Data))
 
+	return nil
+}
+
+// GetDelegate is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGetDelegateResp) error {
+	am := gpr.gp.ArtifactManager
+	ref, err := am.GetObjDelegate(req.Object, req.OfType)
+	if err != nil {
+		return err
+	}
+
+	reply.Object = *ref
 	return nil
 }
 
@@ -218,7 +258,7 @@ func (gp *GoPlugin) StartRunner() error {
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
 
-	execPath := "ginsider-cli/ginsider-cli"
+	execPath := "logicrunner/goplugin/ginsider-cli/ginsider-cli"
 	if gp.Cfg.RunnerPath != "" {
 		execPath = gp.Cfg.RunnerPath
 	}
@@ -271,14 +311,20 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 const timeout = time.Second * 5
 
 // CallMethod runs a method on an object in controlled environment
-func (gp *GoPlugin) CallMethod(codeRef core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
 
 	res := rpctypes.DownCallMethodResp{}
-	req := rpctypes.DownCallMethodReq{Reference: codeRef, Data: data, Method: method, Arguments: args}
+	req := rpctypes.DownCallMethodReq{
+		Context:   ctx,
+		Code:      code,
+		Data:      data,
+		Method:    method,
+		Arguments: args,
+	}
 
 	select {
 	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
@@ -292,14 +338,14 @@ func (gp *GoPlugin) CallMethod(codeRef core.RecordRef, data []byte, method strin
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
-func (gp *GoPlugin) CallConstructor(codeRef core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with rpc connection")
 	}
 
 	res := rpctypes.DownCallConstructorResp{}
-	req := rpctypes.DownCallConstructorReq{Reference: codeRef, Name: name, Arguments: args}
+	req := rpctypes.DownCallConstructorReq{Code: code, Name: name, Arguments: args}
 
 	select {
 	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
