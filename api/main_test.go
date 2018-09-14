@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
@@ -36,9 +37,12 @@ const TestUrl = HOST + "/api/v1?query_type=LOL"
 
 func TestMain(m *testing.M) {
 	cfg := configuration.NewAPIRunner()
+	bootstrapCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)
 
 	cs := core.Components{}
+	b, _ := bootstrap.NewBootstrapper(bootstrapCfg)
+	cs["core.Bootstrapper"] = b
 	api.Start(cs)
 
 	code := m.Run()
@@ -146,7 +150,7 @@ func TestWithFakeMessageRouter(t *testing.T) {
 
 	const LOCATION = "/test/test"
 
-	fw := wrapAPIV1Handler(&mr)
+	fw := wrapAPIV1Handler(&mr, core.RecordRef{})
 	http.HandleFunc(LOCATION, fw)
 
 	const TestUrl2 = HOST + LOCATION + "?query_type=PPPPPPPP"

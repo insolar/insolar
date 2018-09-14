@@ -255,7 +255,7 @@ func (gp *GoPlugin) StartRunner() error {
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
 
-	execPath := "logicrunner/goplugin/ginsider-cli/ginsider-cli"
+	execPath := "testdata/logicrunner/ginsider-cli"
 	if gp.Cfg.RunnerPath != "" {
 		execPath = gp.Cfg.RunnerPath
 	}

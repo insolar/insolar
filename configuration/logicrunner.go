@@ -34,9 +34,9 @@ func NewLogicRunner() LogicRunner {
 	return LogicRunner{
 		BuiltIn: &BuiltIn{},
 		GoPlugin: &GoPlugin{
-			RunnerPath:     "logicrunner/goplugin/ginsider-cli/ginsider-cli",
+			RunnerPath:     "testdata/logicrunner/ginsider-cli",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerCodePath: ".../TEMPDIR_CHANGE ME/...",
+			RunnerCodePath: "contractstorage",
 			MainListen:     "127.0.0.1:7778",
 		},
 	}

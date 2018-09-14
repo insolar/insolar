@@ -23,16 +23,8 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
-
-func makeRootDomainReference() core.RecordRef {
-	const ref = "1111111-1111111-11111111-1111111"
-	return core.String2Ref(base58.Encode([]byte(ref)))
-}
-
-var rootDomainReference = makeRootDomainReference()
 
 func extractCreateMemberResponse(data []byte) (*string, error) {
 	var typeHolder string
@@ -59,7 +51,7 @@ type RequestHandler struct {
 }
 
 // Creates new query handler
-func NewRequestHandler(params *Params, router core.MessageRouter) *RequestHandler {
+func NewRequestHandler(params *Params, router core.MessageRouter, rootDomainReference core.RecordRef) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,

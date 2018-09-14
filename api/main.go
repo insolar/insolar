@@ -25,12 +25,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/satori/go.uuid"
-	"github.com/sirupsen/logrus"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -120,7 +119,7 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func wrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *http.Request) {
+func wrapAPIV1Handler(router core.MessageRouter, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
 		var params *Params
@@ -148,10 +147,10 @@ func wrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *
 		params, err := preprocessRequest(req)
 		if err != nil {
 			answer = writeError("Bad request", badRequest)
-			logrus.Errorf("[QID=]Can't parse input request: %s\n", err, req.RequestURI)
+			logrus.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, router)
+		rh := NewRequestHandler(params, router, rootDomainReference)
 
 		answer = processQueryType(rh, params.QType)
 	}
@@ -199,7 +198,9 @@ func (ar *Runner) Start(c core.Components) error {
 
 	ar.reloadMessageRouter(c)
 
-	fw := wrapAPIV1Handler(ar.messageRouter)
+	rootDomainReference := c["core.Bootstrapper"].(core.Bootstrapper).GetRootDomainRef()
+
+	fw := wrapAPIV1Handler(ar.messageRouter, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
 	logrus.Info("Starting ApiRunner ...")
 	logrus.Info("Config: ", ar.cfg)
