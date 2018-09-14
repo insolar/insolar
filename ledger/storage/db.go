@@ -75,7 +75,7 @@ func setOptions(o *badger.Options) *badger.Options {
 // Creates database in provided dir or in current directory if dir parameter is empty.
 func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	opts = setOptions(opts)
-	dir, err := filepath.Abs(conf.DataDirectory)
+	dir, err := filepath.Abs(conf.Storage.DataDirectory)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 
 	db := &DB{
 		db:         bdb,
-		txretiries: conf.TxRetriesOnConflict,
+		txretiries: conf.Storage.TxRetriesOnConflict,
 	}
 	return db, nil
 }
