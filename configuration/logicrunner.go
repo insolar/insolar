@@ -16,10 +16,6 @@
 
 package configuration
 
-import (
-	"os"
-)
-
 type LogicRunner struct {
 	BuiltIn  *BuiltIn
 	GoPlugin *GoPlugin
@@ -35,14 +31,12 @@ type GoPlugin struct {
 }
 
 func NewLogicRunner() LogicRunner {
-	insiderStorage := "contractstorage"
-	_ = os.Mkdir(insiderStorage, os.ModePerm)
 	return LogicRunner{
 		BuiltIn: &BuiltIn{},
 		GoPlugin: &GoPlugin{
 			RunnerPath:     "testdata/logicrunner/ginsider-cli",
 			RunnerListen:   "127.0.0.1:7777",
-			RunnerCodePath: insiderStorage,
+			RunnerCodePath: "contractstorage",
 			MainListen:     "127.0.0.1:7778",
 		},
 	}
