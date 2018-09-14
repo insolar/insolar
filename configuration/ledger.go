@@ -16,35 +16,28 @@
 
 package configuration
 
-// JetCoordinator holds configuration for JetCoordinator.
-type JetCoordinator struct {
-	VirtualExecutor string
-	LightExecutor   string
-	HeavyExecutor   string
+import (
+	"github.com/insolar/insolar/core"
+)
 
-	VirtualValidators []string
-	LightValidators   []string
-}
-
-// JetCoordinator creates new default JetCoordinator configuration.
-func NewJetCoordinator() JetCoordinator {
-	return JetCoordinator{
-		VirtualExecutor: "",
-		LightExecutor:   "",
-		HeavyExecutor:   "",
-
-		VirtualValidators: make([]string, 0),
-		LightValidators:   make([]string, 0),
-	}
-}
-
-// Ledger holds configuration for ledger.
-type Ledger struct {
+type Storage struct {
 	// DataDirectory is a directory where database's files live.
 	DataDirectory string
 	// TxRetriesOnConflict defines how many retries on transaction conflicts
 	// storage update methods should do.
 	TxRetriesOnConflict int
+}
+
+// JetCoordinator holds configuration for JetCoordinator.
+type JetCoordinator struct {
+	RoleCandidates map[int][]string
+	RoleCounts     map[int]int
+}
+
+// Ledger holds configuration for ledger.
+type Ledger struct {
+	// Storage defines storage configuration.
+	Storage Storage
 	// JetCoordinator defines jet coordinator configuration.
 	JetCoordinator JetCoordinator
 }
@@ -52,8 +45,26 @@ type Ledger struct {
 // NewLedger creates new default Ledger configuration.
 func NewLedger() Ledger {
 	return Ledger{
-		DataDirectory:       "./data",
-		TxRetriesOnConflict: 3,
-		JetCoordinator:      NewJetCoordinator(),
+		Storage: Storage{
+			DataDirectory:       "./data",
+			TxRetriesOnConflict: 3,
+		},
+
+		JetCoordinator: JetCoordinator{
+			RoleCandidates: map[int][]string{
+				int(core.RoleVirtualExecutor):  {"1", "2"},
+				int(core.RoleHeavyExecutor):    {"1", "2"},
+				int(core.RoleLightExecutor):    {"1", "2"},
+				int(core.RoleVirtualValidator): {"1", "2"},
+				int(core.RoleLightValidator):   {"1", "2"},
+			},
+			RoleCounts: map[int]int{
+				int(core.RoleVirtualExecutor):  1,
+				int(core.RoleHeavyExecutor):    1,
+				int(core.RoleLightExecutor):    1,
+				int(core.RoleVirtualValidator): 3,
+				int(core.RoleLightValidator):   3,
+			},
+		},
 	}
 }

@@ -21,103 +21,96 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/pkg/errors"
 )
-
-type mockHolder struct {
-	virtualExecutor core.RecordRef
-	lightExecutor   core.RecordRef
-	heavyExecutor   core.RecordRef
-
-	virtualValidators []core.RecordRef
-	lightValidators   []core.RecordRef
-}
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db          *storage.DB
-	rootJetNode *JetNode
-
-	mock *mockHolder // TODO: remove after actual implementation is ready
+	db             *storage.DB
+	rootJetNode    *JetNode
+	roleCandidates map[core.JetRole][]core.RecordRef
+	roleCounts     map[core.JetRole]int
 }
 
 // NewJetCoordinator creates new coordinator instance.
 func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) (*JetCoordinator, error) {
-	mock, err := createMock(conf)
+	jc := JetCoordinator{
+		db: db,
+		rootJetNode: &JetNode{
+			ref: core.RecordRef{},
+			left: &JetNode{
+				left:  &JetNode{ref: core.RecordRef{}},
+				right: &JetNode{ref: core.RecordRef{}},
+			},
+			right: &JetNode{
+				left:  &JetNode{ref: core.RecordRef{}},
+				right: &JetNode{ref: core.RecordRef{}},
+			},
+		},
+	}
+	jc.loadConfig(conf)
+
+	return &jc, nil
+}
+
+func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
+	jc.roleCandidates = map[core.JetRole][]core.RecordRef{}
+	jc.roleCounts = map[core.JetRole]int{}
+
+	for intRole, candidates := range conf.RoleCandidates {
+		role := core.JetRole(intRole)
+		jc.roleCandidates[role] = []core.RecordRef{}
+		for _, cand := range candidates {
+			jc.roleCandidates[role] = append(jc.roleCandidates[role], core.String2Ref(cand))
+		}
+	}
+
+	for intRole, count := range conf.RoleCounts {
+		role := core.JetRole(intRole)
+		jc.roleCounts[role] = count
+	}
+}
+
+// IsAuthorized checks for role on concrete pulse for the address.
+func (jc *JetCoordinator) IsAuthorized(
+	role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef,
+) (bool, error) {
+	nodes, err := jc.QueryRole(role, obj, pulse)
+	if err != nil {
+		return false, err
+	}
+	for _, n := range nodes {
+		if n == node {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// QueryRole returns node refs responsible for role bound operations for given object and pulse.
+func (jc *JetCoordinator) QueryRole(
+	role core.JetRole, obj core.RecordRef, pulse core.PulseNumber,
+) ([]core.RecordRef, error) {
+	entropy, err := jc.db.GetEntropy(pulse)
 	if err != nil {
 		return nil, err
 	}
 
-	rootJetNode := &JetNode{
-		ref: core.RecordRef{},
-		left: &JetNode{
-			left:  &JetNode{ref: core.RecordRef{}},
-			right: &JetNode{ref: core.RecordRef{}},
-		},
-		right: &JetNode{
-			left:  &JetNode{ref: core.RecordRef{}},
-			right: &JetNode{ref: core.RecordRef{}},
-		},
+	candidates, ok := jc.roleCandidates[role]
+	if !ok {
+		return nil, errors.New("no candidates for this role")
+	}
+	count, ok := jc.roleCounts[role]
+	if !ok {
+		return nil, errors.New("no candidate count for this role")
 	}
 
-	return &JetCoordinator{
-		db:          db,
-		mock:        mock,
-		rootJetNode: rootJetNode,
-	}, nil
-}
-
-func createMock(conf configuration.JetCoordinator) (*mockHolder, error) {
-	virtualExecutor := core.String2Ref(conf.VirtualExecutor)
-	lightExecutor := core.String2Ref(conf.LightExecutor)
-	heavyExecutor := core.String2Ref(conf.HeavyExecutor)
-
-	virtualValidators := make([]core.RecordRef, len(conf.VirtualValidators))
-	for i, vv := range conf.VirtualValidators {
-		virtualValidators[i] = core.String2Ref(vv)
+	selected, err := selectByEntropy(*entropy, candidates, count)
+	if err != nil {
+		return nil, err
 	}
 
-	lightValidators := make([]core.RecordRef, len(conf.LightValidators))
-	for i, lv := range conf.VirtualValidators {
-		lightValidators[i] = core.String2Ref(lv)
-	}
-
-	return &mockHolder{
-		virtualExecutor: virtualExecutor,
-		lightExecutor:   lightExecutor,
-		heavyExecutor:   heavyExecutor,
-
-		virtualValidators: virtualValidators,
-		lightValidators:   lightValidators,
-	}, nil
-}
-
-// IsAuthorized checks for role on concrete pulse for the address.
-func (jc *JetCoordinator) IsAuthorized(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber, node core.RecordRef) bool {
-	nodes := jc.QueryRole(role, obj, pulse)
-	for _, n := range nodes {
-		if n == node {
-			return true
-		}
-	}
-	return false
-}
-
-// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-func (jc *JetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, pulse core.PulseNumber) []core.RecordRef {
-	switch role {
-	case core.RoleVirtualExecutor:
-		return []core.RecordRef{jc.mock.virtualExecutor}
-	case core.RoleLightExecutor:
-		return []core.RecordRef{jc.mock.lightExecutor}
-	case core.RoleHeavyExecutor:
-		return []core.RecordRef{jc.mock.heavyExecutor}
-	case core.RoleVirtualValidator:
-		return jc.mock.virtualValidators
-	case core.RoleLightValidator:
-		return jc.mock.lightValidators
-	default:
-		panic("Unknown role")
-	}
+	return selected, nil
 }
 
 // CreateDrop creates jet drop for provided pulse number.
@@ -131,41 +124,6 @@ func (jc *JetCoordinator) CreateDrop(pulse core.PulseNumber) (*jetdrop.JetDrop, 
 		return nil, err
 	}
 	return newDrop, nil
-}
-
-func (jc *JetCoordinator) getCurrentEntropy() (*core.Entropy, error) { // nolint: megacheck
-	return jc.db.GetEntropy(jc.db.GetCurrentPulse())
-}
-
-// TODO: real signature unknown
-func (jc *JetCoordinator) getNextExecutor(candidates [][]byte) ([]byte, error) { // nolint: megacheck
-	entropy, err := jc.getCurrentEntropy()
-	if err != nil {
-		return nil, err
-	}
-	idx, err := selectByEntropy(*entropy, candidates, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	return candidates[idx[0]], nil
-}
-
-// TODO: real signature unknown
-func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][]byte, error) { // nolint: megacheck
-	entropy, err := jc.getCurrentEntropy()
-	if err != nil {
-		return nil, err
-	}
-	idx, err := selectByEntropy(*entropy, candidates, 1)
-	if err != nil {
-		return nil, err
-	}
-	selected := make([][]byte, 0, count)
-	for _, i := range idx {
-		selected = append(selected, candidates[i])
-	}
-	return selected, nil
 }
 
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
