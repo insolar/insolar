@@ -17,12 +17,9 @@
 package jetcoordinator
 
 import (
-	"fmt"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetdrop"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -123,38 +120,8 @@ func (jc *JetCoordinator) QueryRole(role core.JetRole, obj core.RecordRef, pulse
 	}
 }
 
-// Pulse creates new jet drop and ends current slot.
-// This should be called when receiving a new pulse from pulsar.
-func (jc *JetCoordinator) Pulse(new record.PulseNum) (*jetdrop.JetDrop, error) {
-	current := jc.db.GetCurrentPulse()
-	if new-current != 1 {
-		panic(fmt.Sprintf("Wrong pulse, got %v, but current is %v\n", new, current))
-	}
-
-	// TODO: stop serving all requests (next node will be storage)
-
-	drop, err := jc.createDrop(current)
-	if err != nil {
-		return nil, err
-	}
-	// nextExecutor, err := jc.getNextExecutor([][]byte{}) // TODO: fetch candidates from config
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// nextValidators, err := jc.getNextValidators([][]byte{}, 3) // TODO: fetch candidates and count from config
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// TODO: select next executor and validators. Send jet drop to current validators.
-
-	jc.db.SetCurrentPulse(new)
-
-	return drop, nil
-}
-
 // CreateDrop creates jet drop for provided pulse number.
-func (jc *JetCoordinator) createDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
+func (jc *JetCoordinator) CreateDrop(pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
 	prevDrop, err := jc.db.GetDrop(pulse - 1)
 	if err != nil {
 		return nil, err
@@ -166,7 +133,7 @@ func (jc *JetCoordinator) createDrop(pulse record.PulseNum) (*jetdrop.JetDrop, e
 	return newDrop, nil
 }
 
-func (jc *JetCoordinator) getCurrentEntropy() ([]byte, error) { // nolint: megacheck
+func (jc *JetCoordinator) getCurrentEntropy() (*core.Entropy, error) { // nolint: megacheck
 	return jc.db.GetEntropy(jc.db.GetCurrentPulse())
 }
 
@@ -176,7 +143,7 @@ func (jc *JetCoordinator) getNextExecutor(candidates [][]byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	idx, err := selectByEntropy(entropy, candidates, 1)
+	idx, err := selectByEntropy(*entropy, candidates, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +157,7 @@ func (jc *JetCoordinator) getNextValidators(candidates [][]byte, count int) ([][
 	if err != nil {
 		return nil, err
 	}
-	idx, err := selectByEntropy(entropy, candidates, 1)
+	idx, err := selectByEntropy(*entropy, candidates, 1)
 	if err != nil {
 		return nil, err
 	}

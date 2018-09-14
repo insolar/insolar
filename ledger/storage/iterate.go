@@ -17,10 +17,8 @@
 package storage
 
 import (
-	"bytes"
-
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/core"
 )
 
 // HashIterator iterates over a database record's hashes.
@@ -43,11 +41,10 @@ type HashIterator interface {
 	ShallowHash() []byte
 }
 
-func pulseNumRecordPrefix(n record.PulseNum) []byte {
-	prefix := make([]byte, record.PulseNumSize+1)
+func pulseNumRecordPrefix(pulse core.PulseNumber) []byte {
+	prefix := make([]byte, core.PulseNumberSize+1)
 	prefix[0] = scopeIDRecord
-	buf := bytes.NewBuffer(prefix[1:1])
-	n.MustWrite(buf)
+	copy(prefix[1:], pulse.Bytes())
 	return prefix
 }
 
@@ -56,7 +53,7 @@ func pulseNumRecordPrefix(n record.PulseNum) []byte {
 //
 // Error returned by the ProcessSlotRecords is based on iteration function
 // result or BadgerDB iterator error if any.
-func (db *DB) ProcessSlotHashes(n record.PulseNum, ifn func(it HashIterator) error) error {
+func (db *DB) ProcessSlotHashes(n core.PulseNumber, ifn func(it HashIterator) error) error {
 	prefix := pulseNumRecordPrefix(n)
 
 	iopts := badger.DefaultIteratorOptions
@@ -72,7 +69,7 @@ func (db *DB) ProcessSlotHashes(n record.PulseNum, ifn func(it HashIterator) err
 }
 
 // GetSlotHashes returns array of all record's hashes in provided PulseNum.
-func (db *DB) GetSlotHashes(n record.PulseNum) ([][]byte, error) {
+func (db *DB) GetSlotHashes(n core.PulseNumber) ([][]byte, error) {
 	var hashes [][]byte
 	err := db.ProcessSlotHashes(n, func(it HashIterator) error {
 		for it.Next() {
