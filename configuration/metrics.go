@@ -16,12 +16,12 @@
 
 package configuration
 
-// Stats holds configuration for stats publishing
-type Stats struct {
+// Metrics holds configuration for metrics publishing
+type Metrics struct {
 	ListenAddress string
 }
 
-// NewStats creates new default configuration for stats publishing
-func NewStats() Stats {
-	return Stats{ListenAddress: "0.0.0.0:8080"}
+// NewMetrics creates new default configuration for metrics publishing
+func NewMetrics() Metrics {
+	return Metrics{ListenAddress: "0.0.0.0:8080"}
 }

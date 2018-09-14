@@ -16,7 +16,7 @@
 
 package configuration
 
-// Stats holds configuration for pulsar node
+// Pulsar holds configuration for pulsar node
 type Pulsar struct {
 	Type           string
 	ListenAddress  string
