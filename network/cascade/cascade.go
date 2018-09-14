@@ -34,12 +34,12 @@ func min(a, b int) int {
 }
 
 type Cascade struct {
-	SendMessage func(data core.Cascade, method string, args [][]byte)
+	SendMessage func(data core.Cascade, method string, args [][]byte) error
 }
 
 // SendToNextLayer sends data to callback.
-func (casc *Cascade) SendToNextLayer(data core.Cascade, method string, args [][]byte) {
-	casc.SendMessage(data, method, args)
+func (casc *Cascade) SendToNextLayer(data core.Cascade, method string, args [][]byte) error {
+	return casc.SendMessage(data, method, args)
 }
 
 // a - scale factor

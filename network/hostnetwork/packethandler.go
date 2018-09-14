@@ -283,7 +283,10 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 		response.Success = false
 		response.Error = err.Error()
 	}
-	hostHandler.GetNetworkCommonFacade().GetCascade().SendToNextLayer(data.Data, data.RPC.Method, data.RPC.Args)
+	err = hostHandler.GetNetworkCommonFacade().GetCascade().SendToNextLayer(data.Data, data.RPC.Method, data.RPC.Args)
+	if err != nil {
+		log.Print("failed to send message to next cascade layer")
+	}
 
 	return packetBuilder.Response(response).Build(), err
 }
