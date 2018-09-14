@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 )
@@ -28,12 +29,13 @@ import (
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
 	db          *storage.DB
-	manager     *artifactmanager.LedgerArtifactManager
+	am          *artifactmanager.LedgerArtifactManager
+	pm          *pulsemanager.PulseManager
 	coordinator *jetcoordinator.JetCoordinator
 }
 
 func (l *Ledger) GetPulseManager() core.PulseManager {
-	panic("implement me")
+	return l.pm
 }
 
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
@@ -42,7 +44,7 @@ func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
 
 // GetArtifactManager returns artifact manager to work with.
 func (l *Ledger) GetArtifactManager() core.ArtifactManager {
-	return l.manager
+	return l.am
 }
 
 // NewLedger creates new ledger instance.
@@ -57,13 +59,17 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 
 // NewLedgerWithDB creates new ledger with preconfigured storage.DB instance.
 func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error) {
-	manager, err := artifactmanager.NewArtifactManger(db)
+	am, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
 	}
 	coordinator, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
+	}
+	pm, err := pulsemanager.NewPulseManager(db, coordinator)
+	if err != nil {
+		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
 
 	err = db.Bootstrap()
@@ -73,7 +79,8 @@ func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error)
 
 	return &Ledger{
 		db:          db,
-		manager:     manager,
+		am:          am,
+		pm:          pm,
 		coordinator: coordinator,
 	}, nil
 }

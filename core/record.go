@@ -21,8 +21,10 @@ import (
 )
 
 const (
+	// RecordHashSize is a record hash size. We use 224-bit SHA-3 hash (28 bytes).
+	RecordHashSize = 28
 	// RecordIDSize is relative record address.
-	RecordIDSize = 32
+	RecordIDSize = PulseNumberSize + RecordHashSize
 	// RecordRefSize is absolute records address (including domain ID).
 	RecordRefSize = RecordIDSize * 2
 )

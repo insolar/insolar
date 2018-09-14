@@ -19,6 +19,7 @@ package jetcoordinator
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -34,9 +35,9 @@ func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
 		db: ledger,
 	}
 	var (
-		zeropulse record.PulseNum
-		pulse1    record.PulseNum = 1
-		pulse2    record.PulseNum = 2
+		zeropulse core.PulseNumber
+		pulse1    core.PulseNumber = 1
+		pulse2    core.PulseNumber = 2
 	)
 	// it references on 'fake' zero
 	fakeDrop := jetdrop.JetDrop{

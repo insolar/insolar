@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,9 +33,9 @@ func str2Bytes(s string) []byte {
 	return b
 }
 
-func str2Hash(s string) [HashSize]byte {
+func str2Hash(s string) [core.RecordHashSize]byte {
 	// TODO: add check for s length
-	var h [HashSize]byte
+	var h [core.RecordHashSize]byte
 	b := str2Bytes(s)
 	_ = copy(h[:], b)
 	return h

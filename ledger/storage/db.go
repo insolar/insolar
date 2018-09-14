@@ -44,7 +44,7 @@ const (
 // DB represents BadgerDB storage implementation.
 type DB struct {
 	db           *badger.DB
-	currentPulse record.PulseNum
+	currentPulse core.PulseNumber
 	rootRef      *record.Reference
 
 	// dropWG guards inflight updates before jet drop calculated.
@@ -225,8 +225,8 @@ func (db *DB) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) e
 }
 
 // GetDrop returns jet drop for a given pulse number.
-func (db *DB) GetDrop(pulse record.PulseNum) (*jetdrop.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+func (db *DB) GetDrop(pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
+	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
 	buf, err := db.Get(k)
 	if err != nil {
 		return nil, err
@@ -245,7 +245,7 @@ func (db *DB) waitinflight() {
 // SetDrop stores jet drop for given pulse number.
 //
 // Previous JetDrop should be provided. On success returns saved drop hash.
-func (db *DB) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
+func (db *DB) SetDrop(pulse core.PulseNumber, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	db.waitinflight()
 
 	hw := hash.NewSHA3()
@@ -274,7 +274,7 @@ func (db *DB) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdro
 		return nil, err
 	}
 
-	k := prefixkey(scopeIDJetDrop, record.EncodePulseNum(pulse))
+	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
 	err = db.Set(k, encoded)
 	if err != nil {
 		drop = nil
@@ -283,7 +283,7 @@ func (db *DB) SetDrop(pulse record.PulseNum, prevdrop *jetdrop.JetDrop) (*jetdro
 }
 
 // GetEntropy wraps matching transaction manager method.
-func (db *DB) GetEntropy(pulse record.PulseNum) ([]byte, error) {
+func (db *DB) GetEntropy(pulse core.PulseNumber) (*core.Entropy, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
@@ -295,19 +295,19 @@ func (db *DB) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 }
 
 // SetEntropy wraps matching transaction manager method.
-func (db *DB) SetEntropy(pulse record.PulseNum, entropy []byte) error {
+func (db *DB) SetEntropy(pulse core.PulseNumber, entropy core.Entropy) error {
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetEntropy(pulse, entropy)
 	})
 }
 
 // SetCurrentPulse sets current pulse number.
-func (db *DB) SetCurrentPulse(pulse record.PulseNum) {
+func (db *DB) SetCurrentPulse(pulse core.PulseNumber) {
 	db.currentPulse = pulse
 }
 
 // GetCurrentPulse returns current pulse number.
-func (db *DB) GetCurrentPulse() record.PulseNum {
+func (db *DB) GetCurrentPulse() core.PulseNumber {
 	return db.currentPulse
 }
 
