@@ -117,6 +117,13 @@ func (db *DB) Bootstrap() error {
 		if err != nil {
 			return nil, err
 		}
+
+		// TODO: temporary fake entropy
+		err = db.SetEntropy(db.GetCurrentPulse(), core.Entropy{})
+		if err != nil {
+			return nil, err
+		}
+
 		return rootRef, db.Set([]byte(rootKey), rootRef.CoreRef()[:])
 	}
 
