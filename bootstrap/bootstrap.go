@@ -57,7 +57,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
 	_, insgocc, err := testutil.Build()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't build insgocc")
 	}
 	cb, cleaner := testutil.NewContractBuilder(am, insgocc)
 	defer cleaner()
@@ -67,13 +67,13 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		contractPath, _ := getContractPath(name)
 		code, err := ioutil.ReadFile(contractPath)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "couldn't read contract: ")
 		}
 		contracts[name] = string(code)
 	}
 	err = cb.Build(contracts)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't build contracts")
 	}
 	var data []byte
 	contract, err := am.ActivateObj(
@@ -83,7 +83,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		data,
 	)
 	if contract == nil {
-		return err
+		return errors.Wrap(err, "couldn't create rootdomain instance")
 	}
 	b.rootDomainRef = contract
 
