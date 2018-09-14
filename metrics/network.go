@@ -25,5 +25,5 @@ var cpuTemp = newGauge("cpu_temperature_celsius", "network",
 	"Current temperature of the CPU.",
 )
 
-var nodeCount = newCounter("network_host_count", "network",
+var nodeCount = newCounter("messages_sent_total", "network",
 	"Insolar network host count")
