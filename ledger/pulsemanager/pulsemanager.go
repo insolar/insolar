@@ -50,6 +50,7 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	return nil
 }
 
+// NewPulseManager creates PulseManager instance.
 func NewPulseManager(db *storage.DB, coordinator *jetcoordinator.JetCoordinator) (*PulseManager, error) {
 	pm := PulseManager{
 		db:          db,
