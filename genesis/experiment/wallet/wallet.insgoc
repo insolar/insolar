@@ -31,18 +31,19 @@ type Wallet struct {
 }
 
 // Allocate - returns reference to a new allowance
-func (w *Wallet) Allocate(amount uint, to core.RecordRef) core.RecordRef {
+func (w *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 	// TODO check balance is enough
 	w.Balance -= amount
-	ah := allowance.New(&to, amount, w.GetContext().Time.Unix()+10)
+	ah := allowance.New(to, amount, w.GetContext().Time.Unix()+10)
 	a := ah.AsChild(w.GetReference())
 	return a.GetReference()
 }
 
-func (w *Wallet) Receive(amount uint, from core.RecordRef) {
-	fromWallet := wallet.GetImplementationFrom(from)
+func (w *Wallet) Receive(amount uint, from *core.RecordRef) {
+	fromWallet := wallet.GetImplementationFrom(*from)
 
-	aRef := fromWallet.Allocate(amount, w.GetReference())
+    v := w.GetReference()
+	aRef := fromWallet.Allocate(amount, &v)
 	w.Balance += allowance.GetObject(aRef).TakeAmount()
 }
 

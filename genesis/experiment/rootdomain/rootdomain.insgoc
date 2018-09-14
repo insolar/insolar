@@ -61,11 +61,11 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
 	return res
 }
 
-func (rd *RootDomain) DumpUserInfo(reference string) string {
+func (rd *RootDomain) DumpUserInfo(reference string) []byte {
 	m := member.GetObject(core.String2Ref(reference))
 	res := rd.getUserInfoMap(m)
 	resJSON, _ := json.Marshal(res)
-	return string(resJSON)
+	return resJSON
 }
 
 func (rd *RootDomain) DumpAllUsers() []byte {
