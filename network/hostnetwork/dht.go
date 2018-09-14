@@ -1086,6 +1086,9 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 // CascadeSendMessage sends a message to the next cascade layer.
 func (dht *DHT) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
 	ctx, err := NewContextBuilder(dht).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
 	targetHost, exist, err := dht.FindHost(ctx, targetID)
 	if err != nil {
 		return err
