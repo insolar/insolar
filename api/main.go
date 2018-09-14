@@ -33,12 +33,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ResponseCode int
-
 const (
-	Ok           ResponseCode = 0
-	HandlerError              = -1
-	BadRequest                = -2
+	Ok           int = 0
+	HandlerError int = -1
+	BadRequest   int = -2
 )
 
 func writeError(message string, code int) map[string]interface{} {
@@ -159,13 +157,13 @@ func wrapAPIV1Handler(router core.MessageRouter) func(w http.ResponseWriter, r *
 	}
 }
 
-type APIRunner struct {
+type Runner struct {
 	messageRouter core.MessageRouter
 	server        *http.Server
 	cfg           *configuration.APIRunner
 }
 
-func NewAPIRunner(cfg *configuration.APIRunner) (*APIRunner, error) {
+func NewAPIRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	if cfg == nil {
 		return nil, errors.New("[ NewAPIRunner ] config is nil")
 	}
@@ -177,7 +175,7 @@ func NewAPIRunner(cfg *configuration.APIRunner) (*APIRunner, error) {
 	}
 
 	portStr := fmt.Sprint(cfg.Port)
-	ar := APIRunner{
+	ar := Runner{
 		server: &http.Server{Addr: ":" + portStr},
 		cfg:    cfg,
 	}
@@ -185,7 +183,7 @@ func NewAPIRunner(cfg *configuration.APIRunner) (*APIRunner, error) {
 	return &ar, nil
 }
 
-func (ar *APIRunner) reloadMessageRouter(c core.Components) {
+func (ar *Runner) reloadMessageRouter(c core.Components) {
 	_, ok := c["core.MessageRouter"]
 	if !ok {
 		logrus.Warnln("Working in demo mode: without MessageRouter")
@@ -195,7 +193,7 @@ func (ar *APIRunner) reloadMessageRouter(c core.Components) {
 }
 
 // Start runs api server
-func (ar *APIRunner) Start(c core.Components) error {
+func (ar *Runner) Start(c core.Components) error {
 
 	ar.reloadMessageRouter(c)
 
@@ -212,7 +210,7 @@ func (ar *APIRunner) Start(c core.Components) error {
 }
 
 // Stop stops api server
-func (ar *APIRunner) Stop() error {
+func (ar *Runner) Stop() error {
 	const timeOut = 5
 	logrus.Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeOut)*time.Second)
