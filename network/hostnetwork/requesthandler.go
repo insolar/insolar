@@ -29,6 +29,9 @@ import (
 // RelayRequest sends relay request to target.
 func RelayRequest(hostHandler hosthandler.HostHandler, command, targetID string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
 	var typedCommand packet.CommandType
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
@@ -167,6 +170,9 @@ func RelayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 
 func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string, roleKey string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
 		return err

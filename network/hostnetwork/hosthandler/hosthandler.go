@@ -47,7 +47,7 @@ type CommonFacade struct {
 }
 
 func NewFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
-	return &CommonFacade{r, casc}
+	return &CommonFacade{rpcPtr: r, cascade: casc}
 }
 
 func (fac *CommonFacade) GetRPC() rpc.RPC {

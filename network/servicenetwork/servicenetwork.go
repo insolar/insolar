@@ -65,7 +65,7 @@ func NewServiceNetwork(
 
 	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
 	f := func(data core.Cascade, method string, args [][]byte) {
-		service.initCascadeSendMessage(data, true, method, args)
+		_ = service.initCascadeSendMessage(data, true, method, args)
 	}
 	cascade1.SendMessage = f
 	return service, nil
