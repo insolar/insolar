@@ -17,7 +17,6 @@
 package bootstrap
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -25,7 +24,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
-	"github.com/insolar/insolar/messagerouter/message"
 	"github.com/pkg/errors"
 )
 
@@ -88,30 +86,6 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return err
 	}
 	b.rootDomainRef = contract
-
-	// This is for testing, must be deleted before merge to master
-	msg := &message.CallMethodMessage{
-		ObjectRef: *contract,
-		Method:    "CreateMember",
-		Arguments: []byte("test"),
-	}
-	fmt.Println("res???")
-	lr := c["core.LogicRunner"].(core.LogicRunner)
-	mr := testutil.NewTestMessageRouter(lr)
-	res, err := mr.Route(msg)
-	fmt.Println("res?")
-	fmt.Println(res.Error)
-	fmt.Println("err?")
-	if err != nil {
-		return err
-	}
-	if res.Error != nil {
-		return err
-	}
-	fmt.Println("res:")
-	resParsed := testutil.CBORUnMarshalToSlice(nil, res.Result)
-	fmt.Println(resParsed[0])
-	// Testing is done
 
 	return nil
 }
