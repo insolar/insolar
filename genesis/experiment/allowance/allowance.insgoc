@@ -18,6 +18,7 @@ package allowance
 
 import (
 	"time"
+	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -36,12 +37,16 @@ func (a *Allowance) IsExpired() bool {
 
 func (a *Allowance) TakeAmount() uint {
 	caller := a.GetContext().Caller
-	if *caller == a.To && !a.IsExpired() {
+	fmt.Println(a.GetContext())
+	fmt.Println("CALLER", caller)
+	fmt.Println("TO", a.To)
+	//if *caller == a.To && !a.IsExpired() {
+
 		a.SelfDestructRequest()
 		r := a.Amount
 		a.Amount = 0
 		return r
-	}
+	//}
 	return 0
 }
 
@@ -60,6 +65,6 @@ func (a *Allowance) DeleteExpiredAllowance() uint {
 	return 0
 }
 
-func New(to core.RecordRef, amount uint, expire int64) *Allowance {
-	return &Allowance{To: to, Amount: amount, ExpireTime: expire}
+func New(to *core.RecordRef, amount uint, expire int64) *Allowance {
+	return &Allowance{To: *to, Amount: amount, ExpireTime: expire}
 }

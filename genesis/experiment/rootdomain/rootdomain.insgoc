@@ -18,6 +18,7 @@ package rootdomain
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"contract-proxy/member"
 	"contract-proxy/wallet"
@@ -45,8 +46,10 @@ func (rd *RootDomain) GetBalance(reference string) uint {
 
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	walletFrom := wallet.GetImplementationFrom(core.String2Ref(from))
+	fmt.Println(walletFrom.GetReference())
 
-	walletFrom.Transfer(amount, core.String2Ref(to))
+    v := core.String2Ref(to)
+	walletFrom.Transfer(amount, &v)
 
 	return true
 }
@@ -56,16 +59,15 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
 	res := map[string]interface{}{
         "member": m.GetName(),
         "wallet": w.GetTotalBalance(),
-
     }
 	return res
 }
 
-func (rd *RootDomain) DumpUserInfo(reference string) []byte {
+func (rd *RootDomain) DumpUserInfo(reference string) string {
 	m := member.GetObject(core.String2Ref(reference))
 	res := rd.getUserInfoMap(m)
 	resJSON, _ := json.Marshal(res)
-	return resJSON
+	return string(resJSON)
 }
 
 func (rd *RootDomain) DumpAllUsers() []byte {
