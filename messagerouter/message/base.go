@@ -81,3 +81,9 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 	err = enc.Decode(m)
 	return m, err
 }
+
+func init() {
+	gob.Register(&CallConstructorMessage{})
+	gob.Register(&CallMethodMessage{})
+	gob.Register(&DelegateMessage{})
+}
