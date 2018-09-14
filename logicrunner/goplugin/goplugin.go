@@ -122,9 +122,6 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
-	if reply.Err != nil {
-		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
-	}
 
 	reply.Data = res.Data
 	return nil
@@ -334,7 +331,7 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 	case <-time.After(timeout):
 		return nil, nil, errors.New("timeout")
 	}
-	return res.Data, res.Ret, res.Err
+	return res.Data, res.Ret, nil
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
@@ -355,5 +352,5 @@ func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.Record
 	case <-time.After(timeout):
 		return nil, errors.New("timeout")
 	}
-	return res.Ret, res.Err
+	return res.Ret, nil
 }
