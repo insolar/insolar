@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 )
 
 type Bootstrapper struct {
@@ -77,6 +78,15 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return errors.Wrap(err, "couldn't build contracts")
 	}
 	var data []byte
+
+	ch := new(codec.CborHandle)
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	if err != nil {
+		return errors.Wrap(err, "[ Bootstrapper: Start ]")
+	}
+
 	contract, err := am.ActivateObj(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["rootdomain"],
