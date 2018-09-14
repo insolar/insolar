@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2018 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,13 +14,26 @@
  *    limitations under the License.
  */
 
-package main
+package configuration
 
 import (
-	"testing"
+	"fmt"
 )
 
-// Just to make Goland happy
-func TestStub(t *testing.T) {
+type APIRunner struct {
+	Port     uint
+	Location string
+}
 
+// Create new api coinfig
+func NewAPIRunner() APIRunner {
+	return APIRunner{
+		Port:     7777,
+		Location: "/api/v1",
+	}
+}
+
+func (ar *APIRunner) String() string {
+	res := fmt.Sprintln("Port ->", ar.Port, ", Location ->", ar.Location)
+	return res
 }
