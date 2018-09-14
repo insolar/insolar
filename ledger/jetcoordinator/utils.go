@@ -21,10 +21,11 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/hash"
 )
 
-func selectByEntropy(entropy []byte, values [][]byte, count int) ([]int, error) { // nolint: megacheck
+func selectByEntropy(entropy core.Entropy, values [][]byte, count int) ([]int, error) { // nolint: megacheck
 	type idxHash struct {
 		idx  int
 		hash []byte
@@ -37,7 +38,7 @@ func selectByEntropy(entropy []byte, values [][]byte, count int) ([]int, error) 
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
 		h := hash.NewSHA3()
-		_, err := h.Write(entropy)
+		_, err := h.Write(entropy[:])
 		if err != nil {
 			return nil, err
 		}

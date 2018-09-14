@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2018 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,27 +14,26 @@
  *    limitations under the License.
  */
 
-package member
+package configuration
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"fmt"
 )
 
-type Member struct {
-	foundation.BaseContract
-	Name      string
-	PublicKey []byte
+type APIRunner struct {
+	Port     uint
+	Location string
 }
 
-func (m *Member) GetName() string {
-	return m.Name
-}
-func (m *Member) GetPublicKey() []byte {
-	return m.PublicKey
-}
-
-func New(name string) *Member {
-	return &Member{
-		Name: name,
+// Create new api coinfig
+func NewAPIRunner() APIRunner {
+	return APIRunner{
+		Port:     19191,
+		Location: "/api/v1",
 	}
+}
+
+func (ar *APIRunner) String() string {
+	res := fmt.Sprintln("Port ->", ar.Port, ", Location ->", ar.Location)
+	return res
 }

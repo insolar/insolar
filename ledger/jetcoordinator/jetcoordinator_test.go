@@ -19,6 +19,7 @@ package jetcoordinator
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -34,16 +35,15 @@ func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
 		db: ledger,
 	}
 	var (
-		zeropulse record.PulseNum
-		pulse1    record.PulseNum = 1
-		pulse2    record.PulseNum = 2
+		pulse1 core.PulseNumber = 1
+		pulse2 core.PulseNumber = 2
 	)
 	// it references on 'fake' zero
 	fakeDrop := jetdrop.JetDrop{
 		Hash: []byte{0xFF},
 	}
 	// save zero drop, which references on 'fake' drop with '0xFF' hash.
-	dropz, err := ledger.SetDrop(zeropulse, &fakeDrop)
+	dropz, err := ledger.SetDrop(pulse1, &fakeDrop)
 	assert.NoError(t, err)
 	assert.NotNil(t, dropz)
 
@@ -54,7 +54,7 @@ func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
 	ledger.SetRecord(&record.ObjectActivateRecord{})
 	// trigger new pulse on coordinator
 	// (should save non zero Pulse)
-	drop1, err := jc.Pulse(pulse2)
+	drop1, err := jc.CreateDrop(pulse2)
 	assert.NoError(t, err)
 	assert.NotNil(t, drop1)
 	assert.Equal(t, dropz.Hash, drop1.PrevHash)

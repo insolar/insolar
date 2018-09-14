@@ -14,27 +14,5 @@
  *    limitations under the License.
  */
 
-package member
-
-import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
-
-type Member struct {
-	foundation.BaseContract
-	Name      string
-	PublicKey []byte
-}
-
-func (m *Member) GetName() string {
-	return m.Name
-}
-func (m *Member) GetPublicKey() []byte {
-	return m.PublicKey
-}
-
-func New(name string) *Member {
-	return &Member{
-		Name: name,
-	}
-}
+// Package pulsemanager is responsible for all pulse operations.
+package pulsemanager

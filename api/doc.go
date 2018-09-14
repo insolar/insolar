@@ -14,27 +14,25 @@
  *    limitations under the License.
  */
 
-package member
+package api
 
-import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-)
+/*
+Package api provides http/json APIto interact with our system
 
-type Member struct {
-	foundation.BaseContract
-	Name      string
-	PublicKey []byte
-}
+	// Create api configuration
+	cfg := configuration.NewAPIRunner()
 
-func (m *Member) GetName() string {
-	return m.Name
-}
-func (m *Member) GetPublicKey() []byte {
-	return m.PublicKey
-}
+	// Create api runner
+	api, _ := NewRunner(&cfg)
 
-func New(name string) *Member {
-	return &Member{
-		Name: name,
-	}
-}
+	// Create empty component map
+	cs := core.Components{}
+
+	// Run api server
+	_ = api.Start(cs)
+
+	time.Sleep(60 * time.Second)
+
+	// Gracefully stop api server
+	_ = api.Stop()
+*/

@@ -58,6 +58,17 @@ func TestNewID(t *testing.T) {
 	assert.NotEqual(t, id1.Bytes(), id2.Bytes())
 }
 
+func TestFromBase58(t *testing.T) {
+	id1, err := NewID()
+	assert.NoError(t, err)
+
+	idStr := id1.String()
+
+	id2 := FromBase58(idStr)
+
+	assert.Equal(t, id1.Bytes(), id2.Bytes())
+}
+
 func TestID_Equal(t *testing.T) {
 	id1, _ := NewID()
 	id2, _ := NewID()

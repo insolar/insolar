@@ -17,14 +17,14 @@
 package jetdrop
 
 import (
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/core"
 )
 
 // JetDrop is a blockchain block.
 // It contains hashes of the current block and the previous one.
 type JetDrop struct {
 	// Pulse number (probably we should save it too).
-	Pulse record.PulseNum
+	Pulse core.PulseNumber
 
 	// PrevHash is a hash of all record hashes belongs to previous pulse.
 	PrevHash []byte
