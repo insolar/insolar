@@ -17,6 +17,7 @@
 package logicrunner
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -700,5 +701,13 @@ func TestRootDomainContract(t *testing.T) {
 	})
 	assert.NoError(t, resp4.Error, "contract call")
 	r := testutil.CBORUnMarshal(t, resp4.Result)
-	fmt.Println(string(r.([]interface{})[0].([]byte)))
+
+	var res []map[string]interface{}
+	var expected = map[interface{}]float64{"member1": 999, "member2": 1001}
+
+	err = json.Unmarshal(r.([]interface{})[0].([]byte), &res)
+	assert.NoError(t, err)
+	for _, member := range res {
+		assert.Equal(t, expected[member["member"]], member["wallet"])
+	}
 }
