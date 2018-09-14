@@ -47,7 +47,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	actualConnectionType := ""
 	actualAddress := ""
 
-	result := NewPulsar(config, func(connectionType string, address string) (net.Listener, error) {
+	result, _ := NewPulsar(config, func(connectionType string, address string) (net.Listener, error) {
 		actualConnectionType = connectionType
 		actualAddress = address
 		return &mockListener{}, nil
@@ -70,7 +70,7 @@ func TestNewPulsar_WithtNeighbours(t *testing.T) {
 		},
 	}
 
-	result := NewPulsar(config, func(connectionType string, address string) (net.Listener, error) {
+	result, _ := NewPulsar(config, func(connectionType string, address string) (net.Listener, error) {
 		return &mockListener{}, nil
 	})
 
