@@ -28,7 +28,7 @@ type APIRunner struct {
 // Create new api coinfig
 func NewAPIRunner() APIRunner {
 	return APIRunner{
-		Port:     7777,
+		Port:     19191,
 		Location: "/api/v1",
 	}
 }
