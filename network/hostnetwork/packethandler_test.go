@@ -340,9 +340,18 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("relay ownership", func(t *testing.T) {
-		pckt := packet.NewRelayOwnershipPacket(sender, receiver, true)
+		builder := packet.NewBuilder()
+		pckt := builder.Type(packet.TypeRelayOwnership).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestRelayOwnership{Ready: true}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewRelayOwnershipPacket(sender, receiver, false)
+		pckt = builder.Type(packet.TypeRelayOwnership).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestRelayOwnership{Ready: false}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 

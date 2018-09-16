@@ -178,7 +178,12 @@ func RelayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 		return err
 	}
 
-	request := packet.NewRelayOwnershipPacket(hostHandler.HtFromCtx(ctx).Origin, targetHost, true)
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeRelayOwnership).
+		Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(targetHost).
+		Request(&packet.RequestRelayOwnership{Ready: true}).
+		Build()
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {

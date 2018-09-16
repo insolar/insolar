@@ -83,16 +83,6 @@ func NewPingPacket(sender, receiver *host.Host) *Packet {
 	}
 }
 
-// NewRelayOwnershipPacket uses for relay ownership request.
-func NewRelayOwnershipPacket(sender, receiver *host.Host, ready bool) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeRelayOwnership,
-		Data:     &RequestRelayOwnership{Ready: ready},
-	}
-}
-
 // NewKnownOuterHostsPacket uses to notify all hosts in home subnet about known outer hosts.
 func NewKnownOuterHostsPacket(sender, receiver *host.Host, hosts int) *Packet {
 	return &Packet{
