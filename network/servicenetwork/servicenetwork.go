@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // ServiceNetwork is facade for network.
@@ -83,6 +82,10 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 	if err != nil {
 		return nil, err
 	}
+
+	log.Debugln("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
+		method, msg.GetReference().String())
+
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
 }
@@ -96,6 +99,9 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	if err != nil {
 		return err
 	}
+
+	log.Debugln("SendCascadeMessage with cascade NodeIds = %v method = %s, message reference = %s", data.NodeIds,
+		method, msg.GetReference().String())
 
 	return network.hostNetwork.InitCascadeSendMessage(data, nil, createContext(network.hostNetwork), method, [][]byte{buff})
 }
@@ -133,7 +139,7 @@ func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hostnetwork.C
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
-	logrus.Infoln("Bootstrapping network...")
+	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
 	ctx := createContext(network.hostNetwork)
@@ -152,7 +158,7 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 
 // Stop implements core.Component
 func (network *ServiceNetwork) Stop() error {
-	logrus.Infoln("Stop network")
+	log.Infoln("Stop network")
 	network.hostNetwork.Disconnect()
 	return nil
 }
@@ -160,16 +166,16 @@ func (network *ServiceNetwork) Stop() error {
 func (network *ServiceNetwork) bootstrap() {
 	err := network.hostNetwork.Bootstrap()
 	if err != nil {
-		logrus.Errorln("Failed to bootstrap network", err.Error())
+		log.Errorln("Failed to bootstrap network", err.Error())
 	}
 }
 
 func (network *ServiceNetwork) listen() {
 	func() {
-		logrus.Infoln("Network starts listening")
+		log.Infoln("Network starts listening")
 		err := network.hostNetwork.Listen()
 		if err != nil {
-			logrus.Errorln("Listen failed:", err.Error())
+			log.Errorln("Listen failed:", err.Error())
 		}
 	}()
 }
