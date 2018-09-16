@@ -186,8 +186,8 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 	var err error
 
 	if findCurrentNode {
-		nodeId := network.nodeNetwork.GetID()
-		nextNodes, err = cascade.CalculateNextNodes(data, &nodeId)
+		nodeID := network.nodeNetwork.GetID()
+		nextNodes, err = cascade.CalculateNextNodes(data, &nodeID)
 	} else {
 		nextNodes, err = cascade.CalculateNextNodes(data, nil)
 	}

@@ -69,6 +69,9 @@ func RelayRequest(hostHandler hosthandler.HostHandler, command, targetID string)
 // CheckOriginRequest send a request to check target host originality
 func CheckOriginRequest(hostHandler hosthandler.HostHandler, targetID string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
 		return err
@@ -97,6 +100,9 @@ func CheckOriginRequest(hostHandler hosthandler.HostHandler, targetID string) er
 // AuthenticationRequest sends an authentication request.
 func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetID string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
 		return err
@@ -136,6 +142,9 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetI
 // ObtainIPRequest is request to self IP obtaining.
 func ObtainIPRequest(hostHandler hosthandler.HostHandler, targetID string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
 		return err

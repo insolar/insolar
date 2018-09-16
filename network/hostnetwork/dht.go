@@ -882,9 +882,15 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 		targetHost = routeSet.FirstHost()
 		exists = true
 	} else if dht.proxy.ProxyHostsCount() > 0 {
-		address, _ := host.NewAddress(dht.proxy.GetNextProxyAddress())
+		address, err := host.NewAddress(dht.proxy.GetNextProxyAddress())
+		if err != nil {
+			return nil, false, err
+		}
 		// TODO: current key insertion
-		id1, _ := id.NewID()
+		id1, err := id.NewID()
+		if err != nil {
+			return nil, false, err
+		}
 		targetHost = &host.Host{ID: id1, Address: address}
 		return targetHost, true, nil
 	} else {
