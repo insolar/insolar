@@ -1038,7 +1038,7 @@ func (dht *DHT) processStore(ctx Context, msg *packet.Packet, packetBuilder pack
 }
 
 func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	log.Errorln("recv ping message from " + msg.Sender.Address.String())
+	log.Debugln("receive ping message from " + msg.Sender.Address.String())
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(nil).Build())
 	if err != nil {
 		log.Errorln("Failed to send response:", err.Error())
@@ -1046,6 +1046,7 @@ func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packe
 }
 
 func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
+	log.Debugln("receive RPC message from " + msg.Sender.Address.String())
 	data := msg.Data.(*packet.RequestDataRPC)
 	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
 	result, err := dht.rpc.Invoke(msg.Sender, data.Method, data.Args)
@@ -1099,6 +1100,7 @@ func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, packetBuilder pack
 			State: state,
 		}
 
+		log.Debugf("receive relay message from %s, state %v", msg.Sender.Address.String(), state)
 		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	}
 	if err != nil {
@@ -1325,6 +1327,8 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 		err = errors.New("unknown command")
 		return err
 	}
+
+	log.Debugln("AuthenticationRequest to %s with command %s", targetID, command)
 	request := packet.NewAuthPacket(authCommand, origin, targetHost)
 	future, err := dht.transport.SendRequest(request)
 
@@ -1496,7 +1500,8 @@ func (dht *DHT) getRoutingForSend(ctx Context, targetID string) (*host.Host, *ro
 }
 
 // RemoteProcedureCall calls remote procedure on target host.
-func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) ([]byte, error) {
+	log.Debugf("RemoteProcedureCall to target: %s, method: %s", targetID, method)
 	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
 	if err != nil {
 		return nil, err
@@ -1619,6 +1624,7 @@ func (dht *DHT) RemoteProcedureRegister(name string, method core.RemoteProcedure
 		return method(args)
 	}
 
+	log.Debugln("RemoteProcedureRegister: " + name)
 	dht.rpc.RegisterMethod(name, rp)
 }
 
@@ -1683,6 +1689,7 @@ func (dht *DHT) countOuterHosts() {
 
 // AnalyzeNetwork is func to analyze the network after IP obtaining.
 func (dht *DHT) AnalyzeNetwork(ctx Context) error {
+	log.Debugln("Network analyzing...")
 	var err error
 	dht.subnet.HomeSubnetKey, err = dht.getHomeSubnetKey(ctx)
 	if err != nil {
