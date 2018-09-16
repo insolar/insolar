@@ -146,7 +146,12 @@ func ObtainIPRequest(hostHandler hosthandler.HostHandler, targetID string) error
 	}
 
 	origin := hostHandler.HtFromCtx(ctx).Origin
-	request := packet.NewObtainIPPacket(origin, targetHost)
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeObtainIP).
+		Sender(origin).
+		Receiver(targetHost).
+		Request(&packet.RequestObtainIP{}).
+		Build()
 
 	future, err := hostHandler.SendRequest(request)
 

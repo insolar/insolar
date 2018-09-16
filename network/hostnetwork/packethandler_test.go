@@ -330,7 +330,12 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("obtain ip", func(t *testing.T) {
-		pckt := packet.NewObtainIPPacket(sender, receiver)
+		builder := packet.NewBuilder()
+		pckt := builder.Type(packet.TypeObtainIP).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestObtainIP{}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 

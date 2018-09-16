@@ -83,16 +83,6 @@ func NewPingPacket(sender, receiver *host.Host) *Packet {
 	}
 }
 
-// NewObtainIPPacket uses for get self IP.
-func NewObtainIPPacket(sender, receiver *host.Host) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeObtainIP,
-		Data:     &RequestObtainIP{},
-	}
-}
-
 // NewRelayOwnershipPacket uses for relay ownership request.
 func NewRelayOwnershipPacket(sender, receiver *host.Host, ready bool) *Packet {
 	return &Packet{
