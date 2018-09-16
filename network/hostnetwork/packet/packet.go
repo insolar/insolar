@@ -83,18 +83,6 @@ func NewPingPacket(sender, receiver *host.Host) *Packet {
 	}
 }
 
-// NewRelayPacket uses for send a command to target host to make it as relay.
-func NewRelayPacket(command CommandType, sender, receiver *host.Host) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeRelay,
-		Data: &RequestRelay{
-			Command: command,
-		},
-	}
-}
-
 // NewAuthPacket uses for starting authentication.
 func NewAuthPacket(command CommandType, sender, receiver *host.Host) *Packet {
 	return &Packet{

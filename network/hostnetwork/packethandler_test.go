@@ -312,13 +312,30 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("relay", func(t *testing.T) {
-		pckt := packet.NewRelayPacket(packet.Unknown, sender, receiver)
+		builder := packet.NewBuilder()
+		pckt := builder.Type(packet.TypeRelay).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestRelay{Command: packet.Unknown}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewRelayPacket(packet.StartRelay, authenticatedSender, receiver)
+		pckt = builder.Type(packet.TypeRelay).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestRelay{Command: packet.StartRelay}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewRelayPacket(packet.StopRelay, authenticatedSender, receiver)
+		pckt = builder.Type(packet.TypeRelay).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestRelay{Command: packet.StopRelay}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewRelayPacket(packet.Unknown, authenticatedSender, receiver)
+		pckt = builder.Type(packet.TypeRelay).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestRelay{Command: packet.Unknown}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 

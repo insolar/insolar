@@ -51,7 +51,12 @@ func RelayRequest(hostHandler hosthandler.HostHandler, command, targetID string)
 		err = errors.New("RelayRequest: unknown command")
 		return err
 	}
-	request := packet.NewRelayPacket(typedCommand, hostHandler.HtFromCtx(ctx).Origin, targetHost)
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeRelay).
+		Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(targetHost).
+		Request(&packet.RequestRelay{Command: typedCommand}).
+		Build()
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
