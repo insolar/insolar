@@ -78,7 +78,12 @@ func CheckOriginRequest(hostHandler hosthandler.HostHandler, targetID string) er
 		return err
 	}
 
-	request := packet.NewCheckOriginPacket(hostHandler.HtFromCtx(ctx).Origin, targetHost)
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeCheckOrigin).
+		Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(targetHost).
+		Request(&packet.RequestCheckOrigin{}).
+		Build()
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {

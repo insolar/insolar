@@ -309,9 +309,18 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("check origin", func(t *testing.T) {
-		pckt := packet.NewCheckOriginPacket(sender, receiver)
+		builder := packet.NewBuilder()
+		pckt := builder.Type(packet.TypeCheckOrigin).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestCheckOrigin{}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewCheckOriginPacket(authenticatedSender, receiver)
+		pckt = builder.Type(packet.TypeCheckOrigin).
+			Sender(authenticatedSender).
+			Receiver(receiver).
+			Request(&packet.RequestCheckOrigin{}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
