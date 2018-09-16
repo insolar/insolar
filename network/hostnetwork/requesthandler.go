@@ -112,7 +112,12 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetI
 		err = errors.New("AuthenticationRequest: unknown command")
 		return err
 	}
-	request := packet.NewAuthPacket(authCommand, origin, targetHost)
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeAuth).
+		Sender(origin).
+		Receiver(targetHost).
+		Request(&packet.RequestAuth{Command: authCommand}).
+		Build()
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {

@@ -84,14 +84,14 @@ func NewPingPacket(sender, receiver *host.Host) *Packet {
 }
 
 // NewAuthPacket uses for starting authentication.
-func NewAuthPacket(command CommandType, sender, receiver *host.Host) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeAuth,
-		Data:     &RequestAuth{Command: command},
-	}
-}
+//func NewAuthPacket(command CommandType, sender, receiver *host.Host) *Packet {
+//	return &Packet{
+//		Sender:   sender,
+//		Receiver: receiver,
+//		Type:     TypeAuth,
+//		Data:     &RequestAuth{Command: command},
+//	}
+//}
 
 // NewCheckOriginPacket uses for check originality.
 func NewCheckOriginPacket(sender, receiver *host.Host) *Packet {

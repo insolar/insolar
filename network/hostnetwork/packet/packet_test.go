@@ -54,16 +54,6 @@ func TestPacket_IsValid(t *testing.T) {
 	assert.False(t, badtPacket.IsValid())
 }
 
-func TestNewAuthPacket(t *testing.T) {
-	addr1, _ := host.NewAddress("127.0.0.1:55551")
-	addr2, _ := host.NewAddress("127.0.0.1:55552")
-	sender := host.NewHost(addr1)
-	receiver := host.NewHost(addr2)
-
-	msg := NewAuthPacket(BeginAuth, sender, receiver)
-	assert.True(t, msg.IsValid())
-}
-
 func TestNewCheckOriginPacket(t *testing.T) {
 	addr1, _ := host.NewAddress("127.0.0.1:55551")
 	addr2, _ := host.NewAddress("127.0.0.1:55552")

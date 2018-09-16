@@ -275,15 +275,36 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("authentication", func(t *testing.T) {
-		pckt := packet.NewAuthPacket(packet.Unknown, sender, receiver)
+		builder := packet.NewBuilder()
+		pckt := builder.Type(packet.TypeAuth).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestAuth{Command: packet.Unknown}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewAuthPacket(packet.BeginAuth, sender, receiver)
+		pckt = builder.Type(packet.TypeAuth).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestAuth{Command: packet.BeginAuth}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewAuthPacket(packet.RevokeAuth, sender, receiver)
+		pckt = builder.Type(packet.TypeAuth).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestAuth{Command: packet.RevokeAuth}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewAuthPacket(packet.BeginAuth, authenticatedSender, receiver)
+		pckt = builder.Type(packet.TypeAuth).
+			Sender(authenticatedSender).
+			Receiver(receiver).
+			Request(&packet.RequestAuth{Command: packet.BeginAuth}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = packet.NewAuthPacket(packet.RevokeAuth, authenticatedSender, receiver)
+		pckt = builder.Type(packet.TypeAuth).
+			Sender(authenticatedSender).
+			Receiver(receiver).
+			Request(&packet.RequestAuth{Command: packet.RevokeAuth}).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 

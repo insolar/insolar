@@ -40,10 +40,19 @@ func TestBuildContext(t *testing.T) {
 	sender.ID, _ = id.NewID()
 	receiverAddress, _ := host.NewAddress("0.0.0.0:0")
 	receiver := host.NewHost(receiverAddress)
-	pckt := packet.NewAuthPacket(packet.Unknown, sender, receiver)
+	builder := packet.NewBuilder()
+	pckt := builder.Type(packet.TypeAuth).
+		Sender(sender).
+		Receiver(receiver).
+		Request(&packet.RequestAuth{Command: packet.BeginAuth}).
+		Build()
 	_ = BuildContext(cb, pckt)
 
 	receiver.ID, _ = id.NewID()
-	pckt = packet.NewAuthPacket(packet.Unknown, sender, receiver)
+	pckt = builder.Type(packet.TypeAuth).
+		Sender(sender).
+		Receiver(receiver).
+		Request(&packet.RequestAuth{Command: packet.BeginAuth}).
+		Build()
 	_ = BuildContext(cb, pckt)
 }
