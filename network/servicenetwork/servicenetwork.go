@@ -20,10 +20,10 @@ import (
 	"bytes"
 	"encoding/gob"
 	"io/ioutil"
-	"log"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"

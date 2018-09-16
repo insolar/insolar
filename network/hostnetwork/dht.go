@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"log"
 	"math"
 	"math/big"
 	"sort"
@@ -29,10 +28,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -286,7 +284,7 @@ func (dht *DHT) FindHost(ctx Context, key string) (*host.Host, bool, error) {
 		targetHost = &host.Host{ID: id1, Address: address}
 		return targetHost, true, nil
 	} else {
-		log.Println("Host not found in routing table. Iterating through network...")
+		log.Warnln("Host not found in routing table. Iterating through network...")
 		_, closest, err := dht.iterate(ctx, routing.IterateFindHost, keyBytes, nil)
 		if err != nil {
 			return nil, false, err
@@ -357,7 +355,7 @@ func (dht *DHT) Bootstrap() error {
 				wg.Done()
 				return
 			case <-time.After(dht.options.PacketTimeout):
-				log.Println("bootstrap response timeout")
+				log.Warnln("bootstrap response timeout")
 				future.Cancel()
 				wg.Done()
 				return
@@ -402,7 +400,7 @@ func (dht *DHT) iterateBootstrapHosts(
 			if err != nil {
 				continue
 			}
-			log.Println("sending ping to " + bn.Address.String())
+			log.Debugln("sending ping to " + bn.Address.String())
 			wg.Add(1)
 			futures = append(futures, res)
 		} else {
@@ -834,9 +832,9 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 			} else {
 				targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.String())
 				if err != nil {
-					log.Println(err)
+					log.Errorln(err)
 				} else if !exist {
-					log.Printf("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
+					log.Warnln("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
 				} else {
 					// need to relay incoming packet
 					request := &packet.Packet{Sender: &host.Host{Address: dht.origin.Address, ID: msg.Sender.ID},
@@ -856,7 +854,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 func (dht *DHT) sendRelayedRequest(request *packet.Packet, ctx Context) {
 	_, err := dht.transport.SendRequest(request)
 	if err != nil {
-		log.Println(err)
+		log.Errorln(err)
 	}
 }
 
@@ -870,7 +868,7 @@ func buildContext(cb ContextBuilder, msg *packet.Packet) Context {
 	}
 	if err != nil {
 		// TODO: Do something sane with error!
-		log.Println(err) // don't return this error cuz don't know what to do with
+		log.Errorln(err) // don't return this error cuz don't know what to do with
 	}
 	return ctx
 }
@@ -922,7 +920,7 @@ func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.
 	case packet.TypeCascadeSend:
 		dht.processCascadeSend(ctx, msg, packetBuilder)
 	default:
-		log.Println("unknown request type")
+		log.Errorln("unknown request type")
 	}
 }
 
@@ -941,12 +939,12 @@ func (dht *DHT) processCascadeSend(ctx Context, msg *packet.Packet, packetBuilde
 	}
 	err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 	currentNodeID := dht.nodeNetwork.GetID()
 	err = dht.InitCascadeSendMessage(data.Data, &currentNodeID, ctx, data.RPC.Method, data.RPC.Args)
 	if err != nil {
-		log.Println("Failed to send message to next cascade layers:", err.Error())
+		log.Errorln("Failed to send message to next cascade layers:", err.Error())
 	}
 }
 
@@ -962,7 +960,7 @@ func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuil
 
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 }
 
@@ -977,11 +975,11 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *packet.Packet, packetBui
 				dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs[:i], dht.subnet.PossibleProxyIDs[i+1:]...)
 				err := dht.AuthenticationRequest(ctx, "begin", msg.Sender.ID.String())
 				if err != nil {
-					log.Println("error to send auth request: ", err)
+					log.Errorln("error to send auth request: ", err)
 				}
 				err = dht.RelayRequest(ctx, "start", msg.Sender.ID.String())
 				if err != nil {
-					log.Println("error to send relay request: ", err)
+					log.Errorln("error to send relay request: ", err)
 				}
 				break
 			}
@@ -991,7 +989,7 @@ func (dht *DHT) processRelayOwnership(ctx Context, msg *packet.Packet, packetBui
 
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 }
 
@@ -1005,7 +1003,7 @@ func (dht *DHT) processFindHost(ctx Context, msg *packet.Packet, packetBuilder p
 	}
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 }
 
@@ -1023,7 +1021,7 @@ func (dht *DHT) processFindValue(ctx Context, msg *packet.Packet, packetBuilder 
 	}
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 }
 
@@ -1035,15 +1033,15 @@ func (dht *DHT) processStore(ctx Context, msg *packet.Packet, packetBuilder pack
 	replication := time.Now().Add(dht.options.ReplicateTime)
 	err := dht.store.Store(key, data.Data, replication, expiration, false)
 	if err != nil {
-		log.Println("Failed to store data:", err.Error())
+		log.Errorln("Failed to store data:", err.Error())
 	}
 }
 
 func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	log.Println("recv ping message from " + msg.Sender.Address.String())
+	log.Errorln("recv ping message from " + msg.Sender.Address.String())
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(nil).Build())
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 }
 
@@ -1062,7 +1060,7 @@ func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet
 	}
 	err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 }
 
@@ -1070,7 +1068,7 @@ func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet
 func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
 	var err error
 	if !dht.auth.authenticatedHosts[msg.Sender.ID.String()] {
-		log.Print("relay request from unknown host rejected")
+		log.Warnln("relay request from unknown host rejected")
 		response := &packet.ResponseRelay{
 			State: relay.NoAuth,
 		}
@@ -1104,7 +1102,7 @@ func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, packetBuilder pack
 		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	}
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 }
 
@@ -1121,14 +1119,14 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, packetBui
 
 			err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 			if err != nil {
-				log.Println("Failed to send response:", err)
+				log.Errorln("Failed to send response:", err)
 			}
 			break
 		}
 		key := make([]byte, 512)
 		_, err := rand.Read(key) // crypto/rand
 		if err != nil {
-			log.Println("failed to create auth key. ", err)
+			log.Errorln("failed to create auth key. ", err)
 			return
 		}
 		dht.auth.SentKeys[msg.Sender.ID.String()] = key
@@ -1139,13 +1137,13 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, packetBui
 
 		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 		if err != nil {
-			log.Println("Failed to send response:", err)
+			log.Errorln("Failed to send response:", err)
 		}
 		// TODO process verification msg.Sender host
 		// confirmed
 		err = dht.CheckOriginRequest(ctx, msg.Sender.ID.String())
 		if err != nil {
-			log.Println("error: ", err)
+			log.Errorln("error: ", err)
 		}
 	case packet.RevokeAuth:
 		delete(dht.auth.authenticatedHosts, msg.Sender.ID.String())
@@ -1156,10 +1154,10 @@ func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, packetBui
 
 		err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 		if err != nil {
-			log.Println("Failed to send response:", err)
+			log.Errorln("Failed to send response:", err)
 		}
 	default:
-		log.Println("unknown auth command")
+		log.Warnln("unknown auth command")
 	}
 }
 
@@ -1170,10 +1168,10 @@ func (dht *DHT) processCheckOriginRequest(ctx Context, msg *packet.Packet, packe
 		response := &packet.ResponseCheckOrigin{AuthUniqueKey: key}
 		err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 		if err != nil {
-			log.Println("Failed to send check origin response:", err)
+			log.Errorln("Failed to send check origin response:", err)
 		}
 	} else {
-		log.Println("CheckOrigin request from unregistered host")
+		log.Warnln("CheckOrigin request from unregistered host")
 	}
 }
 
@@ -1181,7 +1179,7 @@ func (dht *DHT) processObtainIPRequest(ctx Context, msg *packet.Packet, packetBu
 	response := &packet.ResponseObtainIP{IP: msg.RemoteAddress}
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
-		log.Println("Failed to send obtain IP response:", err)
+		log.Errorln("Failed to send obtain IP response:", err)
 	}
 }
 
@@ -1210,7 +1208,7 @@ func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error {
 	future, err := dht.transport.SendRequest(request)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Errorln(err.Error())
 		return err
 	}
 
@@ -1282,7 +1280,7 @@ func (dht *DHT) CheckOriginRequest(ctx Context, targetID string) error {
 	future, err := dht.transport.SendRequest(request)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Errorln(err.Error())
 		return err
 	}
 
@@ -1331,7 +1329,7 @@ func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) err
 	future, err := dht.transport.SendRequest(request)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Errorln(err.Error())
 		return err
 	}
 
@@ -1447,7 +1445,7 @@ func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
 	future, err := dht.transport.SendRequest(request)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Errorln(err.Error())
 		return err
 	}
 
@@ -1564,7 +1562,7 @@ func (dht *DHT) InitCascadeSendMessage(data core.Cascade, currentNode *core.Reco
 		hostID := dht.nodeNetwork.ResolveHostID(nextNode)
 		err = dht.cascadeSendMessage(data, ctx, hostID, method, args)
 		if err != nil {
-			logrus.Debugln("failed to send cascade message: ", err)
+			log.Errorln("failed to send cascade message: ", err)
 			failedNodes = append(failedNodes, nextNode)
 		}
 	}
@@ -1713,7 +1711,7 @@ func (dht *DHT) AnalyzeNetwork(ctx Context) error {
 func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
 	for _, id1 := range subnetIDs {
 		err := dht.relayOwnershipRequest(id1, true)
-		log.Println(err.Error())
+		log.Errorln(err.Error()) // todo: check if
 	}
 }
 
@@ -1778,7 +1776,7 @@ func (dht *DHT) processKnownOuterHosts(ctx Context, msg *packet.Packet, packetBu
 
 	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
 	if err != nil {
-		log.Println("Failed to send response:", err.Error())
+		log.Errorln("Failed to send response:", err.Error())
 	}
 }
 
