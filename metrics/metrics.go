@@ -19,6 +19,7 @@ package metrics
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -28,11 +29,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
-
-type MetricsDescriptor struct {
-	Name      string
-	Collector interface{}
-}
 
 // Metrics is a component
 type Metrics struct {
@@ -47,13 +43,16 @@ func NewMetrics(cfg configuration.Metrics) (Metrics, error) {
 	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: &errorLogger{}})
 
 	m.server = &http.Server{Addr: cfg.ListenAddress}
-	err := m.registry.Register(nodeCount)
 
-	return m, err
+	m.registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+	m.registry.MustRegister(prometheus.NewGoCollector())
+
+	return m, nil
 }
 
 // Start is implementation of core.Component interface
 func (m *Metrics) Start(components core.Components) error {
+	log.Infoln("Starting metrics server")
 	http.Handle("/metrics", m.httpHandler)
 	go m.server.ListenAndServe()
 
@@ -83,20 +82,36 @@ func (e *errorLogger) Println(v ...interface{}) {
 	log.Errorln(v)
 }
 
-func newCounter(name, subsystem, help string) prometheus.Counter {
-	return prometheus.NewCounter(prometheus.CounterOpts{
+// AddCounter adds new counter to metrics registry
+func (m *Metrics) AddCounter(name, componentName, help string) (prometheus.Counter, error) {
+	counter := prometheus.NewCounter(prometheus.CounterOpts{
 		Name:      name,
 		Help:      help,
 		Namespace: "insolar",
-		Subsystem: subsystem,
+		Subsystem: componentName,
 	})
+
+	log.Debugln("Register counter: " + name)
+	err := m.registry.Register(counter)
+	if err != nil {
+		return nil, err
+	}
+	return counter, nil
 }
 
-func newGauge(name, subsystem, help string) prometheus.Gauge {
-	return prometheus.NewGauge(prometheus.GaugeOpts{
+// AddGauge adds new gauge to metrics registry
+func (m *Metrics) AddGauge(name, componentName, help string) (prometheus.Gauge, error) {
+	gauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      name,
 		Help:      help,
 		Namespace: "insolar",
-		Subsystem: subsystem,
+		Subsystem: componentName,
 	})
+
+	log.Debugln("Register gauge: " + name)
+	err := m.registry.Register(gauge)
+	if err != nil {
+		return nil, err
+	}
+	return gauge, nil
 }

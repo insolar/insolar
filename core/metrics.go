@@ -14,16 +14,16 @@
  *    limitations under the License.
  */
 
-package metrics
+package core
 
-/*
-var networkDesc = MetricsDescriptorMap{
-	"host_count": {},
-}
-*/
-var cpuTemp = newGauge("cpu_temperature_celsius", "network",
-	"Current temperature of the CPU.",
+import (
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-var nodeCount = newCounter("messages_sent_total", "network",
-	"Insolar network host count")
+// Metrics management interface
+type Metrics interface {
+	// AddCounter adds new counter to metrics registry
+	AddCounter(name, componentName, help string) (prometheus.Counter, error)
+	// AddGauge adds new gauge to metrics registry
+	AddGauge(name, componentName, help string) (prometheus.Gauge, error)
+}
