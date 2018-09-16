@@ -83,19 +83,6 @@ func NewPingPacket(sender, receiver *host.Host) *Packet {
 	}
 }
 
-// NewKnownOuterHostsPacket uses to notify all hosts in home subnet about known outer hosts.
-func NewKnownOuterHostsPacket(sender, receiver *host.Host, hosts int) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeKnownOuterHosts,
-		Data: &RequestKnownOuterHosts{
-			ID:         sender.ID.String(),
-			OuterHosts: hosts,
-		},
-	}
-}
-
 // IsValid checks if packet data is a valid structure for current packet type.
 func (m *Packet) IsValid() (valid bool) {
 	switch m.Type {

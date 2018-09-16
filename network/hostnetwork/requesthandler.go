@@ -233,7 +233,15 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 		return err
 	}
 
-	request := packet.NewKnownOuterHostsPacket(hostHandler.HtFromCtx(ctx).Origin, targetHost, hosts)
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeKnownOuterHosts).
+		Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(targetHost).
+		Request(&packet.RequestKnownOuterHosts{
+			ID:         hostHandler.HtFromCtx(ctx).Origin.ID.String(),
+			OuterHosts: hosts},
+		).
+		Build()
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {

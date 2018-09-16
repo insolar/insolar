@@ -269,13 +269,11 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("check node priv", func(t *testing.T) {
-		builder := packet.NewBuilder()
 		pckt := builder.Type(packet.TypeCheckNodePriv).Sender(sender).Receiver(receiver).Request(&packet.RequestCheckNodePriv{RoleKey: "test string"}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("authentication", func(t *testing.T) {
-		builder := packet.NewBuilder()
 		pckt := builder.Type(packet.TypeAuth).
 			Sender(sender).
 			Receiver(receiver).
@@ -309,7 +307,6 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("check origin", func(t *testing.T) {
-		builder := packet.NewBuilder()
 		pckt := builder.Type(packet.TypeCheckOrigin).
 			Sender(sender).
 			Receiver(receiver).
@@ -325,12 +322,18 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("known outer hosts", func(t *testing.T) {
-		pckt := packet.NewKnownOuterHostsPacket(sender, receiver, 1)
+		pckt := builder.Type(packet.TypeKnownOuterHosts).
+			Sender(sender).
+			Receiver(receiver).
+			Request(&packet.RequestKnownOuterHosts{
+				ID:         sender.ID.String(),
+				OuterHosts: 1},
+			).
+			Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("obtain ip", func(t *testing.T) {
-		builder := packet.NewBuilder()
 		pckt := builder.Type(packet.TypeObtainIP).
 			Sender(sender).
 			Receiver(receiver).
@@ -340,7 +343,6 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("relay ownership", func(t *testing.T) {
-		builder := packet.NewBuilder()
 		pckt := builder.Type(packet.TypeRelayOwnership).
 			Sender(sender).
 			Receiver(receiver).
@@ -356,7 +358,6 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("relay", func(t *testing.T) {
-		builder := packet.NewBuilder()
 		pckt := builder.Type(packet.TypeRelay).
 			Sender(sender).
 			Receiver(receiver).
