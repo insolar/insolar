@@ -269,7 +269,8 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("check node priv", func(t *testing.T) {
-		pckt := packet.NewCheckNodePrivPacket(sender, receiver, "role")
+		builder := packet.NewBuilder()
+		pckt := builder.Type(packet.TypeCheckNodePriv).Sender(sender).Receiver(receiver).Request(&packet.RequestCheckNodePriv{RoleKey: "test string"}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 

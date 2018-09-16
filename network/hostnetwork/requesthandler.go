@@ -183,7 +183,8 @@ func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string, 
 	}
 
 	origin := hostHandler.HtFromCtx(ctx).Origin
-	request := packet.NewCheckNodePrivPacket(origin, targetHost, roleKey)
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeCheckNodePriv).Sender(origin).Receiver(targetHost).Request(&packet.RequestCheckNodePriv{RoleKey: "test string"}).Build()
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {

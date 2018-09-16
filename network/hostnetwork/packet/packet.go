@@ -74,18 +74,6 @@ type Packet struct {
 	IsResponse bool
 }
 
-// NewCheckNodePrivPacket used to create message for check node privileges request.
-func NewCheckNodePrivPacket(sender, receiver *host.Host, roleKey string) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeCheckNodePriv,
-		Data: &RequestCheckNodePriv{
-			RoleKey: roleKey,
-		},
-	}
-}
-
 // NewPingPacket can be used as a shortcut for creating ping packets instead of packet Builder.
 func NewPingPacket(sender, receiver *host.Host) *Packet {
 	return &Packet{
