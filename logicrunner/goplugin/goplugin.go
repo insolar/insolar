@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/messagerouter/message"
+	"github.com/insolar/insolar/messagerouter/response"
 	"github.com/pkg/errors"
 )
 
@@ -97,11 +98,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
-	if res.Error != nil {
-		return errors.Wrap(res.Error, "couldn't route message (error in respone)")
-	}
 
-	reply.Result = res.Result
+	reply.Result = res.(*response.CommonResponse).Result
 
 	return nil
 }
@@ -123,7 +121,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.Wrap(err, "couldn't route message")
 	}
 
-	reply.Data = res.Data
+	reply.Data = res.(*response.CommonResponse).Data
 	return nil
 }
 
@@ -139,11 +137,8 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
-	if res.Error != nil {
-		return errors.Wrap(res.Error, "couldn't route message (error in response)")
-	}
 
-	reply.Reference = core.String2Ref(string(res.Data))
+	reply.Reference = core.String2Ref(string(res.(*response.CommonResponse).Data))
 
 	return nil
 }
@@ -189,11 +184,8 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
-	if res.Error != nil {
-		return errors.Wrap(res.Error, "couldn't route message (error in response)")
-	}
 
-	reply.Reference = core.String2Ref(string(res.Data))
+	reply.Reference = core.String2Ref(string(res.(*response.CommonResponse).Data))
 
 	return nil
 }
@@ -315,7 +307,7 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 	return gp.client, nil
 }
 
-const timeout = time.Second * 5
+const timeout = time.Second * 60
 
 // CallMethod runs a method on an object in controlled environment
 func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {

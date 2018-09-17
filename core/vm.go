@@ -41,7 +41,7 @@ type MachineLogicExecutor interface {
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	Execute(msg Message) (res *Response)
+	Execute(msg Message) (res Response, err error)
 }
 
 // LogicCallContext is a context of contract execution
