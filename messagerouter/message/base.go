@@ -49,6 +49,7 @@ const (
 	CallConstructorMessageType // CallConstructorMessage is a message for calling constructor and obtain its response
 	DelegateMessageType        // DelegateMessage is a message for injecting a delegate
 	ChildMessageType           // ChildMessage is a message for saving a child
+	UpdateObjectMessageType    // UpdateObjectMessage is a message for updating an object
 )
 
 // GetEmptyMessage constructs specified message
@@ -64,6 +65,8 @@ func getEmptyMessage(mt MessageType) (core.Message, error) {
 		return &DelegateMessage{}, nil
 	case ChildMessageType:
 		return &ChildMessage{}, nil
+	case UpdateObjectMessageType:
+		return &UpdateObjectMessage{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented messagetype %d", mt)
 	}
@@ -99,4 +102,5 @@ func init() {
 	gob.Register(&CallMethodMessage{})
 	gob.Register(&DelegateMessage{})
 	gob.Register(&ChildMessage{})
+	gob.Register(&UpdateObjectMessage{})
 }
