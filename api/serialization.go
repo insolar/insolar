@@ -35,7 +35,7 @@ func cborUnMarshal(data []byte, to interface{}) error {
 	return errors.Wrap(err, "[ CBORUnMarshal ]")
 }
 
-// Marshal arguments by cbor
+// MarshalArgs marshals arguments by cbor
 func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	var argsSerialized []byte
 
@@ -49,7 +49,7 @@ func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	return result, nil
 }
 
-// Unmarshal return values by cbor
+// UnMarshalResponse unmarshal return values by cbor
 func UnMarshalResponse(resp []byte, typeHolders []interface{}) ([]interface{}, error) {
 	var marshRes []interface{}
 	marshRes = append(marshRes, typeHolders...)

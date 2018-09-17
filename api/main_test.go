@@ -135,7 +135,7 @@ func (ar *TestsMessageRouter) Stop() error {
 
 const TestBalance = 100500
 
-func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
+func (ar *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
 	data, _ := MarshalArgs(TestBalance)
 
 	resp := core.Response{

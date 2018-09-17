@@ -84,11 +84,11 @@ func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err er
 	return DeserializeResponse(res)
 }
 
-type MyError struct {
+type serializableError struct {
 	S string
 }
 
-func (e *MyError) Error() string {
+func (e *serializableError) Error() string {
 	return e.S
 }
 
@@ -105,7 +105,7 @@ func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 
 	resp := mr.logicRunner.Execute(msg)
 	if resp.Error != nil {
-		resp.Error = &MyError{
+		resp.Error = &serializableError{
 			S: resp.Error.Error(),
 		}
 	}
@@ -132,5 +132,5 @@ func DeserializeResponse(data []byte) (res core.Response, err error) {
 
 func init() {
 	gob.Register(&core.Response{})
-	gob.Register(&MyError{})
+	gob.Register(&serializableError{})
 }

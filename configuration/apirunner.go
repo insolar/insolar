@@ -20,12 +20,13 @@ import (
 	"fmt"
 )
 
+// APIRunner holds configuration for api
 type APIRunner struct {
 	Port     uint
 	Location string
 }
 
-// Create new api coinfig
+// NewAPIRunner create new api config
 func NewAPIRunner() APIRunner {
 	return APIRunner{
 		Port:     19191,
