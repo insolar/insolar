@@ -55,7 +55,7 @@ func (bi *BuiltIn) CallConstructor(ctx *core.LogicCallContext, code core.RecordR
 }
 
 func (bi *BuiltIn) Stop() error {
-	panic("implement me")
+	return nil
 }
 
 // CallMethod runs a method on contract
