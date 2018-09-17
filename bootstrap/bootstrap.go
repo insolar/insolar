@@ -28,14 +28,17 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
+// Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
 }
 
+// GetRootDomainRef returns reference to RootDomain instance
 func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 	return b.rootDomainRef
 }
 
+// NewBootstrapper creates new Bootstrapper
 func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
 	bootstrapper.rootDomainRef = &core.RecordRef{}
@@ -55,6 +58,7 @@ func getContractPath(name string) (string, error) {
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
+// Start creates types and RootDomain instance
 func (b *Bootstrapper) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
 	_, insgocc, err := testutil.Build()
@@ -101,6 +105,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	return nil
 }
 
+// Stop implements core.Component method
 func (b *Bootstrapper) Stop() error {
 	return nil
 }
