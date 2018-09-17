@@ -30,14 +30,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Metrics is a component
+// Metrics is a component which serve metrics to Prometheus.
 type Metrics struct {
 	registry    *prometheus.Registry
 	httpHandler http.Handler
 	server      *http.Server
 }
 
-// NewMetrics creates new Metrics component
+// NewMetrics creates new Metrics component.
 func NewMetrics(cfg configuration.Metrics) (Metrics, error) {
 	m := Metrics{registry: prometheus.NewRegistry()}
 	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: &errorLogger{}})
@@ -50,7 +50,7 @@ func NewMetrics(cfg configuration.Metrics) (Metrics, error) {
 	return m, nil
 }
 
-// Start is implementation of core.Component interface
+// Start is implementation of core.Component interface.
 func (m *Metrics) Start(components core.Components) error {
 	log.Infoln("Starting metrics server")
 	http.Handle("/metrics", m.httpHandler)
@@ -65,7 +65,7 @@ func (m *Metrics) Start(components core.Components) error {
 	return nil
 }
 
-// Stop is implementation of core.Component interface
+// Stop is implementation of core.Component interface.
 func (m *Metrics) Stop() error {
 	const timeOut = 3
 	log.Infoln("Shutting down metrics server")
@@ -79,16 +79,16 @@ func (m *Metrics) Stop() error {
 	return nil
 }
 
-// errorLogger wrapper for error logs
+// errorLogger wrapper for error logs.
 type errorLogger struct {
 }
 
-// Println is wrapper method for ErrorLn
+// Println is wrapper method for ErrorLn.
 func (e *errorLogger) Println(v ...interface{}) {
 	log.Errorln(v)
 }
 
-// AddCounter adds new counter to metrics registry
+// AddCounter adds new counter to metrics registry.
 func (m *Metrics) AddCounter(name, componentName, help string) (prometheus.Counter, error) {
 	counter := prometheus.NewCounter(prometheus.CounterOpts{
 		Name:      name,
@@ -105,7 +105,7 @@ func (m *Metrics) AddCounter(name, componentName, help string) (prometheus.Count
 	return counter, nil
 }
 
-// AddGauge adds new gauge to metrics registry
+// AddGauge adds new gauge to metrics registry.
 func (m *Metrics) AddGauge(name, componentName, help string) (prometheus.Gauge, error) {
 	gauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      name,
