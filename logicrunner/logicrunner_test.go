@@ -714,3 +714,82 @@ func TestRootDomainContract(t *testing.T) {
 		assert.Equal(t, expected[member["member"]], member["wallet"])
 	}
 }
+
+func BenchmarkContractCall(b *testing.B) {
+	goParent := `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/child"
+import "github.com/insolar/insolar/core"
+
+type Parent struct {
+	foundation.BaseContract
+}
+
+func (c *Parent) CCC(ref *core.RecordRef) int {	
+	o := child.GetObject(*ref)	
+	return o.GetNum()
+}
+`
+	goChild := `
+package main
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type Child struct {
+	foundation.BaseContract
+}
+
+func (c *Child) GetNum() int {
+	return 5
+}
+`
+	l, cleaner := ledgertestutil.TmpLedger(b, "")
+	defer cleaner()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(b, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	am := l.GetArtifactManager()
+	lr, err := NewLogicRunner(configuration.LogicRunner{
+		GoPlugin: &configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     runnerbin,
+			RunnerCodePath: insiderStorage,
+		}})
+	assert.NoError(b, err, "Initialize runner")
+
+	assert.NoError(b, lr.Start(core.Components{
+		"core.Ledger":        l,
+		"core.MessageRouter": &testMessageRouter{LogicRunner: lr},
+	}), "starting logicrunner")
+	defer lr.Stop()
+
+	cb, cleaner := testutil.NewContractBuilder(am, icc)
+	defer cleaner()
+	err = cb.Build(map[string]string{"child": goChild, "parent": goParent})
+	assert.NoError(b, err)
+
+	domain := core.String2Ref("c1")
+	parent, err := am.ActivateObj(core.String2Ref("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	assert.NoError(b, err, "create parent")
+	assert.NotEqual(b, parent, nil, "parent created")
+	child, err := am.ActivateObj(core.String2Ref("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	assert.NoError(b, err, "create child")
+	assert.NotEqual(b, child, nil, "child created")
+
+	b.N = 100000
+	for i := 0; i < b.N; i++ {
+		resp := lr.Execute(&message.CallMethodMessage{
+			Request:   core.String2Ref("rr"),
+			ObjectRef: *parent,
+			Method:    "CCC",
+			Arguments: testutil.CBORMarshal(b, []interface{}{child}),
+		})
+		assert.NoError(b, resp.Error, "parent call")
+		r := testutil.CBORUnMarshal(b, resp.Result)
+		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
+	}
+}

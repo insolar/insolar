@@ -372,7 +372,7 @@ func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.Reco
 }
 
 // CBORMarshal - testing serialize helper
-func CBORMarshal(t *testing.T, o interface{}) []byte {
+func CBORMarshal(t testing.TB, o interface{}) []byte {
 	ch := new(codec.CborHandle)
 	var data []byte
 	err := codec.NewEncoderBytes(&data, ch).Encode(o)
@@ -381,7 +381,7 @@ func CBORMarshal(t *testing.T, o interface{}) []byte {
 }
 
 // CBORUnMarshal - testing deserialize helper
-func CBORUnMarshal(t *testing.T, data []byte) interface{} {
+func CBORUnMarshal(t testing.TB, data []byte) interface{} {
 	ch := new(codec.CborHandle)
 	var ret interface{}
 	err := codec.NewDecoderBytes(data, ch).Decode(&ret)
@@ -390,7 +390,7 @@ func CBORUnMarshal(t *testing.T, data []byte) interface{} {
 }
 
 // CBORUnMarshalToSlice - wrapper for CBORUnMarshal, expects slice
-func CBORUnMarshalToSlice(t *testing.T, in []byte) []interface{} {
+func CBORUnMarshalToSlice(t testing.TB, in []byte) []interface{} {
 	r := CBORUnMarshal(t, in)
 	assert.IsType(t, []interface{}{}, r)
 	return r.([]interface{})
@@ -398,7 +398,7 @@ func CBORUnMarshalToSlice(t *testing.T, in []byte) []interface{} {
 
 // AMPublishCode publishes code on ledger
 func AMPublishCode(
-	t *testing.T,
+	t testing.TB,
 	am core.ArtifactManager,
 	domain core.RecordRef,
 	request core.RecordRef,
