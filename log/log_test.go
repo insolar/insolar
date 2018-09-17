@@ -29,22 +29,28 @@ func TestLog_GlobalLogger(t *testing.T) {
 
 	Debug("HelloWorld")
 	Debugln("HelloWorld")
+	Debugf("%s", "HelloWorld")
 
 	Info("HelloWorld")
 	Infoln("HelloWorld")
+	Infof("%s", "HelloWorld")
 
 	Warn("HelloWorld")
 	Warnln("HelloWorld")
+	Warnf("%s", "HelloWorld")
 
 	Error("HelloWorld")
 	Errorln("HelloWorld")
+	Errorf("%s", "HelloWorld")
 
 	assert.Panics(t, func() { Panic("HelloWorld") })
 	assert.Panics(t, func() { Panicln("HelloWorld") })
+	assert.Panics(t, func() { Panicf("%s", "HelloWorld") })
 
 	// can't catch os.exit() to test Fatal
 	// Fatal("HelloWorld")
 	// Fatalln("HelloWorld")
+	// Fatalf("%s", "HelloWorld")
 }
 
 func TestLog_NewLog_InvalidConfig(t *testing.T) {
