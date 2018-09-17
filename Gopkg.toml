@@ -63,3 +63,7 @@
 [[constraint]]
   name = "github.com/dgraph-io/badger"
   version = "1.5.3"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cenkalti/rpc2"

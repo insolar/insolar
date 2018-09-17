@@ -17,19 +17,22 @@
 package pulsar
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/gob"
-	"fmt"
-	"io"
+	"encoding/json"
+	"errors"
 	"net"
-	"os"
 
+	"github.com/cenkalti/rpc2"
 	"github.com/insolar/insolar/configuration"
+	"golang.org/x/crypto/sha3"
 )
 
 type Pulsar struct {
-	Sock       net.Listener
+	Sock      net.Listener
+	RpcServer *rpc2.Server
+
 	Neighbours map[string]*Neighbour
 	PrivateKey *rsa.PrivateKey
 }
@@ -42,115 +45,139 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 		return nil, err
 	}
 
-	reader := rand.Reader
-	bitSize := 2048
-
-	privateKey, err := rsa.GenerateKey(reader, bitSize)
+	// Parse private key from config
+	privateKey, err := ParseRsaPrivateKeyFromPemStr(configuration.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 	pulsar := &Pulsar{Sock: l, Neighbours: map[string]*Neighbour{}}
 	pulsar.PrivateKey = privateKey
 
-	for _, neighbour := range configuration.NodesAddresses {
-		pulsar.Neighbours[neighbour.Address] = &Neighbour{ConnectionType: neighbour.ConnectionType}
+	// Adding other pulsars
+	for _, neighbour := range configuration.ListOfNeighbours {
+		publicKey, err := ParseRsaPublicKeyFromPemStr(neighbour.PublicKey)
+		if err != nil {
+			continue
+		}
+		pulsar.Neighbours[neighbour.PublicKey] = &Neighbour{ConnectionType: neighbour.ConnectionType, PublicKey: publicKey}
 	}
-
-	gob.Register(Message{})
-	gob.Register(HandshakeMessageBody{})
 
 	return pulsar, nil
 }
 
-// Listen port for input connections
-func (pulsar *Pulsar) Listen() {
-	for {
-		// Listen for an incoming connection.
-		conn, err := pulsar.Sock.Accept()
-		if err != nil {
-			fmt.Println("Error accepting: ", err.Error())
-			os.Exit(1)
-		}
-		fmt.Println(conn.RemoteAddr().String())
-		if _, ok := pulsar.Neighbours[conn.RemoteAddr().String()]; !ok {
-			conn.Close()
-			return
-		}
-		// Handle connections in a new goroutine.
-		go pulsar.handleNewRequest(conn)
-	}
+func (pulsar *Pulsar) Start() {
+	// Adding rpc-server listener
+	srv := rpc2.NewServer()
+	ConfigureHandlers(pulsar, srv)
+	pulsar.RpcServer = srv
+	srv.Accept(pulsar.Sock)
 }
 
-// Connect to all known nodes
-func (pulsar *Pulsar) ConnectToAllNeighbours() error {
-	for key, neighbour := range pulsar.Neighbours {
-		err := pulsar.ConnectToNeighbour(key, neighbour.ConnectionType.String())
+func ConfigureHandlers(pulsar *Pulsar, server *rpc2.Server) {
+	server.Handle("handshake", pulsar.HandshakeHandler())
+}
+
+func ConfigureHandlersForClient(pulsar *Pulsar, server *rpc2.Client) {
+	server.Handle("handshake", pulsar.HandshakeHandler())
+}
+
+func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payload, response *Payload) error {
+
+	return func(client *rpc2.Client, request *Payload, response *Payload) error {
+		publicKey, err := ParseRsaPublicKeyFromPemStr(request.PublicKey)
+		if err != nil {
+			return nil
+		}
+		neighbour, err := pulsar.fetchNeighbour(publicKey)
 		if err != nil {
 			return err
 		}
-	}
 
-	return nil
+		err = checkSignature(request)
+		if err != nil {
+			return err
+		}
+
+		if neighbour.Client == nil {
+			neighbour.Client = client
+		}
+
+		generator := StandardEntropyGenerator{}
+		convertedKey, err := ExportRsaPublicKeyAsPemStr(&pulsar.PrivateKey.PublicKey)
+		if err != nil {
+			return nil
+		}
+		message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
+		message.Signature, err = singData(pulsar.PrivateKey, message.Body)
+		response = &message
+
+		return nil
+	}
 }
 
-// Connect to the concrete member
-func (pulsar *Pulsar) ConnectToNeighbour(address string, connectionType string) error {
-	conn, err := net.Dial(connectionType, address)
+func (pulsar *Pulsar) EstablishConnection(pubKey *rsa.PublicKey) error {
+	neighbour, err := pulsar.fetchNeighbour(pubKey)
 	if err != nil {
 		return err
 	}
-	conn.(*net.TCPConn).SetKeepAlive(true)
-	pulsar.Neighbours[address].Connection = conn
-	pulsar.Send(address, &HandshakeMessageBody{PublicKey: pulsar.PrivateKey.PublicKey})
-	go pulsar.handleNewRequest(conn)
+	if neighbour.Client != nil {
+		return nil
+	}
+
+	conn, _ := net.Dial(neighbour.ConnectionType.String(), neighbour.ConnectionAddress)
+
+	clt := rpc2.NewClient(conn)
+	ConfigureHandlersForClient(pulsar, clt)
+	go clt.Run()
+
+	rep := &Payload{}
+	generator := StandardEntropyGenerator{}
+	convertedKey, err := ExportRsaPublicKeyAsPemStr(&pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		return nil
+	}
+	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
+	message.Signature, err = singData(pulsar.PrivateKey, message.Body)
+	clt.Call("handshake", message, rep)
+
+	err = checkSignature(rep)
+	if err != nil {
+		return err
+	}
+	neighbour.Client = clt
 
 	return nil
 }
 
-func (pulsar *Pulsar) Send(address string, data interface{}) error {
-	return gob.NewEncoder(pulsar.Neighbours[address].Connection).Encode(data)
+func (pulsar *Pulsar) fetchNeighbour(pubKey *rsa.PublicKey) (*Neighbour, error) {
+	converted, err := ExportRsaPublicKeyAsPemStr(pubKey)
+	if err != nil {
+		return nil, err
+	}
+	neighbour, ok := pulsar.Neighbours[converted]
+	if !ok {
+		return nil, errors.New("Forbidden connection")
+	}
+
+	return neighbour, nil
 }
 
-// Close all connections
-func (pulsar *Pulsar) Close() {
-	for _, neighbour := range pulsar.Neighbours {
-		if neighbour.Connection != nil {
-			neighbour.Connection.Close()
-		}
+func checkSignature(request *Payload) error {
+	h := sha3.New256()
+	data, _ := json.Marshal(request.Body)
+	h.Write(data)
+	digest := h.Sum(nil)
+	publicKey, err := ParseRsaPublicKeyFromPemStr(request.PublicKey)
+	if err != nil {
+		return nil
 	}
-
-	pulsar.Sock.Close()
+	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA3_256, digest, request.Signature)
 }
 
-// Handles incoming requests.
-func (pulsar *Pulsar) handleNewRequest(conn net.Conn) {
-	dec := gob.NewDecoder(conn)
-	message := &Message{}
-	err := dec.Decode(message)
-	if err == io.EOF {
-		remoteAddr := conn.RemoteAddr().String()
-		pulsar.ConnectToNeighbour(remoteAddr, pulsar.Neighbours[remoteAddr].ConnectionType.String())
-		return
-	}
-
-	switch message.Type {
-	case Handshake:
-		{
-			remoteAddr := conn.RemoteAddr()
-			if savedConn, ok := pulsar.Neighbours[remoteAddr.String()]; ok {
-				if savedConn.Connection != nil {
-					savedConn.Connection.Close()
-				}
-				conn.(*net.TCPConn).SetKeepAlive(true)
-				pulsar.Neighbours[remoteAddr.String()].Connection = conn
-				messageBody := message.Data.(HandshakeMessageBody)
-				pulsar.Neighbours[remoteAddr.String()].PublicKey = &messageBody.PublicKey
-				err := pulsar.Send(remoteAddr.String(), Message{Type: Handshake, Data: &HandshakeMessageBody{PublicKey: pulsar.PrivateKey.PublicKey}})
-				if err != nil {
-					fmt.Println("Error accepting: ", err.Error())
-				}
-				go pulsar.handleNewRequest(conn)
-			}
-		}
-	}
+func singData(privateKey *rsa.PrivateKey, data interface{}) ([]byte, error) {
+	h := sha3.New256()
+	marshaledData, _ := json.Marshal(data)
+	h.Write(marshaledData)
+	d := h.Sum(nil)
+	return rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA3_256, d)
 }

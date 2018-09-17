@@ -2,15 +2,17 @@ package pulsar
 
 import (
 	"crypto/rsa"
-	"net"
 
+	"github.com/cenkalti/rpc2"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 )
 
 type Neighbour struct {
-	ConnectionType configuration.ConnectionType
-	Connection     net.Conn
-	PublicKey      *rsa.PublicKey
+	ConnectionType    configuration.ConnectionType
+	ConnectionAddress string
+	Client            *rpc2.Client
+	PublicKey         *rsa.PublicKey
 }
 
 type MessageType string
@@ -24,6 +26,12 @@ type Message struct {
 	Data interface{}
 }
 
-type HandshakeMessageBody struct {
-	PublicKey rsa.PublicKey
+type HandshakePayload struct {
+	Entropy core.Entropy
+}
+
+type Payload struct {
+	PublicKey string
+	Signature []byte
+	Body      interface{}
 }

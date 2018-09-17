@@ -30,15 +30,18 @@ func (ct ConnectionType) String() string {
 type Pulsar struct {
 	ConnectionType ConnectionType
 	ListenAddress  string
-	NodesAddresses []*PulsarNodeAddress
+	PrivateKey     string
+
+	ListOfNeighbours []*PulsarNodeAddress
 }
 
 type PulsarNodeAddress struct {
 	Address        string
 	ConnectionType ConnectionType
+	PublicKey      string
 }
 
 // NewPulsar creates new default configuration for pulsar node
 func NewPulsar() Pulsar {
-	return Pulsar{ListenAddress: "0.0.0.0:8090", ConnectionType: Tcp, NodesAddresses: []*PulsarNodeAddress{}}
+	return Pulsar{ListenAddress: "0.0.0.0:8090", ConnectionType: Tcp, ListOfNeighbours: []*PulsarNodeAddress{}}
 }
