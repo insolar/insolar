@@ -54,7 +54,13 @@ func NewMetrics(cfg configuration.Metrics) (Metrics, error) {
 func (m *Metrics) Start(components core.Components) error {
 	log.Infoln("Starting metrics server")
 	http.Handle("/metrics", m.httpHandler)
-	go m.server.ListenAndServe()
+	go func() {
+		err := m.server.ListenAndServe()
+		if err != nil {
+			log.Errorln(err, "falied to start metrics server")
+			return
+		}
+	}()
 
 	return nil
 }
