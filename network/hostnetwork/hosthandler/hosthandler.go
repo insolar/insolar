@@ -39,15 +39,18 @@ type Context context.Context
 type NetworkCommonFacade interface {
 	GetRPC() rpc.RPC
 	GetCascade() *cascade.Cascade
+	GetPulseManager() core.PulseManager
+	SetPulseManager(manager core.PulseManager)
 }
 
 type CommonFacade struct {
 	rpcPtr  rpc.RPC
 	cascade *cascade.Cascade
+	pm      core.PulseManager
 }
 
 func NewFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
-	return &CommonFacade{rpcPtr: r, cascade: casc}
+	return &CommonFacade{rpcPtr: r, cascade: casc, pm: nil}
 }
 
 func (fac *CommonFacade) GetRPC() rpc.RPC {
@@ -56,6 +59,14 @@ func (fac *CommonFacade) GetRPC() rpc.RPC {
 
 func (fac *CommonFacade) GetCascade() *cascade.Cascade {
 	return fac.cascade
+}
+
+func (fac *CommonFacade) GetPulseManager() core.PulseManager {
+	return fac.pm
+}
+
+func (fac *CommonFacade) SetPulseManager(manager core.PulseManager) {
+	fac.pm = manager
 }
 
 // HostHandler is an interface which uses for host network implementation.

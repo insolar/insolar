@@ -67,6 +67,11 @@ type RequestCascadeSend struct {
 	Data core.Cascade
 }
 
+// RequestPulse is data received from a pulsar
+type RequestPulse struct {
+	Pulse core.Pulse
+}
+
 // RequestRelay is data for relay request (commands: start/stop relay).
 type RequestRelay struct {
 	Command CommandType

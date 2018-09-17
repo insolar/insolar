@@ -59,9 +59,29 @@ func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 		return processCheckNodePriv(hostHandler, msg, packetBuilder)
 	case packet.TypeCascadeSend:
 		return processCascadeSend(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypePulse:
+		return processPulse(hostHandler, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+	data := msg.Data.(*packet.RequestPulse)
+	pm := hostHandler.GetNetworkCommonFacade().GetPulseManager()
+	if pm == nil {
+		return nil, errors.New("PulseManager is not initialized")
+	}
+	currentPulse, err := pm.Current()
+	if err != nil {
+		return nil, errors.New("could not get current pulse")
+	}
+	log.Printf("got new pulse number: %d", currentPulse.PulseNumber)
+	if data.Pulse.PulseNumber > currentPulse.PulseNumber {
+		log.Printf("set new current pulse number: %d", currentPulse.PulseNumber)
+		pm.Set(data.Pulse)
+	}
+	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }
 
 func processKnownOuterHosts(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {

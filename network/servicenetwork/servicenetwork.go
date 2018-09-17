@@ -121,14 +121,33 @@ func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hostha
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
 
+func getPulseManager(components core.Components) (core.PulseManager, error) {
+	ledgerComponent, exists := components["core.Ledger"]
+	if !exists {
+		return nil, errors.New("no core.Ledger in components")
+	}
+	ledger, cast := ledgerComponent.(core.Ledger)
+	if !cast {
+		return nil, errors.New("bad cast to core.Ledger")
+	}
+	return ledger.GetPulseManager(), nil
+}
+
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
 	logrus.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
+	pm, err := getPulseManager(components)
+	if err != nil {
+		logrus.Error(err)
+	} else {
+		network.hostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
+	}
+
 	ctx := createContext(network.hostNetwork)
-	err := network.hostNetwork.ObtainIP()
+	err = network.hostNetwork.ObtainIP()
 	if err != nil {
 		return err
 	}
@@ -173,7 +192,7 @@ func createContext(handler hosthandler.HostHandler) hosthandler.Context {
 	return ctx
 }
 
-// InitCascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
+// InitCascadeSendMessage initiates the RPC call on target host and sends messages to next cascade layers
 func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCurrentNode bool, method string, args [][]byte) error {
 	if len(data.NodeIds) == 0 {
 		return errors.New("node IDs list should not be empty")

@@ -56,6 +56,8 @@ const (
 	TypeCheckNodePriv
 	// TypeCascadeSend is the packet type for the cascade send message feature
 	TypeCascadeSend
+	// TypePulse is packet type for the messages received from pulsars
+	TypePulse
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -112,6 +114,8 @@ func (m *Packet) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestCheckNodePriv)
 	case TypeCascadeSend:
 		_, valid = m.Data.(*RequestCascadeSend)
+	case TypePulse:
+		_, valid = m.Data.(*RequestPulse)
 	default:
 		valid = false
 	}
@@ -192,6 +196,7 @@ func init() {
 	gob.Register(&RequestKnownOuterHosts{})
 	gob.Register(&RequestCheckNodePriv{})
 	gob.Register(&RequestCascadeSend{})
+	gob.Register(&RequestPulse{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -205,6 +210,7 @@ func init() {
 	gob.Register(&ResponseKnownOuterHosts{})
 	gob.Register(&ResponseCheckNodePriv{})
 	gob.Register(&ResponseCascadeSend{})
+	gob.Register(&ResponsePulse{})
 
 	gob.Register(&id.ID{})
 }
