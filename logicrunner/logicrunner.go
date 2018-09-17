@@ -105,29 +105,6 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
-type withCodeDescriptor interface {
-	CodeDescriptor() (core.CodeDescriptor, error)
-}
-
-func (lr *LogicRunner) executorFromDescriptor(from withCodeDescriptor) (core.MachineLogicExecutor, error) {
-	codeDesc, err := from.CodeDescriptor()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get code descriptor")
-	}
-
-	mt, err := codeDesc.MachineType()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get machine type")
-	}
-
-	executor, err := lr.GetExecutor(mt)
-	if err != nil {
-		return nil, errors.Wrap(err, "no executer registered")
-	}
-
-	return executor, nil
-}
-
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 	lr.ArtifactManager.SetArchPref(
@@ -143,35 +120,24 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 
 	switch m := msg.(type) {
 	case *message.CallMethodMessage:
-		objDesc, err := lr.ArtifactManager.GetLatestObj(m.ObjectRef)
+		resp, err := lr.MessageRouter.Route(&message.GetObjectMessage{
+			Object: m.ObjectRef,
+		})
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object")
 		}
+		info := resp.(*response.ObjectBodyResponse)
+
 		ctx.Callee = &m.ObjectRef
+		ctx.Class = &info.Class
 
-		classDesc, err := objDesc.ClassDescriptor()
+		executor, err := lr.GetExecutor(info.MachineType)
 		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's class")
-		}
-		ctx.Class = classDesc.HeadRef()
-
-		data, err := objDesc.Memory()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's data")
-		}
-
-		codeDesc, err := objDesc.CodeDescriptor()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's code descriptor")
-		}
-
-		executor, err := lr.executorFromDescriptor(objDesc)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get executor")
+			return nil, errors.Wrap(err, "no executer registered")
 		}
 
 		newData, result, err := executor.CallMethod(
-			&ctx, *codeDesc.Ref(), data, m.Method, m.Arguments,
+			&ctx, info.Code, info.Body, m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executer error")
@@ -201,9 +167,14 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 			return nil, errors.Wrap(err, "couldn't get class's code descriptor")
 		}
 
-		executor, err := lr.executorFromDescriptor(classDesc)
+		mt, err := codeDesc.MachineType()
 		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get executor")
+			return nil, errors.Wrap(err, "couldn't get machine type")
+		}
+
+		executor, err := lr.GetExecutor(mt)
+		if err != nil {
+			return nil, errors.Wrap(err, "no executer registered")
 		}
 
 		newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
@@ -239,6 +210,39 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
 		return &response.CommonResponse{}, nil
+
+	case *message.GetObjectMessage:
+		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Object)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object")
+		}
+
+		classDesc, err := objDesc.ClassDescriptor()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object's class")
+		}
+
+		data, err := objDesc.Memory()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object's data")
+		}
+
+		codeDesc, err := objDesc.CodeDescriptor()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object's code descriptor")
+		}
+
+		mt, err := codeDesc.MachineType()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get machine type")
+		}
+
+		return &response.ObjectBodyResponse{
+			Body:        data,
+			Code:        *codeDesc.Ref(),
+			Class:       *classDesc.HeadRef(),
+			MachineType: mt,
+		}, nil
 
 	default:
 		panic("Unknown message type")

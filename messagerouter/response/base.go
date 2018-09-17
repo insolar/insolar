@@ -33,8 +33,12 @@ type baseResponse struct {
 type Type byte
 
 const (
-	WrongResponseType  = Type(iota)
-	CommonResponseType // CommonResponseType - two binary fields: data and results
+	// WrongResponseType - incorrect type (0)
+	WrongResponseType = Type(iota)
+	// CommonResponseType - two binary fields: data and results
+	CommonResponseType
+	// ObjectBodyResponseType - response with body, class reference, code reference ...
+	ObjectBodyResponseType
 )
 
 func getEmptyResponse(t Type) (core.Response, error) {
@@ -43,6 +47,8 @@ func getEmptyResponse(t Type) (core.Response, error) {
 		return nil, errors.New("no empty response for 'wrong' response")
 	case CommonResponseType:
 		return &CommonResponse{}, nil
+	case ObjectBodyResponseType:
+		return &ObjectBodyResponse{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented response type: '%d'", t)
 	}
@@ -79,4 +85,5 @@ func Deserialize(buff io.Reader) (core.Response, error) {
 
 func init() {
 	gob.Register(&CommonResponse{})
+	gob.Register(&ObjectBodyResponse{})
 }
