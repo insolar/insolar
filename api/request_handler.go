@@ -50,7 +50,7 @@ type RequestHandler struct {
 	rootDomainReference core.RecordRef
 }
 
-// Creates new query handler
+// NewRequestHandler creates new query handler
 func NewRequestHandler(params *Params, router core.MessageRouter, rootDomainReference core.RecordRef) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
@@ -82,7 +82,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 	return &res, nil
 }
 
-// Process CreateMember query type
+// ProcessCreateMember processes CreateMember query type
 func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
@@ -135,7 +135,7 @@ func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (*cor
 	return routResult, nil
 }
 
-// Process GetBalance query type
+// ProcessGetBalance processes get_balance query type
 func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	result["currency"] = "RUB"
@@ -175,7 +175,7 @@ func extractSendMoneyResponse(data []byte) (bool, error) {
 	return isSent, nil
 }
 
-// Process SendMoney query type
+// ProcessSendMoney processes send_money query type
 func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
@@ -221,7 +221,7 @@ func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
 	return dumpJSON, nil
 }
 
-// Process Dump users query type
+// ProcessDumpUsers processes Dump users query type
 func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 

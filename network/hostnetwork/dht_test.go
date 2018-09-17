@@ -187,7 +187,7 @@ func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transpor
 	origin, err := host.NewOrigin(ids, addr)
 	tp := newMockTransport()
 	cascade1 := &cascade.Cascade{}
-	ncf := hosthandler.NewFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
+	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
 	return st, origin, tp, ncf, err
 }
 
@@ -200,7 +200,7 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	cfg.BehindNAT = false
 	tp, err := transport.NewTransport(cfg, relay.NewProxy())
 	cascade1 := &cascade.Cascade{}
-	ncf := hosthandler.NewFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
+	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
 	return st, origin, tp, ncf, err
 }
 

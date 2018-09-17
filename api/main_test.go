@@ -125,11 +125,11 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 type TestsMessageRouter struct {
 }
 
-func (ar *TestsMessageRouter) Start(c core.Components) error {
+func (mr *TestsMessageRouter) Start(c core.Components) error {
 	return nil
 }
 
-func (ar *TestsMessageRouter) Stop() error {
+func (mr *TestsMessageRouter) Stop() error {
 	return nil
 }
 

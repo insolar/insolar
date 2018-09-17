@@ -139,8 +139,6 @@ func main() {
 		os.Exit(0)
 	}()
 
-	go handleStats(cfgHolder.Configuration.Stats)
-
 	fmt.Println("Running interactive mode:")
 	repl(nw)
 }

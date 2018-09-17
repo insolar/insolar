@@ -64,7 +64,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *casc
 	}
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
-	ncf := hosthandler.NewFacade(rpc.NewRPCFactory(nil).Create(), cascade)
+	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade)
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),

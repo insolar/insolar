@@ -49,7 +49,7 @@ type CommonFacade struct {
 	pm      core.PulseManager
 }
 
-func NewFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
+func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
 	return &CommonFacade{rpcPtr: r, cascade: casc, pm: nil}
 }
 
