@@ -125,17 +125,17 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 type TestsMessageRouter struct {
 }
 
-func (ar *TestsMessageRouter) Start(c core.Components) error {
+func (mr *TestsMessageRouter) Start(c core.Components) error {
 	return nil
 }
 
-func (ar *TestsMessageRouter) Stop() error {
+func (mr *TestsMessageRouter) Stop() error {
 	return nil
 }
 
 const TestBalance = 100500
 
-func (ar *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
+func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
 	data, _ := MarshalArgs(TestBalance)
 
 	resp := core.Response{
