@@ -30,7 +30,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Metrics is a component which serve metrics to Prometheus.
+// Metrics is a component which serve metrics data to Prometheus.
 type Metrics struct {
 	registry    *prometheus.Registry
 	httpHandler http.Handler
