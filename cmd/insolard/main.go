@@ -23,6 +23,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger"
@@ -103,11 +105,23 @@ func main() {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
 
+	b, err := bootstrap.NewBootstrapper(cfgHolder.Configuration)
+	if err != nil {
+		log.Fatalln("Failed to start Bootstrapper: ", err.Error())
+	}
+
+	ar, err := api.NewRunner(&cfgHolder.Configuration.APIRunner)
+	if err != nil {
+		log.Fatalln("Failed to start ApiRunner: ", err.Error())
+	}
+
 	cm := componentManager{components: make(core.Components), interfaceNames: make([]string, 0)}
 	cm.register("core.Network", nw)
 	cm.register("core.Ledger", l)
 	cm.register("core.LogicRunner", lr)
 	cm.register("core.MessageRouter", mr)
+	cm.register("core.Bootstrapper", b)
+	cm.register("core.ApiRunner", ar)
 	cm.linkAll()
 
 	defer func() {

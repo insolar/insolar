@@ -21,6 +21,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/record"
@@ -42,9 +43,9 @@ func TestStore_SlotIterate(t *testing.T) {
 		&record.ClassActivateRecord{},
 		&record.ObjectActivateRecord{},
 	}
-	pulse1 := record.PulseNum(1)
-	pulse2 := record.PulseNum(2)
-	pulses := []record.PulseNum{pulse1, pulse2}
+	pulse1 := core.PulseNumber(1)
+	pulse2 := core.PulseNumber(2)
+	pulses := []core.PulseNumber{pulse1, pulse2}
 
 	// save records set in different pulses
 	for _, pulse := range pulses {

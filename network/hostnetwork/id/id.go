@@ -18,52 +18,37 @@ package id
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/jbenet/go-base58"
 )
 
 // ID is host id.
-type ID struct {
-	key []byte
-}
-
-// MarshalBinary is binary marshaler.
-func (id ID) MarshalBinary() ([]byte, error) {
-	var res bytes.Buffer
-	key := base58.Encode(id.key)
-	fmt.Fprintln(&res, key)
-	return res.Bytes(), nil
-}
-
-// UnmarshalBinary is binary unmarshaler.
-func (id *ID) UnmarshalBinary(data []byte) error {
-	res := bytes.NewBuffer(data)
-	var key string
-	_, err := fmt.Fscanln(res, &key)
-	id.key = base58.Decode(key)
-	return err
-}
+type ID []byte
 
 // NewID returns random host id.
 func NewID() (ID, error) {
-	key := make([]byte, 20) // TODO: choose hash func
+	key := make([]byte, 20)
 	_, err := random.Read(key)
-	id := ID{key: key}
+	id := ID(key)
 	return id, err
 }
 
-// KeyEqual checks if id is equal ot another.
-func (id ID) KeyEqual(other []byte) bool {
-	return bytes.Equal(id.key, other)
+// FromBase58 returns decoded host id.
+func FromBase58(encoded string) ID {
+	return ID(base58.Decode(encoded))
 }
 
-// KeyString is a base58-encoded string representation of host public key.
-func (id ID) KeyString() string {
-	return base58.Encode(id.key)
+// Equal checks if id is equal ot another.
+func (id ID) Equal(other []byte) bool {
+	return bytes.Equal(id, other)
 }
 
-// GetKey returns a raw key.
-func (id ID) GetKey() []byte {
-	return id.key
+// String is a base58-encoded string representation of host public key.
+func (id ID) String() string {
+	return base58.Encode(id)
+}
+
+// Bytes returns a raw key.
+func (id ID) Bytes() []byte {
+	return id
 }

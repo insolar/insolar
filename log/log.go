@@ -6,6 +6,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const defaultSkipCallNumber = 3
+
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (core.Logger, error) {
 	var logger core.Logger
@@ -29,8 +31,12 @@ func SetLevel(level string) error {
 	return globalLogger.SetLevel(level)
 }
 
-// globalLogger creates with default configuration
-var globalLogger, _ = NewLog(configuration.NewLog())
+// globalLogger creates global logger with correct skipCallNumber
+var globalLogger, _ = func() (core.Logger, error) {
+	logger := newLogrusAdapter()
+	logger.skipCallNumber = defaultSkipCallNumber + 1
+	return logger, logger.SetLevel(configuration.NewLog().Level)
+}()
 
 // Debug logs a message at level Debug to the global logger.
 func Debug(args ...interface{}) {
@@ -70,6 +76,16 @@ func Error(args ...interface{}) {
 // Errorln logs a message at level Error to the global logger.
 func Errorln(args ...interface{}) {
 	globalLogger.Errorln(args...)
+}
+
+// Fatal logs a message at level Fatal to the global logger.
+func Fatal(args ...interface{}) {
+	globalLogger.Fatal(args...)
+}
+
+// Fatalln logs a message at level Fatal to the global logger.
+func Fatalln(args ...interface{}) {
+	globalLogger.Fatalln(args...)
 }
 
 // Panic logs a message at level Panic to the global logger.

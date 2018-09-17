@@ -32,15 +32,20 @@ type DelegateMessage struct {
 	Body  []byte
 }
 
-// GetReference implements core.Message
+// GetOperatingRole returns operating jet role for given message type.
+func (m *DelegateMessage) GetOperatingRole() core.JetRole {
+	return core.RoleLightExecutor
+}
+
+// Get reference returns referenced object.
 func (m *DelegateMessage) GetReference() core.RecordRef {
 	return m.Into
 }
 
-// Serialize serializes message
+// Serialize serializes message.
 func (m *DelegateMessage) Serialize() (io.Reader, error) {
 	buff := &bytes.Buffer{}
-	buff.Write([]byte{byte(CallConstructorMessageType)})
+	buff.Write([]byte{byte(DelegateMessageType)})
 	enc := gob.NewEncoder(buff)
 	err := enc.Encode(m)
 	return buff, err

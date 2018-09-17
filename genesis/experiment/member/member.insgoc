@@ -17,7 +17,7 @@
 package member
 
 import (
-	"github.com/insolar/insolar/toolkit/go/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type Member struct {

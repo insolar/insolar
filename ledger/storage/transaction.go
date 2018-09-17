@@ -19,6 +19,7 @@ package storage
 import (
 	"github.com/dgraph-io/badger"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
@@ -31,7 +32,7 @@ type TransactionManager struct {
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
-	k := make([]byte, record.RefIDSize+1)
+	k := make([]byte, core.RecordRefSize+1)
 	k[0] = prefix
 	_ = copy(k[1:], key)
 	return k
@@ -142,6 +143,9 @@ func (m *TransactionManager) GetObjectIndex(ref *record.Reference) (*index.Objec
 // SetObjectIndex stores object lifeline index.
 func (m *TransactionManager) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
 	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
+	if idx.Delegates == nil {
+		idx.Delegates = map[core.RecordRef]record.Reference{}
+	}
 	encoded, err := index.EncodeObjectLifeline(idx)
 	if err != nil {
 		return err
@@ -152,8 +156,8 @@ func (m *TransactionManager) SetObjectIndex(ref *record.Reference, idx *index.Ob
 // GetEntropy returns entropy from storage for given pulse.
 //
 // Entropy is used for calculating node roles.
-func (m *TransactionManager) GetEntropy(pulse record.PulseNum) ([]byte, error) {
-	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
+func (m *TransactionManager) GetEntropy(pulse core.PulseNumber) (*core.Entropy, error) {
+	k := prefixkey(scopeIDEntropy, pulse.Bytes())
 	item, err := m.txn.Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
@@ -161,19 +165,21 @@ func (m *TransactionManager) GetEntropy(pulse record.PulseNum) ([]byte, error) {
 		}
 		return nil, err
 	}
-	buf, err := item.ValueCopy(nil)
+	buf, err := item.Value()
 	if err != nil {
 		return nil, err
 	}
-	return buf, nil
+	var entropy core.Entropy
+	copy(entropy[:], buf)
+	return &entropy, nil
 }
 
 // SetEntropy stores given entropy for given pulse in storage.
 //
 // Entropy is used for calculating node roles.
-func (m *TransactionManager) SetEntropy(pulse record.PulseNum, entropy []byte) error {
-	k := prefixkey(scopeIDEntropy, record.EncodePulseNum(pulse))
-	return m.txn.Set(k, entropy)
+func (m *TransactionManager) SetEntropy(pulse core.PulseNumber, entropy core.Entropy) error {
+	k := prefixkey(scopeIDEntropy, pulse.Bytes())
+	return m.txn.Set(k, entropy[:])
 }
 
 // Get returns value by key.

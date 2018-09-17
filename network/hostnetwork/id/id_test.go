@@ -53,9 +53,20 @@ func TestNewID(t *testing.T) {
 	id2, err := NewID()
 
 	assert.NoError(t, err)
-	assert.Len(t, id2.GetKey(), 20)
+	assert.Len(t, id2.Bytes(), 20)
 	id1, _ := NewID()
-	assert.NotEqual(t, id1.GetKey(), id2.GetKey())
+	assert.NotEqual(t, id1.Bytes(), id2.Bytes())
+}
+
+func TestFromBase58(t *testing.T) {
+	id1, err := NewID()
+	assert.NoError(t, err)
+
+	idStr := id1.String()
+
+	id2 := FromBase58(idStr)
+
+	assert.Equal(t, id1.Bytes(), id2.Bytes())
 }
 
 func TestID_Equal(t *testing.T) {
@@ -71,7 +82,7 @@ func TestID_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.equal, test.id1.KeyEqual(test.id2.GetKey()))
+			assert.Equal(t, test.equal, test.id1.Equal(test.id2.Bytes()))
 		})
 	}
 }
@@ -89,21 +100,21 @@ func TestID_MarshalBinary(t *testing.T) {
 	err = dec.Decode(&resID)
 	assert.NoError(t, err)
 
-	assert.True(t, id.KeyEqual(resID.key))
-	assert.Equal(t, id.KeyString(), resID.KeyString())
+	assert.True(t, id.Equal(resID))
+	assert.Equal(t, id.String(), resID.String())
 }
 
 func TestID_KeyEqual(t *testing.T) {
 	id1, _ := NewID()
 	id2, _ := NewID()
 
-	assert.Equal(t, id1.KeyString(), id1.KeyString())
-	assert.NotEqual(t, id1.KeyString(), id2.KeyString())
+	assert.Equal(t, id1.String(), id1.String())
+	assert.NotEqual(t, id1.String(), id2.String())
 }
 
 func TestID_String(t *testing.T) {
 	random = newMockReader()
 	id, _ := NewID()
 
-	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.KeyString())
+	assert.Equal(t, "gkdhQDvLi23xxjXjhpMWaTt5byb", id.String())
 }

@@ -21,22 +21,22 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 )
 
-/*
-//todo: interface for HostNetwork
-type HostNetwork interface {
-	RPC
+type NodeNetwork interface {
+	ResolveHostID(ref core.RecordRef) string
+	GetID() core.RecordRef
 }
-*/
 
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork, h HostIDResolver) (*DHT, error) {
+func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		log.Fatal("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")
@@ -54,7 +54,9 @@ func NewHostNetwork(cfg configuration.HostNetwork, h HostIDResolver) (*DHT, erro
 		return nil, err
 	}
 
-	origin, err := host.NewOrigin(nil, originAddress)
+	encodedOriginID := nn.ResolveHostID(nn.GetID())
+	originID := id.FromBase58(encodedOriginID)
+	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +70,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, h HostIDResolver) (*DHT, erro
 		rpc.NewRPCFactory(nil).Create(),
 		options,
 		proxy,
-		h)
+		nn)
 	if err != nil {
 		return nil, err
 	}

@@ -24,17 +24,6 @@ import (
 	"github.com/insolar/insolar/ledger/hash"
 )
 
-const (
-	// HashSize is a record hash size. We use 224-bit SHA-3 hash (28 bytes).
-	HashSize = 28
-	// PulseNumSize - 4 bytes is a PulseNum size (uint32)
-	PulseNumSize = 4
-	// IDSize is the size in bytes of ID binary representation.
-	IDSize = PulseNumSize + HashSize
-	// RefIDSize is the size in bytes of Reference binary representation.
-	RefIDSize = IDSize * 2
-)
-
 // ProjectionType is a "view filter" for record.
 // E.g. we can read whole object or just it's hash.
 type ProjectionType uint32
@@ -42,15 +31,9 @@ type ProjectionType uint32
 // Memory is actual contracts' state, variables etc.
 type Memory []byte
 
-// PulseNum is a sequential number of Pulse.
-// Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
-// Valid Absolute PulseNum must be >65536.
-// If PulseNum <65536 it is a relative PulseNum
-type PulseNum uint32
-
-// SpecialPulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
+// RelativePulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
 // It is only allowed for Storage.
-const SpecialPulseNumber PulseNum = 65536
+const RelativePulseNumber core.PulseNumber = 65536
 
 // TypeID encodes a record object type.
 type TypeID uint32
@@ -59,7 +42,7 @@ type TypeID uint32
 //
 // Hash is a bytes slice here to avoid copy of Hash array.
 type ID struct {
-	Pulse PulseNum
+	Pulse core.PulseNumber
 	Hash  []byte
 }
 
@@ -72,23 +55,6 @@ type Record interface {
 func SHA3Hash224(rec Record) []byte {
 	cborBlob := MustEncode(rec)
 	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
-}
-
-// ID evaluates record ID on PulseNum for Record.
-func (pn PulseNum) ID(rec Record) ID {
-	raw, err := EncodeToRaw(rec)
-	if err != nil {
-		panic(err)
-	}
-	return ID{
-		Pulse: pn,
-		Hash:  raw.Hash(),
-	}
-}
-
-// Bytes evaluates bytes representation of PulseNum and Record pair.
-func (pn PulseNum) Bytes(rec Record) []byte {
-	return ID2Bytes(pn.ID(rec))
 }
 
 // WriteHash implements hash.Writer interface.
@@ -134,8 +100,8 @@ type Reference struct {
 func (ref *Reference) CoreRef() *core.RecordRef {
 	var b core.RecordRef
 	// Record part should go first so we can iterate keys of a certain slot
-	_ = copy(b[:IDSize], ID2Bytes(ref.Record))
-	_ = copy(b[IDSize:], ID2Bytes(ref.Domain))
+	_ = copy(b[:core.RecordIDSize], ID2Bytes(ref.Record))
+	_ = copy(b[core.RecordIDSize:], ID2Bytes(ref.Domain))
 	return &b
 }
 

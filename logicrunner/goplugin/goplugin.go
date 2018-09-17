@@ -122,9 +122,6 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
-	if reply.Err != nil {
-		return errors.Wrap(reply.Err, "couldn't route message (error in respone)")
-	}
 
 	reply.Data = res.Data
 	return nil
@@ -137,8 +134,36 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 	if err != nil {
 		return err
 	}
-
 	reply.Reference = *ref
+	return nil
+}
+
+// GetObjChildren is an RPC returns set of object children
+func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes.UpGetObjChildrenResp) error {
+	// TODO: INS-408
+	am := gpr.gp.ArtifactManager
+	i, err := am.GetObjChildren(req.Obj)
+	if err != nil {
+		return errors.Wrap(err, "am.GetObjChildren failed")
+	}
+	for i.HasNext() {
+		r, err := i.Next()
+		if err != nil {
+			return err
+		}
+		o, err := am.GetLatestObj(r)
+		if err != nil {
+			return errors.Wrap(err, "Have ref, have no object")
+		}
+		cd, err := o.ClassDescriptor()
+		if err != nil {
+			return errors.Wrap(err, "Have ref, have no object")
+		}
+		ref := cd.HeadRef()
+		if ref.Equal(req.Class) {
+			reply.Children = append(reply.Children, r)
+		}
+	}
 	return nil
 }
 
@@ -230,7 +255,7 @@ func (gp *GoPlugin) StartRunner() error {
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
 
-	execPath := "ginsider-cli/ginsider-cli"
+	execPath := "testdata/logicrunner/ginsider-cli"
 	if gp.Cfg.RunnerPath != "" {
 		execPath = gp.Cfg.RunnerPath
 	}
@@ -306,7 +331,7 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 	case <-time.After(timeout):
 		return nil, nil, errors.New("timeout")
 	}
-	return res.Data, res.Ret, res.Err
+	return res.Data, res.Ret, nil
 }
 
 // CallConstructor runs a constructor of a contract in controlled environment
@@ -327,5 +352,5 @@ func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.Record
 	case <-time.After(timeout):
 		return nil, errors.New("timeout")
 	}
-	return res.Ret, res.Err
+	return res.Ret, nil
 }

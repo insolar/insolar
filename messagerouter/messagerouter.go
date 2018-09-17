@@ -19,7 +19,6 @@ package messagerouter
 import (
 	"bytes"
 	"encoding/gob"
-
 	"errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -32,21 +31,24 @@ const deliverRPCMethodName = "MessageRouter.Deliver"
 // MessageRouter is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageRouter struct {
-	LogicRunner core.LogicRunner
+	logicRunner core.LogicRunner
 	service     core.Network
+	ledger      core.Ledger
 }
 
 // New is a `MessageRouter` constructor, takes an executor object
-// that satisfies `LogicRunner` interface
+// that satisfies LogicRunner interface
 func New(cfg configuration.Configuration) (*MessageRouter, error) {
-	mr := &MessageRouter{LogicRunner: nil, service: nil}
+	mr := &MessageRouter{logicRunner: nil, service: nil}
 	return mr, nil
 }
 
 func (mr *MessageRouter) Start(c core.Components) error {
-	mr.LogicRunner = c["core.LogicRunner"].(core.LogicRunner)
+	mr.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
 	mr.service = c["core.Network"].(core.Network)
 	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+
+	mr.ledger = c["core.Ledger"].(core.Ledger)
 	return nil
 }
 
@@ -54,12 +56,40 @@ func (mr *MessageRouter) Stop() error { return nil }
 
 // Route a `Message` and get a `Response` or error from remote host
 func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err error) {
-	res, err := mr.service.SendMessage(deliverRPCMethodName, msg)
+	jc := mr.ledger.GetJetCoordinator()
+	pm := mr.ledger.GetPulseManager()
+	pulse, err := pm.Current()
+	if err != nil {
+		return response, err
+	}
+
+	nodes := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
+
+	if len(nodes) == 0 {
+		err = errors.New("wtf")
+		return
+	}
+
+	if len(nodes) > 1 {
+		// res, err := mr.service.SendCascadeMessage(...)
+
+		return
+	}
+
+	res, err := mr.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
 	if err != nil {
 		return response, err
 	}
 
 	return DeserializeResponse(res)
+}
+
+type MyError struct {
+	S string
+}
+
+func (e *MyError) Error() string {
+	return e.S
 }
 
 // Deliver method calls LogicRunner.Execute on local host
@@ -73,7 +103,13 @@ func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	return Serialize(mr.LogicRunner.Execute(msg))
+	resp := mr.logicRunner.Execute(msg)
+	if resp.Error != nil {
+		resp.Error = &MyError{
+			S: resp.Error.Error(),
+		}
+	}
+	return Serialize(resp)
 }
 
 // Serialize converts Message or Response to byte slice.
@@ -96,4 +132,5 @@ func DeserializeResponse(data []byte) (res core.Response, err error) {
 
 func init() {
 	gob.Register(&core.Response{})
+	gob.Register(&MyError{})
 }

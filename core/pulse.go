@@ -16,11 +16,46 @@
 
 package core
 
-type Entropy [64]byte
+import (
+	"encoding/binary"
+)
+
+const (
+	PulseNumberSize = 4
+	EntropySize     = 64
+)
+
+// Entropy is 64 random bytes used in every pseudo-random calculations.
+type Entropy [EntropySize]byte
+
+// PulseNumber is a sequential number of Pulse.
+// Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
+// Valid Absolute PulseNum must be >65536.
+// If PulseNum <65536 it is a relative PulseNum
 type PulseNumber uint32
 
-// Base data struct for a pulse
+// Bytes serializes pulse number.
+func (pn PulseNumber) Bytes() []byte {
+	buff := make([]byte, PulseNumberSize)
+	binary.BigEndian.PutUint32(buff, uint32(pn))
+	return buff
+}
+
+// Bytes2PulseNumber deserializes pulse number.
+func Bytes2PulseNumber(buf []byte) PulseNumber {
+	return PulseNumber(binary.BigEndian.Uint32(buf))
+}
+
+// Pulse is base data structure for a pulse.
 type Pulse struct {
 	PulseNumber PulseNumber
 	Entropy     Entropy
+}
+
+type PulseManager interface {
+	// Current returns current pulse structure.
+	Current() (*Pulse, error)
+
+	// Set set's new pulse and closes current jet drop.
+	Set(pulse Pulse) error
 }

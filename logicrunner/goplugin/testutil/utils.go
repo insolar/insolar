@@ -389,6 +389,13 @@ func CBORUnMarshal(t *testing.T, data []byte) interface{} {
 	return ret
 }
 
+// CBORUnMarshalToSlice - wrapper for CBORUnMarshal, expects slice
+func CBORUnMarshalToSlice(t *testing.T, in []byte) []interface{} {
+	r := CBORUnMarshal(t, in)
+	assert.IsType(t, []interface{}{}, r)
+	return r.([]interface{})
+}
+
 // AMPublishCode publishes code on ledger
 func AMPublishCode(
 	t *testing.T,
@@ -449,8 +456,12 @@ func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder,
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 	for name := range contracts {
+		ref, err := randomRef()
+		if err != nil {
+			return errors.Wrap(err, "Failed to generate ref")
+		}
 		class, err := cb.ArtifactManager.ActivateClass(
-			core.RecordRef{}, core.RecordRef{},
+			core.RecordRef{}, *ref,
 		)
 		if err != nil {
 			return err

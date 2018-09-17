@@ -16,13 +16,25 @@
 
 package core
 
+// Cascade contains routing data for cascade sending
+type Cascade struct {
+	// NodeIds contains the slice of node identifiers that will receive the message
+	NodeIds []RecordRef
+	// Entropy is used for pseudorandom cascade building
+	Entropy Entropy
+	// Replication factor is the number of children nodes of the each node of the cascade
+	ReplicationFactor uint
+}
+
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(args [][]byte) ([]byte, error)
 
 // Network is interface for network modules facade.
 type Network interface {
 	// SendMessage sends a message.
-	SendMessage(method string, msg Message) ([]byte, error)
+	SendMessage(nodeID RecordRef, method string, msg Message) ([]byte, error)
+	// SendMessage sends a message.
+	SendCascadeMessage(data Cascade, method string, msg Message) error
 	// GetAddress returns an origin address.
 	GetAddress() string
 	// RemoteProcedureRegister is remote procedure register func.

@@ -32,7 +32,7 @@ import (
 
 func genRandomRef() *record.Reference {
 	var coreRef core.RecordRef
-	coreRef[record.RefIDSize-1] = byte(rand.Int() % 256)
+	coreRef[core.RecordIDSize-1] = byte(rand.Int() % 256)
 	ref := record.Core2Reference(coreRef)
 	return &ref
 }
@@ -628,7 +628,7 @@ func TestLedgerArtifactManager_GetLatestClass_ReturnsCorrectDescriptors(t *testi
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(),
+					DomainRecord: *td.domainRef,
 				},
 			},
 		},
@@ -682,7 +682,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(),
+					DomainRecord: *td.domainRef,
 				},
 			},
 		},
@@ -710,7 +710,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(),
+					DomainRecord: *td.domainRef,
 				},
 			},
 		},

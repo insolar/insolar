@@ -282,7 +282,7 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, method string, args []byte) (
 		return nil, errors.Wrap(err, "on calling main API")
 	}
 
-	return []byte(res.Result), res.Err
+	return []byte(res.Result), nil
 }
 
 // RouteConstructorCall ...
@@ -304,7 +304,7 @@ func (gi *GoInsider) RouteConstructorCall(ref core.RecordRef, name string, args 
 		return []byte{}, errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Data, res.Err
+	return res.Data, nil
 }
 
 // SaveAsChild ...
@@ -327,6 +327,23 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, data []byte
 	}
 
 	return res.Reference, nil
+}
+
+// GetObjChildren ...
+func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([]core.RecordRef, error) {
+	client, err := gi.Upstream()
+	if err != nil {
+		return nil, err
+	}
+
+	res := rpctypes.UpGetObjChildrenResp{}
+	req := rpctypes.UpGetObjChildrenReq{Obj: obj, Class: class}
+	err = client.Call("RPC.GetObjChildren", req, &res)
+	if err != nil {
+		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
+	}
+
+	return res.Children, nil
 }
 
 // SaveAsDelegate ...

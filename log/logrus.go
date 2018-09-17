@@ -23,17 +23,18 @@ import (
 )
 
 type logrusAdapter struct {
-	entry *logrus.Entry
+	skipCallNumber int
+	entry          *logrus.Entry
 }
 
 func newLogrusAdapter() logrusAdapter {
-	return logrusAdapter{entry: logrus.NewEntry(logrus.New())}
+	return logrusAdapter{entry: logrus.NewEntry(logrus.New()), skipCallNumber: defaultSkipCallNumber}
 }
 
 // sourced adds a source info fields that contains
 // the package, func, file name and line where the logging happened.
 func (l logrusAdapter) sourced() *logrus.Entry {
-	info := getCallInfo()
+	info := getCallInfo(l.skipCallNumber)
 	return l.entry.WithFields(logrus.Fields{"package": info.packageName,
 		"func": info.funcName,
 		"file": fmt.Sprintf("%s:%d", info.fileName, info.line)})
