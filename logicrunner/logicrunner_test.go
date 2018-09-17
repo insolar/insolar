@@ -782,14 +782,14 @@ func (c *Child) GetNum() int {
 
 	b.N = 1000
 	for i := 0; i < b.N; i++ {
-		resp := lr.Execute(&message.CallMethodMessage{
+		resp, err := lr.Execute(&message.CallMethodMessage{
 			Request:   core.String2Ref("rr"),
 			ObjectRef: *parent,
 			Method:    "CCC",
 			Arguments: testutil.CBORMarshal(b, []interface{}{child}),
 		})
-		assert.NoError(b, resp.Error, "parent call")
-		r := testutil.CBORUnMarshal(b, resp.Result)
+		assert.NoError(b, err, "parent call")
+		r := testutil.CBORUnMarshal(b, resp.(*response.CommonResponse).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
 }
