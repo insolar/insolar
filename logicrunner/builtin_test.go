@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 	"github.com/insolar/insolar/messagerouter/message"
+	"github.com/insolar/insolar/messagerouter/response"
 
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
@@ -65,30 +66,30 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
-	resp := lr.Execute(&message.CallMethodMessage{
+	resp, err := lr.Execute(&message.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"Vany"}),
 	})
-	assert.NoError(t, resp.Error, "contract call")
+	assert.NoError(t, err, "contract call")
 
-	d := testutil.CBORUnMarshal(t, resp.Data)
-	r := testutil.CBORUnMarshal(t, resp.Result)
+	d := testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Data)
+	r := testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
-	resp = lr.Execute(&message.CallMethodMessage{
+	resp, err = lr.Execute(&message.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"Ruz"}),
 	})
-	assert.NoError(t, resp.Error, "contract call")
+	assert.NoError(t, err, "contract call")
 
-	d = testutil.CBORUnMarshal(t, resp.Data)
-	r = testutil.CBORUnMarshal(t, resp.Result)
+	d = testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Data)
+	r = testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }

@@ -50,6 +50,7 @@ const (
 	DelegateMessageType        // DelegateMessage is a message for injecting a delegate
 	ChildMessageType           // ChildMessage is a message for saving a child
 	UpdateObjectMessageType    // UpdateObjectMessage is a message for updating an object
+	GetObjectMessageType       // GetObjectMessage is a message for retrieving an object
 )
 
 // GetEmptyMessage constructs specified message
@@ -67,6 +68,8 @@ func getEmptyMessage(mt MessageType) (core.Message, error) {
 		return &ChildMessage{}, nil
 	case UpdateObjectMessageType:
 		return &UpdateObjectMessage{}, nil
+	case GetObjectMessageType:
+		return &GetObjectMessage{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented messagetype %d", mt)
 	}
@@ -107,4 +110,5 @@ func init() {
 	gob.Register(&DelegateMessage{})
 	gob.Register(&ChildMessage{})
 	gob.Register(&UpdateObjectMessage{})
+	gob.Register(&GetObjectMessage{})
 }
