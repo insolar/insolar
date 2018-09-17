@@ -26,7 +26,7 @@ type APIRunner struct {
 	Location string
 }
 
-// NewAPIRunner create new api config
+// NewAPIRunner creates new api config
 func NewAPIRunner() APIRunner {
 	return APIRunner{
 		Port:     19191,

@@ -49,7 +49,7 @@ func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 	return result, nil
 }
 
-// UnMarshalResponse unmarshal return values by cbor
+// UnMarshalResponse unmarshals return values by cbor
 func UnMarshalResponse(resp []byte, typeHolders []interface{}) ([]interface{}, error) {
 	var marshRes []interface{}
 	marshRes = append(marshRes, typeHolders...)
