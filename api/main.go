@@ -90,7 +90,7 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 	return answer
 }
 
-const QIDQueryParam = "qid"
+const qidQueryParam = "qid"
 
 func preprocessRequest(req *http.Request) (*Params, error) {
 	body, err := ioutil.ReadAll(req.Body)
@@ -130,7 +130,7 @@ func wrapAPIV1Handler(router core.MessageRouter, rootDomainReference core.Record
 			if params == nil {
 				params = &Params{}
 			}
-			answer[QIDQueryParam] = params.QID
+			answer[qidQueryParam] = params.QID
 			serJSON, err := json.MarshalIndent(answer, "", "    ")
 			if err != nil {
 				serJSON = handlerMarshalErrorJSON
@@ -163,7 +163,7 @@ type Runner struct {
 	cfg           *configuration.APIRunner
 }
 
-// C-tor for API Runner
+// NewRunner is C-tor for API Runner
 func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	if cfg == nil {
 		return nil, errors.New("[ NewAPIRunner ] config is nil")

@@ -25,6 +25,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/servicenetwork"
 )
 
@@ -72,7 +73,7 @@ func repl(service *servicenetwork.ServiceNetwork) {
 	}
 }
 
-func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doFindHost(input []string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
 	if len(input) != 2 {
 		displayInteractiveHelp()
 		return
@@ -89,23 +90,23 @@ func doFindHost(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Con
 	}
 }
 
-func doInfo(service core.Network, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doInfo(service core.Network, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
 	hosts := dhtNetwork.NumHosts(ctx)
-	originID := dhtNetwork.GetOriginHost(ctx).ID
+	originID := dhtNetwork.GetOriginHost().IDs[0]
 	fmt.Println("======= Host info ======")
 	fmt.Println("ID key: " + originID.String())
 	fmt.Println("Known hosts: " + strconv.Itoa(hosts))
 	fmt.Println("Address: " + service.GetAddress())
 }
 
-func doSendRelay(command, relayAddr string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
-	err := dhtNetwork.RelayRequest(ctx, command, relayAddr)
+func doSendRelay(command, relayAddr string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
+	err := hostnetwork.RelayRequest(dhtNetwork, command, relayAddr)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-func doRPC(input []string, dhtNetwork *hostnetwork.DHT, ctx hostnetwork.Context) {
+func doRPC(input []string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
 	if len(input) < 2 || len(input[0]) == 0 || len(input[1]) == 0 {
 		if len(input) > 0 && len(input[0]) > 0 {
 			displayInteractiveHelp()

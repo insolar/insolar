@@ -14,14 +14,16 @@
  *    limitations under the License.
  */
 
-package configuration
+package core
 
-// Stats holds configuration for stats publishing
-type Stats struct {
-	ListenAddress string
-}
+import (
+	"github.com/prometheus/client_golang/prometheus"
+)
 
-// NewStats creates new default configuration for stats publishing
-func NewStats() Stats {
-	return Stats{ListenAddress: "0.0.0.0:8080"}
+// Metrics management interface.
+type Metrics interface {
+	// AddCounter adds new counter to metrics registry.
+	AddCounter(name, componentName, help string) (prometheus.Counter, error)
+	// AddGauge adds new gauge to metrics registry.
+	AddGauge(name, componentName, help string) (prometheus.Gauge, error)
 }

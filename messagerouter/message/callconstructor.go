@@ -17,8 +17,6 @@
 package message
 
 import (
-	"bytes"
-	"encoding/gob"
 	"io"
 
 	"github.com/insolar/insolar/core"
@@ -44,9 +42,5 @@ func (m *CallConstructorMessage) GetReference() core.RecordRef {
 
 // Serialize serializes message.
 func (m *CallConstructorMessage) Serialize() (io.Reader, error) {
-	buff := &bytes.Buffer{}
-	buff.Write([]byte{byte(CallConstructorMessageType)})
-	enc := gob.NewEncoder(buff)
-	err := enc.Encode(m)
-	return buff, err
+	return serialize(m, CallConstructorMessageType)
 }
