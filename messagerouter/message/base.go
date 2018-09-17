@@ -18,6 +18,7 @@
 package message
 
 import (
+	"bytes"
 	"encoding/gob"
 	"io"
 
@@ -66,6 +67,14 @@ func getEmptyMessage(mt MessageType) (core.Message, error) {
 	default:
 		return nil, errors.Errorf("unimplemented messagetype %d", mt)
 	}
+}
+
+func serialize(m core.Message, t MessageType) (io.Reader, error) {
+	buff := &bytes.Buffer{}
+	buff.Write([]byte{byte(t)})
+	enc := gob.NewEncoder(buff)
+	err := enc.Encode(m)
+	return buff, err
 }
 
 // Deserialize returns a message
