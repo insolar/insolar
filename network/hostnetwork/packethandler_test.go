@@ -22,16 +22,62 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
+	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/pkg/errors"
 )
+
+type mockNetworkCommonFacade struct {
+	cascade *cascade.Cascade
+	pm      core.PulseManager
+}
+
+type mockPulseManager struct {
+	currentPulse core.Pulse
+}
+
+func (pm *mockPulseManager) Current() (*core.Pulse, error) {
+	return &pm.currentPulse, nil
+}
+
+func (pm *mockPulseManager) Set(pulse core.Pulse) error {
+	pm.currentPulse = pulse
+	return nil
+}
+
+func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
+	var c cascade.Cascade
+	c.SendMessage = func(data core.Cascade, method string, args [][]byte) error {
+		return nil
+	}
+	return &mockNetworkCommonFacade{
+		cascade: &c,
+		pm:      &mockPulseManager{},
+	}
+}
+
+func (fac *mockNetworkCommonFacade) GetRPC() rpc.RPC {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) GetCascade() *cascade.Cascade {
+	return fac.cascade
+}
+
+func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
+}
 
 type mockHostHandler struct {
 	AuthenticatedHost string
@@ -47,7 +93,7 @@ func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.Remo
 }
 
 func (hh *mockHostHandler) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
-	return nil
+	return newMockNetworkCommonFacade()
 }
 
 func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
@@ -403,6 +449,17 @@ func TestDispatchPacketType(t *testing.T) {
 
 	t.Run("find value", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: sender.ID.Bytes()}).Build()
+		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+	})
+
+	t.Run("send cascade", func(t *testing.T) {
+		pckt := builder.Type(packet.TypeCascadeSend).Request(&packet.RequestCascadeSend{
+			Data: core.Cascade{}, RPC: packet.RequestDataRPC{}}).Build()
+		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+	})
+
+	t.Run("pulse", func(t *testing.T) {
+		pckt := builder.Type(packet.TypePulse).Request(&packet.RequestPulse{Pulse: core.Pulse{}}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 }
