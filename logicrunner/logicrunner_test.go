@@ -780,7 +780,7 @@ func (c *Child) GetNum() int {
 	assert.NoError(b, err, "create child")
 	assert.NotEqual(b, child, nil, "child created")
 
-	b.N = 100000
+	b.N = 1000
 	for i := 0; i < b.N; i++ {
 		resp := lr.Execute(&message.CallMethodMessage{
 			Request:   core.String2Ref("rr"),
