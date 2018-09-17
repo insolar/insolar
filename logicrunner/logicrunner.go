@@ -33,6 +33,7 @@ import (
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
+	MessageRouter   core.MessageRouter
 	Cfg             configuration.LogicRunner
 }
 
@@ -48,8 +49,9 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 // Start starts logic runner component
 func (lr *LogicRunner) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
-	mr := c["core.MessageRouter"].(core.MessageRouter)
 	lr.ArtifactManager = am
+	mr := c["core.MessageRouter"].(core.MessageRouter)
+	lr.MessageRouter = mr
 
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(mr, am)
@@ -174,11 +176,17 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 			return &core.Response{Error: errors.Wrap(err, "executer error")}
 		}
 
-		_, err = lr.ArtifactManager.UpdateObj(
-			core.RecordRef{}, core.RecordRef{}, m.ObjectRef, newData,
+		res, err := lr.MessageRouter.Route(
+			&message.UpdateObjectMessage{
+				Object: m.ObjectRef,
+				Body:   newData,
+			},
 		)
 		if err != nil {
 			return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
+		}
+		if res.Error != nil {
+			return &core.Response{Error: errors.Wrap(res.Error, "couldn't update object")}
 		}
 
 		return &core.Response{Data: newData, Result: result}
@@ -224,6 +232,15 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 			return &core.Response{Error: errors.Wrap(err, "couldn't save new object")}
 		}
 		return &core.Response{Data: []byte(ref.String())}
+
+	case *message.UpdateObjectMessage:
+		_, err := lr.ArtifactManager.UpdateObj(
+			core.RecordRef{}, core.RecordRef{}, m.Object, m.Body,
+		)
+		if err != nil {
+			return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
+		}
+		return &core.Response{}
 
 	default:
 		panic("Unknown message type")
