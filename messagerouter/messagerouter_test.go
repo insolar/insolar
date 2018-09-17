@@ -40,7 +40,7 @@ type runner struct {
 func (r *runner) Start(components core.Components) error { return nil }
 func (r *runner) Stop() error                            { return nil }
 
-func (r *runner) Execute(msg core.Message) (res *core.Response) {
+func (r *runner) Execute(msg core.Message) (core.Response, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
@@ -49,7 +49,7 @@ func (r *runner) Execute(msg core.Message) (res *core.Response) {
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 
-	return &core.Response{Data: resp.Data, Result: resp.Result, Error: resp.Error}
+	return resp, nil
 }
 
 func TestNew(t *testing.T) {

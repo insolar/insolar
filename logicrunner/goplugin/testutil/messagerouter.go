@@ -33,8 +33,7 @@ func (*TestMessageRouter) Stop() error { return nil }
 
 // Route executes message on LogicRunner.
 func (r *TestMessageRouter) Route(msg core.Message) (resp core.Response, err error) {
-	res := r.LogicRunner.Execute(msg)
-	return *res, nil
+	return r.LogicRunner.Execute(msg)
 }
 
 // NewTestMessageRouter creates TestMessageRouter which mocks the real one.
