@@ -29,6 +29,6 @@ type NodeNetwork struct {
 // NewNodeNetwork creates new default NodeNetwork configuration
 func NewNodeNetwork() NodeNetwork {
 	return NodeNetwork{
-		Node: &Node{ID: "referenceID"},
+		Node: &Node{ID: "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"},
 	}
 }

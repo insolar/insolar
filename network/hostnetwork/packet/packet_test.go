@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/stretchr/testify/assert"
@@ -54,77 +55,9 @@ func TestPacket_IsValid(t *testing.T) {
 	assert.False(t, badtPacket.IsValid())
 }
 
-func TestNewAuthPacket(t *testing.T) {
-	addr1, _ := host.NewAddress("127.0.0.1:55551")
-	addr2, _ := host.NewAddress("127.0.0.1:55552")
-	sender := host.NewHost(addr1)
-	receiver := host.NewHost(addr2)
-
-	msg := NewAuthPacket(BeginAuth, sender, receiver)
-	assert.True(t, msg.IsValid())
-}
-
-func TestNewCheckNodePrivPacket(t *testing.T) {
-	addr1, _ := host.NewAddress("127.0.0.1:55551")
-	addr2, _ := host.NewAddress("127.0.0.1:55552")
-	sender := host.NewHost(addr1)
-	receiver := host.NewHost(addr2)
-
-	msg := NewCheckNodePrivPacket(sender, receiver, "test string")
-	assert.True(t, msg.IsValid())
-}
-
-func TestNewCheckOriginPacket(t *testing.T) {
-	addr1, _ := host.NewAddress("127.0.0.1:55551")
-	addr2, _ := host.NewAddress("127.0.0.1:55552")
-	sender := host.NewHost(addr1)
-	receiver := host.NewHost(addr2)
-
-	msg := NewCheckOriginPacket(sender, receiver)
-	assert.True(t, msg.IsValid())
-}
-
-func TestNewKnownOuterHostsPacket(t *testing.T) {
-	addr1, _ := host.NewAddress("127.0.0.1:55551")
-	addr2, _ := host.NewAddress("127.0.0.1:55552")
-	sender := host.NewHost(addr1)
-	receiver := host.NewHost(addr2)
-
-	msg := NewKnownOuterHostsPacket(sender, receiver, 1)
-	assert.True(t, msg.IsValid())
-}
-
-func TestNewObtainIPPacket(t *testing.T) {
-	addr1, _ := host.NewAddress("127.0.0.1:55551")
-	addr2, _ := host.NewAddress("127.0.0.1:55552")
-	sender := host.NewHost(addr1)
-	receiver := host.NewHost(addr2)
-
-	msg := NewObtainIPPacket(sender, receiver)
-	assert.True(t, msg.IsValid())
-}
-
-func TestNewRelayPacket(t *testing.T) {
-	addr1, _ := host.NewAddress("127.0.0.1:55551")
-	addr2, _ := host.NewAddress("127.0.0.1:55552")
-	sender := host.NewHost(addr1)
-	receiver := host.NewHost(addr2)
-
-	msg := NewRelayPacket(StartRelay, sender, receiver)
-	assert.True(t, msg.IsValid())
-}
-
-func TestNewRelayOwnershipPacket(t *testing.T) {
-	addr1, _ := host.NewAddress("127.0.0.1:55551")
-	addr2, _ := host.NewAddress("127.0.0.1:55552")
-	sender := host.NewHost(addr1)
-	receiver := host.NewHost(addr2)
-
-	msg := NewRelayOwnershipPacket(sender, receiver, true)
-	assert.True(t, msg.IsValid())
-}
-
 func TestPacket_IsValid_Ok(t *testing.T) {
+	cascade := core.Cascade{}
+	rpcData := RequestDataRPC{}
 	tests := []struct {
 		name       string
 		packetType packetType
@@ -135,6 +68,14 @@ func TestPacket_IsValid_Ok(t *testing.T) {
 		{"TypeFindValue", TypeFindValue, &RequestDataFindValue{}},
 		{"TypeStore", TypeStore, &RequestDataStore{}},
 		{"TypeRPC", TypeRPC, &RequestDataRPC{"test", [][]byte{}}},
+		{"TypeRelay", TypeRelay, &RequestRelay{Unknown}},
+		{"TypeAuth", TypeAuth, &RequestAuth{Unknown}},
+		{"TypeCheckOrigin", TypeCheckOrigin, &RequestCheckOrigin{}},
+		{"TypeObtainIP", TypeObtainIP, &RequestObtainIP{}},
+		{"TypeRelayOwnership", TypeRelayOwnership, &RequestRelayOwnership{true}},
+		{"TypeKnownOuterHosts", TypeKnownOuterHosts, &RequestKnownOuterHosts{"test", 1}},
+		{"TypeCheckNodePriv", TypeCheckNodePriv, &RequestCheckNodePriv{"test"}},
+		{"TypeCascadeSend", TypeCascadeSend, &RequestCascadeSend{rpcData, cascade}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

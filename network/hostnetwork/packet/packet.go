@@ -74,89 +74,12 @@ type Packet struct {
 	IsResponse bool
 }
 
-// NewCheckNodePrivPacket used to create message for check node privileges request.
-func NewCheckNodePrivPacket(sender, receiver *host.Host, roleKey string) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeCheckNodePriv,
-		Data: &RequestCheckNodePriv{
-			RoleKey: roleKey,
-		},
-	}
-}
-
 // NewPingPacket can be used as a shortcut for creating ping packets instead of packet Builder.
 func NewPingPacket(sender, receiver *host.Host) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
 		Type:     TypePing,
-	}
-}
-
-// NewRelayPacket uses for send a command to target host to make it as relay.
-func NewRelayPacket(command CommandType, sender, receiver *host.Host) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeRelay,
-		Data: &RequestRelay{
-			Command: command,
-		},
-	}
-}
-
-// NewAuthPacket uses for starting authentication.
-func NewAuthPacket(command CommandType, sender, receiver *host.Host) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeAuth,
-		Data:     &RequestAuth{Command: command},
-	}
-}
-
-// NewCheckOriginPacket uses for check originality.
-func NewCheckOriginPacket(sender, receiver *host.Host) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeCheckOrigin,
-		Data:     &RequestCheckOrigin{},
-	}
-}
-
-// NewObtainIPPacket uses for get self IP.
-func NewObtainIPPacket(sender, receiver *host.Host) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeObtainIP,
-		Data:     &RequestObtainIP{},
-	}
-}
-
-// NewRelayOwnershipPacket uses for relay ownership request.
-func NewRelayOwnershipPacket(sender, receiver *host.Host, ready bool) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeRelayOwnership,
-		Data:     &RequestRelayOwnership{Ready: ready},
-	}
-}
-
-// NewKnownOuterHostsPacket uses to notify all hosts in home subnet about known outer hosts.
-func NewKnownOuterHostsPacket(sender, receiver *host.Host, hosts int) *Packet {
-	return &Packet{
-		Sender:   sender,
-		Receiver: receiver,
-		Type:     TypeKnownOuterHosts,
-		Data: &RequestKnownOuterHosts{
-			ID:         sender.ID.String(),
-			OuterHosts: hosts,
-		},
 	}
 }
 

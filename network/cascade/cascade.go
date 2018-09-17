@@ -33,6 +33,15 @@ func min(a, b int) int {
 	return a
 }
 
+type Cascade struct {
+	SendMessage func(data core.Cascade, method string, args [][]byte) error
+}
+
+// SendToNextLayer sends data to callback.
+func (casc *Cascade) SendToNextLayer(data core.Cascade, method string, args [][]byte) error {
+	return casc.SendMessage(data, method, args)
+}
+
 // a - scale factor
 // r - common ratio
 // n - length of progression
@@ -45,7 +54,7 @@ func calcHash(nodeID core.RecordRef, entropy core.Entropy) []byte {
 	data := make([]byte, core.RecordRefSize)
 	copy(data, nodeID[:])
 	for i, d := range data {
-		data[i] = entropy[i%64] ^ d
+		data[i] = entropy[i%core.EntropySize] ^ d
 	}
 
 	hash := sha3.New224()
@@ -93,7 +102,7 @@ func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.Recor
 	return
 }
 
-// get nodes of the next cascade layer from the input nodes slice
+// CalculateNextNodes get nodes of the next cascade layer from the input nodes slice
 func CalculateNextNodes(data core.Cascade, currentNode *core.RecordRef) (nextNodeIds []core.RecordRef, err error) {
 	nodeIds := make([]core.RecordRef, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
@@ -112,8 +121,7 @@ func CalculateNextNodes(data core.Cascade, currentNode *core.RecordRef) (nextNod
 	})
 
 	if currentNode == nil {
-		l := min(len(nodeIds), int(data.ReplicationFactor))
-		return nodeIds[:l], nil
+		return nodeIds[:data.ReplicationFactor], nil
 	}
 
 	// get indexes of the next layer nodes from the sorted nodes slice
