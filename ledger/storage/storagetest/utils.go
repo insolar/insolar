@@ -34,7 +34,9 @@ func TmpDB(t testing.TB, dir string) (*storage.DB, func()) {
 		t.Fatal(err)
 	}
 	db, err := storage.NewDB(configuration.Ledger{
-		DataDirectory: tmpdir,
+		Storage: configuration.Storage{
+			DataDirectory: tmpdir,
+		},
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
