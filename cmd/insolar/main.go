@@ -37,7 +37,7 @@ func chooseOutput(path string) (io.Writer, error) {
 		res = os.Stdout
 	} else {
 		var err error
-		res, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
+		res, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't open file for writing")
 		}
@@ -60,7 +60,11 @@ func parseInputParams() {
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
 
-	out.Write([]byte(configuration.ToString(cfgHolder.Configuration)))
+	_, err := out.Write([]byte(configuration.ToString(cfgHolder.Configuration)))
+	if err != nil {
+		fmt.Println("Can't write data to output", err)
+		os.Exit(1)
+	}
 }
 
 func main() {
