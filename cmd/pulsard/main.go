@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar"
-	log "github.com/sirupsen/logrus"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -47,12 +47,8 @@ func main() {
 }
 
 func initLogger(cfg configuration.Log) {
-
-	cfg.Level = "debug"
-	level, err := log.ParseLevel(strings.ToLower(cfg.Level))
+	err := log.SetLevel(strings.ToLower(cfg.Level))
 	if err != nil {
-		log.Warnln(err.Error())
+		log.Errorln(err.Error())
 	}
-	jww.SetLogOutput(log.StandardLogger().Out)
-	log.SetLevel(level)
 }

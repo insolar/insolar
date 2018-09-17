@@ -18,12 +18,12 @@ package transport
 
 import (
 	"errors"
-	"log"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/xtaci/kcp-go"
@@ -106,6 +106,7 @@ func (t *kcpTransport) SendResponse(requestID packet.RequestID, msg *packet.Pack
 
 // Start starts networking.
 func (t *kcpTransport) Start() error {
+	log.Info("Stop KCP transport")
 	for {
 		if session, err := t.listener.AcceptKCP(); err == nil {
 			go t.handleAcceptedConnection(session)
@@ -121,9 +122,10 @@ func (t *kcpTransport) Stop() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
+	log.Info("Stop KCP transport")
 	err := t.listener.Close()
 	if err != nil {
-		log.Println("Failed to close socket:", err.Error())
+		log.Errorln("Failed to close socket:", err.Error())
 	}
 
 	t.disconnectStarted <- true
@@ -212,7 +214,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 	for {
 		err := session.SetDeadline(time.Now().Add(time.Millisecond * 50))
 		if err != nil {
-			log.Println(err.Error())
+			log.Errorln(err.Error())
 		}
 		// Wait for Packets
 		msg, err := packet.DeserializePacket(session)
@@ -249,6 +251,7 @@ func (t *kcpTransport) processRequest(msg *packet.Packet) {
 	}
 }
 
+// PublicAddress returns transport public ip address
 func (t *kcpTransport) PublicAddress() string {
 	return t.publicAddress
 }

@@ -50,6 +50,11 @@ func (l logrusAdapter) Debugln(args ...interface{}) {
 	l.sourced().Debugln(args...)
 }
 
+// Debugf formatted logs a message at level Debug on the stdout.
+func (l logrusAdapter) Debugf(format string, args ...interface{}) {
+	l.sourced().Debugf(format, args...)
+}
+
 // Info logs a message at level Info on the stdout.
 func (l logrusAdapter) Info(args ...interface{}) {
 	l.sourced().Info(args...)
@@ -58,6 +63,11 @@ func (l logrusAdapter) Info(args ...interface{}) {
 // Infoln logs a message at level Info on the stdout.
 func (l logrusAdapter) Infoln(args ...interface{}) {
 	l.sourced().Infoln(args...)
+}
+
+// Infof formatted logs a message at level Info on the stdout.
+func (l logrusAdapter) Infof(format string, args ...interface{}) {
+	l.sourced().Infof(format, args...)
 }
 
 // Warn logs a message at level Warn on the stdout.
@@ -70,6 +80,11 @@ func (l logrusAdapter) Warnln(args ...interface{}) {
 	l.sourced().Warnln(args...)
 }
 
+// Warnf formatted logs a message at level Warn on the stdout.
+func (l logrusAdapter) Warnf(format string, args ...interface{}) {
+	l.sourced().Warnf(format, args...)
+}
+
 // Error logs a message at level Error on the stdout.
 func (l logrusAdapter) Error(args ...interface{}) {
 	l.sourced().Error(args...)
@@ -78,6 +93,11 @@ func (l logrusAdapter) Error(args ...interface{}) {
 // Errorln logs a message at level Error on the stdout.
 func (l logrusAdapter) Errorln(args ...interface{}) {
 	l.sourced().Errorln(args...)
+}
+
+// Errorf formatted logs a message at level Error on the stdout.
+func (l logrusAdapter) Errorf(format string, args ...interface{}) {
+	l.sourced().Errorf(format, args...)
 }
 
 // Fatal logs a message at level Fatal on the stdout.
@@ -90,6 +110,11 @@ func (l logrusAdapter) Fatalln(args ...interface{}) {
 	l.sourced().Fatalln(args...)
 }
 
+// Fatalf formatted logs a message at level Fatal on the stdout.
+func (l logrusAdapter) Fatalf(format string, args ...interface{}) {
+	l.sourced().Fatalf(format, args...)
+}
+
 // Panic logs a message at level Panic on the stdout.
 func (l logrusAdapter) Panic(args ...interface{}) {
 	l.sourced().Panic(args...)
@@ -98,6 +123,11 @@ func (l logrusAdapter) Panic(args ...interface{}) {
 // Panicln logs a message at level Panic on the stdout.
 func (l logrusAdapter) Panicln(args ...interface{}) {
 	l.sourced().Panicln(args...)
+}
+
+// Panicf formatted logs a message at level Panic on the stdout.
+func (l logrusAdapter) Panicf(format string, args ...interface{}) {
+	l.sourced().Panicf(format, args...)
 }
 
 // SetLevel sets log level
