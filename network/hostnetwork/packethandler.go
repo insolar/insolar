@@ -18,9 +18,9 @@ package hostnetwork
 
 import (
 	"crypto/rand"
-	"log"
 	"time"
 
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -76,13 +76,13 @@ func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packe
 	if err != nil {
 		return nil, errors.New("could not get current pulse")
 	}
-	log.Printf("got new pulse number: %d", currentPulse.PulseNumber)
+	log.Debugf("got new pulse number: %d", currentPulse.PulseNumber)
 	if data.Pulse.PulseNumber > currentPulse.PulseNumber {
 		err = pm.Set(data.Pulse)
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("set new current pulse number: %d", currentPulse.PulseNumber)
+		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }
@@ -177,7 +177,7 @@ func processStore(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 }
 
 func processPing(msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	log.Println("recv ping message from " + msg.Sender.Address.String())
+	log.Debugln("recv ping message from " + msg.Sender.Address.String())
 	return packetBuilder.Response(nil).Build(), nil
 }
 
@@ -203,7 +203,7 @@ func processRelay(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	var state relay.State
 	var packet1 *packet.Packet
 	if !hostHandler.HostIsAuthenticated(msg.Sender.ID.String()) {
-		log.Print("relay request from unknown host rejected")
+		log.Debug("relay request from unknown host rejected")
 		response := &packet.ResponseRelay{
 			State: relay.NoAuth,
 		}
@@ -308,7 +308,7 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	}
 	err = hostHandler.GetNetworkCommonFacade().GetCascade().SendToNextLayer(data.Data, data.RPC.Method, data.RPC.Args)
 	if err != nil {
-		log.Print("failed to send message to next cascade layer")
+		log.Debug("failed to send message to next cascade layer")
 	}
 
 	return packetBuilder.Response(response).Build(), err
