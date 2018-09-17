@@ -17,14 +17,14 @@
 package servicenetwork
 
 import (
-	"bytes"
-	"encoding/gob"
 	"io/ioutil"
 	"log"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -33,25 +33,27 @@ import (
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.NodeNetwork
-	hostNetwork *hostnetwork.DHT
+	hostNetwork hosthandler.HostHandler
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(
 	hostConf configuration.HostNetwork,
-	nodeConf configuration.NodeNetwork) (*ServiceNetwork, error) {
+	nodeConf configuration.NodeNetwork,
+) (*ServiceNetwork, error) {
 
 	node := nodenetwork.NewNodeNetwork(nodeConf)
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
 	}
 
-	dht, err := hostnetwork.NewHostNetwork(hostConf, node)
+	cascade1 := &cascade.Cascade{}
+	dht, err := hostnetwork.NewHostNetwork(hostConf, node, cascade1)
 	if err != nil {
 		return nil, err
 	}
 
-	err = dht.ObtainIP(createContext(dht))
+	err = dht.ObtainIP()
 	if err != nil {
 		return nil, err
 	}
@@ -61,16 +63,17 @@ func NewServiceNetwork(
 		return nil, err
 	}
 
-	return &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}, nil
+	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
+	f := func(data core.Cascade, method string, args [][]byte) error {
+		return service.initCascadeSendMessage(data, true, method, args)
+	}
+	cascade1.SendMessage = f
+	return service, nil
 }
 
 // GetAddress returns host public address.
 func (network *ServiceNetwork) GetAddress() string {
-	ctx, err := hostnetwork.NewContextBuilder(network.hostNetwork).SetDefaultHost().Build()
-	if err != nil {
-		log.Fatalln("Failed to create context:", err.Error())
-	}
-	return network.hostNetwork.GetOriginHost(ctx).Address.String()
+	return network.hostNetwork.GetOriginHost().Address.String()
 }
 
 // SendMessage sends a message from MessageRouter.
@@ -97,7 +100,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 		return err
 	}
 
-	return network.hostNetwork.InitCascadeSendMessage(data, nil, createContext(network.hostNetwork), method, [][]byte{buff})
+	return network.initCascadeSendMessage(data, false, method, [][]byte{buff})
 }
 
 func messageToBytes(msg core.Message) ([]byte, error) {
@@ -108,25 +111,13 @@ func messageToBytes(msg core.Message) ([]byte, error) {
 	return ioutil.ReadAll(reqBuff)
 }
 
-// Serialize converts Message or Response to byte slice.
-func Serialize(value interface{}) ([]byte, error) {
-	var buffer bytes.Buffer
-	enc := gob.NewEncoder(&buffer)
-	err := enc.Encode(value)
-	if err != nil {
-		return nil, err
-	}
-	res := buffer.Bytes()
-	return res, err
-}
-
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 	network.hostNetwork.RemoteProcedureRegister(name, method)
 }
 
 // GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
-func (network *ServiceNetwork) GetHostNetwork() (*hostnetwork.DHT, hostnetwork.Context) {
+func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
 
@@ -137,7 +128,7 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	network.bootstrap()
 
 	ctx := createContext(network.hostNetwork)
-	err := network.hostNetwork.ObtainIP(ctx)
+	err := network.hostNetwork.ObtainIP()
 	if err != nil {
 		return err
 	}
@@ -174,11 +165,52 @@ func (network *ServiceNetwork) listen() {
 	}()
 }
 
-func createContext(dht *hostnetwork.DHT) hostnetwork.Context {
-
-	ctx, err := hostnetwork.NewContextBuilder(dht).SetDefaultHost().Build()
+func createContext(handler hosthandler.HostHandler) hosthandler.Context {
+	ctx, err := hostnetwork.NewContextBuilder(handler).SetDefaultHost().Build()
 	if err != nil {
 		log.Fatalln("Failed to create context:", err.Error())
 	}
 	return ctx
+}
+
+// InitCascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
+func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCurrentNode bool, method string, args [][]byte) error {
+	if len(data.NodeIds) == 0 {
+		return errors.New("node IDs list should not be empty")
+	}
+	if data.ReplicationFactor == 0 {
+		return errors.New("replication factor should not be zero")
+	}
+
+	var nextNodes []core.RecordRef
+	var err error
+
+	if findCurrentNode {
+		nodeID := network.nodeNetwork.GetID()
+		nextNodes, err = cascade.CalculateNextNodes(data, &nodeID)
+	} else {
+		nextNodes, err = cascade.CalculateNextNodes(data, nil)
+	}
+	if err != nil {
+		return err
+	}
+	if len(nextNodes) == 0 {
+		return nil
+	}
+
+	var failedNodes []core.RecordRef
+	for _, nextNode := range nextNodes {
+		hostID := network.nodeNetwork.ResolveHostID(nextNode)
+		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
+		if err != nil {
+			logrus.Debugln("failed to send cascade message: ", err)
+			failedNodes = append(failedNodes, nextNode)
+		}
+	}
+
+	if len(failedNodes) > 0 {
+		return errors.New("failed to send cascade message to nodes")
+	}
+
+	return nil
 }

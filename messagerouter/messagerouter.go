@@ -84,6 +84,14 @@ func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err er
 	return DeserializeResponse(res)
 }
 
+type serializableError struct {
+	S string
+}
+
+func (e *serializableError) Error() string {
+	return e.S
+}
+
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
 func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
@@ -95,7 +103,13 @@ func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	return Serialize(mr.logicRunner.Execute(msg))
+	resp := mr.logicRunner.Execute(msg)
+	if resp.Error != nil {
+		resp.Error = &serializableError{
+			S: resp.Error.Error(),
+		}
+	}
+	return Serialize(resp)
 }
 
 // Serialize converts Message or Response to byte slice.
@@ -118,4 +132,5 @@ func DeserializeResponse(data []byte) (res core.Response, err error) {
 
 func init() {
 	gob.Register(&core.Response{})
+	gob.Register(&serializableError{})
 }

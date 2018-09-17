@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,9 +62,11 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 		// todo: bootstrap
 	}
 
+	cascade1 := &cascade.Cascade{}
+	nodenet := nodenetwork.NewNodeNetwork(configuration.NewNodeNetwork())
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			network, err := NewHostNetwork(test.cfg, nil)
+			network, err := NewHostNetwork(test.cfg, nodenet, cascade1)
 			if test.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, network)

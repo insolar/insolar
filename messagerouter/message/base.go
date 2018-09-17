@@ -18,6 +18,7 @@
 package message
 
 import (
+	"bytes"
 	"encoding/gob"
 	"io"
 
@@ -47,6 +48,8 @@ const (
 	CallMethodMessageType      // CallMethodMessage - Simply call method and return result
 	CallConstructorMessageType // CallConstructorMessage is a message for calling constructor and obtain its response
 	DelegateMessageType        // DelegateMessage is a message for injecting a delegate
+	ChildMessageType           // ChildMessage is a message for saving a child
+	UpdateObjectMessageType    // UpdateObjectMessage is a message for updating an object
 )
 
 // GetEmptyMessage constructs specified message
@@ -60,9 +63,25 @@ func getEmptyMessage(mt MessageType) (core.Message, error) {
 		return &CallConstructorMessage{}, nil
 	case DelegateMessageType:
 		return &DelegateMessage{}, nil
+	case ChildMessageType:
+		return &ChildMessage{}, nil
+	case UpdateObjectMessageType:
+		return &UpdateObjectMessage{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented messagetype %d", mt)
 	}
+}
+
+func serialize(m core.Message, t MessageType) (io.Reader, error) {
+	buff := &bytes.Buffer{}
+	_, err := buff.Write([]byte{byte(t)})
+	if err != nil {
+		return nil, err
+	}
+
+	enc := gob.NewEncoder(buff)
+	err = enc.Encode(m)
+	return buff, err
 }
 
 // Deserialize returns a message
@@ -80,4 +99,12 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 	enc := gob.NewDecoder(buff)
 	err = enc.Decode(m)
 	return m, err
+}
+
+func init() {
+	gob.Register(&CallConstructorMessage{})
+	gob.Register(&CallMethodMessage{})
+	gob.Register(&DelegateMessage{})
+	gob.Register(&ChildMessage{})
+	gob.Register(&UpdateObjectMessage{})
 }

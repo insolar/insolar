@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const HOST = "http://localhost:7777"
+const HOST = "http://localhost:19191"
 const TestUrl = HOST + "/api/v1?query_type=LOL"
 
 func TestMain(m *testing.M) {
@@ -125,11 +125,11 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 type TestsMessageRouter struct {
 }
 
-func (ar *TestsMessageRouter) Start(c core.Components) error {
+func (mr *TestsMessageRouter) Start(c core.Components) error {
 	return nil
 }
 
-func (ar *TestsMessageRouter) Stop() error {
+func (mr *TestsMessageRouter) Stop() error {
 	return nil
 }
 

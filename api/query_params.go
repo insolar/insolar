@@ -16,8 +16,10 @@
 
 package api
 
+// QueryType represents type of query
 type QueryType int
 
+// Supported query types
 const (
 	UNDEFINED QueryType = iota
 	CreateMember
@@ -27,7 +29,7 @@ const (
 	DumpAllUsers
 )
 
-// Converts string representation to enum
+// QTypeFromString converts string representation to enum
 func QTypeFromString(strQType string) QueryType {
 	switch strQType {
 	case "create_member":
