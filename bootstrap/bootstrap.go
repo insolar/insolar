@@ -17,6 +17,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -101,7 +102,11 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return errors.Wrap(err, "couldn't create rootdomain instance")
 	}
 	b.rootDomainRef = contract
-
+	rootRefChildren, err := am.GetObjChildren(*am.RootRef())
+	if err != nil {
+		return errors.Wrap(err, "couldn't get children of RootRef object")
+	}
+	fmt.Println(rootRefChildren)
 	return nil
 }
 
