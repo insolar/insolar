@@ -78,8 +78,11 @@ func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packe
 	}
 	log.Printf("got new pulse number: %d", currentPulse.PulseNumber)
 	if data.Pulse.PulseNumber > currentPulse.PulseNumber {
+		err = pm.Set(data.Pulse)
+		if err != nil {
+			return nil, err
+		}
 		log.Printf("set new current pulse number: %d", currentPulse.PulseNumber)
-		pm.Set(data.Pulse)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }
