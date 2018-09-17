@@ -156,6 +156,7 @@ func TestExecution(t *testing.T) {
 		"core.Ledger":        ld,
 		"core.MessageRouter": mr,
 	})
+	mr.LogicRunner = lr
 
 	codeRef := core.String2Ref("someCode")
 	dataRef := core.String2Ref("someObject")
@@ -236,6 +237,7 @@ func (r *Two) Hello(s string) string {
 	assert.NoError(t, err)
 
 	mr := &testMessageRouter{LogicRunner: lr}
+	lr.MessageRouter = mr
 	am := testutil.NewTestArtifactManager()
 	lr.ArtifactManager = am
 
@@ -353,6 +355,7 @@ func (r *Two) Hello(s string) string {
 	assert.NoError(t, err)
 
 	mr := &testMessageRouter{LogicRunner: lr}
+	lr.MessageRouter = mr
 	am := testutil.NewTestArtifactManager()
 	lr.ArtifactManager = am
 
