@@ -109,7 +109,16 @@ func (db *DB) Bootstrap() error {
 	}
 
 	createRootRecord := func() (*record.Reference, error) {
-		rootRef, err := db.SetRecord(&record.ObjectActivateRecord{})
+		rootRef, err := db.SetRecord(&record.ObjectActivateRecord{
+			ActivationRecord: record.ActivationRecord{
+				StatefulResult: record.StatefulResult{
+					ResultRecord: record.ResultRecord{
+						RequestRecord: record.Core2Reference(core.RecordRef{}),
+						DomainRecord:  record.Core2Reference(core.RecordRef{}),
+					},
+				},
+			},
+		})
 		if err != nil {
 			return nil, err
 		}
