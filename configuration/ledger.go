@@ -55,8 +55,8 @@ func NewLedger() Ledger {
 				int(core.RoleVirtualExecutor):  {"ve1", "ve2"},
 				int(core.RoleHeavyExecutor):    {"he1", "he2"},
 				int(core.RoleLightExecutor):    {"le1", "le2"},
-				int(core.RoleVirtualValidator): {"vv1", "vv2"},
-				int(core.RoleLightValidator):   {"lv1", "lv2"},
+				int(core.RoleVirtualValidator): {"vv1", "vv2", "vv3", "vv4"},
+				int(core.RoleLightValidator):   {"lv1", "lv2", "lv3", "lv4"},
 			},
 			RoleCounts: map[int]int{
 				int(core.RoleVirtualExecutor):  1,
