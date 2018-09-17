@@ -74,9 +74,13 @@ func getEmptyMessage(mt MessageType) (core.Message, error) {
 
 func serialize(m core.Message, t MessageType) (io.Reader, error) {
 	buff := &bytes.Buffer{}
-	buff.Write([]byte{byte(t)})
+	_, err := buff.Write([]byte{byte(t)})
+	if err != nil {
+		return nil, err
+	}
+
 	enc := gob.NewEncoder(buff)
-	err := enc.Encode(m)
+	err = enc.Encode(m)
 	return buff, err
 }
 
