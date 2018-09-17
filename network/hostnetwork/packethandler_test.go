@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 type mockNetworkCommonFacade struct {
@@ -73,7 +74,7 @@ func (fac *mockNetworkCommonFacade) GetCascade() *cascade.Cascade {
 }
 
 func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
-	return nil
+	return fac.pm
 }
 
 func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
@@ -83,17 +84,18 @@ type mockHostHandler struct {
 	AuthenticatedHost string
 	ReceivedKey       string
 	FoundHost         *host.Host
+	ncf               hosthandler.NetworkCommonFacade
 }
 
 func newMockHostHandler() *mockHostHandler {
-	return &mockHostHandler{}
+	return &mockHostHandler{ncf: newMockNetworkCommonFacade()}
 }
 
 func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 }
 
 func (hh *mockHostHandler) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
-	return newMockNetworkCommonFacade()
+	return hh.ncf
 }
 
 func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
@@ -294,13 +296,18 @@ func (hh *mockHostHandler) GetOriginHost() *host.Origin {
 	return origin
 }
 
-func TestDispatchPacketType(t *testing.T) {
+func mockSenderReceiver() (sender, receiver *host.Host) {
 	senderAddress, _ := host.NewAddress("0.0.0.0:0")
-	sender := host.NewHost(senderAddress)
+	sender = host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID()
 	receiverAddress, _ := host.NewAddress("0.0.0.0:0")
-	receiver := host.NewHost(receiverAddress)
+	receiver = host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
+	return
+}
+
+func TestDispatchPacketType(t *testing.T) {
+	sender, receiver := mockSenderReceiver()
 	hh := newMockHostHandler()
 	builder := packet.NewBuilder()
 	authenticatedSenderAddress, _ := host.NewAddress("0.0.0.0:0")
@@ -462,4 +469,16 @@ func TestDispatchPacketType(t *testing.T) {
 		pckt := builder.Type(packet.TypePulse).Request(&packet.RequestPulse{Pulse: core.Pulse{}}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
+}
+
+func Test_processPulse(t *testing.T) {
+	hh := newMockHostHandler()
+	sender, receiver := mockSenderReceiver()
+	hh.GetNetworkCommonFacade().GetPulseManager().Set(core.Pulse{PulseNumber: 0, Entropy: core.Entropy{0}})
+	response, _ := processPulse(hh, packet.Builder{}.Request(packet.TypePulse).Sender(sender).Receiver(receiver).
+		Request(&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).Build(),
+		packet.Builder{})
+	newPulse, _ := hh.GetNetworkCommonFacade().GetPulseManager().Current()
+	assert.NotNil(t, response)
+	assert.Equal(t, core.PulseNumber(1), newPulse.PulseNumber)
 }
