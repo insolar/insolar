@@ -18,11 +18,8 @@ package hostnetwork
 
 import (
 	"bytes"
-	"context"
-	"crypto/rand"
 	"errors"
 	"math"
-	"math/big"
 	"sort"
 	"strings"
 	"sync"
@@ -31,35 +28,27 @@ import (
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
-	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/jbenet/go-base58"
 )
 
-// RPC is remote procedure call interface
-type RPC interface {
-	RemoteProcedureCall(ctx Context, target string, method string, args [][]byte) (result []byte, err error)
-	RemoteProcedureRegister(name string, method core.RemoteProcedure)
-}
-
 // DHT represents the state of the local host in the distributed hash table.
 type DHT struct {
-	nodeNetwork NodeNetwork
-	tables      []*routing.HashTable
-	options     *Options
+	tables  []*routing.HashTable
+	options *Options
 
 	origin *host.Origin
 
 	transport transport.Transport
 	store     store.Store
-	rpc       rpc.RPC
+	ncf       hosthandler.NetworkCommonFacade
 	relay     relay.Relay
 	proxy     relay.Proxy
 	auth      AuthInfo
@@ -72,9 +61,7 @@ type AuthInfo struct {
 	SentKeys     map[string][]byte
 	ReceivedKeys map[string][]byte
 
-	authenticatedHosts map[string]bool
-
-	mut sync.Mutex
+	AuthenticatedHosts map[string]bool
 }
 
 // Subnet collects some information about self network part
@@ -124,7 +111,14 @@ type Options struct {
 }
 
 // NewDHT initializes a new DHT host.
-func NewDHT(store store.Store, origin *host.Origin, transport transport.Transport, rpc rpc.RPC, options *Options, proxy relay.Proxy, nn NodeNetwork) (dht *DHT, err error) {
+func NewDHT(
+	store store.Store,
+	origin *host.Origin,
+	transport transport.Transport,
+	ncf hosthandler.NetworkCommonFacade,
+	options *Options,
+	proxy relay.Proxy,
+) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
 		return nil, err
@@ -133,15 +127,14 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		nodeNetwork: nn,
-		options:     options,
-		origin:      origin,
-		rpc:         rpc,
-		transport:   transport,
-		tables:      tables,
-		store:       store,
-		relay:       rel,
-		proxy:       proxy,
+		options:   options,
+		origin:    origin,
+		ncf:       ncf,
+		transport: transport,
+		tables:    tables,
+		store:     store,
+		relay:     rel,
+		proxy:     proxy,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -168,7 +161,7 @@ func NewDHT(store store.Store, origin *host.Origin, transport transport.Transpor
 		options.PacketTimeout = time.Second * 10
 	}
 
-	dht.auth.authenticatedHosts = make(map[string]bool)
+	dht.auth.AuthenticatedHosts = make(map[string]bool)
 	dht.auth.SentKeys = make(map[string][]byte)
 	dht.auth.ReceivedKeys = make(map[string][]byte)
 
@@ -192,36 +185,11 @@ func newTables(origin *host.Origin) ([]*routing.HashTable, error) {
 	return tables, nil
 }
 
-func (dht *DHT) getExpirationTime(ctx context.Context, key []byte) time.Time {
-	ht := dht.htFromCtx(ctx)
-
-	bucket := routing.GetBucketIndexFromDifferingBit(key, ht.Origin.ID.Bytes())
-	var total int
-	for i := 0; i < bucket; i++ {
-		total += ht.GetTotalHostsInBucket(i)
-	}
-	closer := ht.GetAllHostsInBucketCloserThan(bucket, key)
-	score := total + len(closer)
-
-	if score == 0 {
-		score = 1
-	}
-
-	if score > routing.MaxContactsInBucket {
-		return time.Now().Add(dht.options.ExpirationTime)
-	}
-
-	day := dht.options.ExpirationTime
-	seconds := day.Nanoseconds() * int64(math.Exp(float64(routing.MaxContactsInBucket/score)))
-	dur := time.Second * time.Duration(seconds)
-	return time.Now().Add(dur)
-}
-
-// Store stores data on the network. This will trigger an iterateStore loop.
+// StoreData stores data on the network. This will trigger an iterateStore loop.
 // The base58 encoded identifier will be returned if the store is successful.
-func (dht *DHT) Store(ctx Context, data []byte) (id string, err error) {
+func (dht *DHT) StoreData(ctx hosthandler.Context, data []byte) (id string, err error) {
 	key := store.NewKey(data)
-	expiration := dht.getExpirationTime(ctx, key)
+	expiration := dht.GetExpirationTime(ctx, key)
 	replication := time.Now().Add(dht.options.ReplicateTime)
 	err = dht.store.Store(key, data, replication, expiration, true)
 	if err != nil {
@@ -237,7 +205,7 @@ func (dht *DHT) Store(ctx Context, data []byte) (id string, err error) {
 
 // Get retrieves data from the transport using key. Key is the base58 encoded
 // identifier of the data.
-func (dht *DHT) Get(ctx Context, key string) ([]byte, bool, error) {
+func (dht *DHT) Get(ctx hosthandler.Context, key string) ([]byte, bool, error) {
 	keyBytes := base58.Decode(key)
 	if len(keyBytes) != routing.MaxContactsInBucket {
 		return nil, false, errors.New("invalid key")
@@ -258,58 +226,10 @@ func (dht *DHT) Get(ctx Context, key string) ([]byte, bool, error) {
 	return value, exists, nil
 }
 
-// FindHost returns target host's real network address.
-func (dht *DHT) FindHost(ctx Context, key string) (*host.Host, bool, error) {
-	keyBytes := base58.Decode(key)
-	if len(keyBytes) != routing.MaxContactsInBucket {
-		return nil, false, errors.New("invalid key")
-	}
-	ht := dht.htFromCtx(ctx)
-
-	if ht.Origin.ID.Equal(keyBytes) {
-		return ht.Origin, true, nil
-	}
-
-	var targetHost *host.Host
-	var exists = false
-	routeSet := ht.GetClosestContacts(1, keyBytes, nil)
-
-	if routeSet.Len() > 0 && routeSet.FirstHost().ID.Equal(keyBytes) {
-		targetHost = routeSet.FirstHost()
-		exists = true
-	} else if dht.proxy.ProxyHostsCount() > 0 {
-		address, _ := host.NewAddress(dht.proxy.GetNextProxyAddress())
-		// TODO: current key insertion
-		id1, _ := id.NewID()
-		targetHost = &host.Host{ID: id1, Address: address}
-		return targetHost, true, nil
-	} else {
-		log.Warnln("Host not found in routing table. Iterating through network...")
-		_, closest, err := dht.iterate(ctx, routing.IterateFindHost, keyBytes, nil)
-		if err != nil {
-			return nil, false, err
-		}
-		for i := range closest {
-			if closest[i].ID.Equal(keyBytes) {
-				targetHost = closest[i]
-				exists = true
-			}
-		}
-	}
-
-	return targetHost, exists, nil
-}
-
 // NumHosts returns the total number of hosts stored in the local routing table.
-func (dht *DHT) NumHosts(ctx Context) int {
-	ht := dht.htFromCtx(ctx)
+func (dht *DHT) NumHosts(ctx hosthandler.Context) int {
+	ht := dht.HtFromCtx(ctx)
 	return ht.TotalHosts()
-}
-
-// GetOriginHost returns the local host.
-func (dht *DHT) GetOriginHost(ctx Context) *host.Host {
-	ht := dht.htFromCtx(ctx)
-	return ht.Origin
 }
 
 // Listen begins listening on the socket for incoming Packets.
@@ -350,7 +270,7 @@ func (dht *DHT) Bootstrap() error {
 					if err != nil {
 						log.Fatal(err)
 					}
-					dht.addHost(ctx, routing.NewRouteHost(result.Sender))
+					dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
 				}
 				wg.Done()
 				return
@@ -405,7 +325,7 @@ func (dht *DHT) iterateBootstrapHosts(
 			futures = append(futures, res)
 		} else {
 			routeHost := routing.NewRouteHost(bn)
-			dht.addHost(ctx, routeHost)
+			dht.AddHost(ctx, routeHost)
 		}
 	}
 	return futures
@@ -422,8 +342,8 @@ func (dht *DHT) Disconnect() {
 //     iterateFindHost - Used to find host in the network given host abstract address.
 //     iterateFindValue - Used to find a value among the network given a key.
 //     iterateBootstrap - Used to bootstrap the network.
-func (dht *DHT) iterate(ctx Context, t routing.IterateType, target []byte, data []byte) (value []byte, closest []*host.Host, err error) {
-	ht := dht.htFromCtx(ctx)
+func (dht *DHT) iterate(ctx hosthandler.Context, t routing.IterateType, target []byte, data []byte) (value []byte, closest []*host.Host, err error) {
+	ht := dht.HtFromCtx(ctx)
 	routeSet := ht.GetClosestContacts(routing.ParallelCalls, target, []*host.Host{})
 
 	// We keep track of hosts contacted so far. We don't contact the same host
@@ -623,7 +543,7 @@ func (dht *DHT) selectResultChan(
 	return results, false
 }
 
-func (dht *DHT) setUpResultChan(futures []transport.Future, ctx Context, resultChan chan *packet.Packet) {
+func (dht *DHT) setUpResultChan(futures []transport.Future, ctx hosthandler.Context, resultChan chan *packet.Packet) {
 	for _, f := range futures {
 		go func(future transport.Future) {
 			select {
@@ -632,7 +552,7 @@ func (dht *DHT) setUpResultChan(futures []transport.Future, ctx Context, resultC
 					// Channel was closed
 					return
 				}
-				dht.addHost(ctx, routing.NewRouteHost(result.Sender))
+				dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
 				resultChan <- result
 				return
 			case <-time.After(dht.options.PacketTimeout):
@@ -699,51 +619,6 @@ func getPacketBuilder(t routing.IterateType, packetBuilder packet.Builder, targe
 	default:
 		panic("Unknown iterate type")
 	}
-}
-
-// addHost adds a host into the appropriate k bucket
-// we store these buckets in big-endian order so we look at the bits
-// from right to left in order to find the appropriate bucket
-func (dht *DHT) addHost(ctx Context, host *routing.RouteHost) {
-	ht := dht.htFromCtx(ctx)
-	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.Bytes(), host.ID.Bytes())
-
-	// Make sure host doesn't already exist
-	// If it does, mark it as seen
-	if ht.DoesHostExistInBucket(index, host.ID.Bytes()) {
-		ht.MarkHostAsSeen(host.ID.Bytes())
-		return
-	}
-
-	ht.Lock()
-	defer ht.Unlock()
-
-	bucket := ht.RoutingTable[index]
-
-	if len(bucket) == routing.MaxContactsInBucket {
-		// If the bucket is full we need to ping the first host to find out
-		// if it responds back in a reasonable amount of time. If not -
-		// we may remove it
-		n := bucket[0].Host
-		request := packet.NewPingPacket(ht.Origin, n)
-		future, err := dht.transport.SendRequest(request)
-		if err != nil {
-			bucket = append(bucket, host)
-			bucket = bucket[1:]
-		} else {
-			select {
-			case <-future.Result():
-				return
-			case <-time.After(dht.options.PingTimeout):
-				bucket = bucket[1:]
-				bucket = append(bucket, host)
-			}
-		}
-	} else {
-		bucket = append(bucket, host)
-	}
-
-	ht.RoutingTable[index] = bucket
 }
 
 func (dht *DHT) handleDisconnect(start, stop chan bool) {
@@ -823,9 +698,9 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 				continue
 			}
 
-			var ctx Context
-			ctx = buildContext(cb, msg)
-			ht := dht.htFromCtx(ctx)
+			var ctx hosthandler.Context
+			ctx = BuildContext(cb, msg)
+			ht := dht.HtFromCtx(ctx)
 
 			if ht.Origin.ID.Equal(msg.Receiver.ID.Bytes()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
 				dht.dispatchPacketType(ctx, msg, ht)
@@ -842,7 +717,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 						Type:      msg.Type,
 						RequestID: msg.RequestID,
 						Data:      msg.Data}
-					dht.sendRelayedRequest(request, ctx)
+					sendRelayedRequest(dht, request, ctx)
 				}
 			}
 		case <-stop:
@@ -851,771 +726,29 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 	}
 }
 
-func (dht *DHT) sendRelayedRequest(request *packet.Packet, ctx Context) {
-	_, err := dht.transport.SendRequest(request)
+func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, ht *routing.HashTable) {
+	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
+	response, err := ParseIncomingPacket(dht, ctx, msg, packetBuilder)
 	if err != nil {
 		log.Errorln(err)
+	} else if response != nil {
+		err = dht.transport.SendResponse(msg.RequestID, response)
+		if err != nil {
+			log.Errorln("Failed to send response:", err.Error())
+		}
 	}
-}
-
-func buildContext(cb ContextBuilder, msg *packet.Packet) Context {
-	var ctx Context
-	var err error
-	if msg.Receiver.ID.Bytes() == nil {
-		ctx, err = cb.SetDefaultHost().Build()
-	} else {
-		ctx, err = cb.SetHostByID(msg.Receiver.ID).Build()
-	}
-	if err != nil {
-		// TODO: Do something sane with error!
-		log.Errorln(err) // don't return this error cuz don't know what to do with
-	}
-	return ctx
-}
-
-func (dht *DHT) confirmNodeRole(roleKey string) bool {
-	// TODO implement this func
-	return true
 }
 
 // CheckNodeRole starting a check all known nodes.
-func (dht *DHT) CheckNodeRole(ctx Context, domainID string) error {
+func (dht *DHT) CheckNodeRole(domainID string) error {
 	var err error
 	// TODO: change or choose another auth host
 	if len(dht.options.BootstrapHosts) > 0 {
-		err = dht.checkNodePrivRequest(ctx, dht.options.BootstrapHosts[0].ID.String(), domainID)
+		err = checkNodePrivRequest(dht, dht.options.BootstrapHosts[0].ID.String(), domainID)
 	} else {
 		err = errors.New("bootstrap node not exist")
 	}
 	return err
-}
-
-func (dht *DHT) dispatchPacketType(ctx Context, msg *packet.Packet, ht *routing.HashTable) {
-	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
-	switch msg.Type {
-	case packet.TypeFindHost:
-		dht.processFindHost(ctx, msg, packetBuilder)
-	case packet.TypeFindValue:
-		dht.processFindValue(ctx, msg, packetBuilder)
-	case packet.TypeStore:
-		dht.processStore(ctx, msg, packetBuilder)
-	case packet.TypePing:
-		dht.processPing(ctx, msg, packetBuilder)
-	case packet.TypeRPC:
-		dht.processRPC(ctx, msg, packetBuilder)
-	case packet.TypeRelay:
-		dht.processRelay(ctx, msg, packetBuilder)
-	case packet.TypeCheckOrigin:
-		dht.processCheckOriginRequest(ctx, msg, packetBuilder)
-	case packet.TypeAuth:
-		dht.processAuthentication(ctx, msg, packetBuilder)
-	case packet.TypeObtainIP:
-		dht.processObtainIPRequest(ctx, msg, packetBuilder)
-	case packet.TypeRelayOwnership:
-		dht.processRelayOwnership(ctx, msg, packetBuilder)
-	case packet.TypeKnownOuterHosts:
-		dht.processKnownOuterHosts(ctx, msg, packetBuilder)
-	case packet.TypeCheckNodePriv:
-		dht.processCheckNodePriv(ctx, msg, packetBuilder)
-	case packet.TypeCascadeSend:
-		dht.processCascadeSend(ctx, msg, packetBuilder)
-	default:
-		log.Errorln("unknown request type")
-	}
-}
-
-func (dht *DHT) processCascadeSend(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	data := msg.Data.(*packet.RequestCascadeSend)
-
-	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
-	_, err := dht.rpc.Invoke(msg.Sender, data.RPC.Method, data.RPC.Args)
-	response := &packet.ResponseCascadeSend{
-		Success: true,
-		Error:   "",
-	}
-	if err != nil {
-		response.Success = false
-		response.Error = err.Error()
-	}
-	err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-	currentNodeID := dht.nodeNetwork.GetID()
-	err = dht.InitCascadeSendMessage(data.Data, &currentNodeID, ctx, data.RPC.Method, data.RPC.Args)
-	if err != nil {
-		log.Errorln("Failed to send message to next cascade layers:", err.Error())
-	}
-}
-
-func (dht *DHT) processCheckNodePriv(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	data := msg.Data.(*packet.RequestCheckNodePriv)
-	var response packet.ResponseCheckNodePriv
-
-	if dht.confirmNodeRole(data.RoleKey) {
-		response.State = packet.Confirmed
-	} else {
-		response.State = packet.Declined
-	}
-
-	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-}
-
-func (dht *DHT) processRelayOwnership(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	data := msg.Data.(*packet.RequestRelayOwnership)
-
-	if data.Ready {
-		dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs, msg.Sender.ID.String())
-	} else {
-		for i, j := range dht.subnet.PossibleProxyIDs {
-			if j == msg.Sender.ID.String() {
-				dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs[:i], dht.subnet.PossibleProxyIDs[i+1:]...)
-				err := dht.AuthenticationRequest(ctx, "begin", msg.Sender.ID.String())
-				if err != nil {
-					log.Errorln("error to send auth request: ", err)
-				}
-				err = dht.RelayRequest(ctx, "start", msg.Sender.ID.String())
-				if err != nil {
-					log.Errorln("error to send relay request: ", err)
-				}
-				break
-			}
-		}
-	}
-	response := &packet.ResponseRelayOwnership{Accepted: true}
-
-	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-}
-
-func (dht *DHT) processFindHost(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	ht := dht.htFromCtx(ctx)
-	data := msg.Data.(*packet.RequestDataFindHost)
-	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
-	closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*host.Host{msg.Sender})
-	response := &packet.ResponseDataFindHost{
-		Closest: closest.Hosts(),
-	}
-	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-}
-
-func (dht *DHT) processFindValue(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	ht := dht.htFromCtx(ctx)
-	data := msg.Data.(*packet.RequestDataFindValue)
-	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
-	value, exists := dht.store.Retrieve(data.Target)
-	response := &packet.ResponseDataFindValue{}
-	if exists {
-		response.Value = value
-	} else {
-		closest := ht.GetClosestContacts(routing.MaxContactsInBucket, data.Target, []*host.Host{msg.Sender})
-		response.Closest = closest.Hosts()
-	}
-	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-}
-
-func (dht *DHT) processStore(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	data := msg.Data.(*packet.RequestDataStore)
-	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
-	key := store.NewKey(data.Data)
-	expiration := dht.getExpirationTime(ctx, key)
-	replication := time.Now().Add(dht.options.ReplicateTime)
-	err := dht.store.Store(key, data.Data, replication, expiration, false)
-	if err != nil {
-		log.Errorln("Failed to store data:", err.Error())
-	}
-}
-
-func (dht *DHT) processPing(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	log.Debugln("receive ping message from " + msg.Sender.Address.String())
-	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(nil).Build())
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-}
-
-func (dht *DHT) processRPC(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	log.Debugln("receive RPC message from " + msg.Sender.Address.String())
-	data := msg.Data.(*packet.RequestDataRPC)
-	dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
-	result, err := dht.rpc.Invoke(msg.Sender, data.Method, data.Args)
-	response := &packet.ResponseDataRPC{
-		Success: true,
-		Result:  result,
-		Error:   "",
-	}
-	if err != nil {
-		response.Success = false
-		response.Error = err.Error()
-	}
-	err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-}
-
-// Precess relay request.
-func (dht *DHT) processRelay(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	var err error
-	if !dht.auth.authenticatedHosts[msg.Sender.ID.String()] {
-		log.Warnln("relay request from unknown host rejected")
-		response := &packet.ResponseRelay{
-			State: relay.NoAuth,
-		}
-
-		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	} else {
-		data := msg.Data.(*packet.RequestRelay)
-		dht.addHost(ctx, routing.NewRouteHost(msg.Sender))
-
-		var state relay.State
-
-		switch data.Command {
-		case packet.StartRelay:
-			err = dht.relay.AddClient(msg.Sender)
-			state = relay.Started
-		case packet.StopRelay:
-			err = dht.relay.RemoveClient(msg.Sender)
-			state = relay.Stopped
-		default:
-			state = relay.Unknown
-		}
-
-		if err != nil {
-			state = relay.Error
-		}
-
-		response := &packet.ResponseRelay{
-			State: state,
-		}
-
-		log.Debugf("receive relay message from %s, state %v", msg.Sender.Address.String(), state)
-		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	}
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-}
-
-func (dht *DHT) processAuthentication(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	data := msg.Data.(*packet.RequestAuth)
-	switch data.Command {
-	case packet.BeginAuth:
-		if dht.auth.authenticatedHosts[msg.Sender.ID.String()] {
-			// TODO: whats next?
-			response := &packet.ResponseAuth{
-				Success:       false,
-				AuthUniqueKey: nil,
-			}
-
-			err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-			if err != nil {
-				log.Errorln("Failed to send response:", err)
-			}
-			break
-		}
-		key := make([]byte, 512)
-		_, err := rand.Read(key) // crypto/rand
-		if err != nil {
-			log.Errorln("failed to create auth key. ", err)
-			return
-		}
-		dht.auth.SentKeys[msg.Sender.ID.String()] = key
-		response := &packet.ResponseAuth{
-			Success:       true,
-			AuthUniqueKey: key,
-		}
-
-		err = dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-		if err != nil {
-			log.Errorln("Failed to send response:", err)
-		}
-		// TODO process verification msg.Sender host
-		// confirmed
-		err = dht.CheckOriginRequest(ctx, msg.Sender.ID.String())
-		if err != nil {
-			log.Errorln("error: ", err)
-		}
-	case packet.RevokeAuth:
-		delete(dht.auth.authenticatedHosts, msg.Sender.ID.String())
-		response := &packet.ResponseAuth{
-			Success:       true,
-			AuthUniqueKey: nil,
-		}
-
-		err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-		if err != nil {
-			log.Errorln("Failed to send response:", err)
-		}
-	default:
-		log.Warnln("unknown auth command")
-	}
-}
-
-func (dht *DHT) processCheckOriginRequest(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	dht.auth.mut.Lock()
-	defer dht.auth.mut.Unlock()
-	if key, ok := dht.auth.ReceivedKeys[msg.Sender.ID.String()]; ok {
-		response := &packet.ResponseCheckOrigin{AuthUniqueKey: key}
-		err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-		if err != nil {
-			log.Errorln("Failed to send check origin response:", err)
-		}
-	} else {
-		log.Warnln("CheckOrigin request from unregistered host")
-	}
-}
-
-func (dht *DHT) processObtainIPRequest(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	response := &packet.ResponseObtainIP{IP: msg.RemoteAddress}
-	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	if err != nil {
-		log.Errorln("Failed to send obtain IP response:", err)
-	}
-}
-
-// RelayRequest sends relay request to target.
-func (dht *DHT) RelayRequest(ctx Context, command, targetID string) error {
-	var typedCommand packet.CommandType
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for relay request not found")
-		return err
-	}
-
-	switch command {
-	case "start":
-		typedCommand = packet.StartRelay
-	case "stop":
-		typedCommand = packet.StopRelay
-	default:
-		err = errors.New("unknown command")
-		return err
-	}
-	request := packet.NewRelayPacket(typedCommand, dht.htFromCtx(ctx).Origin, targetHost)
-	future, err := dht.transport.SendRequest(request)
-
-	if err != nil {
-		log.Errorln(err.Error())
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseRelay)
-		err = dht.handleRelayResponse(ctx, response, targetID)
-		if err != nil {
-			return err
-		}
-
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		err = errors.New("timeout")
-		return err
-	}
-
-	return nil
-}
-
-func (dht *DHT) handleRelayResponse(ctx Context, response *packet.ResponseRelay, targetID string) error {
-	var err error
-	switch response.State {
-	case relay.Stopped:
-		// stop use this address as relay
-		dht.proxy.RemoveProxyHost(targetID)
-		err = nil
-	case relay.Started:
-		// start use this address as relay
-		dht.proxy.AddProxyHost(targetID)
-		err = nil
-	case relay.NoAuth:
-		err = errors.New("unable to execute relay because this host not authenticated")
-	case relay.Unknown:
-		err = errors.New("unknown relay command")
-	case relay.Error:
-		err = errors.New("relay request error")
-	default:
-		// unknown state/failed to change state
-		err = errors.New("unknown response state")
-	}
-	return err
-}
-
-func (dht *DHT) handleCheckOriginResponse(response *packet.ResponseCheckOrigin, targetID string) {
-	if bytes.Equal(response.AuthUniqueKey, dht.auth.SentKeys[targetID]) {
-		delete(dht.auth.SentKeys, targetID)
-		dht.auth.authenticatedHosts[targetID] = true
-	}
-}
-
-// CheckOriginRequest send a request to check target host originality
-func (dht *DHT) CheckOriginRequest(ctx Context, targetID string) error {
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for relay request not found")
-		return err
-	}
-
-	request := packet.NewCheckOriginPacket(dht.htFromCtx(ctx).Origin, targetHost)
-	future, err := dht.transport.SendRequest(request)
-
-	if err != nil {
-		log.Errorln(err.Error())
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseCheckOrigin)
-		dht.handleCheckOriginResponse(response, targetID)
-
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		err = errors.New("timeout")
-		return err
-	}
-
-	return nil
-}
-
-// AuthenticationRequest sends an authentication request.
-func (dht *DHT) AuthenticationRequest(ctx Context, command, targetID string) error {
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for auth request not found")
-		return err
-	}
-
-	origin := dht.htFromCtx(ctx).Origin
-	var authCommand packet.CommandType
-	switch command {
-	case "begin":
-		authCommand = packet.BeginAuth
-	case "revoke":
-		authCommand = packet.RevokeAuth
-	default:
-		err = errors.New("unknown command")
-		return err
-	}
-
-	log.Debugln("AuthenticationRequest to %s with command %s", targetID, command)
-	request := packet.NewAuthPacket(authCommand, origin, targetHost)
-	future, err := dht.transport.SendRequest(request)
-
-	if err != nil {
-		log.Errorln(err.Error())
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseAuth)
-		err = dht.handleAuthResponse(response, targetHost.ID.String())
-		if err != nil {
-			return err
-		}
-
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		err = errors.New("timeout")
-		return err
-	}
-
-	return nil
-}
-
-func (dht *DHT) checkNodePrivRequest(ctx Context, targetID string, roleKey string) error {
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for check node privileges request not found")
-		return err
-	}
-
-	origin := dht.htFromCtx(ctx).Origin
-	request := packet.NewCheckNodePrivPacket(origin, targetHost, roleKey)
-	future, err := dht.transport.SendRequest(request)
-
-	if err != nil {
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseCheckNodePriv)
-		err = dht.handleCheckNodePrivResponse(response, roleKey)
-		if err != nil {
-			return err
-		}
-
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		err = errors.New("timeout")
-		return err
-	}
-
-	return nil
-}
-
-func (dht *DHT) handleCheckNodePrivResponse(response *packet.ResponseCheckNodePriv, toleKey string) error {
-	switch response.State {
-	case packet.Error:
-		return errors.New(response.Error)
-	case packet.Confirmed:
-		return nil
-	case packet.Declined:
-		// TODO: set default unconfirmed role
-		// dht.nodesMap[dht.nodesIDMap[roleKey]].SetNodeRole("Unconfirmed default role")
-	}
-	return nil
-}
-
-func (dht *DHT) handleAuthResponse(response *packet.ResponseAuth, target string) error {
-	var err error
-	if (len(response.AuthUniqueKey) != 0) && response.Success {
-		dht.auth.mut.Lock()
-		defer dht.auth.mut.Unlock()
-		dht.auth.ReceivedKeys[target] = response.AuthUniqueKey
-		err = nil
-	} else {
-		if response.Success && (len(response.AuthUniqueKey) == 0) { // revoke success
-			return err
-		}
-		if !response.Success {
-			err = errors.New("authentication unsuccessful")
-		} else if len(response.AuthUniqueKey) == 0 {
-			err = errors.New("wrong auth unique key received")
-		}
-	}
-	return err
-}
-
-// ObtainIPRequest is request to self IP obtaining.
-func (dht *DHT) ObtainIPRequest(ctx Context, targetID string) error {
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for relay request not found")
-		return err
-	}
-
-	origin := dht.htFromCtx(ctx).Origin
-	request := packet.NewObtainIPPacket(origin, targetHost)
-
-	future, err := dht.transport.SendRequest(request)
-
-	if err != nil {
-		log.Errorln(err.Error())
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			err = errors.New("chanel closed unexpectedly")
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseObtainIP)
-		err = dht.handleObtainIPResponse(response, targetHost.ID.String())
-		if err != nil {
-			return err
-		}
-
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		err = errors.New("timeout")
-		return err
-	}
-
-	return nil
-}
-
-func (dht *DHT) handleObtainIPResponse(response *packet.ResponseObtainIP, targetID string) error {
-	if response.IP != "" {
-		dht.subnet.SubnetIDs[response.IP] = append(dht.subnet.SubnetIDs[response.IP], targetID)
-	} else {
-		return errors.New("received empty IP")
-	}
-	return nil
-}
-
-func (dht *DHT) getRoutingForSend(ctx Context, targetID string) (*host.Host, *routing.HashTable, error) {
-	targetHost, exists, err := dht.FindHost(ctx, targetID)
-	ht := dht.htFromCtx(ctx)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if !exists {
-		return nil, nil, errors.New("targetHost not found")
-	}
-
-	return targetHost, ht, nil
-}
-
-// RemoteProcedureCall calls remote procedure on target host.
-func (dht *DHT) RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) ([]byte, error) {
-	log.Debugf("RemoteProcedureCall to target: %s, method: %s", targetID, method)
-	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
-	if err != nil {
-		return nil, err
-	}
-
-	request := &packet.Packet{
-		Sender:   ht.Origin,
-		Receiver: targetHost,
-		Type:     packet.TypeRPC,
-		Data: &packet.RequestDataRPC{
-			Method: method,
-			Args:   args,
-		},
-	}
-
-	if targetID == dht.GetOriginHost(ctx).ID.String() {
-		return dht.rpc.Invoke(request.Sender, method, args)
-	}
-
-	// Send the async queries and wait for a future
-	future, err := dht.transport.SendRequest(request)
-	if err != nil {
-		return nil, err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			// Channel was closed
-			return nil, errors.New("channel closed unexpectedly")
-		}
-		dht.addHost(ctx, routing.NewRouteHost(rsp.Sender))
-
-		response := rsp.Data.(*packet.ResponseDataRPC)
-		if response.Success {
-			return response.Result, nil
-		}
-		return nil, errors.New(response.Error)
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		return nil, errors.New("timeout")
-	}
-}
-
-// InitCascadeSendMessage initiates the RPC call on target host and sending messages to next cascade layers
-func (dht *DHT) InitCascadeSendMessage(data core.Cascade, currentNode *core.RecordRef, ctx Context, method string, args [][]byte) error {
-	if len(data.NodeIds) == 0 {
-		return errors.New("node IDs list should not be empty")
-	}
-	if data.ReplicationFactor == 0 {
-		return errors.New("replication factor should not be zero")
-	}
-
-	nextNodes, err := cascade.CalculateNextNodes(data, currentNode)
-	if err != nil {
-		return err
-	}
-	if len(nextNodes) == 0 {
-		return nil
-	}
-	var failedNodes []core.RecordRef
-	for _, nextNode := range nextNodes {
-		hostID := dht.nodeNetwork.ResolveHostID(nextNode)
-		err = dht.cascadeSendMessage(data, ctx, hostID, method, args)
-		if err != nil {
-			log.Errorln("failed to send cascade message: ", err)
-			failedNodes = append(failedNodes, nextNode)
-		}
-	}
-
-	if len(failedNodes) > 0 {
-		return errors.New("failed to send cascade message to nodes")
-	}
-
-	return nil
-}
-
-func (dht *DHT) cascadeSendMessage(data core.Cascade, ctx Context, targetID string, method string, args [][]byte) error {
-	targetHost, ht, err := dht.getRoutingForSend(ctx, targetID)
-	if err != nil {
-		return err
-	}
-
-	request := packet.NewBuilder().Sender(ht.Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
-		Request(&packet.RequestCascadeSend{
-			Data: data,
-			RPC: packet.RequestDataRPC{
-				Method: method,
-				Args:   args,
-			},
-		}).Build()
-
-	future, err := dht.transport.SendRequest(request)
-	if err != nil {
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			// Channel was closed
-			return errors.New("channel closed unexpectedly")
-		}
-		dht.addHost(ctx, routing.NewRouteHost(rsp.Sender))
-
-		response := rsp.Data.(*packet.ResponseCascadeSend)
-		if !response.Success {
-			return errors.New(response.Error)
-		}
-		return nil
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		return errors.New("timeout")
-	}
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host
@@ -1624,16 +757,15 @@ func (dht *DHT) RemoteProcedureRegister(name string, method core.RemoteProcedure
 		return method(args)
 	}
 
-	log.Debugln("RemoteProcedureRegister: " + name)
-	dht.rpc.RegisterMethod(name, rp)
+	dht.ncf.GetRPC().RegisterMethod(name, rp)
 }
 
 // ObtainIP starts to self IP obtaining.
-func (dht *DHT) ObtainIP(ctx Context) error {
+func (dht *DHT) ObtainIP() error {
 	for _, table := range dht.tables {
 		for i := range table.RoutingTable {
 			for j := range table.RoutingTable[i] {
-				err := dht.ObtainIPRequest(ctx, table.RoutingTable[i][j].ID.String())
+				err := ObtainIPRequest(dht, table.RoutingTable[i][j].ID.String())
 				if err != nil {
 					return err
 				}
@@ -1643,14 +775,11 @@ func (dht *DHT) ObtainIP(ctx Context) error {
 	return nil
 }
 
-// GetDistance returns a distance between id1 and id2.
-func (dht *DHT) GetDistance(id1, id2 []byte) *big.Int {
-	buf1 := new(big.Int).SetBytes(id1)
-	buf2 := new(big.Int).SetBytes(id2)
-	return new(big.Int).Xor(buf1, buf2)
+func (dht *DHT) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
+	return dht.ncf
 }
 
-func (dht *DHT) getHomeSubnetKey(ctx Context) (string, error) {
+func (dht *DHT) getHomeSubnetKey(ctx hosthandler.Context) (string, error) {
 	var result string
 	for key, subnet := range dht.subnet.SubnetIDs {
 		first := key
@@ -1688,8 +817,7 @@ func (dht *DHT) countOuterHosts() {
 }
 
 // AnalyzeNetwork is func to analyze the network after IP obtaining.
-func (dht *DHT) AnalyzeNetwork(ctx Context) error {
-	log.Debugln("Network analyzing...")
+func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 	var err error
 	dht.subnet.HomeSubnetKey, err = dht.getHomeSubnetKey(ctx)
 	if err != nil {
@@ -1699,7 +827,7 @@ func (dht *DHT) AnalyzeNetwork(ctx Context) error {
 	dht.subnet.HighKnownHosts.OuterHosts = dht.subnet.HighKnownHosts.SelfKnownOuterHosts
 	hosts := dht.subnet.SubnetIDs[dht.subnet.HomeSubnetKey]
 	for _, ids := range hosts {
-		err = dht.knownOuterHostsRequest(ids, dht.subnet.HighKnownHosts.OuterHosts)
+		err = knownOuterHostsRequest(dht, ids, dht.subnet.HighKnownHosts.OuterHosts)
 		if err != nil {
 			return err
 		}
@@ -1717,139 +845,377 @@ func (dht *DHT) AnalyzeNetwork(ctx Context) error {
 
 func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
 	for _, id1 := range subnetIDs {
-		err := dht.relayOwnershipRequest(id1, true)
-		log.Errorln(err.Error()) // todo: check if
+		err := RelayOwnershipRequest(dht, id1)
+		log.Errorln(err.Error())
 	}
 }
 
-func (dht *DHT) handleRelayOwnership(response *packet.ResponseRelayOwnership, target string) {
-	if response.Accepted {
-		dht.subnet.PossibleRelayIDs = append(dht.subnet.PossibleRelayIDs, target)
-	}
-}
-
-func (dht *DHT) relayOwnershipRequest(targetID string, ready bool) error {
-	ctx, err := NewContextBuilder(dht).SetDefaultHost().Build()
-	if err != nil {
-		return err
-	}
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for relay request not found")
-		return err
-	}
-
-	request := packet.NewRelayOwnershipPacket(dht.htFromCtx(ctx).Origin, targetHost, true)
-	future, err := dht.transport.SendRequest(request)
-
-	if err != nil {
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseRelayOwnership)
-		dht.handleRelayOwnership(response, targetID)
-
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		err = errors.New("timeout")
-		return err
-	}
-
-	return nil
-}
-
-func (dht *DHT) processKnownOuterHosts(ctx Context, msg *packet.Packet, packetBuilder packet.Builder) {
-	data := msg.Data.(*packet.RequestKnownOuterHosts)
-
-	ID := dht.subnet.HighKnownHosts.ID
-	hosts := dht.subnet.HighKnownHosts.OuterHosts
-	if data.OuterHosts > hosts {
-		ID = data.ID
-		hosts = data.OuterHosts
-	}
-	response := &packet.ResponseKnownOuterHosts{
-		ID:         ID,
-		OuterHosts: hosts,
-	}
-
-	err := dht.transport.SendResponse(msg.RequestID, packetBuilder.Response(response).Build())
-	if err != nil {
-		log.Errorln("Failed to send response:", err.Error())
-	}
-}
-
-func (dht *DHT) knownOuterHostsRequest(targetID string, hosts int) error {
-	ctx, err := NewContextBuilder(dht).SetDefaultHost().Build()
-	if err != nil {
-		return err
-	}
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		err = errors.New("target for relay request not found")
-		return err
-	}
-
-	request := packet.NewKnownOuterHostsPacket(dht.htFromCtx(ctx).Origin, targetHost, hosts)
-	future, err := dht.transport.SendRequest(request)
-
-	if err != nil {
-		return err
-	}
-
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			return err
-		}
-
-		response := rsp.Data.(*packet.ResponseKnownOuterHosts)
-		err = dht.handleKnownOuterHosts(ctx, response, targetID)
-		if err != nil {
-			return err
-		}
-
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
-		err = errors.New("timeout")
-		return err
-	}
-
-	return nil
-}
-
-func (dht *DHT) handleKnownOuterHosts(ctx Context, response *packet.ResponseKnownOuterHosts, targetID string) error {
-	var err error
-	if response.OuterHosts > dht.subnet.HighKnownHosts.OuterHosts { // update data
-		dht.subnet.HighKnownHosts.OuterHosts = response.OuterHosts
-		dht.subnet.HighKnownHosts.ID = response.ID
-	}
-	if (response.OuterHosts > dht.subnet.HighKnownHosts.SelfKnownOuterHosts) &&
-		(dht.proxy.ProxyHostsCount() == 0) {
-		err = dht.AuthenticationRequest(ctx, "begin", targetID)
-		if err != nil {
-			return err
-		}
-		err = dht.RelayRequest(ctx, "start", targetID)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dht *DHT) htFromCtx(ctx Context) *routing.HashTable {
+// HtFromCtx returns a routing hashtable known by ctx.
+func (dht *DHT) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
 	htIdx := ctx.Value(ctxTableIndex).(int)
 	return dht.tables[htIdx]
+}
+
+// ConfirmNodeRole is a node role confirmation.
+func (dht *DHT) ConfirmNodeRole(roleKey string) bool {
+	// TODO implement this func
+	return true
+}
+
+// FindHost returns target host's real network address.
+func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool, error) {
+	keyBytes := base58.Decode(key)
+	if len(keyBytes) != routing.MaxContactsInBucket {
+		return nil, false, errors.New("invalid key")
+	}
+	ht := dht.HtFromCtx(ctx)
+
+	if ht.Origin.ID.Equal(keyBytes) {
+		return ht.Origin, true, nil
+	}
+
+	var targetHost *host.Host
+	var exists = false
+	routeSet := ht.GetClosestContacts(1, keyBytes, nil)
+
+	if routeSet.Len() > 0 && routeSet.FirstHost().ID.Equal(keyBytes) {
+		targetHost = routeSet.FirstHost()
+		exists = true
+	} else if dht.proxy.ProxyHostsCount() > 0 {
+		address, err := host.NewAddress(dht.proxy.GetNextProxyAddress())
+		if err != nil {
+			return nil, false, err
+		}
+		// TODO: current key insertion
+		id1, err := id.NewID()
+		if err != nil {
+			return nil, false, err
+		}
+		targetHost = &host.Host{ID: id1, Address: address}
+		return targetHost, true, nil
+	} else {
+		log.Infoln("Host not found in routing table. Iterating through network...")
+		_, closest, err := dht.iterate(ctx, routing.IterateFindHost, keyBytes, nil)
+		if err != nil {
+			return nil, false, err
+		}
+		for i := range closest {
+			if closest[i].ID.Equal(keyBytes) {
+				targetHost = closest[i]
+				exists = true
+			}
+		}
+	}
+
+	return targetHost, exists, nil
+}
+
+// InvokeRPC - invoke a method to rpc.
+func (dht *DHT) InvokeRPC(sender *host.Host, method string, args [][]byte) ([]byte, error) {
+	return dht.ncf.GetRPC().Invoke(sender, method, args)
+}
+
+// AddHost adds a host into the appropriate k bucket
+// we store these buckets in big-endian order so we look at the bits
+// from right to left in order to find the appropriate bucket
+func (dht *DHT) AddHost(ctx hosthandler.Context, host *routing.RouteHost) {
+	ht := dht.HtFromCtx(ctx)
+	index := routing.GetBucketIndexFromDifferingBit(ht.Origin.ID.Bytes(), host.ID.Bytes())
+
+	// Make sure host doesn't already exist
+	// If it does, mark it as seen
+	if ht.DoesHostExistInBucket(index, host.ID.Bytes()) {
+		ht.MarkHostAsSeen(host.ID.Bytes())
+		return
+	}
+
+	ht.Lock()
+	defer ht.Unlock()
+
+	bucket := ht.RoutingTable[index]
+
+	if len(bucket) == routing.MaxContactsInBucket {
+		// If the bucket is full we need to ping the first host to find out
+		// if it responds back in a reasonable amount of time. If not -
+		// we may remove it
+		n := bucket[0].Host
+		request := packet.NewPingPacket(ht.Origin, n)
+		future, err := dht.transport.SendRequest(request)
+		if err != nil {
+			bucket = append(bucket, host)
+			bucket = bucket[1:]
+		} else {
+			select {
+			case <-future.Result():
+				return
+			case <-time.After(dht.options.PingTimeout):
+				bucket = bucket[1:]
+				bucket = append(bucket, host)
+			}
+		}
+	} else {
+		bucket = append(bucket, host)
+	}
+
+	ht.RoutingTable[index] = bucket
+}
+
+// GetReplicationTime returns a interval between Kademlia replication events.
+func (dht *DHT) GetReplicationTime() time.Duration {
+	return dht.options.ReplicateTime
+}
+
+// GetExpirationTime returns a expiration time after which a key/value pair expires.
+func (dht *DHT) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time {
+	ht := dht.HtFromCtx(ctx)
+
+	bucket := routing.GetBucketIndexFromDifferingBit(key, ht.Origin.ID.Bytes())
+	var total int
+	for i := 0; i < bucket; i++ {
+		total += ht.GetTotalHostsInBucket(i)
+	}
+	closer := ht.GetAllHostsInBucketCloserThan(bucket, key)
+	score := total + len(closer)
+
+	if score == 0 {
+		score = 1
+	}
+
+	if score > routing.MaxContactsInBucket {
+		return time.Now().Add(dht.options.ExpirationTime)
+	}
+
+	day := dht.options.ExpirationTime
+	seconds := day.Nanoseconds() * int64(math.Exp(float64(routing.MaxContactsInBucket/score)))
+	dur := time.Second * time.Duration(seconds)
+	return time.Now().Add(dur)
+}
+
+// StoreRetrieves should return the local key/value if it exists.
+func (dht *DHT) StoreRetrieve(key store.Key) ([]byte, bool) {
+	return dht.store.Retrieve(key)
+}
+
+// EqualAuthSentKey returns true if a given key equals to targetID key.
+func (dht *DHT) EqualAuthSentKey(targetID string, key []byte) bool {
+	return bytes.Equal(dht.auth.SentKeys[targetID], key)
+}
+
+// SendRequest sends a packet.
+func (dht *DHT) SendRequest(packet *packet.Packet) (transport.Future, error) {
+	return dht.transport.SendRequest(packet)
+}
+
+// Store should store a key/value pair for the local host with the
+// given replication and expiration times.
+func (dht *DHT) Store(key store.Key, data []byte, replication time.Time, expiration time.Time, publisher bool) error {
+	return dht.store.Store(key, data, replication, expiration, publisher)
+}
+
+// AddPossibleProxyID adds an id which could be a proxy.
+func (dht *DHT) AddPossibleProxyID(id string) {
+	dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs, id)
+}
+
+// AddProxyHost adds a proxy host.
+func (dht *DHT) AddProxyHost(targetID string) {
+	dht.proxy.AddProxyHost(targetID)
+}
+
+// AddSubnetID adds a subnet ID.
+func (dht *DHT) AddSubnetID(ip, targetID string) {
+	dht.subnet.SubnetIDs[ip] = append(dht.subnet.SubnetIDs[ip], targetID)
+}
+
+// AddAuthSentKey adds a sent key to auth.
+func (dht *DHT) AddAuthSentKey(id string, key []byte) {
+	dht.auth.SentKeys[id] = key
+}
+
+// AddRelayClient adds a new relay client.
+func (dht *DHT) AddRelayClient(host *host.Host) error {
+	return dht.relay.AddClient(host)
+}
+
+// RemoteProcedureCall calls remote procedure on target host.
+func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+	targetHost, exists, err := dht.FindHost(ctx, targetID)
+	ht := dht.HtFromCtx(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New("targetHost not found")
+	}
+
+	request := &packet.Packet{
+		Sender:   ht.Origin,
+		Receiver: targetHost,
+		Type:     packet.TypeRPC,
+		Data: &packet.RequestDataRPC{
+			Method: method,
+			Args:   args,
+		},
+	}
+
+	if targetID == dht.GetOriginHost().IDs[0].String() {
+		return dht.ncf.GetRPC().Invoke(request.Sender, method, args)
+	}
+
+	// Send the async queries and wait for a future
+	future, err := dht.transport.SendRequest(request)
+	if err != nil {
+		return nil, err
+	}
+
+	select {
+	case rsp := <-future.Result():
+		if rsp == nil {
+			// Channel was closed
+			return nil, errors.New("chanel closed unexpectedly")
+		}
+		dht.AddHost(ctx, routing.NewRouteHost(rsp.Sender))
+
+		response := rsp.Data.(*packet.ResponseDataRPC)
+		if response.Success {
+			return response.Result, nil
+		}
+		return nil, errors.New(response.Error)
+	case <-time.After(dht.options.PacketTimeout):
+		future.Cancel()
+		return nil, errors.New("timeout")
+	}
+}
+
+// CascadeSendMessage sends a message to the next cascade layer.
+func (dht *DHT) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
+	ctx, err := NewContextBuilder(dht).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
+	targetHost, exist, err := dht.FindHost(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return errors.New("cascadeSendMessage: couldn't find a target host")
+	}
+
+	request := packet.NewBuilder().Sender(dht.HtFromCtx(ctx).Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
+		Request(&packet.RequestCascadeSend{
+			Data: data,
+			RPC: packet.RequestDataRPC{
+				Method: method,
+				Args:   args,
+			},
+		}).Build()
+
+	future, err := dht.SendRequest(request)
+	if err != nil {
+		return err
+	}
+
+	return checkResponse(dht, future, targetID, request)
+}
+
+// AddReceivedKey adds a new received key from target.
+func (dht *DHT) AddReceivedKey(target string, key []byte) {
+	dht.auth.ReceivedKeys[target] = key
+}
+
+// RemoveAuthHost removes a host from auth.
+func (dht *DHT) RemoveAuthHost(key string) {
+	delete(dht.auth.AuthenticatedHosts, key)
+}
+
+// RemoveProxyHost removes host from proxy list.
+func (dht *DHT) RemoveProxyHost(targetID string) {
+	dht.proxy.RemoveProxyHost(targetID)
+}
+
+// RemovePossibleProxyID removes if from possible proxy ids list.
+func (dht *DHT) RemovePossibleProxyID(id string) {
+	for i, proxy := range dht.subnet.PossibleProxyIDs {
+		if id == proxy {
+			dht.subnet.PossibleProxyIDs = append(dht.subnet.PossibleProxyIDs[:i], dht.subnet.PossibleProxyIDs[i+1:]...)
+			return
+		}
+	}
+}
+
+// RemoveAuthSentKeys removes a targetID from sent keys.
+func (dht *DHT) RemoveAuthSentKeys(targetID string) {
+	delete(dht.auth.SentKeys, targetID)
+}
+
+// RemoveRelayClient removes a client from relay list.
+func (dht *DHT) RemoveRelayClient(host *host.Host) error {
+	return dht.relay.RemoveClient(host)
+}
+
+// SetHighKnownHostID sets a new high known host ID.
+func (dht *DHT) SetHighKnownHostID(id string) {
+	dht.subnet.HighKnownHosts.ID = id
+}
+
+// SetOuterHostsCount sets a new value to outer hosts count.
+func (dht *DHT) SetOuterHostsCount(hosts int) {
+	dht.subnet.HighKnownHosts.OuterHosts = hosts
+}
+
+// SetAuthStatus sets a new auth status to targetID.
+func (dht *DHT) SetAuthStatus(targetID string, status bool) {
+	dht.auth.AuthenticatedHosts[targetID] = status
+}
+
+// GetProxyHostsCount returns a proxy hosts count.
+func (dht *DHT) GetProxyHostsCount() int {
+	return dht.proxy.ProxyHostsCount()
+}
+
+// GetOuterHostsCount returns a outer hosts count.
+func (dht *DHT) GetOuterHostsCount() int {
+	return dht.subnet.HighKnownHosts.OuterHosts
+}
+
+// GetSelfKnownOuterHosts return a self known hosts count.
+func (dht *DHT) GetSelfKnownOuterHosts() int {
+	return dht.subnet.HighKnownHosts.SelfKnownOuterHosts
+}
+
+// GetHighKnownHostID returns a high known host ID.
+func (dht *DHT) GetHighKnownHostID() string {
+	return dht.subnet.HighKnownHosts.ID
+}
+
+// GetPacketTimeout returns the maximum time to wait for a response to any packet.
+func (dht *DHT) GetPacketTimeout() time.Duration {
+	return dht.options.PacketTimeout
+}
+
+// KeyIsReceived returns true and a key from targetID if exist.
+func (dht *DHT) KeyIsReceived(key string) ([]byte, bool) {
+	if key, ok := dht.auth.ReceivedKeys[key]; ok {
+		return key, ok
+	}
+	return nil, false
+}
+
+// HostIsAuthenticated returns true if target ID is authenticated host.
+func (dht *DHT) HostIsAuthenticated(targetID string) bool {
+	if _, ok := dht.auth.AuthenticatedHosts[targetID]; ok {
+		return true
+	}
+	return false
+}
+
+func (dht *DHT) AddPossibleRelayID(id string) {
+	dht.subnet.PossibleRelayIDs = append(dht.subnet.PossibleRelayIDs, id)
+}
+
+// GetOriginHost returns the local host.
+func (dht *DHT) GetOriginHost() *host.Origin {
+	return dht.origin
 }

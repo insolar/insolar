@@ -17,18 +17,20 @@
 package hostnetwork
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-	"github.com/pkg/errors"
 )
 
 type NodeNetwork interface {
@@ -37,7 +39,7 @@ type NodeNetwork interface {
 }
 
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork) (*DHT, error) {
+func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		return nil, errors.New("Couldn't start at 0.0.0.0")
@@ -63,15 +65,16 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork) (*DHT, error)
 	}
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
+	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade)
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),
 		origin,
 		tp,
-		rpc.NewRPCFactory(nil).Create(),
+		ncf,
 		options,
 		proxy,
-		nn)
+	)
 	if err != nil {
 		return nil, err
 	}

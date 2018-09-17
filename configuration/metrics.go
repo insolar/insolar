@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
 
 package configuration
 
-// Pulsar holds configuration for pulsar node.
-type Pulsar struct {
-	Type           string
-	ListenAddress  string
-	NodesAddresses []string
+// Metrics holds configuration for metrics publishing.
+type Metrics struct {
+	ListenAddress string
 }
 
-// NewPulsar creates new default configuration for pulsar node.
-func NewPulsar() Pulsar {
-	return Pulsar{ListenAddress: "0.0.0.0:8090", Type: "tcp", NodesAddresses: []string{}}
+// NewMetrics creates new default configuration for metrics publishing.
+func NewMetrics() Metrics {
+	return Metrics{ListenAddress: "0.0.0.0:8080"}
 }

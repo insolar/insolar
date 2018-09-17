@@ -79,7 +79,6 @@ func main() {
 		log.Warnln("Failed to load configuration from env:", err.Error())
 	}
 
-	cfgHolder.Configuration.Host.Transport.BehindNAT = false
 	initLogger(cfgHolder.Configuration.Log)
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
@@ -138,8 +137,6 @@ func main() {
 		cm.stopAll()
 		os.Exit(0)
 	}()
-
-	go handleStats(cfgHolder.Configuration.Stats)
 
 	fmt.Println("Running interactive mode:")
 	repl(nw)
