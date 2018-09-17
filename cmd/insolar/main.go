@@ -31,9 +31,11 @@ var (
 	cmd    string
 )
 
+const defaultStdoutPath = "-"
+
 func chooseOutput(path string) (io.Writer, error) {
 	var res io.Writer
-	if path == "-" {
+	if path == defaultStdoutPath {
 		res = os.Stdout
 	} else {
 		var err error
@@ -46,7 +48,7 @@ func chooseOutput(path string) (io.Writer, error) {
 }
 
 func parseInputParams() {
-	flag.StringVar(&output, "output", "-", "output file (use - for STDOUT)")
+	flag.StringVar(&output, "output", defaultStdoutPath, "output file (use - for STDOUT)")
 	flag.StringVar(&cmd, "cmd", "default_config", "type of cmd")
 
 	if len(os.Args) == 1 {
