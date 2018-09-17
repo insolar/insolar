@@ -22,7 +22,6 @@ import (
 
 // CommonResponse - the most common response
 type CommonResponse struct {
-	baseResponse
 	Data   []byte
 	Result []byte
 }

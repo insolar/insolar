@@ -26,9 +26,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type baseResponse struct {
-}
-
 // Type is a enum type of response
 type Type byte
 

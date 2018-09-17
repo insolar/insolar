@@ -24,7 +24,6 @@ import (
 
 // ObjectBodyResponse - the most common response
 type ObjectBodyResponse struct {
-	baseResponse
 	Body        []byte
 	Code        core.RecordRef
 	Class       core.RecordRef
