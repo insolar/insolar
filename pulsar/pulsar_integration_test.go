@@ -33,23 +33,23 @@ func NewTestPulsar() *Pulsar {
 	return pulsar
 }
 
-func TestNewPulsar_Connection(t *testing.T) {
-	pulsar := NewTestPulsar()
-	dialer := &net.Dialer{
-		LocalAddr: &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 1640,
-		},
-	}
-	conn, err := dialer.Dial("tcp", ":1639")
-	if err != nil {
-		t.Error("could not connect to server: ", err)
-	}
-	defer func() {
-		conn.Close()
-		pulsar.Close()
-	}()
-}
+//func TestNewPulsar_Connection(t *testing.T) {
+//	pulsar := NewTestPulsar()
+//	dialer := &net.Dialer{
+//		LocalAddr: &net.TCPAddr{
+//			IP:   net.ParseIP("127.0.0.1"),
+//			Port: 1640,
+//		},
+//	}
+//	conn, err := dialer.Dial("tcp", ":1639")
+//	if err != nil {
+//		t.Error("could not connect to server: ", err)
+//	}
+//	defer func() {
+//		conn.Close()
+//		pulsar.Close()
+//	}()
+//}
 
 func TestNewPulsar_Handshake(t *testing.T) {
 	pulsar := NewTestPulsar()
@@ -83,8 +83,5 @@ func TestNewPulsar_Handshake(t *testing.T) {
 	assertObj.Equal(pulsarExpectedKey, handshake.PublicKey)
 	assertObj.Equal(&expectedPrivateKey.PublicKey, pulsar.Neighbours["127.0.0.1:1640"].PublicKey)
 
-	defer func() {
-		conn.Close()
-		pulsar.Close()
-	}()
+	conn.Close()
 }

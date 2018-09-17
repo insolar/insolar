@@ -114,7 +114,9 @@ func (pulsar *Pulsar) Send(address string, data interface{}) error {
 // Close all connections
 func (pulsar *Pulsar) Close() {
 	for _, neighbour := range pulsar.Neighbours {
-		neighbour.Connection.Close()
+		if neighbour.Connection != nil {
+			neighbour.Connection.Close()
+		}
 	}
 
 	pulsar.Sock.Close()
