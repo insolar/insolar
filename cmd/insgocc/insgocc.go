@@ -186,5 +186,8 @@ func main() {
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile)
-	rootCmd.Execute()
+	err := rootCmd.Execute()
+	if err != nil {
+		panic(err)
+	}
 }
