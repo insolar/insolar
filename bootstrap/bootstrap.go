@@ -87,7 +87,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 
 	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
 	if err != nil {
-		return errors.Wrap(err, "couldn't get children of RootRef object")
+		return errors.Wrap(err, "couldn't authorized node")
 	}
 	if !isLightExecutor {
 		return nil
