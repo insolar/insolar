@@ -219,7 +219,7 @@ import (
 )
 
 func main() {
-	_ = secondary.GetObject(core.String2Ref("some"))
+	_ = secondary.GetObject(core.NewRefFromBase58("some"))
 }
 	`)
 	assert.NoError(t, err)
