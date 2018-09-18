@@ -111,7 +111,13 @@ func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 			S: err.Error(),
 		}
 	}
-	return Serialize(resp)
+	rd, err := resp.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(rd)
+	return buf.Bytes(), nil
 }
 
 // Serialize converts Message or Response to byte slice.
@@ -123,7 +129,7 @@ func Serialize(value interface{}) ([]byte, error) {
 		return nil, err
 	}
 	res := buffer.Bytes()
-	return res, err
+	return res, nil
 }
 
 func init() {
