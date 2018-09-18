@@ -20,6 +20,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
@@ -195,6 +196,37 @@ func RelayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 		Build()
 	future, err := hostHandler.SendRequest(request)
 
+	if err != nil {
+		return err
+	}
+
+	return checkResponse(hostHandler, future, targetID, request)
+}
+
+// CascadeSendMessage sends a message to the next cascade layer.
+func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, targetID string, method string, args [][]byte) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
+	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return errors.New("cascadeSendMessage: couldn't find a target host")
+	}
+
+	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
+		Request(&packet.RequestCascadeSend{
+			Data: data,
+			RPC: packet.RequestDataRPC{
+				Method: method,
+				Args:   args,
+			},
+		}).Build()
+
+	future, err := hostHandler.SendRequest(request)
 	if err != nil {
 		return err
 	}
