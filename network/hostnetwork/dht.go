@@ -254,33 +254,36 @@ func (dht *DHT) Bootstrap() error {
 	var futures []transport.Future
 	wg := &sync.WaitGroup{}
 	cb := NewContextBuilder(dht)
+	var chanErr chan error
 
 	for _, ht := range dht.tables {
 		futures = dht.iterateBootstrapHosts(ht, cb, wg, futures)
 	}
 
 	for _, f := range futures {
-		go func(future transport.Future) {
-			select {
-			case result := <-future.Result():
-				// If result is nil, channel was closed
-				if result != nil {
-					ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
-					// TODO: must return error here
-					if err != nil {
-						log.Fatal(err)
+		go func(future transport.Future, chanErr chan error) {
+			for {
+				select {
+				case result := <-future.Result():
+					// If result is nil, channel was closed
+					if result != nil {
+						ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
+						if err != nil {
+							chanErr <- err
+							return
+						}
+						dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
 					}
-					dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
+					wg.Done()
+					return
+				case <-time.After(time.Duration(dht.options.PacketTimeout.Seconds() * 60)): // cux we waiting iterateBootstrapHosts timeout.
+					log.Warnln("bootstrap response timeout")
+					future.Cancel()
+					wg.Done()
+					return
 				}
-				wg.Done()
-				return
-			case <-time.After(dht.options.PacketTimeout):
-				log.Warnln("bootstrap response timeout")
-				future.Cancel()
-				wg.Done()
-				return
 			}
-		}(f)
+		}(f, chanErr)
 	}
 
 	wg.Wait()
@@ -312,22 +315,53 @@ func (dht *DHT) iterateBootstrapHosts(
 	if err != nil {
 		return futures
 	}
-	for _, bn := range dht.options.BootstrapHosts {
-		request := packet.NewPingPacket(ht.Origin, bn)
-
-		if bn.ID.Bytes() == nil {
-			res, err := dht.transport.SendRequest(request)
-			if err != nil {
-				continue
+	futuresChan := make(chan transport.Future)
+	localwg := &sync.WaitGroup{}
+	for _, bh := range dht.options.BootstrapHosts {
+		localwg.Add(1)
+		go func(futuresChan chan transport.Future) {
+			request := packet.NewPingPacket(ht.Origin, bh)
+			counter := 1
+			ok := make(chan bool)
+			for {
+				if counter >= 60 {
+					close(ok)
+				}
+				if bh.ID.Bytes() == nil {
+					res, err := dht.transport.SendRequest(request)
+					if err != nil {
+						ok <- false
+						counter = counter * 2
+						continue
+					}
+					log.Debugln("sending ping to " + bh.Address.String())
+					wg.Add(1)
+					futuresChan <- res
+					close(ok)
+				} else {
+					routeHost := routing.NewRouteHost(bh)
+					dht.AddHost(ctx, routeHost)
+					close(ok)
+				}
+				select {
+				case <-ok:
+					return
+				case <-time.After(time.Duration(counter)):
+					if ok == nil {
+						return
+					}
+					counter = counter >> 1
+				}
 			}
-			log.Debugln("sending ping to " + bn.Address.String())
-			wg.Add(1)
-			futures = append(futures, res)
-		} else {
-			routeHost := routing.NewRouteHost(bn)
-			dht.AddHost(ctx, routeHost)
-		}
+		}(futuresChan)
 	}
+	localwg.Wait()
+
+	for fut := range futuresChan {
+		futures = append(futures, fut)
+	}
+	close(futuresChan)
+
 	return futures
 }
 
@@ -774,6 +808,7 @@ func (dht *DHT) ObtainIP() error {
 	return nil
 }
 
+// GetNetworkCommonFacade returns a networkcommonfacade ptr.
 func (dht *DHT) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
 	return dht.ncf
 }

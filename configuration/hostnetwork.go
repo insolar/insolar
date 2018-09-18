@@ -37,9 +37,11 @@ type HostNetwork struct {
 func NewHostNetwork() HostNetwork {
 	// IP address should not be 0.0.0.0!!!
 	transport := Transport{Protocol: "UTP", Address: "127.0.0.1:0", BehindNAT: false}
+	bootstrapHosts := make([]string, 1)
+	bootstrapHosts[0] = "127.0.0.1:12343"
 	return HostNetwork{
 		Transport:      transport,
 		IsRelay:        false,
-		BootstrapHosts: make([]string, 1),
+		BootstrapHosts: bootstrapHosts,
 	}
 }
