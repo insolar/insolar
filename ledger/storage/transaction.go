@@ -96,8 +96,7 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, er
 		return nil, geterr
 	}
 
-	val := record.MustEncodeRaw(raw)
-	err = m.txn.Set(k, val)
+	err = m.txn.Set(k, record.MustEncodeRaw(raw))
 	if err != nil {
 		return nil, err
 	}
