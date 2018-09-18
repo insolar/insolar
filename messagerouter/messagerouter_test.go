@@ -89,7 +89,7 @@ func TestNew(t *testing.T) {
 // 	t.Run("success", func(t *testing.T) {
 // 		r.responses = append(r.responses, core.Response{Data: []byte("data"), Result: []byte("result"), Error: nil})
 // 		resp, err := mr.Route(
-// 			ctx, core.Message{Reference: core.String2Ref(reference), Method: "SomeMethod", Arguments: []byte("args")},
+// 			ctx, core.Message{Reference: core.NewRefFromBase58(reference), Method: "SomeMethod", Arguments: []byte("args")},
 // 		)
 // 		if err != nil {
 // 			t.Fatal(err)
@@ -119,7 +119,7 @@ func TestNew(t *testing.T) {
 // 	t.Run("error", func(t *testing.T) {
 // 		r.responses = append(r.responses, core.Response{Data: []byte{}, Result: []byte{}, Error: errors.New("wtf")})
 // 		_, err := mr.Route(
-// 			ctx, core.Message{Reference: core.String2Ref(reference), Method: "SomeMethod", Arguments: []byte("args")},
+// 			ctx, core.Message{Reference: core.NewRefFromBase58(reference), Method: "SomeMethod", Arguments: []byte("args")},
 // 		)
 // 		if err == nil {
 // 			t.Fatal("error expected")
@@ -146,7 +146,7 @@ func TestNew(t *testing.T) {
 // 		_, err := mr.Route(
 // 			ctx,
 // 			core.Message{
-// 				Reference: core.String2Ref("refNotFound"),
+// 				Reference: core.NewRefFromBase58("refNotFound"),
 // 				Method:    "SomeMethod",
 // 				Arguments: []byte("args"),
 // 			},

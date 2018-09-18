@@ -118,11 +118,11 @@ func SaveToLedger(contract BaseContractInterface, class core.RecordRef) core.Rec
 	}
 
 	contract.SetContext(&CallContext{
-		Me:    core.String2Ref(base58.Encode([]byte(key.String()))),
+		Me:    core.NewRefFromBase58(base58.Encode([]byte(key.String()))),
 		Class: class,
 	})
 	FakeLedger[key.String()] = contract.(ProxyInterface)
-	return core.String2Ref(base58.Encode([]byte(key.String())))
+	return core.NewRefFromBase58(base58.Encode([]byte(key.String())))
 }
 
 func GetObject(ref core.RecordRef) BaseContractInterface {
@@ -138,7 +138,7 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class core.RecordR
 
 	child.SetContext(&CallContext{
 		Parent: parent,
-		Me:     core.String2Ref(base58.Encode([]byte(key.String()))),
+		Me:     core.NewRefFromBase58(base58.Encode([]byte(key.String()))),
 		Class:  class,
 	})
 	FakeLedger[key.String()] = child
@@ -148,7 +148,7 @@ func (bc *BaseContract) AddChild(child BaseContractInterface, class core.RecordR
 	}
 
 	FakeChildren[parent.String()][class.String()] = append(FakeChildren[parent.String()][class.String()], child)
-	return core.String2Ref(base58.Encode([]byte(key.String())))
+	return core.NewRefFromBase58(base58.Encode([]byte(key.String())))
 }
 
 func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class core.RecordRef) core.RecordRef {
@@ -160,7 +160,7 @@ func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class cor
 
 	delegate.SetContext(&CallContext{
 		Parent: selfRef,
-		Me:     core.String2Ref(base58.Encode([]byte(key.String()))),
+		Me:     core.NewRefFromBase58(base58.Encode([]byte(key.String()))),
 		Class:  class,
 	})
 
@@ -176,7 +176,7 @@ func (bc *BaseContract) InjectDelegate(delegate BaseContractInterface, class cor
 	}
 
 	FakeChildren[selfRef.String()][class.String()] = append(FakeChildren[selfRef.String()][class.String()], delegate.(ProxyInterface))
-	return core.String2Ref(base58.Encode([]byte(key.String())))
+	return core.NewRefFromBase58(base58.Encode([]byte(key.String())))
 }
 
 func (bc *BaseContract) SelfDestructRequest() {

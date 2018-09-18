@@ -31,13 +31,13 @@ func TestNewNodeNetwork(t *testing.T) {
 }
 
 func TestNodenetwork_GetReferenceHostID(t *testing.T) {
-	ref := core.String2Ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
+	ref := core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
 	node := NewNode(ref)
 	assert.Equal(t, node.GetID(), ref)
 }
 
 func TestNodeNetwork_GetID(t *testing.T) {
-	ref := core.String2Ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
+	ref := core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
 	node := NewNode(ref)
 	network := &NodeNetwork{
 		node: node,
@@ -49,9 +49,9 @@ func TestNodeNetwork_ResolveHostID(t *testing.T) {
 	str1 := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	str2 := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
-	ref1 := core.String2Ref(str1)
-	ref1_clone := core.String2Ref(str1)
-	ref2 := core.String2Ref(str2)
+	ref1 := core.NewRefFromBase58(str1)
+	ref1_clone := core.NewRefFromBase58(str1)
+	ref2 := core.NewRefFromBase58(str2)
 
 	node := NewNode(ref1)
 	network := &NodeNetwork{

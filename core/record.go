@@ -48,8 +48,8 @@ func (ref RecordRef) Domain() [RecordIDSize]byte {
 	return domain
 }
 
-// String2Ref deserializes reference from base58 encoded string.
-func String2Ref(str string) RecordRef {
+// NewRefFromBase58 deserializes reference from base58 encoded string.
+func NewRefFromBase58(str string) RecordRef {
 	// TODO: if str < 20 bytes, always returns 0. need to check this.
 	decoded := base58.Decode(str)
 	var ref RecordRef
