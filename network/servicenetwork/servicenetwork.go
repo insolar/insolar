@@ -76,7 +76,7 @@ func (network *ServiceNetwork) GetAddress() string {
 	return network.hostNetwork.GetOriginHost().Address.String()
 }
 
-// GetAddress returns host public address.
+// GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
 }
