@@ -47,7 +47,7 @@ func (mock *mockListener) Addr() net.Addr {
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	assertObj := assert.New(t)
 	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	expectedPrivateKey, _ := exportPrivateKey(privateKey)
+	expectedPrivateKey, _ := ExportPrivateKey(privateKey)
 	config := configuration.Pulsar{
 		ConnectionType: "testType",
 		ListenAddress:  "listedAddress",
@@ -63,7 +63,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	})
 
 	assertObj.NoError(err)
-	parsedKey, _ := importPrivateKey(expectedPrivateKey)
+	parsedKey, _ := ImportPrivateKey(expectedPrivateKey)
 	assertObj.Equal(parsedKey, result.PrivateKey)
 	assertObj.Equal("testType", actualConnectionType)
 	assertObj.Equal("listedAddress", actualAddress)
@@ -75,13 +75,13 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	assertObj := assert.New(t)
 
 	firstPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	firstExpectedKey, _ := exportPublicKey(&firstPrivateKey.PublicKey)
+	firstExpectedKey, _ := ExportPublicKey(&firstPrivateKey.PublicKey)
 
 	secondPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	secondExpectedKey, _ := exportPublicKey(&secondPrivateKey.PublicKey)
+	secondExpectedKey, _ := ExportPublicKey(&secondPrivateKey.PublicKey)
 
 	expectedPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	parsedExpectedPrivateKey, _ := exportPrivateKey(expectedPrivateKey)
+	parsedExpectedPrivateKey, _ := ExportPrivateKey(expectedPrivateKey)
 	config := configuration.Pulsar{
 		ConnectionType: "testType",
 		ListenAddress:  "listedAddress",
@@ -105,7 +105,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 func TestSingAndVerify(t *testing.T) {
 	assertObj := assert.New(t)
 	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey, _ := exportPublicKey(&privateKey.PublicKey)
+	publicKey, _ := ExportPublicKey(&privateKey.PublicKey)
 
 	signature, err := singData(privateKey, "This is the message to be signed and verified!")
 	assertObj.NoError(err)

@@ -30,16 +30,16 @@ import (
 func TestTwoPulsars_Handshake(t *testing.T) {
 	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	firstPublic, err := exportPublicKey(&firstKey.PublicKey)
+	firstPublic, err := ExportPublicKey(&firstKey.PublicKey)
 	assert.NoError(t, err)
-	firstPublicExported, err := exportPrivateKey(firstKey)
+	firstPublicExported, err := ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 
 	secondKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	secondPublic, err := exportPublicKey(&secondKey.PublicKey)
+	secondPublic, err := ExportPublicKey(&secondKey.PublicKey)
 	assert.NoError(t, err)
-	secondPublicExported, err := exportPrivateKey(secondKey)
+	secondPublicExported, err := ExportPrivateKey(secondKey)
 	assert.NoError(t, err)
 
 	firstPulsar, err := NewPulsar(configuration.Pulsar{

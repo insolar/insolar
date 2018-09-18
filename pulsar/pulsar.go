@@ -47,7 +47,7 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 	}
 
 	// Parse private key from config
-	privateKey, err := importPrivateKey(configuration.PrivateKey)
+	privateKey, err := ImportPrivateKey(configuration.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 		if len(neighbour.PublicKey) == 0 {
 			continue
 		}
-		publicKey, err := importPublicKey(neighbour.PublicKey)
+		publicKey, err := ImportPublicKey(neighbour.PublicKey)
 		if err != nil {
 			continue
 		}
@@ -112,7 +112,7 @@ func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payl
 		}
 
 		generator := StandardEntropyGenerator{}
-		convertedKey, err := exportPublicKey(&pulsar.PrivateKey.PublicKey)
+		convertedKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payl
 }
 
 func (pulsar *Pulsar) EstablishConnection(pubKey *ecdsa.PublicKey) error {
-	converted, err := exportPublicKey(pubKey)
+	converted, err := ExportPublicKey(pubKey)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func (pulsar *Pulsar) EstablishConnection(pubKey *ecdsa.PublicKey) error {
 	go clt.Run()
 
 	generator := StandardEntropyGenerator{}
-	convertedKey, err := exportPublicKey(&pulsar.PrivateKey.PublicKey)
+	convertedKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		return nil
 	}
@@ -206,7 +206,7 @@ func checkSignature(request *Payload) (bool, error) {
 		return false, err
 	}
 	hash := h.Sum(nil)
-	publicKey, err := importPublicKey(request.PublicKey)
+	publicKey, err := ImportPublicKey(request.PublicKey)
 	if err != nil {
 		return false, err
 	}

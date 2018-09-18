@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/pulsar"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -40,6 +41,9 @@ func main() {
 
 	initLogger(cfgHolder.Configuration.Log)
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+
+	privateKey, err := pulsar.ImportPrivateKey(cfgHolder.Configuration.Pulsar.PrivateKey)
+	fmt.Printf("%v", privateKey)
 }
 
 func initLogger(cfg configuration.Log) {
