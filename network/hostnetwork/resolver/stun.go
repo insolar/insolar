@@ -20,6 +20,7 @@ import (
 	"net"
 
 	"github.com/ccding/go-stun/stun"
+	"github.com/insolar/insolar/log"
 )
 
 type stunResolver struct {
@@ -55,5 +56,6 @@ func (sr *stunResolver) Resolve(conn net.PacketConn) (string, error) {
 		return "", err
 	}
 
+	log.Infof("STUN resolve public address to %s", host.TransportAddr())
 	return host.TransportAddr(), nil
 }

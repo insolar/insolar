@@ -19,7 +19,6 @@ package hostnetwork
 import (
 	"bytes"
 	"errors"
-	"log"
 	"math"
 	"sort"
 	"strings"
@@ -28,6 +27,7 @@ import (
 
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -275,7 +275,7 @@ func (dht *DHT) Bootstrap() error {
 				wg.Done()
 				return
 			case <-time.After(dht.options.PacketTimeout):
-				log.Println("bootstrap response timeout")
+				log.Warnln("bootstrap response timeout")
 				future.Cancel()
 				wg.Done()
 				return
@@ -320,7 +320,7 @@ func (dht *DHT) iterateBootstrapHosts(
 			if err != nil {
 				continue
 			}
-			log.Println("sending ping to " + bn.Address.String())
+			log.Debugln("sending ping to " + bn.Address.String())
 			wg.Add(1)
 			futures = append(futures, res)
 		} else {
@@ -706,9 +706,9 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 			} else {
 				targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.String())
 				if err != nil {
-					log.Println(err)
+					log.Errorln(err)
 				} else if !exist {
-					log.Printf("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
+					log.Warnln("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
 				} else {
 					// need to relay incoming packet
 					request := &packet.Packet{Sender: &host.Host{Address: dht.origin.Address, ID: msg.Sender.ID},
@@ -729,11 +729,11 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 	response, err := ParseIncomingPacket(dht, ctx, msg, packetBuilder)
 	if err != nil {
-		log.Println(err)
+		log.Errorln(err)
 	} else if response != nil {
 		err = dht.transport.SendResponse(msg.RequestID, response)
 		if err != nil {
-			log.Println("Failed to send response:", err.Error())
+			log.Errorln("Failed to send response:", err.Error())
 		}
 	}
 }
@@ -845,7 +845,7 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
 	for _, id1 := range subnetIDs {
 		err := RelayOwnershipRequest(dht, id1)
-		log.Println(err.Error())
+		log.Errorln(err.Error())
 	}
 }
 
@@ -898,7 +898,7 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 		targetHost = &host.Host{ID: id1, Address: address}
 		return targetHost, true, nil
 	} else {
-		log.Println("Host not found in routing table. Iterating through network...")
+		log.Infoln("Host not found in routing table. Iterating through network...")
 		_, closest, err := dht.iterate(ctx, routing.IterateFindHost, keyBytes, nil)
 		if err != nil {
 			return nil, false, err

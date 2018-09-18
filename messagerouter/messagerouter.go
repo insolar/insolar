@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter/message"
+	"github.com/insolar/insolar/messagerouter/response"
 )
 
 const deliverRPCMethodName = "MessageRouter.Deliver"
@@ -55,33 +56,34 @@ func (mr *MessageRouter) Start(c core.Components) error {
 func (mr *MessageRouter) Stop() error { return nil }
 
 // Route a `Message` and get a `Response` or error from remote host
-func (mr *MessageRouter) Route(msg core.Message) (response core.Response, err error) {
+func (mr *MessageRouter) Route(msg core.Message) (core.Response, error) {
 	jc := mr.ledger.GetJetCoordinator()
 	pm := mr.ledger.GetPulseManager()
 	pulse, err := pm.Current()
 	if err != nil {
-		return response, err
+		return nil, err
 	}
 
-	nodes := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(nodes) == 0 {
-		err = errors.New("wtf")
-		return
+		return nil, errors.New("wtf")
 	}
 
 	if len(nodes) > 1 {
 		// res, err := mr.service.SendCascadeMessage(...)
-
-		return
+		return nil, errors.New("wtf")
 	}
 
 	res, err := mr.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
 	if err != nil {
-		return response, err
+		return nil, err
 	}
 
-	return DeserializeResponse(res)
+	return response.Deserialize(bytes.NewBuffer(res))
 }
 
 type serializableError struct {
@@ -103,10 +105,10 @@ func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	resp := mr.logicRunner.Execute(msg)
-	if resp.Error != nil {
-		resp.Error = &serializableError{
-			S: resp.Error.Error(),
+	resp, err := mr.logicRunner.Execute(msg)
+	if err != nil {
+		return nil, &serializableError{
+			S: err.Error(),
 		}
 	}
 	return Serialize(resp)
@@ -124,13 +126,6 @@ func Serialize(value interface{}) ([]byte, error) {
 	return res, err
 }
 
-// DeserializeResponse reads response from byte slice.
-func DeserializeResponse(data []byte) (res core.Response, err error) {
-	err = gob.NewDecoder(bytes.NewBuffer(data)).Decode(&res)
-	return res, err
-}
-
 func init() {
-	gob.Register(&core.Response{})
 	gob.Register(&serializableError{})
 }

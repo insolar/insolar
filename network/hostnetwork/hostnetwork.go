@@ -17,11 +17,12 @@
 package hostnetwork
 
 import (
-	"log"
+	"errors"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -41,7 +42,7 @@ type NodeNetwork interface {
 func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
-		log.Fatal("hostnetwork.NewHostNetwork: \n Couldn't start at 0.0.0.0")
+		return nil, errors.New("Couldn't start at 0.0.0.0")
 	}
 
 	proxy := relay.NewProxy()
@@ -86,7 +87,7 @@ func getBootstrapHosts(addresses []string) []*host.Host {
 	for _, a := range addresses {
 		address, err := host.NewAddress(a)
 		if err != nil {
-			log.Fatalln("Failed to create bootstrap address:", err.Error())
+			log.Errorln("Failed to create bootstrap address:", err.Error())
 		}
 		hosts = append(hosts, host.NewHost(address))
 	}

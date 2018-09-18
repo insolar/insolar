@@ -17,10 +17,10 @@
 package hostnetwork
 
 import (
-	"log"
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
@@ -91,7 +91,7 @@ func CheckOriginRequest(hostHandler hosthandler.HostHandler, targetID string) er
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Debugln(err.Error())
 		return err
 	}
 
@@ -133,7 +133,7 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetI
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Debugln(err.Error())
 		return err
 	}
 
@@ -166,7 +166,7 @@ func ObtainIPRequest(hostHandler hosthandler.HostHandler, targetID string) error
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Debugln(err.Error())
 		return err
 	}
 

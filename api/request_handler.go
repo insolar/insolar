@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/messagerouter/message"
+	"github.com/insolar/insolar/messagerouter/response"
 	"github.com/pkg/errors"
 )
 
@@ -60,7 +61,7 @@ func NewRequestHandler(params *Params, router core.MessageRouter, rootDomainRefe
 	}
 }
 
-func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (*core.Response, error) {
+func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Response, error) {
 	if rh.messageRouter == nil {
 		return nil, errors.New("[ RouteCall ] message router was not set during initialization")
 	}
@@ -75,11 +76,8 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route message")
 	}
-	if res.Error != nil {
-		return nil, errors.Wrap(res.Error, "[ RouteCall ] couldn't route message (error in response)")
-	}
 
-	return &res, nil
+	return res, nil
 }
 
 // ProcessCreateMember processes CreateMember query type
@@ -95,7 +93,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractCreateMemberResponse(routResult.Result)
+	memberRef, err := extractCreateMemberResponse(routResult.(*response.CommonResponse).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -121,7 +119,7 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 	return balance, nil
 }
 
-func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (*core.Response, error) {
+func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Response, error) {
 	args, err := MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
@@ -149,7 +147,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
 
-	amount, err := extractGetBalanceResponse(routResult.Result)
+	amount, err := extractGetBalanceResponse(routResult.(*response.CommonResponse).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -195,7 +193,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
 
-	isSent, err := extractSendMoneyResponse(routResult.Result)
+	isSent, err := extractSendMoneyResponse(routResult.(*response.CommonResponse).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
@@ -226,7 +224,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	result := make(map[string]interface{})
 
 	var err error
-	var routResult *core.Response
+	var routResult core.Response
 	if all {
 		routResult, err = rh.sendRequest("DumpAllUsers", []interface{}{})
 	} else {
@@ -240,7 +238,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	serJSONDump, err := extractDumpAllUsersResponse(routResult.Result)
+	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*response.CommonResponse).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}

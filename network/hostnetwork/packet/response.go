@@ -68,6 +68,12 @@ type ResponseCascadeSend struct {
 	Error   string
 }
 
+// ResponsePulse is the response for a new pulse from a pulsar
+type ResponsePulse struct {
+	Success bool
+	Error   string
+}
+
 // ResponseRelay is data for relay request response.
 type ResponseRelay struct {
 	State relay.State

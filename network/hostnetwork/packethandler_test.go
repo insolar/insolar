@@ -22,32 +22,80 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
+	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
+
+type mockNetworkCommonFacade struct {
+	cascade *cascade.Cascade
+	pm      core.PulseManager
+}
+
+type mockPulseManager struct {
+	currentPulse core.Pulse
+}
+
+func (pm *mockPulseManager) Current() (*core.Pulse, error) {
+	return &pm.currentPulse, nil
+}
+
+func (pm *mockPulseManager) Set(pulse core.Pulse) error {
+	pm.currentPulse = pulse
+	return nil
+}
+
+func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
+	var c cascade.Cascade
+	c.SendMessage = func(data core.Cascade, method string, args [][]byte) error {
+		return nil
+	}
+	return &mockNetworkCommonFacade{
+		cascade: &c,
+		pm:      &mockPulseManager{},
+	}
+}
+
+func (fac *mockNetworkCommonFacade) GetRPC() rpc.RPC {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) GetCascade() *cascade.Cascade {
+	return fac.cascade
+}
+
+func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
+	return fac.pm
+}
+
+func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
+}
 
 type mockHostHandler struct {
 	AuthenticatedHost string
 	ReceivedKey       string
 	FoundHost         *host.Host
+	ncf               hosthandler.NetworkCommonFacade
 }
 
 func newMockHostHandler() *mockHostHandler {
-	return &mockHostHandler{}
+	return &mockHostHandler{ncf: newMockNetworkCommonFacade()}
 }
 
 func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 }
 
 func (hh *mockHostHandler) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
-	return nil
+	return hh.ncf
 }
 
 func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
@@ -248,13 +296,18 @@ func (hh *mockHostHandler) GetOriginHost() *host.Origin {
 	return origin
 }
 
-func TestDispatchPacketType(t *testing.T) {
+func mockSenderReceiver() (sender, receiver *host.Host) {
 	senderAddress, _ := host.NewAddress("0.0.0.0:0")
-	sender := host.NewHost(senderAddress)
+	sender = host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID()
 	receiverAddress, _ := host.NewAddress("0.0.0.0:0")
-	receiver := host.NewHost(receiverAddress)
+	receiver = host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
+	return
+}
+
+func TestDispatchPacketType(t *testing.T) {
+	sender, receiver := mockSenderReceiver()
 	hh := newMockHostHandler()
 	builder := packet.NewBuilder()
 	authenticatedSenderAddress, _ := host.NewAddress("0.0.0.0:0")
@@ -405,4 +458,27 @@ func TestDispatchPacketType(t *testing.T) {
 		pckt := builder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: sender.ID.Bytes()}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
+
+	t.Run("send cascade", func(t *testing.T) {
+		pckt := builder.Type(packet.TypeCascadeSend).Request(&packet.RequestCascadeSend{
+			Data: core.Cascade{}, RPC: packet.RequestDataRPC{}}).Build()
+		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+	})
+
+	t.Run("pulse", func(t *testing.T) {
+		pckt := builder.Type(packet.TypePulse).Request(&packet.RequestPulse{Pulse: core.Pulse{}}).Build()
+		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+	})
+}
+
+func Test_processPulse(t *testing.T) {
+	hh := newMockHostHandler()
+	sender, receiver := mockSenderReceiver()
+	hh.GetNetworkCommonFacade().GetPulseManager().Set(core.Pulse{PulseNumber: 0, Entropy: core.Entropy{0}})
+	response, _ := processPulse(hh, packet.Builder{}.Request(packet.TypePulse).Sender(sender).Receiver(receiver).
+		Request(&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).Build(),
+		packet.Builder{})
+	newPulse, _ := hh.GetNetworkCommonFacade().GetPulseManager().Current()
+	assert.NotNil(t, response)
+	assert.Equal(t, core.PulseNumber(1), newPulse.PulseNumber)
 }

@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/ledger/hash"
 )
 
-func selectByEntropy(entropy core.Entropy, values [][]byte, count int) ([]int, error) { // nolint: megacheck
+func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) ([]core.RecordRef, error) { // nolint: megacheck
 	type idxHash struct {
 		idx  int
 		hash []byte
@@ -42,7 +42,7 @@ func selectByEntropy(entropy core.Entropy, values [][]byte, count int) ([]int, e
 		if err != nil {
 			return nil, err
 		}
-		_, err = h.Write(value)
+		_, err = h.Write(value[:])
 		if err != nil {
 			return nil, err
 		}
@@ -54,9 +54,9 @@ func selectByEntropy(entropy core.Entropy, values [][]byte, count int) ([]int, e
 
 	sort.SliceStable(hashes, func(i, j int) bool { return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0 })
 
-	indexes := make([]int, 0, count)
+	selected := make([]core.RecordRef, 0, count)
 	for i := 0; i < count; i++ {
-		indexes = append(indexes, hashes[i].idx)
+		selected = append(selected, values[hashes[i].idx])
 	}
-	return indexes, nil
+	return selected, nil
 }

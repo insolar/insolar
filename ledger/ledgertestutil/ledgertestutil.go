@@ -28,7 +28,7 @@ import (
 
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger andh cleanup function.
-func TmpLedger(t *testing.T, dir string) (*ledger.Ledger, func()) {
+func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 	db, dbcancel := storagetest.TmpDB(t, dir)
 	l, err := ledger.NewLedgerWithDB(db, configuration.NewLedger())
 	assert.NoError(t, err)

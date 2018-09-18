@@ -28,13 +28,15 @@ import (
 // TmpDB returns BadgerDB's storage implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
-func TmpDB(t *testing.T, dir string) (*storage.DB, func()) {
+func TmpDB(t testing.TB, dir string) (*storage.DB, func()) {
 	tmpdir, err := ioutil.TempDir(dir, "bdb-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	db, err := storage.NewDB(configuration.Ledger{
-		DataDirectory: tmpdir,
+		Storage: configuration.Storage{
+			DataDirectory: tmpdir,
+		},
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
