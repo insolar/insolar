@@ -77,6 +77,11 @@ func (network *ServiceNetwork) GetAddress() string {
 	return network.hostNetwork.GetOriginHost().Address.String()
 }
 
+// GetNodeID returns current node id.
+func (network *ServiceNetwork) GetNodeID() core.RecordRef {
+	return network.nodeNetwork.GetID()
+}
+
 // SendMessage sends a message from MessageRouter.
 func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	if msg == nil {
