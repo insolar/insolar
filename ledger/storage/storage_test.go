@@ -57,6 +57,9 @@ func TestStore_SetRecord(t *testing.T) {
 	gotRec, err := db.GetRecord(gotRef)
 	assert.Nil(t, err)
 	assert.Equal(t, rec, gotRec)
+
+	_, err = db.SetRecord(rec)
+	assert.Equalf(t, err, storage.ErrOverride, "records override should be forbidden")
 }
 
 func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {

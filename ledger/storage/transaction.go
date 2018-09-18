@@ -75,6 +75,8 @@ func (m *TransactionManager) GetRecord(ref *record.Reference) (record.Record, er
 }
 
 // SetRecord stores record in BadgerDB and returns *record.Reference of new record.
+//
+// If record exists returns ErrOverride error.
 func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, error) {
 	raw, err := record.EncodeToRaw(rec)
 	if err != nil {
@@ -88,8 +90,15 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, er
 		},
 	}
 	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
-	val := record.MustEncodeRaw(raw)
-	err = m.txn.Set(k, val)
+	_, geterr := m.txn.Get(k)
+	if geterr == nil {
+		return nil, ErrOverride
+	}
+	if geterr != badger.ErrKeyNotFound {
+		return nil, geterr
+	}
+
+	err = m.txn.Set(k, record.MustEncodeRaw(raw))
 	if err != nil {
 		return nil, err
 	}
