@@ -88,6 +88,14 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, er
 		},
 	}
 	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
+	_, geterr := m.txn.Get(k)
+	if geterr == nil {
+		return nil, ErrOverride
+	}
+	if geterr != badger.ErrKeyNotFound {
+		return nil, geterr
+	}
+
 	val := record.MustEncodeRaw(raw)
 	err = m.txn.Set(k, val)
 	if err != nil {

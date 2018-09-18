@@ -31,4 +31,7 @@ var (
 
 	// ErrConflict is the alias for badger.ErrConflict.
 	ErrConflict = badger.ErrConflict
+
+	// ErrOverride is returned if SetRecord tries update existing record
+	ErrOverride = errors.New("records override is forbidden")
 )
