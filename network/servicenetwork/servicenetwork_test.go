@@ -19,7 +19,7 @@ package servicenetwork
 import (
 	"strconv"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"testing"
 	"time"
 
@@ -115,6 +115,20 @@ func mockConfiguration(host string, bootstrapHosts []string, nodeID string) (con
 	return h, n
 }
 
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return true // completed normally
+	case <-time.After(timeout):
+		return false // timed out
+	}
+}
+
 func TestServiceNetwork_SendMessage2(t *testing.T) {
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -136,10 +150,11 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		secondNode.Stop()
 	}()
 
-	var a uint32 = 0
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	secondNode.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
-		atomic.StoreUint32(&a, 1)
+		wg.Done()
 		return nil, nil
 	})
 
@@ -150,9 +165,9 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	}
 
 	firstNode.SendMessage(core.String2Ref(secondNodeId), "test", msg)
-	time.Sleep(10 * time.Millisecond)
+	success := waitTimeout(&wg, 20*time.Millisecond)
 
-	assert.Equal(t, uint32(1), a)
+	assert.True(t, success)
 }
 
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
@@ -176,10 +191,11 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		secondNode.Stop()
 	}()
 
-	var a uint32 = 0
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	secondNode.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
-		atomic.StoreUint32(&a, 1)
+		wg.Done()
 		return nil, nil
 	})
 
@@ -196,9 +212,9 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	}
 
 	firstNode.SendCascadeMessage(c, "test", msg)
-	time.Sleep(10 * time.Millisecond)
+	success := waitTimeout(&wg, 20*time.Millisecond)
 
-	assert.Equal(t, uint32(1), a)
+	assert.True(t, success)
 }
 
 func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
@@ -221,7 +237,8 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	port := 10000
 	bootstrapNodes := nodeIds[len(nodeIds)-2:]
 	bootstrapHosts := make([]string, 0)
-	var a uint32 = 0
+	var wg sync.WaitGroup
+	wg.Add(11)
 	services := make([]*ServiceNetwork, 0)
 
 	defer func() {
@@ -236,7 +253,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		service, _ = NewServiceNetwork(mockConfiguration(host, bHosts, node))
 		service.Start(nil)
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
-			atomic.AddUint32(&a, 1)
+			wg.Done()
 			return nil, nil
 		})
 		port++
@@ -270,8 +287,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 	firstService.SendCascadeMessage(c, "test", msg)
-	time.Sleep(50 * time.Millisecond)
-	// check that all 11 nodes received the message
-	assert.Equal(t, uint32(11), a)
+	success := waitTimeout(&wg, 100*time.Millisecond)
 
+	assert.True(t, success)
 }
