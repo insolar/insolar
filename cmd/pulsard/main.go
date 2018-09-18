@@ -44,6 +44,7 @@ func main() {
 
 	privateKey, err := pulsar.ImportPrivateKey(cfgHolder.Configuration.Pulsar.PrivateKey)
 	fmt.Printf("%v", privateKey)
+	fmt.Printf("%v", err)
 }
 
 func initLogger(cfg configuration.Log) {
