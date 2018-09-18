@@ -178,7 +178,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsChild(core.String2Ref("{{ .RootRefStr }}"))
+	friend := holder.AsChild(core.NewRefFromBase58("{{ .RootRefStr }}"))
 
 	res := friend.Hello(s)
 
@@ -249,7 +249,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsDelegate(core.String2Ref("{{ .RootRefStr }}"))
+	friend := holder.AsDelegate(core.NewRefFromBase58("{{ .RootRefStr }}"))
 
 	res := friend.Hello(s)
 

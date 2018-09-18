@@ -158,9 +158,9 @@ func TestExecution(t *testing.T) {
 	})
 	mr.LogicRunner = lr
 
-	codeRef := core.String2Ref("someCode")
-	dataRef := core.String2Ref("someObject")
-	classRef := core.String2Ref("someClass")
+	codeRef := core.NewRefFromBase58("someCode")
+	dataRef := core.NewRefFromBase58("someObject")
+	classRef := core.NewRefFromBase58("someClass")
 	am.Objects[dataRef] = &testutil.TestObjectDescriptor{
 		AM:    am,
 		Data:  []byte("origData"),
@@ -586,13 +586,13 @@ func New(n int) *Child {
 	err = cb.Build(map[string]string{"contract": goContract})
 	assert.NoError(t, err)
 
-	domain := core.String2Ref("c1")
-	contract, err := am.ActivateObj(core.String2Ref("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	domain := core.NewRefFromBase58("c1")
+	contract, err := am.ActivateObj(core.NewRefFromBase58("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(&message.CallMethodMessage{
-		Request:   core.String2Ref("r2"),
+		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
@@ -602,7 +602,7 @@ func New(n int) *Child {
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 	resp, err = lr.Execute(&message.CallMethodMessage{
-		Request:   core.String2Ref("r3"),
+		Request:   core.NewRefFromBase58("r3"),
 		ObjectRef: *contract,
 		Method:    "SumChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
@@ -662,8 +662,8 @@ func TestRootDomainContract(t *testing.T) {
 
 	t.Logf("XX %+v", cb)
 
-	domain := core.String2Ref("c1")
-	request := core.String2Ref("c2")
+	domain := core.NewRefFromBase58("c1")
+	request := core.NewRefFromBase58("c2")
 	contract, err := am.ActivateObj(domain, request, *cb.Classes["rootDomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
@@ -772,18 +772,18 @@ func (c *Child) GetNum() int {
 	err = cb.Build(map[string]string{"child": goChild, "parent": goParent})
 	assert.NoError(b, err)
 
-	domain := core.String2Ref("c1")
-	parent, err := am.ActivateObj(core.String2Ref("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	domain := core.NewRefFromBase58("c1")
+	parent, err := am.ActivateObj(core.NewRefFromBase58("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create parent")
 	assert.NotEqual(b, parent, nil, "parent created")
-	child, err := am.ActivateObj(core.String2Ref("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	child, err := am.ActivateObj(core.NewRefFromBase58("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create child")
 	assert.NotEqual(b, child, nil, "child created")
 
 	b.N = 1000
 	for i := 0; i < b.N; i++ {
 		resp, err := lr.Execute(&message.CallMethodMessage{
-			Request:   core.String2Ref("rr"),
+			Request:   core.NewRefFromBase58("rr"),
 			ObjectRef: *parent,
 			Method:    "CCC",
 			Arguments: testutil.CBORMarshal(b, []interface{}{child}),

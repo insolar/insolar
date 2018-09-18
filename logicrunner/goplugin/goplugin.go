@@ -138,7 +138,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 		return errors.Wrap(err, "couldn't route message")
 	}
 
-	reply.Reference = core.String2Ref(string(res.(*response.CommonResponse).Data))
+	reply.Reference = core.NewRefFromBase58(string(res.(*response.CommonResponse).Data))
 
 	return nil
 }
@@ -185,7 +185,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 		return errors.Wrap(err, "couldn't route message")
 	}
 
-	reply.Reference = core.String2Ref(string(res.(*response.CommonResponse).Data))
+	reply.Reference = core.NewRefFromBase58(string(res.(*response.CommonResponse).Data))
 
 	return nil
 }

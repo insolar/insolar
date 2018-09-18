@@ -61,7 +61,7 @@ func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
 		role := core.JetRole(intRole)
 		jc.roleCandidates[role] = []core.RecordRef{}
 		for _, cand := range candidates {
-			jc.roleCandidates[role] = append(jc.roleCandidates[role], core.String2Ref(cand))
+			jc.roleCandidates[role] = append(jc.roleCandidates[role], core.NewRefFromBase58(cand))
 		}
 	}
 
