@@ -56,4 +56,6 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	err = secondPulsar.EstablishConnection(&firstPulsar.PrivateKey.PublicKey)
 
 	assert.NoError(t, err)
+	assert.NotNil(t, firstPulsar.Neighbours[secondPublic].Client)
+	assert.NotNil(t, secondPulsar.Neighbours[firstPublic].Client)
 }

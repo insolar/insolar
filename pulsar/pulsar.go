@@ -56,6 +56,9 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.ListOfNeighbours {
+		if len(neighbour.PublicKey) == 0 {
+			continue
+		}
 		publicKey, err := importPublicKey(neighbour.PublicKey)
 		if err != nil {
 			continue
@@ -111,11 +114,14 @@ func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payl
 		generator := StandardEntropyGenerator{}
 		convertedKey, err := exportPublicKey(&pulsar.PrivateKey.PublicKey)
 		if err != nil {
-			return nil
+			return err
 		}
 		message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
 		message.Signature, err = singData(pulsar.PrivateKey, message.Body)
-		response = &message
+		if err != nil {
+			return err
+		}
+		*response = message
 
 		return nil
 	}
