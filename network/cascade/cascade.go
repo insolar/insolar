@@ -121,7 +121,8 @@ func CalculateNextNodes(data core.Cascade, currentNode *core.RecordRef) (nextNod
 	})
 
 	if currentNode == nil {
-		return nodeIds[:data.ReplicationFactor], nil
+		length := min(int(data.ReplicationFactor), len(nodeIds))
+		return nodeIds[:length], nil
 	}
 
 	// get indexes of the next layer nodes from the sorted nodes slice

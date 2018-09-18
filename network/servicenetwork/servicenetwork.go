@@ -18,6 +18,7 @@ package servicenetwork
 
 import (
 	"io/ioutil"
+	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -145,7 +146,7 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 
 	pm, err := getPulseManager(components)
 	if err != nil {
-		logrus.Error(err)
+		log.Error(err)
 	} else {
 		network.hostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
 	}
@@ -179,13 +180,11 @@ func (network *ServiceNetwork) bootstrap() {
 }
 
 func (network *ServiceNetwork) listen() {
-	func() {
-		log.Infoln("Network starts listening")
-		err := network.hostNetwork.Listen()
-		if err != nil {
-			log.Errorln("Listen failed:", err.Error())
-		}
-	}()
+	log.Infoln("Network starts listening")
+	err := network.hostNetwork.Listen()
+	if err != nil {
+		log.Errorln("Listen failed:", err.Error())
+	}
 }
 
 func createContext(handler hosthandler.HostHandler) hosthandler.Context {
@@ -221,18 +220,18 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 		return nil
 	}
 
-	var failedNodes []core.RecordRef
+	var failedNodes []string
 	for _, nextNode := range nextNodes {
 		hostID := network.nodeNetwork.ResolveHostID(nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
 			logrus.Debugln("failed to send cascade message: ", err)
-			failedNodes = append(failedNodes, nextNode)
+			failedNodes = append(failedNodes, nextNode.String())
 		}
 	}
 
 	if len(failedNodes) > 0 {
-		return errors.New("failed to send cascade message to nodes")
+		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
 	}
 
 	return nil
