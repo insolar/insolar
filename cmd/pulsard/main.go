@@ -18,12 +18,10 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/pulsar"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -42,10 +40,6 @@ func main() {
 
 	initLogger(cfgHolder.Configuration.Log)
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
-
-	pulsarServer := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, net.Listen)
-	defer pulsarServer.Close()
-	pulsarServer.Listen()
 }
 
 func initLogger(cfg configuration.Log) {
