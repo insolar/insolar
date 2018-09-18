@@ -17,12 +17,12 @@
 package pulsar
 
 import (
-	"crypto"
+	"bytes"
+	"crypto/ecdsa"
 	"crypto/rand"
-	"crypto/rsa"
 	"encoding/gob"
-	"encoding/json"
 	"errors"
+	"math/big"
 	"net"
 
 	"github.com/cenkalti/rpc2"
@@ -35,7 +35,7 @@ type Pulsar struct {
 	RpcServer *rpc2.Server
 
 	Neighbours map[string]*Neighbour
-	PrivateKey *rsa.PrivateKey
+	PrivateKey *ecdsa.PrivateKey
 }
 
 // Creation new pulsar-node
@@ -47,7 +47,7 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 	}
 
 	// Parse private key from config
-	privateKey, err := ParseRsaPrivateKeyFromPemStr(configuration.PrivateKey)
+	privateKey, err := importPrivateKey(configuration.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.ListOfNeighbours {
-		publicKey, err := ParseRsaPublicKeyFromPemStr(neighbour.PublicKey)
+		publicKey, err := importPublicKey(neighbour.PublicKey)
 		if err != nil {
 			continue
 		}
@@ -96,9 +96,12 @@ func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payl
 			return err
 		}
 
-		err = checkSignature(request)
+		result, err := checkSignature(request)
 		if err != nil {
 			return err
+		}
+		if !result {
+			return errors.New("Signature check failed")
 		}
 
 		if neighbour.Client == nil {
@@ -106,7 +109,7 @@ func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payl
 		}
 
 		generator := StandardEntropyGenerator{}
-		convertedKey, err := ExportRsaPublicKeyAsPemStr(&pulsar.PrivateKey.PublicKey)
+		convertedKey, err := exportPublicKey(&pulsar.PrivateKey.PublicKey)
 		if err != nil {
 			return nil
 		}
@@ -118,8 +121,8 @@ func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payl
 	}
 }
 
-func (pulsar *Pulsar) EstablishConnection(pubKey *rsa.PublicKey) error {
-	converted, err := ExportRsaPublicKeyAsPemStr(pubKey)
+func (pulsar *Pulsar) EstablishConnection(pubKey *ecdsa.PublicKey) error {
+	converted, err := exportPublicKey(pubKey)
 	if err != nil {
 		return err
 	}
@@ -141,7 +144,7 @@ func (pulsar *Pulsar) EstablishConnection(pubKey *rsa.PublicKey) error {
 	go clt.Run()
 
 	generator := StandardEntropyGenerator{}
-	convertedKey, err := ExportRsaPublicKeyAsPemStr(&pulsar.PrivateKey.PublicKey)
+	convertedKey, err := exportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		return nil
 	}
@@ -156,9 +159,12 @@ func (pulsar *Pulsar) EstablishConnection(pubKey *rsa.PublicKey) error {
 		return err
 	}
 
-	err = checkSignature(&rep)
+	result, err := checkSignature(&rep)
 	if err != nil {
 		return err
+	}
+	if !result {
+		return errors.New("Signature check failed")
 	}
 	neighbour.Client = clt
 
@@ -174,22 +180,46 @@ func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
 	return neighbour, nil
 }
 
-func checkSignature(request *Payload) error {
-	h := sha3.New256()
-	data, _ := json.Marshal(request.Body)
-	h.Write(data)
-	digest := h.Sum(nil)
-	publicKey, err := ParseRsaPublicKeyFromPemStr(request.PublicKey)
+func checkSignature(request *Payload) (bool, error) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(request.Body)
 	if err != nil {
-		return nil
+		return false, err
 	}
-	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA3_256, digest, request.Signature)
+
+	r := big.Int{}
+	s := big.Int{}
+	sigLen := len(request.Signature)
+	r.SetBytes(request.Signature[:(sigLen / 2)])
+	s.SetBytes(request.Signature[(sigLen / 2):])
+
+	h := sha3.New256()
+	h.Write(b.Bytes())
+	hash := h.Sum(nil)
+	publicKey, err := importPublicKey(request.PublicKey)
+	if err != nil {
+		return false, nil
+	}
+
+	return ecdsa.Verify(publicKey, hash, &r, &s), nil
 }
 
-func singData(privateKey *rsa.PrivateKey, data interface{}) ([]byte, error) {
+func singData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(data)
+	if err != nil {
+		return nil, err
+	}
+
 	h := sha3.New256()
-	marshaledData, _ := json.Marshal(data)
-	h.Write(marshaledData)
-	d := h.Sum(nil)
-	return rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA3_256, d)
+	h.Write(b.Bytes())
+	hash := h.Sum(nil)
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(r.Bytes(), s.Bytes()...), nil
 }

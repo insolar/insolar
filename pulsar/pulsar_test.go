@@ -17,6 +17,9 @@
 package pulsar
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"net"
 	"testing"
 
@@ -66,10 +69,8 @@ vF+t7yqqR9T1g2Xv0KJpkquwBKNliiQnVwbuhA==
 		return &mockListener{}, nil
 	})
 
-	if err != nil {
-		t.Errorf("Error happened %v", err)
-	}
-	parsedKey, _ := ParseRsaPrivateKeyFromPemStr(expectedPrivateKey)
+	assertObj.NoError(err)
+	parsedKey, _ := importPrivateKey(expectedPrivateKey)
 	assertObj.Equal(parsedKey, result.PrivateKey)
 	assertObj.Equal("testType", actualConnectionType)
 	assertObj.Equal("listedAddress", actualAddress)
@@ -110,10 +111,21 @@ vF+t7yqqR9T1g2Xv0KJpkquwBKNliiQnVwbuhA==
 		return &mockListener{}, nil
 	})
 
-	if err != nil {
-		t.Errorf("Error happened %v", err)
-	}
+	assertObj.NoError(err)
 	assertObj.Equal(2, len(result.Neighbours))
 	assertObj.Equal("tcp", result.Neighbours[firstExpectedKey].ConnectionType.String())
 	assertObj.Equal("pct", result.Neighbours[secondExpectedKey].ConnectionType.String())
+}
+
+func TestSingAndVerify(t *testing.T) {
+	assertObj := assert.New(t)
+	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	publicKey, _ := exportPublicKey(&privateKey.PublicKey)
+
+	signature, err := singData(privateKey, "This is the message to be signed and verified!")
+	assertObj.NoError(err)
+
+	checkSignature, err := checkSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: "This is the message to be signed and verified!"})
+
+	assertObj.Equal(true, checkSignature)
 }

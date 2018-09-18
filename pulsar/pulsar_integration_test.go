@@ -1,24 +1,35 @@
 package pulsar
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"net"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTwoPulsars_Handshake(t *testing.T) {
-	firstKey, _ := rsa.GenerateKey(rand.Reader, 256)
-	firstPublic, _ := ExportRsaPublicKeyAsPemStr(&firstKey.PublicKey)
-	secondKey, _ := rsa.GenerateKey(rand.Reader, 256)
-	secondPublic, _ := ExportRsaPublicKeyAsPemStr(&secondKey.PublicKey)
+	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	firstPublic, err := exportPublicKey(&firstKey.PublicKey)
+	assert.NoError(t, err)
+	firstPublicExported, err := exportPrivateKey(firstKey)
+	assert.NoError(t, err)
 
-	firstPulsar, _ := NewPulsar(configuration.Pulsar{
+	secondKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	secondPublic, err := exportPublicKey(&secondKey.PublicKey)
+	assert.NoError(t, err)
+	secondPublicExported, err := exportPrivateKey(secondKey)
+	assert.NoError(t, err)
+
+	firstPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType: "tcp",
 		ListenAddress:  ":1639",
-		PrivateKey:     ExportRsaPrivateKeyAsPemStr(firstKey),
+		PrivateKey:     firstPublicExported,
 		ListOfNeighbours: []*configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
@@ -26,11 +37,12 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		}},
 		net.Listen,
 	)
+	assert.NoError(t, err)
 
-	secondPulsar, _ := NewPulsar(configuration.Pulsar{
+	secondPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType: "tcp",
 		ListenAddress:  ":1640",
-		PrivateKey:     ExportRsaPrivateKeyAsPemStr(secondKey),
+		PrivateKey:     secondPublicExported,
 		ListOfNeighbours: []*configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
@@ -38,11 +50,10 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		}},
 		net.Listen,
 	)
+	assert.NoError(t, err)
 
 	go firstPulsar.Start()
-	err := secondPulsar.EstablishConnection(&firstPulsar.PrivateKey.PublicKey)
+	err = secondPulsar.EstablishConnection(&firstPulsar.PrivateKey.PublicKey)
 
-	if err != nil {
-		t.Errorf("Error happened %v", err)
-	}
+	assert.NoError(t, err)
 }

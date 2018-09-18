@@ -1,7 +1,7 @@
 package pulsar
 
 import (
-	"crypto/rsa"
+	"crypto/ecdsa"
 
 	"github.com/cenkalti/rpc2"
 	"github.com/insolar/insolar/configuration"
@@ -12,7 +12,7 @@ type Neighbour struct {
 	ConnectionType    configuration.ConnectionType
 	ConnectionAddress string
 	Client            *rpc2.Client
-	PublicKey         *rsa.PublicKey
+	PublicKey         *ecdsa.PublicKey
 }
 
 type RequestType string
