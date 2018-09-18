@@ -54,6 +54,12 @@ func (d *CodeDescriptor) Code() ([]byte, error) {
 	return code, nil
 }
 
+// Validate checks code record integrity.
+func (d *CodeDescriptor) Validate() error {
+	// TODO: implement me
+	return nil
+}
+
 // ClassDescriptor represents meta info required to fetch all class data.
 type ClassDescriptor struct {
 	manager *LedgerArtifactManager
@@ -75,6 +81,12 @@ func (d *ClassDescriptor) HeadRef() *core.RecordRef {
 // StateRef returns reference to represented class state record.
 func (d *ClassDescriptor) StateRef() *core.RecordRef {
 	return d.stateRef.CoreRef()
+}
+
+// IsActive checks if class is active.
+func (d *ClassDescriptor) IsActive() (bool, error) {
+	// TODO: implement me
+	return true, nil
 }
 
 // CodeDescriptor returns descriptor for fetching object's code data.
@@ -166,6 +178,12 @@ func (d *ObjectDescriptor) Memory() ([]byte, error) {
 	}
 
 	return d.headRecord.Memory, nil
+}
+
+// IsActive checks if object is active.
+func (d *ObjectDescriptor) IsActive() (bool, error) {
+	// TODO: implement me
+	return true, nil
 }
 
 // CodeDescriptor returns descriptor for fetching object's code data.

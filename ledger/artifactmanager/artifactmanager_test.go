@@ -332,7 +332,10 @@ func TestLedgerArtifactManager_ActivateObj_CreatesCorrectRecord(t *testing.T) {
 			},
 		},
 	})
-	td.db.SetObjectIndex(parentRef, &index.ObjectLifeline{})
+	td.db.SetObjectIndex(parentRef, &index.ObjectLifeline{
+		ClassRef:       *classRef,
+		LatestStateRef: *parentRef,
+	})
 
 	activateCoreRef, err := td.manager.ActivateObj(
 		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *classRef.CoreRef(), *parentRef.CoreRef(), memory,
@@ -410,6 +413,7 @@ func TestLedgerArtifactManager_ActivateObjDelegate_CreatesCorrectRecord(t *testi
 		},
 	})
 	td.db.SetObjectIndex(parentRef, &index.ObjectLifeline{
+		ClassRef:       *classRef,
 		LatestStateRef: *parentRef,
 		Delegates:      map[core.RecordRef]record.Reference{},
 	})
