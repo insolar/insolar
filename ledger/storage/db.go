@@ -197,9 +197,9 @@ func (db *DB) SetRecord(rec record.Record) (ref *record.Reference, err error) {
 		return err
 	})
 	if err != nil {
-		ref = nil
+		return nil, err
 	}
-	return ref, err
+	return ref, nil
 }
 
 // GetClassIndex wraps matching transaction manager method.
