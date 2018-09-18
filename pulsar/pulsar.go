@@ -32,7 +32,7 @@ import (
 
 type Pulsar struct {
 	Sock      net.Listener
-	RpcServer *rpc2.Server
+	RPCServer *rpc2.Server
 
 	Neighbours map[string]*Neighbour
 	PrivateKey *ecdsa.PrivateKey
@@ -79,7 +79,7 @@ func (pulsar *Pulsar) Start() {
 	// Adding rpc-server listener
 	srv := rpc2.NewServer()
 	ConfigureHandlers(pulsar, srv)
-	pulsar.RpcServer = srv
+	pulsar.RPCServer = srv
 	srv.Accept(pulsar.Sock)
 }
 
@@ -201,11 +201,14 @@ func checkSignature(request *Payload) (bool, error) {
 	s.SetBytes(request.Signature[(sigLen / 2):])
 
 	h := sha3.New256()
-	h.Write(b.Bytes())
+	_, err = h.Write(b.Bytes())
+	if err != nil {
+		return false, err
+	}
 	hash := h.Sum(nil)
 	publicKey, err := importPublicKey(request.PublicKey)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 
 	return ecdsa.Verify(publicKey, hash, &r, &s), nil
@@ -220,7 +223,10 @@ func singData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
 	}
 
 	h := sha3.New256()
-	h.Write(b.Bytes())
+	_, err = h.Write(b.Bytes())
+	if err != nil {
+		return nil, err
+	}
 	hash := h.Sum(nil)
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
 	if err != nil {

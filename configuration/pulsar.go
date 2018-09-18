@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package configuration
 type ConnectionType string
 
 const (
-	Tcp ConnectionType = "tcp"
+	TCP ConnectionType = "tcp"
 )
 
 func (ct ConnectionType) String() string {
@@ -43,5 +43,5 @@ type PulsarNodeAddress struct {
 
 // NewPulsar creates new default configuration for pulsar node.
 func NewPulsar() Pulsar {
-	return Pulsar{ListenAddress: "0.0.0.0:8090", ConnectionType: Tcp, ListOfNeighbours: []*PulsarNodeAddress{}}
+	return Pulsar{ListenAddress: "0.0.0.0:8090", ConnectionType: TCP, ListOfNeighbours: []*PulsarNodeAddress{}}
 }
