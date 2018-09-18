@@ -17,7 +17,6 @@
 package bootstrap
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -62,6 +61,20 @@ func getContractPath(name string) (string, error) {
 // Start creates types and RootDomain instance
 func (b *Bootstrapper) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
+
+	rootRefChildren, err := am.GetObjChildren(*am.RootRef())
+	if err != nil {
+		return errors.Wrap(err, "couldn't get children of RootRef object")
+	}
+	if rootRefChildren.HasNext() {
+		rootDomainRef, err := rootRefChildren.Next()
+		if err != nil {
+			return errors.Wrap(err, "couldn't get next child of RootRef object")
+		}
+		b.rootDomainRef = &rootDomainRef
+		return nil
+	}
+
 	_, insgocc, err := testutil.Build()
 	if err != nil {
 		return errors.Wrap(err, "couldn't build insgocc")
@@ -102,11 +115,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return errors.Wrap(err, "couldn't create rootdomain instance")
 	}
 	b.rootDomainRef = contract
-	rootRefChildren, err := am.GetObjChildren(*am.RootRef())
-	if err != nil {
-		return errors.Wrap(err, "couldn't get children of RootRef object")
-	}
-	fmt.Println(rootRefChildren)
+
 	return nil
 }
 
