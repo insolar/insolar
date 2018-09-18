@@ -117,7 +117,10 @@ func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(rd)
+	_, err = buf.ReadFrom(rd)
+	if err != nil {
+		return nil, err
+	}
 	return buf.Bytes(), nil
 }
 
