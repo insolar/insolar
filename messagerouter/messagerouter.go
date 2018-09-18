@@ -69,13 +69,14 @@ func (mr *MessageRouter) Route(msg core.Message) (core.Response, error) {
 		return nil, err
 	}
 
-	if len(nodes) == 0 {
-		return nil, errors.New("wtf")
-	}
-
 	if len(nodes) > 1 {
-		// res, err := mr.service.SendCascadeMessage(...)
-		return nil, errors.New("wtf")
+		cascade := core.Cascade{
+			NodeIds:           nodes,
+			Entropy:           pulse.Entropy,
+			ReplicationFactor: 2,
+		}
+		err := mr.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
+		return nil, err
 	}
 
 	res, err := mr.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
