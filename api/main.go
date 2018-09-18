@@ -21,15 +21,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -78,12 +77,12 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = writeError(msg, badRequest)
-		logrus.Printf("[QID=%s] %s\n", rh.qid, msg)
+		log.Warnf("[QID=%s] %s\n", rh.qid, msg)
 		return answer
 	}
 	if hError != nil {
 		errMsg := "Handler error: " + hError.Error()
-		log.Printf("[QID=%s] %s\n", rh.qid, errMsg)
+		log.Errorf("[QID=%s] %s\n", rh.qid, errMsg)
 		answer = writeError(errMsg, handlerError)
 	}
 
@@ -114,7 +113,7 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 		}
 	}
 
-	logrus.Printf("[QID=%s] Query: %s. Url: %s\n", params.QID, string(body), req.URL)
+	log.Infof("[QID=%s] Query: %s. Url: %s\n", params.QID, string(body), req.URL)
 
 	return &params, nil
 }
@@ -139,15 +138,15 @@ func wrapAPIV1Handler(router core.MessageRouter, rootDomainReference core.Record
 			var newLine byte = '\n'
 			_, err = response.Write(append(serJSON, newLine))
 			if err != nil {
-				logrus.Printf("[QID=%s] Can't write response\n", params.QID)
+				log.Errorf("[QID=%s] Can't write response\n", params.QID)
 			}
-			logrus.Infof("[QID=%s] Request completed\n", params.QID)
+			log.Infof("[QID=%s] Request completed\n", params.QID)
 		}()
 
 		params, err := preprocessRequest(req)
 		if err != nil {
 			answer = writeError("Bad request", badRequest)
-			logrus.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
+			log.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
 		rh := NewRequestHandler(params, router, rootDomainReference)
@@ -187,7 +186,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 func (ar *Runner) reloadMessageRouter(c core.Components) {
 	_, ok := c["core.MessageRouter"]
 	if !ok {
-		logrus.Warnln("Working in demo mode: without MessageRouter")
+		log.Warn("Working in demo mode: without MessageRouter")
 	} else {
 		ar.messageRouter = c["core.MessageRouter"].(core.MessageRouter)
 	}
@@ -202,11 +201,11 @@ func (ar *Runner) Start(c core.Components) error {
 
 	fw := wrapAPIV1Handler(ar.messageRouter, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
-	logrus.Info("Starting ApiRunner ...")
-	logrus.Info("Config: ", ar.cfg)
+	log.Info("Starting ApiRunner ...")
+	log.Info("Config: ", ar.cfg)
 	go func() {
 		if err := ar.server.ListenAndServe(); err != nil {
-			logrus.Errorln("Httpserver: ListenAndServe() error: ", err)
+			log.Error("Httpserver: ListenAndServe() error: ", err)
 		}
 	}()
 	return nil
@@ -215,7 +214,7 @@ func (ar *Runner) Start(c core.Components) error {
 // Stop stops api server
 func (ar *Runner) Stop() error {
 	const timeOut = 5
-	logrus.Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
+	log.Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeOut)*time.Second)
 	defer cancel()
 	err := ar.server.Shutdown(ctx)
