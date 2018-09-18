@@ -75,6 +75,24 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return nil
 	}
 
+	jc := c["core.Ledger"].(core.Ledger).GetJetCoordinator()
+	pm := c["core.Ledger"].(core.Ledger).GetPulseManager()
+	currentPulse, err := pm.Current()
+	if err != nil {
+		return errors.Wrap(err, "couldn't get current pulse")
+	}
+
+	network := c["core.Network"].(core.Network)
+	nodeID := network.GetNodeID()
+
+	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get children of RootRef object")
+	}
+	if !isLightExecutor {
+		return nil
+	}
+
 	_, insgocc, err := testutil.Build()
 	if err != nil {
 		return errors.Wrap(err, "couldn't build insgocc")
