@@ -64,7 +64,10 @@ func (mr *MessageRouter) Route(msg core.Message) (core.Response, error) {
 		return nil, err
 	}
 
-	nodes := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(nodes) == 0 {
 		return nil, errors.New("wtf")

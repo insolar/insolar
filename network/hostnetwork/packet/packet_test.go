@@ -76,6 +76,7 @@ func TestPacket_IsValid_Ok(t *testing.T) {
 		{"TypeKnownOuterHosts", TypeKnownOuterHosts, &RequestKnownOuterHosts{"test", 1}},
 		{"TypeCheckNodePriv", TypeCheckNodePriv, &RequestCheckNodePriv{"test"}},
 		{"TypeCascadeSend", TypeCascadeSend, &RequestCascadeSend{rpcData, cascade}},
+		{"TypePulse", TypePulse, &RequestPulse{Pulse: core.Pulse{}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

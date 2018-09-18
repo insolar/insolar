@@ -19,13 +19,13 @@ package transport
 import (
 	"context"
 	"errors"
-	"log"
 	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 
@@ -101,6 +101,7 @@ func (t *utpTransport) SendResponse(requestID packet.RequestID, msg *packet.Pack
 
 // Start starts networking.
 func (t *utpTransport) Start() error {
+	log.Info("Start UTP transport")
 	for {
 		conn, err := t.socket.Accept()
 
@@ -118,12 +119,13 @@ func (t *utpTransport) Stop() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
+	log.Info("Stop UTP transport")
 	t.disconnectStarted <- true
 	close(t.disconnectStarted)
 
 	err := t.socket.CloseNow()
 	if err != nil {
-		log.Println("Failed to close socket:", err.Error())
+		log.Errorln("Failed to close socket:", err.Error())
 	}
 }
 
@@ -258,6 +260,7 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 	}
 }
 
+// PublicAddress returns transport public ip address
 func (t *utpTransport) PublicAddress() string {
 	return t.publicAddress
 }
