@@ -15,15 +15,14 @@ type Neighbour struct {
 	PublicKey         *rsa.PublicKey
 }
 
-type MessageType string
+type RequestType string
 
 const (
-	Handshake MessageType = "handshake"
+	Handshake RequestType = "handshake"
 )
 
-type Message struct {
-	Type MessageType
-	Data interface{}
+func (state RequestType) String() string {
+	return string(state)
 }
 
 type HandshakePayload struct {

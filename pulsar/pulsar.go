@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"net"
@@ -59,8 +60,14 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 		if err != nil {
 			continue
 		}
-		pulsar.Neighbours[neighbour.PublicKey] = &Neighbour{ConnectionType: neighbour.ConnectionType, PublicKey: publicKey}
+		pulsar.Neighbours[neighbour.PublicKey] = &Neighbour{
+			ConnectionType:    neighbour.ConnectionType,
+			ConnectionAddress: neighbour.Address,
+			PublicKey:         publicKey}
 	}
+
+	gob.Register(Payload{})
+	gob.Register(HandshakePayload{})
 
 	return pulsar, nil
 }
@@ -74,21 +81,17 @@ func (pulsar *Pulsar) Start() {
 }
 
 func ConfigureHandlers(pulsar *Pulsar, server *rpc2.Server) {
-	server.Handle("handshake", pulsar.HandshakeHandler())
+	server.Handle(Handshake.String(), pulsar.HandshakeHandler())
 }
 
 func ConfigureHandlersForClient(pulsar *Pulsar, server *rpc2.Client) {
-	server.Handle("handshake", pulsar.HandshakeHandler())
+	server.Handle(Handshake.String(), pulsar.HandshakeHandler())
 }
 
 func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payload, response *Payload) error {
 
 	return func(client *rpc2.Client, request *Payload, response *Payload) error {
-		publicKey, err := ParseRsaPublicKeyFromPemStr(request.PublicKey)
-		if err != nil {
-			return nil
-		}
-		neighbour, err := pulsar.fetchNeighbour(publicKey)
+		neighbour, err := pulsar.fetchNeighbour(request.PublicKey)
 		if err != nil {
 			return err
 		}
@@ -116,7 +119,11 @@ func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payl
 }
 
 func (pulsar *Pulsar) EstablishConnection(pubKey *rsa.PublicKey) error {
-	neighbour, err := pulsar.fetchNeighbour(pubKey)
+	converted, err := ExportRsaPublicKeyAsPemStr(pubKey)
+	if err != nil {
+		return err
+	}
+	neighbour, err := pulsar.fetchNeighbour(converted)
 	if err != nil {
 		return err
 	}
@@ -124,23 +131,32 @@ func (pulsar *Pulsar) EstablishConnection(pubKey *rsa.PublicKey) error {
 		return nil
 	}
 
-	conn, _ := net.Dial(neighbour.ConnectionType.String(), neighbour.ConnectionAddress)
+	conn, err := net.Dial(neighbour.ConnectionType.String(), neighbour.ConnectionAddress)
+	if err != nil {
+		return err
+	}
 
 	clt := rpc2.NewClient(conn)
 	ConfigureHandlersForClient(pulsar, clt)
 	go clt.Run()
 
-	rep := &Payload{}
 	generator := StandardEntropyGenerator{}
 	convertedKey, err := ExportRsaPublicKeyAsPemStr(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		return nil
 	}
+	var rep Payload
 	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
 	message.Signature, err = singData(pulsar.PrivateKey, message.Body)
-	clt.Call("handshake", message, rep)
+	if err != nil {
+		return err
+	}
+	err = clt.Call(Handshake.String(), message, &rep)
+	if err != nil {
+		return err
+	}
 
-	err = checkSignature(rep)
+	err = checkSignature(&rep)
 	if err != nil {
 		return err
 	}
@@ -149,12 +165,8 @@ func (pulsar *Pulsar) EstablishConnection(pubKey *rsa.PublicKey) error {
 	return nil
 }
 
-func (pulsar *Pulsar) fetchNeighbour(pubKey *rsa.PublicKey) (*Neighbour, error) {
-	converted, err := ExportRsaPublicKeyAsPemStr(pubKey)
-	if err != nil {
-		return nil, err
-	}
-	neighbour, ok := pulsar.Neighbours[converted]
+func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
+	neighbour, ok := pulsar.Neighbours[pubKey]
 	if !ok {
 		return nil, errors.New("Forbidden connection")
 	}
