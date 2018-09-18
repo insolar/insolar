@@ -14,48 +14,60 @@
  *    limitations under the License.
  */
 
-package jetcoordinator
+package jetcoordinator_test
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/ledger/jetdrop"
-	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
-func TestCreateJetDrop_CreatesCorrectDrop(t *testing.T) {
-	ledger, cleaner := storagetest.TmpDB(t, "")
+func TestJetCoordinator_QueryRole(t *testing.T) {
+	ledger, cleaner := ledgertestutil.TmpLedger(t, "")
 	defer cleaner()
 
-	jc := &JetCoordinator{
-		db: ledger,
-	}
-	var (
-		pulse1 core.PulseNumber = 1
-		pulse2 core.PulseNumber = 2
-	)
-	// it references on 'fake' zero
-	fakeDrop := jetdrop.JetDrop{
-		Hash: []byte{0xFF},
-	}
-	// save zero drop, which references on 'fake' drop with '0xFF' hash.
-	dropz, err := ledger.SetDrop(pulse1, &fakeDrop)
-	assert.NoError(t, err)
-	assert.NotNil(t, dropz)
+	var err error
 
-	// save pulse1 records
-	ledger.SetCurrentPulse(pulse1)
-	ledger.SetRecord(&record.CodeRecord{})
-	ledger.SetRecord(&record.ClassActivateRecord{})
-	ledger.SetRecord(&record.ObjectActivateRecord{})
-	// trigger new pulse on coordinator
-	// (should save non zero Pulse)
-	drop1, err := jc.CreateDrop(pulse2)
+	am := ledger.GetArtifactManager()
+	pm := ledger.GetPulseManager()
+	jc := ledger.GetJetCoordinator()
+
+	pulse, err := pm.Current()
 	assert.NoError(t, err)
-	assert.NotNil(t, drop1)
-	assert.Equal(t, dropz.Hash, drop1.PrevHash)
+
+	selected, err := jc.QueryRole(core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber)
+	assert.Equal(t, []core.RecordRef{core.String2Ref("ve2")}, selected)
+
+	selected, err = jc.QueryRole(core.RoleVirtualValidator, *am.RootRef(), pulse.PulseNumber)
+	assert.Equal(t, []core.RecordRef{
+		core.String2Ref("vv3"),
+		core.String2Ref("vv1"),
+		core.String2Ref("vv4"),
+	}, selected)
+}
+
+func TestJetCoordinator_IsAuthorized(t *testing.T) {
+	ledger, cleaner := ledgertestutil.TmpLedger(t, "")
+	defer cleaner()
+
+	var err error
+
+	am := ledger.GetArtifactManager()
+	pm := ledger.GetPulseManager()
+	jc := ledger.GetJetCoordinator()
+
+	pulse, err := pm.Current()
+	assert.NoError(t, err)
+
+	authorized, err := jc.IsAuthorized(
+		core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber, core.String2Ref("ve1"),
+	)
+	assert.Equal(t, false, authorized)
+
+	authorized, err = jc.IsAuthorized(
+		core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber, core.String2Ref("ve2"),
+	)
+	assert.Equal(t, true, authorized)
 }

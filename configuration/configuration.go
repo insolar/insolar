@@ -33,7 +33,7 @@ type Configuration struct {
 	Service     ServiceNetwork
 	Ledger      Ledger
 	Log         Log
-	Stats       Stats
+	Metrics     Metrics
 	LogicRunner LogicRunner
 	APIRunner   APIRunner
 	Pulsar      Pulsar
@@ -53,7 +53,7 @@ func NewConfiguration() Configuration {
 		Service:     NewServiceNetwork(),
 		Ledger:      NewLedger(),
 		Log:         NewLog(),
-		Stats:       NewStats(),
+		Metrics:     NewMetrics(),
 		LogicRunner: NewLogicRunner(),
 		APIRunner:   NewAPIRunner(),
 		Pulsar:      NewPulsar(),

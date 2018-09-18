@@ -26,7 +26,7 @@ func (ct ConnectionType) String() string {
 	return string(ct)
 }
 
-// Stats holds configuration for pulsar node
+// Pulsar holds configuration for pulsar node.
 type Pulsar struct {
 	ConnectionType ConnectionType
 	ListenAddress  string
@@ -41,7 +41,7 @@ type PulsarNodeAddress struct {
 	PublicKey      string
 }
 
-// NewPulsar creates new default configuration for pulsar node
+// NewPulsar creates new default configuration for pulsar node.
 func NewPulsar() Pulsar {
 	return Pulsar{ListenAddress: "0.0.0.0:8090", ConnectionType: Tcp, ListOfNeighbours: []*PulsarNodeAddress{}}
 }

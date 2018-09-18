@@ -41,7 +41,5 @@ logicrunner/goplugin/preprocessor/preprocessor
 cmd/insgocc/insgocc
 *_generated.go
 
-
-cmd/icc/icc
 /testdata
 data

@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/insolar/insolar/api"
@@ -28,10 +27,10 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/network/servicenetwork"
-	log "github.com/sirupsen/logrus"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -80,7 +79,6 @@ func main() {
 		log.Warnln("Failed to load configuration from env:", err.Error())
 	}
 
-	cfgHolder.Configuration.Host.Transport.BehindNAT = false
 	initLogger(cfgHolder.Configuration.Log)
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
@@ -140,19 +138,13 @@ func main() {
 		os.Exit(0)
 	}()
 
-	go handleStats(cfgHolder.Configuration.Stats)
-
 	fmt.Println("Running interactive mode:")
 	repl(nw)
 }
 
 func initLogger(cfg configuration.Log) {
-
-	cfg.Level = "debug"
-	level, err := log.ParseLevel(strings.ToLower(cfg.Level))
+	err := log.SetLevel(cfg.Level)
 	if err != nil {
-		log.Warnln(err.Error())
+		log.Errorln(err.Error())
 	}
-	jww.SetLogOutput(log.StandardLogger().Out)
-	log.SetLevel(level)
 }

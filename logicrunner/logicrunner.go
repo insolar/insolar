@@ -27,12 +27,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/messagerouter/message"
+	"github.com/insolar/insolar/messagerouter/response"
 )
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
+	MessageRouter   core.MessageRouter
 	Cfg             configuration.LogicRunner
 }
 
@@ -48,8 +50,9 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 // Start starts logic runner component
 func (lr *LogicRunner) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
-	mr := c["core.MessageRouter"].(core.MessageRouter)
 	lr.ArtifactManager = am
+	mr := c["core.MessageRouter"].(core.MessageRouter)
+	lr.MessageRouter = mr
 
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(mr, am)
@@ -102,31 +105,8 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
-type withCodeDescriptor interface {
-	CodeDescriptor() (core.CodeDescriptor, error)
-}
-
-func (lr *LogicRunner) executorFromDescriptor(from withCodeDescriptor) (core.MachineLogicExecutor, error) {
-	codeDesc, err := from.CodeDescriptor()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get code descriptor")
-	}
-
-	mt, err := codeDesc.MachineType()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get machine type")
-	}
-
-	executor, err := lr.GetExecutor(mt)
-	if err != nil {
-		return nil, errors.Wrap(err, "no executer registered")
-	}
-
-	return executor, nil
-}
-
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
+func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 	lr.ArtifactManager.SetArchPref(
 		[]core.MachineType{
 			core.MachineTypeBuiltin,
@@ -140,82 +120,129 @@ func (lr *LogicRunner) Execute(msg core.Message) *core.Response {
 
 	switch m := msg.(type) {
 	case *message.CallMethodMessage:
-		objDesc, err := lr.ArtifactManager.GetLatestObj(m.ObjectRef)
+		resp, err := lr.MessageRouter.Route(&message.GetObjectMessage{
+			Object: m.ObjectRef,
+		})
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't get object")}
+			return nil, errors.Wrap(err, "couldn't get object")
 		}
+		info := resp.(*response.ObjectBodyResponse)
+
 		ctx.Callee = &m.ObjectRef
+		ctx.Class = &info.Class
 
-		classDesc, err := objDesc.ClassDescriptor()
+		executor, err := lr.GetExecutor(info.MachineType)
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't get object's class")}
-		}
-		ctx.Class = classDesc.HeadRef()
-
-		data, err := objDesc.Memory()
-		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't get object's data")}
-		}
-
-		codeDesc, err := objDesc.CodeDescriptor()
-		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't get object's code descriptor")}
-		}
-
-		executor, err := lr.executorFromDescriptor(objDesc)
-		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't get executor")}
+			return nil, errors.Wrap(err, "no executer registered")
 		}
 
 		newData, result, err := executor.CallMethod(
-			&ctx, *codeDesc.Ref(), data, m.Method, m.Arguments,
+			&ctx, info.Code, info.Body, m.Method, m.Arguments,
 		)
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "executer error")}
+			return nil, errors.Wrap(err, "executer error")
 		}
 
-		_, err = lr.ArtifactManager.UpdateObj(
-			core.RecordRef{}, core.RecordRef{}, m.ObjectRef, newData,
+		_, err = lr.MessageRouter.Route(
+			&message.UpdateObjectMessage{
+				Object: m.ObjectRef,
+				Body:   newData,
+			},
 		)
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't update object")}
+			return nil, errors.Wrap(err, "couldn't update object")
 		}
 
-		return &core.Response{Data: newData, Result: result}
+		return &response.CommonResponse{Data: newData, Result: result}, nil
 
 	case *message.CallConstructorMessage:
 		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't get class")}
+			return nil, errors.Wrap(err, "couldn't get class")
 		}
 		ctx.Class = classDesc.HeadRef()
 
 		codeDesc, err := classDesc.CodeDescriptor()
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't get class's code descriptor")}
+			return nil, errors.Wrap(err, "couldn't get class's code descriptor")
 		}
 
-		executor, err := lr.executorFromDescriptor(classDesc)
+		mt, err := codeDesc.MachineType()
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't get executor")}
+			return nil, errors.Wrap(err, "couldn't get machine type")
+		}
+
+		executor, err := lr.GetExecutor(mt)
+		if err != nil {
+			return nil, errors.Wrap(err, "no executer registered")
 		}
 
 		newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "executer error")}
+			return nil, errors.Wrap(err, "executer error")
 		}
 
-		return &core.Response{Data: newData}
+		return &response.CommonResponse{Data: newData}, nil
 
 	case *message.DelegateMessage:
-		// TODO: should be InjectDelegate
 		ref, err := lr.ArtifactManager.ActivateObjDelegate(
 			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
 		)
 		if err != nil {
-			return &core.Response{Error: errors.Wrap(err, "couldn't save new object")}
+			return nil, errors.Wrap(err, "couldn't save new object")
 		}
-		return &core.Response{Data: []byte(ref.String())}
+		return &response.CommonResponse{Data: []byte(ref.String())}, nil
+
+	case *message.ChildMessage:
+		ref, err := lr.ArtifactManager.ActivateObj(
+			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't save new object")
+		}
+		return &response.CommonResponse{Data: []byte(ref.String())}, nil
+
+	case *message.UpdateObjectMessage:
+		_, err := lr.ArtifactManager.UpdateObj(
+			core.RecordRef{}, core.RecordRef{}, m.Object, m.Body,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't update object")
+		}
+		return &response.CommonResponse{}, nil
+
+	case *message.GetObjectMessage:
+		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Object)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object")
+		}
+
+		classDesc, err := objDesc.ClassDescriptor()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object's class")
+		}
+
+		data, err := objDesc.Memory()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object's data")
+		}
+
+		codeDesc, err := objDesc.CodeDescriptor()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get object's code descriptor")
+		}
+
+		mt, err := codeDesc.MachineType()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get machine type")
+		}
+
+		return &response.ObjectBodyResponse{
+			Body:        data,
+			Code:        *codeDesc.Ref(),
+			Class:       *classDesc.HeadRef(),
+			MachineType: mt,
+		}, nil
 
 	default:
 		panic("Unknown message type")

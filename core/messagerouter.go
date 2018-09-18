@@ -32,10 +32,9 @@ type Message interface {
 }
 
 // Response to a `Message`
-type Response struct {
-	Data   []byte
-	Result []byte
-	Error  error
+type Response interface {
+	// Serialize serializes message.
+	Serialize() (io.Reader, error)
 }
 
 // MessageRouter interface

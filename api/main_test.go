@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/messagerouter/response"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -125,11 +126,11 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 type TestsMessageRouter struct {
 }
 
-func (ar *TestsMessageRouter) Start(c core.Components) error {
+func (mr *TestsMessageRouter) Start(c core.Components) error {
 	return nil
 }
 
-func (ar *TestsMessageRouter) Stop() error {
+func (mr *TestsMessageRouter) Stop() error {
 	return nil
 }
 
@@ -138,11 +139,9 @@ const TestBalance = 100500
 func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
 	data, _ := MarshalArgs(TestBalance)
 
-	resp := core.Response{
+	return &response.CommonResponse{
 		Result: data,
-	}
-
-	return resp, nil
+	}, nil
 }
 
 func TestWithFakeMessageRouter(t *testing.T) {

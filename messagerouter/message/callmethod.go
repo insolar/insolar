@@ -17,8 +17,6 @@
 package message
 
 import (
-	"bytes"
-	"encoding/gob"
 	"io"
 
 	"github.com/insolar/insolar/core"
@@ -38,16 +36,12 @@ func (m *CallMethodMessage) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
-// Get reference returns referenced object.
+// GetReference returns referenced object.
 func (m *CallMethodMessage) GetReference() core.RecordRef {
 	return m.ObjectRef
 }
 
 // Serialize serializes message.
 func (m *CallMethodMessage) Serialize() (io.Reader, error) {
-	buff := &bytes.Buffer{}
-	buff.Write([]byte{byte(CallMethodMessageType)})
-	enc := gob.NewEncoder(buff)
-	err := enc.Encode(m)
-	return buff, err
+	return serialize(m, CallMethodMessageType)
 }
