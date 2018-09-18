@@ -430,7 +430,6 @@ func (dht *DHT) iterateIsDone(
 					&packet.RequestDataStore{
 						Data: data,
 					}).Build()
-
 				future, _ := dht.transport.SendRequest(msg)
 				// We do not need to handle result of this packet
 				future.Cancel()
@@ -862,6 +861,11 @@ func (dht *DHT) ConfirmNodeRole(roleKey string) bool {
 	return true
 }
 
+// CascadeSendMessage sends a message to the next cascade layer.
+func (dht *DHT) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
+	return CascadeSendMessage(dht, data, targetID, method, args)
+}
+
 // FindHost returns target host's real network address.
 func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool, error) {
 	keyBytes := base58.Decode(key)
@@ -1089,37 +1093,6 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 	}
 }
 
-// CascadeSendMessage sends a message to the next cascade layer.
-func (dht *DHT) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
-	ctx, err := NewContextBuilder(dht).SetDefaultHost().Build()
-	if err != nil {
-		return err
-	}
-	targetHost, exist, err := dht.FindHost(ctx, targetID)
-	if err != nil {
-		return err
-	}
-	if !exist {
-		return errors.New("cascadeSendMessage: couldn't find a target host")
-	}
-
-	request := packet.NewBuilder().Sender(dht.HtFromCtx(ctx).Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
-		Request(&packet.RequestCascadeSend{
-			Data: data,
-			RPC: packet.RequestDataRPC{
-				Method: method,
-				Args:   args,
-			},
-		}).Build()
-
-	future, err := dht.SendRequest(request)
-	if err != nil {
-		return err
-	}
-
-	return checkResponse(dht, future, targetID, request)
-}
-
 // AddReceivedKey adds a new received key from target.
 func (dht *DHT) AddReceivedKey(target string, key []byte) {
 	dht.auth.ReceivedKeys[target] = key
@@ -1211,6 +1184,7 @@ func (dht *DHT) HostIsAuthenticated(targetID string) bool {
 	return false
 }
 
+// AddPossibleRelayID add a host id which can be a relay.
 func (dht *DHT) AddPossibleRelayID(id string) {
 	dht.subnet.PossibleRelayIDs = append(dht.subnet.PossibleRelayIDs, id)
 }
