@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -71,16 +72,19 @@ func main() {
 		Short: "Generate contract's proxy",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 1 {
-				panic(errors.New("proxy command should be followed by exactly one file name to process"))
+				fmt.Println("proxy command should be followed by exactly one file name to process")
+				os.Exit(1)
 			}
 			parsed, err := preprocessor.ParseFile(args[0])
 			if err != nil {
-				panic(errors.Wrap(err, "couldn't parse"))
+				fmt.Println(errors.Wrap(err, "couldn't parse"))
+				os.Exit(1)
 			}
 
 			err = preprocessor.GenerateContractProxy(parsed, reference, output.writer)
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 		},
 	}
@@ -92,16 +96,19 @@ func main() {
 		Short: "Generate contract's wrapper",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 1 {
-				panic(errors.New("wrapper command should be followed by exactly one file name to process"))
+				fmt.Println("wrapper command should be followed by exactly one file name to process")
+				os.Exit(1)
 			}
 			parsed, err := preprocessor.ParseFile(args[0])
 			if err != nil {
-				panic(errors.Wrap(err, "couldn't parse"))
+				fmt.Println(errors.Wrap(err, "couldn't parse"))
+				os.Exit(1)
 			}
 
 			err = preprocessor.GenerateContractWrapper(parsed, output.writer)
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 		},
 	}
@@ -112,16 +119,19 @@ func main() {
 		Short: "Rewrite imports in contract file",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 1 {
-				panic(errors.New("imports command should be followed by exactly one file name to process"))
+				fmt.Println("imports command should be followed by exactly one file name to process")
+				os.Exit(1)
 			}
 			parsed, err := preprocessor.ParseFile(args[0])
 			if err != nil {
-				panic(errors.Wrap(err, "couldn't parse"))
+				fmt.Println(errors.Wrap(err, "couldn't parse"))
+				os.Exit(1)
 			}
 
 			err = preprocessor.CmdRewriteImports(parsed, output.writer)
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 		},
 	}
@@ -133,20 +143,24 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			dir, err := os.Getwd()
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 			if len(args) != 1 {
-				panic(errors.New("compile command should be followed by exactly one file name to compile"))
+				fmt.Println("compile command should be followed by exactly one file name to compile")
+				os.Exit(1)
 			}
 			parsed, err := preprocessor.ParseFile(args[0])
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 
 			// make temporary dir
 			tmpDir, err := ioutil.TempDir("", "test-")
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 			defer os.RemoveAll(tmpDir) // nolint: errcheck
 
@@ -154,7 +168,8 @@ func main() {
 
 			contract, err := os.Create(tmpDir + "/" + name + ".go")
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 			defer contract.Close()
 
@@ -162,23 +177,27 @@ func main() {
 
 			wrapper, err := os.Create(tmpDir + "/" + name + ".wrapper.go")
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 			defer wrapper.Close()
 
 			err = preprocessor.GenerateContractWrapper(parsed, wrapper)
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 
 			err = os.Chdir(tmpDir)
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 
 			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, name+".so")).CombinedOutput()
 			if err != nil {
-				panic(errors.Wrap(err, "can't build contract: "+string(out)))
+				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
+				os.Exit(1)
 			}
 		},
 	}
@@ -188,6 +207,7 @@ func main() {
 	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile)
 	err := rootCmd.Execute()
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
