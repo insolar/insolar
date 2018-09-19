@@ -8,7 +8,7 @@ import (
 
 // UpdateObjectMessage is a message for calling constructor and obtain its response
 type UpdateObjectMessage struct {
-	baseMessage
+	baseEvent
 	Object core.RecordRef
 	Body   []byte
 }
@@ -25,5 +25,5 @@ func (m *UpdateObjectMessage) GetReference() core.RecordRef {
 
 // Serialize serializes message.
 func (m *UpdateObjectMessage) Serialize() (io.Reader, error) {
-	return serialize(m, UpdateObjectMessageType)
+	return serialize(m, UpdateObjectEventType)
 }

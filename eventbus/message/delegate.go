@@ -24,7 +24,7 @@ import (
 
 // DelegateMessage is a message for saving contract's body as a delegate
 type DelegateMessage struct {
-	baseMessage
+	baseEvent
 	Into  core.RecordRef
 	Class core.RecordRef
 	Body  []byte
@@ -42,5 +42,5 @@ func (m *DelegateMessage) GetReference() core.RecordRef {
 
 // Serialize serializes message.
 func (m *DelegateMessage) Serialize() (io.Reader, error) {
-	return serialize(m, DelegateMessageType)
+	return serialize(m, DelegateEventType)
 }

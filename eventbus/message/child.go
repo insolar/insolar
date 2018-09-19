@@ -8,7 +8,7 @@ import (
 
 // ChildMessage is a message for saving contract's body as a child
 type ChildMessage struct {
-	baseMessage
+	baseEvent
 	Into  core.RecordRef
 	Class core.RecordRef
 	Body  []byte
@@ -26,5 +26,5 @@ func (m *ChildMessage) GetReference() core.RecordRef {
 
 // Serialize serializes message.
 func (m *ChildMessage) Serialize() (io.Reader, error) {
-	return serialize(m, ChildMessageType)
+	return serialize(m, ChildEventType)
 }

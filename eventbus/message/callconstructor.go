@@ -24,7 +24,7 @@ import (
 
 // CallConstructorMessage is a message for calling constructor and obtain its response
 type CallConstructorMessage struct {
-	baseMessage
+	baseEvent
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
@@ -42,5 +42,5 @@ func (m *CallConstructorMessage) GetReference() core.RecordRef {
 
 // Serialize serializes message.
 func (m *CallConstructorMessage) Serialize() (io.Reader, error) {
-	return serialize(m, CallConstructorMessageType)
+	return serialize(m, CallConstructorEventType)
 }

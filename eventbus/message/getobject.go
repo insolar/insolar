@@ -24,7 +24,7 @@ import (
 
 // GetObjectMessage is a message for calling constructor and obtain its response
 type GetObjectMessage struct {
-	baseMessage
+	baseEvent
 	Object core.RecordRef
 }
 
@@ -40,5 +40,5 @@ func (m *GetObjectMessage) GetReference() core.RecordRef {
 
 // Serialize serializes message.
 func (m *GetObjectMessage) Serialize() (io.Reader, error) {
-	return serialize(m, GetObjectMessageType)
+	return serialize(m, GetObjectEventType)
 }

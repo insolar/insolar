@@ -24,7 +24,7 @@ import (
 
 // CallMethodMessage - Simply call method and return result
 type CallMethodMessage struct {
-	baseMessage
+	baseEvent
 	ObjectRef core.RecordRef
 	Request   core.RecordRef
 	Method    string
@@ -43,5 +43,5 @@ func (m *CallMethodMessage) GetReference() core.RecordRef {
 
 // Serialize serializes message.
 func (m *CallMethodMessage) Serialize() (io.Reader, error) {
-	return serialize(m, CallMethodMessageType)
+	return serialize(m, CallMethodEventType)
 }

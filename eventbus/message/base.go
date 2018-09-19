@@ -27,55 +27,55 @@ import (
 )
 
 // BaseMessage base of message class family, do not use it standalone
-type baseMessage struct {
+type baseEvent struct {
 	Request core.RecordRef
 	Domain  core.RecordRef
 }
 
-func (baseMessage) Serialize() (io.Reader, error) {
+func (baseEvent) Serialize() (io.Reader, error) {
 	panic("Do not use base")
 }
 
-func (baseMessage) GetReference() core.RecordRef {
+func (baseEvent) GetReference() core.RecordRef {
 	panic("Do not use base")
 }
 
-// MessageType is a enum type of message
-type MessageType byte
+// EventType is a enum type of message
+type EventType byte
 
 const (
-	baseMessageType            = MessageType(iota)
-	CallMethodMessageType      // CallMethodMessage - Simply call method and return result
-	CallConstructorMessageType // CallConstructorMessage is a message for calling constructor and obtain its response
-	DelegateMessageType        // DelegateMessage is a message for injecting a delegate
-	ChildMessageType           // ChildMessage is a message for saving a child
-	UpdateObjectMessageType    // UpdateObjectMessage is a message for updating an object
-	GetObjectMessageType       // GetObjectMessage is a message for retrieving an object
+	baseEventType            = EventType(iota)
+	CallMethodEventType      // CallMethodEvent - Simply call method and return result
+	CallConstructorEventType // CallConstructorEvent is a event for calling constructor and obtain its response
+	DelegateEventType        // DelegateEvent is a event for injecting a delegate
+	ChildEventType           // ChildEvent is a event for saving a child
+	UpdateObjectEventType    // UpdateObjectEvent is a event for updating an object
+	GetObjectEventType       // GetObjectEvent is a event for retrieving an object
 )
 
 // GetEmptyMessage constructs specified message
-func getEmptyMessage(mt MessageType) (core.Event, error) {
+func getEmptyEvent(mt EventType) (core.Event, error) {
 	switch mt {
-	case baseMessageType:
-		return nil, errors.New("working with message type == 0 is prohibited")
-	case CallMethodMessageType:
+	case baseEventType:
+		return nil, errors.New("working with event type == 0 is prohibited")
+	case CallMethodEventType:
 		return &CallMethodMessage{}, nil
-	case CallConstructorMessageType:
+	case CallConstructorEventType:
 		return &CallConstructorMessage{}, nil
-	case DelegateMessageType:
+	case DelegateEventType:
 		return &DelegateMessage{}, nil
-	case ChildMessageType:
+	case ChildEventType:
 		return &ChildMessage{}, nil
-	case UpdateObjectMessageType:
+	case UpdateObjectEventType:
 		return &UpdateObjectMessage{}, nil
-	case GetObjectMessageType:
+	case GetObjectEventType:
 		return &GetObjectMessage{}, nil
 	default:
-		return nil, errors.Errorf("unimplemented messagetype %d", mt)
+		return nil, errors.Errorf("unimplemented event type %d", mt)
 	}
 }
 
-func serialize(m core.Event, t MessageType) (io.Reader, error) {
+func serialize(event core.Event, t EventType) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	_, err := buff.Write([]byte{byte(t)})
 	if err != nil {
@@ -83,7 +83,7 @@ func serialize(m core.Event, t MessageType) (io.Reader, error) {
 	}
 
 	enc := gob.NewEncoder(buff)
-	err = enc.Encode(m)
+	err = enc.Encode(event)
 	return buff, err
 }
 
@@ -92,16 +92,16 @@ func Deserialize(buff io.Reader) (core.Event, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
-		return nil, errors.New("too short slice for deserialize message")
+		return nil, errors.New("too short slice for deserialize event")
 	}
 
-	m, err := getEmptyMessage(MessageType(b[0]))
+	event, err := getEmptyEvent(EventType(b[0]))
 	if err != nil {
 		return nil, err
 	}
 	enc := gob.NewDecoder(buff)
-	err = enc.Decode(m)
-	return m, err
+	err = enc.Decode(event)
+	return event, err
 }
 
 func init() {
