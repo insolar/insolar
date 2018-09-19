@@ -1,6 +1,8 @@
 package log
 
 import (
+	stdlog "log"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -32,10 +34,13 @@ func SetLevel(level string) error {
 }
 
 // globalLogger creates global logger with correct skipCallNumber
-var globalLogger, _ = func() (core.Logger, error) {
+var globalLogger = func() core.Logger {
 	logger := newLogrusAdapter()
 	logger.skipCallNumber = defaultSkipCallNumber + 1
-	return logger, logger.SetLevel(configuration.NewLog().Level)
+	if err := logger.SetLevel(configuration.NewLog().Level); err != nil {
+		stdlog.Println("warning:", err.Error())
+	}
+	return logger
 }()
 
 // Debug logs a event at level Debug to the global logger.

@@ -18,10 +18,10 @@ package configuration
 
 import (
 	"fmt"
+	stdlog "log"
 	"reflect"
 	"strings"
 
-	"github.com/prometheus/common/log"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
@@ -131,7 +131,7 @@ func bindEnvs(v *viper.Viper, iface interface{}, parts ...string) {
 		default:
 			err := v.BindEnv(strings.Join(path, "."))
 			if err != nil {
-				log.Warnln(err.Error())
+				stdlog.Println(err.Error())
 			}
 		}
 	}
