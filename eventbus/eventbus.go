@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package messagerouter
+package eventbus
 
 import (
 	"bytes"
@@ -23,8 +23,8 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/insolar/insolar/messagerouter/response"
+	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/response"
 )
 
 const deliverRPCMethodName = "EventBus.Deliver"

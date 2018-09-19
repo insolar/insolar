@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter/response"
+	"github.com/insolar/insolar/eventbus/response"
 	"github.com/stretchr/testify/assert"
 )
 

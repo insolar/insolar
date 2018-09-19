@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-// Package response represents responses to messages of the messagerouter
+// Package response represents responses to messages of the eventbus
 package response
 
 import (

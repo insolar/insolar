@@ -14,14 +14,14 @@
  *    limitations under the License.
  */
 
-package messagerouter
+package eventbus
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter/message"
+	"github.com/insolar/insolar/eventbus/message"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/assert"
 )

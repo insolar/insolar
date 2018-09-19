@@ -89,7 +89,7 @@ func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error)
 func (l *Ledger) Start(c core.Components) error {
 	// TODO: add links to network and maybe message router
 	// eb := c["core.EventBus"].(core.EventBus)
-	// l.messagerouter = eb
+	// l.eventbus = eb
 	return nil
 }
 
