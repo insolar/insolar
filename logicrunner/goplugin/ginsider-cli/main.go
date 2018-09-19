@@ -22,7 +22,7 @@ import (
 	"net/rpc"
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
@@ -35,12 +35,15 @@ func main() {
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
 	pflag.Parse()
 
-	log.SetLevel(log.DebugLevel)
+	err := log.SetLevel("Debug")
+	if err != nil {
+		log.Errorln(err.Error())
+	}
 
 	insider := ginsider.NewGoInsider(*path, *rpcAddress)
 	proxyctx.Current = insider
 
-	err := rpc.Register(&ginsider.RPC{GI: insider})
+	err = rpc.Register(&ginsider.RPC{GI: insider})
 	if err != nil {
 		log.Fatal("Couldn't register RPC interface: ", err)
 		os.Exit(1)
@@ -53,11 +56,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Print("ginsider launched, listens " + *listen)
+	log.Debug("ginsider launched, listens " + *listen)
 	err = http.Serve(listener, nil)
 	if err != nil {
 		log.Fatal("couldn't start server: ", err)
 		os.Exit(1)
 	}
-	log.Print("bye\n")
+	log.Debug("bye\n")
 }

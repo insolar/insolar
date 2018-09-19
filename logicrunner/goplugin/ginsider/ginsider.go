@@ -25,10 +25,10 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -392,13 +392,13 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
-	log.Printf("serializing %+v", what)
+	log.Debugf("serializing %+v", what)
 	return codec.NewEncoderBytes(to, ch).Encode(what)
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
 func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 	ch := new(codec.CborHandle)
-	log.Printf("de-serializing %+v", from)
+	log.Debugf("de-serializing %+v", from)
 	return codec.NewDecoderBytes(from, ch).Decode(into)
 }
