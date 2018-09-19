@@ -50,8 +50,8 @@ func TestBareHelloworld(t *testing.T) {
 	mr := &testMessageRouter{lr}
 
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":        l,
-		"core.MessageRouter": mr,
+		"core.Ledger":   l,
+		"core.EventBus": mr,
 	}), "starting logicrunner")
 
 	hw := helloworld.NewHelloWorld()

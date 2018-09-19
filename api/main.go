@@ -118,7 +118,7 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func wrapAPIV1Handler(router core.MessageRouter, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
+func wrapAPIV1Handler(router core.EventBus, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
 		var params *Params
@@ -157,7 +157,7 @@ func wrapAPIV1Handler(router core.MessageRouter, rootDomainReference core.Record
 
 // Runner implements Component for API
 type Runner struct {
-	messageRouter core.MessageRouter
+	messageRouter core.EventBus
 	server        *http.Server
 	cfg           *configuration.APIRunner
 }
@@ -184,11 +184,11 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 }
 
 func (ar *Runner) reloadMessageRouter(c core.Components) {
-	_, ok := c["core.MessageRouter"]
+	_, ok := c["core.EventBus"]
 	if !ok {
-		log.Warn("Working in demo mode: without MessageRouter")
+		log.Warn("Working in demo mode: without EventBus")
 	} else {
-		ar.messageRouter = c["core.MessageRouter"].(core.MessageRouter)
+		ar.messageRouter = c["core.EventBus"].(core.EventBus)
 	}
 }
 

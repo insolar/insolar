@@ -47,12 +47,12 @@ func extractCreateMemberResponse(data []byte) (*string, error) {
 type RequestHandler struct {
 	qid                 string
 	params              *Params
-	messageRouter       core.MessageRouter
+	messageRouter       core.EventBus
 	rootDomainReference core.RecordRef
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, router core.MessageRouter, rootDomainReference core.RecordRef) *RequestHandler {
+func NewRequestHandler(params *Params, router core.EventBus, rootDomainReference core.RecordRef) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,

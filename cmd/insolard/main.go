@@ -117,7 +117,7 @@ func main() {
 	cm.register("core.Network", nw)
 	cm.register("core.Ledger", l)
 	cm.register("core.LogicRunner", lr)
-	cm.register("core.MessageRouter", mr)
+	cm.register("core.EventBus", mr)
 	cm.register("core.Bootstrapper", b)
 	cm.register("core.ApiRunner", ar)
 	cm.linkAll()

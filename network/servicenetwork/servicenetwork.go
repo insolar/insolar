@@ -82,7 +82,7 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
 }
 
-// SendMessage sends a message from MessageRouter.
+// SendMessage sends a message from EventBus.
 func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	if msg == nil {
 		return nil, errors.New("message is nil")
@@ -100,7 +100,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 	return res, err
 }
 
-// SendCascadeMessage sends a message from MessageRouter to a cascade of nodes. Message reference is ignored
+// SendCascadeMessage sends a message from EventBus to a cascade of nodes. Message reference is ignored
 func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
 	if msg == nil {
 		return errors.New("message is nil")

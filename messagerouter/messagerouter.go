@@ -27,9 +27,9 @@ import (
 	"github.com/insolar/insolar/messagerouter/response"
 )
 
-const deliverRPCMethodName = "MessageRouter.Deliver"
+const deliverRPCMethodName = "EventBus.Deliver"
 
-// MessageRouter is component that routes application logic requests,
+// EventBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageRouter struct {
 	logicRunner core.LogicRunner
@@ -37,7 +37,7 @@ type MessageRouter struct {
 	ledger      core.Ledger
 }
 
-// New is a `MessageRouter` constructor, takes an executor object
+// New is a `EventBus` constructor, takes an executor object
 // that satisfies LogicRunner interface
 func New(cfg configuration.Configuration) (*MessageRouter, error) {
 	mr := &MessageRouter{logicRunner: nil, service: nil}

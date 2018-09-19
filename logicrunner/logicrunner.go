@@ -34,7 +34,7 @@ import (
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
-	MessageRouter   core.MessageRouter
+	MessageRouter   core.EventBus
 	Cfg             configuration.LogicRunner
 }
 
@@ -51,7 +51,7 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 func (lr *LogicRunner) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
 	lr.ArtifactManager = am
-	mr := c["core.MessageRouter"].(core.MessageRouter)
+	mr := c["core.EventBus"].(core.EventBus)
 	lr.MessageRouter = mr
 
 	if lr.Cfg.BuiltIn != nil {

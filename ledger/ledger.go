@@ -88,7 +88,7 @@ func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error)
 // Start initializes external ledger dependencies.
 func (l *Ledger) Start(c core.Components) error {
 	// TODO: add links to network and maybe message router
-	// mr := c["core.MessageRouter"].(core.MessageRouter)
+	// mr := c["core.EventBus"].(core.EventBus)
 	// l.messagerouter = mr
 	return nil
 }

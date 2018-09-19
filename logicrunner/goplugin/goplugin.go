@@ -52,7 +52,7 @@ type RunnerOptions struct {
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	Cfg             *configuration.GoPlugin
-	MessageRouter   core.MessageRouter
+	MessageRouter   core.EventBus
 	ArtifactManager core.ArtifactManager
 	sock            net.Listener
 	runner          *exec.Cmd
@@ -203,7 +203,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGet
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.GoPlugin, mr core.MessageRouter, am core.ArtifactManager) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.GoPlugin, mr core.EventBus, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
 		MessageRouter:   mr,
