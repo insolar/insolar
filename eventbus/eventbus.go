@@ -101,12 +101,12 @@ func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when eb.deliver()")
 	}
-	msg, err := event.Deserialize(bytes.NewBuffer(args[0]))
+	e, err := event.Deserialize(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := eb.logicRunner.Execute(msg)
+	resp, err := eb.logicRunner.Execute(e)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
