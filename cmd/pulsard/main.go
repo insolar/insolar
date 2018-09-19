@@ -42,8 +42,9 @@ func main() {
 	initLogger(cfgHolder.Configuration.Log)
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	pulsar := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar)
-	pulsar.Listen()
+	privateKey, err := pulsar.ImportPrivateKey(cfgHolder.Configuration.Pulsar.PrivateKey)
+	fmt.Printf("%v", privateKey)
+	fmt.Printf("%v", err)
 }
 
 func initLogger(cfg configuration.Log) {
