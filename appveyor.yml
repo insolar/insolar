@@ -22,6 +22,9 @@ deploy: false
 build_script:
 - go get -u github.com/golang/dep/cmd/dep
 - dep ensure
+# Dirty hack
+- go build -o testdata/logicrunner/insgocc github.com/insolar/insolar/cmd/insgocc
+- go build -o testdata/logicrunner/ginsider-cli github.com/insolar/insolar/logicrunner/goplugin/ginsider-cli
 
 test_script:
 - go test ./...

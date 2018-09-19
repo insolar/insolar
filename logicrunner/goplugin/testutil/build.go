@@ -21,7 +21,6 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -61,7 +60,6 @@ func buildPreprocessor() (string, error) {
 
 func testdataPath() string {
 	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	log.Fatal("import found dir:", p.Dir)
 	if err != nil {
 		panic(err)
 	}
