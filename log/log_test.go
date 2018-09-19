@@ -67,20 +67,37 @@ func TestLog_GlobalLogger(t *testing.T) {
 	// Fatalf("%s", "HelloWorld")
 }
 
-func TestLog_NewLog_InvalidConfig(t *testing.T) {
-	cfg := configuration.NewLog()
-	cfg.Adapter = "invalid"
-
-	tests := map[string]configuration.Log{
+func TestLog_NewLog_Config(t *testing.T) {
+	invalidtests := map[string]configuration.Log{
 		"InvalidAdapter": configuration.Log{Level: "Debug", Adapter: "invalid"},
 		"InvalidLevel":   configuration.Log{Level: "Invalid", Adapter: "logrus"},
 	}
 
-	for name, test := range tests {
+	for name, test := range invalidtests {
 		t.Run(name, func(t *testing.T) {
 			logger, err := NewLog(test)
 			assert.Nil(t, logger)
 			assert.Error(t, err)
 		})
 	}
+
+	validtests := map[string]configuration.Log{
+		"WithAdapter": configuration.Log{Level: "Debug", Adapter: "logrus"},
+	}
+	for name, test := range validtests {
+		t.Run(name, func(t *testing.T) {
+			logger, err := NewLog(test)
+			assert.NotNil(t, logger)
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestLog_GlobalLogger_Level(t *testing.T) {
+	got := GetLevel()
+	assert.NoError(t, SetLevel("error"))
+	assert.Error(t, SetLevel("errorrr"))
+	assert.Equal(t, "error", GetLevel())
+	assert.NoError(t, SetLevel(got))
+	assert.Equal(t, got, GetLevel())
 }
