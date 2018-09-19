@@ -75,22 +75,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:be19aca2607a4fa38609e919bcbe01938dc835cd346cf354b7d18f5136c62371"
-  name = "github.com/cenkalti/hub"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "11382a9960d39b0ecda16fd01c424c11ff765a34"
-
-[[projects]]
-  branch = "master"
-  digest = "1:6e896cec7f47d4f4114842f8c6ad3af021e7254868fa29f869701a84e2850c67"
-  name = "github.com/cenkalti/rpc2"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "9642ea02d0aad04b8efb5e1a6bbc63daf8d0903d"
-
-[[projects]]
-  branch = "master"
   digest = "1:454adc7f974228ff789428b6dc098638c57a64aa0718f0bd61e53d3cd39d7a75"
   name = "github.com/chzyer/readline"
   packages = ["."]
@@ -494,7 +478,6 @@
   input-imports = [
     "github.com/anacrolix/utp",
     "github.com/ccding/go-stun/stun",
-    "github.com/cenkalti/rpc2",
     "github.com/chzyer/readline",
     "github.com/dgraph-io/badger",
     "github.com/huandu/xstrings",

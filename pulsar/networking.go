@@ -18,8 +18,10 @@ package pulsar
 
 import (
 	"crypto/ecdsa"
+	"errors"
+	"net"
+	"net/rpc"
 
-	"github.com/cenkalti/rpc2"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 )
@@ -27,14 +29,14 @@ import (
 type Neighbour struct {
 	ConnectionType    configuration.ConnectionType
 	ConnectionAddress string
-	Client            *rpc2.Client
+	OutgoingClient    *rpc.Client
 	PublicKey         *ecdsa.PublicKey
 }
 
 type RequestType string
 
 const (
-	Handshake RequestType = "handshake"
+	Handshake RequestType = "Pulsar.MakeHandshake"
 )
 
 func (state RequestType) String() string {
@@ -49,4 +51,45 @@ type Payload struct {
 	PublicKey string
 	Signature []byte
 	Body      interface{}
+}
+
+type Handler struct {
+	pulsar *Pulsar
+}
+
+func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
+	neighbour, err := handler.pulsar.fetchNeighbour(request.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	result, err := checkSignature(request)
+	if err != nil {
+		return err
+	}
+	if !result {
+		return errors.New("Signature check failed")
+	}
+
+	generator := StandardEntropyGenerator{}
+	convertedKey, err := ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		return err
+	}
+	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
+	message.Signature, err = singData(handler.pulsar.PrivateKey, message.Body)
+	if err != nil {
+		return err
+	}
+	*response = message
+
+	if neighbour.OutgoingClient == nil {
+		conn, err := net.Dial(neighbour.ConnectionType.String(), neighbour.ConnectionAddress)
+		if err != nil {
+			return err
+		}
+		neighbour.OutgoingClient = rpc.NewClient(conn)
+	}
+
+	return nil
 }

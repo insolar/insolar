@@ -24,15 +24,16 @@ import (
 	"errors"
 	"math/big"
 	"net"
+	"net/rpc"
 
-	"github.com/cenkalti/rpc2"
 	"github.com/insolar/insolar/configuration"
 	"golang.org/x/crypto/sha3"
 )
 
 type Pulsar struct {
-	Sock      net.Listener
-	RPCServer *rpc2.Server
+	Sock               net.Listener
+	SockConnectionType configuration.ConnectionType
+	RPCServer          *rpc.Server
 
 	Neighbours map[string]*Neighbour
 	PrivateKey *ecdsa.PrivateKey
@@ -51,7 +52,7 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 	if err != nil {
 		return nil, err
 	}
-	pulsar := &Pulsar{Sock: l, Neighbours: map[string]*Neighbour{}}
+	pulsar := &Pulsar{Sock: l, Neighbours: map[string]*Neighbour{}, SockConnectionType: configuration.ConnectionType}
 	pulsar.PrivateKey = privateKey
 
 	// Adding other pulsars
@@ -76,67 +77,29 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 }
 
 func (pulsar *Pulsar) Start() {
-	// Adding rpc-server listener
-	srv := rpc2.NewServer()
-	ConfigureHandlers(pulsar, srv)
-	pulsar.RPCServer = srv
-	srv.Accept(pulsar.Sock)
+	server := rpc.NewServer()
+
+	server.RegisterName("Pulsar", &Handler{pulsar: pulsar})
+	pulsar.RPCServer = server
+	server.Accept(pulsar.Sock)
 }
 
-func ConfigureHandlers(pulsar *Pulsar, server *rpc2.Server) {
-	server.Handle(Handshake.String(), pulsar.HandshakeHandler())
-}
-
-func ConfigureHandlersForClient(pulsar *Pulsar, server *rpc2.Client) {
-	server.Handle(Handshake.String(), pulsar.HandshakeHandler())
-}
-
-func (pulsar *Pulsar) HandshakeHandler() func(client *rpc2.Client, request *Payload, response *Payload) error {
-
-	return func(client *rpc2.Client, request *Payload, response *Payload) error {
-		neighbour, err := pulsar.fetchNeighbour(request.PublicKey)
-		if err != nil {
-			return err
+func (pulsar *Pulsar) Close() {
+	for _, neighbour := range pulsar.Neighbours {
+		if neighbour.OutgoingClient != nil {
+			neighbour.OutgoingClient.Close()
 		}
-
-		result, err := checkSignature(request)
-		if err != nil {
-			return err
-		}
-		if !result {
-			return errors.New("Signature check failed")
-		}
-
-		if neighbour.Client == nil {
-			neighbour.Client = client
-		}
-
-		generator := StandardEntropyGenerator{}
-		convertedKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
-		if err != nil {
-			return err
-		}
-		message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
-		message.Signature, err = singData(pulsar.PrivateKey, message.Body)
-		if err != nil {
-			return err
-		}
-		*response = message
-
-		return nil
 	}
+
+	pulsar.Sock.Close()
 }
 
-func (pulsar *Pulsar) EstablishConnection(pubKey *ecdsa.PublicKey) error {
-	converted, err := ExportPublicKey(pubKey)
+func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
+	neighbour, err := pulsar.fetchNeighbour(pubKey)
 	if err != nil {
 		return err
 	}
-	neighbour, err := pulsar.fetchNeighbour(converted)
-	if err != nil {
-		return err
-	}
-	if neighbour.Client != nil {
+	if neighbour.OutgoingClient != nil {
 		return nil
 	}
 
@@ -145,10 +108,8 @@ func (pulsar *Pulsar) EstablishConnection(pubKey *ecdsa.PublicKey) error {
 		return err
 	}
 
-	clt := rpc2.NewClient(conn)
-	ConfigureHandlersForClient(pulsar, clt)
-	go clt.Run()
-
+	clt := rpc.NewClient(conn)
+	neighbour.OutgoingClient = clt
 	generator := StandardEntropyGenerator{}
 	convertedKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
@@ -172,7 +133,6 @@ func (pulsar *Pulsar) EstablishConnection(pubKey *ecdsa.PublicKey) error {
 	if !result {
 		return errors.New("Signature check failed")
 	}
-	neighbour.Client = clt
 
 	return nil
 }
