@@ -48,13 +48,20 @@ func testdataPath() string {
 	return filepath.Join(p.Dir, "testdata", "functional")
 }
 
-func testMainWrapper(m *testing.M) int {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		fmt.Println("couldn't find info about current file")
-		return 1
+func buildInsolard() (string, error) {
+	insolardPath := filepath.Join(testdataPath(), "insolard")
+	_, err := exec.Command(
+		"go", "build",
+		"-o", insolardPath,
+		insolarImportPath+"/cmd/insolard/",
+	).CombinedOutput()
+	if err != nil {
+		return "", err
 	}
+	return insolardPath, nil
+}
 
+func setup(currentFile string) (string, error) {
 	err := os.Mkdir(filepath.Join(filepath.Dir(currentFile), "contractstorage"), 0777)
 	if err != nil {
 		fmt.Println("failed to create runnercodepath for tests:", err)
@@ -63,43 +70,18 @@ func testMainWrapper(m *testing.M) int {
 
 	_, _, err = testutil.Build()
 	if err != nil {
-		fmt.Println("couldn't build insgocc or ginsider-cli, skip tests: ", err)
-		return 1
+		return "", err
 	}
 
-	insolardPath := filepath.Join(testdataPath(), "insolard")
-	_, err = exec.Command(
-		"go", "build",
-		"-o", insolardPath,
-		insolarImportPath+"/cmd/insolard/",
-	).CombinedOutput()
-	if err != nil {
-		fmt.Println("insolard build failed, skip tests:", err)
-		return 1
-	}
-	cmd := exec.Command(
-		insolardPath,
-	)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		fmt.Println("failed to create pipe for input, skip tests: ", err)
-		return 1
-	}
-	defer stdin.Close()
+	return buildInsolard()
+}
 
+func wait(cmd *exec.Cmd) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Println("failed to create pipe for output, skip tests: ", err)
-		return 1
+		fmt.Println("failed to create pipe for output: ", err)
 	}
 	defer stdout.Close()
-
-	err = cmd.Start()
-	if err != nil {
-		fmt.Println("failed to start insolard, skip tests: ", err)
-		return 1
-	}
-
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -108,8 +90,14 @@ func testMainWrapper(m *testing.M) int {
 			break
 		}
 	}
+}
 
-	code := m.Run()
+func teardown(cmd *exec.Cmd, currentFile string) {
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		fmt.Println("failed to create pipe for input: ", err)
+	}
+	defer stdin.Close()
 
 	io.WriteString(stdin, "exit\n")
 	err = cmd.Wait()
@@ -124,6 +112,33 @@ func testMainWrapper(m *testing.M) int {
 	if err != nil {
 		fmt.Println("failed to remobe data directory for func tests: ", err)
 	}
+}
+
+func testMainWrapper(m *testing.M) int {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		fmt.Println("couldn't find info about current file, skip tests")
+		return 1
+	}
+
+	insolardPath, err := setup(currentFile)
+	if err != nil {
+		fmt.Println("failed to setup insolard, skip tests: ", err)
+		return 1
+	}
+
+	cmd := exec.Command(
+		insolardPath,
+	)
+
+	err = cmd.Start()
+	if err != nil {
+		fmt.Println("failed to start insolard, skip tests: ", err)
+		return 1
+	}
+	wait(cmd)
+	code := m.Run()
+	teardown(cmd, currentFile)
 	return code
 }
 
