@@ -44,7 +44,7 @@ func ChangeGoPath(path string) (string, error) {
 		gopath = build.Default.GOPATH
 	}
 
-	err := os.Setenv("GOPATH", path+":"+gopath)
+	err := os.Setenv("GOPATH", path+string(os.PathListSeparator)+gopath)
 	if err != nil {
 		return "", err
 	}
