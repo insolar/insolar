@@ -14,19 +14,19 @@
  *    limitations under the License.
  */
 
-package response
+package reaction
 
 import (
 	"io"
 )
 
-// CommonResponse - the most common response
+// CommonResponse - the most common reaction
 type CommonResponse struct {
 	Data   []byte
 	Result []byte
 }
 
-// Serialize serializes response
+// Serialize serializes reaction
 func (r *CommonResponse) Serialize() (io.Reader, error) {
 	return serialize(r, CommonResponseType)
 }

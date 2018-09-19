@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CallConstructorEvent is a event for calling constructor and obtain its response
+// CallConstructorEvent is a event for calling constructor and obtain its reaction
 type CallConstructorEvent struct {
 	baseEvent
 	ClassRef  core.RecordRef
@@ -30,7 +30,7 @@ type CallConstructorEvent struct {
 	Arguments core.Arguments
 }
 
-// React handles event and returns associated response.
+// React handles event and returns associated reaction.
 func (e *CallConstructorEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }

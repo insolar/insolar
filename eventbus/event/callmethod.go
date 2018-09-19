@@ -31,7 +31,7 @@ type CallMethodEvent struct {
 	Arguments core.Arguments
 }
 
-// React handles event and returns associated response.
+// React handles event and returns associated reaction.
 func (e *CallMethodEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }

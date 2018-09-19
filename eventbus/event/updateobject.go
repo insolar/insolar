@@ -22,14 +22,14 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// UpdateObjectEvent is a event for calling constructor and obtain its response
+// UpdateObjectEvent is a event for calling constructor and obtain its reaction
 type UpdateObjectEvent struct {
 	baseEvent
 	Object core.RecordRef
 	Body   []byte
 }
 
-// React handles event and returns associated response.
+// React handles event and returns associated reaction.
 func (e *UpdateObjectEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }

@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/response"
+	"github.com/insolar/insolar/eventbus/reaction"
 )
 
 const deliverRPCMethodName = "EventBus.Deliver"
@@ -92,7 +92,7 @@ func (eb *EventBus) Route(event core.Event) (core.Reaction, error) {
 		return nil, err
 	}
 
-	return response.Deserialize(bytes.NewBuffer(res))
+	return reaction.Deserialize(bytes.NewBuffer(res))
 }
 
 type serializableError struct {

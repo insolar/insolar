@@ -30,7 +30,7 @@ type ChildEvent struct {
 	Body  []byte
 }
 
-// React handles event and returns associated response.
+// React handles event and returns associated reaction.
 func (e *ChildEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }

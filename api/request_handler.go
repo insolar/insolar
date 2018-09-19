@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/response"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/pkg/errors"
 )
 
@@ -93,7 +93,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractCreateMemberResponse(routResult.(*response.CommonResponse).Result)
+	memberRef, err := extractCreateMemberResponse(routResult.(*reaction.CommonResponse).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -147,7 +147,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
 
-	amount, err := extractGetBalanceResponse(routResult.(*response.CommonResponse).Result)
+	amount, err := extractGetBalanceResponse(routResult.(*reaction.CommonResponse).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -193,7 +193,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
 
-	isSent, err := extractSendMoneyResponse(routResult.(*response.CommonResponse).Result)
+	isSent, err := extractSendMoneyResponse(routResult.(*reaction.CommonResponse).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
@@ -238,7 +238,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*response.CommonResponse).Result)
+	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reaction.CommonResponse).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}

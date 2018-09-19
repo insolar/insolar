@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/response"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
@@ -126,7 +126,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object")
 		}
-		info := resp.(*response.ObjectBodyResponse)
+		info := resp.(*reaction.ObjectBodyResponse)
 
 		ctx.Callee = &m.ObjectRef
 		ctx.Class = &info.Class
@@ -153,7 +153,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
 
-		return &response.CommonResponse{Data: newData, Result: result}, nil
+		return &reaction.CommonResponse{Data: newData, Result: result}, nil
 
 	case *event.CallConstructorEvent:
 		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
@@ -182,7 +182,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "executer error")
 		}
 
-		return &response.CommonResponse{Data: newData}, nil
+		return &reaction.CommonResponse{Data: newData}, nil
 
 	case *event.DelegateEvent:
 		ref, err := lr.ArtifactManager.ActivateObjDelegate(
@@ -191,7 +191,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't save new object")
 		}
-		return &response.CommonResponse{Data: []byte(ref.String())}, nil
+		return &reaction.CommonResponse{Data: []byte(ref.String())}, nil
 
 	case *event.ChildEvent:
 		ref, err := lr.ArtifactManager.ActivateObj(
@@ -200,7 +200,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't save new object")
 		}
-		return &response.CommonResponse{Data: []byte(ref.String())}, nil
+		return &reaction.CommonResponse{Data: []byte(ref.String())}, nil
 
 	case *event.UpdateObjectEvent:
 		_, err := lr.ArtifactManager.UpdateObj(
@@ -209,7 +209,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
-		return &response.CommonResponse{}, nil
+		return &reaction.CommonResponse{}, nil
 
 	case *event.GetObjectEvent:
 		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Object)
@@ -237,7 +237,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "couldn't get machine type")
 		}
 
-		return &response.ObjectBodyResponse{
+		return &reaction.ObjectBodyResponse{
 			Body:        data,
 			Code:        *codeDesc.Ref(),
 			Class:       *classDesc.HeadRef(),

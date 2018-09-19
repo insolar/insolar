@@ -29,7 +29,7 @@ type Event interface {
 	GetReference() RecordRef
 	// GetOperatingRole returns operating jet role for given event type.
 	GetOperatingRole() JetRole
-	// React handles event and returns associated response.
+	// React handles event and returns associated reaction.
 	React(Components) (Reaction, error)
 }
 

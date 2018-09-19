@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package response
+package reaction
 
 import (
 	"io"
@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// ObjectBodyResponse - the most common response
+// ObjectBodyResponse - the most common reaction
 type ObjectBodyResponse struct {
 	Body        []byte
 	Code        core.RecordRef
@@ -30,7 +30,7 @@ type ObjectBodyResponse struct {
 	MachineType core.MachineType
 }
 
-// Serialize serializes response
+// Serialize serializes reaction
 func (r *ObjectBodyResponse) Serialize() (io.Reader, error) {
 	return serialize(r, ObjectBodyResponseType)
 }
