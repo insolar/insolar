@@ -63,7 +63,7 @@ func getEmptyEvent(mt EventType) (core.Event, error) {
 	case CallConstructorEventType:
 		return &CallConstructorEvent{}, nil
 	case DelegateEventType:
-		return &DelegateMessage{}, nil
+		return &DelegateEvent{}, nil
 	case ChildEventType:
 		return &ChildEvent{}, nil
 	case UpdateObjectEventType:
@@ -107,7 +107,7 @@ func Deserialize(buff io.Reader) (core.Event, error) {
 func init() {
 	gob.Register(&CallConstructorEvent{})
 	gob.Register(&CallMethodEvent{})
-	gob.Register(&DelegateMessage{})
+	gob.Register(&DelegateEvent{})
 	gob.Register(&ChildEvent{})
 	gob.Register(&UpdateObjectMessage{})
 	gob.Register(&GetObjectMessage{})
