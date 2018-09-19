@@ -110,13 +110,13 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.New("event bus was not set during initialization")
 	}
 
-	msg := &event.CallConstructorEvent{
+	e := &event.CallConstructorEvent{
 		ClassRef:  req.Reference,
 		Name:      req.Constructor,
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.EventBus.Route(msg)
+	res, err := gpr.gp.EventBus.Route(e)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route event")
 	}
