@@ -22,23 +22,23 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// GetObjectMessage is a event for calling constructor and obtain its response
-type GetObjectMessage struct {
+// GetObjectEvent is a event for calling constructor and obtain its response
+type GetObjectEvent struct {
 	baseEvent
 	Object core.RecordRef
 }
 
 // GetOperatingRole returns operating jet role for given event type.
-func (m *GetObjectMessage) GetOperatingRole() core.JetRole {
+func (e *GetObjectEvent) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
 // GetReference returns referenced object.
-func (m *GetObjectMessage) GetReference() core.RecordRef {
-	return m.Object
+func (e *GetObjectEvent) GetReference() core.RecordRef {
+	return e.Object
 }
 
 // Serialize serializes event.
-func (m *GetObjectMessage) Serialize() (io.Reader, error) {
-	return serialize(m, GetObjectEventType)
+func (e *GetObjectEvent) Serialize() (io.Reader, error) {
+	return serialize(e, GetObjectEventType)
 }

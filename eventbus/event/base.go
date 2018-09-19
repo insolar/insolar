@@ -69,7 +69,7 @@ func getEmptyEvent(mt EventType) (core.Event, error) {
 	case UpdateObjectEventType:
 		return &UpdateObjectMessage{}, nil
 	case GetObjectEventType:
-		return &GetObjectMessage{}, nil
+		return &GetObjectEvent{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented event type %d", mt)
 	}
@@ -110,5 +110,5 @@ func init() {
 	gob.Register(&DelegateEvent{})
 	gob.Register(&ChildEvent{})
 	gob.Register(&UpdateObjectMessage{})
-	gob.Register(&GetObjectMessage{})
+	gob.Register(&GetObjectEvent{})
 }
