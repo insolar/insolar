@@ -32,6 +32,7 @@ import (
 
 // DispatchPacketType checks event type.
 func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+	// TODO: add counter
 	switch msg.Type {
 	case packet.TypeFindHost:
 		return processFindHost(hostHandler, ctx, msg, packetBuilder)

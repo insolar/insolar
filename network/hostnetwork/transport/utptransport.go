@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 
@@ -172,6 +173,7 @@ func (t *utpTransport) createFuture(msg *packet.Packet) Future {
 	defer t.mutex.Unlock()
 	t.futures[msg.RequestID] = newFuture
 
+	metrics.NetworkFutures.WithLabelValues(msg.Type.String()).Set(float64(len(t.futures)))
 	return newFuture
 }
 

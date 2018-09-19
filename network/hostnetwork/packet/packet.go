@@ -31,7 +31,7 @@ type packetType int
 
 const (
 	// TypePing is packet type for ping method.
-	TypePing = packetType(iota + 1)
+	TypePing packetType = iota + 1
 	// TypeStore is packet type for store method.
 	TypeStore
 	// TypeFindHost is packet type for FindHost method.
