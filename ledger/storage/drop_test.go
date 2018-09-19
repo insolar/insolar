@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/log"
 )
 
 func TestStore_DropWaitWrites(t *testing.T) {
@@ -42,21 +43,21 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	go func() {
 		db.Update(func(tx *storage.TransactionManager) error {
 			wgStart.Done()
-			// log.Println("start tx1")
+			log.Debugln("start tx1")
 			return nil
 		})
-		// log.Println("end tx1")
+		log.Debugln("end tx1")
 		wgEnd.Done()
 	}()
 	tx2finish := make(chan bool)
 	go func() {
 		db.Update(func(tx *storage.TransactionManager) error {
 			wgStart.Done()
-			// log.Println("start tx2")
+			log.Debugln("start tx2")
 			<-tx2finish
 			return nil
 		})
-		// log.Println("end tx2")
+		log.Debugln("end tx2")
 		wgEnd.Done()
 	}()
 
@@ -65,7 +66,7 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	wgStart.Wait()
 	go func() {
 		prevdrop := &jetdrop.JetDrop{}
-		// log.Println("start SetDrop")
+		log.Debugln("start SetDrop")
 		_, _ = db.SetDrop(0, prevdrop)
 		close(dropdone)
 	}()
@@ -91,8 +92,8 @@ func TestStore_DropWaitWrites(t *testing.T) {
 
 	txFin := <-txFinCh
 	dropFin := <-dropFinCh
-	// log.Println("R: tx end t:", txFin)
-	// log.Println("R: drop   t:", dropFin)
+	log.Debugln("R: tx end t:", txFin)
+	log.Debugln("R: drop   t:", dropFin)
 
 	assert.Conditionf(t, func() bool {
 		return dropFin.After(txFin)

@@ -16,10 +16,14 @@
 
 package core
 
+import "io"
+
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
-	// SetLevel sets log level
+	// SetLevel sets log level.
 	SetLevel(string) error
+	// GetLevel gets log level.
+	GetLevel() string
 
 	// Debug logs a event at level Debug.
 	Debug(...interface{})
@@ -62,4 +66,7 @@ type Logger interface {
 	Panicln(...interface{})
 	// Panicf formatted logs a event at level Panic and than call panic().
 	Panicf(string, ...interface{})
+
+	// SetOutput sets the output destination for the logger.
+	SetOutput(w io.Writer)
 }
