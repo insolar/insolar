@@ -29,6 +29,10 @@ type UpdateObjectEvent struct {
 	Body   []byte
 }
 
+func (e *UpdateObjectEvent) Handle(core.Components) (core.Response, error) {
+	panic("implement me")
+}
+
 // GetOperatingRole returns operating jet role for given event type.
 func (e *UpdateObjectEvent) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor

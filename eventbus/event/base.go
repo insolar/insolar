@@ -32,14 +32,6 @@ type baseEvent struct {
 	Domain  core.RecordRef
 }
 
-func (baseEvent) Serialize() (io.Reader, error) {
-	panic("Do not use base")
-}
-
-func (baseEvent) GetReference() core.RecordRef {
-	panic("Do not use base")
-}
-
 // Type is a enum type of event
 type Type byte
 

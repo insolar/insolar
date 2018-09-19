@@ -30,6 +30,10 @@ type CallConstructorEvent struct {
 	Arguments core.Arguments
 }
 
+func (e *CallConstructorEvent) Handle(core.Components) (core.Response, error) {
+	panic("implement me")
+}
+
 // GetOperatingRole returns operating jet role for given event type.
 func (e *CallConstructorEvent) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor

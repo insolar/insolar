@@ -28,6 +28,10 @@ type GetObjectEvent struct {
 	Object core.RecordRef
 }
 
+func (e *GetObjectEvent) Handle(core.Components) (core.Response, error) {
+	panic("implement me")
+}
+
 // GetOperatingRole returns operating jet role for given event type.
 func (e *GetObjectEvent) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor

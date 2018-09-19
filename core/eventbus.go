@@ -29,6 +29,8 @@ type Event interface {
 	GetReference() RecordRef
 	// GetOperatingRole returns operating jet role for given event type.
 	GetOperatingRole() JetRole
+	// Handle handles event and returns associated response.
+	Handle(Components) (Response, error)
 }
 
 // Response to a `Event`

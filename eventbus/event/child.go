@@ -30,6 +30,10 @@ type ChildEvent struct {
 	Body  []byte
 }
 
+func (e *ChildEvent) Handle(core.Components) (core.Response, error) {
+	panic("implement me")
+}
+
 // GetOperatingRole returns operating jet role for given event type.
 func (e *ChildEvent) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor

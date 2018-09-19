@@ -31,6 +31,10 @@ type CallMethodEvent struct {
 	Arguments core.Arguments
 }
 
+func (e *CallMethodEvent) Handle(core.Components) (core.Response, error) {
+	panic("implement me")
+}
+
 // GetOperatingRole returns operating jet role for given event type.
 func (e *CallMethodEvent) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
