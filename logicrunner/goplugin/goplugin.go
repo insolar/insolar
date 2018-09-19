@@ -127,13 +127,13 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
-	msg := &event.ChildEvent{
+	e := &event.ChildEvent{
 		Into:  req.Parent,
 		Class: req.Class,
 		Body:  req.Data,
 	}
 
-	res, err := gpr.gp.EventBus.Route(msg)
+	res, err := gpr.gp.EventBus.Route(e)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route event")
 	}
