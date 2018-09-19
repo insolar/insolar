@@ -22,10 +22,12 @@ import (
 
 // Custom errors possibly useful to check by artifact manager callers.
 var (
-	ErrInvalidRef        = errors.New("invalid reference")
-	ErrClassDeactivated  = errors.New("class is deactivated")
-	ErrObjectDeactivated = errors.New("object is deactivated")
-	ErrInconsistentIndex = errors.New("inconsistent index")
-	ErrWrongObject       = errors.New("provided object is not and instance of provided class")
-	ErrNotFound          = errors.New("object not found")
+	ErrInvalidRef                 = errors.New("invalid reference")
+	ErrClassDeactivated           = errors.New("class is deactivated")
+	ErrClassDelegateAlreadyExists = errors.New("delegate for this class already exists")
+	ErrClassIsNotActive           = errors.New("class is not active")
+	ErrObjectDeactivated          = errors.New("object is deactivated")
+	ErrInconsistentIndex          = errors.New("inconsistent index")
+	ErrWrongObject                = errors.New("provided object is not and instance of provided class")
+	ErrNotFound                   = errors.New("object not found")
 )
