@@ -51,6 +51,6 @@ func (neighbour *Neighbour) CheckAndRefreshConnection(rpcErr error) {
 	}
 
 	if err != nil {
-		log.Fatal("Unable to initialize connection to RPC")
+		log.Error("Unable to initialize connection to RPC")
 	}
 }

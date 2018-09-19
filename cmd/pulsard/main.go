@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
+	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar"
@@ -50,7 +52,26 @@ func main() {
 	}
 
 	go server.Start()
+
 	tryToConnectToNeighbours(server)
+	ticker := time.NewTicker(5 * time.Second)
+	go func() {
+		for range ticker.C {
+			tryToConnectToNeighbours(server)
+		}
+	}()
+
+	rl, err := readline.New("> ")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Press any button to exit")
+	_, _ = rl.Readline()
+
+	// Need to think about the shutdown mechanism
+	ticker.Stop()
+	defer server.Close()
 }
 
 func tryToConnectToNeighbours(pulsarServer *pulsar.Pulsar) {
@@ -69,7 +90,11 @@ func tryToConnectToNeighbours(pulsarServer *pulsar.Pulsar) {
 		}
 
 		err := neighbour.OutgoingClient.Call(pulsar.HealthCheck.String(), nil, nil)
-		if err != nil {
+
+		accessCall := neighbour.OutgoingClient.Go(pulsar.HealthCheck.String(), nil, nil, nil)
+		replyCall := <-accessCall.Done
+		if replyCall.Error != nil {
+			log.Warn("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
 			neighbour.CheckAndRefreshConnection(err)
 		}
 	}
