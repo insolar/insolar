@@ -30,7 +30,8 @@ type DelegateEvent struct {
 	Body  []byte
 }
 
-func (e *DelegateEvent) Handle(core.Components) (core.Response, error) {
+// React handles event and returns associated response.
+func (e *DelegateEvent) React(core.Components) (core.Response, error) {
 	panic("implement me")
 }
 

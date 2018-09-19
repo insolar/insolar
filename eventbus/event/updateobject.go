@@ -29,7 +29,8 @@ type UpdateObjectEvent struct {
 	Body   []byte
 }
 
-func (e *UpdateObjectEvent) Handle(core.Components) (core.Response, error) {
+// React handles event and returns associated response.
+func (e *UpdateObjectEvent) React(core.Components) (core.Response, error) {
 	panic("implement me")
 }
 

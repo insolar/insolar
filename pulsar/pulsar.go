@@ -50,7 +50,7 @@ func (pulsar *Pulsar) Listen() {
 			fmt.Println("Error accepting: ", err.Error())
 			os.Exit(1)
 		}
-		// Handle connections in a new goroutine.
+		// React connections in a new goroutine.
 		go handleRequest(conn)
 	}
 }

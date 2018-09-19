@@ -28,7 +28,8 @@ type GetObjectEvent struct {
 	Object core.RecordRef
 }
 
-func (e *GetObjectEvent) Handle(core.Components) (core.Response, error) {
+// React handles event and returns associated response.
+func (e *GetObjectEvent) React(core.Components) (core.Response, error) {
 	panic("implement me")
 }
 
