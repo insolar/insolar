@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -192,7 +193,8 @@ func TestCompileContractProxy(t *testing.T) {
 	assert.NoError(t, err)
 
 	// XXX: dirty hack to make `dep` installed packages available in generated code
-	err = os.Symlink(cwd+"/../../../vendor/", tmpDir+"/src/secondary/vendor")
+	// err = os.Symlink(cwd+"/../../../vendor/", tmpDir+"/src/secondary/vendor")
+	err = os.Symlink(filepath.Join(cwd, "..", "..", "..", "vendor"), filepath.Join(tmpDir, "src", "secondary", "vendor"))
 	assert.NoError(t, err)
 
 	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
@@ -214,8 +216,8 @@ func TestCompileContractProxy(t *testing.T) {
 package test
 
 import (
-	"secondary"
 	"github.com/insolar/insolar/core"
+	"secondary"
 )
 
 func main() {
