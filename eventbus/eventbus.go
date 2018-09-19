@@ -114,7 +114,7 @@ func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	resp, err := eb.logicRunner.Execute(e)
+	resp, err := e.React(eb.components)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
