@@ -31,8 +31,32 @@ type LedgerArtifactManager struct {
 	archPref []core.MachineType
 }
 
-func (m *LedgerArtifactManager) checkRequestRecord(s storage.Store, requestRef *record.Reference) error {
-	// TODO: implement request check
+func (m *LedgerArtifactManager) validateCodeRecord(ref core.RecordRef) error {
+	desc, err := m.GetCode(ref)
+	if err != nil {
+		return err
+	}
+	err = desc.Validate()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *LedgerArtifactManager) validateActiveClass(ref core.RecordRef) error {
+	desc, err := m.GetLatestClass(ref)
+	if err != nil {
+		return err
+	}
+	active, err := desc.IsActive()
+	if err != nil {
+		return err
+	}
+	if !active {
+		return errors.New("class is not active")
+	}
+
 	return nil
 }
 
@@ -147,11 +171,6 @@ func (m *LedgerArtifactManager) DeclareType(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 
-	err := m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
-
 	rec := record.TypeRecord{
 		StorageRecord: record.StorageRecord{
 			StatefulResult: record.StatefulResult{
@@ -179,11 +198,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 
-	err := m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
-
 	rec := record.CodeRecord{
 		StorageRecord: record.StorageRecord{
 			StatefulResult: record.StatefulResult{
@@ -208,13 +222,10 @@ func (m *LedgerArtifactManager) DeployCode(
 func (m *LedgerArtifactManager) ActivateClass(
 	domain, request core.RecordRef,
 ) (*core.RecordRef, error) {
+	var err error
+
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
-
-	err := m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
 
 	rec := record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
@@ -261,11 +272,6 @@ func (m *LedgerArtifactManager) DeactivateClass(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	classRef := record.Core2Reference(class)
-
-	err = m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
 
 	var deactivationRef *record.Reference
 	err = m.db.Update(func(tx *storage.TransactionManager) error {
@@ -318,15 +324,20 @@ func (m *LedgerArtifactManager) UpdateClass(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	classRef := record.Core2Reference(class)
-	codeRef := record.Core2Reference(code)
 	migrationRefs := make([]record.Reference, 0, len(migrations))
 	for _, migration := range migrations {
 		migrationRefs = append(migrationRefs, record.Core2Reference(migration))
 	}
 
-	err = m.checkRequestRecord(m.db, &requestRef)
+	err = m.validateCodeRecord(code)
 	if err != nil {
 		return nil, err
+	}
+	for _, migration := range migrations {
+		err = m.validateCodeRecord(migration)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var amendRef *record.Reference
@@ -334,17 +345,6 @@ func (m *LedgerArtifactManager) UpdateClass(
 		_, _, classIndex, err := m.getActiveClass(tx, classRef)
 		if err != nil {
 			return err
-		}
-
-		_, err = m.getCodeRecord(tx, codeRef)
-		if err != nil {
-			return err
-		}
-		for _, migrationRef := range migrationRefs {
-			_, err = m.getCodeRecord(tx, migrationRef)
-			if err != nil {
-				return errors.Wrap(err, "invalid migrations")
-			}
 		}
 
 		rec := record.ClassAmendRecord{
@@ -358,7 +358,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 				HeadRecord:    classRef,
 				AmendedRecord: classIndex.LatestStateRef,
 			},
-			NewCode:    codeRef,
+			NewCode:    record.Core2Reference(code),
 			Migrations: migrationRefs,
 		}
 
@@ -395,18 +395,13 @@ func (m *LedgerArtifactManager) ActivateObj(
 	classRef := record.Core2Reference(class)
 	parentRef := record.Core2Reference(parent)
 
-	err = m.checkRequestRecord(m.db, &requestRef)
+	err = m.validateActiveClass(class)
 	if err != nil {
 		return nil, err
 	}
 
 	var objRef *record.Reference
 	err = m.db.Update(func(tx *storage.TransactionManager) error {
-		_, _, _, err = m.getActiveClass(tx, classRef)
-		if err != nil {
-			return err
-		}
-
 		rec := record.ObjectActivateRecord{
 			ActivationRecord: record.ActivationRecord{
 				StatefulResult: record.StatefulResult{
@@ -429,7 +424,6 @@ func (m *LedgerArtifactManager) ActivateObj(
 		err = tx.SetObjectIndex(objRef, &index.ObjectLifeline{
 			ClassRef:       classRef,
 			LatestStateRef: *objRef,
-			Delegates:      map[core.RecordRef]record.Reference{},
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -438,7 +432,11 @@ func (m *LedgerArtifactManager) ActivateObj(
 		// append new record parent's children
 		parentIdx, err := tx.GetObjectIndex(&parentRef)
 		if err != nil {
-			return errors.Wrap(err, "inconsistent index")
+			if err == ErrNotFound {
+				parentIdx = &index.ObjectLifeline{}
+			} else {
+				return errors.Wrap(err, "inconsistent index")
+			}
 		}
 		parentIdx.Children = append(parentIdx.Children, *objRef)
 		err = tx.SetObjectIndex(&parentRef, parentIdx)
@@ -466,18 +464,13 @@ func (m *LedgerArtifactManager) ActivateObjDelegate(
 	classRef := record.Core2Reference(class)
 	parentRef := record.Core2Reference(parent)
 
-	err = m.checkRequestRecord(m.db, &requestRef)
+	err = m.validateActiveClass(class)
 	if err != nil {
 		return nil, err
 	}
 
 	var objRef *record.Reference
 	err = m.db.Update(func(tx *storage.TransactionManager) error {
-		_, _, _, err = m.getActiveClass(tx, classRef)
-		if err != nil {
-			return err
-		}
-
 		rec := record.ObjectActivateRecord{
 			ActivationRecord: record.ActivationRecord{
 				StatefulResult: record.StatefulResult{
@@ -543,11 +536,6 @@ func (m *LedgerArtifactManager) DeactivateObj(
 	requestRef := record.Core2Reference(request)
 	objRef := record.Core2Reference(obj)
 
-	err = m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
-
 	var deactivationRef *record.Reference
 	err = m.db.Update(func(tx *storage.TransactionManager) error {
 		_, _, objIndex, err := m.getActiveObject(tx, objRef)
@@ -598,11 +586,6 @@ func (m *LedgerArtifactManager) UpdateObj(
 	domainRef := record.Core2Reference(domain)
 	requestRef := record.Core2Reference(request)
 	objRef := record.Core2Reference(obj)
-
-	err = m.checkRequestRecord(m.db, &requestRef)
-	if err != nil {
-		return nil, err
-	}
 
 	var amendRef *record.Reference
 	err = m.db.Update(func(tx *storage.TransactionManager) error {

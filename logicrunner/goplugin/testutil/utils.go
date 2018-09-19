@@ -23,10 +23,9 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"testing"
 
 	"github.com/pkg/errors"
-
-	"testing"
 
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
@@ -100,6 +99,11 @@ func (t *TestCodeDescriptor) Code() ([]byte, error) {
 	return t.ACode, nil
 }
 
+// Validate checks code record integrity.
+func (t *TestCodeDescriptor) Validate() error {
+	return nil
+}
+
 // TestClassDescriptor ...
 type TestClassDescriptor struct {
 	AM    *TestArtifactManager
@@ -115,6 +119,11 @@ func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
 // StateRef ...
 func (t *TestClassDescriptor) StateRef() *core.RecordRef {
 	panic("not implemented")
+}
+
+// IsActive checks if class is active.
+func (t *TestClassDescriptor) IsActive() (bool, error) {
+	return true, nil
 }
 
 // CodeDescriptor ...
@@ -143,6 +152,11 @@ func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
 // StateRef implementation for tests
 func (t *TestObjectDescriptor) StateRef() *core.RecordRef {
 	panic("not implemented")
+}
+
+// IsActive checks if object is active.
+func (t *TestObjectDescriptor) IsActive() (bool, error) {
+	return true, nil
 }
 
 // Memory implementation for tests
