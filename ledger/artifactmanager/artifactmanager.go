@@ -434,8 +434,9 @@ func (m *LedgerArtifactManager) ActivateObj(
 		if err != nil {
 			if err == ErrNotFound {
 				parentIdx = &index.ObjectLifeline{}
+			} else {
+				return errors.Wrap(err, "inconsistent index")
 			}
-			return errors.Wrap(err, "inconsistent index")
 		}
 		parentIdx.Children = append(parentIdx.Children, *objRef)
 		err = tx.SetObjectIndex(&parentRef, parentIdx)
