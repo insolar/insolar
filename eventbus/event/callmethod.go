@@ -22,8 +22,8 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CallMethodMessage - Simply call method and return result
-type CallMethodMessage struct {
+// CallMethodEvent - Simply call method and return result
+type CallMethodEvent struct {
 	baseEvent
 	ObjectRef core.RecordRef
 	Request   core.RecordRef
@@ -32,16 +32,16 @@ type CallMethodMessage struct {
 }
 
 // GetOperatingRole returns operating jet role for given event type.
-func (m *CallMethodMessage) GetOperatingRole() core.JetRole {
+func (e *CallMethodEvent) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
 // GetReference returns referenced object.
-func (m *CallMethodMessage) GetReference() core.RecordRef {
-	return m.ObjectRef
+func (e *CallMethodEvent) GetReference() core.RecordRef {
+	return e.ObjectRef
 }
 
 // Serialize serializes event.
-func (m *CallMethodMessage) Serialize() (io.Reader, error) {
-	return serialize(m, CallMethodEventType)
+func (e *CallMethodEvent) Serialize() (io.Reader, error) {
+	return serialize(e, CallMethodEventType)
 }

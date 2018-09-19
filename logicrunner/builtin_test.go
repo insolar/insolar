@@ -66,7 +66,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
-	resp, err := lr.Execute(&event.CallMethodMessage{
+	resp, err := lr.Execute(&event.CallMethodEvent{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
@@ -80,7 +80,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
-	resp, err = lr.Execute(&event.CallMethodMessage{
+	resp, err = lr.Execute(&event.CallMethodEvent{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",

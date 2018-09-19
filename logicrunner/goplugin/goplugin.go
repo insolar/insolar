@@ -88,7 +88,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.New("event bus was not set during initialization")
 	}
 
-	msg := &event.CallMethodMessage{
+	msg := &event.CallMethodEvent{
 		ObjectRef: req.Object,
 		Method:    req.Method,
 		Arguments: req.Arguments,
