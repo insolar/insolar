@@ -21,6 +21,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -76,4 +77,24 @@ func TestConfiguration_LoadEnv(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, defaultCfg, holder.Configuration)
 	assert.Equal(t, "127.0.0.2:5555", holder.Configuration.Host.Transport.Address)
+}
+
+func TestConfiguration_Init(t *testing.T) {
+	var (
+		holder *Holder
+		err    error
+	)
+	holder, err = NewHolder().Init(false)
+	assert.NoError(t, err)
+	assert.NotNil(t, holder)
+
+	holder = NewHolder().MustInit(false)
+	assert.NotNil(t, holder)
+
+	holder, err = NewHolder().Init(true)
+	assert.Error(t, err)
+	assert.IsType(t, viper.ConfigFileNotFoundError{}, err)
+	assert.Nil(t, holder)
+
+	assert.Panics(t, func() { NewHolder().MustInit(true) })
 }
