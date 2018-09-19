@@ -67,7 +67,7 @@ func getEmptyEvent(mt EventType) (core.Event, error) {
 	case ChildEventType:
 		return &ChildEvent{}, nil
 	case UpdateObjectEventType:
-		return &UpdateObjectMessage{}, nil
+		return &UpdateObjectEvent{}, nil
 	case GetObjectEventType:
 		return &GetObjectEvent{}, nil
 	default:
@@ -109,6 +109,6 @@ func init() {
 	gob.Register(&CallMethodEvent{})
 	gob.Register(&DelegateEvent{})
 	gob.Register(&ChildEvent{})
-	gob.Register(&UpdateObjectMessage{})
+	gob.Register(&UpdateObjectEvent{})
 	gob.Register(&GetObjectEvent{})
 }
