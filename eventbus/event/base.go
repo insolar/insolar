@@ -40,11 +40,11 @@ func (baseEvent) GetReference() core.RecordRef {
 	panic("Do not use base")
 }
 
-// EventType is a enum type of event
-type EventType byte
+// Type is a enum type of event
+type Type byte
 
 const (
-	baseEventType            = EventType(iota)
+	baseEventType            = Type(iota)
 	CallMethodEventType      // CallMethodEvent - Simply call method and return result
 	CallConstructorEventType // CallConstructorEvent is a event for calling constructor and obtain its response
 	DelegateEventType        // DelegateEvent is a event for injecting a delegate
@@ -54,7 +54,7 @@ const (
 )
 
 // GetEmptyMessage constructs specified event
-func getEmptyEvent(mt EventType) (core.Event, error) {
+func getEmptyEvent(mt Type) (core.Event, error) {
 	switch mt {
 	case baseEventType:
 		return nil, errors.New("working with event type == 0 is prohibited")
@@ -75,7 +75,7 @@ func getEmptyEvent(mt EventType) (core.Event, error) {
 	}
 }
 
-func serialize(event core.Event, t EventType) (io.Reader, error) {
+func serialize(event core.Event, t Type) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	_, err := buff.Write([]byte{byte(t)})
 	if err != nil {
@@ -95,7 +95,7 @@ func Deserialize(buff io.Reader) (core.Event, error) {
 		return nil, errors.New("too short slice for deserialize event")
 	}
 
-	event, err := getEmptyEvent(EventType(b[0]))
+	event, err := getEmptyEvent(Type(b[0]))
 	if err != nil {
 		return nil, err
 	}
