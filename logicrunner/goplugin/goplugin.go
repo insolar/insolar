@@ -174,13 +174,13 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
-	msg := &event.DelegateEvent{
+	e := &event.DelegateEvent{
 		Into:  req.Into,
 		Class: req.Class,
 		Body:  req.Data,
 	}
 
-	res, err := gpr.gp.EventBus.Route(msg)
+	res, err := gpr.gp.EventBus.Route(e)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route event")
 	}
