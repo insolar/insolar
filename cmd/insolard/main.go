@@ -98,7 +98,7 @@ func main() {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
 
-	mr, err := messagerouter.New(cfgHolder.Configuration)
+	eb, err := messagerouter.New(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
@@ -117,7 +117,7 @@ func main() {
 	cm.register("core.Network", nw)
 	cm.register("core.Ledger", l)
 	cm.register("core.LogicRunner", lr)
-	cm.register("core.EventBus", mr)
+	cm.register("core.EventBus", eb)
 	cm.register("core.Bootstrapper", b)
 	cm.register("core.ApiRunner", ar)
 	cm.linkAll()
