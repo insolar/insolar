@@ -19,10 +19,11 @@ package pulsar
 import (
 	"bytes"
 	"fmt"
-	"github.com/insolar/insolar/configuration"
 	"net"
 	"os"
 	"strconv"
+
+	"github.com/insolar/insolar/configuration"
 )
 
 type Pulsar struct {
@@ -85,15 +86,15 @@ func handleRequest(conn net.Conn) {
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
 	}
-	// Builds the message.
-	message := "Hi, I received your message! It was "
+	// Builds the event.
+	message := "Hi, I received your event! It was "
 	message += strconv.Itoa(reqLen)
 	message += " bytes long and that's what it said: \""
 	n := bytes.Index(buf, []byte{0})
 	message += string(buf[:n-1])
 	message += "\" ! Honestly I have no clue about what to do with your messages, so Bye Bye!\n"
 
-	// Write the message in the connection channel.
+	// Write the event in the connection channel.
 	_, err = conn.Write([]byte(message))
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())

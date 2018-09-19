@@ -22,7 +22,7 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/response"
 	"github.com/pkg/errors"
 )
@@ -66,15 +66,15 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		return nil, errors.New("[ RouteCall ] event bus was not set during initialization")
 	}
 
-	msg := &message.CallMethodMessage{
+	e := &event.CallMethodEvent{
 		ObjectRef: ref,
 		Method:    method,
 		Arguments: args,
 	}
 
-	res, err := rh.eventBus.Route(msg)
+	res, err := rh.eventBus.Route(e)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route message")
+		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route event")
 	}
 
 	return res, nil

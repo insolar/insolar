@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package event
 
 import (
 	"io"
@@ -22,25 +22,23 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// DelegateMessage is a message for saving contract's body as a delegate
-type DelegateMessage struct {
-	baseMessage
-	Into  core.RecordRef
-	Class core.RecordRef
-	Body  []byte
+// GetObjectEvent is a event for calling constructor and obtain its response
+type GetObjectEvent struct {
+	baseEvent
+	Object core.RecordRef
 }
 
-// GetOperatingRole returns operating jet role for given message type.
-func (m *DelegateMessage) GetOperatingRole() core.JetRole {
+// GetOperatingRole returns operating jet role for given event type.
+func (e *GetObjectEvent) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
 // GetReference returns referenced object.
-func (m *DelegateMessage) GetReference() core.RecordRef {
-	return m.Into
+func (e *GetObjectEvent) GetReference() core.RecordRef {
+	return e.Object
 }
 
-// Serialize serializes message.
-func (m *DelegateMessage) Serialize() (io.Reader, error) {
-	return serialize(m, DelegateMessageType)
+// Serialize serializes event.
+func (e *GetObjectEvent) Serialize() (io.Reader, error) {
+	return serialize(e, GetObjectEventType)
 }

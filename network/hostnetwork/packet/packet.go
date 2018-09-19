@@ -54,7 +54,7 @@ const (
 	TypeKnownOuterHosts
 	// TypeCheckNodePriv is packet to check preset node privileges.
 	TypeCheckNodePriv
-	// TypeCascadeSend is the packet type for the cascade send message feature
+	// TypeCascadeSend is the packet type for the cascade send event feature
 	TypeCascadeSend
 	// TypePulse is packet type for the messages received from pulsars
 	TypePulse

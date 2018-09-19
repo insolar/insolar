@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/response"
 )
 
@@ -55,8 +55,8 @@ func (eb *EventBus) Start(c core.Components) error {
 
 func (eb *EventBus) Stop() error { return nil }
 
-// Route a `Message` and get a `Response` or error from remote host
-func (eb *EventBus) Route(msg core.Message) (core.Response, error) {
+// Route a `Event` and get a `Response` or error from remote host
+func (eb *EventBus) Route(event core.Event) (core.Response, error) {
 	jc := eb.ledger.GetJetCoordinator()
 	pm := eb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -64,7 +64,7 @@ func (eb *EventBus) Route(msg core.Message) (core.Response, error) {
 		return nil, err
 	}
 
-	nodes, err := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(event.GetOperatingRole(), event.GetReference(), pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +75,11 @@ func (eb *EventBus) Route(msg core.Message) (core.Response, error) {
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := eb.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
+		err := eb.service.SendCascadeEvent(cascade, deliverRPCMethodName, event)
 		return nil, err
 	}
 
-	res, err := eb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
+	res, err := eb.service.SendEvent(nodes[0], deliverRPCMethodName, event)
 	if err != nil {
 		return nil, err
 	}
@@ -101,12 +101,12 @@ func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when eb.deliver()")
 	}
-	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
+	e, err := event.Deserialize(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := eb.logicRunner.Execute(msg)
+	resp, err := eb.logicRunner.Execute(e)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),

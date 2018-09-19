@@ -82,30 +82,30 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
 }
 
-// SendMessage sends a message from EventBus.
-func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
-	if msg == nil {
-		return nil, errors.New("message is nil")
+// SendEvent sends a event from EventBus.
+func (network *ServiceNetwork) SendEvent(nodeID core.RecordRef, method string, event core.Event) ([]byte, error) {
+	if event == nil {
+		return nil, errors.New("event is nil")
 	}
 	hostID := network.nodeNetwork.ResolveHostID(nodeID)
-	buff, err := messageToBytes(msg)
+	buff, err := eventToBytes(event)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debugln("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		method, msg.GetReference().String())
+	log.Debugln("SendEvent with nodeID = %s method = %s, event reference = %s", nodeID.String(),
+		method, event.GetReference().String())
 
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
 }
 
-// SendCascadeMessage sends a message from EventBus to a cascade of nodes. Message reference is ignored
-func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
-	if msg == nil {
-		return errors.New("message is nil")
+// SendCascadeEvent sends a event from EventBus to a cascade of nodes. Event reference is ignored
+func (network *ServiceNetwork) SendCascadeEvent(data core.Cascade, method string, event core.Event) error {
+	if event == nil {
+		return errors.New("event is nil")
 	}
-	buff, err := messageToBytes(msg)
+	buff, err := eventToBytes(event)
 	if err != nil {
 		return err
 	}
@@ -113,8 +113,8 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	return network.initCascadeSendMessage(data, false, method, [][]byte{buff})
 }
 
-func messageToBytes(msg core.Message) ([]byte, error) {
-	reqBuff, err := msg.Serialize()
+func eventToBytes(event core.Event) ([]byte, error) {
+	reqBuff, err := event.Serialize()
 	if err != nil {
 		return nil, err
 	}
@@ -230,13 +230,13 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 		hostID := network.nodeNetwork.ResolveHostID(nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
-			logrus.Debugln("failed to send cascade message: ", err)
+			logrus.Debugln("failed to send cascade event: ", err)
 			failedNodes = append(failedNodes, nextNode.String())
 		}
 	}
 
 	if len(failedNodes) > 0 {
-		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
+		return errors.New("failed to send cascade event to nodes: " + strings.Join(failedNodes, ", "))
 	}
 
 	return nil

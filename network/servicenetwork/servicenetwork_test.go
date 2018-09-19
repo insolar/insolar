@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/prometheus/common/log"
 	"github.com/stretchr/testify/assert"
 )
@@ -83,13 +83,13 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	network, err := NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
 
-	msg := &message.CallMethodMessage{
+	e := &event.CallMethodEvent{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
 
-	network.SendMessage(core.NewRefFromBase58("test"), "test", msg)
+	network.SendEvent(core.NewRefFromBase58("test"), "test", e)
 }
 
 func TestServiceNetwork_Start(t *testing.T) {
@@ -158,13 +158,13 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		return nil, nil
 	})
 
-	msg := &message.CallMethodMessage{
+	e := &event.CallMethodEvent{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
 
-	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", msg)
+	firstNode.SendEvent(core.NewRefFromBase58(secondNodeId), "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
@@ -199,7 +199,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		return nil, nil
 	})
 
-	msg := &message.CallMethodMessage{
+	e := &event.CallMethodEvent{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -211,7 +211,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	firstNode.SendCascadeMessage(c, "test", msg)
+	firstNode.SendCascadeEvent(c, "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
@@ -266,7 +266,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		bootstrapHosts = append(bootstrapHosts, host)
 	}
 	nodes := nodeIds[:len(nodeIds)-2]
-	// first node that will send cascade message to all other nodes
+	// first node that will send cascade event to all other nodes
 	var firstService *ServiceNetwork
 	for i, node := range nodes {
 		service, _ := initService(node.String(), bootstrapHosts)
@@ -275,18 +275,18 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		}
 	}
 
-	msg := &message.CallMethodMessage{
+	e := &event.CallMethodEvent{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
-	// send cascade message to all nodes except the first
+	// send cascade event to all nodes except the first
 	c := core.Cascade{
 		NodeIds:           nodeIds[1:],
 		ReplicationFactor: 2,
 		Entropy:           core.Entropy{0},
 	}
-	firstService.SendCascadeMessage(c, "test", msg)
+	firstService.SendCascadeEvent(c, "test", e)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)

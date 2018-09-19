@@ -60,7 +60,7 @@ func TestWrongQueryParam(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
+	assert.Contains(t, string(body[:]), `"event": "Wrong query parameter 'query_type' = 'TEST'"`)
 }
 
 func TestHandlerError(t *testing.T) {
@@ -70,7 +70,7 @@ func TestHandlerError(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] event`)
+	assert.Contains(t, string(body[:]), `"event": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] event`)
 }
 
 func TestBadRequest(t *testing.T) {
@@ -78,7 +78,7 @@ func TestBadRequest(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Bad request"`)
+	assert.Contains(t, string(body[:]), `"event": "Bad request"`)
 }
 
 func TestSerialization(t *testing.T) {
@@ -136,7 +136,7 @@ func (eb *TestEventBus) Stop() error {
 
 const TestBalance = 100500
 
-func (eb *TestEventBus) Route(msg core.Message) (core.Response, error) {
+func (eb *TestEventBus) Route(event core.Event) (core.Response, error) {
 	data, _ := MarshalArgs(TestBalance)
 
 	return &response.CommonResponse{

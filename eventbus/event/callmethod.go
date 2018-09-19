@@ -14,29 +14,34 @@
  *    limitations under the License.
  */
 
-package testutil
+package event
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/core"
 )
 
-// TestEventBus can execute messages on LogicRunner.
-type TestEventBus struct {
-	LogicRunner core.LogicRunner
+// CallMethodEvent - Simply call method and return result
+type CallMethodEvent struct {
+	baseEvent
+	ObjectRef core.RecordRef
+	Request   core.RecordRef
+	Method    string
+	Arguments core.Arguments
 }
 
-// Start is the dummy mock of Start method.
-func (*TestEventBus) Start(components core.Components) error { return nil }
-
-// Stop is the dummy mock of Stop method.
-func (*TestEventBus) Stop() error { return nil }
-
-// Route executes event on LogicRunner.
-func (eb *TestEventBus) Route(event core.Event) (resp core.Response, err error) {
-	return eb.LogicRunner.Execute(event)
+// GetOperatingRole returns operating jet role for given event type.
+func (e *CallMethodEvent) GetOperatingRole() core.JetRole {
+	return core.RoleVirtualExecutor
 }
 
-// NewTestEventBus creates TestEventBus which mocks the real one.
-func NewTestEventBus(lr core.LogicRunner) *TestEventBus {
-	return &TestEventBus{LogicRunner: lr}
+// GetReference returns referenced object.
+func (e *CallMethodEvent) GetReference() core.RecordRef {
+	return e.ObjectRef
+}
+
+// Serialize serializes event.
+func (e *CallMethodEvent) Serialize() (io.Reader, error) {
+	return serialize(e, CallMethodEventType)
 }
