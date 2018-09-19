@@ -37,7 +37,7 @@ type Response interface {
 	Serialize() (io.Reader, error)
 }
 
-// MessageRouter interface
-type MessageRouter interface {
+// EventBus interface
+type EventBus interface {
 	Route(msg Message) (resp Response, err error)
 }

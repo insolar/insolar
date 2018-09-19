@@ -24,17 +24,17 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/response"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
-	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/insolar/insolar/messagerouter/response"
 )
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
-	MessageRouter   core.MessageRouter
+	EventBus        core.EventBus
 	Cfg             configuration.LogicRunner
 }
 
@@ -51,18 +51,18 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 func (lr *LogicRunner) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
 	lr.ArtifactManager = am
-	mr := c["core.MessageRouter"].(core.MessageRouter)
-	lr.MessageRouter = mr
+	eventBus := c["core.EventBus"].(core.EventBus)
+	lr.EventBus = eventBus
 
 	if lr.Cfg.BuiltIn != nil {
-		bi := builtin.NewBuiltIn(mr, am)
+		bi := builtin.NewBuiltIn(eventBus, am)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
 			return err
 		}
 	}
 
 	if lr.Cfg.GoPlugin != nil {
-		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, mr, am)
+		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, eventBus, am)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 
 	switch m := msg.(type) {
 	case *message.CallMethodMessage:
-		resp, err := lr.MessageRouter.Route(&message.GetObjectMessage{
+		resp, err := lr.EventBus.Route(&message.GetObjectMessage{
 			Object: m.ObjectRef,
 		})
 		if err != nil {
@@ -143,7 +143,7 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 			return nil, errors.Wrap(err, "executer error")
 		}
 
-		_, err = lr.MessageRouter.Route(
+		_, err = lr.EventBus.Route(
 			&message.UpdateObjectMessage{
 				Object: m.ObjectRef,
 				Body:   newData,

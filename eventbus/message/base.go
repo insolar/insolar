@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-// Package message represents message that messagerouter can route
+// Package message represents message that eventbus can route
 package message
 
 import (

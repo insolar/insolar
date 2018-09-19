@@ -14,14 +14,14 @@
  *    limitations under the License.
  */
 
-package messagerouter
+package eventbus
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter/message"
+	"github.com/insolar/insolar/eventbus/message"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/assert"
 )
@@ -60,15 +60,15 @@ func TestNew(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
-	mr, err := New(configuration.Configuration{})
-	mr.Start(core.Components{
+	eb, err := New(configuration.Configuration{})
+	eb.Start(core.Components{
 		"core.LogicRunner": r,
 		"core.Network":     network,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mr == nil {
+	if eb == nil {
 		t.Fatal("no object created")
 	}
 }

@@ -29,9 +29,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/response"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/insolar/insolar/messagerouter/response"
 	"github.com/pkg/errors"
 )
 
@@ -52,7 +52,7 @@ type RunnerOptions struct {
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	Cfg             *configuration.GoPlugin
-	MessageRouter   core.MessageRouter
+	EventBus        core.EventBus
 	ArtifactManager core.ArtifactManager
 	sock            net.Listener
 	runner          *exec.Cmd
@@ -82,10 +82,10 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
-// RouteCall routes call from a contract to a contract through message router
+// RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) error {
-	if gpr.gp.MessageRouter == nil {
-		return errors.New("message router was not set during initialization")
+	if gpr.gp.EventBus == nil {
+		return errors.New("event bus was not set during initialization")
 	}
 
 	msg := &message.CallMethodMessage{
@@ -94,7 +94,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(msg)
+	res, err := gpr.gp.EventBus.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
@@ -106,8 +106,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 
 // RouteConstructorCall routes call from a contract to a constructor of another contract
 func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *rpctypes.UpRouteConstructorResp) error {
-	if gpr.gp.MessageRouter == nil {
-		return errors.New("message router was not set during initialization")
+	if gpr.gp.EventBus == nil {
+		return errors.New("event bus was not set during initialization")
 	}
 
 	msg := &message.CallConstructorMessage{
@@ -116,7 +116,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(msg)
+	res, err := gpr.gp.EventBus.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
@@ -133,7 +133,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 		Body:  req.Data,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(msg)
+	res, err := gpr.gp.EventBus.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
@@ -180,7 +180,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 		Body:  req.Data,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(msg)
+	res, err := gpr.gp.EventBus.Route(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't route message")
 	}
@@ -203,10 +203,10 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGet
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.GoPlugin, mr core.MessageRouter, am core.ArtifactManager) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.GoPlugin, eb core.EventBus, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
-		MessageRouter:   mr,
+		EventBus:        eb,
 		ArtifactManager: am,
 	}
 	if gp.Cfg.MainListen == "" {

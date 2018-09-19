@@ -22,8 +22,8 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/insolar/insolar/messagerouter/response"
+	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/response"
 	"github.com/pkg/errors"
 )
 
@@ -47,23 +47,23 @@ func extractCreateMemberResponse(data []byte) (*string, error) {
 type RequestHandler struct {
 	qid                 string
 	params              *Params
-	messageRouter       core.MessageRouter
+	eventBus            core.EventBus
 	rootDomainReference core.RecordRef
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, router core.MessageRouter, rootDomainReference core.RecordRef) *RequestHandler {
+func NewRequestHandler(params *Params, eventBus core.EventBus, rootDomainReference core.RecordRef) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
-		messageRouter:       router,
+		eventBus:            eventBus,
 		rootDomainReference: rootDomainReference,
 	}
 }
 
 func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Response, error) {
-	if rh.messageRouter == nil {
-		return nil, errors.New("[ RouteCall ] message router was not set during initialization")
+	if rh.eventBus == nil {
+		return nil, errors.New("[ RouteCall ] event bus was not set during initialization")
 	}
 
 	msg := &message.CallMethodMessage{
@@ -72,7 +72,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		Arguments: args,
 	}
 
-	res, err := rh.messageRouter.Route(msg)
+	res, err := rh.eventBus.Route(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route message")
 	}
