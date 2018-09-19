@@ -139,7 +139,7 @@ const TestBalance = 100500
 func (eb *TestEventBus) Route(event core.Event) (core.Reaction, error) {
 	data, _ := MarshalArgs(TestBalance)
 
-	return &reaction.CommonResponse{
+	return &reaction.CommonReaction{
 		Result: data,
 	}, nil
 }

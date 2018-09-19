@@ -20,13 +20,13 @@ import (
 	"io"
 )
 
-// CommonResponse - the most common reaction
-type CommonResponse struct {
+// CommonReaction - the most common reaction.
+type CommonReaction struct {
 	Data   []byte
 	Result []byte
 }
 
-// Serialize serializes reaction
-func (r *CommonResponse) Serialize() (io.Reader, error) {
-	return serialize(r, CommonResponseType)
+// Serialize serializes reaction.
+func (r *CommonReaction) Serialize() (io.Reader, error) {
+	return serialize(r, CommonReactionType)
 }

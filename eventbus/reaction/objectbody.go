@@ -22,15 +22,15 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// ObjectBodyResponse - the most common reaction
-type ObjectBodyResponse struct {
+// ObjectBodyReaction - the most common reaction.
+type ObjectBodyReaction struct {
 	Body        []byte
 	Code        core.RecordRef
 	Class       core.RecordRef
 	MachineType core.MachineType
 }
 
-// Serialize serializes reaction
-func (r *ObjectBodyResponse) Serialize() (io.Reader, error) {
-	return serialize(r, ObjectBodyResponseType)
+// Serialize serializes reaction.
+func (r *ObjectBodyReaction) Serialize() (io.Reader, error) {
+	return serialize(r, ObjectBodyReactionType)
 }

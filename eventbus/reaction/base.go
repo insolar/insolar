@@ -30,28 +30,28 @@ import (
 type Type byte
 
 const (
-	// WrongResponseType - incorrect type (0)
-	WrongResponseType = Type(iota)
-	// CommonResponseType - two binary fields: data and results
-	CommonResponseType
-	// ObjectBodyResponseType - reaction with body, class reference, code reference ...
-	ObjectBodyResponseType
+	// WrongReactionType - incorrect type (0)
+	WrongReactionType = Type(iota)
+	// CommonReactionType - two binary fields: data and results
+	CommonReactionType
+	// ObjectBodyReactionType - reaction with body, class reference, code reference ...
+	ObjectBodyReactionType
 )
 
-func getEmptyResponse(t Type) (core.Reaction, error) {
+func getEmptyReaction(t Type) (core.Reaction, error) {
 	switch t {
-	case WrongResponseType:
+	case WrongReactionType:
 		return nil, errors.New("no empty reaction for 'wrong' reaction")
-	case CommonResponseType:
-		return &CommonResponse{}, nil
-	case ObjectBodyResponseType:
-		return &ObjectBodyResponse{}, nil
+	case CommonReactionType:
+		return &CommonReaction{}, nil
+	case ObjectBodyReactionType:
+		return &ObjectBodyReaction{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reaction type: '%d'", t)
 	}
 }
 
-func serialize(m core.Reaction, t Type) (io.Reader, error) {
+func serialize(reaction core.Reaction, t Type) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	_, err := buff.Write([]byte{byte(t)})
 	if err != nil {
@@ -59,28 +59,28 @@ func serialize(m core.Reaction, t Type) (io.Reader, error) {
 	}
 
 	enc := gob.NewEncoder(buff)
-	err = enc.Encode(m)
+	err = enc.Encode(reaction)
 	return buff, err
 }
 
-// Deserialize returns a reaction
+// Deserialize returns a reaction.
 func Deserialize(buff io.Reader) (core.Reaction, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
-		return nil, errors.New("too short input to deserialize a event reaction")
+		return nil, errors.New("too short input to deserialize an event reaction")
 	}
 
-	m, err := getEmptyResponse(Type(b[0]))
+	reaction, err := getEmptyReaction(Type(b[0]))
 	if err != nil {
 		return nil, err
 	}
 	enc := gob.NewDecoder(buff)
-	err = enc.Decode(m)
-	return m, err
+	err = enc.Decode(reaction)
+	return reaction, err
 }
 
 func init() {
-	gob.Register(&CommonResponse{})
-	gob.Register(&ObjectBodyResponse{})
+	gob.Register(&CommonReaction{})
+	gob.Register(&ObjectBodyReaction{})
 }

@@ -99,7 +99,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.Wrap(err, "couldn't route event")
 	}
 
-	reply.Result = res.(*reaction.CommonResponse).Result
+	reply.Result = res.(*reaction.CommonReaction).Result
 
 	return nil
 }
@@ -121,7 +121,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.Wrap(err, "couldn't route event")
 	}
 
-	reply.Data = res.(*reaction.CommonResponse).Data
+	reply.Data = res.(*reaction.CommonReaction).Data
 	return nil
 }
 
@@ -138,7 +138,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 		return errors.Wrap(err, "couldn't route event")
 	}
 
-	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonResponse).Data))
+	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
 
 	return nil
 }
@@ -185,7 +185,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 		return errors.Wrap(err, "couldn't route event")
 	}
 
-	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonResponse).Data))
+	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
 
 	return nil
 }

@@ -126,7 +126,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object")
 		}
-		info := resp.(*reaction.ObjectBodyResponse)
+		info := resp.(*reaction.ObjectBodyReaction)
 
 		ctx.Callee = &m.ObjectRef
 		ctx.Class = &info.Class
@@ -153,7 +153,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
 
-		return &reaction.CommonResponse{Data: newData, Result: result}, nil
+		return &reaction.CommonReaction{Data: newData, Result: result}, nil
 
 	case *event.CallConstructorEvent:
 		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
@@ -182,7 +182,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "executer error")
 		}
 
-		return &reaction.CommonResponse{Data: newData}, nil
+		return &reaction.CommonReaction{Data: newData}, nil
 
 	case *event.DelegateEvent:
 		ref, err := lr.ArtifactManager.ActivateObjDelegate(
@@ -191,7 +191,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't save new object")
 		}
-		return &reaction.CommonResponse{Data: []byte(ref.String())}, nil
+		return &reaction.CommonReaction{Data: []byte(ref.String())}, nil
 
 	case *event.ChildEvent:
 		ref, err := lr.ArtifactManager.ActivateObj(
@@ -200,7 +200,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't save new object")
 		}
-		return &reaction.CommonResponse{Data: []byte(ref.String())}, nil
+		return &reaction.CommonReaction{Data: []byte(ref.String())}, nil
 
 	case *event.UpdateObjectEvent:
 		_, err := lr.ArtifactManager.UpdateObj(
@@ -209,7 +209,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
-		return &reaction.CommonResponse{}, nil
+		return &reaction.CommonReaction{}, nil
 
 	case *event.GetObjectEvent:
 		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Object)
@@ -237,7 +237,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "couldn't get machine type")
 		}
 
-		return &reaction.ObjectBodyResponse{
+		return &reaction.ObjectBodyReaction{
 			Body:        data,
 			Code:        *codeDesc.Ref(),
 			Class:       *classDesc.HeadRef(),
