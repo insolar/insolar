@@ -74,7 +74,7 @@ type RequestPulse struct {
 
 // RequestGetRandomHosts is data for the call that returns random hosts of the DHT network
 type RequestGetRandomHosts struct {
-	RandomHostsNumber int
+	HostsNumber int
 }
 
 // RequestRelay is data for relay request (commands: start/stop relay).

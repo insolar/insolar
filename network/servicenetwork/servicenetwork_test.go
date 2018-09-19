@@ -290,4 +290,10 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
+
+	hostHandler, ctx := firstService.GetHostNetwork()
+	// routing table should return total of 11 hosts
+	assert.Equal(t, 11, len(hostHandler.HtFromCtx(ctx).GetHosts(100)))
+	// when we request 4 hosts, routing table should return 4 hosts
+	assert.Equal(t, 4, len(hostHandler.HtFromCtx(ctx).GetHosts(4)))
 }

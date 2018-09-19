@@ -76,11 +76,11 @@ func processGetRandomHosts(
 
 	data := msg.Data.(*packet.RequestGetRandomHosts)
 	ht := hostHandler.HtFromCtx(ctx)
-	if data.RandomHostsNumber <= 0 {
+	if data.HostsNumber <= 0 {
 		return packetBuilder.Response(&packet.ResponseGetRandomHosts{
 			Hosts: nil, Error: "hosts number should be more than zero"}).Build(), nil
 	}
-	hosts := ht.GetHosts(data.RandomHostsNumber)
+	hosts := ht.GetHosts(data.HostsNumber)
 	// TODO: handle scenario when we get less hosts than requested
 	return packetBuilder.Response(&packet.ResponseGetRandomHosts{Hosts: hosts, Error: ""}).Build(), nil
 }
