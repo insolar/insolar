@@ -31,8 +31,8 @@ type CallConstructorEvent struct {
 }
 
 // React handles event and returns associated reaction.
-func (e *CallConstructorEvent) React(core.Components) (core.Reaction, error) {
-	panic("implement me")
+func (e *CallConstructorEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
 }
 
 // GetOperatingRole returns operating jet role for given event type.

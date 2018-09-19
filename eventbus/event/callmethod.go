@@ -32,8 +32,8 @@ type CallMethodEvent struct {
 }
 
 // React handles event and returns associated reaction.
-func (e *CallMethodEvent) React(core.Components) (core.Reaction, error) {
-	panic("implement me")
+func (e *CallMethodEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
 }
 
 // GetOperatingRole returns operating jet role for given event type.

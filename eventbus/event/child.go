@@ -31,8 +31,8 @@ type ChildEvent struct {
 }
 
 // React handles event and returns associated reaction.
-func (e *ChildEvent) React(core.Components) (core.Reaction, error) {
-	panic("implement me")
+func (e *ChildEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
 }
 
 // GetOperatingRole returns operating jet role for given event type.
