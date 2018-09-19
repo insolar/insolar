@@ -53,7 +53,7 @@ func TestGoPlugin(t *testing.T) {
 	assert.NoError(t, err, "Initialize runner")
 
 	lr.ArtifactManager = l.GetArtifactManager()
-	eb := testutil.NewTestMessageRouter(lr)
+	eb := testutil.NewTestEventBus(lr)
 	assert.NoError(t, lr.Start(core.Components{
 		"core.Ledger":   l,
 		"core.EventBus": eb,
