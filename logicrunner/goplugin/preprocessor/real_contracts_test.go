@@ -77,9 +77,8 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 }
 
 func TestCompilingRealSmartContracts(t *testing.T) {
-	// iccDir := "../../../cmd/insgocc"
 	cwd, _ := os.Getwd()
-	iccDir := filepath.Join("cwd", "..", "..", "..", "cmd", "insgocc")
+	iccDir := filepath.Join(cwd, "..", "..", "..", "cmd", "insgocc")
 
 	_, err := exec.Command("go", "build", "-o", filepath.Join(iccDir, "insgocc"), iccDir).CombinedOutput()
 	assert.NoError(t, err)
