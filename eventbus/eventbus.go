@@ -35,21 +35,29 @@ type EventBus struct {
 	logicRunner core.LogicRunner
 	service     core.Network
 	ledger      core.Ledger
+
+	components core.Components
 }
 
 // New is a `EventBus` constructor, takes an executor object
 // that satisfies LogicRunner interface
 func New(cfg configuration.Configuration) (*EventBus, error) {
-	eb := &EventBus{logicRunner: nil, service: nil}
-	return eb, nil
+	return &EventBus{
+		logicRunner: nil,
+		service:     nil,
+		ledger:      nil,
+		components:  nil,
+	}, nil
 }
 
 func (eb *EventBus) Start(c core.Components) error {
 	eb.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
 	eb.service = c["core.Network"].(core.Network)
 	eb.service.RemoteProcedureRegister(deliverRPCMethodName, eb.deliver)
-
 	eb.ledger = c["core.Ledger"].(core.Ledger)
+
+	// Storing entire DI container here to pass it into event handle methods.
+	eb.components = c
 	return nil
 }
 
