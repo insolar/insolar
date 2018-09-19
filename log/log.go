@@ -17,6 +17,7 @@
 package log
 
 import (
+	"io"
 	stdlog "log"
 
 	"github.com/insolar/insolar/configuration"
@@ -153,4 +154,9 @@ func Panicln(args ...interface{}) {
 // Panicf logs a event at level Panic to the global logger.
 func Panicf(format string, args ...interface{}) {
 	globalLogger.Panicf(format, args...)
+}
+
+// SetOutput sets the output destination for the logger.
+func SetOutput(w io.Writer) {
+	globalLogger.SetOutput(w)
 }
