@@ -44,21 +44,21 @@ func New(cfg configuration.Configuration) (*EventBus, error) {
 	return mr, nil
 }
 
-func (mr *EventBus) Start(c core.Components) error {
-	mr.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
-	mr.service = c["core.Network"].(core.Network)
-	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
+func (eb *EventBus) Start(c core.Components) error {
+	eb.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
+	eb.service = c["core.Network"].(core.Network)
+	eb.service.RemoteProcedureRegister(deliverRPCMethodName, eb.deliver)
 
-	mr.ledger = c["core.Ledger"].(core.Ledger)
+	eb.ledger = c["core.Ledger"].(core.Ledger)
 	return nil
 }
 
-func (mr *EventBus) Stop() error { return nil }
+func (eb *EventBus) Stop() error { return nil }
 
 // Route a `Message` and get a `Response` or error from remote host
-func (mr *EventBus) Route(msg core.Message) (core.Response, error) {
-	jc := mr.ledger.GetJetCoordinator()
-	pm := mr.ledger.GetPulseManager()
+func (eb *EventBus) Route(msg core.Message) (core.Response, error) {
+	jc := eb.ledger.GetJetCoordinator()
+	pm := eb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
 	if err != nil {
 		return nil, err
@@ -75,11 +75,11 @@ func (mr *EventBus) Route(msg core.Message) (core.Response, error) {
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mr.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
+		err := eb.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
 		return nil, err
 	}
 
-	res, err := mr.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
+	res, err := eb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -97,16 +97,16 @@ func (e *serializableError) Error() string {
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (mr *EventBus) deliver(args [][]byte) (result []byte, err error) {
+func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
-		return nil, errors.New("need exactly one argument when mr.deliver()")
+		return nil, errors.New("need exactly one argument when eb.deliver()")
 	}
 	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := mr.logicRunner.Execute(msg)
+	resp, err := eb.logicRunner.Execute(msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
