@@ -123,20 +123,20 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-type TestsMessageRouter struct {
+type TestEventBus struct {
 }
 
-func (mr *TestsMessageRouter) Start(c core.Components) error {
+func (eb *TestEventBus) Start(c core.Components) error {
 	return nil
 }
 
-func (mr *TestsMessageRouter) Stop() error {
+func (eb *TestEventBus) Stop() error {
 	return nil
 }
 
 const TestBalance = 100500
 
-func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
+func (eb *TestEventBus) Route(msg core.Message) (core.Response, error) {
 	data, _ := MarshalArgs(TestBalance)
 
 	return &response.CommonResponse{
@@ -145,11 +145,11 @@ func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
 }
 
 func TestWithFakeMessageRouter(t *testing.T) {
-	mr := TestsMessageRouter{}
+	eb := TestEventBus{}
 
 	const LOCATION = "/test/test"
 
-	fw := wrapAPIV1Handler(&mr, core.RecordRef{})
+	fw := wrapAPIV1Handler(&eb, core.RecordRef{})
 	http.HandleFunc(LOCATION, fw)
 
 	const TestUrl2 = HOST + LOCATION + "?query_type=PPPPPPPP"
