@@ -207,11 +207,9 @@ type respAPI struct {
 	Err       map[string]interface{} `json:"error"`
 }
 
-func TestInsolardResponseNotErr(t *testing.T) {
-	var resp respAPI
-	postParams := map[string]interface{}{
-		"query_type": "dump_all_users",
-	}
+var resp respAPI
+
+func doPostAndUnmarshal(t *testing.T, postParams map[string]interface{}) {
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
@@ -220,24 +218,23 @@ func TestInsolardResponseNotErr(t *testing.T) {
 	assert.NoError(t, err)
 	err = json.Unmarshal([]byte(body), &resp)
 	assert.NoError(t, err)
+}
+
+func TestInsolardResponseNotErr(t *testing.T) {
+	postParams := map[string]interface{}{
+		"query_type": "dump_all_users",
+	}
+	doPostAndUnmarshal(t, postParams)
 	assert.Equal(t, map[string]interface{}(nil), resp.Err)
 }
 
 func TestTransferMoney(t *testing.T) {
-	var resp respAPI
 	// Create member which balance will increase
 	postParams := map[string]interface{}{
 		"query_type": "create_member",
 		"name":       "First",
 	}
-	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err := ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	err = json.Unmarshal([]byte(body), &resp)
-	assert.NoError(t, err)
+	doPostAndUnmarshal(t, postParams)
 	assert.NotEqual(t, "", resp.Reference)
 	firstMemberRef := resp.Reference
 
@@ -246,14 +243,7 @@ func TestTransferMoney(t *testing.T) {
 		"query_type": "create_member",
 		"name":       "Second",
 	}
-	jsonValue, _ = json.Marshal(postParams)
-	postResp, err = http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err = ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	err = json.Unmarshal([]byte(body), &resp)
-	assert.NoError(t, err)
+	doPostAndUnmarshal(t, postParams)
 	assert.NotEqual(t, "", resp.Reference)
 	secondMemberRef := resp.Reference
 
@@ -264,14 +254,7 @@ func TestTransferMoney(t *testing.T) {
 		"to":         firstMemberRef,
 		"amount":     111,
 	}
-	jsonValue, _ = json.Marshal(postParams)
-	postResp, err = http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err = ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	err = json.Unmarshal([]byte(body), &resp)
-	assert.NoError(t, err)
+	doPostAndUnmarshal(t, postParams)
 	assert.Equal(t, true, resp.Success)
 
 	// Check balance of first member
@@ -279,14 +262,7 @@ func TestTransferMoney(t *testing.T) {
 		"query_type": "get_balance",
 		"reference":  firstMemberRef,
 	}
-	jsonValue, _ = json.Marshal(postParams)
-	postResp, err = http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err = ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	err = json.Unmarshal([]byte(body), &resp)
-	assert.NoError(t, err)
+	doPostAndUnmarshal(t, postParams)
 	assert.Equal(t, uint(1111), resp.Amount)
 	assert.Equal(t, "RUB", resp.Currency)
 
@@ -295,14 +271,7 @@ func TestTransferMoney(t *testing.T) {
 		"query_type": "get_balance",
 		"reference":  secondMemberRef,
 	}
-	jsonValue, _ = json.Marshal(postParams)
-	postResp, err = http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err = ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	err = json.Unmarshal([]byte(body), &resp)
-	assert.NoError(t, err)
+	doPostAndUnmarshal(t, postParams)
 	assert.Equal(t, uint(889), resp.Amount)
 	assert.Equal(t, "RUB", resp.Currency)
 }
