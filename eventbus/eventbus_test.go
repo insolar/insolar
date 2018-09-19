@@ -40,12 +40,12 @@ type runner struct {
 func (r *runner) Start(components core.Components) error { return nil }
 func (r *runner) Stop() error                            { return nil }
 
-func (r *runner) Execute(msg core.Event) (core.Response, error) {
+func (r *runner) Execute(event core.Event) (core.Response, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
-	m := msg.(*message.CallMethodMessage)
-	r.requests = append(r.requests, req{msg.GetReference(), m.Method, m.Arguments})
+	m := event.(*message.CallMethodMessage)
+	r.requests = append(r.requests, req{event.GetReference(), m.Method, m.Arguments})
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 

@@ -56,7 +56,7 @@ func (eb *EventBus) Start(c core.Components) error {
 func (eb *EventBus) Stop() error { return nil }
 
 // Route a `Event` and get a `Response` or error from remote host
-func (eb *EventBus) Route(msg core.Event) (core.Response, error) {
+func (eb *EventBus) Route(event core.Event) (core.Response, error) {
 	jc := eb.ledger.GetJetCoordinator()
 	pm := eb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -64,7 +64,7 @@ func (eb *EventBus) Route(msg core.Event) (core.Response, error) {
 		return nil, err
 	}
 
-	nodes, err := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(event.GetOperatingRole(), event.GetReference(), pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +75,11 @@ func (eb *EventBus) Route(msg core.Event) (core.Response, error) {
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := eb.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
+		err := eb.service.SendCascadeMessage(cascade, deliverRPCMethodName, event)
 		return nil, err
 	}
 
-	res, err := eb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
+	res, err := eb.service.SendMessage(nodes[0], deliverRPCMethodName, event)
 	if err != nil {
 		return nil, err
 	}
