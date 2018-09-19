@@ -183,7 +183,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
-func (ar *Runner) reloadMessageRouter(c core.Components) {
+func (ar *Runner) reloadEventBus(c core.Components) {
 	_, ok := c["core.EventBus"]
 	if !ok {
 		log.Warn("Working in demo mode: without EventBus")
@@ -195,7 +195,7 @@ func (ar *Runner) reloadMessageRouter(c core.Components) {
 // Start runs api server
 func (ar *Runner) Start(c core.Components) error {
 
-	ar.reloadMessageRouter(c)
+	ar.reloadEventBus(c)
 
 	rootDomainReference := c["core.Bootstrapper"].(core.Bootstrapper).GetRootDomainRef()
 

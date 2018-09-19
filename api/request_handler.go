@@ -63,7 +63,7 @@ func NewRequestHandler(params *Params, eventBus core.EventBus, rootDomainReferen
 
 func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Response, error) {
 	if rh.eventBus == nil {
-		return nil, errors.New("[ RouteCall ] message router was not set during initialization")
+		return nil, errors.New("[ RouteCall ] event bus was not set during initialization")
 	}
 
 	msg := &message.CallMethodMessage{

@@ -144,7 +144,7 @@ func (eb *TestEventBus) Route(msg core.Message) (core.Response, error) {
 	}, nil
 }
 
-func TestWithFakeMessageRouter(t *testing.T) {
+func TestWithFakeEventBus(t *testing.T) {
 	eb := TestEventBus{}
 
 	const LOCATION = "/test/test"
