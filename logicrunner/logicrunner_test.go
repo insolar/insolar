@@ -182,7 +182,7 @@ func TestExecution(t *testing.T) {
 	assert.Equal(t, []byte("res"), resp.(*response.CommonResponse).Result)
 
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-	resp, err = lr.Execute(&event.CallConstructorMessage{ClassRef: classRef})
+	resp, err = lr.Execute(&event.CallConstructorEvent{ClassRef: classRef})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("data"), resp.(*response.CommonResponse).Data)
 	assert.Equal(t, []byte(nil), resp.(*response.CommonResponse).Result)

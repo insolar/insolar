@@ -22,8 +22,8 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CallConstructorMessage is a event for calling constructor and obtain its response
-type CallConstructorMessage struct {
+// CallConstructorEvent is a event for calling constructor and obtain its response
+type CallConstructorEvent struct {
 	baseEvent
 	ClassRef  core.RecordRef
 	Name      string
@@ -31,16 +31,16 @@ type CallConstructorMessage struct {
 }
 
 // GetOperatingRole returns operating jet role for given event type.
-func (m *CallConstructorMessage) GetOperatingRole() core.JetRole {
+func (e *CallConstructorEvent) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
 // Get reference returns referenced object.
-func (m *CallConstructorMessage) GetReference() core.RecordRef {
-	return m.ClassRef
+func (e *CallConstructorEvent) GetReference() core.RecordRef {
+	return e.ClassRef
 }
 
 // Serialize serializes event.
-func (m *CallConstructorMessage) Serialize() (io.Reader, error) {
-	return serialize(m, CallConstructorEventType)
+func (e *CallConstructorEvent) Serialize() (io.Reader, error) {
+	return serialize(e, CallConstructorEventType)
 }
