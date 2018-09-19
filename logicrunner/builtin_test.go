@@ -47,11 +47,11 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	mr := &testMessageRouter{lr}
+	eb := &testEventBus{lr}
 
 	assert.NoError(t, lr.Start(core.Components{
 		"core.Ledger":   l,
-		"core.EventBus": mr,
+		"core.EventBus": eb,
 	}), "starting logicrunner")
 
 	hw := helloworld.NewHelloWorld()
