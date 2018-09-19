@@ -15,11 +15,11 @@
  */
 
 /*
-Package messagerouter routes messages (contract calls & responses) and delivers'em to relevant modules.
+Package eventbus routes messages (contract calls & responses) and delivers'em to relevant modules.
 
 Usage:
 
 	TODO:
 
 */
-package messagerouter
+package eventbus

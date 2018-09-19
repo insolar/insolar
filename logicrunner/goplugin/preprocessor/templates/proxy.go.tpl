@@ -11,7 +11,7 @@ import (
 {{ end }}
 
 // Reference to class of this contract
-var ClassReference = core.String2Ref("{{ .ClassReference }}")
+var ClassReference = core.NewRefFromBase58("{{ .ClassReference }}")
 
 // Contract proxy type
 type {{ .ContractType }} struct {

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package event
 
 import (
 	"io"
@@ -22,26 +22,25 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CallMethodMessage - Simply call method and return result
-type CallMethodMessage struct {
-	baseMessage
-	ObjectRef core.RecordRef
-	Request   core.RecordRef
-	Method    string
-	Arguments core.Arguments
+// ChildEvent is a event for saving contract's body as a child
+type ChildEvent struct {
+	baseEvent
+	Into  core.RecordRef
+	Class core.RecordRef
+	Body  []byte
 }
 
-// GetOperatingRole returns operating jet role for given message type.
-func (m *CallMethodMessage) GetOperatingRole() core.JetRole {
-	return core.RoleVirtualExecutor
+// GetOperatingRole returns operating jet role for given event type.
+func (e *ChildEvent) GetOperatingRole() core.JetRole {
+	return core.RoleLightExecutor
 }
 
 // GetReference returns referenced object.
-func (m *CallMethodMessage) GetReference() core.RecordRef {
-	return m.ObjectRef
+func (e *ChildEvent) GetReference() core.RecordRef {
+	return e.Into
 }
 
-// Serialize serializes message.
-func (m *CallMethodMessage) Serialize() (io.Reader, error) {
-	return serialize(m, CallMethodMessageType)
+// Serialize serializes event.
+func (e *ChildEvent) Serialize() (io.Reader, error) {
+	return serialize(e, ChildEventType)
 }

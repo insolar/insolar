@@ -38,13 +38,13 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	assert.NoError(t, err)
 
 	selected, err := jc.QueryRole(core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber)
-	assert.Equal(t, []core.RecordRef{core.String2Ref("ve2")}, selected)
+	assert.Equal(t, []core.RecordRef{core.NewRefFromBase58("ve2")}, selected)
 
 	selected, err = jc.QueryRole(core.RoleVirtualValidator, *am.RootRef(), pulse.PulseNumber)
 	assert.Equal(t, []core.RecordRef{
-		core.String2Ref("vv3"),
-		core.String2Ref("vv1"),
-		core.String2Ref("vv4"),
+		core.NewRefFromBase58("vv3"),
+		core.NewRefFromBase58("vv1"),
+		core.NewRefFromBase58("vv4"),
 	}, selected)
 }
 
@@ -62,12 +62,12 @@ func TestJetCoordinator_IsAuthorized(t *testing.T) {
 	assert.NoError(t, err)
 
 	authorized, err := jc.IsAuthorized(
-		core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber, core.String2Ref("ve1"),
+		core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber, core.NewRefFromBase58("ve1"),
 	)
 	assert.Equal(t, false, authorized)
 
 	authorized, err = jc.IsAuthorized(
-		core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber, core.String2Ref("ve2"),
+		core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber, core.NewRefFromBase58("ve2"),
 	)
 	assert.Equal(t, true, authorized)
 }

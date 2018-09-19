@@ -150,6 +150,9 @@ type CodeDescriptor interface {
 	// Code fetches code from storage. Code will be fetched according to architecture preferences
 	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
 	Code() ([]byte, error)
+
+	// Validate checks code record integrity.
+	Validate() error
 }
 
 // ClassDescriptor represents meta info required to fetch all object data.
@@ -159,6 +162,9 @@ type ClassDescriptor interface {
 
 	// StateRef returns reference to represented class state record.
 	StateRef() *RecordRef
+
+	// IsActive checks if class is active.
+	IsActive() (bool, error)
 
 	// CodeDescriptor returns descriptor for fetching class's code data.
 	CodeDescriptor() (CodeDescriptor, error)
@@ -174,6 +180,9 @@ type ObjectDescriptor interface {
 
 	// Memory fetches object memory from storage.
 	Memory() ([]byte, error)
+
+	// IsActive checks if object is active.
+	IsActive() (bool, error)
 
 	// CodeDescriptor returns descriptor for fetching object's code data.
 	CodeDescriptor() (CodeDescriptor, error)

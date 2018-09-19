@@ -23,9 +23,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/eventbus/response"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
-	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/insolar/insolar/messagerouter/response"
 
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
@@ -47,11 +47,11 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	mr := &testMessageRouter{lr}
+	eb := &testEventBus{lr}
 
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":        l,
-		"core.MessageRouter": mr,
+		"core.Ledger":   l,
+		"core.EventBus": eb,
 	}), "starting logicrunner")
 
 	hw := helloworld.NewHelloWorld()
@@ -66,7 +66,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
-	resp, err := lr.Execute(&message.CallMethodMessage{
+	resp, err := lr.Execute(&event.CallMethodEvent{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
@@ -80,7 +80,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
-	resp, err = lr.Execute(&message.CallMethodMessage{
+	resp, err = lr.Execute(&event.CallMethodEvent{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",

@@ -14,25 +14,34 @@
  *    limitations under the License.
  */
 
-package nodenetwork
+package event
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/core"
 )
 
-// Node is an essence which provides communication between network level and EventBus.
-type Node struct {
-	id core.RecordRef
+// CallMethodEvent - Simply call method and return result
+type CallMethodEvent struct {
+	baseEvent
+	ObjectRef core.RecordRef
+	Request   core.RecordRef
+	Method    string
+	Arguments core.Arguments
 }
 
-// NewNode creates a node with given args.
-func NewNode(nodeID core.RecordRef) *Node {
-	return &Node{
-		id: nodeID,
-	}
+// GetOperatingRole returns operating jet role for given event type.
+func (e *CallMethodEvent) GetOperatingRole() core.JetRole {
+	return core.RoleVirtualExecutor
 }
 
-// GetID returns a Node ID.
-func (node Node) GetID() core.RecordRef {
-	return node.id
+// GetReference returns referenced object.
+func (e *CallMethodEvent) GetReference() core.RecordRef {
+	return e.ObjectRef
+}
+
+// Serialize serializes event.
+func (e *CallMethodEvent) Serialize() (io.Reader, error) {
+	return serialize(e, CallMethodEventType)
 }

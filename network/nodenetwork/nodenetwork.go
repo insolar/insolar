@@ -30,7 +30,7 @@ type NodeNetwork struct {
 
 // NewNodeNetwork creates a new node network.
 func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *NodeNetwork {
-	node := NewNode(core.String2Ref(nodeCfg.Node.ID))
+	node := NewNode(core.NewRefFromBase58(nodeCfg.Node.ID))
 	network := &NodeNetwork{
 		node: node,
 	}

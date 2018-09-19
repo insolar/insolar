@@ -33,15 +33,15 @@ type Contract interface {
 // BuiltIn is a contract runner engine
 type BuiltIn struct {
 	AM       core.ArtifactManager
-	MR       core.MessageRouter
+	EB       core.EventBus
 	Registry map[string]Contract
 }
 
 // NewBuiltIn is an constructor
-func NewBuiltIn(mr core.MessageRouter, am core.ArtifactManager) *BuiltIn {
+func NewBuiltIn(eb core.EventBus, am core.ArtifactManager) *BuiltIn {
 	bi := BuiltIn{
 		AM:       am,
-		MR:       mr,
+		EB:       eb,
 		Registry: make(map[string]Contract),
 	}
 

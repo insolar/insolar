@@ -61,6 +61,38 @@ func getContractPath(name string) (string, error) {
 // Start creates types and RootDomain instance
 func (b *Bootstrapper) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
+
+	rootRefChildren, err := am.GetObjChildren(*am.RootRef())
+	if err != nil {
+		return errors.Wrap(err, "couldn't get children of RootRef object")
+	}
+	if rootRefChildren.HasNext() {
+		rootDomainRef, err := rootRefChildren.Next()
+		if err != nil {
+			return errors.Wrap(err, "couldn't get next child of RootRef object")
+		}
+		b.rootDomainRef = &rootDomainRef
+		return nil
+	}
+
+	jc := c["core.Ledger"].(core.Ledger).GetJetCoordinator()
+	pm := c["core.Ledger"].(core.Ledger).GetPulseManager()
+	currentPulse, err := pm.Current()
+	if err != nil {
+		return errors.Wrap(err, "couldn't get current pulse")
+	}
+
+	network := c["core.Network"].(core.Network)
+	nodeID := network.GetNodeID()
+
+	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
+	if err != nil {
+		return errors.Wrap(err, "couldn't authorized node")
+	}
+	if !isLightExecutor {
+		return nil
+	}
+
 	_, insgocc, err := testutil.Build()
 	if err != nil {
 		return errors.Wrap(err, "couldn't build insgocc")

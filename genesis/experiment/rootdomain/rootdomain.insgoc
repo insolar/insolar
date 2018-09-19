@@ -39,14 +39,14 @@ func (rd *RootDomain) CreateMember(name string) string {
 }
 
 func (rd *RootDomain) GetBalance(reference string) uint {
-	w := wallet.GetImplementationFrom(core.String2Ref(reference))
+	w := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
 	return w.GetTotalBalance()
 }
 
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
-	walletFrom := wallet.GetImplementationFrom(core.String2Ref(from))
+	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
 
-    v := core.String2Ref(to)
+    v := core.NewRefFromBase58(to)
 	walletFrom.Transfer(amount, &v)
 
 	return true
@@ -62,7 +62,7 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
 }
 
 func (rd *RootDomain) DumpUserInfo(reference string) []byte {
-	m := member.GetObject(core.String2Ref(reference))
+	m := member.GetObject(core.NewRefFromBase58(reference))
 	res := rd.getUserInfoMap(m)
 	resJSON, _ := json.Marshal(res)
 	return resJSON

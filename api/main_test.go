@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter/response"
+	"github.com/insolar/insolar/eventbus/response"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +60,7 @@ func TestWrongQueryParam(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
+	assert.Contains(t, string(body[:]), `"event": "Wrong query parameter 'query_type' = 'TEST'"`)
 }
 
 func TestHandlerError(t *testing.T) {
@@ -70,7 +70,7 @@ func TestHandlerError(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] message`)
+	assert.Contains(t, string(body[:]), `"event": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] event`)
 }
 
 func TestBadRequest(t *testing.T) {
@@ -78,7 +78,7 @@ func TestBadRequest(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Bad request"`)
+	assert.Contains(t, string(body[:]), `"event": "Bad request"`)
 }
 
 func TestSerialization(t *testing.T) {
@@ -123,20 +123,20 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-type TestsMessageRouter struct {
+type TestEventBus struct {
 }
 
-func (mr *TestsMessageRouter) Start(c core.Components) error {
+func (eb *TestEventBus) Start(c core.Components) error {
 	return nil
 }
 
-func (mr *TestsMessageRouter) Stop() error {
+func (eb *TestEventBus) Stop() error {
 	return nil
 }
 
 const TestBalance = 100500
 
-func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
+func (eb *TestEventBus) Route(event core.Event) (core.Response, error) {
 	data, _ := MarshalArgs(TestBalance)
 
 	return &response.CommonResponse{
@@ -144,12 +144,12 @@ func (mr *TestsMessageRouter) Route(msg core.Message) (core.Response, error) {
 	}, nil
 }
 
-func TestWithFakeMessageRouter(t *testing.T) {
-	mr := TestsMessageRouter{}
+func TestWithFakeEventBus(t *testing.T) {
+	eb := TestEventBus{}
 
 	const LOCATION = "/test/test"
 
-	fw := wrapAPIV1Handler(&mr, core.RecordRef{})
+	fw := wrapAPIV1Handler(&eb, core.RecordRef{})
 	http.HandleFunc(LOCATION, fw)
 
 	const TestUrl2 = HOST + LOCATION + "?query_type=PPPPPPPP"
