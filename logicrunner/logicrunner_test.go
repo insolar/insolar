@@ -237,7 +237,7 @@ func (r *Two) Hello(s string) string {
 	assert.NoError(t, err)
 
 	mr := &testMessageRouter{LogicRunner: lr}
-	lr.MessageRouter = mr
+	lr.EventBus = mr
 	am := testutil.NewTestArtifactManager()
 	lr.ArtifactManager = am
 
@@ -355,7 +355,7 @@ func (r *Two) Hello(s string) string {
 	assert.NoError(t, err)
 
 	mr := &testMessageRouter{LogicRunner: lr}
-	lr.MessageRouter = mr
+	lr.EventBus = mr
 	am := testutil.NewTestArtifactManager()
 	lr.ArtifactManager = am
 
