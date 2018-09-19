@@ -41,5 +41,5 @@ type Reaction interface {
 
 // EventBus interface
 type EventBus interface {
-	Route(event Event) (resp Reaction, err error)
+	Route(Event) (Reaction, error)
 }
