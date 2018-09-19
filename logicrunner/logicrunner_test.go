@@ -142,8 +142,8 @@ type testEventBus struct {
 
 func (*testEventBus) Start(components core.Components) error { return nil }
 func (*testEventBus) Stop() error                            { return nil }
-func (eb *testEventBus) Route(msg core.Event) (resp core.Response, err error) {
-	return eb.LogicRunner.Execute(msg)
+func (eb *testEventBus) Route(event core.Event) (resp core.Response, err error) {
+	return eb.LogicRunner.Execute(event)
 }
 
 func TestExecution(t *testing.T) {

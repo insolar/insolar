@@ -32,8 +32,8 @@ func (*TestEventBus) Start(components core.Components) error { return nil }
 func (*TestEventBus) Stop() error { return nil }
 
 // Route executes message on LogicRunner.
-func (eb *TestEventBus) Route(msg core.Event) (resp core.Response, err error) {
-	return eb.LogicRunner.Execute(msg)
+func (eb *TestEventBus) Route(event core.Event) (resp core.Response, err error) {
+	return eb.LogicRunner.Execute(event)
 }
 
 // NewTestEventBus creates TestEventBus which mocks the real one.
