@@ -61,10 +61,12 @@ func buildInsolard() (string, error) {
 	return insolardPath, nil
 }
 
+// Create dir for runnercodepath, build ginsider-cli for logic runner correct start, and finally build insolard
+// Return path to binary and err
 func setup(currentFile string) (string, error) {
-	err := os.Mkdir(filepath.Join(filepath.Dir(currentFile), "contractstorage"), 0777)
+	err := os.MkdirAll(filepath.Join(filepath.Dir(currentFile), "contractstorage"), 0777)
 	if err != nil {
-		fmt.Println("failed to create runnercodepath for tests:", err)
+		return "", err
 	}
 
 	_, _, err = testutil.Build()
