@@ -47,22 +47,22 @@ func extractCreateMemberResponse(data []byte) (*string, error) {
 type RequestHandler struct {
 	qid                 string
 	params              *Params
-	messageRouter       core.EventBus
+	eventBus            core.EventBus
 	rootDomainReference core.RecordRef
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, router core.EventBus, rootDomainReference core.RecordRef) *RequestHandler {
+func NewRequestHandler(params *Params, eventBus core.EventBus, rootDomainReference core.RecordRef) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
-		messageRouter:       router,
+		eventBus:            eventBus,
 		rootDomainReference: rootDomainReference,
 	}
 }
 
 func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Response, error) {
-	if rh.messageRouter == nil {
+	if rh.eventBus == nil {
 		return nil, errors.New("[ RouteCall ] message router was not set during initialization")
 	}
 
@@ -72,7 +72,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		Arguments: args,
 	}
 
-	res, err := rh.messageRouter.Route(msg)
+	res, err := rh.eventBus.Route(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route message")
 	}

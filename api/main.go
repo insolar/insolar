@@ -118,7 +118,7 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func wrapAPIV1Handler(router core.EventBus, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
+func wrapAPIV1Handler(eventBus core.EventBus, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
 		var params *Params
@@ -149,7 +149,7 @@ func wrapAPIV1Handler(router core.EventBus, rootDomainReference core.RecordRef) 
 			log.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, router, rootDomainReference)
+		rh := NewRequestHandler(params, eventBus, rootDomainReference)
 
 		answer = processQueryType(rh, params.QType)
 	}
@@ -157,9 +157,9 @@ func wrapAPIV1Handler(router core.EventBus, rootDomainReference core.RecordRef) 
 
 // Runner implements Component for API
 type Runner struct {
-	messageRouter core.EventBus
-	server        *http.Server
-	cfg           *configuration.APIRunner
+	eventBus core.EventBus
+	server   *http.Server
+	cfg      *configuration.APIRunner
 }
 
 // NewRunner is C-tor for API Runner
@@ -188,7 +188,7 @@ func (ar *Runner) reloadMessageRouter(c core.Components) {
 	if !ok {
 		log.Warn("Working in demo mode: without EventBus")
 	} else {
-		ar.messageRouter = c["core.EventBus"].(core.EventBus)
+		ar.eventBus = c["core.EventBus"].(core.EventBus)
 	}
 }
 
@@ -199,7 +199,7 @@ func (ar *Runner) Start(c core.Components) error {
 
 	rootDomainReference := c["core.Bootstrapper"].(core.Bootstrapper).GetRootDomainRef()
 
-	fw := wrapAPIV1Handler(ar.messageRouter, *rootDomainReference)
+	fw := wrapAPIV1Handler(ar.eventBus, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
 	log.Info("Starting ApiRunner ...")
 	log.Info("Config: ", ar.cfg)
