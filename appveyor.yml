@@ -9,7 +9,7 @@ clone_folder: c:\gopath\src\github.com\insolar\insolar
 environment:
   GOPATH: c:\gopath
   GOVERSION: 1.11
-  CC: gcc.exe
+  CGO_ENABLED: 0
 
 init:
 - git config --global core.autocrlf input
@@ -21,7 +21,7 @@ install:
 - rmdir c:\go /s /q
 - appveyor DownloadFile https://storage.googleapis.com/golang/go%GOVERSION%.windows-amd64.msi
 - msiexec /i go%GOVERSION%.windows-amd64.msi /q
-#- choco install bzr
+#- choco install git
 - set Path=c:\go\bin;c:\gopath\bin;%Path%
 - go version
 - go env
@@ -34,5 +34,5 @@ build_script:
 - dep ensure
 
 test_script:
-- go test --race ./...
+- go test ./...
 - go build -o insolard cmd/insolard/*
