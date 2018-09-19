@@ -53,7 +53,8 @@ func SetLevel(level string) error {
 var globalLogger = func() core.Logger {
 	logger := newLogrusAdapter()
 	logger.skipCallNumber = defaultSkipCallNumber + 1
-	if err := logger.SetLevel(configuration.NewLog().Level); err != nil {
+	holder := configuration.NewHolder().MustInit(false)
+	if err := logger.SetLevel(holder.Configuration.Log.Level); err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
 	return logger

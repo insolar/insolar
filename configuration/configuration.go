@@ -62,10 +62,35 @@ func NewConfiguration() Configuration {
 	return cfg
 }
 
+// MustInit wrapper around Init function which panics on error.
+func (c *Holder) MustInit(required bool) *Holder {
+	_, err := c.Init(required)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+// Init init all configuration data from config file and environment.
+//
+// Does not fail on not found config file if the 'required' flag set to false.
+func (c *Holder) Init(required bool) (*Holder, error) {
+	err := c.Load()
+	if err != nil {
+		if required {
+			return c, err
+		}
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return c, err
+		}
+	}
+	return c, c.LoadEnv()
+}
+
 // NewHolder creates new Holder with default configuration
-func NewHolder() Holder {
+func NewHolder() *Holder {
 	cfg := NewConfiguration()
-	holder := Holder{Configuration: cfg, viper: viper.New()}
+	holder := &Holder{Configuration: cfg, viper: viper.New()}
 
 	holder.viper.SetConfigName(".insolar")
 	holder.viper.AddConfigPath("$HOME/")
@@ -131,7 +156,7 @@ func bindEnvs(v *viper.Viper, iface interface{}, parts ...string) {
 		default:
 			err := v.BindEnv(strings.Join(path, "."))
 			if err != nil {
-				stdlog.Println(err.Error())
+				stdlog.Println("bindEnv failed:", err.Error())
 			}
 		}
 	}
