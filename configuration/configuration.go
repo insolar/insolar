@@ -78,13 +78,17 @@ func (c *Holder) Init(required bool) (*Holder, error) {
 	err := c.Load()
 	if err != nil {
 		if required {
-			return c, err
+			return nil, err
 		}
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return c, err
+			return nil, err
 		}
 	}
-	return c, c.LoadEnv()
+	err = c.LoadEnv()
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 // NewHolder creates new Holder with default configuration
