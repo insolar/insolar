@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // ServiceNetwork is facade for network.
@@ -230,7 +229,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 		hostID := network.nodeNetwork.ResolveHostID(nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
-			logrus.Debugln("failed to send cascade event: ", err)
+			log.Debugln("failed to send cascade event: ", err)
 			failedNodes = append(failedNodes, nextNode.String())
 		}
 	}

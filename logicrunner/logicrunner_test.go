@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
@@ -42,7 +42,10 @@ var runnerbin = ""
 
 func TestMain(m *testing.M) {
 	var err error
-	log.SetLevel(log.DebugLevel)
+	err = log.SetLevel("Debug")
+	if err != nil {
+		log.Errorln(err.Error())
+	}
 	if runnerbin, icc, err = testutil.Build(); err != nil {
 		fmt.Println("Logic runner build failed, skip tests:", err.Error())
 		os.Exit(1)
