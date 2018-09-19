@@ -66,13 +66,13 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		return nil, errors.New("[ RouteCall ] event bus was not set during initialization")
 	}
 
-	msg := &event.CallMethodEvent{
+	e := &event.CallMethodEvent{
 		ObjectRef: ref,
 		Method:    method,
 		Arguments: args,
 	}
 
-	res, err := rh.eventBus.Route(msg)
+	res, err := rh.eventBus.Route(e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route event")
 	}

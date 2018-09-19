@@ -83,13 +83,13 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	network, err := NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
 
-	msg := &event.CallMethodEvent{
+	e := &event.CallMethodEvent{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
 
-	network.SendMessage(core.NewRefFromBase58("test"), "test", msg)
+	network.SendMessage(core.NewRefFromBase58("test"), "test", e)
 }
 
 func TestServiceNetwork_Start(t *testing.T) {
@@ -158,13 +158,13 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		return nil, nil
 	})
 
-	msg := &event.CallMethodEvent{
+	e := &event.CallMethodEvent{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
 
-	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", msg)
+	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
@@ -199,7 +199,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		return nil, nil
 	})
 
-	msg := &event.CallMethodEvent{
+	e := &event.CallMethodEvent{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -211,7 +211,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	firstNode.SendCascadeMessage(c, "test", msg)
+	firstNode.SendCascadeMessage(c, "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
@@ -275,7 +275,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		}
 	}
 
-	msg := &event.CallMethodEvent{
+	e := &event.CallMethodEvent{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -286,7 +286,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		ReplicationFactor: 2,
 		Entropy:           core.Entropy{0},
 	}
-	firstService.SendCascadeMessage(c, "test", msg)
+	firstService.SendCascadeMessage(c, "test", e)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
