@@ -17,6 +17,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -36,6 +37,21 @@ func main() {
 	pflag.Parse()
 
 	log.SetLevel(log.DebugLevel)
+
+	if *path == "" {
+		tmpDir, err := ioutil.TempDir("", "contractcache-")
+		if err != nil {
+			log.Fatal("Couldn't create temp cache dir: ", err)
+			os.Exit(1)
+		}
+		defer func() {
+			err := os.RemoveAll(tmpDir)
+			if err != nil {
+				log.Println(err)
+			}
+		}()
+		*path = tmpDir
+	}
 
 	insider := ginsider.NewGoInsider(*path, *rpcAddress)
 	proxyctx.Current = insider
