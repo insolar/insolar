@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,12 +40,12 @@ type runner struct {
 func (r *runner) Start(components core.Components) error { return nil }
 func (r *runner) Stop() error                            { return nil }
 
-func (r *runner) Execute(event core.Event) (core.Response, error) {
+func (r *runner) Execute(e core.Event) (core.Response, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
-	m := event.(*event.CallMethodMessage)
-	r.requests = append(r.requests, req{event.GetReference(), m.Method, m.Arguments})
+	m := e.(*event.CallMethodEvent)
+	r.requests = append(r.requests, req{e.GetReference(), m.Method, m.Arguments})
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 
