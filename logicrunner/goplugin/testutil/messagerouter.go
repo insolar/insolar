@@ -31,7 +31,7 @@ func (*TestEventBus) Start(components core.Components) error { return nil }
 // Stop is the dummy mock of Stop method.
 func (*TestEventBus) Stop() error { return nil }
 
-// Route executes message on LogicRunner.
+// Route executes event on LogicRunner.
 func (eb *TestEventBus) Route(event core.Event) (resp core.Response, err error) {
 	return eb.LogicRunner.Execute(event)
 }

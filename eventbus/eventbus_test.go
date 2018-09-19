@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,7 +43,7 @@ func (r *runner) Execute(event core.Event) (core.Response, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
-	m := event.(*message.CallMethodMessage)
+	m := event.(*event.CallMethodMessage)
 	r.requests = append(r.requests, req{event.GetReference(), m.Method, m.Arguments})
 	resp := r.responses[0]
 	r.responses = r.responses[1:]

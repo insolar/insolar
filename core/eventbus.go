@@ -23,17 +23,17 @@ type Arguments []byte
 
 // Event is a routable packet, ATM just a method call
 type Event interface {
-	// Serialize serializes message.
+	// Serialize serializes event.
 	Serialize() (io.Reader, error)
 	// Get reference returns referenced object.
 	GetReference() RecordRef
-	// GetOperatingRole returns operating jet role for given message type.
+	// GetOperatingRole returns operating jet role for given event type.
 	GetOperatingRole() JetRole
 }
 
 // Response to a `Event`
 type Response interface {
-	// Serialize serializes message.
+	// Serialize serializes event.
 	Serialize() (io.Reader, error)
 }
 

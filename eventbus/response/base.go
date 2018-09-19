@@ -68,7 +68,7 @@ func Deserialize(buff io.Reader) (core.Response, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
-		return nil, errors.New("too short input to deserialize a message response")
+		return nil, errors.New("too short input to deserialize a event response")
 	}
 
 	m, err := getEmptyResponse(Type(b[0]))

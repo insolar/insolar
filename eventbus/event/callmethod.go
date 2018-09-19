@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package event
 
 import (
 	"io"
@@ -22,25 +22,26 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CallConstructorMessage is a message for calling constructor and obtain its response
-type CallConstructorMessage struct {
+// CallMethodMessage - Simply call method and return result
+type CallMethodMessage struct {
 	baseEvent
-	ClassRef  core.RecordRef
-	Name      string
+	ObjectRef core.RecordRef
+	Request   core.RecordRef
+	Method    string
 	Arguments core.Arguments
 }
 
-// GetOperatingRole returns operating jet role for given message type.
-func (m *CallConstructorMessage) GetOperatingRole() core.JetRole {
+// GetOperatingRole returns operating jet role for given event type.
+func (m *CallMethodMessage) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
-// Get reference returns referenced object.
-func (m *CallConstructorMessage) GetReference() core.RecordRef {
-	return m.ClassRef
+// GetReference returns referenced object.
+func (m *CallMethodMessage) GetReference() core.RecordRef {
+	return m.ObjectRef
 }
 
-// Serialize serializes message.
-func (m *CallConstructorMessage) Serialize() (io.Reader, error) {
-	return serialize(m, CallConstructorEventType)
+// Serialize serializes event.
+func (m *CallMethodMessage) Serialize() (io.Reader, error) {
+	return serialize(m, CallMethodEventType)
 }

@@ -40,8 +40,8 @@ const (
 func writeError(message string, code int) map[string]interface{} {
 	errJSON := map[string]interface{}{
 		"error": map[string]interface{}{
-			"message": message,
-			"code":    code,
+			"event": message,
+			"code":  code,
 		},
 	}
 	return errJSON

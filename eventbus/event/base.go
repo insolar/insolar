@@ -14,8 +14,8 @@
  *    limitations under the License.
  */
 
-// Package message represents message that eventbus can route
-package message
+// Package event represents event that eventbus can route
+package event
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// BaseMessage base of message class family, do not use it standalone
+// BaseMessage base of event class family, do not use it standalone
 type baseEvent struct {
 	Request core.RecordRef
 	Domain  core.RecordRef
@@ -40,7 +40,7 @@ func (baseEvent) GetReference() core.RecordRef {
 	panic("Do not use base")
 }
 
-// EventType is a enum type of message
+// EventType is a enum type of event
 type EventType byte
 
 const (
@@ -53,7 +53,7 @@ const (
 	GetObjectEventType       // GetObjectEvent is a event for retrieving an object
 )
 
-// GetEmptyMessage constructs specified message
+// GetEmptyMessage constructs specified event
 func getEmptyEvent(mt EventType) (core.Event, error) {
 	switch mt {
 	case baseEventType:
@@ -87,7 +87,7 @@ func serialize(event core.Event, t EventType) (io.Reader, error) {
 	return buff, err
 }
 
-// Deserialize returns a message
+// Deserialize returns a event
 func Deserialize(buff io.Reader) (core.Event, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)

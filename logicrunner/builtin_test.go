@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/response"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 
@@ -66,7 +66,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
-	resp, err := lr.Execute(&message.CallMethodMessage{
+	resp, err := lr.Execute(&event.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
@@ -80,7 +80,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
-	resp, err = lr.Execute(&message.CallMethodMessage{
+	resp, err = lr.Execute(&event.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",

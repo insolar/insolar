@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
 	"github.com/insolar/insolar/eventbus/response"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -119,8 +118,8 @@ func (lr *LogicRunner) Execute(event core.Event) (core.Response, error) {
 	}
 
 	switch m := event.(type) {
-	case *message.CallMethodMessage:
-		resp, err := lr.EventBus.Route(&message.GetObjectMessage{
+	case *event.CallMethodMessage:
+		resp, err := lr.EventBus.Route(&event.GetObjectMessage{
 			Object: m.ObjectRef,
 		})
 		if err != nil {
@@ -144,7 +143,7 @@ func (lr *LogicRunner) Execute(event core.Event) (core.Response, error) {
 		}
 
 		_, err = lr.EventBus.Route(
-			&message.UpdateObjectMessage{
+			&event.UpdateObjectMessage{
 				Object: m.ObjectRef,
 				Body:   newData,
 			},
@@ -155,7 +154,7 @@ func (lr *LogicRunner) Execute(event core.Event) (core.Response, error) {
 
 		return &response.CommonResponse{Data: newData, Result: result}, nil
 
-	case *message.CallConstructorMessage:
+	case *event.CallConstructorMessage:
 		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class")
@@ -184,7 +183,7 @@ func (lr *LogicRunner) Execute(event core.Event) (core.Response, error) {
 
 		return &response.CommonResponse{Data: newData}, nil
 
-	case *message.DelegateMessage:
+	case *event.DelegateMessage:
 		ref, err := lr.ArtifactManager.ActivateObjDelegate(
 			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
 		)
@@ -193,7 +192,7 @@ func (lr *LogicRunner) Execute(event core.Event) (core.Response, error) {
 		}
 		return &response.CommonResponse{Data: []byte(ref.String())}, nil
 
-	case *message.ChildMessage:
+	case *event.ChildMessage:
 		ref, err := lr.ArtifactManager.ActivateObj(
 			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
 		)
@@ -202,7 +201,7 @@ func (lr *LogicRunner) Execute(event core.Event) (core.Response, error) {
 		}
 		return &response.CommonResponse{Data: []byte(ref.String())}, nil
 
-	case *message.UpdateObjectMessage:
+	case *event.UpdateObjectMessage:
 		_, err := lr.ArtifactManager.UpdateObj(
 			core.RecordRef{}, core.RecordRef{}, m.Object, m.Body,
 		)
@@ -211,7 +210,7 @@ func (lr *LogicRunner) Execute(event core.Event) (core.Response, error) {
 		}
 		return &response.CommonResponse{}, nil
 
-	case *message.GetObjectMessage:
+	case *event.GetObjectMessage:
 		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Object)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object")
@@ -245,6 +244,6 @@ func (lr *LogicRunner) Execute(event core.Event) (core.Response, error) {
 		}, nil
 
 	default:
-		panic("Unknown message type")
+		panic("Unknown event type")
 	}
 }

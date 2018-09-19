@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/prometheus/common/log"
 	"github.com/stretchr/testify/assert"
 )
@@ -83,7 +83,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	network, err := NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
 
-	msg := &message.CallMethodMessage{
+	msg := &event.CallMethodMessage{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -158,7 +158,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		return nil, nil
 	})
 
-	msg := &message.CallMethodMessage{
+	msg := &event.CallMethodMessage{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -199,7 +199,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		return nil, nil
 	})
 
-	msg := &message.CallMethodMessage{
+	msg := &event.CallMethodMessage{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -266,7 +266,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		bootstrapHosts = append(bootstrapHosts, host)
 	}
 	nodes := nodeIds[:len(nodeIds)-2]
-	// first node that will send cascade message to all other nodes
+	// first node that will send cascade event to all other nodes
 	var firstService *ServiceNetwork
 	for i, node := range nodes {
 		service, _ := initService(node.String(), bootstrapHosts)
@@ -275,12 +275,12 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		}
 	}
 
-	msg := &message.CallMethodMessage{
+	msg := &event.CallMethodMessage{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
-	// send cascade message to all nodes except the first
+	// send cascade event to all nodes except the first
 	c := core.Cascade{
 		NodeIds:           nodeIds[1:],
 		ReplicationFactor: 2,

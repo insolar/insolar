@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/response"
 )
 
@@ -101,7 +101,7 @@ func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when eb.deliver()")
 	}
-	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
+	msg, err := event.Deserialize(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}

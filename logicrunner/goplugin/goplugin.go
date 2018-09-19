@@ -29,7 +29,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/response"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
@@ -88,7 +88,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.New("event bus was not set during initialization")
 	}
 
-	msg := &message.CallMethodMessage{
+	msg := &event.CallMethodMessage{
 		ObjectRef: req.Object,
 		Method:    req.Method,
 		Arguments: req.Arguments,
@@ -96,7 +96,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 
 	res, err := gpr.gp.EventBus.Route(msg)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route message")
+		return errors.Wrap(err, "couldn't route event")
 	}
 
 	reply.Result = res.(*response.CommonResponse).Result
@@ -110,7 +110,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.New("event bus was not set during initialization")
 	}
 
-	msg := &message.CallConstructorMessage{
+	msg := &event.CallConstructorMessage{
 		ClassRef:  req.Reference,
 		Name:      req.Constructor,
 		Arguments: req.Arguments,
@@ -118,7 +118,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 
 	res, err := gpr.gp.EventBus.Route(msg)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route message")
+		return errors.Wrap(err, "couldn't route event")
 	}
 
 	reply.Data = res.(*response.CommonResponse).Data
@@ -127,7 +127,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
-	msg := &message.ChildMessage{
+	msg := &event.ChildMessage{
 		Into:  req.Parent,
 		Class: req.Class,
 		Body:  req.Data,
@@ -135,7 +135,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 
 	res, err := gpr.gp.EventBus.Route(msg)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route message")
+		return errors.Wrap(err, "couldn't route event")
 	}
 
 	reply.Reference = core.NewRefFromBase58(string(res.(*response.CommonResponse).Data))
@@ -174,7 +174,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
-	msg := &message.DelegateMessage{
+	msg := &event.DelegateMessage{
 		Into:  req.Into,
 		Class: req.Class,
 		Body:  req.Data,
@@ -182,7 +182,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 
 	res, err := gpr.gp.EventBus.Route(msg)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route message")
+		return errors.Wrap(err, "couldn't route event")
 	}
 
 	reply.Reference = core.NewRefFromBase58(string(res.(*response.CommonResponse).Data))

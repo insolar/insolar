@@ -1,4 +1,4 @@
-package message
+package event
 
 import (
 	"io"
@@ -6,7 +6,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// ChildMessage is a message for saving contract's body as a child
+// ChildMessage is a event for saving contract's body as a child
 type ChildMessage struct {
 	baseEvent
 	Into  core.RecordRef
@@ -14,7 +14,7 @@ type ChildMessage struct {
 	Body  []byte
 }
 
-// GetOperatingRole returns operating jet role for given message type.
+// GetOperatingRole returns operating jet role for given event type.
 func (m *ChildMessage) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
@@ -24,7 +24,7 @@ func (m *ChildMessage) GetReference() core.RecordRef {
 	return m.Into
 }
 
-// Serialize serializes message.
+// Serialize serializes event.
 func (m *ChildMessage) Serialize() (io.Reader, error) {
 	return serialize(m, ChildEventType)
 }

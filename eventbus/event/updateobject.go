@@ -1,4 +1,4 @@
-package message
+package event
 
 import (
 	"io"
@@ -6,14 +6,14 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// UpdateObjectMessage is a message for calling constructor and obtain its response
+// UpdateObjectMessage is a event for calling constructor and obtain its response
 type UpdateObjectMessage struct {
 	baseEvent
 	Object core.RecordRef
 	Body   []byte
 }
 
-// GetOperatingRole returns operating jet role for given message type.
+// GetOperatingRole returns operating jet role for given event type.
 func (m *UpdateObjectMessage) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
@@ -23,7 +23,7 @@ func (m *UpdateObjectMessage) GetReference() core.RecordRef {
 	return m.Object
 }
 
-// Serialize serializes message.
+// Serialize serializes event.
 func (m *UpdateObjectMessage) Serialize() (io.Reader, error) {
 	return serialize(m, UpdateObjectEventType)
 }

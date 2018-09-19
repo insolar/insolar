@@ -82,10 +82,10 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
 }
 
-// SendMessage sends a message from EventBus.
+// SendMessage sends a event from EventBus.
 func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, event core.Event) ([]byte, error) {
 	if event == nil {
-		return nil, errors.New("message is nil")
+		return nil, errors.New("event is nil")
 	}
 	hostID := network.nodeNetwork.ResolveHostID(nodeID)
 	buff, err := eventToBytes(event)
@@ -93,17 +93,17 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, err
 	}
 
-	log.Debugln("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
+	log.Debugln("SendMessage with nodeID = %s method = %s, event reference = %s", nodeID.String(),
 		method, event.GetReference().String())
 
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
 }
 
-// SendCascadeMessage sends a message from EventBus to a cascade of nodes. Event reference is ignored
+// SendCascadeMessage sends a event from EventBus to a cascade of nodes. Event reference is ignored
 func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, event core.Event) error {
 	if event == nil {
-		return errors.New("message is nil")
+		return errors.New("event is nil")
 	}
 	buff, err := eventToBytes(event)
 	if err != nil {
@@ -230,13 +230,13 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 		hostID := network.nodeNetwork.ResolveHostID(nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
-			logrus.Debugln("failed to send cascade message: ", err)
+			logrus.Debugln("failed to send cascade event: ", err)
 			failedNodes = append(failedNodes, nextNode.String())
 		}
 	}
 
 	if len(failedNodes) > 0 {
-		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
+		return errors.New("failed to send cascade event to nodes: " + strings.Join(failedNodes, ", "))
 	}
 
 	return nil

@@ -30,7 +30,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/message"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/response"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -176,13 +176,13 @@ func TestExecution(t *testing.T) {
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
 	assert.NoError(t, err)
 
-	resp, err := lr.Execute(&message.CallMethodMessage{ObjectRef: dataRef})
+	resp, err := lr.Execute(&event.CallMethodMessage{ObjectRef: dataRef})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("data"), resp.(*response.CommonResponse).Data)
 	assert.Equal(t, []byte("res"), resp.(*response.CommonResponse).Result)
 
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-	resp, err = lr.Execute(&message.CallConstructorMessage{ClassRef: classRef})
+	resp, err = lr.Execute(&event.CallConstructorMessage{ClassRef: classRef})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("data"), resp.(*response.CommonResponse).Data)
 	assert.Equal(t, []byte(nil), resp.(*response.CommonResponse).Result)
@@ -591,7 +591,7 @@ func New(n int) *Child {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := lr.Execute(&message.CallMethodMessage{
+	resp, err := lr.Execute(&event.CallMethodMessage{
 		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
@@ -601,7 +601,7 @@ func New(n int) *Child {
 	r := testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
-	resp, err = lr.Execute(&message.CallMethodMessage{
+	resp, err = lr.Execute(&event.CallMethodMessage{
 		Request:   core.NewRefFromBase58("r3"),
 		ObjectRef: *contract,
 		Method:    "SumChilds",
@@ -668,7 +668,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp1, err := lr.Execute(&message.CallMethodMessage{
+	resp1, err := lr.Execute(&event.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "CreateMember",
@@ -678,7 +678,7 @@ func TestRootDomainContract(t *testing.T) {
 	r1 := testutil.CBORUnMarshal(t, resp1.(*response.CommonResponse).Result)
 	member1Ref := r1.([]interface{})[0].(string)
 
-	resp2, err := lr.Execute(&message.CallMethodMessage{
+	resp2, err := lr.Execute(&event.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "CreateMember",
@@ -688,7 +688,7 @@ func TestRootDomainContract(t *testing.T) {
 	r2 := testutil.CBORUnMarshal(t, resp2.(*response.CommonResponse).Result)
 	member2Ref := r2.([]interface{})[0].(string)
 
-	_, err = lr.Execute(&message.CallMethodMessage{
+	_, err = lr.Execute(&event.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "SendMoney",
@@ -696,7 +696,7 @@ func TestRootDomainContract(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	resp4, err := lr.Execute(&message.CallMethodMessage{
+	resp4, err := lr.Execute(&event.CallMethodMessage{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "DumpAllUsers",
@@ -782,7 +782,7 @@ func (c *Child) GetNum() int {
 
 	b.N = 1000
 	for i := 0; i < b.N; i++ {
-		resp, err := lr.Execute(&message.CallMethodMessage{
+		resp, err := lr.Execute(&event.CallMethodMessage{
 			Request:   core.NewRefFromBase58("rr"),
 			ObjectRef: *parent,
 			Method:    "CCC",
