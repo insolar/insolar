@@ -22,12 +22,17 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CallConstructorEvent is a event for calling constructor and obtain its response
+// CallConstructorEvent is a event for calling constructor and obtain its reaction
 type CallConstructorEvent struct {
 	baseEvent
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
+}
+
+// React handles event and returns associated reaction.
+func (e *CallConstructorEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
 }
 
 // GetOperatingRole returns operating jet role for given event type.

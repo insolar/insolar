@@ -30,6 +30,11 @@ type ChildEvent struct {
 	Body  []byte
 }
 
+// React handles event and returns associated reaction.
+func (e *ChildEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
+}
+
 // GetOperatingRole returns operating jet role for given event type.
 func (e *ChildEvent) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor

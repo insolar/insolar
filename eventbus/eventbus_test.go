@@ -34,13 +34,13 @@ type req struct {
 
 type runner struct {
 	requests  []req
-	responses []core.Response
+	responses []core.Reaction
 }
 
 func (r *runner) Start(components core.Components) error { return nil }
 func (r *runner) Stop() error                            { return nil }
 
-func (r *runner) Execute(e core.Event) (core.Response, error) {
+func (r *runner) Execute(e core.Event) (core.Reaction, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
@@ -56,7 +56,7 @@ func TestNew(t *testing.T) {
 	t.Skip("need repair")
 	r := new(runner)
 	r.requests = make([]req, 0)
-	r.responses = make([]core.Response, 0)
+	r.responses = make([]core.Reaction, 0)
 	cfg := configuration.NewConfiguration()
 	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
@@ -77,7 +77,7 @@ func TestNew(t *testing.T) {
 // func TestRoute(t *testing.T) {
 // 	r := new(runner)
 // 	r.requests = make([]req, 0)
-// 	r.responses = make([]core.Response, 0)
+// 	r.responses = make([]core.Reaction, 0)
 //
 // 	dht, err := NewNode()
 // 	assert.NoError(t, err)
@@ -87,8 +87,8 @@ func TestNew(t *testing.T) {
 // 	reference := dht.GetOriginHost(ctx).ID.String()
 //
 // 	t.Run("success", func(t *testing.T) {
-// 		r.responses = append(r.responses, core.Response{Data: []byte("data"), Result: []byte("result"), Error: nil})
-// 		resp, err := mr.Route(
+// 		r.responses = append(r.responses, core.Reaction{Data: []byte("data"), Result: []byte("result"), Error: nil})
+// 		resp, err := mr.Dispatch(
 // 			ctx, core.Event{Reference: core.NewRefFromBase58(reference), Method: "SomeMethod", Arguments: []byte("args")},
 // 		)
 // 		if err != nil {
@@ -117,8 +117,8 @@ func TestNew(t *testing.T) {
 // 		}
 // 	})
 // 	t.Run("error", func(t *testing.T) {
-// 		r.responses = append(r.responses, core.Response{Data: []byte{}, Result: []byte{}, Error: errors.New("wtf")})
-// 		_, err := mr.Route(
+// 		r.responses = append(r.responses, core.Reaction{Data: []byte{}, Result: []byte{}, Error: errors.New("wtf")})
+// 		_, err := mr.Dispatch(
 // 			ctx, core.Event{Reference: core.NewRefFromBase58(reference), Method: "SomeMethod", Arguments: []byte("args")},
 // 		)
 // 		if err == nil {
@@ -143,7 +143,7 @@ func TestNew(t *testing.T) {
 // 	})
 //
 // 	t.Run("referenceNotFound", func(t *testing.T) {
-// 		_, err := mr.Route(
+// 		_, err := mr.Dispatch(
 // 			ctx,
 // 			core.Event{
 // 				Reference: core.NewRefFromBase58("refNotFound"),

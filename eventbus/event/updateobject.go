@@ -22,11 +22,16 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// UpdateObjectEvent is a event for calling constructor and obtain its response
+// UpdateObjectEvent is a event for calling constructor and obtain its reaction
 type UpdateObjectEvent struct {
 	baseEvent
 	Object core.RecordRef
 	Body   []byte
+}
+
+// React handles event and returns associated reaction.
+func (e *UpdateObjectEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
 }
 
 // GetOperatingRole returns operating jet role for given event type.

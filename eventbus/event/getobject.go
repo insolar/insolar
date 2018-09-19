@@ -22,10 +22,15 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// GetObjectEvent is a event for calling constructor and obtain its response
+// GetObjectEvent is a event for calling constructor and obtain its reaction
 type GetObjectEvent struct {
 	baseEvent
 	Object core.RecordRef
+}
+
+// React handles event and returns associated reaction.
+func (e *GetObjectEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
 }
 
 // GetOperatingRole returns operating jet role for given event type.
