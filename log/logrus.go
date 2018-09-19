@@ -140,3 +140,8 @@ func (l logrusAdapter) SetLevel(level string) error {
 	l.entry.Logger.Level = lvl
 	return nil
 }
+
+// GetLevel returns log level
+func (l logrusAdapter) GetLevel() string {
+	return l.entry.Logger.Level.String()
+}

@@ -49,6 +49,11 @@ func SetLevel(level string) error {
 	return globalLogger.SetLevel(level)
 }
 
+// GetLevel lets log level for global logger
+func GetLevel() string {
+	return globalLogger.GetLevel()
+}
+
 // globalLogger creates global logger with correct skipCallNumber
 var globalLogger = func() core.Logger {
 	logger := newLogrusAdapter()

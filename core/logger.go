@@ -18,8 +18,10 @@ package core
 
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
-	// SetLevel sets log level
+	// SetLevel sets log level.
 	SetLevel(string) error
+	// GetLevel gets log level.
+	GetLevel() string
 
 	// Debug logs a event at level Debug.
 	Debug(...interface{})
