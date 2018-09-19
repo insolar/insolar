@@ -39,5 +39,5 @@ type Response interface {
 
 // EventBus interface
 type EventBus interface {
-	Route(msg Event) (resp Response, err error)
+	Route(event Event) (resp Response, err error)
 }
