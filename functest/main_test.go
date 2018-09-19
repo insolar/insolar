@@ -88,8 +88,12 @@ func wait(stdout io.ReadCloser) {
 	}
 }
 
-func teardown(cmd *exec.Cmd, currentFile string, stdin io.WriteCloser) {
+func exitFromInsolard(stdin io.WriteCloser) {
 	io.WriteString(stdin, "exit\n")
+}
+
+func teardown(cmd *exec.Cmd, currentFile string, stdin io.WriteCloser) {
+	exitFromInsolard(stdin)
 	err := cmd.Wait()
 	if err != nil {
 		fmt.Println("try to kill, wait done with error: ", err)
