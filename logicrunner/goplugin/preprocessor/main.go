@@ -124,7 +124,9 @@ func numberedVars(list *ast.FieldList, name string) string {
 func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, map[string]bool) {
 	var methodsInfo []map[string]interface{}
 	imports := make(map[string]bool)
-	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
+	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
+	imports[fmt.Sprintf(`"%s"`, corePath)] = true
+
 	for _, method := range parsed.methods[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
 		extendImportsMap(parsed, method.Type.Params, imports)

@@ -30,6 +30,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -62,72 +63,24 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return err
 	}
 
-	export, err := p.Lookup("INSEXPORT")
+	symbol, err := p.Lookup("INSWRAPPER_" + args.Method)
 	if err != nil {
-		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in plugin")
+		return errors.Wrapf(err, "Can't find wrapper %s", args.Method)
 	}
 
-	obj := reflect.New(reflect.ValueOf(export).Elem().Type()).Interface()
+	wrapper, ok := symbol.(func(ph proxyctx.ProxyHelper, object []byte,
+		data []byte, context *core.LogicCallContext) ([]byte, []byte, error))
+	if !ok {
+		return errors.New("Wrapper with wrong signature")
+	}
 
-	ch := new(codec.CborHandle)
-	err = codec.NewDecoderBytes(args.Data, ch).Decode(obj)
+	state, result, err := wrapper(t.GI, args.Data, args.Arguments, args.Context) // may be entire args???
+
 	if err != nil {
-		return errors.Wrapf(err, "couldn't decode data into %T", obj)
+		return errors.Wrapf(err, "Method call returned error")
 	}
-
-	setContext := reflect.ValueOf(obj).MethodByName("SetContext")
-	if !setContext.IsValid() {
-		return errors.New("this is not a contract, it not supports SetContext method")
-	}
-	setContext.Call([]reflect.Value{reflect.ValueOf(args.Context)})
-
-	method := reflect.ValueOf(obj).MethodByName(args.Method)
-	if !method.IsValid() {
-		return errors.New("no method " + args.Method + " in the plugin")
-	}
-
-	inLen := method.Type().NumIn()
-
-	mask := make([]interface{}, inLen)
-	for i := 0; i < inLen; i++ {
-		argType := method.Type().In(i)
-		mask[i] = reflect.Zero(argType).Interface()
-	}
-
-	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
-	if err != nil {
-		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the method")
-	}
-
-	in := make([]reflect.Value, inLen)
-	for i := 0; i < inLen; i++ {
-		in[i] = reflect.ValueOf(mask[i])
-	}
-
-	log.Debugf(
-		"Calling method %q in contract %q with %d arguments",
-		args.Method, args.Code, inLen,
-	)
-	resValues := method.Call(in)
-
-	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(obj)
-	if err != nil {
-		return errors.Wrap(err, "couldn't marshal new object data into cbor")
-	}
-
-	res := make([]interface{}, len(resValues))
-	for i, v := range resValues {
-		res[i] = v.Interface()
-	}
-
-	var resSerialized []byte
-	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res)
-	if err != nil {
-		return errors.Wrap(err, "couldn't marshal returned values into cbor")
-	}
-
-	reply.Ret = resSerialized
-
+	reply.Data = state
+	reply.Ret = result
 	return nil
 }
 
