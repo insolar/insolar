@@ -31,7 +31,7 @@ const deliverRPCMethodName = "EventBus.Deliver"
 
 // EventBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
-type MessageRouter struct {
+type EventBus struct {
 	logicRunner core.LogicRunner
 	service     core.Network
 	ledger      core.Ledger
@@ -39,12 +39,12 @@ type MessageRouter struct {
 
 // New is a `EventBus` constructor, takes an executor object
 // that satisfies LogicRunner interface
-func New(cfg configuration.Configuration) (*MessageRouter, error) {
-	mr := &MessageRouter{logicRunner: nil, service: nil}
+func New(cfg configuration.Configuration) (*EventBus, error) {
+	mr := &EventBus{logicRunner: nil, service: nil}
 	return mr, nil
 }
 
-func (mr *MessageRouter) Start(c core.Components) error {
+func (mr *EventBus) Start(c core.Components) error {
 	mr.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
 	mr.service = c["core.Network"].(core.Network)
 	mr.service.RemoteProcedureRegister(deliverRPCMethodName, mr.deliver)
@@ -53,10 +53,10 @@ func (mr *MessageRouter) Start(c core.Components) error {
 	return nil
 }
 
-func (mr *MessageRouter) Stop() error { return nil }
+func (mr *EventBus) Stop() error { return nil }
 
 // Route a `Message` and get a `Response` or error from remote host
-func (mr *MessageRouter) Route(msg core.Message) (core.Response, error) {
+func (mr *EventBus) Route(msg core.Message) (core.Response, error) {
 	jc := mr.ledger.GetJetCoordinator()
 	pm := mr.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -97,7 +97,7 @@ func (e *serializableError) Error() string {
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (mr *MessageRouter) deliver(args [][]byte) (result []byte, err error) {
+func (mr *EventBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when mr.deliver()")
 	}
