@@ -66,7 +66,6 @@ func setup(currentFile string) (string, error) {
 	if err != nil {
 		fmt.Println("failed to create runnercodepath for tests:", err)
 	}
-	defer os.RemoveAll(filepath.Join(filepath.Dir(currentFile), "contractstorage"))
 
 	_, _, err = testutil.Build()
 	if err != nil {
@@ -76,12 +75,7 @@ func setup(currentFile string) (string, error) {
 	return buildInsolard()
 }
 
-func wait(cmd *exec.Cmd) {
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Println("failed to create pipe for output: ", err)
-	}
-	defer stdout.Close()
+func wait(stdout io.ReadCloser) {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -92,15 +86,9 @@ func wait(cmd *exec.Cmd) {
 	}
 }
 
-func teardown(cmd *exec.Cmd, currentFile string) {
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		fmt.Println("failed to create pipe for input: ", err)
-	}
-	defer stdin.Close()
-
+func teardown(cmd *exec.Cmd, currentFile string, stdin io.WriteCloser) {
 	io.WriteString(stdin, "exit\n")
-	err = cmd.Wait()
+	err := cmd.Wait()
 	if err != nil {
 		fmt.Println("try to kill, wait done with error: ", err)
 		err := cmd.Process.Kill()
@@ -110,7 +98,11 @@ func teardown(cmd *exec.Cmd, currentFile string) {
 	}
 	err = os.RemoveAll(filepath.Join(filepath.Dir(currentFile), "data"))
 	if err != nil {
-		fmt.Println("failed to remobe data directory for func tests: ", err)
+		fmt.Println("failed to remove data directory for func tests: ", err)
+	}
+	err = os.RemoveAll(filepath.Join(filepath.Dir(currentFile), "contractstorage"))
+	if err != nil {
+		fmt.Println("failed to remove contractstorage directory for func tests: ", err)
 	}
 }
 
@@ -131,14 +123,26 @@ func testMainWrapper(m *testing.M) int {
 		insolardPath,
 	)
 
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		fmt.Println("failed to create pipe for input: ", err)
+	}
+	defer stdin.Close()
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Println("failed to create pipe for output: ", err)
+	}
+	defer stdout.Close()
+
 	err = cmd.Start()
 	if err != nil {
 		fmt.Println("failed to start insolard, skip tests: ", err)
 		return 1
 	}
-	wait(cmd)
+	wait(stdout)
 	code := m.Run()
-	teardown(cmd, currentFile)
+	teardown(cmd, currentFile, stdin)
 	return code
 }
 
