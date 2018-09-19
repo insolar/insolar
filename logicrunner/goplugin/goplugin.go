@@ -82,10 +82,10 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
-// RouteCall routes call from a contract to a contract through message router
+// RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) error {
 	if gpr.gp.EventBus == nil {
-		return errors.New("message router was not set during initialization")
+		return errors.New("event bus was not set during initialization")
 	}
 
 	msg := &message.CallMethodMessage{
@@ -107,7 +107,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 // RouteConstructorCall routes call from a contract to a constructor of another contract
 func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *rpctypes.UpRouteConstructorResp) error {
 	if gpr.gp.EventBus == nil {
-		return errors.New("message router was not set during initialization")
+		return errors.New("event bus was not set during initialization")
 	}
 
 	msg := &message.CallConstructorMessage{
