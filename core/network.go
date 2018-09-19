@@ -31,10 +31,10 @@ type RemoteProcedure func(args [][]byte) ([]byte, error)
 
 // Network is interface for network modules facade.
 type Network interface {
-	// SendMessage sends a event.
-	SendMessage(nodeID RecordRef, method string, event Event) ([]byte, error)
-	// SendMessage sends a event.
-	SendCascadeMessage(data Cascade, method string, event Event) error
+	// SendEvent sends a event.
+	SendEvent(nodeID RecordRef, method string, event Event) ([]byte, error)
+	// SendEvent sends a event.
+	SendCascadeEvent(data Cascade, method string, event Event) error
 	// GetAddress returns an origin address.
 	GetAddress() string
 	// RemoteProcedureRegister is remote procedure register func.

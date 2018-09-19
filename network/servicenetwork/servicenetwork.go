@@ -82,8 +82,8 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
 }
 
-// SendMessage sends a event from EventBus.
-func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, event core.Event) ([]byte, error) {
+// SendEvent sends a event from EventBus.
+func (network *ServiceNetwork) SendEvent(nodeID core.RecordRef, method string, event core.Event) ([]byte, error) {
 	if event == nil {
 		return nil, errors.New("event is nil")
 	}
@@ -93,15 +93,15 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, err
 	}
 
-	log.Debugln("SendMessage with nodeID = %s method = %s, event reference = %s", nodeID.String(),
+	log.Debugln("SendEvent with nodeID = %s method = %s, event reference = %s", nodeID.String(),
 		method, event.GetReference().String())
 
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
 }
 
-// SendCascadeMessage sends a event from EventBus to a cascade of nodes. Event reference is ignored
-func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, event core.Event) error {
+// SendCascadeEvent sends a event from EventBus to a cascade of nodes. Event reference is ignored
+func (network *ServiceNetwork) SendCascadeEvent(data core.Cascade, method string, event core.Event) error {
 	if event == nil {
 		return errors.New("event is nil")
 	}

@@ -89,7 +89,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	network.SendMessage(core.NewRefFromBase58("test"), "test", e)
+	network.SendEvent(core.NewRefFromBase58("test"), "test", e)
 }
 
 func TestServiceNetwork_Start(t *testing.T) {
@@ -164,7 +164,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", e)
+	firstNode.SendEvent(core.NewRefFromBase58(secondNodeId), "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
@@ -211,7 +211,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	firstNode.SendCascadeMessage(c, "test", e)
+	firstNode.SendCascadeEvent(c, "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
@@ -286,7 +286,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		ReplicationFactor: 2,
 		Entropy:           core.Entropy{0},
 	}
-	firstService.SendCascadeMessage(c, "test", e)
+	firstService.SendCascadeEvent(c, "test", e)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)

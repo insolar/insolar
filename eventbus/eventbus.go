@@ -75,11 +75,11 @@ func (eb *EventBus) Route(event core.Event) (core.Response, error) {
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := eb.service.SendCascadeMessage(cascade, deliverRPCMethodName, event)
+		err := eb.service.SendCascadeEvent(cascade, deliverRPCMethodName, event)
 		return nil, err
 	}
 
-	res, err := eb.service.SendMessage(nodes[0], deliverRPCMethodName, event)
+	res, err := eb.service.SendEvent(nodes[0], deliverRPCMethodName, event)
 	if err != nil {
 		return nil, err
 	}
