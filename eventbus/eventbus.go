@@ -40,8 +40,8 @@ type EventBus struct {
 // New is a `EventBus` constructor, takes an executor object
 // that satisfies LogicRunner interface
 func New(cfg configuration.Configuration) (*EventBus, error) {
-	mr := &EventBus{logicRunner: nil, service: nil}
-	return mr, nil
+	eb := &EventBus{logicRunner: nil, service: nil}
+	return eb, nil
 }
 
 func (eb *EventBus) Start(c core.Components) error {

@@ -60,15 +60,15 @@ func TestNew(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
-	mr, err := New(configuration.Configuration{})
-	mr.Start(core.Components{
+	eb, err := New(configuration.Configuration{})
+	eb.Start(core.Components{
 		"core.LogicRunner": r,
 		"core.Network":     network,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mr == nil {
+	if eb == nil {
 		t.Fatal("no object created")
 	}
 }
