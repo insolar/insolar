@@ -61,7 +61,7 @@ func NewRequestHandler(params *Params, eventBus core.EventBus, rootDomainReferen
 	}
 }
 
-func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Response, error) {
+func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reaction, error) {
 	if rh.eventBus == nil {
 		return nil, errors.New("[ RouteCall ] event bus was not set during initialization")
 	}
@@ -119,7 +119,7 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 	return balance, nil
 }
 
-func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Response, error) {
+func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reaction, error) {
 	args, err := MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
@@ -224,7 +224,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	result := make(map[string]interface{})
 
 	var err error
-	var routResult core.Response
+	var routResult core.Reaction
 	if all {
 		routResult, err = rh.sendRequest("DumpAllUsers", []interface{}{})
 	} else {

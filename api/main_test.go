@@ -136,7 +136,7 @@ func (eb *TestEventBus) Stop() error {
 
 const TestBalance = 100500
 
-func (eb *TestEventBus) Route(event core.Event) (core.Response, error) {
+func (eb *TestEventBus) Route(event core.Event) (core.Reaction, error) {
 	data, _ := MarshalArgs(TestBalance)
 
 	return &response.CommonResponse{

@@ -31,7 +31,7 @@ type ChildEvent struct {
 }
 
 // React handles event and returns associated response.
-func (e *ChildEvent) React(core.Components) (core.Response, error) {
+func (e *ChildEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }
 

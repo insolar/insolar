@@ -38,7 +38,7 @@ const (
 	ObjectBodyResponseType
 )
 
-func getEmptyResponse(t Type) (core.Response, error) {
+func getEmptyResponse(t Type) (core.Reaction, error) {
 	switch t {
 	case WrongResponseType:
 		return nil, errors.New("no empty response for 'wrong' response")
@@ -51,7 +51,7 @@ func getEmptyResponse(t Type) (core.Response, error) {
 	}
 }
 
-func serialize(m core.Response, t Type) (io.Reader, error) {
+func serialize(m core.Reaction, t Type) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	_, err := buff.Write([]byte{byte(t)})
 	if err != nil {
@@ -64,7 +64,7 @@ func serialize(m core.Response, t Type) (io.Reader, error) {
 }
 
 // Deserialize returns a response
-func Deserialize(buff io.Reader) (core.Response, error) {
+func Deserialize(buff io.Reader) (core.Reaction, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {

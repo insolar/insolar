@@ -31,7 +31,7 @@ type DelegateEvent struct {
 }
 
 // React handles event and returns associated response.
-func (e *DelegateEvent) React(core.Components) (core.Response, error) {
+func (e *DelegateEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }
 

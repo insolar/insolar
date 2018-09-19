@@ -32,7 +32,7 @@ func (*TestEventBus) Start(components core.Components) error { return nil }
 func (*TestEventBus) Stop() error { return nil }
 
 // Route executes event on LogicRunner.
-func (eb *TestEventBus) Route(event core.Event) (resp core.Response, err error) {
+func (eb *TestEventBus) Route(event core.Event) (resp core.Reaction, err error) {
 	return eb.LogicRunner.Execute(event)
 }
 

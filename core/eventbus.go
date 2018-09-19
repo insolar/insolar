@@ -30,16 +30,16 @@ type Event interface {
 	// GetOperatingRole returns operating jet role for given event type.
 	GetOperatingRole() JetRole
 	// React handles event and returns associated response.
-	React(Components) (Response, error)
+	React(Components) (Reaction, error)
 }
 
-// Response to a `Event`
-type Response interface {
+// Reaction for an `Event`
+type Reaction interface {
 	// Serialize serializes event.
 	Serialize() (io.Reader, error)
 }
 
 // EventBus interface
 type EventBus interface {
-	Route(event Event) (resp Response, err error)
+	Route(event Event) (resp Reaction, err error)
 }

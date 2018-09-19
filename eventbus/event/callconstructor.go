@@ -31,7 +31,7 @@ type CallConstructorEvent struct {
 }
 
 // React handles event and returns associated response.
-func (e *CallConstructorEvent) React(core.Components) (core.Response, error) {
+func (e *CallConstructorEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }
 

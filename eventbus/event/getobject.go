@@ -29,7 +29,7 @@ type GetObjectEvent struct {
 }
 
 // React handles event and returns associated response.
-func (e *GetObjectEvent) React(core.Components) (core.Response, error) {
+func (e *GetObjectEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }
 

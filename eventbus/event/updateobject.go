@@ -30,7 +30,7 @@ type UpdateObjectEvent struct {
 }
 
 // React handles event and returns associated response.
-func (e *UpdateObjectEvent) React(core.Components) (core.Response, error) {
+func (e *UpdateObjectEvent) React(core.Components) (core.Reaction, error) {
 	panic("implement me")
 }
 
