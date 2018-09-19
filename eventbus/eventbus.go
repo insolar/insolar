@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/log"
 )
 
 const deliverRPCMethodName = "EventBus.Deliver"
@@ -63,8 +64,8 @@ func (eb *EventBus) Start(c core.Components) error {
 
 func (eb *EventBus) Stop() error { return nil }
 
-// Route a `Event` and get a `Reaction` or error from remote host
-func (eb *EventBus) Route(event core.Event) (core.Reaction, error) {
+// Dispatch an `Event` and get a `Reaction` or error from remote host.
+func (eb *EventBus) Dispatch(event core.Event) (core.Reaction, error) {
 	jc := eb.ledger.GetJetCoordinator()
 	pm := eb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -93,6 +94,14 @@ func (eb *EventBus) Route(event core.Event) (core.Reaction, error) {
 	}
 
 	return reaction.Deserialize(bytes.NewBuffer(res))
+}
+
+// DispatchAsync dispatches a `Event` to remote host.
+func (eb *EventBus) DispatchAsync(event core.Event) {
+	go func() {
+		_, err := eb.Dispatch(event)
+		log.Errorln(err)
+	}()
 }
 
 type serializableError struct {

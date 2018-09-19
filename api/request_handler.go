@@ -72,9 +72,9 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		Arguments: args,
 	}
 
-	res, err := rh.eventBus.Route(e)
+	res, err := rh.eventBus.Dispatch(e)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route event")
+		return nil, errors.Wrap(err, "[ RouteCall ] couldn't dispatch event")
 	}
 
 	return res, nil

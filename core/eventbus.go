@@ -41,5 +41,8 @@ type Reaction interface {
 
 // EventBus interface
 type EventBus interface {
-	Route(Event) (Reaction, error)
+	// Dispatch an `Event` and get a `Reaction` or error from remote host.
+	Dispatch(Event) (Reaction, error)
+	// DispatchAsync dispatches an `Event` to remote host.
+	DispatchAsync(Event)
 }

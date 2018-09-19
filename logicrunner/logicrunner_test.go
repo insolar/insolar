@@ -142,9 +142,10 @@ type testEventBus struct {
 
 func (*testEventBus) Start(components core.Components) error { return nil }
 func (*testEventBus) Stop() error                            { return nil }
-func (eb *testEventBus) Route(event core.Event) (resp core.Reaction, err error) {
+func (eb *testEventBus) Dispatch(event core.Event) (resp core.Reaction, err error) {
 	return eb.LogicRunner.Execute(event)
 }
+func (*testEventBus) DispatchAsync(event core.Event) {}
 
 func TestExecution(t *testing.T) {
 	am := testutil.NewTestArtifactManager()

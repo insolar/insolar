@@ -31,10 +31,11 @@ func (*TestEventBus) Start(components core.Components) error { return nil }
 // Stop is the dummy mock of Stop method.
 func (*TestEventBus) Stop() error { return nil }
 
-// Route executes event on LogicRunner.
-func (eb *TestEventBus) Route(event core.Event) (resp core.Reaction, err error) {
+// Dispatch executes event on LogicRunner.
+func (eb *TestEventBus) Dispatch(event core.Event) (resp core.Reaction, err error) {
 	return eb.LogicRunner.Execute(event)
 }
+func (*TestEventBus) DispatchAsync(event core.Event) {}
 
 // NewTestEventBus creates TestEventBus which mocks the real one.
 func NewTestEventBus(lr core.LogicRunner) *TestEventBus {

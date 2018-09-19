@@ -134,9 +134,11 @@ func (eb *TestEventBus) Stop() error {
 	return nil
 }
 
+func (*TestEventBus) DispatchAsync(event core.Event) {}
+
 const TestBalance = 100500
 
-func (eb *TestEventBus) Route(event core.Event) (core.Reaction, error) {
+func (eb *TestEventBus) Dispatch(event core.Event) (core.Reaction, error) {
 	data, _ := MarshalArgs(TestBalance)
 
 	return &reaction.CommonReaction{

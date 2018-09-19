@@ -120,7 +120,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 
 	switch m := e.(type) {
 	case *event.CallMethodEvent:
-		resp, err := lr.EventBus.Route(&event.GetObjectEvent{
+		resp, err := lr.EventBus.Dispatch(&event.GetObjectEvent{
 			Object: m.ObjectRef,
 		})
 		if err != nil {
@@ -143,7 +143,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "executer error")
 		}
 
-		_, err = lr.EventBus.Route(
+		_, err = lr.EventBus.Dispatch(
 			&event.UpdateObjectEvent{
 				Object: m.ObjectRef,
 				Body:   newData,
