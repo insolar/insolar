@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
@@ -75,9 +76,10 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 }
 
 func TestCompilingRealSmartContracts(t *testing.T) {
-	iccDir := "../../../cmd/insgocc"
+	// iccDir := "../../../cmd/insgocc"
+	iccDir := filepath.Join("..", "..", "..", "cmd", "insgocc")
 
-	_, err := exec.Command("go", "build", "-o", iccDir+"/insgocc", iccDir).CombinedOutput()
+	_, err := exec.Command("go", "build", "-o", filepath.Join(iccDir, "insgocc"), iccDir).CombinedOutput()
 	assert.NoError(t, err)
 
 	contracts := make(map[string]string)
@@ -88,7 +90,7 @@ func TestCompilingRealSmartContracts(t *testing.T) {
 	}
 
 	am := testutil.NewTestArtifactManager()
-	cb, cleaner := testutil.NewContractBuilder(am, iccDir+"/insgocc")
+	cb, cleaner := testutil.NewContractBuilder(am, filepath.Join(iccDir, "insgocc"))
 	defer cleaner()
 	err = cb.Build(contracts)
 	assert.NoError(t, err)
