@@ -27,6 +27,7 @@ import (
 	"net/rpc"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/log"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -79,7 +80,10 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 func (pulsar *Pulsar) Start() {
 	server := rpc.NewServer()
 
-	server.RegisterName("Pulsar", &Handler{pulsar: pulsar})
+	err := server.RegisterName("Pulsar", &Handler{pulsar: pulsar})
+	if err != nil {
+		panic(err)
+	}
 	pulsar.RPCServer = server
 	server.Accept(pulsar.Sock)
 }
@@ -87,11 +91,17 @@ func (pulsar *Pulsar) Start() {
 func (pulsar *Pulsar) Close() {
 	for _, neighbour := range pulsar.Neighbours {
 		if neighbour.OutgoingClient != nil {
-			neighbour.OutgoingClient.Close()
+			err := neighbour.OutgoingClient.Close()
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}
 
-	pulsar.Sock.Close()
+	err := pulsar.Sock.Close()
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
