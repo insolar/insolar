@@ -17,26 +17,18 @@
 package pulsar
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"net"
 	"net/rpc"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 )
-
-type Neighbour struct {
-	ConnectionType    configuration.ConnectionType
-	ConnectionAddress string
-	OutgoingClient    *rpc.Client
-	PublicKey         *ecdsa.PublicKey
-}
 
 type RequestType string
 
 const (
-	Handshake RequestType = "Pulsar.MakeHandshake"
+	HealthCheck RequestType = "Pulsar.HealthCheck"
+	Handshake   RequestType = "Pulsar.MakeHandshake"
 )
 
 func (state RequestType) String() string {
@@ -55,6 +47,10 @@ type Payload struct {
 
 type Handler struct {
 	pulsar *Pulsar
+}
+
+func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
+	return nil
 }
 
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
@@ -88,7 +84,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		if err != nil {
 			return err
 		}
-		neighbour.OutgoingClient = rpc.NewClient(conn)
+		neighbour.OutgoingClient = &RpcConnection{RpcClient: rpc.NewClient(conn)}
 	}
 
 	return nil

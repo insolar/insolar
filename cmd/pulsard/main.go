@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
@@ -42,9 +43,36 @@ func main() {
 	initLogger(cfgHolder.Configuration.Log)
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	privateKey, err := pulsar.ImportPrivateKey(cfgHolder.Configuration.Pulsar.PrivateKey)
-	fmt.Printf("%v", privateKey)
-	fmt.Printf("%v", err)
+	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, net.Listen)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+
+	go server.Start()
+	tryToConnectToNeighbours(server)
+}
+
+func tryToConnectToNeighbours(pulsarServer *pulsar.Pulsar) {
+	for _, neighbour := range pulsarServer.Neighbours {
+		if neighbour.OutgoingClient == nil {
+			publicKey, err := pulsar.ExportPublicKey(neighbour.PublicKey)
+			if err != nil {
+				continue
+			}
+
+			err = pulsarServer.EstablishConnection(publicKey)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+		}
+
+		err := neighbour.OutgoingClient.Call(pulsar.HealthCheck.String(), nil, nil)
+		if err != nil {
+			neighbour.CheckAndRefreshConnection(err)
+		}
+	}
 }
 
 func initLogger(cfg configuration.Log) {

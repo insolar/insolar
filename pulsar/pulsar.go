@@ -82,6 +82,7 @@ func (pulsar *Pulsar) Start() {
 
 	err := server.RegisterName("Pulsar", &Handler{pulsar: pulsar})
 	if err != nil {
+		log.Fatal(err)
 		panic(err)
 	}
 	pulsar.RPCServer = server
@@ -119,7 +120,7 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 	}
 
 	clt := rpc.NewClient(conn)
-	neighbour.OutgoingClient = clt
+	neighbour.OutgoingClient = &RpcConnection{Client: clt}
 	generator := StandardEntropyGenerator{}
 	convertedKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
