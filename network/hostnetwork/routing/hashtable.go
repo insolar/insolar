@@ -337,6 +337,25 @@ func (ht *HashTable) TotalHosts() int {
 	return total
 }
 
+// GetHosts returns hostsNumber (or less) hosts from the HashTable, starting from the first bucket
+func (ht *HashTable) GetHosts(hostsNumber int) []host.Host {
+	ht.Lock()
+	defer ht.Unlock()
+
+	result := make([]host.Host, 0)
+
+Loop:
+	for _, bucket := range ht.RoutingTable {
+		for _, routeHost := range bucket {
+			result = append(result, *routeHost.Host)
+			if len(result) == hostsNumber {
+				break Loop
+			}
+		}
+	}
+	return result
+}
+
 // hasBit is a Simple helper function to determine the value of a particular
 // bit in a byte by index
 // Example:

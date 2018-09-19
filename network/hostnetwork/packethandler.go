@@ -61,9 +61,28 @@ func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 		return processCascadeSend(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypePulse:
 		return processPulse(hostHandler, msg, packetBuilder)
+	case packet.TypeGetRandomHosts:
+		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processGetRandomHosts(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder) (*packet.Packet, error) {
+
+	data := msg.Data.(*packet.RequestGetRandomHosts)
+	ht := hostHandler.HtFromCtx(ctx)
+	if data.RandomHostsNumber <= 0 {
+		return packetBuilder.Response(&packet.ResponseGetRandomHosts{
+			Hosts: nil, Error: "hosts number should be more than zero"}).Build(), nil
+	}
+	hosts := ht.GetHosts(data.RandomHostsNumber)
+	// TODO: handle scenario when we get less hosts than requested
+	return packetBuilder.Response(&packet.ResponseGetRandomHosts{Hosts: hosts, Error: ""}).Build(), nil
 }
 
 func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {

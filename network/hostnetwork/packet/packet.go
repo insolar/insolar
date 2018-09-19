@@ -58,6 +58,8 @@ const (
 	TypeCascadeSend
 	// TypePulse is packet type for the messages received from pulsars
 	TypePulse
+	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network
+	TypeGetRandomHosts
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -116,6 +118,8 @@ func (m *Packet) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestCascadeSend)
 	case TypePulse:
 		_, valid = m.Data.(*RequestPulse)
+	case TypeGetRandomHosts:
+		_, valid = m.Data.(*RequestGetRandomHosts)
 	default:
 		valid = false
 	}
