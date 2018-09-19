@@ -55,8 +55,8 @@ func (eb *EventBus) Start(c core.Components) error {
 
 func (eb *EventBus) Stop() error { return nil }
 
-// Route a `Message` and get a `Response` or error from remote host
-func (eb *EventBus) Route(msg core.Message) (core.Response, error) {
+// Route a `Event` and get a `Response` or error from remote host
+func (eb *EventBus) Route(msg core.Event) (core.Response, error) {
 	jc := eb.ledger.GetJetCoordinator()
 	pm := eb.ledger.GetPulseManager()
 	pulse, err := pm.Current()

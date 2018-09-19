@@ -106,7 +106,7 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
+func (lr *LogicRunner) Execute(msg core.Event) (core.Response, error) {
 	lr.ArtifactManager.SetArchPref(
 		[]core.MachineType{
 			core.MachineTypeBuiltin,

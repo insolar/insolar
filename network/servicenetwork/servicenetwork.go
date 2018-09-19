@@ -83,7 +83,7 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 }
 
 // SendMessage sends a message from EventBus.
-func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Event) ([]byte, error) {
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
@@ -100,8 +100,8 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 	return res, err
 }
 
-// SendCascadeMessage sends a message from EventBus to a cascade of nodes. Message reference is ignored
-func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
+// SendCascadeMessage sends a message from EventBus to a cascade of nodes. Event reference is ignored
+func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Event) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
@@ -113,7 +113,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	return network.initCascadeSendMessage(data, false, method, [][]byte{buff})
 }
 
-func messageToBytes(msg core.Message) ([]byte, error) {
+func messageToBytes(msg core.Event) ([]byte, error) {
 	reqBuff, err := msg.Serialize()
 	if err != nil {
 		return nil, err

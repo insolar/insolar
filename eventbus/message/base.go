@@ -54,7 +54,7 @@ const (
 )
 
 // GetEmptyMessage constructs specified message
-func getEmptyMessage(mt MessageType) (core.Message, error) {
+func getEmptyMessage(mt MessageType) (core.Event, error) {
 	switch mt {
 	case baseMessageType:
 		return nil, errors.New("working with message type == 0 is prohibited")
@@ -75,7 +75,7 @@ func getEmptyMessage(mt MessageType) (core.Message, error) {
 	}
 }
 
-func serialize(m core.Message, t MessageType) (io.Reader, error) {
+func serialize(m core.Event, t MessageType) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	_, err := buff.Write([]byte{byte(t)})
 	if err != nil {
@@ -88,7 +88,7 @@ func serialize(m core.Message, t MessageType) (io.Reader, error) {
 }
 
 // Deserialize returns a message
-func Deserialize(buff io.Reader) (core.Message, error) {
+func Deserialize(buff io.Reader) (core.Event, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
