@@ -70,7 +70,7 @@ func TestHandlerError(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] message`)
+	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] event`)
 }
 
 func TestBadRequest(t *testing.T) {
