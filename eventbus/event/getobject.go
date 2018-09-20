@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package event
 
 import (
 	"io"
@@ -22,23 +22,28 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// GetObjectMessage is a message for calling constructor and obtain its response
-type GetObjectMessage struct {
-	baseMessage
+// GetObjectEvent is a event for calling constructor and obtain its reaction
+type GetObjectEvent struct {
+	baseEvent
 	Object core.RecordRef
 }
 
-// GetOperatingRole returns operating jet role for given message type.
-func (m *GetObjectMessage) GetOperatingRole() core.JetRole {
+// React handles event and returns associated reaction.
+func (e *GetObjectEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
+}
+
+// GetOperatingRole returns operating jet role for given event type.
+func (e *GetObjectEvent) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
 // GetReference returns referenced object.
-func (m *GetObjectMessage) GetReference() core.RecordRef {
-	return m.Object
+func (e *GetObjectEvent) GetReference() core.RecordRef {
+	return e.Object
 }
 
-// Serialize serializes message.
-func (m *GetObjectMessage) Serialize() (io.Reader, error) {
-	return serialize(m, GetObjectMessageType)
+// Serialize serializes event.
+func (e *GetObjectEvent) Serialize() (io.Reader, error) {
+	return serialize(e, GetObjectEventType)
 }

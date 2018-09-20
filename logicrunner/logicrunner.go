@@ -20,21 +20,21 @@ package logicrunner
 import (
 	"time"
 
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
-	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/insolar/insolar/messagerouter/response"
 )
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
-	MessageRouter   core.MessageRouter
+	EventBus        core.EventBus
 	Cfg             configuration.LogicRunner
 }
 
@@ -51,18 +51,18 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 func (lr *LogicRunner) Start(c core.Components) error {
 	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
 	lr.ArtifactManager = am
-	mr := c["core.MessageRouter"].(core.MessageRouter)
-	lr.MessageRouter = mr
+	eventBus := c["core.EventBus"].(core.EventBus)
+	lr.EventBus = eventBus
 
 	if lr.Cfg.BuiltIn != nil {
-		bi := builtin.NewBuiltIn(mr, am)
+		bi := builtin.NewBuiltIn(eventBus, am)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
 			return err
 		}
 	}
 
 	if lr.Cfg.GoPlugin != nil {
-		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, mr, am)
+		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, eventBus, am)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
+func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 	lr.ArtifactManager.SetArchPref(
 		[]core.MachineType{
 			core.MachineTypeBuiltin,
@@ -115,18 +115,18 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 	)
 
 	ctx := core.LogicCallContext{
-		Time: time.Now(), // TODO: probably we should take it from msg
+		Time: time.Now(), // TODO: probably we should take it from e
 	}
 
-	switch m := msg.(type) {
-	case *message.CallMethodMessage:
-		resp, err := lr.MessageRouter.Route(&message.GetObjectMessage{
+	switch m := e.(type) {
+	case *event.CallMethodEvent:
+		resp, err := lr.EventBus.Dispatch(&event.GetObjectEvent{
 			Object: m.ObjectRef,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object")
 		}
-		info := resp.(*response.ObjectBodyResponse)
+		info := resp.(*reaction.ObjectBodyReaction)
 
 		ctx.Callee = &m.ObjectRef
 		ctx.Class = &info.Class
@@ -143,8 +143,8 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 			return nil, errors.Wrap(err, "executer error")
 		}
 
-		_, err = lr.MessageRouter.Route(
-			&message.UpdateObjectMessage{
+		_, err = lr.EventBus.Dispatch(
+			&event.UpdateObjectEvent{
 				Object: m.ObjectRef,
 				Body:   newData,
 			},
@@ -153,9 +153,9 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
 
-		return &response.CommonResponse{Data: newData, Result: result}, nil
+		return &reaction.CommonReaction{Data: newData, Result: result}, nil
 
-	case *message.CallConstructorMessage:
+	case *event.CallConstructorEvent:
 		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class")
@@ -182,36 +182,36 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 			return nil, errors.Wrap(err, "executer error")
 		}
 
-		return &response.CommonResponse{Data: newData}, nil
+		return &reaction.CommonReaction{Data: newData}, nil
 
-	case *message.DelegateMessage:
+	case *event.DelegateEvent:
 		ref, err := lr.ArtifactManager.ActivateObjDelegate(
 			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't save new object")
 		}
-		return &response.CommonResponse{Data: []byte(ref.String())}, nil
+		return &reaction.CommonReaction{Data: []byte(ref.String())}, nil
 
-	case *message.ChildMessage:
+	case *event.ChildEvent:
 		ref, err := lr.ArtifactManager.ActivateObj(
 			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't save new object")
 		}
-		return &response.CommonResponse{Data: []byte(ref.String())}, nil
+		return &reaction.CommonReaction{Data: []byte(ref.String())}, nil
 
-	case *message.UpdateObjectMessage:
+	case *event.UpdateObjectEvent:
 		_, err := lr.ArtifactManager.UpdateObj(
 			core.RecordRef{}, core.RecordRef{}, m.Object, m.Body,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
-		return &response.CommonResponse{}, nil
+		return &reaction.CommonReaction{}, nil
 
-	case *message.GetObjectMessage:
+	case *event.GetObjectEvent:
 		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Object)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object")
@@ -237,7 +237,7 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 			return nil, errors.Wrap(err, "couldn't get machine type")
 		}
 
-		return &response.ObjectBodyResponse{
+		return &reaction.ObjectBodyReaction{
 			Body:        data,
 			Code:        *codeDesc.Ref(),
 			Class:       *classDesc.HeadRef(),
@@ -245,6 +245,6 @@ func (lr *LogicRunner) Execute(msg core.Message) (core.Response, error) {
 		}, nil
 
 	default:
-		panic("Unknown message type")
+		panic("Unknown e type")
 	}
 }

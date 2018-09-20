@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// Node is an essence which provides communication between network level and MessageRouter.
+// Node is an essence which provides communication between network level and EventBus.
 type Node struct {
 	id core.RecordRef
 }

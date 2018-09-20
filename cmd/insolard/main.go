@@ -26,10 +26,10 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/messagerouter"
 	"github.com/insolar/insolar/network/servicenetwork"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -98,7 +98,7 @@ func main() {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
 
-	mr, err := messagerouter.New(cfgHolder.Configuration)
+	eb, err := eventbus.New(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
@@ -117,7 +117,7 @@ func main() {
 	cm.register("core.Network", nw)
 	cm.register("core.Ledger", l)
 	cm.register("core.LogicRunner", lr)
-	cm.register("core.MessageRouter", mr)
+	cm.register("core.EventBus", eb)
 	cm.register("core.Bootstrapper", b)
 	cm.register("core.ApiRunner", ar)
 	cm.linkAll()

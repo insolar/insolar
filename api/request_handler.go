@@ -22,8 +22,8 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/insolar/insolar/messagerouter/response"
+	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/pkg/errors"
 )
 
@@ -47,34 +47,34 @@ func extractCreateMemberResponse(data []byte) (*string, error) {
 type RequestHandler struct {
 	qid                 string
 	params              *Params
-	messageRouter       core.MessageRouter
+	eventBus            core.EventBus
 	rootDomainReference core.RecordRef
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, router core.MessageRouter, rootDomainReference core.RecordRef) *RequestHandler {
+func NewRequestHandler(params *Params, eventBus core.EventBus, rootDomainReference core.RecordRef) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
-		messageRouter:       router,
+		eventBus:            eventBus,
 		rootDomainReference: rootDomainReference,
 	}
 }
 
-func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Response, error) {
-	if rh.messageRouter == nil {
-		return nil, errors.New("[ RouteCall ] message router was not set during initialization")
+func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reaction, error) {
+	if rh.eventBus == nil {
+		return nil, errors.New("[ RouteCall ] event bus was not set during initialization")
 	}
 
-	msg := &message.CallMethodMessage{
+	e := &event.CallMethodEvent{
 		ObjectRef: ref,
 		Method:    method,
 		Arguments: args,
 	}
 
-	res, err := rh.messageRouter.Route(msg)
+	res, err := rh.eventBus.Dispatch(e)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ RouteCall ] couldn't route message")
+		return nil, errors.Wrap(err, "[ RouteCall ] couldn't dispatch event")
 	}
 
 	return res, nil
@@ -93,7 +93,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractCreateMemberResponse(routResult.(*response.CommonResponse).Result)
+	memberRef, err := extractCreateMemberResponse(routResult.(*reaction.CommonReaction).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -119,7 +119,7 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 	return balance, nil
 }
 
-func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Response, error) {
+func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reaction, error) {
 	args, err := MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
@@ -147,7 +147,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
 
-	amount, err := extractGetBalanceResponse(routResult.(*response.CommonResponse).Result)
+	amount, err := extractGetBalanceResponse(routResult.(*reaction.CommonReaction).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -193,7 +193,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
 
-	isSent, err := extractSendMoneyResponse(routResult.(*response.CommonResponse).Result)
+	isSent, err := extractSendMoneyResponse(routResult.(*reaction.CommonReaction).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
@@ -224,7 +224,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	result := make(map[string]interface{})
 
 	var err error
-	var routResult core.Response
+	var routResult core.Reaction
 	if all {
 		routResult, err = rh.sendRequest("DumpAllUsers", []interface{}{})
 	} else {
@@ -238,7 +238,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*response.CommonResponse).Result)
+	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reaction.CommonReaction).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}

@@ -25,10 +25,10 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -311,7 +311,7 @@ func (gi *GoInsider) RouteConstructorCall(ref core.RecordRef, name string, args 
 func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.String2Ref(""), err
+		return core.NewRefFromBase58(""), err
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -323,7 +323,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, data []byte
 	res := rpctypes.UpSaveAsChildResp{}
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
-		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
 	return res.Reference, nil
@@ -350,7 +350,7 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([
 func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.String2Ref(""), err
+		return core.NewRefFromBase58(""), err
 	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
@@ -362,7 +362,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byt
 	res := rpctypes.UpSaveAsDelegateResp{}
 	err = client.Call("RPC.SaveAsDelegate", req, &res)
 	if err != nil {
-		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
 	return res.Reference, nil
@@ -372,7 +372,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byt
 func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return core.String2Ref(""), err
+		return core.NewRefFromBase58(""), err
 	}
 
 	req := rpctypes.UpGetDelegateReq{
@@ -383,7 +383,7 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 	res := rpctypes.UpGetDelegateResp{}
 	err = client.Call("RPC.GetDelegate", req, &res)
 	if err != nil {
-		return core.String2Ref(""), errors.Wrap(err, "on calling main API")
+		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
 	return res.Object, nil
@@ -392,13 +392,13 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
-	log.Printf("serializing %+v", what)
+	log.Debugf("serializing %+v", what)
 	return codec.NewEncoderBytes(to, ch).Encode(what)
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
 func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 	ch := new(codec.CborHandle)
-	log.Printf("de-serializing %+v", from)
+	log.Debugf("de-serializing %+v", from)
 	return codec.NewDecoderBytes(from, ch).Decode(into)
 }

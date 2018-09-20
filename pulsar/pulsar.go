@@ -18,86 +18,190 @@ package pulsar
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/insolar/insolar/configuration"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"encoding/gob"
+	"errors"
+	"math/big"
 	"net"
-	"os"
-	"strconv"
+	"net/rpc"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/log"
+	"golang.org/x/crypto/sha3"
 )
 
 type Pulsar struct {
-	Sock       net.Listener
-	Neighbours map[string]net.Conn
+	Sock               net.Listener
+	SockConnectionType configuration.ConnectionType
+	RPCServer          *rpc.Server
+
+	Neighbours map[string]*Neighbour
+	PrivateKey *ecdsa.PrivateKey
 }
 
-func NewPulsar(configuration configuration.Pulsar) *Pulsar {
+// Creation new pulsar-node
+func NewPulsar(configuration configuration.Pulsar, listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 	// Listen for incoming connections.
-	l, err := net.Listen(configuration.Type, configuration.ListenAddress)
+	l, err := listener(configuration.ConnectionType.String(), configuration.ListenAddress)
 	if err != nil {
-		fmt.Println("Error listening:", err.Error())
-		os.Exit(1)
+		return nil, err
 	}
 
-	return &Pulsar{Sock: l, Neighbours: map[string]net.Conn{}}
-}
+	// Parse private key from config
+	privateKey, err := ImportPrivateKey(configuration.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	pulsar := &Pulsar{Sock: l, Neighbours: map[string]*Neighbour{}, SockConnectionType: configuration.ConnectionType}
+	pulsar.PrivateKey = privateKey
 
-func (pulsar *Pulsar) Listen() {
-	for {
-		// Listen for an incoming connection.
-		conn, err := pulsar.Sock.Accept()
-		if err != nil {
-			fmt.Println("Error accepting: ", err.Error())
-			os.Exit(1)
+	// Adding other pulsars
+	for _, neighbour := range configuration.ListOfNeighbours {
+		if len(neighbour.PublicKey) == 0 {
+			continue
 		}
-		// Handle connections in a new goroutine.
-		go handleRequest(conn)
+		publicKey, err := ImportPublicKey(neighbour.PublicKey)
+		if err != nil {
+			continue
+		}
+		pulsar.Neighbours[neighbour.PublicKey] = &Neighbour{
+			ConnectionType:    neighbour.ConnectionType,
+			ConnectionAddress: neighbour.Address,
+			PublicKey:         publicKey}
+	}
+
+	gob.Register(Payload{})
+	gob.Register(HandshakePayload{})
+
+	return pulsar, nil
+}
+
+func (pulsar *Pulsar) Start() {
+	server := rpc.NewServer()
+
+	err := server.RegisterName("Pulsar", &Handler{pulsar: pulsar})
+	if err != nil {
+		panic(err)
+	}
+	pulsar.RPCServer = server
+	server.Accept(pulsar.Sock)
+}
+
+func (pulsar *Pulsar) Close() {
+	for _, neighbour := range pulsar.Neighbours {
+		if neighbour.OutgoingClient != nil {
+			err := neighbour.OutgoingClient.Close()
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
+
+	err := pulsar.Sock.Close()
+	if err != nil {
+		log.Error(err)
 	}
 }
 
-func (pulsar *Pulsar) ConnectToNeighbour(address string, connectionType string) error {
-	conn, err := net.Dial(connectionType, address)
+func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
+	neighbour, err := pulsar.fetchNeighbour(pubKey)
 	if err != nil {
-		fmt.Println("Error accepting: ", err.Error())
 		return err
 	}
-	pulsar.Neighbours[address] = conn
+	if neighbour.OutgoingClient != nil {
+		return nil
+	}
+
+	conn, err := net.Dial(neighbour.ConnectionType.String(), neighbour.ConnectionAddress)
+	if err != nil {
+		return err
+	}
+
+	clt := rpc.NewClient(conn)
+	neighbour.OutgoingClient = clt
+	generator := StandardEntropyGenerator{}
+	convertedKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		return nil
+	}
+	var rep Payload
+	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
+	message.Signature, err = singData(pulsar.PrivateKey, message.Body)
+	if err != nil {
+		return err
+	}
+	err = clt.Call(Handshake.String(), message, &rep)
+	if err != nil {
+		return err
+	}
+
+	result, err := checkSignature(&rep)
+	if err != nil {
+		return err
+	}
+	if !result {
+		return errors.New("Signature check failed")
+	}
 
 	return nil
 }
 
-func (pulsar *Pulsar) Send(address string, data interface{}) {
+func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
+	neighbour, ok := pulsar.Neighbours[pubKey]
+	if !ok {
+		return nil, errors.New("Forbidden connection")
+	}
+
+	return neighbour, nil
 }
 
-func (pulsar *Pulsar) Close() {
-	for _, connection := range pulsar.Neighbours {
-		connection.Close()
+func checkSignature(request *Payload) (bool, error) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(request.Body)
+	if err != nil {
+		return false, err
 	}
 
-	pulsar.Sock.Close()
+	r := big.Int{}
+	s := big.Int{}
+	sigLen := len(request.Signature)
+	r.SetBytes(request.Signature[:(sigLen / 2)])
+	s.SetBytes(request.Signature[(sigLen / 2):])
+
+	h := sha3.New256()
+	_, err = h.Write(b.Bytes())
+	if err != nil {
+		return false, err
+	}
+	hash := h.Sum(nil)
+	publicKey, err := ImportPublicKey(request.PublicKey)
+	if err != nil {
+		return false, err
+	}
+
+	return ecdsa.Verify(publicKey, hash, &r, &s), nil
 }
 
-// Handles incoming requests.
-func handleRequest(conn net.Conn) {
-	// Make a buffer to hold incoming data.
-	buf := make([]byte, 1024)
-	// Read the incoming connection into the buffer.
-	reqLen, err := conn.Read(buf)
+func singData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(data)
 	if err != nil {
-		fmt.Println("Error reading:", err.Error())
+		return nil, err
 	}
-	// Builds the message.
-	message := "Hi, I received your message! It was "
-	message += strconv.Itoa(reqLen)
-	message += " bytes long and that's what it said: \""
-	n := bytes.Index(buf, []byte{0})
-	message += string(buf[:n-1])
-	message += "\" ! Honestly I have no clue about what to do with your messages, so Bye Bye!\n"
 
-	// Write the message in the connection channel.
-	_, err = conn.Write([]byte(message))
+	h := sha3.New256()
+	_, err = h.Write(b.Bytes())
 	if err != nil {
-		fmt.Println("Error reading:", err.Error())
+		return nil, err
 	}
-	// Close the connection when you're done with it.
-	conn.Close()
+	hash := h.Sum(nil)
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(r.Bytes(), s.Bytes()...), nil
 }

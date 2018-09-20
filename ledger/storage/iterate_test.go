@@ -83,7 +83,6 @@ func TestStore_SlotIterate(t *testing.T) {
 	iterErr = db.ProcessSlotHashes(pulse2, func(it storage.HashIterator) error {
 		for i := 1; it.Next(); i++ {
 			h := it.Hash()
-			// log.Printf("%v: got hash: %x\n", i, h)
 			allhashes2expect = append(allhashes2expect, h)
 		}
 		return nil

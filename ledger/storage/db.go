@@ -17,7 +17,6 @@
 package storage
 
 import (
-	"log"
 	"path/filepath"
 	"sync"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/log"
 )
 
 const (
@@ -197,9 +197,9 @@ func (db *DB) SetRecord(rec record.Record) (ref *record.Reference, err error) {
 		return err
 	})
 	if err != nil {
-		ref = nil
+		return nil, err
 	}
-	return ref, err
+	return ref, nil
 }
 
 // GetClassIndex wraps matching transaction manager method.
@@ -371,7 +371,7 @@ func (db *DB) Update(fn func(*TransactionManager) error) error {
 			if db.txretiries > 0 {
 				err = ErrConflictRetriesOver
 			} else {
-				log.Println(">>> ErrConflict:", ErrConflict)
+				log.Info("local storage transaction conflict")
 				err = ErrConflict
 			}
 			break

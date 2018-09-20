@@ -53,10 +53,10 @@ func TestGoPlugin(t *testing.T) {
 	assert.NoError(t, err, "Initialize runner")
 
 	lr.ArtifactManager = l.GetArtifactManager()
-	mr := testutil.NewTestMessageRouter(lr)
+	eb := testutil.NewTestEventBus(lr)
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":        l,
-		"core.MessageRouter": mr,
+		"core.Ledger":   l,
+		"core.EventBus": eb,
 	}), "starting logicrunner")
 
 	insiderStorage, err := ioutil.TempDir("", "test-")
@@ -72,7 +72,7 @@ func TestGoPlugin(t *testing.T) {
 			RunnerCodePath: insiderStorage,
 		}
 
-		gp, err := goplugin.NewGoPlugin(gopluginconfig, mr, l.GetArtifactManager())
+		gp, err := goplugin.NewGoPlugin(gopluginconfig, eb, l.GetArtifactManager())
 		assert.NoError(t, err)
 		// defer gp.Stop()
 		err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
@@ -178,7 +178,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsChild(core.String2Ref("{{ .RootRefStr }}"))
+	friend := holder.AsChild(core.NewRefFromBase58("{{ .RootRefStr }}"))
 
 	res := friend.Hello(s)
 
@@ -249,7 +249,7 @@ type One struct {
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
-	friend := holder.AsDelegate(core.String2Ref("{{ .RootRefStr }}"))
+	friend := holder.AsDelegate(core.NewRefFromBase58("{{ .RootRefStr }}"))
 
 	res := friend.Hello(s)
 

@@ -469,6 +469,11 @@ func TestDispatchPacketType(t *testing.T) {
 		pckt := builder.Type(packet.TypePulse).Request(&packet.RequestPulse{Pulse: core.Pulse{}}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
+
+	t.Run("get random hosts", func(t *testing.T) {
+		pckt := builder.Type(packet.TypeGetRandomHosts).Request(&packet.RequestGetRandomHosts{HostsNumber: 2}).Build()
+		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+	})
 }
 
 func Test_processPulse(t *testing.T) {

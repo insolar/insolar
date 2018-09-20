@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package message
+package reaction
 
 import (
 	"io"
@@ -22,25 +22,15 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CallConstructorMessage is a message for calling constructor and obtain its response
-type CallConstructorMessage struct {
-	baseMessage
-	ClassRef  core.RecordRef
-	Name      string
-	Arguments core.Arguments
+// ObjectBodyReaction - the most common reaction.
+type ObjectBodyReaction struct {
+	Body        []byte
+	Code        core.RecordRef
+	Class       core.RecordRef
+	MachineType core.MachineType
 }
 
-// GetOperatingRole returns operating jet role for given message type.
-func (m *CallConstructorMessage) GetOperatingRole() core.JetRole {
-	return core.RoleVirtualExecutor
-}
-
-// Get reference returns referenced object.
-func (m *CallConstructorMessage) GetReference() core.RecordRef {
-	return m.ClassRef
-}
-
-// Serialize serializes message.
-func (m *CallConstructorMessage) Serialize() (io.Reader, error) {
-	return serialize(m, CallConstructorMessageType)
+// Serialize serializes reaction.
+func (r *ObjectBodyReaction) Serialize() (io.Reader, error) {
+	return serialize(r, ObjectBodyReactionType)
 }

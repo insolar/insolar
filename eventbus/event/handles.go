@@ -14,12 +14,17 @@
  *    limitations under the License.
  */
 
-/*
-Package messagerouter routes messages (contract calls & responses) and delivers'em to relevant modules.
+package event
 
-Usage:
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
+)
 
-	TODO:
-
-*/
-package messagerouter
+func logicRunnerHandle(e core.Event, c core.Components) (core.Reaction, error) {
+	lr, ok := c["core.LogicRunner"].(core.LogicRunner)
+	if !ok {
+		return nil, errors.New("could not find logic runner")
+	}
+	return lr.Execute(e)
+}

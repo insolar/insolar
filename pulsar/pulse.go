@@ -21,7 +21,7 @@ import (
 )
 
 // Create a new pulse with using of custom Entropy Generator
-func NewPulse(previousPulseNumber uint32, entropyGenerator EntropyGenerator) *core.Pulse {
+func NewPulse(previousPulseNumber core.PulseNumber, entropyGenerator EntropyGenerator) *core.Pulse {
 	previousPulseNumber++
 	return &core.Pulse{PulseNumber: core.PulseNumber(previousPulseNumber), Entropy: entropyGenerator.GenerateEntropy()}
 }

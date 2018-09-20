@@ -74,6 +74,12 @@ type ResponsePulse struct {
 	Error   string
 }
 
+// ResponseGetRandomHosts is the response containing random hosts of the DHT network
+type ResponseGetRandomHosts struct {
+	Hosts []host.Host
+	Error string
+}
+
 // ResponseRelay is data for relay request response.
 type ResponseRelay struct {
 	State relay.State

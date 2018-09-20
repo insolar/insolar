@@ -29,9 +29,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/insolar/insolar/messagerouter/message"
-	"github.com/insolar/insolar/messagerouter/response"
 	"github.com/pkg/errors"
 )
 
@@ -52,7 +52,7 @@ type RunnerOptions struct {
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	Cfg             *configuration.GoPlugin
-	MessageRouter   core.MessageRouter
+	EventBus        core.EventBus
 	ArtifactManager core.ArtifactManager
 	sock            net.Listener
 	runner          *exec.Cmd
@@ -82,63 +82,63 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
-// RouteCall routes call from a contract to a contract through message router
+// RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) error {
-	if gpr.gp.MessageRouter == nil {
-		return errors.New("message router was not set during initialization")
+	if gpr.gp.EventBus == nil {
+		return errors.New("event bus was not set during initialization")
 	}
 
-	msg := &message.CallMethodMessage{
+	e := &event.CallMethodEvent{
 		ObjectRef: req.Object,
 		Method:    req.Method,
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(msg)
+	res, err := gpr.gp.EventBus.Dispatch(e)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route message")
+		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	reply.Result = res.(*response.CommonResponse).Result
+	reply.Result = res.(*reaction.CommonReaction).Result
 
 	return nil
 }
 
 // RouteConstructorCall routes call from a contract to a constructor of another contract
 func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *rpctypes.UpRouteConstructorResp) error {
-	if gpr.gp.MessageRouter == nil {
-		return errors.New("message router was not set during initialization")
+	if gpr.gp.EventBus == nil {
+		return errors.New("event bus was not set during initialization")
 	}
 
-	msg := &message.CallConstructorMessage{
+	e := &event.CallConstructorEvent{
 		ClassRef:  req.Reference,
 		Name:      req.Constructor,
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(msg)
+	res, err := gpr.gp.EventBus.Dispatch(e)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route message")
+		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	reply.Data = res.(*response.CommonResponse).Data
+	reply.Data = res.(*reaction.CommonReaction).Data
 	return nil
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
-	msg := &message.ChildMessage{
+	e := &event.ChildEvent{
 		Into:  req.Parent,
 		Class: req.Class,
 		Body:  req.Data,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(msg)
+	res, err := gpr.gp.EventBus.Dispatch(e)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route message")
+		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	reply.Reference = core.String2Ref(string(res.(*response.CommonResponse).Data))
+	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
 
 	return nil
 }
@@ -174,18 +174,18 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
-	msg := &message.DelegateMessage{
+	e := &event.DelegateEvent{
 		Into:  req.Into,
 		Class: req.Class,
 		Body:  req.Data,
 	}
 
-	res, err := gpr.gp.MessageRouter.Route(msg)
+	res, err := gpr.gp.EventBus.Dispatch(e)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route message")
+		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	reply.Reference = core.String2Ref(string(res.(*response.CommonResponse).Data))
+	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
 
 	return nil
 }
@@ -203,10 +203,10 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGet
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.GoPlugin, mr core.MessageRouter, am core.ArtifactManager) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.GoPlugin, eb core.EventBus, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
-		MessageRouter:   mr,
+		EventBus:        eb,
 		ArtifactManager: am,
 	}
 	if gp.Cfg.MainListen == "" {

@@ -27,8 +27,11 @@ var (
 	ErrNotFound = errors.New("storage object not found")
 
 	// ErrConflictRetriesOver is returned if Update transaction fails on all retry attempts.
-	ErrConflictRetriesOver = errors.New("Transaction Conflict retries exceeded")
+	ErrConflictRetriesOver = errors.New("transaction conflict retries limit exceeded")
 
 	// ErrConflict is the alias for badger.ErrConflict.
 	ErrConflict = badger.ErrConflict
+
+	// ErrOverride is returned if SetRecord tries update existing record
+	ErrOverride = errors.New("records override is forbidden")
 )

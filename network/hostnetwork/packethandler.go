@@ -30,7 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DispatchPacketType checks message type.
+// DispatchPacketType checks event type.
 func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	switch msg.Type {
 	case packet.TypeFindHost:
@@ -61,9 +61,28 @@ func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 		return processCascadeSend(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypePulse:
 		return processPulse(hostHandler, msg, packetBuilder)
+	case packet.TypeGetRandomHosts:
+		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processGetRandomHosts(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder) (*packet.Packet, error) {
+
+	data := msg.Data.(*packet.RequestGetRandomHosts)
+	ht := hostHandler.HtFromCtx(ctx)
+	if data.HostsNumber <= 0 {
+		return packetBuilder.Response(&packet.ResponseGetRandomHosts{
+			Hosts: nil, Error: "hosts number should be more than zero"}).Build(), nil
+	}
+	hosts := ht.GetHosts(data.HostsNumber)
+	// TODO: handle scenario when we get less hosts than requested
+	return packetBuilder.Response(&packet.ResponseGetRandomHosts{Hosts: hosts, Error: ""}).Build(), nil
 }
 
 func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
@@ -177,7 +196,7 @@ func processStore(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 }
 
 func processPing(msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	log.Debugln("recv ping message from " + msg.Sender.Address.String())
+	log.Debugln("recv ping event from " + msg.Sender.Address.String())
 	return packetBuilder.Response(nil).Build(), nil
 }
 
@@ -308,7 +327,7 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	}
 	err = hostHandler.GetNetworkCommonFacade().GetCascade().SendToNextLayer(data.Data, data.RPC.Method, data.RPC.Args)
 	if err != nil {
-		log.Debug("failed to send message to next cascade layer")
+		log.Debug("failed to send event to next cascade layer")
 	}
 
 	return packetBuilder.Response(response).Build(), err

@@ -14,23 +14,12 @@
  *    limitations under the License.
  */
 
-package response
+/*
+Package eventbus routes messages (contract calls & responses) and delivers'em to relevant modules.
 
-import (
-	"io"
+Usage:
 
-	"github.com/insolar/insolar/core"
-)
+	TODO:
 
-// ObjectBodyResponse - the most common response
-type ObjectBodyResponse struct {
-	Body        []byte
-	Code        core.RecordRef
-	Class       core.RecordRef
-	MachineType core.MachineType
-}
-
-// Serialize serializes response
-func (r *ObjectBodyResponse) Serialize() (io.Reader, error) {
-	return serialize(r, ObjectBodyResponseType)
-}
+*/
+package eventbus
