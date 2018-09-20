@@ -96,7 +96,7 @@ func (r *Wallet) Allocate( amount uint, to *core.RecordRef ) ( core.RecordRef ) 
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "Allocate", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "Allocate", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -113,6 +113,24 @@ func (r *Wallet) Allocate( amount uint, to *core.RecordRef ) ( core.RecordRef ) 
     return resList[0].(core.RecordRef)
 }
 
+func (r *Wallet) AllocateNoWait( amount uint, to *core.RecordRef ) {
+    var args [2]interface{}
+	args[0] = amount
+	args[1] = to
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "Allocate", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *Wallet) Receive( amount uint, from *core.RecordRef ) (  ) {
     var args [2]interface{}
 	args[0] = amount
@@ -125,7 +143,7 @@ func (r *Wallet) Receive( amount uint, from *core.RecordRef ) (  ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "Receive", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "Receive", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -138,6 +156,24 @@ func (r *Wallet) Receive( amount uint, from *core.RecordRef ) (  ) {
     }
 
     return 
+}
+
+func (r *Wallet) ReceiveNoWait( amount uint, from *core.RecordRef ) {
+    var args [2]interface{}
+	args[0] = amount
+	args[1] = from
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "Receive", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 
 func (r *Wallet) Transfer( amount uint, to *core.RecordRef ) (  ) {
@@ -152,7 +188,7 @@ func (r *Wallet) Transfer( amount uint, to *core.RecordRef ) (  ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "Transfer", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "Transfer", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -165,6 +201,24 @@ func (r *Wallet) Transfer( amount uint, to *core.RecordRef ) (  ) {
     }
 
     return 
+}
+
+func (r *Wallet) TransferNoWait( amount uint, to *core.RecordRef ) {
+    var args [2]interface{}
+	args[0] = amount
+	args[1] = to
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "Transfer", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 
 func (r *Wallet) Accept( aRef *core.RecordRef ) (  ) {
@@ -178,7 +232,7 @@ func (r *Wallet) Accept( aRef *core.RecordRef ) (  ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "Accept", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "Accept", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -193,6 +247,23 @@ func (r *Wallet) Accept( aRef *core.RecordRef ) (  ) {
     return 
 }
 
+func (r *Wallet) AcceptNoWait( aRef *core.RecordRef ) {
+    var args [1]interface{}
+	args[0] = aRef
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "Accept", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *Wallet) GetTotalBalance(  ) ( uint ) {
     var args [0]interface{}
 
@@ -203,7 +274,7 @@ func (r *Wallet) GetTotalBalance(  ) ( uint ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "GetTotalBalance", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetTotalBalance", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -220,6 +291,22 @@ func (r *Wallet) GetTotalBalance(  ) ( uint ) {
     return resList[0].(uint)
 }
 
+func (r *Wallet) GetTotalBalanceNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetTotalBalance", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *Wallet) ReturnAndDeleteExpiriedAllowances(  ) (  ) {
     var args [0]interface{}
 
@@ -230,7 +317,7 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowances(  ) (  ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "ReturnAndDeleteExpiriedAllowances", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "ReturnAndDeleteExpiriedAllowances", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -243,5 +330,21 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowances(  ) (  ) {
     }
 
     return 
+}
+
+func (r *Wallet) ReturnAndDeleteExpiriedAllowancesNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "ReturnAndDeleteExpiriedAllowances", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 
