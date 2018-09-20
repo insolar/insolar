@@ -278,8 +278,8 @@ func (r *Two) Hello(s string) string {
 	)
 	assert.NoError(t, err)
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -400,8 +400,8 @@ func (r *Two) Hello(s string) string {
 		panic(err)
 	}
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -478,8 +478,8 @@ func (r *One) Hello() string {
 	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode([]interface{}{})
 	assert.NoError(t, err)
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
@@ -584,8 +584,8 @@ func New(n int) *Child {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"child": goChild})
 	assert.NoError(t, err)
 	err = cb.Build(map[string]string{"contract": goContract})
@@ -661,12 +661,10 @@ func TestRootDomainContract(t *testing.T) {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootDomain": string(rootDomainCode)})
 	assert.NoError(t, err)
-
-	t.Logf("XX %+v", cb)
 
 	domain := core.NewRefFromBase58("c1")
 	request := core.NewRefFromBase58("c2")
@@ -773,8 +771,8 @@ func (c *Child) GetNum() int {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"child": goChild, "parent": goParent})
 	assert.NoError(b, err)
 
