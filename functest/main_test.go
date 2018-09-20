@@ -30,8 +30,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -86,15 +88,28 @@ func buildGinsiderCLI() error {
 	return err
 }
 
-func waitForLaunch(stdout io.ReadCloser) {
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		line := scanner.Text()
-		fmt.Println(line)
-		if strings.Contains(line, "======= Host info ======") {
-			break
+func waitForLaunch(stdout io.ReadCloser) error {
+	done := make(chan bool, 1)
+	timeout := 15 * time.Second
+
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			fmt.Println(line)
+			if strings.Contains(line, "======= Host info ======") {
+				done <- true
+			}
 		}
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-time.After(timeout):
+		return errors.Errorf("could't wait for launch: timeout of %s was exceeded", timeout)
 	}
+
 }
 
 func startInsolard() error {
@@ -117,7 +132,10 @@ func startInsolard() error {
 	if err != nil {
 		return err
 	}
-	waitForLaunch(stdout)
+	err = waitForLaunch(stdout)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
