@@ -33,7 +33,7 @@ var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
 var pathWithContracts = "../../../genesis/experiment"
 
 func contractPath(name string) string {
-	return filepath.Join(pathWithContracts, name, name+".insgoc")
+	return filepath.Join(pathWithContracts, name, name+".go")
 }
 
 func MakeTestName(file string, contractType string) string {
