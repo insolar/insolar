@@ -47,7 +47,7 @@ func main() {
 		defer func() {
 			err := os.RemoveAll(tmpDir)
 			if err != nil {
-				log.Println(err)
+				log.Print(err)
 			}
 		}()
 		*path = tmpDir
