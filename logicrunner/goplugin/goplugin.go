@@ -160,7 +160,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 		if err != nil {
 			return errors.Wrap(err, "Have ref, have no object")
 		}
-		cd, err := o.ClassDescriptor()
+		cd, err := o.ClassDescriptor(nil)
 		if err != nil {
 			return errors.Wrap(err, "Have ref, have no object")
 		}
