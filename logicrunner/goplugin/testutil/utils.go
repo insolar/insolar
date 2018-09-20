@@ -514,6 +514,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 		cb.Codes[name] = code
 
+		cb.ArtifactManager.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 		_, err = cb.ArtifactManager.UpdateClass(
 			core.RecordRef{}, core.RecordRef{},
 			*cb.Classes[name],
