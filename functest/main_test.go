@@ -198,34 +198,64 @@ func TestMain(m *testing.M) {
 	os.Exit(testMainWrapper(m))
 }
 
-type respAPI struct {
-	Qid       string                 `json:"qid"`
-	Reference string                 `json:"reference"`
-	Success   bool                   `json:"success"`
-	Amount    uint                   `json:"amount"`
-	Currency  string                 `json:"currency"`
-	Err       map[string]interface{} `json:"error"`
+type errorResponse struct {
+	Code  int    `json:"code"`
+	Event string `json:"event"`
 }
 
-var resp respAPI
+type baseResponse struct {
+	Qid string         `json:"qid"`
+	Err *errorResponse `json:"error"`
+}
 
-func doPostAndUnmarshal(t *testing.T, postParams map[string]interface{}) {
+type createMemberResponse struct {
+	baseResponse
+	Reference string `json:"reference"`
+}
+
+type sendMoneyResponse struct {
+	baseResponse
+	Success bool `json:"success"`
+}
+
+type getBalanceResponse struct {
+	baseResponse
+	Amount   uint   `json:"amount"`
+	Currency string `json:"currency"`
+}
+
+type userInfo struct {
+	baseResponse
+	Member string `json:"member"`
+	Wallet uint   `json:"wallet"`
+}
+
+type dumpAllUsersResponse struct {
+	baseResponse
+	DumpInfo []userInfo `json:"dump_info"`
+}
+
+func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
-	err = json.Unmarshal([]byte(body), &resp)
-	assert.NoError(t, err)
+	return body
 }
 
 func TestInsolardResponseNotErr(t *testing.T) {
 	postParams := map[string]interface{}{
 		"query_type": "dump_all_users",
 	}
-	doPostAndUnmarshal(t, postParams)
-	assert.Equal(t, map[string]interface{}(nil), resp.Err)
+	body := getResponseBody(t, postParams)
+
+	var response dumpAllUsersResponse
+	err := json.Unmarshal(body, &response)
+	assert.NoError(t, err)
+
+	assert.Nil(t, response.Err)
 }
 
 func TestTransferMoney(t *testing.T) {
@@ -234,18 +264,30 @@ func TestTransferMoney(t *testing.T) {
 		"query_type": "create_member",
 		"name":       "First",
 	}
-	doPostAndUnmarshal(t, postParams)
-	assert.NotEqual(t, "", resp.Reference)
-	firstMemberRef := resp.Reference
+	body := getResponseBody(t, postParams)
+
+	var firstMemberResponse createMemberResponse
+	err := json.Unmarshal(body, &firstMemberResponse)
+	assert.NoError(t, err)
+	assert.Nil(t, firstMemberResponse.Err)
+
+	firstMemberRef := firstMemberResponse.Reference
+	assert.NotEqual(t, "", firstMemberRef)
 
 	// Create member which balance will decrease
 	postParams = map[string]interface{}{
 		"query_type": "create_member",
 		"name":       "Second",
 	}
-	doPostAndUnmarshal(t, postParams)
-	assert.NotEqual(t, "", resp.Reference)
-	secondMemberRef := resp.Reference
+	body = getResponseBody(t, postParams)
+
+	var secondMemberResponse createMemberResponse
+	err = json.Unmarshal(body, &secondMemberResponse)
+	assert.NoError(t, err)
+	assert.Nil(t, secondMemberResponse.Err)
+
+	secondMemberRef := secondMemberResponse.Reference
+	assert.NotEqual(t, "", secondMemberRef)
 
 	// Transfer money from one member to another
 	postParams = map[string]interface{}{
@@ -254,24 +296,42 @@ func TestTransferMoney(t *testing.T) {
 		"to":         firstMemberRef,
 		"amount":     111,
 	}
-	doPostAndUnmarshal(t, postParams)
-	assert.Equal(t, true, resp.Success)
+	body = getResponseBody(t, postParams)
+
+	var transferResponse sendMoneyResponse
+	err = json.Unmarshal(body, &transferResponse)
+	assert.NoError(t, err)
+	assert.Nil(t, transferResponse.Err)
+
+	assert.Equal(t, true, transferResponse.Success)
 
 	// Check balance of first member
 	postParams = map[string]interface{}{
 		"query_type": "get_balance",
 		"reference":  firstMemberRef,
 	}
-	doPostAndUnmarshal(t, postParams)
-	assert.Equal(t, uint(1111), resp.Amount)
-	assert.Equal(t, "RUB", resp.Currency)
+	body = getResponseBody(t, postParams)
+
+	var firstBalanceResponse getBalanceResponse
+	err = json.Unmarshal(body, &firstBalanceResponse)
+	assert.NoError(t, err)
+	assert.Nil(t, firstBalanceResponse.Err)
+
+	assert.Equal(t, uint(1111), firstBalanceResponse.Amount)
+	assert.Equal(t, "RUB", firstBalanceResponse.Currency)
 
 	// Check balance of second member
 	postParams = map[string]interface{}{
 		"query_type": "get_balance",
 		"reference":  secondMemberRef,
 	}
-	doPostAndUnmarshal(t, postParams)
-	assert.Equal(t, uint(889), resp.Amount)
-	assert.Equal(t, "RUB", resp.Currency)
+	body = getResponseBody(t, postParams)
+
+	var secondBalanceResponse getBalanceResponse
+	err = json.Unmarshal(body, &secondBalanceResponse)
+	assert.NoError(t, err)
+	assert.Nil(t, secondBalanceResponse.Err)
+
+	assert.Equal(t, uint(889), secondBalanceResponse.Amount)
+	assert.Equal(t, "RUB", secondBalanceResponse.Currency)
 }
