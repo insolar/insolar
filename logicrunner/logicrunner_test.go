@@ -435,6 +435,113 @@ func (r *Two) Hello(s string) string {
 	assert.Equal(t, "Hello you too, ins. 1288 times!", resParsed[0])
 }
 
+func TestBasicNotificationCall(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "contract-proxy/two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() {
+	holder := two.New()
+	friend := holder.AsDelegate(r.GetReference())
+	friend.HelloNoWait()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() *Two {
+	return &Two{X:322};
+}
+
+func (r *Two) Hello() string {
+	r.X *= 2
+	return fmt.Sprintf("Hello %d times!", r.X)
+}
+`
+
+	lr, err := NewLogicRunner(configuration.LogicRunner{})
+	assert.NoError(t, err)
+
+	eb := &testEventBus{LogicRunner: lr}
+	lr.EventBus = eb
+	am := testutil.NewTestArtifactManager()
+	lr.ArtifactManager = am
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	gp, err := goplugin.NewGoPlugin(
+		&configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     runnerbin,
+			RunnerCodePath: insiderStorage,
+		},
+		eb,
+		am,
+	)
+	assert.NoError(t, err)
+	defer gp.Stop()
+
+	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
+	assert.NoError(t, err)
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(
+		[]interface{}{},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
+	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
+
+	obj, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["one"],
+		*am.RootRef(),
+		data,
+	)
+	assert.NoError(t, err)
+
+	_, _, err = gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
+	assert.NoError(t, err)
+}
+
 func TestContextPassing(t *testing.T) {
 	var code = `
 package main
