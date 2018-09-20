@@ -205,13 +205,13 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 
 // Creates twenty DHTs and bootstraps each with the previous
 // at the end all should know about each other
-func TestBootstrapTwentyHosts(t *testing.T) {
+func TestBootstrapManyHosts(t *testing.T) {
 	done := make(chan bool)
 	port := 15000
 	var dhts []*DHT
-	count := 10
+	hostCount := 10
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < hostCount; i++ {
 		ids := make([]id.ID, 0)
 		id1, _ := id.NewID()
 		ids = append(ids, id1)
@@ -252,149 +252,10 @@ func TestBootstrapTwentyHosts(t *testing.T) {
 	// time.Sleep(time.Millisecond * 10000)
 
 	for _, dht := range dhts {
-		assert.Equal(t, count-1, dht.NumHosts(getDefaultCtx(dht)))
+		assert.Equal(t, hostCount-1, dht.NumHosts(getDefaultCtx(dht)))
 		dht.Disconnect()
 		<-done
 	}
-}
-
-// Creates two DHTs, bootstrap one using the other, ensure that they both know
-// about each other afterwards.
-func TestBootstrapTwoHosts(t *testing.T) {
-	done := make(chan bool)
-
-	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID()
-	ids1 = append(ids1, id1)
-	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
-	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4)
-	assert.NoError(t, err)
-
-	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
-	st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:16001")
-	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
-		BootstrapHosts: []*host.Host{
-			{
-				ID:      ids1[0],
-				Address: bootstrapAddr2,
-			},
-		},
-	},
-		relay.NewProxy(),
-		4)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 0, dht1.NumHosts(getDefaultCtx(dht1)))
-	assert.Equal(t, 0, dht2.NumHosts(getDefaultCtx(dht2)))
-
-	go func() {
-		go func() {
-			err2 := dht2.Bootstrap()
-			assert.NoError(t, err2)
-
-			time.Sleep(500 * time.Millisecond)
-
-			dht2.Disconnect()
-			dht1.Disconnect()
-			done <- true
-		}()
-		err3 := dht2.Listen()
-		assert.Equal(t, closedPacket, err3.Error())
-		done <- true
-	}()
-
-	err = dht1.Listen()
-	assert.Equal(t, closedPacket, err.Error())
-
-	assert.Equal(t, 1, dht1.NumHosts(getDefaultCtx(dht1)))
-	assert.Equal(t, 1, dht2.NumHosts(getDefaultCtx(dht2)))
-	<-done
-	<-done
-}
-
-// Creates three DHTs, bootstrap B using A, bootstrap C using B. A should know
-// about both B and C
-func TestBootstrapThreeHosts(t *testing.T) {
-	done := make(chan bool)
-
-	ids1 := make([]id.ID, 0)
-	id1, _ := id.NewID()
-	ids1 = append(ids1, id1)
-	st1, s1, tp1, r1, err := realDhtParams(ids1, "127.0.0.1:17000")
-	assert.NoError(t, err)
-	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy(), 4)
-
-	ids2 := make([]id.ID, 0)
-	id2, _ := id.NewID()
-	ids2 = append(ids2, id2)
-	st2, s2, tp2, r2, err := realDhtParams(ids2, "127.0.0.1:17001")
-	assert.NoError(t, err)
-	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
-		BootstrapHosts: []*host.Host{
-			{
-				ID:      ids1[0],
-				Address: dht1.origin.Address,
-			},
-		},
-	},
-		relay.NewProxy(), 4)
-
-	st3, s3, tp3, r3, err := realDhtParams(nil, "127.0.0.1:17002")
-	assert.NoError(t, err)
-	dht3, _ := NewDHT(st3, s3, tp3, r3, &Options{
-		BootstrapHosts: []*host.Host{
-			{
-				ID:      ids2[0],
-				Address: dht2.origin.Address,
-			},
-		},
-	},
-		relay.NewProxy(), 4)
-
-	assert.Equal(t, 0, dht1.NumHosts(getDefaultCtx(dht1)))
-	assert.Equal(t, 0, dht2.NumHosts(getDefaultCtx(dht2)))
-	assert.Equal(t, 0, dht3.NumHosts(getDefaultCtx(dht3)))
-
-	go func(dht1 *DHT, dht2 *DHT, dht3 *DHT) {
-		go func(dht1 *DHT, dht2 *DHT, dht3 *DHT) {
-			err2 := dht2.Bootstrap()
-			assert.NoError(t, err2)
-
-			go func(dht1 *DHT, dht2 *DHT, dht3 *DHT) {
-				err3 := dht3.Bootstrap()
-				assert.NoError(t, err3)
-
-				time.Sleep(500 * time.Millisecond)
-
-				dht1.Disconnect()
-
-				time.Sleep(100 * time.Millisecond)
-
-				dht2.Disconnect()
-
-				dht3.Disconnect()
-				done <- true
-			}(dht1, dht2, dht3)
-
-			err4 := dht3.Listen()
-			assert.Equal(t, closedPacket, err4.Error())
-			done <- true
-		}(dht1, dht2, dht3)
-		err5 := dht2.Listen()
-		assert.Equal(t, closedPacket, err5.Error())
-		done <- true
-	}(dht1, dht2, dht3)
-
-	err = dht1.Listen()
-	assert.Equal(t, closedPacket, err.Error())
-
-	assert.Equal(t, 2, dht1.NumHosts(getDefaultCtx(dht1)))
-	assert.Equal(t, 2, dht2.NumHosts(getDefaultCtx(dht2)))
-	assert.Equal(t, 2, dht3.NumHosts(getDefaultCtx(dht3)))
-
-	<-done
-	<-done
-	<-done
 }
 
 // Creates two DHTs and bootstraps using only IP:Port. Connecting host should
