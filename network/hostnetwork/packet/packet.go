@@ -201,6 +201,7 @@ func init() {
 	gob.Register(&RequestCheckNodePriv{})
 	gob.Register(&RequestCascadeSend{})
 	gob.Register(&RequestPulse{})
+	gob.Register(&RequestGetRandomHosts{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -215,6 +216,7 @@ func init() {
 	gob.Register(&ResponseCheckNodePriv{})
 	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
+	gob.Register(&ResponseGetRandomHosts{})
 
 	gob.Register(&id.ID{})
 }
