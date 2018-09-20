@@ -203,9 +203,17 @@ type errorResponse struct {
 	Event string `json:"event"`
 }
 
+type responseInterface interface {
+	getError() *errorResponse
+}
+
 type baseResponse struct {
 	Qid string         `json:"qid"`
 	Err *errorResponse `json:"error"`
+}
+
+func (r *baseResponse) getError() *errorResponse {
+	return r.Err
 }
 
 type createMemberResponse struct {
@@ -245,15 +253,20 @@ func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	return body
 }
 
+func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
+	err := json.Unmarshal(body, &response)
+	assert.NoError(t, err)
+	assert.Nil(t, response.getError())
+}
+
 func TestInsolardResponseNotErr(t *testing.T) {
 	postParams := map[string]interface{}{
 		"query_type": "dump_all_users",
 	}
 	body := getResponseBody(t, postParams)
 
-	var response dumpAllUsersResponse
-	err := json.Unmarshal(body, &response)
-	assert.NoError(t, err)
+	response := &dumpAllUsersResponse{}
+	unmarshalResponse(t, body, response)
 
 	assert.Nil(t, response.Err)
 }
@@ -266,10 +279,8 @@ func TestTransferMoney(t *testing.T) {
 	}
 	body := getResponseBody(t, postParams)
 
-	var firstMemberResponse createMemberResponse
-	err := json.Unmarshal(body, &firstMemberResponse)
-	assert.NoError(t, err)
-	assert.Nil(t, firstMemberResponse.Err)
+	firstMemberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, firstMemberResponse)
 
 	firstMemberRef := firstMemberResponse.Reference
 	assert.NotEqual(t, "", firstMemberRef)
@@ -281,10 +292,8 @@ func TestTransferMoney(t *testing.T) {
 	}
 	body = getResponseBody(t, postParams)
 
-	var secondMemberResponse createMemberResponse
-	err = json.Unmarshal(body, &secondMemberResponse)
-	assert.NoError(t, err)
-	assert.Nil(t, secondMemberResponse.Err)
+	secondMemberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, secondMemberResponse)
 
 	secondMemberRef := secondMemberResponse.Reference
 	assert.NotEqual(t, "", secondMemberRef)
@@ -298,10 +307,8 @@ func TestTransferMoney(t *testing.T) {
 	}
 	body = getResponseBody(t, postParams)
 
-	var transferResponse sendMoneyResponse
-	err = json.Unmarshal(body, &transferResponse)
-	assert.NoError(t, err)
-	assert.Nil(t, transferResponse.Err)
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, body, transferResponse)
 
 	assert.Equal(t, true, transferResponse.Success)
 
@@ -312,10 +319,8 @@ func TestTransferMoney(t *testing.T) {
 	}
 	body = getResponseBody(t, postParams)
 
-	var firstBalanceResponse getBalanceResponse
-	err = json.Unmarshal(body, &firstBalanceResponse)
-	assert.NoError(t, err)
-	assert.Nil(t, firstBalanceResponse.Err)
+	firstBalanceResponse := &getBalanceResponse{}
+	unmarshalResponse(t, body, firstBalanceResponse)
 
 	assert.Equal(t, uint(1111), firstBalanceResponse.Amount)
 	assert.Equal(t, "RUB", firstBalanceResponse.Currency)
@@ -327,10 +332,8 @@ func TestTransferMoney(t *testing.T) {
 	}
 	body = getResponseBody(t, postParams)
 
-	var secondBalanceResponse getBalanceResponse
-	err = json.Unmarshal(body, &secondBalanceResponse)
-	assert.NoError(t, err)
-	assert.Nil(t, secondBalanceResponse.Err)
+	secondBalanceResponse := &getBalanceResponse{}
+	unmarshalResponse(t, body, secondBalanceResponse)
 
 	assert.Equal(t, uint(889), secondBalanceResponse.Amount)
 	assert.Equal(t, "RUB", secondBalanceResponse.Currency)
