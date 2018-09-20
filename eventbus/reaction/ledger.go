@@ -7,8 +7,8 @@ import (
 )
 
 type Code struct {
-	code        []byte
-	machineType core.MachineType
+	code        []byte           // nolint
+	machineType core.MachineType // nolint
 }
 
 func (e *Code) Serialize() (io.Reader, error) {

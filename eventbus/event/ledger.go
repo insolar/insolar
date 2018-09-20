@@ -24,8 +24,8 @@ import (
 )
 
 type GetCode struct {
-	code        core.RecordRef
-	machinePref []core.MachineType
+	code        core.RecordRef     // nolint
+	machinePref []core.MachineType // nolint
 }
 
 func (e *GetCode) Serialize() (io.Reader, error) {
