@@ -73,7 +73,14 @@ Installation
 ------------
 
     go get github.com/insolar/insolar
-    
+
+
+Generate default configuration file
+------------
+
+    go run cmd/insolar/* -output=-
+
+
 Docker container
 ------------
 
