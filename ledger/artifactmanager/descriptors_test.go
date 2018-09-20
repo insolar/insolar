@@ -59,8 +59,9 @@ func TestCodeDescriptor_MachineType(t *testing.T) {
 	defer cleaner()
 
 	desc := CodeDescriptor{
-		manager: td.manager,
-		ref:     td.ref,
+		db:          td.manager.db,
+		machinePref: td.manager.archPref,
+		ref:         td.ref,
 	}
 
 	mt, err := desc.MachineType()
@@ -73,8 +74,9 @@ func TestCodeDescriptor_Code(t *testing.T) {
 	defer cleaner()
 
 	desc := CodeDescriptor{
-		manager: td.manager,
-		ref:     td.ref,
+		db:          td.manager.db,
+		machinePref: td.manager.archPref,
+		ref:         td.ref,
 	}
 
 	code, err := desc.Code()
@@ -105,58 +107,6 @@ func prepareClassDescriptorTestData(t *testing.T) (preparedClassDescriptorTestDa
 		classRec: &rec,
 		classRef: ref,
 	}, cleaner
-}
-
-func TestClassDescriptor_GetMigrations(t *testing.T) {
-	td, cleaner := prepareClassDescriptorTestData(t)
-	defer cleaner()
-
-	codeRef1, _ := td.db.SetRecord(&record.CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			core.MachineType(1): {1},
-		},
-	})
-	codeRef2, _ := td.db.SetRecord(&record.CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			core.MachineType(1): {2},
-		},
-	})
-	codeRef3, _ := td.db.SetRecord(&record.CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			core.MachineType(1): {3},
-		},
-	})
-	codeRef4, _ := td.db.SetRecord(&record.CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			core.MachineType(1): {4},
-		},
-	})
-
-	amendRec3 := record.ClassAmendRecord{Migrations: []record.Reference{*codeRef4}}
-	amendRef1, _ := td.db.SetRecord(&record.ClassAmendRecord{
-		Migrations: []record.Reference{*codeRef1},
-	})
-	amendRef2, _ := td.db.SetRecord(&record.ClassAmendRecord{
-		Migrations: []record.Reference{*codeRef2, *codeRef3},
-	})
-	amendRef3, _ := td.db.SetRecord(&amendRec3)
-	idx := index.ClassLifeline{
-		LatestStateRef: *amendRef2,
-		AmendRefs:      []record.Reference{*amendRef1, *amendRef2, *amendRef3},
-	}
-	td.db.SetClassIndex(td.classRef, &idx)
-
-	desc := ClassDescriptor{
-		manager:       td.manager,
-		stateRef:      amendRef1,
-		headRecord:    td.classRec,
-		stateRecord:   &amendRec3,
-		lifelineIndex: &idx,
-	}
-
-	migrations, err := desc.GetMigrations()
-	assert.NoError(t, err)
-	assert.Equal(t, [][]byte{{2}, {3}, {4}}, migrations)
 }
 
 type preparedObjectDescriptorTestData struct {
@@ -196,22 +146,20 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 	}
 	td.db.SetObjectIndex(td.objRef, &idx)
 
-	desc := ObjectDescriptor{
-		manager:       td.manager,
-		headRecord:    td.objRec,
-		stateRecord:   nil,
-		lifelineIndex: &idx,
-	}
+	desc, err := NewObjectDescriptor(td.db, *td.objRef, nil)
+	assert.NoError(t, err)
 	mem, err := desc.Memory()
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{2}, mem)
+
+	desc, err = NewObjectDescriptor(td.db, *td.objRef, td.objRef)
+	assert.NoError(t, err)
+	mem, err = desc.Memory()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1}, mem)
 
-	desc = ObjectDescriptor{
-		manager:       td.manager,
-		headRecord:    td.objRec,
-		stateRecord:   &amendRec,
-		lifelineIndex: &idx,
-	}
+	desc, err = NewObjectDescriptor(td.db, *td.objRef, amendRef)
+	assert.NoError(t, err)
 	mem, err = desc.Memory()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{2}, mem)

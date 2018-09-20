@@ -49,7 +49,7 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 
 	return preparedAMTestData{
 		db:         db,
-		manager:    &LedgerArtifactManager{db: db},
+		manager:    &LedgerArtifactManager{db: db, archPref: []core.MachineType{core.MachineTypeBuiltin}},
 		domainRef:  genRandomRef(),
 		requestRef: genRandomRef(),
 	}, cleaner
@@ -254,6 +254,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 				},
 			},
 		},
+		TargetedCode: map[core.MachineType][]byte{core.MachineTypeBuiltin: {}},
 	})
 	migrationRef, _ := td.db.SetRecord(&record.CodeRecord{
 		StorageRecord: record.StorageRecord{
@@ -263,6 +264,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 				},
 			},
 		},
+		TargetedCode: map[core.MachineType][]byte{core.MachineTypeBuiltin: {}},
 	})
 	migrationRefs := []record.Reference{*migrationRef}
 	migrationCoreRefs := []core.RecordRef{*migrationRef.CoreRef()}
@@ -580,21 +582,6 @@ func TestLedgerArtifactManager_UpdateObj_CreatesCorrectRecord(t *testing.T) {
 	})
 }
 
-func TestLedgerArtifactManager_GetCode(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-
-	codeRef := genRandomRef()
-
-	desc, err := td.manager.GetCode(*codeRef.CoreRef())
-	assert.NoError(t, err)
-	assert.Equal(t, CodeDescriptor{
-		manager: td.manager.(*LedgerArtifactManager),
-		ref:     codeRef,
-	}, *desc.(*CodeDescriptor))
-}
-
 func TestLedgerArtifactManager_GetLatestObj_VerifiesRecords(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
@@ -618,159 +605,7 @@ func TestLedgerArtifactManager_GetLatestObj_VerifiesClassIsActive(t *testing.T) 
 		ClassRef:       *classRef,
 	})
 	_, err := td.manager.GetLatestObj(*objectRef.CoreRef())
-	assert.NotNil(t, err)
-}
-
-func TestLedgerArtifactManager_GetLatestClass_ReturnsCorrectDescriptors(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-
-	ledgerManager, _ := td.manager.(*LedgerArtifactManager)
-
-	classRef, _ := td.db.SetRecord(&record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *td.domainRef,
-				},
-			},
-		},
-	})
-	classRec, _ := td.db.GetRecord(classRef)
-	classRecCasted, _ := classRec.(*record.ClassActivateRecord)
-	classAmendRef, _ := td.db.SetRecord(&record.ClassAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  *td.domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
-		},
-	})
-	classAmendRec, _ := td.db.GetRecord(classAmendRef)
-	classAmendRecCasted, _ := classAmendRec.(*record.ClassAmendRecord)
-	classIndex := index.ClassLifeline{
-		LatestStateRef: *classAmendRef,
-	}
-	td.db.SetClassIndex(classRef, &classIndex)
-
-	classDesc, err := td.manager.GetLatestClass(*classRef.CoreRef())
-	assert.NoError(t, err)
-	expectedClassDesc := &ClassDescriptor{
-		manager: ledgerManager,
-
-		headRef: classRef,
-		stateRef: &record.Reference{
-			Domain: classRef.Domain,
-			Record: classAmendRef.Record,
-		},
-
-		headRecord:    classRecCasted,
-		stateRecord:   classAmendRecCasted,
-		lifelineIndex: &classIndex,
-	}
-
-	assert.Equal(t, *expectedClassDesc, *classDesc.(*ClassDescriptor))
-}
-
-func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-
-	ledgerManager, _ := td.manager.(*LedgerArtifactManager)
-
-	classRef, _ := td.db.SetRecord(&record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *td.domainRef,
-				},
-			},
-		},
-	})
-	classRec, _ := td.db.GetRecord(classRef)
-	classRecCasted, _ := classRec.(*record.ClassActivateRecord)
-	classAmendRef, _ := td.db.SetRecord(&record.ClassAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  *td.domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
-		},
-	})
-	classAmendRec, _ := td.db.GetRecord(classAmendRef)
-	classAmendRecCasted, _ := classAmendRec.(*record.ClassAmendRecord)
-	classIndex := index.ClassLifeline{
-		LatestStateRef: *classAmendRef,
-	}
-	td.db.SetClassIndex(classRef, &classIndex)
-
-	objectRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *td.domainRef,
-				},
-			},
-		},
-		Memory: []byte{3},
-	})
-	objectRec, _ := td.db.GetRecord(objectRef)
-	objectRecCasted, _ := objectRec.(*record.ObjectActivateRecord)
-	objectAmendRef, _ := td.db.SetRecord(&record.ObjectAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *td.domainRef,
-				},
-			},
-		},
-		NewMemory: []byte{4},
-	})
-	objectAmendRec, _ := td.db.GetRecord(objectAmendRef)
-	objectAmendRecCasted, _ := objectAmendRec.(*record.ObjectAmendRecord)
-	objectIndex := index.ObjectLifeline{
-		LatestStateRef: *objectAmendRef,
-		ClassRef:       *classRef,
-	}
-	td.db.SetObjectIndex(objectRef, &objectIndex)
-
-	objDesc, err := td.manager.GetLatestObj(*objectRef.CoreRef())
-	assert.NoError(t, err)
-	expectedObjDesc := &ObjectDescriptor{
-		manager: ledgerManager,
-
-		headRef: objectRef,
-		stateRef: &record.Reference{
-			Domain: objectRef.Domain,
-			Record: objectAmendRef.Record,
-		},
-
-		headRecord:    objectRecCasted,
-		stateRecord:   objectAmendRecCasted,
-		lifelineIndex: &objectIndex,
-
-		classDescriptor: &ClassDescriptor{
-			manager: ledgerManager,
-
-			headRef: classRef,
-			stateRef: &record.Reference{
-				Domain: classRef.Domain,
-				Record: classAmendRef.Record,
-			},
-
-			headRecord:    classRecCasted,
-			stateRecord:   classAmendRecCasted,
-			lifelineIndex: &classIndex,
-		},
-	}
-
-	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
+	assert.Error(t, err)
 }
 
 func TestLedgerArtifactManager_GetObjChildren_VerifiesRecords(t *testing.T) {
