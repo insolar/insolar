@@ -223,49 +223,6 @@ func (d *ClassDescriptor) stateLocal() (record.ClassState, error) {
 	return d.cache.stateRecord, nil
 }
 
-// GetMigrations fetches all migrations from provided to artifact manager state to the last state known to storage. VM
-// is responsible for applying these migrations and updating objects.
-// TODO: not used for now
-// func (d *ClassDescriptor) GetMigrations() ([][]byte, error) {
-// 	var amends []*record.ClassAmendRecord
-// 	// Search for provided state in class amends from the end of the list.
-// 	// Record keys are hashes and are not incremental, so we can't say if provided state should be before or after.
-// 	for i := len(d.lifelineIndex.AmendRefs) - 1; i >= 0; i-- {
-// 		amendRef := d.lifelineIndex.AmendRefs[i]
-// 		if d.stateRef.IsEqual(amendRef) {
-// 			break // Provided state is found. It means we now have all the amends we need.
-// 		}
-// 		rec, err := d.manager.db.GetRecord(&amendRef)
-// 		if err != nil {
-// 			return nil, errors.Wrap(err, "inconsistent class index")
-// 		}
-// 		amendRec, ok := rec.(*record.ClassAmendRecord)
-// 		if !ok {
-// 			return nil, errors.Wrap(ErrInvalidRef, "inconsistent class index")
-// 		}
-// 		amends = append(amends, amendRec)
-// 	}
-// 	// Reverse found amends again (we appended them from the end) so they'll have the original order.
-// 	sortedAmends := make([]*record.ClassAmendRecord, len(amends))
-// 	for i, amend := range amends {
-// 		sortedAmends[len(amends)-i-1] = amend
-// 	}
-//
-// 	// Flatten the migrations list from amends.
-// 	var migrations [][]byte
-// 	for _, amendRec := range sortedAmends {
-// 		for _, codeRef := range amendRec.Migrations {
-// 			code, _, err := d.manager.getCodeRecordCode(d.manager.db, codeRef)
-// 			if err != nil {
-// 				return nil, errors.Wrap(err, "invalid migration reference in amend record")
-// 			}
-// 			migrations = append(migrations, code)
-// 		}
-// 	}
-//
-// 	return migrations, nil
-// }
-
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor struct {
 	cache struct {
