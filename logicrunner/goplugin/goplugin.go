@@ -106,6 +106,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 
 // RouteConstructorCall routes call from a contract to a constructor of another contract
 func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *rpctypes.UpRouteConstructorResp) error {
+	log.Printf("RCC: %+v", req)
 	if gpr.gp.EventBus == nil {
 		return errors.New("event bus was not set during initialization")
 	}

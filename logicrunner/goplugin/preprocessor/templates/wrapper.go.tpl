@@ -57,8 +57,7 @@ func INSCONSTRUCTOR_{{ $f.Name }}(ph proxyctx.ProxyHelper, data []byte) ([]byte,
     {{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
 
     ret := []byte{}
-    err = ph.Serialize([]interface{} { {{ $f.Results }} }, ret[0])
-
+    err = ph.Serialize({{ $f.Results }}, &ret)
     return ret, err
 }
 {{ end }}

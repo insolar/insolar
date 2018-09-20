@@ -442,10 +442,10 @@ type ContractsBuilder struct {
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder, func()) {
+func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
-		return nil, nil
+		return nil
 	}
 
 	cb := &ContractsBuilder{
@@ -454,9 +454,10 @@ func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder,
 		Codes:           make(map[string]*core.RecordRef),
 		ArtifactManager: am,
 		IccPath:         icc}
-	return cb, func() {
-		os.RemoveAll(cb.root) // nolint: errcheck
-	}
+	return cb
+}
+func (cb *ContractsBuilder) Clean() {
+	os.RemoveAll(cb.root) // nolint: errcheck
 }
 
 // Build ...

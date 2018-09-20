@@ -103,7 +103,7 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 	if err != nil {
 		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
-
+	log.Debugf("C4: %+v", resValues)
 	reply.Ret = resValues
 
 	return nil

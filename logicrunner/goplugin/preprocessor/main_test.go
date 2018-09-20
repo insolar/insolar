@@ -448,7 +448,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/pointerPath"`)
-	assert.NotContains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+	//assert.NotContains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
@@ -458,7 +458,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/pointerPath"`)
-	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+	//assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
 func TestAliasImportsFromContract(t *testing.T) {
@@ -499,7 +499,7 @@ func ( A ) Get(i someAlias.SomeType){
 	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
-	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+	// assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
 func TestImportsFromContractUseInsideFunc(t *testing.T) {
@@ -541,7 +541,7 @@ func ( A ) Get() {
 	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
-	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+	// assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
 func TestImportsFromContractUseForReturnValue(t *testing.T) {
@@ -583,7 +583,7 @@ func ( A ) Get() path.SomeValue {
 	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
-	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+	// assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
 func TestNotMatchFileNameForProxy(t *testing.T) {
