@@ -144,6 +144,8 @@ func (t *baseTransport) handlePacket(msg *packet.Packet) {
 }
 
 func (t *baseTransport) processResponse(msg *packet.Packet) {
+	log.Debugf("Process response %s with RequestID = %s", msg.RemoteAddress, msg.RequestID)
+
 	future := t.getFuture(msg)
 	if future != nil && !shouldProcessPacket(future, msg) {
 		future.SetResult(msg)
@@ -153,6 +155,7 @@ func (t *baseTransport) processResponse(msg *packet.Packet) {
 
 func (t *baseTransport) processRequest(msg *packet.Packet) {
 	if msg.IsValid() {
+		log.Debugf("Process request %s with RequestID = %s", msg.RemoteAddress, msg.RequestID)
 		t.received <- msg
 	}
 }
