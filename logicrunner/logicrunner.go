@@ -38,6 +38,7 @@ type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	EventBus        core.EventBus
+	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
 	cb              CaseBind
 	sock            net.Listener
@@ -69,6 +70,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
 			return err
 		}
+		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeBuiltin)
 	}
 
 	if lr.Cfg.GoPlugin != nil {
@@ -79,6 +81,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 		if err := lr.RegisterExecutor(core.MachineTypeGoPlugin, gp); err != nil {
 			return err
 		}
+		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeGoPlugin)
 	}
 
 	return nil
@@ -130,18 +133,13 @@ func (lr *LogicRunner) Execute(e core.LogicRunnerEvent) (core.Reaction, error) {
 		Pulse:  lr.cb.P,
 	}
 
-	machinePref := []core.MachineType{
-		core.MachineTypeBuiltin,
-		core.MachineTypeGoPlugin,
-	}
-
 	switch m := e.(type) {
 	case *event.CallMethod:
 		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
 			Type: CaseRecordTypeMethodCall,
 			Resp: e,
 		})
-		re, err := lr.executeMethodCall(ctx, m, machinePref) // TODO: move machinepref inside lr
+		re, err := lr.executeMethodCall(ctx, m) // TODO: move machinepref inside lr
 		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
 			Type: CaseRecordTypeMethodCallResult,
 			Resp: re,
@@ -153,7 +151,7 @@ func (lr *LogicRunner) Execute(e core.LogicRunnerEvent) (core.Reaction, error) {
 			Type: CaseRecordTypeConstructorCall,
 			Resp: e,
 		})
-		re, err := lr.executeConstructorCall(ctx, m, machinePref)
+		re, err := lr.executeConstructorCall(ctx, m)
 		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
 			Type: CaseRecordTypeConstructorCallResult,
 			Resp: re,
