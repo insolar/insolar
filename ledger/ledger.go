@@ -28,10 +28,10 @@ import (
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	db          *storage.DB
-	am          *artifactmanager.LedgerArtifactManager
-	pm          *pulsemanager.PulseManager
-	coordinator *jetcoordinator.JetCoordinator
+	db *storage.DB
+	am *artifactmanager.LedgerArtifactManager
+	pm *pulsemanager.PulseManager
+	jc *jetcoordinator.JetCoordinator
 }
 
 func (l *Ledger) GetPulseManager() core.PulseManager {
@@ -39,7 +39,7 @@ func (l *Ledger) GetPulseManager() core.PulseManager {
 }
 
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
-	return l.coordinator
+	return l.jc
 }
 
 // GetArtifactManager returns artifact manager to work with.
@@ -63,11 +63,11 @@ func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
 	}
-	coordinator, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
+	jc, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}
-	pm, err := pulsemanager.NewPulseManager(db, coordinator)
+	pm, err := pulsemanager.NewPulseManager(db, jc)
 	if err != nil {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
@@ -78,10 +78,10 @@ func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error)
 	}
 
 	return &Ledger{
-		db:          db,
-		am:          am,
-		pm:          pm,
-		coordinator: coordinator,
+		db: db,
+		am: am,
+		pm: pm,
+		jc: jc,
 	}, nil
 }
 
