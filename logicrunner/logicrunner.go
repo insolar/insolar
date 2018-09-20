@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -118,41 +119,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 
 	switch m := e.(type) {
 	case *event.CallMethodEvent:
-		resp, err := lr.EventBus.Dispatch(&event.GetObjectEvent{
-			Object: m.ObjectRef,
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object")
-		}
-		info := resp.(*reaction.ObjectBodyReaction)
-
-		ctx.Callee = &m.ObjectRef
-		ctx.Class = &info.Class
-
-		executor, err := lr.GetExecutor(info.MachineType)
-		if err != nil {
-			return nil, errors.Wrap(err, "no executer registered")
-		}
-
-		newData, result, err := executor.CallMethod(
-			&ctx, info.Code, info.Body, m.Method, m.Arguments,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "executer error")
-		}
-
-		_, err = lr.EventBus.Dispatch(
-			&event.UpdateObjectEvent{
-				Object: m.ObjectRef,
-				Body:   newData,
-			},
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
-		}
-
-		return &reaction.CommonReaction{Data: newData, Result: result}, nil
-
+		return lr.executeMethodCall(ctx, m)
 	case *event.CallConstructorEvent:
 		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
 		if err != nil {
@@ -244,5 +211,59 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 
 	default:
 		panic("Unknown e type")
+	}
+}
+
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethodEvent) (core.Reaction, error) {
+	resp, err := lr.EventBus.Dispatch(&event.GetObjectEvent{
+		Object: e.ObjectRef,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object")
+	}
+	info := resp.(*reaction.ObjectBodyReaction)
+
+	ctx.Callee = &e.ObjectRef
+	ctx.Class = &info.Class
+
+	executor, err := lr.GetExecutor(info.MachineType)
+	if err != nil {
+		return nil, errors.Wrap(err, "no executer registered")
+	}
+
+	executer := func() (*reaction.CommonReaction, error) {
+		newData, result, err := executor.CallMethod(
+			&ctx, info.Code, info.Body, e.Method, e.Arguments,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "executer error")
+		}
+
+		_, err = lr.EventBus.Dispatch(
+			&event.UpdateObjectEvent{
+				Object: e.ObjectRef,
+				Body:   newData,
+			},
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't update object")
+		}
+
+		return &reaction.CommonReaction{Data: newData, Result: result}, nil
+	}
+
+	switch e.ReturnMode {
+	case event.ReturnResult:
+		return executer()
+	case event.ReturnNoWait:
+		go func() {
+			_, err := executer()
+			if err != nil {
+				log.Error(err)
+			}
+		}()
+		return &reaction.CommonReaction{}, nil
+	default:
+		return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 	}
 }
