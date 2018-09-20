@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/rpc"
 	"os"
+	"path/filepath"
 	"plugin"
 	"reflect"
 
@@ -211,7 +212,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
 func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
-	path := gi.dir + "/" + ref.String()
+	path := filepath.Join(gi.dir, ref.String())
 	_, err := os.Stat(path)
 
 	if err == nil {
