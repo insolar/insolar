@@ -54,7 +54,7 @@ func getContractPath(name string) (string, error) {
 	}
 	rootDir := filepath.Dir(filepath.Dir(currentFile))
 	contractDir := filepath.Join(rootDir, pathToContracts)
-	contractFile := name + ".insgoc"
+	contractFile := name + ".go"
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
