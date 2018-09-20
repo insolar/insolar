@@ -15,6 +15,7 @@ type RecordId string
 
 const (
 	LastPulseRecordId RecordId = "lastPulse"
+	PulseRecordId     RecordId = "pulse"
 )
 
 // NewDB returns pulsar.storage.db with BadgerDB instance initialized by opts.
@@ -38,6 +39,22 @@ func NewStorageBadger(conf configuration.Pulsar, opts *badger.Options) (*BadgerS
 	db := &BadgerStorageImpl{
 		db: bdb,
 	}
+
+	// Because first 2 bites of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
+	// for calculation pulse numbers we use the formula - unix.Now() - firstPulseDate + 65536
+	genesisPulse := core.Pulse{PulseNumber: core.FirstPulseDate - core.FirstPulseDate + 65536}
+	predefinedEntropy := []byte{138, 67, 169, 65, 13, 4, 211, 121, 35, 73, 128, 81, 138, 164, 87, 139,
+		150, 104, 24, 255, 159, 10, 172, 233, 183, 61, 183, 192, 169, 103, 187, 209,
+		181, 235, 43, 188, 164, 151, 138, 213, 231, 222, 27, 244, 42, 194, 55, 133,
+		30, 202, 50, 246, 119, 180, 59, 143, 130, 248, 87, 28, 155, 33, 157, 30}
+	copy(genesisPulse.Entropy[:], predefinedEntropy[:core.EntropySize])
+
+	err = db.SavePulse(&genesisPulse)
+	err = db.SetLastPulse(&genesisPulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "problems with init database")
+	}
+
 	return db, nil
 }
 
@@ -80,7 +97,25 @@ func (storage *BadgerStorageImpl) GetLastPulse() (*core.Pulse, error) {
 	return &pulseNumber, err
 }
 
-func (storage *BadgerStorageImpl) UpdatePulse(pulse *core.Pulse) error {
+func (storage *BadgerStorageImpl) SavePulse(pulse *core.Pulse) error {
+	var buffer bytes.Buffer
+	enc := gob.NewEncoder(&buffer)
+	err := enc.Encode(pulse)
+	if err != nil {
+		return err
+	}
+	pulseNumber := pulse.PulseNumber.Bytes()
+	key := []byte(PulseRecordId)
+	for _, pulseItem := range pulseNumber {
+		key = append(key, pulseItem)
+	}
+	return storage.db.Update(func(txn *badger.Txn) error {
+		err := txn.Set(key, buffer.Bytes())
+		return err
+	})
+}
+
+func (storage *BadgerStorageImpl) SetLastPulse(pulse *core.Pulse) error {
 	var buffer bytes.Buffer
 	enc := gob.NewEncoder(&buffer)
 	err := enc.Encode(pulse)

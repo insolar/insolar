@@ -53,6 +53,8 @@ type Pulse struct {
 	Signs       map[string][]byte
 }
 
+const FirstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
+
 type PulseManager interface {
 	// Current returns current pulse structure.
 	Current() (*Pulse, error)
