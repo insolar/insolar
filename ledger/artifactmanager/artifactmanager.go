@@ -29,6 +29,7 @@ import (
 type LedgerArtifactManager struct {
 	db       *storage.DB
 	archPref []core.MachineType
+	eventBus core.EventBus
 }
 
 func (m *LedgerArtifactManager) validateCodeRecord(ref core.RecordRef) error {
@@ -144,6 +145,12 @@ func (m *LedgerArtifactManager) getActiveObject(s storage.Store, objRef record.R
 	}
 
 	return activateRec, amendRecord, objIndex, nil
+}
+
+// HandleEvent performs event processing.
+func (m *LedgerArtifactManager) HandleEvent(event core.Event) (core.Reaction, error) {
+	// TODO: type switch and matching method calling
+	panic("implement me")
 }
 
 // RootRef returns the root record reference.
@@ -633,67 +640,67 @@ func (m *LedgerArtifactManager) UpdateObj(
 //
 // This method is used by validator to fetch the exact state of the object that was used by the executor.
 // TODO: not used for now
-func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
-	classState, objectState core.RecordRef,
-) ([]byte, []byte, error) {
-	classRef := record.Core2Reference(classState)
-	objRef := record.Core2Reference(objectState)
-
-	// Fetching class data
-	classRec, err := m.db.GetRecord(&classRef)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to retrieve class record")
-	}
-
-	var codeRef record.Reference
-	var classHeadRef record.Reference
-	switch rec := classRec.(type) {
-	case *record.ClassActivateRecord:
-		codeRef = rec.CodeRecord
-		classHeadRef = classRef
-	case *record.ClassAmendRecord:
-		codeRef = rec.NewCode
-		classHeadRef = rec.HeadRecord
-	default:
-		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
-	}
-
-	code, _, err := m.getCodeRecordCode(m.db, codeRef)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Fetching object data
-	objectRec, err := m.db.GetRecord(&objRef)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to retrieve object record")
-	}
-
-	var memory []byte
-	var objectHeadRef record.Reference
-	switch rec := objectRec.(type) {
-	case *record.ObjectActivateRecord:
-		memory = rec.Memory
-		objectHeadRef = objRef
-	case *record.ObjectAmendRecord:
-		memory = rec.NewMemory
-		objectHeadRef = rec.HeadRecord
-	default:
-		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve object record")
-	}
-
-	objectIndex, err := m.db.GetObjectIndex(&objectHeadRef)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "inconsistent object index")
-	}
-
-	// Checking if the object belongs to the class
-	if objectIndex.ClassRef.IsNotEqual(classHeadRef) {
-		return nil, nil, ErrWrongObject
-	}
-
-	return code, memory, nil
-}
+// func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
+// 	classState, objectState core.RecordRef,
+// ) ([]byte, []byte, error) {
+// 	classRef := record.Core2Reference(classState)
+// 	objRef := record.Core2Reference(objectState)
+//
+// 	// Fetching class data
+// 	classRec, err := m.db.GetRecord(&classRef)
+// 	if err != nil {
+// 		return nil, nil, errors.Wrap(err, "failed to retrieve class record")
+// 	}
+//
+// 	var codeRef record.Reference
+// 	var classHeadRef record.Reference
+// 	switch rec := classRec.(type) {
+// 	case *record.ClassActivateRecord:
+// 		codeRef = rec.CodeRecord
+// 		classHeadRef = classRef
+// 	case *record.ClassAmendRecord:
+// 		codeRef = rec.NewCode
+// 		classHeadRef = rec.HeadRecord
+// 	default:
+// 		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve class record")
+// 	}
+//
+// 	code, _, err := m.getCodeRecordCode(m.db, codeRef)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+//
+// 	// Fetching object data
+// 	objectRec, err := m.db.GetRecord(&objRef)
+// 	if err != nil {
+// 		return nil, nil, errors.Wrap(err, "failed to retrieve object record")
+// 	}
+//
+// 	var memory []byte
+// 	var objectHeadRef record.Reference
+// 	switch rec := objectRec.(type) {
+// 	case *record.ObjectActivateRecord:
+// 		memory = rec.Memory
+// 		objectHeadRef = objRef
+// 	case *record.ObjectAmendRecord:
+// 		memory = rec.NewMemory
+// 		objectHeadRef = rec.HeadRecord
+// 	default:
+// 		return nil, nil, errors.Wrap(ErrInvalidRef, "failed to retrieve object record")
+// 	}
+//
+// 	objectIndex, err := m.db.GetObjectIndex(&objectHeadRef)
+// 	if err != nil {
+// 		return nil, nil, errors.Wrap(err, "inconsistent object index")
+// 	}
+//
+// 	// Checking if the object belongs to the class
+// 	if objectIndex.ClassRef.IsNotEqual(classHeadRef) {
+// 		return nil, nil, ErrWrongObject
+// 	}
+//
+// 	return code, memory, nil
+// }
 
 // GetCode returns code from code record by provided reference.
 //
@@ -701,12 +708,12 @@ func (m *LedgerArtifactManager) GetExactObj( // nolint: gocyclo
 func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
 	codeRef := record.Core2Reference(code)
 
-	desc := CodeDescriptor{
-		ref:     &codeRef,
-		manager: m,
+	desc, err := NewCodeDescriptor(m.db, codeRef, m.archPref)
+	if err != nil {
+		return nil, err
 	}
 
-	return &desc, nil
+	return desc, nil
 }
 
 // GetLatestClass returns descriptor for latest state of the class known to storage.
@@ -716,19 +723,16 @@ func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescripto
 func (m *LedgerArtifactManager) GetLatestClass(head core.RecordRef) (core.ClassDescriptor, error) {
 	classRef := record.Core2Reference(head)
 
-	classActivateRec, classStateRec, classIndex, err := m.getActiveClass(m.db, classRef)
+	class, err := NewClassDescriptor(m.db, classRef, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	class := &ClassDescriptor{
-		manager: m,
-
-		headRef:       &classRef,
-		stateRef:      &classIndex.LatestStateRef,
-		headRecord:    classActivateRec,
-		stateRecord:   classStateRec,
-		lifelineIndex: classIndex,
+	active, err := class.IsActive()
+	if err != nil {
+		return nil, err
+	}
+	if !active {
+		return nil, ErrClassDeactivated
 	}
 
 	return class, nil
@@ -739,27 +743,33 @@ func (m *LedgerArtifactManager) GetLatestClass(head core.RecordRef) (core.ClassD
 //
 // Returned descriptor will provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDescriptor, error) {
+	var (
+		active bool
+		err    error
+	)
 	objRef := record.Core2Reference(head)
 
-	objActivateRec, objStateRec, objIndex, err := m.getActiveObject(m.db, objRef)
+	object, err := NewObjectDescriptor(m.db, objRef, nil)
 	if err != nil {
 		return nil, err
 	}
-	class, err := m.GetLatestClass(*objIndex.ClassRef.CoreRef())
+	active, err = object.IsActive()
 	if err != nil {
 		return nil, err
 	}
-
-	object := &ObjectDescriptor{
-		manager: m,
-
-		headRef:       &objRef,
-		stateRef:      &objIndex.LatestStateRef,
-		headRecord:    objActivateRec,
-		stateRecord:   objStateRec,
-		lifelineIndex: objIndex,
-
-		classDescriptor: class.(*ClassDescriptor),
+	if !active {
+		return nil, ErrObjectDeactivated
+	}
+	class, err := object.ClassDescriptor(nil)
+	if err != nil {
+		return nil, err
+	}
+	active, err = class.IsActive()
+	if err != nil {
+		return nil, err
+	}
+	if !active {
+		return nil, ErrClassDeactivated
 	}
 
 	return object, nil
@@ -794,6 +804,21 @@ func (m *LedgerArtifactManager) GetObjDelegate(head, asClass core.RecordRef) (*c
 	}
 
 	return delegateRef.CoreRef(), nil
+}
+
+func (m *LedgerArtifactManager) Link(components core.Components) error {
+	busComponent, exists := components["core.EventBus"]
+	if !exists {
+		return errors.New("no core.EventBus in components")
+	}
+	eventBus, ok := busComponent.(core.EventBus)
+	if !ok {
+		return errors.New("EventBus assertion failed")
+	}
+
+	m.eventBus = eventBus
+
+	return nil
 }
 
 // NewArtifactManger creates new manager instance.
