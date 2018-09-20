@@ -40,7 +40,7 @@ func (e *CallConstructorEvent) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
-// Get reference returns referenced object.
+// GetReference returns referenced object.
 func (e *CallConstructorEvent) GetReference() core.RecordRef {
 	return e.ClassRef
 }

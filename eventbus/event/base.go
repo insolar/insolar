@@ -43,7 +43,22 @@ const (
 	ChildEventType           // ChildEvent is a event for saving a child
 	UpdateObjectEventType    // UpdateObjectEvent is a event for updating an object
 	GetObjectEventType       // GetObjectEvent is a event for retrieving an object
-	TypeGetCode              // TypeGetCode - retrieve code from storage.
+
+	// Artifact manager event types:
+
+	GetCodeType             // GetCodeType - retrieve code from storage.
+	GetLatestClassType      // GetLatestClassType - latest state of the class known to storage
+	GetLatestObjType        // GetLatestObjType returns descriptor for latest state of the object known to storage.
+	DeclareTypeType         // DeclareTypeType creates new type.
+	DeployCodeType          // DeployCodeType creates new code.
+	ActivateClassType       // ActivateClassType activates class.
+	DeactivateClassType     // DeactivateClassType deactivates class.
+	UpdateClassType         // UpdateClassType amends class.
+	ActivateObjType         // ActivateObjType activates object.
+	ActivateObjDelegateType // ActivateObjDelegateType similar to ActivateObjType but it creates object as parent's delegate of provided class.
+	DeactivateObjType       // DeactivateObjType deactivates object.
+	UpdateObjType           // UpdateObjType amends object.
+
 )
 
 // GetEmptyMessage constructs specified event
