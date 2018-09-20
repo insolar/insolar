@@ -216,6 +216,8 @@ func TestMain(m *testing.M) {
 	os.Exit(testMainWrapper(m))
 }
 
+type postParams map[string]interface{}
+
 type errorResponse struct {
 	Code  int    `json:"code"`
 	Event string `json:"event"`
@@ -278,10 +280,9 @@ func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
 }
 
 func TestInsolardResponseNotErr(t *testing.T) {
-	postParams := map[string]interface{}{
+	body := getResponseBody(t, postParams{
 		"query_type": "dump_all_users",
-	}
-	body := getResponseBody(t, postParams)
+	})
 
 	response := &dumpAllUsersResponse{}
 	unmarshalResponse(t, body, response)
@@ -291,11 +292,10 @@ func TestInsolardResponseNotErr(t *testing.T) {
 
 func TestTransferMoney(t *testing.T) {
 	// Create member which balance will increase
-	postParams := map[string]interface{}{
+	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"name":       "First",
-	}
-	body := getResponseBody(t, postParams)
+	})
 
 	firstMemberResponse := &createMemberResponse{}
 	unmarshalResponse(t, body, firstMemberResponse)
@@ -304,11 +304,10 @@ func TestTransferMoney(t *testing.T) {
 	assert.NotEqual(t, "", firstMemberRef)
 
 	// Create member which balance will decrease
-	postParams = map[string]interface{}{
+	body = getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"name":       "Second",
-	}
-	body = getResponseBody(t, postParams)
+	})
 
 	secondMemberResponse := &createMemberResponse{}
 	unmarshalResponse(t, body, secondMemberResponse)
@@ -317,13 +316,12 @@ func TestTransferMoney(t *testing.T) {
 	assert.NotEqual(t, "", secondMemberRef)
 
 	// Transfer money from one member to another
-	postParams = map[string]interface{}{
+	body = getResponseBody(t, postParams{
 		"query_type": "send_money",
 		"from":       secondMemberRef,
 		"to":         firstMemberRef,
 		"amount":     111,
-	}
-	body = getResponseBody(t, postParams)
+	})
 
 	transferResponse := &sendMoneyResponse{}
 	unmarshalResponse(t, body, transferResponse)
@@ -331,11 +329,10 @@ func TestTransferMoney(t *testing.T) {
 	assert.Equal(t, true, transferResponse.Success)
 
 	// Check balance of first member
-	postParams = map[string]interface{}{
+	body = getResponseBody(t, postParams{
 		"query_type": "get_balance",
 		"reference":  firstMemberRef,
-	}
-	body = getResponseBody(t, postParams)
+	})
 
 	firstBalanceResponse := &getBalanceResponse{}
 	unmarshalResponse(t, body, firstBalanceResponse)
@@ -344,11 +341,10 @@ func TestTransferMoney(t *testing.T) {
 	assert.Equal(t, "RUB", firstBalanceResponse.Currency)
 
 	// Check balance of second member
-	postParams = map[string]interface{}{
+	body = getResponseBody(t, postParams{
 		"query_type": "get_balance",
 		"reference":  secondMemberRef,
-	}
-	body = getResponseBody(t, postParams)
+	})
 
 	secondBalanceResponse := &getBalanceResponse{}
 	unmarshalResponse(t, body, secondBalanceResponse)
