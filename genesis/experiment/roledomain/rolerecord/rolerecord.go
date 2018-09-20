@@ -21,18 +21,18 @@ import (
 	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
+// RoleRecord contains info about role
 type RoleRecord struct {
 	foundation.BaseContract
 
 	PublicKey string
 	Role      core.JetRole
-	Node      core.RecordRef
 }
 
-func New(pk string, role core.JetRole, node core.RecordRef) *RoleRecord {
+// New creates new RoleRecord
+func NewRoleRecord(pk string, role core.JetRole) *RoleRecord {
 	return &RoleRecord{
 		PublicKey: pk,
 		Role:      role,
-		Node:      node,
 	}
 }

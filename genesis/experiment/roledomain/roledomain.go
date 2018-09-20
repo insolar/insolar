@@ -22,17 +22,30 @@ import (
 	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
+// RoleDomain holds rolerecords
 type RoleDomain struct {
 	foundation.BaseContract
 }
 
-func (rd *RoleDomain) AddNode(pk string, role core.JetRole, node core.RecordRef) core.RecordRef {
-	newRecord := rolerecord.New(pk, role, node)
+// NewRoleDomain create new RoleDomain
+func NewRoleDomain() *RoleDomain {
+	return &RoleDomain{}
+}
+
+// RegisterNode registers node in system
+func (rd *RoleDomain) RegisterNode(pk string, role core.JetRole) core.RecordRef {
+	newRecord := rolerecord.New(pk, role)
 	recordHolder := rd.AsChild(newRecord.GetReference())
 	return recordHolder.GetReference()
 }
 
+// GetNodeRecord get node record by ref
+func (rd *RoleDomain) GetNodeRecord(ref core.RecordRef) *rolerecord.RoleRecord {
+	return rolerecord.GetObject(ref)
+}
+
+// RemoveNode deletes node from registry
 func (rd *RoleDomain) RemoveNode(nodeRef core.RecordRef) {
-	node := foundation.GetObject(nodeRef)
+	node := recordHolder.GetObject(nodeRef)
 	node.SelfDestructRequest()
 }
