@@ -133,8 +133,10 @@ func (b *Hello) String() string {
 	return fmt.Sprint("Hello, Go is there!")
 }
 	`
-	cb, cbcleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
-	defer cbcleaner()
+	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
+	cb := testutil.NewContractBuilder(am, tctx.preprocessor)
+	defer cb.Clean()
 	err := cb.Build(map[string]string{"hello": helloCode})
 	assert.NoError(t, err)
 
@@ -211,8 +213,8 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	cb, cbcleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
-	defer cbcleaner()
+	cb := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
+	defer cb.Clean()
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
@@ -282,8 +284,8 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	cb, cbcleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
-	defer cbcleaner()
+	cb := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
+	defer cb.Clean()
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,

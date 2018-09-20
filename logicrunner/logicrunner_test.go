@@ -172,7 +172,7 @@ func TestExecution(t *testing.T) {
 		Class: &classRef,
 	}
 	am.Classes[classRef] = &testutil.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
-	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef, AMachineType: core.MachineTypeGoPlugin}
+	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: codeRef, AMachineType: core.MachineTypeGoPlugin}
 
 	te := newTestExecutor()
 	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
@@ -278,8 +278,8 @@ func (r *Two) Hello(s string) string {
 	)
 	assert.NoError(t, err)
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -400,8 +400,8 @@ func (r *Two) Hello(s string) string {
 		panic(err)
 	}
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -478,8 +478,8 @@ func (r *One) Hello() string {
 	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode([]interface{}{})
 	assert.NoError(t, err)
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
@@ -568,6 +568,7 @@ func New(n int) *Child {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
@@ -583,8 +584,8 @@ func New(n int) *Child {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"child": goChild})
 	assert.NoError(t, err)
 	err = cb.Build(map[string]string{"contract": goContract})
@@ -644,6 +645,7 @@ func TestRootDomainContract(t *testing.T) {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	fmt.Println("RUNNERPATH", runnerbin)
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
@@ -660,12 +662,10 @@ func TestRootDomainContract(t *testing.T) {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootDomain": string(rootDomainCode)})
 	assert.NoError(t, err)
-
-	t.Logf("XX %+v", cb)
 
 	domain := core.NewRefFromBase58("c1")
 	request := core.NewRefFromBase58("c2")
@@ -772,8 +772,8 @@ func (c *Child) GetNum() int {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"child": goChild, "parent": goParent})
 	assert.NoError(b, err)
 

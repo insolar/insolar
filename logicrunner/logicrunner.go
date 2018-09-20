@@ -107,15 +107,13 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
-	lr.ArtifactManager.SetArchPref(
-		[]core.MachineType{
-			core.MachineTypeBuiltin,
-			core.MachineTypeGoPlugin,
-		},
-	)
-
 	ctx := core.LogicCallContext{
 		Time: time.Now(), // TODO: probably we should take it from e
+	}
+
+	machinePref := []core.MachineType{
+		core.MachineTypeBuiltin,
+		core.MachineTypeGoPlugin,
 	}
 
 	switch m := e.(type) {
@@ -162,7 +160,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		}
 		ctx.Class = classDesc.HeadRef()
 
-		codeDesc, err := classDesc.CodeDescriptor()
+		codeDesc, err := classDesc.CodeDescriptor(machinePref)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class's code descriptor")
 		}
@@ -217,7 +215,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "couldn't get object")
 		}
 
-		classDesc, err := objDesc.ClassDescriptor()
+		classDesc, err := objDesc.ClassDescriptor(nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object's class")
 		}
@@ -227,7 +225,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "couldn't get object's data")
 		}
 
-		codeDesc, err := objDesc.CodeDescriptor()
+		codeDesc, err := classDesc.CodeDescriptor(machinePref)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object's code descriptor")
 		}
