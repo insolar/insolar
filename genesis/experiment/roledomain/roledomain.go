@@ -18,7 +18,7 @@ package roledomain
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis/proxy/roledomain/rolerecord"
+	"github.com/insolar/insolar/genesis/proxy/rolerecord"
 	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
