@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"plugin"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -37,6 +38,7 @@ type GoInsider struct {
 	UpstreamRPCAddress string
 	UpstreamRPCClient  *rpc.Client
 	plugins            map[string]*plugin.Plugin
+	pluginsMutex       sync.Mutex
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
@@ -159,6 +161,8 @@ func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
+	gi.pluginsMutex.Lock()
+	defer gi.pluginsMutex.Unlock()
 	key := ref.String()
 	if gi.plugins[key] != nil {
 		return gi.plugins[key], nil
