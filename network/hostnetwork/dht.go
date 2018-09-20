@@ -743,7 +743,7 @@ func (dht *DHT) CheckNodeRole(domainID string) error {
 	var err error
 	// TODO: change or choose another auth host
 	if len(dht.options.BootstrapHosts) > 0 {
-		err = checkNodePrivRequest(dht, dht.options.BootstrapHosts[0].ID.String(), domainID)
+		err = checkNodePrivRequest(dht, dht.options.BootstrapHosts[0].ID.String())
 	} else {
 		err = errors.New("bootstrap node not exist")
 	}

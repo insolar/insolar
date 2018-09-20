@@ -206,7 +206,6 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 // Creates twenty DHTs and bootstraps each with the previous
 // at the end all should know about each other
 func TestBootstrapManyHosts(t *testing.T) {
-	done := make(chan bool)
 	port := 15000
 	var dhts []*DHT
 	hostCount := 10
@@ -238,23 +237,17 @@ func TestBootstrapManyHosts(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, closedPacket, err.Error())
-			time.Sleep(time.Millisecond * 200)
-			done <- true
 		}(dht)
-		go func(dht *DHT) {
-			err := dht.Bootstrap()
-			assert.NoError(t, err)
-			time.Sleep(time.Millisecond * 200)
-		}(dht)
-		time.Sleep(time.Millisecond * 200)
 	}
 
-	// time.Sleep(time.Millisecond * 10000)
+	for _, dht := range dhts {
+		err := dht.Bootstrap()
+		assert.NoError(t, err)
+	}
 
 	for _, dht := range dhts {
 		assert.Equal(t, hostCount-1, dht.NumHosts(getDefaultCtx(dht)))
 		dht.Disconnect()
-		<-done
 	}
 }
 
@@ -362,8 +355,6 @@ func TestReconnect(t *testing.T) {
 
 		<-done
 		<-done
-
-		time.Sleep(time.Millisecond * 50)
 	}
 }
 
@@ -457,7 +448,6 @@ func TestNetworkingSendError(t *testing.T) {
 	mockTp.failNextSendPacket()
 
 	dht.Bootstrap()
-
 	dht.Disconnect()
 
 	<-done
@@ -506,9 +496,7 @@ func TestHostResponseSendError(t *testing.T) {
 	}()
 
 	dht.Bootstrap()
-
 	assert.Equal(t, 1, dht.tables[0].TotalHosts())
-
 	dht.Disconnect()
 
 	<-done
@@ -917,7 +905,6 @@ func TestDHT_Disconnect(t *testing.T) {
 			assert.Equal(t, closedPacket, err.Error())
 			done <- true
 		}(dht)
-		time.Sleep(time.Millisecond * 200)
 	}
 
 	for _, dht := range dhts {
