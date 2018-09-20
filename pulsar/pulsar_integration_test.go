@@ -51,6 +51,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1641"},
 		}},
+		nil,
 		net.Listen,
 	)
 	assert.NoError(t, err)
@@ -64,6 +65,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1641"},
 		}},
+		nil,
 		net.Listen,
 	)
 	assert.NoError(t, err)
