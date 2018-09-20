@@ -26,73 +26,57 @@ import (
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/log"
 )
 
+// testing storage SetDrop lock logic
+//
+// 1) wait update transaction start, when start SetDrop (should lock)
+// 2) transaction waits start of SetDrop call and waits 'waittime' (200ms)
+// (could be unstable in really slow environments)
+// 3) wait SetDrop and transaction finished
+// 4) compare finish time of SetDrop and transaction
+// SetDrop should happen after transaction (after 'waittime' timeout happens)
 func TestStore_DropWaitWrites(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	var (
-		wgStart sync.WaitGroup
-		wgEnd   sync.WaitGroup
-	)
-	wgStart.Add(2)
-	wgEnd.Add(2)
+	var txFin time.Time
+	var dropFin time.Time
+	waittime := time.Millisecond * 200
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	txstarted := make(chan bool)
+	dropwaits := make(chan bool)
 	go func() {
 		db.Update(func(tx *storage.TransactionManager) error {
-			wgStart.Done()
-			// log.Println("start tx1")
+			log.Debugln("start tx")
+			close(txstarted)
+			<-dropwaits
+			time.Sleep(waittime)
 			return nil
 		})
-		// log.Println("end tx1")
-		wgEnd.Done()
-	}()
-	tx2finish := make(chan bool)
-	go func() {
-		db.Update(func(tx *storage.TransactionManager) error {
-			wgStart.Done()
-			// log.Println("start tx2")
-			<-tx2finish
-			return nil
-		})
-		// log.Println("end tx2")
-		wgEnd.Done()
+		txFin = time.Now()
+		log.Debugln("end tx")
+		wg.Done()
 	}()
 
-	// all transactions started
-	dropdone := make(chan bool)
-	wgStart.Wait()
 	go func() {
+		<-txstarted
 		prevdrop := &jetdrop.JetDrop{}
-		// log.Println("start SetDrop")
+		log.Debugln("start SetDrop")
+		close(dropwaits)
 		_, _ = db.SetDrop(0, prevdrop)
-		close(dropdone)
+		dropFin = time.Now()
+		log.Debugln("end SetDrop")
+		wg.Done()
 	}()
+	wg.Wait()
 
-	txFinCh := make(chan time.Time)
-	dropFinCh := make(chan time.Time)
-	go func() {
-		// wait all transactions are finished
-		wgEnd.Wait()
-		txFinCh <- time.Now()
-	}()
-	go func() {
-		// wait drop is ready
-		<-dropdone
-		dropFinCh <- time.Now()
-	}()
-
-	tx2waittime := time.Millisecond * 200
-	go func() {
-		time.Sleep(tx2waittime)
-		close(tx2finish)
-	}()
-
-	txFin := <-txFinCh
-	dropFin := <-dropFinCh
-	// log.Println("R: tx end t:", txFin)
-	// log.Println("R: drop   t:", dropFin)
+	log.Debugln("R: tx end t:", txFin)
+	log.Debugln("R: drop   t:", dropFin)
 
 	assert.Conditionf(t, func() bool {
 		return dropFin.After(txFin)

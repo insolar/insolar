@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
@@ -49,7 +50,7 @@ func chooseOutput(path string) (io.Writer, error) {
 
 func parseInputParams() {
 	flag.StringVar(&output, "output", defaultStdoutPath, "output file (use - for STDOUT)")
-	flag.StringVar(&cmd, "cmd", "default_config", "type of cmd")
+	flag.StringVar(&cmd, "cmd", "default_config", "available commands: default_config | random_ref")
 
 	if len(os.Args) == 1 {
 		flag.Usage()
@@ -69,6 +70,15 @@ func printDefaultConfig(out io.Writer) {
 	}
 }
 
+func randomRef(out io.Writer) {
+	ref := testutils.RandomRef()
+	_, err := out.Write([]byte(ref.String() + "\n"))
+	if err != nil {
+		fmt.Println("Can't write data to output", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
@@ -80,5 +90,7 @@ func main() {
 	switch cmd {
 	case "default_config":
 		printDefaultConfig(out)
+	case "random_ref":
+		randomRef(out)
 	}
 }
