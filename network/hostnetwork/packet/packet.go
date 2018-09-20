@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/id"
 )
 
+//go:generate stringer -type=packetType
 type packetType int
 
 const (
