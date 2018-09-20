@@ -55,9 +55,8 @@ func (m *LedgerArtifactManager) validateActiveClass(ref core.RecordRef) error {
 		return err
 	}
 	if !active {
-		return errors.New("class is not active")
+		return ErrClassDeactivated
 	}
-
 	return nil
 }
 
@@ -513,7 +512,7 @@ func (m *LedgerArtifactManager) ActivateObjDelegate(
 			return errors.Wrap(err, "inconsistent index")
 		}
 		if _, ok := parentIdx.Delegates[class]; ok {
-			return errors.New("delegate for this class already exists")
+			return ErrClassDelegateAlreadyExists
 		}
 		parentIdx.Delegates[class] = *objRef
 		err = tx.SetObjectIndex(&parentRef, parentIdx)
