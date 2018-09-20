@@ -457,7 +457,10 @@ func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
 	return cb
 }
 func (cb *ContractsBuilder) Clean() {
-	os.RemoveAll(cb.root) // nolint: errcheck
+	err := os.RemoveAll(cb.root) // nolint: errcheck
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Build ...
