@@ -16,36 +16,4 @@
 
 package event
 
-import (
-	"io"
-
-	"github.com/insolar/insolar/core"
-)
-
-// DelegateEvent is a event for saving contract's body as a delegate
-type DelegateEvent struct {
-	baseEvent
-	Into  core.RecordRef
-	Class core.RecordRef
-	Body  []byte
-}
-
-// React handles event and returns associated reaction.
-func (e *DelegateEvent) React(c core.Components) (core.Reaction, error) {
-	return logicRunnerHandle(e, c)
-}
-
-// GetOperatingRole returns operating jet role for given event type.
-func (e *DelegateEvent) GetOperatingRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
-// GetReference returns referenced object.
-func (e *DelegateEvent) GetReference() core.RecordRef {
-	return e.Into
-}
-
-// Serialize serializes event.
-func (e *DelegateEvent) Serialize() (io.Reader, error) {
-	return serialize(e, DelegateEventType)
-}
+// type DelegateEvent = ActivateObjDelegate

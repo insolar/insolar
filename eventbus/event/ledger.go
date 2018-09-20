@@ -119,7 +119,6 @@ func (e *DeclareType) Serialize() (io.Reader, error) {
 }
 
 func (e *DeclareType) GetReference() core.RecordRef {
-	// XXX: ?
 	return e.Request
 }
 
@@ -150,7 +149,6 @@ func (e *DeployCode) Serialize() (io.Reader, error) {
 }
 
 func (e *DeployCode) GetReference() core.RecordRef {
-	// XXX: ?
 	return e.Request
 }
 
@@ -181,7 +179,6 @@ func (e *ActivateClass) Serialize() (io.Reader, error) {
 }
 
 func (e *ActivateClass) GetReference() core.RecordRef {
-	// XXX: ?
 	return e.Request
 }
 
@@ -246,7 +243,6 @@ func (e *UpdateClass) Serialize() (io.Reader, error) {
 }
 
 func (e *UpdateClass) GetReference() core.RecordRef {
-	// XXX: or Code ?
 	return e.Class
 }
 

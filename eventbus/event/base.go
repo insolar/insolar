@@ -39,11 +39,6 @@ const (
 	baseEventType            = Type(iota)
 	CallMethodEventType      // CallMethodEvent - Simply call method and return result
 	CallConstructorEventType // CallConstructorEvent is a event for calling constructor and obtain its reaction
-	DelegateEventType        // DelegateEvent is a event for injecting a delegate
-	ChildEventType           // ChildEvent is a event for saving a child
-	UpdateObjectEventType    // UpdateObjectEvent is a event for updating an object
-	GetObjectEventType       // GetObjectEvent is a event for retrieving an object
-
 	// Artifact manager event types:
 
 	GetCodeType             // GetCodeType - retrieve code from storage.
@@ -70,14 +65,30 @@ func getEmptyEvent(mt Type) (core.Event, error) {
 		return &CallMethodEvent{}, nil
 	case CallConstructorEventType:
 		return &CallConstructorEvent{}, nil
-	case DelegateEventType:
-		return &DelegateEvent{}, nil
-	case ChildEventType:
-		return &ChildEvent{}, nil
-	case UpdateObjectEventType:
-		return &UpdateObjectEvent{}, nil
-	case GetObjectEventType:
-		return &GetObjectEvent{}, nil
+	case GetCodeType:
+		return &GetCode{}, nil
+	case GetLatestClassType:
+		return &GetLatestClass{}, nil
+	case GetLatestObjType:
+		return &GetLatestObj{}, nil
+	case DeclareTypeType:
+		return &DeclareType{}, nil
+	case DeployCodeType:
+		return &DeployCode{}, nil
+	case ActivateClassType:
+		return &ActivateClass{}, nil
+	case DeactivateClassType:
+		return &DeactivateClass{}, nil
+	case UpdateClassType:
+		return &UpdateClass{}, nil
+	case ActivateObjType:
+		return &ActivateObj{}, nil
+	case ActivateObjDelegateType:
+		return &ActivateObjDelegate{}, nil
+	case DeactivateObjType:
+		return &DeactivateObj{}, nil
+	case UpdateObjType:
+		return &UpdateObj{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented event type %d", mt)
 	}
@@ -115,8 +126,16 @@ func Deserialize(buff io.Reader) (core.Event, error) {
 func init() {
 	gob.Register(&CallConstructorEvent{})
 	gob.Register(&CallMethodEvent{})
-	gob.Register(&DelegateEvent{})
-	gob.Register(&ChildEvent{})
-	gob.Register(&UpdateObjectEvent{})
-	gob.Register(&GetObjectEvent{})
+	gob.Register(&GetCode{})
+	gob.Register(&GetLatestClass{})
+	gob.Register(&GetLatestObj{})
+	gob.Register(&DeclareType{})
+	gob.Register(&DeployCode{})
+	gob.Register(&ActivateClass{})
+	gob.Register(&DeactivateClass{})
+	gob.Register(&UpdateClass{})
+	gob.Register(&ActivateObj{})
+	gob.Register(&ActivateObjDelegate{})
+	gob.Register(&DeactivateObj{})
+	gob.Register(&UpdateObj{})
 }

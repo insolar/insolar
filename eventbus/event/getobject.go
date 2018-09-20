@@ -16,34 +16,5 @@
 
 package event
 
-import (
-	"io"
-
-	"github.com/insolar/insolar/core"
-)
-
 // GetObjectEvent is a event for calling constructor and obtain its reaction
-type GetObjectEvent struct {
-	baseEvent
-	Object core.RecordRef
-}
-
-// React handles event and returns associated reaction.
-func (e *GetObjectEvent) React(c core.Components) (core.Reaction, error) {
-	return logicRunnerHandle(e, c)
-}
-
-// GetOperatingRole returns operating jet role for given event type.
-func (e *GetObjectEvent) GetOperatingRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
-// GetReference returns referenced object.
-func (e *GetObjectEvent) GetReference() core.RecordRef {
-	return e.Object
-}
-
-// Serialize serializes event.
-func (e *GetObjectEvent) Serialize() (io.Reader, error) {
-	return serialize(e, GetObjectEventType)
-}
+// type GetObjectEvent = GetLatestObj
