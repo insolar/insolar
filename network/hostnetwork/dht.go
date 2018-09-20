@@ -287,10 +287,9 @@ func (dht *DHT) iterateBootstrapHosts(
 		return
 	}
 	localwg := &sync.WaitGroup{}
-	localwg.Add(1)
 	for i, bh := range dht.options.BootstrapHosts {
-		futureChan := make(chan transport.Future)
-		go func(futureChan chan transport.Future, cb ContextBuilder, dht *DHT, bh *host.Host, ht *routing.HashTable, localwg *sync.WaitGroup) {
+		localwg.Add(1)
+		go func(cb ContextBuilder, dht *DHT, bh *host.Host, ht *routing.HashTable, localwg *sync.WaitGroup) {
 			counter := 1
 			for {
 				request := packet.NewPingPacket(ht.Origin, bh)
@@ -309,8 +308,6 @@ func (dht *DHT) iterateBootstrapHosts(
 						}
 						localwg.Done()
 						break
-						futureChan <- res
-						return
 					}
 				} else {
 					routeHost := routing.NewRouteHost(bh)
@@ -327,7 +324,7 @@ func (dht *DHT) iterateBootstrapHosts(
 				counter = counter << 1
 				time.Sleep(time.Second * time.Duration(counter))
 			}
-		}(futureChan, cb, dht, bh, ht, localwg)
+		}(cb, dht, bh, ht, localwg)
 	}
 	localwg.Wait()
 
