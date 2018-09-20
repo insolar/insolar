@@ -537,7 +537,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {
-	dstDir := filepath.Join(cb.root, "src/contract-proxy", name)
+	dstDir := filepath.Join(cb.root, "src/github.com/insolar/insolar/genesis/proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
