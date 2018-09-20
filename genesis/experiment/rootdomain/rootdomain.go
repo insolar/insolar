@@ -19,8 +19,8 @@ package rootdomain
 import (
 	"encoding/json"
 
-	"contract-proxy/member"
-	"contract-proxy/wallet"
+	"github.com/insolar/insolar/genesis/proxy/member"
+	"github.com/insolar/insolar/genesis/proxy/wallet"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"

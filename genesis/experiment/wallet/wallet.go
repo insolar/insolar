@@ -20,8 +20,8 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
-	"contract-proxy/allowance"
-	"contract-proxy/wallet"
+	"github.com/insolar/insolar/genesis/proxy/allowance"
+	"github.com/insolar/insolar/genesis/proxy/wallet"
 )
 
 // Wallet - basic wallet contract
