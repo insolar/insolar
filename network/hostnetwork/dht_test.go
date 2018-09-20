@@ -226,7 +226,8 @@ func TestBootstrapTwentyHosts(t *testing.T) {
 				bootstrapHost,
 			},
 		},
-			relay.NewProxy())
+			relay.NewProxy(),
+			4)
 		port++
 		assert.NoError(t, err)
 		dhts = append(dhts, dht)
@@ -238,6 +239,7 @@ func TestBootstrapTwentyHosts(t *testing.T) {
 		go func(dht *DHT) {
 			err := dht.Listen()
 			assert.Equal(t, closedPacket, err.Error())
+			time.Sleep(time.Millisecond * 200)
 			done <- true
 		}(dht)
 		go func(dht *DHT) {
@@ -248,7 +250,7 @@ func TestBootstrapTwentyHosts(t *testing.T) {
 		time.Sleep(time.Millisecond * 200)
 	}
 
-	time.Sleep(time.Millisecond * 3000)
+	// time.Sleep(time.Millisecond * 10000)
 
 	for _, dht := range dhts {
 		assert.Equal(t, count-1, dht.NumHosts(getDefaultCtx(dht)))
@@ -266,7 +268,7 @@ func TestBootstrapTwoHosts(t *testing.T) {
 	id1, _ := id.NewID()
 	ids1 = append(ids1, id1)
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
-	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4)
 	assert.NoError(t, err)
 
 	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
@@ -279,7 +281,8 @@ func TestBootstrapTwoHosts(t *testing.T) {
 			},
 		},
 	},
-		relay.NewProxy())
+		relay.NewProxy(),
+		4)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 0, dht1.NumHosts(getDefaultCtx(dht1)))
@@ -320,7 +323,7 @@ func TestBootstrapThreeHosts(t *testing.T) {
 	ids1 = append(ids1, id1)
 	st1, s1, tp1, r1, err := realDhtParams(ids1, "127.0.0.1:17000")
 	assert.NoError(t, err)
-	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
+	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy(), 4)
 
 	ids2 := make([]id.ID, 0)
 	id2, _ := id.NewID()
@@ -335,7 +338,7 @@ func TestBootstrapThreeHosts(t *testing.T) {
 			},
 		},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 
 	st3, s3, tp3, r3, err := realDhtParams(nil, "127.0.0.1:17002")
 	assert.NoError(t, err)
@@ -347,7 +350,7 @@ func TestBootstrapThreeHosts(t *testing.T) {
 			},
 		},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 
 	assert.Equal(t, 0, dht1.NumHosts(getDefaultCtx(dht1)))
 	assert.Equal(t, 0, dht2.NumHosts(getDefaultCtx(dht2)))
@@ -405,7 +408,7 @@ func TestBootstrapNoID(t *testing.T) {
 	ids1 = append(ids1, id1)
 	st1, s1, tp1, r1, err := realDhtParams(ids1, "0.0.0.0:18000")
 	assert.NoError(t, err)
-	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
+	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy(), 4)
 
 	st2, s2, tp2, r2, err := realDhtParams(nil, "0.0.0.0:18001")
 	assert.NoError(t, err)
@@ -416,7 +419,7 @@ func TestBootstrapNoID(t *testing.T) {
 			},
 		},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 
 	assert.Equal(t, 0, dht1.NumHosts(getDefaultCtx(dht1)))
 	assert.Equal(t, 0, dht2.NumHosts(getDefaultCtx(dht2)))
@@ -459,7 +462,7 @@ func TestReconnect(t *testing.T) {
 		ids1 = append(ids1, id1)
 		st1, s1, tp1, r1, err := realDhtParams(ids1, "127.0.0.1:19000")
 		assert.NoError(t, err)
-		dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
+		dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy(), 4)
 
 		st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:19001")
 		assert.NoError(t, err)
@@ -471,7 +474,7 @@ func TestReconnect(t *testing.T) {
 				},
 			},
 		},
-			relay.NewProxy())
+			relay.NewProxy(), 4)
 
 		assert.Equal(t, 0, dht1.NumHosts(getDefaultCtx(dht1)))
 
@@ -514,7 +517,7 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 	id1, _ := id.NewID()
 	ids1 = append(ids1, id1)
 	st1, s1, tp1, r1, _ := realDhtParams(ids1, "127.0.0.1:20000")
-	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy())
+	dht1, _ := NewDHT(st1, s1, tp1, r1, &Options{}, relay.NewProxy(), 4)
 
 	st2, s2, tp2, r2, _ := realDhtParams(nil, "127.0.0.1:20001")
 	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
@@ -524,7 +527,7 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 				Address: dht1.origin.Address,
 			},
 		},
-	}, relay.NewProxy())
+	}, relay.NewProxy(), 4)
 
 	go func() {
 		err := dht1.Listen()
@@ -577,7 +580,7 @@ func TestNetworkingSendError(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 	mockTp := tp.(*mockTransport)
 
 	go func() {
@@ -615,7 +618,7 @@ func TestHostResponseSendError(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 	mockTp := tp.(*mockTransport)
 
 	queries := 0
@@ -668,7 +671,7 @@ func TestBucketRefresh(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 	mockTp := tp.(*mockTransport)
 
 	queries := 0
@@ -724,7 +727,7 @@ func TestStoreReplication(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 	mockTp := tp.(*mockTransport)
 
 	go func() {
@@ -780,7 +783,7 @@ func TestStoreExpiration(t *testing.T) {
 	dht, _ := NewDHT(st, s, tp, r, &Options{
 		ExpirationTime: time.Second,
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 
 	go func() {
 		dht.Listen()
@@ -822,7 +825,7 @@ func TestFindHostAllBuckets(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 	mockTp := tp.(*mockTransport)
 
 	go func() {
@@ -885,7 +888,7 @@ func TestFindHostAllBuckets(t *testing.T) {
 // 			Address: bootstrapAddr,
 // 		}},
 // 	},
-// 		relay.NewProxy())
+// 		relay.NewProxy(), 4)
 // 	mockTp := tp.(*mockTransport)
 //
 // 	go func() {
@@ -950,7 +953,7 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 	assert.NoError(t, err)
 	done := make(chan bool)
 
-	dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
+	dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4)
 
 	go func() {
 		dht.Listen()
@@ -999,7 +1002,7 @@ func TestDHT_Listen(t *testing.T) {
 				bootstrapHost,
 			},
 		},
-			relay.NewProxy())
+			relay.NewProxy(), 4)
 		port++
 		dhts = append(dhts, dht)
 		assert.NoError(t, err)
@@ -1039,7 +1042,7 @@ func TestDHT_Disconnect(t *testing.T) {
 				bootstrapHost,
 			},
 		},
-			relay.NewProxy())
+			relay.NewProxy(), 4)
 		port++
 		dhts = append(dhts, dht)
 		assert.NoError(t, err)
@@ -1073,7 +1076,7 @@ func TestNewDHT(t *testing.T) {
 	bootstrapHost := host.NewHost(address)
 	dht, err := NewDHT(st, s, tp, r,
 		&Options{BootstrapHosts: []*host.Host{bootstrapHost}},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 	assert.NoError(t, err)
 	assert.NotEqual(t, nil, dht)
 
@@ -1106,7 +1109,7 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 				bootstrapHost,
 			},
 		},
-			relay.NewProxy())
+			relay.NewProxy(), 4)
 		port++
 		dhts = append(dhts, dht)
 		assert.NoError(t, err)
@@ -1122,9 +1125,11 @@ func TestDHT_AnalyzeNetwork(t *testing.T) {
 		}(dht)
 	}
 
-	for _, dht := range dhts {
-		dht.Bootstrap()
-	}
+	go func() {
+		for _, dht := range dhts {
+			dht.Bootstrap()
+		}
+	}()
 
 	ctx, _ := NewContextBuilder(dhts[0]).SetDefaultHost().Build()
 
@@ -1149,7 +1154,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	id1, _ := id.NewID()
 	ids1 = append(ids1, id1)
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
-	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy())
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4)
 	assert.NoError(t, err)
 
 	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
@@ -1162,7 +1167,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 			},
 		},
 	},
-		relay.NewProxy())
+		relay.NewProxy(), 4)
 
 	dhts = append(dhts, dht1)
 	dhts = append(dhts, dht2)
@@ -1178,16 +1183,18 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	}
 
 	for _, dht := range dhts {
-		err := dht.Bootstrap()
-		assert.NoError(t, err)
+		dht.Bootstrap()
 	}
 
 	err = dhts[1].CheckNodeRole("domain ID")
 	assert.NoError(t, err)
 
-	for _, dht := range dhts {
-		dht.Disconnect()
-	}
+	go func() {
+		for _, dht := range dhts {
+			dht.Disconnect()
+		}
+	}()
+
 	<-done
 }
 
