@@ -53,6 +53,7 @@ type DHT struct {
 	proxy     relay.Proxy
 	auth      AuthInfo
 	subnet    Subnet
+	timeout   int // bootstrap reconnect timeout
 }
 
 // AuthInfo collects some information about authentication.
@@ -118,6 +119,7 @@ func NewDHT(
 	ncf hosthandler.NetworkCommonFacade,
 	options *Options,
 	proxy relay.Proxy,
+	timeout int,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -135,6 +137,7 @@ func NewDHT(
 		store:     store,
 		relay:     rel,
 		proxy:     proxy,
+		timeout:   timeout,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -249,44 +252,14 @@ func (dht *DHT) Listen() error {
 // BootstrapHosts.
 func (dht *DHT) Bootstrap() error {
 	if len(dht.options.BootstrapHosts) == 0 {
-		return nil
+		return errors.New("no bootstrap nodes detected")
 	}
-	var futures []transport.Future
-	wg := &sync.WaitGroup{}
 	cb := NewContextBuilder(dht)
-	var chanErr chan error
 
 	for _, ht := range dht.tables {
-		futures = dht.iterateBootstrapHosts(ht, cb, wg, futures)
+		dht.iterateBootstrapHosts(ht, cb)
 	}
 
-	for _, f := range futures {
-		go func(future transport.Future, chanErr chan error) {
-			for {
-				select {
-				case result := <-future.Result():
-					// If result is nil, channel was closed
-					if result != nil {
-						ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
-						if err != nil {
-							chanErr <- err
-							return
-						}
-						dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
-					}
-					wg.Done()
-					return
-				case <-time.After(time.Duration(dht.options.PacketTimeout.Seconds() * 60)): // cux we waiting iterateBootstrapHosts timeout.
-					log.Warnln("bootstrap response timeout")
-					future.Cancel()
-					wg.Done()
-					return
-				}
-			}
-		}(f, chanErr)
-	}
-
-	wg.Wait()
 	return dht.iterateHt(cb)
 }
 
@@ -308,61 +281,57 @@ func (dht *DHT) iterateHt(cb ContextBuilder) error {
 func (dht *DHT) iterateBootstrapHosts(
 	ht *routing.HashTable,
 	cb ContextBuilder,
-	wg *sync.WaitGroup,
-	futures []transport.Future,
-) []transport.Future {
+) {
 	ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
 	if err != nil {
-		return futures
+		return
 	}
-	futuresChan := make(chan transport.Future)
 	localwg := &sync.WaitGroup{}
-	for _, bh := range dht.options.BootstrapHosts {
-		localwg.Add(1)
-		go func(futuresChan chan transport.Future) {
-			request := packet.NewPingPacket(ht.Origin, bh)
+	localwg.Add(1)
+	for i, bh := range dht.options.BootstrapHosts {
+		futureChan := make(chan transport.Future)
+		go func(futureChan chan transport.Future, cb ContextBuilder, dht *DHT, bh *host.Host, ht *routing.HashTable, localwg *sync.WaitGroup) {
 			counter := 1
-			ok := make(chan bool)
 			for {
-				if counter >= 60 {
-					close(ok)
-				}
+				request := packet.NewPingPacket(ht.Origin, bh)
 				if bh.ID.Bytes() == nil {
 					res, err := dht.transport.SendRequest(request)
 					if err != nil {
-						ok <- false
-						counter = counter * 2
-						continue
+						log.Error(err)
+					} else {
+						result := <-res.Result()
+						if res != nil {
+							ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
+							if err != nil {
+								log.Error(err)
+							}
+							dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
+						}
+						localwg.Done()
+						break
+						futureChan <- res
+						return
 					}
-					log.Debugln("sending ping to " + bh.Address.String())
-					wg.Add(1)
-					futuresChan <- res
-					close(ok)
 				} else {
 					routeHost := routing.NewRouteHost(bh)
 					dht.AddHost(ctx, routeHost)
-					close(ok)
-				}
-				select {
-				case <-ok:
+					localwg.Done()
 					return
-				case <-time.After(time.Duration(counter)):
-					if ok == nil {
-						return
-					}
-					counter = counter >> 1
 				}
+				if counter >= dht.timeout {
+					if i == len(dht.options.BootstrapHosts)-1 {
+						localwg.Done()
+					}
+					return
+				}
+				counter = counter << 1
+				time.Sleep(time.Second * time.Duration(counter))
 			}
-		}(futuresChan)
+		}(futureChan, cb, dht, bh, ht, localwg)
 	}
 	localwg.Wait()
 
-	for fut := range futuresChan {
-		futures = append(futures, fut)
-	}
-	close(futuresChan)
-
-	return futures
+	return
 }
 
 // Disconnect will trigger a Stop from the network.
