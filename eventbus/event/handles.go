@@ -14,23 +14,17 @@
  *    limitations under the License.
  */
 
-package response
+package event
 
 import (
-	"io"
-
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
-// ObjectBodyResponse - the most common response
-type ObjectBodyResponse struct {
-	Body        []byte
-	Code        core.RecordRef
-	Class       core.RecordRef
-	MachineType core.MachineType
-}
-
-// Serialize serializes response
-func (r *ObjectBodyResponse) Serialize() (io.Reader, error) {
-	return serialize(r, ObjectBodyResponseType)
+func logicRunnerHandle(e core.Event, c core.Components) (core.Reaction, error) {
+	lr, ok := c["core.LogicRunner"].(core.LogicRunner)
+	if !ok {
+		return nil, errors.New("could not find logic runner")
+	}
+	return lr.Execute(e)
 }

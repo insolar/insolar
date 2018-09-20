@@ -32,21 +32,13 @@ type baseEvent struct {
 	Domain  core.RecordRef
 }
 
-func (baseEvent) Serialize() (io.Reader, error) {
-	panic("Do not use base")
-}
-
-func (baseEvent) GetReference() core.RecordRef {
-	panic("Do not use base")
-}
-
 // Type is a enum type of event
 type Type byte
 
 const (
 	baseEventType            = Type(iota)
 	CallMethodEventType      // CallMethodEvent - Simply call method and return result
-	CallConstructorEventType // CallConstructorEvent is a event for calling constructor and obtain its response
+	CallConstructorEventType // CallConstructorEvent is a event for calling constructor and obtain its reaction
 	DelegateEventType        // DelegateEvent is a event for injecting a delegate
 	ChildEventType           // ChildEvent is a event for saving a child
 	UpdateObjectEventType    // UpdateObjectEvent is a event for updating an object

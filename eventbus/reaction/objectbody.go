@@ -14,14 +14,23 @@
  *    limitations under the License.
  */
 
-package pulsar
+package reaction
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/core"
 )
 
-// Create a new pulse with using of custom Entropy Generator
-func NewPulse(previousPulseNumber core.PulseNumber, entropyGenerator EntropyGenerator) *core.Pulse {
-	previousPulseNumber++
-	return &core.Pulse{PulseNumber: core.PulseNumber(previousPulseNumber), Entropy: entropyGenerator.GenerateEntropy()}
+// ObjectBodyReaction - the most common reaction.
+type ObjectBodyReaction struct {
+	Body        []byte
+	Code        core.RecordRef
+	Class       core.RecordRef
+	MachineType core.MachineType
+}
+
+// Serialize serializes reaction.
+func (r *ObjectBodyReaction) Serialize() (io.Reader, error) {
+	return serialize(r, ObjectBodyReactionType)
 }

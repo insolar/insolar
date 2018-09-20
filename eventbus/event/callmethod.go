@@ -31,6 +31,11 @@ type CallMethodEvent struct {
 	Arguments core.Arguments
 }
 
+// React handles event and returns associated reaction.
+func (e *CallMethodEvent) React(c core.Components) (core.Reaction, error) {
+	return logicRunnerHandle(e, c)
+}
+
 // GetOperatingRole returns operating jet role for given event type.
 func (e *CallMethodEvent) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor

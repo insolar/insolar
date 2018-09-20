@@ -24,7 +24,8 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/response"
+	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/log"
 )
 
 const deliverRPCMethodName = "EventBus.Deliver"
@@ -35,28 +36,36 @@ type EventBus struct {
 	logicRunner core.LogicRunner
 	service     core.Network
 	ledger      core.Ledger
+
+	components core.Components
 }
 
 // New is a `EventBus` constructor, takes an executor object
 // that satisfies LogicRunner interface
 func New(cfg configuration.Configuration) (*EventBus, error) {
-	eb := &EventBus{logicRunner: nil, service: nil}
-	return eb, nil
+	return &EventBus{
+		logicRunner: nil,
+		service:     nil,
+		ledger:      nil,
+		components:  nil,
+	}, nil
 }
 
 func (eb *EventBus) Start(c core.Components) error {
 	eb.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
 	eb.service = c["core.Network"].(core.Network)
 	eb.service.RemoteProcedureRegister(deliverRPCMethodName, eb.deliver)
-
 	eb.ledger = c["core.Ledger"].(core.Ledger)
+
+	// Storing entire DI container here to pass it into event handle methods.
+	eb.components = c
 	return nil
 }
 
 func (eb *EventBus) Stop() error { return nil }
 
-// Route a `Event` and get a `Response` or error from remote host
-func (eb *EventBus) Route(event core.Event) (core.Response, error) {
+// Dispatch an `Event` and get a `Reaction` or error from remote host.
+func (eb *EventBus) Dispatch(event core.Event) (core.Reaction, error) {
 	jc := eb.ledger.GetJetCoordinator()
 	pm := eb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -84,7 +93,15 @@ func (eb *EventBus) Route(event core.Event) (core.Response, error) {
 		return nil, err
 	}
 
-	return response.Deserialize(bytes.NewBuffer(res))
+	return reaction.Deserialize(bytes.NewBuffer(res))
+}
+
+// DispatchAsync dispatches a `Event` to remote host.
+func (eb *EventBus) DispatchAsync(event core.Event) {
+	go func() {
+		_, err := eb.Dispatch(event)
+		log.Errorln(err)
+	}()
 }
 
 type serializableError struct {
@@ -106,7 +123,7 @@ func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	resp, err := eb.logicRunner.Execute(e)
+	resp, err := e.React(eb.components)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),

@@ -17,31 +17,45 @@
 package log
 
 import (
+	"bytes"
+	"os"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/configuration"
 )
+
+func capture(f func()) string {
+	var buf bytes.Buffer
+	SetOutput(&buf)
+	f()
+	SetOutput(os.Stderr)
+	return buf.String()
+}
+
+func assertHelloWorld(t *testing.T, out string) {
+	assert.Contains(t, out, " msg=HelloWorld")
+}
 
 func TestLog_GlobalLogger(t *testing.T) {
 
 	assert.NoError(t, SetLevel("debug"))
 
-	Debug("HelloWorld")
-	Debugln("HelloWorld")
-	Debugf("%s", "HelloWorld")
+	assertHelloWorld(t, capture(func() { Debug("HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Debugln("HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Debugf("%s", "HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Info("HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Infoln("HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Infof("%s", "HelloWorld") }))
 
-	Info("HelloWorld")
-	Infoln("HelloWorld")
-	Infof("%s", "HelloWorld")
+	assertHelloWorld(t, capture(func() { Warn("HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Warnln("HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Warnf("%s", "HelloWorld") }))
 
-	Warn("HelloWorld")
-	Warnln("HelloWorld")
-	Warnf("%s", "HelloWorld")
-
-	Error("HelloWorld")
-	Errorln("HelloWorld")
-	Errorf("%s", "HelloWorld")
+	assertHelloWorld(t, capture(func() { Error("HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Errorln("HelloWorld") }))
+	assertHelloWorld(t, capture(func() { Errorf("%s", "HelloWorld") }))
 
 	assert.Panics(t, func() { Panic("HelloWorld") })
 	assert.Panics(t, func() { Panicln("HelloWorld") })
@@ -53,20 +67,37 @@ func TestLog_GlobalLogger(t *testing.T) {
 	// Fatalf("%s", "HelloWorld")
 }
 
-func TestLog_NewLog_InvalidConfig(t *testing.T) {
-	cfg := configuration.NewLog()
-	cfg.Adapter = "invalid"
-
-	tests := map[string]configuration.Log{
+func TestLog_NewLog_Config(t *testing.T) {
+	invalidtests := map[string]configuration.Log{
 		"InvalidAdapter": configuration.Log{Level: "Debug", Adapter: "invalid"},
 		"InvalidLevel":   configuration.Log{Level: "Invalid", Adapter: "logrus"},
 	}
 
-	for name, test := range tests {
+	for name, test := range invalidtests {
 		t.Run(name, func(t *testing.T) {
 			logger, err := NewLog(test)
 			assert.Nil(t, logger)
 			assert.Error(t, err)
 		})
 	}
+
+	validtests := map[string]configuration.Log{
+		"WithAdapter": configuration.Log{Level: "Debug", Adapter: "logrus"},
+	}
+	for name, test := range validtests {
+		t.Run(name, func(t *testing.T) {
+			logger, err := NewLog(test)
+			assert.NotNil(t, logger)
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestLog_GlobalLogger_Level(t *testing.T) {
+	got := GetLevel()
+	assert.NoError(t, SetLevel("error"))
+	assert.Error(t, SetLevel("errorrr"))
+	assert.Equal(t, "error", GetLevel())
+	assert.NoError(t, SetLevel(got))
+	assert.Equal(t, got, GetLevel())
 }

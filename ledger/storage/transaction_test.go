@@ -18,9 +18,6 @@ package storage_test
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 	"sync/atomic"
 	"testing"
 
@@ -28,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/log"
 )
 
 type tTxStat struct {
@@ -61,8 +59,7 @@ type tConflictResult struct {
 tx1 returns storage.ErrConflict error after commit in this scenario.
 */
 func testconflict(t *testing.T, db *storage.DB, key []byte, conflicts int) *tConflictResult {
-	tlog := getlog()
-	tlog.Println("use key", key)
+	log.Debugln("use key", key)
 	newvalue := newvalueGenerator()
 	seterr := db.Set(key, newvalue())
 	assert.NoError(t, seterr)
@@ -76,23 +73,23 @@ func testconflict(t *testing.T, db *storage.DB, key []byte, conflicts int) *tCon
 		v1 := newvalue()
 		tx1stat.err = db.Update(func(tx *storage.TransactionManager) error {
 			tx1stat.attempts++
-			tlog.Printf("tx1 [%v]: start", tx1stat.attempts)
+			log.Debugf("tx1 [%v]: start", tx1stat.attempts)
 			vgot, geterr := tx.Get(key)
 			if geterr != nil {
 				return geterr
 			}
-			tlog.Printf("tx1 [%v]: got '%v'\n", tx1stat.attempts, string(vgot))
+			log.Debugf("tx1 [%v]: got '%v'\n", tx1stat.attempts, string(vgot))
 
 			seterr := tx.Set(key, v1)
 			if seterr != nil {
 				return seterr
 			}
-			tlog.Printf("tx1 [%v]: set '%v'\n", tx1stat.attempts, string(v1))
+			log.Debugf("tx1 [%v]: set '%v'\n", tx1stat.attempts, string(v1))
 			inflightTx1 <- true
 			<-endTx1
 			return seterr
 		})
-		tlog.Printf("tx1 [%v]: done", tx1stat.attempts)
+		log.Debugf("tx1 [%v]: done", tx1stat.attempts)
 		close(doneTx1)
 	}()
 
@@ -101,21 +98,21 @@ func testconflict(t *testing.T, db *storage.DB, key []byte, conflicts int) *tCon
 		v2 := newvalue()
 		tx2stat.err = db.Update(func(tx *storage.TransactionManager) error {
 			tx2stat.attempts++
-			tlog.Printf("tx2 [%v]: start", tx2stat.attempts)
+			log.Debugf("tx2 [%v]: start", tx2stat.attempts)
 
 			vgot, geterr := tx.Get(key)
 			if geterr != nil {
 				return geterr
 			}
-			tlog.Printf("tx2 [%v]: got '%v'", tx2stat.attempts, string(vgot))
+			log.Debugf("tx2 [%v]: got '%v'", tx2stat.attempts, string(vgot))
 
 			seterr := tx.Set(key, v2)
 			if seterr == nil {
-				tlog.Printf("tx2 [%v]: set '%v'\n", tx2stat.attempts, string(v2))
+				log.Debugf("tx2 [%v]: set '%v'\n", tx2stat.attempts, string(v2))
 			}
 			return seterr
 		})
-		tlog.Printf("tx2 [%v]: done (error=%v)\n", tx2stat.attempts, tx2stat.err)
+		log.Debugf("tx2 [%v]: done (error=%v)\n", tx2stat.attempts, tx2stat.err)
 	}
 
 TRY_LOOP:
@@ -128,7 +125,7 @@ TRY_LOOP:
 			}
 			endTx1 <- true
 		case <-doneTx1:
-			tlog.Println("goroutine with cycle done")
+			log.Debugln("goroutine with cycle done")
 			break TRY_LOOP
 		}
 	}
@@ -197,11 +194,4 @@ func newvalueGenerator() valueGen {
 	return func() []byte {
 		return []byte(fmt.Sprintf("v%v", atomic.AddInt32(&valcounter, 1)-1))
 	}
-}
-
-func getlog() *log.Logger {
-	if os.Getenv("INSOLAR_TESTS_CONFLICTS_DEBUG") != "" {
-		return log.New(os.Stderr, "", log.LstdFlags)
-	}
-	return log.New(ioutil.Discard, "", log.LstdFlags)
 }

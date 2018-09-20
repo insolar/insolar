@@ -4,7 +4,6 @@ language: go
 sudo: false
 
 go:
-  - "1.10.x"
   - "1.11.x"
 
 env:
@@ -13,6 +12,7 @@ env:
 # «For parallel processes running at the same time, try to reduce the number. More than two to four processes should be fine, beyond that, resources are likely to be exhausted.»
 # https://docs.travis-ci.com/user/common-build-problems/#my-build-script-is-killed-without-any-error
     - GOMAXPROCS=2
+    - CGO_ENABLED=0
 
 before_install:
   - "go get -u github.com/golang/dep/cmd/dep"
@@ -21,7 +21,7 @@ install:
   - "dep ensure"
   - "go generate -x ./..."
 script:
-  - "go test --race --coverprofile=coverage.txt --covermode=atomic ./..."
+  - "CGO_ENABLED=1 go test --race --coverprofile=coverage.txt --covermode=atomic ./..."
   - "go build -o insolard cmd/insolard/*"
 after_success:
   - "bash <(curl -s https://codecov.io/bash)"

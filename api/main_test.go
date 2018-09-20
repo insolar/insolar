@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/response"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -134,12 +134,14 @@ func (eb *TestEventBus) Stop() error {
 	return nil
 }
 
+func (*TestEventBus) DispatchAsync(event core.Event) {}
+
 const TestBalance = 100500
 
-func (eb *TestEventBus) Route(event core.Event) (core.Response, error) {
+func (eb *TestEventBus) Dispatch(event core.Event) (core.Reaction, error) {
 	data, _ := MarshalArgs(TestBalance)
 
-	return &response.CommonResponse{
+	return &reaction.CommonReaction{
 		Result: data,
 	}, nil
 }

@@ -33,7 +33,8 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+
+	"github.com/insolar/insolar/log"
 )
 
 var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"

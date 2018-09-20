@@ -24,15 +24,15 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/response"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 )
@@ -42,7 +42,10 @@ var runnerbin = ""
 
 func TestMain(m *testing.M) {
 	var err error
-	log.SetLevel(log.DebugLevel)
+	err = log.SetLevel("Debug")
+	if err != nil {
+		log.Errorln(err.Error())
+	}
 	if runnerbin, icc, err = testutil.Build(); err != nil {
 		fmt.Println("Logic runner build failed, skip tests:", err.Error())
 		os.Exit(1)
@@ -142,9 +145,10 @@ type testEventBus struct {
 
 func (*testEventBus) Start(components core.Components) error { return nil }
 func (*testEventBus) Stop() error                            { return nil }
-func (eb *testEventBus) Route(event core.Event) (resp core.Response, err error) {
+func (eb *testEventBus) Dispatch(event core.Event) (resp core.Reaction, err error) {
 	return eb.LogicRunner.Execute(event)
 }
+func (*testEventBus) DispatchAsync(event core.Event) {}
 
 func TestExecution(t *testing.T) {
 	am := testutil.NewTestArtifactManager()
@@ -178,14 +182,14 @@ func TestExecution(t *testing.T) {
 
 	resp, err := lr.Execute(&event.CallMethodEvent{ObjectRef: dataRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*response.CommonResponse).Data)
-	assert.Equal(t, []byte("res"), resp.(*response.CommonResponse).Result)
+	assert.Equal(t, []byte("data"), resp.(*reaction.CommonReaction).Data)
+	assert.Equal(t, []byte("res"), resp.(*reaction.CommonReaction).Result)
 
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
 	resp, err = lr.Execute(&event.CallConstructorEvent{ClassRef: classRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*response.CommonResponse).Data)
-	assert.Equal(t, []byte(nil), resp.(*response.CommonResponse).Result)
+	assert.Equal(t, []byte("data"), resp.(*reaction.CommonReaction).Data)
+	assert.Equal(t, []byte(nil), resp.(*reaction.CommonReaction).Result)
 }
 
 func TestContractCallingContract(t *testing.T) {
@@ -598,7 +602,7 @@ func New(n int) *Child {
 		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
 	})
 	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Result)
+	r := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 	resp, err = lr.Execute(&event.CallMethodEvent{
@@ -608,7 +612,7 @@ func New(n int) *Child {
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
-	r = testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Result)
+	r = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 }
@@ -675,7 +679,7 @@ func TestRootDomainContract(t *testing.T) {
 		Arguments: testutil.CBORMarshal(t, []interface{}{"member1"}),
 	})
 	assert.NoError(t, err, "contract call")
-	r1 := testutil.CBORUnMarshal(t, resp1.(*response.CommonResponse).Result)
+	r1 := testutil.CBORUnMarshal(t, resp1.(*reaction.CommonReaction).Result)
 	member1Ref := r1.([]interface{})[0].(string)
 
 	resp2, err := lr.Execute(&event.CallMethodEvent{
@@ -685,7 +689,7 @@ func TestRootDomainContract(t *testing.T) {
 		Arguments: testutil.CBORMarshal(t, []interface{}{"member2"}),
 	})
 	assert.NoError(t, err, "contract call")
-	r2 := testutil.CBORUnMarshal(t, resp2.(*response.CommonResponse).Result)
+	r2 := testutil.CBORUnMarshal(t, resp2.(*reaction.CommonReaction).Result)
 	member2Ref := r2.([]interface{})[0].(string)
 
 	_, err = lr.Execute(&event.CallMethodEvent{
@@ -703,7 +707,7 @@ func TestRootDomainContract(t *testing.T) {
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp4.(*response.CommonResponse).Result)
+	r := testutil.CBORUnMarshal(t, resp4.(*reaction.CommonReaction).Result)
 
 	var res []map[string]interface{}
 	var expected = map[interface{}]float64{"member1": 999, "member2": 1001}
@@ -789,7 +793,7 @@ func (c *Child) GetNum() int {
 			Arguments: testutil.CBORMarshal(b, []interface{}{child}),
 		})
 		assert.NoError(b, err, "parent call")
-		r := testutil.CBORUnMarshal(b, resp.(*response.CommonResponse).Result)
+		r := testutil.CBORUnMarshal(b, resp.(*reaction.CommonReaction).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
 }

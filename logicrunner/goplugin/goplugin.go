@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/response"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -94,12 +94,12 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.EventBus.Route(e)
+	res, err := gpr.gp.EventBus.Dispatch(e)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route event")
+		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	reply.Result = res.(*response.CommonResponse).Result
+	reply.Result = res.(*reaction.CommonReaction).Result
 
 	return nil
 }
@@ -116,12 +116,12 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		Arguments: req.Arguments,
 	}
 
-	res, err := gpr.gp.EventBus.Route(e)
+	res, err := gpr.gp.EventBus.Dispatch(e)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route event")
+		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	reply.Data = res.(*response.CommonResponse).Data
+	reply.Data = res.(*reaction.CommonReaction).Data
 	return nil
 }
 
@@ -133,12 +133,12 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 		Body:  req.Data,
 	}
 
-	res, err := gpr.gp.EventBus.Route(e)
+	res, err := gpr.gp.EventBus.Dispatch(e)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route event")
+		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	reply.Reference = core.NewRefFromBase58(string(res.(*response.CommonResponse).Data))
+	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
 
 	return nil
 }
@@ -180,12 +180,12 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 		Body:  req.Data,
 	}
 
-	res, err := gpr.gp.EventBus.Route(e)
+	res, err := gpr.gp.EventBus.Dispatch(e)
 	if err != nil {
-		return errors.Wrap(err, "couldn't route event")
+		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	reply.Reference = core.NewRefFromBase58(string(res.(*response.CommonResponse).Data))
+	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
 
 	return nil
 }

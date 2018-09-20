@@ -29,15 +29,20 @@ type Event interface {
 	GetReference() RecordRef
 	// GetOperatingRole returns operating jet role for given event type.
 	GetOperatingRole() JetRole
+	// React handles event and returns associated reaction.
+	React(Components) (Reaction, error)
 }
 
-// Response to a `Event`
-type Response interface {
+// Reaction for an `Event`
+type Reaction interface {
 	// Serialize serializes event.
 	Serialize() (io.Reader, error)
 }
 
 // EventBus interface
 type EventBus interface {
-	Route(event Event) (resp Response, err error)
+	// Dispatch an `Event` and get a `Reaction` or error from remote host.
+	Dispatch(Event) (Reaction, error)
+	// DispatchAsync dispatches an `Event` to remote host.
+	DispatchAsync(Event)
 }

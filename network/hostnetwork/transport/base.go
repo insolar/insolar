@@ -17,25 +17,19 @@
 package transport
 
 import (
-	"context"
 	"errors"
 	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
-
-	"github.com/anacrolix/utp"
 )
 
-type utpTransport struct {
-	socket *utp.Socket
-
+type baseTransport struct {
 	received chan *packet.Packet
 	sequence *uint64
 
@@ -47,17 +41,11 @@ type utpTransport struct {
 
 	proxy         relay.Proxy
 	publicAddress string
+	sendFunc      func(recvAddress string, data []byte) error
 }
 
-func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*utpTransport, error) {
-	socket, err := utp.NewSocketFromPacketConn(conn)
-	if err != nil {
-		return nil, err
-	}
-
-	transport := &utpTransport{
-		socket: socket,
-
+func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
+	return baseTransport{
 		received: make(chan *packet.Packet),
 		sequence: new(uint64),
 
@@ -70,12 +58,10 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 		proxy:         proxy,
 		publicAddress: publicAddress,
 	}
-
-	return transport, nil
 }
 
 // SendRequest sends request packet and returns future.
-func (t *utpTransport) SendRequest(msg *packet.Packet) (Future, error) {
+func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	if !msg.IsValid() {
 		return nil, errors.New("invalid packet")
 	}
@@ -94,44 +80,14 @@ func (t *utpTransport) SendRequest(msg *packet.Packet) (Future, error) {
 }
 
 // SendResponse sends response packet.
-func (t *utpTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
+func (t *baseTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
 	return t.sendPacket(msg)
 }
 
-// Start starts networking.
-func (t *utpTransport) Start() error {
-	log.Info("Start UTP transport")
-	for {
-		conn, err := t.socket.Accept()
-
-		if err != nil {
-			<-t.disconnectFinished
-			return err
-		}
-
-		go t.handleAcceptedConnection(conn)
-	}
-}
-
-// Stop stops networking.
-func (t *utpTransport) Stop() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	log.Info("Stop UTP transport")
-	t.disconnectStarted <- true
-	close(t.disconnectStarted)
-
-	err := t.socket.CloseNow()
-	if err != nil {
-		log.Errorln("Failed to close socket:", err.Error())
-	}
-}
-
 // Close closes packet channels.
-func (t *utpTransport) Close() {
+func (t *baseTransport) Close() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -140,28 +96,25 @@ func (t *utpTransport) Close() {
 }
 
 // Packets returns incoming packets channel.
-func (t *utpTransport) Packets() <-chan *packet.Packet {
+func (t *baseTransport) Packets() <-chan *packet.Packet {
 	return t.received
 }
 
 // Stopped checks if networking is stopped already.
-func (t *utpTransport) Stopped() <-chan bool {
+func (t *baseTransport) Stopped() <-chan bool {
 	return t.disconnectStarted
 }
 
-func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (net.Conn, error) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
-	defer cancel()
-
-	return t.socket.DialContext(ctx, "", addr)
-}
-
-func (t *utpTransport) generateID() packet.RequestID {
+func (t *baseTransport) generateID() packet.RequestID {
 	id := AtomicLoadAndIncrementUint64(t.sequence)
 	return packet.RequestID(id)
 }
 
-func (t *utpTransport) createFuture(msg *packet.Packet) Future {
+func (t *baseTransport) getRemoteAddress(conn net.Conn) string {
+	return strings.Split(conn.RemoteAddr().String(), ":")[0]
+}
+
+func (t *baseTransport) createFuture(msg *packet.Packet) Future {
 	newFuture := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
 		t.mutex.Lock()
 		defer t.mutex.Unlock()
@@ -177,56 +130,14 @@ func (t *utpTransport) createFuture(msg *packet.Packet) Future {
 	return newFuture
 }
 
-func (t *utpTransport) getFuture(msg *packet.Packet) Future {
+func (t *baseTransport) getFuture(msg *packet.Packet) Future {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
 	return t.futures[msg.RequestID]
 }
 
-func (t *utpTransport) sendPacket(msg *packet.Packet) error {
-	var recvAddress string
-	if t.proxy.ProxyHostsCount() > 0 {
-		recvAddress = t.proxy.GetNextProxyAddress()
-	}
-	if len(recvAddress) == 0 {
-		recvAddress = msg.Receiver.Address.String()
-	}
-	conn, err := t.socketDialTimeout(recvAddress, time.Second)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	data, err := packet.SerializePacket(msg)
-	if err != nil {
-		return err
-	}
-
-	_, err = conn.Write(data)
-	return err
-}
-
-func (t *utpTransport) getRemoteAddress(conn net.Conn) string {
-	return strings.Split(conn.RemoteAddr().String(), ":")[0]
-}
-
-func (t *utpTransport) handleAcceptedConnection(conn net.Conn) {
-	for {
-		// Wait for Packets
-		msg, err := packet.DeserializePacket(conn)
-		if err != nil {
-			// TODO should we penalize this Host somehow ? Ban it ?
-			// if err.Error() != "EOF" {
-			// }
-			return
-		}
-		msg.RemoteAddress = t.getRemoteAddress(conn)
-		t.handlePacket(msg)
-	}
-}
-
-func (t *utpTransport) handlePacket(msg *packet.Packet) {
+func (t *baseTransport) handlePacket(msg *packet.Packet) {
 	if msg.IsResponse {
 		t.processResponse(msg)
 	} else {
@@ -234,7 +145,9 @@ func (t *utpTransport) handlePacket(msg *packet.Packet) {
 	}
 }
 
-func (t *utpTransport) processResponse(msg *packet.Packet) {
+func (t *baseTransport) processResponse(msg *packet.Packet) {
+	log.Debugf("Process response %s with RequestID = %s", msg.RemoteAddress, msg.RequestID)
+
 	future := t.getFuture(msg)
 	if future != nil && !shouldProcessPacket(future, msg) {
 		future.SetResult(msg)
@@ -242,10 +155,34 @@ func (t *utpTransport) processResponse(msg *packet.Packet) {
 	future.Cancel()
 }
 
-func (t *utpTransport) processRequest(msg *packet.Packet) {
+func (t *baseTransport) processRequest(msg *packet.Packet) {
 	if msg.IsValid() {
+		log.Debugf("Process request %s with RequestID = %s", msg.RemoteAddress, msg.RequestID)
 		t.received <- msg
 	}
+}
+
+// PublicAddress returns transport public ip address
+func (t *baseTransport) PublicAddress() string {
+	return t.publicAddress
+}
+
+func (t *baseTransport) sendPacket(msg *packet.Packet) error {
+	var recvAddress string
+	if t.proxy.ProxyHostsCount() > 0 {
+		recvAddress = t.proxy.GetNextProxyAddress()
+	}
+	if len(recvAddress) == 0 {
+		recvAddress = msg.Receiver.Address.String()
+	}
+
+	data, err := packet.SerializePacket(msg)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Send packet to %s with RequestID = %s", recvAddress, msg.RequestID)
+	return t.sendFunc(recvAddress, data)
 }
 
 func shouldProcessPacket(future Future, msg *packet.Packet) bool {
@@ -260,9 +197,4 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 			return val
 		}
 	}
-}
-
-// PublicAddress returns transport public ip address
-func (t *utpTransport) PublicAddress() string {
-	return t.publicAddress
 }

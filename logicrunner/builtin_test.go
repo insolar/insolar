@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/response"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 
 	"github.com/insolar/insolar/ledger/ledgertestutil"
@@ -74,8 +74,8 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	d := testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Data)
-	r := testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Result)
+	d := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Data)
+	r := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
@@ -88,8 +88,8 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	d = testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Data)
-	r = testutil.CBORUnMarshal(t, resp.(*response.CommonResponse).Result)
+	d = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Data)
+	r = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }
