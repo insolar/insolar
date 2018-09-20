@@ -8,7 +8,9 @@ WORKDIR /go/src/github.com/insolar/insolar
 COPY Gopkg.toml Gopkg.lock ./
 RUN dep ensure --vendor-only
 COPY . ./
-RUN CGO_ENABLED=0 GOOS=linux go install -a -installsuffix nocgo github.com/insolar/insolar/cmd/insolard
+RUN CGO_ENABLED=0 GOOS=linux go install -a -installsuffix nocgo github.com/insolar/insolar/cmd/insolard && \
+CGO_ENABLED=0 GOOS=linux go install -a -installsuffix nocgo github.com/insolar/insolar/cmd/insolar
+
 
 #FROM scratch
 #COPY --from=builder /go/src/github.com/insolar/insolar /go/src/github.com/insolar/insolar
