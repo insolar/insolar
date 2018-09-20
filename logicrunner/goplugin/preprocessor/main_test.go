@@ -118,7 +118,7 @@ func TestBasicGeneration(t *testing.T) {
 	t.Run("wrapper", func(t *testing.T) {
 		buf := bytes.Buffer{}
 
-		parsed, err := ParseFile(tmpDir + "/main.go")
+		parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
 		assert.NoError(t, err)
 
 		err = GenerateContractWrapper(parsed, &buf)
@@ -132,7 +132,7 @@ func TestBasicGeneration(t *testing.T) {
 	t.Run("proxy", func(t *testing.T) {
 		buf := bytes.Buffer{}
 
-		parsed, err := ParseFile(tmpDir + "/main.go")
+		parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
 		assert.NoError(t, err)
 
 		err = GenerateContractProxy(parsed, "testRef", &buf)
@@ -171,7 +171,7 @@ func NewWrong() {
 	err = testutil.WriteFile(tmpDir, "code1", code)
 	assert.NoError(t, err)
 
-	info, err := ParseFile(tmpDir + "/code1")
+	info, err := ParseFile(filepath.Join(tmpDir, "code1"))
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(info.constructors))
@@ -189,21 +189,20 @@ func TestCompileContractProxy(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
-	err = os.MkdirAll(tmpDir+"/src/secondary/", 0777)
+	err = os.MkdirAll(filepath.Join(tmpDir, "src/secondary"), 0777)
 	assert.NoError(t, err)
 
 	// XXX: dirty hack to make `dep` installed packages available in generated code
-	// err = os.Symlink(cwd+"/../../../vendor/", tmpDir+"/src/secondary/vendor")
-	err = os.Symlink(filepath.Join(cwd, "..", "..", "..", "vendor"), filepath.Join(tmpDir, "src", "secondary", "vendor"))
+	err = os.Symlink(filepath.Join(cwd, "../../../vendor"), filepath.Join(tmpDir, "src/secondary/vendor"))
 	assert.NoError(t, err)
 
-	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
+	proxyFh, err := os.OpenFile(filepath.Join(tmpDir, "/src/secondary/main.go"), os.O_WRONLY|os.O_CREATE, 0644)
 	assert.NoError(t, err)
 
-	err = testutil.WriteFile(tmpDir+"/contracts/secondary/", "main.go", randomTestCode)
+	err = testutil.WriteFile(filepath.Join(tmpDir, "/contracts/secondary/"), "main.go", randomTestCode)
 	assert.NoError(t, err)
 
-	parsed, err := ParseFile(tmpDir + "/contracts/secondary/main.go")
+	parsed, err := ParseFile(filepath.Join(tmpDir, "/contracts/secondary/main.go"))
 	assert.NoError(t, err)
 
 	err = GenerateContractProxy(parsed, "testRef", proxyFh)

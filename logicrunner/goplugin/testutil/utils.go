@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -59,7 +60,7 @@ func WriteFile(dir string, name string, text string) error {
 		return err
 	}
 
-	fh, err := os.OpenFile(dir+"/"+name, os.O_WRONLY|os.O_CREATE, 0644)
+	fh, err := os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -487,7 +488,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	re := regexp.MustCompile(`package\s+\S+`)
 	for name, code := range contracts {
 		code = re.ReplaceAllString(code, "package main")
-		err := WriteFile(cb.root+"/src/contract/"+name+"/", "main.go", code)
+		err := WriteFile(filepath.Join(cb.root, "src/contract", name), "main.go", code)
 		if err != nil {
 			return err
 		}
@@ -507,7 +508,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			return err
 		}
 
-		pluginBinary, err := ioutil.ReadFile(cb.root + "/plugins/" + name + ".so")
+		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
 			return err
 		}
@@ -536,18 +537,18 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {
-	dstDir := cb.root + "/src/contract-proxy/" + name
+	dstDir := filepath.Join(cb.root, "src/contract-proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
 		return err
 	}
 
-	contractPath := cb.root + "/src/contract/" + name + "/main.go"
+	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
 
 	out, err := exec.Command(
 		cb.IccPath, "proxy",
-		"-o", dstDir+"/main.go",
+		"-o", filepath.Join(dstDir, "main.go"),
 		"--code-reference", cb.Classes[name].String(),
 		contractPath,
 	).CombinedOutput()
@@ -558,8 +559,8 @@ func (cb *ContractsBuilder) proxy(name string) error {
 }
 
 func (cb *ContractsBuilder) wrapper(name string) error {
-	contractPath := cb.root + "/src/contract/" + name + "/main.go"
-	wrapperPath := cb.root + "/src/contract/" + name + "/main_wrapper.go"
+	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
+	wrapperPath := filepath.Join(cb.root, "src/contract", name, "main_wrapper.go")
 
 	out, err := exec.Command(cb.IccPath, "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
 	if err != nil {
@@ -570,7 +571,7 @@ func (cb *ContractsBuilder) wrapper(name string) error {
 
 // Plugin ...
 func (cb *ContractsBuilder) plugin(name string) error {
-	dstDir := cb.root + "/plugins/"
+	dstDir := filepath.Join(cb.root, "plugins")
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
@@ -583,9 +584,14 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	}
 	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
 
-	//contractPath := root + "/src/contract/" + name + "/main.go"
+	// contractPath := filepath.Join(root, "src/contract", name, "main.go")
 
-	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", "contract/"+name).CombinedOutput()
+	out, err := exec.Command(
+		"go", "build",
+		"-buildmode=plugin",
+		"-o", filepath.Join(dstDir, name+".so"),
+		"contract/"+name,
+	).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))
 	}
