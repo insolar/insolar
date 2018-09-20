@@ -91,8 +91,8 @@ func TestCompilingRealSmartContracts(t *testing.T) {
 	}
 
 	am := testutil.NewTestArtifactManager()
-	cb, cleaner := testutil.NewContractBuilder(am, filepath.Join(iccDir, "insgocc"))
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, filepath.Join(iccDir, "insgocc"))
+	defer cb.Clean()
 	err = cb.Build(contracts)
 	assert.NoError(t, err)
 }

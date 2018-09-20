@@ -97,8 +97,8 @@ func (bc *BaseContract) SelfDestructRequest() {
 
 // CBORMarshaler is a special interface for serializer object
 type CBORMarshaler interface {
-	Marshal(interface{}) []byte
-	Unmarshal(interface{}, []byte)
+	Marshal(interface{}) ([]byte, error)
+	Unmarshal(interface{}, []byte) error
 }
 
 // Call other contract via network dispatcher
