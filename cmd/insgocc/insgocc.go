@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
@@ -214,7 +215,7 @@ func main() {
 
 			name := preprocessor.GetContractName(parsed)
 
-			contract, err := os.Create(tmpDir + "/" + name + ".go")
+			contract, err := os.Create(filepath.Join(tmpDir, name+".go"))
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -223,7 +224,7 @@ func main() {
 
 			preprocessor.RewriteContractPackage(parsed, contract)
 
-			wrapper, err := os.Create(tmpDir + "/" + name + ".wrapper.go")
+			wrapper, err := os.Create(filepath.Join(tmpDir, name+".wrapper.go"))
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)

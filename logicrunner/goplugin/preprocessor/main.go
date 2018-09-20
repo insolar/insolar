@@ -194,6 +194,9 @@ func ProxyPackageName(parsed *ParsedFile) (string, error) {
 func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
 
 	proxyPackageName, err := ProxyPackageName(parsed)
+	if err != nil {
+		return err
+	}
 
 	types := generateTypes(parsed)
 

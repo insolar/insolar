@@ -33,7 +33,7 @@ func buildCLI(name string) (string, error) {
 	out, err := exec.Command(
 		"go", "build",
 		"-o", clipath,
-		insolarImportPath+"/logicrunner/goplugin/"+name,
+		filepath.Join(insolarImportPath, "logicrunner", "goplugin", name),
 	).CombinedOutput()
 	if err != nil {
 		return "", errors.Wrapf(err, "can't build %s: %s", name, string(out))
@@ -50,7 +50,7 @@ func buildPreprocessor() (string, error) {
 	out, err := exec.Command(
 		"go", "build",
 		"-o", insgocc,
-		insolarImportPath+"/cmd/insgocc",
+		filepath.Join(insolarImportPath, "cmd", "insgocc"),
 	).CombinedOutput()
 	if err != nil {
 		return "", errors.Wrapf(err, "can't build preprocessor. Build output: %s", string(out))
