@@ -90,7 +90,8 @@ func (t *kcpTransport) send(recvAddress string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	//defer conn.Close()
+	// No need explicit close KCP session.
+	// defer conn.Close()
 
 	_, err = session.Write(data)
 	return err
@@ -111,6 +112,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 			return
 		}
 		msg.RemoteAddress = t.getRemoteAddress(session)
+		log.Debugln("Handle connection from ", msg.RemoteAddress)
 		t.handlePacket(msg)
 	}
 }

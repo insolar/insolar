@@ -23,6 +23,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
@@ -39,8 +40,7 @@ type baseTransport struct {
 
 	proxy         relay.Proxy
 	publicAddress string
-	//dialTimeoutFunc func(addr string, timeout time.Duration) (net.Conn, error)
-	sendFunc func(recvAddress string, data []byte) error
+	sendFunc      func(recvAddress string, data []byte) error
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
@@ -176,6 +176,7 @@ func (t *baseTransport) sendPacket(msg *packet.Packet) error {
 		return err
 	}
 
+	log.Debugf("Send packet to %s with RequestID = %s", recvAddress, msg.RequestID)
 	return t.sendFunc(recvAddress, data)
 }
 

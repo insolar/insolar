@@ -136,8 +136,6 @@ func (t *transportSuite) TestSendInvalidPacket() {
 }
 
 func TestUTPTransport(t *testing.T) {
-	//t.Skip("skip unstable tests for UTP")
-
 	cfg1 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17010", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17011", BehindNAT: false}
 
@@ -145,7 +143,6 @@ func TestUTPTransport(t *testing.T) {
 }
 
 func TestKCPTransport(t *testing.T) {
-	//t.Skip("skip unstable tests for KCP")
 	cfg1 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17012", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "KCP", Address: "127.0.0.1:17013", BehindNAT: false}
 
