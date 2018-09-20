@@ -43,6 +43,7 @@ const (
 	ChildEventType           // ChildEvent is a event for saving a child
 	UpdateObjectEventType    // UpdateObjectEvent is a event for updating an object
 	GetObjectEventType       // GetObjectEvent is a event for retrieving an object
+	TypeGetCode              // TypeGetCode - retrieve code from storage.
 )
 
 // GetEmptyMessage constructs specified event

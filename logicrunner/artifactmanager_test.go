@@ -133,7 +133,9 @@ func (b *Hello) String() string {
 	return fmt.Sprint("Hello, Go is there!")
 }
 	`
-	cb, cbcleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
+	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
+	cb, cbcleaner := testutil.NewContractBuilder(am, tctx.preprocessor)
 	defer cbcleaner()
 	err := cb.Build(map[string]string{"hello": helloCode})
 	assert.NoError(t, err)

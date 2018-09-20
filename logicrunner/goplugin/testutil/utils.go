@@ -80,14 +80,14 @@ func WriteFile(dir string, name string, text string) error {
 
 // TestCodeDescriptor implementation for tests
 type TestCodeDescriptor struct {
-	ARef         *core.RecordRef
+	ARef         core.RecordRef
 	ACode        []byte
 	AMachineType core.MachineType
 }
 
 // Ref implementation for tests
 func (t *TestCodeDescriptor) Ref() *core.RecordRef {
-	return t.ARef
+	return &t.ARef
 }
 
 // MachineType implementation for tests
@@ -118,7 +118,7 @@ func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
 }
 
 // StateRef ...
-func (t *TestClassDescriptor) StateRef() *core.RecordRef {
+func (t *TestClassDescriptor) StateRef() (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
@@ -128,7 +128,7 @@ func (t *TestClassDescriptor) IsActive() (bool, error) {
 }
 
 // CodeDescriptor ...
-func (t *TestClassDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
+func (t *TestClassDescriptor) CodeDescriptor(machinePref []core.MachineType) (core.CodeDescriptor, error) {
 	res, ok := t.AM.Codes[*t.ACode]
 	if !ok {
 		return nil, errors.New("No code")
@@ -151,7 +151,7 @@ func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
 }
 
 // StateRef implementation for tests
-func (t *TestObjectDescriptor) StateRef() *core.RecordRef {
+func (t *TestObjectDescriptor) StateRef() (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
@@ -165,21 +165,8 @@ func (t *TestObjectDescriptor) Memory() ([]byte, error) {
 	return t.Data, nil
 }
 
-// CodeDescriptor implementation for tests
-func (t *TestObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
-	if t.Code == nil {
-		return nil, errors.New("No code")
-	}
-
-	res, ok := t.AM.Codes[*t.Code]
-	if !ok {
-		return nil, errors.New("No code")
-	}
-	return res, nil
-}
-
 // ClassDescriptor implementation for tests
-func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
+func (t *TestObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
 	if t.Class == nil {
 		return nil, errors.New("No class")
 	}
@@ -216,6 +203,11 @@ func (t *TestArtifactManager) Stop() error { return nil }
 
 // RootRef implementation for tests
 func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef{} }
+
+// HandleEvent implementation for tests
+func (t *TestArtifactManager) HandleEvent(event core.Event) (core.Reaction, error) {
+	panic("implement me")
+}
 
 // SetArchPref implementation for tests
 func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
@@ -277,7 +269,7 @@ func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.Rec
 		return nil, errors.Wrap(err, "Failed to generate ref")
 	}
 	t.Codes[*ref] = &TestCodeDescriptor{
-		ARef:         ref,
+		ARef:         *ref,
 		ACode:        codeMap[core.MachineTypeGoPlugin],
 		AMachineType: core.MachineTypeGoPlugin,
 	}
