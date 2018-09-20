@@ -36,3 +36,7 @@ func NewRoleRecord(pk string, role core.JetRole) *RoleRecord {
 		Role:      role,
 	}
 }
+
+func (rr *RoleRecord) SelfDestroy() {
+	rr.SelfDestructRequest()
+}

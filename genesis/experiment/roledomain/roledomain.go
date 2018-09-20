@@ -18,7 +18,7 @@ package roledomain
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis/experiment/roledomain/rolerecord"
+	"github.com/insolar/insolar/genesis/proxy/roledomain/rolerecord"
 	"github.com/insolar/insolar/toolkit/go/foundation"
 )
 
@@ -34,9 +34,9 @@ func NewRoleDomain() *RoleDomain {
 
 // RegisterNode registers node in system
 func (rd *RoleDomain) RegisterNode(pk string, role core.JetRole) core.RecordRef {
-	newRecord := rolerecord.New(pk, role)
-	recordHolder := rd.AsChild(newRecord.GetReference())
-	return recordHolder.GetReference()
+	newRecord := rolerecord.NewRoleRecord(pk, role)
+	record := newRecord.AsChild(rd.GetReference())
+	return record.GetReference()
 }
 
 // GetNodeRecord get node record by ref
@@ -46,6 +46,6 @@ func (rd *RoleDomain) GetNodeRecord(ref core.RecordRef) *rolerecord.RoleRecord {
 
 // RemoveNode deletes node from registry
 func (rd *RoleDomain) RemoveNode(nodeRef core.RecordRef) {
-	node := recordHolder.GetObject(nodeRef)
-	node.SelfDestructRequest()
+	node := rolerecord.GetObject(nodeRef)
+	node.SelfDestroy()
 }
