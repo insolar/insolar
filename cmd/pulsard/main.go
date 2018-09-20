@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/storage"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -45,7 +46,13 @@ func main() {
 	initLogger(cfgHolder.Configuration.Log)
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, net.Listen)
+	storage, err := pulsarstorage.NewStorageBadger(cfgHolder.Configuration.Pulsar, nil)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+
+	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, net.Listen)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
@@ -53,11 +60,11 @@ func main() {
 
 	go server.Start()
 
-	tryToConnectToNeighbours(server)
+	server.RefreshConnections()
 	ticker := time.NewTicker(5 * time.Second)
 	go func() {
 		for range ticker.C {
-			tryToConnectToNeighbours(server)
+			server.RefreshConnections()
 		}
 	}()
 
@@ -72,32 +79,6 @@ func main() {
 	// Need to think about the shutdown mechanism
 	ticker.Stop()
 	defer server.Close()
-}
-
-func tryToConnectToNeighbours(pulsarServer *pulsar.Pulsar) {
-	for _, neighbour := range pulsarServer.Neighbours {
-		if neighbour.OutgoingClient == nil {
-			publicKey, err := pulsar.ExportPublicKey(neighbour.PublicKey)
-			if err != nil {
-				continue
-			}
-
-			err = pulsarServer.EstablishConnection(publicKey)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-		}
-
-		err := neighbour.OutgoingClient.Call(pulsar.HealthCheck.String(), nil, nil)
-
-		accessCall := neighbour.OutgoingClient.Go(pulsar.HealthCheck.String(), nil, nil, nil)
-		replyCall := <-accessCall.Done
-		if replyCall.Error != nil {
-			log.Warn("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
-			neighbour.CheckAndRefreshConnection(err)
-		}
-	}
 }
 
 func initLogger(cfg configuration.Log) {

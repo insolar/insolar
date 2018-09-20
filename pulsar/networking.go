@@ -27,16 +27,25 @@ import (
 type RequestType string
 
 const (
-	HealthCheck RequestType = "Pulsar.HealthCheck"
-	Handshake   RequestType = "Pulsar.MakeHandshake"
+	HealthCheck        RequestType = "Pulsar.HealthCheck"
+	Handshake          RequestType = "Pulsar.MakeHandshake"
+	GetLastPulseNumber RequestType = "Pulsar.GetLastPulse"
 )
 
 func (state RequestType) String() string {
 	return string(state)
 }
 
+type GetLastPulsePayload struct {
+	core.Pulse
+}
+
 type HandshakePayload struct {
 	Entropy core.Entropy
+}
+
+type NumberSignaturePayload struct {
+	NumberSignature []byte
 }
 
 type Payload struct {
@@ -59,7 +68,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 
-	result, err := checkSignature(request)
+	result, err := checkPayloadSignature(request)
 	if err != nil {
 		return err
 	}
@@ -84,8 +93,26 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		if err != nil {
 			return err
 		}
-		neighbour.OutgoingClient = &RpcConnection{RpcClient: rpc.NewClient(conn)}
+		neighbour.OutgoingClient = &RpcConnection{Client: rpc.NewClient(conn)}
 	}
+
+	return nil
+}
+
+func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) error {
+	pulse, err := handler.pulsar.Storage.GetLastPulse()
+	if err != nil {
+		return err
+	}
+
+	convertedKey, err := ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+
+	message := Payload{PublicKey: convertedKey, Body: GetLastPulsePayload{Pulse: *pulse}}
+	message.Signature, err = singData(handler.pulsar.PrivateKey, message.Body)
+	*response = message
 
 	return nil
 }

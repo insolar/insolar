@@ -27,7 +27,9 @@ import (
 	"net/rpc"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/pulsar/storage"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -38,10 +40,12 @@ type Pulsar struct {
 
 	Neighbours map[string]*Neighbour
 	PrivateKey *ecdsa.PrivateKey
+
+	Storage pulsarstorage.PulsarStorage
 }
 
 // Creation new pulsar-node
-func NewPulsar(configuration configuration.Pulsar, listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
+func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarStorage, listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 	// Listen for incoming connections.
 	l, err := listener(configuration.ConnectionType.String(), configuration.ListenAddress)
 	if err != nil {
@@ -55,6 +59,7 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 	}
 	pulsar := &Pulsar{Sock: l, Neighbours: map[string]*Neighbour{}, SockConnectionType: configuration.ConnectionType}
 	pulsar.PrivateKey = privateKey
+	pulsar.Storage = storage
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.ListOfNeighbours {
@@ -73,6 +78,7 @@ func NewPulsar(configuration configuration.Pulsar, listener func(string, string)
 
 	gob.Register(Payload{})
 	gob.Register(HandshakePayload{})
+	gob.Register(NumberSignaturePayload{})
 
 	return pulsar, nil
 }
@@ -137,7 +143,7 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 		return err
 	}
 
-	result, err := checkSignature(&rep)
+	result, err := checkPayloadSignature(&rep)
 	if err != nil {
 		return err
 	}
@@ -146,6 +152,87 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 	}
 
 	return nil
+}
+
+func (pulsar *Pulsar) RefreshConnections() {
+	for _, neighbour := range pulsar.Neighbours {
+		if neighbour.OutgoingClient == nil {
+			publicKey, err := ExportPublicKey(neighbour.PublicKey)
+			if err != nil {
+				continue
+			}
+
+			err = pulsar.EstablishConnection(publicKey)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+		}
+
+		err := neighbour.OutgoingClient.Call(HealthCheck.String(), nil, nil)
+
+		healthCheckCall := neighbour.OutgoingClient.Go(HealthCheck.String(), nil, nil, nil)
+		replyCall := <-healthCheckCall.Done
+		if replyCall.Error != nil {
+			log.Warn("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
+			neighbour.CheckAndRefreshConnection(err)
+		}
+
+		fetchedPulse, err := pulsar.GetLastPulse(neighbour)
+		if err != nil {
+			log.Warn("Problems with fetched pulse from %v, with error - %v", neighbour.ConnectionAddress, err)
+		}
+
+		savedPulse, err := pulsar.Storage.GetLastPulse()
+		if err != nil {
+			log.Fatal(err)
+			panic(err)
+		}
+
+		if savedPulse.PulseNumber < fetchedPulse.PulseNumber {
+			pulsar.Storage.UpdatePulse(fetchedPulse)
+		}
+	}
+}
+
+func (pulsar *Pulsar) GetLastPulse(neighbour *Neighbour) (*core.Pulse, error) {
+	var response Payload
+	getLastPulseCall := neighbour.OutgoingClient.Go(GetLastPulseNumber.String(), nil, response, nil)
+	replyCall := <-getLastPulseCall.Done
+	if replyCall.Error != nil {
+		log.Warn("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
+	}
+	payload := replyCall.Reply.(Payload)
+	ok, err := checkPayloadSignature(&payload)
+	if !ok {
+		log.Warn("Problems with connection to %v, with error - %v", err)
+	}
+
+	payloadData := payload.Body.(GetLastPulsePayload)
+
+	consensusNumber := (len(pulsar.Neighbours) / 2) + 1
+	signedPulsars := 0
+
+	for _, node := range pulsar.Neighbours {
+		nodeKey, _ := ExportPublicKey(node.PublicKey)
+		sign, ok := payloadData.Signs[nodeKey]
+
+		if !ok {
+			continue
+		}
+
+		verified, err := checkSignature(&core.Pulse{Entropy: payloadData.Entropy, PulseNumber: payloadData.PulseNumber}, nodeKey, sign)
+		if err != nil || !verified {
+			continue
+		}
+
+		signedPulsars++
+		if signedPulsars == consensusNumber {
+			return &payloadData.Pulse, nil
+		}
+	}
+
+	return nil, errors.New("Signal signature isn't correct")
 }
 
 func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
@@ -157,19 +244,23 @@ func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
 	return neighbour, nil
 }
 
-func checkSignature(request *Payload) (bool, error) {
+func checkPayloadSignature(request *Payload) (bool, error) {
+	return checkSignature(request.Body, request.PublicKey, request.Signature)
+}
+
+func checkSignature(data interface{}, pub string, signature []byte) (bool, error) {
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
-	err := e.Encode(request.Body)
+	err := e.Encode(data)
 	if err != nil {
 		return false, err
 	}
 
 	r := big.Int{}
 	s := big.Int{}
-	sigLen := len(request.Signature)
-	r.SetBytes(request.Signature[:(sigLen / 2)])
-	s.SetBytes(request.Signature[(sigLen / 2):])
+	sigLen := len(signature)
+	r.SetBytes(signature[:(sigLen / 2)])
+	s.SetBytes(signature[(sigLen / 2):])
 
 	h := sha3.New256()
 	_, err = h.Write(b.Bytes())
@@ -177,7 +268,7 @@ func checkSignature(request *Payload) (bool, error) {
 		return false, err
 	}
 	hash := h.Sum(nil)
-	publicKey, err := ImportPublicKey(request.PublicKey)
+	publicKey, err := ImportPublicKey(pub)
 	if err != nil {
 		return false, err
 	}

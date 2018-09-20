@@ -50,6 +50,7 @@ func Bytes2PulseNumber(buf []byte) PulseNumber {
 type Pulse struct {
 	PulseNumber PulseNumber
 	Entropy     Entropy
+	Signs       map[string][]byte
 }
 
 type PulseManager interface {

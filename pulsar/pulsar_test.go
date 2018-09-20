@@ -56,7 +56,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	actualConnectionType := ""
 	actualAddress := ""
 
-	result, err := NewPulsar(config, func(connectionType string, address string) (net.Listener, error) {
+	result, err := NewPulsar(config, nil, func(connectionType string, address string) (net.Listener, error) {
 		actualConnectionType = connectionType
 		actualAddress = address
 		return &mockListener{}, nil
@@ -92,7 +92,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 		},
 	}
 
-	result, err := NewPulsar(config, func(connectionType string, address string) (net.Listener, error) {
+	result, err := NewPulsar(config, nil, func(connectionType string, address string) (net.Listener, error) {
 		return &mockListener{}, nil
 	})
 
@@ -110,7 +110,7 @@ func TestSingAndVerify(t *testing.T) {
 	signature, err := singData(privateKey, "This is the message to be signed and verified!")
 	assertObj.NoError(err)
 
-	checkSignature, err := checkSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: "This is the message to be signed and verified!"})
+	checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: "This is the message to be signed and verified!"})
 
 	assertObj.Equal(true, checkSignature)
 }
