@@ -172,7 +172,7 @@ func TestExecution(t *testing.T) {
 		Class: &classRef,
 	}
 	am.Classes[classRef] = &testutil.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
-	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef, AMachineType: core.MachineTypeGoPlugin}
+	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: codeRef, AMachineType: core.MachineTypeGoPlugin}
 
 	te := newTestExecutor()
 	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
@@ -568,6 +568,7 @@ func New(n int) *Child {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
@@ -643,6 +644,7 @@ func TestRootDomainContract(t *testing.T) {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	fmt.Println("RUNNERPATH", runnerbin)
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
