@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
-	"log"
 )
 
 // LogicRunner is a general interface of contract executor
@@ -155,7 +154,6 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		return &reaction.CommonReaction{Data: newData, Result: result}, nil
 
 	case *event.CallConstructorEvent:
-		log.Printf("REF= %+v", m)
 		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class")
