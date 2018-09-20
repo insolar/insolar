@@ -440,7 +440,7 @@ func TestBasicNotificationCall(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 
 type One struct {
 	foundation.BaseContract
