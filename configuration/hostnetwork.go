@@ -31,6 +31,7 @@ type HostNetwork struct {
 	Transport      Transport
 	BootstrapHosts []string
 	IsRelay        bool // set if node must be relay explicit
+	Timeout        int  // bootstrap reconnect timeout
 }
 
 // NewHostNetwork creates new default HostNetwork configuration
@@ -43,5 +44,6 @@ func NewHostNetwork() HostNetwork {
 		Transport:      transport,
 		IsRelay:        false,
 		BootstrapHosts: bootstrapHosts,
+		Timeout:        4,
 	}
 }
