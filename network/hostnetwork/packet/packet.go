@@ -58,6 +58,8 @@ const (
 	TypeCascadeSend
 	// TypePulse is packet type for the messages received from pulsars
 	TypePulse
+	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network
+	TypeGetRandomHosts
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -116,6 +118,8 @@ func (m *Packet) IsValid() (valid bool) {
 		_, valid = m.Data.(*RequestCascadeSend)
 	case TypePulse:
 		_, valid = m.Data.(*RequestPulse)
+	case TypeGetRandomHosts:
+		_, valid = m.Data.(*RequestGetRandomHosts)
 	default:
 		valid = false
 	}
@@ -197,6 +201,7 @@ func init() {
 	gob.Register(&RequestCheckNodePriv{})
 	gob.Register(&RequestCascadeSend{})
 	gob.Register(&RequestPulse{})
+	gob.Register(&RequestGetRandomHosts{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -211,6 +216,7 @@ func init() {
 	gob.Register(&ResponseCheckNodePriv{})
 	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
+	gob.Register(&ResponseGetRandomHosts{})
 
 	gob.Register(&id.ID{})
 }
