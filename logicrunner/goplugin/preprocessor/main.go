@@ -173,10 +173,10 @@ func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 	return nil
 }
 
-func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
+func ProxyPackageName(parsed *ParsedFile) (string, error) {
 	match := regexp.MustCompile("([^/]+)/([^/]+).(go|insgoc)$").FindStringSubmatch(parsed.name)
 	if match == nil {
-		return errors.New("couldn't match filename without extension and path")
+		return "", errors.New("couldn't match filename without extension and path")
 	}
 
 	packageName := parsed.node.Name.Name
@@ -187,6 +187,15 @@ func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Wri
 	}
 	if proxyPackageName == "main" {
 		proxyPackageName = match[1]
+	}
+	return proxyPackageName, nil
+}
+
+func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
+
+	proxyPackageName, err := ProxyPackageName(parsed)
+	if err != nil {
+		return err
 	}
 
 	types := generateTypes(parsed)
