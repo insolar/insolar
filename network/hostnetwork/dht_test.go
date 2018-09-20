@@ -148,7 +148,7 @@ func (t *mockTransport) PublicAddress() string {
 	return t.publicAddress
 }
 
-func mockFindHostResponse(request *packet.Packet, nextID []byte) *packet.Packet {
+func mockFindHostResponse(request *packet.Packet) *packet.Packet {
 	r := &packet.Packet{}
 	n := &host.Host{}
 	n.ID = request.Sender.ID
@@ -567,7 +567,7 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 // Tests sending a packet which results in an error when attempting to
 // send over uTP
 func TestNetworkingSendError(t *testing.T) {
-	zeroId := getIDWithValues(0)
+	zeroId := getIDWithValues()
 	done := make(chan int)
 
 	bootstrapAddr, _ := host.NewAddress("0.0.0.0:21001")
@@ -605,7 +605,7 @@ func TestNetworkingSendError(t *testing.T) {
 // Tests sending a packet which results in a successful send, but the host
 // never responds
 func TestHostResponseSendError(t *testing.T) {
-	zeroID := getIDWithValues(0)
+	zeroID := getIDWithValues()
 	done := make(chan int)
 
 	bootstrapAddr, _ := host.NewAddress("0.0.0.0:22001")
@@ -638,7 +638,7 @@ func TestHostResponseSendError(t *testing.T) {
 				close(done)
 			} else {
 				queries++
-				res := mockFindHostResponse(request, getZerodIDWithNthByte(2, byte(255)).Bytes())
+				res := mockFindHostResponse(request)
 				mockTp.send <- res
 			}
 		}
@@ -656,7 +656,7 @@ func TestHostResponseSendError(t *testing.T) {
 // Tests a bucket refresh by setting a very low RefreshTime value, adding a single
 // host to a bucket, and waiting for the refresh packet for the bucket
 func TestBucketRefresh(t *testing.T) {
-	zeroID := getIDWithValues(0)
+	zeroID := getIDWithValues()
 	done := make(chan int)
 	refresh := make(chan int)
 
@@ -712,7 +712,7 @@ func TestBucketRefresh(t *testing.T) {
 // Tets store replication by setting the ReplicateTime time to a very small value.
 // Stores some data, and then expects another store packet in ReplicateTime time
 func TestStoreReplication(t *testing.T) {
-	zeroID := getIDWithValues(0)
+	zeroID := getIDWithValues()
 	done := make(chan int)
 	replicate := make(chan int)
 
@@ -775,7 +775,7 @@ func TestStoreReplication(t *testing.T) {
 // the store.
 func TestStoreExpiration(t *testing.T) {
 	done := make(chan bool)
-	zeroID := getIDWithValues(0)
+	zeroID := getIDWithValues()
 
 	st, s, tp, r, err := realDhtParams([]id.ID{zeroID}, "0.0.0.0:25000")
 	assert.NoError(t, err)
@@ -813,7 +813,7 @@ func TestStoreExpiration(t *testing.T) {
 func TestFindHostAllBuckets(t *testing.T) {
 	t.Skip()
 	done := make(chan bool)
-	zeroID := getIDWithValues(0)
+	zeroID := getIDWithValues()
 
 	bootstrapAddr, _ := host.NewAddress("127.0.0.1:26011")
 	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "127.0.0.1:26010")
@@ -843,7 +843,7 @@ func TestFindHostAllBuckets(t *testing.T) {
 				return
 			}
 
-			res := mockFindHostResponse(request, getZerodIDWithNthByte(k, byte(math.Pow(2, float64(i)))).Bytes())
+			res := mockFindHostResponse(request)
 
 			i--
 			if i < 0 {
@@ -948,7 +948,7 @@ func TestFindHostAllBuckets(t *testing.T) {
 // }
 
 func TestGetRandomIDFromBucket(t *testing.T) {
-	zeroID := getIDWithValues(0)
+	zeroID := getIDWithValues()
 	st, s, tp, r, err := realDhtParams([]id.ID{zeroID}, "0.0.0.0:28000")
 	assert.NoError(t, err)
 	done := make(chan bool)
@@ -974,12 +974,12 @@ func TestGetRandomIDFromBucket(t *testing.T) {
 }
 
 func getZerodIDWithNthByte(n int, v byte) id.ID {
-	id1 := getIDWithValues(0)
+	id1 := getIDWithValues()
 	id1.Bytes()[n] = v
 	return id1
 }
 
-func getIDWithValues(b byte) id.ID {
+func getIDWithValues() id.ID {
 	id1, _ := id.NewID()
 	return id1
 }
