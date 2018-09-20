@@ -44,8 +44,7 @@ func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 		socket:        socket,
 		baseTransport: newBaseTransport(proxy, publicAddress),
 	}
-	transport.dialTimeoutFunc = transport.socketDialTimeout
-
+	transport.sendFunc = transport.send
 	return transport, nil
 }
 
@@ -77,6 +76,17 @@ func (t *utpTransport) Stop() {
 	if err != nil {
 		log.Errorln("Failed to close socket:", err.Error())
 	}
+}
+
+func (t *utpTransport) send(recvAddress string, data []byte) error {
+	conn, err := t.socketDialTimeout(recvAddress, time.Second)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	_, err = conn.Write(data)
+	return err
 }
 
 func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (net.Conn, error) {

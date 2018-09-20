@@ -49,10 +49,7 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 		baseTransport: newBaseTransport(proxy, publicAddress),
 		blockCrypt:    crypt,
 	}
-	transport.dialTimeoutFunc = func(addr string, timeout time.Duration) (net.Conn, error) {
-		return transport.socketDialTimeout(addr, timeout)
-	}
-
+	transport.sendFunc = transport.send
 	return transport, nil
 }
 
@@ -86,6 +83,17 @@ func (t *kcpTransport) Stop() {
 
 func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (*kcp.UDPSession, error) {
 	return kcp.DialWithOptions(addr, t.blockCrypt, 0, 0)
+}
+
+func (t *kcpTransport) send(recvAddress string, data []byte) error {
+	session, err := t.socketDialTimeout(recvAddress, time.Second)
+	if err != nil {
+		return err
+	}
+	//defer conn.Close()
+
+	_, err = session.Write(data)
+	return err
 }
 
 func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {

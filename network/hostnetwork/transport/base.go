@@ -22,7 +22,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
@@ -38,10 +37,10 @@ type baseTransport struct {
 	mutex   *sync.RWMutex
 	futures map[packet.RequestID]Future
 
-	proxy           relay.Proxy
-	publicAddress   string
-	connection      net.Conn
-	dialTimeoutFunc func(addr string, timeout time.Duration) (net.Conn, error)
+	proxy         relay.Proxy
+	publicAddress string
+	//dialTimeoutFunc func(addr string, timeout time.Duration) (net.Conn, error)
+	sendFunc func(recvAddress string, data []byte) error
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
@@ -171,20 +170,13 @@ func (t *baseTransport) sendPacket(msg *packet.Packet) error {
 	if len(recvAddress) == 0 {
 		recvAddress = msg.Receiver.Address.String()
 	}
-	var err error
-	t.connection, err = t.dialTimeoutFunc(recvAddress, time.Second)
-	if err != nil {
-		return err
-	}
-	//defer t.connection.Close()
 
 	data, err := packet.SerializePacket(msg)
 	if err != nil {
 		return err
 	}
 
-	_, err = t.connection.Write(data)
-	return err
+	return t.sendFunc(recvAddress, data)
 }
 
 func shouldProcessPacket(future Future, msg *packet.Packet) bool {
