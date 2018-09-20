@@ -44,12 +44,7 @@ func main() {
 			log.Fatal("Couldn't create temp cache dir: ", err)
 			os.Exit(1)
 		}
-		defer func() {
-			err := os.RemoveAll(tmpDir)
-			if err != nil {
-				log.Print(err)
-			}
-		}()
+		defer os.RemoveAll(tmpDir)
 		*path = tmpDir
 	}
 
