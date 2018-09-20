@@ -17,16 +17,13 @@
 package ginsider
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 	"io/ioutil"
 	"net/rpc"
 	"os"
 	"path/filepath"
 	"plugin"
-	"reflect"
-
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -63,9 +60,9 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return err
 	}
 
-	symbol, err := p.Lookup("INSWRAPPER_" + args.Method)
+	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
 	if err != nil {
-		return errors.Wrapf(err, "Can't find wrapper %s", args.Method)
+		return errors.Wrapf(err, "Can't find wrapper for %s", args.Method)
 	}
 
 	wrapper, ok := symbol.(func(ph proxyctx.ProxyHelper, object []byte,
@@ -92,57 +89,22 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return err
 	}
 
-	export, err := p.Lookup(args.Name)
+	symbol, err := p.Lookup("INSCONSTRUCTOR_" + args.Name)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't lookup symbol %q in plugin", args.Name)
+		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
 	}
 
-	method := reflect.ValueOf(export)
-	if !method.IsValid() {
-		return fmt.Errorf("%q is not valid symbol", args.Name)
-	}
-	if method.Kind() != reflect.Func {
-		return fmt.Errorf("%q is not a function", args.Name)
+	f, ok := symbol.(func(ph proxyctx.ProxyHelper, data []byte) ([]byte, error))
+	if !ok {
+		return errors.New("Wrapper with wrong signature")
 	}
 
-	inLen := method.Type().NumIn()
-
-	mask := make([]interface{}, inLen)
-	for i := 0; i < inLen; i++ {
-		argType := method.Type().In(i)
-		mask[i] = reflect.Zero(argType).Interface()
-	}
-
-	ch := new(codec.CborHandle)
-
-	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
+	resValues, err := f(t.GI, args.Arguments)
 	if err != nil {
-		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the constructor")
+		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
 
-	in := make([]reflect.Value, inLen)
-	for i := 0; i < inLen; i++ {
-		in[i] = reflect.ValueOf(mask[i])
-	}
-
-	log.Debugf(
-		"Calling constructor %q in contract %q with %d arguments",
-		args.Name, args.Code, inLen,
-	)
-	resValues := method.Call(in)
-
-	res := make([]interface{}, len(resValues))
-	for i, v := range resValues {
-		res[i] = v.Interface()
-	}
-
-	var resSerialized []byte
-	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res[0])
-	if err != nil {
-		return errors.Wrap(err, "couldn't marshal returned values into cbor")
-	}
-
-	reply.Ret = resSerialized
+	reply.Ret = resValues
 
 	return nil
 }

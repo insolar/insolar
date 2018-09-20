@@ -121,12 +121,12 @@ func numberedVars(list *ast.FieldList, name string) string {
 	return strings.Join(rets, ", ")
 }
 
-func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, map[string]bool) {
-	var methodsInfo []map[string]interface{}
+func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, []map[string]interface{}, map[string]bool) {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
 	imports[fmt.Sprintf(`"%s"`, corePath)] = true
 
+	var methodsInfo []map[string]interface{}
 	for _, method := range parsed.methods[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
 		extendImportsMap(parsed, method.Type.Params, imports)
@@ -139,7 +139,22 @@ func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, 
 		}
 		methodsInfo = append(methodsInfo, info)
 	}
-	return methodsInfo, imports
+
+	var funcInfo []map[string]interface{}
+	for _, f := range parsed.constructors[parsed.contract] {
+		argsInit, argsList := generateZeroListOfTypes(parsed, "args", f.Type.Params)
+		extendImportsMap(parsed, f.Type.Params, imports)
+
+		info := map[string]interface{}{
+			"Name":              f.Name.Name,
+			"ArgumentsZeroList": argsInit,
+			"Arguments":         argsList,
+			"Results":           numberedVars(f.Type.Results, "ret"),
+		}
+		funcInfo = append(funcInfo, info)
+	}
+
+	return methodsInfo, funcInfo, imports
 }
 
 func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
@@ -150,12 +165,13 @@ func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
 
-	methodsInfo, imports := generateContractMethodsInfo(parsed)
+	methodsInfo, funcInfo, imports := generateContractMethodsInfo(parsed)
 
 	data := struct {
 		PackageName    string
 		ContractType   string
 		Methods        []map[string]interface{}
+		Functions      []map[string]interface{}
 		ParsedCode     []byte
 		FoundationPath string
 		Imports        map[string]bool
@@ -163,6 +179,7 @@ func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 		packageName,
 		parsed.contract,
 		methodsInfo,
+		funcInfo,
 		parsed.code,
 		foundationPath,
 		imports,
