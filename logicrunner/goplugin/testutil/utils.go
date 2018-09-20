@@ -467,9 +467,16 @@ func (cb *ContractsBuilder) Clean() {
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 	for name := range contracts {
-		ref, err := randomRef()
-		if err != nil {
-			return errors.Wrap(err, "Failed to generate ref")
+		ref := new(core.RecordRef)
+		// Temporary hack for root domain object. For all nodes to know it reference.
+		if name == "rootdomain" {
+			*ref = core.NewRefFromBase58("ffff1111ffff1111ffff1111ffff1111ffff1111ffff1111ffff1111ffff1111")
+		} else {
+			var err error
+			ref, err = randomRef()
+			if err != nil {
+				return errors.Wrap(err, "Failed to generate ref")
+			}
 		}
 		class, err := cb.ArtifactManager.ActivateClass(
 			core.RecordRef{}, *ref,
