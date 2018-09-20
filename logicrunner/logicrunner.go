@@ -175,7 +175,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "no executer registered")
 		}
 
-		newData, err := executor.CallConstructor(&ctx, codeDesc.Ref(), m.Name, m.Arguments)
+		newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
 		if err != nil {
 			return nil, errors.Wrap(err, "executer error")
 		}
@@ -237,7 +237,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 
 		return &reaction.ObjectBodyReaction{
 			Body:        data,
-			Code:        codeDesc.Ref(),
+			Code:        *codeDesc.Ref(),
 			Class:       *classDesc.HeadRef(),
 			MachineType: mt,
 		}, nil

@@ -37,8 +37,8 @@ type CodeDescriptor struct {
 }
 
 // Ref returns reference to represented code record.
-func (d *CodeDescriptor) Ref() core.RecordRef {
-	return *d.ref.CoreRef()
+func (d *CodeDescriptor) Ref() *core.RecordRef {
+	return d.ref.CoreRef()
 }
 
 // MachineType fetches code from storage and returns first available machine type according to architecture

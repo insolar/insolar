@@ -85,8 +85,8 @@ type TestCodeDescriptor struct {
 }
 
 // Ref implementation for tests
-func (t *TestCodeDescriptor) Ref() core.RecordRef {
-	return t.ARef
+func (t *TestCodeDescriptor) Ref() *core.RecordRef {
+	return &t.ARef
 }
 
 // MachineType implementation for tests

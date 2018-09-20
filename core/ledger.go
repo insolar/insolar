@@ -142,7 +142,7 @@ type ArtifactManager interface {
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
-	Ref() RecordRef
+	Ref() *RecordRef
 
 	// MachineType fetches code from storage and returns first available machine type according to architecture
 	// preferences.
