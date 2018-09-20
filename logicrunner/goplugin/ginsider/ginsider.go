@@ -180,13 +180,14 @@ func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 }
 
 // RouteCall ...
-func (gi *GoInsider) RouteCall(ref core.RecordRef, method string, args []byte) ([]byte, error) {
+func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
 
 	req := rpctypes.UpRouteReq{
+		Wait:      wait,
 		Object:    ref,
 		Method:    method,
 		Arguments: args,
