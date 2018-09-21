@@ -912,32 +912,34 @@ func (c *Child) GetNum() int {
 
 func TestProxyGeneration(t *testing.T) {
 	contracts := []string{
-		"../genesis/experiment/rootdomain/rootdomain.go",
-		"../genesis/experiment/member/member.go",
-		"../genesis/experiment/allowance/allowance.go",
-		"../genesis/experiment/wallet/wallet.go",
+		"rootdomain",
+		"member",
+		"allowance",
+		"wallet",
 	}
 
 	for _, contract := range contracts {
-		parsed, err := preprocessor.ParseFile(contract)
-		assert.NoError(t, err)
+		t.Run(contract, func(t *testing.T) {
+			parsed, err := preprocessor.ParseFile("../genesis/experiment/" + contract + "/" + contract + ".go")
+			assert.NoError(t, err)
 
-		proxyPath, err := preprocessor.FindPath()
-		assert.NoError(t, err)
+			proxyPath, err := preprocessor.FindPath()
+			assert.NoError(t, err)
 
-		name, err := preprocessor.ProxyPackageName(parsed)
-		assert.NoError(t, err)
+			name, err := preprocessor.ProxyPackageName(parsed)
+			assert.NoError(t, err)
 
-		proxy := path.Join(proxyPath, name, name+".go")
-		_, err = os.Stat(proxy)
-		assert.NoError(t, err)
+			proxy := path.Join(proxyPath, name, name+".go")
+			_, err = os.Stat(proxy)
+			assert.NoError(t, err)
 
-		buff := bytes.NewBufferString("")
-		preprocessor.GenerateContractProxy(parsed, "", buff)
+			buff := bytes.NewBufferString("")
+			preprocessor.GenerateContractProxy(parsed, "", buff)
 
-		cmd := exec.Command("diff", proxy, "-")
-		cmd.Stdin = buff
-		out, err := cmd.CombinedOutput()
-		assert.NoError(t, err, string(out))
+			cmd := exec.Command("diff", proxy, "-")
+			cmd.Stdin = buff
+			out, err := cmd.CombinedOutput()
+			assert.NoError(t, err, string(out))
+		})
 	}
 }
