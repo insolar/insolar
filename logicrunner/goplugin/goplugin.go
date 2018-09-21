@@ -24,6 +24,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"time"
 
@@ -285,7 +286,7 @@ func (gp *GoPlugin) StartRunner() error {
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() error {
-	err := gp.runner.Process.Kill()
+	err := gp.runner.Process.Signal(syscall.SIGINT)
 	if err != nil {
 		return err
 	}
