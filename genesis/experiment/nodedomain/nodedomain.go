@@ -47,5 +47,5 @@ func (rd *NodeDomain) GetNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 // RemoveNode deletes node from registry
 func (rd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 	node := noderecord.GetObject(nodeRef)
-	node.SelfDestroy()
+	node.Destroy()
 }

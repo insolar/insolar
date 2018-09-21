@@ -85,7 +85,7 @@ func (r *NodeRecord) GetClass() core.RecordRef {
 }
 
 
-func (r *NodeRecord) SelfDestroy(  ) (  ) {
+func (r *NodeRecord) Destroy(  ) (  ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -95,7 +95,7 @@ func (r *NodeRecord) SelfDestroy(  ) (  ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "SelfDestroy", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -110,7 +110,7 @@ func (r *NodeRecord) SelfDestroy(  ) (  ) {
     return 
 }
 
-func (r *NodeRecord) SelfDestroyNoWait(  ) {
+func (r *NodeRecord) DestroyNoWait(  ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -120,7 +120,7 @@ func (r *NodeRecord) SelfDestroyNoWait(  ) {
         panic(err)
     }
 
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "SelfDestroy", argsSerialized)
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "Destroy", argsSerialized)
     if err != nil {
         panic(err)
     }
