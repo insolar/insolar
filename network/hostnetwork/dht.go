@@ -256,7 +256,7 @@ func (dht *DHT) Listen() error {
 // BootstrapHosts.
 func (dht *DHT) Bootstrap() error {
 	if len(dht.options.BootstrapHosts) == 0 {
-		return errors.New("no bootstrap nodes detected")
+		return nil
 	}
 	cb := NewContextBuilder(dht)
 
