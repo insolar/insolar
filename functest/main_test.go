@@ -393,3 +393,25 @@ func TestGetRequest(t *testing.T) {
 	assert.Equal(t, api.BadRequest, getResponse.Err.Code)
 	assert.Equal(t, "Bad request", getResponse.Err.Event)
 }
+
+func TestWrongQueryType(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "wrong_query_type",
+	})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Wrong query parameter 'query_type' = 'wrong_query_type'", response.Err.Event)
+}
+
+func TestWithoutQueryType(t *testing.T) {
+	body := getResponseBody(t, postParams{})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Wrong query parameter 'query_type' = ''", response.Err.Event)
+}
