@@ -320,14 +320,12 @@ func (dht *DHT) iterateBootstrapHosts(
 					break
 				}
 				if counter >= dht.timeout {
-					if dht.infinityBootstrap {
-						counter = 1
-					} else {
+					if !dht.infinityBootstrap {
 						localwg.Done()
 						break
 					}
 				}
-				counter = counter << 1
+				counter = counter * 2
 				time.Sleep(time.Second * time.Duration(counter))
 			}
 		}(cb, dht, bh, ht, localwg)
