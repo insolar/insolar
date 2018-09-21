@@ -368,7 +368,7 @@ func TestWrongHOST(t *testing.T) {
 	wrongHOST := "http://localhost:14141"
 	testUrl := wrongHOST + "/api/v1"
 	_, err := http.Post(testUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.EqualError(t, err, "Post http://localhost:14141/api/v1: dial tcp [::1]:14141: connect: connection refused")
+	assert.Contains(t, err.Error(), "connect: connection refused")
 }
 
 func TestWrongUrl(t *testing.T) {
