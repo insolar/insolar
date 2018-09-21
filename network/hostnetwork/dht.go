@@ -46,14 +46,15 @@ type DHT struct {
 
 	origin *host.Origin
 
-	transport transport.Transport
-	store     store.Store
-	ncf       hosthandler.NetworkCommonFacade
-	relay     relay.Relay
-	proxy     relay.Proxy
-	auth      AuthInfo
-	subnet    Subnet
-	timeout   int // bootstrap reconnect timeout
+	transport         transport.Transport
+	store             store.Store
+	ncf               hosthandler.NetworkCommonFacade
+	relay             relay.Relay
+	proxy             relay.Proxy
+	auth              AuthInfo
+	subnet            Subnet
+	timeout           int // bootstrap reconnect timeout
+	infinityBootstrap bool
 }
 
 // AuthInfo collects some information about authentication.
@@ -120,6 +121,7 @@ func NewDHT(
 	options *Options,
 	proxy relay.Proxy,
 	timeout int,
+	infbootstrap bool,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -129,15 +131,16 @@ func NewDHT(
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		options:   options,
-		origin:    origin,
-		ncf:       ncf,
-		transport: transport,
-		tables:    tables,
-		store:     store,
-		relay:     rel,
-		proxy:     proxy,
-		timeout:   timeout,
+		options:           options,
+		origin:            origin,
+		ncf:               ncf,
+		transport:         transport,
+		tables:            tables,
+		store:             store,
+		relay:             rel,
+		proxy:             proxy,
+		timeout:           timeout,
+		infinityBootstrap: infbootstrap,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -287,7 +290,7 @@ func (dht *DHT) iterateBootstrapHosts(
 		return
 	}
 	localwg := &sync.WaitGroup{}
-	for i, bh := range dht.options.BootstrapHosts {
+	for _, bh := range dht.options.BootstrapHosts {
 		localwg.Add(1)
 		go func(cb ContextBuilder, dht *DHT, bh *host.Host, ht *routing.HashTable, localwg *sync.WaitGroup) {
 			counter := 1
@@ -313,13 +316,15 @@ func (dht *DHT) iterateBootstrapHosts(
 					routeHost := routing.NewRouteHost(bh)
 					dht.AddHost(ctx, routeHost)
 					localwg.Done()
-					return
+					break
 				}
 				if counter >= dht.timeout {
-					if i == len(dht.options.BootstrapHosts)-1 {
+					if dht.infinityBootstrap {
+						counter = 1
+					} else {
 						localwg.Done()
+						break
 					}
-					return
 				}
 				counter = counter << 1
 				time.Sleep(time.Second * time.Duration(counter))
