@@ -716,7 +716,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 						Type:      msg.Type,
 						RequestID: msg.RequestID,
 						Data:      msg.Data}
-					sendRelayedRequest(dht, request, ctx)
+					sendRelayedRequest(dht, request)
 				}
 			}
 		case <-stop:
@@ -835,19 +835,12 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 	if len(dht.subnet.SubnetIDs) == 1 {
 		if dht.subnet.HomeSubnetKey == "" { // current host have a static IP
 			for _, subnetIDs := range dht.subnet.SubnetIDs {
-				dht.sendRelayOwnership(subnetIDs)
+				SendRelayOwnership(dht, subnetIDs)
 			}
 		}
 	}
 
 	return nil
-}
-
-func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
-	for _, id1 := range subnetIDs {
-		err := RelayOwnershipRequest(dht, id1)
-		log.Errorln(err.Error())
-	}
 }
 
 // HtFromCtx returns a routing hashtable known by ctx.

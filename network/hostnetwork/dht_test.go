@@ -19,12 +19,15 @@ package hostnetwork
 import (
 	"bytes"
 	"errors"
-	"math"
+	"io/ioutil"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/nodenetwork"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -362,7 +365,6 @@ func TestReconnect(t *testing.T) {
 // payload from one host to another. Ensure that the other host now has
 // this data in its store.
 func TestStoreAndFindLargeValue(t *testing.T) {
-	t.Skip("FIXME: slow and unstable test")
 	done := make(chan bool)
 
 	ids1 := make([]id.ID, 0)
@@ -656,146 +658,6 @@ func TestStoreExpiration(t *testing.T) {
 	<-done
 }
 
-// create a new host and bootstrap it. All hosts in the network know of a
-// single host closer to the original host. This continues until every MaxContactsInBucket bucket
-// is occupied.
-func TestFindHostAllBuckets(t *testing.T) {
-	t.Skip()
-	done := make(chan bool)
-	zeroID := getIDWithValues()
-
-	bootstrapAddr, _ := host.NewAddress("127.0.0.1:26011")
-	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "127.0.0.1:26010")
-	assert.NoError(t, err)
-
-	dht, _ := NewDHT(st, s, tp, r, &Options{
-		BootstrapHosts: []*host.Host{{
-			ID:      getZerodIDWithNthByte(0, byte(math.Pow(2, 7))),
-			Address: bootstrapAddr,
-		}},
-	},
-		relay.NewProxy(), 4)
-	mockTp := tp.(*mockTransport)
-
-	go func() {
-		dht.Listen()
-		done <- true
-	}()
-
-	var k = 0
-	var i = 6
-
-	go func() {
-		for {
-			request := <-mockTp.recv
-			if request == nil {
-				return
-			}
-
-			res := mockFindHostResponse(request)
-
-			i--
-			if i < 0 {
-				i = 7
-				k++
-			}
-			if k > 19 {
-				k = 19
-			}
-
-			mockTp.send <- res
-		}
-	}()
-
-	dht.Bootstrap()
-
-	for _, v := range dht.tables[0].RoutingTable {
-		assert.Equal(t, 0, len(v))
-	}
-
-	dht.Disconnect()
-	<-done
-}
-
-// TODO: delete or repair
-// Tests timing out of hosts in a bucket. DHT bootstraps networks and learns
-// about 20 subsequent hosts in the same bucket. Upon attempting to add the 21st
-// host to the now full bucket, we should receive a ping to the very first host
-// added in order to determine if it is still alive.
-// func TestAddHostTimeout(t *testing.T) {
-// 	zeroID := getIDWithValues(0)
-// 	done := make(chan int)
-// 	pinged := make(chan int)
-//
-// 	bootstrapAddr, _ := host.NewAddress("0.0.0.0:27001")
-// 	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:27000")
-// 	assert.NoError(t, err)
-//
-// 	dht, _ := NewDHT(st, s, tp, r, &Options{
-// 		BootstrapHosts: []*host.Host{{
-// 			ID:      getZerodIDWithNthByte(1, byte(255)),
-// 			Address: bootstrapAddr,
-// 		}},
-// 	},
-// 		relay.NewProxy(), 4)
-// 	mockTp := tp.(*mockTransport)
-//
-// 	go func() {
-// 		dht.Listen()
-// 	}()
-//
-// 	var hostsAdded = 1
-// 	var firstHost []byte
-// 	var lastHost []byte
-//
-// 	go func() {
-// 		for {
-// 			request := <-mockTp.recv
-// 			if request == nil {
-// 				return
-// 			}
-// 			switch request.Type {
-// 			case packet.TypeFindHost:
-// 				id1 := getIDWithValues(0)
-// 				if hostsAdded > routing.MaxContactsInBucket+1 {
-// 					close(done)
-// 					return
-// 				}
-//
-// 				if hostsAdded == 1 {
-// 					firstHost = id1.Bytes()
-// 				}
-//
-// 				if hostsAdded == routing.MaxContactsInBucket {
-// 					lastHost = id1.Bytes()
-// 				}
-//
-// 				id1.Bytes()[1] = byte(255 - hostsAdded)
-// 				hostsAdded++
-//
-// 				res := mockFindHostResponse(request, id1.Bytes())
-// 				mockTp.send <- res
-// 			case packet.TypePing:
-// 				assert.Equal(t, packet.TypePing, request.Type)
-// 				assert.Equal(t, getZerodIDWithNthByte(1, byte(255)), request.Receiver.ID)
-// 				close(pinged)
-// 			}
-// 		}
-// 	}()
-//
-// 	dht.Bootstrap()
-//
-// 	// ensure the first host in the table is the second host contacted, and the
-// 	// last is the last host contacted
-// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][0].ID.Bytes(), firstHost))
-// 	assert.Equal(t, 0, bytes.Compare(dht.tables[0].RoutingTable[routing.KeyBitSize-9][19].ID.Bytes(), lastHost))
-//
-// 	dht.Disconnect()
-//
-// 	<-done
-// 	<-pinged
-// }
-
 func TestGetRandomIDFromBucket(t *testing.T) {
 	zeroID := getIDWithValues()
 	st, s, tp, r, err := realDhtParams([]id.ID{zeroID}, "0.0.0.0:28000")
@@ -1044,4 +906,100 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	}()
 
 	<-done
+}
+
+func TestDHT_RemoteProcedureCall(t *testing.T) {
+	ids1 := make([]id.ID, 0)
+	id1, _ := id.NewID()
+	ids1 = append(ids1, id1)
+	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:23220")
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4)
+	assert.NoError(t, err)
+
+	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:23220")
+	st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:23221")
+	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
+		BootstrapHosts: []*host.Host{
+			{
+				ID:      ids1[0],
+				Address: bootstrapAddr2,
+			},
+		},
+	},
+		relay.NewProxy(), 4)
+
+	go func(dht *DHT) {
+		dht1.Listen()
+	}(dht1)
+	go func(dht *DHT) {
+		dht2.Listen()
+	}(dht2)
+	dht1.Bootstrap()
+	dht2.Bootstrap()
+
+	e := &event.CallMethodEvent{
+		ObjectRef: core.NewRefFromBase58("test"),
+		Method:    "test",
+		Arguments: []byte("test"),
+	}
+
+	reqBuff, err := e.Serialize()
+	event1, _ := ioutil.ReadAll(reqBuff)
+
+	dht2.RemoteProcedureCall(getDefaultCtx(dht1), dht2.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
+	dht1.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
+		return nil, nil
+	})
+
+	dht2.RemoteProcedureCall(getDefaultCtx(dht1), dht1.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
+}
+
+func TestDHT_Getters(t *testing.T) {
+	ids1 := make([]id.ID, 0)
+	id1, _ := id.NewID()
+	ids1 = append(ids1, id1)
+	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:0")
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4)
+	assert.NoError(t, err)
+	outerHostCount := 3
+
+	relay1 := "127.0.0.1:123123"
+	proxy1 := "127.0.0.1:123124"
+	hostAddr, _ := host.NewAddress("127.0.0.1:50001")
+	str1 := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
+	ref1 := core.NewRefFromBase58(str1)
+
+	host1 := host.NewHost(hostAddr)
+	node := nodenetwork.NewNode(ref1)
+
+	assert.False(t, dht1.HostIsAuthenticated(node.GetID().String()))
+	_, check := dht1.KeyIsReceived(node.GetID().String())
+	assert.False(t, check)
+
+	dht1.AddPossibleRelayID(relay1)
+	dht1.AddPossibleProxyID(proxy1)
+	dht1.AddRelayClient(host1)
+	dht1.AddReceivedKey(node.GetID().String(), host1.ID.Bytes())
+	dht1.AddAuthSentKey(node.GetID().String(), host1.ID.Bytes())
+	dht1.AddSubnetID("id", node.GetID().String())
+	dht1.AddSubnetID("id2", host1.ID.String())
+	dht1.AddProxyHost(host1.ID.String())
+	dht1.SetAuthStatus(node.GetID().String(), true)
+	dht1.SetOuterHostsCount(outerHostCount)
+	dht1.SetHighKnownHostID(node.GetID().String())
+
+	assert.True(t, dht1.HostIsAuthenticated(node.GetID().String()))
+	_, check = dht1.KeyIsReceived(node.GetID().String())
+	assert.True(t, check)
+	assert.Equal(t, dht1.GetHighKnownHostID(), node.GetID().String())
+	assert.Equal(t, dht1.GetSelfKnownOuterHosts(), 0)
+	assert.Equal(t, dht1.GetOuterHostsCount(), outerHostCount)
+	assert.Equal(t, dht1.GetProxyHostsCount(), 1)
+	assert.True(t, dht1.EqualAuthSentKey(node.GetID().String(), host1.ID.Bytes()))
+
+	dht1.RemoveRelayClient(host1)
+	dht1.RemoveAuthSentKeys(node.GetID().String())
+	dht1.RemovePossibleProxyID(node.GetID().String())
+	dht1.RemoveProxyHost(node.GetID().String())
+	dht1.RemoveAuthHost(node.GetID().String())
 }
