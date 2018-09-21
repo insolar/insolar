@@ -256,6 +256,7 @@ func (dht *DHT) Listen() error {
 // BootstrapHosts.
 func (dht *DHT) Bootstrap() error {
 	if len(dht.options.BootstrapHosts) == 0 {
+		log.Info("empty bootstrap hosts")
 		return nil
 	}
 	cb := NewContextBuilder(dht)
@@ -286,51 +287,68 @@ func (dht *DHT) iterateBootstrapHosts(
 	ht *routing.HashTable,
 	cb ContextBuilder,
 ) {
-	ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
-	if err != nil {
-		return
-	}
 	localwg := &sync.WaitGroup{}
+	log.Info("bootstrapping to each known hosts.")
 	for _, bh := range dht.options.BootstrapHosts {
 		localwg.Add(1)
 		go func(cb ContextBuilder, dht *DHT, bh *host.Host, ht *routing.HashTable, localwg *sync.WaitGroup) {
 			counter := 1
-			for {
-				request := packet.NewPingPacket(ht.Origin, bh)
-				if bh.ID.Bytes() == nil {
-					res, err := dht.transport.SendRequest(request)
-					if err != nil {
-						log.Error(err)
+			if dht.infinityBootstrap {
+				log.Info("do infinity mode bootstrap.")
+				for {
+					if dht.gotBootstrap(ht, bh, cb, localwg) {
+						return
 					} else {
-						result := <-res.Result()
-						if res != nil {
-							ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
-							if err != nil {
-								log.Error(err)
-							}
-							dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
+						if counter < dht.timeout {
+							counter = counter * 2
 						}
-						localwg.Done()
-						break
+						time.Sleep(time.Second * time.Duration(counter))
 					}
-				} else {
-					routeHost := routing.NewRouteHost(bh)
-					dht.AddHost(ctx, routeHost)
+				}
+			} else {
+				log.Info("do one time mode bootstrap.")
+				if !dht.gotBootstrap(ht, bh, cb, localwg) {
 					localwg.Done()
-					break
 				}
-				if counter >= dht.timeout {
-					if !dht.infinityBootstrap {
-						localwg.Done()
-						break
-					}
-				}
-				counter = counter * 2
-				time.Sleep(time.Second * time.Duration(counter))
 			}
 		}(cb, dht, bh, ht, localwg)
 	}
 	localwg.Wait()
+}
+
+func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBuilder, localwg *sync.WaitGroup) bool {
+	request := packet.NewPingPacket(ht.Origin, bh)
+	if bh.ID.Bytes() == nil {
+		log.Info("sending ping request")
+		res, err := dht.transport.SendRequest(request)
+		if err != nil {
+			log.Error(err)
+		} else {
+			result := <-res.Result()
+			log.Info("checking response")
+			if res != nil {
+				ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
+				if err != nil {
+					log.Error(err)
+				}
+				dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
+			}
+			localwg.Done()
+			return true
+		}
+	} else {
+		log.Info("bootstrap host known. creating new route host.")
+		routeHost := routing.NewRouteHost(bh)
+		ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
+		if err != nil {
+			log.Error("failed to create a context")
+			return false
+		}
+		dht.AddHost(ctx, routeHost)
+		localwg.Done()
+		return true
+	}
+	return false
 }
 
 // Disconnect will trigger a Stop from the network.
