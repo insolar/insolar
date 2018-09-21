@@ -6,6 +6,7 @@ insolar:
       behindnat: false
     bootstraphosts: []
     isrelay: false
+    infinitybootstrap: false
   node:
     nodes: []
   log:
