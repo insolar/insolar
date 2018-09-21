@@ -17,19 +17,18 @@
 package ginsider
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 	"io/ioutil"
 	"net/rpc"
 	"os"
 	"path/filepath"
 	"plugin"
-	"reflect"
-
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -39,6 +38,7 @@ type GoInsider struct {
 	UpstreamRPCAddress string
 	UpstreamRPCClient  *rpc.Client
 	plugins            map[string]*plugin.Plugin
+	pluginsMutex       sync.Mutex
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
@@ -62,72 +62,24 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return err
 	}
 
-	export, err := p.Lookup("INSEXPORT")
+	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
 	if err != nil {
-		return errors.Wrap(err, "couldn't lookup 'INSEXPORT' in plugin")
+		return errors.Wrapf(err, "Can't find wrapper for %s", args.Method)
 	}
 
-	obj := reflect.New(reflect.ValueOf(export).Elem().Type()).Interface()
+	wrapper, ok := symbol.(func(ph proxyctx.ProxyHelper, object []byte,
+		data []byte, context *core.LogicCallContext) ([]byte, []byte, error))
+	if !ok {
+		return errors.New("Wrapper with wrong signature")
+	}
 
-	ch := new(codec.CborHandle)
-	err = codec.NewDecoderBytes(args.Data, ch).Decode(obj)
+	state, result, err := wrapper(t.GI, args.Data, args.Arguments, args.Context) // may be entire args???
+
 	if err != nil {
-		return errors.Wrapf(err, "couldn't decode data into %T", obj)
+		return errors.Wrapf(err, "Method call returned error")
 	}
-
-	setContext := reflect.ValueOf(obj).MethodByName("SetContext")
-	if !setContext.IsValid() {
-		return errors.New("this is not a contract, it not supports SetContext method")
-	}
-	setContext.Call([]reflect.Value{reflect.ValueOf(args.Context)})
-
-	method := reflect.ValueOf(obj).MethodByName(args.Method)
-	if !method.IsValid() {
-		return errors.New("no method " + args.Method + " in the plugin")
-	}
-
-	inLen := method.Type().NumIn()
-
-	mask := make([]interface{}, inLen)
-	for i := 0; i < inLen; i++ {
-		argType := method.Type().In(i)
-		mask[i] = reflect.Zero(argType).Interface()
-	}
-
-	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
-	if err != nil {
-		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the method")
-	}
-
-	in := make([]reflect.Value, inLen)
-	for i := 0; i < inLen; i++ {
-		in[i] = reflect.ValueOf(mask[i])
-	}
-
-	log.Debugf(
-		"Calling method %q in contract %q with %d arguments",
-		args.Method, args.Code, inLen,
-	)
-	resValues := method.Call(in)
-
-	err = codec.NewEncoderBytes(&reply.Data, ch).Encode(obj)
-	if err != nil {
-		return errors.Wrap(err, "couldn't marshal new object data into cbor")
-	}
-
-	res := make([]interface{}, len(resValues))
-	for i, v := range resValues {
-		res[i] = v.Interface()
-	}
-
-	var resSerialized []byte
-	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res)
-	if err != nil {
-		return errors.Wrap(err, "couldn't marshal returned values into cbor")
-	}
-
-	reply.Ret = resSerialized
-
+	reply.Data = state
+	reply.Ret = result
 	return nil
 }
 
@@ -139,57 +91,22 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return err
 	}
 
-	export, err := p.Lookup(args.Name)
+	symbol, err := p.Lookup("INSCONSTRUCTOR_" + args.Name)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't lookup symbol %q in plugin", args.Name)
+		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
 	}
 
-	method := reflect.ValueOf(export)
-	if !method.IsValid() {
-		return fmt.Errorf("%q is not valid symbol", args.Name)
-	}
-	if method.Kind() != reflect.Func {
-		return fmt.Errorf("%q is not a function", args.Name)
+	f, ok := symbol.(func(ph proxyctx.ProxyHelper, data []byte) ([]byte, error))
+	if !ok {
+		return errors.New("Wrapper with wrong signature")
 	}
 
-	inLen := method.Type().NumIn()
-
-	mask := make([]interface{}, inLen)
-	for i := 0; i < inLen; i++ {
-		argType := method.Type().In(i)
-		mask[i] = reflect.Zero(argType).Interface()
-	}
-
-	ch := new(codec.CborHandle)
-
-	err = codec.NewDecoderBytes(args.Arguments, ch).Decode(&mask)
+	resValues, err := f(t.GI, args.Arguments)
 	if err != nil {
-		return errors.Wrap(err, "couldn't unmarshal CBOR for arguments of the constructor")
+		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
 
-	in := make([]reflect.Value, inLen)
-	for i := 0; i < inLen; i++ {
-		in[i] = reflect.ValueOf(mask[i])
-	}
-
-	log.Debugf(
-		"Calling constructor %q in contract %q with %d arguments",
-		args.Name, args.Code, inLen,
-	)
-	resValues := method.Call(in)
-
-	res := make([]interface{}, len(resValues))
-	for i, v := range resValues {
-		res[i] = v.Interface()
-	}
-
-	var resSerialized []byte
-	err = codec.NewEncoderBytes(&resSerialized, ch).Encode(res[0])
-	if err != nil {
-		return errors.Wrap(err, "couldn't marshal returned values into cbor")
-	}
-
-	reply.Ret = resSerialized
+	reply.Ret = resValues
 
 	return nil
 }
@@ -244,6 +161,8 @@ func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
 func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
+	gi.pluginsMutex.Lock()
+	defer gi.pluginsMutex.Unlock()
 	key := ref.String()
 	if gi.plugins[key] != nil {
 		return gi.plugins[key], nil
@@ -265,13 +184,14 @@ func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 }
 
 // RouteCall ...
-func (gi *GoInsider) RouteCall(ref core.RecordRef, method string, args []byte) ([]byte, error) {
+func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
 
 	req := rpctypes.UpRouteReq{
+		Wait:      wait,
 		Object:    ref,
 		Method:    method,
 		Arguments: args,

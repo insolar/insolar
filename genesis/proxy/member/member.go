@@ -94,7 +94,7 @@ func (r *Member) GetName(  ) ( string ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "GetName", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetName", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -111,6 +111,22 @@ func (r *Member) GetName(  ) ( string ) {
     return resList[0].(string)
 }
 
+func (r *Member) GetNameNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetName", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *Member) GetPublicKey(  ) ( []byte ) {
     var args [0]interface{}
 
@@ -121,7 +137,7 @@ func (r *Member) GetPublicKey(  ) ( []byte ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "GetPublicKey", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -136,5 +152,21 @@ func (r *Member) GetPublicKey(  ) ( []byte ) {
     }
 
     return resList[0].([]byte)
+}
+
+func (r *Member) GetPublicKeyNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 

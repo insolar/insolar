@@ -55,7 +55,7 @@ func getContractPath(name string) (string, error) {
 	}
 	rootDir := filepath.Dir(filepath.Dir(currentFile))
 	contractDir := filepath.Join(rootDir, pathToContracts)
-	contractFile := name + ".insgoc"
+	contractFile := name + ".go"
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
@@ -99,10 +99,12 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't build insgocc")
 	}
-	cb, cleaner := testutil.NewContractBuilder(am, insgocc)
-	defer cleaner()
+
+	cb := testutil.NewContractBuilder(am, insgocc)
+	defer cb.Clean()
 	log.Info("[Bootstrapper] building contracts")
-	var contractNames = []string{"wallet", "member", "allowance", "rootdomain", "roledomain"}
+	var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
+	log.Info("[Bootstrapper] building contracts:", contractNames)
 	contracts := make(map[string]string)
 	for _, name := range contractNames {
 		contractPath, _ := getContractPath(name)

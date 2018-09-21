@@ -96,7 +96,7 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "IsExpired", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsExpired", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -113,6 +113,22 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
     return resList[0].(bool)
 }
 
+func (r *Allowance) IsExpiredNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "IsExpired", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *Allowance) TakeAmount(  ) ( uint ) {
     var args [0]interface{}
 
@@ -123,7 +139,7 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "TakeAmount", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "TakeAmount", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -138,6 +154,22 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
     }
 
     return resList[0].(uint)
+}
+
+func (r *Allowance) TakeAmountNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "TakeAmount", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 
 func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
@@ -150,7 +182,7 @@ func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "GetBalanceForOwner", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalanceForOwner", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -167,6 +199,22 @@ func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
     return resList[0].(uint)
 }
 
+func (r *Allowance) GetBalanceForOwnerNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalanceForOwner", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
     var args [0]interface{}
 
@@ -177,7 +225,7 @@ func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "DeleteExpiredAllowance", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "DeleteExpiredAllowance", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -192,5 +240,21 @@ func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
     }
 
     return resList[0].(uint)
+}
+
+func (r *Allowance) DeleteExpiredAllowanceNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "DeleteExpiredAllowance", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 

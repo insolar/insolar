@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -33,7 +32,7 @@ var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
 var pathWithContracts = "../../../genesis/experiment"
 
 func contractPath(name string) string {
-	return filepath.Join(pathWithContracts, name, name+".insgoc")
+	return filepath.Join(pathWithContracts, name, name+".go")
 }
 
 func MakeTestName(file string, contractType string) string {
@@ -77,8 +76,7 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 }
 
 func TestCompilingRealSmartContracts(t *testing.T) {
-	cwd, _ := os.Getwd()
-	iccDir := filepath.Join(cwd, "..", "..", "..", "cmd", "insgocc")
+	iccDir := "../../../cmd/insgocc"
 
 	_, err := exec.Command("go", "build", "-o", filepath.Join(iccDir, "insgocc"), iccDir).CombinedOutput()
 	assert.NoError(t, err)
@@ -91,8 +89,8 @@ func TestCompilingRealSmartContracts(t *testing.T) {
 	}
 
 	am := testutil.NewTestArtifactManager()
-	cb, cleaner := testutil.NewContractBuilder(am, filepath.Join(iccDir, "insgocc"))
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, filepath.Join(iccDir, "insgocc"))
+	defer cb.Clean()
 	err = cb.Build(contracts)
 	assert.NoError(t, err)
 }

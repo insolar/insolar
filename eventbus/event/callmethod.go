@@ -22,13 +22,26 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// MethodReturnMode ENUM to set when method returns its result
+type MethodReturnMode int
+
+const (
+	// ReturnResult - return result as soon as it is ready
+	ReturnResult MethodReturnMode = iota
+	// ReturnNoWait - call method and return without results
+	ReturnNoWait
+	// ReturnValidated (not yet) - return result only when it's validated
+	// ReturnValidated
+)
+
 // CallMethodEvent - Simply call method and return result
 type CallMethodEvent struct {
 	baseEvent
-	ObjectRef core.RecordRef
-	Request   core.RecordRef
-	Method    string
-	Arguments core.Arguments
+	ReturnMode MethodReturnMode
+	ObjectRef  core.RecordRef
+	Request    core.RecordRef
+	Method     string
+	Arguments  core.Arguments
 }
 
 // React handles event and returns associated reaction.

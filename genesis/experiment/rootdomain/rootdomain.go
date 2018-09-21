@@ -46,7 +46,7 @@ func (rd *RootDomain) GetBalance(reference string) uint {
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
 
-    v := core.NewRefFromBase58(to)
+	v := core.NewRefFromBase58(to)
 	walletFrom.Transfer(amount, &v)
 
 	return true
@@ -55,9 +55,9 @@ func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
 	w := wallet.GetImplementationFrom(m.GetReference())
 	res := map[string]interface{}{
-        "member": m.GetName(),
-        "wallet": w.GetTotalBalance(),
-    }
+		"member": m.GetName(),
+		"wallet": w.GetTotalBalance(),
+	}
 	return res
 }
 
@@ -70,9 +70,9 @@ func (rd *RootDomain) DumpUserInfo(reference string) []byte {
 
 func (rd *RootDomain) DumpAllUsers() []byte {
 	res := []map[string]interface{}{}
-	crefs, err  := rd.GetChildrenTyped(member.ClassReference)
+	crefs, err := rd.GetChildrenTyped(member.ClassReference)
 	if err != nil {
-	    panic(err)
+		panic(err)
 	}
 	for _, cref := range crefs {
 		m := member.GetObject(cref)

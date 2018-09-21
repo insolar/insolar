@@ -8,7 +8,7 @@ import (
 
 
 // Reference to class of this contract
-var ClassReference = core.NewRefFromBase58("testRef")
+var ClassReference = core.NewRefFromBase58("")
 
 // Contract proxy type
 type RoleRecord struct {
@@ -95,7 +95,7 @@ func (r *RoleRecord) SelfDestroy(  ) (  ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "SelfDestroy", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "SelfDestroy", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -108,5 +108,21 @@ func (r *RoleRecord) SelfDestroy(  ) (  ) {
     }
 
     return 
+}
+
+func (r *RoleRecord) SelfDestroyNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "SelfDestroy", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 

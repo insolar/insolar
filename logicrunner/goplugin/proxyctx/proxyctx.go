@@ -22,7 +22,7 @@ import (
 
 // ProxyHelper interface with methods that are needed by contract proxies
 type ProxyHelper interface {
-	RouteCall(ref core.RecordRef, method string, args []byte) ([]byte, error)
+	RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error)
 	RouteConstructorCall(classRef core.RecordRef, name string, args []byte) ([]byte, error)
 	SaveAsChild(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error)
 	GetObjChildren(head core.RecordRef, class core.RecordRef) ([]core.RecordRef, error)

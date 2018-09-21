@@ -95,7 +95,7 @@ func (r *RootDomain) CreateMember( name string ) ( string ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "CreateMember", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateMember", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -112,6 +112,23 @@ func (r *RootDomain) CreateMember( name string ) ( string ) {
     return resList[0].(string)
 }
 
+func (r *RootDomain) CreateMemberNoWait( name string ) {
+    var args [1]interface{}
+	args[0] = name
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "CreateMember", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *RootDomain) GetBalance( reference string ) ( uint ) {
     var args [1]interface{}
 	args[0] = reference
@@ -123,7 +140,7 @@ func (r *RootDomain) GetBalance( reference string ) ( uint ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "GetBalance", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalance", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -140,6 +157,23 @@ func (r *RootDomain) GetBalance( reference string ) ( uint ) {
     return resList[0].(uint)
 }
 
+func (r *RootDomain) GetBalanceNoWait( reference string ) {
+    var args [1]interface{}
+	args[0] = reference
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalance", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
     var args [3]interface{}
 	args[0] = from
@@ -153,7 +187,7 @@ func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "SendMoney", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "SendMoney", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -170,6 +204,25 @@ func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
     return resList[0].(bool)
 }
 
+func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
+    var args [3]interface{}
+	args[0] = from
+	args[1] = to
+	args[2] = amount
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "SendMoney", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *RootDomain) getUserInfoMap( m *member.Member ) ( map[string]interface{} ) {
     var args [1]interface{}
 	args[0] = m
@@ -181,7 +234,7 @@ func (r *RootDomain) getUserInfoMap( m *member.Member ) ( map[string]interface{}
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "getUserInfoMap", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "getUserInfoMap", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -198,6 +251,23 @@ func (r *RootDomain) getUserInfoMap( m *member.Member ) ( map[string]interface{}
     return resList[0].(map[string]interface{})
 }
 
+func (r *RootDomain) getUserInfoMapNoWait( m *member.Member ) {
+    var args [1]interface{}
+	args[0] = m
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "getUserInfoMap", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
     var args [1]interface{}
 	args[0] = reference
@@ -209,7 +279,7 @@ func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "DumpUserInfo", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpUserInfo", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -226,6 +296,23 @@ func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
     return resList[0].([]byte)
 }
 
+func (r *RootDomain) DumpUserInfoNoWait( reference string ) {
+    var args [1]interface{}
+	args[0] = reference
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpUserInfo", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
     var args [0]interface{}
 
@@ -236,7 +323,7 @@ func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "DumpAllUsers", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllUsers", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -251,5 +338,21 @@ func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
     }
 
     return resList[0].([]byte)
+}
+
+func (r *RootDomain) DumpAllUsersNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllUsers", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 
