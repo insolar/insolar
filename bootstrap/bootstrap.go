@@ -102,7 +102,6 @@ func (b *Bootstrapper) Start(c core.Components) error {
 
 	cb := testutil.NewContractBuilder(am, insgocc)
 	defer cb.Clean()
-	log.Info("[Bootstrapper] building contracts")
 	var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
 	log.Info("[Bootstrapper] building contracts:", contractNames)
 	contracts := make(map[string]string)
