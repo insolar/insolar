@@ -25,6 +25,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -525,4 +526,19 @@ func GetContractName(p *ParsedFile) string {
 func RewriteContractPackage(p *ParsedFile, w io.Writer) {
 	p.node.Name.Name = "main"
 	printer.Fprint(w, p.fileSet, p.node)
+}
+
+func FindPath() (string, error) {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		return "", errors.Errorf("GOPATH is not set")
+	}
+	for _, p := range strings.Split(gopath, ":") {
+		pp := path.Join(p, "src/github.com/insolar/insolar/genesis/proxy")
+		_, err := os.Stat(pp)
+		if err == nil {
+			return pp, nil
+		}
+	}
+	return "", errors.Errorf("Not found github.com/insolar/insolar in GOPATH")
 }

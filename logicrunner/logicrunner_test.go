@@ -17,12 +17,16 @@
 package logicrunner
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"path"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
@@ -903,5 +907,37 @@ func (c *Child) GetNum() int {
 		assert.NoError(b, err, "parent call")
 		r := testutil.CBORUnMarshal(b, resp.(*reaction.CommonReaction).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
+	}
+}
+
+func TestProxyGeneration(t *testing.T) {
+	contracts := []string{
+		"../genesis/experiment/rootdomain/rootdomain.go",
+		"../genesis/experiment/member/member.go",
+		"../genesis/experiment/allowance/allowance.go",
+		"../genesis/experiment/wallet/wallet.go",
+	}
+
+	for _, contract := range contracts {
+		parsed, err := preprocessor.ParseFile(contract)
+		assert.NoError(t, err)
+
+		proxyPath, err := preprocessor.FindPath()
+		assert.NoError(t, err)
+
+		name, err := preprocessor.ProxyPackageName(parsed)
+		assert.NoError(t, err)
+
+		proxy := path.Join(proxyPath, name, name+".go")
+		_, err = os.Stat(proxy)
+		assert.NoError(t, err)
+
+		buff := bytes.NewBufferString("")
+		preprocessor.GenerateContractProxy(parsed, "", buff)
+
+		cmd := exec.Command("diff", proxy, "-")
+		cmd.Stdin = buff
+		out, err := cmd.CombinedOutput()
+		assert.NoError(t, err, string(out))
 	}
 }

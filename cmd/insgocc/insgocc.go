@@ -24,7 +24,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
@@ -64,21 +63,6 @@ func (r *outputFlag) Type() string {
 	return "file"
 }
 
-func findPath() (string, error) {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		return "", errors.Errorf("GOPATH is not set")
-	}
-	for _, p := range strings.Split(gopath, ":") {
-		pp := path.Join(p, "src/github.com/insolar/insolar/genesis/proxy")
-		_, err := os.Stat(pp)
-		if err == nil {
-			return pp, nil
-		}
-	}
-	return "", errors.Errorf("Not found github.com/insolar/insolar in GOPATH")
-}
-
 func main() {
 
 	var reference, outdir string
@@ -102,7 +86,7 @@ func main() {
 			}
 
 			if proxyOut.String() == "" {
-				p, err := findPath()
+				p, err := preprocessor.FindPath()
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)
