@@ -33,7 +33,7 @@ func NewNodeDomain() *NodeDomain {
 }
 
 // RegisterNode registers node in system
-func (nd *NodeDomain) RegisterNode(pk string, role core.JetRole) core.RecordRef {
+func (nd *NodeDomain) RegisterNode(pk string, role string) core.RecordRef {
 	newRecord := noderecord.NewNodeRecord(pk, role)
 	record := newRecord.AsChild(nd.GetReference())
 	return record.GetReference()
