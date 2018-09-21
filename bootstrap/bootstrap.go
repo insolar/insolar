@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -90,6 +91,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return errors.Wrap(err, "couldn't authorized node")
 	}
 	if !isLightExecutor {
+		log.Info("[Bootstrapper] Is not light executor. Don't build contracts")
 		return nil
 	}
 
@@ -99,7 +101,8 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	}
 	cb, cleaner := testutil.NewContractBuilder(am, insgocc)
 	defer cleaner()
-	var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
+	log.Info("[Bootstrapper] building contracts")
+	var contractNames = []string{"wallet", "member", "allowance", "rootdomain", "roledomain"}
 	contracts := make(map[string]string)
 	for _, name := range contractNames {
 		contractPath, _ := getContractPath(name)
