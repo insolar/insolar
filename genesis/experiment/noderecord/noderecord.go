@@ -14,14 +14,14 @@
  *    limitations under the License.
  */
 
-package rolerecord
+package noderecord
 
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-// NodeRecord contains info about role
+// NodeRecord contains info about node
 type NodeRecord struct {
 	foundation.BaseContract
 
@@ -30,7 +30,7 @@ type NodeRecord struct {
 }
 
 // New creates new NodeRecord
-func NewRoleRecord(pk string, role core.JetRole) *NodeRecord {
+func NewNodeRecord(pk string, role core.JetRole) *NodeRecord {
 	return &NodeRecord{
 		PublicKey: pk,
 		Role:      role,

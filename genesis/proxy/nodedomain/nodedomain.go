@@ -1,8 +1,8 @@
-package roledomain
+package nodedomain
 
 import (
         "github.com/insolar/insolar/core"
-        "github.com/insolar/insolar/genesis/proxy/rolerecord"
+        "github.com/insolar/insolar/genesis/experiment/noderecord"
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -12,7 +12,7 @@ import (
 var ClassReference = core.NewRefFromBase58("")
 
 // Contract proxy type
-type RoleDomain struct {
+type NodeDomain struct {
     Reference core.RecordRef
 }
 
@@ -20,32 +20,32 @@ type ContractHolder struct {
 	data []byte
 }
 
-func (r *ContractHolder) AsChild(objRef core.RecordRef) *RoleDomain {
+func (r *ContractHolder) AsChild(objRef core.RecordRef) *NodeDomain {
     ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
     if err != nil {
         panic(err)
     }
-    return &RoleDomain{Reference: ref}
+    return &NodeDomain{Reference: ref}
 }
 
-func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *RoleDomain {
+func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *NodeDomain {
     ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
     if err != nil {
         panic(err)
     }
-    return &RoleDomain{Reference: ref}
+    return &NodeDomain{Reference: ref}
 }
 
 // GetObject
-func GetObject(ref core.RecordRef) (r *RoleDomain) {
-    return &RoleDomain{Reference: ref}
+func GetObject(ref core.RecordRef) (r *NodeDomain) {
+    return &NodeDomain{Reference: ref}
 }
 
 func GetClass() core.RecordRef {
     return ClassReference
 }
 
-func GetImplementationFrom(object core.RecordRef) *RoleDomain {
+func GetImplementationFrom(object core.RecordRef) *NodeDomain {
     ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
     if err != nil {
         panic(err)
@@ -54,7 +54,7 @@ func GetImplementationFrom(object core.RecordRef) *RoleDomain {
 }
 
 
-func NewRoleDomain(  ) *ContractHolder {
+func NewNodeDomain(  ) *ContractHolder {
     var args [0]interface{}
 
 
@@ -64,7 +64,7 @@ func NewRoleDomain(  ) *ContractHolder {
         panic(err)
     }
 
-    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "NewRoleDomain", argsSerialized)
+    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "NewNodeDomain", argsSerialized)
     if err != nil {
 		panic(err)
     }
@@ -74,17 +74,17 @@ func NewRoleDomain(  ) *ContractHolder {
 
 
 // GetReference
-func (r *RoleDomain) GetReference() core.RecordRef {
+func (r *NodeDomain) GetReference() core.RecordRef {
     return r.Reference
 }
 
 // GetClass
-func (r *RoleDomain) GetClass() core.RecordRef {
+func (r *NodeDomain) GetClass() core.RecordRef {
     return ClassReference
 }
 
 
-func (r *RoleDomain) RegisterNode( pk string, role core.JetRole ) ( core.RecordRef ) {
+func (r *NodeDomain) RegisterNode( pk string, role core.JetRole ) ( core.RecordRef ) {
     var args [2]interface{}
 	args[0] = pk
 	args[1] = role
@@ -113,7 +113,7 @@ func (r *RoleDomain) RegisterNode( pk string, role core.JetRole ) ( core.RecordR
     return resList[0].(core.RecordRef)
 }
 
-func (r *RoleDomain) RegisterNodeNoWait( pk string, role core.JetRole ) {
+func (r *NodeDomain) RegisterNodeNoWait( pk string, role core.JetRole ) {
     var args [2]interface{}
 	args[0] = pk
 	args[1] = role
@@ -131,7 +131,7 @@ func (r *RoleDomain) RegisterNodeNoWait( pk string, role core.JetRole ) {
     }
 }
 
-func (r *RoleDomain) GetNodeRecord( ref core.RecordRef ) ( *rolerecord.RoleRecord ) {
+func (r *NodeDomain) GetNodeRecord( ref core.RecordRef ) ( *noderecord.NodeRecord ) {
     var args [1]interface{}
 	args[0] = ref
 
@@ -148,7 +148,7 @@ func (r *RoleDomain) GetNodeRecord( ref core.RecordRef ) ( *rolerecord.RoleRecor
     }
 
     resList := [1]interface{}{}
-	var a0 *rolerecord.RoleRecord
+	var a0 *noderecord.NodeRecord
 	resList[0] = a0
 
     err = proxyctx.Current.Deserialize(res, &resList)
@@ -156,10 +156,10 @@ func (r *RoleDomain) GetNodeRecord( ref core.RecordRef ) ( *rolerecord.RoleRecor
         panic(err)
     }
 
-    return resList[0].(*rolerecord.RoleRecord)
+    return resList[0].(*noderecord.NodeRecord)
 }
 
-func (r *RoleDomain) GetNodeRecordNoWait( ref core.RecordRef ) {
+func (r *NodeDomain) GetNodeRecordNoWait( ref core.RecordRef ) {
     var args [1]interface{}
 	args[0] = ref
 
@@ -176,7 +176,7 @@ func (r *RoleDomain) GetNodeRecordNoWait( ref core.RecordRef ) {
     }
 }
 
-func (r *RoleDomain) RemoveNode( nodeRef core.RecordRef ) (  ) {
+func (r *NodeDomain) RemoveNode( nodeRef core.RecordRef ) (  ) {
     var args [1]interface{}
 	args[0] = nodeRef
 
@@ -202,7 +202,7 @@ func (r *RoleDomain) RemoveNode( nodeRef core.RecordRef ) (  ) {
     return 
 }
 
-func (r *RoleDomain) RemoveNodeNoWait( nodeRef core.RecordRef ) {
+func (r *NodeDomain) RemoveNodeNoWait( nodeRef core.RecordRef ) {
     var args [1]interface{}
 	args[0] = nodeRef
 

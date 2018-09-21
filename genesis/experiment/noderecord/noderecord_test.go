@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package rolerecord
+package noderecord
 
 import (
 	"testing"
@@ -23,10 +23,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewRoleRecord(t *testing.T) {
+func TestNewNodeRecord(t *testing.T) {
 	const TestPubKey = "test"
 	const TestRole = core.RoleHeavyExecutor
-	record := NewRoleRecord(TestPubKey, TestRole)
+	record := NewNodeRecord(TestPubKey, TestRole)
 	assert.Equal(t, TestRole, record.Role)
 	assert.Equal(t, TestPubKey, record.PublicKey)
 }

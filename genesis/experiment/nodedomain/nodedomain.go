@@ -14,38 +14,38 @@
  *    limitations under the License.
  */
 
-package roledomain
+package nodedomain
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis/proxy/rolerecord"
+	"github.com/insolar/insolar/genesis/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-// NodeDomain holds rolerecords
+// NodeDomain holds noderecords
 type NodeDomain struct {
 	foundation.BaseContract
 }
 
-// NewRoleDomain create new NodeDomain
-func NewRoleDomain() *NodeDomain {
+// NewNodeDomain create new NodeDomain
+func NewNodeDomain() *NodeDomain {
 	return &NodeDomain{}
 }
 
 // RegisterNode registers node in system
 func (rd *NodeDomain) RegisterNode(pk string, role core.JetRole) core.RecordRef {
-	newRecord := rolerecord.NewRoleRecord(pk, role)
+	newRecord := noderecord.NewNodeRecord(pk, role)
 	record := newRecord.AsChild(rd.GetReference())
 	return record.GetReference()
 }
 
 // GetNodeRecord get node record by ref
-func (rd *NodeDomain) GetNodeRecord(ref core.RecordRef) *rolerecord.RoleRecord {
-	return rolerecord.GetObject(ref)
+func (rd *NodeDomain) GetNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
+	return noderecord.GetObject(ref)
 }
 
 // RemoveNode deletes node from registry
 func (rd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
-	node := rolerecord.GetObject(nodeRef)
+	node := noderecord.GetObject(nodeRef)
 	node.SelfDestroy()
 }

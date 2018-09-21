@@ -1,4 +1,4 @@
-package rolerecord
+package noderecord
 
 import (
         "github.com/insolar/insolar/core"
@@ -11,7 +11,7 @@ import (
 var ClassReference = core.NewRefFromBase58("")
 
 // Contract proxy type
-type RoleRecord struct {
+type NodeRecord struct {
     Reference core.RecordRef
 }
 
@@ -19,32 +19,32 @@ type ContractHolder struct {
 	data []byte
 }
 
-func (r *ContractHolder) AsChild(objRef core.RecordRef) *RoleRecord {
+func (r *ContractHolder) AsChild(objRef core.RecordRef) *NodeRecord {
     ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
     if err != nil {
         panic(err)
     }
-    return &RoleRecord{Reference: ref}
+    return &NodeRecord{Reference: ref}
 }
 
-func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *RoleRecord {
+func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *NodeRecord {
     ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
     if err != nil {
         panic(err)
     }
-    return &RoleRecord{Reference: ref}
+    return &NodeRecord{Reference: ref}
 }
 
 // GetObject
-func GetObject(ref core.RecordRef) (r *RoleRecord) {
-    return &RoleRecord{Reference: ref}
+func GetObject(ref core.RecordRef) (r *NodeRecord) {
+    return &NodeRecord{Reference: ref}
 }
 
 func GetClass() core.RecordRef {
     return ClassReference
 }
 
-func GetImplementationFrom(object core.RecordRef) *RoleRecord {
+func GetImplementationFrom(object core.RecordRef) *NodeRecord {
     ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
     if err != nil {
         panic(err)
@@ -53,7 +53,7 @@ func GetImplementationFrom(object core.RecordRef) *RoleRecord {
 }
 
 
-func NewRoleRecord( pk string, role core.JetRole ) *ContractHolder {
+func NewNodeRecord( pk string, role core.JetRole ) *ContractHolder {
     var args [2]interface{}
 	args[0] = pk
 	args[1] = role
@@ -65,7 +65,7 @@ func NewRoleRecord( pk string, role core.JetRole ) *ContractHolder {
         panic(err)
     }
 
-    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "NewRoleRecord", argsSerialized)
+    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "NewNodeRecord", argsSerialized)
     if err != nil {
 		panic(err)
     }
@@ -75,17 +75,17 @@ func NewRoleRecord( pk string, role core.JetRole ) *ContractHolder {
 
 
 // GetReference
-func (r *RoleRecord) GetReference() core.RecordRef {
+func (r *NodeRecord) GetReference() core.RecordRef {
     return r.Reference
 }
 
 // GetClass
-func (r *RoleRecord) GetClass() core.RecordRef {
+func (r *NodeRecord) GetClass() core.RecordRef {
     return ClassReference
 }
 
 
-func (r *RoleRecord) SelfDestroy(  ) (  ) {
+func (r *NodeRecord) SelfDestroy(  ) (  ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -110,7 +110,7 @@ func (r *RoleRecord) SelfDestroy(  ) (  ) {
     return 
 }
 
-func (r *RoleRecord) SelfDestroyNoWait(  ) {
+func (r *NodeRecord) SelfDestroyNoWait(  ) {
     var args [0]interface{}
 
     var argsSerialized []byte
