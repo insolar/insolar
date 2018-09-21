@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -113,6 +114,11 @@ func main() {
 		log.Fatalln("Failed to start ApiRunner: ", err.Error())
 	}
 
+	met, err := metrics.NewMetrics(cfgHolder.Configuration.Metrics)
+	if err != nil {
+		log.Fatalln("Failed to start Metrics: ", err.Error())
+	}
+
 	cm := componentManager{components: make(core.Components), interfaceNames: make([]string, 0)}
 	cm.register("core.Network", nw)
 	cm.register("core.Ledger", l)
@@ -120,6 +126,7 @@ func main() {
 	cm.register("core.EventBus", eb)
 	cm.register("core.Bootstrapper", b)
 	cm.register("core.ApiRunner", ar)
+	cm.register("core.Metrics", met)
 	cm.linkAll()
 
 	defer func() {

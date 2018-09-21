@@ -197,7 +197,7 @@ func TestContractCallingContract(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -310,7 +310,7 @@ func TestInjectingDelegate(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -440,7 +440,7 @@ func TestBasicNotificationCall(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -608,7 +608,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"contract-proxy/child"
+	"github.com/insolar/insolar/genesis/proxy/child"
 )
 
 type Contract struct {
@@ -726,19 +726,20 @@ func New(n int) *Child {
 }
 
 func TestRootDomainContract(t *testing.T) {
-	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.insgoc")
+	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.go" +
+		"")
 	if err != nil {
 		fmt.Print(err)
 	}
-	memberCode, err := ioutil.ReadFile("../genesis/experiment/member/member.insgoc")
+	memberCode, err := ioutil.ReadFile("../genesis/experiment/member/member.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	allowanceCode, err := ioutil.ReadFile("../genesis/experiment/allowance/allowance.insgoc")
+	allowanceCode, err := ioutil.ReadFile("../genesis/experiment/allowance/allowance.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	walletCode, err := ioutil.ReadFile("../genesis/experiment/wallet/wallet.insgoc")
+	walletCode, err := ioutil.ReadFile("../genesis/experiment/wallet/wallet.go")
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -831,7 +832,7 @@ func BenchmarkContractCall(b *testing.B) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/child"
+import "github.com/insolar/insolar/genesis/proxy/child"
 import "github.com/insolar/insolar/core"
 
 type Parent struct {

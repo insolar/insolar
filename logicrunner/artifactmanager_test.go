@@ -171,7 +171,7 @@ func (tctx *testGoPluginCtx) callingContract(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 import "github.com/insolar/insolar/core"
 
 type One struct {
@@ -242,7 +242,7 @@ func (tctx *testGoPluginCtx) injectingDelegate(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 import "github.com/insolar/insolar/core"
 
 type One struct {
