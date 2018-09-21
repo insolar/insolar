@@ -18,7 +18,7 @@ package rolerecord
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/toolkit/go/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // RoleRecord contains info about role
