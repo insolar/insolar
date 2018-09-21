@@ -44,7 +44,7 @@ func NewHostNetwork() HostNetwork {
 		Transport:         transport,
 		IsRelay:           false,
 		BootstrapHosts:    bootstrapHosts,
-		Timeout:           120,
+		Timeout:           4,
 		InfinityBootstrap: false,
 	}
 }

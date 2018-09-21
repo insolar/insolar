@@ -7,7 +7,7 @@ insolar:
     bootstraphosts: []
     isrelay: false
     infinitybootstrap: false
-    timeout: 120
+    timeout: 4
   node:
     nodes: []
   log:
