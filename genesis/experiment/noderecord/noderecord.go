@@ -38,6 +38,6 @@ func NewNodeRecord(pk string, role core.JetRole) *NodeRecord {
 }
 
 // SelfDestroy makes request to destroy current node record
-func (rr *NodeRecord) Destroy() {
-	rr.SelfDestructRequest()
+func (nr *NodeRecord) Destroy() {
+	nr.SelfDestructRequest()
 }
