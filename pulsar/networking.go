@@ -22,6 +22,7 @@ import (
 	"net/rpc"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 )
 
 type RequestType string
@@ -56,7 +57,8 @@ type EntropySignaturePayload struct {
 }
 
 type Handler struct {
-	pulsar *Pulsar
+	pulsar           *Pulsar
+	entropyGenerator EntropyGenerator
 }
 
 func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
@@ -114,6 +116,45 @@ func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) 
 	message := Payload{PublicKey: convertedKey, Body: GetLastPulsePayload{Pulse: *pulse}}
 	message.Signature, err = singData(handler.pulsar.PrivateKey, message.Body)
 	*response = message
+
+	return nil
+}
+
+func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
+	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
+	if err != nil {
+		log.Warn("Message from unknown host %v - %v", request.PublicKey)
+		return err
+	}
+
+	result, err := checkPayloadSignature(request)
+	if err != nil {
+		return err
+	}
+	if !result {
+		return errors.New("Signature check failed")
+	}
+
+	handler.pulsar.EntropyGenerationLock.Lock()
+	if handler.pulsar.State == Waiting {
+		handler.pulsar.State = EntropySignProcessing
+		err := handler.pulsar.GenerateEntropyWithSignature(handler.entropyGenerator)
+		if err != nil {
+			handler.pulsar.State = Failed
+			log.Error(err)
+			handler.pulsar.EntropyGenerationLock.Unlock()
+			return err
+		}
+
+		go handler.pulsar.BroadcastSignatureOfEntropy()
+	}
+	handler.pulsar.EntropyGenerationLock.Unlock()
+
+	requestBody := request.Body.(EntropySignaturePayload)
+	handler.pulsar.OwnedBftRow[request.PublicKey] = &BftCell{Sign: requestBody.Signature}
+
+	//add method, when all, ok, send number
+	//also set timeout for sending number
 
 	return nil
 }

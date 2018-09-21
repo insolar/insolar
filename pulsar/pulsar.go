@@ -47,13 +47,21 @@ type Pulsar struct {
 	Neighbours map[string]*Neighbour
 	PrivateKey *ecdsa.PrivateKey
 
-	Storage   pulsarstorage.PulsarStorage
-	LastPulse *core.Pulse
+	Storage pulsarstorage.PulsarStorage
 
 	State                 State
 	EntropyGenerationLock sync.Mutex
 	Entropy               core.Entropy
 	EntropySign           []byte
+	ProcessingPulseNumber core.PulseNumber
+	LastPulse             *core.Pulse
+	OwnedBftRow           map[string]*BftCell
+	BftGrid               map[string]map[string]*BftCell
+}
+
+type BftCell struct {
+	Sign   []byte
+	Number uint32
 }
 
 // Creation new pulsar-node
@@ -93,7 +101,7 @@ func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarS
 
 	gob.Register(Payload{})
 	gob.Register(HandshakePayload{})
-	gob.Register(NumberSignaturePayload{})
+	//gob.Register(NumberSignaturePayload{})
 
 	return pulsar, nil
 }
