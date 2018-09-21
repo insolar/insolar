@@ -333,8 +333,6 @@ func (dht *DHT) iterateBootstrapHosts(
 		}(cb, dht, bh, ht, localwg)
 	}
 	localwg.Wait()
-
-	return
 }
 
 // Disconnect will trigger a Stop from the network.
