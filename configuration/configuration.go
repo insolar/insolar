@@ -97,7 +97,6 @@ func NewHolder() *Holder {
 	holder := &Holder{Configuration: cfg, viper: viper.New()}
 
 	holder.viper.SetConfigName(".insolar")
-	holder.viper.AddConfigPath("$HOME/")
 	holder.viper.AddConfigPath(".")
 	holder.viper.SetConfigType("yml")
 

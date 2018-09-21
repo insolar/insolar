@@ -24,6 +24,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"time"
 
@@ -88,10 +89,18 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.New("event bus was not set during initialization")
 	}
 
+	var mode event.MethodReturnMode
+	if req.Wait {
+		mode = event.ReturnResult
+	} else {
+		mode = event.ReturnNoWait
+	}
+
 	e := &event.CallMethodEvent{
-		ObjectRef: req.Object,
-		Method:    req.Method,
-		Arguments: req.Arguments,
+		ReturnMode: mode,
+		ObjectRef:  req.Object,
+		Method:     req.Method,
+		Arguments:  req.Arguments,
 	}
 
 	res, err := gpr.gp.EventBus.Dispatch(e)
@@ -160,7 +169,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 		if err != nil {
 			return errors.Wrap(err, "Have ref, have no object")
 		}
-		cd, err := o.ClassDescriptor()
+		cd, err := o.ClassDescriptor(nil)
 		if err != nil {
 			return errors.Wrap(err, "Have ref, have no object")
 		}
@@ -277,7 +286,7 @@ func (gp *GoPlugin) StartRunner() error {
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() error {
-	err := gp.runner.Process.Kill()
+	err := gp.runner.Process.Signal(syscall.SIGINT)
 	if err != nil {
 		return err
 	}

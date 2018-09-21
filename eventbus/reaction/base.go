@@ -36,6 +36,8 @@ const (
 	CommonReactionType
 	// ObjectBodyReactionType - reaction with body, class reference, code reference ...
 	ObjectBodyReactionType
+	// TypeCode - retrieve code from storage.
+	TypeCode
 )
 
 func getEmptyReaction(t Type) (core.Reaction, error) {

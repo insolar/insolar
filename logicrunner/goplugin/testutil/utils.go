@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -44,7 +45,7 @@ func ChangeGoPath(path string) (string, error) {
 		gopath = build.Default.GOPATH
 	}
 
-	err := os.Setenv("GOPATH", path+":"+gopath)
+	err := os.Setenv("GOPATH", path+string(os.PathListSeparator)+gopath)
 	if err != nil {
 		return "", err
 	}
@@ -59,7 +60,7 @@ func WriteFile(dir string, name string, text string) error {
 		return err
 	}
 
-	fh, err := os.OpenFile(dir+"/"+name, os.O_WRONLY|os.O_CREATE, 0644)
+	fh, err := os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -79,14 +80,14 @@ func WriteFile(dir string, name string, text string) error {
 
 // TestCodeDescriptor implementation for tests
 type TestCodeDescriptor struct {
-	ARef         *core.RecordRef
+	ARef         core.RecordRef
 	ACode        []byte
 	AMachineType core.MachineType
 }
 
 // Ref implementation for tests
 func (t *TestCodeDescriptor) Ref() *core.RecordRef {
-	return t.ARef
+	return &t.ARef
 }
 
 // MachineType implementation for tests
@@ -117,7 +118,7 @@ func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
 }
 
 // StateRef ...
-func (t *TestClassDescriptor) StateRef() *core.RecordRef {
+func (t *TestClassDescriptor) StateRef() (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
@@ -127,7 +128,7 @@ func (t *TestClassDescriptor) IsActive() (bool, error) {
 }
 
 // CodeDescriptor ...
-func (t *TestClassDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
+func (t *TestClassDescriptor) CodeDescriptor(machinePref []core.MachineType) (core.CodeDescriptor, error) {
 	res, ok := t.AM.Codes[*t.ACode]
 	if !ok {
 		return nil, errors.New("No code")
@@ -150,7 +151,7 @@ func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
 }
 
 // StateRef implementation for tests
-func (t *TestObjectDescriptor) StateRef() *core.RecordRef {
+func (t *TestObjectDescriptor) StateRef() (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
@@ -164,21 +165,8 @@ func (t *TestObjectDescriptor) Memory() ([]byte, error) {
 	return t.Data, nil
 }
 
-// CodeDescriptor implementation for tests
-func (t *TestObjectDescriptor) CodeDescriptor() (core.CodeDescriptor, error) {
-	if t.Code == nil {
-		return nil, errors.New("No code")
-	}
-
-	res, ok := t.AM.Codes[*t.Code]
-	if !ok {
-		return nil, errors.New("No code")
-	}
-	return res, nil
-}
-
 // ClassDescriptor implementation for tests
-func (t *TestObjectDescriptor) ClassDescriptor() (core.ClassDescriptor, error) {
+func (t *TestObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
 	if t.Class == nil {
 		return nil, errors.New("No class")
 	}
@@ -215,6 +203,11 @@ func (t *TestArtifactManager) Stop() error { return nil }
 
 // RootRef implementation for tests
 func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef{} }
+
+// HandleEvent implementation for tests
+func (t *TestArtifactManager) HandleEvent(event core.Event) (core.Reaction, error) {
+	panic("implement me")
+}
 
 // SetArchPref implementation for tests
 func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
@@ -276,7 +269,7 @@ func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.Rec
 		return nil, errors.Wrap(err, "Failed to generate ref")
 	}
 	t.Codes[*ref] = &TestCodeDescriptor{
-		ARef:         ref,
+		ARef:         *ref,
 		ACode:        codeMap[core.MachineTypeGoPlugin],
 		AMachineType: core.MachineTypeGoPlugin,
 	}
@@ -449,10 +442,10 @@ type ContractsBuilder struct {
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder, func()) {
+func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
-		return nil, nil
+		return nil
 	}
 
 	cb := &ContractsBuilder{
@@ -461,8 +454,12 @@ func NewContractBuilder(am core.ArtifactManager, icc string) (*ContractsBuilder,
 		Codes:           make(map[string]*core.RecordRef),
 		ArtifactManager: am,
 		IccPath:         icc}
-	return cb, func() {
-		os.RemoveAll(cb.root) // nolint: errcheck
+	return cb
+}
+func (cb *ContractsBuilder) Clean() {
+	err := os.RemoveAll(cb.root) // nolint: errcheck
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -487,7 +484,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	re := regexp.MustCompile(`package\s+\S+`)
 	for name, code := range contracts {
 		code = re.ReplaceAllString(code, "package main")
-		err := WriteFile(cb.root+"/src/contract/"+name+"/", "main.go", code)
+		err := WriteFile(filepath.Join(cb.root, "src/contract", name), "main.go", code)
 		if err != nil {
 			return err
 		}
@@ -507,7 +504,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			return err
 		}
 
-		pluginBinary, err := ioutil.ReadFile(cb.root + "/plugins/" + name + ".so")
+		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
 			return err
 		}
@@ -521,6 +518,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 		cb.Codes[name] = code
 
+		cb.ArtifactManager.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 		_, err = cb.ArtifactManager.UpdateClass(
 			core.RecordRef{}, core.RecordRef{},
 			*cb.Classes[name],
@@ -536,18 +534,18 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {
-	dstDir := cb.root + "/src/contract-proxy/" + name
+	dstDir := filepath.Join(cb.root, "src/github.com/insolar/insolar/genesis/proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
 		return err
 	}
 
-	contractPath := cb.root + "/src/contract/" + name + "/main.go"
+	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
 
 	out, err := exec.Command(
 		cb.IccPath, "proxy",
-		"-o", dstDir+"/main.go",
+		"-o", filepath.Join(dstDir, "main.go"),
 		"--code-reference", cb.Classes[name].String(),
 		contractPath,
 	).CombinedOutput()
@@ -558,8 +556,8 @@ func (cb *ContractsBuilder) proxy(name string) error {
 }
 
 func (cb *ContractsBuilder) wrapper(name string) error {
-	contractPath := cb.root + "/src/contract/" + name + "/main.go"
-	wrapperPath := cb.root + "/src/contract/" + name + "/main_wrapper.go"
+	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
+	wrapperPath := filepath.Join(cb.root, "src/contract", name, "main_wrapper.go")
 
 	out, err := exec.Command(cb.IccPath, "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
 	if err != nil {
@@ -570,7 +568,7 @@ func (cb *ContractsBuilder) wrapper(name string) error {
 
 // Plugin ...
 func (cb *ContractsBuilder) plugin(name string) error {
-	dstDir := cb.root + "/plugins/"
+	dstDir := filepath.Join(cb.root, "plugins")
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
@@ -583,9 +581,14 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	}
 	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
 
-	//contractPath := root + "/src/contract/" + name + "/main.go"
+	// contractPath := filepath.Join(root, "src/contract", name, "main.go")
 
-	out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", dstDir+"/"+name+".so", "contract/"+name).CombinedOutput()
+	out, err := exec.Command(
+		"go", "build",
+		"-buildmode=plugin",
+		"-o", filepath.Join(dstDir, name+".so"),
+		"contract/"+name,
+	).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))
 	}

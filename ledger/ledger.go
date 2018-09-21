@@ -87,9 +87,11 @@ func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error)
 
 // Start initializes external ledger dependencies.
 func (l *Ledger) Start(c core.Components) error {
-	// TODO: add links to network and maybe event bus
-	// eb := c["core.EventBus"].(core.EventBus)
-	// l.eventbus = eb
+	var err error
+	if err = l.am.Link(c); err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -117,7 +118,7 @@ func TestBasicGeneration(t *testing.T) {
 	t.Run("wrapper", func(t *testing.T) {
 		buf := bytes.Buffer{}
 
-		parsed, err := ParseFile(tmpDir + "/main.go")
+		parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
 		assert.NoError(t, err)
 
 		err = GenerateContractWrapper(parsed, &buf)
@@ -131,7 +132,7 @@ func TestBasicGeneration(t *testing.T) {
 	t.Run("proxy", func(t *testing.T) {
 		buf := bytes.Buffer{}
 
-		parsed, err := ParseFile(tmpDir + "/main.go")
+		parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
 		assert.NoError(t, err)
 
 		err = GenerateContractProxy(parsed, "testRef", &buf)
@@ -170,7 +171,7 @@ func NewWrong() {
 	err = testutil.WriteFile(tmpDir, "code1", code)
 	assert.NoError(t, err)
 
-	info, err := ParseFile(tmpDir + "/code1")
+	info, err := ParseFile(filepath.Join(tmpDir, "code1"))
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(info.constructors))
@@ -188,20 +189,20 @@ func TestCompileContractProxy(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
-	err = os.MkdirAll(tmpDir+"/src/secondary/", 0777)
+	err = os.MkdirAll(filepath.Join(tmpDir, "src/secondary"), 0777)
 	assert.NoError(t, err)
 
 	// XXX: dirty hack to make `dep` installed packages available in generated code
-	err = os.Symlink(cwd+"/../../../vendor/", tmpDir+"/src/secondary/vendor")
+	err = os.Symlink(filepath.Join(cwd, "../../../vendor"), filepath.Join(tmpDir, "src/secondary/vendor"))
 	assert.NoError(t, err)
 
-	proxyFh, err := os.OpenFile(tmpDir+"/src/secondary/main.go", os.O_WRONLY|os.O_CREATE, 0644)
+	proxyFh, err := os.OpenFile(filepath.Join(tmpDir, "/src/secondary/main.go"), os.O_WRONLY|os.O_CREATE, 0644)
 	assert.NoError(t, err)
 
-	err = testutil.WriteFile(tmpDir+"/contracts/secondary/", "main.go", randomTestCode)
+	err = testutil.WriteFile(filepath.Join(tmpDir, "/contracts/secondary/"), "main.go", randomTestCode)
 	assert.NoError(t, err)
 
-	parsed, err := ParseFile(tmpDir + "/contracts/secondary/main.go")
+	parsed, err := ParseFile(filepath.Join(tmpDir, "/contracts/secondary/main.go"))
 	assert.NoError(t, err)
 
 	err = GenerateContractProxy(parsed, "testRef", proxyFh)
@@ -214,8 +215,8 @@ func TestCompileContractProxy(t *testing.T) {
 package test
 
 import (
-	"secondary"
 	"github.com/insolar/insolar/core"
+	"secondary"
 )
 
 func main() {
@@ -447,7 +448,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/pointerPath"`)
-	assert.NotContains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
@@ -457,7 +458,6 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/pointerPath"`)
-	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
 func TestAliasImportsFromContract(t *testing.T) {
@@ -498,7 +498,7 @@ func ( A ) Get(i someAlias.SomeType){
 	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
-	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
+	assert.NotContains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 }
 
 func TestImportsFromContractUseInsideFunc(t *testing.T) {
@@ -531,7 +531,6 @@ func ( A ) Get() {
 	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufProxy.String(), `"some/test/import/path"`)
-	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
@@ -540,7 +539,6 @@ func ( A ) Get() {
 	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
-	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
 func TestImportsFromContractUseForReturnValue(t *testing.T) {
@@ -573,7 +571,6 @@ func ( A ) Get() path.SomeValue {
 	err = GenerateContractProxy(parsed, "testRef", &bufProxy)
 	assert.NoError(t, err)
 	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
-	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 	code, err := ioutil.ReadAll(&bufProxy)
 	assert.NoError(t, err)
 	assert.NotEqual(t, len(code), 0)
@@ -582,7 +579,6 @@ func ( A ) Get() path.SomeValue {
 	err = GenerateContractWrapper(parsed, &bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
-	assert.Contains(t, bufWrapper.String(), `"github.com/insolar/insolar/logicrunner/goplugin/foundation"`)
 }
 
 func TestNotMatchFileNameForProxy(t *testing.T) {

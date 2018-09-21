@@ -133,8 +133,10 @@ func (b *Hello) String() string {
 	return fmt.Sprint("Hello, Go is there!")
 }
 	`
-	cb, cbcleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
-	defer cbcleaner()
+	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
+	cb := testutil.NewContractBuilder(am, tctx.preprocessor)
+	defer cb.Clean()
 	err := cb.Build(map[string]string{"hello": helloCode})
 	assert.NoError(t, err)
 
@@ -169,7 +171,7 @@ func (tctx *testGoPluginCtx) callingContract(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 import "github.com/insolar/insolar/core"
 
 type One struct {
@@ -211,8 +213,8 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	cb, cbcleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
-	defer cbcleaner()
+	cb := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
+	defer cb.Clean()
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
@@ -240,7 +242,7 @@ func (tctx *testGoPluginCtx) injectingDelegate(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 import "github.com/insolar/insolar/core"
 
 type One struct {
@@ -282,8 +284,8 @@ func (r *Two) Hello(s string) string {
 }
 `
 
-	cb, cbcleaner := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
-	defer cbcleaner()
+	cb := testutil.NewContractBuilder(l.GetArtifactManager(), tctx.preprocessor)
+	defer cb.Clean()
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,

@@ -28,6 +28,7 @@ import (
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -1013,6 +1014,7 @@ func (dht *DHT) EqualAuthSentKey(targetID string, key []byte) bool {
 
 // SendRequest sends a packet.
 func (dht *DHT) SendRequest(packet *packet.Packet) (transport.Future, error) {
+	metrics.NetworkPacketSentTotal.WithLabelValues(packet.Type.String()).Inc()
 	return dht.transport.SendRequest(packet)
 }
 
