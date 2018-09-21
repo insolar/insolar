@@ -28,8 +28,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
 var pathWithContracts = "../../../genesis/experiment"
+
+func getContractNames() ([]string, error) {
+	var result []string
+	files, err := ioutil.ReadDir(pathWithContracts)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			result = append(result, f.Name())
+		}
+	}
+
+	return result, nil
+}
 
 func contractPath(name string) string {
 	return filepath.Join(pathWithContracts, name, name+".go")
@@ -40,6 +54,8 @@ func MakeTestName(file string, contractType string) string {
 }
 
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
+	contractNames, err := getContractNames()
+	assert.NoError(t, err)
 	for _, name := range contractNames {
 		file := contractPath(name)
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
@@ -58,6 +74,8 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 }
 
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
+	contractNames, err := getContractNames()
+	assert.NoError(t, err)
 	for _, name := range contractNames {
 		file := contractPath(name)
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
@@ -82,6 +100,8 @@ func TestCompilingRealSmartContracts(t *testing.T) {
 	assert.NoError(t, err)
 
 	contracts := make(map[string]string)
+	contractNames, err := getContractNames()
+	assert.NoError(t, err)
 	for _, name := range contractNames {
 		code, err := ioutil.ReadFile(contractPath(name))
 		assert.NoError(t, err)
