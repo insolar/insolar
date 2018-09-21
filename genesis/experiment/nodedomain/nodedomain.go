@@ -33,19 +33,19 @@ func NewNodeDomain() *NodeDomain {
 }
 
 // RegisterNode registers node in system
-func (rd *NodeDomain) RegisterNode(pk string, role core.JetRole) core.RecordRef {
+func (nd *NodeDomain) RegisterNode(pk string, role core.JetRole) core.RecordRef {
 	newRecord := noderecord.NewNodeRecord(pk, role)
-	record := newRecord.AsChild(rd.GetReference())
+	record := newRecord.AsChild(nd.GetReference())
 	return record.GetReference()
 }
 
 // GetNodeRecord get node record by ref
-func (rd *NodeDomain) GetNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
+func (nd *NodeDomain) GetNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
 // RemoveNode deletes node from registry
-func (rd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
+func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 	node := noderecord.GetObject(nodeRef)
 	node.Destroy()
 }
