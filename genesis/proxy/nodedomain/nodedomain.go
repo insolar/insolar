@@ -2,13 +2,13 @@ package nodedomain
 
 import (
         "github.com/insolar/insolar/core"
-        "github.com/insolar/insolar/genesis/experiment/noderecord"
+        "github.com/insolar/insolar/genesis/proxy/noderecord"
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 
 
-// Reference to class of this contract
+// ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
 // Contract proxy type
