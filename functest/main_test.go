@@ -34,6 +34,7 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -414,4 +415,43 @@ func TestWithoutQueryType(t *testing.T) {
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
 	assert.Equal(t, "Wrong query parameter 'query_type' = ''", response.Err.Event)
+}
+
+func TestTooMuchParams(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"some_param": "irrelevant info",
+		"name":       testutils.RandomRef().String(),
+	})
+
+	firstMemberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, firstMemberResponse)
+
+	firstMemberRef := firstMemberResponse.Reference
+	assert.NotEqual(t, "", firstMemberRef)
+}
+
+func TestQueryTypeAsIntParams(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": 100,
+	})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Event)
+}
+
+func TestWrongTypeInParams(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       128182187,
+	})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Event)
 }
