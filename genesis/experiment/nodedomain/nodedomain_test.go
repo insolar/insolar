@@ -18,7 +18,7 @@ package roledomain
 
 // func TestRoleDomain_GetNodeRecord(t *testing.T) {
 // 	roleDomain := NewRoleDomain()
-// 	rRecord := rolerecord.NewRoleRecord("test", core.RoleHeavyExecutor)
+// 	rRecord := noderecord.NewRoleRecord("test", core.RoleHeavyExecutor)
 // 	nodeRef := roleDomain.RegisterNode(rRecord.PublicKey, rRecord.Role)
 //
 // 	gotRoleRecord := roleDomain.GetNodeRecord(nodeRef)
@@ -29,7 +29,7 @@ package roledomain
 // func TestRoleDomain_RemoveNode(t *testing.T) {
 //
 // 	roleDomain := NewRoleDomain()
-// 	rRecord := rolerecord.NewRoleRecord("test", core.RoleHeavyExecutor)
+// 	rRecord := noderecord.NewRoleRecord("test", core.RoleHeavyExecutor)
 // 	nodeRef := roleDomain.RegisterNode(rRecord.PublicKey, rRecord.Role)
 //
 // 	gotRoleRecord := roleDomain.GetNodeRecord(nodeRef)

@@ -21,22 +21,23 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-// RoleRecord contains info about role
-type RoleRecord struct {
+// NodeRecord contains info about role
+type NodeRecord struct {
 	foundation.BaseContract
 
 	PublicKey string
 	Role      core.JetRole
 }
 
-// New creates new RoleRecord
-func NewRoleRecord(pk string, role core.JetRole) *RoleRecord {
-	return &RoleRecord{
+// New creates new NodeRecord
+func NewRoleRecord(pk string, role core.JetRole) *NodeRecord {
+	return &NodeRecord{
 		PublicKey: pk,
 		Role:      role,
 	}
 }
 
-func (rr *RoleRecord) SelfDestroy() {
+// SelfDestroy makes request to destroy current node record
+func (rr *NodeRecord) SelfDestroy() {
 	rr.SelfDestructRequest()
 }

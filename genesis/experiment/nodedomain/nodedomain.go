@@ -22,30 +22,30 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-// RoleDomain holds rolerecords
-type RoleDomain struct {
+// NodeDomain holds rolerecords
+type NodeDomain struct {
 	foundation.BaseContract
 }
 
-// NewRoleDomain create new RoleDomain
-func NewRoleDomain() *RoleDomain {
-	return &RoleDomain{}
+// NewRoleDomain create new NodeDomain
+func NewRoleDomain() *NodeDomain {
+	return &NodeDomain{}
 }
 
 // RegisterNode registers node in system
-func (rd *RoleDomain) RegisterNode(pk string, role core.JetRole) core.RecordRef {
+func (rd *NodeDomain) RegisterNode(pk string, role core.JetRole) core.RecordRef {
 	newRecord := rolerecord.NewRoleRecord(pk, role)
 	record := newRecord.AsChild(rd.GetReference())
 	return record.GetReference()
 }
 
 // GetNodeRecord get node record by ref
-func (rd *RoleDomain) GetNodeRecord(ref core.RecordRef) *rolerecord.RoleRecord {
+func (rd *NodeDomain) GetNodeRecord(ref core.RecordRef) *rolerecord.RoleRecord {
 	return rolerecord.GetObject(ref)
 }
 
 // RemoveNode deletes node from registry
-func (rd *RoleDomain) RemoveNode(nodeRef core.RecordRef) {
+func (rd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 	node := rolerecord.GetObject(nodeRef)
 	node.SelfDestroy()
 }
