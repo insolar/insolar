@@ -20,8 +20,8 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
-	"contract-proxy/allowance"
-	"contract-proxy/wallet"
+	"github.com/insolar/insolar/genesis/proxy/allowance"
+	"github.com/insolar/insolar/genesis/proxy/wallet"
 )
 
 // Wallet - basic wallet contract
@@ -42,7 +42,7 @@ func (w *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 func (w *Wallet) Receive(amount uint, from *core.RecordRef) {
 	fromWallet := wallet.GetImplementationFrom(*from)
 
-    v := w.GetReference()
+	v := w.GetReference()
 	aRef := fromWallet.Allocate(amount, &v)
 	w.Balance += allowance.GetObject(aRef).TakeAmount()
 }
@@ -56,7 +56,7 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) {
 	ah := allowance.New(&toWalletRef, amount, w.GetContext().Time.Unix()+10)
 	a := ah.AsChild(w.GetReference())
 
-    r := a.GetReference()
+	r := a.GetReference()
 	toWallet.Accept(&r)
 }
 
@@ -68,10 +68,10 @@ func (w *Wallet) GetTotalBalance() uint {
 	var totalAllowanced uint
 	crefs, err := w.GetChildrenTyped(allowance.GetClass())
 	if err != nil {
-	    panic(err)
+		panic(err)
 	}
 	for _, cref := range crefs {
-	    a := allowance.GetObject(cref)
+		a := allowance.GetObject(cref)
 
 		totalAllowanced += a.GetBalanceForOwner()
 	}
@@ -81,7 +81,7 @@ func (w *Wallet) GetTotalBalance() uint {
 func (w *Wallet) ReturnAndDeleteExpiriedAllowances() {
 	crefs, err := w.GetChildrenTyped(allowance.GetClass())
 	if err != nil {
-	    panic(err)
+		panic(err)
 	}
 	for _, cref := range crefs {
 		Allowance := allowance.GetObject(cref)

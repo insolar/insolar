@@ -23,6 +23,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
@@ -34,8 +36,8 @@ type outputFlag struct {
 	writer io.Writer
 }
 
-func newOutputFlag() *outputFlag {
-	return &outputFlag{path: "-", writer: os.Stdout}
+func newOutputFlag(path string) *outputFlag {
+	return &outputFlag{path: path, writer: os.Stdout}
 }
 
 func (r *outputFlag) String() string {
@@ -62,26 +64,73 @@ func (r *outputFlag) Type() string {
 	return "file"
 }
 
+func findPath() (string, error) {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		return "", errors.Errorf("GOPATH is not set")
+	}
+	for _, p := range strings.Split(gopath, ":") {
+		pp := path.Join(p, "src/github.com/insolar/insolar/genesis/proxy")
+		_, err := os.Stat(pp)
+		if err == nil {
+			return pp, nil
+		}
+	}
+	return "", errors.Errorf("Not found github.com/insolar/insolar in GOPATH")
+}
+
 func main() {
 
 	var reference, outdir string
-	output := newOutputFlag()
+	output := newOutputFlag("-")
+	proxyOut := newOutputFlag("")
 
 	var cmdProxy = &cobra.Command{
 		Use:   "proxy [flags] <file name to process>",
 		Short: "Generate contract's proxy",
 		Run: func(cmd *cobra.Command, args []string) {
+
 			if len(args) != 1 {
 				fmt.Println("proxy command should be followed by exactly one file name to process")
 				os.Exit(1)
 			}
+
 			parsed, err := preprocessor.ParseFile(args[0])
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
 			}
 
-			err = preprocessor.GenerateContractProxy(parsed, reference, output.writer)
+			if proxyOut.String() == "" {
+				p, err := findPath()
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+				proxyPackage, err := preprocessor.ProxyPackageName(parsed)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+
+				_, err = os.Stat(path.Join(p, proxyPackage))
+				if err != nil {
+					err := os.Mkdir(path.Join(p, proxyPackage), 0755)
+					if err != nil {
+						fmt.Println(err)
+						os.Exit(1)
+					}
+				}
+
+				err = proxyOut.Set(path.Join(p, proxyPackage, proxyPackage+".go"))
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+			}
+
+			err = preprocessor.GenerateContractProxy(parsed, reference, proxyOut.writer)
+
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -89,7 +138,7 @@ func main() {
 		},
 	}
 	cmdProxy.Flags().StringVarP(&reference, "code-reference", "r", "", "reference to code of")
-	cmdProxy.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
+	cmdProxy.Flags().VarP(proxyOut, "output", "o", "output file (use - for STDOUT)")
 
 	var cmdWrapper = &cobra.Command{
 		Use:   "wrapper [flags] <file name to process>",
@@ -166,7 +215,7 @@ func main() {
 
 			name := preprocessor.GetContractName(parsed)
 
-			contract, err := os.Create(tmpDir + "/" + name + ".go")
+			contract, err := os.Create(filepath.Join(tmpDir, name+".go"))
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -175,7 +224,7 @@ func main() {
 
 			preprocessor.RewriteContractPackage(parsed, contract)
 
-			wrapper, err := os.Create(tmpDir + "/" + name + ".wrapper.go")
+			wrapper, err := os.Create(filepath.Join(tmpDir, name+".wrapper.go"))
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)

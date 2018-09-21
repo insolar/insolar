@@ -62,6 +62,7 @@ type UpGetCodeResp struct {
 
 // UpRouteReq is a set of arguments for Dispatch RPC in goplugin
 type UpRouteReq struct {
+	Wait      bool
 	Object    core.RecordRef
 	Method    string
 	Arguments core.Arguments
