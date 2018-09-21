@@ -17,20 +17,26 @@
 package pulsar
 
 import (
-	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/gob"
 	"errors"
-	"math/big"
 	"net"
 	"net/rpc"
+	"sync"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/storage"
-	"golang.org/x/crypto/sha3"
+)
+
+type State int
+
+const (
+	Waiting               State = 0
+	EntropyGenerating     State = 1
+	EntropySignProcessing State = 3
+	Failed                State = 2
 )
 
 type Pulsar struct {
@@ -41,7 +47,13 @@ type Pulsar struct {
 	Neighbours map[string]*Neighbour
 	PrivateKey *ecdsa.PrivateKey
 
-	Storage pulsarstorage.PulsarStorage
+	Storage   pulsarstorage.PulsarStorage
+	LastPulse *core.Pulse
+
+	State                 State
+	EntropyGenerationLock sync.Mutex
+	Entropy               core.Entropy
+	EntropySign           []byte
 }
 
 // Creation new pulsar-node
@@ -57,9 +69,12 @@ func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarS
 	if err != nil {
 		return nil, err
 	}
-	pulsar := &Pulsar{Sock: l, Neighbours: map[string]*Neighbour{}, SockConnectionType: configuration.ConnectionType}
-	pulsar.PrivateKey = privateKey
-	pulsar.Storage = storage
+	pulsar := &Pulsar{Sock: l,
+		Neighbours:         map[string]*Neighbour{},
+		Storage:            storage,
+		PrivateKey:         privateKey,
+		SockConnectionType: configuration.ConnectionType,
+		State:              Waiting}
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.ListOfNeighbours {
@@ -169,16 +184,14 @@ func (pulsar *Pulsar) RefreshConnections() {
 			}
 		}
 
-		err := neighbour.OutgoingClient.Call(HealthCheck.String(), nil, nil)
-
 		healthCheckCall := neighbour.OutgoingClient.Go(HealthCheck.String(), nil, nil, nil)
 		replyCall := <-healthCheckCall.Done
 		if replyCall.Error != nil {
 			log.Warn("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
-			neighbour.CheckAndRefreshConnection(err)
+			neighbour.CheckAndRefreshConnection(replyCall.Error)
 		}
 
-		fetchedPulse, err := pulsar.GetLastPulse(neighbour)
+		fetchedPulse, err := pulsar.SyncLastPulseWithNeighbour(neighbour)
 		if err != nil {
 			log.Warn("Problems with fetched pulse from %v, with error - %v", neighbour.ConnectionAddress, err)
 		}
@@ -190,12 +203,13 @@ func (pulsar *Pulsar) RefreshConnections() {
 		}
 
 		if savedPulse.PulseNumber < fetchedPulse.PulseNumber {
-			pulsar.Storage.UpdatePulse(fetchedPulse)
+			pulsar.Storage.SetLastPulse(fetchedPulse)
+			pulsar.LastPulse = fetchedPulse
 		}
 	}
 }
 
-func (pulsar *Pulsar) GetLastPulse(neighbour *Neighbour) (*core.Pulse, error) {
+func (pulsar *Pulsar) SyncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pulse, error) {
 	var response Payload
 	getLastPulseCall := neighbour.OutgoingClient.Go(GetLastPulseNumber.String(), nil, response, nil)
 	replyCall := <-getLastPulseCall.Done
@@ -235,6 +249,58 @@ func (pulsar *Pulsar) GetLastPulse(neighbour *Neighbour) (*core.Pulse, error) {
 	return nil, errors.New("Signal signature isn't correct")
 }
 
+func (pulsar *Pulsar) StartConsensusProcess(pulseNumber uint32, generator EntropyGenerator) error {
+	pulsar.EntropyGenerationLock.Lock()
+	if pulsar.State > Waiting {
+		return nil
+	}
+	pulsar.State = EntropyGenerating
+	err := pulsar.GenerateEntropyWithSignature(generator)
+	if err != nil {
+		return err
+	}
+	pulsar.EntropyGenerationLock.Unlock()
+
+	return nil
+}
+
+func (pulsar *Pulsar) GenerateEntropyWithSignature(generator EntropyGenerator) error {
+	pulsar.Entropy = generator.GenerateEntropy()
+	signature, err := singData(pulsar.PrivateKey, pulsar.Entropy)
+	pulsar.EntropySign = signature
+	if err != nil {
+		log.Error(err)
+		pulsar.State = Failed
+		return err
+	}
+
+	return nil
+}
+
+func (pulsar *Pulsar) BroadcastSignatureOfEntropy() {
+	pulsar.State = EntropySignProcessing
+	body := &EntropySignaturePayload{Signature: pulsar.EntropySign}
+	sign, err := singData(pulsar.PrivateKey, body)
+	pubKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		log.Error(err)
+		pulsar.State = Failed
+		return
+	}
+
+	for _, neighbour := range pulsar.Neighbours {
+		broadcastCall := neighbour.OutgoingClient.Go(ReceiveSignatureForEntropy.String(),
+			&Payload{Body: body, PublicKey: pubKey, Signature: sign},
+			nil,
+			nil)
+		reply := <-broadcastCall.Done
+		if reply.Error != nil {
+			log.Warn("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+		}
+	}
+
+}
+
 func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
 	neighbour, ok := pulsar.Neighbours[pubKey]
 	if !ok {
@@ -242,58 +308,4 @@ func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
 	}
 
 	return neighbour, nil
-}
-
-func checkPayloadSignature(request *Payload) (bool, error) {
-	return checkSignature(request.Body, request.PublicKey, request.Signature)
-}
-
-func checkSignature(data interface{}, pub string, signature []byte) (bool, error) {
-	b := bytes.Buffer{}
-	e := gob.NewEncoder(&b)
-	err := e.Encode(data)
-	if err != nil {
-		return false, err
-	}
-
-	r := big.Int{}
-	s := big.Int{}
-	sigLen := len(signature)
-	r.SetBytes(signature[:(sigLen / 2)])
-	s.SetBytes(signature[(sigLen / 2):])
-
-	h := sha3.New256()
-	_, err = h.Write(b.Bytes())
-	if err != nil {
-		return false, err
-	}
-	hash := h.Sum(nil)
-	publicKey, err := ImportPublicKey(pub)
-	if err != nil {
-		return false, err
-	}
-
-	return ecdsa.Verify(publicKey, hash, &r, &s), nil
-}
-
-func singData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
-	b := bytes.Buffer{}
-	e := gob.NewEncoder(&b)
-	err := e.Encode(data)
-	if err != nil {
-		return nil, err
-	}
-
-	h := sha3.New256()
-	_, err = h.Write(b.Bytes())
-	if err != nil {
-		return nil, err
-	}
-	hash := h.Sum(nil)
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(r.Bytes(), s.Bytes()...), nil
 }

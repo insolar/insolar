@@ -27,31 +27,32 @@ import (
 type RequestType string
 
 const (
-	HealthCheck        RequestType = "Pulsar.HealthCheck"
-	Handshake          RequestType = "Pulsar.MakeHandshake"
-	GetLastPulseNumber RequestType = "Pulsar.GetLastPulse"
+	HealthCheck                RequestType = "Pulsar.HealthCheck"
+	Handshake                  RequestType = "Pulsar.MakeHandshake"
+	GetLastPulseNumber         RequestType = "Pulsar.SyncLastPulseWithNeighbour"
+	ReceiveSignatureForEntropy RequestType = "Pulsar.ReceiveSignatureForEntropy"
 )
 
 func (state RequestType) String() string {
 	return string(state)
 }
 
-type GetLastPulsePayload struct {
-	core.Pulse
+type Payload struct {
+	PublicKey string
+	Signature []byte
+	Body      interface{}
 }
 
 type HandshakePayload struct {
 	Entropy core.Entropy
 }
 
-type NumberSignaturePayload struct {
-	NumberSignature []byte
+type GetLastPulsePayload struct {
+	core.Pulse
 }
 
-type Payload struct {
-	PublicKey string
+type EntropySignaturePayload struct {
 	Signature []byte
-	Body      interface{}
 }
 
 type Handler struct {
