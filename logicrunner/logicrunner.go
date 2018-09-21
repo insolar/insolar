@@ -20,12 +20,12 @@ package logicrunner
 import (
 	"time"
 
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
