@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -95,6 +96,7 @@ func (network *ServiceNetwork) SendEvent(nodeID core.RecordRef, method string, e
 	log.Debugln("SendEvent with nodeID = %s method = %s, event reference = %s", nodeID.String(),
 		method, event.GetReference().String())
 
+	metrics.NetworkMessageSentTotal.Inc()
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
 }
