@@ -146,12 +146,6 @@ func (m *LedgerArtifactManager) getActiveObject(s storage.Store, objRef record.R
 	return activateRec, amendRecord, objIndex, nil
 }
 
-// HandleEvent performs event processing.
-func (m *LedgerArtifactManager) HandleEvent(event core.Event) (core.Reaction, error) {
-	// TODO: type switch and matching method calling
-	panic("implement me")
-}
-
 // RootRef returns the root record reference.
 //
 // Root record is the parent for all top-level records.
