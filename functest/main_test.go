@@ -32,6 +32,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -279,6 +280,12 @@ func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
 	assert.Nil(t, response.getError())
 }
 
+func unmarshalResponseWithError(t *testing.T, body []byte, response responseInterface) {
+	err := json.Unmarshal(body, &response)
+	assert.NoError(t, err)
+	assert.NotNil(t, response.getError())
+}
+
 func TestInsolardResponseNotErr(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "dump_all_users",
@@ -371,4 +378,18 @@ func TestWrongUrl(t *testing.T) {
 	postResp, err := http.Post(testUrl, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, postResp.StatusCode)
+}
+
+func TestGetRequest(t *testing.T) {
+	postResp, err := http.Get(TestUrl)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, postResp.StatusCode)
+	body, err := ioutil.ReadAll(postResp.Body)
+	assert.NoError(t, err)
+
+	getResponse := &baseResponse{}
+	unmarshalResponseWithError(t, body, getResponse)
+
+	assert.Equal(t, api.BadRequest, getResponse.Err.Code)
+	assert.Equal(t, "Bad request", getResponse.Err.Event)
 }
