@@ -121,7 +121,7 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 	return nil
 }
 
-func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet, ctx hosthandler.Context) {
+func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet) {
 	_, err := hostHandler.SendRequest(request)
 	if err != nil {
 		log.Debugln(err)

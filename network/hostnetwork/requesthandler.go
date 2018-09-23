@@ -234,7 +234,7 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string, roleKey string) error {
+func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
 		return err
