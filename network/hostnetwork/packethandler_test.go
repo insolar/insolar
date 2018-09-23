@@ -167,7 +167,21 @@ func (hh *mockHostHandler) SendRequest(request *packet.Packet) (transport.Future
 
 	switch request.Type {
 	case packet.TypeRelay:
-		response = builder.Response(&packet.ResponseRelay{State: relay.Started}).Build()
+		data := request.Data.(*packet.RequestRelay)
+		switch data.Command {
+		case packet.StartRelay:
+			response = builder.Response(&packet.ResponseRelay{State: relay.Started}).Build()
+		case packet.StopRelay:
+			response = builder.Response(&packet.ResponseRelay{State: relay.Stopped}).Build()
+		case packet.BeginAuth:
+			response = builder.Response(&packet.ResponseRelay{State: relay.NoAuth}).Build()
+		case packet.RevokeAuth:
+			response = builder.Response(&packet.ResponseRelay{State: relay.NoAuth}).Build()
+		case packet.Unknown:
+			response = builder.Response(&packet.ResponseRelay{State: relay.Unknown}).Build()
+		default:
+			response = builder.Response(&packet.ResponseRelay{State: relay.Error}).Build()
+		}
 	case packet.TypeObtainIP:
 		response = builder.Response(&packet.ResponseObtainIP{IP: "0.0.0.0"}).Build()
 	case packet.TypeCheckOrigin:
