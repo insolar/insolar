@@ -4,9 +4,9 @@ package packet
 
 import "strconv"
 
-const _packetType_name = "TypePingTypeStoreTypeFindHostTypeFindValueTypeRPCTypeRelayTypeAuthTypeCheckOriginTypeObtainIPTypeRelayOwnershipTypeKnownOuterHostsTypeCheckNodePrivTypeCascadeSendTypePulse"
+const _packetType_name = "TypePingTypeStoreTypeFindHostTypeFindValueTypeRPCTypeRelayTypeAuthTypeCheckOriginTypeObtainIPTypeRelayOwnershipTypeKnownOuterHostsTypeCheckNodePrivTypeCascadeSendTypePulseTypeGetRandomHosts"
 
-var _packetType_index = [...]uint8{0, 8, 17, 29, 42, 49, 58, 66, 81, 93, 111, 130, 147, 162, 171}
+var _packetType_index = [...]uint8{0, 8, 17, 29, 42, 49, 58, 66, 81, 93, 111, 130, 147, 162, 171, 189}
 
 func (i packetType) String() string {
 	i -= 1
