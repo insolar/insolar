@@ -2,7 +2,6 @@ INSOLAR =insolar
 INSOLARD=insolard
 INSGOCC =insgocc
 PULSARD =pulsard
-GINSIDER=ginsider-cli
 
 ALL_PACKAGES=./...
 COVERPROFILE=coverage.txt
@@ -14,7 +13,7 @@ all: clean install-deps install build test
 lint: ci-lint
 
 ci-lint:
-	golangci-lint run
+	golangci-lint run $(ALL_PACKAGES)
 
 metalint:
 	gometalinter --vendor $(ALL_PACKAGES)
@@ -25,7 +24,6 @@ clean:
 	rm -f $(INSOLAR)
 	rm -f $(INSGOCC)
 	rm -f $(PULSARD)
-	rm -f $(GINSIDER)
 	rm -f $(COVERPROFILE)
 
 install-deps:
@@ -41,7 +39,6 @@ build:
 	go build -o $(INSOLAR) cmd/insolar/*
 	go build -o $(INSGOCC) cmd/insgocc/*
 	go build -o $(PULSARD) cmd/pulsard/*
-	go build -o $(GINSIDER) logicrunner/goplugin/ginsider-cli/main.go
 
 test:
 	go test -v $(ALL_PACKAGES)
