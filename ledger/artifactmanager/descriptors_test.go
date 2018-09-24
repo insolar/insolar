@@ -54,15 +54,22 @@ func prepareCodeDescriptorTestData(t *testing.T) (preparedCodeDescriptorTestData
 	}, cleaner
 }
 
+func TestCodeDescriptor_Ref(t *testing.T) {
+	td, cleaner := prepareCodeDescriptorTestData(t)
+	defer cleaner()
+
+	desc, err := NewCodeDescriptor(td.db, *td.ref, td.manager.archPref)
+	assert.NoError(t, err)
+	ref := desc.Ref()
+	assert.Equal(t, *td.ref.CoreRef(), *ref)
+}
+
 func TestCodeDescriptor_MachineType(t *testing.T) {
 	td, cleaner := prepareCodeDescriptorTestData(t)
 	defer cleaner()
 
-	desc := CodeDescriptor{
-		manager: td.manager,
-		ref:     td.ref,
-	}
-
+	desc, err := NewCodeDescriptor(td.db, *td.ref, td.manager.archPref)
+	assert.NoError(t, err)
 	mt, err := desc.MachineType()
 	assert.NoError(t, err)
 	assert.Equal(t, core.MachineType(1), mt)
@@ -72,14 +79,26 @@ func TestCodeDescriptor_Code(t *testing.T) {
 	td, cleaner := prepareCodeDescriptorTestData(t)
 	defer cleaner()
 
-	desc := CodeDescriptor{
-		manager: td.manager,
-		ref:     td.ref,
-	}
-
+	desc, err := NewCodeDescriptor(td.db, *td.ref, td.manager.archPref)
+	assert.NoError(t, err)
 	code, err := desc.Code()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1, 2, 3}, code)
+}
+
+func TestCodeDescriptor_Validate(t *testing.T) {
+	td, cleaner := prepareCodeDescriptorTestData(t)
+	defer cleaner()
+
+	desc, err := NewCodeDescriptor(td.db, *genRandomRef(), td.manager.archPref)
+	assert.NoError(t, err)
+	err = desc.Validate()
+	assert.Error(t, err)
+
+	desc, err = NewCodeDescriptor(td.db, *td.ref, td.manager.archPref)
+	assert.NoError(t, err)
+	err = desc.Validate()
+	assert.NoError(t, err)
 }
 
 type preparedClassDescriptorTestData struct {
@@ -107,56 +126,73 @@ func prepareClassDescriptorTestData(t *testing.T) (preparedClassDescriptorTestDa
 	}, cleaner
 }
 
-func TestClassDescriptor_GetMigrations(t *testing.T) {
+func TestClassDescriptor_HeadRef(t *testing.T) {
+	t.Parallel()
 	td, cleaner := prepareClassDescriptorTestData(t)
 	defer cleaner()
 
-	codeRef1, _ := td.db.SetRecord(&record.CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			core.MachineType(1): {1},
-		},
-	})
-	codeRef2, _ := td.db.SetRecord(&record.CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			core.MachineType(1): {2},
-		},
-	})
-	codeRef3, _ := td.db.SetRecord(&record.CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			core.MachineType(1): {3},
-		},
-	})
-	codeRef4, _ := td.db.SetRecord(&record.CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			core.MachineType(1): {4},
-		},
-	})
-
-	amendRec3 := record.ClassAmendRecord{Migrations: []record.Reference{*codeRef4}}
-	amendRef1, _ := td.db.SetRecord(&record.ClassAmendRecord{
-		Migrations: []record.Reference{*codeRef1},
-	})
-	amendRef2, _ := td.db.SetRecord(&record.ClassAmendRecord{
-		Migrations: []record.Reference{*codeRef2, *codeRef3},
-	})
-	amendRef3, _ := td.db.SetRecord(&amendRec3)
-	idx := index.ClassLifeline{
-		LatestStateRef: *amendRef2,
-		AmendRefs:      []record.Reference{*amendRef1, *amendRef2, *amendRef3},
-	}
-	td.db.SetClassIndex(td.classRef, &idx)
-
-	desc := ClassDescriptor{
-		manager:       td.manager,
-		stateRef:      amendRef1,
-		headRecord:    td.classRec,
-		stateRecord:   &amendRec3,
-		lifelineIndex: &idx,
-	}
-
-	migrations, err := desc.GetMigrations()
+	desc, err := NewClassDescriptor(td.db, *td.classRef, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, [][]byte{{2}, {3}, {4}}, migrations)
+	assert.Equal(t, *td.classRef.CoreRef(), *desc.HeadRef())
+}
+
+func TestClassDescriptor_StateRef(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareClassDescriptorTestData(t)
+	defer cleaner()
+
+	stateRef := genRandomRef()
+	err := td.db.SetClassIndex(td.classRef, &index.ClassLifeline{LatestStateRef: *stateRef})
+
+	desc, err := NewClassDescriptor(td.db, *td.classRef, nil)
+	assert.NoError(t, err)
+	descStateRef, err := desc.StateRef()
+	assert.NoError(t, err)
+	assert.Equal(t, *stateRef.CoreRef(), *descStateRef)
+
+	desc, err = NewClassDescriptor(td.db, *td.classRef, stateRef)
+	descStateRef, err = desc.StateRef()
+	assert.NoError(t, err)
+	assert.Equal(t, *stateRef.CoreRef(), *descStateRef)
+}
+
+func TestClassDescriptor_IsActive(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareClassDescriptorTestData(t)
+	defer cleaner()
+
+	err := td.db.SetClassIndex(td.classRef, &index.ClassLifeline{LatestStateRef: *td.classRef})
+	assert.NoError(t, err)
+
+	desc, err := NewClassDescriptor(td.db, *td.classRef, nil)
+	assert.NoError(t, err)
+	active, err := desc.IsActive()
+	assert.NoError(t, err)
+	assert.Equal(t, true, active)
+
+	deactivateRef, err := td.db.SetRecord(&record.DeactivationRecord{})
+	err = td.db.SetClassIndex(td.classRef, &index.ClassLifeline{LatestStateRef: *deactivateRef})
+	desc, err = NewClassDescriptor(td.db, *td.classRef, nil)
+	assert.NoError(t, err)
+	active, err = desc.IsActive()
+	assert.NoError(t, err)
+	assert.Equal(t, false, active)
+}
+
+func TestClassDescriptor_CodeDescriptor(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareClassDescriptorTestData(t)
+	defer cleaner()
+
+	codeRef := genRandomRef()
+	amendRef, err := td.db.SetRecord(&record.ClassAmendRecord{NewCode: *codeRef})
+	err = td.db.SetClassIndex(td.classRef, &index.ClassLifeline{LatestStateRef: *amendRef})
+	assert.NoError(t, err)
+
+	desc, err := NewClassDescriptor(td.db, *td.classRef, nil)
+	assert.NoError(t, err)
+	_, err = desc.CodeDescriptor(nil)
+	assert.NoError(t, err)
 }
 
 type preparedObjectDescriptorTestData struct {
@@ -184,6 +220,74 @@ func prepareObjectDescriptorTestData(t *testing.T) (preparedObjectDescriptorTest
 	}, cleaner
 }
 
+func TestObjectDescriptor_HeadRef(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareObjectDescriptorTestData(t)
+	defer cleaner()
+
+	desc, err := NewObjectDescriptor(td.db, *td.objRef, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, *td.objRef.CoreRef(), *desc.HeadRef())
+}
+
+func TestObjectDescriptor_StateRef(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareObjectDescriptorTestData(t)
+	defer cleaner()
+
+	stateRef := genRandomRef()
+	err := td.db.SetObjectIndex(td.objRef, &index.ObjectLifeline{LatestStateRef: *stateRef})
+
+	desc, err := NewObjectDescriptor(td.db, *td.objRef, nil)
+	assert.NoError(t, err)
+	descStateRef, err := desc.StateRef()
+	assert.NoError(t, err)
+	assert.Equal(t, *stateRef.CoreRef(), *descStateRef)
+
+	desc, err = NewObjectDescriptor(td.db, *td.objRef, stateRef)
+	descStateRef, err = desc.StateRef()
+	assert.NoError(t, err)
+	assert.Equal(t, *stateRef.CoreRef(), *descStateRef)
+}
+
+func TestObjectDescriptor_IsActive(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareObjectDescriptorTestData(t)
+	defer cleaner()
+
+	err := td.db.SetObjectIndex(td.objRef, &index.ObjectLifeline{LatestStateRef: *td.objRef})
+	assert.NoError(t, err)
+
+	desc, err := NewObjectDescriptor(td.db, *td.objRef, nil)
+	assert.NoError(t, err)
+	active, err := desc.IsActive()
+	assert.NoError(t, err)
+	assert.Equal(t, true, active)
+
+	deactivateRef, err := td.db.SetRecord(&record.DeactivationRecord{})
+	err = td.db.SetObjectIndex(td.objRef, &index.ObjectLifeline{LatestStateRef: *deactivateRef})
+	desc, err = NewObjectDescriptor(td.db, *td.objRef, nil)
+	assert.NoError(t, err)
+	active, err = desc.IsActive()
+	assert.NoError(t, err)
+	assert.Equal(t, false, active)
+}
+
+func TestObjectDescriptor_ClassDescriptor(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareObjectDescriptorTestData(t)
+	defer cleaner()
+
+	classRef := genRandomRef()
+	err := td.db.SetObjectIndex(td.objRef, &index.ObjectLifeline{LatestStateRef: *td.objRef, ClassRef: *classRef})
+	assert.NoError(t, err)
+
+	desc, err := NewObjectDescriptor(td.db, *td.objRef, nil)
+	assert.NoError(t, err)
+	_, err = desc.ClassDescriptor(nil)
+	assert.NoError(t, err)
+}
+
 func TestObjectDescriptor_GetMemory(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareObjectDescriptorTestData(t)
@@ -196,22 +300,20 @@ func TestObjectDescriptor_GetMemory(t *testing.T) {
 	}
 	td.db.SetObjectIndex(td.objRef, &idx)
 
-	desc := ObjectDescriptor{
-		manager:       td.manager,
-		headRecord:    td.objRec,
-		stateRecord:   nil,
-		lifelineIndex: &idx,
-	}
+	desc, err := NewObjectDescriptor(td.db, *td.objRef, nil)
+	assert.NoError(t, err)
 	mem, err := desc.Memory()
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{2}, mem)
+
+	desc, err = NewObjectDescriptor(td.db, *td.objRef, td.objRef)
+	assert.NoError(t, err)
+	mem, err = desc.Memory()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{1}, mem)
 
-	desc = ObjectDescriptor{
-		manager:       td.manager,
-		headRecord:    td.objRec,
-		stateRecord:   &amendRec,
-		lifelineIndex: &idx,
-	}
+	desc, err = NewObjectDescriptor(td.db, *td.objRef, amendRef)
+	assert.NoError(t, err)
 	mem, err = desc.Memory()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{2}, mem)

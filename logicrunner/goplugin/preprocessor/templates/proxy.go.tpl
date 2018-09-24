@@ -10,7 +10,7 @@ import (
     {{- $typeStruct }}
 {{ end }}
 
-// Reference to class of this contract
+// ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("{{ .ClassReference }}")
 
 // Contract proxy type
@@ -94,7 +94,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, "{{ $method.Name }}", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "{{ $method.Name }}", argsSerialized)
     if err != nil {
    		panic(err)
     }
@@ -106,5 +106,20 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
     }
 
     return {{ $method.Results }}
+}
+
+func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }} ) {
+    {{ $method.InitArgs }}
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "{{ $method.Name }}", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
 }
 {{ end }}

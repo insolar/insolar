@@ -18,10 +18,10 @@ package configuration
 
 import (
 	"fmt"
+	stdlog "log"
 	"reflect"
 	"strings"
 
-	"github.com/prometheus/common/log"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
@@ -62,13 +62,41 @@ func NewConfiguration() Configuration {
 	return cfg
 }
 
+// MustInit wrapper around Init function which panics on error.
+func (c *Holder) MustInit(required bool) *Holder {
+	_, err := c.Init(required)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+// Init init all configuration data from config file and environment.
+//
+// Does not fail on not found config file if the 'required' flag set to false.
+func (c *Holder) Init(required bool) (*Holder, error) {
+	err := c.Load()
+	if err != nil {
+		if required {
+			return nil, err
+		}
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return nil, err
+		}
+	}
+	err = c.LoadEnv()
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 // NewHolder creates new Holder with default configuration
-func NewHolder() Holder {
+func NewHolder() *Holder {
 	cfg := NewConfiguration()
-	holder := Holder{Configuration: cfg, viper: viper.New()}
+	holder := &Holder{Configuration: cfg, viper: viper.New()}
 
 	holder.viper.SetConfigName(".insolar")
-	holder.viper.AddConfigPath("$HOME/")
 	holder.viper.AddConfigPath(".")
 	holder.viper.SetConfigType("yml")
 
@@ -131,7 +159,7 @@ func bindEnvs(v *viper.Viper, iface interface{}, parts ...string) {
 		default:
 			err := v.BindEnv(strings.Join(path, "."))
 			if err != nil {
-				log.Warnln(err.Error())
+				stdlog.Println("bindEnv failed:", err.Error())
 			}
 		}
 	}

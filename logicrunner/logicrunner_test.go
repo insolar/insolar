@@ -172,7 +172,7 @@ func TestExecution(t *testing.T) {
 		Class: &classRef,
 	}
 	am.Classes[classRef] = &testutil.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
-	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: &codeRef, AMachineType: core.MachineTypeGoPlugin}
+	am.Codes[codeRef] = &testutil.TestCodeDescriptor{ARef: codeRef, AMachineType: core.MachineTypeGoPlugin}
 
 	te := newTestExecutor()
 	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
@@ -197,7 +197,7 @@ func TestContractCallingContract(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -278,8 +278,8 @@ func (r *Two) Hello(s string) string {
 	)
 	assert.NoError(t, err)
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -310,7 +310,7 @@ func TestInjectingDelegate(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/two"
+import "github.com/insolar/insolar/genesis/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -400,8 +400,8 @@ func (r *Two) Hello(s string) string {
 		panic(err)
 	}
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -433,6 +433,113 @@ func (r *Two) Hello(s string) string {
 	err = codec.NewDecoderBytes(res, ch).Decode(&resParsed)
 	assert.NoError(t, err)
 	assert.Equal(t, "Hello you too, ins. 1288 times!", resParsed[0])
+}
+
+func TestBasicNotificationCall(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/genesis/proxy/two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() {
+	holder := two.New()
+	friend := holder.AsDelegate(r.GetReference())
+	friend.HelloNoWait()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+	X int
+}
+
+func New() *Two {
+	return &Two{X:322};
+}
+
+func (r *Two) Hello() string {
+	r.X *= 2
+	return fmt.Sprintf("Hello %d times!", r.X)
+}
+`
+
+	lr, err := NewLogicRunner(configuration.LogicRunner{})
+	assert.NoError(t, err)
+
+	eb := &testEventBus{LogicRunner: lr}
+	lr.EventBus = eb
+	am := testutil.NewTestArtifactManager()
+	lr.ArtifactManager = am
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	gp, err := goplugin.NewGoPlugin(
+		&configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     runnerbin,
+			RunnerCodePath: insiderStorage,
+		},
+		eb,
+		am,
+	)
+	assert.NoError(t, err)
+	defer gp.Stop()
+
+	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
+	assert.NoError(t, err)
+
+	ch := new(codec.CborHandle)
+	var data []byte
+	err = codec.NewEncoderBytes(&data, ch).Encode(
+		&struct{}{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var argsSerialized []byte
+	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode(
+		[]interface{}{},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
+	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	assert.NoError(t, err)
+
+	obj, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["one"],
+		*am.RootRef(),
+		data,
+	)
+	assert.NoError(t, err)
+
+	_, _, err = gp.CallMethod(
+		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
+		data, "Hello", argsSerialized,
+	)
+	assert.NoError(t, err)
 }
 
 func TestContextPassing(t *testing.T) {
@@ -478,8 +585,8 @@ func (r *One) Hello() string {
 	err = codec.NewEncoderBytes(&argsSerialized, ch).Encode([]interface{}{})
 	assert.NoError(t, err)
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
@@ -501,7 +608,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"contract-proxy/child"
+	"github.com/insolar/insolar/genesis/proxy/child"
 )
 
 type Contract struct {
@@ -568,6 +675,7 @@ func New(n int) *Child {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
@@ -583,8 +691,8 @@ func New(n int) *Child {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"child": goChild})
 	assert.NoError(t, err)
 	err = cb.Build(map[string]string{"contract": goContract})
@@ -618,19 +726,20 @@ func New(n int) *Child {
 }
 
 func TestRootDomainContract(t *testing.T) {
-	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.insgoc")
+	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.go" +
+		"")
 	if err != nil {
 		fmt.Print(err)
 	}
-	memberCode, err := ioutil.ReadFile("../genesis/experiment/member/member.insgoc")
+	memberCode, err := ioutil.ReadFile("../genesis/experiment/member/member.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	allowanceCode, err := ioutil.ReadFile("../genesis/experiment/allowance/allowance.insgoc")
+	allowanceCode, err := ioutil.ReadFile("../genesis/experiment/allowance/allowance.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	walletCode, err := ioutil.ReadFile("../genesis/experiment/wallet/wallet.insgoc")
+	walletCode, err := ioutil.ReadFile("../genesis/experiment/wallet/wallet.go")
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -643,6 +752,7 @@ func TestRootDomainContract(t *testing.T) {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
+	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	fmt.Println("RUNNERPATH", runnerbin)
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
@@ -659,12 +769,10 @@ func TestRootDomainContract(t *testing.T) {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootDomain": string(rootDomainCode)})
 	assert.NoError(t, err)
-
-	t.Logf("XX %+v", cb)
 
 	domain := core.NewRefFromBase58("c1")
 	request := core.NewRefFromBase58("c2")
@@ -724,7 +832,7 @@ func BenchmarkContractCall(b *testing.B) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "contract-proxy/child"
+import "github.com/insolar/insolar/genesis/proxy/child"
 import "github.com/insolar/insolar/core"
 
 type Parent struct {
@@ -771,8 +879,8 @@ func (c *Child) GetNum() int {
 	}), "starting logicrunner")
 	defer lr.Stop()
 
-	cb, cleaner := testutil.NewContractBuilder(am, icc)
-	defer cleaner()
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
 	err = cb.Build(map[string]string{"child": goChild, "parent": goParent})
 	assert.NoError(b, err)
 

@@ -48,6 +48,9 @@ type JetCoordinator interface {
 
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
+	// HandleEvent performs event processing.
+	HandleEvent(event Event) (Reaction, error)
+
 	// RootRef returns the root record reference.
 	//
 	// Root record is the parent for all top-level records.
@@ -161,13 +164,13 @@ type ClassDescriptor interface {
 	HeadRef() *RecordRef
 
 	// StateRef returns reference to represented class state record.
-	StateRef() *RecordRef
+	StateRef() (*RecordRef, error)
 
 	// IsActive checks if class is active.
 	IsActive() (bool, error)
 
 	// CodeDescriptor returns descriptor for fetching class's code data.
-	CodeDescriptor() (CodeDescriptor, error)
+	CodeDescriptor(machinePref []MachineType) (CodeDescriptor, error)
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
@@ -176,7 +179,7 @@ type ObjectDescriptor interface {
 	HeadRef() *RecordRef
 
 	// StateRef returns reference to object state record.
-	StateRef() *RecordRef
+	StateRef() (*RecordRef, error)
 
 	// Memory fetches object memory from storage.
 	Memory() ([]byte, error)
@@ -184,11 +187,8 @@ type ObjectDescriptor interface {
 	// IsActive checks if object is active.
 	IsActive() (bool, error)
 
-	// CodeDescriptor returns descriptor for fetching object's code data.
-	CodeDescriptor() (CodeDescriptor, error)
-
 	// ClassDescriptor returns descriptor for fetching object's class data.
-	ClassDescriptor() (ClassDescriptor, error)
+	ClassDescriptor(state *RecordRef) (ClassDescriptor, error)
 }
 
 type RefIterator interface {

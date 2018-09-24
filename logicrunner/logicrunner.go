@@ -20,11 +20,12 @@ package logicrunner
 import (
 	"time"
 
-	"github.com/insolar/insolar/eventbus/event"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -107,53 +108,18 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
-	lr.ArtifactManager.SetArchPref(
-		[]core.MachineType{
-			core.MachineTypeBuiltin,
-			core.MachineTypeGoPlugin,
-		},
-	)
-
 	ctx := core.LogicCallContext{
 		Time: time.Now(), // TODO: probably we should take it from e
 	}
 
+	machinePref := []core.MachineType{
+		core.MachineTypeBuiltin,
+		core.MachineTypeGoPlugin,
+	}
+
 	switch m := e.(type) {
 	case *event.CallMethodEvent:
-		resp, err := lr.EventBus.Dispatch(&event.GetObjectEvent{
-			Object: m.ObjectRef,
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object")
-		}
-		info := resp.(*reaction.ObjectBodyReaction)
-
-		ctx.Callee = &m.ObjectRef
-		ctx.Class = &info.Class
-
-		executor, err := lr.GetExecutor(info.MachineType)
-		if err != nil {
-			return nil, errors.Wrap(err, "no executer registered")
-		}
-
-		newData, result, err := executor.CallMethod(
-			&ctx, info.Code, info.Body, m.Method, m.Arguments,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "executer error")
-		}
-
-		_, err = lr.EventBus.Dispatch(
-			&event.UpdateObjectEvent{
-				Object: m.ObjectRef,
-				Body:   newData,
-			},
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
-		}
-
-		return &reaction.CommonReaction{Data: newData, Result: result}, nil
+		return lr.executeMethodCall(ctx, m, machinePref)
 
 	case *event.CallConstructorEvent:
 		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
@@ -162,7 +128,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 		}
 		ctx.Class = classDesc.HeadRef()
 
-		codeDesc, err := classDesc.CodeDescriptor()
+		codeDesc, err := classDesc.CodeDescriptor(machinePref)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class's code descriptor")
 		}
@@ -184,67 +150,95 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 
 		return &reaction.CommonReaction{Data: newData}, nil
 
-	case *event.DelegateEvent:
-		ref, err := lr.ArtifactManager.ActivateObjDelegate(
-			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
+	default:
+		panic("Unknown e type")
+	}
+}
+
+type objectBody struct {
+	Body        []byte
+	Code        core.RecordRef
+	Class       core.RecordRef
+	MachineType core.MachineType
+}
+
+func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.MachineType) (*objectBody, error) {
+	objDesc, err := lr.ArtifactManager.GetLatestObj(objref)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object")
+	}
+
+	classDesc, err := objDesc.ClassDescriptor(nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object's class")
+	}
+
+	data, err := objDesc.Memory()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object's data")
+	}
+
+	codeDesc, err := classDesc.CodeDescriptor(machinePref)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
+	}
+
+	mt, err := codeDesc.MachineType()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get machine type")
+	}
+
+	return &objectBody{
+		Body:        data,
+		Code:        *codeDesc.Ref(),
+		Class:       *classDesc.HeadRef(),
+		MachineType: mt,
+	}, nil
+}
+
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethodEvent, machinePref []core.MachineType) (core.Reaction, error) {
+	objbody, err := lr.getObjectEvent(e.ObjectRef, machinePref)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object")
+	}
+
+	ctx.Callee = &e.ObjectRef
+	ctx.Class = &objbody.Class
+
+	executor, err := lr.GetExecutor(objbody.MachineType)
+	if err != nil {
+		return nil, errors.Wrap(err, "no executer registered")
+	}
+
+	executer := func() (*reaction.CommonReaction, error) {
+		newData, result, err := executor.CallMethod(
+			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save new object")
+			return nil, errors.Wrap(err, "executer error")
 		}
-		return &reaction.CommonReaction{Data: []byte(ref.String())}, nil
 
-	case *event.ChildEvent:
-		ref, err := lr.ArtifactManager.ActivateObj(
-			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save new object")
-		}
-		return &reaction.CommonReaction{Data: []byte(ref.String())}, nil
-
-	case *event.UpdateObjectEvent:
-		_, err := lr.ArtifactManager.UpdateObj(
-			core.RecordRef{}, core.RecordRef{}, m.Object, m.Body,
+		_, err = lr.ArtifactManager.UpdateObj(
+			core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
-		return &reaction.CommonReaction{}, nil
 
-	case *event.GetObjectEvent:
-		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Object)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object")
-		}
-
-		classDesc, err := objDesc.ClassDescriptor()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's class")
-		}
-
-		data, err := objDesc.Memory()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's data")
-		}
-
-		codeDesc, err := objDesc.CodeDescriptor()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's code descriptor")
-		}
-
-		mt, err := codeDesc.MachineType()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get machine type")
-		}
-
-		return &reaction.ObjectBodyReaction{
-			Body:        data,
-			Code:        *codeDesc.Ref(),
-			Class:       *classDesc.HeadRef(),
-			MachineType: mt,
-		}, nil
-
-	default:
-		panic("Unknown e type")
+		return &reaction.CommonReaction{Data: newData, Result: result}, nil
 	}
+
+	switch e.ReturnMode {
+	case event.ReturnResult:
+		return executer()
+	case event.ReturnNoWait:
+		go func() {
+			_, err := executer()
+			if err != nil {
+				log.Error(err)
+			}
+		}()
+		return &reaction.CommonReaction{}, nil
+	}
+	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 }

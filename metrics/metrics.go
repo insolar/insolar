@@ -30,6 +30,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+const insolarNamespace = "insolar"
+
 // Metrics is a component which serve metrics data to Prometheus.
 type Metrics struct {
 	registry    *prometheus.Registry
@@ -38,7 +40,7 @@ type Metrics struct {
 }
 
 // NewMetrics creates new Metrics component.
-func NewMetrics(cfg configuration.Metrics) (Metrics, error) {
+func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 	m := Metrics{registry: prometheus.NewRegistry()}
 	m.httpHandler = promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: &errorLogger{}})
 
@@ -47,7 +49,12 @@ func NewMetrics(cfg configuration.Metrics) (Metrics, error) {
 	m.registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
 	m.registry.MustRegister(prometheus.NewGoCollector())
 
-	return m, nil
+	m.registry.MustRegister(NetworkMessageSentTotal)
+	m.registry.MustRegister(NetworkFutures)
+	m.registry.MustRegister(NetworkPacketSentTotal)
+	m.registry.MustRegister(NetworkPacketReceivedTotal)
+
+	return &m, nil
 }
 
 // Start is implementation of core.Component interface.

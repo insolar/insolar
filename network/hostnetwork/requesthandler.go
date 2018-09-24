@@ -300,6 +300,7 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 			return err
 		}
 
+		// todo: add couner ?
 		switch request.Type {
 		case packet.TypeKnownOuterHosts:
 			response := rsp.Data.(*packet.ResponseKnownOuterHosts)

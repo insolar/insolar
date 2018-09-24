@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -49,16 +50,6 @@ func NewServiceNetwork(
 
 	cascade1 := &cascade.Cascade{}
 	dht, err := hostnetwork.NewHostNetwork(hostConf, node, cascade1)
-	if err != nil {
-		return nil, err
-	}
-
-	err = dht.ObtainIP()
-	if err != nil {
-		return nil, err
-	}
-
-	err = dht.AnalyzeNetwork(createContext(dht))
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +86,7 @@ func (network *ServiceNetwork) SendEvent(nodeID core.RecordRef, method string, e
 	log.Debugln("SendEvent with nodeID = %s method = %s, event reference = %s", nodeID.String(),
 		method, event.GetReference().String())
 
+	metrics.NetworkMessageSentTotal.Inc()
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
 }
@@ -145,8 +137,19 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
+
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
+
+	err := network.hostNetwork.ObtainIP()
+	if err != nil {
+		return err
+	}
+
+	err = network.hostNetwork.AnalyzeNetwork(createContext(network.hostNetwork))
+	if err != nil {
+		return err
+	}
 
 	pm, err := getPulseManager(components)
 	if err != nil {

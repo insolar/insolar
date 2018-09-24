@@ -24,6 +24,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"time"
 
@@ -88,10 +89,18 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.New("event bus was not set during initialization")
 	}
 
+	var mode event.MethodReturnMode
+	if req.Wait {
+		mode = event.ReturnResult
+	} else {
+		mode = event.ReturnNoWait
+	}
+
 	e := &event.CallMethodEvent{
-		ObjectRef: req.Object,
-		Method:    req.Method,
-		Arguments: req.Arguments,
+		ReturnMode: mode,
+		ObjectRef:  req.Object,
+		Method:     req.Method,
+		Arguments:  req.Arguments,
 	}
 
 	res, err := gpr.gp.EventBus.Dispatch(e)
@@ -127,19 +136,13 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
-	e := &event.ChildEvent{
-		Into:  req.Parent,
-		Class: req.Class,
-		Body:  req.Data,
-	}
-
-	res, err := gpr.gp.EventBus.Dispatch(e)
+	ref, err := gpr.gp.ArtifactManager.ActivateObj(
+		core.RecordRef{}, core.RecordRef{}, req.Class, req.Parent, req.Data,
+	)
 	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
+		return errors.Wrap(err, "couldn't save new object")
 	}
-
-	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
-
+	reply.Reference = *ref
 	return nil
 }
 
@@ -160,7 +163,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 		if err != nil {
 			return errors.Wrap(err, "Have ref, have no object")
 		}
-		cd, err := o.ClassDescriptor()
+		cd, err := o.ClassDescriptor(nil)
 		if err != nil {
 			return errors.Wrap(err, "Have ref, have no object")
 		}
@@ -174,19 +177,13 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
-	e := &event.DelegateEvent{
-		Into:  req.Into,
-		Class: req.Class,
-		Body:  req.Data,
-	}
-
-	res, err := gpr.gp.EventBus.Dispatch(e)
+	ref, err := gpr.gp.ArtifactManager.ActivateObjDelegate(
+		core.RecordRef{}, core.RecordRef{}, req.Class, req.Into, req.Data,
+	)
 	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
+		return errors.Wrap(err, "couldn't save delegate")
 	}
-
-	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
-
+	reply.Reference = *ref
 	return nil
 }
 
@@ -277,7 +274,7 @@ func (gp *GoPlugin) StartRunner() error {
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() error {
-	err := gp.runner.Process.Kill()
+	err := gp.runner.Process.Signal(syscall.SIGINT)
 	if err != nil {
 		return err
 	}

@@ -21,6 +21,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+type ClassState interface {
+	IsDeactivation() bool
+	IsAmend() bool
+	GetCode() *Reference
+}
+
+type ObjectState interface {
+	IsDeactivation() bool
+	IsAmend() bool
+	GetMemory() []byte
+}
+
 // ReasonCode is an error reason code.
 type ReasonCode uint32
 
@@ -123,8 +135,17 @@ type ActivationRecord struct {
 type ClassActivateRecord struct {
 	ActivationRecord
 
-	CodeRecord    Reference
 	DefaultMemory Memory
+}
+
+func (r *ClassActivateRecord) IsDeactivation() bool {
+	return false
+}
+func (r *ClassActivateRecord) IsAmend() bool {
+	return false
+}
+func (r *ClassActivateRecord) GetCode() *Reference {
+	return nil
 }
 
 // ObjectActivateRecord is produced when we instantiate new object from an available class.
@@ -135,6 +156,18 @@ type ObjectActivateRecord struct {
 	Memory              Memory
 	Parent              Reference
 	Delegate            bool
+}
+
+func (r *ObjectActivateRecord) IsDeactivation() bool {
+	return false
+}
+
+func (r *ObjectActivateRecord) IsAmend() bool {
+	return false
+}
+
+func (r *ObjectActivateRecord) GetMemory() []byte {
+	return r.Memory
 }
 
 // StorageRecord is produced when we store something in ledger. Code, data etc.
@@ -185,9 +218,37 @@ type ClassAmendRecord struct {
 	Migrations []Reference // CodeRecord
 }
 
+func (r *ClassAmendRecord) IsDeactivation() bool {
+	return false
+}
+
+func (r *ClassAmendRecord) IsAmend() bool {
+	return true
+}
+
+func (r *ClassAmendRecord) GetCode() *Reference {
+	return &r.NewCode
+}
+
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
 	AmendRecord
+}
+
+func (*DeactivationRecord) IsDeactivation() bool {
+	return true
+}
+
+func (*DeactivationRecord) IsAmend() bool {
+	return false
+}
+
+func (*DeactivationRecord) GetMemory() []byte {
+	return nil
+}
+
+func (*DeactivationRecord) GetCode() *Reference {
+	return nil
 }
 
 // ObjectAmendRecord is an amendment record for objects.
@@ -195,6 +256,18 @@ type ObjectAmendRecord struct {
 	AmendRecord
 
 	NewMemory Memory
+}
+
+func (r *ObjectAmendRecord) IsDeactivation() bool {
+	return false
+}
+
+func (r *ObjectAmendRecord) IsAmend() bool {
+	return true
+}
+
+func (r *ObjectAmendRecord) GetMemory() []byte {
+	return r.NewMemory
 }
 
 // StatefulCallResult is a contract call result that produces new state.
