@@ -17,13 +17,11 @@ env:
     - INSOLAR_LOG_LEVEL=debug
 
 before_install:
-  - "go get -u github.com/golang/dep/cmd/dep"
-  - "go get -u golang.org/x/tools/cmd/stringer"
+  - make install-deps
 install:
-  - "dep ensure"
-  - "go generate -x ./..."
+  - make install
 script:
-  - "CGO_ENABLED=1 go test --race --coverprofile=coverage.txt --covermode=atomic ./..."
-  - "go build -o insolard cmd/insolard/*"
+  - make test_with_coverage
+  - make build
 after_success:
   - "bash <(curl -s https://codecov.io/bash)"

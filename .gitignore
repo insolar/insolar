@@ -40,6 +40,7 @@ logicrunner/goplugin/ginsider-cli/ginsider-cli
 logicrunner/goplugin/preprocessor/preprocessor
 cmd/insgocc/insgocc
 *_generated.go
+network/hostnetwork/packet/packettype_string.go
 
 /testdata
 data
