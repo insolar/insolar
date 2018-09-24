@@ -35,13 +35,13 @@ type State int
 
 const (
 	WaitingForTheStart   State = 0
-	WaitingForTheSigns   State = 1
-	SendingNumbers       State = 2
-	WaitingForTheEntropy State = 3
-	SendingVector        State = 4
-	WaitingForTheVectors State = 5
-	Verifying            State = 6
-	SendingSignForChosen State = 7
+	WaitingForTheSigns   State = 2
+	SendingEntropy       State = 3
+	WaitingForTheEntropy State = 4
+	SendingVector        State = 5
+	WaitingForTheVectors State = 6
+	Verifying            State = 7
+	SendingSignForChosen State = 8
 	Failed               State = -1
 )
 
@@ -280,7 +280,7 @@ func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error 
 		return nil
 	}
 
-	err := pulsar.GenerateEntropyWithSignature()
+	err := pulsar.generateNewEntropyAndSign()
 	if err != nil {
 		pulsar.switchStateTo(Failed, err)
 		return err
@@ -294,30 +294,12 @@ func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error 
 	return nil
 }
 
-func (pulsar *Pulsar) GenerateEntropyWithSignature() error {
-	if pulsar.State == Failed {
-		return nil
-	}
-
-	pulsar.GeneratedEntropy = pulsar.EntropyGenerator.GenerateEntropy()
-	signature, err := singData(pulsar.PrivateKey, pulsar.GeneratedEntropy)
-	pulsar.GeneratedEntropySign = signature
-	if err != nil {
-		pulsar.switchStateTo(Failed, err)
-		return err
-	}
-
-	return nil
-}
-
 func (pulsar *Pulsar) BroadcastSignatureOfEntropy() {
 	if pulsar.State == Failed {
 		return
 	}
 
-	body := &EntropySignaturePayload{Signature: pulsar.GeneratedEntropySign}
-	sign, err := singData(pulsar.PrivateKey, body)
-	pubKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	payload, err := pulsar.preparePayload(EntropySignaturePayload{PulseNumber: pulsar.ProcessingPulseNumber, Signature: pulsar.GeneratedEntropySign})
 	if err != nil {
 		pulsar.switchStateTo(Failed, err)
 		return
@@ -325,7 +307,7 @@ func (pulsar *Pulsar) BroadcastSignatureOfEntropy() {
 
 	for _, neighbour := range pulsar.Neighbours {
 		broadcastCall := neighbour.OutgoingClient.Go(ReceiveSignatureForEntropy.String(),
-			&Payload{Body: body, PublicKey: pubKey, Signature: sign},
+			payload,
 			nil,
 			nil)
 		reply := <-broadcastCall.Done
@@ -336,7 +318,26 @@ func (pulsar *Pulsar) BroadcastSignatureOfEntropy() {
 }
 
 func (pulsar *Pulsar) BroadcastEntropy() {
+	if pulsar.State == Failed {
+		return
+	}
 
+	payload, err := pulsar.preparePayload(EntropyPayload{PulseNumber: pulsar.ProcessingPulseNumber, Entropy: pulsar.GeneratedEntropy})
+	if err != nil {
+		pulsar.switchStateTo(Failed, err)
+		return
+	}
+
+	for _, neighbour := range pulsar.Neighbours {
+		broadcastCall := neighbour.OutgoingClient.Go(ReceiveEntropy.String(),
+			payload,
+			nil,
+			nil)
+		reply := <-broadcastCall.Done
+		if reply.Error != nil {
+			log.Warn("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+		}
+	}
 }
 
 func (pulsar *Pulsar) switchStateTo(state State, arg interface{}) {
@@ -345,12 +346,16 @@ func (pulsar *Pulsar) switchStateTo(state State, arg interface{}) {
 		log.Info("Switch to start")
 	case WaitingForTheSigns:
 		pulsar.stateSwitchedToWaitingForSigns()
+	case SendingEntropy:
+		pulsar.stateSwitchedToSendingEntropy()
+	case WaitingForTheEntropy:
+		pulsar.stateSwitchedWaitingForTheEntropy()
 	case Failed:
 		pulsar.stateSwitchedToFailed(arg.(error))
 	}
 }
 
-func (pulsar *Pulsar) stateSwitchedToSendingNumbers() {
+func (pulsar *Pulsar) stateSwitchedToSendingEntropy() {
 	if pulsar.State == Failed {
 		return
 	}
@@ -406,13 +411,13 @@ func (pulsar *Pulsar) stateSwitchedToWaitingForSigns() {
 			}
 			if len(pulsar.OwnedBftRow) == len(pulsar.Neighbours) {
 				ticker.Stop()
-				pulsar.switchStateTo(SendingNumbers, nil)
+				pulsar.switchStateTo(SendingEntropy, nil)
 				return
 			}
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				pulsar.switchStateTo(SendingNumbers, nil)
+				pulsar.switchStateTo(SendingEntropy, nil)
 			}
 		}
 	}()
@@ -428,6 +433,27 @@ func (pulsar *Pulsar) stateSwitchedToFailed(err error) {
 	pulsar.BftGrid = map[string]map[string]*BftCell{}
 
 	pulsar.EntropyGenerationLock.Unlock()
+}
+
+func (pulsar *Pulsar) generateNewEntropyAndSign() error {
+	pulsar.GeneratedEntropy = pulsar.EntropyGenerator.GenerateEntropy()
+	signature, err := singData(pulsar.PrivateKey, pulsar.GeneratedEntropy)
+	pulsar.GeneratedEntropySign = signature
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (pulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
+	sign, err := singData(pulsar.PrivateKey, body)
+	pubKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Payload{Body: body, PublicKey: pubKey, Signature: sign}, nil
 }
 
 func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
