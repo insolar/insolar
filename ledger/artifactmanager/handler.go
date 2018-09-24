@@ -11,10 +11,12 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
+// EventHandler processes events for local storage interaction.
 type EventHandler struct {
 	db *storage.DB
 }
 
+// NewEventHandler creates new handler.
 func NewEventHandler(db *storage.DB) (*EventHandler, error) {
 	return &EventHandler{db: db}, nil
 }
