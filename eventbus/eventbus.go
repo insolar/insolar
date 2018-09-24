@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"reflect"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -65,7 +66,7 @@ func (eb *EventBus) Start(c core.Components) error {
 func (eb *EventBus) Stop() error { return nil }
 
 // Dispatch an `Event` and get a `Reaction` or error from remote host.
-func (eb *EventBus) Dispatch(event core.Event) (core.Reaction, error) {
+func (eb *EventBus) Dispatch(e core.Event) (core.Reaction, error) {
 	jc := eb.ledger.GetJetCoordinator()
 	pm := eb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -73,10 +74,18 @@ func (eb *EventBus) Dispatch(event core.Event) (core.Reaction, error) {
 		return nil, err
 	}
 
-	nodes, err := jc.QueryRole(event.GetOperatingRole(), event.GetReference(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(e.GetOperatingRole(), e.GetReference(), pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf(
+		"Dispatching event %s. Pulse: %d, event ref: %s, operating role: %d, nodes: %v",
+		reflect.TypeOf(e).Elem().Name(),
+		pulse.PulseNumber,
+		e.GetReference(),
+		e.GetOperatingRole(),
+		nodes,
+	)
 
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
@@ -84,11 +93,11 @@ func (eb *EventBus) Dispatch(event core.Event) (core.Reaction, error) {
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := eb.service.SendCascadeEvent(cascade, deliverRPCMethodName, event)
+		err := eb.service.SendCascadeEvent(cascade, deliverRPCMethodName, e)
 		return nil, err
 	}
 
-	res, err := eb.service.SendEvent(nodes[0], deliverRPCMethodName, event)
+	res, err := eb.service.SendEvent(nodes[0], deliverRPCMethodName, e)
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +132,29 @@ func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
+	pm := eb.ledger.GetPulseManager()
+	pulse, err := pm.Current()
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf(
+		"Delivering event %s. Pulse: %d, event ref: %s, operating role: %d",
+		reflect.TypeOf(e).Elem().Name(),
+		pulse.PulseNumber,
+		e.GetReference(),
+		e.GetOperatingRole(),
+	)
+
 	resp, err := e.React(eb.components)
 	if err != nil {
+		log.Debugf(
+			"Got error for event reaction %s. Pulse: %d, event ref: %s, operating role: %d, error: %s",
+			reflect.TypeOf(e).Elem().Name(),
+			pulse.PulseNumber,
+			e.GetReference(),
+			e.GetOperatingRole(),
+			err.Error(),
+		)
 		return nil, &serializableError{
 			S: err.Error(),
 		}

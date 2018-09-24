@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -677,6 +678,7 @@ func (m *LedgerArtifactManager) GetLatestObj(head core.RecordRef) (core.ObjectDe
 
 	object, err := NewObjectDescriptor(m.db, objRef, nil)
 	if err != nil {
+		log.Errorf("Error while getting latest object by ref %s: %s", head, err.Error())
 		return nil, err
 	}
 	active, err = object.IsActive()

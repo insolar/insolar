@@ -75,23 +75,27 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return nil
 	}
 
-	jc := c["core.Ledger"].(core.Ledger).GetJetCoordinator()
-	pm := c["core.Ledger"].(core.Ledger).GetPulseManager()
-	currentPulse, err := pm.Current()
-	if err != nil {
-		return errors.Wrap(err, "couldn't get current pulse")
-	}
-
-	network := c["core.Network"].(core.Network)
-	nodeID := network.GetNodeID()
-
-	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
-	if err != nil {
-		return errors.Wrap(err, "couldn't authorized node")
-	}
-	if !isLightExecutor {
-		return nil
-	}
+	// TODO: Denis Linnik
+	// Temporary disable role checking.
+	// Because of bad API module which gets contracts' addresses from bootstrap.
+	//
+	// jc := c["core.Ledger"].(core.Ledger).GetJetCoordinator()
+	// pm := c["core.Ledger"].(core.Ledger).GetPulseManager()
+	// currentPulse, err := pm.Current()
+	// if err != nil {
+	// 	return errors.Wrap(err, "couldn't get current pulse")
+	// }
+	//
+	// network := c["core.Network"].(core.Network)
+	// nodeID := network.GetNodeID()
+	//
+	// isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
+	// if err != nil {
+	// 	return errors.Wrap(err, "couldn't authorized node")
+	// }
+	// if !isLightExecutor {
+	// 	return nil
+	// }
 
 	_, insgocc, err := testutil.Build()
 	if err != nil {

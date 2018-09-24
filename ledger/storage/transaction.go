@@ -18,6 +18,7 @@ package storage
 
 import (
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
@@ -56,6 +57,7 @@ func (m *TransactionManager) Discard() {
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(ref *record.Reference) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
+	log.Debugf("Getting record %s", ref)
 	item, err := m.txn.Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {

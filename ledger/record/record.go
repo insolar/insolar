@@ -117,3 +117,7 @@ func (ref Reference) IsEqual(ref2 Reference) bool {
 func (ref Reference) IsNotEqual(ref2 Reference) bool {
 	return !ref.IsEqual(ref2)
 }
+
+func (ref Reference) String() string {
+	return ref.CoreRef().String()
+}

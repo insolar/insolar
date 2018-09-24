@@ -83,7 +83,7 @@ func (network *ServiceNetwork) SendEvent(nodeID core.RecordRef, method string, e
 		return nil, err
 	}
 
-	log.Debugln("SendEvent with nodeID = %s method = %s, event reference = %s", nodeID.String(),
+	log.Debugf("SendEvent with nodeID = %s method = %s, event reference = %s", nodeID.String(),
 		method, event.GetReference().String())
 
 	metrics.NetworkMessageSentTotal.Inc()
