@@ -297,13 +297,12 @@ func (dht *DHT) iterateBootstrapHosts(
 				log.Info("do infinity mode bootstrap.")
 				for {
 					if dht.gotBootstrap(ht, bh, cb, localwg) {
-						break
-					} else {
-						if counter < dht.timeout {
-							counter = counter * 2
-						}
-						time.Sleep(time.Second * time.Duration(counter))
+						return
 					}
+					if counter < dht.timeout {
+						counter = counter * 2
+					}
+					time.Sleep(time.Second * time.Duration(counter))
 				}
 			} else {
 				log.Info("do one time mode bootstrap.")
