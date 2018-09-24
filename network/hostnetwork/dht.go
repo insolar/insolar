@@ -449,7 +449,10 @@ func (dht *DHT) iterateIsDone(
 					&packet.RequestDataStore{
 						Data: data,
 					}).Build()
-				future, _ := dht.transport.SendRequest(msg)
+				future, err := dht.transport.SendRequest(msg)
+				if err != nil {
+					return nil, nil, nil, err
+				}
 				// We do not need to handle result of this packet
 				future.Cancel()
 			}
