@@ -139,6 +139,10 @@ func (r *testLedger) Start(components core.Components) error   { return nil }
 func (r *testLedger) Stop() error                              { return nil }
 func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
 
+func (r *testLedger) HandleEvent(core.Event) (core.Reaction, error) {
+	panic("implement me")
+}
+
 type testEventBus struct {
 	LogicRunner core.LogicRunner
 }
@@ -283,7 +287,7 @@ func (r *Two) Hello(s string) string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObj(
+	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
 		*am.RootRef(),
@@ -405,7 +409,7 @@ func (r *Two) Hello(s string) string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObj(
+	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
 		*am.RootRef(),
@@ -527,7 +531,7 @@ func (r *Two) Hello() string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObj(
+	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
 		*am.RootRef(),
@@ -675,7 +679,6 @@ func New(n int) *Child {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
-	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
@@ -699,7 +702,7 @@ func New(n int) *Child {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.ActivateObj(core.NewRefFromBase58("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -752,7 +755,6 @@ func TestRootDomainContract(t *testing.T) {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
-	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	fmt.Println("RUNNERPATH", runnerbin)
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
@@ -776,7 +778,7 @@ func TestRootDomainContract(t *testing.T) {
 
 	domain := core.NewRefFromBase58("c1")
 	request := core.NewRefFromBase58("c2")
-	contract, err := am.ActivateObj(domain, request, *cb.Classes["rootDomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.ActivateObject(domain, request, *cb.Classes["rootDomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -885,10 +887,10 @@ func (c *Child) GetNum() int {
 	assert.NoError(b, err)
 
 	domain := core.NewRefFromBase58("c1")
-	parent, err := am.ActivateObj(core.NewRefFromBase58("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	parent, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create parent")
 	assert.NotEqual(b, parent, nil, "parent created")
-	child, err := am.ActivateObj(core.NewRefFromBase58("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	child, err := am.ActivateObject(core.NewRefFromBase58("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create child")
 	assert.NotEqual(b, child, nil, "child created")
 
