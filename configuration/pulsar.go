@@ -28,11 +28,15 @@ func (ct ConnectionType) String() string {
 
 // Pulsar holds configuration for pulsar node.
 type Pulsar struct {
-	MinimalPulseNumber uint32
-	ConnectionType     ConnectionType
-	ListenAddress      string
-	PrivateKey         string
-	Storage            Storage
+	ConnectionType ConnectionType
+	ListenAddress  string
+	PrivateKey     string
+	Storage        Storage
+
+	PulseTime                    int32 // ms
+	ReceivingSignTimeout         int32 // ms
+	ReceivingNumberTimeout       int32 // ms
+	ReceivingNumberVectorTimeout int32 // ms
 
 	ListOfNeighbours []*PulsarNodeAddress
 }
@@ -46,10 +50,15 @@ type PulsarNodeAddress struct {
 // NewPulsar creates new default configuration for pulsar node.
 func NewPulsar() Pulsar {
 	return Pulsar{
-		ListenAddress:      "0.0.0.0:8090",
-		ConnectionType:     TCP,
-		ListOfNeighbours:   []*PulsarNodeAddress{},
-		MinimalPulseNumber: 65537,
-		Storage:            Storage{DataDirectory: ""},
+		ListenAddress:  "0.0.0.0:8090",
+		ConnectionType: TCP,
+
+		PulseTime:                    10000,
+		ReceivingSignTimeout:         1000,
+		ReceivingNumberTimeout:       1000,
+		ReceivingNumberVectorTimeout: 1000,
+
+		ListOfNeighbours: []*PulsarNodeAddress{},
+		Storage:          Storage{DataDirectory: ""},
 	}
 }

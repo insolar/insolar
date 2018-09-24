@@ -144,7 +144,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 
 	handler.pulsar.EntropyGenerationLock.Lock()
 	if handler.pulsar.State == WaitingForTheStart {
-		handler.pulsar.StartConsensusProcess(requestBody.PulseNumber, handler.pulsar.EntropyGenerator)
+		handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
 	}
 	handler.pulsar.EntropyGenerationLock.Unlock()
 
