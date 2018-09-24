@@ -22,9 +22,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const TestPubKey = "test"
+const TestRole = "virtual"
+
 func TestNewNodeRecord(t *testing.T) {
-	const TestPubKey = "test"
-	const TestRole = "virtual"
+
 	r := GetRoleFromString(TestRole)
 	assert.NotEqual(t, RoleUnknown, r)
 	record := NewNodeRecord(TestPubKey, TestRole)
@@ -35,4 +37,14 @@ func TestNewNodeRecord(t *testing.T) {
 func TestFromString(t *testing.T) {
 	role := GetRoleFromString("ZZZ")
 	assert.Equal(t, RoleUnknown, role)
+}
+
+func TestNodeRecord_GetPublicKey(t *testing.T) {
+	record := NewNodeRecord(TestPubKey, TestRole)
+	assert.Equal(t, TestPubKey, record.GetPublicKey())
+}
+
+func TestNodeRecord_GetRole(t *testing.T) {
+	record := NewNodeRecord(TestPubKey, TestRole)
+	assert.Equal(t, RoleVirtual, record.GetRole())
 }

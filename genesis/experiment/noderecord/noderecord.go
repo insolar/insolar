@@ -65,6 +65,14 @@ func NewNodeRecord(pk string, roleS string) *NodeRecord {
 	}
 }
 
+func (nr *NodeRecord) GetPublicKey() string {
+	return nr.PublicKey
+}
+
+func (nr *NodeRecord) GetRole() NodeRole {
+	return nr.Role
+}
+
 // SelfDestroy makes request to destroy current node record
 func (nr *NodeRecord) Destroy() {
 	nr.SelfDestructRequest()
