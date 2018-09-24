@@ -14,27 +14,22 @@
  *    limitations under the License.
  */
 
-package testutils
+package core
 
-import (
-	"crypto/rand"
-
-	"github.com/insolar/insolar/core"
-	"github.com/satori/go.uuid"
-)
-
-// RandomRef generates random RecordRef
-func RandomRef() core.RecordRef {
-	ref := [64]byte{}
-	rand.Read(ref[:]) // nolint
-	return ref
+// Component controller methods
+type Component interface {
+	Start(components Components) error
+	Stop() error
 }
 
-// RandomString generates random uuid and return it as string
-func RandomString() string {
-	newUUID, err := uuid.NewV4()
-	if err != nil {
-		return ""
-	}
-	return newUUID.String()
+// Components is a registry for other core interfaces
+// Fields order are important and represent start and stop order in the daemon
+type Components struct {
+	Network      Network
+	Ledger       Ledger
+	LogicRunner  LogicRunner
+	EventBus     EventBus
+	Bootstrapper Bootstrapper
+	APIRunner    Component
+	Metrics      Component
 }

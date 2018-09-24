@@ -32,7 +32,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -279,6 +281,12 @@ func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
 	assert.Nil(t, response.getError())
 }
 
+func unmarshalResponseWithError(t *testing.T, body []byte, response responseInterface) {
+	err := json.Unmarshal(body, &response)
+	assert.NoError(t, err)
+	assert.NotNil(t, response.getError())
+}
+
 func TestInsolardResponseNotErr(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "dump_all_users",
@@ -351,4 +359,117 @@ func TestTransferMoney(t *testing.T) {
 
 	assert.Equal(t, uint(889), secondBalanceResponse.Amount)
 	assert.Equal(t, "RUB", secondBalanceResponse.Currency)
+}
+
+func TestWrongUrl(t *testing.T) {
+	jsonValue, _ := json.Marshal(postParams{
+		"query_type": "dump_all_users",
+	})
+	testUrl := HOST + "/not_api/v1"
+	postResp, err := http.Post(testUrl, "application/json", bytes.NewBuffer(jsonValue))
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, postResp.StatusCode)
+}
+
+func TestGetRequest(t *testing.T) {
+	postResp, err := http.Get(TestUrl)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, postResp.StatusCode)
+	body, err := ioutil.ReadAll(postResp.Body)
+	assert.NoError(t, err)
+
+	getResponse := &baseResponse{}
+	unmarshalResponseWithError(t, body, getResponse)
+
+	assert.Equal(t, api.BadRequest, getResponse.Err.Code)
+	assert.Equal(t, "Bad request", getResponse.Err.Event)
+}
+
+func TestWrongJson(t *testing.T) {
+	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, postResp.StatusCode)
+	body, err := ioutil.ReadAll(postResp.Body)
+	assert.NoError(t, err)
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Event)
+}
+
+func TestWrongQueryType(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "wrong_query_type",
+	})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Wrong query parameter 'query_type' = 'wrong_query_type'", response.Err.Event)
+}
+
+func TestWithoutQueryType(t *testing.T) {
+	body := getResponseBody(t, postParams{})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Wrong query parameter 'query_type' = ''", response.Err.Event)
+}
+
+func TestTooMuchParams(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"some_param": "irrelevant info",
+		"name":       testutils.RandomString(),
+	})
+
+	firstMemberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, firstMemberResponse)
+
+	firstMemberRef := firstMemberResponse.Reference
+	assert.NotEqual(t, "", firstMemberRef)
+}
+
+func TestQueryTypeAsIntParams(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": 100,
+	})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Event)
+}
+
+func TestWrongTypeInParams(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       128182187,
+	})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Event)
+}
+
+// TODO: unskip test after doing errors in smart contracts
+func _TestWrongReferenceInParams(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_balance",
+		"reference":  testutils.RandomString(),
+	})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Event)
 }

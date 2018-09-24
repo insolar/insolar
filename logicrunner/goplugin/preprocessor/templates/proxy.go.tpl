@@ -10,7 +10,7 @@ import (
     {{- $typeStruct }}
 {{ end }}
 
-// Reference to class of this contract
+// ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("{{ .ClassReference }}")
 
 // Contract proxy type

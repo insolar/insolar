@@ -54,16 +54,6 @@ func NewServiceNetwork(
 		return nil, err
 	}
 
-	err = dht.ObtainIP()
-	if err != nil {
-		return nil, err
-	}
-
-	err = dht.AnalyzeNetwork(createContext(dht))
-	if err != nil {
-		return nil, err
-	}
-
 	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
 	f := func(data core.Cascade, method string, args [][]byte) error {
 		return service.initCascadeSendMessage(data, true, method, args)
@@ -133,22 +123,28 @@ func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hostha
 }
 
 func getPulseManager(components core.Components) (core.PulseManager, error) {
-	ledgerComponent, exists := components["core.Ledger"]
-	if !exists {
+	if components.Ledger == nil {
 		return nil, errors.New("no core.Ledger in components")
 	}
-	ledger, cast := ledgerComponent.(core.Ledger)
-	if !cast {
-		return nil, errors.New("bad cast to core.Ledger")
-	}
-	return ledger.GetPulseManager(), nil
+	return components.Ledger.GetPulseManager(), nil
 }
 
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
+
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
+
+	err := network.hostNetwork.ObtainIP()
+	if err != nil {
+		return err
+	}
+
+	err = network.hostNetwork.AnalyzeNetwork(createContext(network.hostNetwork))
+	if err != nil {
+		return err
+	}
 
 	pm, err := getPulseManager(components)
 	if err != nil {

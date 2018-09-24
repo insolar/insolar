@@ -733,17 +733,11 @@ func (m *LedgerArtifactManager) GetObjDelegate(head, asClass core.RecordRef) (*c
 }
 
 func (m *LedgerArtifactManager) Link(components core.Components) error {
-	busComponent, exists := components["core.EventBus"]
-	if !exists {
+	if components.EventBus == nil {
 		return errors.New("no core.EventBus in components")
 	}
-	eventBus, ok := busComponent.(core.EventBus)
-	if !ok {
-		return errors.New("EventBus assertion failed")
-	}
 
-	m.eventBus = eventBus
-
+	m.eventBus = components.EventBus
 	return nil
 }
 

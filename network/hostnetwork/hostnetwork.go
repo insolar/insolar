@@ -42,7 +42,7 @@ type NodeNetwork interface {
 func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
-		return nil, errors.New("Couldn't start at 0.0.0.0")
+		return nil, errors.New("couldn't start at 0.0.0.0")
 	}
 
 	proxy := relay.NewProxy()
@@ -74,6 +74,8 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *casc
 		ncf,
 		options,
 		proxy,
+		cfg.Timeout,
+		cfg.InfinityBootstrap,
 	)
 	if err != nil {
 		return nil, err
