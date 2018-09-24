@@ -8,7 +8,7 @@ import (
 
 
 
-// Reference to class of this contract
+// ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
 // Contract proxy type

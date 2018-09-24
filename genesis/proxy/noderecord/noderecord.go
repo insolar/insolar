@@ -1,17 +1,18 @@
-package allowance
+package noderecord
 
 import (
         "github.com/insolar/insolar/core"
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
+type NodeRole int
 
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
 // Contract proxy type
-type Allowance struct {
+type NodeRecord struct {
     Reference core.RecordRef
 }
 
@@ -19,32 +20,32 @@ type ContractHolder struct {
 	data []byte
 }
 
-func (r *ContractHolder) AsChild(objRef core.RecordRef) *Allowance {
+func (r *ContractHolder) AsChild(objRef core.RecordRef) *NodeRecord {
     ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
     if err != nil {
         panic(err)
     }
-    return &Allowance{Reference: ref}
+    return &NodeRecord{Reference: ref}
 }
 
-func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *Allowance {
+func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *NodeRecord {
     ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
     if err != nil {
         panic(err)
     }
-    return &Allowance{Reference: ref}
+    return &NodeRecord{Reference: ref}
 }
 
 // GetObject
-func GetObject(ref core.RecordRef) (r *Allowance) {
-    return &Allowance{Reference: ref}
+func GetObject(ref core.RecordRef) (r *NodeRecord) {
+    return &NodeRecord{Reference: ref}
 }
 
 func GetClass() core.RecordRef {
     return ClassReference
 }
 
-func GetImplementationFrom(object core.RecordRef) *Allowance {
+func GetImplementationFrom(object core.RecordRef) *NodeRecord {
     ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
     if err != nil {
         panic(err)
@@ -53,11 +54,10 @@ func GetImplementationFrom(object core.RecordRef) *Allowance {
 }
 
 
-func New( to *core.RecordRef, amount uint, expire int64 ) *ContractHolder {
-    var args [3]interface{}
-	args[0] = to
-	args[1] = amount
-	args[2] = expire
+func NewNodeRecord( pk string, roleS string ) *ContractHolder {
+    var args [2]interface{}
+	args[0] = pk
+	args[1] = roleS
 
 
     var argsSerialized []byte
@@ -66,7 +66,7 @@ func New( to *core.RecordRef, amount uint, expire int64 ) *ContractHolder {
         panic(err)
     }
 
-    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "New", argsSerialized)
+    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "NewNodeRecord", argsSerialized)
     if err != nil {
 		panic(err)
     }
@@ -76,17 +76,17 @@ func New( to *core.RecordRef, amount uint, expire int64 ) *ContractHolder {
 
 
 // GetReference
-func (r *Allowance) GetReference() core.RecordRef {
+func (r *NodeRecord) GetReference() core.RecordRef {
     return r.Reference
 }
 
 // GetClass
-func (r *Allowance) GetClass() core.RecordRef {
+func (r *NodeRecord) GetClass() core.RecordRef {
     return ClassReference
 }
 
 
-func (r *Allowance) IsExpired(  ) ( bool ) {
+func (r *NodeRecord) GetPublicKey(  ) ( string ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -96,13 +96,13 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsExpired", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
     if err != nil {
    		panic(err)
     }
 
     resList := [1]interface{}{}
-	var a0 bool
+	var a0 string
 	resList[0] = a0
 
     err = proxyctx.Current.Deserialize(res, &resList)
@@ -110,10 +110,10 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
         panic(err)
     }
 
-    return resList[0].(bool)
+    return resList[0].(string)
 }
 
-func (r *Allowance) IsExpiredNoWait(  ) {
+func (r *NodeRecord) GetPublicKeyNoWait(  ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -123,13 +123,13 @@ func (r *Allowance) IsExpiredNoWait(  ) {
         panic(err)
     }
 
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "IsExpired", argsSerialized)
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
     if err != nil {
         panic(err)
     }
 }
 
-func (r *Allowance) TakeAmount(  ) ( uint ) {
+func (r *NodeRecord) GetRole(  ) ( NodeRole ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -139,13 +139,13 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "TakeAmount", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRole", argsSerialized)
     if err != nil {
    		panic(err)
     }
 
     resList := [1]interface{}{}
-	var a0 uint
+	var a0 NodeRole
 	resList[0] = a0
 
     err = proxyctx.Current.Deserialize(res, &resList)
@@ -153,10 +153,10 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
         panic(err)
     }
 
-    return resList[0].(uint)
+    return resList[0].(NodeRole)
 }
 
-func (r *Allowance) TakeAmountNoWait(  ) {
+func (r *NodeRecord) GetRoleNoWait(  ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -166,13 +166,13 @@ func (r *Allowance) TakeAmountNoWait(  ) {
         panic(err)
     }
 
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "TakeAmount", argsSerialized)
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized)
     if err != nil {
         panic(err)
     }
 }
 
-func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
+func (r *NodeRecord) Destroy(  ) (  ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -182,24 +182,22 @@ func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalanceForOwner", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized)
     if err != nil {
    		panic(err)
     }
 
-    resList := [1]interface{}{}
-	var a0 uint
-	resList[0] = a0
+    resList := [0]interface{}{}
 
     err = proxyctx.Current.Deserialize(res, &resList)
     if err != nil {
         panic(err)
     }
 
-    return resList[0].(uint)
+    return 
 }
 
-func (r *Allowance) GetBalanceForOwnerNoWait(  ) {
+func (r *NodeRecord) DestroyNoWait(  ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -209,50 +207,7 @@ func (r *Allowance) GetBalanceForOwnerNoWait(  ) {
         panic(err)
     }
 
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalanceForOwner", argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-}
-
-func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
-    var args [0]interface{}
-
-    var argsSerialized []byte
-
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "DeleteExpiredAllowance", argsSerialized)
-    if err != nil {
-   		panic(err)
-    }
-
-    resList := [1]interface{}{}
-	var a0 uint
-	resList[0] = a0
-
-    err = proxyctx.Current.Deserialize(res, &resList)
-    if err != nil {
-        panic(err)
-    }
-
-    return resList[0].(uint)
-}
-
-func (r *Allowance) DeleteExpiredAllowanceNoWait(  ) {
-    var args [0]interface{}
-
-    var argsSerialized []byte
-
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "DeleteExpiredAllowance", argsSerialized)
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "Destroy", argsSerialized)
     if err != nil {
         panic(err)
     }
