@@ -53,7 +53,8 @@ type GetLastPulsePayload struct {
 }
 
 type EntropySignaturePayload struct {
-	Signature []byte
+	PulseNumber core.PulseNumber
+	Signature   []byte
 }
 
 type Handler struct {
@@ -139,18 +140,14 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 		return errors.New("Signature check failed")
 	}
 
-	handler.pulsar.EntropyGenerationLock.Lock()
-	if handler.pulsar.State == Waiting {
-		err := handler.pulsar.GenerateEntropyWithSignature(handler.entropyGenerator)
-		if err != nil {
-			return handler.pulsar.failCurrentPulseProcess(err)
-		}
+	requestBody := request.Body.(EntropySignaturePayload)
 
-		go handler.pulsar.BroadcastSignatureOfEntropy()
+	handler.pulsar.EntropyGenerationLock.Lock()
+	if handler.pulsar.State == WaitingForTheStart {
+		handler.pulsar.StartConsensusProcess(requestBody.PulseNumber, handler.pulsar.EntropyGenerator)
 	}
 	handler.pulsar.EntropyGenerationLock.Unlock()
 
-	requestBody := request.Body.(EntropySignaturePayload)
 	handler.pulsar.OwnedBftRow[request.PublicKey] = &BftCell{Sign: requestBody.Signature}
 
 	//add method, when all, ok, send number

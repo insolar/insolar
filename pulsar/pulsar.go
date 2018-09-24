@@ -33,9 +33,11 @@ import (
 type State int
 
 const (
-	Waiting   State = 0
-	InProcess State = 1
-	Failed    State = 2
+	WaitingForTheStart  State = 0
+	WaitingForTheSigns  State = 1
+	WaitingForTheNumber State = 2
+	Verifying           State = 3
+	Failed              State = -1
 )
 
 type Pulsar struct {
@@ -46,7 +48,8 @@ type Pulsar struct {
 	Neighbours map[string]*Neighbour
 	PrivateKey *ecdsa.PrivateKey
 
-	Storage pulsarstorage.PulsarStorage
+	Storage          pulsarstorage.PulsarStorage
+	EntropyGenerator EntropyGenerator
 
 	State                 State
 	EntropyGenerationLock sync.Mutex
@@ -83,7 +86,8 @@ func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarS
 		Storage:            storage,
 		PrivateKey:         privateKey,
 		SockConnectionType: configuration.ConnectionType,
-		State:              Waiting}
+		State:              WaitingForTheStart,
+	}
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.ListOfNeighbours {
@@ -97,7 +101,8 @@ func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarS
 		pulsar.Neighbours[neighbour.PublicKey] = &Neighbour{
 			ConnectionType:    neighbour.ConnectionType,
 			ConnectionAddress: neighbour.Address,
-			PublicKey:         publicKey}
+			PublicKey:         publicKey,
+		}
 	}
 
 	gob.Register(Payload{})
@@ -258,19 +263,21 @@ func (pulsar *Pulsar) SyncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pu
 	return nil, errors.New("Signal signature isn't correct")
 }
 
-func (pulsar *Pulsar) StartConsensusProcess(pulseNumber uint32, generator EntropyGenerator) error {
+func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber, generator EntropyGenerator) error {
 	pulsar.EntropyGenerationLock.Lock()
 
-	if pulsar.State == InProcess {
+	if pulsar.State > WaitingForTheStart {
 		return nil
 	}
 
-	pulsar.State = InProcess
 	err := pulsar.GenerateEntropyWithSignature(generator)
 	if err != nil {
 		pulsar.setStateTo(Failed, err)
 		return err
 	}
+
+	pulsar.setStateTo(WaitingForTheSigns, nil)
+	go pulsar.BroadcastSignatureOfEntropy()
 
 	pulsar.EntropyGenerationLock.Unlock()
 	return nil
@@ -320,8 +327,8 @@ func (pulsar *Pulsar) BroadcastSignatureOfEntropy() {
 
 func (pulsar *Pulsar) setStateTo(state State, arg interface{}) {
 	switch state {
-	case Waiting:
-	case InProcess:
+	case WaitingForTheStart:
+
 	case Failed:
 		log.Error(arg)
 
