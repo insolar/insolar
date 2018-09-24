@@ -27,6 +27,7 @@ const (
 	GetBalance
 	SendMoney
 	DumpAllUsers
+	RegisterNode
 )
 
 // QTypeFromString converts string representation to enum
@@ -42,6 +43,8 @@ func QTypeFromString(strQType string) QueryType {
 		return SendMoney
 	case "dump_all_users":
 		return DumpAllUsers
+	case "register_node":
+		return RegisterNode
 	}
 
 	return UNDEFINED
@@ -56,4 +59,6 @@ type Params struct {
 	To        string `json:"to"`
 	QID       string `json:"qid"`
 	Amount    int    `json:"amount"`
+	PublicKey string `json:"public_key"`
+	Role      string `json: role`
 }

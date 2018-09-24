@@ -252,3 +252,30 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 
 	return result, nil
 }
+
+func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	if len(rh.params.PublicKey) == 0 {
+		return nil, errors.New("field 'public_key' is required")
+	}
+
+	if len(rh.params.Role) == 0 {
+		return nil, errors.New("field 'role' is required")
+	}
+
+	routResult, err := rh.sendRequest("RegisterNode", []interface{}{rh.params.PublicKey, rh.params.Role})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
+	}
+
+	memberRef, err := extractCreateMemberResponse(routResult.(*reaction.CommonReaction).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
+	}
+
+	result["reference"] = memberRef
+
+	return result, nil
+
+}

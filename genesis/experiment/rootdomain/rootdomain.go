@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/insolar/insolar/genesis/proxy/member"
+	"github.com/insolar/insolar/genesis/proxy/nodedomain"
 	"github.com/insolar/insolar/genesis/proxy/wallet"
 
 	"github.com/insolar/insolar/core"
@@ -28,6 +29,20 @@ import (
 
 type RootDomain struct {
 	foundation.BaseContract
+}
+
+func (rd *RootDomain) RegisterNode(public_key string, role string) string {
+	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
+	if err != nil {
+		panic(err)
+	}
+
+	if len(domainRefs) == 0 {
+		panic("No NodeDomain references")
+	}
+	nd := nodedomain.GetObject(domainRefs[0])
+
+	return nd.RegisterNode(public_key, role).String()
 }
 
 func (rd *RootDomain) CreateMember(name string) string {

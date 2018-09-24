@@ -84,6 +84,53 @@ func (r *RootDomain) GetClass() core.RecordRef {
 }
 
 
+func (r *RootDomain) RegisterNode( public_key string, role string ) ( string ) {
+    var args [2]interface{}
+	args[0] = public_key
+	args[1] = role
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [1]interface{}{}
+	var a0 string
+	resList[0] = a0
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].(string)
+}
+
+func (r *RootDomain) RegisterNodeNoWait( public_key string, role string ) {
+    var args [2]interface{}
+	args[0] = public_key
+	args[1] = role
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *RootDomain) CreateMember( name string ) ( string ) {
     var args [1]interface{}
 	args[0] = name
