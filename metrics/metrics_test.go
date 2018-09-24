@@ -33,14 +33,8 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	err = m.Start(nil)
 	assert.NoError(t, err)
 
-	counter, err := m.AddCounter("test_total", "metrics", "just test counter")
-	assert.NoError(t, err)
-
-	gauge, err := m.AddGauge("temperature_celsius", "metrics", "just test gauge")
-	assert.NoError(t, err)
-
-	counter.Add(55)
-	gauge.Set(100)
+	NetworkMessageSentTotal.Inc()
+	NetworkPacketSentTotal.WithLabelValues("ping").Add(55)
 
 	response, err := http.Get("http://" + cfg.ListenAddress + "/metrics")
 	defer response.Body.Close()
@@ -49,8 +43,8 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	contentText := string(content)
 	assert.NoError(t, err)
 
-	assert.True(t, strings.Contains(contentText, "insolar_metrics_test_total 55"))
-	assert.True(t, strings.Contains(contentText, "insolar_metrics_temperature_celsius 100"))
+	assert.True(t, strings.Contains(contentText, "insolar_network_message_sent_total 1"))
+	assert.True(t, strings.Contains(contentText, `insolar_network_packet_sent_total{packetType="ping"} 55`))
 
 	assert.NoError(t, m.Stop())
 }
