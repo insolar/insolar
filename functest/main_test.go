@@ -361,16 +361,6 @@ func TestTransferMoney(t *testing.T) {
 	assert.Equal(t, "RUB", secondBalanceResponse.Currency)
 }
 
-func TestWrongHOST(t *testing.T) {
-	jsonValue, _ := json.Marshal(postParams{
-		"query_type": "dump_all_users",
-	})
-	wrongHOST := "http://localhost:14141"
-	testUrl := wrongHOST + "/api/v1"
-	_, err := http.Post(testUrl, "application/json", bytes.NewBuffer(jsonValue))
-	assert.Contains(t, err.Error(), "connect: connection refused")
-}
-
 func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{
 		"query_type": "dump_all_users",
