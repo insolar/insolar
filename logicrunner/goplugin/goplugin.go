@@ -242,19 +242,18 @@ func (gp *GoPlugin) StartRunner() error {
 	if gp.Cfg.RunnerListen != "" {
 		runnerArguments = append(runnerArguments, "-l", gp.Cfg.RunnerListen)
 	} else {
-		return errors.New("listen is not optional in gp.RunnerOptions")
+		return errors.New("RunnerListen is not set in the configuration of GoPlugin")
 	}
 	if gp.Cfg.RunnerCodePath != "" {
 		runnerArguments = append(runnerArguments, "-d", gp.Cfg.RunnerCodePath)
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
 
-	execPath := "testdata/logicrunner/ginsider-cli"
-	if gp.Cfg.RunnerPath != "" {
-		execPath = gp.Cfg.RunnerPath
+	if gp.Cfg.RunnerPath == "" {
+		return errors.New("RunnerPath is not set in the configuration of GoPlugin")
 	}
 
-	runner := exec.Command(execPath, runnerArguments...)
+	runner := exec.Command(gp.Cfg.RunnerPath, runnerArguments...)
 	runner.Stdout = os.Stdout
 	runner.Stderr = os.Stderr
 	err := runner.Start()
