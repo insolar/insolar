@@ -67,7 +67,7 @@ func getContractPath(name string) (string, error) {
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
-func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func CborInstance(contractIntance interface{}) ([]byte, error) {
 	var instanceData []byte
 
 	ch := new(codec.CborHandle)
@@ -75,7 +75,16 @@ func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.
 		rootdomain.NewRootDomain(),
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootDomain ] Problem with CBORing")
+		return nil, errors.Wrap(err, "[ CborInstance ] Problem with CBORing")
+	}
+
+	return instanceData, nil
+}
+
+func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+	instanceData, err := CborInstance(rootdomain.NewRootDomain())
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
 	contract, err := am.ActivateObj(
@@ -85,7 +94,7 @@ func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.
 		instanceData,
 	)
 	if contract == nil {
-		return errors.Wrap(err, "[ActivateRootDomain] Couldn't create rootdomain instance")
+		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	b.rootDomainRef = contract
 
@@ -93,14 +102,9 @@ func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.
 }
 
 func (b *Bootstrapper) ActivateNodeDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
-	var instanceData []byte
-
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&instanceData, ch).Encode(
-		nodedomain.NewNodeDomain(),
-	)
+	instanceData, err := CborInstance(nodedomain.NewNodeDomain())
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] : problem with CBORing")
+		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
 	contract, err := am.ActivateObj(
