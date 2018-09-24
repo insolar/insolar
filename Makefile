@@ -34,10 +34,18 @@ install:
 	dep ensure
 	go generate -x $(ALL_PACKAGES)
 
-build:
+build: $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD)
+
+$(INSOLARD):
 	go build -o $(INSOLARD) cmd/insolard/*
+
+$(INSOLAR):
 	go build -o $(INSOLAR) cmd/insolar/*
+
+$(INSGOCC):
 	go build -o $(INSGOCC) cmd/insgocc/*
+
+$(PULSARD):
 	go build -o $(PULSARD) cmd/pulsard/*
 
 test:
