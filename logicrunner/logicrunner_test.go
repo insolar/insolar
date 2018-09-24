@@ -911,19 +911,15 @@ func (c *Child) GetNum() int {
 }
 
 func TestProxyGeneration(t *testing.T) {
-	contracts := []string{
-		"rootdomain",
-		"member",
-		"allowance",
-		"wallet",
-	}
+	contracts, err := preprocessor.GetRealContractsNames()
+	assert.NoError(t, err)
 
 	for _, contract := range contracts {
 		t.Run(contract, func(t *testing.T) {
 			parsed, err := preprocessor.ParseFile("../genesis/experiment/" + contract + "/" + contract + ".go")
 			assert.NoError(t, err)
 
-			proxyPath, err := preprocessor.FindPath()
+			proxyPath, err := preprocessor.GetRealGenesisDir("proxy")
 			assert.NoError(t, err)
 
 			name, err := preprocessor.ProxyPackageName(parsed)

@@ -37,9 +37,9 @@ func MakeTestName(file string, contractType string) string {
 }
 
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
-	contractNames, err := testutil.GetRealContractsNames()
+	contractNames, err := GetRealContractsNames()
 	assert.NoError(t, err)
-	contractsDir, err := testutil.GetRealContractsDir()
+	contractsDir, err := GetRealGenesisDir("experiment")
 	assert.NoError(t, err)
 	for _, name := range contractNames {
 		file := contractPath(name, contractsDir)
@@ -59,9 +59,9 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 }
 
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
-	contractNames, err := testutil.GetRealContractsNames()
+	contractNames, err := GetRealContractsNames()
 	assert.NoError(t, err)
-	contractsDir, err := testutil.GetRealContractsDir()
+	contractsDir, err := GetRealGenesisDir("experiment")
 	assert.NoError(t, err)
 	for _, name := range contractNames {
 		file := contractPath(name, contractsDir)
@@ -87,9 +87,9 @@ func TestCompilingRealSmartContracts(t *testing.T) {
 	assert.NoError(t, err)
 
 	contracts := make(map[string]string)
-	contractNames, err := testutil.GetRealContractsNames()
+	contractNames, err := GetRealContractsNames()
 	assert.NoError(t, err)
-	contractsDir, err := testutil.GetRealContractsDir()
+	contractsDir, err := GetRealGenesisDir("experiment")
 	assert.NoError(t, err)
 	for _, name := range contractNames {
 		code, err := ioutil.ReadFile(contractPath(name, contractsDir))

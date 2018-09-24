@@ -86,7 +86,7 @@ func main() {
 			}
 
 			if proxyOut.String() == "" {
-				p, err := preprocessor.FindPath()
+				p, err := preprocessor.GetRealGenesisDir("proxy")
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)

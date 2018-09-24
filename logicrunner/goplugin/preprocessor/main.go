@@ -528,17 +528,43 @@ func RewriteContractPackage(p *ParsedFile, w io.Writer) {
 	printer.Fprint(w, p.fileSet, p.node)
 }
 
-func FindPath() (string, error) {
+// GetRealGenesisDir return dir under genesis dir
+func GetRealGenesisDir(dir string) (string, error) {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return "", errors.Errorf("GOPATH is not set")
 	}
+
+	contractsPath := ""
 	for _, p := range strings.Split(gopath, ":") {
-		pp := path.Join(p, "src/github.com/insolar/insolar/genesis/proxy")
-		_, err := os.Stat(pp)
+		contractsPath = path.Join(p, "src/github.com/insolar/insolar/genesis/", dir)
+		_, err := os.Stat(contractsPath)
 		if err == nil {
-			return pp, nil
+			return contractsPath, nil
 		}
 	}
 	return "", errors.Errorf("Not found github.com/insolar/insolar in GOPATH")
+}
+
+// GetRealContractsNames returns names of all real smart contracts
+func GetRealContractsNames() ([]string, error) {
+	pathWithContracts, err := GetRealGenesisDir("experiment")
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetContractNames ]")
+	}
+	if len(pathWithContracts) == 0 {
+		return nil, errors.New("[ GetContractNames ] There are contracts dir")
+	}
+	var result []string
+	files, err := ioutil.ReadDir(pathWithContracts)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			result = append(result, f.Name())
+		}
+	}
+
+	return result, nil
 }
