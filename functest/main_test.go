@@ -460,16 +460,16 @@ func TestWrongTypeInParams(t *testing.T) {
 	assert.Equal(t, "Bad request", response.Err.Event)
 }
 
-// TODO: uncomment test after doing errors in smart contracts
-// func TestWrongReferenceInParams(t *testing.T) {
-// 	body := getResponseBody(t, postParams{
-// 		"query_type": "get_balance",
-// 		"reference":  testutils.RandomString(),
-// 	})
-//
-// 	response := &baseResponse{}
-// 	unmarshalResponseWithError(t, body, response)
-//
-// 	assert.Equal(t, api.BadRequest, response.Err.Code)
-// 	assert.Equal(t, "Bad request", response.Err.Event)
-// }
+// TODO: unskip test after doing errors in smart contracts
+func _TestWrongReferenceInParams(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_balance",
+		"reference":  testutils.RandomString(),
+	})
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Event)
+}
