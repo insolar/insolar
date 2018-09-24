@@ -28,25 +28,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var pathWithContracts = "../../../genesis/experiment"
-
-func getContractNames() ([]string, error) {
-	var result []string
-	files, err := ioutil.ReadDir(pathWithContracts)
-	if err != nil {
-		return nil, err
-	}
-	for _, f := range files {
-		if f.IsDir() {
-			result = append(result, f.Name())
-		}
-	}
-
-	return result, nil
-}
-
-func contractPath(name string) string {
-	return filepath.Join(pathWithContracts, name, name+".go")
+func contractPath(name string, contractsDir string) string {
+	return filepath.Join(contractsDir, name, name+".go")
 }
 
 func MakeTestName(file string, contractType string) string {
@@ -54,10 +37,12 @@ func MakeTestName(file string, contractType string) string {
 }
 
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
-	contractNames, err := getContractNames()
+	contractNames, err := testutil.GetRealContractsNames()
+	assert.NoError(t, err)
+	contractsDir, err := testutil.GetRealContractsDir()
 	assert.NoError(t, err)
 	for _, name := range contractNames {
-		file := contractPath(name)
+		file := contractPath(name, contractsDir)
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
 			parsed, err := ParseFile(file)
 			assert.NoError(t, err)
@@ -74,10 +59,12 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 }
 
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
-	contractNames, err := getContractNames()
+	contractNames, err := testutil.GetRealContractsNames()
+	assert.NoError(t, err)
+	contractsDir, err := testutil.GetRealContractsDir()
 	assert.NoError(t, err)
 	for _, name := range contractNames {
-		file := contractPath(name)
+		file := contractPath(name, contractsDir)
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
 			parsed, err := ParseFile(file)
 			assert.NoError(t, err)
@@ -100,10 +87,12 @@ func TestCompilingRealSmartContracts(t *testing.T) {
 	assert.NoError(t, err)
 
 	contracts := make(map[string]string)
-	contractNames, err := getContractNames()
+	contractNames, err := testutil.GetRealContractsNames()
+	assert.NoError(t, err)
+	contractsDir, err := testutil.GetRealContractsDir()
 	assert.NoError(t, err)
 	for _, name := range contractNames {
-		code, err := ioutil.ReadFile(contractPath(name))
+		code, err := ioutil.ReadFile(contractPath(name, contractsDir))
 		assert.NoError(t, err)
 		contracts[name] = string(code)
 	}
