@@ -30,13 +30,10 @@ import (
 type Type byte
 
 const (
-	// WrongReactionType - incorrect type (0)
-	WrongReactionType = Type(iota)
-	// CommonReactionType - two binary fields: data and results
-	CommonReactionType
-	// ObjectBodyReactionType - reaction with body, class reference, code reference ...
-	ObjectBodyReactionType
+	TypeWrong          = Type(iota) // TypeWrong - incorrect type (0)
+	TypeCommonReaction              // TypeCommonReaction - two binary fields: data and results
 
+	// Ledger
 	TypeCode      // TypeCode - code from storage.
 	TypeClass     // TypeClass - class from storage.
 	TypeObject    // TypeObject - object from storage.
@@ -46,12 +43,10 @@ const (
 
 func getEmptyReaction(t Type) (core.Reaction, error) {
 	switch t {
-	case WrongReactionType:
+	case TypeWrong:
 		return nil, errors.New("no empty reaction for 'wrong' reaction")
-	case CommonReactionType:
+	case TypeCommonReaction:
 		return &CommonReaction{}, nil
-	case ObjectBodyReactionType:
-		return &ObjectBodyReaction{}, nil
 	case TypeCode:
 		return &Code{}, nil
 	case TypeClass:
@@ -98,7 +93,6 @@ func Deserialize(buff io.Reader) (core.Reaction, error) {
 
 func init() {
 	gob.Register(&CommonReaction{})
-	gob.Register(&ObjectBodyReaction{})
 	gob.Register(&Code{})
 	gob.Register(&Class{})
 	gob.Register(&Object{})

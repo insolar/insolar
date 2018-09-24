@@ -36,9 +36,9 @@ type baseEvent struct {
 type Type byte
 
 const (
-	baseEventType            = Type(iota)
-	CallMethodEventType      // CallMethodEvent - Simply call method and return result
-	CallConstructorEventType // CallConstructorEvent is a event for calling constructor and obtain its reaction
+	TypeBase            = Type(iota)
+	TypeCallMethod      // CallMethodEvent - Simply call method and return result
+	TypeCallConstructor // CallConstructorEvent is a event for calling constructor and obtain its reaction
 
 	// Ledger
 	TypeGetCode                // TypeGetCode - retrieve code from storage.
@@ -59,12 +59,12 @@ const (
 // GetEmptyMessage constructs specified event
 func getEmptyEvent(mt Type) (core.Event, error) {
 	switch mt {
-	case baseEventType:
+	case TypeBase:
 		return nil, errors.New("working with event type == 0 is prohibited")
-	case CallMethodEventType:
-		return &CallMethodEvent{}, nil
-	case CallConstructorEventType:
-		return &CallConstructorEvent{}, nil
+	case TypeCallMethod:
+		return &CallMethod{}, nil
+	case TypeCallConstructor:
+		return &CallConstructor{}, nil
 
 	// Ledger
 	case TypeGetCode:
@@ -128,8 +128,8 @@ func Deserialize(buff io.Reader) (core.Event, error) {
 }
 
 func init() {
-	gob.Register(&CallConstructorEvent{})
-	gob.Register(&CallMethodEvent{})
+	gob.Register(&CallConstructor{})
+	gob.Register(&CallMethod{})
 
 	// Ledger
 	gob.Register(&GetCode{})

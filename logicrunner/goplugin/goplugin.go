@@ -90,7 +90,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		mode = event.ReturnNoWait
 	}
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ReturnMode: mode,
 		ObjectRef:  req.Object,
 		Method:     req.Method,
@@ -113,7 +113,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.New("event bus was not set during initialization")
 	}
 
-	e := &event.CallConstructorEvent{
+	e := &event.CallConstructor{
 		ClassRef:  req.Reference,
 		Name:      req.Constructor,
 		Arguments: req.Arguments,
