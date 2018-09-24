@@ -38,7 +38,10 @@ const (
 	WaitingForTheSigns   State = 1
 	SendingNumbers       State = 2
 	WaitingForTheEntropy State = 3
-	Verifying            State = 4
+	SendingVector        State = 4
+	WaitingForTheVectors State = 5
+	Verifying            State = 6
+	SendingSignForChosen State = 7
 	Failed               State = -1
 )
 
@@ -51,13 +54,6 @@ type Pulsar struct {
 	PrivateKey *ecdsa.PrivateKey
 
 	Config configuration.Pulsar
-
-	ReceivingSignTicker                *time.Ticker
-	ReceivingSignTickerTimeout         time.Time
-	ReceivingNumberTicker              *time.Ticker
-	ReceivingNumberTickerTimeout       time.Time
-	ReceivingNumberVectorTicker        *time.Ticker
-	ReceivingNumberVectorTickerTimeout time.Time
 
 	Storage          pulsarstorage.PulsarStorage
 	EntropyGenerator EntropyGenerator
@@ -75,8 +71,9 @@ type Pulsar struct {
 }
 
 type BftCell struct {
-	Sign   []byte
-	Number uint32
+	Sign            []byte
+	Entropy         core.Entropy
+	EntropyRecieved bool
 }
 
 // Creation new pulsar-node
@@ -368,25 +365,31 @@ func (pulsar *Pulsar) stateSwitchedToSendingNumbers() {
 }
 
 func (pulsar *Pulsar) stateSwitchedWaitingForTheEntropy() {
-	pulsar.ReceivingNumberTickerTimeout = time.Now().Add(time.Duration(pulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
-	pulsar.ReceivingNumberTicker = time.NewTicker(10 * time.Millisecond)
-	ticker := pulsar.ReceivingNumberTicker
-	timeout := pulsar.ReceivingNumberTickerTimeout
+	ticker := time.NewTicker(10 * time.Millisecond)
+	timeout := time.Now().Add(time.Duration(pulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
 			if pulsar.State == Failed {
 				ticker.Stop()
 				return
 			}
-			if len(pulsar.OwnedBftRow) == len(pulsar.Neighbours) {
+
+			entropyCount := 0
+			for _, item := range pulsar.OwnedBftRow {
+				if item.EntropyRecieved {
+					entropyCount++
+				}
+			}
+
+			if entropyCount == len(pulsar.Neighbours) {
 				ticker.Stop()
-				pulsar.switchStateTo(SendingNumbers, nil)
+				pulsar.switchStateTo(SendingVector, nil)
 				return
 			}
 
 			if time.Now().After(timeout) {
 				ticker.Stop()
-				pulsar.switchStateTo(SendingNumbers, nil)
+				pulsar.switchStateTo(SendingVector, nil)
 			}
 		}
 	}()
