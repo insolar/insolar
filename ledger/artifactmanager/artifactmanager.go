@@ -34,7 +34,7 @@ func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
 	return &LedgerArtifactManager{db: db}, nil
 }
 
-// Link links external components components.
+// Link links external components.
 func (m *LedgerArtifactManager) Link(components core.Components) error {
 	m.eventBus = components.EventBus
 
