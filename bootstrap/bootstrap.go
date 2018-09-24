@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/genesis/experiment/rootdomain"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
@@ -57,6 +58,31 @@ func getContractPath(name string) (string, error) {
 	contractDir := filepath.Join(rootDir, pathToContracts)
 	contractFile := name + ".go"
 	return filepath.Join(contractDir, name, contractFile), nil
+}
+
+func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+	var instanceData []byte
+
+	ch := new(codec.CborHandle)
+	err := codec.NewEncoderBytes(&instanceData, ch).Encode(
+		rootdomain.NewRootDomain(),
+	)
+	if err != nil {
+		return errors.Wrap(err, "[ Bootstrapper: Start ]")
+	}
+
+	contract, err := am.ActivateObj(
+		core.RecordRef{}, core.RecordRef{},
+		*cb.Classes["rootdomain"],
+		*am.RootRef(),
+		instanceData,
+	)
+	if contract == nil {
+		return errors.Wrap(err, "[Bootstrapper] couldn't create rootdomain instance")
+	}
+	b.rootDomainRef = contract
+
+	return nil
 }
 
 // Start creates types and RootDomain instance
@@ -117,28 +143,8 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	if err != nil {
 		return errors.Wrap(err, "[Bootstrapper] couldn't build contracts")
 	}
-	var data []byte
 
-	ch := new(codec.CborHandle)
-	err = codec.NewEncoderBytes(&data, ch).Encode(
-		&struct{}{},
-	)
-	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper: Start ]")
-	}
-
-	contract, err := am.ActivateObj(
-		core.RecordRef{}, core.RecordRef{},
-		*cb.Classes["rootdomain"],
-		*am.RootRef(),
-		data,
-	)
-	if contract == nil {
-		return errors.Wrap(err, "[Bootstrapper] couldn't create rootdomain instance")
-	}
-	b.rootDomainRef = contract
-
-	return nil
+	return b.ActivateRootDomain(am, cb)
 }
 
 // Stop implements core.Component method
