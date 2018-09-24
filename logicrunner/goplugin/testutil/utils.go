@@ -206,7 +206,7 @@ func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef
 
 // HandleEvent implementation for tests
 func (t *TestArtifactManager) HandleEvent(event core.Event) (core.Reaction, error) {
-	panic("implement me")
+	panic("TestArtifactManager.HandleEvent: implement me")
 }
 
 // SetArchPref implementation for tests

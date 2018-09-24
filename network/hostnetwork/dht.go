@@ -28,6 +28,7 @@ import (
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -46,14 +47,15 @@ type DHT struct {
 
 	origin *host.Origin
 
-	transport transport.Transport
-	store     store.Store
-	ncf       hosthandler.NetworkCommonFacade
-	relay     relay.Relay
-	proxy     relay.Proxy
-	auth      AuthInfo
-	subnet    Subnet
-	timeout   int // bootstrap reconnect timeout
+	transport         transport.Transport
+	store             store.Store
+	ncf               hosthandler.NetworkCommonFacade
+	relay             relay.Relay
+	proxy             relay.Proxy
+	auth              AuthInfo
+	subnet            Subnet
+	timeout           int // bootstrap reconnect timeout
+	infinityBootstrap bool
 }
 
 // AuthInfo collects some information about authentication.
@@ -120,6 +122,7 @@ func NewDHT(
 	options *Options,
 	proxy relay.Proxy,
 	timeout int,
+	infbootstrap bool,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -129,15 +132,16 @@ func NewDHT(
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		options:   options,
-		origin:    origin,
-		ncf:       ncf,
-		transport: transport,
-		tables:    tables,
-		store:     store,
-		relay:     rel,
-		proxy:     proxy,
-		timeout:   timeout,
+		options:           options,
+		origin:            origin,
+		ncf:               ncf,
+		transport:         transport,
+		tables:            tables,
+		store:             store,
+		relay:             rel,
+		proxy:             proxy,
+		timeout:           timeout,
+		infinityBootstrap: infbootstrap,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -252,7 +256,8 @@ func (dht *DHT) Listen() error {
 // BootstrapHosts.
 func (dht *DHT) Bootstrap() error {
 	if len(dht.options.BootstrapHosts) == 0 {
-		return errors.New("no bootstrap nodes detected")
+		log.Info("empty bootstrap hosts")
+		return nil
 	}
 	cb := NewContextBuilder(dht)
 
@@ -282,53 +287,67 @@ func (dht *DHT) iterateBootstrapHosts(
 	ht *routing.HashTable,
 	cb ContextBuilder,
 ) {
-	ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
-	if err != nil {
-		return
-	}
 	localwg := &sync.WaitGroup{}
-	for i, bh := range dht.options.BootstrapHosts {
+	log.Info("bootstrapping to each known hosts.")
+	for _, bh := range dht.options.BootstrapHosts {
 		localwg.Add(1)
 		go func(cb ContextBuilder, dht *DHT, bh *host.Host, ht *routing.HashTable, localwg *sync.WaitGroup) {
 			counter := 1
-			for {
-				request := packet.NewPingPacket(ht.Origin, bh)
-				if bh.ID.Bytes() == nil {
-					res, err := dht.transport.SendRequest(request)
-					if err != nil {
-						log.Error(err)
-					} else {
-						result := <-res.Result()
-						if res != nil {
-							ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
-							if err != nil {
-								log.Error(err)
-							}
-							dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
-						}
-						localwg.Done()
-						break
+			if dht.infinityBootstrap {
+				log.Info("do infinity mode bootstrap.")
+				for {
+					if dht.gotBootstrap(ht, bh, cb, localwg) {
+						return
 					}
-				} else {
-					routeHost := routing.NewRouteHost(bh)
-					dht.AddHost(ctx, routeHost)
+					if counter < dht.timeout {
+						counter = counter * 2
+					}
+					time.Sleep(time.Second * time.Duration(counter))
+				}
+			} else {
+				log.Info("do one time mode bootstrap.")
+				if !dht.gotBootstrap(ht, bh, cb, localwg) {
 					localwg.Done()
-					return
 				}
-				if counter >= dht.timeout {
-					if i == len(dht.options.BootstrapHosts)-1 {
-						localwg.Done()
-					}
-					return
-				}
-				counter = counter << 1
-				time.Sleep(time.Second * time.Duration(counter))
 			}
 		}(cb, dht, bh, ht, localwg)
 	}
 	localwg.Wait()
+}
 
-	return
+func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBuilder, localwg *sync.WaitGroup) bool {
+	request := packet.NewPingPacket(ht.Origin, bh)
+	if bh.ID.Bytes() == nil {
+		log.Info("sending ping request")
+		res, err := dht.transport.SendRequest(request)
+		if err != nil {
+			log.Error(err)
+		} else {
+			result := <-res.Result()
+			log.Info("checking response")
+			if res != nil {
+				ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
+				if err != nil {
+					log.Error(err)
+				}
+				dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
+			}
+			localwg.Done()
+			return true
+		}
+	} else {
+		log.Info("bootstrap host known. creating new route host.")
+		routeHost := routing.NewRouteHost(bh)
+		ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
+		if err != nil {
+			log.Error("failed to create a context")
+			return false
+		}
+		dht.AddHost(ctx, routeHost)
+		localwg.Done()
+		return true
+	}
+	return false
 }
 
 // Disconnect will trigger a Stop from the network.
@@ -1001,6 +1020,7 @@ func (dht *DHT) EqualAuthSentKey(targetID string, key []byte) bool {
 
 // SendRequest sends a packet.
 func (dht *DHT) SendRequest(packet *packet.Packet) (transport.Future, error) {
+	metrics.NetworkPacketSentTotal.WithLabelValues(packet.Type.String()).Inc()
 	return dht.transport.SendRequest(packet)
 }
 

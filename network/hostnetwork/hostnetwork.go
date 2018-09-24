@@ -75,6 +75,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *casc
 		options,
 		proxy,
 		cfg.Timeout,
+		cfg.InfinityBootstrap,
 	)
 	if err != nil {
 		return nil, err
