@@ -33,8 +33,8 @@ import (
 
 const (
 	_            int = 0
-	handlerError int = -1
-	badRequest   int = -2
+	HandlerError int = -1
+	BadRequest   int = -2
 )
 
 func writeError(message string, code int) map[string]interface{} {
@@ -48,7 +48,7 @@ func writeError(message string, code int) map[string]interface{} {
 }
 
 func makeHandlerMarshalErrorJSON() []byte {
-	jsonErr := writeError("Invalid data from handler", handlerError)
+	jsonErr := writeError("Invalid data from handler", HandlerError)
 	serJSON, err := json.Marshal(jsonErr)
 	if err != nil {
 		log.Fatal("Can't marshal base error")
@@ -76,14 +76,14 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 		answer, hError = rh.ProcessSendMoney()
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
-		answer = writeError(msg, badRequest)
+		answer = writeError(msg, BadRequest)
 		log.Warnf("[QID=%s] %s\n", rh.qid, msg)
 		return answer
 	}
 	if hError != nil {
 		errMsg := "Handler error: " + hError.Error()
 		log.Errorf("[QID=%s] %s\n", rh.qid, errMsg)
-		answer = writeError(errMsg, handlerError)
+		answer = writeError(errMsg, HandlerError)
 	}
 
 	return answer
@@ -145,7 +145,7 @@ func wrapAPIV1Handler(eventBus core.EventBus, rootDomainReference core.RecordRef
 
 		params, err := preprocessRequest(req)
 		if err != nil {
-			answer = writeError("Bad request", badRequest)
+			answer = writeError("Bad request", BadRequest)
 			log.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
