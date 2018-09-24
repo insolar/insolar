@@ -31,7 +31,7 @@ type RootDomain struct {
 	foundation.BaseContract
 }
 
-func (rd *RootDomain) RegisterNode(public_key string, role string) string {
+func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
 		panic(err)
@@ -42,7 +42,7 @@ func (rd *RootDomain) RegisterNode(public_key string, role string) string {
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	return nd.RegisterNode(public_key, role).String()
+	return nd.RegisterNode(publicKey, role).String()
 }
 
 func (rd *RootDomain) CreateMember(name string) string {
