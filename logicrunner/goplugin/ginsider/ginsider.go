@@ -17,14 +17,15 @@
 package ginsider
 
 import (
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 	"io/ioutil"
 	"net/rpc"
 	"os"
 	"path/filepath"
 	"plugin"
 	"sync"
+
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"

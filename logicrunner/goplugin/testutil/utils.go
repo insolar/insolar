@@ -28,7 +28,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -604,7 +603,6 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		"-o", filepath.Join(dstDir, name+".so"),
 		"contract/"+name,
 	).CombinedOutput()
-	log.Warn(string(out))
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))
 	}
