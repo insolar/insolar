@@ -14,11 +14,4 @@
  *    limitations under the License.
  */
 
-package core
-
-type Components map[string]Component
-
-type Component interface {
-	Start(components Components) error
-	Stop() error
-}
+package nodedomain

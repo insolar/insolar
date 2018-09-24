@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +31,7 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	cfg := configuration.NewMetrics()
 	m, err := NewMetrics(cfg)
 	assert.NoError(t, err)
-	err = m.Start(nil)
+	err = m.Start(core.Components{})
 	assert.NoError(t, err)
 
 	counter, err := m.AddCounter("test_total", "metrics", "just test counter")

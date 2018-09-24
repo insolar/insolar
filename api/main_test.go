@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 
 	cs := core.Components{}
 	b, _ := bootstrap.NewBootstrapper(bootstrapCfg)
-	cs["core.Bootstrapper"] = b
+	cs.Bootstrapper = b
 	api.Start(cs)
 
 	code := m.Run()

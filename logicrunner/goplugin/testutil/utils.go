@@ -22,8 +22,10 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -32,6 +34,48 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 )
+
+// GetRealContractsDir return dir with real contracts
+func GetRealContractsDir() (string, error) {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		return "", errors.Errorf("GOPATH is not set")
+	}
+
+	contractsPath := ""
+	for _, p := range strings.Split(gopath, ":") {
+		contractsPath = path.Join(p, "src/github.com/insolar/insolar/genesis/experiment/")
+		_, err := os.Stat(contractsPath)
+		if err == nil {
+			break
+		}
+	}
+
+	return contractsPath, nil
+}
+
+// GetRealContractsNames returns names of all real smart contracts
+func GetRealContractsNames() ([]string, error) {
+	pathWithContracts, err := GetRealContractsDir()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetContractNames ]")
+	}
+	if len(pathWithContracts) == 0 {
+		return nil, errors.New("[ GetContractNames ] There are contracts dir")
+	}
+	var result []string
+	files, err := ioutil.ReadDir(pathWithContracts)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			result = append(result, f.Name())
+		}
+	}
+
+	return result, nil
+}
 
 // ChangeGoPath prepends `path` to GOPATH environment variable
 // accounting for possibly for default value. Returns original

@@ -123,15 +123,10 @@ func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hostha
 }
 
 func getPulseManager(components core.Components) (core.PulseManager, error) {
-	ledgerComponent, exists := components["core.Ledger"]
-	if !exists {
+	if components.Ledger == nil {
 		return nil, errors.New("no core.Ledger in components")
 	}
-	ledger, cast := ledgerComponent.(core.Ledger)
-	if !cast {
-		return nil, errors.New("bad cast to core.Ledger")
-	}
-	return ledger.GetPulseManager(), nil
+	return components.Ledger.GetPulseManager(), nil
 }
 
 // Start implements core.Component
