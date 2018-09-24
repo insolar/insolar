@@ -17,6 +17,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -38,6 +39,16 @@ func main() {
 	err := log.SetLevel("Debug")
 	if err != nil {
 		log.Errorln(err.Error())
+	}
+
+	if *path == "" {
+		tmpDir, err := ioutil.TempDir("", "contractcache-")
+		if err != nil {
+			log.Fatal("Couldn't create temp cache dir: ", err)
+			os.Exit(1)
+		}
+		defer os.RemoveAll(tmpDir)
+		*path = tmpDir
 	}
 
 	insider := ginsider.NewGoInsider(*path, *rpcAddress)
