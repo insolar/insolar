@@ -37,7 +37,7 @@ type EventBus struct {
 	service     core.Network
 	ledger      core.Ledger
 
-	components core.Components
+	components *core.Components
 }
 
 // New is a `EventBus` constructor, takes an executor object
@@ -52,13 +52,13 @@ func New(cfg configuration.Configuration) (*EventBus, error) {
 }
 
 func (eb *EventBus) Start(c core.Components) error {
-	eb.logicRunner = c["core.LogicRunner"].(core.LogicRunner)
-	eb.service = c["core.Network"].(core.Network)
+	eb.logicRunner = c.LogicRunner
+	eb.service = c.Network
 	eb.service.RemoteProcedureRegister(deliverRPCMethodName, eb.deliver)
-	eb.ledger = c["core.Ledger"].(core.Ledger)
+	eb.ledger = c.Ledger
 
 	// Storing entire DI container here to pass it into event handle methods.
-	eb.components = c
+	eb.components = &c
 	return nil
 }
 
@@ -123,7 +123,7 @@ func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, err
 	}
 
-	resp, err := e.React(eb.components)
+	resp, err := e.React(*eb.components)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),

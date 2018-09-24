@@ -108,8 +108,8 @@ func TestBasics(t *testing.T) {
 	assert.NoError(t, err)
 
 	comps := core.Components{
-		"core.Ledger":   &testLedger{am: testutil.NewTestArtifactManager()},
-		"core.EventBus": &testEventBus{},
+		Ledger:   &testLedger{am: testutil.NewTestArtifactManager()},
+		EventBus: &testEventBus{},
 	}
 	assert.NoError(t, lr.Start(comps))
 	assert.IsType(t, &LogicRunner{}, lr)
@@ -161,8 +161,8 @@ func TestExecution(t *testing.T) {
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
 	lr.Start(core.Components{
-		"core.Ledger":   ld,
-		"core.EventBus": eb,
+		Ledger:   ld,
+		EventBus: eb,
 	})
 	eb.LogicRunner = lr
 
@@ -690,8 +690,8 @@ func New(n int) *Child {
 	assert.NoError(t, err, "Initialize runner")
 
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": &testEventBus{LogicRunner: lr},
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
 
@@ -768,8 +768,8 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err, "Initialize runner")
 
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": &testEventBus{LogicRunner: lr},
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
 
@@ -878,8 +878,8 @@ func (c *Child) GetNum() int {
 	assert.NoError(b, err, "Initialize runner")
 
 	assert.NoError(b, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": &testEventBus{LogicRunner: lr},
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
 

@@ -40,13 +40,16 @@ func (e *GetCode) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *GetCode) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
+func getLedger(c core.Components) (core.Ledger, error) {
+	if c.Ledger == nil {
 		return nil, errors.New("no core.EventBus in components")
 	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	return c.Ledger, nil
+}
+
+func (e *GetCode) React(c core.Components) (core.Reaction, error) {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
 	return ledger.GetArtifactManager().HandleEvent(e)
@@ -69,12 +72,8 @@ func (e *GetLatestClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *GetLatestClass) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
 	return ledger.GetArtifactManager().HandleEvent(e)
@@ -97,12 +96,8 @@ func (e *GetLatestObj) GetOperatingRole() core.JetRole {
 }
 
 func (e *GetLatestObj) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
 	return ledger.GetArtifactManager().HandleEvent(e)
@@ -127,12 +122,8 @@ func (e *DeclareType) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeclareType) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
 	return ledger.GetArtifactManager().HandleEvent(e)
@@ -157,15 +148,10 @@ func (e *DeployCode) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeployCode) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
-
 	return ledger.GetArtifactManager().HandleEvent(e)
 }
 
@@ -187,15 +173,10 @@ func (e *ActivateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *ActivateClass) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
-
 	return ledger.GetArtifactManager().HandleEvent(e)
 }
 
@@ -218,15 +199,10 @@ func (e *DeactivateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeactivateClass) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
-
 	return ledger.GetArtifactManager().HandleEvent(e)
 }
 
@@ -251,15 +227,10 @@ func (e *UpdateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *UpdateClass) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
-
 	return ledger.GetArtifactManager().HandleEvent(e)
 }
 
@@ -284,15 +255,10 @@ func (e *ActivateObj) GetOperatingRole() core.JetRole {
 }
 
 func (e *ActivateObj) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
-
 	return ledger.GetArtifactManager().HandleEvent(e)
 }
 
@@ -317,15 +283,10 @@ func (e *ActivateObjDelegate) GetOperatingRole() core.JetRole {
 }
 
 func (e *ActivateObjDelegate) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
-
 	return ledger.GetArtifactManager().HandleEvent(e)
 }
 
@@ -348,15 +309,10 @@ func (e *DeactivateObj) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeactivateObj) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
-
 	return ledger.GetArtifactManager().HandleEvent(e)
 }
 
@@ -381,14 +337,9 @@ func (e *UpdateObj) GetOperatingRole() core.JetRole {
 }
 
 func (e *UpdateObj) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
+	ledger, err := getLedger(c)
+	if err != nil {
 		return nil, errors.New("EventBus assertion failed")
 	}
-
 	return ledger.GetArtifactManager().HandleEvent(e)
 }

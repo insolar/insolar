@@ -234,7 +234,7 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string, roleKey string) error {
+func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
 		return err
@@ -290,6 +290,14 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 	}
 
 	return checkResponse(hostHandler, future, targetID, request)
+}
+
+// SendRelayOwnership send a relay ownership request.
+func SendRelayOwnership(hostHandler hosthandler.HostHandler, subnetIDs []string) {
+	for _, id1 := range subnetIDs {
+		err := RelayOwnershipRequest(hostHandler, id1)
+		log.Errorln(err.Error())
+	}
 }
 
 func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future, targetID string, request *packet.Packet) error {
