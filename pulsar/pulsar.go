@@ -266,7 +266,9 @@ func (pulsar *Pulsar) SyncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pu
 func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber, generator EntropyGenerator) error {
 	pulsar.EntropyGenerationLock.Lock()
 
-	if pulsar.State > WaitingForTheStart {
+	if pulsar.State > WaitingForTheStart || pulseNumber < pulsar.ProcessingPulseNumber || pulseNumber < pulsar.LastPulse.PulseNumber {
+		pulsar.EntropyGenerationLock.Unlock()
+		log.Warn("Wrong state status or pulse number, state - %v, revcieved pulse - %v, last pulse - %v, processing pulse - %v", pulsar.State, pulseNumber, pulsar.LastPulse, pulsar.ProcessingPulseNumber)
 		return nil
 	}
 
@@ -276,6 +278,7 @@ func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber, genera
 		return err
 	}
 
+	pulsar.ProcessingPulseNumber = pulseNumber
 	pulsar.setStateTo(WaitingForTheSigns, nil)
 	go pulsar.BroadcastSignatureOfEntropy()
 
