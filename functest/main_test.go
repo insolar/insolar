@@ -425,7 +425,7 @@ func TestTooMuchParams(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"some_param": "irrelevant info",
-		"name":       testutils.RandomRef().String(),
+		"name":       testutils.RandomString(),
 	})
 
 	firstMemberResponse := &createMemberResponse{}
@@ -464,7 +464,7 @@ func TestWrongTypeInParams(t *testing.T) {
 // func TestWrongReferenceInParams(t *testing.T) {
 // 	body := getResponseBody(t, postParams{
 // 		"query_type": "get_balance",
-// 		"reference":  testutils.RandomRef().String(),
+// 		"reference":  testutils.RandomString(),
 // 	})
 //
 // 	response := &baseResponse{}

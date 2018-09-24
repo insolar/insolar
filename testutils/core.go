@@ -20,6 +20,7 @@ import (
 	"crypto/rand"
 
 	"github.com/insolar/insolar/core"
+	"github.com/satori/go.uuid"
 )
 
 // RandomRef generates random RecordRef
@@ -27,4 +28,10 @@ func RandomRef() core.RecordRef {
 	ref := [64]byte{}
 	rand.Read(ref[:]) // nolint
 	return ref
+}
+
+// RandomString generates random uuid and return it as string
+func RandomString() string {
+	newUUID, _ := uuid.NewV4()
+	return newUUID.String()
 }
