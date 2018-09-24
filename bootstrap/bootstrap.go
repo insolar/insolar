@@ -67,7 +67,7 @@ func getContractPath(name string) (string, error) {
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
-func CborInstance(contractIntance interface{}) ([]byte, error) {
+func serializeInstance(contractIntance interface{}) ([]byte, error) {
 	var instanceData []byte
 
 	ch := new(codec.CborHandle)
@@ -82,7 +82,7 @@ func CborInstance(contractIntance interface{}) ([]byte, error) {
 }
 
 func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
-	instanceData, err := CborInstance(rootdomain.NewRootDomain())
+	instanceData, err := serializeInstance(rootdomain.NewRootDomain())
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
@@ -102,7 +102,7 @@ func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.
 }
 
 func (b *Bootstrapper) ActivateNodeDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
-	instanceData, err := CborInstance(nodedomain.NewNodeDomain())
+	instanceData, err := serializeInstance(nodedomain.NewNodeDomain())
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
