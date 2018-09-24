@@ -19,14 +19,20 @@ package noderecord
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNodeRecord(t *testing.T) {
 	const TestPubKey = "test"
-	const TestRole = core.RoleHeavyExecutor
+	const TestRole = "virtual"
+	r := GetRoleFromString(TestRole)
+	assert.NotEqual(t, RoleUnknown, r)
 	record := NewNodeRecord(TestPubKey, TestRole)
-	assert.Equal(t, TestRole, record.Role)
+	assert.Equal(t, r, record.Role)
 	assert.Equal(t, TestPubKey, record.PublicKey)
+}
+
+func TestFromString(t *testing.T) {
+	role := GetRoleFromString("ZZZ")
+	assert.Equal(t, RoleUnknown, role)
 }

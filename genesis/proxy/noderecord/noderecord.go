@@ -5,6 +5,7 @@ import (
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
+type NodeRole int
 
 
 // ClassReference to class of this contract
@@ -53,10 +54,10 @@ func GetImplementationFrom(object core.RecordRef) *NodeRecord {
 }
 
 
-func NewNodeRecord( pk string, role core.JetRole ) *ContractHolder {
+func NewNodeRecord( pk string, roleS string ) *ContractHolder {
     var args [2]interface{}
 	args[0] = pk
-	args[1] = role
+	args[1] = roleS
 
 
     var argsSerialized []byte

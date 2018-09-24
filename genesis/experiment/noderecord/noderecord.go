@@ -17,20 +17,48 @@
 package noderecord
 
 import (
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
+
+type NodeRole int
+
+const (
+	RoleUnknown = NodeRole(iota)
+	RoleVirtual
+	RoleHeavyMaterial
+	RoleLightMaterial
+)
+
+func GetRoleFromString(role string) NodeRole {
+	switch role {
+	case "virtual":
+		return RoleVirtual
+	case "heavy_material":
+		return RoleHeavyMaterial
+	case "light_material":
+		return RoleLightMaterial
+	}
+
+	return RoleUnknown
+}
 
 // NodeRecord contains info about node
 type NodeRecord struct {
 	foundation.BaseContract
 
 	PublicKey string
-	Role      core.JetRole
+	Role      NodeRole
 }
 
 // New creates new NodeRecord
-func NewNodeRecord(pk string, role core.JetRole) *NodeRecord {
+func NewNodeRecord(pk string, roleS string) *NodeRecord {
+
+	role := GetRoleFromString(roleS)
+	if role == RoleUnknown {
+		// TODO: return error
+		panic("Can't unsupported role")
+	}
+
 	return &NodeRecord{
 		PublicKey: pk,
 		Role:      role,
@@ -38,6 +66,6 @@ func NewNodeRecord(pk string, role core.JetRole) *NodeRecord {
 }
 
 // SelfDestroy makes request to destroy current node record
-func (rr *NodeRecord) Destroy() {
-	rr.SelfDestructRequest()
+func (nr *NodeRecord) Destroy() {
+	nr.SelfDestructRequest()
 }

@@ -84,7 +84,7 @@ func (r *NodeDomain) GetClass() core.RecordRef {
 }
 
 
-func (r *NodeDomain) RegisterNode( pk string, role core.JetRole ) ( core.RecordRef ) {
+func (r *NodeDomain) RegisterNode( pk string, role string ) ( core.RecordRef ) {
     var args [2]interface{}
 	args[0] = pk
 	args[1] = role
@@ -113,7 +113,7 @@ func (r *NodeDomain) RegisterNode( pk string, role core.JetRole ) ( core.RecordR
     return resList[0].(core.RecordRef)
 }
 
-func (r *NodeDomain) RegisterNodeNoWait( pk string, role core.JetRole ) {
+func (r *NodeDomain) RegisterNodeNoWait( pk string, role string ) {
     var args [2]interface{}
 	args[0] = pk
 	args[1] = role
