@@ -130,4 +130,19 @@ func Deserialize(buff io.Reader) (core.Event, error) {
 func init() {
 	gob.Register(&CallConstructorEvent{})
 	gob.Register(&CallMethodEvent{})
+
+	// Ledger
+	gob.Register(&GetCode{})
+	gob.Register(&GetClass{})
+	gob.Register(&GetObject{})
+	gob.Register(&GetDelegate{})
+	gob.Register(&DeclareType{})
+	gob.Register(&DeployCode{})
+	gob.Register(&ActivateClass{})
+	gob.Register(&DeactivateClass{})
+	gob.Register(&UpdateClass{})
+	gob.Register(&ActivateObject{})
+	gob.Register(&ActivateObjectDelegate{})
+	gob.Register(&DeactivateObject{})
+	gob.Register(&UpdateObject{})
 }

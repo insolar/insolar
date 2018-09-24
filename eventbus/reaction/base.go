@@ -99,4 +99,9 @@ func Deserialize(buff io.Reader) (core.Reaction, error) {
 func init() {
 	gob.Register(&CommonReaction{})
 	gob.Register(&ObjectBodyReaction{})
+	gob.Register(&Code{})
+	gob.Register(&Class{})
+	gob.Register(&Object{})
+	gob.Register(&Delegate{})
+	gob.Register(&Reference{})
 }
