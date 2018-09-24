@@ -16,14 +16,7 @@
 
 package core
 
-import (
-	"github.com/prometheus/client_golang/prometheus"
-)
-
-// Metrics management interface.
+// Metrics management component.
 type Metrics interface {
-	// AddCounter adds new counter to metrics registry.
-	AddCounter(name, componentName, help string) (prometheus.Counter, error)
-	// AddGauge adds new gauge to metrics registry.
-	AddGauge(name, componentName, help string) (prometheus.Gauge, error)
+	Component
 }
