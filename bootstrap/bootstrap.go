@@ -67,12 +67,12 @@ func getContractPath(name string) (string, error) {
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
-func serializeInstance(contractIntance interface{}) ([]byte, error) {
+func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	var instanceData []byte
 
 	ch := new(codec.CborHandle)
 	err := codec.NewEncoderBytes(&instanceData, ch).Encode(
-		rootdomain.NewRootDomain(),
+		contractInstance,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ CborInstance ] Problem with CBORing")
