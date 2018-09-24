@@ -31,6 +31,12 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
+const (
+	nodeDomain = "nodedomain"
+	nodeRecord = "noderecord"
+	rootDomain = "rootdomain"
+)
+
 // Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
@@ -69,7 +75,7 @@ func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.
 		rootdomain.NewRootDomain(),
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] ActivateRootDomain. Problem with CBORing")
+		return errors.Wrap(err, "[ ActivateRootDomain ] Problem with CBORing")
 	}
 
 	contract, err := am.ActivateObj(
@@ -79,7 +85,7 @@ func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.
 		instanceData,
 	)
 	if contract == nil {
-		return errors.Wrap(err, "[Bootstrapper] couldn't create rootdomain instance")
+		return errors.Wrap(err, "[ActivateRootDomain] Couldn't create rootdomain instance")
 	}
 	b.rootDomainRef = contract
 
@@ -109,12 +115,6 @@ func (b *Bootstrapper) ActivateNodeDomain(am core.ArtifactManager, cb *testutil.
 
 	return nil
 }
-
-const (
-	nodeDomain = "nodedomain"
-	nodeRecord = "noderecord"
-	rootDomain = "rootdomain"
-)
 
 func (b *Bootstrapper) ActivateSmartContracts(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
 	err := b.ActivateRootDomain(am, cb)
