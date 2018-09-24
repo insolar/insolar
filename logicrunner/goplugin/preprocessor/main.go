@@ -19,6 +19,7 @@ package preprocessor
 import (
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -530,7 +531,7 @@ func RewriteContractPackage(p *ParsedFile, w io.Writer) {
 
 // GetRealGenesisDir return dir under genesis dir
 func GetRealGenesisDir(dir string) (string, error) {
-	gopath := os.Getenv("GOPATH")
+	gopath := build.Default.GOPATH //os.Getenv("GOPATH")
 	if gopath == "" {
 		return "", errors.Errorf("GOPATH is not set")
 	}
