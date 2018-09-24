@@ -47,13 +47,15 @@ type DHT struct {
 
 	origin *host.Origin
 
-	transport transport.Transport
-	store     store.Store
-	ncf       hosthandler.NetworkCommonFacade
-	relay     relay.Relay
-	proxy     relay.Proxy
-	auth      AuthInfo
-	subnet    Subnet
+	transport         transport.Transport
+	store             store.Store
+	ncf               hosthandler.NetworkCommonFacade
+	relay             relay.Relay
+	proxy             relay.Proxy
+	auth              AuthInfo
+	subnet            Subnet
+	timeout           int // bootstrap reconnect timeout
+	infinityBootstrap bool
 }
 
 // AuthInfo collects some information about authentication.
@@ -119,6 +121,8 @@ func NewDHT(
 	ncf hosthandler.NetworkCommonFacade,
 	options *Options,
 	proxy relay.Proxy,
+	timeout int,
+	infbootstrap bool,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -128,14 +132,16 @@ func NewDHT(
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		options:   options,
-		origin:    origin,
-		ncf:       ncf,
-		transport: transport,
-		tables:    tables,
-		store:     store,
-		relay:     rel,
-		proxy:     proxy,
+		options:           options,
+		origin:            origin,
+		ncf:               ncf,
+		transport:         transport,
+		tables:            tables,
+		store:             store,
+		relay:             rel,
+		proxy:             proxy,
+		timeout:           timeout,
+		infinityBootstrap: infbootstrap,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -250,41 +256,15 @@ func (dht *DHT) Listen() error {
 // BootstrapHosts.
 func (dht *DHT) Bootstrap() error {
 	if len(dht.options.BootstrapHosts) == 0 {
+		log.Info("empty bootstrap hosts")
 		return nil
 	}
-	var futures []transport.Future
-	wg := &sync.WaitGroup{}
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
-		futures = dht.iterateBootstrapHosts(ht, cb, wg, futures)
+		dht.iterateBootstrapHosts(ht, cb)
 	}
 
-	for _, f := range futures {
-		go func(future transport.Future) {
-			select {
-			case result := <-future.Result():
-				// If result is nil, channel was closed
-				if result != nil {
-					ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
-					// TODO: must return error here
-					if err != nil {
-						log.Fatal(err)
-					}
-					dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
-				}
-				wg.Done()
-				return
-			case <-time.After(dht.options.PacketTimeout):
-				log.Warnln("bootstrap response timeout")
-				future.Cancel()
-				wg.Done()
-				return
-			}
-		}(f)
-	}
-
-	wg.Wait()
 	return dht.iterateHt(cb)
 }
 
@@ -306,30 +286,68 @@ func (dht *DHT) iterateHt(cb ContextBuilder) error {
 func (dht *DHT) iterateBootstrapHosts(
 	ht *routing.HashTable,
 	cb ContextBuilder,
-	wg *sync.WaitGroup,
-	futures []transport.Future,
-) []transport.Future {
-	ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
-	if err != nil {
-		return futures
-	}
-	for _, bn := range dht.options.BootstrapHosts {
-		request := packet.NewPingPacket(ht.Origin, bn)
-
-		if bn.ID.Bytes() == nil {
-			res, err := dht.transport.SendRequest(request)
-			if err != nil {
-				continue
+) {
+	localwg := &sync.WaitGroup{}
+	log.Info("bootstrapping to each known hosts.")
+	for _, bh := range dht.options.BootstrapHosts {
+		localwg.Add(1)
+		go func(cb ContextBuilder, dht *DHT, bh *host.Host, ht *routing.HashTable, localwg *sync.WaitGroup) {
+			counter := 1
+			if dht.infinityBootstrap {
+				log.Info("do infinity mode bootstrap.")
+				for {
+					if dht.gotBootstrap(ht, bh, cb, localwg) {
+						return
+					}
+					if counter < dht.timeout {
+						counter = counter * 2
+					}
+					time.Sleep(time.Second * time.Duration(counter))
+				}
+			} else {
+				log.Info("do one time mode bootstrap.")
+				if !dht.gotBootstrap(ht, bh, cb, localwg) {
+					localwg.Done()
+				}
 			}
-			log.Debugln("sending ping to " + bn.Address.String())
-			wg.Add(1)
-			futures = append(futures, res)
-		} else {
-			routeHost := routing.NewRouteHost(bn)
-			dht.AddHost(ctx, routeHost)
-		}
+		}(cb, dht, bh, ht, localwg)
 	}
-	return futures
+	localwg.Wait()
+}
+
+func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBuilder, localwg *sync.WaitGroup) bool {
+	request := packet.NewPingPacket(ht.Origin, bh)
+	if bh.ID.Bytes() == nil {
+		log.Info("sending ping request")
+		res, err := dht.transport.SendRequest(request)
+		if err != nil {
+			log.Error(err)
+		} else {
+			result := <-res.Result()
+			log.Info("checking response")
+			if res != nil {
+				ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
+				if err != nil {
+					log.Error(err)
+				}
+				dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
+			}
+			localwg.Done()
+			return true
+		}
+	} else {
+		log.Info("bootstrap host known. creating new route host.")
+		routeHost := routing.NewRouteHost(bh)
+		ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
+		if err != nil {
+			log.Error("failed to create a context")
+			return false
+		}
+		dht.AddHost(ctx, routeHost)
+		localwg.Done()
+		return true
+	}
+	return false
 }
 
 // Disconnect will trigger a Stop from the network.
@@ -775,6 +793,7 @@ func (dht *DHT) ObtainIP() error {
 	return nil
 }
 
+// GetNetworkCommonFacade returns a networkcommonfacade ptr.
 func (dht *DHT) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
 	return dht.ncf
 }
