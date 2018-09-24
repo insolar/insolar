@@ -899,11 +899,9 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	err = dhts[1].CheckNodeRole("domain ID")
 	assert.NoError(t, err)
 
-	go func() {
-		for _, dht := range dhts {
-			dht.Disconnect()
-		}
-	}()
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
 
 	<-done
 }
