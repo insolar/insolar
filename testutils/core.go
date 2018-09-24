@@ -32,6 +32,9 @@ func RandomRef() core.RecordRef {
 
 // RandomString generates random uuid and return it as string
 func RandomString() string {
-	newUUID, _ := uuid.NewV4()
+	newUUID, err := uuid.NewV4()
+	if err != nil {
+		return ""
+	}
 	return newUUID.String()
 }
