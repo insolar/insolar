@@ -54,16 +54,6 @@ func NewServiceNetwork(
 		return nil, err
 	}
 
-	err = dht.ObtainIP()
-	if err != nil {
-		return nil, err
-	}
-
-	err = dht.AnalyzeNetwork(createContext(dht))
-	if err != nil {
-		return nil, err
-	}
-
 	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
 	f := func(data core.Cascade, method string, args [][]byte) error {
 		return service.initCascadeSendMessage(data, true, method, args)
@@ -147,8 +137,19 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
+
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
+
+	err := network.hostNetwork.ObtainIP()
+	if err != nil {
+		return err
+	}
+
+	err = network.hostNetwork.AnalyzeNetwork(createContext(network.hostNetwork))
+	if err != nil {
+		return err
+	}
 
 	pm, err := getPulseManager(components)
 	if err != nil {

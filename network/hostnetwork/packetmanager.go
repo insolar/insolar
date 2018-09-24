@@ -38,7 +38,7 @@ func BuildContext(cb ContextBuilder, msg *packet.Packet) hosthandler.Context {
 	}
 	if err != nil {
 		// TODO: Do something sane with error!
-		log.Debugln(err) // don't return this error cuz don't know what to do with
+		log.Error(err) // don't return this error cuz don't know what to do with
 	}
 	return ctx
 }
