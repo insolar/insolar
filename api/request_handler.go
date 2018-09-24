@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func extractCreateMemberResponse(data []byte) (*string, error) {
+func extractStringResponse(data []byte) (*string, error) {
 	var typeHolder string
 	refOrig, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
@@ -93,7 +93,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractCreateMemberResponse(routResult.(*reaction.CommonReaction).Result)
+	memberRef, err := extractStringResponse(routResult.(*reaction.CommonReaction).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -269,7 +269,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	memberRef, err := extractCreateMemberResponse(routResult.(*reaction.CommonReaction).Result)
+	memberRef, err := extractStringResponse(routResult.(*reaction.CommonReaction).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}

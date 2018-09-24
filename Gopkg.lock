@@ -393,12 +393,11 @@
   version = "v1.1"
 
 [[projects]]
-  digest = "1:03aa6e485e528acb119fb32901cf99582c380225fc7d5a02758e08b180cb56c3"
+  digest = "1:59a32808dc731a74dba0fefcac75c5b66ebeeeadae04538b95b81c986722ccaa"
   name = "github.com/ugorji/go"
   packages = ["codec"]
   pruneopts = "UT"
-  revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
-  version = "v1.1.1"
+  revision = "587a7e6ca264903eb19416288533bea8ff898ec0"
 
 [[projects]]
   digest = "1:6430cb8f5f61e9550411648f06f0bba8771c9b4b13ce8e5dc4b8ecb9236dcf3f"
