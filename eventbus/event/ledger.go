@@ -23,13 +23,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+func handleLedger(c core.Components, e core.Event) (core.Reaction, error) {
+	// TODO: replace with config struct
+	ledgerComponent, exists := c["core.Ledger"]
+	if !exists {
+		return nil, errors.New("no core.EventBus in components")
+	}
+	ledger, ok := ledgerComponent.(core.Ledger)
+	if !ok {
+		return nil, errors.New("EventBus assertion failed")
+	}
+
+	return ledger.HandleEvent(e)
+}
+
 type GetCode struct {
 	Code        core.RecordRef
 	MachinePref []core.MachineType
 }
 
 func (e *GetCode) Serialize() (io.Reader, error) {
-	return serialize(e, GetCodeType)
+	return serialize(e, TypeGetCode)
 }
 
 func (e *GetCode) GetReference() core.RecordRef {
@@ -41,71 +55,70 @@ func (e *GetCode) GetOperatingRole() core.JetRole {
 }
 
 func (e *GetCode) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-	return ledger.GetArtifactManager().HandleEvent(e)
+	return handleLedger(c, e)
 }
 
-type GetLatestClass struct {
-	Head core.RecordRef
+type GetClass struct {
+	Head  core.RecordRef
+	State *core.RecordRef // If nil, will fetch the latest state.
 }
 
-func (e *GetLatestClass) Serialize() (io.Reader, error) {
-	return serialize(e, GetLatestClassType)
+func (e *GetClass) Serialize() (io.Reader, error) {
+	return serialize(e, TypeGetClass)
 }
 
-func (e *GetLatestClass) GetReference() core.RecordRef {
+func (e *GetClass) GetReference() core.RecordRef {
 	return e.Head
 }
 
-func (e *GetLatestClass) GetOperatingRole() core.JetRole {
+func (e *GetClass) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *GetLatestClass) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-	return ledger.GetArtifactManager().HandleEvent(e)
+func (e *GetClass) React(c core.Components) (core.Reaction, error) {
+	return handleLedger(c, e)
 }
 
-type GetLatestObj struct {
-	Head core.RecordRef
+type GetObject struct {
+	Head  core.RecordRef
+	State *core.RecordRef // If nil, will fetch the latest state.
 }
 
-func (e *GetLatestObj) Serialize() (io.Reader, error) {
-	return serialize(e, GetLatestObjType)
+func (e *GetObject) Serialize() (io.Reader, error) {
+	return serialize(e, TypeGetObject)
 }
 
-func (e *GetLatestObj) GetReference() core.RecordRef {
+func (e *GetObject) GetReference() core.RecordRef {
 	return e.Head
 }
 
-func (e *GetLatestObj) GetOperatingRole() core.JetRole {
+func (e *GetObject) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *GetLatestObj) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-	return ledger.GetArtifactManager().HandleEvent(e)
+func (e *GetObject) React(c core.Components) (core.Reaction, error) {
+	return handleLedger(c, e)
+}
+
+type GetDelegate struct {
+	Head    core.RecordRef
+	AsClass core.RecordRef
+}
+
+func (e *GetDelegate) Serialize() (io.Reader, error) {
+	return serialize(e, TypeGetDelegate)
+}
+
+func (e *GetDelegate) GetReference() core.RecordRef {
+	return e.Head
+}
+
+func (e *GetDelegate) GetOperatingRole() core.JetRole {
+	return core.RoleLightExecutor
+}
+
+func (e *GetDelegate) React(c core.Components) (core.Reaction, error) {
+	return handleLedger(c, e)
 }
 
 type DeclareType struct {
@@ -115,7 +128,7 @@ type DeclareType struct {
 }
 
 func (e *DeclareType) Serialize() (io.Reader, error) {
-	return serialize(e, DeclareTypeType)
+	return serialize(e, TypeDeclareType)
 }
 
 func (e *DeclareType) GetReference() core.RecordRef {
@@ -127,15 +140,7 @@ func (e *DeclareType) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeclareType) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-	return ledger.GetArtifactManager().HandleEvent(e)
+	return handleLedger(c, e)
 }
 
 type DeployCode struct {
@@ -145,10 +150,11 @@ type DeployCode struct {
 }
 
 func (e *DeployCode) Serialize() (io.Reader, error) {
-	return serialize(e, DeployCodeType)
+	return serialize(e, TypeDeployCode)
 }
 
 func (e *DeployCode) GetReference() core.RecordRef {
+	// XXX: ?
 	return e.Request
 }
 
@@ -157,16 +163,7 @@ func (e *DeployCode) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeployCode) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.GetArtifactManager().HandleEvent(e)
+	return handleLedger(c, e)
 }
 
 type ActivateClass struct {
@@ -175,10 +172,11 @@ type ActivateClass struct {
 }
 
 func (e *ActivateClass) Serialize() (io.Reader, error) {
-	return serialize(e, ActivateClassType)
+	return serialize(e, TypeActivateClass)
 }
 
 func (e *ActivateClass) GetReference() core.RecordRef {
+	// XXX: ?
 	return e.Request
 }
 
@@ -187,16 +185,7 @@ func (e *ActivateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *ActivateClass) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.GetArtifactManager().HandleEvent(e)
+	return handleLedger(c, e)
 }
 
 type DeactivateClass struct {
@@ -206,7 +195,7 @@ type DeactivateClass struct {
 }
 
 func (e *DeactivateClass) Serialize() (io.Reader, error) {
-	return serialize(e, DeactivateClassType)
+	return serialize(e, TypeDeactivateClass)
 }
 
 func (e *DeactivateClass) GetReference() core.RecordRef {
@@ -218,31 +207,23 @@ func (e *DeactivateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeactivateClass) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.GetArtifactManager().HandleEvent(e)
+	return handleLedger(c, e)
 }
 
 type UpdateClass struct {
-	Domain        core.RecordRef
-	Request       core.RecordRef
-	Class         core.RecordRef
-	Code          core.RecordRef
-	MigrationRefs []core.RecordRef
+	Domain     core.RecordRef
+	Request    core.RecordRef
+	Class      core.RecordRef
+	Code       core.RecordRef
+	Migrations []core.RecordRef
 }
 
 func (e *UpdateClass) Serialize() (io.Reader, error) {
-	return serialize(e, UpdateClassType)
+	return serialize(e, TypeUpdateClass)
 }
 
 func (e *UpdateClass) GetReference() core.RecordRef {
+	// XXX: or Code ?
 	return e.Class
 }
 
@@ -251,19 +232,10 @@ func (e *UpdateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *UpdateClass) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.GetArtifactManager().HandleEvent(e)
+	return handleLedger(c, e)
 }
 
-type ActivateObj struct {
+type ActivateObject struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Class   core.RecordRef
@@ -271,32 +243,23 @@ type ActivateObj struct {
 	Memory  []byte
 }
 
-func (e *ActivateObj) Serialize() (io.Reader, error) {
-	return serialize(e, ActivateObjType)
+func (e *ActivateObject) Serialize() (io.Reader, error) {
+	return serialize(e, TypeActivateObject)
 }
 
-func (e *ActivateObj) GetReference() core.RecordRef {
+func (e *ActivateObject) GetReference() core.RecordRef {
 	return e.Class
 }
 
-func (e *ActivateObj) GetOperatingRole() core.JetRole {
+func (e *ActivateObject) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *ActivateObj) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.GetArtifactManager().HandleEvent(e)
+func (e *ActivateObject) React(c core.Components) (core.Reaction, error) {
+	return handleLedger(c, e)
 }
 
-type ActivateObjDelegate struct {
+type ActivateObjectDelegate struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Class   core.RecordRef
@@ -304,91 +267,64 @@ type ActivateObjDelegate struct {
 	Memory  []byte
 }
 
-func (e *ActivateObjDelegate) Serialize() (io.Reader, error) {
-	return serialize(e, ActivateObjDelegateType)
+func (e *ActivateObjectDelegate) Serialize() (io.Reader, error) {
+	return serialize(e, TypeActivateObjectDelegate)
 }
 
-func (e *ActivateObjDelegate) GetReference() core.RecordRef {
+func (e *ActivateObjectDelegate) GetReference() core.RecordRef {
 	return e.Class
 }
 
-func (e *ActivateObjDelegate) GetOperatingRole() core.JetRole {
+func (e *ActivateObjectDelegate) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *ActivateObjDelegate) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.GetArtifactManager().HandleEvent(e)
+func (e *ActivateObjectDelegate) React(c core.Components) (core.Reaction, error) {
+	return handleLedger(c, e)
 }
 
-type DeactivateObj struct {
+type DeactivateObject struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
-	Obj     core.RecordRef
+	Object  core.RecordRef
 }
 
-func (e *DeactivateObj) Serialize() (io.Reader, error) {
-	return serialize(e, DeactivateObjType)
+func (e *DeactivateObject) Serialize() (io.Reader, error) {
+	return serialize(e, TypeDeactivateObject)
 }
 
-func (e *DeactivateObj) GetReference() core.RecordRef {
-	return e.Obj
+func (e *DeactivateObject) GetReference() core.RecordRef {
+	return e.Object
 }
 
-func (e *DeactivateObj) GetOperatingRole() core.JetRole {
+func (e *DeactivateObject) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *DeactivateObj) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.GetArtifactManager().HandleEvent(e)
+func (e *DeactivateObject) React(c core.Components) (core.Reaction, error) {
+	return handleLedger(c, e)
 }
 
-// UpdateObj event for call of core.ArtifactManager.UpdateObj
-type UpdateObj struct {
+// UpdateObject event for call of core.ArtifactManager.UpdateObj
+type UpdateObject struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
-	Obj     core.RecordRef
+	Object  core.RecordRef
 	Memory  []byte
 }
 
-func (e *UpdateObj) Serialize() (io.Reader, error) {
-	return serialize(e, UpdateObjType)
+func (e *UpdateObject) Serialize() (io.Reader, error) {
+	return serialize(e, TypeUpdateObject)
 }
 
-func (e *UpdateObj) GetReference() core.RecordRef {
-	return e.Obj
+func (e *UpdateObject) GetReference() core.RecordRef {
+	return e.Object
 }
 
-func (e *UpdateObj) GetOperatingRole() core.JetRole {
+func (e *UpdateObject) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *UpdateObj) React(c core.Components) (core.Reaction, error) {
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.GetArtifactManager().HandleEvent(e)
+func (e *UpdateObject) React(c core.Components) (core.Reaction, error) {
+	return handleLedger(c, e)
 }
