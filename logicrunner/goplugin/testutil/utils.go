@@ -135,18 +135,13 @@ func (t *TestCodeDescriptor) Ref() *core.RecordRef {
 }
 
 // MachineType implementation for tests
-func (t *TestCodeDescriptor) MachineType() (core.MachineType, error) {
-	return t.AMachineType, nil
+func (t *TestCodeDescriptor) MachineType() core.MachineType {
+	return t.AMachineType
 }
 
 // Code implementation for tests
-func (t *TestCodeDescriptor) Code() ([]byte, error) {
-	return t.ACode, nil
-}
-
-// Validate checks code record integrity.
-func (t *TestCodeDescriptor) Validate() error {
-	return nil
+func (t *TestCodeDescriptor) Code() []byte {
+	return t.ACode
 }
 
 // TestClassDescriptor ...
@@ -162,13 +157,8 @@ func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
 }
 
 // StateRef ...
-func (t *TestClassDescriptor) StateRef() (*core.RecordRef, error) {
+func (t *TestClassDescriptor) StateRef() *core.RecordRef {
 	panic("not implemented")
-}
-
-// IsActive checks if class is active.
-func (t *TestClassDescriptor) IsActive() (bool, error) {
-	return true, nil
 }
 
 // CodeDescriptor ...
@@ -182,11 +172,12 @@ func (t *TestClassDescriptor) CodeDescriptor(machinePref []core.MachineType) (co
 
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
-	AM        *TestArtifactManager
-	Data      []byte
-	Code      *core.RecordRef
-	Class     *core.RecordRef
-	Delegates map[core.RecordRef]core.RecordRef
+	AM                *TestArtifactManager
+	Data              []byte
+	Code              *core.RecordRef
+	Class             *core.RecordRef
+	Delegates         map[core.RecordRef]core.RecordRef
+	ChildrenContainer []core.RecordRef
 }
 
 // HeadRef implementation for tests
@@ -195,18 +186,18 @@ func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
 }
 
 // StateRef implementation for tests
-func (t *TestObjectDescriptor) StateRef() (*core.RecordRef, error) {
+func (t *TestObjectDescriptor) StateRef() *core.RecordRef {
 	panic("not implemented")
 }
 
-// IsActive checks if object is active.
-func (t *TestObjectDescriptor) IsActive() (bool, error) {
-	return true, nil
+// Memory implementation for tests
+func (t *TestObjectDescriptor) Memory() []byte {
+	return t.Data
 }
 
-// Memory implementation for tests
-func (t *TestObjectDescriptor) Memory() ([]byte, error) {
-	return t.Data, nil
+// Children implementation for tests
+func (t *TestObjectDescriptor) Children() core.RefIterator {
+	panic("not implemented")
 }
 
 // ClassDescriptor implementation for tests
@@ -248,23 +239,8 @@ func (t *TestArtifactManager) Stop() error { return nil }
 // RootRef implementation for tests
 func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef{} }
 
-// HandleEvent implementation for tests
-func (t *TestArtifactManager) HandleEvent(event core.Event) (core.Reaction, error) {
-	panic("TestArtifactManager.HandleEvent: implement me")
-}
-
-// SetArchPref implementation for tests
-func (t *TestArtifactManager) SetArchPref(pref []core.MachineType) {
-	t.Types = pref
-}
-
-// GetExactObj implementation for tests
-func (t *TestArtifactManager) GetExactObj(class core.RecordRef, object core.RecordRef) ([]byte, []byte, error) {
-	panic("not implemented")
-}
-
-// GetLatestClass implementation for tests
-func (t *TestArtifactManager) GetLatestClass(object core.RecordRef) (core.ClassDescriptor, error) {
+// GetClass implementation for tests
+func (t *TestArtifactManager) GetClass(object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
 	res, ok := t.Classes[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -272,8 +248,8 @@ func (t *TestArtifactManager) GetLatestClass(object core.RecordRef) (core.ClassD
 	return res, nil
 }
 
-// GetLatestObj implementation for tests
-func (t *TestArtifactManager) GetLatestObj(object core.RecordRef) (core.ObjectDescriptor, error) {
+// GetObject implementation for tests
+func (t *TestArtifactManager) GetObject(object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -281,13 +257,8 @@ func (t *TestArtifactManager) GetLatestObj(object core.RecordRef) (core.ObjectDe
 	return res, nil
 }
 
-// GetObjChildren implementation for tests
-func (t *TestArtifactManager) GetObjChildren(head core.RecordRef) (core.RefIterator, error) {
-	panic("not implemented")
-}
-
-// GetObjDelegate implementation for tests
-func (t *TestArtifactManager) GetObjDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+// GetDelegate implementation for tests
+func (t *TestArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
 	obj, ok := t.Objects[head]
 	if !ok {
 		return nil, errors.New("No object")
@@ -321,7 +292,7 @@ func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.Rec
 }
 
 // GetCode implementation for tests
-func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
+func (t *TestArtifactManager) GetCode(code core.RecordRef, machinePref []core.MachineType) (core.CodeDescriptor, error) {
 	res, ok := t.Codes[code]
 	if !ok {
 		return nil, errors.New("No code")
@@ -369,8 +340,8 @@ func randomRef() (*core.RecordRef, error) {
 	return &ref, nil
 }
 
-// ActivateObj implementation for tests
-func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
+// ActivateObject implementation for tests
+func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
 	codeRef := t.Classes[class].ACode
 
 	ref, err := randomRef()
@@ -388,9 +359,9 @@ func (t *TestArtifactManager) ActivateObj(domain core.RecordRef, request core.Re
 	return ref, nil
 }
 
-// ActivateObjDelegate implementation for tests
-func (t *TestArtifactManager) ActivateObjDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	ref, err := t.ActivateObj(domain, request, class, parent, memory)
+// ActivateObjectDelegate implementation for tests
+func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
+	ref, err := t.ActivateObject(domain, request, class, parent, memory)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to generate ref")
 	}
@@ -404,13 +375,13 @@ func (t *TestArtifactManager) ActivateObjDelegate(domain, request, class, parent
 	return ref, nil
 }
 
-// DeactivateObj implementation for tests
-func (t *TestArtifactManager) DeactivateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordRef, error) {
+// DeactivateObject implementation for tests
+func (t *TestArtifactManager) DeactivateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
-// UpdateObj implementation for tests
-func (t *TestArtifactManager) UpdateObj(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
+// UpdateObject implementation for tests
+func (t *TestArtifactManager) UpdateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
 	objDesc, ok := t.Objects[obj]
 	if !ok {
 		return nil, errors.New("No object to update")
@@ -562,7 +533,6 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 		cb.Codes[name] = code
 
-		cb.ArtifactManager.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 		_, err = cb.ArtifactManager.UpdateClass(
 			core.RecordRef{}, core.RecordRef{},
 			*cb.Classes[name],

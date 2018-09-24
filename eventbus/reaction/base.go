@@ -36,8 +36,12 @@ const (
 	CommonReactionType
 	// ObjectBodyReactionType - reaction with body, class reference, code reference ...
 	ObjectBodyReactionType
-	// TypeCode - retrieve code from storage.
-	TypeCode
+
+	TypeCode      // TypeCode - code from storage.
+	TypeClass     // TypeClass - class from storage.
+	TypeObject    // TypeObject - object from storage.
+	TypeDelegate  // TypeDelegate - delegate reference from storage.
+	TypeReference // TypeReference - common reaction for methods returning reference to created records.
 )
 
 func getEmptyReaction(t Type) (core.Reaction, error) {
@@ -48,6 +52,16 @@ func getEmptyReaction(t Type) (core.Reaction, error) {
 		return &CommonReaction{}, nil
 	case ObjectBodyReactionType:
 		return &ObjectBodyReaction{}, nil
+	case TypeCode:
+		return &Code{}, nil
+	case TypeClass:
+		return &Class{}, nil
+	case TypeObject:
+		return &Object{}, nil
+	case TypeDelegate:
+		return &Delegate{}, nil
+	case TypeReference:
+		return &Reference{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reaction type: '%d'", t)
 	}
@@ -85,4 +99,9 @@ func Deserialize(buff io.Reader) (core.Reaction, error) {
 func init() {
 	gob.Register(&CommonReaction{})
 	gob.Register(&ObjectBodyReaction{})
+	gob.Register(&Code{})
+	gob.Register(&Class{})
+	gob.Register(&Object{})
+	gob.Register(&Delegate{})
+	gob.Register(&Reference{})
 }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -63,12 +63,13 @@ func getContractPath(name string) (string, error) {
 func (b *Bootstrapper) Start(c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 
-	rootRefChildren, err := am.GetObjChildren(*am.RootRef())
+	rootObj, err := am.GetObject(*am.RootRef(), nil)
 	if err != nil {
 		return errors.Wrap(err, "[Bootstrapper] couldn't get children of RootRef object")
 	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
+	i := rootObj.Children()
+	if i.HasNext() {
+		rootDomainRef, err := i.Next()
 		if err != nil {
 			return errors.Wrap(err, "[Bootstrapper] couldn't get next child of RootRef object")
 		}
@@ -127,7 +128,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper: Start ]")
 	}
 
-	contract, err := am.ActivateObj(
+	contract, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["rootdomain"],
 		*am.RootRef(),
