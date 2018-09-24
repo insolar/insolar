@@ -184,11 +184,10 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 }
 
 func (ar *Runner) reloadEventBus(c core.Components) {
-	_, ok := c["core.EventBus"]
-	if !ok {
+	if c.EventBus == nil {
 		log.Warn("Working in demo mode: without EventBus")
 	} else {
-		ar.eventBus = c["core.EventBus"].(core.EventBus)
+		ar.eventBus = c.EventBus
 	}
 }
 
@@ -197,7 +196,7 @@ func (ar *Runner) Start(c core.Components) error {
 
 	ar.reloadEventBus(c)
 
-	rootDomainReference := c["core.Bootstrapper"].(core.Bootstrapper).GetRootDomainRef()
+	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
 
 	fw := wrapAPIV1Handler(ar.eventBus, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
