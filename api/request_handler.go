@@ -31,7 +31,7 @@ func extractStringResponse(data []byte) (*string, error) {
 	var typeHolder string
 	refOrig, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ extractCreateMemberResponse ]")
+		return nil, errors.Wrap(err, "[ extractStringResponse ]")
 	}
 
 	reference, ok := refOrig[0].(string)
