@@ -62,8 +62,8 @@ func TestNew(t *testing.T) {
 	assert.NoError(t, err)
 	eb, err := New(configuration.Configuration{})
 	eb.Start(core.Components{
-		"core.LogicRunner": r,
-		"core.Network":     network,
+		LogicRunner: r,
+		Network:     network,
 	})
 	if err != nil {
 		t.Fatal(err)
