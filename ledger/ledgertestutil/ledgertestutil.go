@@ -47,7 +47,7 @@ func (m *eventBusMock) Dispatch(e core.Event) (core.Reaction, error) {
 }
 
 func (m *eventBusMock) DispatchAsync(e core.Event) {
-	_, _ = m.handler.Handle(e)
+	m.handler.Handle(e) // nolint
 }
 
 // TmpLedger crteates ledger on top of temporary database.
