@@ -269,12 +269,12 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	memberRef, err := extractStringResponse(routResult.(*reaction.CommonReaction).Result)
+	nodeRef, err := extractStringResponse(routResult.(*reaction.CommonReaction).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	result["reference"] = memberRef
+	result["reference"] = nodeRef
 
 	return result, nil
 
