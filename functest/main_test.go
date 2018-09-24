@@ -92,7 +92,7 @@ func buildGinsiderCLI() error {
 
 func waitForLaunch(stdout io.ReadCloser) error {
 	done := make(chan bool, 1)
-	timeout := 70 * time.Second
+	timeout := 30 * time.Second
 
 	go func() {
 		scanner := bufio.NewScanner(stdout)
@@ -383,6 +383,20 @@ func TestGetRequest(t *testing.T) {
 
 	assert.Equal(t, api.BadRequest, getResponse.Err.Code)
 	assert.Equal(t, "Bad request", getResponse.Err.Event)
+}
+
+func TestWrongJson(t *testing.T) {
+	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, postResp.StatusCode)
+	body, err := ioutil.ReadAll(postResp.Body)
+	assert.NoError(t, err)
+
+	response := &baseResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Event)
 }
 
 func TestWrongQueryType(t *testing.T) {
