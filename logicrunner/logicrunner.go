@@ -50,9 +50,9 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(c core.Components) error {
-	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
+	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
-	eventBus := c["core.EventBus"].(core.EventBus)
+	eventBus := c.EventBus
 	lr.EventBus = eventBus
 
 	if lr.Cfg.BuiltIn != nil {

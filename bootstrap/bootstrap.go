@@ -61,7 +61,7 @@ func getContractPath(name string) (string, error) {
 
 // Start creates types and RootDomain instance
 func (b *Bootstrapper) Start(c core.Components) error {
-	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
+	am := c.Ledger.GetArtifactManager()
 
 	rootObj, err := am.GetObject(*am.RootRef(), nil)
 	if err != nil {
@@ -77,14 +77,14 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return nil
 	}
 
-	jc := c["core.Ledger"].(core.Ledger).GetJetCoordinator()
-	pm := c["core.Ledger"].(core.Ledger).GetPulseManager()
+	jc := c.Ledger.GetJetCoordinator()
+	pm := c.Ledger.GetPulseManager()
 	currentPulse, err := pm.Current()
 	if err != nil {
 		return errors.Wrap(err, "[Bootstrapper] couldn't get current pulse")
 	}
 
-	network := c["core.Network"].(core.Network)
+	network := c.Network
 	nodeID := network.GetNodeID()
 
 	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)

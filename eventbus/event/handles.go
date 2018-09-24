@@ -18,13 +18,8 @@ package event
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 func logicRunnerHandle(e core.Event, c core.Components) (core.Reaction, error) {
-	lr, ok := c["core.LogicRunner"].(core.LogicRunner)
-	if !ok {
-		return nil, errors.New("could not find logic runner")
-	}
-	return lr.Execute(e)
+	return c.LogicRunner.Execute(e)
 }

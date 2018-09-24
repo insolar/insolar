@@ -72,7 +72,7 @@ func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 
 	// Init components.
 	eb := eventBusMock{handler: handler}
-	components := core.Components{"core.EventBus": &eb}
+	components := core.Components{EventBus: &eb}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)

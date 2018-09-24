@@ -20,22 +20,7 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
-
-func handleLedger(c core.Components, e core.Event) (core.Reaction, error) {
-	// TODO: replace with config struct
-	ledgerComponent, exists := c["core.Ledger"]
-	if !exists {
-		return nil, errors.New("no core.EventBus in components")
-	}
-	ledger, ok := ledgerComponent.(core.Ledger)
-	if !ok {
-		return nil, errors.New("EventBus assertion failed")
-	}
-
-	return ledger.HandleEvent(e)
-}
 
 type GetCode struct {
 	Code        core.RecordRef
@@ -55,7 +40,7 @@ func (e *GetCode) GetOperatingRole() core.JetRole {
 }
 
 func (e *GetCode) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type GetClass struct {
@@ -76,7 +61,7 @@ func (e *GetClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *GetClass) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type GetObject struct {
@@ -97,7 +82,7 @@ func (e *GetObject) GetOperatingRole() core.JetRole {
 }
 
 func (e *GetObject) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type GetDelegate struct {
@@ -118,7 +103,7 @@ func (e *GetDelegate) GetOperatingRole() core.JetRole {
 }
 
 func (e *GetDelegate) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type DeclareType struct {
@@ -140,7 +125,7 @@ func (e *DeclareType) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeclareType) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type DeployCode struct {
@@ -163,7 +148,7 @@ func (e *DeployCode) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeployCode) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type ActivateClass struct {
@@ -185,7 +170,7 @@ func (e *ActivateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *ActivateClass) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type DeactivateClass struct {
@@ -207,7 +192,7 @@ func (e *DeactivateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeactivateClass) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type UpdateClass struct {
@@ -223,7 +208,6 @@ func (e *UpdateClass) Serialize() (io.Reader, error) {
 }
 
 func (e *UpdateClass) GetReference() core.RecordRef {
-	// XXX: or Code ?
 	return e.Class
 }
 
@@ -232,7 +216,7 @@ func (e *UpdateClass) GetOperatingRole() core.JetRole {
 }
 
 func (e *UpdateClass) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type ActivateObject struct {
@@ -256,7 +240,7 @@ func (e *ActivateObject) GetOperatingRole() core.JetRole {
 }
 
 func (e *ActivateObject) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type ActivateObjectDelegate struct {
@@ -280,7 +264,7 @@ func (e *ActivateObjectDelegate) GetOperatingRole() core.JetRole {
 }
 
 func (e *ActivateObjectDelegate) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 type DeactivateObject struct {
@@ -302,7 +286,7 @@ func (e *DeactivateObject) GetOperatingRole() core.JetRole {
 }
 
 func (e *DeactivateObject) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }
 
 // UpdateObject event for call of core.ArtifactManager.UpdateObj
@@ -326,5 +310,5 @@ func (e *UpdateObject) GetOperatingRole() core.JetRole {
 }
 
 func (e *UpdateObject) React(c core.Components) (core.Reaction, error) {
-	return handleLedger(c, e)
+	return c.Ledger.HandleEvent(e)
 }

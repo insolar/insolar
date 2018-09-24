@@ -20,8 +20,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/reaction"
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -37,16 +35,7 @@ func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
 }
 
 func (m *LedgerArtifactManager) Link(components core.Components) error {
-	busComponent, exists := components["core.EventBus"]
-	if !exists {
-		return errors.New("no core.EventBus in components")
-	}
-	eventBus, ok := busComponent.(core.EventBus)
-	if !ok {
-		return errors.New("EventBus assertion failed")
-	}
-
-	m.eventBus = eventBus
+	m.eventBus = components.EventBus
 
 	return nil
 }

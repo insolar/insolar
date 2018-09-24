@@ -55,8 +55,8 @@ func TestGoPlugin(t *testing.T) {
 	lr.ArtifactManager = l.GetArtifactManager()
 	eb := testutil.NewTestEventBus(lr)
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": eb,
+		Ledger:   l,
+		EventBus: eb,
 	}), "starting logicrunner")
 
 	insiderStorage, err := ioutil.TempDir("", "test-")
