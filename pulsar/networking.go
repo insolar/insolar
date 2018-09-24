@@ -32,7 +32,7 @@ const (
 	Handshake                  RequestType = "Pulsar.MakeHandshake"
 	GetLastPulseNumber         RequestType = "Pulsar.SyncLastPulseWithNeighbour"
 	ReceiveSignatureForEntropy RequestType = "Pulsar.ReceiveSignatureForEntropy"
-	ReceiveEntropy             RequestType = "Pulsar.ReceiveEntropy"
+	ReceiveEntropy             RequestType = "Pulsar.ReceiveEntropy" // need to be implemented
 )
 
 func (state RequestType) String() string {

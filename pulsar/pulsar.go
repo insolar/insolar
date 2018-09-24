@@ -71,15 +71,19 @@ type Pulsar struct {
 }
 
 type BftCell struct {
-	Sign            []byte
-	Entropy         core.Entropy
-	EntropyRecieved bool
+	Sign              []byte
+	Entropy           core.Entropy
+	IsEntropyReceived bool
 }
 
 // Creation new pulsar-node
-func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarStorage, listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
+func NewPulsar(
+	configuration configuration.Pulsar,
+	storage pulsarstorage.PulsarStorage,
+	entropyGenerator EntropyGenerator,
+	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 	// Listen for incoming connections.
-	l, err := listener(configuration.ConnectionType.String(), configuration.ListenAddress)
+	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.ListenAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -89,13 +93,26 @@ func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarS
 	if err != nil {
 		return nil, err
 	}
-	pulsar := &Pulsar{Sock: l,
-		Neighbours:         map[string]*Neighbour{},
-		Storage:            storage,
-		PrivateKey:         privateKey,
-		SockConnectionType: configuration.ConnectionType,
-		State:              WaitingForTheStart,
+	pulsar := &Pulsar{
+		Sock:                  listenerImpl,
+		SockConnectionType:    configuration.ConnectionType,
+		Neighbours:            map[string]*Neighbour{},
+		PrivateKey:            privateKey,
+		Config:                configuration,
+		Storage:               storage,
+		EntropyGenerator:      entropyGenerator,
+		State:                 WaitingForTheStart,
+		EntropyGenerationLock: sync.Mutex{},
+		OwnedBftRow:           map[string]*BftCell{},
+		BftGrid:               map[string]map[string]*BftCell{},
 	}
+
+	lastPulse, err := storage.GetLastPulse()
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+	pulsar.LastPulse = lastPulse
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.ListOfNeighbours {
@@ -115,7 +132,9 @@ func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarS
 
 	gob.Register(Payload{})
 	gob.Register(HandshakePayload{})
-	//gob.Register(NumberSignaturePayload{})
+	gob.Register(GetLastPulsePayload{})
+	gob.Register(EntropySignaturePayload{})
+	gob.Register(EntropyPayload{})
 
 	return pulsar, nil
 }
@@ -381,7 +400,7 @@ func (pulsar *Pulsar) stateSwitchedWaitingForTheEntropy() {
 
 			entropyCount := 0
 			for _, item := range pulsar.OwnedBftRow {
-				if item.EntropyRecieved {
+				if item.IsEntropyReceived {
 					entropyCount++
 				}
 			}
