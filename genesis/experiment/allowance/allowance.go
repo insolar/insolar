@@ -38,10 +38,10 @@ func (a *Allowance) TakeAmount() uint {
 	//caller := a.GetContext().Caller
 	//if *caller == a.To && !a.IsExpired() {
 
-	a.SelfDestructRequest()
-	r := a.Amount
-	a.Amount = 0
-	return r
+		a.SelfDestructRequest()
+		r := a.Amount
+		a.Amount = 0
+		return r
 	//}
 	return 0
 }
