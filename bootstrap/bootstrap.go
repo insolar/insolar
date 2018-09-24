@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -50,7 +51,7 @@ var pathToContracts = "genesis/experiment/"
 func getContractPath(name string) (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
-		return "", errors.Wrap(nil, "couldn't find info about current file")
+		return "", errors.Wrap(nil, "[Bootstrapper] couldn't find info about current file")
 	}
 	rootDir := filepath.Dir(filepath.Dir(currentFile))
 	contractDir := filepath.Join(rootDir, pathToContracts)
@@ -64,12 +65,12 @@ func (b *Bootstrapper) Start(c core.Components) error {
 
 	rootRefChildren, err := am.GetObjChildren(*am.RootRef())
 	if err != nil {
-		return errors.Wrap(err, "couldn't get children of RootRef object")
+		return errors.Wrap(err, "[Bootstrapper] couldn't get children of RootRef object")
 	}
 	if rootRefChildren.HasNext() {
 		rootDomainRef, err := rootRefChildren.Next()
 		if err != nil {
-			return errors.Wrap(err, "couldn't get next child of RootRef object")
+			return errors.Wrap(err, "[Bootstrapper] couldn't get next child of RootRef object")
 		}
 		b.rootDomainRef = &rootDomainRef
 		return nil
@@ -79,7 +80,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 	pm := c["core.Ledger"].(core.Ledger).GetPulseManager()
 	currentPulse, err := pm.Current()
 	if err != nil {
-		return errors.Wrap(err, "couldn't get current pulse")
+		return errors.Wrap(err, "[Bootstrapper] couldn't get current pulse")
 	}
 
 	network := c["core.Network"].(core.Network)
@@ -87,31 +88,34 @@ func (b *Bootstrapper) Start(c core.Components) error {
 
 	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
 	if err != nil {
-		return errors.Wrap(err, "couldn't authorized node")
+		return errors.Wrap(err, "[Bootstrapper] couldn't authorized node")
 	}
 	if !isLightExecutor {
+		log.Info("[Bootstrapper] Is not light executor. Don't build contracts")
 		return nil
 	}
 
 	_, insgocc, err := testutil.Build()
 	if err != nil {
-		return errors.Wrap(err, "couldn't build insgocc")
+		return errors.Wrap(err, "[Bootstrapper] couldn't build insgocc")
 	}
+
 	cb := testutil.NewContractBuilder(am, insgocc)
 	defer cb.Clean()
 	var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
+	log.Info("[Bootstrapper] building contracts:", contractNames)
 	contracts := make(map[string]string)
 	for _, name := range contractNames {
 		contractPath, _ := getContractPath(name)
 		code, err := ioutil.ReadFile(contractPath)
 		if err != nil {
-			return errors.Wrap(err, "couldn't read contract: ")
+			return errors.Wrap(err, "[Bootstrapper] couldn't read contract: ")
 		}
 		contracts[name] = string(code)
 	}
 	err = cb.Build(contracts)
 	if err != nil {
-		return errors.Wrap(err, "couldn't build contracts")
+		return errors.Wrap(err, "[Bootstrapper] couldn't build contracts")
 	}
 	var data []byte
 
@@ -130,7 +134,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		data,
 	)
 	if contract == nil {
-		return errors.Wrap(err, "couldn't create rootdomain instance")
+		return errors.Wrap(err, "[Bootstrapper] couldn't create rootdomain instance")
 	}
 	b.rootDomainRef = contract
 
