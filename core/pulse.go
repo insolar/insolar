@@ -25,7 +25,7 @@ const (
 	EntropySize     = 64
 )
 
-// Entropy is 64 random bytes used in every pseudo-random calculations.
+// GeneratedEntropy is 64 random bytes used in every pseudo-random calculations.
 type Entropy [EntropySize]byte
 
 // PulseNumber is a sequential number of Pulse.

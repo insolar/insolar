@@ -121,6 +121,10 @@ func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) 
 }
 
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
+	if handler.pulsar.State == Failed {
+		return nil
+	}
+
 	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
 	if err != nil {
 		log.Warn("Message from unknown host %v - %v", request.PublicKey)
@@ -137,13 +141,9 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 
 	handler.pulsar.EntropyGenerationLock.Lock()
 	if handler.pulsar.State == Waiting {
-		handler.pulsar.State = EntropySignProcessing
 		err := handler.pulsar.GenerateEntropyWithSignature(handler.entropyGenerator)
 		if err != nil {
-			handler.pulsar.State = Failed
-			log.Error(err)
-			handler.pulsar.EntropyGenerationLock.Unlock()
-			return err
+			return handler.pulsar.failCurrentPulseProcess(err)
 		}
 
 		go handler.pulsar.BroadcastSignatureOfEntropy()

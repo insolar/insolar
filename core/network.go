@@ -20,7 +20,7 @@ package core
 type Cascade struct {
 	// NodeIds contains the slice of node identifiers that will receive the event
 	NodeIds []RecordRef
-	// Entropy is used for pseudorandom cascade building
+	// GeneratedEntropy is used for pseudorandom cascade building
 	Entropy Entropy
 	// Replication factor is the number of children nodes of the each node of the cascade
 	ReplicationFactor uint

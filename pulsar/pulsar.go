@@ -33,10 +33,9 @@ import (
 type State int
 
 const (
-	Waiting               State = 0
-	EntropyGenerating     State = 1
-	EntropySignProcessing State = 3
-	Failed                State = 2
+	Waiting   State = 0
+	InProcess State = 1
+	Failed    State = 2
 )
 
 type Pulsar struct {
@@ -51,12 +50,14 @@ type Pulsar struct {
 
 	State                 State
 	EntropyGenerationLock sync.Mutex
-	Entropy               core.Entropy
-	EntropySign           []byte
+	GeneratedEntropy      core.Entropy
+	GeneratedEntropySign  []byte
+
 	ProcessingPulseNumber core.PulseNumber
 	LastPulse             *core.Pulse
-	OwnedBftRow           map[string]*BftCell
-	BftGrid               map[string]map[string]*BftCell
+
+	OwnedBftRow map[string]*BftCell
+	BftGrid     map[string]map[string]*BftCell
 }
 
 type BftCell struct {
@@ -106,7 +107,7 @@ func NewPulsar(configuration configuration.Pulsar, storage pulsarstorage.PulsarS
 	return pulsar, nil
 }
 
-func (pulsar *Pulsar) Start() {
+func (pulsar *Pulsar) StartServer() {
 	server := rpc.NewServer()
 
 	err := server.RegisterName("Pulsar", &Handler{pulsar: pulsar})
@@ -118,7 +119,7 @@ func (pulsar *Pulsar) Start() {
 	server.Accept(pulsar.Sock)
 }
 
-func (pulsar *Pulsar) Close() {
+func (pulsar *Pulsar) StopServer() {
 	for _, neighbour := range pulsar.Neighbours {
 		if neighbour.OutgoingClient != nil {
 			err := neighbour.OutgoingClient.Close()
@@ -259,26 +260,32 @@ func (pulsar *Pulsar) SyncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pu
 
 func (pulsar *Pulsar) StartConsensusProcess(pulseNumber uint32, generator EntropyGenerator) error {
 	pulsar.EntropyGenerationLock.Lock()
-	if pulsar.State > Waiting {
+
+	if pulsar.State == InProcess {
 		return nil
 	}
-	pulsar.State = EntropyGenerating
+
+	pulsar.State = InProcess
 	err := pulsar.GenerateEntropyWithSignature(generator)
 	if err != nil {
+		pulsar.setStateTo(Failed, err)
 		return err
 	}
-	pulsar.EntropyGenerationLock.Unlock()
 
+	pulsar.EntropyGenerationLock.Unlock()
 	return nil
 }
 
 func (pulsar *Pulsar) GenerateEntropyWithSignature(generator EntropyGenerator) error {
-	pulsar.Entropy = generator.GenerateEntropy()
-	signature, err := singData(pulsar.PrivateKey, pulsar.Entropy)
-	pulsar.EntropySign = signature
+	if pulsar.State == Failed {
+		return nil
+	}
+
+	pulsar.GeneratedEntropy = generator.GenerateEntropy()
+	signature, err := singData(pulsar.PrivateKey, pulsar.GeneratedEntropy)
+	pulsar.GeneratedEntropySign = signature
 	if err != nil {
-		log.Error(err)
-		pulsar.State = Failed
+		pulsar.setStateTo(Failed, err)
 		return err
 	}
 
@@ -286,13 +293,15 @@ func (pulsar *Pulsar) GenerateEntropyWithSignature(generator EntropyGenerator) e
 }
 
 func (pulsar *Pulsar) BroadcastSignatureOfEntropy() {
-	pulsar.State = EntropySignProcessing
-	body := &EntropySignaturePayload{Signature: pulsar.EntropySign}
+	if pulsar.State == Failed {
+		return
+	}
+
+	body := &EntropySignaturePayload{Signature: pulsar.GeneratedEntropySign}
 	sign, err := singData(pulsar.PrivateKey, body)
 	pubKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
-		log.Error(err)
-		pulsar.State = Failed
+		pulsar.setStateTo(Failed, err)
 		return
 	}
 
@@ -309,11 +318,27 @@ func (pulsar *Pulsar) BroadcastSignatureOfEntropy() {
 
 }
 
+func (pulsar *Pulsar) setStateTo(state State, arg interface{}) {
+	switch state {
+	case Waiting:
+	case InProcess:
+	case Failed:
+		log.Error(arg)
+
+		pulsar.State = Failed
+		pulsar.GeneratedEntropy = [core.EntropySize]byte{}
+		pulsar.GeneratedEntropySign = []byte{}
+		pulsar.OwnedBftRow = map[string]*BftCell{}
+		pulsar.BftGrid = map[string]map[string]*BftCell{}
+
+		pulsar.EntropyGenerationLock.Unlock()
+	}
+}
+
 func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
 	neighbour, ok := pulsar.Neighbours[pubKey]
 	if !ok {
 		return nil, errors.New("Forbidden connection")
 	}
-
 	return neighbour, nil
 }

@@ -70,8 +70,8 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	go firstPulsar.Start()
-	go secondPulsar.Start()
+	go firstPulsar.StartServer()
+	go secondPulsar.StartServer()
 	err = secondPulsar.EstablishConnection(firstPublic)
 
 	assert.NoError(t, err)

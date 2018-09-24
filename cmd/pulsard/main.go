@@ -58,7 +58,7 @@ func main() {
 		panic(err)
 	}
 
-	go server.Start()
+	go server.StartServer()
 
 	server.RefreshConnections()
 	ticker := time.NewTicker(5 * time.Second)
@@ -78,7 +78,7 @@ func main() {
 
 	// Need to think about the shutdown mechanism
 	ticker.Stop()
-	defer server.Close()
+	defer server.StopServer()
 }
 
 func initLogger(cfg configuration.Log) {
