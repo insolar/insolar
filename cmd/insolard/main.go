@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/version"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -134,6 +135,7 @@ func main() {
 		os.Exit(0)
 	}()
 
+	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
 	repl(nw)
 }
