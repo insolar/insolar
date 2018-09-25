@@ -30,6 +30,15 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+type MockRpcClientFactoryWrapper struct {
+	mock.Mock
+}
+
+func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RpcClientWrapper {
+	args := mock.Mock.Called()
+	return args.Get(0).(RpcClientWrapper)
+}
+
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	assertObj := assert.New(t)
 	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -49,9 +58,12 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	}
 	storage := &pulsartestutil.MockStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
+	clientFactory := &MockRpcClientFactoryWrapper{}
+	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRpcClientWrapper{})
 
 	result, err := NewPulsar(config,
 		storage,
+		clientFactory,
 		pulsartestutil.MockEntropyGenerator{},
 		mockListener)
 
@@ -62,6 +74,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	assertObj.Equal("listedAddress", actualAddress)
 	assertObj.IsType(result.Sock, &pulsartestutil.MockListener{})
 	assertObj.NotNil(result.PrivateKey)
+	clientFactory.AssertNumberOfCalls(t, "CreateWrapper", 0)
 }
 
 func TestNewPulsar_WithNeighbours(t *testing.T) {
@@ -86,8 +99,10 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	}
 	storage := &pulsartestutil.MockStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
+	clientFactory := &MockRpcClientFactoryWrapper{}
+	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRpcClientWrapper{})
 
-	result, err := NewPulsar(config, storage,
+	result, err := NewPulsar(config, storage, clientFactory,
 		pulsartestutil.MockEntropyGenerator{}, func(connectionType string, address string) (net.Listener, error) {
 			return &pulsartestutil.MockListener{}, nil
 		})
@@ -96,6 +111,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	assertObj.Equal(2, len(result.Neighbours))
 	assertObj.Equal("tcp", result.Neighbours[firstExpectedKey].ConnectionType.String())
 	assertObj.Equal("pct", result.Neighbours[secondExpectedKey].ConnectionType.String())
+	clientFactory.AssertNumberOfCalls(t, "CreateWrapper", 2)
 }
 
 func TestSingAndVerify(t *testing.T) {

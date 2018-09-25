@@ -80,6 +80,7 @@ type BftCell struct {
 func NewPulsar(
 	configuration configuration.Pulsar,
 	storage pulsarstorage.PulsarStorage,
+	rpcWrapperFactory RpcClientWrapperFactory,
 	entropyGenerator EntropyGenerator,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 	// Listen for incoming connections.
@@ -123,10 +124,12 @@ func NewPulsar(
 		if err != nil {
 			continue
 		}
+
 		pulsar.Neighbours[neighbour.PublicKey] = &Neighbour{
 			ConnectionType:    neighbour.ConnectionType,
 			ConnectionAddress: neighbour.Address,
 			PublicKey:         publicKey,
+			OutgoingClient:    rpcWrapperFactory.CreateWrapper(),
 		}
 	}
 
@@ -172,30 +175,23 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 	if err != nil {
 		return err
 	}
-	if neighbour.OutgoingClient != nil {
+	if neighbour.OutgoingClient.IsInitialised() {
 		return nil
 	}
 
-	conn, err := net.Dial(neighbour.ConnectionType.String(), neighbour.ConnectionAddress)
+	err = neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
 	if err != nil {
 		return err
 	}
 
-	clt := rpc.NewClient(conn)
-	neighbour.OutgoingClient = &RpcConnection{Client: clt}
-	generator := StandardEntropyGenerator{}
-	convertedKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
-	if err != nil {
-		return nil
-	}
 	var rep Payload
-	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
-	message.Signature, err = singData(pulsar.PrivateKey, message.Body)
+	message, err := pulsar.preparePayload(HandshakePayload{Entropy: pulsar.EntropyGenerator.GenerateEntropy()})
 	if err != nil {
 		return err
 	}
-	err = clt.Call(Handshake.String(), message, &rep)
-	if err != nil {
+	handshakeCall := neighbour.OutgoingClient.Go(Handshake.String(), message, &rep, nil)
+	reply := <-handshakeCall.Done
+	if reply.Error != nil {
 		return err
 	}
 
@@ -229,7 +225,10 @@ func (pulsar *Pulsar) RefreshConnections() {
 		replyCall := <-healthCheckCall.Done
 		if replyCall.Error != nil {
 			log.Warn("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
-			neighbour.CheckAndRefreshConnection(replyCall.Error)
+			err := neighbour.CheckAndRefreshConnection(replyCall.Error)
+			if err != nil {
+				continue
+			}
 		}
 
 		fetchedPulse, err := pulsar.SyncLastPulseWithNeighbour(neighbour)

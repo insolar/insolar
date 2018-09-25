@@ -20,6 +20,7 @@ import (
 	"errors"
 	"net"
 	"net/rpc"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -103,7 +104,10 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		if err != nil {
 			return err
 		}
-		neighbour.OutgoingClient = &RpcConnection{Client: rpc.NewClient(conn)}
+		neighbour.OutgoingClient = &RpcClientWrapperImpl{
+			Mutex:  &sync.Mutex{},
+			Client: rpc.NewClient(conn),
+		}
 	}
 
 	return nil

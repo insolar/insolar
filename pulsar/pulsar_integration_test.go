@@ -47,7 +47,6 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 
 	storage := &pulsartestutil.MockStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
-
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType: "tcp",
 		ListenAddress:  ":1639",
@@ -58,6 +57,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			{ConnectionType: "tcp", Address: "127.0.0.1:1641"},
 		}},
 		storage,
+		&RpcClientWrapperFactoryImpl{},
 		pulsartestutil.MockEntropyGenerator{},
 		net.Listen,
 	)
@@ -73,6 +73,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			{ConnectionType: "tcp", Address: "127.0.0.1:1641"},
 		}},
 		storage,
+		&RpcClientWrapperFactoryImpl{},
 		pulsartestutil.MockEntropyGenerator{},
 		net.Listen,
 	)
