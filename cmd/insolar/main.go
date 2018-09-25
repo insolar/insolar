@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
 
@@ -50,7 +51,7 @@ func chooseOutput(path string) (io.Writer, error) {
 
 func parseInputParams() {
 	flag.StringVar(&output, "output", defaultStdoutPath, "output file (use - for STDOUT)")
-	flag.StringVar(&cmd, "cmd", "default_config", "available commands: default_config | random_ref")
+	flag.StringVar(&cmd, "cmd", "default_config", "available commands: default_config | random_ref | version")
 
 	if len(os.Args) == 1 {
 		flag.Usage()
@@ -92,5 +93,7 @@ func main() {
 		printDefaultConfig(out)
 	case "random_ref":
 		randomRef(out)
+	case "version":
+		fmt.Println(version.GetFullVersion())
 	}
 }

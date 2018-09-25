@@ -18,6 +18,7 @@ package metrics
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -63,8 +64,14 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 func (m *Metrics) Start(components core.Components) error {
 	log.Infoln("Starting metrics server")
 	http.Handle("/metrics", m.httpHandler)
+
+	listener, err := net.Listen("tcp", m.server.Addr)
+	if err != nil {
+		return errors.Wrap(err, "Failed to listen at address")
+	}
+
 	go func() {
-		err := m.server.ListenAndServe()
+		err := m.server.Serve(listener)
 		if err != nil && err.Error() != "http: Server closed" {
 			log.Errorln(err, "falied to start metrics server")
 			return

@@ -8,6 +8,18 @@ BIN_DIR =bin
 ALL_PACKAGES=./...
 COVERPROFILE=coverage.txt
 
+BUILD_NUMBER:=$(TRAVIS_BUILD_NUMBER)
+BUILD_DATE = $(shell date "+%Y-%m-%d")
+BUILD_TIME = $(shell date "+%H:%M:%S")
+BUILD_HASH = $(shell git rev-parse --short HEAD)
+BUILD_VERSION?=$(shell git describe --abbrev=0 --tags)
+
+LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
+LDFLAGS += -X github.com/insolar/insolar/version.BuildNumber=${BUILD_NUMBER}
+LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
+LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
+LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
+
 .PHONY: all lint ci-lint metalint clean install-deps install build test test_with_coverage
 
 all: clean install-deps install build test
@@ -38,19 +50,19 @@ build:
 	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND)
 
 $(INSOLARD):
-	go build -o $(BIN_DIR)/$(INSOLARD) cmd/insolard/*.go
+	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
 
 $(INSOLAR):
-	go build -o $(BIN_DIR)/$(INSOLAR) cmd/insolar/*.go
+	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 $(INSGOCC):
-	go build -o $(BIN_DIR)/$(INSGOCC) cmd/insgocc/*.go
+	go build -o $(BIN_DIR)/$(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(PULSARD):
-	go build -o $(BIN_DIR)/$(PULSARD) cmd/pulsard/*.go
+	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
 
 $(INSGORUND):
-	go build -o $(BIN_DIR)/$(INSGORUND) cmd/insgorund/*.go
+	go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
 
 test:
 	go test -v $(ALL_PACKAGES)
