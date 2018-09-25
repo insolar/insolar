@@ -123,6 +123,21 @@ func numberedVars(list *ast.FieldList, name string) string {
 	return strings.Join(rets, ", ")
 }
 
+func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
+	if list == nil || list.NumFields() == 0 {
+		return []int{}
+	}
+
+	rets := []int{}
+	for i, e := range list.List {
+		tname := string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
+		if tname == t {
+			rets = append(rets, i)
+		}
+	}
+	return rets
+}
+
 func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, []map[string]interface{}, map[string]bool) {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
@@ -134,10 +149,11 @@ func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, 
 		extendImportsMap(parsed, method.Type.Params, imports)
 
 		info := map[string]interface{}{
-			"Name":              method.Name.Name,
-			"ArgumentsZeroList": argsInit,
-			"Arguments":         argsList,
-			"Results":           numberedVars(method.Type.Results, "ret"),
+			"Name":                method.Name.Name,
+			"ArgumentsZeroList":   argsInit,
+			"Arguments":           argsList,
+			"Results":             numberedVars(method.Type.Results, "ret"),
+			"ErrorInterfaceInRes": typeIndexes(parsed, method.Type.Results, "error"),
 		}
 		methodsInfo = append(methodsInfo, info)
 	}
@@ -355,6 +371,13 @@ func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[str
 
 	for _, e := range params.List {
 		tname := string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
+		if tname == "error" {
+			imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
+		}
+	}
+
+	for _, e := range params.List {
+		tname := string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
 		tname = strings.Trim(tname, "*")
 		tnameFrom := strings.Split(tname, ".")
 
@@ -392,6 +415,9 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 
 	for i, arg := range list.List {
 		tname := string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
+		if tname == "error" {
+			tname = "*foundation.Error"
+		}
 
 		text += fmt.Sprintf("\tvar a%d %s\n", i, tname)
 		text += fmt.Sprintf("\t%s[%d] = a%d\n", name, i, i)

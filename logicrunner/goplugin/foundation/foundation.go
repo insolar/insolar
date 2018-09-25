@@ -92,3 +92,14 @@ func GetObject(ref core.RecordRef) ProxyInterface {
 // SelfDestructRequest contract will be marked as deleted after call finishes
 func (bc *BaseContract) SelfDestructRequest() {
 }
+
+// Error elementary string based error struct satisfying builtin error interface
+//    foundation.Error{"some err"}
+type Error struct {
+	S string
+}
+
+// Error returns error in string format
+func (e *Error) Error() string {
+	return e.S
+}
