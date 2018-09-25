@@ -1,14 +1,14 @@
 set -e
 
-GINSIDER_DIR=logicrunner/goplugin/ginsider-cli
-GINSIDER_BIN=$GINSIDER_DIR/ginsider-cli
+INSGORUND_DIR=cmd/insgorund
+INSGORUND_BIN=$INSGORUND_DIR/insgorund
 TEST_DATA=testdata
 INSOLARD=$TEST_DATA/functional/insolard
 CONTRACT_STORAGE=contractstorage
 
 stop_listening()
 {
-    ports="7777 19191 18181"
+    ports="19191 18181 18182 8090"
     echo "Stop listening..."
     for port in $ports
     do
@@ -40,7 +40,7 @@ prepare()
 build_ginsider_cli()
 {
     echo "Building ginsider-cli ..."
-    go build -o $GINSIDER_BIN $GINSIDER_DIR/main.go
+    go build -o $INSGORUND_BIN $INSGORUND_DIR/insgorund.go
 }
 
 build_insolard()
@@ -52,7 +52,7 @@ build_insolard()
 check_binaries()
 {
     echo "Check binaries ..."
-    if [ ! -f $GINSIDER_BIN ]
+    if [ ! -f $INSGORUND_BIN ]
     then
         build_ginsider_cli
     fi
@@ -66,7 +66,7 @@ check_binaries()
 
 rebuild_binaries()
 {
-    rm -rfv $GINSIDER_BIN
+    rm -rfv $INSGORUND_BIN
     rm -rfv $INSOLARD
     check_binaries
 }

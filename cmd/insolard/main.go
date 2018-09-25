@@ -70,6 +70,11 @@ var (
 func parseInputParams() {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
+	err := rootCmd.Execute()
+	if err != nil {
+		fmt.Println("Wrong input params:", err)
+		os.Exit(1)
+	}
 }
 
 func main() {
@@ -78,7 +83,7 @@ func main() {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
 	var err error
-	if len(configPath) == 0 {
+	if len(configPath) != 0 {
 		err = cfgHolder.LoadFromFile(configPath)
 	} else {
 		err = cfgHolder.Load()
