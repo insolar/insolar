@@ -5,6 +5,7 @@ INSGORUND_BIN=$INSGORUND_DIR/insgorund
 TEST_DATA=testdata
 INSOLARD=$TEST_DATA/functional/insolard
 CONTRACT_STORAGE=contractstorage
+LEDGER_DIR=data
 
 stop_listening()
 {
@@ -20,14 +21,14 @@ clear_dirs()
 {
     echo "Cleaning directories ..."
     rm -rfv $CONTRACT_STORAGE/*
-    rm -rfv data/*
+    rm -rfv $LEDGER_DIR/*
 }
 
 create_required_dirs()
 {
     mkdir -p $TEST_DATA/functional
     mkdir -p $CONTRACT_STORAGE
-    mkdir -p data
+    mkdir -p $LEDGER_DIR
 }
 
 prepare()
