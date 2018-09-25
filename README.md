@@ -87,6 +87,8 @@ Example
 ------------
     # Start node
     ./scripts/insolard/launch.sh
+
+    # In other terminal:
     # Create user
     curl --data '{"query_type": "create_member", "name": "Peter"}' "localhost:19191/api/v1?"
     # Dump user info
