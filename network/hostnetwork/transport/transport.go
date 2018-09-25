@@ -17,13 +17,12 @@
 package transport
 
 import (
-	"errors"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/pkg/errors"
 )
 
 // Transport is an interface for network transport.
@@ -57,12 +56,12 @@ type Transport interface {
 func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
 	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create connection")
 	}
 
 	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create resolver")
 	}
 
 	switch cfg.Protocol {

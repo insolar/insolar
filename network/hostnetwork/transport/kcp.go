@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/pkg/errors"
 	"github.com/xtaci/kcp-go"
 )
 
@@ -36,12 +37,12 @@ func newKCPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 	crypt, err := kcp.NewNoneBlockCrypt([]byte{})
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create KCP transport")
 	}
 
 	lis, err := kcp.ServeConn(crypt, 0, 0, conn)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to serve connection")
 	}
 
 	transport := &kcpTransport{
@@ -88,13 +89,13 @@ func (t *kcpTransport) socketDialTimeout(addr string, timeout time.Duration) (*k
 func (t *kcpTransport) send(recvAddress string, data []byte) error {
 	session, err := t.socketDialTimeout(recvAddress, time.Second)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to socket dial")
 	}
 	// No need explicit close KCP session.
 	// defer conn.Close()
 
 	_, err = session.Write(data)
-	return err
+	return errors.Wrap(err, "Failed to session write data")
 }
 
 func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {

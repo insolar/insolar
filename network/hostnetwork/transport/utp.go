@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/pkg/errors"
 
 	"github.com/anacrolix/utp"
 )
@@ -37,7 +38,7 @@ type utpTransport struct {
 func newUTPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*utpTransport, error) {
 	socket, err := utp.NewSocketFromPacketConn(conn)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create socket")
 	}
 
 	transport := &utpTransport{
@@ -81,12 +82,12 @@ func (t *utpTransport) Stop() {
 func (t *utpTransport) send(recvAddress string, data []byte) error {
 	conn, err := t.socketDialTimeout(recvAddress, time.Second)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to socket dial")
 	}
 	defer conn.Close()
 
 	_, err = conn.Write(data)
-	return err
+	return errors.Wrap(err, "Failed to write data")
 }
 
 func (t *utpTransport) socketDialTimeout(addr string, timeout time.Duration) (net.Conn, error) {

@@ -18,6 +18,7 @@ package host
 
 import (
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/pkg/errors"
 )
 
 // Origin is “self” variant of Host.
@@ -34,7 +35,7 @@ func NewOrigin(ids []id.ID, address *Address) (*Origin, error) {
 		ids = append(ids, id1)
 
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Failed to create new host ID")
 		}
 	}
 
