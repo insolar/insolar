@@ -377,7 +377,7 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 
 	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
-		err = errors.New("knownOuterHostsRequest: timeout")
+		err = errors.New(request.Type.String() + ": timeout")
 		return err
 	}
 	return nil
