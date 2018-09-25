@@ -32,6 +32,7 @@ import (
 
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/pulsar"
 )
 
 type testGoPluginCtx struct {
@@ -77,6 +78,7 @@ func TestGoPlugin(t *testing.T) {
 		// defer gp.Stop()
 		err = lr.RegisterExecutor(core.MachineTypeGoPlugin, gp)
 		assert.NoError(t, err)
+		lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 		return gp, func() {
 			_ = gp.Stop()

@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/pulsar"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -128,6 +129,7 @@ func main() {
 	cm.register("core.ApiRunner", ar)
 	cm.register("core.Metrics", met)
 	cm.linkAll()
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	defer func() {
 		cm.stopAll()

@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/pulsar"
 )
 
 var icc = ""
@@ -102,6 +103,7 @@ func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.Rec
 func TestBasics(t *testing.T) {
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	comps := core.Components{
 		"core.Ledger":   &testLedger{am: testutil.NewTestArtifactManager()},
@@ -160,6 +162,7 @@ func TestExecution(t *testing.T) {
 		"core.Ledger":   ld,
 		"core.EventBus": eb,
 	})
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 	eb.LogicRunner = lr
 
 	codeRef := core.NewRefFromBase58("someCode")
@@ -239,6 +242,7 @@ func (r *Two) Hello(s string) string {
 
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	eb := &testEventBus{LogicRunner: lr}
 	lr.EventBus = eb
@@ -357,6 +361,7 @@ func (r *Two) Hello(s string) string {
 
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	eb := &testEventBus{LogicRunner: lr}
 	lr.EventBus = eb
@@ -479,6 +484,7 @@ func (r *Two) Hello() string {
 
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	eb := &testEventBus{LogicRunner: lr}
 	lr.EventBus = eb
@@ -690,6 +696,7 @@ func New(n int) *Child {
 		"core.EventBus": &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	cb := testutil.NewContractBuilder(am, icc)
 	defer cb.Clean()
@@ -768,6 +775,7 @@ func TestRootDomainContract(t *testing.T) {
 		"core.EventBus": &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	cb := testutil.NewContractBuilder(am, icc)
 	defer cb.Clean()
@@ -878,6 +886,7 @@ func (c *Child) GetNum() int {
 		"core.EventBus": &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	cb := testutil.NewContractBuilder(am, icc)
 	defer cb.Clean()
