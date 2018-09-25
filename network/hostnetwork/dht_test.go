@@ -931,7 +931,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	assert.NoError(t, err)
 
 	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
-	st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:16001")
+	st2, s2, tp2, r2, _ := realDhtParams(nil, "127.0.0.1:16001")
 	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
 		BootstrapHosts: []*host.Host{
 			{
@@ -978,7 +978,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	assert.NoError(t, err)
 
 	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:23220")
-	st2, s2, tp2, r2, err := realDhtParams(nil, "127.0.0.1:23221")
+	st2, s2, tp2, r2, _ := realDhtParams(nil, "127.0.0.1:23221")
 	dht2, _ := NewDHT(st2, s2, tp2, r2, &Options{
 		BootstrapHosts: []*host.Host{
 			{
@@ -1004,7 +1004,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	reqBuff, err := e.Serialize()
+	reqBuff, _ := e.Serialize()
 	event1, _ := ioutil.ReadAll(reqBuff)
 
 	dht2.RemoteProcedureCall(getDefaultCtx(dht1), dht2.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})

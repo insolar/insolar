@@ -1011,7 +1011,7 @@ func (dht *DHT) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time
 	return time.Now().Add(dur)
 }
 
-// StoreRetrieves should return the local key/value if it exists.
+// StoreRetrieve should return the local key/value if it exists.
 func (dht *DHT) StoreRetrieve(key store.Key) ([]byte, bool) {
 	return dht.store.Retrieve(key)
 }

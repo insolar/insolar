@@ -494,8 +494,9 @@ func Test_processPulse(t *testing.T) {
 	hh := newMockHostHandler()
 	sender, receiver := mockSenderReceiver()
 	hh.GetNetworkCommonFacade().GetPulseManager().Set(core.Pulse{PulseNumber: 0, Entropy: core.Entropy{0}})
-	response, _ := processPulse(hh, packet.Builder{}.Request(packet.TypePulse).Sender(sender).Receiver(receiver).
-		Request(&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).Build(),
+	response, _ := processPulse(hh, getDefaultCtx(hh),
+		packet.Builder{}.Request(packet.TypePulse).Sender(sender).Receiver(receiver).
+			Request(&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).Build(),
 		packet.Builder{})
 	newPulse, _ := hh.GetNetworkCommonFacade().GetPulseManager().Current()
 	assert.NotNil(t, response)
