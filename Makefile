@@ -2,8 +2,8 @@ INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = insgocc
 PULSARD = pulsard
-INSGORUND =insgorund
-BIN_DIR =bin
+INSGORUND = insgorund
+BIN_DIR = bin
 
 ALL_PACKAGES=./...
 COVERPROFILE=coverage.txt
