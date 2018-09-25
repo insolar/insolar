@@ -49,7 +49,7 @@ func (r *outputFlag) Set(arg string) error {
 		res = os.Stdout
 	} else {
 		var err error
-		res, err = os.OpenFile(arg, os.O_WRONLY|os.O_CREATE, 0644)
+		res, err = os.OpenFile(arg, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			return errors.Wrap(err, "couldn't open file for writing")
 		}
