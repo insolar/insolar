@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/pkg/errors"
@@ -75,8 +76,8 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	assert.NoError(t, err, "Initialize runner")
 
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": &testEventBus{LogicRunner: lr},
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 

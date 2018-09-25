@@ -21,12 +21,15 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
-	"syscall"
 
 	"time"
 
+	"syscall"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -66,13 +69,6 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	if err != nil {
 		return err
 	}
-
-	code, err := codeDescriptor.Code()
-	codeDescriptor, err := am.GetCode(req.Code, []core.MachineType{core.MachineTypeGoPlugin})
-	if err != nil {
-		return err
-	}
-
 	reply.Code = codeDescriptor.Code()
 	return nil
 }
@@ -210,6 +206,7 @@ func NewGoPlugin(conf *configuration.LogicRunner, eb core.EventBus, am core.Arti
 }
 
 // StartRunner starts ginsider process
+
 func (gp *GoPlugin) StartRunner() error {
 	var runnerArguments []string
 	if gp.Cfg.GoPlugin.RunnerListen != "" {
@@ -222,14 +219,11 @@ func (gp *GoPlugin) StartRunner() error {
 	}
 	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.RpcListen)
 
-	execPath := "testdata/logicrunner/ginsider-cli"
-	if gp.Cfg.GoPlugin.RunnerPath != "" {
-		execPath = gp.Cfg.GoPlugin.RunnerPath
-	if gp.Cfg.RunnerPath == "" {
+	if gp.Cfg.GoPlugin.RunnerPath == "" {
 		return errors.New("RunnerPath is not set in the configuration of GoPlugin")
 	}
 
-	runner := exec.Command(gp.Cfg.RunnerPath, runnerArguments...)
+	runner := exec.Command(gp.Cfg.GoPlugin.RunnerPath, runnerArguments...)
 	runner.Stdout = os.Stdout
 	runner.Stderr = os.Stderr
 	err := runner.Start()
