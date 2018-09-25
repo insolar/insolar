@@ -51,7 +51,7 @@ logicrunner:
   builtin: {}
   goplugin:
     runnerlisten: 127.0.0.1:18181
-    runnerpath: cmd/insgorund/insgorund
+    runnerpath: bin/insgorund
     runnercodepath: contractstorage
     mainlisten: 127.0.0.1:18182
 pulsar:

@@ -2,6 +2,8 @@ INSOLAR =insolar
 INSOLARD=insolard
 INSGOCC =insgocc
 PULSARD =pulsard
+INSGORUND =insgorund
+BIN_DIR =bin
 
 ALL_PACKAGES=./...
 COVERPROFILE=coverage.txt
@@ -20,33 +22,35 @@ metalint:
 
 clean:
 	go clean $(ALL_PACKAGES)
-	rm -f $(INSOLARD)
-	rm -f $(INSOLAR)
-	rm -f $(INSGOCC)
-	rm -f $(PULSARD)
 	rm -f $(COVERPROFILE)
+	rm -rf $(BIN_DIR) 
 
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u golang.org/x/tools/cmd/stringer
 
-install:
+pre-build:
 	dep ensure
 	go generate -x $(ALL_PACKAGES)
 
-build: $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD)
+build: 
+	mkdir -p $(BIN_DIR)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND)
 
 $(INSOLARD):
-	go build -o $(INSOLARD) cmd/insolard/*
+	go build -o $(BIN_DIR)/$(INSOLARD) cmd/insolard/*.go
 
 $(INSOLAR):
-	go build -o $(INSOLAR) cmd/insolar/*
+	go build -o $(BIN_DIR)/$(INSOLAR) cmd/insolar/*.go
 
 $(INSGOCC):
-	go build -o $(INSGOCC) cmd/insgocc/*
+	go build -o $(BIN_DIR)/$(INSGOCC) cmd/insgocc/*.go
 
 $(PULSARD):
-	go build -o $(PULSARD) cmd/pulsard/*
+	go build -o $(BIN_DIR)/$(PULSARD) cmd/pulsard/*.go
+
+$(INSGORUND):
+	go build -o $(BIN_DIR)/$(INSGORUND) cmd/insgorund/*.go
 
 test:
 	go test -v $(ALL_PACKAGES)

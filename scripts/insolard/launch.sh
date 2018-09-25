@@ -1,9 +1,9 @@
 set -e
 
-INSGORUND_DIR=cmd/insgorund
-INSGORUND_BIN=$INSGORUND_DIR/insgorund
+BIN_DIR=bin
+INSGORUND_BIN=$BIN_DIR/insgorund
 TEST_DATA=testdata
-INSOLARD=$TEST_DATA/functional/insolard
+INSOLARD=$BIN_DIR/insolard
 CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
 
@@ -38,38 +38,15 @@ prepare()
     clear_dirs
 }
 
-build_ginsider_cli()
+build_binaries()
 {
-    echo "Building ginsider-cli ..."
-    go build -o $INSGORUND_BIN $INSGORUND_DIR/insgorund.go
-}
-
-build_insolard()
-{
-    echo "Building insolard ..."
-    go build -o $INSOLARD cmd/insolard/*.go 
-}
-
-check_binaries()
-{
-    echo "Check binaries ..."
-    if [ ! -f $INSGORUND_BIN ]
-    then
-        build_ginsider_cli
-    fi
-
-    if [ ! -f $INSOLARD ]
-    then
-        build_insolard
-    fi
-
+    make build
 }
 
 rebuild_binaries()
 {
-    rm -rfv $INSGORUND_BIN
-    rm -rfv $INSOLARD
-    check_binaries
+    make clean
+    build_binaries
 }
 
 check_working_dir()
@@ -113,7 +90,7 @@ check_working_dir
 process_input_params $param
 
 prepare
-check_binaries
+build_binaries
 
 $INSOLARD --config scripts/insolard/insolar.yaml
 
