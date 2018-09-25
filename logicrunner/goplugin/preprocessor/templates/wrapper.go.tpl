@@ -38,7 +38,7 @@ func INSMETHOD_{{ $method.Name }}(ph proxyctx.ProxyHelper, object []byte,
     }
 
 {{ range $i := $method.ErrorInterfaceInRes }}
-    ret{{ $i }} = ph.ConvertError(ret{{ $i }})
+    ret{{ $i }} = ph.MakeErrorSerializable(ret{{ $i }})
 {{ end }}
 
     ret := []byte{}

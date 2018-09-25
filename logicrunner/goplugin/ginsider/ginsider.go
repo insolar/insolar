@@ -326,8 +326,8 @@ func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 	return codec.NewDecoderBytes(from, ch).Decode(into)
 }
 
-// ConvertError converts errors satisfying error interface to foundation.Error
-func (gi *GoInsider) ConvertError(e error) error {
+// MakeErrorSerializable converts errors satisfying error interface to foundation.Error
+func (gi *GoInsider) MakeErrorSerializable(e error) error {
 	if e == nil {
 		return nil
 	}
