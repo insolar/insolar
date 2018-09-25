@@ -84,9 +84,9 @@ func (r *RootDomain) GetClass() core.RecordRef {
 }
 
 
-func (r *RootDomain) RegisterNode( public_key string, role string ) ( string ) {
+func (r *RootDomain) RegisterNode( publicKey string, role string ) ( string ) {
     var args [2]interface{}
-	args[0] = public_key
+	args[0] = publicKey
 	args[1] = role
 
     var argsSerialized []byte
@@ -113,9 +113,9 @@ func (r *RootDomain) RegisterNode( public_key string, role string ) ( string ) {
     return resList[0].(string)
 }
 
-func (r *RootDomain) RegisterNodeNoWait( public_key string, role string ) {
+func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
     var args [2]interface{}
-	args[0] = public_key
+	args[0] = publicKey
 	args[1] = role
 
     var argsSerialized []byte
