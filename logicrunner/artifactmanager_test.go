@@ -134,7 +134,6 @@ func (b *Hello) String() string {
 }
 	`
 	am := l.GetArtifactManager()
-	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	cb := testutil.NewContractBuilder(am, tctx.preprocessor)
 	defer cb.Clean()
 	err := cb.Build(map[string]string{"hello": helloCode})

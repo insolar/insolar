@@ -998,7 +998,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	dht1.Bootstrap()
 	dht2.Bootstrap()
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),

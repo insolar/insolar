@@ -55,7 +55,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	network, err := NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -131,7 +131,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		return nil, nil
 	})
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -172,7 +172,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		return nil, nil
 	})
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -248,7 +248,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		}
 	}
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),

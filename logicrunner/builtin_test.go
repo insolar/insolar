@@ -56,17 +56,15 @@ func TestBareHelloworld(t *testing.T) {
 
 	hw := helloworld.NewHelloWorld()
 
-	am.SetArchPref([]core.MachineType{core.MachineTypeBuiltin})
-
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
 	_, _, classRef, err := testutil.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 
-	contract, err := am.ActivateObj(request, domain, *classRef, *am.RootRef(), testutil.CBORMarshal(t, hw))
+	contract, err := am.ActivateObject(request, domain, *classRef, *am.RootRef(), testutil.CBORMarshal(t, hw))
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
-	resp, err := lr.Execute(&event.CallMethodEvent{
+	resp, err := lr.Execute(&event.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
@@ -80,7 +78,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
-	resp, err = lr.Execute(&event.CallMethodEvent{
+	resp, err = lr.Execute(&event.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",

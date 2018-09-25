@@ -28,10 +28,11 @@ import (
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	db          *storage.DB
-	am          *artifactmanager.LedgerArtifactManager
-	pm          *pulsemanager.PulseManager
-	coordinator *jetcoordinator.JetCoordinator
+	db      *storage.DB
+	am      *artifactmanager.LedgerArtifactManager
+	pm      *pulsemanager.PulseManager
+	jc      *jetcoordinator.JetCoordinator
+	handler *artifactmanager.EventHandler
 }
 
 func (l *Ledger) GetPulseManager() core.PulseManager {
@@ -39,12 +40,16 @@ func (l *Ledger) GetPulseManager() core.PulseManager {
 }
 
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
-	return l.coordinator
+	return l.jc
 }
 
 // GetArtifactManager returns artifact manager to work with.
 func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.am
+}
+
+func (l *Ledger) HandleEvent(e core.Event) (core.Reaction, error) {
+	return l.handler.Handle(e)
 }
 
 // NewLedger creates new ledger instance.
@@ -54,35 +59,50 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
-	return NewLedgerWithDB(db, conf)
-}
-
-// NewLedgerWithDB creates new ledger with preconfigured storage.DB instance.
-func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error) {
 	am, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
 	}
-	coordinator, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
+	jc, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}
-	pm, err := pulsemanager.NewPulseManager(db, coordinator)
+	pm, err := pulsemanager.NewPulseManager(db, jc)
 	if err != nil {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
 
+	handler, err := artifactmanager.NewEventHandler(db)
+	if err != nil {
+		return nil, err
+	}
 	err = db.Bootstrap()
 	if err != nil {
 		return nil, err
 	}
 
+	ledger := Ledger{
+		db:      db,
+		am:      am,
+		pm:      pm,
+		jc:      jc,
+		handler: handler,
+	}
+
+	return &ledger, nil
+}
+
+func NewTestLedger(
+	db *storage.DB, am *artifactmanager.LedgerArtifactManager, pm *pulsemanager.PulseManager,
+	jc *jetcoordinator.JetCoordinator, amh *artifactmanager.EventHandler,
+) *Ledger {
 	return &Ledger{
-		db:          db,
-		am:          am,
-		pm:          pm,
-		coordinator: coordinator,
-	}, nil
+		db:      db,
+		am:      am,
+		pm:      pm,
+		jc:      jc,
+		handler: amh,
+	}
 }
 
 // Start initializes external ledger dependencies.

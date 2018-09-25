@@ -29,33 +29,24 @@ const insolarImportPath = "github.com/insolar/insolar"
 var testdataDir = testdataPath()
 
 func buildCLI(name string) (string, error) {
-	clipath := filepath.Join(testdataDir, name)
+	binPath := filepath.Join(testdataDir, name)
 	out, err := exec.Command(
 		"go", "build",
-		"-o", clipath,
-		filepath.Join(insolarImportPath, "logicrunner", "goplugin", name),
-	).CombinedOutput()
-	if err != nil {
-		return "", errors.Wrapf(err, "can't build %s: %s", name, string(out))
-	}
-	return clipath, nil
-}
-
-func buildInciderCLI() (string, error) {
-	return buildCLI("ginsider-cli")
-}
-
-func buildPreprocessor() (string, error) {
-	insgocc := filepath.Join(testdataDir, "insgocc")
-	out, err := exec.Command(
-		"go", "build",
-		"-o", insgocc,
-		filepath.Join(insolarImportPath, "cmd", "insgocc"),
+		"-o", binPath,
+		filepath.Join(insolarImportPath, "cmd", name),
 	).CombinedOutput()
 	if err != nil {
 		return "", errors.Wrapf(err, "can't build preprocessor. Build output: %s", string(out))
 	}
-	return insgocc, nil
+	return binPath, nil
+}
+
+func buildInciderCLI() (string, error) {
+	return buildCLI("insgorund")
+}
+
+func buildPreprocessor() (string, error) {
+	return buildCLI("insgocc")
 }
 
 func testdataPath() string {
@@ -66,7 +57,7 @@ func testdataPath() string {
 	return filepath.Join(p.Dir, "testdata", "logicrunner")
 }
 
-// Build compiles and return path to ginsider-cli and insgocc binaries.
+// Build compiles and return path to insgorund and insgocc binaries.
 func Build() (string, string, error) {
 	icc, err := buildInciderCLI()
 	if err != nil {
