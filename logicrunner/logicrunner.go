@@ -25,9 +25,10 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/builtin"
+	"github.com/insolar/insolar/logicrunner/caserecord"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
@@ -119,9 +120,11 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 
 	switch m := e.(type) {
 	case *event.CallMethod:
+		lr.addObjectCaseRecord(m.ObjectRef, caserecord.Incoming{Event: m})
 		return lr.executeMethodCall(ctx, m, machinePref)
 
 	case *event.CallConstructor:
+		lr.addObjectCaseRecord(m.ClassRef, caserecord.Incoming{Event: m})
 		classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class")
@@ -192,7 +195,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 
 	executor, err := lr.GetExecutor(objbody.MachineType)
 	if err != nil {
-		return nil, errors.Wrap(err, "no executer registered")
+		return nil, errors.Wrap(err, "no executor registered")
 	}
 
 	executer := func() (*reaction.CommonReaction, error) {
@@ -200,7 +203,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "executer error")
+			return nil, errors.Wrap(err, "executor error")
 		}
 
 		_, err = lr.ArtifactManager.UpdateObject(
@@ -226,4 +229,22 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 		return &reaction.CommonReaction{}, nil
 	}
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
+}
+
+func (lr *LogicRunner) Validate(binder core.CaseBind) (int, error) {
+	return 0, nil
+}
+
+func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
+	lr.cb = core.CaseBind{
+		P: pulse,
+		R: make(map[core.RecordRef][]core.CaseRecord),
+	}
+	return nil
+}
+
+func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecord) error {
+
+	lr.cb.R[ref] = append(lr.cb.R[ref], cr)
+	return nil
 }
