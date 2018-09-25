@@ -60,7 +60,7 @@ check_working_dir()
 
 usage()
 {
-    echo "usage: $0 <clear,rebuild>"
+    echo "usage: $0 <clear|rebuild>"
 }
 
 process_input_params()
