@@ -37,15 +37,16 @@ type Type byte
 
 const (
 	TypeBase            = Type(iota)
-	TypeCallMethod      // CallMethod - Simply call method and return result
-	TypeCallConstructor // CallConstructor is a event for calling constructor and obtain its reaction
+	TypeCallMethod      // TypeCallMethod calls method and returns result
+	TypeCallConstructor // TypeCallConstructor is a event for calling constructor and obtain its reaction
 
 	// Ledger
-	TypeGetCode                // TypeGetCode - retrieve code from storage.
-	TypeGetClass               // TypeGetClass - latest state of the class known to storage
-	TypeGetObject              // TypeGetObject returns descriptor for latest state of the object known to storage.
-	TypeGetDelegate            // TypeGetDelegate returns descriptor for latest state of the object known to storage.
-	TypeDeclareType            // TypeGetDelegate creates new type.
+
+	TypeGetCode                // TypeGetCode retrieves code from storage.
+	TypeGetClass               // TypeGetClass retrieves class from storage.
+	TypeGetObject              // TypeGetObject retrieves object from storage.
+	TypeGetDelegate            // TypeGetDelegate retrieves object represented as provided class.
+	TypeDeclareType            // TypeDeclareType creates new type.
 	TypeDeployCode             // TypeDeployCode creates new code.
 	TypeActivateClass          // TypeActivateClass activates class.
 	TypeDeactivateClass        // TypeDeactivateClass deactivates class.

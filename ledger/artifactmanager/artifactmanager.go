@@ -48,7 +48,7 @@ func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
 	return m.db.RootRef().CoreRef()
 }
 
-// GetCode returns code from code record by provided reference.
+// GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
 func (m *LedgerArtifactManager) GetCode(
@@ -78,10 +78,10 @@ func (m *LedgerArtifactManager) GetCode(
 	return &desc, nil
 }
 
-// GetClass returns descriptor for latest state of the class known to storage.
-// If the class is deactivated, an error should be returned.
+// GetClass returns descriptor for provided state.
 //
-// Returned descriptor will provide methods for fetching all related data.
+// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
+// provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
 	genericReact, err := m.eventBus.Dispatch(&event.GetClass{
 		Head:  head,
@@ -105,10 +105,10 @@ func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.Record
 	return &desc, nil
 }
 
-// GetObject returns descriptor for latest state of the object known to storage.
-// If the object or the class is deactivated, an error should be returned.
+// GetObject returns descriptor for provided state.
 //
-// Returned descriptor will provide methods for fetching all related data.
+// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
+// provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
 	genericReact, err := m.eventBus.Dispatch(&event.GetObject{
 		Head:  head,

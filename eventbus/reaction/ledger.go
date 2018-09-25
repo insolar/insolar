@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// Code is code from storage.
 type Code struct {
 	Code        []byte
 	MachineType core.MachineType
@@ -31,6 +32,7 @@ func (e *Code) Serialize() (io.Reader, error) {
 	return serialize(e, TypeCode)
 }
 
+// Class is class from storage.
 type Class struct {
 	Head  core.RecordRef
 	State core.RecordRef
@@ -41,6 +43,7 @@ func (e *Class) Serialize() (io.Reader, error) {
 	return serialize(e, TypeClass)
 }
 
+// Object is object from storage.
 type Object struct {
 	Head     core.RecordRef
 	State    core.RecordRef
@@ -53,6 +56,7 @@ func (e *Object) Serialize() (io.Reader, error) {
 	return serialize(e, TypeObject)
 }
 
+// Delegate is delegate reference from storage.
 type Delegate struct {
 	Head core.RecordRef
 }
@@ -61,6 +65,7 @@ func (e *Delegate) Serialize() (io.Reader, error) {
 	return serialize(e, TypeDelegate)
 }
 
+// Reference is common reaction for methods returning reference to created records.
 type Reference struct {
 	Ref core.RecordRef
 }
