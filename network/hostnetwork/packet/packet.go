@@ -171,7 +171,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 	var reader bytes.Buffer
 	for uint64(reader.Len()) < length {
-		n, _ := reader.ReadFrom(conn)
+		n, err := reader.ReadFrom(conn)
 		if err != nil && n == 0 {
 			log.Debugln(err.Error())
 		}
