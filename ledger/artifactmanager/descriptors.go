@@ -42,8 +42,7 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 	return d.machineType
 }
 
-// Code fetches code from storage. Code will be fetched according to architecture preferences
-// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
+// Code returns fetched code for given machine type.
 func (d *CodeDescriptor) Code() []byte {
 	return d.code
 }
