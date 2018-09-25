@@ -147,7 +147,7 @@ func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 
 	log.Debugf("obtaining code %q", ref)
 	res := rpctypes.UpGetCodeResp{}
-	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Code: ref}, &res)
+	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Code: ref, MType: core.MachineTypeGoPlugin}, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}

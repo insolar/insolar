@@ -52,7 +52,8 @@ type DownCallConstructorResp struct {
 
 // UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
 type UpGetCodeReq struct {
-	Code core.RecordRef
+	MType core.MachineType
+	Code  core.RecordRef
 }
 
 // UpGetCodeResp is response from GetCode RPC in goplugin
