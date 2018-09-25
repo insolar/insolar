@@ -5,14 +5,14 @@ PULSARD = pulsard
 INSGORUND = insgorund
 BIN_DIR = bin
 
-ALL_PACKAGES=./...
-COVERPROFILE=coverage.txt
+ALL_PACKAGES = ./...
+COVERPROFILE = coverage.txt
 
-BUILD_NUMBER:=$(TRAVIS_BUILD_NUMBER)
+BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 BUILD_DATE = $(shell date "+%Y-%m-%d")
 BUILD_TIME = $(shell date "+%H:%M:%S")
 BUILD_HASH = $(shell git rev-parse --short HEAD)
-BUILD_VERSION?=$(shell git describe --abbrev=0 --tags)
+BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
 
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildNumber=${BUILD_NUMBER}
