@@ -68,18 +68,12 @@ type RPC struct {
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.gp.ArtifactManager
-	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
-	codeDescriptor, err := am.GetCode(req.Code)
+	codeDescriptor, err := am.GetCode(req.Code, []core.MachineType{core.MachineTypeGoPlugin})
 	if err != nil {
 		return err
 	}
 
-	code, err := codeDescriptor.Code()
-	if err != nil {
-		return err
-	}
-
-	reply.Code = code
+	reply.Code = codeDescriptor.Code()
 	return nil
 }
 
@@ -96,7 +90,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		mode = event.ReturnNoWait
 	}
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ReturnMode: mode,
 		ObjectRef:  req.Object,
 		Method:     req.Method,
@@ -119,7 +113,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 		return errors.New("event bus was not set during initialization")
 	}
 
-	e := &event.CallConstructorEvent{
+	e := &event.CallConstructor{
 		ClassRef:  req.Reference,
 		Name:      req.Constructor,
 		Arguments: req.Arguments,
@@ -136,7 +130,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
-	ref, err := gpr.gp.ArtifactManager.ActivateObj(
+	ref, err := gpr.gp.ArtifactManager.ActivateObject(
 		core.RecordRef{}, core.RecordRef{}, req.Class, req.Parent, req.Data,
 	)
 	if err != nil {
@@ -150,16 +144,17 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes.UpGetObjChildrenResp) error {
 	// TODO: INS-408
 	am := gpr.gp.ArtifactManager
-	i, err := am.GetObjChildren(req.Obj)
+	obj, err := am.GetObject(req.Obj, nil)
 	if err != nil {
 		return errors.Wrap(err, "am.GetObjChildren failed")
 	}
+	i := obj.Children()
 	for i.HasNext() {
 		r, err := i.Next()
 		if err != nil {
 			return err
 		}
-		o, err := am.GetLatestObj(r)
+		o, err := am.GetObject(r, nil)
 		if err != nil {
 			return errors.Wrap(err, "Have ref, have no object")
 		}
@@ -177,7 +172,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
-	ref, err := gpr.gp.ArtifactManager.ActivateObjDelegate(
+	ref, err := gpr.gp.ArtifactManager.ActivateObjectDelegate(
 		core.RecordRef{}, core.RecordRef{}, req.Class, req.Into, req.Data,
 	)
 	if err != nil {
@@ -190,7 +185,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGetDelegateResp) error {
 	am := gpr.gp.ArtifactManager
-	ref, err := am.GetObjDelegate(req.Object, req.OfType)
+	ref, err := am.GetDelegate(req.Object, req.OfType)
 	if err != nil {
 		return err
 	}
