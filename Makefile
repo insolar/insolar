@@ -1,7 +1,7 @@
-INSOLAR =insolar
-INSOLARD=insolard
-INSGOCC =insgocc
-PULSARD =pulsard
+INSOLAR = insolar
+INSOLARD = insolard
+INSGOCC = insgocc
+PULSARD = pulsard
 INSGORUND =insgorund
 BIN_DIR =bin
 
