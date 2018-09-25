@@ -136,6 +136,7 @@ func (b *Bootstrapper) ActivateSmartContracts(am core.ArtifactManager, cb *testu
 
 // Start creates types and RootDomain instance
 func (b *Bootstrapper) Start(c core.Components) error {
+	log.Info("[ Bootstrapper ] Starting Bootstrap ...")
 	am := c.Ledger.GetArtifactManager()
 
 	rootObj, err := am.GetObject(*am.RootRef(), nil)
@@ -189,10 +190,12 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		}
 		contracts[name] = string(code)
 	}
+	log.Info("[ Bootstrapper ] Start building contracts ...")
 	err = cb.Build(contracts)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
 	}
+	log.Info("[ Bootstrapper ] Stop building contracts ...")
 
 	err = b.ActivateSmartContracts(am, cb)
 	if err != nil {
