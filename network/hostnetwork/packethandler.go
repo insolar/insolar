@@ -61,7 +61,7 @@ func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	case packet.TypeCascadeSend:
 		return processCascadeSend(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypePulse:
-		return processPulse(hostHandler, msg, packetBuilder)
+		return processPulse(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeGetRandomHosts:
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
 	default:
@@ -86,7 +86,7 @@ func processGetRandomHosts(
 	return packetBuilder.Response(&packet.ResponseGetRandomHosts{Hosts: hosts, Error: ""}).Build(), nil
 }
 
-func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestPulse)
 	pm := hostHandler.GetNetworkCommonFacade().GetPulseManager()
 	if pm == nil {
@@ -103,6 +103,7 @@ func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packe
 			return nil, err
 		}
 		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
+		ResendPulseToKnownHosts(hostHandler, ctx, data)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }

@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
@@ -234,6 +235,33 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
+// ResendPulseToKnownHosts resends received pulse to all known hosts
+func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, pulse *packet.RequestPulse) {
+	ht := hostHandler.HtFromCtx(ctx)
+	hosts := ht.GetMulticastHosts()
+	for _, host := range hosts {
+		err := sendPulse(hostHandler, host.Host, pulse)
+		if err != nil {
+			log.Debug("error resending pulse to host %s: %s", host.ID, err.Error())
+		}
+	}
+}
+
+func sendPulse(hostHandler hosthandler.HostHandler, host *host.Host, pulse *packet.RequestPulse) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
+	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).Receiver(host).
+		Type(packet.TypePulse).Request(pulse).Build()
+
+	future, err := hostHandler.SendRequest(request)
+	if err != nil {
+		return err
+	}
+	return checkResponse(hostHandler, future, "", request)
+}
+
 func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
@@ -333,6 +361,11 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 			err = handleRelayResponse(hostHandler, response, targetID)
 		case packet.TypeCascadeSend:
 			response := rsp.Data.(*packet.ResponseCascadeSend)
+			if !response.Success {
+				err = errors.New(response.Error)
+			}
+		case packet.TypePulse:
+			response := rsp.Data.(*packet.ResponsePulse)
 			if !response.Success {
 				err = errors.New(response.Error)
 			}
