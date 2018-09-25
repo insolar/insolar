@@ -22,6 +22,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"net"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
@@ -37,11 +39,16 @@ type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	EventBus        core.EventBus
-	Cfg             configuration.LogicRunner
+	Cfg             *configuration.LogicRunner
+	cb              core.CaseBind
+	sock            net.Listener
 }
 
 // NewLogicRunner is constructor for LogicRunner
-func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
+func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
+	if cfg == nil {
+		return nil, errors.New("LogicRunner have nil configuration")
+	}
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
@@ -56,6 +63,8 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	eventBus := c.EventBus
 	lr.EventBus = eventBus
 
+	StartRPC(lr)
+
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(eventBus, am)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
@@ -64,7 +73,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	}
 
 	if lr.Cfg.GoPlugin != nil {
-		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, eventBus, am)
+		gp, err := goplugin.NewGoPlugin(lr.Cfg, eventBus, am)
 		if err != nil {
 			return err
 		}
@@ -88,6 +97,13 @@ func (lr *LogicRunner) Stop() error {
 			reterr = errors.Wrap(reterr, err.Error())
 		}
 	}
+
+	if lr.sock != nil {
+		if err := lr.sock.Close(); err != nil {
+			return err
+		}
+	}
+
 	return reterr
 }
 

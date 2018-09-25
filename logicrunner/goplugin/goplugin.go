@@ -18,9 +18,6 @@
 package goplugin
 
 import (
-	"log"
-	"net"
-	"net/http"
 	"net/rpc"
 	"os"
 	"os/exec"
@@ -30,8 +27,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -52,10 +47,9 @@ type RunnerOptions struct {
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
-	Cfg             *configuration.GoPlugin
+	Cfg             *configuration.LogicRunner
 	EventBus        core.EventBus
 	ArtifactManager core.ArtifactManager
-	sock            net.Listener
 	runner          *exec.Cmd
 	client          *rpc.Client
 }
@@ -201,60 +195,36 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGet
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.GoPlugin, eb core.EventBus, am core.ArtifactManager) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.LogicRunner, eb core.EventBus, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
 		EventBus:        eb,
 		ArtifactManager: am,
-	}
-	if gp.Cfg.MainListen == "" {
-		gp.Cfg.MainListen = "127.0.0.1:7777"
 	}
 
 	err := gp.StartRunner()
 	if err != nil {
 		return nil, err
 	}
-
-	go gp.Start()
 	return &gp, nil
-}
-
-var rpcService *RPC
-
-// Start starts RPC interface to help runner, note that NewGoPlugin does
-// this for you
-func (gp *GoPlugin) Start() {
-	if rpcService == nil {
-		rpcService = &RPC{}
-		_ = rpc.Register(rpcService)
-		rpc.HandleHTTP()
-	}
-	rpcService.gp = gp
-
-	l, e := net.Listen("tcp", gp.Cfg.MainListen)
-	if e != nil {
-		log.Fatal("couldn't setup listener on '"+gp.Cfg.MainListen+"': ", e)
-	}
-	gp.sock = l
-	log.Printf("starting goplugin RPC service on %q", gp.Cfg.MainListen)
-	_ = http.Serve(l, nil)
-	log.Printf("STOP")
 }
 
 // StartRunner starts ginsider process
 func (gp *GoPlugin) StartRunner() error {
 	var runnerArguments []string
-	if gp.Cfg.RunnerListen != "" {
-		runnerArguments = append(runnerArguments, "-l", gp.Cfg.RunnerListen)
+	if gp.Cfg.GoPlugin.RunnerListen != "" {
+		runnerArguments = append(runnerArguments, "-l", gp.Cfg.GoPlugin.RunnerListen)
 	} else {
 		return errors.New("RunnerListen is not set in the configuration of GoPlugin")
 	}
-	if gp.Cfg.RunnerCodePath != "" {
-		runnerArguments = append(runnerArguments, "-d", gp.Cfg.RunnerCodePath)
+	if gp.Cfg.GoPlugin.RunnerCodePath != "" {
+		runnerArguments = append(runnerArguments, "-d", gp.Cfg.GoPlugin.RunnerCodePath)
 	}
-	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
+	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.RpcListen)
 
+	execPath := "testdata/logicrunner/ginsider-cli"
+	if gp.Cfg.GoPlugin.RunnerPath != "" {
+		execPath = gp.Cfg.GoPlugin.RunnerPath
 	if gp.Cfg.RunnerPath == "" {
 		return errors.New("RunnerPath is not set in the configuration of GoPlugin")
 	}
@@ -280,12 +250,6 @@ func (gp *GoPlugin) Stop() error {
 	}
 	time.Sleep(200 * time.Millisecond)
 
-	if gp.sock != nil {
-		err = gp.sock.Close()
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -295,9 +259,9 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 		return gp.client, nil
 	}
 
-	client, err := rpc.DialHTTP("tcp", gp.Cfg.RunnerListen)
+	client, err := rpc.DialHTTP("tcp", gp.Cfg.GoPlugin.RunnerListen)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s'", gp.Cfg.RunnerListen)
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", gp.Cfg.GoPlugin.RunnerListen)
 	}
 
 	gp.client = client

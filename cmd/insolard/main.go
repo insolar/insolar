@@ -94,7 +94,7 @@ func main() {
 		log.Fatalln("Failed to start Ledger: ", err.Error())
 	}
 
-	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
+	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
 	if err != nil {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
@@ -120,7 +120,7 @@ func main() {
 	}
 
 	cm.linkAll()
-	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
+	cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	defer func() {
 		cm.stopAll()

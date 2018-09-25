@@ -43,7 +43,7 @@ func TestBareHelloworld(t *testing.T) {
 	defer cleaner()
 
 	am := l.GetArtifactManager()
-	lr, err := NewLogicRunner(configuration.LogicRunner{
+	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err, "Initialize runner")
