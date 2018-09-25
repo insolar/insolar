@@ -56,7 +56,7 @@ func (cm *componentManager) stopAll() {
 	v := reflect.ValueOf(cm.components)
 	for i := v.NumField() - 1; i >= 0; i-- {
 		err := v.Field(i).Interface().(core.Component).Stop()
-		log.Debugln("Stop component: ", v.String())
+		log.Infoln("Stop component: ", v.String())
 		if err != nil {
 			log.Errorf("failed to stop component %s : %s", v.String(), err.Error())
 		}
