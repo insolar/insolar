@@ -92,16 +92,3 @@ func GetObject(ref core.RecordRef) ProxyInterface {
 // SelfDestructRequest contract will be marked as deleted after call finishes
 func (bc *BaseContract) SelfDestructRequest() {
 }
-
-/////// next code is system helper for wrappers generator //////
-
-// CBORMarshaler is a special interface for serializer object
-type CBORMarshaler interface {
-	Marshal(interface{}) ([]byte, error)
-	Unmarshal(interface{}, []byte) error
-}
-
-// Call other contract via network dispatcher
-func Call(Reference core.RecordRef, MethodName string, Arguments []interface{}) ([]interface{}, error) {
-	return nil, nil
-}
