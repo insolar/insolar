@@ -28,5 +28,5 @@ type CommonReaction struct {
 
 // Serialize serializes reaction.
 func (r *CommonReaction) Serialize() (io.Reader, error) {
-	return serialize(r, CommonReactionType)
+	return serialize(r, TypeCommonReaction)
 }

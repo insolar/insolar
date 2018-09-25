@@ -87,7 +87,7 @@ func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.
 		return errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	contract, err := am.ActivateObj(
+	contract, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes[rootDomain],
 		*am.RootRef(),
@@ -107,7 +107,7 @@ func (b *Bootstrapper) ActivateNodeDomain(am core.ArtifactManager, cb *testutil.
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	contract, err := am.ActivateObj(
+	contract, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
@@ -138,7 +138,8 @@ func (b *Bootstrapper) ActivateSmartContracts(am core.ArtifactManager, cb *testu
 func (b *Bootstrapper) Start(c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 
-	rootRefChildren, err := am.GetObjChildren(*am.RootRef())
+	rootObj, err := am.GetObject(*am.RootRef(), nil)
+	rootRefChildren := rootObj.Children()
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't get children of RootRef object")
 	}
