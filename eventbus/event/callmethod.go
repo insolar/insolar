@@ -34,7 +34,7 @@ const (
 	// ReturnValidated
 )
 
-// CallMethodEvent - Simply call method and return result
+// CallMethod - Simply call method and return result
 type CallMethod struct {
 	baseEvent
 	ReturnMode MethodReturnMode

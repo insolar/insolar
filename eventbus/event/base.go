@@ -37,8 +37,8 @@ type Type byte
 
 const (
 	TypeBase            = Type(iota)
-	TypeCallMethod      // CallMethodEvent - Simply call method and return result
-	TypeCallConstructor // CallConstructorEvent is a event for calling constructor and obtain its reaction
+	TypeCallMethod      // CallMethod - Simply call method and return result
+	TypeCallConstructor // CallConstructor is a event for calling constructor and obtain its reaction
 
 	// Ledger
 	TypeGetCode                // TypeGetCode - retrieve code from storage.
