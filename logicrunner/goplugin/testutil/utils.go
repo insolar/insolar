@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -470,10 +471,12 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	}
 
 	for name := range contracts {
+		log.Debugf("Start to build plugin for %s", name)
 		err := cb.plugin(name)
 		if err != nil {
 			return err
 		}
+		log.Debugf("Stop to build plugin for %s", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
