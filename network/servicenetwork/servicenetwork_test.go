@@ -188,6 +188,16 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
+
+	err := firstNode.SendCascadeEvent(c, "test", nil)
+	assert.NotNil(t, err)
+	c.ReplicationFactor = 0
+	err = firstNode.SendCascadeEvent(c, "test", e)
+	assert.NotNil(t, err)
+	c.ReplicationFactor = 2
+	c.NodeIds = nil
+	err = firstNode.SendCascadeEvent(c, "test", e)
+	assert.NotNil(t, err)
 }
 
 func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {

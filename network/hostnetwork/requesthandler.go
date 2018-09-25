@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/pkg/errors"
 )
@@ -236,9 +237,7 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 }
 
 // ResendPulseToKnownHosts resends received pulse to all known hosts
-func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, pulse *packet.RequestPulse) {
-	ht := hostHandler.HtFromCtx(ctx)
-	hosts := ht.GetMulticastHosts()
+func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []*routing.RouteHost, pulse *packet.RequestPulse) {
 	for _, host := range hosts {
 		err := sendPulse(hostHandler, host.Host, pulse)
 		if err != nil {

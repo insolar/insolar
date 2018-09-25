@@ -488,6 +488,12 @@ func TestDispatchPacketType(t *testing.T) {
 		pckt := builder.Type(packet.TypeGetRandomHosts).Request(&packet.RequestGetRandomHosts{HostsNumber: 2}).Build()
 		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
+
+	t.Run("broken packet", func(t *testing.T) {
+		pckt := builder.Type(packet.TypeGetRandomHosts * 1024).Request(&packet.RequestGetRandomHosts{}).Build()
+		_, err := DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		assert.NotNil(t, err)
+	})
 }
 
 func Test_processPulse(t *testing.T) {
