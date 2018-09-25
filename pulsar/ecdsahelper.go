@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 )
 
+// Helper-function for exporting ecdsa.PrivateKey to PEM string
 func ExportPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
 	x509Encoded, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
@@ -31,6 +32,7 @@ func ExportPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
 	return string(pemEncoded), nil
 }
 
+// Helper-function for exporting ecdsa.PublicKey from PEM string
 func ExportPublicKey(publicKey *ecdsa.PublicKey) (string, error) {
 	x509EncodedPub, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
@@ -41,6 +43,7 @@ func ExportPublicKey(publicKey *ecdsa.PublicKey) (string, error) {
 	return string(pemEncodedPub), nil
 }
 
+// Helper-function for importing ecdsa.PrivateKey from PEM string
 func ImportPrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
 	block, _ := pem.Decode([]byte(pemEncoded))
 	x509Encoded := block.Bytes
@@ -51,6 +54,7 @@ func ImportPrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
+// Helper-function for importing ecdsa.PublicKey from PEM string
 func ImportPublicKey(pemPubEncoded string) (*ecdsa.PublicKey, error) {
 	blockPub, _ := pem.Decode([]byte(pemPubEncoded))
 	x509EncodedPub := blockPub.Bytes

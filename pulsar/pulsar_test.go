@@ -113,16 +113,3 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	assertObj.Equal("pct", result.Neighbours[secondExpectedKey].ConnectionType.String())
 	clientFactory.AssertNumberOfCalls(t, "CreateWrapper", 2)
 }
-
-func TestSingAndVerify(t *testing.T) {
-	assertObj := assert.New(t)
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey, _ := ExportPublicKey(&privateKey.PublicKey)
-
-	signature, err := singData(privateKey, "This is the message to be signed and verified!")
-	assertObj.NoError(err)
-
-	checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: "This is the message to be signed and verified!"})
-
-	assertObj.Equal(true, checkSignature)
-}

@@ -175,11 +175,18 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 	if err != nil {
 		return err
 	}
+
+	// Double-check lock
 	if neighbour.OutgoingClient.IsInitialised() {
 		return nil
 	}
-
+	neighbour.OutgoingClient.Lock()
+	if neighbour.OutgoingClient.IsInitialised() {
+		neighbour.OutgoingClient.Unlock()
+		return nil
+	}
 	err = neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
+	neighbour.OutgoingClient.Unlock()
 	if err != nil {
 		return err
 	}

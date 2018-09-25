@@ -18,9 +18,6 @@ package pulsar
 
 import (
 	"errors"
-	"net"
-	"net/rpc"
-	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -99,14 +96,18 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	}
 	*response = message
 
-	if neighbour.OutgoingClient == nil {
-		conn, err := net.Dial(neighbour.ConnectionType.String(), neighbour.ConnectionAddress)
+	// Double check lock
+	if !neighbour.OutgoingClient.IsInitialised() {
+		neighbour.OutgoingClient.Lock()
+
+		if neighbour.OutgoingClient.IsInitialised() {
+			neighbour.OutgoingClient.Unlock()
+			return nil
+		}
+		err = neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
+		neighbour.OutgoingClient.Unlock()
 		if err != nil {
 			return err
-		}
-		neighbour.OutgoingClient = &RpcClientWrapperImpl{
-			Mutex:  &sync.Mutex{},
-			Client: rpc.NewClient(conn),
 		}
 	}
 

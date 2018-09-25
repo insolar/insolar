@@ -40,7 +40,7 @@ type RpcClientWrapperFactoryImpl struct {
 // Standard factory implementation
 // Returns RpcClientWrapperImpl
 func (RpcClientWrapperFactoryImpl) CreateWrapper() RpcClientWrapper {
-	return &RpcClientWrapperImpl{}
+	return &RpcClientWrapperImpl{Mutex: &sync.Mutex{}}
 }
 
 // Interface for wrappers around rpc clients
@@ -80,12 +80,12 @@ func (impl *RpcClientWrapperImpl) Close() error {
 
 // Take current neighbour's lock
 func (impl *RpcClientWrapperImpl) Lock() {
-	impl.Lock()
+	impl.Mutex.Lock()
 }
 
 // Release current neighbour's lock
 func (impl *RpcClientWrapperImpl) Unlock() {
-	impl.Unlock()
+	impl.Mutex.Unlock()
 }
 
 // Set wrapper's undercover rpc client
