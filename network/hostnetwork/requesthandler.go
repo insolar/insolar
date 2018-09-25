@@ -254,7 +254,7 @@ func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string) 
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to SendRequest")
 	}
 
 	return checkResponse(hostHandler, future, targetID, request)
@@ -267,7 +267,7 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 	}
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to FindHost")
 	}
 	if !exist {
 		err = errors.New("knownOuterHostsRequest: target for relay request not found")
@@ -286,7 +286,7 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to SendRequest")
 	}
 
 	return checkResponse(hostHandler, future, targetID, request)
