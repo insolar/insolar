@@ -83,6 +83,14 @@ Generate default configuration file
 
     go run cmd/insolar/* -output=-
 
+Example
+------------
+    # Start node
+    ./scripts/insolard/launch.sh
+    # Create user
+    curl --data '{"query_type": "create_member", "name": "Peter"}' "localhost:19191/api/v1?"
+    # Dump user info
+    curl --data '{"query_type": "dump_all_users"}' "localhost:19191/api/v1?"
 
 Docker container
 ------------
