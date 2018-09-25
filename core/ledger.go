@@ -37,6 +37,7 @@ type Ledger interface {
 	// GetPulseManager returns pulse manager to work with.
 	GetPulseManager() PulseManager
 
+	// HandleEvent processes provided event.
 	HandleEvent(Event) (Reaction, error)
 }
 
@@ -55,21 +56,21 @@ type ArtifactManager interface {
 	// Root record is the parent for all top-level records.
 	RootRef() *RecordRef
 
-	// GetCode returns code from code record by provided reference.
+	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
 	GetCode(ref RecordRef, machinePref []MachineType) (CodeDescriptor, error)
 
-	// GetClass returns descriptor for latest state of the class known to storage.
-	// If the class is deactivated, an error should be returned.
+	// GetClass returns descriptor for provided state.
 	//
-	// Returned descriptor will provide methods for fetching all related data.
+	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
+	// provide methods for fetching all related data.
 	GetClass(head RecordRef, state *RecordRef) (ClassDescriptor, error)
 
-	// GetObject returns descriptor for latest state of the object known to storage.
-	// If the object or the class is deactivated, an error should be returned.
+	// GetObject returns descriptor for provided state.
 	//
-	// Returned descriptor will provide methods for fetching all related data.
+	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
+	// provide methods for fetching all related data.
 	GetObject(head RecordRef, state *RecordRef) (ObjectDescriptor, error)
 
 	// GetDelegate returns provided object's delegate reference for provided class.
@@ -133,14 +134,10 @@ type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *RecordRef
 
-	// MachineType fetches code from storage and returns first available machine type according to architecture
-	// preferences.
-	//
-	// Code for returned machine type will be fetched by Code method.
+	// MachineType returns first available machine type for provided machine preference.
 	MachineType() MachineType
 
-	// Code fetches code from storage. Code will be fetched according to architecture preferences
-	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
+	// Code returns code for first available machine type for provided machine preference.
 	Code() []byte
 }
 

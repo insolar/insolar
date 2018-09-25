@@ -34,15 +34,12 @@ func (d *CodeDescriptor) Ref() *core.RecordRef {
 	return &d.ref
 }
 
-// MachineType fetches code from storage and returns first available machine type according to architecture
-// preferences.
-//
-// Code for returned machine type will be fetched by Code method.
+// MachineType returns first available machine type for provided machine preference.
 func (d *CodeDescriptor) MachineType() core.MachineType {
 	return d.machineType
 }
 
-// Code returns fetched code for given machine type.
+// Code returns code for first available machine type for provided machine preference.
 func (d *CodeDescriptor) Code() []byte {
 	return d.code
 }

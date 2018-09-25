@@ -34,11 +34,12 @@ const (
 	TypeCommonReaction              // TypeCommonReaction - two binary fields: data and results
 
 	// Ledger
-	TypeCode      // TypeCode - code from storage.
-	TypeClass     // TypeClass - class from storage.
-	TypeObject    // TypeObject - object from storage.
-	TypeDelegate  // TypeDelegate - delegate reference from storage.
-	TypeReference // TypeReference - common reaction for methods returning reference to created records.
+
+	TypeCode      // TypeCode is code from storage.
+	TypeClass     // TypeClass is class from storage.
+	TypeObject    // TypeObject is object from storage.
+	TypeDelegate  // TypeDelegate is delegate reference from storage.
+	TypeReference // TypeReference is common reaction for methods returning reference to created records.
 )
 
 func getEmptyReaction(t Type) (core.Reaction, error) {

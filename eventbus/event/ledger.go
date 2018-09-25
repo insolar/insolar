@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// GetCode retrieves code from storage.
 type GetCode struct {
 	Code        core.RecordRef
 	MachinePref []core.MachineType
@@ -43,6 +44,7 @@ func (e *GetCode) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// GetClass retrieves class from storage.
 type GetClass struct {
 	Head  core.RecordRef
 	State *core.RecordRef // If nil, will fetch the latest state.
@@ -64,6 +66,7 @@ func (e *GetClass) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// GetObject retrieves object from storage.
 type GetObject struct {
 	Head  core.RecordRef
 	State *core.RecordRef // If nil, will fetch the latest state.
@@ -85,6 +88,7 @@ func (e *GetObject) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// GetDelegate retrieves object represented as provided class.
 type GetDelegate struct {
 	Head    core.RecordRef
 	AsClass core.RecordRef
@@ -106,6 +110,7 @@ func (e *GetDelegate) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// DeclareType creates new type.
 type DeclareType struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
@@ -128,6 +133,7 @@ func (e *DeclareType) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// DeployCode creates new code.
 type DeployCode struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
@@ -150,6 +156,7 @@ func (e *DeployCode) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// ActivateClass activates class.
 type ActivateClass struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
@@ -171,6 +178,7 @@ func (e *ActivateClass) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// DeactivateClass deactivates class.
 type DeactivateClass struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
@@ -193,6 +201,7 @@ func (e *DeactivateClass) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// UpdateClass amends class.
 type UpdateClass struct {
 	Domain     core.RecordRef
 	Request    core.RecordRef
@@ -217,6 +226,7 @@ func (e *UpdateClass) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// ActivateObject activates object.
 type ActivateObject struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
@@ -241,6 +251,7 @@ func (e *ActivateObject) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
+// ActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
 type ActivateObjectDelegate struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
@@ -265,6 +276,7 @@ func (e *ActivateObjectDelegate) React(c core.Components) (core.Reaction, error)
 	return c.Ledger.HandleEvent(e)
 }
 
+// DeactivateObject deactivates object.
 type DeactivateObject struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
@@ -287,7 +299,7 @@ func (e *DeactivateObject) React(c core.Components) (core.Reaction, error) {
 	return c.Ledger.HandleEvent(e)
 }
 
-// UpdateObject event for call of core.ArtifactManager.UpdateObj
+// UpdateObject amends object.
 type UpdateObject struct {
 	Domain  core.RecordRef
 	Request core.RecordRef
