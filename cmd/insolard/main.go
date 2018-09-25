@@ -74,8 +74,7 @@ func parseInputParams() {
 	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Println("Wrong input params:", err)
-		os.Exit(1)
+		log.Fatal("Wrong input params:", err)
 	}
 }
 
