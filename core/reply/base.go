@@ -26,11 +26,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Type is a enum type of reaction
-type Type byte
-
 const (
-	TypeCommon = Type(iota) // TypeCommonReaction - two binary fields: data and results
+	// Logicrunner
+
+	TypeCommon = core.ReplyType(iota) // TypeCommonReaction - two binary fields: data and results
 
 	// Ledger
 
@@ -38,10 +37,10 @@ const (
 	TypeClass     // TypeClass is class from storage.
 	TypeObject    // TypeObject is object from storage.
 	TypeDelegate  // TypeDelegate is delegate reference from storage.
-	TypeReference // TypeReference is common reaction for methods returning reference to created records.
+	TypeReference // TypeReference is common reply for methods returning reference to created records.
 )
 
-func getEmptyReaction(t Type) (core.Reply, error) {
+func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 	switch t {
 	case TypeCommon:
 		return &Common{}, nil
@@ -56,37 +55,38 @@ func getEmptyReaction(t Type) (core.Reply, error) {
 	case TypeReference:
 		return &Reference{}, nil
 	default:
-		return nil, errors.Errorf("unimplemented reaction type: '%d'", t)
+		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
 }
 
-func serialize(reaction core.Reply, t Type) (io.Reader, error) {
+// Serialize returns encoded reply.
+func Serialize(reply core.Reply) (io.Reader, error) {
 	buff := &bytes.Buffer{}
-	_, err := buff.Write([]byte{byte(t)})
+	_, err := buff.Write([]byte{byte(reply.Type())})
 	if err != nil {
 		return nil, err
 	}
 
 	enc := gob.NewEncoder(buff)
-	err = enc.Encode(reaction)
+	err = enc.Encode(reply)
 	return buff, err
 }
 
-// Deserialize returns a reaction.
+// Deserialize returns decoded reply.
 func Deserialize(buff io.Reader) (core.Reply, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
-		return nil, errors.New("too short input to deserialize an message reaction")
+		return nil, errors.New("too short input to deserialize a message reply")
 	}
 
-	reaction, err := getEmptyReaction(Type(b[0]))
+	reply, err := getEmptyReply(core.ReplyType(b[0]))
 	if err != nil {
 		return nil, err
 	}
 	enc := gob.NewDecoder(buff)
-	err = enc.Decode(reaction)
-	return reaction, err
+	err = enc.Decode(reply)
+	return reply, err
 }
 
 func init() {

@@ -50,11 +50,6 @@ func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.am
 }
 
-// HandleMessage is a wrapper for EventHandler.Handle method.
-func (l *Ledger) HandleMessage(e core.Message) (core.Reply, error) {
-	return l.handler.Handle(e)
-}
-
 // NewLedger creates new ledger instance.
 func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	var err error
@@ -74,11 +69,11 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
-
 	handler, err := artifactmanager.NewMessageHandler(db)
 	if err != nil {
 		return nil, err
 	}
+
 	err = db.Bootstrap()
 	if err != nil {
 		return nil, err
@@ -117,6 +112,9 @@ func NewTestLedger(
 func (l *Ledger) Start(c core.Components) error {
 	var err error
 	if err = l.am.Link(c); err != nil {
+		return err
+	}
+	if err = l.handler.Link(c); err != nil {
 		return err
 	}
 

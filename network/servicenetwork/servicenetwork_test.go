@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagebus/message"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/stretchr/testify/assert"

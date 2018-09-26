@@ -17,8 +17,6 @@
 package message
 
 import (
-	"io"
-
 	"github.com/insolar/insolar/core"
 )
 
@@ -39,26 +37,39 @@ type CallMethod struct {
 	BaseLogicEvent
 	ReturnMode MethodReturnMode
 	ObjectRef  core.RecordRef
+	Request    core.RecordRef
 	Method     string
 	Arguments  core.Arguments
 }
 
-// React handles message and returns associated reply.
-func (e *CallMethod) React(c core.Components) (core.Reply, error) {
-	return logicRunnerHandle(e, c)
+func (e *CallMethod) Type() core.MessageType {
+	return TypeCallMethod
 }
 
-// GetOperatingRole returns operating jet role for given message type.
-func (e *CallMethod) GetOperatingRole() core.JetRole {
+func (e *CallMethod) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
-// GetReference returns referenced object.
-func (e *CallMethod) GetReference() core.RecordRef {
-	return e.ObjectRef
+func (e *CallMethod) Target() *core.RecordRef {
+	return &e.ObjectRef
 }
 
-// Serialize serializes message.
-func (e *CallMethod) Serialize() (io.Reader, error) {
-	return serialize(e, TypeCallMethod)
+// CallConstructor is a message for calling constructor and obtain its reply
+type CallConstructor struct {
+	BaseLogicEvent
+	ClassRef  core.RecordRef
+	Name      string
+	Arguments core.Arguments
+}
+
+func (e *CallConstructor) Type() core.MessageType {
+	return TypeCallConstructor
+}
+
+func (e *CallConstructor) Target() *core.RecordRef {
+	return &e.ClassRef
+}
+
+func (e *CallConstructor) TargetRole() core.JetRole {
+	return core.RoleVirtualExecutor
 }

@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagebus/reply"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -126,6 +126,10 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 }
 
 type TestMessageBus struct {
+}
+
+func (eb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
+	return nil
 }
 
 func (eb *TestMessageBus) Start(c core.Components) error {

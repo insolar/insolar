@@ -25,6 +25,10 @@ type TestMessageBus struct {
 	LogicRunner core.LogicRunner
 }
 
+func (eb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
+	return nil
+}
+
 // Start is the dummy mock of Start method.
 func (*TestMessageBus) Start(components core.Components) error { return nil }
 
@@ -32,8 +36,8 @@ func (*TestMessageBus) Start(components core.Components) error { return nil }
 func (*TestMessageBus) Stop() error { return nil }
 
 // Send executes message on LogicRunner.
-func (eb *TestMessageBus) Send(event core.Message) (resp core.Reply, err error) {
-	return eb.LogicRunner.Execute(event)
+func (eb *TestMessageBus) Send(msg core.Message) (resp core.Reply, err error) {
+	return eb.LogicRunner.Execute(msg.(core.LogicRunnerEvent))
 }
 
 func (*TestMessageBus) SendAsync(msg core.Message) {}

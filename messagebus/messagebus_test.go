@@ -21,7 +21,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagebus/message"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,12 +42,12 @@ func (r *runner) OnPulse(pulse core.Pulse) error { return nil }
 func (r *runner) Start(components core.Components) error { return nil }
 func (r *runner) Stop() error                            { return nil }
 
-func (r *runner) Execute(e core.LogicRunnerEvent) (core.Reply, error) {
+func (r *runner) Execute(msg core.LogicRunnerEvent) (core.Reply, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
-	m := e.(*message.CallMethod)
-	r.requests = append(r.requests, req{e.GetReference(), m.Method, m.Arguments})
+	m := msg.(*message.CallMethod)
+	r.requests = append(r.requests, req{*msg.Target(), m.Method, m.Arguments})
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 

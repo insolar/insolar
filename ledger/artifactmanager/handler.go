@@ -21,10 +21,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/messagebus/message"
-	"github.com/insolar/insolar/messagebus/reply"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -37,42 +37,57 @@ func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 	return &MessageHandler{db: db}, nil
 }
 
-// Handle performs message processing.
-func (h *MessageHandler) Handle(genericMessage core.Message) (core.Reply, error) {
-	switch m := genericMessage.(type) {
-	case *message.GetCode:
-		return h.handleGetCode(m)
-	case *message.GetClass:
-		return h.handleGetClass(m)
-	case *message.GetObject:
-		return h.handleGetObject(m)
-	case *message.GetDelegate:
-		return h.handleGetDelegate(m)
-	case *message.DeclareType:
-		return h.handleDeclareType(m)
-	case *message.DeployCode:
-		return h.handleDeployCode(m)
-	case *message.ActivateClass:
-		return h.handleActivateClass(m)
-	case *message.DeactivateClass:
-		return h.handleDeactivateClass(m)
-	case *message.UpdateClass:
-		return h.handleUpdateClass(m)
-	case *message.ActivateObject:
-		return h.handleActivateObject(m)
-	case *message.ActivateObjectDelegate:
-		return h.handleActivateObjectDelegate(m)
-	case *message.DeactivateObject:
-		return h.handleDeactivateObject(m)
-	case *message.UpdateObject:
-		return h.handleUpdateObject(m)
+// Link links external components.
+func (h *MessageHandler) Link(components core.Components) error {
+	var err error
+	bus := components.MessageBus
+
+	if err = bus.Register(message.TypeGetCode, h.handleGetCode); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeGetClass, h.handleGetClass); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeGetObject, h.handleGetObject); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeGetDelegate, h.handleGetDelegate); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeDeclareType, h.handleDeclareType); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeDeployCode, h.handleDeployCode); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeActivateClass, h.handleActivateClass); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeDeactivateClass, h.handleDeactivateClass); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeUpdateClass, h.handleUpdateClass); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeActivateObject, h.handleActivateObject); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeActivateObjectDelegate, h.handleActivateObjectDelegate); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeDeactivateObject, h.handleDeactivateObject); err != nil {
+		return err
+	}
+	if err = bus.Register(message.TypeUpdateObject, h.handleUpdateObject); err != nil {
+		return err
 	}
 
-	return nil, errors.New("no handler for this message")
+	return err
 }
 
-func (h *MessageHandler) handleGetCode(ev *message.GetCode) (core.Reply, error) {
-	codeRef := record.Core2Reference(ev.Code)
+func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.GetCode)
+	codeRef := record.Core2Reference(msg.Code)
 	rec, err := h.db.GetRecord(&codeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
@@ -81,7 +96,7 @@ func (h *MessageHandler) handleGetCode(ev *message.GetCode) (core.Reply, error) 
 	if !ok {
 		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
 	}
-	code, mt, err := codeRec.GetCode(ev.MachinePref)
+	code, mt, err := codeRec.GetCode(msg.MachinePref)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code from record")
 	}
@@ -94,8 +109,10 @@ func (h *MessageHandler) handleGetCode(ev *message.GetCode) (core.Reply, error) 
 	return &react, nil
 }
 
-func (h *MessageHandler) handleGetClass(ev *message.GetClass) (core.Reply, error) {
-	_, stateRef, state, err := getClass(h.db, &ev.Head, ev.State)
+func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.GetClass)
+
+	_, stateRef, state, err := getClass(h.db, &msg.Head, msg.State)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +125,7 @@ func (h *MessageHandler) handleGetClass(ev *message.GetClass) (core.Reply, error
 	}
 
 	react := reply.Class{
-		Head:  ev.Head,
+		Head:  msg.Head,
 		State: *stateRef,
 		Code:  code,
 	}
@@ -116,8 +133,10 @@ func (h *MessageHandler) handleGetClass(ev *message.GetClass) (core.Reply, error
 	return &react, nil
 }
 
-func (h *MessageHandler) handleGetObject(ev *message.GetObject) (core.Reply, error) {
-	idx, stateRef, state, err := getObject(h.db, &ev.Head, ev.State)
+func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.GetObject)
+
+	idx, stateRef, state, err := getObject(h.db, &msg.Head, msg.State)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +147,7 @@ func (h *MessageHandler) handleGetObject(ev *message.GetObject) (core.Reply, err
 	}
 
 	react := reply.Object{
-		Head:     ev.Head,
+		Head:     msg.Head,
 		State:    *stateRef,
 		Class:    *idx.ClassRef.CoreRef(),
 		Memory:   state.GetMemory(),
@@ -138,13 +157,15 @@ func (h *MessageHandler) handleGetObject(ev *message.GetObject) (core.Reply, err
 	return &react, nil
 }
 
-func (h *MessageHandler) handleGetDelegate(ev *message.GetDelegate) (core.Reply, error) {
-	idx, _, _, err := getObject(h.db, &ev.Head, nil)
+func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.GetDelegate)
+
+	idx, _, _, err := getObject(h.db, &msg.Head, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	delegateRef, ok := idx.Delegates[ev.AsClass]
+	delegateRef, ok := idx.Delegates[msg.AsClass]
 	if !ok {
 		return nil, ErrNotFound
 	}
@@ -156,9 +177,11 @@ func (h *MessageHandler) handleGetDelegate(ev *message.GetDelegate) (core.Reply,
 	return &react, nil
 }
 
-func (h *MessageHandler) handleDeclareType(ev *message.DeclareType) (core.Reply, error) {
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
+func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.DeclareType)
+
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
 
 	rec := record.TypeRecord{
 		StorageRecord: record.StorageRecord{
@@ -169,7 +192,7 @@ func (h *MessageHandler) handleDeclareType(ev *message.DeclareType) (core.Reply,
 				},
 			},
 		},
-		TypeDeclaration: ev.TypeDec,
+		TypeDeclaration: msg.TypeDec,
 	}
 	codeRef, err := h.db.SetRecord(&rec)
 	if err != nil {
@@ -179,9 +202,11 @@ func (h *MessageHandler) handleDeclareType(ev *message.DeclareType) (core.Reply,
 	return &reply.Reference{Ref: *codeRef.CoreRef()}, nil
 }
 
-func (h *MessageHandler) handleDeployCode(ev *message.DeployCode) (core.Reply, error) {
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
+func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.DeployCode)
+
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
 
 	rec := record.CodeRecord{
 		StorageRecord: record.StorageRecord{
@@ -192,7 +217,7 @@ func (h *MessageHandler) handleDeployCode(ev *message.DeployCode) (core.Reply, e
 				},
 			},
 		},
-		TargetedCode: ev.CodeMap,
+		TargetedCode: msg.CodeMap,
 	}
 	codeRef, err := h.db.SetRecord(&rec)
 	if err != nil {
@@ -201,9 +226,11 @@ func (h *MessageHandler) handleDeployCode(ev *message.DeployCode) (core.Reply, e
 	return &reply.Reference{Ref: *codeRef.CoreRef()}, nil
 }
 
-func (h *MessageHandler) handleActivateClass(ev *message.ActivateClass) (core.Reply, error) {
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
+func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.ActivateClass)
+
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
 
 	rec := record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
@@ -240,15 +267,19 @@ func (h *MessageHandler) handleActivateClass(ev *message.ActivateClass) (core.Re
 	return &reply.Reference{Ref: *classRef.CoreRef()}, nil
 }
 
-func (h *MessageHandler) handleDeactivateClass(ev *message.DeactivateClass) (core.Reply, error) {
-	var err error
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
-	classRef := record.Core2Reference(ev.Class)
+func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.DeactivateClass)
 
-	var deactivationRef *record.Reference
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
+	classRef := record.Core2Reference(msg.Class)
+
+	var (
+		err             error
+		deactivationRef *record.Reference
+	)
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getClass(tx, &ev.Class, nil)
+		idx, _, _, err := getClass(tx, &msg.Class, nil)
 		if err != nil {
 			return err
 		}
@@ -285,21 +316,23 @@ func (h *MessageHandler) handleDeactivateClass(ev *message.DeactivateClass) (cor
 	return &reply.Reference{Ref: *deactivationRef.CoreRef()}, nil
 }
 
-func (h *MessageHandler) handleUpdateClass(ev *message.UpdateClass) (core.Reply, error) {
-	var err error
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
-	classRef := record.Core2Reference(ev.Class)
-	migrationRefs := make([]record.Reference, 0, len(ev.Class))
-	for _, migration := range ev.Migrations {
+func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.UpdateClass)
+
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
+	classRef := record.Core2Reference(msg.Class)
+	migrationRefs := make([]record.Reference, 0, len(msg.Class))
+	for _, migration := range msg.Migrations {
 		migrationRefs = append(migrationRefs, record.Core2Reference(migration))
 	}
 
-	err = validateCode(h.db, &ev.Code)
+	var err error
+	err = validateCode(h.db, &msg.Code)
 	if err != nil {
 		return nil, err
 	}
-	for _, migration := range ev.Migrations {
+	for _, migration := range msg.Migrations {
 		err = validateCode(h.db, &migration)
 		if err != nil {
 			return nil, err
@@ -308,7 +341,7 @@ func (h *MessageHandler) handleUpdateClass(ev *message.UpdateClass) (core.Reply,
 
 	var amendRef *record.Reference
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getClass(tx, &ev.Class, nil)
+		idx, _, _, err := getClass(tx, &msg.Class, nil)
 		if err != nil {
 			return err
 		}
@@ -324,7 +357,7 @@ func (h *MessageHandler) handleUpdateClass(ev *message.UpdateClass) (core.Reply,
 				HeadRecord:    classRef,
 				AmendedRecord: idx.LatestStateRef,
 			},
-			NewCode:    record.Core2Reference(ev.Code),
+			NewCode:    record.Core2Reference(msg.Code),
 			Migrations: migrationRefs,
 		}
 
@@ -348,18 +381,20 @@ func (h *MessageHandler) handleUpdateClass(ev *message.UpdateClass) (core.Reply,
 	return &reply.Reference{Ref: *amendRef.CoreRef()}, nil
 }
 
-func (h *MessageHandler) handleActivateObject(ev *message.ActivateObject) (core.Reply, error) {
-	var err error
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
-	classRef := record.Core2Reference(ev.Class)
-	parentRef := record.Core2Reference(ev.Parent)
+func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.ActivateObject)
 
-	_, _, _, err = getClass(h.db, &ev.Class, nil)
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
+	classRef := record.Core2Reference(msg.Class)
+	parentRef := record.Core2Reference(msg.Parent)
+
+	var err error
+	_, _, _, err = getClass(h.db, &msg.Class, nil)
 	if err != nil {
 		return nil, err
 	}
-	_, _, _, err = getObject(h.db, &ev.Parent, nil)
+	_, _, _, err = getObject(h.db, &msg.Parent, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -376,7 +411,7 @@ func (h *MessageHandler) handleActivateObject(ev *message.ActivateObject) (core.
 				},
 			},
 			ClassActivateRecord: classRef,
-			Memory:              ev.Memory,
+			Memory:              msg.Memory,
 			Parent:              parentRef,
 			Delegate:            false,
 		}
@@ -418,18 +453,20 @@ func (h *MessageHandler) handleActivateObject(ev *message.ActivateObject) (core.
 	return &reply.Reference{Ref: *objRef.CoreRef()}, nil
 }
 
-func (h *MessageHandler) handleActivateObjectDelegate(ev *message.ActivateObjectDelegate) (core.Reply, error) {
-	var err error
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
-	classRef := record.Core2Reference(ev.Class)
-	parentRef := record.Core2Reference(ev.Parent)
+func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.ActivateObjectDelegate)
 
-	_, _, _, err = getClass(h.db, &ev.Class, nil)
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
+	classRef := record.Core2Reference(msg.Class)
+	parentRef := record.Core2Reference(msg.Parent)
+
+	var err error
+	_, _, _, err = getClass(h.db, &msg.Class, nil)
 	if err != nil {
 		return nil, err
 	}
-	_, _, _, err = getObject(h.db, &ev.Parent, nil)
+	_, _, _, err = getObject(h.db, &msg.Parent, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -446,7 +483,7 @@ func (h *MessageHandler) handleActivateObjectDelegate(ev *message.ActivateObject
 				},
 			},
 			ClassActivateRecord: classRef,
-			Memory:              ev.Memory,
+			Memory:              msg.Memory,
 			Parent:              parentRef,
 			Delegate:            true,
 		}
@@ -470,10 +507,10 @@ func (h *MessageHandler) handleActivateObjectDelegate(ev *message.ActivateObject
 		if err != nil {
 			return errors.Wrap(err, "inconsistent index")
 		}
-		if _, ok := parentIdx.Delegates[ev.Class]; ok {
+		if _, ok := parentIdx.Delegates[msg.Class]; ok {
 			return ErrClassDelegateAlreadyExists
 		}
-		parentIdx.Delegates[ev.Class] = *objRef
+		parentIdx.Delegates[msg.Class] = *objRef
 		err = tx.SetObjectIndex(&parentRef, parentIdx)
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -489,15 +526,19 @@ func (h *MessageHandler) handleActivateObjectDelegate(ev *message.ActivateObject
 	return &reply.Reference{Ref: *objRef.CoreRef()}, nil
 }
 
-func (h *MessageHandler) handleDeactivateObject(ev *message.DeactivateObject) (core.Reply, error) {
-	var err error
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
-	objRef := record.Core2Reference(ev.Object)
+func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.DeactivateObject)
 
-	var deactivationRef *record.Reference
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
+	objRef := record.Core2Reference(msg.Object)
+
+	var (
+		err             error
+		deactivationRef *record.Reference
+	)
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &ev.Object, nil)
+		idx, _, _, err := getObject(tx, &msg.Object, nil)
 		if err != nil {
 			return err
 		}
@@ -534,15 +575,19 @@ func (h *MessageHandler) handleDeactivateObject(ev *message.DeactivateObject) (c
 	return &reply.Reference{Ref: *deactivationRef.CoreRef()}, nil
 }
 
-func (h *MessageHandler) handleUpdateObject(ev *message.UpdateObject) (core.Reply, error) {
-	var err error
-	domainRef := record.Core2Reference(ev.Domain)
-	requestRef := record.Core2Reference(ev.Request)
-	objRef := record.Core2Reference(ev.Object)
+func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.UpdateObject)
 
-	var amendRef *record.Reference
+	domainRef := record.Core2Reference(msg.Domain)
+	requestRef := record.Core2Reference(msg.Request)
+	objRef := record.Core2Reference(msg.Object)
+
+	var (
+		err      error
+		amendRef *record.Reference
+	)
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &ev.Object, nil)
+		idx, _, _, err := getObject(tx, &msg.Object, nil)
 		if err != nil {
 			return err
 		}
@@ -558,7 +603,7 @@ func (h *MessageHandler) handleUpdateObject(ev *message.UpdateObject) (core.Repl
 				HeadRecord:    objRef,
 				AmendedRecord: idx.LatestStateRef,
 			},
-			NewMemory: ev.Memory,
+			NewMemory: msg.Memory,
 		}
 
 		amendRef, err = tx.SetRecord(&rec)

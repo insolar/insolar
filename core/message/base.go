@@ -37,12 +37,11 @@ func (be BaseLogicEvent) GetCaller() *core.RecordRef {
 	return &be.Caller
 }
 
-// Type is a enum type of event
-type Type byte
-
 const (
-	TypeCallMethod      = Type(iota) // TypeCallMethod calls method and returns result
-	TypeCallConstructor              // TypeCallConstructor is a message for calling constructor and obtain its reply
+	// Logicrunner
+
+	TypeCallMethod      = core.MessageType(iota) // TypeCallMethod calls method and returns result
+	TypeCallConstructor                          // TypeCallConstructor is a message for calling constructor and obtain its reply
 
 	// Ledger
 
@@ -62,13 +61,13 @@ const (
 )
 
 // GetEmptyMessage constructs specified message
-func getEmptyMessage(mt Type) (core.Message, error) {
+func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	switch mt {
+	// Logicrunner
 	case TypeCallMethod:
 		return &CallMethod{}, nil
 	case TypeCallConstructor:
 		return &CallConstructor{}, nil
-
 	// Ledger
 	case TypeGetCode:
 		return &GetCode{}, nil
@@ -101,9 +100,10 @@ func getEmptyMessage(mt Type) (core.Message, error) {
 	}
 }
 
-func serialize(msg core.Message, t Type) (io.Reader, error) {
+// Serialize returns encoded message.
+func Serialize(msg core.Message) (io.Reader, error) {
 	buff := &bytes.Buffer{}
-	_, err := buff.Write([]byte{byte(t)})
+	_, err := buff.Write([]byte{byte(msg.Type())})
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func serialize(msg core.Message, t Type) (io.Reader, error) {
 	return buff, err
 }
 
-// Deserialize returns a message
+// Deserialize returns decoded message.
 func Deserialize(buff io.Reader) (core.Message, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
@@ -121,7 +121,7 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 		return nil, errors.New("too short slice for deserialize message")
 	}
 
-	msg, err := getEmptyMessage(Type(b[0]))
+	msg, err := getEmptyMessage(core.MessageType(b[0]))
 	if err != nil {
 		return nil, err
 	}
@@ -131,9 +131,9 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 }
 
 func init() {
+	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
-
 	// Ledger
 	gob.Register(&GetCode{})
 	gob.Register(&GetClass{})

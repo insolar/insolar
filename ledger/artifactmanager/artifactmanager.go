@@ -18,9 +18,9 @@ package artifactmanager
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/messagebus/message"
-	"github.com/insolar/insolar/messagebus/reply"
 )
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
@@ -65,7 +65,7 @@ func (m *LedgerArtifactManager) GetCode(
 
 	react, ok := genericReact.(*reply.Code)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	desc := CodeDescriptor{
 		machinePref: machinePref,
@@ -94,7 +94,7 @@ func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.Record
 
 	react, ok := genericReact.(*reply.Class)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	desc := ClassDescriptor{
 		am:    m,
@@ -121,7 +121,7 @@ func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.Recor
 
 	react, ok := genericReact.(*reply.Object)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	desc := ObjectDescriptor{
 		am:       m,
@@ -150,7 +150,7 @@ func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core
 
 	react, ok := genericReact.(*reply.Delegate)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	return &react.Head, nil
 }
@@ -291,7 +291,7 @@ func (m *LedgerArtifactManager) sendReference(ev core.Message) (*core.RecordRef,
 
 	react, ok := genericReact.(*reply.Reference)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	return &react.Ref, nil
 }

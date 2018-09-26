@@ -23,9 +23,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/messagebus/message"
-	"github.com/insolar/insolar/messagebus/reply"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -36,44 +36,47 @@ type MessageBus struct {
 	logicRunner core.LogicRunner
 	service     core.Network
 	ledger      core.Ledger
-
-	components *core.Components
+	handlers    map[core.MessageType]core.MessageHandler
 }
 
 // NewMessageBus is a `MessageBus` constructor, takes an executor object
 // that satisfies LogicRunner interface
-func NewMessageBus(cfg configuration.Configuration) (*MessageBus, error) {
-	return &MessageBus{
-		logicRunner: nil,
-		service:     nil,
-		ledger:      nil,
-		components:  nil,
-	}, nil
+func NewMessageBus(configuration.Configuration) (*MessageBus, error) {
+	return &MessageBus{handlers: map[core.MessageType]core.MessageHandler{}}, nil
 }
 
-func (eb *MessageBus) Start(c core.Components) error {
-	eb.logicRunner = c.LogicRunner
-	eb.service = c.Network
-	eb.service.RemoteProcedureRegister(deliverRPCMethodName, eb.deliver)
-	eb.ledger = c.Ledger
+func (mb *MessageBus) Start(c core.Components) error {
+	mb.logicRunner = c.LogicRunner
+	mb.service = c.Network
+	mb.service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
+	mb.ledger = c.Ledger
 
-	// Storing entire DI container here to pass it into message handle methods.
-	eb.components = &c
 	return nil
 }
 
-func (eb *MessageBus) Stop() error { return nil }
+func (mb *MessageBus) Stop() error { return nil }
+
+func (mb *MessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
+	_, ok := mb.handlers[p]
+	if ok {
+		return errors.New("handler for this type already exists")
+	}
+
+	mb.handlers[p] = handler
+	return nil
+}
 
 // Send an `Message` and get a `Reply` or error from remote host.
-func (eb *MessageBus) Send(msg core.Message) (core.Reply, error) {
-	jc := eb.ledger.GetJetCoordinator()
-	pm := eb.ledger.GetPulseManager()
+func (mb *MessageBus) Send(msg core.Message) (core.Reply, error) {
+	jc := mb.ledger.GetJetCoordinator()
+	pm := mb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
 	if err != nil {
 		return nil, err
 	}
 
-	nodes, err := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
+	// TODO: send to all actors of the role if nil Target
+	nodes, err := jc.QueryRole(msg.TargetRole(), *msg.Target(), pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -84,11 +87,11 @@ func (eb *MessageBus) Send(msg core.Message) (core.Reply, error) {
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := eb.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
+		err := mb.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
 		return nil, err
 	}
 
-	res, err := eb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
+	res, err := mb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +100,9 @@ func (eb *MessageBus) Send(msg core.Message) (core.Reply, error) {
 }
 
 // SendAsync sends a `Message` to remote host.
-func (eb *MessageBus) SendAsync(msg core.Message) {
+func (mb *MessageBus) SendAsync(msg core.Message) {
 	go func() {
-		_, err := eb.Send(msg)
+		_, err := mb.Send(msg)
 		log.Errorln(err)
 	}()
 }
@@ -114,22 +117,27 @@ func (e *serializableError) Error() string {
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (eb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
+func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
-		return nil, errors.New("need exactly one argument when eb.deliver()")
+		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
-	e, err := message.Deserialize(bytes.NewBuffer(args[0]))
+	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := e.React(*eb.components)
+	handler, ok := mb.handlers[msg.Type()]
+	if !ok {
+		return nil, errors.New("no handler for received message type")
+	}
+
+	resp, err := handler(msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
 		}
 	}
-	rd, err := resp.Serialize()
+	rd, err := reply.Serialize(resp)
 	if err != nil {
 		return nil, err
 	}

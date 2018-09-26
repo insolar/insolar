@@ -23,9 +23,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
-	"github.com/insolar/insolar/messagebus/message"
-	"github.com/insolar/insolar/messagebus/reply"
 
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"

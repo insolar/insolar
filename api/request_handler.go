@@ -22,8 +22,8 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/messagebus/message"
-	"github.com/insolar/insolar/messagebus/reply"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 )
 

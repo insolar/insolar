@@ -16,21 +16,24 @@
 
 package core
 
-import "io"
-
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
 
+// MessageType is an enum type of message.
+type MessageType byte
+
+// ReplyType is an enum type of message reply.
+type ReplyType byte
+
 // Message is a routable packet, ATM just a method call
 type Message interface {
-	// Serialize serializes message.
-	Serialize() (io.Reader, error)
-	// GetReference returns referenced object.
-	GetReference() RecordRef
-	// GetOperatingRole returns operating jet role for given message type.
-	GetOperatingRole() JetRole
-	// React handles message and returns associated reply.
-	React(Components) (Reply, error)
+	// Type returns message type.
+	Type() MessageType
+	// Target returns target for this message. If nil, Message will be sent for all actors for the role returned by
+	// Role method.
+	Target() *RecordRef
+	// TargetRole returns jet role to actors of which Message should be sent.
+	TargetRole() JetRole
 }
 
 type LogicRunnerEvent interface {
@@ -41,8 +44,8 @@ type LogicRunnerEvent interface {
 
 // Reply for an `Message`
 type Reply interface {
-	// Serialize serializes message.
-	Serialize() (io.Reader, error)
+	// Type returns message type.
+	Type() ReplyType
 }
 
 // MessageBus interface
@@ -51,4 +54,9 @@ type MessageBus interface {
 	Send(Message) (Reply, error)
 	// SendAsync sends an `Message` to remote host.
 	SendAsync(Message)
+	// Register saves message handler in the registry. Only one handler can be registered for a message type.
+	Register(p MessageType, handler MessageHandler) error
 }
+
+// MessageHandler is a function for message handling. It should be registered via Register method.
+type MessageHandler func(Message) (Reply, error)

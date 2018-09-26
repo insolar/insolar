@@ -28,13 +28,13 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
-	"github.com/insolar/insolar/messagebus/message"
-	"github.com/insolar/insolar/messagebus/reply"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -183,9 +183,13 @@ type testMessageBus struct {
 	LogicRunner core.LogicRunner
 }
 
+func (eb *testMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
+	return nil
+}
+
 func (*testMessageBus) Start(components core.Components) error { return nil }
 func (*testMessageBus) Stop() error                            { return nil }
-func (eb *testMessageBus) Dispatch(event core.Message) (resp core.Reaction, err error) {
+func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) {
 	e, ok := event.(core.LogicRunnerEvent)
 	if !ok {
 		panic("Called with not logicrunner event")

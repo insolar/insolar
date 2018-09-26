@@ -26,11 +26,11 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
-	"github.com/insolar/insolar/messagebus/message"
-	"github.com/insolar/insolar/messagebus/reply"
 )
 
 // LogicRunner is a general interface of contract executor
@@ -84,6 +84,14 @@ func (lr *LogicRunner) Start(c core.Components) error {
 		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeGoPlugin)
 	}
 
+	// TODO: use separate handlers
+	if err := messageBus.Register(message.TypeCallMethod, lr.HandleMessage); err != nil {
+		return err
+	}
+	if err := messageBus.Register(message.TypeCallConstructor, lr.HandleMessage); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -125,19 +133,23 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
+func (lr *LogicRunner) HandleMessage(msg core.Message) (core.Reply, error) {
+	return lr.Execute(msg.(core.LogicRunnerEvent))
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(e core.LogicRunnerEvent) (core.Reply, error) {
+func (lr *LogicRunner) Execute(msg core.LogicRunnerEvent) (core.Reply, error) {
 	ctx := core.LogicCallContext{
-		Caller: e.GetCaller(),
+		Caller: msg.GetCaller(),
 		Time:   time.Now(), // TODO: probably we should take it from e
 		Pulse:  lr.cb.P,
 	}
 
-	switch m := e.(type) {
+	switch m := msg.(type) {
 	case *message.CallMethod:
 		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
 			Type: CaseRecordTypeMethodCall,
-			Resp: e,
+			Resp: msg,
 		})
 		re, err := lr.executeMethodCall(ctx, m)
 		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
@@ -149,7 +161,7 @@ func (lr *LogicRunner) Execute(e core.LogicRunnerEvent) (core.Reply, error) {
 	case *message.CallConstructor:
 		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
 			Type: CaseRecordTypeConstructorCall,
-			Resp: e,
+			Resp: msg,
 		})
 		re, err := lr.executeConstructorCall(ctx, m)
 		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{

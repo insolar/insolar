@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
@@ -84,7 +85,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 	}
 
 	log.Debugln("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		method, msg.GetReference().String())
+		method, msg.Target().String())
 
 	metrics.NetworkMessageSentTotal.Inc()
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
@@ -105,7 +106,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 }
 
 func messageToBytes(msg core.Message) ([]byte, error) {
-	reqBuff, err := msg.Serialize()
+	reqBuff, err := message.Serialize(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}

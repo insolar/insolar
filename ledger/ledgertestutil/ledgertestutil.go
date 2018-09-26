@@ -17,6 +17,7 @@
 package ledgertestutil
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -31,23 +32,42 @@ import (
 )
 
 type messageBusMock struct {
-	handler *artifactmanager.MessageHandler
+	handlers map[core.MessageType]core.MessageHandler
 }
 
-func (m *messageBusMock) Start(components core.Components) error {
+func NewMessageBusMock() *messageBusMock {
+	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
+}
+
+func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandler) error {
+	_, ok := mb.handlers[p]
+	if ok {
+		return errors.New("handler for this type already exists")
+	}
+
+	mb.handlers[p] = handler
+	return nil
+}
+
+func (mb *messageBusMock) Start(components core.Components) error {
 	panic("implement me")
 }
 
-func (m *messageBusMock) Stop() error {
+func (mb *messageBusMock) Stop() error {
 	panic("implement me")
 }
 
-func (m *messageBusMock) Send(e core.Message) (core.Reply, error) {
-	return m.handler.Handle(e)
+func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
+	handler, ok := mb.handlers[m.Type()]
+	if !ok {
+		return nil, errors.New("no handler for this message type")
+	}
+
+	return handler(m)
 }
 
-func (m *messageBusMock) SendAsync(e core.Message) {
-	m.handler.Handle(e) // nolint
+func (mb *messageBusMock) SendAsync(m core.Message) {
+	panic("implement me")
 }
 
 // TmpLedger crteates ledger on top of temporary database.
@@ -71,8 +91,8 @@ func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 	assert.NoError(t, err)
 
 	// Init components.
-	eb := messageBusMock{handler: handler}
-	components := core.Components{MessageBus: &eb}
+	mb := NewMessageBusMock()
+	components := core.Components{MessageBus: mb}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)

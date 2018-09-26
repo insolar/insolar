@@ -42,8 +42,6 @@ type Ledger interface {
 
 	// GetPulseManager returns pulse manager to work with.
 	GetPulseManager() PulseManager
-
-	HandleMessage(Message) (Reply, error)
 }
 
 // JetCoordinator provides methods for calculating Jet affinity
