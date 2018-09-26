@@ -44,6 +44,7 @@ var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 var corePath = "github.com/insolar/insolar/core"
 
+// ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
 	name    string
 	code    []byte
@@ -56,6 +57,7 @@ type ParsedFile struct {
 	contract     string
 }
 
+// codeOfNode returns source code of an AST node
 func (r *ParsedFile) codeOfNode(n ast.Node) string {
 	return string(r.code[n.Pos()-1 : n.End()-1])
 }
@@ -74,6 +76,7 @@ func slurpFile(fileName string) ([]byte, error) {
 	return res, nil
 }
 
+// ParseFile parses a file as Go source code of a smart contract
 func ParseFile(fileName string) (*ParsedFile, error) {
 	res := ParsedFile{
 		name: fileName,
@@ -177,6 +180,8 @@ func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, 
 	return methodsInfo, funcInfo, imports
 }
 
+// GenerateContractWrapper generates and writes into `out` source code
+// of wrapper for the contract
 func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 	packageName := parsed.node.Name.Name
 
@@ -212,6 +217,8 @@ func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 	return nil
 }
 
+// ProxyPackageName guesses user friendly contract "name" from file name
+// and/or package in the file
 func ProxyPackageName(parsed *ParsedFile) (string, error) {
 	match := regexp.MustCompile("([^/]+)/([^/]+).(go|insgoc)$").FindStringSubmatch(parsed.name)
 	if match == nil {
@@ -230,6 +237,7 @@ func ProxyPackageName(parsed *ParsedFile) (string, error) {
 	return proxyPackageName, nil
 }
 
+// GenerateContractProxy generates and writes into `out` source code of contract's proxy
 func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
 
 	proxyPackageName, err := ProxyPackageName(parsed)
@@ -282,6 +290,8 @@ func typeName(t ast.Expr) string {
 	return t.(*ast.Ident).Name
 }
 
+// IsContract returns true if type declares a contract,
+// e.g. struct with foundation.BaseContract embedded
 func IsContract(typeNode *ast.TypeSpec) bool {
 	baseContract := "foundation.BaseContract"
 	switch st := typeNode.Type.(type) {
