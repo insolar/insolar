@@ -43,28 +43,34 @@ type NetworkCommonFacade interface {
 	SetPulseManager(manager core.PulseManager)
 }
 
+// CommonFacade implements a NetworkCommonFacade.
 type CommonFacade struct {
 	rpcPtr  rpc.RPC
 	cascade *cascade.Cascade
 	pm      core.PulseManager
 }
 
+// NewNetworkCommonFacade creates a NetworkCommonFacade.
 func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
 	return &CommonFacade{rpcPtr: r, cascade: casc, pm: nil}
 }
 
+// GetRPC return an RPC pointer.
 func (fac *CommonFacade) GetRPC() rpc.RPC {
 	return fac.rpcPtr
 }
 
+// GetCascade returns a cascade pointer.
 func (fac *CommonFacade) GetCascade() *cascade.Cascade {
 	return fac.cascade
 }
 
+// GetPulseManager returns a pulse manager pointer.
 func (fac *CommonFacade) GetPulseManager() core.PulseManager {
 	return fac.pm
 }
 
+// SetPulseManager sets a pulse manager to common facade.
 func (fac *CommonFacade) SetPulseManager(manager core.PulseManager) {
 	fac.pm = manager
 }

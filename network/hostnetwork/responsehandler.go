@@ -40,11 +40,11 @@ func handleKnownOuterHosts(hostHandler hosthandler.HostHandler, response *packet
 		(hostHandler.GetProxyHostsCount() == 0) {
 		err = AuthenticationRequest(hostHandler, "begin", targetID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "AuthenticationRequest failed")
 		}
 		err = RelayRequest(hostHandler, "start", targetID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "RelayRequest failed")
 		}
 	}
 	return nil
@@ -121,7 +121,7 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 	return nil
 }
 
-func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet, ctx hosthandler.Context) {
+func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet) {
 	_, err := hostHandler.SendRequest(request)
 	if err != nil {
 		log.Debugln(err)

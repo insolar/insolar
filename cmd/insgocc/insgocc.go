@@ -24,7 +24,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
@@ -50,7 +49,7 @@ func (r *outputFlag) Set(arg string) error {
 		res = os.Stdout
 	} else {
 		var err error
-		res, err = os.OpenFile(arg, os.O_WRONLY|os.O_CREATE, 0644)
+		res, err = os.OpenFile(arg, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			return errors.Wrap(err, "couldn't open file for writing")
 		}
@@ -62,21 +61,6 @@ func (r *outputFlag) Set(arg string) error {
 
 func (r *outputFlag) Type() string {
 	return "file"
-}
-
-func findPath() (string, error) {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		return "", errors.Errorf("GOPATH is not set")
-	}
-	for _, p := range strings.Split(gopath, ":") {
-		pp := path.Join(p, "src/github.com/insolar/insolar/genesis/proxy")
-		_, err := os.Stat(pp)
-		if err == nil {
-			return pp, nil
-		}
-	}
-	return "", errors.Errorf("Not found github.com/insolar/insolar in GOPATH")
 }
 
 func main() {
@@ -102,7 +86,7 @@ func main() {
 			}
 
 			if proxyOut.String() == "" {
-				p, err := findPath()
+				p, err := preprocessor.GetRealGenesisDir("proxy")
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)

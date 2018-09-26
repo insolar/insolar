@@ -23,7 +23,7 @@ import (
 )
 
 // CallConstructorEvent is a event for calling constructor and obtain its reaction
-type CallConstructorEvent struct {
+type CallConstructor struct {
 	baseEvent
 	ClassRef  core.RecordRef
 	Name      string
@@ -31,21 +31,21 @@ type CallConstructorEvent struct {
 }
 
 // React handles event and returns associated reaction.
-func (e *CallConstructorEvent) React(c core.Components) (core.Reaction, error) {
+func (e *CallConstructor) React(c core.Components) (core.Reaction, error) {
 	return logicRunnerHandle(e, c)
 }
 
 // GetOperatingRole returns operating jet role for given event type.
-func (e *CallConstructorEvent) GetOperatingRole() core.JetRole {
+func (e *CallConstructor) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
 // GetReference returns referenced object.
-func (e *CallConstructorEvent) GetReference() core.RecordRef {
+func (e *CallConstructor) GetReference() core.RecordRef {
 	return e.ClassRef
 }
 
 // Serialize serializes event.
-func (e *CallConstructorEvent) Serialize() (io.Reader, error) {
-	return serialize(e, CallConstructorEventType)
+func (e *CallConstructor) Serialize() (io.Reader, error) {
+	return serialize(e, TypeCallConstructor)
 }

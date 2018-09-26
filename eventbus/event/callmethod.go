@@ -34,8 +34,8 @@ const (
 	// ReturnValidated
 )
 
-// CallMethodEvent - Simply call method and return result
-type CallMethodEvent struct {
+// CallMethod - Simply call method and return result
+type CallMethod struct {
 	baseEvent
 	ReturnMode MethodReturnMode
 	ObjectRef  core.RecordRef
@@ -45,21 +45,21 @@ type CallMethodEvent struct {
 }
 
 // React handles event and returns associated reaction.
-func (e *CallMethodEvent) React(c core.Components) (core.Reaction, error) {
+func (e *CallMethod) React(c core.Components) (core.Reaction, error) {
 	return logicRunnerHandle(e, c)
 }
 
 // GetOperatingRole returns operating jet role for given event type.
-func (e *CallMethodEvent) GetOperatingRole() core.JetRole {
+func (e *CallMethod) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
 // GetReference returns referenced object.
-func (e *CallMethodEvent) GetReference() core.RecordRef {
+func (e *CallMethod) GetReference() core.RecordRef {
 	return e.ObjectRef
 }
 
 // Serialize serializes event.
-func (e *CallMethodEvent) Serialize() (io.Reader, error) {
-	return serialize(e, CallMethodEventType)
+func (e *CallMethod) Serialize() (io.Reader, error) {
+	return serialize(e, TypeCallMethod)
 }

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"reflect"
 	"syscall"
 
 	"github.com/insolar/insolar/api"
@@ -32,37 +33,33 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/version"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
 type componentManager struct {
-	components     core.Components
-	interfaceNames []string
-}
-
-func (cm *componentManager) register(interfaceName string, component core.Component) {
-	cm.interfaceNames = append(cm.interfaceNames, interfaceName)
-	cm.components[interfaceName] = component
+	components core.Components
 }
 
 // linkAll - link dependency for all components
 func (cm *componentManager) linkAll() {
-	for _, name := range cm.interfaceNames {
-		err := cm.components[name].Start(cm.components)
+	v := reflect.ValueOf(cm.components)
+	for i := 0; i < v.NumField(); i++ {
+		err := v.Field(i).Interface().(core.Component).Start(cm.components)
 		if err != nil {
-			log.Errorln("failed to start component ", name, " : ", err.Error())
+			log.Errorf("failed to start component %s : %s", v.Field(i).String(), err.Error())
 		}
 	}
 }
 
 // stopAll - reverse order stop all components
 func (cm *componentManager) stopAll() {
-	for i := len(cm.interfaceNames) - 1; i >= 0; i-- {
-		name := cm.interfaceNames[i]
-		log.Infoln("Stop component: ", name)
-		err := cm.components[name].Stop()
+	v := reflect.ValueOf(cm.components)
+	for i := v.NumField() - 1; i >= 0; i-- {
+		err := v.Field(i).Interface().(core.Component).Stop()
+		log.Infoln("Stop component: ", v.String())
 		if err != nil {
-			log.Errorln("failed to stop component ", name, " : ", err.Error())
+			log.Errorf("failed to stop component %s : %s", v.String(), err.Error())
 		}
 	}
 }
@@ -84,49 +81,43 @@ func main() {
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
+	cm := componentManager{}
 	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration.Host, cfgHolder.Configuration.Node)
 	if err != nil {
 		log.Fatalln("Failed to start Network: ", err.Error())
 	}
+	cm.components.Network = nw
 
-	l, err := ledger.NewLedger(cfgHolder.Configuration.Ledger)
+	cm.components.Ledger, err = ledger.NewLedger(cfgHolder.Configuration.Ledger)
 	if err != nil {
 		log.Fatalln("Failed to start Ledger: ", err.Error())
 	}
 
-	lr, err := logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
+	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
 	if err != nil {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
 
-	eb, err := eventbus.New(cfgHolder.Configuration)
+	cm.components.EventBus, err = eventbus.New(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
 
-	b, err := bootstrap.NewBootstrapper(cfgHolder.Configuration)
+	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("Failed to start Bootstrapper: ", err.Error())
 	}
 
-	ar, err := api.NewRunner(&cfgHolder.Configuration.APIRunner)
+	cm.components.APIRunner, err = api.NewRunner(&cfgHolder.Configuration.APIRunner)
 	if err != nil {
 		log.Fatalln("Failed to start ApiRunner: ", err.Error())
 	}
 
-	met, err := metrics.NewMetrics(cfgHolder.Configuration.Metrics)
+	cm.components.Metrics, err = metrics.NewMetrics(cfgHolder.Configuration.Metrics)
 	if err != nil {
 		log.Fatalln("Failed to start Metrics: ", err.Error())
 	}
 
-	cm := componentManager{components: make(core.Components), interfaceNames: make([]string, 0)}
-	cm.register("core.Network", nw)
-	cm.register("core.Ledger", l)
-	cm.register("core.LogicRunner", lr)
-	cm.register("core.EventBus", eb)
-	cm.register("core.Bootstrapper", b)
-	cm.register("core.ApiRunner", ar)
-	cm.register("core.Metrics", met)
 	cm.linkAll()
 
 	defer func() {
@@ -145,6 +136,7 @@ func main() {
 		os.Exit(0)
 	}()
 
+	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
 	repl(nw)
 }

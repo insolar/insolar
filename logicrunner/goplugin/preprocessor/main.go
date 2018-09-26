@@ -19,12 +19,14 @@ package preprocessor
 import (
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/printer"
 	"go/token"
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -52,6 +54,10 @@ type ParsedFile struct {
 	methods      map[string][]*ast.FuncDecl
 	constructors map[string][]*ast.FuncDecl
 	contract     string
+}
+
+func (r *ParsedFile) codeOfNode(n ast.Node) string {
+	return string(r.code[n.Pos()-1 : n.End()-1])
 }
 
 func slurpFile(fileName string) ([]byte, error) {
@@ -121,6 +127,20 @@ func numberedVars(list *ast.FieldList, name string) string {
 	return strings.Join(rets, ", ")
 }
 
+func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
+	if list == nil || list.NumFields() == 0 {
+		return []int{}
+	}
+
+	rets := []int{}
+	for i, e := range list.List {
+		if parsed.codeOfNode(e.Type) == t {
+			rets = append(rets, i)
+		}
+	}
+	return rets
+}
+
 func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, []map[string]interface{}, map[string]bool) {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
@@ -132,10 +152,11 @@ func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, 
 		extendImportsMap(parsed, method.Type.Params, imports)
 
 		info := map[string]interface{}{
-			"Name":              method.Name.Name,
-			"ArgumentsZeroList": argsInit,
-			"Arguments":         argsList,
-			"Results":           numberedVars(method.Type.Results, "ret"),
+			"Name":                method.Name.Name,
+			"ArgumentsZeroList":   argsInit,
+			"Arguments":           argsList,
+			"Results":             numberedVars(method.Type.Results, "ret"),
+			"ErrorInterfaceInRes": typeIndexes(parsed, method.Type.Results, "error"),
 		}
 		methodsInfo = append(methodsInfo, info)
 	}
@@ -340,7 +361,7 @@ func getMethods(parsed *ParsedFile) error {
 func generateTypes(parsed *ParsedFile) []string {
 	var types []string
 	for _, t := range parsed.types {
-		types = append(types, "type "+string(parsed.code[t.Pos()-1:t.End()-1]))
+		types = append(types, "type "+parsed.codeOfNode(t))
 	}
 
 	return types
@@ -352,7 +373,13 @@ func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[str
 	}
 
 	for _, e := range params.List {
-		tname := string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
+		if parsed.codeOfNode(e.Type) == "error" {
+			imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
+		}
+	}
+
+	for _, e := range params.List {
+		tname := parsed.codeOfNode(e.Type)
 		tname = strings.Trim(tname, "*")
 		tnameFrom := strings.Split(tname, ".")
 
@@ -389,7 +416,10 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 	}
 
 	for i, arg := range list.List {
-		tname := string(parsed.code[arg.Type.Pos()-1 : arg.Type.End()-1])
+		tname := parsed.codeOfNode(arg.Type)
+		if tname == "error" {
+			tname = "*foundation.Error"
+		}
 
 		text += fmt.Sprintf("\tvar a%d %s\n", i, tname)
 		text += fmt.Sprintf("\t%s[%d] = a%d\n", name, i, i)
@@ -400,7 +430,7 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 		if i > 0 {
 			listCode += ", "
 		}
-		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, string(parsed.code[arg.Type.Pos()-1:arg.Type.End()-1]))
+		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, parsed.codeOfNode(arg.Type))
 	}
 
 	return text, listCode
@@ -418,7 +448,7 @@ func genFieldList(parsed *ParsedFile, params *ast.FieldList, withNames bool) str
 		if withNames {
 			res += e.Names[0].Name + " "
 		}
-		res += string(parsed.code[e.Type.Pos()-1 : e.Type.End()-1])
+		res += parsed.codeOfNode(e.Type)
 	}
 	return res
 }
@@ -525,4 +555,45 @@ func GetContractName(p *ParsedFile) string {
 func RewriteContractPackage(p *ParsedFile, w io.Writer) {
 	p.node.Name.Name = "main"
 	printer.Fprint(w, p.fileSet, p.node)
+}
+
+// GetRealGenesisDir return dir under genesis dir
+func GetRealGenesisDir(dir string) (string, error) {
+	gopath := build.Default.GOPATH
+	if gopath == "" {
+		return "", errors.Errorf("GOPATH is not set")
+	}
+
+	contractsPath := ""
+	for _, p := range strings.Split(gopath, ":") {
+		contractsPath = path.Join(p, "src/github.com/insolar/insolar/genesis/", dir)
+		_, err := os.Stat(contractsPath)
+		if err == nil {
+			return contractsPath, nil
+		}
+	}
+	return "", errors.Errorf("Not found github.com/insolar/insolar in GOPATH")
+}
+
+// GetRealContractsNames returns names of all real smart contracts
+func GetRealContractsNames() ([]string, error) {
+	pathWithContracts, err := GetRealGenesisDir("experiment")
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetContractNames ]")
+	}
+	if len(pathWithContracts) == 0 {
+		return nil, errors.New("[ GetContractNames ] There are contracts dir")
+	}
+	var result []string
+	files, err := ioutil.ReadDir(pathWithContracts)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			result = append(result, f.Name())
+		}
+	}
+
+	return result, nil
 }

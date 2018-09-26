@@ -14,23 +14,22 @@
  *    limitations under the License.
  */
 
-package reaction
+package core
 
-import (
-	"io"
-
-	"github.com/insolar/insolar/core"
-)
-
-// ObjectBodyReaction - the most common reaction.
-type ObjectBodyReaction struct {
-	Body        []byte
-	Code        core.RecordRef
-	Class       core.RecordRef
-	MachineType core.MachineType
+// Component controller methods
+type Component interface {
+	Start(components Components) error
+	Stop() error
 }
 
-// Serialize serializes reaction.
-func (r *ObjectBodyReaction) Serialize() (io.Reader, error) {
-	return serialize(r, ObjectBodyReactionType)
+// Components is a registry for other core interfaces
+// Fields order are important and represent start and stop order in the daemon
+type Components struct {
+	Network      Network
+	Ledger       Ledger
+	LogicRunner  LogicRunner
+	EventBus     EventBus
+	Bootstrapper Bootstrapper
+	APIRunner    Component
+	Metrics      Component
 }

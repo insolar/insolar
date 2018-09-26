@@ -43,7 +43,7 @@ ledger:
       5: 1
 
 log:
-  level: Info
+  level: Debug
   adapter: logrus
 stats:
   listenaddress: 0.0.0.0:8080
@@ -51,7 +51,7 @@ logicrunner:
   builtin: {}
   goplugin:
     runnerlisten: 127.0.0.1:18181
-    runnerpath: ../testdata/logicrunner/ginsider-cli
+    runnerpath: ../testdata/logicrunner/insgorund
     runnercodepath: contractstorage
     mainlisten: 127.0.0.1:18182
 pulsar:

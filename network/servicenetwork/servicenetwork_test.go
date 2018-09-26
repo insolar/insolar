@@ -26,36 +26,8 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/prometheus/common/log"
 	"github.com/stretchr/testify/assert"
 )
-
-type componentManager struct {
-	components     core.Components
-	interfaceNames []string
-}
-
-func (cm *componentManager) register(interfaceName string, component core.Component) {
-	cm.interfaceNames = append(cm.interfaceNames, interfaceName)
-	cm.components[interfaceName] = component
-}
-
-func (cm *componentManager) linkAll() {
-	for _, name := range cm.interfaceNames {
-		_ = cm.components[name].Start(cm.components)
-	}
-}
-
-func (cm *componentManager) stopAll() {
-	for i := len(cm.interfaceNames) - 1; i >= 0; i-- {
-		name := cm.interfaceNames[i]
-		log.Infoln("Stop component: ", name)
-		err := cm.components[name].Stop()
-		if err != nil {
-			log.Errorln("failed to stop component ", name, " : ", err.Error())
-		}
-	}
-}
 
 func TestNewServiceNetwork(t *testing.T) {
 	cfg := configuration.NewConfiguration()
@@ -83,7 +55,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	network, err := NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -96,10 +68,11 @@ func TestServiceNetwork_Start(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
-	cm := componentManager{components: make(core.Components), interfaceNames: make([]string, 0)}
-	cm.register("core.Network", network)
-	cm.linkAll()
-	cm.stopAll()
+	err = network.Start(core.Components{})
+	assert.NoError(t, err)
+
+	err = network.Stop()
+	assert.NoError(t, err)
 }
 
 func mockConfiguration(host string, bootstrapHosts []string, nodeID string) (configuration.HostNetwork, configuration.NodeNetwork) {
@@ -142,8 +115,8 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		nil,
 		secondNodeId))
 
-	secondNode.Start(nil)
-	firstNode.Start(nil)
+	secondNode.Start(core.Components{})
+	firstNode.Start(core.Components{})
 
 	defer func() {
 		firstNode.Stop()
@@ -158,7 +131,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		return nil, nil
 	})
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -183,8 +156,8 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		nil,
 		secondNodeId))
 
-	secondNode.Start(nil)
-	firstNode.Start(nil)
+	secondNode.Start(core.Components{})
+	firstNode.Start(core.Components{})
 
 	defer func() {
 		firstNode.Stop()
@@ -199,7 +172,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		return nil, nil
 	})
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -251,7 +224,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
 		service, _ = NewServiceNetwork(mockConfiguration(host, bHosts, node))
-		service.Start(nil)
+		service.Start(core.Components{})
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
 			return nil, nil
@@ -275,7 +248,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		}
 	}
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),

@@ -27,11 +27,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func extractCreateMemberResponse(data []byte) (*string, error) {
+func extractStringResponse(data []byte) (*string, error) {
 	var typeHolder string
 	refOrig, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ extractCreateMemberResponse ]")
+		return nil, errors.Wrap(err, "[ extractStringResponse ]")
 	}
 
 	reference, ok := refOrig[0].(string)
@@ -66,7 +66,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		return nil, errors.New("[ RouteCall ] event bus was not set during initialization")
 	}
 
-	e := &event.CallMethodEvent{
+	e := &event.CallMethod{
 		ObjectRef: ref,
 		Method:    method,
 		Arguments: args,
@@ -93,7 +93,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractCreateMemberResponse(routResult.(*reaction.CommonReaction).Result)
+	memberRef, err := extractStringResponse(routResult.(*reaction.CommonReaction).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -251,4 +251,31 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	result["dump_info"] = dumpInfo
 
 	return result, nil
+}
+
+func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	if len(rh.params.PublicKey) == 0 {
+		return nil, errors.New("field 'public_key' is required")
+	}
+
+	if len(rh.params.Role) == 0 {
+		return nil, errors.New("field 'role' is required")
+	}
+
+	routResult, err := rh.sendRequest("RegisterNode", []interface{}{rh.params.PublicKey, rh.params.Role})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
+	}
+
+	nodeRef, err := extractStringResponse(routResult.(*reaction.CommonReaction).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
+	}
+
+	result["reference"] = nodeRef
+
+	return result, nil
+
 }

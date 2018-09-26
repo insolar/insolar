@@ -30,6 +30,7 @@ type ProxyHelper interface {
 	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
+	MakeErrorSerializable(error) error
 }
 
 // Current - hackish way to give proxies access to the current environment

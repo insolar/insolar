@@ -18,117 +18,53 @@ package artifactmanager
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 )
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor struct {
-	cache struct {
-		machineType core.MachineType
-		code        []byte
-	}
-
-	db          *storage.DB
-	ref         *record.Reference
+	machineType core.MachineType
+	code        []byte
+	ref         core.RecordRef
 	machinePref []core.MachineType
 }
 
 // Ref returns reference to represented code record.
 func (d *CodeDescriptor) Ref() *core.RecordRef {
-	return d.ref.CoreRef()
+	return &d.ref
 }
 
-// MachineType fetches code from storage and returns first available machine type according to architecture
-// preferences.
-//
-// Code for returned machine type will be fetched by Code method.
-func (d *CodeDescriptor) MachineType() (core.MachineType, error) {
-	_, mt, err := d.code()
-	if err != nil {
-		return core.MachineTypeNotExist, err
-	}
-	return mt, nil
+// MachineType returns first available machine type for provided machine preference.
+func (d *CodeDescriptor) MachineType() core.MachineType {
+	return d.machineType
 }
 
-// Code fetches code from storage. Code will be fetched according to architecture preferences
-// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
-func (d *CodeDescriptor) Code() ([]byte, error) {
-	code, _, err := d.code()
-	if err != nil {
-		return nil, err
-	}
-	return code, nil
-}
-
-// Validate checks code record integrity.
-func (d *CodeDescriptor) Validate() error {
-	_, _, err := d.code()
-	return err
-}
-
-func NewCodeDescriptor(db *storage.DB, ref record.Reference, machinePref []core.MachineType) (*CodeDescriptor, error) {
-	desc := CodeDescriptor{
-		db:          db,
-		ref:         &ref,
-		machinePref: machinePref,
-	}
-
-	return &desc, nil
-}
-
-func (d *CodeDescriptor) code() ([]byte, core.MachineType, error) {
-	if d.cache.code != nil && d.cache.machineType != core.MachineTypeNotExist {
-		return d.cache.code, d.cache.machineType, nil
-	}
-	// TODO: local / non-local check
-	return d.codeLocal()
-}
-
-func (d *CodeDescriptor) codeLocal() ([]byte, core.MachineType, error) {
-	rec, err := d.db.GetRecord(d.ref)
-	if err != nil {
-		return nil, core.MachineTypeNotExist, errors.Wrap(err, "failed to retrieve code record")
-	}
-	codeRec, ok := rec.(*record.CodeRecord)
-	if !ok {
-		return nil, core.MachineTypeNotExist, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
-	}
-	code, mt, err := codeRec.GetCode(d.machinePref)
-	if err != nil {
-		return nil, mt, errors.Wrap(err, "failed to retrieve code from record")
-	}
-
-	return code, mt, nil
+// Code returns code for first available machine type for provided machine preference.
+func (d *CodeDescriptor) Code() []byte {
+	return d.code
 }
 
 // ClassDescriptor represents meta info required to fetch all class data.
 type ClassDescriptor struct {
 	cache struct {
-		lifelineIndex  *index.ClassLifeline
-		stateRecord    record.ClassState
-		codeDescriptor *CodeDescriptor
+		codeDescriptor core.CodeDescriptor
 	}
 
-	db       *storage.DB
-	headRef  *record.Reference
-	stateRef *record.Reference
+	am core.ArtifactManager
+
+	head  core.RecordRef
+	state core.RecordRef
+	code  *core.RecordRef // Can be nil.
 }
 
 // HeadRef returns head reference to represented class record.
 func (d *ClassDescriptor) HeadRef() *core.RecordRef {
-	return d.headRef.CoreRef()
+	return &d.head
 }
 
 // StateRef returns reference to represented class state record.
-func (d *ClassDescriptor) StateRef() (*core.RecordRef, error) {
-	idx, err := d.index()
-	if err != nil {
-		return nil, err
-	}
-	return idx.LatestStateRef.CoreRef(), nil
+func (d *ClassDescriptor) StateRef() *core.RecordRef {
+	return &d.state
 }
 
 // CodeDescriptor returns descriptor for fetching object's code data.
@@ -137,224 +73,58 @@ func (d *ClassDescriptor) CodeDescriptor(machinePref []core.MachineType) (core.C
 		return d.cache.codeDescriptor, nil
 	}
 
-	state, err := d.state()
-	if err != nil {
-		return nil, err
-	}
-
-	codeRef := state.GetCode()
-	if codeRef == nil {
+	if d.code == nil {
 		return nil, errors.New("class has no code")
 	}
 
-	desc, err := NewCodeDescriptor(d.db, *codeRef, machinePref)
-	if err != nil {
-		return nil, err
-	}
-
-	return desc, nil
-}
-
-// IsActive checks if class is active.
-func (d *ClassDescriptor) IsActive() (bool, error) {
-	state, err := d.state()
-	if err != nil {
-		return false, err
-	}
-	return !state.IsDeactivation(), nil
-}
-
-func NewClassDescriptor(db *storage.DB, head record.Reference, state *record.Reference) (*ClassDescriptor, error) {
-	desc := ClassDescriptor{
-		db:       db,
-		headRef:  &head,
-		stateRef: state,
-	}
-	return &desc, nil
-}
-
-func (d *ClassDescriptor) index() (*index.ClassLifeline, error) {
-	if d.cache.lifelineIndex != nil {
-		return d.cache.lifelineIndex, nil
-	}
-	// TODO: local / non-local check
-	return d.indexLocal()
-}
-
-func (d *ClassDescriptor) indexLocal() (*index.ClassLifeline, error) {
-	idx, err := d.db.GetClassIndex(d.headRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "inconsistent class index")
-	}
-	return idx, nil
-}
-
-func (d *ClassDescriptor) state() (record.ClassState, error) {
-	if d.cache.stateRecord != nil {
-		return d.cache.stateRecord, nil
-	}
-	// TODO: local / non-local check
-	return d.stateLocal()
-}
-
-func (d *ClassDescriptor) stateLocal() (record.ClassState, error) {
-	if d.cache.stateRecord == nil {
-		var stateRef *record.Reference
-		if d.stateRef == nil {
-			idx, err := d.index()
-			if err != nil {
-				return nil, err
-			}
-			stateRef = &idx.LatestStateRef
-		} else {
-			stateRef = d.stateRef
-		}
-		state, err := d.db.GetRecord(stateRef)
-		if err != nil {
-			return nil, err
-		}
-		stateRec, ok := state.(record.ClassState)
-		if !ok {
-			return nil, errors.New("invalid class record")
-		}
-		d.cache.stateRecord = stateRec
-	}
-
-	return d.cache.stateRecord, nil
+	return d.am.GetCode(*d.code, machinePref)
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor struct {
 	cache struct {
-		lifelineIndex   *index.ObjectLifeline
-		stateRecord     record.ObjectState
-		classDescriptor *ClassDescriptor
+		classDescriptor core.ClassDescriptor
 	}
-	db       *storage.DB
-	headRef  *record.Reference
-	stateRef *record.Reference
+	am core.ArtifactManager
+
+	head     core.RecordRef
+	state    core.RecordRef
+	class    core.RecordRef
+	memory   []byte
+	children []core.RecordRef
 }
 
 // HeadRef returns reference to represented object record.
 func (d *ObjectDescriptor) HeadRef() *core.RecordRef {
-	return d.headRef.CoreRef()
+	return &d.head
 }
 
 // StateRef returns reference to object state record.
-func (d *ObjectDescriptor) StateRef() (*core.RecordRef, error) {
-	idx, err := d.index()
-	if err != nil {
-		return nil, err
-	}
-	return idx.LatestStateRef.CoreRef(), nil
+func (d *ObjectDescriptor) StateRef() *core.RecordRef {
+	return &d.state
 }
 
 // Memory fetches latest memory of the object known to storage.
-func (d *ObjectDescriptor) Memory() ([]byte, error) {
-	state, err := d.state()
-	if err != nil {
-		return nil, err
-	}
-	return state.GetMemory(), nil
+func (d *ObjectDescriptor) Memory() []byte {
+	return d.memory
 }
 
-// IsActive checks if object is active.
-func (d *ObjectDescriptor) IsActive() (bool, error) {
-	state, err := d.state()
-	if err != nil {
-		return false, err
-	}
-	return !state.IsDeactivation(), nil
+// Children returns object's children references.
+func (d *ObjectDescriptor) Children() core.RefIterator {
+	return &RefIterator{elements: d.children}
 }
 
 // ClassDescriptor returns descriptor for fetching object's class data.
 func (d *ObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
-	var (
-		class *ClassDescriptor
-		err   error
-	)
 	if d.cache.classDescriptor != nil {
 		return d.cache.classDescriptor, nil
 	}
 
-	idx, err := d.index()
-	if err != nil {
-		return nil, err
-	}
-	if state != nil {
-		classRef := record.Core2Reference(*state)
-		class, err = NewClassDescriptor(d.db, idx.ClassRef, &classRef)
-	} else {
-		class, err = NewClassDescriptor(d.db, idx.ClassRef, nil)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return class, nil
-}
-
-func NewObjectDescriptor(db *storage.DB, head record.Reference, state *record.Reference) (*ObjectDescriptor, error) {
-	desc := ObjectDescriptor{
-		db:       db,
-		headRef:  &head,
-		stateRef: state,
-	}
-	return &desc, nil
-}
-
-func (d *ObjectDescriptor) index() (*index.ObjectLifeline, error) {
-	if d.cache.lifelineIndex != nil {
-		return d.cache.lifelineIndex, nil
-	}
-	// TODO: local / non-local check
-	return d.indexLocal()
-}
-
-func (d *ObjectDescriptor) indexLocal() (*index.ObjectLifeline, error) {
-	idx, err := d.db.GetObjectIndex(d.headRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "inconsistent object index")
-	}
-	return idx, nil
-}
-
-func (d *ObjectDescriptor) state() (record.ObjectState, error) {
-	if d.cache.stateRecord != nil {
-		return d.cache.stateRecord, nil
-	}
-	// TODO: local / non-local check
-	return d.stateLocal()
-}
-
-func (d *ObjectDescriptor) stateLocal() (record.ObjectState, error) {
-	if d.cache.stateRecord == nil {
-		var stateRef *record.Reference
-		if d.stateRef == nil {
-			idx, err := d.index()
-			if err != nil {
-				return nil, err
-			}
-			stateRef = &idx.LatestStateRef
-		} else {
-			stateRef = d.stateRef
-		}
-		state, err := d.db.GetRecord(stateRef)
-		if err != nil {
-			return nil, err
-		}
-		stateRec, ok := state.(record.ObjectState)
-		if !ok {
-			return nil, errors.New("invalid class record")
-		}
-		d.cache.stateRecord = stateRec
-	}
-
-	return d.cache.stateRecord, nil
+	return d.am.GetClass(d.class, state)
 }
 
 type RefIterator struct {
-	elements     []record.Reference
+	elements     []core.RecordRef
 	currentIndex int
 }
 
@@ -365,5 +135,5 @@ func (i *RefIterator) HasNext() bool {
 func (i *RefIterator) Next() (core.RecordRef, error) {
 	el := i.elements[i.currentIndex]
 	i.currentIndex++
-	return *el.CoreRef(), nil
+	return el, nil
 }

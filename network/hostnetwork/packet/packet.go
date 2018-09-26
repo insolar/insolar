@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/pkg/errors"
 )
 
 //go:generate stringer -type=packetType
@@ -89,6 +90,7 @@ func NewPingPacket(sender, receiver *host.Host) *Packet {
 }
 
 // IsValid checks if packet data is a valid structure for current packet type.
+// nolint: gocyclo
 func (m *Packet) IsValid() (valid bool) {
 	switch m.Type {
 	case TypePing:
@@ -139,7 +141,7 @@ func SerializePacket(q *Packet) ([]byte, error) {
 	enc := gob.NewEncoder(&msgBuffer)
 	err := enc.Encode(q)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to serialize packet")
 	}
 
 	length := msgBuffer.Len()
@@ -166,12 +168,12 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 	lengthReader := bytes.NewBuffer(lengthBytes)
 	length, err := binary.ReadUvarint(lengthReader)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to read variant")
 	}
 
 	var reader bytes.Buffer
 	for uint64(reader.Len()) < length {
-		n, _ := reader.ReadFrom(conn)
+		n, err := reader.ReadFrom(conn)
 		if err != nil && n == 0 {
 			log.Debugln(err.Error())
 		}
@@ -182,7 +184,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 	err = dec.Decode(msg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to deserialize packet")
 	}
 
 	return msg, nil

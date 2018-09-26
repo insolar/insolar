@@ -44,7 +44,7 @@ func (r *runner) Execute(e core.Event) (core.Reaction, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
-	m := e.(*event.CallMethodEvent)
+	m := e.(*event.CallMethod)
 	r.requests = append(r.requests, req{e.GetReference(), m.Method, m.Arguments})
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
@@ -62,8 +62,8 @@ func TestNew(t *testing.T) {
 	assert.NoError(t, err)
 	eb, err := New(configuration.Configuration{})
 	eb.Start(core.Components{
-		"core.LogicRunner": r,
-		"core.Network":     network,
+		LogicRunner: r,
+		Network:     network,
 	})
 	if err != nil {
 		t.Fatal(err)

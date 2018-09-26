@@ -17,15 +17,16 @@
 package store
 
 import (
-	"crypto/sha1"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/sha3"
 )
 
 func TestNewKey(t *testing.T) {
 	data := []byte("some data")
-	sha := sha1.Sum(data)
+	sha := make([]byte, 20)
+	sha3.ShakeSum128(sha, data[:])
 
 	assert.Equal(t, NewKey(data), Key(sha[:]))
 }

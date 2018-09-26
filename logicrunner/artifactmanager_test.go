@@ -55,8 +55,8 @@ func TestGoPlugin(t *testing.T) {
 	lr.ArtifactManager = l.GetArtifactManager()
 	eb := testutil.NewTestEventBus(lr)
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": eb,
+		Ledger:   l,
+		EventBus: eb,
 	}), "starting logicrunner")
 
 	insiderStorage, err := ioutil.TempDir("", "test-")
@@ -134,7 +134,6 @@ func (b *Hello) String() string {
 }
 	`
 	am := l.GetArtifactManager()
-	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	cb := testutil.NewContractBuilder(am, tctx.preprocessor)
 	defer cb.Clean()
 	err := cb.Build(map[string]string{"hello": helloCode})

@@ -17,7 +17,7 @@
 package store
 
 import (
-	"crypto/sha1"
+	"golang.org/x/crypto/sha3"
 )
 
 // Key is storage key. For now it is 20-byte slice.
@@ -25,7 +25,8 @@ type Key []byte
 
 // NewKey creates new key for given data.
 func NewKey(data []byte) Key {
-	sum := sha1.Sum(data)
+	sum := make([]byte, 20)
+	sha3.ShakeSum128(sum, data[:])
 	return Key(sum[:])
 }
 

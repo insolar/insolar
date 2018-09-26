@@ -17,12 +17,17 @@
 package logicrunner
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"path"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
@@ -104,8 +109,8 @@ func TestBasics(t *testing.T) {
 	assert.NoError(t, err)
 
 	comps := core.Components{
-		"core.Ledger":   &testLedger{am: testutil.NewTestArtifactManager()},
-		"core.EventBus": &testEventBus{},
+		Ledger:   &testLedger{am: testutil.NewTestArtifactManager()},
+		EventBus: &testEventBus{},
 	}
 	assert.NoError(t, lr.Start(comps))
 	assert.IsType(t, &LogicRunner{}, lr)
@@ -139,6 +144,10 @@ func (r *testLedger) Start(components core.Components) error   { return nil }
 func (r *testLedger) Stop() error                              { return nil }
 func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
 
+func (r *testLedger) HandleEvent(core.Event) (core.Reaction, error) {
+	panic("implement me")
+}
+
 type testEventBus struct {
 	LogicRunner core.LogicRunner
 }
@@ -157,8 +166,8 @@ func TestExecution(t *testing.T) {
 	lr, err := NewLogicRunner(configuration.LogicRunner{})
 	assert.NoError(t, err)
 	lr.Start(core.Components{
-		"core.Ledger":   ld,
-		"core.EventBus": eb,
+		Ledger:   ld,
+		EventBus: eb,
 	})
 	eb.LogicRunner = lr
 
@@ -180,13 +189,13 @@ func TestExecution(t *testing.T) {
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
 	assert.NoError(t, err)
 
-	resp, err := lr.Execute(&event.CallMethodEvent{ObjectRef: dataRef})
+	resp, err := lr.Execute(&event.CallMethod{ObjectRef: dataRef})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("data"), resp.(*reaction.CommonReaction).Data)
 	assert.Equal(t, []byte("res"), resp.(*reaction.CommonReaction).Result)
 
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-	resp, err = lr.Execute(&event.CallConstructorEvent{ClassRef: classRef})
+	resp, err = lr.Execute(&event.CallConstructor{ClassRef: classRef})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("data"), resp.(*reaction.CommonReaction).Data)
 	assert.Equal(t, []byte(nil), resp.(*reaction.CommonReaction).Result)
@@ -283,7 +292,7 @@ func (r *Two) Hello(s string) string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObj(
+	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
 		*am.RootRef(),
@@ -405,7 +414,7 @@ func (r *Two) Hello(s string) string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObj(
+	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
 		*am.RootRef(),
@@ -527,7 +536,7 @@ func (r *Two) Hello() string {
 	err = cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObj(
+	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
 		*am.RootRef(),
@@ -675,7 +684,6 @@ func New(n int) *Child {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
-	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
 			MainListen:     "127.0.0.1:7778",
@@ -686,8 +694,8 @@ func New(n int) *Child {
 	assert.NoError(t, err, "Initialize runner")
 
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": &testEventBus{LogicRunner: lr},
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
 
@@ -699,11 +707,11 @@ func New(n int) *Child {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.ActivateObj(core.NewRefFromBase58("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := lr.Execute(&event.CallMethodEvent{
+	resp, err := lr.Execute(&event.CallMethod{
 		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
@@ -713,7 +721,7 @@ func New(n int) *Child {
 	r := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
-	resp, err = lr.Execute(&event.CallMethodEvent{
+	resp, err = lr.Execute(&event.CallMethod{
 		Request:   core.NewRefFromBase58("r3"),
 		ObjectRef: *contract,
 		Method:    "SumChilds",
@@ -723,6 +731,98 @@ func New(n int) *Child {
 	r = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
+}
+
+func TestErrorInterface(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/genesis/proxy/two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) AnError() error {
+	holder := two.New()
+	friend := holder.AsChild(r.GetReference())
+
+	return friend.AnError()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"errors"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() *Two {
+	return &Two{}
+}
+func (r *Two) AnError() error {
+	return errors.New("an error")
+}
+`
+
+	l, cleaner := ledgertestutil.TmpLedger(t, "")
+	defer cleaner()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	am := l.GetArtifactManager()
+	lr, err := NewLogicRunner(configuration.LogicRunner{
+		GoPlugin: &configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     runnerbin,
+			RunnerCodePath: insiderStorage,
+		}})
+	assert.NoError(t, err, "Initialize runner")
+
+	assert.NoError(t, lr.Start(core.Components{
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
+	}), "starting logicrunner")
+	defer lr.Stop()
+
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
+	err = cb.Build(map[string]string{
+		"one": contractOneCode,
+		"two": contractTwoCode,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contract, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["one"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	resp, err := lr.Execute(&event.CallMethod{
+		Request:   core.NewRefFromBase58("r2"),
+		ObjectRef: *contract,
+		Method:    "AnError",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+
+	ch := new(codec.CborHandle)
+	res := []interface{}{&foundation.Error{}}
+	err = codec.NewDecoderBytes(resp.(*reaction.CommonReaction).Result, ch).Decode(&res)
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 }
 
 func TestRootDomainContract(t *testing.T) {
@@ -752,7 +852,6 @@ func TestRootDomainContract(t *testing.T) {
 	defer os.RemoveAll(insiderStorage) // nolint: errcheck
 
 	am := l.GetArtifactManager()
-	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
 	fmt.Println("RUNNERPATH", runnerbin)
 	lr, err := NewLogicRunner(configuration.LogicRunner{
 		GoPlugin: &configuration.GoPlugin{
@@ -764,8 +863,8 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err, "Initialize runner")
 
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": &testEventBus{LogicRunner: lr},
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
 
@@ -776,11 +875,11 @@ func TestRootDomainContract(t *testing.T) {
 
 	domain := core.NewRefFromBase58("c1")
 	request := core.NewRefFromBase58("c2")
-	contract, err := am.ActivateObj(domain, request, *cb.Classes["rootDomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.ActivateObject(domain, request, *cb.Classes["rootDomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp1, err := lr.Execute(&event.CallMethodEvent{
+	resp1, err := lr.Execute(&event.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "CreateMember",
@@ -790,7 +889,7 @@ func TestRootDomainContract(t *testing.T) {
 	r1 := testutil.CBORUnMarshal(t, resp1.(*reaction.CommonReaction).Result)
 	member1Ref := r1.([]interface{})[0].(string)
 
-	resp2, err := lr.Execute(&event.CallMethodEvent{
+	resp2, err := lr.Execute(&event.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "CreateMember",
@@ -800,7 +899,7 @@ func TestRootDomainContract(t *testing.T) {
 	r2 := testutil.CBORUnMarshal(t, resp2.(*reaction.CommonReaction).Result)
 	member2Ref := r2.([]interface{})[0].(string)
 
-	_, err = lr.Execute(&event.CallMethodEvent{
+	_, err = lr.Execute(&event.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "SendMoney",
@@ -808,7 +907,7 @@ func TestRootDomainContract(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	resp4, err := lr.Execute(&event.CallMethodEvent{
+	resp4, err := lr.Execute(&event.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "DumpAllUsers",
@@ -874,8 +973,8 @@ func (c *Child) GetNum() int {
 	assert.NoError(b, err, "Initialize runner")
 
 	assert.NoError(b, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": &testEventBus{LogicRunner: lr},
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	defer lr.Stop()
 
@@ -885,16 +984,16 @@ func (c *Child) GetNum() int {
 	assert.NoError(b, err)
 
 	domain := core.NewRefFromBase58("c1")
-	parent, err := am.ActivateObj(core.NewRefFromBase58("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	parent, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create parent")
 	assert.NotEqual(b, parent, nil, "parent created")
-	child, err := am.ActivateObj(core.NewRefFromBase58("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	child, err := am.ActivateObject(core.NewRefFromBase58("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create child")
 	assert.NotEqual(b, child, nil, "child created")
 
 	b.N = 1000
 	for i := 0; i < b.N; i++ {
-		resp, err := lr.Execute(&event.CallMethodEvent{
+		resp, err := lr.Execute(&event.CallMethod{
 			Request:   core.NewRefFromBase58("rr"),
 			ObjectRef: *parent,
 			Method:    "CCC",
@@ -903,5 +1002,35 @@ func (c *Child) GetNum() int {
 		assert.NoError(b, err, "parent call")
 		r := testutil.CBORUnMarshal(b, resp.(*reaction.CommonReaction).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
+	}
+}
+
+func TestProxyGeneration(t *testing.T) {
+	contracts, err := preprocessor.GetRealContractsNames()
+	assert.NoError(t, err)
+
+	for _, contract := range contracts {
+		t.Run(contract, func(t *testing.T) {
+			parsed, err := preprocessor.ParseFile("../genesis/experiment/" + contract + "/" + contract + ".go")
+			assert.NoError(t, err)
+
+			proxyPath, err := preprocessor.GetRealGenesisDir("proxy")
+			assert.NoError(t, err)
+
+			name, err := preprocessor.ProxyPackageName(parsed)
+			assert.NoError(t, err)
+
+			proxy := path.Join(proxyPath, name, name+".go")
+			_, err = os.Stat(proxy)
+			assert.NoError(t, err)
+
+			buff := bytes.NewBufferString("")
+			preprocessor.GenerateContractProxy(parsed, "", buff)
+
+			cmd := exec.Command("diff", proxy, "-")
+			cmd.Stdin = buff
+			out, err := cmd.CombinedOutput()
+			assert.NoError(t, err, string(out))
+		})
 	}
 }
