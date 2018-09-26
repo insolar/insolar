@@ -581,6 +581,10 @@ func New(n int) *Child {
 	r := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
+	rlr := lr.(*LogicRunner)
+	assert.Equal(t, 1, int(rlr.cb.P.PulseNumber), "right pulsenumber")
+	assert.Equal(t, 1, len(rlr.cb.R[*contract]), "right number of caserecords") // wrong, must be much greater
+
 	resp, err = lr.Execute(&event.CallMethod{
 		Request:   core.NewRefFromBase58("r3"),
 		ObjectRef: *contract,

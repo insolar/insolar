@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
-	"github.com/insolar/insolar/logicrunner/caserecord"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
@@ -40,7 +39,7 @@ type LogicRunner struct {
 	ArtifactManager core.ArtifactManager
 	EventBus        core.EventBus
 	Cfg             *configuration.LogicRunner
-	cb              core.CaseBind
+	cb              CaseBind
 	sock            net.Listener
 }
 
@@ -136,11 +135,17 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 
 	switch m := e.(type) {
 	case *event.CallMethod:
-		lr.addObjectCaseRecord(m.ObjectRef, caserecord.Incoming{Event: m})
+		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
+			Type: CaseRecordTypeMethodCall,
+			Resp: e,
+		})
 		return lr.executeMethodCall(ctx, m, machinePref)
 
 	case *event.CallConstructor:
-		lr.addObjectCaseRecord(m.ClassRef, caserecord.Incoming{Event: m})
+		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
+			Type: CaseRecordTypeConstructorCall,
+			Resp: e,
+		})
 		classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class")
@@ -247,20 +252,15 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 }
 
-func (lr *LogicRunner) Validate(binder core.CaseBind) (int, error) {
-	return 0, nil
-}
-
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	lr.cb = core.CaseBind{
+	lr.cb = CaseBind{
 		P: pulse,
-		R: make(map[core.RecordRef][]core.CaseRecord),
+		R: make(map[core.RecordRef][]CaseRecord),
 	}
 	return nil
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecord) error {
-
+func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr CaseRecord) error {
 	lr.cb.R[ref] = append(lr.cb.R[ref], cr)
 	return nil
 }

@@ -72,7 +72,6 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	if err != nil {
 		return err
 	}
-
 	reply.Code = codeDescriptor.Code()
 	return nil
 }
@@ -102,6 +101,11 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
+	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
+		Type:   CaseRecordTypeRouteCall,
+		ReqSig: HashInterface(req),
+		Resp:   reply,
+	})
 	reply.Result = res.(*reaction.CommonReaction).Result
 
 	return nil
@@ -123,7 +127,11 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
-
+	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
+		Type:   CaseRecordTypeRouteCall,
+		ReqSig: HashInterface(req),
+		Resp:   reply,
+	})
 	reply.Data = res.(*reaction.CommonReaction).Data
 	return nil
 }
@@ -136,6 +144,11 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object")
 	}
+	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
+		Type:   CaseRecordTypeSaveAsChild,
+		ReqSig: HashInterface(req),
+		Resp:   reply,
+	})
 	reply.Reference = *ref
 	return nil
 }
@@ -167,6 +180,11 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 			reply.Children = append(reply.Children, r)
 		}
 	}
+	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{ // bad idea, we can store gadzillion of children
+		Type:   CaseRecordTypeGetObjChildren,
+		ReqSig: HashInterface(req),
+		Resp:   reply,
+	})
 	return nil
 }
 
@@ -178,6 +196,11 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 	if err != nil {
 		return errors.Wrap(err, "couldn't save delegate")
 	}
+	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
+		Type:   CaseRecordTypeSaveAsDelegate,
+		ReqSig: HashInterface(req),
+		Resp:   reply,
+	})
 	reply.Reference = *ref
 	return nil
 }
@@ -189,7 +212,11 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGet
 	if err != nil {
 		return err
 	}
-
+	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
+		Type:   CaseRecordTypeGetDelegate,
+		ReqSig: HashInterface(req),
+		Resp:   reply,
+	})
 	reply.Object = *ref
 	return nil
 }

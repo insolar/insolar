@@ -50,8 +50,17 @@ type DownCallConstructorResp struct {
 	Ret core.Arguments
 }
 
+// UpBaseReq  is a base type for all insgorund -> logicrunner requests
+type UpBaseReq struct {
+	Me core.RecordRef
+}
+
+// UpReqIface interface for UpBaseReq descendant responses
+type UpRespIface interface{}
+
 // UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
 type UpGetCodeReq struct {
+	UpBaseReq
 	MType core.MachineType
 	Code  core.RecordRef
 }
@@ -63,6 +72,7 @@ type UpGetCodeResp struct {
 
 // UpRouteReq is a set of arguments for Dispatch RPC in goplugin
 type UpRouteReq struct {
+	UpBaseReq
 	Wait      bool
 	Object    core.RecordRef
 	Method    string
@@ -76,6 +86,7 @@ type UpRouteResp struct {
 
 // UpRouteConstructorReq is a set of arguments for RouteConstructor RPC in goplugin
 type UpRouteConstructorReq struct {
+	UpBaseReq
 	Reference   core.RecordRef
 	Constructor string
 	Arguments   core.Arguments
@@ -88,6 +99,7 @@ type UpRouteConstructorResp struct {
 
 // UpSaveAsChildReq is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildReq struct {
+	UpBaseReq
 	Parent core.RecordRef
 	Class  core.RecordRef
 	Data   []byte
@@ -100,6 +112,7 @@ type UpSaveAsChildResp struct {
 
 // UpSaveAsChildResp is a set of arguments for GetObjChildren RPC in goplugin
 type UpGetObjChildrenReq struct {
+	UpBaseReq
 	Obj   core.RecordRef
 	Class core.RecordRef
 }
@@ -111,6 +124,7 @@ type UpGetObjChildrenResp struct {
 
 // UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateReq struct {
+	UpBaseReq
 	Into  core.RecordRef
 	Class core.RecordRef
 	Data  []byte
@@ -123,6 +137,7 @@ type UpSaveAsDelegateResp struct {
 
 // UpGetDelegateReq is a set of arguments for GetDelegate RPC in goplugin
 type UpGetDelegateReq struct {
+	UpBaseReq
 	Object core.RecordRef
 	OfType core.RecordRef
 }

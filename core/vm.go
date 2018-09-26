@@ -42,7 +42,6 @@ type MachineLogicExecutor interface {
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	Execute(event Event) (res Reaction, err error)
-	Validate(binder CaseBind) (int, error)
 	OnPulse(pulse Pulse) error
 }
 
@@ -54,14 +53,4 @@ type LogicCallContext struct {
 	Caller *RecordRef // Contract that made the call
 	Time   time.Time  // Time when call was made
 	Pulse  Pulse      // Number of the pulse
-}
-
-// CaseRecord is one record of validateable object calling history
-type CaseRecord interface {
-}
-
-// CaseBinder is a whole result of executor efforts on every object it seen on this pulse
-type CaseBind struct {
-	P Pulse                      // pulse info for this bind
-	R map[RecordRef][]CaseRecord // ordered cases for each object
 }
