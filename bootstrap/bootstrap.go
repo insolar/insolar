@@ -35,9 +35,12 @@ const (
 	nodeDomain = "nodedomain"
 	nodeRecord = "noderecord"
 	rootDomain = "rootdomain"
+	wallet     = "wallet"
+	member     = "member"
+	allowance  = "allowance"
 )
 
-var contractNames = []string{"wallet", "member", "allowance", rootDomain, nodeDomain, nodeRecord}
+var contractNames = []string{wallet, member, allowance, rootDomain, nodeDomain, nodeRecord}
 
 // Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
