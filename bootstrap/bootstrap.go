@@ -122,6 +122,23 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	return nil, nil
 }
 
+func buildSmartContracts(cb *testutil.ContractsBuilder) error {
+	log.Info("[ buildSmartContracts ] building contracts:", contractNames)
+	contracts, err := getContractsMap()
+	if err != nil {
+		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
+	}
+
+	log.Info("[ buildSmartContracts ] Start building contracts ...")
+	err = cb.Build(contracts)
+	if err != nil {
+		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
+	}
+	log.Info("[ buildSmartContracts ] Stop building contracts ...")
+
+	return nil
+}
+
 func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	var instanceData []byte
 
@@ -217,21 +234,14 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build insgocc")
 	}
 
-	log.Info("[ Bootstrapper ] building contracts:", contractNames)
-	contracts, err := getContractsMap()
-	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
-	}
-
 	am := c.Ledger.GetArtifactManager()
 	cb := testutil.NewContractBuilder(am, insgocc)
 	defer cb.Clean()
-	log.Info("[ Bootstrapper ] Start building contracts ...")
-	err = cb.Build(contracts)
+
+	err = buildSmartContracts(cb)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
 	}
-	log.Info("[ Bootstrapper ] Stop building contracts ...")
 
 	err = b.activateSmartContracts(am, cb)
 	if err != nil {
