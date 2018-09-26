@@ -43,29 +43,11 @@ func (pm *MockPulseManager) SetCallback(callback func(core.Pulse)) {
 	pm.callback = callback
 }
 
-// MockLedger mock struct that implements core.Ledger interface.
-type MockLedger struct {
-	PM core.PulseManager
-}
-
-func (l *MockLedger) GetArtifactManager() core.ArtifactManager {
-	return nil
-}
-
-func (l *MockLedger) GetJetCoordinator() core.JetCoordinator {
-	return nil
-}
-
-func (l *MockLedger) GetPulseManager() core.PulseManager {
-	return l.PM
-}
-
-func (l *MockLedger) HandleEvent(core.Event) (core.Reaction, error) {
-	return nil, nil
-}
-
 // GetDefaultCtx creates default context for the host handler.
 func GetDefaultCtx(hostHandler hosthandler.HostHandler) hosthandler.Context {
-	ctx, _ := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		panic(err)
+	}
 	return ctx
 }

@@ -104,6 +104,26 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	}
 }
 
+type mockLedger struct {
+	PM core.PulseManager
+}
+
+func (l *mockLedger) GetArtifactManager() core.ArtifactManager {
+	return nil
+}
+
+func (l *mockLedger) GetJetCoordinator() core.JetCoordinator {
+	return nil
+}
+
+func (l *mockLedger) GetPulseManager() core.PulseManager {
+	return l.PM
+}
+
+func (l *mockLedger) HandleEvent(core.Event) (core.Reaction, error) {
+	return nil, nil
+}
+
 func TestServiceNetwork_SendMessage2(t *testing.T) {
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -295,7 +315,7 @@ func Test_processPulse(t *testing.T) {
 		"127.0.0.1:10001",
 		nil,
 		secondNodeId))
-	firstLedger := &hostnetwork.MockLedger{PM: &hostnetwork.MockPulseManager{}}
+	firstLedger := &mockLedger{PM: &hostnetwork.MockPulseManager{}}
 	mpm := hostnetwork.MockPulseManager{}
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -304,7 +324,7 @@ func Test_processPulse(t *testing.T) {
 			wg.Done()
 		}
 	})
-	secondLedger := &hostnetwork.MockLedger{PM: &mpm}
+	secondLedger := &mockLedger{PM: &mpm}
 
 	secondNode.Start(core.Components{Ledger: secondLedger})
 	firstNode.Start(core.Components{Ledger: firstLedger})
@@ -368,7 +388,7 @@ func Test_processPulse2(t *testing.T) {
 				wg.Done()
 			}
 		})
-		ledger := &hostnetwork.MockLedger{PM: &mpm}
+		ledger := &mockLedger{PM: &mpm}
 		ledgers = append(ledgers, ledger)
 
 		host = prefix + strconv.Itoa(port)
