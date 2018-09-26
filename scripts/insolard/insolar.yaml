@@ -43,18 +43,19 @@ ledger:
       5: 1
 
 log:
-  level: Debug
+  level: Info
   adapter: logrus
 stats:
   listenaddress: 0.0.0.0:8080
 logicrunner:
-  rpclisten: 127.0.0.1:18182
   builtin: {}
   goplugin:
     runnerlisten: 127.0.0.1:18181
-    runnerpath: ../testdata/logicrunner/insgorund
+    runnerpath: bin/insgorund
     runnercodepath: contractstorage
+    mainlisten: 127.0.0.1:18182
 pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
   nodesaddresses: []
+
