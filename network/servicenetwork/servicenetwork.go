@@ -199,7 +199,7 @@ func createContext(handler hosthandler.HostHandler) hosthandler.Context {
 	return ctx
 }
 
-// InitCascadeSendMessage initiates the RPC call on target host and sends messages to next cascade layers
+// initCascadeSendMessage initiates the RPC call on target host and sends messages to next cascade layers
 func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCurrentNode bool, method string, args [][]byte) error {
 	if len(data.NodeIds) == 0 {
 		return errors.New("node IDs list should not be empty")

@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -30,17 +29,12 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
 
-// NodeNetwork is interface to binding node and host network.
-type NodeNetwork interface {
-	ResolveHostID(ref core.RecordRef) string
-	GetID() core.RecordRef
-}
-
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
+func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		return nil, errors.New("couldn't start at 0.0.0.0")
