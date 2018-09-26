@@ -28,6 +28,7 @@ type Code struct {
 	MachineType core.MachineType
 }
 
+// Serialize serializes to gob.
 func (e *Code) Serialize() (io.Reader, error) {
 	return serialize(e, TypeCode)
 }
@@ -39,6 +40,7 @@ type Class struct {
 	Code  *core.RecordRef // Can be nil.
 }
 
+// Serialize serializes to gob.
 func (e *Class) Serialize() (io.Reader, error) {
 	return serialize(e, TypeClass)
 }
@@ -52,6 +54,7 @@ type Object struct {
 	Children []core.RecordRef
 }
 
+// Serialize serializes to gob.
 func (e *Object) Serialize() (io.Reader, error) {
 	return serialize(e, TypeObject)
 }
@@ -61,6 +64,7 @@ type Delegate struct {
 	Head core.RecordRef
 }
 
+// Serialize serializes to gob.
 func (e *Delegate) Serialize() (io.Reader, error) {
 	return serialize(e, TypeDelegate)
 }
@@ -70,6 +74,7 @@ type Reference struct {
 	Ref core.RecordRef
 }
 
+// Serialize serializes to gob.
 func (e *Reference) Serialize() (io.Reader, error) {
 	return serialize(e, TypeReference)
 }
