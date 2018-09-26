@@ -20,11 +20,11 @@ package foundation
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/tylerb/gls"
 )
 
 // BaseContract is a base class for all contracts.
 type BaseContract struct {
-	context *core.LogicCallContext // Context hidden from anyone
 }
 
 // ProxyInterface interface any proxy of a contract implements
@@ -41,37 +41,40 @@ type BaseContractInterface interface {
 
 // GetReference - Returns public reference of contract
 func (bc *BaseContract) GetReference() core.RecordRef {
-	if bc.context == nil {
-		panic("object has no context set before first use")
-	}
-	if bc.context.Callee == nil {
+	ctx := bc.GetContext()
+	if ctx.Callee == nil {
 		panic("context has no callee set")
 	}
-	return *bc.context.Callee
+	return *ctx.Callee
 }
 
 // GetClass - Returns class of contract
 func (bc *BaseContract) GetClass() core.RecordRef {
-	if bc.context == nil {
-		panic("object has no context set before first use")
-	}
-	return *bc.context.Class
+
+	return *bc.GetContext().Class
 }
 
 // GetContext returns current calling context of this object.
 // It exists only for currently called contract.
-func (bc *BaseContract) GetContext() core.LogicCallContext {
-	return *bc.context
-}
-
-// SetContext - do not use it in smartcontracts
-func (bc *BaseContract) SetContext(cc *core.LogicCallContext) {
-	if bc.context == nil {
-		bc.context = cc
+func (bc *BaseContract) GetContext() *core.LogicCallContext {
+	ctx := gls.Get("ctx")
+	if ctx == nil {
+		panic("object has no context")
+	} else if ctx, ok := ctx.(*core.LogicCallContext); ok {
+		return ctx
 	} else {
-		panic("context can not be set twice")
+		panic("wrong type of context")
 	}
 }
+
+//// SetContext - do not use it in smartcontracts
+//func (bc *BaseContract) SetContext(cc *core.LogicCallContext) {
+//	if bc.context == nil {
+//		bc.context = cc
+//	} else {
+//		panic("context can not be set twice")
+//	}
+//}
 
 // GetImplementationFor finds delegate typed r in object and returns it
 func GetImplementationFor(object, ofType core.RecordRef) (core.RecordRef, error) {

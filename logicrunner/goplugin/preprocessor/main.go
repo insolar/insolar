@@ -144,7 +144,6 @@ func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
 func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, []map[string]interface{}, map[string]bool) {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
-	imports[fmt.Sprintf(`"%s"`, corePath)] = true
 
 	var methodsInfo []map[string]interface{}
 	for _, method := range parsed.methods[parsed.contract] {

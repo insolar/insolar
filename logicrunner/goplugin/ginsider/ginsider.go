@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/tylerb/gls"
 )
 
 // GoInsider is an RPC interface to run code of plugins
@@ -70,12 +71,14 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	}
 
 	wrapper, ok := symbol.(func(ph proxyctx.ProxyHelper, object []byte,
-		data []byte, context *core.LogicCallContext) ([]byte, []byte, error))
+		data []byte) ([]byte, []byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	state, result, err := wrapper(t.GI, args.Data, args.Arguments, args.Context) // may be entire args???
+	gls.Set("ctx", args.Context)
+	state, result, err := wrapper(t.GI, args.Data, args.Arguments) // may be entire args???
+	gls.Cleanup()
 
 	if err != nil {
 		return errors.Wrapf(err, "Method call returned error")
