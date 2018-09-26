@@ -35,6 +35,10 @@ func NewRouteSet() *RouteSet {
 	return &RouteSet{}
 }
 
+func NewRouteSetWithComparator(comparator []byte) *RouteSet {
+	return &RouteSet{comparator: comparator}
+}
+
 // Hosts returns list of RouteSet hosts.
 func (rs *RouteSet) Hosts() []*host.Host {
 	hosts := make([]*host.Host, len(rs.hosts))
