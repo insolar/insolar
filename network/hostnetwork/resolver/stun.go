@@ -21,6 +21,7 @@ import (
 
 	"github.com/ccding/go-stun/stun"
 	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
 type stunResolver struct {
@@ -48,12 +49,12 @@ func (sr *stunResolver) Resolve(conn net.PacketConn) (string, error) {
 
 	_, host, err := client.Discover()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Failed to discover address")
 	}
 
 	_, err = client.Keepalive()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Failed to Keepalive")
 	}
 
 	log.Infof("STUN resolve public address to %s", host.TransportAddr())

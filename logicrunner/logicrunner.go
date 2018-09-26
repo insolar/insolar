@@ -25,8 +25,8 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
@@ -118,11 +118,11 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 	}
 
 	switch m := e.(type) {
-	case *event.CallMethodEvent:
+	case *event.CallMethod:
 		return lr.executeMethodCall(ctx, m, machinePref)
 
-	case *event.CallConstructorEvent:
-		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
+	case *event.CallConstructor:
+		classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class")
 		}
@@ -133,12 +133,7 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 			return nil, errors.Wrap(err, "couldn't get class's code descriptor")
 		}
 
-		mt, err := codeDesc.MachineType()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get machine type")
-		}
-
-		executor, err := lr.GetExecutor(mt)
+		executor, err := lr.GetExecutor(codeDesc.MachineType())
 		if err != nil {
 			return nil, errors.Wrap(err, "no executer registered")
 		}
@@ -163,7 +158,7 @@ type objectBody struct {
 }
 
 func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.MachineType) (*objectBody, error) {
-	objDesc, err := lr.ArtifactManager.GetLatestObj(objref)
+	objDesc, err := lr.ArtifactManager.GetObject(objref, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
@@ -173,30 +168,20 @@ func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
 
-	data, err := objDesc.Memory()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object's data")
-	}
-
 	codeDesc, err := classDesc.CodeDescriptor(machinePref)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
 	}
 
-	mt, err := codeDesc.MachineType()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get machine type")
-	}
-
 	return &objectBody{
-		Body:        data,
+		Body:        objDesc.Memory(),
 		Code:        *codeDesc.Ref(),
 		Class:       *classDesc.HeadRef(),
-		MachineType: mt,
+		MachineType: codeDesc.MachineType(),
 	}, nil
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethodEvent, machinePref []core.MachineType) (core.Reaction, error) {
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethod, machinePref []core.MachineType) (core.Reaction, error) {
 	objbody, err := lr.getObjectEvent(e.ObjectRef, machinePref)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
@@ -218,7 +203,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 			return nil, errors.Wrap(err, "executer error")
 		}
 
-		_, err = lr.ArtifactManager.UpdateObj(
+		_, err = lr.ArtifactManager.UpdateObject(
 			core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
 		)
 		if err != nil {

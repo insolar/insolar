@@ -18,6 +18,8 @@ package host
 
 import (
 	"net"
+
+	"github.com/pkg/errors"
 )
 
 // Address is host's real network address.
@@ -29,7 +31,7 @@ type Address struct {
 func NewAddress(address string) (*Address, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to resolve ip address")
 	}
 	return &Address{UDPAddr: *udpAddr}, nil
 }

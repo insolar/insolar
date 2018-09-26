@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/version"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -54,8 +55,9 @@ func (cm *componentManager) linkAll() {
 // stopAll - reverse order stop all components
 func (cm *componentManager) stopAll() {
 	v := reflect.ValueOf(cm.components)
-	for i := v.NumField() - 1; i == 0; i-- {
+	for i := v.NumField() - 1; i >= 0; i-- {
 		err := v.Field(i).Interface().(core.Component).Stop()
+		log.Infoln("Stop component: ", v.String())
 		if err != nil {
 			log.Errorf("failed to stop component %s : %s", v.String(), err.Error())
 		}
@@ -134,6 +136,7 @@ func main() {
 		os.Exit(0)
 	}()
 
+	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
 	repl(nw)
 }

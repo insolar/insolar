@@ -68,6 +68,9 @@ See [package readme](genesis) for more details.
 
 Provides configuration params for all Insolar components and helper for config resources management.
 
+### [Metrics](metrics)
+
+Using Prometheus monitoring system and time series database for collecting and store metrics
 
 Installation
 ------------
@@ -91,6 +94,7 @@ Docker container
 Contributing
 ------------
 See [Contributing Guidelines](.github/CONTRIBUTING.md).
+
 
 License
 -------

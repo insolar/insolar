@@ -14,16 +14,13 @@
  *    limitations under the License.
  */
 
-package core
+/*
+Package version provides project version information.
+Golang ldflags -X in Makefile is used for values substitution
 
-import (
-	"github.com/prometheus/client_golang/prometheus"
-)
+Example:
 
-// Metrics management interface.
-type Metrics interface {
-	// AddCounter adds new counter to metrics registry.
-	AddCounter(name, componentName, help string) (prometheus.Counter, error)
-	// AddGauge adds new gauge to metrics registry.
-	AddGauge(name, componentName, help string) (prometheus.Gauge, error)
-}
+	fmt.Println(version.GetFullVersion())
+
+*/
+package version

@@ -23,6 +23,6 @@ import (
 // PublicAddressResolver is network address resolver interface.
 type PublicAddressResolver interface {
 
-	// Returns public network address from given connection.
+	// Resolve returns public network address from given connection.
 	Resolve(conn net.PacketConn) (string, error)
 }

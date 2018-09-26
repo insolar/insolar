@@ -18,10 +18,10 @@ package hostnetwork
 
 import (
 	"context"
-	"errors"
 
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/pkg/errors"
 )
 
 type ctxKey string
@@ -50,7 +50,7 @@ func (cb ContextBuilder) Build() (ctx hosthandler.Context, err error) {
 	for _, action := range cb.actions {
 		ctx, err = action(ctx)
 		if err != nil {
-			return
+			return nil, errors.Wrap(err, "Failed to build context")
 		}
 	}
 	return

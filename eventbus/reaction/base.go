@@ -30,24 +30,34 @@ import (
 type Type byte
 
 const (
-	// WrongReactionType - incorrect type (0)
-	WrongReactionType = Type(iota)
-	// CommonReactionType - two binary fields: data and results
-	CommonReactionType
-	// ObjectBodyReactionType - reaction with body, class reference, code reference ...
-	ObjectBodyReactionType
-	// TypeCode - retrieve code from storage.
-	TypeCode
+	TypeWrong          = Type(iota) // TypeWrong - incorrect type (0)
+	TypeCommonReaction              // TypeCommonReaction - two binary fields: data and results
+
+	// Ledger
+
+	TypeCode      // TypeCode is code from storage.
+	TypeClass     // TypeClass is class from storage.
+	TypeObject    // TypeObject is object from storage.
+	TypeDelegate  // TypeDelegate is delegate reference from storage.
+	TypeReference // TypeReference is common reaction for methods returning reference to created records.
 )
 
 func getEmptyReaction(t Type) (core.Reaction, error) {
 	switch t {
-	case WrongReactionType:
+	case TypeWrong:
 		return nil, errors.New("no empty reaction for 'wrong' reaction")
-	case CommonReactionType:
+	case TypeCommonReaction:
 		return &CommonReaction{}, nil
-	case ObjectBodyReactionType:
-		return &ObjectBodyReaction{}, nil
+	case TypeCode:
+		return &Code{}, nil
+	case TypeClass:
+		return &Class{}, nil
+	case TypeObject:
+		return &Object{}, nil
+	case TypeDelegate:
+		return &Delegate{}, nil
+	case TypeReference:
+		return &Reference{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reaction type: '%d'", t)
 	}
@@ -84,5 +94,9 @@ func Deserialize(buff io.Reader) (core.Reaction, error) {
 
 func init() {
 	gob.Register(&CommonReaction{})
-	gob.Register(&ObjectBodyReaction{})
+	gob.Register(&Code{})
+	gob.Register(&Class{})
+	gob.Register(&Object{})
+	gob.Register(&Delegate{})
+	gob.Register(&Reference{})
 }

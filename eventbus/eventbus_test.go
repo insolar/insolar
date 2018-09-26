@@ -44,7 +44,7 @@ func (r *runner) Execute(e core.Event) (core.Reaction, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
-	m := e.(*event.CallMethodEvent)
+	m := e.(*event.CallMethod)
 	r.requests = append(r.requests, req{e.GetReference(), m.Method, m.Arguments})
 	resp := r.responses[0]
 	r.responses = r.responses[1:]

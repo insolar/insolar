@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/pkg/errors"
 )
 
 //go:generate stringer -type=packetType
@@ -140,7 +141,7 @@ func SerializePacket(q *Packet) ([]byte, error) {
 	enc := gob.NewEncoder(&msgBuffer)
 	err := enc.Encode(q)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to serialize packet")
 	}
 
 	length := msgBuffer.Len()
@@ -167,7 +168,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 	lengthReader := bytes.NewBuffer(lengthBytes)
 	length, err := binary.ReadUvarint(lengthReader)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to read variant")
 	}
 
 	var reader bytes.Buffer
@@ -183,7 +184,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 	err = dec.Decode(msg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to deserialize packet")
 	}
 
 	return msg, nil

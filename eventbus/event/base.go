@@ -36,59 +36,64 @@ type baseEvent struct {
 type Type byte
 
 const (
-	baseEventType            = Type(iota)
-	CallMethodEventType      // CallMethodEvent - Simply call method and return result
-	CallConstructorEventType // CallConstructorEvent is a event for calling constructor and obtain its reaction
-	// Artifact manager event types:
+	TypeBase            = Type(iota)
+	TypeCallMethod      // TypeCallMethod calls method and returns result
+	TypeCallConstructor // TypeCallConstructor is a event for calling constructor and obtain its reaction
 
-	GetCodeType             // GetCodeType - retrieve code from storage.
-	GetLatestClassType      // GetLatestClassType - latest state of the class known to storage
-	GetLatestObjType        // GetLatestObjType returns descriptor for latest state of the object known to storage.
-	DeclareTypeType         // DeclareTypeType creates new type.
-	DeployCodeType          // DeployCodeType creates new code.
-	ActivateClassType       // ActivateClassType activates class.
-	DeactivateClassType     // DeactivateClassType deactivates class.
-	UpdateClassType         // UpdateClassType amends class.
-	ActivateObjType         // ActivateObjType activates object.
-	ActivateObjDelegateType // ActivateObjDelegateType similar to ActivateObjType but it creates object as parent's delegate of provided class.
-	DeactivateObjType       // DeactivateObjType deactivates object.
-	UpdateObjType           // UpdateObjType amends object.
+	// Ledger
 
+	TypeGetCode                // TypeGetCode retrieves code from storage.
+	TypeGetClass               // TypeGetClass retrieves class from storage.
+	TypeGetObject              // TypeGetObject retrieves object from storage.
+	TypeGetDelegate            // TypeGetDelegate retrieves object represented as provided class.
+	TypeDeclareType            // TypeDeclareType creates new type.
+	TypeDeployCode             // TypeDeployCode creates new code.
+	TypeActivateClass          // TypeActivateClass activates class.
+	TypeDeactivateClass        // TypeDeactivateClass deactivates class.
+	TypeUpdateClass            // TypeUpdateClass amends class.
+	TypeActivateObject         // TypeActivateObject activates object.
+	TypeActivateObjectDelegate // TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
+	TypeDeactivateObject       // TypeDeactivateObject deactivates object.
+	TypeUpdateObject           // TypeUpdateObject amends object.
 )
 
 // GetEmptyMessage constructs specified event
 func getEmptyEvent(mt Type) (core.Event, error) {
 	switch mt {
-	case baseEventType:
+	case TypeBase:
 		return nil, errors.New("working with event type == 0 is prohibited")
-	case CallMethodEventType:
-		return &CallMethodEvent{}, nil
-	case CallConstructorEventType:
-		return &CallConstructorEvent{}, nil
-	case GetCodeType:
+	case TypeCallMethod:
+		return &CallMethod{}, nil
+	case TypeCallConstructor:
+		return &CallConstructor{}, nil
+
+	// Ledger
+	case TypeGetCode:
 		return &GetCode{}, nil
-	case GetLatestClassType:
-		return &GetLatestClass{}, nil
-	case GetLatestObjType:
-		return &GetLatestObj{}, nil
-	case DeclareTypeType:
+	case TypeGetClass:
+		return &GetClass{}, nil
+	case TypeGetObject:
+		return &GetObject{}, nil
+	case TypeGetDelegate:
+		return &GetDelegate{}, nil
+	case TypeDeclareType:
 		return &DeclareType{}, nil
-	case DeployCodeType:
+	case TypeDeployCode:
 		return &DeployCode{}, nil
-	case ActivateClassType:
+	case TypeActivateClass:
 		return &ActivateClass{}, nil
-	case DeactivateClassType:
+	case TypeDeactivateClass:
 		return &DeactivateClass{}, nil
-	case UpdateClassType:
+	case TypeUpdateClass:
 		return &UpdateClass{}, nil
-	case ActivateObjType:
-		return &ActivateObj{}, nil
-	case ActivateObjDelegateType:
-		return &ActivateObjDelegate{}, nil
-	case DeactivateObjType:
-		return &DeactivateObj{}, nil
-	case UpdateObjType:
-		return &UpdateObj{}, nil
+	case TypeActivateObject:
+		return &ActivateObject{}, nil
+	case TypeActivateObjectDelegate:
+		return &ActivateObjectDelegate{}, nil
+	case TypeDeactivateObject:
+		return &DeactivateObject{}, nil
+	case TypeUpdateObject:
+		return &UpdateObject{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented event type %d", mt)
 	}
@@ -124,18 +129,21 @@ func Deserialize(buff io.Reader) (core.Event, error) {
 }
 
 func init() {
-	gob.Register(&CallConstructorEvent{})
-	gob.Register(&CallMethodEvent{})
+	gob.Register(&CallConstructor{})
+	gob.Register(&CallMethod{})
+
+	// Ledger
 	gob.Register(&GetCode{})
-	gob.Register(&GetLatestClass{})
-	gob.Register(&GetLatestObj{})
+	gob.Register(&GetClass{})
+	gob.Register(&GetObject{})
+	gob.Register(&GetDelegate{})
 	gob.Register(&DeclareType{})
 	gob.Register(&DeployCode{})
 	gob.Register(&ActivateClass{})
 	gob.Register(&DeactivateClass{})
 	gob.Register(&UpdateClass{})
-	gob.Register(&ActivateObj{})
-	gob.Register(&ActivateObjDelegate{})
-	gob.Register(&DeactivateObj{})
-	gob.Register(&UpdateObj{})
+	gob.Register(&ActivateObject{})
+	gob.Register(&ActivateObjectDelegate{})
+	gob.Register(&DeactivateObject{})
+	gob.Register(&UpdateObject{})
 }

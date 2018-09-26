@@ -40,11 +40,11 @@ func handleKnownOuterHosts(hostHandler hosthandler.HostHandler, response *packet
 		(hostHandler.GetProxyHostsCount() == 0) {
 		err = AuthenticationRequest(hostHandler, "begin", targetID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "AuthenticationRequest failed")
 		}
 		err = RelayRequest(hostHandler, "start", targetID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "RelayRequest failed")
 		}
 	}
 	return nil
