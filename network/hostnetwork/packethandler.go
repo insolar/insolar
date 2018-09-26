@@ -105,7 +105,7 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
 		ht := hostHandler.HtFromCtx(ctx)
 		hosts := ht.GetMulticastHosts()
-		ResendPulseToKnownHosts(hostHandler, hosts, data)
+		go ResendPulseToKnownHosts(hostHandler, hosts, data)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }

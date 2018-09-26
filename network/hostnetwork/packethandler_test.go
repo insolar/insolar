@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/hostnetwork/mockutils"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
@@ -41,19 +42,6 @@ type mockNetworkCommonFacade struct {
 	pm      core.PulseManager
 }
 
-type mockPulseManager struct {
-	currentPulse core.Pulse
-}
-
-func (pm *mockPulseManager) Current() (*core.Pulse, error) {
-	return &pm.currentPulse, nil
-}
-
-func (pm *mockPulseManager) Set(pulse core.Pulse) error {
-	pm.currentPulse = pulse
-	return nil
-}
-
 func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
 	var c cascade.Cascade
 	c.SendMessage = func(data core.Cascade, method string, args [][]byte) error {
@@ -61,7 +49,7 @@ func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
 	}
 	return &mockNetworkCommonFacade{
 		cascade: &c,
-		pm:      &mockPulseManager{},
+		pm:      &mockutils.MockPulseManager{},
 	}
 }
 
@@ -332,12 +320,12 @@ func TestDispatchPacketType(t *testing.T) {
 
 	t.Run("ping", func(t *testing.T) {
 		pckt := packet.NewPingPacket(sender, receiver)
-		DispatchPacketType(hh, getDefaultCtx(nil), pckt, builder)
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(nil), pckt, builder)
 	})
 
 	t.Run("check node priv", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeCheckNodePriv).Sender(sender).Receiver(receiver).Request(&packet.RequestCheckNodePriv{RoleKey: "test string"}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("authentication", func(t *testing.T) {
@@ -346,31 +334,31 @@ func TestDispatchPacketType(t *testing.T) {
 			Receiver(receiver).
 			Request(&packet.RequestAuth{Command: packet.Unknown}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeAuth).
 			Sender(sender).
 			Receiver(receiver).
 			Request(&packet.RequestAuth{Command: packet.BeginAuth}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeAuth).
 			Sender(sender).
 			Receiver(receiver).
 			Request(&packet.RequestAuth{Command: packet.RevokeAuth}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeAuth).
 			Sender(authenticatedSender).
 			Receiver(receiver).
 			Request(&packet.RequestAuth{Command: packet.BeginAuth}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeAuth).
 			Sender(authenticatedSender).
 			Receiver(receiver).
 			Request(&packet.RequestAuth{Command: packet.RevokeAuth}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("check origin", func(t *testing.T) {
@@ -379,13 +367,13 @@ func TestDispatchPacketType(t *testing.T) {
 			Receiver(receiver).
 			Request(&packet.RequestCheckOrigin{}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeCheckOrigin).
 			Sender(authenticatedSender).
 			Receiver(receiver).
 			Request(&packet.RequestCheckOrigin{}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("known outer hosts", func(t *testing.T) {
@@ -397,7 +385,7 @@ func TestDispatchPacketType(t *testing.T) {
 				OuterHosts: 1},
 			).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("obtain ip", func(t *testing.T) {
@@ -406,7 +394,7 @@ func TestDispatchPacketType(t *testing.T) {
 			Receiver(receiver).
 			Request(&packet.RequestObtainIP{}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("relay ownership", func(t *testing.T) {
@@ -415,13 +403,13 @@ func TestDispatchPacketType(t *testing.T) {
 			Receiver(receiver).
 			Request(&packet.RequestRelayOwnership{Ready: true}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeRelayOwnership).
 			Sender(sender).
 			Receiver(receiver).
 			Request(&packet.RequestRelayOwnership{Ready: false}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("relay", func(t *testing.T) {
@@ -430,68 +418,68 @@ func TestDispatchPacketType(t *testing.T) {
 			Receiver(receiver).
 			Request(&packet.RequestRelay{Command: packet.Unknown}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeRelay).
 			Sender(sender).
 			Receiver(receiver).
 			Request(&packet.RequestRelay{Command: packet.StartRelay}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeRelay).
 			Sender(sender).
 			Receiver(receiver).
 			Request(&packet.RequestRelay{Command: packet.StopRelay}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeRelay).
 			Sender(sender).
 			Receiver(receiver).
 			Request(&packet.RequestRelay{Command: packet.Unknown}).
 			Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("rpc", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeRPC).Request(&packet.RequestDataRPC{}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		pckt = builder.Type(packet.TypeRPC).Request(&packet.RequestDataRPC{Method: "error"}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("store", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeStore).Request(&packet.RequestDataStore{}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("find host", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeFindHost).Request(&packet.RequestDataFindHost{Target: receiver.ID.Bytes()}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("find value", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: sender.ID.Bytes()}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("send cascade", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeCascadeSend).Request(&packet.RequestCascadeSend{
 			Data: core.Cascade{}, RPC: packet.RequestDataRPC{}}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("pulse", func(t *testing.T) {
 		pckt := builder.Type(packet.TypePulse).Request(&packet.RequestPulse{Pulse: core.Pulse{}}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("get random hosts", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeGetRandomHosts).Request(&packet.RequestGetRandomHosts{HostsNumber: 2}).Build()
-		DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})
 
 	t.Run("broken packet", func(t *testing.T) {
 		pckt := builder.Type(packet.TypeGetRandomHosts * 1024).Request(&packet.RequestGetRandomHosts{}).Build()
-		_, err := DispatchPacketType(hh, getDefaultCtx(hh), pckt, packet.NewBuilder())
+		_, err := DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 		assert.NotNil(t, err)
 	})
 }
@@ -500,7 +488,7 @@ func Test_processPulse(t *testing.T) {
 	hh := newMockHostHandler()
 	sender, receiver := mockSenderReceiver()
 	hh.GetNetworkCommonFacade().GetPulseManager().Set(core.Pulse{PulseNumber: 0, Entropy: core.Entropy{0}})
-	response, _ := processPulse(hh, getDefaultCtx(hh),
+	response, _ := processPulse(hh, mockutils.GetDefaultCtx(hh),
 		packet.Builder{}.Request(packet.TypePulse).Sender(sender).Receiver(receiver).
 			Request(&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).Build(),
 		packet.Builder{})
