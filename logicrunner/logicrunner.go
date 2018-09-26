@@ -125,7 +125,8 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 	ctx := core.LogicCallContext{
-		Time: time.Now(), // TODO: probably we should take it from e
+		Time:  time.Now(), // TODO: probably we should take it from e
+		Pulse: lr.cb.P,
 	}
 
 	machinePref := []core.MachineType{
