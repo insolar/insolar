@@ -21,10 +21,8 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
-
-	"time"
-
 	"syscall"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"

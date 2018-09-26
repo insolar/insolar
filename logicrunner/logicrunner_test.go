@@ -26,23 +26,19 @@ import (
 	"path"
 	"testing"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/ugorji/go/codec"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/ugorji/go/codec"
 )
 
 var icc = ""
@@ -637,34 +633,10 @@ func (r *Two) AnError() error {
 	return errors.New("an error")
 }
 `
-
-	l, cleaner := ledgertestutil.TmpLedger(t, "")
+	lr, am, cb, cleaner := PrepareLrAmCb(t)
 	defer cleaner()
 
-	insiderStorage, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
-	defer os.RemoveAll(insiderStorage) // nolint: errcheck
-
-	am := l.GetArtifactManager()
-	lr, err := NewLogicRunner(configuration.LogicRunner{
-		GoPlugin: &configuration.GoPlugin{
-			MainListen:     "127.0.0.1:7778",
-			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     runnerbin,
-			RunnerCodePath: insiderStorage,
-		}})
-	assert.NoError(t, err, "Initialize runner")
-
-	assert.NoError(t, lr.Start(core.Components{
-		Ledger:   l,
-		EventBus: &testEventBus{LogicRunner: lr},
-	}), "starting logicrunner")
-	defer lr.Stop()
-	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
-
-	cb := testutil.NewContractBuilder(am, icc)
-	defer cb.Clean()
-	err = cb.Build(map[string]string{
+	err := cb.Build(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
 	})
