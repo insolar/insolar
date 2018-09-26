@@ -37,8 +37,6 @@ type runner struct {
 	responses []core.Reaction
 }
 
-func (r *runner) Validate(binder core.CaseBind) (int, error) { return 0, nil }
-
 func (r *runner) OnPulse(pulse core.Pulse) error { return nil }
 
 func (r *runner) Start(components core.Components) error { return nil }
