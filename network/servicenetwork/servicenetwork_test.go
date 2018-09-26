@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/mockutils"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/stretchr/testify/assert"
 )
@@ -78,15 +77,42 @@ func TestServiceNetwork_Start(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) (configuration.HostNetwork, configuration.NodeNetwork) {
+	transport := configuration.Transport{Protocol: "UTP", Address: host, BehindNAT: false}
+	h := configuration.HostNetwork{
+		Transport:      transport,
+		IsRelay:        false,
+		BootstrapHosts: bootstrapHosts,
+	}
+
+	n := configuration.NodeNetwork{Node: &configuration.Node{ID: nodeID}}
+
+	return h, n
+}
+
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return true // completed normally
+	case <-time.After(timeout):
+		return false // timed out
+	}
+}
+
 func TestServiceNetwork_SendMessage2(t *testing.T) {
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
-	firstNode, _ := NewServiceNetwork(mockutils.MockServiceConfiguration(
+	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10000",
 		[]string{"127.0.0.1:10001"},
 		firstNodeId))
-	secondNode, _ := NewServiceNetwork(mockutils.MockServiceConfiguration(
+	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10001",
 		nil,
 		secondNodeId))
@@ -114,7 +140,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 	}
 
 	firstNode.SendEvent(core.NewRefFromBase58(secondNodeId), "test", e)
-	success := mockutils.WaitTimeout(&wg, 20*time.Millisecond)
+	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
 }
@@ -123,11 +149,11 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
-	firstNode, _ := NewServiceNetwork(mockutils.MockServiceConfiguration(
+	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10000",
 		[]string{"127.0.0.1:10001"},
 		firstNodeId))
-	secondNode, _ := NewServiceNetwork(mockutils.MockServiceConfiguration(
+	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10001",
 		nil,
 		secondNodeId))
@@ -161,7 +187,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	}
 
 	firstNode.SendCascadeEvent(c, "test", e)
-	success := mockutils.WaitTimeout(&wg, 20*time.Millisecond)
+	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
 
@@ -209,7 +235,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	// init node and register test function
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
-		service, _ = NewServiceNetwork(mockutils.MockServiceConfiguration(host, bHosts, node))
+		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
 		service.Start(core.Components{})
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
@@ -246,7 +272,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 	firstService.SendCascadeEvent(c, "test", e)
-	success := mockutils.WaitTimeout(&wg, 100*time.Millisecond)
+	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
 
@@ -261,16 +287,16 @@ func Test_processPulse(t *testing.T) {
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
-	firstNode, _ := NewServiceNetwork(mockutils.MockServiceConfiguration(
+	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10000",
 		[]string{"127.0.0.1:10001"},
 		firstNodeId))
-	secondNode, _ := NewServiceNetwork(mockutils.MockServiceConfiguration(
+	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
 		"127.0.0.1:10001",
 		nil,
 		secondNodeId))
-	firstLedger := &mockutils.MockLedger{PM: &mockutils.MockPulseManager{}}
-	mpm := mockutils.MockPulseManager{}
+	firstLedger := &hostnetwork.MockLedger{PM: &hostnetwork.MockPulseManager{}}
+	mpm := hostnetwork.MockPulseManager{}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	mpm.SetCallback(func(pulse core.Pulse) {
@@ -278,7 +304,7 @@ func Test_processPulse(t *testing.T) {
 			wg.Done()
 		}
 	})
-	secondLedger := &mockutils.MockLedger{PM: &mpm}
+	secondLedger := &hostnetwork.MockLedger{PM: &mpm}
 
 	secondNode.Start(core.Components{Ledger: secondLedger})
 	firstNode.Start(core.Components{Ledger: firstLedger})
@@ -297,14 +323,14 @@ func Test_processPulse(t *testing.T) {
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar
-	hostnetwork.DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
+	hostnetwork.DispatchPacketType(hh, hostnetwork.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = firstLedger.GetPulseManager().Current()
 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 
 	// pulse is passed to the second node and stored there, too
-	success := mockutils.WaitTimeout(&wg, time.Millisecond*10)
+	success := waitTimeout(&wg, time.Millisecond*10)
 	assert.True(t, success)
 	secondStoredPulse, _ := secondLedger.GetPulseManager().Current()
 	assert.Equal(t, core.PulseNumber(1), secondStoredPulse.PulseNumber)
@@ -336,17 +362,17 @@ func Test_processPulse2(t *testing.T) {
 
 	// init node and register test function
 	initService := func(node string, bHosts []string) (host string) {
-		mpm := mockutils.MockPulseManager{}
+		mpm := hostnetwork.MockPulseManager{}
 		mpm.SetCallback(func(pulse core.Pulse) {
 			if pulse.PulseNumber == core.PulseNumber(1) {
 				wg.Done()
 			}
 		})
-		ledger := &mockutils.MockLedger{PM: &mpm}
+		ledger := &hostnetwork.MockLedger{PM: &mpm}
 		ledgers = append(ledgers, ledger)
 
 		host = prefix + strconv.Itoa(port)
-		service, _ := NewServiceNetwork(mockutils.MockServiceConfiguration(host, bHosts, node))
+		service, _ := NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
 		service.Start(core.Components{Ledger: ledger})
 		port++
 		services = append(services, service)
@@ -376,14 +402,14 @@ func Test_processPulse2(t *testing.T) {
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar on the last started service
-	hostnetwork.DispatchPacketType(hh, mockutils.GetDefaultCtx(hh), pckt, packet.NewBuilder())
+	hostnetwork.DispatchPacketType(hh, hostnetwork.GetDefaultCtx(hh), pckt, packet.NewBuilder())
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = ll.GetPulseManager().Current()
 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 
 	// pulse is passed to the other 11 nodes and stored there, too
-	success := mockutils.WaitTimeout(&wg, time.Millisecond*200)
+	success := waitTimeout(&wg, time.Millisecond*200)
 	assert.True(t, success)
 
 	for _, ldgr := range ledgers {

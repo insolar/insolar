@@ -14,46 +14,12 @@
  *    limitations under the License.
  */
 
-package mockutils
+package hostnetwork
 
 import (
-	"sync"
-	"time"
-
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 )
-
-// MockServiceConfiguration function to generate mock configuration for a ServiceNetwork node.
-func MockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) (configuration.HostNetwork, configuration.NodeNetwork) {
-	transport := configuration.Transport{Protocol: "UTP", Address: host, BehindNAT: false}
-	h := configuration.HostNetwork{
-		Transport:      transport,
-		IsRelay:        false,
-		BootstrapHosts: bootstrapHosts,
-	}
-
-	n := configuration.NodeNetwork{Node: &configuration.Node{ID: nodeID}}
-
-	return h, n
-}
-
-// WaitTimeout function to wait on a wait group with a timeout.
-func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return true // completed normally
-	case <-time.After(timeout):
-		return false // timed out
-	}
-}
 
 // MockPulseManager mock struct to read and write pulse that implements core.PulseManager interface.
 type MockPulseManager struct {
@@ -100,6 +66,6 @@ func (l *MockLedger) HandleEvent(core.Event) (core.Reaction, error) {
 
 // GetDefaultCtx creates default context for the host handler.
 func GetDefaultCtx(hostHandler hosthandler.HostHandler) hosthandler.Context {
-	ctx, _ := hostnetwork.NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	ctx, _ := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	return ctx
 }

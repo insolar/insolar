@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
 	"github.com/insolar/insolar/network/cascade"
-	"github.com/insolar/insolar/network/hostnetwork/mockutils"
 	"github.com/insolar/insolar/network/nodenetwork"
 
 	"github.com/insolar/insolar/configuration"
@@ -247,7 +246,7 @@ func TestBootstrapManyHosts(t *testing.T) {
 	}
 
 	for _, dht := range dhts {
-		assert.Equal(t, hostCount-1, dht.NumHosts(mockutils.GetDefaultCtx(dht)))
+		assert.Equal(t, hostCount-1, dht.NumHosts(GetDefaultCtx(dht)))
 		dht.Disconnect()
 	}
 }
@@ -275,8 +274,8 @@ func TestBootstrapNoID(t *testing.T) {
 	},
 		relay.NewProxy(), 4, false)
 
-	assert.Equal(t, 0, dht1.NumHosts(mockutils.GetDefaultCtx(dht1)))
-	assert.Equal(t, 0, dht2.NumHosts(mockutils.GetDefaultCtx(dht2)))
+	assert.Equal(t, 0, dht1.NumHosts(GetDefaultCtx(dht1)))
+	assert.Equal(t, 0, dht2.NumHosts(GetDefaultCtx(dht2)))
 
 	go func() {
 		go func() {
@@ -297,8 +296,8 @@ func TestBootstrapNoID(t *testing.T) {
 	err = dht1.Listen()
 	assert.Equal(t, closedPacket, err.Error())
 
-	assert.Equal(t, 1, dht1.NumHosts(mockutils.GetDefaultCtx(dht1)))
-	assert.Equal(t, 1, dht2.NumHosts(mockutils.GetDefaultCtx(dht2)))
+	assert.Equal(t, 1, dht1.NumHosts(GetDefaultCtx(dht1)))
+	assert.Equal(t, 1, dht2.NumHosts(GetDefaultCtx(dht2)))
 
 	<-done
 	<-done
@@ -330,7 +329,7 @@ func TestReconnect(t *testing.T) {
 		},
 			relay.NewProxy(), 4, false)
 
-		assert.Equal(t, 0, dht1.NumHosts(mockutils.GetDefaultCtx(dht1)))
+		assert.Equal(t, 0, dht1.NumHosts(GetDefaultCtx(dht1)))
 
 		go func() {
 			go func() {
@@ -351,8 +350,8 @@ func TestReconnect(t *testing.T) {
 		err = dht1.Listen()
 		assert.Equal(t, closedPacket, err.Error())
 
-		assert.Equal(t, 1, dht1.NumHosts(mockutils.GetDefaultCtx(dht1)))
-		assert.Equal(t, 1, dht2.NumHosts(mockutils.GetDefaultCtx(dht2)))
+		assert.Equal(t, 1, dht1.NumHosts(GetDefaultCtx(dht1)))
+		assert.Equal(t, 1, dht2.NumHosts(GetDefaultCtx(dht2)))
 
 		<-done
 		<-done
@@ -399,12 +398,12 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 
 	payload := [1000000]byte{}
 
-	key, err := dht1.StoreData(mockutils.GetDefaultCtx(dht1), payload[:])
+	key, err := dht1.StoreData(GetDefaultCtx(dht1), payload[:])
 	assert.NoError(t, err)
 
 	time.Sleep(1 * time.Second)
 
-	value, exists, err := dht2.Get(mockutils.GetDefaultCtx(dht1), key)
+	value, exists, err := dht2.Get(GetDefaultCtx(dht1), key)
 	assert.NoError(t, err)
 	assert.Equal(t, true, exists)
 	assert.Equal(t, 0, bytes.Compare(payload[:], value))
@@ -610,7 +609,7 @@ func TestStoreReplication(t *testing.T) {
 
 	dht.Bootstrap()
 
-	dht.StoreData(mockutils.GetDefaultCtx(dht), []byte("foo"))
+	dht.StoreData(GetDefaultCtx(dht), []byte("foo"))
 
 	<-replicate
 
@@ -639,16 +638,16 @@ func TestStoreExpiration(t *testing.T) {
 		done <- true
 	}()
 
-	k, _ := dht.StoreData(mockutils.GetDefaultCtx(dht), []byte("foo"))
+	k, _ := dht.StoreData(GetDefaultCtx(dht), []byte("foo"))
 
-	v, exists, _ := dht.Get(mockutils.GetDefaultCtx(dht), k)
+	v, exists, _ := dht.Get(GetDefaultCtx(dht), k)
 	assert.Equal(t, true, exists)
 
 	assert.Equal(t, []byte("foo"), v)
 
 	<-time.After(time.Second * 3)
 
-	_, exists, _ = dht.Get(mockutils.GetDefaultCtx(dht), k)
+	_, exists, _ = dht.Get(GetDefaultCtx(dht), k)
 
 	assert.Equal(t, false, exists)
 
@@ -1003,12 +1002,12 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	reqBuff, _ := e.Serialize()
 	event1, _ := ioutil.ReadAll(reqBuff)
 
-	dht2.RemoteProcedureCall(mockutils.GetDefaultCtx(dht1), dht2.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
+	dht2.RemoteProcedureCall(GetDefaultCtx(dht1), dht2.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
 	dht1.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 		return nil, nil
 	})
 
-	dht2.RemoteProcedureCall(mockutils.GetDefaultCtx(dht1), dht1.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
+	dht2.RemoteProcedureCall(GetDefaultCtx(dht1), dht1.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
 }
 
 func TestDHT_Getters(t *testing.T) {

@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/mockutils"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
@@ -30,7 +29,7 @@ func TestParseIncomingPacket(t *testing.T) {
 	builder := packet.NewBuilder()
 
 	pckt := builder.Type(packet.TypeStore).Request(&packet.RequestDataStore{}).Build()
-	ParseIncomingPacket(hh, mockutils.GetDefaultCtx(hh), pckt, builder)
+	ParseIncomingPacket(hh, GetDefaultCtx(hh), pckt, builder)
 }
 
 func TestBuildContext(t *testing.T) {
