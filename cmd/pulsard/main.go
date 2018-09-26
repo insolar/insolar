@@ -26,8 +26,8 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/version"
 	"github.com/insolar/insolar/pulsar/storage"
+	"github.com/insolar/insolar/version"
 	jww "github.com/spf13/jwalterweatherman"
 )
 

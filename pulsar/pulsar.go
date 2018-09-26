@@ -320,13 +320,6 @@ func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error 
 	pulsar.switchStateTo(WaitingForTheSigns, nil)
 	go pulsar.BroadcastSignatureOfEntropy()
 
-	ownedPublicKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
-	if err != nil {
-		pulsar.switchStateTo(Failed, err)
-		return err
-	}
-	pulsar.OwnedBftRow[ownedPublicKey] = &BftCell{Entropy: pulsar.GeneratedEntropy, IsEntropyReceived: true, Sign: pulsar.GeneratedEntropySign}
-
 	pulsar.EntropyGenerationLock.Unlock()
 	return nil
 }
@@ -359,7 +352,16 @@ func (pulsar *Pulsar) BroadcastVector() {
 		return
 	}
 
-	payload, err := pulsar.preparePayload(VectorPayload{PulseNumber: pulsar.ProcessingPulseNumber, Vector: pulsar.OwnedBftRow})
+	pubKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		pulsar.switchStateTo(Failed, err)
+		return
+	}
+	pulsar.OwnedBftRow[pubKey] = &BftCell{Entropy: pulsar.GeneratedEntropy, IsEntropyReceived: true, Sign: pulsar.GeneratedEntropySign}
+
+	payload, err := pulsar.preparePayload(VectorPayload{
+		PulseNumber: pulsar.ProcessingPulseNumber,
+		Vector:      pulsar.OwnedBftRow})
 	if err != nil {
 		pulsar.switchStateTo(Failed, err)
 		return
@@ -434,15 +436,10 @@ func (pulsar *Pulsar) stateSwitchedToSendingVector() {
 	}
 
 	// Calculation with the current pulsar
-	if len(pulsar.OwnedBftRow) == connections+1 {
+	if len(pulsar.OwnedBftRow) == connections {
 		pulsar.switchStateTo(Verifying, nil)
 	}
-	ownedPublicKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
-	if err != nil {
-		pulsar.switchStateTo(Failed, err)
-	}
 
-	pulsar.BftGrid[ownedPublicKey] = pulsar.OwnedBftRow
 	go pulsar.BroadcastVector()
 
 	pulsar.switchStateTo(WaitingForTheVectors, nil)
@@ -461,7 +458,7 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropy() {
 	}
 
 	// Calculation with the current pulsar
-	if len(pulsar.OwnedBftRow) == connections+1 {
+	if len(pulsar.OwnedBftRow) == connections {
 		pulsar.switchStateTo(Verifying, nil)
 	}
 
@@ -553,17 +550,78 @@ func (pulsar *Pulsar) stateSwitchedToReceivingVector() {
 }
 
 func (pulsar *Pulsar) stateSwitchedToVerifying() {
-	if len(pulsar.OwnedBftRow) == 1 && len(pulsar.OwnedBftRow) == 1 {
+	currentPulsarRow, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		pulsar.switchStateTo(Failed, err)
+	}
+
+	if len(pulsar.OwnedBftRow) == 0 {
 		pulsar.CurrentPulseEntropy = pulsar.GeneratedEntropy
-		pem, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
-		if err != nil {
-			pulsar.switchStateTo(Failed, err)
-		}
-		pulsar.CurrentPulseSender = pem
+		pulsar.CurrentPulseSender = currentPulsarRow
 		pulsar.switchStateTo(SendingToNetwork, nil)
 		return
 	}
+	pulsar.BftGrid[currentPulsarRow] = pulsar.OwnedBftRow
 
+	finalEntropySet := []core.Entropy{}
+	finalSetOfPulsars := []string{}
+
+	minConsensusNumber := (len(pulsar.OwnedBftRow) * 2) / 3
+
+	for columnPulsarKey, _ := range pulsar.OwnedBftRow {
+		cache := map[string]int{}
+		finalSetOfPulsars = append(finalSetOfPulsars, columnPulsarKey)
+
+		for rowPulsarKey, _ := range pulsar.OwnedBftRow {
+			bftCell := pulsar.BftGrid[rowPulsarKey][columnPulsarKey]
+			isChecked, err := checkSignature(bftCell.Entropy, columnPulsarKey, bftCell.Sign)
+
+			if err != nil || !isChecked {
+				continue
+			}
+
+			cache[string(bftCell.Entropy[:])]++
+		}
+
+		// len(cache) != 1 someone is cheater
+
+		maxCount := int(0)
+		var entropy core.Entropy
+		for key, value := range cache {
+			if value > maxCount {
+				maxCount = value
+				copy(entropy[:], []byte(key)[:core.EntropySize])
+			}
+		}
+
+		if maxCount >= minConsensusNumber {
+			finalEntropySet = append(finalEntropySet, entropy)
+		}
+	}
+
+	if len(finalEntropySet) == 0 {
+		pulsar.switchStateTo(Failed, errors.New("Bft is broken."))
+		return
+	}
+
+	var finalEntropy core.Entropy
+
+	for _, tempEntropy := range finalEntropySet {
+		for byteIndex := 0; byteIndex < core.EntropySize; byteIndex++ {
+			finalEntropy[byteIndex] ^= tempEntropy[byteIndex]
+		}
+	}
+
+	pulsar.CurrentPulseEntropy = finalEntropy
+	chosenPulsar, err := selectByEntropy(finalEntropy, finalSetOfPulsars, len(finalSetOfPulsars))
+	pulsar.CurrentPulseSender = chosenPulsar[0]
+
+	if chosenPulsar[0] == currentPulsarRow {
+		pulsar.switchStateTo(SendingToNetwork, nil)
+	} else {
+		pulsar.switchStateTo(SendingSignForChosen, nil)
+
+	}
 }
 
 func (pulsar *Pulsar) stateSwitchedToFailed(err error) {
