@@ -76,7 +76,7 @@ func getContractsMap() (map[string]string, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
 		}
-		code, err := ioutil.ReadFile(contractPath)
+		code, err := ioutil.ReadFile(filepath.Clean(contractPath))
 		if err != nil {
 			return nil, errors.Wrap(err, "[ contractsMap ] couldn't read contract: ")
 		}
