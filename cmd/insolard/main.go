@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/version"
+	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
@@ -64,10 +65,30 @@ func (cm *componentManager) stopAll() {
 	}
 }
 
+var (
+	configPath string
+)
+
+func parseInputParams() {
+	var rootCmd = &cobra.Command{Use: "insolard"}
+	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
+	err := rootCmd.Execute()
+	if err != nil {
+		log.Fatal("Wrong input params:", err)
+	}
+}
+
 func main() {
+	parseInputParams()
+
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
-	err := cfgHolder.Load()
+	var err error
+	if len(configPath) != 0 {
+		err = cfgHolder.LoadFromFile(configPath)
+	} else {
+		err = cfgHolder.Load()
+	}
 	if err != nil {
 		log.Warnln("Failed to load configuration from file: ", err.Error())
 	}

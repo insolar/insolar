@@ -1,16 +1,18 @@
-INSOLAR =insolar
-INSOLARD=insolard
-INSGOCC =insgocc
-PULSARD =pulsard
+INSOLAR = insolar
+INSOLARD = insolard
+INSGOCC = insgocc
+PULSARD = pulsard
+INSGORUND = insgorund
+BIN_DIR = bin
 
-ALL_PACKAGES=./...
-COVERPROFILE=coverage.txt
+ALL_PACKAGES = ./...
+COVERPROFILE = coverage.txt
 
-BUILD_NUMBER:=$(TRAVIS_BUILD_NUMBER)
+BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 BUILD_DATE = $(shell date "+%Y-%m-%d")
 BUILD_TIME = $(shell date "+%H:%M:%S")
 BUILD_HASH = $(shell git rev-parse --short HEAD)
-BUILD_VERSION?=$(shell git describe --abbrev=0 --tags)
+BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
 
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildNumber=${BUILD_NUMBER}
@@ -32,33 +34,35 @@ metalint:
 
 clean:
 	go clean $(ALL_PACKAGES)
-	rm -f $(INSOLARD)
-	rm -f $(INSOLAR)
-	rm -f $(INSGOCC)
-	rm -f $(PULSARD)
 	rm -f $(COVERPROFILE)
+	rm -rf $(BIN_DIR) 
 
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u golang.org/x/tools/cmd/stringer
 
-install:
+pre-build:
 	dep ensure
 	go generate -x $(ALL_PACKAGES)
 
-build: $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD)
+build: 
+	mkdir -p $(BIN_DIR)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND)
 
 $(INSOLARD):
-	go build -o $(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*
+	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
 
 $(INSOLAR):
-	go build -o $(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*
+	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 $(INSGOCC):
-	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*
+	go build -o $(BIN_DIR)/$(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(PULSARD):
-	go build -o $(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*
+	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
+
+$(INSGORUND):
+	go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
 
 test:
 	go test -v $(ALL_PACKAGES)

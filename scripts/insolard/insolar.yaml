@@ -1,0 +1,61 @@
+host:
+  transport:
+    protocol: UTP
+    address: 127.0.0.1:0
+    behindnat: false
+  bootstraphosts: []
+  isrelay: false
+  infinitybootstrap: false
+  timeout: 4
+node:
+  node:
+    id: "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
+service:
+  service: {}
+ledger:
+  storage:
+    datadirectory: ./data
+    txretriesonconflict: 3
+  jetcoordinator:
+    rolecandidates:
+      1:
+      - "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
+      2:
+      - vv1
+      - vv2
+      - vv3
+      - vv4
+      3:
+      - "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
+      4:
+      - lv1
+      - lv2
+      - lv3
+      - lv4
+      5:
+      - he1
+      - he2
+    rolecounts:
+      1: 1
+      2: 3
+      3: 1
+      4: 3
+      5: 1
+
+log:
+  level: Info
+  adapter: logrus
+stats:
+  listenaddress: 0.0.0.0:8080
+logicrunner:
+  builtin: {}
+  goplugin:
+    runnerlisten: 127.0.0.1:18181
+    runnerpath: bin/insgorund
+    runnercodepath: contractstorage
+    mainlisten: 127.0.0.1:18182
+pulsar:
+  type: tcp
+  listenaddress: 0.0.0.0:8090
+  nodesaddresses: []
+
