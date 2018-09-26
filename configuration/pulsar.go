@@ -33,10 +33,10 @@ type Pulsar struct {
 	PrivateKey     string
 	Storage        Storage
 
-	PulseTime                    int32 // ms
-	ReceivingSignTimeout         int32 // ms
-	ReceivingNumberTimeout       int32 // ms
-	ReceivingNumberVectorTimeout int32 // ms
+	PulseTime              int32 // ms
+	ReceivingSignTimeout   int32 // ms
+	ReceivingNumberTimeout int32 // ms
+	ReceivingVectorTimeout int32 // ms
 
 	ListOfNeighbours []*PulsarNodeAddress
 }
@@ -53,10 +53,10 @@ func NewPulsar() Pulsar {
 		ListenAddress:  "0.0.0.0:8090",
 		ConnectionType: TCP,
 
-		PulseTime:                    10000,
-		ReceivingSignTimeout:         1000,
-		ReceivingNumberTimeout:       1000,
-		ReceivingNumberVectorTimeout: 1000,
+		PulseTime:              10000,
+		ReceivingSignTimeout:   1000,
+		ReceivingNumberTimeout: 1000,
+		ReceivingVectorTimeout: 1000,
 
 		ListOfNeighbours: []*PulsarNodeAddress{},
 		Storage:          Storage{DataDirectory: ""},
