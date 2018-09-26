@@ -37,6 +37,8 @@ type runner struct {
 	responses []core.Reaction
 }
 
+func (r *runner) OnPulse(pulse core.Pulse) error { return nil }
+
 func (r *runner) Start(components core.Components) error { return nil }
 func (r *runner) Stop() error                            { return nil }
 

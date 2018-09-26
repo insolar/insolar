@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -114,7 +115,7 @@ func main() {
 		log.Fatalln("Failed to start Ledger: ", err.Error())
 	}
 
-	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(cfgHolder.Configuration.LogicRunner)
+	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
 	if err != nil {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
@@ -140,6 +141,10 @@ func main() {
 	}
 
 	cm.linkAll()
+	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
+	if err != nil {
+		log.Fatalln("Failed init pulse for LogicRunner: ", err.Error())
+	}
 
 	defer func() {
 		cm.stopAll()

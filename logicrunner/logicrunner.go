@@ -22,6 +22,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"net"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/eventbus/event"
@@ -36,11 +38,16 @@ type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	EventBus        core.EventBus
-	Cfg             configuration.LogicRunner
+	Cfg             *configuration.LogicRunner
+	cb              CaseBind
+	sock            net.Listener
 }
 
 // NewLogicRunner is constructor for LogicRunner
-func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
+func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
+	if cfg == nil {
+		return nil, errors.New("LogicRunner have nil configuration")
+	}
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
@@ -55,6 +62,8 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	eventBus := c.EventBus
 	lr.EventBus = eventBus
 
+	StartRPC(lr)
+
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(eventBus, am)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
@@ -63,7 +72,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	}
 
 	if lr.Cfg.GoPlugin != nil {
-		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, eventBus, am)
+		gp, err := goplugin.NewGoPlugin(lr.Cfg, eventBus, am)
 		if err != nil {
 			return err
 		}
@@ -87,6 +96,13 @@ func (lr *LogicRunner) Stop() error {
 			reterr = errors.Wrap(reterr, err.Error())
 		}
 	}
+
+	if lr.sock != nil {
+		if err := lr.sock.Close(); err != nil {
+			return err
+		}
+	}
+
 	return reterr
 }
 
@@ -109,7 +125,8 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 	ctx := core.LogicCallContext{
-		Time: time.Now(), // TODO: probably we should take it from e
+		Time:  time.Now(), // TODO: probably we should take it from e
+		Pulse: lr.cb.P,
 	}
 
 	machinePref := []core.MachineType{
@@ -119,9 +136,17 @@ func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
 
 	switch m := e.(type) {
 	case *event.CallMethod:
+		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
+			Type: CaseRecordTypeMethodCall,
+			Resp: e,
+		})
 		return lr.executeMethodCall(ctx, m, machinePref)
 
 	case *event.CallConstructor:
+		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
+			Type: CaseRecordTypeConstructorCall,
+			Resp: e,
+		})
 		classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get class")
@@ -192,7 +217,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 
 	executor, err := lr.GetExecutor(objbody.MachineType)
 	if err != nil {
-		return nil, errors.Wrap(err, "no executer registered")
+		return nil, errors.Wrap(err, "no executor registered")
 	}
 
 	executer := func() (*reaction.CommonReaction, error) {
@@ -200,7 +225,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "executer error")
+			return nil, errors.Wrap(err, "executor error")
 		}
 
 		_, err = lr.ArtifactManager.UpdateObject(
@@ -226,4 +251,16 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 		return &reaction.CommonReaction{}, nil
 	}
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
+}
+
+func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
+	lr.cb = CaseBind{
+		P: pulse,
+		R: make(map[core.RecordRef][]CaseRecord),
+	}
+	return nil
+}
+
+func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr CaseRecord) {
+	lr.cb.R[ref] = append(lr.cb.R[ref], cr)
 }
