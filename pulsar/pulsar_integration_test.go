@@ -86,4 +86,75 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, firstPulsar.Neighbours[secondPublic].OutgoingClient)
 	assert.NotNil(t, secondPulsar.Neighbours[firstPublic].OutgoingClient)
+
+	defer func() {
+		firstPulsar.StopServer()
+		secondPulsar.StopServer()
+	}()
 }
+
+//
+//func TestTwoPulsars_Full_Consensus(t *testing.T) {
+//	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+//	assert.NoError(t, err)
+//	firstPublic, err := ExportPublicKey(&firstKey.PublicKey)
+//	assert.NoError(t, err)
+//	firstPublicExported, err := ExportPrivateKey(firstKey)
+//	assert.NoError(t, err)
+//
+//	secondKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+//	assert.NoError(t, err)
+//	secondPublic, err := ExportPublicKey(&secondKey.PublicKey)
+//	assert.NoError(t, err)
+//	secondPublicExported, err := ExportPrivateKey(secondKey)
+//	assert.NoError(t, err)
+//
+//	storage := &pulsartestutil.MockStorage{}
+//	firstPulse := 123
+//	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: core.PulseNumber(firstPulse)}, nil)
+//	firstPulsar, err := NewPulsar(configuration.Pulsar{
+//		ConnectionType: "tcp",
+//		ListenAddress:  ":1639",
+//		PrivateKey:     firstPublicExported,
+//		ListOfNeighbours: []*configuration.PulsarNodeAddress{
+//			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
+//		}},
+//		storage,
+//		&RpcClientWrapperFactoryImpl{},
+//		pulsartestutil.MockEntropyGenerator{},
+//		net.Listen,
+//	)
+//	assert.NoError(t, err)
+//
+//	secondPulsar, err := NewPulsar(configuration.Pulsar{
+//		ConnectionType: "tcp",
+//		ListenAddress:  ":1640",
+//		PrivateKey:     secondPublicExported,
+//		ListOfNeighbours: []*configuration.PulsarNodeAddress{
+//			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
+//		}},
+//		storage,
+//		&RpcClientWrapperFactoryImpl{},
+//		pulsartestutil.MockEntropyGenerator{},
+//		net.Listen,
+//	)
+//	assert.NoError(t, err)
+//
+//	go firstPulsar.StartServer()
+//	go secondPulsar.StartServer()
+//	err = secondPulsar.EstablishConnection(firstPublic)
+//	assert.NoError(t, err)
+//	assert.NotNil(t, firstPulsar.Neighbours[secondPublic].OutgoingClient)
+//	assert.NotNil(t, secondPulsar.Neighbours[firstPublic].OutgoingClient)
+//
+//	firstPulsar.StartConsensusProcess(core.PulseNumber(firstPulse + 1))
+//
+//	for len(secondPulsar.OwnedBftRow) != 1{
+//		time.Sleep(1 * time.Millisecond)
+//	}
+//
+//	defer func(){
+//		firstPulsar.StopServer()
+//		secondPulsar.StopServer()
+//	}()
+//}

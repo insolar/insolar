@@ -90,3 +90,33 @@ func (mock *MockRpcClientWrapper) Go(serviceMethod string, args interface{}, rep
 	mockArgs := mock.Mock.Called(serviceMethod, args, reply, done)
 	return mockArgs.Get(0).(*rpc.Call)
 }
+
+type CustomRpcWrapperMock struct {
+	Done *rpc.Call
+}
+
+func (CustomRpcWrapperMock) Lock() {
+}
+
+func (CustomRpcWrapperMock) Unlock() {
+}
+
+func (CustomRpcWrapperMock) IsInitialised() bool {
+	return false
+}
+
+func (CustomRpcWrapperMock) SetRpcClient(client *rpc.Client) {
+	panic("implement me")
+}
+
+func (CustomRpcWrapperMock) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
+	return nil
+}
+
+func (CustomRpcWrapperMock) Close() error {
+	panic("implement me")
+}
+
+func (impl CustomRpcWrapperMock) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
+	return impl.Done
+}

@@ -156,7 +156,7 @@ func (pulsar *Pulsar) StartServer() {
 
 func (pulsar *Pulsar) StopServer() {
 	for _, neighbour := range pulsar.Neighbours {
-		if neighbour.OutgoingClient != nil {
+		if neighbour.OutgoingClient != nil && neighbour.OutgoingClient.IsInitialised() {
 			err := neighbour.OutgoingClient.Close()
 			if err != nil {
 				log.Error(err)
@@ -199,10 +199,11 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 	handshakeCall := neighbour.OutgoingClient.Go(Handshake.String(), message, &rep, nil)
 	reply := <-handshakeCall.Done
 	if reply.Error != nil {
-		return err
+		return reply.Error
 	}
+	casted := reply.Reply.(*Payload)
 
-	result, err := checkPayloadSignature(&rep)
+	result, err := checkPayloadSignature(casted)
 	if err != nil {
 		return err
 	}
@@ -315,6 +316,13 @@ func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error 
 	pulsar.switchStateTo(WaitingForTheSigns, nil)
 	go pulsar.BroadcastSignatureOfEntropy()
 
+	ownedPublicKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	if err != nil {
+		pulsar.switchStateTo(Failed, err)
+		return err
+	}
+	pulsar.OwnedBftRow[ownedPublicKey] = &BftCell{Entropy: pulsar.GeneratedEntropy, IsEntropyReceived: true, Sign: pulsar.GeneratedEntropySign}
+
 	pulsar.EntropyGenerationLock.Unlock()
 	return nil
 }
@@ -385,7 +393,15 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropy() {
 		return
 	}
 
-	if len(pulsar.OwnedBftRow) == 0 {
+	connections := 0
+	for _, item := range pulsar.Neighbours {
+		if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
+			connections++
+		}
+	}
+
+	// Calculation with the current pulsar
+	if len(pulsar.OwnedBftRow) == connections+1 {
 		pulsar.switchStateTo(Verifying, nil)
 	}
 
@@ -411,7 +427,8 @@ func (pulsar *Pulsar) stateSwitchedWaitingForTheEntropy() {
 				}
 			}
 
-			if entropyCount == len(pulsar.Neighbours) {
+			// Calculation with the current pulsar
+			if entropyCount == len(pulsar.Neighbours)+1 {
 				ticker.Stop()
 				pulsar.switchStateTo(SendingVector, nil)
 				return
