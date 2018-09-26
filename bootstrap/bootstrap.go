@@ -72,7 +72,10 @@ func getContractPath(name string) (string, error) {
 func getContractsMap() (map[string]string, error) {
 	contracts := make(map[string]string)
 	for _, name := range contractNames {
-		contractPath, _ := getContractPath(name)
+		contractPath, err := getContractPath(name)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
+		}
 		code, err := ioutil.ReadFile(contractPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ contractsMap ] couldn't read contract: ")
