@@ -29,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
@@ -323,4 +324,12 @@ func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 	ch := new(codec.CborHandle)
 	log.Debugf("de-serializing %+v", from)
 	return codec.NewDecoderBytes(from, ch).Decode(into)
+}
+
+// MakeErrorSerializable converts errors satisfying error interface to foundation.Error
+func (gi *GoInsider) MakeErrorSerializable(e error) error {
+	if e == nil {
+		return nil
+	}
+	return &foundation.Error{S: e.Error()}
 }

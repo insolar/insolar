@@ -26,6 +26,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -730,6 +731,98 @@ func New(n int) *Child {
 	r = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
+}
+
+func TestErrorInterface(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/genesis/proxy/two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) AnError() error {
+	holder := two.New()
+	friend := holder.AsChild(r.GetReference())
+
+	return friend.AnError()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"errors"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() *Two {
+	return &Two{}
+}
+func (r *Two) AnError() error {
+	return errors.New("an error")
+}
+`
+
+	l, cleaner := ledgertestutil.TmpLedger(t, "")
+	defer cleaner()
+
+	insiderStorage, err := ioutil.TempDir("", "test-")
+	assert.NoError(t, err)
+	defer os.RemoveAll(insiderStorage) // nolint: errcheck
+
+	am := l.GetArtifactManager()
+	lr, err := NewLogicRunner(configuration.LogicRunner{
+		GoPlugin: &configuration.GoPlugin{
+			MainListen:     "127.0.0.1:7778",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerPath:     runnerbin,
+			RunnerCodePath: insiderStorage,
+		}})
+	assert.NoError(t, err, "Initialize runner")
+
+	assert.NoError(t, lr.Start(core.Components{
+		Ledger:   l,
+		EventBus: &testEventBus{LogicRunner: lr},
+	}), "starting logicrunner")
+	defer lr.Stop()
+
+	cb := testutil.NewContractBuilder(am, icc)
+	defer cb.Clean()
+	err = cb.Build(map[string]string{
+		"one": contractOneCode,
+		"two": contractTwoCode,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contract, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["one"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	resp, err := lr.Execute(&event.CallMethod{
+		Request:   core.NewRefFromBase58("r2"),
+		ObjectRef: *contract,
+		Method:    "AnError",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+
+	ch := new(codec.CborHandle)
+	res := []interface{}{&foundation.Error{}}
+	err = codec.NewDecoderBytes(resp.(*reaction.CommonReaction).Result, ch).Decode(&res)
+	assert.NoError(t, err, "contract call")
+	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 }
 
 func TestRootDomainContract(t *testing.T) {
