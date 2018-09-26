@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package event
+package message
 
 import (
 	"io"
@@ -40,8 +40,8 @@ func (e *GetCode) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *GetCode) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *GetCode) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // GetClass retrieves class from storage.
@@ -62,8 +62,8 @@ func (e *GetClass) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *GetClass) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *GetClass) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // GetObject retrieves object from storage.
@@ -84,8 +84,8 @@ func (e *GetObject) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *GetObject) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *GetObject) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // GetDelegate retrieves object represented as provided class.
@@ -106,8 +106,8 @@ func (e *GetDelegate) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *GetDelegate) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *GetDelegate) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // DeclareType creates new type.
@@ -129,8 +129,8 @@ func (e *DeclareType) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *DeclareType) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *DeclareType) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // DeployCode creates new code.
@@ -152,8 +152,8 @@ func (e *DeployCode) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *DeployCode) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *DeployCode) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // ActivateClass activates class.
@@ -174,8 +174,8 @@ func (e *ActivateClass) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *ActivateClass) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *ActivateClass) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // DeactivateClass deactivates class.
@@ -197,8 +197,8 @@ func (e *DeactivateClass) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *DeactivateClass) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *DeactivateClass) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // UpdateClass amends class.
@@ -222,8 +222,8 @@ func (e *UpdateClass) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *UpdateClass) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *UpdateClass) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // ActivateObject activates object.
@@ -247,8 +247,8 @@ func (e *ActivateObject) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *ActivateObject) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *ActivateObject) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // ActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
@@ -272,8 +272,8 @@ func (e *ActivateObjectDelegate) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *ActivateObjectDelegate) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *ActivateObjectDelegate) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // DeactivateObject deactivates object.
@@ -295,8 +295,8 @@ func (e *DeactivateObject) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *DeactivateObject) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *DeactivateObject) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }
 
 // UpdateObject amends object.
@@ -319,6 +319,6 @@ func (e *UpdateObject) GetOperatingRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
-func (e *UpdateObject) React(c core.Components) (core.Reaction, error) {
-	return c.Ledger.HandleEvent(e)
+func (e *UpdateObject) React(c core.Components) (core.Reply, error) {
+	return c.Ledger.HandleMessage(e)
 }

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package event
+package message
 
 import (
 	"github.com/insolar/insolar/core"

@@ -21,34 +21,34 @@ import "io"
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
 
-// Event is a routable packet, ATM just a method call
-type Event interface {
-	// Serialize serializes event.
+// Message is a routable packet, ATM just a method call
+type Message interface {
+	// Serialize serializes message.
 	Serialize() (io.Reader, error)
-	// Get reference returns referenced object.
+	// GetReference returns referenced object.
 	GetReference() RecordRef
-	// GetOperatingRole returns operating jet role for given event type.
+	// GetOperatingRole returns operating jet role for given message type.
 	GetOperatingRole() JetRole
-	// React handles event and returns associated reaction.
-	React(Components) (Reaction, error)
+	// React handles message and returns associated reply.
+	React(Components) (Reply, error)
 }
 
 type LogicRunnerEvent interface {
-	Event
+	Message
 	// Returns initiator of this event
 	GetCaller() *RecordRef
 }
 
-// Reaction for an `Event`
-type Reaction interface {
-	// Serialize serializes event.
+// Reply for an `Message`
+type Reply interface {
+	// Serialize serializes message.
 	Serialize() (io.Reader, error)
 }
 
-// EventBus interface
-type EventBus interface {
-	// Dispatch an `Event` and get a `Reaction` or error from remote host.
-	Dispatch(Event) (Reaction, error)
-	// DispatchAsync dispatches an `Event` to remote host.
-	DispatchAsync(Event)
+// MessageBus interface
+type MessageBus interface {
+	// Send an `Message` and get a `Reply` or error from remote host.
+	Send(Message) (Reply, error)
+	// SendAsync sends an `Message` to remote host.
+	SendAsync(Message)
 }

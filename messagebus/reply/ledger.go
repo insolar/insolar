@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package reaction
+package reply
 
 import (
 	"io"

@@ -21,57 +21,57 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/messagebus/message"
+	"github.com/insolar/insolar/messagebus/reply"
 )
 
-// EventHandler processes events for local storage interaction.
-type EventHandler struct {
+// MessageHandler processes messages for local storage interaction.
+type MessageHandler struct {
 	db *storage.DB
 }
 
-// NewEventHandler creates new handler.
-func NewEventHandler(db *storage.DB) (*EventHandler, error) {
-	return &EventHandler{db: db}, nil
+// NewMessageHandler creates new handler.
+func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
+	return &MessageHandler{db: db}, nil
 }
 
-// Handle performs event processing.
-func (h *EventHandler) Handle(genericEvent core.Event) (core.Reaction, error) {
-	switch e := genericEvent.(type) {
-	case *event.GetCode:
-		return h.handleGetCode(e)
-	case *event.GetClass:
-		return h.handleGetClass(e)
-	case *event.GetObject:
-		return h.handleGetObject(e)
-	case *event.GetDelegate:
-		return h.handleGetDelegate(e)
-	case *event.DeclareType:
-		return h.handleDeclareType(e)
-	case *event.DeployCode:
-		return h.handleDeployCode(e)
-	case *event.ActivateClass:
-		return h.handleActivateClass(e)
-	case *event.DeactivateClass:
-		return h.handleDeactivateClass(e)
-	case *event.UpdateClass:
-		return h.handleUpdateClass(e)
-	case *event.ActivateObject:
-		return h.handleActivateObject(e)
-	case *event.ActivateObjectDelegate:
-		return h.handleActivateObjectDelegate(e)
-	case *event.DeactivateObject:
-		return h.handleDeactivateObject(e)
-	case *event.UpdateObject:
-		return h.handleUpdateObject(e)
+// Handle performs message processing.
+func (h *MessageHandler) Handle(genericMessage core.Message) (core.Reply, error) {
+	switch m := genericMessage.(type) {
+	case *message.GetCode:
+		return h.handleGetCode(m)
+	case *message.GetClass:
+		return h.handleGetClass(m)
+	case *message.GetObject:
+		return h.handleGetObject(m)
+	case *message.GetDelegate:
+		return h.handleGetDelegate(m)
+	case *message.DeclareType:
+		return h.handleDeclareType(m)
+	case *message.DeployCode:
+		return h.handleDeployCode(m)
+	case *message.ActivateClass:
+		return h.handleActivateClass(m)
+	case *message.DeactivateClass:
+		return h.handleDeactivateClass(m)
+	case *message.UpdateClass:
+		return h.handleUpdateClass(m)
+	case *message.ActivateObject:
+		return h.handleActivateObject(m)
+	case *message.ActivateObjectDelegate:
+		return h.handleActivateObjectDelegate(m)
+	case *message.DeactivateObject:
+		return h.handleDeactivateObject(m)
+	case *message.UpdateObject:
+		return h.handleUpdateObject(m)
 	}
 
-	return nil, errors.New("no handler for this event")
+	return nil, errors.New("no handler for this message")
 }
 
-func (h *EventHandler) handleGetCode(ev *event.GetCode) (core.Reaction, error) {
+func (h *MessageHandler) handleGetCode(ev *message.GetCode) (core.Reply, error) {
 	codeRef := record.Core2Reference(ev.Code)
 	rec, err := h.db.GetRecord(&codeRef)
 	if err != nil {
@@ -86,7 +86,7 @@ func (h *EventHandler) handleGetCode(ev *event.GetCode) (core.Reaction, error) {
 		return nil, errors.Wrap(err, "failed to retrieve code from record")
 	}
 
-	react := reaction.Code{
+	react := reply.Code{
 		Code:        code,
 		MachineType: mt,
 	}
@@ -94,7 +94,7 @@ func (h *EventHandler) handleGetCode(ev *event.GetCode) (core.Reaction, error) {
 	return &react, nil
 }
 
-func (h *EventHandler) handleGetClass(ev *event.GetClass) (core.Reaction, error) {
+func (h *MessageHandler) handleGetClass(ev *message.GetClass) (core.Reply, error) {
 	_, stateRef, state, err := getClass(h.db, &ev.Head, ev.State)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (h *EventHandler) handleGetClass(ev *event.GetClass) (core.Reaction, error)
 		code = state.GetCode().CoreRef()
 	}
 
-	react := reaction.Class{
+	react := reply.Class{
 		Head:  ev.Head,
 		State: *stateRef,
 		Code:  code,
@@ -116,7 +116,7 @@ func (h *EventHandler) handleGetClass(ev *event.GetClass) (core.Reaction, error)
 	return &react, nil
 }
 
-func (h *EventHandler) handleGetObject(ev *event.GetObject) (core.Reaction, error) {
+func (h *MessageHandler) handleGetObject(ev *message.GetObject) (core.Reply, error) {
 	idx, stateRef, state, err := getObject(h.db, &ev.Head, ev.State)
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (h *EventHandler) handleGetObject(ev *event.GetObject) (core.Reaction, erro
 		children = append(children, *c.CoreRef())
 	}
 
-	react := reaction.Object{
+	react := reply.Object{
 		Head:     ev.Head,
 		State:    *stateRef,
 		Class:    *idx.ClassRef.CoreRef(),
@@ -138,7 +138,7 @@ func (h *EventHandler) handleGetObject(ev *event.GetObject) (core.Reaction, erro
 	return &react, nil
 }
 
-func (h *EventHandler) handleGetDelegate(ev *event.GetDelegate) (core.Reaction, error) {
+func (h *MessageHandler) handleGetDelegate(ev *message.GetDelegate) (core.Reply, error) {
 	idx, _, _, err := getObject(h.db, &ev.Head, nil)
 	if err != nil {
 		return nil, err
@@ -149,14 +149,14 @@ func (h *EventHandler) handleGetDelegate(ev *event.GetDelegate) (core.Reaction, 
 		return nil, ErrNotFound
 	}
 
-	react := reaction.Delegate{
+	react := reply.Delegate{
 		Head: *delegateRef.CoreRef(),
 	}
 
 	return &react, nil
 }
 
-func (h *EventHandler) handleDeclareType(ev *event.DeclareType) (core.Reaction, error) {
+func (h *MessageHandler) handleDeclareType(ev *message.DeclareType) (core.Reply, error) {
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
 
@@ -176,10 +176,10 @@ func (h *EventHandler) handleDeclareType(ev *event.DeclareType) (core.Reaction, 
 		return nil, errors.Wrap(err, "failed to store record")
 	}
 
-	return &reaction.Reference{Ref: *codeRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *codeRef.CoreRef()}, nil
 }
 
-func (h *EventHandler) handleDeployCode(ev *event.DeployCode) (core.Reaction, error) {
+func (h *MessageHandler) handleDeployCode(ev *message.DeployCode) (core.Reply, error) {
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
 
@@ -198,10 +198,10 @@ func (h *EventHandler) handleDeployCode(ev *event.DeployCode) (core.Reaction, er
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
-	return &reaction.Reference{Ref: *codeRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *codeRef.CoreRef()}, nil
 }
 
-func (h *EventHandler) handleActivateClass(ev *event.ActivateClass) (core.Reaction, error) {
+func (h *MessageHandler) handleActivateClass(ev *message.ActivateClass) (core.Reply, error) {
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
 
@@ -237,10 +237,10 @@ func (h *EventHandler) handleActivateClass(ev *event.ActivateClass) (core.Reacti
 		return nil, err
 	}
 
-	return &reaction.Reference{Ref: *classRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *classRef.CoreRef()}, nil
 }
 
-func (h *EventHandler) handleDeactivateClass(ev *event.DeactivateClass) (core.Reaction, error) {
+func (h *MessageHandler) handleDeactivateClass(ev *message.DeactivateClass) (core.Reply, error) {
 	var err error
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
@@ -282,10 +282,10 @@ func (h *EventHandler) handleDeactivateClass(ev *event.DeactivateClass) (core.Re
 		return nil, err
 	}
 
-	return &reaction.Reference{Ref: *deactivationRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *deactivationRef.CoreRef()}, nil
 }
 
-func (h *EventHandler) handleUpdateClass(ev *event.UpdateClass) (core.Reaction, error) {
+func (h *MessageHandler) handleUpdateClass(ev *message.UpdateClass) (core.Reply, error) {
 	var err error
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
@@ -345,10 +345,10 @@ func (h *EventHandler) handleUpdateClass(ev *event.UpdateClass) (core.Reaction, 
 		return nil, err
 	}
 
-	return &reaction.Reference{Ref: *amendRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *amendRef.CoreRef()}, nil
 }
 
-func (h *EventHandler) handleActivateObject(ev *event.ActivateObject) (core.Reaction, error) {
+func (h *MessageHandler) handleActivateObject(ev *message.ActivateObject) (core.Reply, error) {
 	var err error
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
@@ -415,10 +415,10 @@ func (h *EventHandler) handleActivateObject(ev *event.ActivateObject) (core.Reac
 	if err != nil {
 		return nil, err
 	}
-	return &reaction.Reference{Ref: *objRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *objRef.CoreRef()}, nil
 }
 
-func (h *EventHandler) handleActivateObjectDelegate(ev *event.ActivateObjectDelegate) (core.Reaction, error) {
+func (h *MessageHandler) handleActivateObjectDelegate(ev *message.ActivateObjectDelegate) (core.Reply, error) {
 	var err error
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
@@ -486,10 +486,10 @@ func (h *EventHandler) handleActivateObjectDelegate(ev *event.ActivateObjectDele
 		return nil, err
 	}
 
-	return &reaction.Reference{Ref: *objRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *objRef.CoreRef()}, nil
 }
 
-func (h *EventHandler) handleDeactivateObject(ev *event.DeactivateObject) (core.Reaction, error) {
+func (h *MessageHandler) handleDeactivateObject(ev *message.DeactivateObject) (core.Reply, error) {
 	var err error
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
@@ -531,10 +531,10 @@ func (h *EventHandler) handleDeactivateObject(ev *event.DeactivateObject) (core.
 		return nil, err
 	}
 
-	return &reaction.Reference{Ref: *deactivationRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *deactivationRef.CoreRef()}, nil
 }
 
-func (h *EventHandler) handleUpdateObject(ev *event.UpdateObject) (core.Reaction, error) {
+func (h *MessageHandler) handleUpdateObject(ev *message.UpdateObject) (core.Reply, error) {
 	var err error
 	domainRef := record.Core2Reference(ev.Domain)
 	requestRef := record.Core2Reference(ev.Request)
@@ -578,7 +578,7 @@ func (h *EventHandler) handleUpdateObject(ev *event.UpdateObject) (core.Reaction
 		return nil, err
 	}
 
-	return &reaction.Reference{Ref: *amendRef.CoreRef()}, nil
+	return &reply.Reference{Ref: *amendRef.CoreRef()}, nil
 }
 
 func getClass(

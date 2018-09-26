@@ -44,15 +44,15 @@ type preparedAMTestData struct {
 	requestRef *record.Reference
 }
 
-type eventBusMock struct {
-	handler *EventHandler
+type messageBusMock struct {
+	handler *MessageHandler
 }
 
-func (m *eventBusMock) Dispatch(e core.Event) (core.Reaction, error) {
+func (m *messageBusMock) Send(e core.Message) (core.Reply, error) {
 	return m.handler.Handle(e)
 }
 
-func (m *eventBusMock) DispatchAsync(e core.Event) {
+func (m *messageBusMock) SendAsync(e core.Message) {
 	m.handler.Handle(e)
 }
 
@@ -62,8 +62,8 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 	return preparedAMTestData{
 		db: db,
 		manager: &LedgerArtifactManager{
-			db:       db,
-			eventBus: &eventBusMock{handler: &EventHandler{db: db}},
+			db:         db,
+			messageBus: &messageBusMock{handler: &MessageHandler{db: db}},
 		},
 		domainRef:  genRandomRef(),
 		requestRef: genRandomRef(),

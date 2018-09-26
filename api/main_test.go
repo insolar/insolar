@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/messagebus/reply"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +60,7 @@ func TestWrongQueryParam(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"event": "Wrong query parameter 'query_type' = 'TEST'"`)
+	assert.Contains(t, string(body[:]), `"message": "Wrong query parameter 'query_type' = 'TEST'"`)
 }
 
 func TestHandlerError(t *testing.T) {
@@ -70,7 +70,9 @@ func TestHandlerError(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(postResp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"event": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] event`)
+	a := string(body[:])
+	_ = a
+	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] message`)
 }
 
 func TestBadRequest(t *testing.T) {
@@ -78,7 +80,7 @@ func TestBadRequest(t *testing.T) {
 	assert.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"event": "Bad request"`)
+	assert.Contains(t, string(body[:]), `"message": "Bad request"`)
 }
 
 func TestSerialization(t *testing.T) {
@@ -123,31 +125,31 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-type TestEventBus struct {
+type TestMessageBus struct {
 }
 
-func (eb *TestEventBus) Start(c core.Components) error {
+func (eb *TestMessageBus) Start(c core.Components) error {
 	return nil
 }
 
-func (eb *TestEventBus) Stop() error {
+func (eb *TestMessageBus) Stop() error {
 	return nil
 }
 
-func (*TestEventBus) DispatchAsync(event core.Event) {}
+func (*TestMessageBus) SendAsync(core.Message) {}
 
 const TestBalance = 100500
 
-func (eb *TestEventBus) Dispatch(event core.Event) (core.Reaction, error) {
+func (eb *TestMessageBus) Send(core.Message) (core.Reply, error) {
 	data, _ := MarshalArgs(TestBalance)
 
-	return &reaction.CommonReaction{
+	return &reply.Common{
 		Result: data,
 	}, nil
 }
 
-func TestWithFakeEventBus(t *testing.T) {
-	eb := TestEventBus{}
+func TestWithFakeMessageBus(t *testing.T) {
+	eb := TestMessageBus{}
 
 	const LOCATION = "/test/test"
 

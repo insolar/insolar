@@ -32,7 +32,7 @@ type Ledger struct {
 	am      *artifactmanager.LedgerArtifactManager
 	pm      *pulsemanager.PulseManager
 	jc      *jetcoordinator.JetCoordinator
-	handler *artifactmanager.EventHandler
+	handler *artifactmanager.MessageHandler
 }
 
 // GetPulseManager returns PulseManager.
@@ -50,8 +50,8 @@ func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.am
 }
 
-// HandleEvent is a wrapper for EventHandler.Handle method.
-func (l *Ledger) HandleEvent(e core.Event) (core.Reaction, error) {
+// HandleMessage is a wrapper for EventHandler.Handle method.
+func (l *Ledger) HandleMessage(e core.Message) (core.Reply, error) {
 	return l.handler.Handle(e)
 }
 
@@ -75,7 +75,7 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
 
-	handler, err := artifactmanager.NewEventHandler(db)
+	handler, err := artifactmanager.NewMessageHandler(db)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func NewTestLedger(
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
 	jc *jetcoordinator.JetCoordinator,
-	amh *artifactmanager.EventHandler,
+	amh *artifactmanager.MessageHandler,
 ) *Ledger {
 	return &Ledger{
 		db:      db,

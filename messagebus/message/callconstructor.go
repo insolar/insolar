@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package event
+package message
 
 import (
 	"io"
@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CallConstructorEvent is a event for calling constructor and obtain its reaction
+// CallConstructor is a message for calling constructor and obtain its reply
 type CallConstructor struct {
 	BaseLogicEvent
 	ClassRef  core.RecordRef
@@ -30,12 +30,12 @@ type CallConstructor struct {
 	Arguments core.Arguments
 }
 
-// React handles event and returns associated reaction.
-func (e *CallConstructor) React(c core.Components) (core.Reaction, error) {
+// React handles message and returns associated reply.
+func (e *CallConstructor) React(c core.Components) (core.Reply, error) {
 	return logicRunnerHandle(e, c)
 }
 
-// GetOperatingRole returns operating jet role for given event type.
+// GetOperatingRole returns operating jet role for given message type.
 func (e *CallConstructor) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
@@ -45,7 +45,7 @@ func (e *CallConstructor) GetReference() core.RecordRef {
 	return e.ClassRef
 }
 
-// Serialize serializes event.
+// Serialize serializes message.
 func (e *CallConstructor) Serialize() (io.Reader, error) {
 	return serialize(e, TypeCallConstructor)
 }

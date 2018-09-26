@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package eventbus
+package messagebus
 
 import (
 	"bytes"
@@ -23,16 +23,16 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/messagebus/message"
+	"github.com/insolar/insolar/messagebus/reply"
 )
 
-const deliverRPCMethodName = "EventBus.Deliver"
+const deliverRPCMethodName = "MessageBus.Deliver"
 
-// EventBus is component that routes application logic requests,
+// MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
-type EventBus struct {
+type MessageBus struct {
 	logicRunner core.LogicRunner
 	service     core.Network
 	ledger      core.Ledger
@@ -40,10 +40,10 @@ type EventBus struct {
 	components *core.Components
 }
 
-// New is a `EventBus` constructor, takes an executor object
+// NewMessageBus is a `MessageBus` constructor, takes an executor object
 // that satisfies LogicRunner interface
-func New(cfg configuration.Configuration) (*EventBus, error) {
-	return &EventBus{
+func NewMessageBus(cfg configuration.Configuration) (*MessageBus, error) {
+	return &MessageBus{
 		logicRunner: nil,
 		service:     nil,
 		ledger:      nil,
@@ -51,21 +51,21 @@ func New(cfg configuration.Configuration) (*EventBus, error) {
 	}, nil
 }
 
-func (eb *EventBus) Start(c core.Components) error {
+func (eb *MessageBus) Start(c core.Components) error {
 	eb.logicRunner = c.LogicRunner
 	eb.service = c.Network
 	eb.service.RemoteProcedureRegister(deliverRPCMethodName, eb.deliver)
 	eb.ledger = c.Ledger
 
-	// Storing entire DI container here to pass it into event handle methods.
+	// Storing entire DI container here to pass it into message handle methods.
 	eb.components = &c
 	return nil
 }
 
-func (eb *EventBus) Stop() error { return nil }
+func (eb *MessageBus) Stop() error { return nil }
 
-// Dispatch an `Event` and get a `Reaction` or error from remote host.
-func (eb *EventBus) Dispatch(event core.Event) (core.Reaction, error) {
+// Send an `Message` and get a `Reply` or error from remote host.
+func (eb *MessageBus) Send(msg core.Message) (core.Reply, error) {
 	jc := eb.ledger.GetJetCoordinator()
 	pm := eb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -73,7 +73,7 @@ func (eb *EventBus) Dispatch(event core.Event) (core.Reaction, error) {
 		return nil, err
 	}
 
-	nodes, err := jc.QueryRole(event.GetOperatingRole(), event.GetReference(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(msg.GetOperatingRole(), msg.GetReference(), pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -84,22 +84,22 @@ func (eb *EventBus) Dispatch(event core.Event) (core.Reaction, error) {
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := eb.service.SendCascadeEvent(cascade, deliverRPCMethodName, event)
+		err := eb.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
 		return nil, err
 	}
 
-	res, err := eb.service.SendEvent(nodes[0], deliverRPCMethodName, event)
+	res, err := eb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
 	if err != nil {
 		return nil, err
 	}
 
-	return reaction.Deserialize(bytes.NewBuffer(res))
+	return reply.Deserialize(bytes.NewBuffer(res))
 }
 
-// DispatchAsync dispatches a `Event` to remote host.
-func (eb *EventBus) DispatchAsync(event core.Event) {
+// SendAsync sends a `Message` to remote host.
+func (eb *MessageBus) SendAsync(msg core.Message) {
 	go func() {
-		_, err := eb.Dispatch(event)
+		_, err := eb.Send(msg)
 		log.Errorln(err)
 	}()
 }
@@ -114,11 +114,11 @@ func (e *serializableError) Error() string {
 
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
-func (eb *EventBus) deliver(args [][]byte) (result []byte, err error) {
+func (eb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when eb.deliver()")
 	}
-	e, err := event.Deserialize(bytes.NewBuffer(args[0]))
+	e, err := message.Deserialize(bytes.NewBuffer(args[0]))
 	if err != nil {
 		return nil, err
 	}

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package event
+package message
 
 import (
 	"io"
@@ -39,17 +39,16 @@ type CallMethod struct {
 	BaseLogicEvent
 	ReturnMode MethodReturnMode
 	ObjectRef  core.RecordRef
-	Request    core.RecordRef
 	Method     string
 	Arguments  core.Arguments
 }
 
-// React handles event and returns associated reaction.
-func (e *CallMethod) React(c core.Components) (core.Reaction, error) {
+// React handles message and returns associated reply.
+func (e *CallMethod) React(c core.Components) (core.Reply, error) {
 	return logicRunnerHandle(e, c)
 }
 
-// GetOperatingRole returns operating jet role for given event type.
+// GetOperatingRole returns operating jet role for given message type.
 func (e *CallMethod) GetOperatingRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
@@ -59,7 +58,7 @@ func (e *CallMethod) GetReference() core.RecordRef {
 	return e.ObjectRef
 }
 
-// Serialize serializes event.
+// Serialize serializes message.
 func (e *CallMethod) Serialize() (io.Reader, error) {
 	return serialize(e, TypeCallMethod)
 }

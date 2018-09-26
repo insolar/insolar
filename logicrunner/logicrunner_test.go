@@ -28,13 +28,13 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/messagebus/message"
+	"github.com/insolar/insolar/messagebus/reply"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -72,8 +72,8 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	assert.NoError(t, err, "Initialize runner")
 
 	assert.NoError(t, lr.Start(core.Components{
-		Ledger:   l,
-		EventBus: &testEventBus{LogicRunner: lr},
+		Ledger:     l,
+		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
 	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
@@ -140,8 +140,8 @@ func TestBasics(t *testing.T) {
 	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	comps := core.Components{
-		Ledger:   &testLedger{am: testutil.NewTestArtifactManager()},
-		EventBus: &testEventBus{},
+		Ledger:     &testLedger{am: testutil.NewTestArtifactManager()},
+		MessageBus: &testMessageBus{},
 	}
 	assert.NoError(t, lr.Start(comps))
 	assert.IsType(t, &LogicRunner{}, lr)
@@ -175,34 +175,34 @@ func (r *testLedger) Start(components core.Components) error   { return nil }
 func (r *testLedger) Stop() error                              { return nil }
 func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
 
-func (r *testLedger) HandleEvent(core.Event) (core.Reaction, error) {
+func (r *testLedger) HandleMessage(core.Message) (core.Reply, error) {
 	panic("implement me")
 }
 
-type testEventBus struct {
+type testMessageBus struct {
 	LogicRunner core.LogicRunner
 }
 
-func (*testEventBus) Start(components core.Components) error { return nil }
-func (*testEventBus) Stop() error                            { return nil }
-func (eb *testEventBus) Dispatch(event core.Event) (resp core.Reaction, err error) {
+func (*testMessageBus) Start(components core.Components) error { return nil }
+func (*testMessageBus) Stop() error                            { return nil }
+func (eb *testMessageBus) Dispatch(event core.Message) (resp core.Reaction, err error) {
 	e, ok := event.(core.LogicRunnerEvent)
 	if !ok {
 		panic("Called with not logicrunner event")
 	}
 	return eb.LogicRunner.Execute(e)
 }
-func (*testEventBus) DispatchAsync(event core.Event) {}
+func (*testMessageBus) SendAsync(msg core.Message) {}
 
 func TestExecution(t *testing.T) {
 	am := testutil.NewTestArtifactManager()
 	ld := &testLedger{am: am}
-	eb := &testEventBus{}
+	eb := &testMessageBus{}
 	lr, err := NewLogicRunner(&configuration.LogicRunner{})
 	assert.NoError(t, err)
 	lr.Start(core.Components{
-		Ledger:   ld,
-		EventBus: eb,
+		Ledger:     ld,
+		MessageBus: eb,
 	})
 	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 	eb.LogicRunner = lr
@@ -225,16 +225,16 @@ func TestExecution(t *testing.T) {
 	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
 	assert.NoError(t, err)
 
-	resp, err := lr.Execute(&event.CallMethod{ObjectRef: dataRef})
+	resp, err := lr.Execute(&message.CallMethod{ObjectRef: dataRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*reaction.CommonReaction).Data)
-	assert.Equal(t, []byte("res"), resp.(*reaction.CommonReaction).Result)
+	assert.Equal(t, []byte("data"), resp.(*reply.Common).Data)
+	assert.Equal(t, []byte("res"), resp.(*reply.Common).Result)
 
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-	resp, err = lr.Execute(&event.CallConstructor{ClassRef: classRef})
+	resp, err = lr.Execute(&message.CallConstructor{ClassRef: classRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*reaction.CommonReaction).Data)
-	assert.Equal(t, []byte(nil), resp.(*reaction.CommonReaction).Result)
+	assert.Equal(t, []byte("data"), resp.(*reply.Common).Data)
+	assert.Equal(t, []byte(nil), resp.(*reply.Common).Result)
 }
 
 func TestContractCallingContract(t *testing.T) {
@@ -575,28 +575,28 @@ func New(n int) *Child {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := lr.Execute(&event.CallMethod{
+	resp, err := lr.Execute(&message.CallMethod{
 		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
 	})
 	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
+	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 	rlr := lr.(*LogicRunner)
 	assert.Equal(t, 1, int(rlr.cb.P.PulseNumber), "right pulsenumber")
 	assert.Equal(t, 20, len(rlr.cb.R[*contract]), "right number of caserecords")
 
-	resp, err = lr.Execute(&event.CallMethod{
+	resp, err = lr.Execute(&message.CallMethod{
 		Request:   core.NewRefFromBase58("r3"),
 		ObjectRef: *contract,
 		Method:    "SumChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
-	r = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
+	r = testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 }
@@ -655,7 +655,7 @@ func (r *Two) AnError() error {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp, err := lr.Execute(&event.CallMethod{
+	resp, err := lr.Execute(&message.CallMethod{
 		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "AnError",
@@ -665,7 +665,7 @@ func (r *Two) AnError() error {
 
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
-	err = codec.NewDecoderBytes(resp.(*reaction.CommonReaction).Result, ch).Decode(&res)
+	err = codec.NewDecoderBytes(resp.(*reply.Common).Result, ch).Decode(&res)
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 }
@@ -700,27 +700,27 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp1, err := lr.Execute(&event.CallMethod{
+	resp1, err := lr.Execute(&message.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "CreateMember",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"member1"}),
 	})
 	assert.NoError(t, err, "contract call")
-	r1 := testutil.CBORUnMarshal(t, resp1.(*reaction.CommonReaction).Result)
+	r1 := testutil.CBORUnMarshal(t, resp1.(*reply.Common).Result)
 	member1Ref := r1.([]interface{})[0].(string)
 
-	resp2, err := lr.Execute(&event.CallMethod{
+	resp2, err := lr.Execute(&message.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "CreateMember",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"member2"}),
 	})
 	assert.NoError(t, err, "contract call")
-	r2 := testutil.CBORUnMarshal(t, resp2.(*reaction.CommonReaction).Result)
+	r2 := testutil.CBORUnMarshal(t, resp2.(*reply.Common).Result)
 	member2Ref := r2.([]interface{})[0].(string)
 
-	_, err = lr.Execute(&event.CallMethod{
+	_, err = lr.Execute(&message.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "SendMoney",
@@ -728,14 +728,14 @@ func TestRootDomainContract(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	resp4, err := lr.Execute(&event.CallMethod{
+	resp4, err := lr.Execute(&message.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "DumpAllUsers",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp4.(*reaction.CommonReaction).Result)
+	r := testutil.CBORUnMarshal(t, resp4.(*reply.Common).Result)
 
 	var res []map[string]interface{}
 	var expected = map[interface{}]float64{"member1": 999, "member2": 1001}
@@ -791,14 +791,14 @@ func (c *Child) GetNum() int {
 
 	b.N = 1000
 	for i := 0; i < b.N; i++ {
-		resp, err := lr.Execute(&event.CallMethod{
+		resp, err := lr.Execute(&message.CallMethod{
 			Request:   core.NewRefFromBase58("rr"),
 			ObjectRef: *parent,
 			Method:    "CCC",
 			Arguments: testutil.CBORMarshal(b, []interface{}{child}),
 		})
 		assert.NoError(b, err, "parent call")
-		r := testutil.CBORUnMarshal(b, resp.(*reaction.CommonReaction).Result)
+		r := testutil.CBORUnMarshal(b, resp.(*reply.Common).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
 }

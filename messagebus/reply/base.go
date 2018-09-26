@@ -14,8 +14,8 @@
  *    limitations under the License.
  */
 
-// Package reaction represents responses to messages of the eventbus
-package reaction
+// Package reply represents responses to messages of the messagebus
+package reply
 
 import (
 	"bytes"
@@ -30,8 +30,7 @@ import (
 type Type byte
 
 const (
-	TypeWrong          = Type(iota) // TypeWrong - incorrect type (0)
-	TypeCommonReaction              // TypeCommonReaction - two binary fields: data and results
+	TypeCommon = Type(iota) // TypeCommonReaction - two binary fields: data and results
 
 	// Ledger
 
@@ -42,12 +41,10 @@ const (
 	TypeReference // TypeReference is common reaction for methods returning reference to created records.
 )
 
-func getEmptyReaction(t Type) (core.Reaction, error) {
+func getEmptyReaction(t Type) (core.Reply, error) {
 	switch t {
-	case TypeWrong:
-		return nil, errors.New("no empty reaction for 'wrong' reaction")
-	case TypeCommonReaction:
-		return &CommonReaction{}, nil
+	case TypeCommon:
+		return &Common{}, nil
 	case TypeCode:
 		return &Code{}, nil
 	case TypeClass:
@@ -63,7 +60,7 @@ func getEmptyReaction(t Type) (core.Reaction, error) {
 	}
 }
 
-func serialize(reaction core.Reaction, t Type) (io.Reader, error) {
+func serialize(reaction core.Reply, t Type) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	_, err := buff.Write([]byte{byte(t)})
 	if err != nil {
@@ -76,11 +73,11 @@ func serialize(reaction core.Reaction, t Type) (io.Reader, error) {
 }
 
 // Deserialize returns a reaction.
-func Deserialize(buff io.Reader) (core.Reaction, error) {
+func Deserialize(buff io.Reader) (core.Reply, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
-		return nil, errors.New("too short input to deserialize an event reaction")
+		return nil, errors.New("too short input to deserialize an message reaction")
 	}
 
 	reaction, err := getEmptyReaction(Type(b[0]))
@@ -93,7 +90,7 @@ func Deserialize(buff io.Reader) (core.Reaction, error) {
 }
 
 func init() {
-	gob.Register(&CommonReaction{})
+	gob.Register(&Common{})
 	gob.Register(&Code{})
 	gob.Register(&Class{})
 	gob.Register(&Object{})

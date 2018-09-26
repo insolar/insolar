@@ -30,23 +30,23 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
-type eventBusMock struct {
-	handler *artifactmanager.EventHandler
+type messageBusMock struct {
+	handler *artifactmanager.MessageHandler
 }
 
-func (m *eventBusMock) Start(components core.Components) error {
+func (m *messageBusMock) Start(components core.Components) error {
 	panic("implement me")
 }
 
-func (m *eventBusMock) Stop() error {
+func (m *messageBusMock) Stop() error {
 	panic("implement me")
 }
 
-func (m *eventBusMock) Dispatch(e core.Event) (core.Reaction, error) {
+func (m *messageBusMock) Send(e core.Message) (core.Reply, error) {
 	return m.handler.Handle(e)
 }
 
-func (m *eventBusMock) DispatchAsync(e core.Event) {
+func (m *messageBusMock) SendAsync(e core.Message) {
 	m.handler.Handle(e) // nolint
 }
 
@@ -57,7 +57,7 @@ func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 	// Init subcomponents.
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(t, dir)
-	handler, err := artifactmanager.NewEventHandler(db)
+	handler, err := artifactmanager.NewMessageHandler(db)
 	assert.NoError(t, err)
 	am, err := artifactmanager.NewArtifactManger(db)
 	assert.NoError(t, err)
@@ -71,8 +71,8 @@ func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 	assert.NoError(t, err)
 
 	// Init components.
-	eb := eventBusMock{handler: handler}
-	components := core.Components{EventBus: &eb}
+	eb := messageBusMock{handler: handler}
+	components := core.Components{MessageBus: &eb}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)
