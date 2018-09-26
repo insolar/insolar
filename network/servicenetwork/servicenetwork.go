@@ -80,7 +80,7 @@ func (network *ServiceNetwork) SendEvent(nodeID core.RecordRef, method string, e
 	hostID := network.nodeNetwork.ResolveHostID(nodeID)
 	buff, err := eventToBytes(event)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
 
 	log.Debugln("SendEvent with nodeID = %s method = %s, event reference = %s", nodeID.String(),
@@ -98,7 +98,7 @@ func (network *ServiceNetwork) SendCascadeEvent(data core.Cascade, method string
 	}
 	buff, err := eventToBytes(event)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to serialize event")
 	}
 
 	return network.initCascadeSendMessage(data, false, method, [][]byte{buff})
@@ -107,7 +107,7 @@ func (network *ServiceNetwork) SendCascadeEvent(data core.Cascade, method string
 func eventToBytes(event core.Event) ([]byte, error) {
 	reqBuff, err := event.Serialize()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
 	return ioutil.ReadAll(reqBuff)
 }
@@ -138,12 +138,12 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 
 	err := network.hostNetwork.ObtainIP()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to ObtainIP")
 	}
 
 	err = network.hostNetwork.AnalyzeNetwork(createContext(network.hostNetwork))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to AnalyzeNetwork")
 	}
 
 	pm, err := getPulseManager(components)
@@ -153,16 +153,18 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 		network.hostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
 	}
 
+	// TODO: may be merge bug, check copy-paste
 	ctx := createContext(network.hostNetwork)
 	err = network.hostNetwork.ObtainIP()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to ObtainIP")
 	}
 
 	err = network.hostNetwork.AnalyzeNetwork(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to AnalyzeNetwork")
 	}
+	// todo: end
 
 	return nil
 }
@@ -216,7 +218,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 		nextNodes, err = cascade.CalculateNextNodes(data, nil)
 	}
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to CalculateNextNodes")
 	}
 	if len(nextNodes) == 0 {
 		return nil

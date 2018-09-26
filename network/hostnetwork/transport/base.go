@@ -17,7 +17,6 @@
 package transport
 
 import (
-	"errors"
 	"net"
 	"strings"
 	"sync"
@@ -27,6 +26,7 @@ import (
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/pkg/errors"
 )
 
 type baseTransport struct {
@@ -73,7 +73,7 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	err := t.sendPacket(msg)
 	if err != nil {
 		future.Cancel()
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to send packet")
 	}
 
 	return future, nil
@@ -178,7 +178,7 @@ func (t *baseTransport) sendPacket(msg *packet.Packet) error {
 
 	data, err := packet.SerializePacket(msg)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
 	log.Debugf("Send packet to %s with RequestID = %s", recvAddress, msg.RequestID)

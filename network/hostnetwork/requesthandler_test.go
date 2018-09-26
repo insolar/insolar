@@ -97,7 +97,9 @@ func TestRelayRequest(t *testing.T) {
 	err = RelayRequest(hh, "begin auth", receiver.ID.String())
 	assert.Error(t, err, "unknown command")
 	err = RelayRequest(hh, "start", receiver.ID.String())
+	assert.NoError(t, err)
 	err = RelayRequest(hh, "stop", receiver.ID.String())
+	assert.NoError(t, err)
 }
 
 func TestRelayOwnershipRequest(t *testing.T) {
@@ -114,6 +116,7 @@ func TestRelayOwnershipRequest(t *testing.T) {
 
 	hh.FoundHost = receiver
 	err = RelayOwnershipRequest(hh, receiver.ID.String())
+	assert.NoError(t, err)
 }
 
 func TestCascadeSendMessage(t *testing.T) {

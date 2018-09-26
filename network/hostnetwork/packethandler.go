@@ -31,6 +31,7 @@ import (
 )
 
 // DispatchPacketType checks event type.
+// nolint: gocyclo
 func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	// TODO: add counter
 	switch msg.Type {
@@ -94,13 +95,13 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	}
 	currentPulse, err := pm.Current()
 	if err != nil {
-		return nil, errors.New("could not get current pulse")
+		return nil, errors.Wrap(err, "could not get current pulse")
 	}
 	log.Debugf("got new pulse number: %d", currentPulse.PulseNumber)
 	if data.Pulse.PulseNumber > currentPulse.PulseNumber {
 		err = pm.Set(data.Pulse)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
 		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
 		ht := hostHandler.HtFromCtx(ctx)
@@ -149,11 +150,11 @@ func processRelayOwnership(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		hostHandler.RemovePossibleProxyID(msg.Sender.ID.String())
 		err := AuthenticationRequest(hostHandler, "begin", msg.Sender.ID.String())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "AuthenticationRequest failed")
 		}
 		err = RelayRequest(hostHandler, "start", msg.Sender.ID.String())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "RelayRequest failed")
 		}
 	}
 	response := &packet.ResponseRelayOwnership{Accepted: true}
@@ -194,7 +195,7 @@ func processStore(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	replication := time.Now().Add(hostHandler.GetReplicationTime())
 	err := hostHandler.Store(key, data.Data, replication, expiration, false)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to store data")
 	}
 	return nil, nil
 }
@@ -275,7 +276,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		key := make([]byte, 512)
 		_, err := rand.Read(key) // crypto/rand
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Failed to generate random key")
 		}
 		hostHandler.AddAuthSentKey(msg.Sender.ID.String(), key)
 		response := &packet.ResponseAuth{
@@ -287,7 +288,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		// confirmed
 		err = CheckOriginRequest(hostHandler, msg.Sender.ID.String())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "CheckOriginRequest failed")
 		}
 
 		return packetBuilder.Response(response).Build(), nil

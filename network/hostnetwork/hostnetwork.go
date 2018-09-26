@@ -17,7 +17,6 @@
 package hostnetwork
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
@@ -31,6 +30,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/pkg/errors"
 )
 
 // NewHostNetwork creates and returns DHT network.
@@ -44,19 +44,19 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 
 	tp, err := transport.NewTransport(cfg.Transport, proxy)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create transport")
 	}
 
 	originAddress, err := host.NewAddress(tp.PublicAddress())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to ")
 	}
 
 	encodedOriginID := nn.ResolveHostID(nn.GetID())
 	originID := id.FromBase58(encodedOriginID)
 	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create Origin")
 	}
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
@@ -73,7 +73,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		cfg.InfinityBootstrap,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create DHT")
 	}
 
 	return network, nil
