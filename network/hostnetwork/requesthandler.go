@@ -249,14 +249,14 @@ func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []*routi
 func sendPulse(hostHandler hosthandler.HostHandler, host *host.Host, pulse *packet.RequestPulse) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to send pulse")
 	}
 	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).Receiver(host).
 		Type(packet.TypePulse).Request(pulse).Build()
 
 	future, err := hostHandler.SendRequest(request)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to send pulse")
 	}
 	return checkResponse(hostHandler, future, "", request)
 }
@@ -376,8 +376,7 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 
 	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
-		err = errors.New(request.Type.String() + ": timeout")
-		return err
+		return errors.New(request.Type.String() + ": timeout")
 	}
 	return nil
 }
