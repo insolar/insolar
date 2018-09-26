@@ -93,15 +93,13 @@ func GetObject(ref core.RecordRef) ProxyInterface {
 func (bc *BaseContract) SelfDestructRequest() {
 }
 
-/////// next code is system helper for wrappers generator //////
-
-// CBORMarshaler is a special interface for serializer object
-type CBORMarshaler interface {
-	Marshal(interface{}) ([]byte, error)
-	Unmarshal(interface{}, []byte) error
+// Error elementary string based error struct satisfying builtin error interface
+//    foundation.Error{"some err"}
+type Error struct {
+	S string
 }
 
-// Call other contract via network dispatcher
-func Call(Reference core.RecordRef, MethodName string, Arguments []interface{}) ([]interface{}, error) {
-	return nil, nil
+// Error returns error in string format
+func (e *Error) Error() string {
+	return e.S
 }
