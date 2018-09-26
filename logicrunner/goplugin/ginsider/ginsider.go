@@ -194,9 +194,8 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 		return rpctypes.UpBaseReq{
 			Me: *ctx.Callee,
 		}
-	} else {
-		panic("Wrong or unexistent context")
 	}
+	panic("Wrong or unexistent context")
 }
 
 // RouteCall ...
