@@ -261,7 +261,6 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	return nil
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr CaseRecord) error {
+func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr CaseRecord) {
 	lr.cb.R[ref] = append(lr.cb.R[ref], cr)
-	return nil
 }

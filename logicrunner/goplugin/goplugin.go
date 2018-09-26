@@ -215,7 +215,7 @@ func (gp *GoPlugin) StartRunner() error {
 	if gp.Cfg.GoPlugin.RunnerCodePath != "" {
 		runnerArguments = append(runnerArguments, "-d", gp.Cfg.GoPlugin.RunnerCodePath)
 	}
-	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.RpcListen)
+	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.RPCListen)
 
 	if gp.Cfg.GoPlugin.RunnerPath == "" {
 		return errors.New("RunnerPath is not set in the configuration of GoPlugin")

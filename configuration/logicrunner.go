@@ -17,7 +17,7 @@
 package configuration
 
 type LogicRunner struct {
-	RpcListen string // ip:port of main system connectivity socket
+	RPCListen string // ip:port of main system connectivity socket
 	BuiltIn   *BuiltIn
 	GoPlugin  *GoPlugin
 }
@@ -32,7 +32,7 @@ type GoPlugin struct {
 
 func NewLogicRunner() LogicRunner {
 	return LogicRunner{
-		RpcListen: "127.0.0.1:7778",
+		RPCListen: "127.0.0.1:7778",
 		BuiltIn:   &BuiltIn{},
 		GoPlugin: &GoPlugin{
 			RunnerPath:     "testdata/logicrunner/insgorund",

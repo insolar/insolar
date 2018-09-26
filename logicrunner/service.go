@@ -44,12 +44,12 @@ func StartRPC(lr *LogicRunner) *RPC {
 	}
 	rpcService.lr = lr
 
-	l, e := net.Listen("tcp", lr.Cfg.RpcListen)
+	l, e := net.Listen("tcp", lr.Cfg.RPCListen)
 	if e != nil {
-		log.Fatal("couldn't setup listener on '"+lr.Cfg.RpcListen+"': ", e)
+		log.Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"': ", e)
 	}
 	lr.sock = l
-	log.Infof("starting LogicRunner RPC service on %q", lr.Cfg.RpcListen)
+	log.Infof("starting LogicRunner RPC service on %q", lr.Cfg.RPCListen)
 	go func() {
 		if err := http.Serve(l, nil); err != nil {
 			log.Warn("Can't Listen LogicRunner RPC Socket: ", err)
