@@ -42,6 +42,7 @@ type MachineLogicExecutor interface {
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	Execute(event Event) (res Reaction, err error)
+	OnPulse(pulse Pulse) error
 }
 
 // LogicCallContext is a context of contract execution
@@ -51,5 +52,5 @@ type LogicCallContext struct {
 	Parent *RecordRef // Parent of the callee
 	Caller *RecordRef // Contract that made the call
 	Time   time.Time  // Time when call was made
-	Pulse  uint64     // Number of the pulse
+	Pulse  Pulse      // Number of the pulse
 }

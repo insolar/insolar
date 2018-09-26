@@ -19,7 +19,7 @@ env:
 before_install:
   - make install-deps
 install:
-  - make install
+  - make pre-build
 script:
   - make build
   - make test_with_coverage
