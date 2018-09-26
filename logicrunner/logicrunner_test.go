@@ -186,7 +186,11 @@ type testEventBus struct {
 func (*testEventBus) Start(components core.Components) error { return nil }
 func (*testEventBus) Stop() error                            { return nil }
 func (eb *testEventBus) Dispatch(event core.Event) (resp core.Reaction, err error) {
-	return eb.LogicRunner.Execute(event)
+	e, ok := event.(core.LogicRunnerEvent)
+	if !ok {
+		panic("Called with not logicrunner event")
+	}
+	return eb.LogicRunner.Execute(e)
 }
 func (*testEventBus) DispatchAsync(event core.Event) {}
 

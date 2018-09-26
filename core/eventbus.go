@@ -33,6 +33,12 @@ type Event interface {
 	React(Components) (Reaction, error)
 }
 
+type LogicRunnerEvent interface {
+	Event
+	// Returns initiator of this event
+	GetCaller() *RecordRef
+}
+
 // Reaction for an `Event`
 type Reaction interface {
 	// Serialize serializes event.
