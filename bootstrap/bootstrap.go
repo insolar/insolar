@@ -82,6 +82,46 @@ func getContractsMap() (map[string]string, error) {
 	return contracts, nil
 }
 
+func isLightExecutor(c core.Components) (bool, error) {
+	am := c.Ledger.GetArtifactManager()
+	jc := c.Ledger.GetJetCoordinator()
+	pm := c.Ledger.GetPulseManager()
+	currentPulse, err := pm.Current()
+	if err != nil {
+		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
+	}
+
+	network := c.Network
+	nodeID := network.GetNodeID()
+
+	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
+	if err != nil {
+		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
+	}
+	if !isLightExecutor {
+		log.Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
+		return false, nil
+	}
+	return true, nil
+}
+
+func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
+	am := c.Ledger.GetArtifactManager()
+	rootObj, err := am.GetObject(*am.RootRef(), nil)
+	rootRefChildren := rootObj.Children()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of RootRef object")
+	}
+	if rootRefChildren.HasNext() {
+		rootDomainRef, err := rootRefChildren.Next()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of RootRef object")
+		}
+		return &rootDomainRef, nil
+	}
+	return nil, nil
+}
+
 func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	var instanceData []byte
 
@@ -149,60 +189,21 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testu
 	return nil
 }
 
-func (b *Bootstrapper) isLightExecutor(c core.Components) (bool, error) {
-	am := c.Ledger.GetArtifactManager()
-	jc := c.Ledger.GetJetCoordinator()
-	pm := c.Ledger.GetPulseManager()
-	currentPulse, err := pm.Current()
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
-	}
-
-	network := c.Network
-	nodeID := network.GetNodeID()
-
-	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
-	}
-	if !isLightExecutor {
-		log.Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
-		return false, nil
-	}
-	return true, nil
-}
-
-func (b *Bootstrapper) getRootDomainRef(c core.Components) (*core.RecordRef, error) {
-	am := c.Ledger.GetArtifactManager()
-	rootObj, err := am.GetObject(*am.RootRef(), nil)
-	rootRefChildren := rootObj.Children()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of RootRef object")
-	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of RootRef object")
-		}
-		return &rootDomainRef, nil
-	}
-	return nil, nil
-}
-
 // Start creates types and RootDomain instance
 func (b *Bootstrapper) Start(c core.Components) error {
 	log.Info("[ Bootstrapper ] Starting Bootstrap ...")
 
-	rootDomainRef, err := b.getRootDomainRef(c)
+	rootDomainRef, err := getRootDomainRef(c)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't get ref of rootDomain")
 	}
 	if rootDomainRef != nil {
 		b.rootDomainRef = rootDomainRef
+		log.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
 	}
 
-	isLightExecutor, err := b.isLightExecutor(c)
+	isLightExecutor, err := isLightExecutor(c)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't check if node is light executor")
 	}
