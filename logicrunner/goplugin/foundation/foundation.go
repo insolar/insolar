@@ -50,13 +50,16 @@ func (bc *BaseContract) GetReference() core.RecordRef {
 
 // GetClass - Returns class of contract
 func (bc *BaseContract) GetClass() core.RecordRef {
-
 	return *bc.GetContext().Class
 }
 
-// GetContext returns current calling context of this object.
-// It exists only for currently called contract.
+// GetContext returns current calling context OBSOLETED.
 func (bc *BaseContract) GetContext() *core.LogicCallContext {
+	return GetContext()
+}
+
+// GetContext returns current calling context.
+func GetContext() *core.LogicCallContext {
 	ctx := gls.Get("ctx")
 	if ctx == nil {
 		panic("object has no context")
@@ -66,15 +69,6 @@ func (bc *BaseContract) GetContext() *core.LogicCallContext {
 		panic("wrong type of context")
 	}
 }
-
-//// SetContext - do not use it in smartcontracts
-//func (bc *BaseContract) SetContext(cc *core.LogicCallContext) {
-//	if bc.context == nil {
-//		bc.context = cc
-//	} else {
-//		panic("context can not be set twice")
-//	}
-//}
 
 // GetImplementationFor finds delegate typed r in object and returns it
 func GetImplementationFor(object, ofType core.RecordRef) (core.RecordRef, error) {

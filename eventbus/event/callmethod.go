@@ -36,7 +36,7 @@ const (
 
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	baseEvent
+	BaseEvent
 	ReturnMode MethodReturnMode
 	ObjectRef  core.RecordRef
 	Request    core.RecordRef

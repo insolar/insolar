@@ -27,13 +27,13 @@ import (
 )
 
 // BaseMessage base of event class family, do not use it standalone
-type baseEvent struct {
+type BaseEvent struct {
 	Caller  core.RecordRef
 	Request core.RecordRef
 	Domain  core.RecordRef
 }
 
-func (be baseEvent) GetCaller() *core.RecordRef {
+func (be BaseEvent) GetCaller() *core.RecordRef {
 	return &be.Caller
 }
 
