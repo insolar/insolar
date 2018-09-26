@@ -33,6 +33,7 @@ func min(a, b int) int {
 	return a
 }
 
+// Cascade uses to send a cascade message.
 type Cascade struct {
 	SendMessage func(data core.Cascade, method string, args [][]byte) error
 }

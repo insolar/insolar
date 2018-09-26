@@ -31,6 +31,7 @@ import (
 )
 
 // DispatchPacketType checks event type.
+// NOLINT
 func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	// TODO: add counter
 	switch msg.Type {
