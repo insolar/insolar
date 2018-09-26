@@ -90,6 +90,7 @@ func NewPingPacket(sender, receiver *host.Host) *Packet {
 }
 
 // IsValid checks if packet data is a valid structure for current packet type.
+// nolint: gocyclo
 func (m *Packet) IsValid() (valid bool) {
 	switch m.Type {
 	case TypePing:

@@ -1004,7 +1004,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	reqBuff, err := e.Serialize()
+	reqBuff, _ := e.Serialize()
 	event1, _ := ioutil.ReadAll(reqBuff)
 
 	dht2.RemoteProcedureCall(getDefaultCtx(dht1), dht2.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
@@ -1020,8 +1020,8 @@ func TestDHT_Getters(t *testing.T) {
 	id1, _ := id.NewID()
 	ids1 = append(ids1, id1)
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:0")
-	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false)
 	assert.NoError(t, err)
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false)
 	outerHostCount := 3
 
 	relay1 := "127.0.0.1:123123"

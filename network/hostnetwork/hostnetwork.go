@@ -33,6 +33,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NodeNetwork is interface to binding node and host network.
 type NodeNetwork interface {
 	ResolveHostID(ref core.RecordRef) string
 	GetID() core.RecordRef
