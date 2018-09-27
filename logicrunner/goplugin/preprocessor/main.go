@@ -230,8 +230,8 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		"PackageName":         proxyPackageName,
 		"Types":               generateTypes(pf),
 		"ContractType":        pf.contract,
-		"MethodsProxies":      generateMethodsProxies(pf),
-		"ConstructorsProxies": generateConstructorProxies(pf),
+		"MethodsProxies":      pf.functionInfoForProxy(pf.methods[pf.contract]),
+		"ConstructorsProxies": pf.functionInfoForProxy(pf.constructors[pf.contract]),
 		"ClassReference":      classReference,
 		"Imports":             pf.generateImports(false),
 	}
@@ -241,6 +241,25 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	return nil
+}
+
+func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]string {
+	var res []map[string]string
+
+	for _, fun := range list {
+		resInit, resList := generateZeroListOfTypes(pf, "resList", fun.Type.Results)
+
+		info := map[string]string{
+			"Name":           fun.Name.Name,
+			"Arguments":      genFieldList(pf, fun.Type.Params, true),
+			"InitArgs":       generateInitArguments(fun.Type.Params),
+			"ResultZeroList": resInit,
+			"Results":        resList,
+			"ResultsTypes":   genFieldList(pf, fun.Type.Results, false),
+		}
+		res = append(res, info)
+	}
+	return res
 }
 
 func openTemplate(fileName string) (*template.Template, error) {
@@ -441,30 +460,6 @@ func generateInitArguments(list *ast.FieldList) string {
 	return initArgs
 }
 
-func generateMethodProxyInfo(parsed *ParsedFile, method *ast.FuncDecl) map[string]interface{} {
-
-	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
-
-	return map[string]interface{}{
-		"Name":           method.Name.Name,
-		"ResultZeroList": resInit,
-		"Results":        resList,
-		"Arguments":      genFieldList(parsed, method.Type.Params, true),
-		"ResultsTypes":   genFieldList(parsed, method.Type.Results, false),
-		"InitArgs":       generateInitArguments(method.Type.Params),
-	}
-}
-
-func generateMethodsProxies(parsed *ParsedFile) []map[string]interface{} {
-	var methodsProxies []map[string]interface{}
-
-	for _, method := range parsed.methods[parsed.contract] {
-		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
-	}
-
-	return methodsProxies
-}
-
 func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
@@ -484,20 +479,6 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 		}
 	}
 	return imports
-}
-
-func generateConstructorProxies(parsed *ParsedFile) []map[string]string {
-	var res []map[string]string
-
-	for _, e := range parsed.constructors[parsed.contract] {
-		info := map[string]string{
-			"Name":      e.Name.Name,
-			"Arguments": genFieldList(parsed, e.Type.Params, true),
-			"InitArgs":  generateInitArguments(e.Type.Params),
-		}
-		res = append(res, info)
-	}
-	return res
 }
 
 func CmdRewriteImports(parsed *ParsedFile, w io.Writer) error {
