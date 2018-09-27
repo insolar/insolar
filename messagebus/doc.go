@@ -14,19 +14,12 @@
  *    limitations under the License.
  */
 
-package reaction
+/*
+Package messagebus routes messages (contract calls & responses) and delivers'em to relevant modules.
 
-import (
-	"io"
-)
+Usage:
 
-// CommonReaction - the most common reaction.
-type CommonReaction struct {
-	Data   []byte
-	Result []byte
-}
+	TODO:
 
-// Serialize serializes reaction.
-func (r *CommonReaction) Serialize() (io.Reader, error) {
-	return serialize(r, TypeCommonReaction)
-}
+*/
+package messagebus

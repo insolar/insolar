@@ -23,8 +23,8 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 
 	"github.com/insolar/insolar/ledger/ledgertestutil"
@@ -48,11 +48,11 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	eb := &testEventBus{lr}
+	eb := &testMessageBus{lr}
 
 	assert.NoError(t, lr.Start(core.Components{
-		Ledger:   l,
-		EventBus: eb,
+		Ledger:     l,
+		MessageBus: eb,
 	}), "starting logicrunner")
 	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
@@ -66,7 +66,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
-	resp, err := lr.Execute(&event.CallMethod{
+	resp, err := lr.Execute(&message.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
@@ -74,13 +74,13 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	d := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Data)
-	r := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
+	d := testutil.CBORUnMarshal(t, resp.(*reply.Common).Data)
+	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
-	resp, err = lr.Execute(&event.CallMethod{
+	resp, err = lr.Execute(&message.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
@@ -88,8 +88,8 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	d = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Data)
-	r = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
+	d = testutil.CBORUnMarshal(t, resp.(*reply.Common).Data)
+	r = testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }

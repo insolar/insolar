@@ -14,12 +14,18 @@
  *    limitations under the License.
  */
 
-package event
+package reply
 
 import (
 	"github.com/insolar/insolar/core"
 )
 
-func logicRunnerHandle(e core.LogicRunnerEvent, c core.Components) (core.Reaction, error) {
-	return c.LogicRunner.Execute(e)
+// Common - the most common reaction.
+type Common struct {
+	Data   []byte
+	Result []byte
+}
+
+func (r *Common) Type() core.ReplyType {
+	return TypeCommon
 }
