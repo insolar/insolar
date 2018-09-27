@@ -27,9 +27,14 @@ import (
 )
 
 // BaseMessage base of event class family, do not use it standalone
-type baseEvent struct {
+type BaseLogicEvent struct {
+	Caller  core.RecordRef
 	Request core.RecordRef
 	Domain  core.RecordRef
+}
+
+func (be BaseLogicEvent) GetCaller() *core.RecordRef {
+	return &be.Caller
 }
 
 // Type is a enum type of event
