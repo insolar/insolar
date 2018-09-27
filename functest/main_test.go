@@ -319,28 +319,6 @@ type dumpAllUsersResponse struct {
 	DumpInfo []userInfo `json:"dump_info"`
 }
 
-func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
-	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err := ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	return body
-}
-
-func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
-	err := json.Unmarshal(body, &response)
-	assert.NoError(t, err)
-	assert.Nil(t, response.getError())
-}
-
-func unmarshalResponseWithError(t *testing.T, body []byte, response responseInterface) {
-	err := json.Unmarshal(body, &response)
-	assert.NoError(t, err)
-	assert.NotNil(t, response.getError())
-}
-
 func createMember(t *testing.T) string {
 	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
@@ -363,6 +341,28 @@ func getBalance(t *testing.T, reference string) int {
 	unmarshalResponse(t, body, firstBalanceResponse)
 
 	return int(firstBalanceResponse.Amount)
+}
+
+func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
+	jsonValue, _ := json.Marshal(postParams)
+	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, postResp.StatusCode)
+	body, err := ioutil.ReadAll(postResp.Body)
+	assert.NoError(t, err)
+	return body
+}
+
+func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
+	err := json.Unmarshal(body, &response)
+	assert.NoError(t, err)
+	assert.Nil(t, response.getError())
+}
+
+func unmarshalResponseWithError(t *testing.T, body []byte, response responseInterface) {
+	err := json.Unmarshal(body, &response)
+	assert.NoError(t, err)
+	assert.NotNil(t, response.getError())
 }
 
 func TestInsolardResponseNotErr(t *testing.T) {
