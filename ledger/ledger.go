@@ -35,10 +35,12 @@ type Ledger struct {
 	handler *artifactmanager.EventHandler
 }
 
+// GetPulseManager returns PulseManager.
 func (l *Ledger) GetPulseManager() core.PulseManager {
 	return l.pm
 }
 
+// GetJetCoordinator returns JetCoordinator.
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
 	return l.jc
 }
@@ -48,6 +50,7 @@ func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.am
 }
 
+// HandleEvent is a wrapper for EventHandler.Handle method.
 func (l *Ledger) HandleEvent(e core.Event) (core.Reaction, error) {
 	return l.handler.Handle(e)
 }
@@ -92,9 +95,14 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	return &ledger, nil
 }
 
+// NewTestLedger is the util function for creation of Ledger with provided
+// private members (suitable for tests).
 func NewTestLedger(
-	db *storage.DB, am *artifactmanager.LedgerArtifactManager, pm *pulsemanager.PulseManager,
-	jc *jetcoordinator.JetCoordinator, amh *artifactmanager.EventHandler,
+	db *storage.DB,
+	am *artifactmanager.LedgerArtifactManager,
+	pm *pulsemanager.PulseManager,
+	jc *jetcoordinator.JetCoordinator,
+	amh *artifactmanager.EventHandler,
 ) *Ledger {
 	return &Ledger{
 		db:      db,

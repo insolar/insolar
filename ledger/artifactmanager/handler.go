@@ -37,7 +37,7 @@ func NewEventHandler(db *storage.DB) (*EventHandler, error) {
 	return &EventHandler{db: db}, nil
 }
 
-// HandleEvent performs event processing.
+// Handle performs event processing.
 func (h *EventHandler) Handle(genericEvent core.Event) (core.Reaction, error) {
 	switch e := genericEvent.(type) {
 	case *event.GetCode:
