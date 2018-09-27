@@ -57,12 +57,8 @@ type ParsedFile struct {
 	contract     string
 }
 
-// codeOfNode returns source code of an AST node
-func (r *ParsedFile) codeOfNode(n ast.Node) string {
-	return string(r.code[n.Pos()-1 : n.End()-1])
-}
-
 // ParseFile parses a file as Go source code of a smart contract
+// and returns it as `ParsedFile`
 func ParseFile(fileName string) (*ParsedFile, error) {
 	res := ParsedFile{
 		name: fileName,
@@ -89,6 +85,11 @@ func ParseFile(fileName string) (*ParsedFile, error) {
 	}
 
 	return &res, nil
+}
+
+// codeOfNode returns source code of an AST node
+func (r *ParsedFile) codeOfNode(n ast.Node) string {
+	return string(r.code[n.Pos()-1 : n.End()-1])
 }
 
 func openTemplate(fileName string) (*template.Template, error) {
