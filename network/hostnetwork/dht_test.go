@@ -397,16 +397,14 @@ func TestStoreAndFindLargeValue(t *testing.T) {
 		done <- true
 	}()
 
-	time.Sleep(1 * time.Second)
-
 	dht2.Bootstrap()
 
-	payload := [1000000]byte{}
+	payload := make([]byte, 1000000)
 
 	key, err := dht1.StoreData(getDefaultCtx(dht1), payload[:])
 	assert.NoError(t, err)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	value, exists, err := dht2.Get(getDefaultCtx(dht1), key)
 	assert.NoError(t, err)
