@@ -32,7 +32,7 @@ func (*TestEventBus) Start(components core.Components) error { return nil }
 func (*TestEventBus) Stop() error { return nil }
 
 // Dispatch executes event on LogicRunner.
-func (eb *TestEventBus) Dispatch(event core.Event) (resp core.Reaction, err error) {
+func (eb *TestEventBus) Dispatch(event core.LogicRunnerEvent) (resp core.Reaction, err error) {
 	return eb.LogicRunner.Execute(event)
 }
 func (*TestEventBus) DispatchAsync(event core.Event) {}

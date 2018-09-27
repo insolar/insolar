@@ -24,7 +24,7 @@ import (
 
 // CallConstructorEvent is a event for calling constructor and obtain its reaction
 type CallConstructor struct {
-	baseEvent
+	BaseLogicEvent
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments

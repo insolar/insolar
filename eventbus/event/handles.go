@@ -20,6 +20,6 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-func logicRunnerHandle(e core.Event, c core.Components) (core.Reaction, error) {
+func logicRunnerHandle(e core.LogicRunnerEvent, c core.Components) (core.Reaction, error) {
 	return c.LogicRunner.Execute(e)
 }

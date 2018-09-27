@@ -186,7 +186,11 @@ type testEventBus struct {
 func (*testEventBus) Start(components core.Components) error { return nil }
 func (*testEventBus) Stop() error                            { return nil }
 func (eb *testEventBus) Dispatch(event core.Event) (resp core.Reaction, err error) {
-	return eb.LogicRunner.Execute(event)
+	e, ok := event.(core.LogicRunnerEvent)
+	if !ok {
+		panic("Called with not logicrunner event")
+	}
+	return eb.LogicRunner.Execute(e)
 }
 func (*testEventBus) DispatchAsync(event core.Event) {}
 
@@ -583,7 +587,7 @@ func New(n int) *Child {
 
 	rlr := lr.(*LogicRunner)
 	assert.Equal(t, 1, int(rlr.cb.P.PulseNumber), "right pulsenumber")
-	assert.Equal(t, 1, len(rlr.cb.R[*contract]), "right number of caserecords") // wrong, must be much greater
+	assert.Equal(t, 20, len(rlr.cb.R[*contract]), "right number of caserecords")
 
 	resp, err = lr.Execute(&event.CallMethod{
 		Request:   core.NewRefFromBase58("r3"),
