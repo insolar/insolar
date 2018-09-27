@@ -827,7 +827,7 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err)
 
 			buff := bytes.NewBufferString("")
-			preprocessor.GenerateContractProxy(parsed, "", buff)
+			parsed.WriteProxy("", buff)
 
 			cmd := exec.Command("diff", proxy, "-")
 			cmd.Stdin = buff

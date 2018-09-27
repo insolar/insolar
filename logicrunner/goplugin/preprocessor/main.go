@@ -197,6 +197,35 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 	return nil
 }
 
+// WriteProxy generates and writes into `out` source code of contract's proxy
+func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
+	proxyPackageName, err := ProxyPackageName(pf)
+	if err != nil {
+		return err
+	}
+
+	tmpl, err := openTemplate("templates/proxy.go.tpl")
+	if err != nil {
+		return errors.Wrap(err, "couldn't open template file for proxy")
+	}
+
+	data := map[string]interface{}{
+		"PackageName":         proxyPackageName,
+		"Types":               generateTypes(pf),
+		"ContractType":        pf.contract,
+		"MethodsProxies":      generateMethodsProxies(pf),
+		"ConstructorsProxies": generateConstructorProxies(pf),
+		"ClassReference":      classReference,
+		"Imports":             pf.generateImports(false),
+	}
+	err = tmpl.Execute(out, data)
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
+	return nil
+}
+
 func openTemplate(fileName string) (*template.Template, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -271,52 +300,6 @@ func ProxyPackageName(parsed *ParsedFile) (string, error) {
 		proxyPackageName = match[1]
 	}
 	return proxyPackageName, nil
-}
-
-// GenerateContractProxy generates and writes into `out` source code of contract's proxy
-func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
-
-	proxyPackageName, err := ProxyPackageName(parsed)
-	if err != nil {
-		return err
-	}
-
-	types := generateTypes(parsed)
-
-	methodsProxies := generateMethodsProxies(parsed)
-
-	constructorProxies := generateConstructorProxies(parsed)
-
-	imports := parsed.generateImports(false)
-
-	tmpl, err := openTemplate("templates/proxy.go.tpl")
-	if err != nil {
-		return errors.Wrap(err, "couldn't open template file for proxy")
-	}
-
-	data := struct {
-		PackageName         string
-		Types               []string
-		ContractType        string
-		MethodsProxies      []map[string]interface{}
-		ConstructorsProxies []map[string]string
-		ClassReference      string
-		Imports             map[string]bool
-	}{
-		proxyPackageName,
-		types,
-		parsed.contract,
-		methodsProxies,
-		constructorProxies,
-		classReference,
-		imports,
-	}
-	err = tmpl.Execute(out, data)
-	if err != nil {
-		return errors.Wrap(err, "couldn't write code output handle")
-	}
-
-	return nil
 }
 
 func typeName(t ast.Expr) string {

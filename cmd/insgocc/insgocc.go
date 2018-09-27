@@ -113,7 +113,7 @@ func main() {
 				}
 			}
 
-			err = preprocessor.GenerateContractProxy(parsed, reference, proxyOut.writer)
+			err = parsed.WriteProxy(reference, proxyOut.writer)
 
 			if err != nil {
 				fmt.Println(err)
