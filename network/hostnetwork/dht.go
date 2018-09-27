@@ -265,7 +265,48 @@ func (dht *DHT) Bootstrap() error {
 		dht.iterateBootstrapHosts(ht, cb)
 	}
 
-	return dht.iterateHt(cb)
+	err := dht.iterateHt(cb)
+	if err != nil {
+		return errors.Wrap(err, "error bootstrapping dht network")
+	}
+
+	for _, ht := range dht.tables {
+		dht.iterateHtGetNearestHosts(ht, cb)
+	}
+
+	return nil
+}
+
+func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilder) {
+	ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
+	if err != nil {
+		log.Errorf("Error sending GetNearestHosts packet: %s", err.Error())
+		return
+	}
+
+	futures := make([]transport.Future, 0)
+	for _, host := range dht.options.BootstrapHosts {
+		p := packet.NewBuilder().Type(packet.TypeFindHost).Sender(ht.Origin).Receiver(host).
+			Request(&packet.RequestDataFindHost{Target: ht.Origin.ID}).Build()
+		future, err := dht.transport.SendRequest(p)
+		if err != nil {
+			log.Errorf("Error sending GetNearestHosts packet to host: %s", host.String())
+			continue
+		}
+		futures = append(futures, future)
+	}
+
+	total := 0
+	for _, f := range futures {
+		result := <-f.Result()
+		data := result.Data.(*packet.ResponseDataFindHost)
+		for _, host := range data.Closest {
+			dht.AddHost(ctx, routing.NewRouteHost(host))
+			log.Debugf("Added host to DHT routing table: %s %s", host.ID, host.Address)
+		}
+		total += len(data.Closest)
+	}
+	log.Infof("Added %d additional hosts to DHT routing table", total)
 }
 
 func (dht *DHT) iterateHt(cb ContextBuilder) error {
