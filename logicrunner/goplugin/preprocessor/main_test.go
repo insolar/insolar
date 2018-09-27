@@ -439,6 +439,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	return
 }
 `)
+	assert.NoError(t, err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
 	assert.NoError(t, err)
@@ -481,6 +482,7 @@ func ( A ) Get(i someAlias.SomeType){
 	return
 }
 `)
+	assert.NoError(t, err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
 	assert.NoError(t, err)
@@ -523,6 +525,7 @@ func ( A ) Get() {
 	return
 }
 `)
+	assert.NoError(t, err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
 	assert.NoError(t, err)
@@ -563,6 +566,7 @@ func ( A ) Get() path.SomeValue {
 	return f
 }
 `)
+	assert.NoError(t, err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
 	assert.NoError(t, err)
@@ -594,6 +598,7 @@ type A struct{
 	foundation.BaseContract
 }
 `)
+	assert.NoError(t, err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
 	assert.NoError(t, err)
