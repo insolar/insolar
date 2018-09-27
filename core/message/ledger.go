@@ -20,7 +20,18 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+type BaseLedgerMessage struct{}
+
+func (BaseLedgerMessage) GetCaller() *core.RecordRef {
+	return nil
+}
+
+func (BaseLedgerMessage) TargetRole() core.JetRole {
+	return core.RoleHeavyExecutor
+}
+
 type GetCode struct {
+	BaseLedgerMessage
 	Code        core.RecordRef
 	MachinePref []core.MachineType
 }
@@ -38,6 +49,7 @@ func (e *GetCode) TargetRole() core.JetRole {
 }
 
 type GetClass struct {
+	BaseLedgerMessage
 	Head  core.RecordRef
 	State *core.RecordRef // If nil, will fetch the latest state.
 }
@@ -55,6 +67,7 @@ func (e *GetClass) TargetRole() core.JetRole {
 }
 
 type GetObject struct {
+	BaseLedgerMessage
 	Head  core.RecordRef
 	State *core.RecordRef // If nil, will fetch the latest state.
 }
@@ -72,6 +85,7 @@ func (e *GetObject) TargetRole() core.JetRole {
 }
 
 type GetDelegate struct {
+	BaseLedgerMessage
 	Head    core.RecordRef
 	AsClass core.RecordRef
 }
@@ -89,6 +103,7 @@ func (e *GetDelegate) TargetRole() core.JetRole {
 }
 
 type DeclareType struct {
+	BaseLedgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	TypeDec []byte
@@ -107,6 +122,7 @@ func (e *DeclareType) TargetRole() core.JetRole {
 }
 
 type DeployCode struct {
+	BaseLedgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	CodeMap map[core.MachineType][]byte
@@ -125,6 +141,7 @@ func (e *DeployCode) TargetRole() core.JetRole {
 }
 
 type ActivateClass struct {
+	BaseLedgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 }
@@ -142,6 +159,7 @@ func (e *ActivateClass) TargetRole() core.JetRole {
 }
 
 type DeactivateClass struct {
+	BaseLedgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Class   core.RecordRef
@@ -160,6 +178,7 @@ func (e *DeactivateClass) TargetRole() core.JetRole {
 }
 
 type UpdateClass struct {
+	BaseLedgerMessage
 	Domain     core.RecordRef
 	Request    core.RecordRef
 	Class      core.RecordRef
@@ -180,6 +199,7 @@ func (e *UpdateClass) TargetRole() core.JetRole {
 }
 
 type ActivateObject struct {
+	BaseLedgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Class   core.RecordRef
@@ -200,6 +220,7 @@ func (e *ActivateObject) TargetRole() core.JetRole {
 }
 
 type ActivateObjectDelegate struct {
+	BaseLedgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Class   core.RecordRef
@@ -220,6 +241,7 @@ func (e *ActivateObjectDelegate) TargetRole() core.JetRole {
 }
 
 type DeactivateObject struct {
+	BaseLedgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Object  core.RecordRef
@@ -239,6 +261,7 @@ func (e *DeactivateObject) TargetRole() core.JetRole {
 
 // UpdateObject for call of core.ArtifactManager.UpdateObj
 type UpdateObject struct {
+	BaseLedgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Object  core.RecordRef

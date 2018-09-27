@@ -34,10 +34,6 @@ type Message interface {
 	Target() *RecordRef
 	// TargetRole returns jet role to actors of which Message should be sent.
 	TargetRole() JetRole
-}
-
-type LogicRunnerEvent interface {
-	Message
 	// Returns initiator of this event
 	GetCaller() *RecordRef
 }

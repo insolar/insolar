@@ -41,8 +41,8 @@ type MachineLogicExecutor interface {
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	Execute(event LogicRunnerEvent) (res Reply, err error)
-	OnPulse(pulse Pulse) error
+	Execute(Message) (res Reply, err error)
+	OnPulse(Pulse) error
 }
 
 // LogicCallContext is a context of contract execution

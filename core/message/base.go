@@ -26,17 +26,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// BaseLogicEvent base of event class family, do not use it standalone
-type BaseLogicEvent struct {
-	Caller  core.RecordRef
-	Request core.RecordRef
-	Domain  core.RecordRef
-}
-
-func (be BaseLogicEvent) GetCaller() *core.RecordRef {
-	return &be.Caller
-}
-
 const (
 	// Logicrunner
 
