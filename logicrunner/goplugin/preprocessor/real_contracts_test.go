@@ -87,7 +87,7 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 			assert.NoError(t, err)
 
 			var buf bytes.Buffer
-			err = GenerateContractWrapper(parsed, &buf)
+			err = parsed.WriteWrapper(&buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)

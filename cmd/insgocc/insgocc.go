@@ -138,7 +138,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			err = preprocessor.GenerateContractWrapper(parsed, output.writer)
+			err = parsed.WriteWrapper(output.writer)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -215,7 +215,7 @@ func main() {
 			}
 			defer wrapper.Close()
 
-			err = preprocessor.GenerateContractWrapper(parsed, wrapper)
+			err = parsed.WriteWrapper(wrapper)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)

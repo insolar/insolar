@@ -170,6 +170,43 @@ func (pf *ParsedFile) CodeOfNode(n ast.Node) string {
 	return string(pf.code[n.Pos()-1 : n.End()-1])
 }
 
+// WriteWrapper generates and writes into `out` source code
+// of wrapper for the contract
+func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
+	packageName := pf.node.Name.Name
+
+	tmpl, err := openTemplate("templates/wrapper.go.tpl")
+	if err != nil {
+		return errors.Wrap(err, "couldn't open template file for wrapper")
+	}
+
+	imports := pf.generateImports(true)
+
+	data := struct {
+		PackageName    string
+		ContractType   string
+		Methods        []map[string]interface{}
+		Functions      []map[string]interface{}
+		ParsedCode     []byte
+		FoundationPath string
+		Imports        map[string]bool
+	}{
+		packageName,
+		pf.contract,
+		pf.functionInfoForWrapper(pf.methods[pf.contract]),
+		pf.functionInfoForWrapper(pf.constructors[pf.contract]),
+		pf.code,
+		foundationPath,
+		imports,
+	}
+	err = tmpl.Execute(out, data)
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
+	return nil
+}
+
 func openTemplate(fileName string) (*template.Template, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -209,75 +246,21 @@ func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
 	return rets
 }
 
-func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, []map[string]interface{}) {
-
-	var methodsInfo []map[string]interface{}
-	for _, method := range parsed.methods[parsed.contract] {
-		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
+func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
+	var res []map[string]interface{}
+	for _, fun := range list {
+		argsInit, argsList := generateZeroListOfTypes(pf, "args", fun.Type.Params)
 
 		info := map[string]interface{}{
-			"Name":                method.Name.Name,
+			"Name":                fun.Name.Name,
 			"ArgumentsZeroList":   argsInit,
 			"Arguments":           argsList,
-			"Results":             numberedVars(method.Type.Results, "ret"),
-			"ErrorInterfaceInRes": typeIndexes(parsed, method.Type.Results, "error"),
+			"Results":             numberedVars(fun.Type.Results, "ret"),
+			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, "error"),
 		}
-		methodsInfo = append(methodsInfo, info)
+		res = append(res, info)
 	}
-
-	var funcInfo []map[string]interface{}
-	for _, f := range parsed.constructors[parsed.contract] {
-		argsInit, argsList := generateZeroListOfTypes(parsed, "args", f.Type.Params)
-
-		info := map[string]interface{}{
-			"Name":              f.Name.Name,
-			"ArgumentsZeroList": argsInit,
-			"Arguments":         argsList,
-			"Results":           numberedVars(f.Type.Results, "ret"),
-		}
-		funcInfo = append(funcInfo, info)
-	}
-
-	return methodsInfo, funcInfo
-}
-
-// GenerateContractWrapper generates and writes into `out` source code
-// of wrapper for the contract
-func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
-	packageName := parsed.node.Name.Name
-
-	tmpl, err := openTemplate("templates/wrapper.go.tpl")
-	if err != nil {
-		return errors.Wrap(err, "couldn't open template file for wrapper")
-	}
-
-	imports := parsed.generateImports(true)
-
-	methodsInfo, funcInfo := generateContractMethodsInfo(parsed)
-
-	data := struct {
-		PackageName    string
-		ContractType   string
-		Methods        []map[string]interface{}
-		Functions      []map[string]interface{}
-		ParsedCode     []byte
-		FoundationPath string
-		Imports        map[string]bool
-	}{
-		packageName,
-		parsed.contract,
-		methodsInfo,
-		funcInfo,
-		parsed.code,
-		foundationPath,
-		imports,
-	}
-	err = tmpl.Execute(out, data)
-	if err != nil {
-		return errors.Wrap(err, "couldn't write code output handle")
-	}
-
-	return nil
+	return res
 }
 
 // ProxyPackageName guesses user friendly contract "name" from file name

@@ -121,7 +121,7 @@ func TestBasicGeneration(t *testing.T) {
 		parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
 		assert.NoError(t, err)
 
-		err = GenerateContractWrapper(parsed, &buf)
+		err = parsed.WriteWrapper(&buf)
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -267,7 +267,7 @@ func ( A ) Get(){
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(parsed, &bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), "    self.Get(  )")
 }
@@ -354,7 +354,7 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 	assert.NoError(t, err)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(parsed, &bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), "var a0 int")
 	assert.Contains(t, bufWrapper.String(), "args[0] = a0")
@@ -454,7 +454,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(parsed, &bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/path"`)
 	assert.Contains(t, bufWrapper.String(), `"some/test/import/pointerPath"`)
@@ -495,7 +495,7 @@ func ( A ) Get(i someAlias.SomeType){
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(parsed, &bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper)
 	assert.NoError(t, err)
 	assert.Contains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
 	assert.NotContains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -536,7 +536,7 @@ func ( A ) Get() {
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(parsed, &bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
 }
@@ -576,7 +576,7 @@ func ( A ) Get() path.SomeValue {
 	assert.NotEqual(t, len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = GenerateContractWrapper(parsed, &bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper)
 	assert.NoError(t, err)
 	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
 }
