@@ -38,3 +38,5 @@ vm/wasm/test/data/*.wat
 
 /testdata
 data
+
+/bin
