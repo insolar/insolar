@@ -527,3 +527,185 @@ func _TestWrongReferenceInParams(t *testing.T) {
 	assert.Equal(t, api.BadRequest, response.Err.Code)
 	assert.Equal(t, "Bad request", response.Err.Event)
 }
+
+func createMember(t *testing.T) string {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       testutils.RandomString(),
+	})
+
+	firstMemberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, firstMemberResponse)
+
+	return firstMemberResponse.Reference
+}
+
+func getBalance(t *testing.T, reference string) int {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_balance",
+		"reference":  reference,
+	})
+
+	firstBalanceResponse := &getBalanceResponse{}
+	unmarshalResponse(t, body, firstBalanceResponse)
+
+	return int(firstBalanceResponse.Amount)
+}
+
+func TestTransferNegativeAmount(t *testing.T) {
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     -111,
+	})
+
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponseWithError(t, body, transferResponse)
+
+	assert.Equal(t, api.BadRequest, transferResponse.Err.Code)
+	assert.Equal(t, "Bad request", transferResponse.Err.Event)
+
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
+
+	assert.Equal(t, oldFirstBalance, newFirstBalance)
+	assert.Equal(t, oldSecondBalance, newSecondBalance)
+
+}
+
+func TestTransferAllAmount(t *testing.T) {
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     oldSecondBalance,
+	})
+
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, body, transferResponse)
+
+	assert.Equal(t, true, transferResponse.Success)
+
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
+
+	assert.Equal(t, oldFirstBalance+oldSecondBalance, newFirstBalance)
+	assert.Equal(t, 0, newSecondBalance)
+
+}
+
+func _TestTransferMoreThanAvailableAmount(t *testing.T) {
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     10000000000,
+	})
+
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, body, transferResponse)
+
+	// Add checking than contract gives specific error
+
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
+
+	assert.Equal(t, oldFirstBalance, newFirstBalance)
+	assert.Equal(t, oldSecondBalance, newSecondBalance)
+}
+
+func _TestTransferToMyself(t *testing.T) {
+	memberRef := createMember(t)
+	oldBalance := getBalance(t, memberRef)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       memberRef,
+		"to":         memberRef,
+		"amount":     oldBalance - 1,
+	})
+
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, body, transferResponse)
+
+	assert.Equal(t, true, transferResponse.Success)
+
+	newBalance := getBalance(t, memberRef)
+
+	assert.Equal(t, oldBalance, newBalance)
+}
+
+// TODO: test to check overflow of balance
+
+func TestTransferTwoTimes(t *testing.T) {
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
+
+	firstBody := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     100,
+	})
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, firstBody, transferResponse)
+	assert.Equal(t, true, transferResponse.Success)
+
+	secondBody := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     100,
+	})
+	unmarshalResponse(t, secondBody, transferResponse)
+	assert.Equal(t, true, transferResponse.Success)
+
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
+
+	assert.Equal(t, oldFirstBalance+200, newFirstBalance)
+	assert.Equal(t, oldSecondBalance-200, newSecondBalance)
+}
+
+func TestCreateMembersWithSameName(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       "NameForTestCreateMembersWithSameName",
+	})
+
+	memberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, memberResponse)
+
+	firstMemberRef := memberResponse.Reference
+	assert.NotEqual(t, "", firstMemberRef)
+
+	body = getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       "NameForTestCreateMembersWithSameName",
+	})
+
+	unmarshalResponse(t, body, memberResponse)
+
+	secondMemberRef := memberResponse.Reference
+	assert.NotEqual(t, "", secondMemberRef)
+
+	assert.NotEqual(t, firstMemberRef, secondMemberRef)
+}
