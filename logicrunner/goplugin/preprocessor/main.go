@@ -60,7 +60,7 @@ type ParsedFile struct {
 // ParseFile parses a file as Go source code of a smart contract
 // and returns it as `ParsedFile`
 func ParseFile(fileName string) (*ParsedFile, error) {
-	res := ParsedFile{
+	res := &ParsedFile{
 		name: fileName,
 	}
 	sourceCode, err := slurpFile(fileName)
@@ -76,7 +76,12 @@ func ParseFile(fileName string) (*ParsedFile, error) {
 	}
 	res.node = node
 
-	err = getMethods(&res)
+	err = res.parseTypes()
+	if err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+
+	err = res.parseFunctionsAndMethods()
 	if err != nil {
 		return nil, errors.Wrap(err, "")
 	}
@@ -84,12 +89,85 @@ func ParseFile(fileName string) (*ParsedFile, error) {
 		return nil, errors.New("Only one smart contract must exist")
 	}
 
-	return &res, nil
+	return res, nil
+}
+
+func (pf *ParsedFile) parseTypes() error {
+	pf.types = make(map[string]*ast.TypeSpec)
+	for _, decl := range pf.node.Decls {
+		tDecl, ok := decl.(*ast.GenDecl)
+		if !ok || tDecl.Tok != token.TYPE {
+			continue
+		}
+
+		for _, e := range tDecl.Specs {
+			typeNode := e.(*ast.TypeSpec)
+
+			err := pf.parseTypeSpec(typeNode)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) parseTypeSpec(typeSpec *ast.TypeSpec) error {
+	if isContractTypeSpec(typeSpec) {
+		if pf.contract != "" {
+			return errors.New("more than one contract in a file")
+		}
+		pf.contract = typeSpec.Name.Name
+	} else {
+		pf.types[typeSpec.Name.Name] = typeSpec
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) parseFunctionsAndMethods() error {
+	pf.methods = make(map[string][]*ast.FuncDecl)
+	pf.constructors = make(map[string][]*ast.FuncDecl)
+	for _, decl := range pf.node.Decls {
+		fd, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+
+		if fd.Recv == nil || fd.Recv.NumFields() == 0 {
+			pf.parseConstructor(fd)
+		} else {
+			typename := typeName(fd.Recv.List[0].Type)
+			pf.methods[typename] = append(pf.methods[typename], fd)
+		}
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) parseConstructor(fd *ast.FuncDecl) {
+	if !strings.HasPrefix(fd.Name.Name, "New") {
+		return // doesn't look like a constructor
+	}
+
+	if fd.Type.Results.NumFields() < 1 {
+		log.Infof("Ignored %q as constructor, not enought returned values", fd.Name.Name)
+		return
+	}
+
+	if fd.Type.Results.NumFields() > 1 {
+		log.Errorf("Constructor %q returns more than one argument, not supported at the moment", fd.Name.Name)
+		return
+	}
+
+	typename := typeName(fd.Type.Results.List[0].Type)
+	pf.constructors[typename] = append(pf.constructors[typename], fd)
 }
 
 // codeOfNode returns source code of an AST node
-func (r *ParsedFile) codeOfNode(n ast.Node) string {
-	return string(r.code[n.Pos()-1 : n.End()-1])
+func (pf *ParsedFile) codeOfNode(n ast.Node) string {
+	return string(pf.code[n.Pos()-1 : n.End()-1])
 }
 
 func openTemplate(fileName string) (*template.Template, error) {
@@ -277,80 +355,31 @@ func typeName(t ast.Expr) string {
 	return t.(*ast.Ident).Name
 }
 
-// IsContract returns true if type declares a contract,
-// e.g. struct with foundation.BaseContract embedded
-func IsContract(typeNode *ast.TypeSpec) bool {
+func isContractTypeSpec(typeNode *ast.TypeSpec) bool {
 	baseContract := "foundation.BaseContract"
-	switch st := typeNode.Type.(type) {
-	case *ast.StructType:
-		if st.Fields == nil {
-			return false
+	st, ok := typeNode.Type.(*ast.StructType)
+	if !ok {
+		return false
+	}
+	if st.Fields == nil || st.Fields.NumFields() == 0 {
+		return false
+	}
+	for _, fd := range st.Fields.List {
+		if len(fd.Names) != 0 {
+			continue // named struct field
 		}
-		for _, fd := range st.Fields.List {
-			selectField, ok := fd.Type.(*ast.SelectorExpr)
-			if !ok {
-				continue
-			}
-			pack := selectField.X.(*ast.Ident).Name
-			class := selectField.Sel.Name
-			if (baseContract == (pack + "." + class)) && len(fd.Names) == 0 {
-				return true
-			}
+		selectField, ok := fd.Type.(*ast.SelectorExpr)
+		if !ok {
+			continue
+		}
+		pack := selectField.X.(*ast.Ident).Name
+		class := selectField.Sel.Name
+		if baseContract == (pack + "." + class) {
+			return true
 		}
 	}
 
 	return false
-}
-
-func getMethods(parsed *ParsedFile) error {
-	parsed.types = make(map[string]*ast.TypeSpec)
-	parsed.methods = make(map[string][]*ast.FuncDecl)
-	parsed.constructors = make(map[string][]*ast.FuncDecl)
-	for _, d := range parsed.node.Decls {
-		switch td := d.(type) {
-		case *ast.GenDecl:
-			if td.Tok != token.TYPE {
-				continue
-			}
-
-			for _, e := range td.Specs {
-				typeNode := e.(*ast.TypeSpec)
-
-				if IsContract(typeNode) {
-					if parsed.contract != "" {
-						return errors.New("more than one contract in a file")
-					}
-					parsed.contract = typeNode.Name.Name
-				} else {
-					parsed.types[typeNode.Name.Name] = typeNode
-				}
-			}
-		case *ast.FuncDecl:
-			if td.Recv == nil || td.Recv.NumFields() == 0 {
-				if !strings.HasPrefix(td.Name.Name, "New") {
-					continue // doesn't look like a constructor
-				}
-
-				if td.Type.Results.NumFields() < 1 {
-					log.Infof("Ignored %q as constructor, not enought returned values", td.Name.Name)
-					continue
-				}
-
-				if td.Type.Results.NumFields() > 1 {
-					log.Errorf("Constructor %q returns more than one argument, not supported at the moment", td.Name.Name)
-					continue
-				}
-
-				typename := typeName(td.Type.Results.List[0].Type)
-				parsed.constructors[typename] = append(parsed.constructors[typename], td)
-			} else {
-				typename := typeName(td.Recv.List[0].Type)
-				parsed.methods[typename] = append(parsed.methods[typename], td)
-			}
-		}
-	}
-
-	return nil
 }
 
 // nolint
