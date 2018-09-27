@@ -17,6 +17,8 @@
 package hostnetwork
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 )
@@ -25,13 +27,20 @@ import (
 type MockPulseManager struct {
 	currentPulse core.Pulse
 	callback     func(core.Pulse)
+	mutex        sync.Mutex
 }
 
 func (pm *MockPulseManager) Current() (*core.Pulse, error) {
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
+
 	return &pm.currentPulse, nil
 }
 
 func (pm *MockPulseManager) Set(pulse core.Pulse) error {
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
+
 	pm.currentPulse = pulse
 	if pm.callback != nil {
 		pm.callback(pulse)
