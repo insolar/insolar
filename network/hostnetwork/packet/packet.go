@@ -22,6 +22,8 @@ import (
 	"encoding/gob"
 	"io"
 
+	"github.com/insolar/insolar/core"
+
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -62,6 +64,8 @@ const (
 	TypePulse
 	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network
 	TypeGetRandomHosts
+	// TypeActiveNodes is packet type to get an active nodes.
+	TypeActiveNodes
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -78,6 +82,12 @@ type Packet struct {
 	Data       interface{}
 	Error      error
 	IsResponse bool
+}
+
+type ActiveNode struct {
+	ID        id.ID
+	Address   string
+	Reference core.RecordRef
 }
 
 // NewPingPacket can be used as a shortcut for creating ping packets instead of packet Builder.
@@ -122,6 +132,8 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestPulse)
 	case TypeGetRandomHosts:
 		_, valid = m.Data.(*RequestGetRandomHosts)
+	case TypeActiveNodes:
+		_, valid = m.Data.(*RequestActiveNodes)
 	default:
 		valid = false
 	}
