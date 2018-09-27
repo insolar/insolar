@@ -80,6 +80,7 @@ type HostHandler interface {
 	Disconnect()
 	Listen() error
 	ObtainIP() error
+	GetActiveNodes() error
 	Bootstrap() error
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error

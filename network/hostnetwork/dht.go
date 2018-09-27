@@ -865,6 +865,14 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 	return nil
 }
 
+func (dht *DHT) GetActiveNodes() error {
+	var err error
+	for _, target := range dht.options.BootstrapHosts {
+		err = SendActiveNodesRequest(dht, target)
+	}
+	return err
+}
+
 // HtFromCtx returns a routing hashtable known by ctx.
 func (dht *DHT) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
 	htIdx := ctx.Value(ctxTableIndex).(int)
