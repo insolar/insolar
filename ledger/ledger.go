@@ -32,7 +32,7 @@ type Ledger struct {
 	am      *artifactmanager.LedgerArtifactManager
 	pm      *pulsemanager.PulseManager
 	jc      *jetcoordinator.JetCoordinator
-	handler *artifactmanager.EventHandler
+	handler *artifactmanager.MessageHandler
 }
 
 // GetPulseManager returns PulseManager.
@@ -48,11 +48,6 @@ func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
 // GetArtifactManager returns artifact manager to work with.
 func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.am
-}
-
-// HandleEvent is a wrapper for EventHandler.Handle method.
-func (l *Ledger) HandleEvent(e core.Event) (core.Reaction, error) {
-	return l.handler.Handle(e)
 }
 
 // NewLedger creates new ledger instance.
@@ -74,11 +69,11 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
-
-	handler, err := artifactmanager.NewEventHandler(db)
+	handler, err := artifactmanager.NewMessageHandler(db)
 	if err != nil {
 		return nil, err
 	}
+
 	err = db.Bootstrap()
 	if err != nil {
 		return nil, err
@@ -102,7 +97,7 @@ func NewTestLedger(
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
 	jc *jetcoordinator.JetCoordinator,
-	amh *artifactmanager.EventHandler,
+	amh *artifactmanager.MessageHandler,
 ) *Ledger {
 	return &Ledger{
 		db:      db,
@@ -117,6 +112,9 @@ func NewTestLedger(
 func (l *Ledger) Start(c core.Components) error {
 	var err error
 	if err = l.am.Link(c); err != nil {
+		return err
+	}
+	if err = l.handler.Link(c); err != nil {
 		return err
 	}
 

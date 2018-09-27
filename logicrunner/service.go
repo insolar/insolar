@@ -24,8 +24,8 @@ import (
 	"net/rpc"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
@@ -77,26 +77,26 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 }
 
 // MakeBaseEvent makes base of logicrunner event from base of up request
-func MakeBaseEvent(req rpctypes.UpBaseReq) event.BaseLogicEvent {
-	return event.BaseLogicEvent{
+func MakeBaseEvent(req rpctypes.UpBaseReq) message.BaseLogicEvent {
+	return message.BaseLogicEvent{
 		Caller: req.Me,
 	}
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
-func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) error {
-	if gpr.lr.EventBus == nil {
+func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
+	if gpr.lr.MessageBus == nil {
 		return errors.New("event bus was not set during initialization")
 	}
 
-	var mode event.MethodReturnMode
+	var mode message.MethodReturnMode
 	if req.Wait {
-		mode = event.ReturnResult
+		mode = message.ReturnResult
 	} else {
-		mode = event.ReturnNoWait
+		mode = message.ReturnNoWait
 	}
 
-	e := &event.CallMethod{
+	msg := &message.CallMethod{
 		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
 		ReturnMode:     mode,
 		ObjectRef:      req.Object,
@@ -104,7 +104,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 		Arguments:      req.Arguments,
 	}
 
-	res, err := gpr.lr.EventBus.Dispatch(e)
+	res, err := gpr.lr.MessageBus.Send(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -112,36 +112,36 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
 		Type:   CaseRecordTypeRouteCall,
 		ReqSig: HashInterface(req),
-		Resp:   reply,
+		Resp:   rep,
 	})
-	reply.Result = res.(*reaction.CommonReaction).Result
+	rep.Result = res.(*reply.Common).Result
 
 	return nil
 }
 
 // RouteConstructorCall routes call from a contract to a constructor of another contract
-func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *rpctypes.UpRouteConstructorResp) error {
-	if gpr.lr.EventBus == nil {
+func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rpctypes.UpRouteConstructorResp) error {
+	if gpr.lr.MessageBus == nil {
 		return errors.New("event bus was not set during initialization")
 	}
 
-	e := &event.CallConstructor{
+	msg := &message.CallConstructor{
 		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
 		ClassRef:       req.Reference,
 		Name:           req.Constructor,
 		Arguments:      req.Arguments,
 	}
 
-	res, err := gpr.lr.EventBus.Dispatch(e)
+	res, err := gpr.lr.MessageBus.Send(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
 	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
 		Type:   CaseRecordTypeRouteCall,
 		ReqSig: HashInterface(req),
-		Resp:   reply,
+		Resp:   rep,
 	})
-	reply.Data = res.(*reaction.CommonReaction).Data
+	rep.Data = res.(*reply.Common).Data
 	return nil
 }
 

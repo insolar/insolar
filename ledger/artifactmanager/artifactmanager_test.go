@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/core"
@@ -44,26 +45,58 @@ type preparedAMTestData struct {
 	requestRef *record.Reference
 }
 
-type eventBusMock struct {
-	handler *EventHandler
+type messageBusMock struct {
+	handlers map[core.MessageType]core.MessageHandler
 }
 
-func (m *eventBusMock) Dispatch(e core.Event) (core.Reaction, error) {
-	return m.handler.Handle(e)
+func NewMessageBusMock() *messageBusMock {
+	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
 }
 
-func (m *eventBusMock) DispatchAsync(e core.Event) {
-	m.handler.Handle(e)
+func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandler) error {
+	_, ok := mb.handlers[p]
+	if ok {
+		return errors.New("handler for this type already exists")
+	}
+
+	mb.handlers[p] = handler
+	return nil
+}
+
+func (mb *messageBusMock) Start(components core.Components) error {
+	panic("implement me")
+}
+
+func (mb *messageBusMock) Stop() error {
+	panic("implement me")
+}
+
+func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
+	handler, ok := mb.handlers[m.Type()]
+	if !ok {
+		return nil, errors.New("no handler for this message type")
+	}
+
+	return handler(m)
+}
+
+func (mb *messageBusMock) SendAsync(m core.Message) {
+	panic("implement me")
 }
 
 func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 	db, cleaner := storagetest.TmpDB(t, "")
 
+	mb := NewMessageBusMock()
+	components := core.Components{MessageBus: mb}
+	handler := MessageHandler{db: db}
+	handler.Link(components)
+
 	return preparedAMTestData{
 		db: db,
 		manager: &LedgerArtifactManager{
-			db:       db,
-			eventBus: &eventBusMock{handler: &EventHandler{db: db}},
+			db:         db,
+			messageBus: mb,
 		},
 		domainRef:  genRandomRef(),
 		requestRef: genRandomRef(),

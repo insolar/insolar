@@ -275,8 +275,8 @@ func TestMain(m *testing.M) {
 type postParams map[string]interface{}
 
 type errorResponse struct {
-	Code  int    `json:"code"`
-	Event string `json:"event"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
 type responseInterface interface {
@@ -425,7 +425,7 @@ func TestGetRequest(t *testing.T) {
 	unmarshalResponseWithError(t, body, getResponse)
 
 	assert.Equal(t, api.BadRequest, getResponse.Err.Code)
-	assert.Equal(t, "Bad request", getResponse.Err.Event)
+	assert.Equal(t, "Bad request", getResponse.Err.Message)
 }
 
 func TestWrongJson(t *testing.T) {
@@ -439,7 +439,7 @@ func TestWrongJson(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Event)
+	assert.Equal(t, "Bad request", response.Err.Message)
 }
 
 func TestWrongQueryType(t *testing.T) {
@@ -451,7 +451,7 @@ func TestWrongQueryType(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Wrong query parameter 'query_type' = 'wrong_query_type'", response.Err.Event)
+	assert.Equal(t, "Wrong query parameter 'query_type' = 'wrong_query_type'", response.Err.Message)
 }
 
 func TestWithoutQueryType(t *testing.T) {
@@ -461,7 +461,7 @@ func TestWithoutQueryType(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Wrong query parameter 'query_type' = ''", response.Err.Event)
+	assert.Equal(t, "Wrong query parameter 'query_type' = ''", response.Err.Message)
 }
 
 func TestTooMuchParams(t *testing.T) {
@@ -487,7 +487,7 @@ func TestQueryTypeAsIntParams(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Event)
+	assert.Equal(t, "Bad request", response.Err.Message)
 }
 
 func TestWrongTypeInParams(t *testing.T) {
@@ -500,7 +500,7 @@ func TestWrongTypeInParams(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Event)
+	assert.Equal(t, "Bad request", response.Err.Message)
 }
 
 // TODO: unskip test after doing errors in smart contracts
@@ -514,7 +514,7 @@ func _TestWrongReferenceInParams(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Event)
+	assert.Equal(t, "Bad request", response.Err.Message)
 }
 
 func TestTransferNegativeAmount(t *testing.T) {

@@ -29,11 +29,11 @@ package main
 	func main() {
 		// global logger
 		log.SetLevel("Debug")
-		log.Debugln("debug log event")
+		log.Debugln("debug log message")
 
 		// local logger
 		logger, _ := log.NewLog(configuration.Log{Level: "Warning", Adapter: "logrus"})
-		logger.Warnln("warning log event")
+		logger.Warnln("warning log message")
 	}
 
 */

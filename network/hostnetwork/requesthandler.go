@@ -205,7 +205,7 @@ func RelayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-// CascadeSendMessage sends a event to the next cascade layer.
+// CascadeSendMessage sends a message to the next cascade layer.
 func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, targetID string, method string, args [][]byte) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
