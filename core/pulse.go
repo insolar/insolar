@@ -25,7 +25,7 @@ const (
 	EntropySize     = 64
 )
 
-// GeneratedEntropy is 64 random bytes used in every pseudo-random calculations.
+// Entropy is 64 random bytes used in every pseudo-random calculations.
 type Entropy [EntropySize]byte
 
 // PulseNumber is a sequential number of Pulse.
@@ -53,13 +53,16 @@ type Pulse struct {
 	Signs       map[string]PulseSenderConfirmation
 }
 
+// Information about pulse's confirmations
 type PulseSenderConfirmation struct {
 	ChosenPublicKey string
 	Signature       []byte
 }
 
+// Hardcoded date of first pulse
 const FirstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
 
+// PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {
 	// Current returns current pulse structure.
 	Current() (*Pulse, error)

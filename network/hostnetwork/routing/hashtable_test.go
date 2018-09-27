@@ -120,6 +120,7 @@ func TestHashTable_GetHosts(t *testing.T) {
 
 	assert.Equal(t, 10, len(ht.GetHosts(100)))
 	assert.Equal(t, 4, len(ht.GetHosts(4)))
+	assert.Equal(t, 10, len(ht.GetMulticastHosts()))
 }
 
 func TestHashTable_MarkHostAsSeen(t *testing.T) {

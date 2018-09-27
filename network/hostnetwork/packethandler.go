@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -31,9 +31,12 @@ import (
 )
 
 // DispatchPacketType checks event type.
-// nolint: gocyclo
-func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	// TODO: add counter
+func DispatchPacketType(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder,
+) (*packet.Packet, error) { // nolint: gocyclo
 	switch msg.Type {
 	case packet.TypeFindHost:
 		return processFindHost(hostHandler, ctx, msg, packetBuilder)
@@ -62,7 +65,7 @@ func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	case packet.TypeCascadeSend:
 		return processCascadeSend(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypePulse:
-		return processPulse(hostHandler, msg, packetBuilder)
+		return processPulse(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeGetRandomHosts:
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
 	default:
@@ -87,7 +90,7 @@ func processGetRandomHosts(
 	return packetBuilder.Response(&packet.ResponseGetRandomHosts{Hosts: hosts, Error: ""}).Build(), nil
 }
 
-func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestPulse)
 	pm := hostHandler.GetNetworkCommonFacade().GetPulseManager()
 	if pm == nil {
@@ -104,6 +107,9 @@ func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packe
 			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
 		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
+		ht := hostHandler.HtFromCtx(ctx)
+		hosts := ht.GetMulticastHosts()
+		go ResendPulseToKnownHosts(hostHandler, hosts, data)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }

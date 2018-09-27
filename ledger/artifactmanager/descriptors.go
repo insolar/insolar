@@ -123,15 +123,18 @@ func (d *ObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDes
 	return d.am.GetClass(d.class, state)
 }
 
+// RefIterator implements core.RefIterator.
 type RefIterator struct {
 	elements     []core.RecordRef
 	currentIndex int
 }
 
+// HasNext checks if any elements left in iterator.
 func (i *RefIterator) HasNext() bool {
 	return len(i.elements) > i.currentIndex
 }
 
+// Next returns next element.
 func (i *RefIterator) Next() (core.RecordRef, error) {
 	el := i.elements[i.currentIndex]
 	i.currentIndex++
