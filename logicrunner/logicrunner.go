@@ -139,7 +139,7 @@ func (lr *LogicRunner) Execute(e core.LogicRunnerEvent) (core.Reaction, error) {
 			Type: CaseRecordTypeMethodCall,
 			Resp: e,
 		})
-		re, err := lr.executeMethodCall(ctx, m) // TODO: move machinepref inside lr
+		re, err := lr.executeMethodCall(ctx, m)
 		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
 			Type: CaseRecordTypeMethodCallResult,
 			Resp: re,
@@ -170,7 +170,7 @@ type objectBody struct {
 	MachineType core.MachineType
 }
 
-func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.MachineType) (*objectBody, error) {
+func (lr *LogicRunner) getObjectEvent(objref core.RecordRef) (*objectBody, error) {
 	objDesc, err := lr.ArtifactManager.GetObject(objref, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
@@ -181,7 +181,7 @@ func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
 
-	codeDesc, err := classDesc.CodeDescriptor(machinePref)
+	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
 	}
@@ -194,8 +194,8 @@ func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.
 	}, nil
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethod, machinePref []core.MachineType) (core.Reaction, error) {
-	objbody, err := lr.getObjectEvent(e.ObjectRef, machinePref)
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethod) (core.Reaction, error) {
+	objbody, err := lr.getObjectEvent(e.ObjectRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
@@ -241,7 +241,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 }
 
-func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *event.CallConstructor, machinePref []core.MachineType) (core.Reaction, error) {
+func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *event.CallConstructor) (core.Reaction, error) {
 
 	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 	if err != nil {
@@ -249,7 +249,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *even
 	}
 	ctx.Class = classDesc.HeadRef()
 
-	codeDesc, err := classDesc.CodeDescriptor(machinePref)
+	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class's code descriptor")
 	}
