@@ -63,7 +63,6 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	assert.NoError(t, err)
 
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
-	fmt.Println("RUNNERPATH", runnerbin)
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		RPCListen: "127.0.0.1:7778",
 		GoPlugin: &configuration.GoPlugin{

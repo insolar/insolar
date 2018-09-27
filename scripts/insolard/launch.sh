@@ -1,9 +1,9 @@
 set -e
 
 BIN_DIR=bin
-INSGORUND_BIN=$BIN_DIR/insgorund
 TEST_DATA=testdata
 INSOLARD=$BIN_DIR/insolard
+INSGORUND=$BIN_DIR/insgorund
 CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
 
@@ -92,5 +92,6 @@ process_input_params $param
 prepare
 build_binaries
 
+$INSGORUND -l 127.0.0.1:18181 --rpc 127.0.0.1:18182 &
 $INSOLARD --config scripts/insolard/insolar.yaml
 

@@ -52,8 +52,6 @@ logicrunner:
   builtin: {}
   goplugin:
     runnerlisten: 127.0.0.1:18181
-    runnerpath: ../testdata/logicrunner/insgorund
-    runnercodepath: contractstorage
 pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
