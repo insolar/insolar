@@ -185,6 +185,11 @@ func (pf *ParsedFile) ProxyPackageName() (string, error) {
 	return proxyPackageName, nil
 }
 
+// ContractName returns name of the contract
+func (pf *ParsedFile) ContractName() string {
+	return pf.node.Name.Name
+}
+
 // CodeOfNode returns source code of an AST node
 func (pf *ParsedFile) CodeOfNode(n ast.Node) string {
 	return string(pf.code[n.Pos()-1 : n.End()-1])
@@ -280,6 +285,40 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]st
 		res = append(res, info)
 	}
 	return res
+}
+
+// ChangePackageToMain changes package of the parsed code to "main"
+func (pf *ParsedFile) ChangePackageToMain() {
+	pf.node.Name.Name = "main"
+}
+
+// ReplaceFoundationImport replaces import of "client" foundation with "server"
+// version
+func (pf *ParsedFile) ReplaceFoundationImport() {
+	quoted := strconv.Quote(clientFoundation)
+	for _, d := range pf.node.Decls {
+		td, ok := d.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		if td.Tok != token.IMPORT {
+			continue
+		}
+		for _, s := range td.Specs {
+			is, ok := s.(*ast.ImportSpec)
+			if !ok {
+				continue
+			}
+			if is.Path.Value == quoted {
+				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
+			}
+		}
+	}
+}
+
+// Write prints `out` contract's code, it could be changed with a few methods
+func (pf *ParsedFile) Write(out io.Writer) error {
+	return printer.Fprint(out, pf.fileSet, pf.node)
 }
 
 func openTemplate(fileName string) (*template.Template, error) {
@@ -479,48 +518,6 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 		}
 	}
 	return imports
-}
-
-func CmdRewriteImports(parsed *ParsedFile, w io.Writer) error {
-	if err := rewriteImports(parsed); err != nil {
-		return errors.Wrap(err, "couldn't process")
-	}
-	if err := printer.Fprint(w, parsed.fileSet, parsed.node); err != nil {
-		return errors.Wrap(err, "couldn't save")
-	}
-	return nil
-}
-
-func rewriteImports(p *ParsedFile) error {
-	quoted := strconv.Quote(clientFoundation)
-	for _, d := range p.node.Decls {
-		td, ok := d.(*ast.GenDecl)
-		if !ok {
-			continue
-		}
-		if td.Tok != token.IMPORT {
-			continue
-		}
-		for _, s := range td.Specs {
-			is, ok := s.(*ast.ImportSpec)
-			if !ok {
-				continue
-			}
-			if is.Path.Value == quoted {
-				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
-			}
-		}
-	}
-	return nil
-}
-
-func GetContractName(p *ParsedFile) string {
-	return p.node.Name.Name
-}
-
-func RewriteContractPackage(p *ParsedFile, w io.Writer) {
-	p.node.Name.Name = "main"
-	printer.Fprint(w, p.fileSet, p.node)
 }
 
 // GetRealGenesisDir return dir under genesis dir
