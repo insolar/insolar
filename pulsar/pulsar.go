@@ -47,6 +47,7 @@ const (
 	Failed                State = -1
 )
 
+// Base pulsar's struct
 type Pulsar struct {
 	Sock               net.Listener
 	SockConnectionType configuration.ConnectionType
@@ -138,6 +139,9 @@ func NewPulsar(
 			OutgoingClient:    rpcWrapperFactory.CreateWrapper(),
 		}
 	}
+
+	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.BftGrid = map[string]map[string]*BftCell{}
 
 	gob.Register(Payload{})
 	gob.Register(HandshakePayload{})
@@ -289,7 +293,7 @@ func (pulsar *Pulsar) SyncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pu
 			continue
 		}
 
-		verified, err := checkSignature(&core.Pulse{Entropy: payloadData.Entropy, PulseNumber: payloadData.PulseNumber}, nodeKey, sign)
+		verified, err := checkSignature(&core.Pulse{Entropy: payloadData.Entropy, PulseNumber: payloadData.PulseNumber}, nodeKey, sign.Signature)
 		if err != nil || !verified {
 			continue
 		}
@@ -576,7 +580,7 @@ func (pulsar *Pulsar) stateSwitchedToVerifying() {
 		pulsar.switchStateTo(Failed, err)
 	}
 
-	if len(pulsar.OwnedBftRow) == 1 {
+	if len(pulsar.OwnedBftRow) == 0 {
 		pulsar.EntropyForNodes = pulsar.GeneratedEntropy
 		pulsar.PulseSenderToNodes = currentPulsarRow
 		pulsar.switchStateTo(SendingEntropyToNodes, nil)
@@ -589,11 +593,11 @@ func (pulsar *Pulsar) stateSwitchedToVerifying() {
 
 	minConsensusNumber := (len(pulsar.OwnedBftRow) * 2) / 3
 
-	for columnPulsarKey, _ := range pulsar.OwnedBftRow {
+	for columnPulsarKey := range pulsar.OwnedBftRow {
 		cache := map[string]int{}
 		finalSetOfPulsars = append(finalSetOfPulsars, columnPulsarKey)
 
-		for rowPulsarKey, _ := range pulsar.OwnedBftRow {
+		for rowPulsarKey := range pulsar.OwnedBftRow {
 			bftCell := pulsar.BftGrid[rowPulsarKey][columnPulsarKey]
 			isChecked, err := checkSignature(bftCell.Entropy, columnPulsarKey, bftCell.Sign)
 

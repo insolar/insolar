@@ -93,6 +93,41 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	}()
 }
 
+//func TestOnePulsar_FullStatesTransition(t *testing.T) {
+//	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+//	assert.NoError(t, err)
+//	firstPublicExported, err := ExportPrivateKey(firstKey)
+//	assert.NoError(t, err)
+//
+//	storage := &pulsartestutil.MockStorage{}
+//	firstPulse := 123
+//	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: core.PulseNumber(firstPulse)}, nil)
+//	pulsar, err := NewPulsar(configuration.Pulsar{
+//		ConnectionType:   "tcp",
+//		ListenAddress:    ":1639",
+//		PrivateKey:       firstPublicExported,
+//		ListOfNeighbours: []*configuration.PulsarNodeAddress{},
+//		PulseTime: 10000,
+//		ReceivingSignTimeout:   1000,
+//		ReceivingNumberTimeout: 1000,
+//		ReceivingVectorTimeout: 1000,},
+//		storage,
+//
+//		&RpcClientWrapperFactoryImpl{},
+//		pulsartestutil.MockEntropyGenerator{},
+//		net.Listen,
+//	)
+//	assert.NoError(t, err)
+//
+//	pulsar.StartConsensusProcess(core.PulseNumber(firstPulse + 1))
+//
+//	for pulsar.State != SendingEntropyToNodes {
+//		time.Sleep(1 * time.Millisecond)
+//	}
+//
+//	assert.NoError(t, err)
+//}
+
 //
 //func TestTwoPulsars_Full_Consensus(t *testing.T) {
 //	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

@@ -54,7 +54,7 @@ func main() {
 		panic(err)
 	}
 
-	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, net.Listen)
+	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, &pulsar.RpcClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
