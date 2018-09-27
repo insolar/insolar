@@ -209,14 +209,11 @@ func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
 	return rets
 }
 
-func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, []map[string]interface{}, map[string]bool) {
-	imports := make(map[string]bool)
-	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
+func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, []map[string]interface{}) {
 
 	var methodsInfo []map[string]interface{}
 	for _, method := range parsed.methods[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-		extendImportsMap(parsed, method.Type.Params, imports)
 
 		info := map[string]interface{}{
 			"Name":                method.Name.Name,
@@ -231,7 +228,6 @@ func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, 
 	var funcInfo []map[string]interface{}
 	for _, f := range parsed.constructors[parsed.contract] {
 		argsInit, argsList := generateZeroListOfTypes(parsed, "args", f.Type.Params)
-		extendImportsMap(parsed, f.Type.Params, imports)
 
 		info := map[string]interface{}{
 			"Name":              f.Name.Name,
@@ -242,7 +238,7 @@ func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, 
 		funcInfo = append(funcInfo, info)
 	}
 
-	return methodsInfo, funcInfo, imports
+	return methodsInfo, funcInfo
 }
 
 // GenerateContractWrapper generates and writes into `out` source code
@@ -255,7 +251,9 @@ func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
 
-	methodsInfo, funcInfo, imports := generateContractMethodsInfo(parsed)
+	imports := parsed.generateImports(true)
+
+	methodsInfo, funcInfo := generateContractMethodsInfo(parsed)
 
 	data := struct {
 		PackageName    string
@@ -316,7 +314,7 @@ func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Wri
 
 	constructorProxies := generateConstructorProxies(parsed)
 
-	imports := generateImports(parsed)
+	imports := parsed.generateImports(false)
 
 	tmpl, err := openTemplate("templates/proxy.go.tpl")
 	if err != nil {
@@ -511,17 +509,23 @@ func generateMethodsProxies(parsed *ParsedFile) []map[string]interface{} {
 	return methodsProxies
 }
 
-func generateImports(parsed *ParsedFile) map[string]bool {
+func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
-	imports[fmt.Sprintf(`"%s"`, corePath)] = true
-	for _, method := range parsed.methods[parsed.contract] {
-		extendImportsMap(parsed, method.Type.Params, imports)
-		extendImportsMap(parsed, method.Type.Results, imports)
+	if !wrapper {
+		imports[fmt.Sprintf(`"%s"`, corePath)] = true
 	}
-	for _, fun := range parsed.constructors[parsed.contract] {
-		extendImportsMap(parsed, fun.Type.Params, imports)
-		extendImportsMap(parsed, fun.Type.Results, imports)
+	for _, method := range pf.methods[pf.contract] {
+		extendImportsMap(pf, method.Type.Params, imports)
+		if !wrapper {
+			extendImportsMap(pf, method.Type.Results, imports)
+		}
+	}
+	for _, fun := range pf.constructors[pf.contract] {
+		extendImportsMap(pf, fun.Type.Params, imports)
+		if !wrapper {
+			extendImportsMap(pf, fun.Type.Results, imports)
+		}
 	}
 	return imports
 }
