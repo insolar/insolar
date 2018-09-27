@@ -40,7 +40,7 @@ import (
 )
 
 const HOST = "http://localhost:19191"
-const TestUrl = HOST + "/api/v1"
+const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
 
 var cmd *exec.Cmd
@@ -216,33 +216,33 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolard was successfully builded")
 
-	err = startInsolard()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start insolard: ")
-	}
-	fmt.Println("[ setup ] insolard was successfully started")
-
 	err = startInsgorund()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
 	fmt.Println("[ setup ] insgorund was successfully started")
 
+	err = startInsolard()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't start insolard: ")
+	}
+	fmt.Println("[ setup ] insolard was successfully started")
+
 	return nil
 }
 
 func teardown() {
-	err := stopInsgorund()
-	if err != nil {
-		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
-	}
-	fmt.Println("[ teardown ] insgorund was successfully stoped")
-
-	err = stopInsolard()
+	err := stopInsolard()
 	if err != nil {
 		fmt.Println("[ teardown ] failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
+
+	err = stopInsgorund()
+	if err != nil {
+		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
+	}
+	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
 	err = deleteDirForData()
 	if err != nil {
@@ -321,7 +321,7 @@ type dumpAllUsersResponse struct {
 
 func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -419,14 +419,14 @@ func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{
 		"query_type": "dump_all_users",
 	})
-	testUrl := HOST + "/not_api/v1"
-	postResp, err := http.Post(testUrl, "application/json", bytes.NewBuffer(jsonValue))
+	testURL := HOST + "/not_api/v1"
+	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, postResp.StatusCode)
 }
 
 func TestGetRequest(t *testing.T) {
-	postResp, err := http.Get(TestUrl)
+	postResp, err := http.Get(TestURL)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -440,7 +440,7 @@ func TestGetRequest(t *testing.T) {
 }
 
 func TestWrongJson(t *testing.T) {
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
+	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer([]byte("some not json value")))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
