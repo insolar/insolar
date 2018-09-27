@@ -197,6 +197,23 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 	return nil
 }
 
+func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
+	var res []map[string]interface{}
+	for _, fun := range list {
+		argsInit, argsList := generateZeroListOfTypes(pf, "args", fun.Type.Params)
+
+		info := map[string]interface{}{
+			"Name":                fun.Name.Name,
+			"ArgumentsZeroList":   argsInit,
+			"Arguments":           argsList,
+			"Results":             numberedVars(fun.Type.Results, "ret"),
+			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, "error"),
+		}
+		res = append(res, info)
+	}
+	return res
+}
+
 // WriteProxy generates and writes into `out` source code of contract's proxy
 func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	proxyPackageName, err := ProxyPackageName(pf)
@@ -263,23 +280,6 @@ func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
 		}
 	}
 	return rets
-}
-
-func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
-	var res []map[string]interface{}
-	for _, fun := range list {
-		argsInit, argsList := generateZeroListOfTypes(pf, "args", fun.Type.Params)
-
-		info := map[string]interface{}{
-			"Name":                fun.Name.Name,
-			"ArgumentsZeroList":   argsInit,
-			"Arguments":           argsList,
-			"Results":             numberedVars(fun.Type.Results, "ret"),
-			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, "error"),
-		}
-		res = append(res, info)
-	}
-	return res
 }
 
 // ProxyPackageName guesses user friendly contract "name" from file name
