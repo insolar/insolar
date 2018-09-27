@@ -415,7 +415,6 @@ func isContractTypeSpec(typeNode *ast.TypeSpec) bool {
 	return false
 }
 
-// nolint
 func generateTypes(parsed *ParsedFile) []string {
 	var types []string
 	for _, t := range parsed.types {
