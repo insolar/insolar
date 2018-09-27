@@ -17,6 +17,8 @@
 package core
 
 import (
+	"crypto/rand"
+
 	"github.com/jbenet/go-base58"
 )
 
@@ -54,5 +56,12 @@ func NewRefFromBase58(str string) RecordRef {
 	decoded := base58.Decode(str)
 	var ref RecordRef
 	copy(ref[:], decoded)
+	return ref
+}
+
+// RandomRef generates random RecordRef
+func RandomRef() RecordRef {
+	ref := [64]byte{}
+	rand.Read(ref[:]) // nolint
 	return ref
 }
