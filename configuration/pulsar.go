@@ -33,10 +33,11 @@ type Pulsar struct {
 	PrivateKey     string
 	Storage        Storage
 
-	PulseTime              int32 // ms
-	ReceivingSignTimeout   int32 // ms
-	ReceivingNumberTimeout int32 // ms
-	ReceivingVectorTimeout int32 // ms
+	PulseTime                      int32 // ms
+	ReceivingSignTimeout           int32 // ms
+	ReceivingNumberTimeout         int32 // ms
+	ReceivingVectorTimeout         int32 // ms
+	ReceivingSignsForChosenTimeout int32 // ms
 
 	ListOfNeighbours []*PulsarNodeAddress
 }

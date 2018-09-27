@@ -34,16 +34,17 @@ import (
 type State int
 
 const (
-	WaitingForTheStart   State = 0
-	WaitingForTheSigns   State = 2
-	SendingEntropy       State = 3
-	WaitingForTheEntropy State = 4
-	SendingVector        State = 5
-	WaitingForTheVectors State = 6
-	Verifying            State = 7
-	SendingSignForChosen State = 8
-	SendingToNetwork     State = 9
-	Failed               State = -1
+	WaitingForTheStart    State = 0
+	WaitingForTheSigns    State = 2
+	SendingEntropy        State = 3
+	WaitingForTheEntropy  State = 4
+	SendingVector         State = 5
+	WaitingForTheVectors  State = 6
+	Verifying             State = 7
+	SendingSignForChosen  State = 8
+	WaitingForChosenSigns State = 9
+	SendingEntropyToNodes State = 10
+	Failed                State = -1
 )
 
 type Pulsar struct {
@@ -64,8 +65,9 @@ type Pulsar struct {
 	GeneratedEntropy      core.Entropy
 	GeneratedEntropySign  []byte
 
-	CurrentPulseEntropy core.Entropy
-	CurrentPulseSender  string
+	EntropyForNodes       core.Entropy
+	PulseSenderToNodes    string
+	SignsConfirmedSending map[string]*core.PulseSenderConfirmation
 
 	ProcessingPulseNumber core.PulseNumber
 	LastPulse             *core.Pulse
@@ -403,6 +405,7 @@ func (pulsar *Pulsar) BroadcastEntropy() {
 }
 
 func (pulsar *Pulsar) switchStateTo(state State, arg interface{}) {
+	pulsar.State = state
 	switch state {
 	case WaitingForTheStart:
 		log.Info("Switch to start")
@@ -418,6 +421,12 @@ func (pulsar *Pulsar) switchStateTo(state State, arg interface{}) {
 		pulsar.stateSwitchedToReceivingVector()
 	case Verifying:
 		pulsar.stateSwitchedToVerifying()
+	case WaitingForChosenSigns:
+		pulsar.stateSwitchedToWaitingForChosenSigns()
+	case SendingSignForChosen:
+		pulsar.stateSwitchedToSendingSignForChosen()
+	case SendingEntropyToNodes:
+		pulsar.stateSwitchedToSendingEntropyToNodes()
 	case Failed:
 		pulsar.stateSwitchedToFailed(arg.(error))
 	}
@@ -509,8 +518,14 @@ func (pulsar *Pulsar) stateSwitchedToWaitingForSigns() {
 				return
 			}
 
-			// Calculation with the current pulsar
-			if len(pulsar.OwnedBftRow) == len(pulsar.Neighbours)+1 {
+			connections := 0
+			for _, item := range pulsar.Neighbours {
+				if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
+					connections++
+				}
+			}
+
+			if len(pulsar.OwnedBftRow) == connections {
 				ticker.Stop()
 				pulsar.switchStateTo(SendingEntropy, nil)
 				return
@@ -534,8 +549,14 @@ func (pulsar *Pulsar) stateSwitchedToReceivingVector() {
 				return
 			}
 
-			// Calculation with the current pulsar
-			if len(pulsar.BftGrid) == len(pulsar.Neighbours)+1 {
+			connections := 0
+			for _, item := range pulsar.Neighbours {
+				if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
+					connections++
+				}
+			}
+
+			if len(pulsar.BftGrid) == connections {
 				ticker.Stop()
 				pulsar.switchStateTo(Verifying, nil)
 				return
@@ -555,10 +576,10 @@ func (pulsar *Pulsar) stateSwitchedToVerifying() {
 		pulsar.switchStateTo(Failed, err)
 	}
 
-	if len(pulsar.OwnedBftRow) == 0 {
-		pulsar.CurrentPulseEntropy = pulsar.GeneratedEntropy
-		pulsar.CurrentPulseSender = currentPulsarRow
-		pulsar.switchStateTo(SendingToNetwork, nil)
+	if len(pulsar.OwnedBftRow) == 1 {
+		pulsar.EntropyForNodes = pulsar.GeneratedEntropy
+		pulsar.PulseSenderToNodes = currentPulsarRow
+		pulsar.switchStateTo(SendingEntropyToNodes, nil)
 		return
 	}
 	pulsar.BftGrid[currentPulsarRow] = pulsar.OwnedBftRow
@@ -612,15 +633,77 @@ func (pulsar *Pulsar) stateSwitchedToVerifying() {
 		}
 	}
 
-	pulsar.CurrentPulseEntropy = finalEntropy
+	pulsar.EntropyForNodes = finalEntropy
 	chosenPulsar, err := selectByEntropy(finalEntropy, finalSetOfPulsars, len(finalSetOfPulsars))
-	pulsar.CurrentPulseSender = chosenPulsar[0]
+	pulsar.PulseSenderToNodes = chosenPulsar[0]
 
-	if chosenPulsar[0] == currentPulsarRow {
-		pulsar.switchStateTo(SendingToNetwork, nil)
+	if pulsar.PulseSenderToNodes == currentPulsarRow {
+		pulsar.switchStateTo(WaitingForChosenSigns, nil)
 	} else {
 		pulsar.switchStateTo(SendingSignForChosen, nil)
 
+	}
+}
+
+func (pulsar *Pulsar) stateSwitchedToWaitingForChosenSigns() {
+	ticker := time.NewTicker(10 * time.Millisecond)
+	currentTimeOut := time.Now().Add(time.Duration(pulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
+	go func() {
+		for range ticker.C {
+			if pulsar.State == Failed {
+				ticker.Stop()
+				return
+			}
+
+			connections := 0
+			for _, item := range pulsar.Neighbours {
+				if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
+					connections++
+				}
+			}
+
+			if len(pulsar.SignsConfirmedSending) >= (connections/2)+1 {
+				ticker.Stop()
+				pulsar.switchStateTo(SendingEntropyToNodes, nil)
+				return
+			}
+
+			if time.Now().After(currentTimeOut) {
+				ticker.Stop()
+				pulsar.switchStateTo(Failed, errors.New("Not enought confirmation for sending result to network"))
+			}
+		}
+	}()
+}
+
+func (pulsar *Pulsar) stateSwitchedToSendingSignForChosen() {
+	if pulsar.State == Failed {
+		return
+	}
+	confirmation := SenderConfirmationPayload{PulseNumber: pulsar.ProcessingPulseNumber, ChosenPublicKey: pulsar.PulseSenderToNodes}
+	signature, err := singData(pulsar.PrivateKey, pulsar.PulseSenderToNodes)
+	if err != nil {
+		pulsar.switchStateTo(Failed, err)
+		return
+	}
+	confirmation.Signature = signature
+
+	payload, err := pulsar.preparePayload(confirmation)
+	if err != nil {
+		pulsar.switchStateTo(Failed, err)
+		return
+	}
+
+	call := pulsar.Neighbours[pulsar.PulseSenderToNodes].OutgoingClient.Go(ReceiveChosenSignature.String(), payload, nil, nil)
+	reply := <-call.Done
+	if reply.Error != nil {
+		//Here should be retry
+	}
+}
+
+func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
+	if pulsar.State == Failed {
+		return
 	}
 }
 

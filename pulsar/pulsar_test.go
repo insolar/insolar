@@ -235,3 +235,17 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 
 	assert.NoError(t, err)
 }
+
+func TestPulsar_stateSwitchedToVerifying_OnePulsar(t *testing.T) {
+	mainPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	pulsar := &Pulsar{
+		Neighbours:       map[string]*Neighbour{},
+		PrivateKey:       mainPrivateKey,
+		GeneratedEntropy: pulsartestutil.MockEntropy,
+		OwnedBftRow:      map[string]*BftCell{"test": &BftCell{}},
+	}
+
+	pulsar.stateSwitchedToVerifying()
+
+}

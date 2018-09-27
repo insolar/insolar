@@ -50,7 +50,12 @@ func Bytes2PulseNumber(buf []byte) PulseNumber {
 type Pulse struct {
 	PulseNumber PulseNumber
 	Entropy     Entropy
-	Signs       map[string][]byte
+	Signs       map[string]PulseSenderConfirmation
+}
+
+type PulseSenderConfirmation struct {
+	ChosenPublicKey string
+	Signature       []byte
 }
 
 const FirstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)

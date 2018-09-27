@@ -33,6 +33,7 @@ const (
 	ReceiveSignatureForEntropy RequestType = "Pulsar.ReceiveSignatureForEntropy"
 	ReceiveEntropy             RequestType = "Pulsar.ReceiveEntropy"
 	ReceiveVector              RequestType = "Pulsar.ReceiveVector"
+	ReceiveChosenSignature     RequestType = "Pulsar.ReceiveChosenSignature"
 )
 
 func (state RequestType) String() string {
@@ -66,6 +67,12 @@ type EntropyPayload struct {
 type VectorPayload struct {
 	PulseNumber core.PulseNumber
 	Vector      map[string]*BftCell
+}
+
+type SenderConfirmationPayload struct {
+	PulseNumber     core.PulseNumber
+	Signature       []byte
+	ChosenPublicKey string
 }
 
 type Handler struct {
@@ -238,6 +245,44 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 		return fmt.Errorf("Current pulse number - %v.", handler.pulsar.ProcessingPulseNumber)
 	}
 	handler.pulsar.BftGrid[request.PublicKey] = requestBody.Vector
+
+	return nil
+}
+
+func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
+	if handler.pulsar.State == Failed {
+		return nil
+	}
+
+	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
+	if err != nil {
+		log.Warn("Message from unknown host %v.", request.PublicKey)
+		return err
+	}
+
+	result, err := checkPayloadSignature(request)
+	if err != nil {
+		return err
+	}
+	if !result {
+		return errors.New("Signature check failed")
+	}
+
+	requestBody := request.Body.(SenderConfirmationPayload)
+	// this if should pe replaced with another realisation.INS-528
+	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
+		return fmt.Errorf("Current pulse number - %v.", handler.pulsar.ProcessingPulseNumber)
+	}
+
+	isVerified, err := checkSignature(requestBody.ChosenPublicKey, request.PublicKey, requestBody.Signature)
+	if !isVerified || err != nil {
+		return errors.New("Signature check failed")
+	}
+
+	handler.pulsar.SignsConfirmedSending[request.PublicKey] = &core.PulseSenderConfirmation{
+		ChosenPublicKey: requestBody.ChosenPublicKey,
+		Signature:       requestBody.Signature,
+	}
 
 	return nil
 }
