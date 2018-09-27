@@ -62,20 +62,6 @@ func (r *ParsedFile) codeOfNode(n ast.Node) string {
 	return string(r.code[n.Pos()-1 : n.End()-1])
 }
 
-func slurpFile(fileName string) ([]byte, error) {
-	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "Can't open file '"+fileName+"'")
-	}
-	defer file.Close() //nolint: errcheck
-
-	res, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, errors.Wrap(err, "Can't read file '"+fileName+"'")
-	}
-	return res, nil
-}
-
 // ParseFile parses a file as Go source code of a smart contract
 func ParseFile(fileName string) (*ParsedFile, error) {
 	res := ParsedFile{
@@ -605,4 +591,18 @@ func GetRealContractsNames() ([]string, error) {
 	}
 
 	return result, nil
+}
+
+func slurpFile(fileName string) ([]byte, error) {
+	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't open file '"+fileName+"'")
+	}
+	defer file.Close() //nolint: errcheck
+
+	res, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't read file '"+fileName+"'")
+	}
+	return res, nil
 }
