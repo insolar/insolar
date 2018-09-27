@@ -617,6 +617,7 @@ func _TestTransferToMyself(t *testing.T) {
 }
 
 // TODO: test to check overflow of balance
+// TODO: check transfer zero amount
 
 func TestTransferTwoTimes(t *testing.T) {
 	firstMemberRef := createMember(t)
