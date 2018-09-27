@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,7 +68,7 @@ func Test_getNextCascadeLayerIndexes(t *testing.T) {
 	// nodeIds := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
 	nodeIds := make([]core.RecordRef, 0, 12)
 	for i := 0; i < 11; i++ {
-		nodeIds = append(nodeIds, testutils.RandomRef())
+		nodeIds = append(nodeIds, core.RandomRef())
 	}
 	startIndex, endIndex := getNextCascadeLayerIndexes(nodeIds, nodeIds[4], 2)
 	assert.Equal(t, 10, startIndex)
@@ -80,7 +79,7 @@ func Test_getNextCascadeLayerIndexes(t *testing.T) {
 	startIndex, endIndex = getNextCascadeLayerIndexes(nodeIds, nodeIds[2], 3)
 	assert.Equal(t, 9, startIndex)
 	assert.Equal(t, 12, endIndex)
-	startIndex, endIndex = getNextCascadeLayerIndexes(nodeIds, testutils.RandomRef(), 2)
+	startIndex, endIndex = getNextCascadeLayerIndexes(nodeIds, core.RandomRef(), 2)
 	assert.Equal(t, len(nodeIds), startIndex)
 	assert.Equal(t, len(nodeIds), endIndex)
 }
