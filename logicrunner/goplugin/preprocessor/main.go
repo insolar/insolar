@@ -480,7 +480,9 @@ func generateMethodsProxies(parsed *ParsedFile) []map[string]interface{} {
 	var methodsProxies []map[string]interface{}
 
 	for _, method := range parsed.methods[parsed.contract] {
-		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
+		if method.Name.IsExported() {
+			methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
+		}
 	}
 
 	return methodsProxies
