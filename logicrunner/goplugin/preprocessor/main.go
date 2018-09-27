@@ -165,6 +165,26 @@ func (pf *ParsedFile) parseConstructor(fd *ast.FuncDecl) {
 	pf.constructors[typename] = append(pf.constructors[typename], fd)
 }
 
+// ProxyPackageName guesses user friendly contract "name" from file name
+// and/or package in the file
+func (pf *ParsedFile) ProxyPackageName() (string, error) {
+	match := regexp.MustCompile("([^/]+)/([^/]+).(go|insgoc)$").FindStringSubmatch(pf.name)
+	if match == nil {
+		return "", errors.New("couldn't match filename without extension and path")
+	}
+
+	packageName := pf.node.Name.Name
+
+	proxyPackageName := packageName
+	if proxyPackageName == "main" {
+		proxyPackageName = match[2]
+	}
+	if proxyPackageName == "main" {
+		proxyPackageName = match[1]
+	}
+	return proxyPackageName, nil
+}
+
 // CodeOfNode returns source code of an AST node
 func (pf *ParsedFile) CodeOfNode(n ast.Node) string {
 	return string(pf.code[n.Pos()-1 : n.End()-1])
@@ -216,7 +236,7 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 
 // WriteProxy generates and writes into `out` source code of contract's proxy
 func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
-	proxyPackageName, err := ProxyPackageName(pf)
+	proxyPackageName, err := pf.ProxyPackageName()
 	if err != nil {
 		return err
 	}
@@ -299,26 +319,6 @@ func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
 		}
 	}
 	return rets
-}
-
-// ProxyPackageName guesses user friendly contract "name" from file name
-// and/or package in the file
-func ProxyPackageName(parsed *ParsedFile) (string, error) {
-	match := regexp.MustCompile("([^/]+)/([^/]+).(go|insgoc)$").FindStringSubmatch(parsed.name)
-	if match == nil {
-		return "", errors.New("couldn't match filename without extension and path")
-	}
-
-	packageName := parsed.node.Name.Name
-
-	proxyPackageName := packageName
-	if proxyPackageName == "main" {
-		proxyPackageName = match[2]
-	}
-	if proxyPackageName == "main" {
-		proxyPackageName = match[1]
-	}
-	return proxyPackageName, nil
 }
 
 func typeName(t ast.Expr) string {

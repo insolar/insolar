@@ -91,7 +91,7 @@ func main() {
 					fmt.Println(err)
 					os.Exit(1)
 				}
-				proxyPackage, err := preprocessor.ProxyPackageName(parsed)
+				proxyPackage, err := parsed.ProxyPackageName()
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)
