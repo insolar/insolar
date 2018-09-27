@@ -139,7 +139,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
 	ref, err := gpr.lr.ArtifactManager.ActivateObject(
-		core.RecordRef{}, core.RecordRef{}, req.Class, req.Parent, req.Data,
+		core.RecordRef{}, core.RandomRef(), req.Class, req.Parent, req.Data,
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object")
@@ -191,7 +191,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
 	ref, err := gpr.lr.ArtifactManager.ActivateObjectDelegate(
-		core.RecordRef{}, core.RecordRef{}, req.Class, req.Into, req.Data,
+		core.RecordRef{}, core.RandomRef(), req.Class, req.Into, req.Data,
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save delegate")
