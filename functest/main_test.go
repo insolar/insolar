@@ -341,6 +341,30 @@ func unmarshalResponseWithError(t *testing.T, body []byte, response responseInte
 	assert.NotNil(t, response.getError())
 }
 
+func createMember(t *testing.T) string {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       testutils.RandomString(),
+	})
+
+	firstMemberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, firstMemberResponse)
+
+	return firstMemberResponse.Reference
+}
+
+func getBalance(t *testing.T, reference string) int {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_balance",
+		"reference":  reference,
+	})
+
+	firstBalanceResponse := &getBalanceResponse{}
+	unmarshalResponse(t, body, firstBalanceResponse)
+
+	return int(firstBalanceResponse.Amount)
+}
+
 func TestInsolardResponseNotErr(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "dump_all_users",
@@ -353,36 +377,19 @@ func TestInsolardResponseNotErr(t *testing.T) {
 }
 
 func TestTransferMoney(t *testing.T) {
-	// Create member which balance will increase
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       "First",
-	})
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
 
-	firstMemberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, firstMemberResponse)
-
-	firstMemberRef := firstMemberResponse.Reference
-	assert.NotEqual(t, "", firstMemberRef)
-
-	// Create member which balance will decrease
-	body = getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       "Second",
-	})
-
-	secondMemberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, secondMemberResponse)
-
-	secondMemberRef := secondMemberResponse.Reference
-	assert.NotEqual(t, "", secondMemberRef)
+	amount := 111
 
 	// Transfer money from one member to another
-	body = getResponseBody(t, postParams{
+	body := getResponseBody(t, postParams{
 		"query_type": "send_money",
 		"from":       secondMemberRef,
 		"to":         firstMemberRef,
-		"amount":     111,
+		"amount":     amount,
 	})
 
 	transferResponse := &sendMoneyResponse{}
@@ -390,29 +397,11 @@ func TestTransferMoney(t *testing.T) {
 
 	assert.Equal(t, true, transferResponse.Success)
 
-	// Check balance of first member
-	body = getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  firstMemberRef,
-	})
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
 
-	firstBalanceResponse := &getBalanceResponse{}
-	unmarshalResponse(t, body, firstBalanceResponse)
-
-	assert.Equal(t, uint(1111), firstBalanceResponse.Amount)
-	assert.Equal(t, "RUB", firstBalanceResponse.Currency)
-
-	// Check balance of second member
-	body = getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  secondMemberRef,
-	})
-
-	secondBalanceResponse := &getBalanceResponse{}
-	unmarshalResponse(t, body, secondBalanceResponse)
-
-	assert.Equal(t, uint(889), secondBalanceResponse.Amount)
-	assert.Equal(t, "RUB", secondBalanceResponse.Currency)
+	assert.Equal(t, oldFirstBalance+amount, newFirstBalance)
+	assert.Equal(t, oldSecondBalance-amount, newSecondBalance)
 }
 
 func TestWrongUrl(t *testing.T) {
@@ -526,30 +515,6 @@ func _TestWrongReferenceInParams(t *testing.T) {
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
 	assert.Equal(t, "Bad request", response.Err.Event)
-}
-
-func createMember(t *testing.T) string {
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       testutils.RandomString(),
-	})
-
-	firstMemberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, firstMemberResponse)
-
-	return firstMemberResponse.Reference
-}
-
-func getBalance(t *testing.T, reference string) int {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  reference,
-	})
-
-	firstBalanceResponse := &getBalanceResponse{}
-	unmarshalResponse(t, body, firstBalanceResponse)
-
-	return int(firstBalanceResponse.Amount)
 }
 
 func TestTransferNegativeAmount(t *testing.T) {
