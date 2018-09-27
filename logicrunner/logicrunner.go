@@ -38,6 +38,7 @@ type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	EventBus        core.EventBus
+	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
 	cb              CaseBind
 	sock            net.Listener
@@ -69,6 +70,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
 			return err
 		}
+		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeBuiltin)
 	}
 
 	if lr.Cfg.GoPlugin != nil {
@@ -79,6 +81,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 		if err := lr.RegisterExecutor(core.MachineTypeGoPlugin, gp); err != nil {
 			return err
 		}
+		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeGoPlugin)
 	}
 
 	return nil
@@ -130,18 +133,13 @@ func (lr *LogicRunner) Execute(e core.LogicRunnerEvent) (core.Reaction, error) {
 		Pulse:  lr.cb.P,
 	}
 
-	machinePref := []core.MachineType{
-		core.MachineTypeBuiltin,
-		core.MachineTypeGoPlugin,
-	}
-
 	switch m := e.(type) {
 	case *event.CallMethod:
 		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
 			Type: CaseRecordTypeMethodCall,
 			Resp: e,
 		})
-		re, err := lr.executeMethodCall(ctx, m, machinePref) // TODO: move machinepref inside lr
+		re, err := lr.executeMethodCall(ctx, m)
 		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
 			Type: CaseRecordTypeMethodCallResult,
 			Resp: re,
@@ -153,7 +151,7 @@ func (lr *LogicRunner) Execute(e core.LogicRunnerEvent) (core.Reaction, error) {
 			Type: CaseRecordTypeConstructorCall,
 			Resp: e,
 		})
-		re, err := lr.executeConstructorCall(ctx, m, machinePref)
+		re, err := lr.executeConstructorCall(ctx, m)
 		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
 			Type: CaseRecordTypeConstructorCallResult,
 			Resp: re,
@@ -172,7 +170,7 @@ type objectBody struct {
 	MachineType core.MachineType
 }
 
-func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.MachineType) (*objectBody, error) {
+func (lr *LogicRunner) getObjectEvent(objref core.RecordRef) (*objectBody, error) {
 	objDesc, err := lr.ArtifactManager.GetObject(objref, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
@@ -183,7 +181,7 @@ func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
 
-	codeDesc, err := classDesc.CodeDescriptor(machinePref)
+	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
 	}
@@ -196,8 +194,8 @@ func (lr *LogicRunner) getObjectEvent(objref core.RecordRef, machinePref []core.
 	}, nil
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethod, machinePref []core.MachineType) (core.Reaction, error) {
-	objbody, err := lr.getObjectEvent(e.ObjectRef, machinePref)
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethod) (core.Reaction, error) {
+	objbody, err := lr.getObjectEvent(e.ObjectRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
@@ -243,7 +241,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 }
 
-func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *event.CallConstructor, machinePref []core.MachineType) (core.Reaction, error) {
+func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *event.CallConstructor) (core.Reaction, error) {
 
 	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 	if err != nil {
@@ -251,7 +249,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *even
 	}
 	ctx.Class = classDesc.HeadRef()
 
-	codeDesc, err := classDesc.CodeDescriptor(machinePref)
+	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class's code descriptor")
 	}
