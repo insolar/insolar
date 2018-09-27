@@ -321,6 +321,27 @@ func (pf *ParsedFile) codeOfNode(n ast.Node) string {
 	return string(pf.code[n.Pos()-1 : n.End()-1])
 }
 
+func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
+	imports := make(map[string]bool)
+	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
+	if !wrapper {
+		imports[fmt.Sprintf(`"%s"`, corePath)] = true
+	}
+	for _, method := range pf.methods[pf.contract] {
+		extendImportsMap(pf, method.Type.Params, imports)
+		if !wrapper {
+			extendImportsMap(pf, method.Type.Results, imports)
+		}
+	}
+	for _, fun := range pf.constructors[pf.contract] {
+		extendImportsMap(pf, fun.Type.Params, imports)
+		if !wrapper {
+			extendImportsMap(pf, fun.Type.Results, imports)
+		}
+	}
+	return imports
+}
+
 func openTemplate(fileName string) (*template.Template, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -497,27 +518,6 @@ func generateInitArguments(list *ast.FieldList) string {
 		initArgs += fmt.Sprintf("\targs[%d] = %s\n", i, arg.Names[0].Name)
 	}
 	return initArgs
-}
-
-func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
-	imports := make(map[string]bool)
-	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
-	if !wrapper {
-		imports[fmt.Sprintf(`"%s"`, corePath)] = true
-	}
-	for _, method := range pf.methods[pf.contract] {
-		extendImportsMap(pf, method.Type.Params, imports)
-		if !wrapper {
-			extendImportsMap(pf, method.Type.Results, imports)
-		}
-	}
-	for _, fun := range pf.constructors[pf.contract] {
-		extendImportsMap(pf, fun.Type.Params, imports)
-		if !wrapper {
-			extendImportsMap(pf, fun.Type.Results, imports)
-		}
-	}
-	return imports
 }
 
 // GetRealGenesisDir return dir under genesis dir
