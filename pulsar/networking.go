@@ -76,8 +76,7 @@ type SenderConfirmationPayload struct {
 }
 
 type Handler struct {
-	pulsar           *Pulsar
-	entropyGenerator EntropyGenerator
+	pulsar *Pulsar
 }
 
 func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
@@ -95,7 +94,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 	if !result {
-		return errors.New("Signature check failed")
+		return errors.New("signature check failed")
 	}
 
 	generator := StandardEntropyGenerator{}
@@ -141,6 +140,10 @@ func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) 
 
 	message := Payload{PublicKey: convertedKey, Body: GetLastPulsePayload{Pulse: *pulse}}
 	message.Signature, err = singData(handler.pulsar.PrivateKey, message.Body)
+	if err != nil {
+		panic(err)
+	}
+
 	*response = message
 
 	return nil
@@ -162,18 +165,23 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 		return err
 	}
 	if !result {
-		return errors.New("Signature check failed")
+		return errors.New("signature check failed")
 	}
 
 	requestBody := request.Body.(EntropySignaturePayload)
 	// this if should pe replaced with another realisation.INS-528
 	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("Current pulse number - %v.", handler.pulsar.ProcessingPulseNumber)
+		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
 	}
 
 	handler.pulsar.EntropyGenerationLock.Lock()
 	if handler.pulsar.State == WaitingForTheStart {
-		handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
+		err = handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
+		if err != nil {
+			handler.pulsar.switchStateTo(Failed, err)
+			handler.pulsar.EntropyGenerationLock.Unlock()
+			return nil
+		}
 	}
 	handler.pulsar.EntropyGenerationLock.Unlock()
 
@@ -189,7 +197,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 
 	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
 	if err != nil {
-		log.Warn("Message from unknown host %v.", request.PublicKey)
+		log.Warn("Message from unknown host %v", request.PublicKey)
 		return err
 	}
 
@@ -198,7 +206,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 		return err
 	}
 	if !result {
-		return errors.New("Signature check failed.")
+		return errors.New("signature check failed")
 	}
 
 	requestBody := request.Body.(EntropyPayload)
@@ -227,7 +235,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 
 	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
 	if err != nil {
-		log.Warn("Message from unknown host %v.", request.PublicKey)
+		log.Warn("Message from unknown host %v", request.PublicKey)
 		return err
 	}
 
@@ -236,7 +244,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 		return err
 	}
 	if !result {
-		return errors.New("Signature check failed.")
+		return errors.New("signature check failed")
 	}
 
 	requestBody := request.Body.(VectorPayload)
@@ -265,18 +273,18 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		return err
 	}
 	if !result {
-		return errors.New("Signature check failed")
+		return errors.New("signature check failed")
 	}
 
 	requestBody := request.Body.(SenderConfirmationPayload)
 	// this if should pe replaced with another realisation.INS-528
 	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("Current pulse number - %v.", handler.pulsar.ProcessingPulseNumber)
+		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
 	}
 
 	isVerified, err := checkSignature(requestBody.ChosenPublicKey, request.PublicKey, requestBody.Signature)
 	if !isVerified || err != nil {
-		return errors.New("Signature check failed")
+		return errors.New("signature check failed")
 	}
 
 	handler.pulsar.SignsConfirmedSending[request.PublicKey] = &core.PulseSenderConfirmation{

@@ -54,7 +54,7 @@ func main() {
 		panic(err)
 	}
 
-	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, &pulsar.RpcClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
+	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
@@ -76,7 +76,10 @@ func main() {
 	}
 
 	fmt.Println("Press any button to exit")
-	_, _ = rl.Readline()
+	_, err = rl.Readline()
+	if err != nil {
+		log.Warn(err)
+	}
 
 	// Need to think about the shutdown mechanism
 	ticker.Stop()

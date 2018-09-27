@@ -57,7 +57,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			{ConnectionType: "tcp", Address: "127.0.0.1:1641"},
 		}},
 		storage,
-		&RpcClientWrapperFactoryImpl{},
+		&RPCClientWrapperFactoryImpl{},
 		pulsartestutil.MockEntropyGenerator{},
 		net.Listen,
 	)
@@ -73,7 +73,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 			{ConnectionType: "tcp", Address: "127.0.0.1:1641"},
 		}},
 		storage,
-		&RpcClientWrapperFactoryImpl{},
+		&RPCClientWrapperFactoryImpl{},
 		pulsartestutil.MockEntropyGenerator{},
 		net.Listen,
 	)
@@ -113,7 +113,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 //		ReceivingVectorTimeout: 1000,},
 //		storage,
 //
-//		&RpcClientWrapperFactoryImpl{},
+//		&RPCClientWrapperFactoryImpl{},
 //		pulsartestutil.MockEntropyGenerator{},
 //		net.Listen,
 //	)
@@ -155,7 +155,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 //			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
 //		}},
 //		storage,
-//		&RpcClientWrapperFactoryImpl{},
+//		&RPCClientWrapperFactoryImpl{},
 //		pulsartestutil.MockEntropyGenerator{},
 //		net.Listen,
 //	)
@@ -169,7 +169,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 //			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 //		}},
 //		storage,
-//		&RpcClientWrapperFactoryImpl{},
+//		&RPCClientWrapperFactoryImpl{},
 //		pulsartestutil.MockEntropyGenerator{},
 //		net.Listen,
 //	)

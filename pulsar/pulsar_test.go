@@ -36,9 +36,9 @@ type MockRpcClientFactoryWrapper struct {
 	mock.Mock
 }
 
-func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RpcClientWrapper {
+func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RPCClientWrapper {
 	args := mock.Mock.Called()
-	return args.Get(0).(RpcClientWrapper)
+	return args.Get(0).(RPCClientWrapper)
 }
 
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {

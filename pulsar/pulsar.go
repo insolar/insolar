@@ -87,7 +87,7 @@ type BftCell struct {
 func NewPulsar(
 	configuration configuration.Pulsar,
 	storage pulsarstorage.PulsarStorage,
-	rpcWrapperFactory RpcClientWrapperFactory,
+	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator EntropyGenerator,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 	// Listen for incoming connections.
@@ -218,7 +218,7 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 		return err
 	}
 	if !result {
-		return errors.New("Signature check failed")
+		return errors.New("signature check failed")
 	}
 
 	return nil
@@ -261,7 +261,11 @@ func (pulsar *Pulsar) RefreshConnections() {
 		}
 
 		if savedPulse.PulseNumber < fetchedPulse.PulseNumber {
-			pulsar.Storage.SetLastPulse(fetchedPulse)
+			err := pulsar.Storage.SetLastPulse(fetchedPulse)
+			if err != nil {
+				log.Fatal(err)
+				panic(err)
+			}
 			pulsar.LastPulse = fetchedPulse
 		}
 	}
@@ -286,7 +290,11 @@ func (pulsar *Pulsar) SyncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pu
 	signedPulsars := 0
 
 	for _, node := range pulsar.Neighbours {
-		nodeKey, _ := ExportPublicKey(node.PublicKey)
+		nodeKey, err := ExportPublicKey(node.PublicKey)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
 		sign, ok := payloadData.Signs[nodeKey]
 
 		if !ok {
@@ -304,7 +312,7 @@ func (pulsar *Pulsar) SyncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pu
 		}
 	}
 
-	return nil, errors.New("Signal signature isn't correct")
+	return nil, errors.New("signal signature isn't correct")
 }
 
 func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error {
@@ -312,7 +320,7 @@ func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error 
 
 	if pulsar.State > WaitingForTheStart || pulseNumber < pulsar.ProcessingPulseNumber || pulseNumber < pulsar.LastPulse.PulseNumber {
 		pulsar.EntropyGenerationLock.Unlock()
-		log.Warn("Wrong state status or pulse number, state - %v, revcieved pulse - %v, last pulse - %v, processing pulse - %v", pulsar.State, pulseNumber, pulsar.LastPulse, pulsar.ProcessingPulseNumber)
+		log.Warn("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", pulsar.State, pulseNumber, pulsar.LastPulse, pulsar.ProcessingPulseNumber)
 		return nil
 	}
 
@@ -625,7 +633,7 @@ func (pulsar *Pulsar) stateSwitchedToVerifying() {
 	}
 
 	if len(finalEntropySet) == 0 {
-		pulsar.switchStateTo(Failed, errors.New("Bft is broken."))
+		pulsar.switchStateTo(Failed, errors.New("bft is broken"))
 		return
 	}
 
@@ -639,6 +647,9 @@ func (pulsar *Pulsar) stateSwitchedToVerifying() {
 
 	pulsar.EntropyForNodes = finalEntropy
 	chosenPulsar, err := selectByEntropy(finalEntropy, finalSetOfPulsars, len(finalSetOfPulsars))
+	if err != nil {
+		pulsar.switchStateTo(Failed, err)
+	}
 	pulsar.PulseSenderToNodes = chosenPulsar[0]
 
 	if pulsar.PulseSenderToNodes == currentPulsarRow {
@@ -674,7 +685,7 @@ func (pulsar *Pulsar) stateSwitchedToWaitingForChosenSigns() {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				pulsar.switchStateTo(Failed, errors.New("Not enought confirmation for sending result to network"))
+				pulsar.switchStateTo(Failed, errors.New("not enought confirmation for sending result to network"))
 			}
 		}
 	}()
@@ -736,6 +747,9 @@ func (pulsar *Pulsar) generateNewEntropyAndSign() error {
 
 func (pulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
 	sign, err := singData(pulsar.PrivateKey, body)
+	if err != nil {
+		return nil, err
+	}
 	pubKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		return nil, err
@@ -747,7 +761,7 @@ func (pulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
 func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
 	neighbour, ok := pulsar.Neighbours[pubKey]
 	if !ok {
-		return nil, errors.New("Forbidden connection")
+		return nil, errors.New("forbidden connection")
 	}
 	return neighbour, nil
 }

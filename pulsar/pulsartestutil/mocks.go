@@ -36,11 +36,11 @@ func (mock *MockStorage) GetLastPulse() (*core.Pulse, error) {
 	return args.Get(0).(*core.Pulse), args.Error(1)
 }
 
-func (MockStorage) SetLastPulse(pulse *core.Pulse) error {
+func (*MockStorage) SetLastPulse(pulse *core.Pulse) error {
 	panic("implement me")
 }
 
-func (MockStorage) SavePulse(pulse *core.Pulse) error {
+func (*MockStorage) SavePulse(pulse *core.Pulse) error {
 	panic("implement me")
 }
 
@@ -72,7 +72,7 @@ func (mock *MockRpcClientWrapper) IsInitialised() bool {
 	return args.Bool(0)
 }
 
-func (mock *MockRpcClientWrapper) SetRpcClient(client *rpc.Client) {
+func (mock *MockRpcClientWrapper) SetRPCClient(client *rpc.Client) {
 	mock.Mock.Called(client)
 }
 
@@ -95,28 +95,28 @@ type CustomRpcWrapperMock struct {
 	Done *rpc.Call
 }
 
-func (CustomRpcWrapperMock) Lock() {
+func (*CustomRpcWrapperMock) Lock() {
 }
 
-func (CustomRpcWrapperMock) Unlock() {
+func (*CustomRpcWrapperMock) Unlock() {
 }
 
-func (CustomRpcWrapperMock) IsInitialised() bool {
+func (*CustomRpcWrapperMock) IsInitialised() bool {
 	return false
 }
 
-func (CustomRpcWrapperMock) SetRpcClient(client *rpc.Client) {
+func (*CustomRpcWrapperMock) SetRPCClient(client *rpc.Client) {
 	panic("implement me")
 }
 
-func (CustomRpcWrapperMock) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
+func (*CustomRpcWrapperMock) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
 	return nil
 }
 
-func (CustomRpcWrapperMock) Close() error {
+func (*CustomRpcWrapperMock) Close() error {
 	panic("implement me")
 }
 
-func (impl CustomRpcWrapperMock) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
+func (impl *CustomRpcWrapperMock) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
 	return impl.Done
 }

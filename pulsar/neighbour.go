@@ -28,23 +28,23 @@ import (
 
 // Interface for factory of rpc wrappers
 // Needed for creation wrappers objects
-type RpcClientWrapperFactory interface {
-	CreateWrapper() RpcClientWrapper
+type RPCClientWrapperFactory interface {
+	CreateWrapper() RPCClientWrapper
 }
 
 // Standard factory implementation
 // Returns RpcClientWrapperImpl
-type RpcClientWrapperFactoryImpl struct {
+type RPCClientWrapperFactoryImpl struct {
 }
 
 // Standard factory implementation
 // Returns RpcClientWrapperImpl
-func (RpcClientWrapperFactoryImpl) CreateWrapper() RpcClientWrapper {
+func (RPCClientWrapperFactoryImpl) CreateWrapper() RPCClientWrapper {
 	return &RpcClientWrapperImpl{Mutex: &sync.Mutex{}}
 }
 
 // Interface for wrappers around rpc clients
-type RpcClientWrapper interface {
+type RPCClientWrapper interface {
 	// Take current neighbour's lock
 	Lock()
 	// Release current neighbour's lock
@@ -53,7 +53,7 @@ type RpcClientWrapper interface {
 	// Check if client initialised
 	IsInitialised() bool
 	// Set wrapper's undercover rpc client
-	SetRpcClient(client *rpc.Client)
+	SetRPCClient(client *rpc.Client)
 	// Create connection and reinit client
 	CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error
 	// Close wrapped client
@@ -63,7 +63,7 @@ type RpcClientWrapper interface {
 	Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call
 }
 
-// Base RpcClientWrapper impl for rpc.Client
+// Base RPCClientWrapper impl for rpc.Client
 type RpcClientWrapperImpl struct {
 	*sync.Mutex
 	*rpc.Client
@@ -89,7 +89,7 @@ func (impl *RpcClientWrapperImpl) Unlock() {
 }
 
 // Set wrapper's undercover rpc client
-func (impl *RpcClientWrapperImpl) SetRpcClient(client *rpc.Client) {
+func (impl *RpcClientWrapperImpl) SetRPCClient(client *rpc.Client) {
 	impl.Client = client
 }
 
@@ -112,7 +112,7 @@ func (impl *RpcClientWrapperImpl) Go(serviceMethod string, args interface{}, rep
 type Neighbour struct {
 	ConnectionType    configuration.ConnectionType
 	ConnectionAddress string
-	OutgoingClient    RpcClientWrapper
+	OutgoingClient    RPCClientWrapper
 	PublicKey         *ecdsa.PublicKey
 }
 
