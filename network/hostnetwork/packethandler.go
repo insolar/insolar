@@ -31,9 +31,12 @@ import (
 )
 
 // DispatchPacketType checks event type.
-// nolint: gocyclo
-func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	// TODO: add counter
+func DispatchPacketType(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder,
+) (*packet.Packet, error) { // nolint: gocyclo
 	switch msg.Type {
 	case packet.TypeFindHost:
 		return processFindHost(hostHandler, ctx, msg, packetBuilder)
