@@ -534,7 +534,7 @@ func TestTransferNegativeAmount(t *testing.T) {
 	unmarshalResponseWithError(t, body, transferResponse)
 
 	assert.Equal(t, api.BadRequest, transferResponse.Err.Code)
-	assert.Equal(t, "Bad request", transferResponse.Err.Event)
+	assert.Equal(t, "Bad request", transferResponse.Err.Message)
 
 	newFirstBalance := getBalance(t, firstMemberRef)
 	newSecondBalance := getBalance(t, secondMemberRef)
