@@ -180,24 +180,14 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
 
-	imports := pf.generateImports(true)
-
-	data := struct {
-		PackageName    string
-		ContractType   string
-		Methods        []map[string]interface{}
-		Functions      []map[string]interface{}
-		ParsedCode     []byte
-		FoundationPath string
-		Imports        map[string]bool
-	}{
-		packageName,
-		pf.contract,
-		pf.functionInfoForWrapper(pf.methods[pf.contract]),
-		pf.functionInfoForWrapper(pf.constructors[pf.contract]),
-		pf.code,
-		foundationPath,
-		imports,
+	data := map[string]interface{}{
+		"PackageName":    packageName,
+		"ContractType":   pf.contract,
+		"Methods":        pf.functionInfoForWrapper(pf.methods[pf.contract]),
+		"Functions":      pf.functionInfoForWrapper(pf.constructors[pf.contract]),
+		"ParsedCode":     pf.code,
+		"FoundationPath": foundationPath,
+		"Imports":        pf.generateImports(true),
 	}
 	err = tmpl.Execute(out, data)
 	if err != nil {
