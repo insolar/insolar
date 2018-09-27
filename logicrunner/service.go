@@ -77,8 +77,8 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 }
 
 // MakeBaseEvent makes base of logicrunner event from base of up request
-func MakeBaseEvent(req rpctypes.UpBaseReq) event.BaseEvent {
-	return event.BaseEvent{
+func MakeBaseEvent(req rpctypes.UpBaseReq) event.BaseLogicEvent {
+	return event.BaseLogicEvent{
 		Caller: req.Me,
 	}
 }
@@ -97,11 +97,11 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) 
 	}
 
 	e := &event.CallMethod{
-		BaseEvent:  MakeBaseEvent(req.UpBaseReq),
-		ReturnMode: mode,
-		ObjectRef:  req.Object,
-		Method:     req.Method,
-		Arguments:  req.Arguments,
+		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
+		ReturnMode:     mode,
+		ObjectRef:      req.Object,
+		Method:         req.Method,
+		Arguments:      req.Arguments,
 	}
 
 	res, err := gpr.lr.EventBus.Dispatch(e)
@@ -126,10 +126,10 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *
 	}
 
 	e := &event.CallConstructor{
-		BaseEvent: MakeBaseEvent(req.UpBaseReq),
-		ClassRef:  req.Reference,
-		Name:      req.Constructor,
-		Arguments: req.Arguments,
+		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
+		ClassRef:       req.Reference,
+		Name:           req.Constructor,
+		Arguments:      req.Arguments,
 	}
 
 	res, err := gpr.lr.EventBus.Dispatch(e)
