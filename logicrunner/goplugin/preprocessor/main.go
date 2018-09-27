@@ -165,8 +165,8 @@ func (pf *ParsedFile) parseConstructor(fd *ast.FuncDecl) {
 	pf.constructors[typename] = append(pf.constructors[typename], fd)
 }
 
-// codeOfNode returns source code of an AST node
-func (pf *ParsedFile) codeOfNode(n ast.Node) string {
+// CodeOfNode returns source code of an AST node
+func (pf *ParsedFile) CodeOfNode(n ast.Node) string {
 	return string(pf.code[n.Pos()-1 : n.End()-1])
 }
 
@@ -202,7 +202,7 @@ func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
 
 	rets := []int{}
 	for i, e := range list.List {
-		if parsed.codeOfNode(e.Type) == t {
+		if parsed.CodeOfNode(e.Type) == t {
 			rets = append(rets, i)
 		}
 	}
@@ -386,7 +386,7 @@ func isContractTypeSpec(typeNode *ast.TypeSpec) bool {
 func generateTypes(parsed *ParsedFile) []string {
 	var types []string
 	for _, t := range parsed.types {
-		types = append(types, "type "+parsed.codeOfNode(t))
+		types = append(types, "type "+parsed.CodeOfNode(t))
 	}
 
 	return types
@@ -398,13 +398,13 @@ func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[str
 	}
 
 	for _, e := range params.List {
-		if parsed.codeOfNode(e.Type) == "error" {
+		if parsed.CodeOfNode(e.Type) == "error" {
 			imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
 		}
 	}
 
 	for _, e := range params.List {
-		tname := parsed.codeOfNode(e.Type)
+		tname := parsed.CodeOfNode(e.Type)
 		tname = strings.Trim(tname, "*")
 		tnameFrom := strings.Split(tname, ".")
 
@@ -441,7 +441,7 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 	}
 
 	for i, arg := range list.List {
-		tname := parsed.codeOfNode(arg.Type)
+		tname := parsed.CodeOfNode(arg.Type)
 		if tname == "error" {
 			tname = "*foundation.Error"
 		}
@@ -455,7 +455,7 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 		if i > 0 {
 			listCode += ", "
 		}
-		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, parsed.codeOfNode(arg.Type))
+		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, parsed.CodeOfNode(arg.Type))
 	}
 
 	return text, listCode
@@ -473,7 +473,7 @@ func genFieldList(parsed *ParsedFile, params *ast.FieldList, withNames bool) str
 		if withNames {
 			res += e.Names[0].Name + " "
 		}
-		res += parsed.codeOfNode(e.Type)
+		res += parsed.CodeOfNode(e.Type)
 	}
 	return res
 }
