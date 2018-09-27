@@ -95,4 +95,3 @@ build_binaries
 
 $INSGORUND -l 127.0.0.1:18181 --rpc 127.0.0.1:18182 &
 $INSOLARD --config scripts/insolard/insolar.yaml
-
