@@ -29,7 +29,7 @@ func TestParseIncomingPacket(t *testing.T) {
 	builder := packet.NewBuilder()
 
 	pckt := builder.Type(packet.TypeStore).Request(&packet.RequestDataStore{}).Build()
-	ParseIncomingPacket(hh, getDefaultCtx(hh), pckt, builder)
+	ParseIncomingPacket(hh, GetDefaultCtx(hh), pckt, builder)
 }
 
 func TestBuildContext(t *testing.T) {

@@ -329,7 +329,10 @@ func GetBucketIndexFromDifferingBit(id1, id2 []byte) int {
 func (ht *HashTable) TotalHosts() int {
 	ht.Lock()
 	defer ht.Unlock()
+	return ht.totalHosts()
+}
 
+func (ht *HashTable) totalHosts() int {
 	var total int
 	for _, v := range ht.RoutingTable {
 		total += len(v)
@@ -352,6 +355,20 @@ Loop:
 				break Loop
 			}
 		}
+	}
+	return result
+}
+
+// GetMulticastHosts returns snapshot of all hosts from the HashTable
+func (ht *HashTable) GetMulticastHosts() []*RouteHost {
+	ht.Lock()
+	defer ht.Unlock()
+
+	result := make([]*RouteHost, ht.totalHosts())
+	index := 0
+	for _, bucket := range ht.RoutingTable {
+		copy(result[index:], bucket)
+		index += len(bucket)
 	}
 	return result
 }

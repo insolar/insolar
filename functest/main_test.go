@@ -86,8 +86,10 @@ func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
-func buildGinsiderCLI() error {
-	_, _, err := testutil.Build()
+var insgorundPath string
+
+func buildGinsiderCLI() (err error) {
+	insgorundPath, _, err = testutil.Build()
 	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
 }
 
@@ -178,6 +180,23 @@ func stopInsolard() error {
 	return nil
 }
 
+var insgorundCleaner func()
+
+func startInsgorund() (err error) {
+	insgorundCleaner, err = testutils.StartInsgorund(insgorundPath, "127.0.0.1:18181", "127.0.0.1:18182")
+	if err != nil {
+		return errors.Wrap(err, "[ startInsolard ] could't wait for insolard to start completely: ")
+	}
+	return err
+}
+
+func stopInsgorund() error {
+	if insgorundCleaner != nil {
+		insgorundCleaner()
+	}
+	return nil
+}
+
 func setup() error {
 	err := createDirForContracts()
 	if err != nil {
@@ -203,11 +222,23 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
 
+	err = startInsgorund()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
+	}
+	fmt.Println("[ setup ] insgorund was successfully started")
+
 	return nil
 }
 
 func teardown() {
-	err := stopInsolard()
+	err := stopInsgorund()
+	if err != nil {
+		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
+	}
+	fmt.Println("[ teardown ] insgorund was successfully stoped")
+
+	err = stopInsolard()
 	if err != nil {
 		fmt.Println("[ teardown ] failed to stop insolard: ", err)
 	}

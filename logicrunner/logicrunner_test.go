@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
@@ -58,17 +59,17 @@ func TestMain(m *testing.M) {
 }
 
 func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testutil.ContractsBuilder, func()) {
-	insiderStorage, err := ioutil.TempDir("", "test-")
+	rundCleaner, err := testutils.StartInsgorund(runnerbin, "127.0.0.1:7777", "127.0.0.1:7778")
 	assert.NoError(t, err)
+
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	fmt.Println("RUNNERPATH", runnerbin)
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		RPCListen: "127.0.0.1:7778",
 		GoPlugin: &configuration.GoPlugin{
-			RunnerListen:   "127.0.0.1:7777",
-			RunnerPath:     runnerbin,
-			RunnerCodePath: insiderStorage,
-		}})
+			RunnerListen: "127.0.0.1:7777",
+		},
+	})
 	assert.NoError(t, err, "Initialize runner")
 
 	assert.NoError(t, lr.Start(core.Components{
@@ -84,7 +85,7 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 		cb.Clean()
 		lr.Stop()
 		cleaner()
-		os.RemoveAll(insiderStorage) // nolint: errcheck
+		rundCleaner()
 	}
 }
 
