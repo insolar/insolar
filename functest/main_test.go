@@ -216,33 +216,33 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolard was successfully builded")
 
-	err = startInsolard()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start insolard: ")
-	}
-	fmt.Println("[ setup ] insolard was successfully started")
-
 	err = startInsgorund()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
 	fmt.Println("[ setup ] insgorund was successfully started")
 
+	err = startInsolard()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't start insolard: ")
+	}
+	fmt.Println("[ setup ] insolard was successfully started")
+
 	return nil
 }
 
 func teardown() {
-	err := stopInsgorund()
-	if err != nil {
-		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
-	}
-	fmt.Println("[ teardown ] insgorund was successfully stoped")
-
-	err = stopInsolard()
+	err := stopInsolard()
 	if err != nil {
 		fmt.Println("[ teardown ] failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
+
+	err = stopInsgorund()
+	if err != nil {
+		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
+	}
+	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
 	err = deleteDirForData()
 	if err != nil {
