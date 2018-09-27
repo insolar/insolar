@@ -232,6 +232,7 @@ func init() {
 	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
 	gob.Register(&ResponseGetRandomHosts{})
+	gob.Register(&ResponseActiveNodes{})
 
 	gob.Register(&id.ID{})
 }

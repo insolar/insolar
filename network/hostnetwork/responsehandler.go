@@ -17,7 +17,6 @@
 package hostnetwork
 
 import (
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
@@ -121,9 +120,10 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 	return nil
 }
 
-func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet) {
-	_, err := hostHandler.SendRequest(request)
-	if err != nil {
-		log.Debugln(err)
+func handleActiveNodesResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseActiveNodes) error {
+	for _, node := range response.ActiveNodes {
+		// TODO: set nodes to hostHandler
+		_ = node.Address // dummy for node
 	}
+	return nil
 }
