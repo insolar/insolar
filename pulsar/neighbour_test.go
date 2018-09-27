@@ -22,7 +22,7 @@ func capture(f func()) string {
 }
 
 func TestNeighbour_CheckAndRefreshConnection_RefreshSuccess(t *testing.T) {
-	client := &pulsartestutil.MockRpcClientWrapper{}
+	client := &pulsartestutil.MockRPCClientWrapper{}
 	client.On("CreateConnection", configuration.TCP, "expectedAddress").Return(nil)
 	client.On("Lock")
 	client.On("Unlock")
@@ -41,7 +41,7 @@ func TestNeighbour_CheckAndRefreshConnection_RefreshSuccess(t *testing.T) {
 }
 
 func TestNeighbour_CheckAndRefreshConnection_RefreshFailed(t *testing.T) {
-	client := &pulsartestutil.MockRpcClientWrapper{}
+	client := &pulsartestutil.MockRPCClientWrapper{}
 	client.On("CreateConnection", configuration.TCP, "expectedAddress").Return(errors.New("oops"))
 	client.On("Lock")
 	client.On("Unlock")

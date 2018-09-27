@@ -61,7 +61,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	storage := &pulsartestutil.MockStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	clientFactory := &MockRpcClientFactoryWrapper{}
-	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRpcClientWrapper{})
+	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})
 
 	result, err := NewPulsar(config,
 		storage,
@@ -102,7 +102,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	storage := &pulsartestutil.MockStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	clientFactory := &MockRpcClientFactoryWrapper{}
-	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRpcClientWrapper{})
+	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})
 
 	result, err := NewPulsar(config, storage, clientFactory,
 		pulsartestutil.MockEntropyGenerator{}, func(connectionType string, address string) (net.Listener, error) {
@@ -119,7 +119,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 	pulsar := &Pulsar{Neighbours: map[string]*Neighbour{}}
 
-	mockClientWrapper := &pulsartestutil.MockRpcClientWrapper{}
+	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(true)
 
 	firstPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -136,7 +136,7 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t *testing.T) {
 	pulsar := &Pulsar{Neighbours: map[string]*Neighbour{}}
 
-	mockClientWrapper := &pulsartestutil.MockRpcClientWrapper{}
+	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(false)
 	mockClientWrapper.On("CreateConnection", mock.Anything, mock.Anything).Return(errors.New("test reasons"))
 	mockClientWrapper.On("Lock")
@@ -163,7 +163,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
 	}
 
-	mockClientWrapper := &pulsartestutil.CustomRpcWrapperMock{}
+	mockClientWrapper := &pulsartestutil.CustomRPCWrapperMock{}
 
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Error: errors.New("oops, request is broken")}
@@ -189,7 +189,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
 	}
 
-	mockClientWrapper := &pulsartestutil.CustomRpcWrapperMock{}
+	mockClientWrapper := &pulsartestutil.CustomRPCWrapperMock{}
 
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Reply: &Payload{Body: HandshakePayload{}}}
@@ -221,7 +221,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 	payload.Signature = sign
 	payload.PublicKey = expectedNeighbourKey
 
-	mockClientWrapper := &pulsartestutil.CustomRpcWrapperMock{}
+	mockClientWrapper := &pulsartestutil.CustomRPCWrapperMock{}
 
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Reply: &payload}

@@ -212,7 +212,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	requestBody := request.Body.(EntropyPayload)
 	// this if should pe replaced with another realisation.INS-528
 	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("Current pulse number - %v.", handler.pulsar.ProcessingPulseNumber)
+		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
 	}
 	if btfCell, ok := handler.pulsar.OwnedBftRow[request.PublicKey]; ok {
 		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
@@ -250,7 +250,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 	requestBody := request.Body.(VectorPayload)
 	// this if should pe replaced with another realisation.INS-528
 	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("Current pulse number - %v.", handler.pulsar.ProcessingPulseNumber)
+		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
 	}
 	handler.pulsar.BftGrid[request.PublicKey] = requestBody.Vector
 

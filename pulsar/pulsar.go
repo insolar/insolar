@@ -713,6 +713,7 @@ func (pulsar *Pulsar) stateSwitchedToSendingSignForChosen() {
 	reply := <-call.Done
 	if reply.Error != nil {
 		//Here should be retry
+		log.Error(reply.Error)
 	}
 }
 

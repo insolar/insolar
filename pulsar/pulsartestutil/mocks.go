@@ -44,7 +44,7 @@ func (*MockStorage) SavePulse(pulse *core.Pulse) error {
 	panic("implement me")
 }
 
-// Mock of entropy generator for pulsar's tests
+// MockEntropy generator for pulsar's tests
 var MockEntropy = [64]byte{1, 2, 3, 4, 5, 6, 7, 8}
 
 type MockEntropyGenerator struct {
@@ -55,68 +55,68 @@ func (MockEntropyGenerator) GenerateEntropy() core.Entropy {
 }
 
 // Mock of RpcClientWrapper
-type MockRpcClientWrapper struct {
+type MockRPCClientWrapper struct {
 	mock.Mock
 }
 
-func (mock *MockRpcClientWrapper) Lock() {
+func (mock *MockRPCClientWrapper) Lock() {
 	mock.Mock.Called()
 }
 
-func (mock *MockRpcClientWrapper) Unlock() {
+func (mock *MockRPCClientWrapper) Unlock() {
 	mock.Mock.Called()
 }
 
-func (mock *MockRpcClientWrapper) IsInitialised() bool {
+func (mock *MockRPCClientWrapper) IsInitialised() bool {
 	args := mock.Mock.Called()
 	return args.Bool(0)
 }
 
-func (mock *MockRpcClientWrapper) SetRPCClient(client *rpc.Client) {
+func (mock *MockRPCClientWrapper) SetRPCClient(client *rpc.Client) {
 	mock.Mock.Called(client)
 }
 
-func (mock *MockRpcClientWrapper) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
+func (mock *MockRPCClientWrapper) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
 	args := mock.Mock.Called(connectionType, connectionAddress)
 	return args.Error(0)
 }
 
-func (mock *MockRpcClientWrapper) Close() error {
+func (mock *MockRPCClientWrapper) Close() error {
 	args := mock.Mock.Called()
 	return args.Error(0)
 }
 
-func (mock *MockRpcClientWrapper) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
+func (mock *MockRPCClientWrapper) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
 	mockArgs := mock.Mock.Called(serviceMethod, args, reply, done)
 	return mockArgs.Get(0).(*rpc.Call)
 }
 
-type CustomRpcWrapperMock struct {
+type CustomRPCWrapperMock struct {
 	Done *rpc.Call
 }
 
-func (*CustomRpcWrapperMock) Lock() {
+func (*CustomRPCWrapperMock) Lock() {
 }
 
-func (*CustomRpcWrapperMock) Unlock() {
+func (*CustomRPCWrapperMock) Unlock() {
 }
 
-func (*CustomRpcWrapperMock) IsInitialised() bool {
+func (*CustomRPCWrapperMock) IsInitialised() bool {
 	return false
 }
 
-func (*CustomRpcWrapperMock) SetRPCClient(client *rpc.Client) {
+func (*CustomRPCWrapperMock) SetRPCClient(client *rpc.Client) {
 	panic("implement me")
 }
 
-func (*CustomRpcWrapperMock) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
+func (*CustomRPCWrapperMock) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
 	return nil
 }
 
-func (*CustomRpcWrapperMock) Close() error {
+func (*CustomRPCWrapperMock) Close() error {
 	panic("implement me")
 }
 
-func (impl *CustomRpcWrapperMock) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
+func (impl *CustomRPCWrapperMock) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
 	return impl.Done
 }

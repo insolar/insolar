@@ -33,14 +33,14 @@ type RPCClientWrapperFactory interface {
 }
 
 // Standard factory implementation
-// Returns RpcClientWrapperImpl
+// Returns RPCClientWrapperImpl
 type RPCClientWrapperFactoryImpl struct {
 }
 
 // Standard factory implementation
-// Returns RpcClientWrapperImpl
+// Returns RPCClientWrapperImpl
 func (RPCClientWrapperFactoryImpl) CreateWrapper() RPCClientWrapper {
-	return &RpcClientWrapperImpl{Mutex: &sync.Mutex{}}
+	return &RPCClientWrapperImpl{Mutex: &sync.Mutex{}}
 }
 
 // Interface for wrappers around rpc clients
@@ -64,37 +64,37 @@ type RPCClientWrapper interface {
 }
 
 // Base RPCClientWrapper impl for rpc.Client
-type RpcClientWrapperImpl struct {
+type RPCClientWrapperImpl struct {
 	*sync.Mutex
 	*rpc.Client
 }
 
-func (impl *RpcClientWrapperImpl) IsInitialised() bool {
+func (impl *RPCClientWrapperImpl) IsInitialised() bool {
 	return impl.Client != nil
 }
 
 // Close wrapped client
-func (impl *RpcClientWrapperImpl) Close() error {
+func (impl *RPCClientWrapperImpl) Close() error {
 	return impl.Client.Close()
 }
 
 // Take current neighbour's lock
-func (impl *RpcClientWrapperImpl) Lock() {
+func (impl *RPCClientWrapperImpl) Lock() {
 	impl.Mutex.Lock()
 }
 
 // Release current neighbour's lock
-func (impl *RpcClientWrapperImpl) Unlock() {
+func (impl *RPCClientWrapperImpl) Unlock() {
 	impl.Mutex.Unlock()
 }
 
 // Set wrapper's undercover rpc client
-func (impl *RpcClientWrapperImpl) SetRPCClient(client *rpc.Client) {
+func (impl *RPCClientWrapperImpl) SetRPCClient(client *rpc.Client) {
 	impl.Client = client
 }
 
 // Create base rpc connection
-func (impl *RpcClientWrapperImpl) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
+func (impl *RPCClientWrapperImpl) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
 	conn, err := net.Dial(connectionType.String(), connectionAddress)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func (impl *RpcClientWrapperImpl) CreateConnection(connectionType configuration.
 }
 
 // Make a call in async style, with done channel as async-marker
-func (impl *RpcClientWrapperImpl) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
+func (impl *RPCClientWrapperImpl) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
 	return impl.Client.Go(serviceMethod, args, reply, done)
 }
 

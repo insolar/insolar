@@ -11,11 +11,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-type RecordId string
+type RecordID string
 
 const (
-	LastPulseRecordId RecordId = "lastPulse"
-	PulseRecordId     RecordId = "pulse"
+	LastPulseRecordID RecordID = "lastPulse"
+	PulseRecordID     RecordID = "pulse"
 )
 
 // NewDB returns pulsar.storage.db with BadgerDB instance initialized by opts.
@@ -42,7 +42,7 @@ func NewStorageBadger(conf configuration.Pulsar, opts *badger.Options) (*BadgerS
 
 	// Because first 2 bites of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
 	// for calculation pulse numbers we use the formula - unix.Now() - firstPulseDate + 65536
-	genesisPulse := core.Pulse{PulseNumber: core.FirstPulseDate - core.FirstPulseDate + 65536}
+	genesisPulse := core.Pulse{PulseNumber: core.FirstPulseDate + 65536}
 	predefinedEntropy := []byte{138, 67, 169, 65, 13, 4, 211, 121, 35, 73, 128, 81, 138, 164, 87, 139,
 		150, 104, 24, 255, 159, 10, 172, 233, 183, 61, 183, 192, 169, 103, 187, 209,
 		181, 235, 43, 188, 164, 151, 138, 213, 231, 222, 27, 244, 42, 194, 55, 133,
@@ -50,6 +50,9 @@ func NewStorageBadger(conf configuration.Pulsar, opts *badger.Options) (*BadgerS
 	copy(genesisPulse.Entropy[:], predefinedEntropy[:core.EntropySize])
 
 	err = db.SavePulse(&genesisPulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "problems with init database")
+	}
 	err = db.SetLastPulse(&genesisPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "problems with init database")
@@ -76,7 +79,7 @@ func (storage *BadgerStorageImpl) GetLastPulse() (*core.Pulse, error) {
 	var pulseNumber core.Pulse
 
 	err := storage.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(LastPulseRecordId))
+		item, err := txn.Get([]byte(LastPulseRecordID))
 		if err != nil {
 			return err
 		}
@@ -105,10 +108,9 @@ func (storage *BadgerStorageImpl) SavePulse(pulse *core.Pulse) error {
 		return err
 	}
 	pulseNumber := pulse.PulseNumber.Bytes()
-	key := []byte(PulseRecordId)
-	for _, pulseItem := range pulseNumber {
-		key = append(key, pulseItem)
-	}
+	key := []byte(PulseRecordID)
+	key = append(key, pulseNumber...)
+
 	return storage.db.Update(func(txn *badger.Txn) error {
 		err := txn.Set(key, buffer.Bytes())
 		return err
@@ -123,7 +125,7 @@ func (storage *BadgerStorageImpl) SetLastPulse(pulse *core.Pulse) error {
 		return err
 	}
 	return storage.db.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte(LastPulseRecordId), buffer.Bytes())
+		err := txn.Set([]byte(LastPulseRecordID), buffer.Bytes())
 		return err
 	})
 }
