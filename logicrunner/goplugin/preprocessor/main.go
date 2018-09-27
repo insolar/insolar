@@ -65,14 +65,14 @@ func ParseFile(fileName string) (*ParsedFile, error) {
 	}
 	sourceCode, err := slurpFile(fileName)
 	if err != nil {
-		return &res, errors.Wrap(err, "Can't read slurp file")
+		return nil, errors.Wrap(err, "Can't read file")
 	}
 	res.code = sourceCode
 
 	res.fileSet = token.NewFileSet()
 	node, err := parser.ParseFile(res.fileSet, res.name, res.code, parser.ParseComments)
 	if err != nil {
-		return &res, errors.Wrapf(err, "Can't parse %s", fileName)
+		return nil, errors.Wrapf(err, "Can't parse %s", fileName)
 	}
 	res.node = node
 
