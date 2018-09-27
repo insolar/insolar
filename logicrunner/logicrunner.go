@@ -141,35 +141,24 @@ func (lr *LogicRunner) Execute(e core.LogicRunnerEvent) (core.Reaction, error) {
 			Type: CaseRecordTypeMethodCall,
 			Resp: e,
 		})
-		return lr.executeMethodCall(ctx, m, machinePref)
+		re, err := lr.executeMethodCall(ctx, m, machinePref) // TODO: move machinepref inside lr
+		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
+			Type: CaseRecordTypeMethodCallResult,
+			Resp: re,
+		})
+		return re, err
 
 	case *event.CallConstructor:
 		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
 			Type: CaseRecordTypeConstructorCall,
 			Resp: e,
 		})
-		classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get class")
-		}
-		ctx.Class = classDesc.HeadRef()
-
-		codeDesc, err := classDesc.CodeDescriptor(machinePref)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get class's code descriptor")
-		}
-
-		executor, err := lr.GetExecutor(codeDesc.MachineType())
-		if err != nil {
-			return nil, errors.Wrap(err, "no executer registered")
-		}
-
-		newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
-		if err != nil {
-			return nil, errors.Wrap(err, "executer error")
-		}
-
-		return &reaction.CommonReaction{Data: newData}, nil
+		re, err := lr.executeConstructorCall(ctx, m, machinePref)
+		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
+			Type: CaseRecordTypeConstructorCallResult,
+			Resp: re,
+		})
+		return re, err
 
 	default:
 		panic("Unknown e type")
@@ -252,6 +241,31 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.Cal
 		return &reaction.CommonReaction{}, nil
 	}
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
+}
+
+func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *event.CallConstructor, machinePref []core.MachineType) (core.Reaction, error) {
+
+	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get class")
+	}
+	ctx.Class = classDesc.HeadRef()
+
+	codeDesc, err := classDesc.CodeDescriptor(machinePref)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get class's code descriptor")
+	}
+
+	executor, err := lr.GetExecutor(codeDesc.MachineType())
+	if err != nil {
+		return nil, errors.Wrap(err, "no executer registered")
+	}
+
+	newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
+	if err != nil {
+		return nil, errors.Wrap(err, "executer error")
+	}
+	return &reaction.CommonReaction{Data: newData}, nil
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
