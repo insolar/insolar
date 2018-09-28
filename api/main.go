@@ -76,6 +76,8 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 		answer, hError = rh.ProcessSendMoney()
 	case RegisterNode:
 		answer, hError = rh.ProcessRegisterNode()
+	case IsAuth:
+		answer, hError = rh.ProcessIsAuthorized()
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = writeError(msg, BadRequest)
