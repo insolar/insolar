@@ -64,7 +64,6 @@ func main() {
 	var nextPulseNumber core.PulseNumber
 	if server.LastPulse.PulseNumber == core.FirstPulseDate {
 		nextPulseNumber = core.CalculatePulseNumber(time.Now())
-		server.StartConsensusProcess(nextPulseNumber)
 	} else {
 		waitTime := core.CalculateMsToNextPulse(server.LastPulse.PulseNumber, time.Now())
 		if waitTime != 0 {
@@ -73,11 +72,19 @@ func main() {
 		time.Sleep(waitTime)
 
 	}
-	server.StartConsensusProcess(nextPulseNumber)
+	err = server.StartConsensusProcess(nextPulseNumber)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
 	pulseTicker := time.NewTicker(time.Duration(cfgHolder.Configuration.Pulsar.PulseTime) * time.Second)
 	go func() {
 		for range pulseTicker.C {
-			server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
+			err = server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
+			if err != nil {
+				log.Fatal(err)
+				panic(err)
+			}
 		}
 	}()
 
