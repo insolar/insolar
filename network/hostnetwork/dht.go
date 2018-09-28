@@ -627,15 +627,15 @@ func (dht *DHT) selectResultChan(
 
 func (dht *DHT) setUpResultChan(futures []transport.Future, ctx hosthandler.Context, resultChan chan *packet.Packet) {
 	for _, f := range futures {
-		go func(future transport.Future) {
-			result, timeout := dht.getResultWithTimeout(f, dht.options.PacketTimeout)
+		go func(future transport.Future, ctx hosthandler.Context, resultChan chan *packet.Packet) {
+			result, timeout := dht.getResultWithTimeout(future, dht.options.PacketTimeout)
 			if timeout || result == nil {
 				// Timeout occurred or channel was closed
 				return
 			}
 			dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
 			resultChan <- result
-		}(f)
+		}(f, ctx, resultChan)
 	}
 }
 
