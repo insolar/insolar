@@ -131,6 +131,49 @@ func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
     }
 }
 
+func (r *RootDomain) IsAuthorized(  ) ( bool ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsAuthorized", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [1]interface{}{}
+	var a0 bool
+	resList[0] = a0
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].(bool)
+}
+
+func (r *RootDomain) IsAuthorizedNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "IsAuthorized", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *RootDomain) CreateMember( name string ) ( string ) {
     var args [1]interface{}
 	args[0] = name

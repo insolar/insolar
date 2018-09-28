@@ -190,11 +190,7 @@ func (eb *testMessageBus) Register(p core.MessageType, handler core.MessageHandl
 func (*testMessageBus) Start(components core.Components) error { return nil }
 func (*testMessageBus) Stop() error                            { return nil }
 func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) {
-	e, ok := event.(core.LogicRunnerEvent)
-	if !ok {
-		panic("Called with not logicrunner event")
-	}
-	return eb.LogicRunner.Execute(e)
+	return eb.LogicRunner.Execute(event)
 }
 func (*testMessageBus) SendAsync(msg core.Message) {}
 
