@@ -19,9 +19,7 @@ package goplugin
 
 import (
 	"net/rpc"
-	"os"
 	"os/exec"
-	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -47,66 +45,25 @@ type RunnerOptions struct {
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	Cfg             *configuration.LogicRunner
-	EventBus        core.EventBus
+	MessageBus      core.MessageBus
 	ArtifactManager core.ArtifactManager
 	runner          *exec.Cmd
 	client          *rpc.Client
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.LogicRunner, eb core.EventBus, am core.ArtifactManager) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.LogicRunner, eb core.MessageBus, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
-		EventBus:        eb,
+		MessageBus:      eb,
 		ArtifactManager: am,
 	}
 
-	err := gp.StartRunner()
-	if err != nil {
-		return nil, err
-	}
 	return &gp, nil
-}
-
-// StartRunner starts ginsider process
-
-func (gp *GoPlugin) StartRunner() error {
-	var runnerArguments []string
-	if gp.Cfg.GoPlugin.RunnerListen != "" {
-		runnerArguments = append(runnerArguments, "-l", gp.Cfg.GoPlugin.RunnerListen)
-	} else {
-		return errors.New("RunnerListen is not set in the configuration of GoPlugin")
-	}
-	if gp.Cfg.GoPlugin.RunnerCodePath != "" {
-		runnerArguments = append(runnerArguments, "-d", gp.Cfg.GoPlugin.RunnerCodePath)
-	}
-	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.RPCListen)
-
-	if gp.Cfg.GoPlugin.RunnerPath == "" {
-		return errors.New("RunnerPath is not set in the configuration of GoPlugin")
-	}
-
-	runner := exec.Command(gp.Cfg.GoPlugin.RunnerPath, runnerArguments...)
-	runner.Stdout = os.Stdout
-	runner.Stderr = os.Stderr
-	err := runner.Start()
-	if err != nil {
-		return err
-	}
-	time.Sleep(200 * time.Millisecond)
-	gp.runner = runner
-
-	return nil
 }
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() error {
-	err := gp.runner.Process.Signal(syscall.SIGINT)
-	if err != nil {
-		return err
-	}
-	time.Sleep(200 * time.Millisecond)
-
 	return nil
 }
 

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -35,7 +35,12 @@ const (
 	nodeDomain = "nodedomain"
 	nodeRecord = "noderecord"
 	rootDomain = "rootdomain"
+	wallet     = "wallet"
+	member     = "member"
+	allowance  = "allowance"
 )
+
+var contractNames = []string{wallet, member, allowance, rootDomain, nodeDomain, nodeRecord}
 
 // Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
@@ -59,12 +64,85 @@ var pathToContracts = "genesis/experiment/"
 func getContractPath(name string) (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
-		return "", errors.Wrap(nil, "[Bootstrapper] couldn't find info about current file")
+		return "", errors.Wrap(nil, "[ getContractPath ] couldn't find info about current file")
 	}
 	rootDir := filepath.Dir(filepath.Dir(currentFile))
 	contractDir := filepath.Join(rootDir, pathToContracts)
 	contractFile := name + ".go"
 	return filepath.Join(contractDir, name, contractFile), nil
+}
+
+func getContractsMap() (map[string]string, error) {
+	contracts := make(map[string]string)
+	for _, name := range contractNames {
+		contractPath, err := getContractPath(name)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
+		}
+		code, err := ioutil.ReadFile(filepath.Clean(contractPath))
+		if err != nil {
+			return nil, errors.Wrap(err, "[ contractsMap ] couldn't read contract: ")
+		}
+		contracts[name] = string(code)
+	}
+	return contracts, nil
+}
+
+func isLightExecutor(c core.Components) (bool, error) {
+	am := c.Ledger.GetArtifactManager()
+	jc := c.Ledger.GetJetCoordinator()
+	pm := c.Ledger.GetPulseManager()
+	currentPulse, err := pm.Current()
+	if err != nil {
+		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
+	}
+
+	network := c.Network
+	nodeID := network.GetNodeID()
+
+	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
+	if err != nil {
+		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
+	}
+	if !isLightExecutor {
+		log.Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
+		return false, nil
+	}
+	return true, nil
+}
+
+func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
+	am := c.Ledger.GetArtifactManager()
+	rootObj, err := am.GetObject(*am.RootRef(), nil)
+	rootRefChildren := rootObj.Children()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of RootRef object")
+	}
+	if rootRefChildren.HasNext() {
+		rootDomainRef, err := rootRefChildren.Next()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of RootRef object")
+		}
+		return &rootDomainRef, nil
+	}
+	return nil, nil
+}
+
+func buildSmartContracts(cb *testutil.ContractsBuilder) error {
+	log.Info("[ buildSmartContracts ] building contracts:", contractNames)
+	contracts, err := getContractsMap()
+	if err != nil {
+		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
+	}
+
+	log.Info("[ buildSmartContracts ] Start building contracts ...")
+	err = cb.Build(contracts)
+	if err != nil {
+		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
+	}
+	log.Info("[ buildSmartContracts ] Stop building contracts ...")
+
+	return nil
 }
 
 func serializeInstance(contractInstance interface{}) ([]byte, error) {
@@ -75,20 +153,20 @@ func serializeInstance(contractInstance interface{}) ([]byte, error) {
 		contractInstance,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ CborInstance ] Problem with CBORing")
+		return nil, errors.Wrap(err, "[ serializeInstance ] Problem with CBORing")
 	}
 
 	return instanceData, nil
 }
 
-func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
 	instanceData, err := serializeInstance(rootdomain.NewRootDomain())
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
 	contract, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+		core.RecordRef{}, core.RandomRef(),
 		*cb.Classes[rootDomain],
 		*am.RootRef(),
 		instanceData,
@@ -101,14 +179,14 @@ func (b *Bootstrapper) ActivateRootDomain(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
-func (b *Bootstrapper) ActivateNodeDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
 	instanceData, err := serializeInstance(nodedomain.NewNodeDomain())
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
 	contract, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+		core.RecordRef{}, core.RandomRef(),
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
 		instanceData,
@@ -120,13 +198,13 @@ func (b *Bootstrapper) ActivateNodeDomain(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
-func (b *Bootstrapper) ActivateSmartContracts(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
-	err := b.ActivateRootDomain(am, cb)
+func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+	err := b.activateRootDomain(am, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.ActivateNodeDomain(am, cb)
+	err = b.activateNodeDomain(am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
@@ -137,38 +215,23 @@ func (b *Bootstrapper) ActivateSmartContracts(am core.ArtifactManager, cb *testu
 // Start creates types and RootDomain instance
 func (b *Bootstrapper) Start(c core.Components) error {
 	log.Info("[ Bootstrapper ] Starting Bootstrap ...")
-	am := c.Ledger.GetArtifactManager()
 
-	rootObj, err := am.GetObject(*am.RootRef(), nil)
-	rootRefChildren := rootObj.Children()
+	rootDomainRef, err := getRootDomainRef(c)
 	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't get children of RootRef object")
+		return errors.Wrap(err, "[ Bootstrapper ] couldn't get ref of rootDomain")
 	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
-		if err != nil {
-			return errors.Wrap(err, "[ Bootstrapper ] couldn't get next child of RootRef object")
-		}
-		b.rootDomainRef = &rootDomainRef
+	if rootDomainRef != nil {
+		b.rootDomainRef = rootDomainRef
+		log.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
 	}
 
-	jc := c.Ledger.GetJetCoordinator()
-	pm := c.Ledger.GetPulseManager()
-	currentPulse, err := pm.Current()
+	isLightExecutor, err := isLightExecutor(c)
 	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't get current pulse")
-	}
-
-	network := c.Network
-	nodeID := network.GetNodeID()
-
-	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
-	if err != nil {
-		return errors.Wrap(err, "[ Bootstrapper ] couldn't authorized node")
+		return errors.Wrap(err, "[ Bootstrapper ] couldn't check if node is light executor")
 	}
 	if !isLightExecutor {
-		log.Info("[ Bootstrapper ] Is not light executor. Don't build contracts")
+		log.Info("[ Bootstrapper ] Node is not light executor. Don't do bootstrap")
 		return nil
 	}
 
@@ -177,27 +240,16 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build insgocc")
 	}
 
+	am := c.Ledger.GetArtifactManager()
 	cb := testutil.NewContractBuilder(am, insgocc)
 	defer cb.Clean()
-	var contractNames = []string{"wallet", "member", "allowance", rootDomain, nodeDomain, nodeRecord}
-	log.Info("[Bootstrapper] building contracts:", contractNames)
-	contracts := make(map[string]string)
-	for _, name := range contractNames {
-		contractPath, _ := getContractPath(name)
-		code, err := ioutil.ReadFile(contractPath)
-		if err != nil {
-			return errors.Wrap(err, "[ Bootstrapper ] couldn't read contract: ")
-		}
-		contracts[name] = string(code)
-	}
-	log.Info("[ Bootstrapper ] Start building contracts ...")
-	err = cb.Build(contracts)
+
+	err = buildSmartContracts(cb)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build contracts")
 	}
-	log.Info("[ Bootstrapper ] Stop building contracts ...")
 
-	err = b.ActivateSmartContracts(am, cb)
+	err = b.activateSmartContracts(am, cb)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ]")
 	}

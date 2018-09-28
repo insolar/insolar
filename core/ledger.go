@@ -16,14 +16,20 @@
 
 package core
 
+// JetRole is number representing a node role.
 type JetRole int
 
 const (
-	RoleVirtualExecutor  = JetRole(iota + 1) // Role responsible for current pulse CPU operations.
-	RoleVirtualValidator                     // Role responsible for previous pulse CPU operations.
-	RoleLightExecutor                        // Role responsible for current pulse Disk operations.
-	RoleLightValidator                       // Role responsible for previous pulse Disk operations.
-	RoleHeavyExecutor                        // Role responsible for permanent Disk operations.
+	// RoleVirtualExecutor is responsible for current pulse CPU operations.
+	RoleVirtualExecutor = JetRole(iota + 1)
+	// RoleVirtualValidator is responsible for previous pulse CPU operations.
+	RoleVirtualValidator
+	// RoleLightExecutor is responsible for current pulse Disk operations.
+	RoleLightExecutor
+	// RoleLightValidator is responsible for previous pulse Disk operations.
+	RoleLightValidator
+	// RoleHeavyExecutor is responsible for permanent Disk operations.
+	RoleHeavyExecutor
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
@@ -36,11 +42,10 @@ type Ledger interface {
 
 	// GetPulseManager returns pulse manager to work with.
 	GetPulseManager() PulseManager
-
-	// HandleEvent processes provided event.
-	HandleEvent(Event) (Reaction, error)
 }
 
+// JetCoordinator provides methods for calculating Jet affinity
+// (e.g. to which Jet a message should be sent).
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
 	IsAuthorized(role JetRole, obj RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
@@ -171,6 +176,7 @@ type ObjectDescriptor interface {
 	Children() RefIterator
 }
 
+// RefIterator is used for iteration over affined children(parts) of container.
 type RefIterator interface {
 	Next() (RecordRef, error)
 	HasNext() bool

@@ -22,12 +22,14 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// JetNode represents node in Jet tree.
 type JetNode struct {
 	ref   core.RecordRef
 	left  *JetNode
 	right *JetNode
 }
 
+// GetContaining returns leaf node reference. Leaf node is a jet host for provided objRef.
 func (jn *JetNode) GetContaining(objRef *core.RecordRef) *core.RecordRef {
 	if jn.left == nil || jn.right == nil {
 		return &jn.ref

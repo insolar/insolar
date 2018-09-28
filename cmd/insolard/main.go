@@ -27,10 +27,10 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar"
@@ -120,7 +120,7 @@ func main() {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}
 
-	cm.components.EventBus, err = eventbus.New(cfgHolder.Configuration)
+	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("Failed to start LogicRunner: ", err.Error())
 	}

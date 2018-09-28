@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -21,8 +21,10 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/pkg/errors"
 )
@@ -203,7 +205,7 @@ func RelayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-// CascadeSendMessage sends a event to the next cascade layer.
+// CascadeSendMessage sends a message to the next cascade layer.
 func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, targetID string, method string, args [][]byte) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
@@ -232,6 +234,31 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	}
 
 	return checkResponse(hostHandler, future, targetID, request)
+}
+
+// ResendPulseToKnownHosts resends received pulse to all known hosts
+func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []*routing.RouteHost, pulse *packet.RequestPulse) {
+	for _, host := range hosts {
+		err := sendPulse(hostHandler, host.Host, pulse)
+		if err != nil {
+			log.Debug("error resending pulse to host %s: %s", host.ID, err.Error())
+		}
+	}
+}
+
+func sendPulse(hostHandler hosthandler.HostHandler, host *host.Host, pulse *packet.RequestPulse) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return errors.Wrap(err, "failed to send pulse")
+	}
+	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).Receiver(host).
+		Type(packet.TypePulse).Request(pulse).Build()
+
+	future, err := hostHandler.SendRequest(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to send pulse")
+	}
+	return checkResponse(hostHandler, future, "", request)
 }
 
 func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string) error {
@@ -336,6 +363,11 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 			if !response.Success {
 				err = errors.New(response.Error)
 			}
+		case packet.TypePulse:
+			response := rsp.Data.(*packet.ResponsePulse)
+			if !response.Success {
+				err = errors.New(response.Error)
+			}
 		}
 
 		if err != nil {
@@ -344,8 +376,7 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 
 	case <-time.After(hostHandler.GetPacketTimeout()):
 		future.Cancel()
-		err = errors.New("knownOuterHostsRequest: timeout")
-		return err
+		return errors.New(request.Type.String() + ": timeout")
 	}
 	return nil
 }

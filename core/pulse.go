@@ -52,6 +52,7 @@ type Pulse struct {
 	Entropy     Entropy
 }
 
+// PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {
 	// Current returns current pulse structure.
 	Current() (*Pulse, error)

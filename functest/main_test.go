@@ -40,7 +40,7 @@ import (
 )
 
 const HOST = "http://localhost:19191"
-const TestUrl = HOST + "/api/v1"
+const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
 
 var cmd *exec.Cmd
@@ -86,8 +86,10 @@ func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
-func buildGinsiderCLI() error {
-	_, _, err := testutil.Build()
+var insgorundPath string
+
+func buildGinsiderCLI() (err error) {
+	insgorundPath, _, err = testutil.Build()
 	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
 }
 
@@ -178,6 +180,23 @@ func stopInsolard() error {
 	return nil
 }
 
+var insgorundCleaner func()
+
+func startInsgorund() (err error) {
+	insgorundCleaner, err = testutils.StartInsgorund(insgorundPath, "127.0.0.1:18181", "127.0.0.1:18182")
+	if err != nil {
+		return errors.Wrap(err, "[ startInsolard ] could't wait for insolard to start completely: ")
+	}
+	return err
+}
+
+func stopInsgorund() error {
+	if insgorundCleaner != nil {
+		insgorundCleaner()
+	}
+	return nil
+}
+
 func setup() error {
 	err := createDirForContracts()
 	if err != nil {
@@ -197,6 +216,12 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolard was successfully builded")
 
+	err = startInsgorund()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
+	}
+	fmt.Println("[ setup ] insgorund was successfully started")
+
 	err = startInsolard()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insolard: ")
@@ -212,6 +237,12 @@ func teardown() {
 		fmt.Println("[ teardown ] failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
+
+	err = stopInsgorund()
+	if err != nil {
+		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
+	}
+	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
 	err = deleteDirForData()
 	if err != nil {
@@ -244,8 +275,8 @@ func TestMain(m *testing.M) {
 type postParams map[string]interface{}
 
 type errorResponse struct {
-	Code  int    `json:"code"`
-	Event string `json:"event"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
 type responseInterface interface {
@@ -288,9 +319,33 @@ type dumpAllUsersResponse struct {
 	DumpInfo []userInfo `json:"dump_info"`
 }
 
+func createMember(t *testing.T) string {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       testutils.RandomString(),
+	})
+
+	firstMemberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, firstMemberResponse)
+
+	return firstMemberResponse.Reference
+}
+
+func getBalance(t *testing.T, reference string) int {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_balance",
+		"reference":  reference,
+	})
+
+	firstBalanceResponse := &getBalanceResponse{}
+	unmarshalResponse(t, body, firstBalanceResponse)
+
+	return int(firstBalanceResponse.Amount)
+}
+
 func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -322,36 +377,19 @@ func TestInsolardResponseNotErr(t *testing.T) {
 }
 
 func TestTransferMoney(t *testing.T) {
-	// Create member which balance will increase
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       "First",
-	})
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
 
-	firstMemberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, firstMemberResponse)
-
-	firstMemberRef := firstMemberResponse.Reference
-	assert.NotEqual(t, "", firstMemberRef)
-
-	// Create member which balance will decrease
-	body = getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       "Second",
-	})
-
-	secondMemberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, secondMemberResponse)
-
-	secondMemberRef := secondMemberResponse.Reference
-	assert.NotEqual(t, "", secondMemberRef)
+	amount := 111
 
 	// Transfer money from one member to another
-	body = getResponseBody(t, postParams{
+	body := getResponseBody(t, postParams{
 		"query_type": "send_money",
 		"from":       secondMemberRef,
 		"to":         firstMemberRef,
-		"amount":     111,
+		"amount":     amount,
 	})
 
 	transferResponse := &sendMoneyResponse{}
@@ -359,43 +397,25 @@ func TestTransferMoney(t *testing.T) {
 
 	assert.Equal(t, true, transferResponse.Success)
 
-	// Check balance of first member
-	body = getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  firstMemberRef,
-	})
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
 
-	firstBalanceResponse := &getBalanceResponse{}
-	unmarshalResponse(t, body, firstBalanceResponse)
-
-	assert.Equal(t, uint(1111), firstBalanceResponse.Amount)
-	assert.Equal(t, "RUB", firstBalanceResponse.Currency)
-
-	// Check balance of second member
-	body = getResponseBody(t, postParams{
-		"query_type": "get_balance",
-		"reference":  secondMemberRef,
-	})
-
-	secondBalanceResponse := &getBalanceResponse{}
-	unmarshalResponse(t, body, secondBalanceResponse)
-
-	assert.Equal(t, uint(889), secondBalanceResponse.Amount)
-	assert.Equal(t, "RUB", secondBalanceResponse.Currency)
+	assert.Equal(t, oldFirstBalance+amount, newFirstBalance)
+	assert.Equal(t, oldSecondBalance-amount, newSecondBalance)
 }
 
 func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{
 		"query_type": "dump_all_users",
 	})
-	testUrl := HOST + "/not_api/v1"
-	postResp, err := http.Post(testUrl, "application/json", bytes.NewBuffer(jsonValue))
+	testURL := HOST + "/not_api/v1"
+	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, postResp.StatusCode)
 }
 
 func TestGetRequest(t *testing.T) {
-	postResp, err := http.Get(TestUrl)
+	postResp, err := http.Get(TestURL)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -405,11 +425,11 @@ func TestGetRequest(t *testing.T) {
 	unmarshalResponseWithError(t, body, getResponse)
 
 	assert.Equal(t, api.BadRequest, getResponse.Err.Code)
-	assert.Equal(t, "Bad request", getResponse.Err.Event)
+	assert.Equal(t, "Bad request", getResponse.Err.Message)
 }
 
 func TestWrongJson(t *testing.T) {
-	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
+	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer([]byte("some not json value")))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -419,7 +439,7 @@ func TestWrongJson(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Event)
+	assert.Equal(t, "Bad request", response.Err.Message)
 }
 
 func TestWrongQueryType(t *testing.T) {
@@ -431,7 +451,7 @@ func TestWrongQueryType(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Wrong query parameter 'query_type' = 'wrong_query_type'", response.Err.Event)
+	assert.Equal(t, "Wrong query parameter 'query_type' = 'wrong_query_type'", response.Err.Message)
 }
 
 func TestWithoutQueryType(t *testing.T) {
@@ -441,7 +461,7 @@ func TestWithoutQueryType(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Wrong query parameter 'query_type' = ''", response.Err.Event)
+	assert.Equal(t, "Wrong query parameter 'query_type' = ''", response.Err.Message)
 }
 
 func TestTooMuchParams(t *testing.T) {
@@ -467,7 +487,7 @@ func TestQueryTypeAsIntParams(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Event)
+	assert.Equal(t, "Bad request", response.Err.Message)
 }
 
 func TestWrongTypeInParams(t *testing.T) {
@@ -480,7 +500,7 @@ func TestWrongTypeInParams(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Event)
+	assert.Equal(t, "Bad request", response.Err.Message)
 }
 
 // TODO: unskip test after doing errors in smart contracts
@@ -494,5 +514,164 @@ func _TestWrongReferenceInParams(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Event)
+	assert.Equal(t, "Bad request", response.Err.Message)
+}
+
+func TestTransferNegativeAmount(t *testing.T) {
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     -111,
+	})
+
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponseWithError(t, body, transferResponse)
+
+	assert.Equal(t, api.BadRequest, transferResponse.Err.Code)
+	assert.Equal(t, "Bad request", transferResponse.Err.Message)
+
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
+
+	assert.Equal(t, oldFirstBalance, newFirstBalance)
+	assert.Equal(t, oldSecondBalance, newSecondBalance)
+
+}
+
+func TestTransferAllAmount(t *testing.T) {
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     oldSecondBalance,
+	})
+
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, body, transferResponse)
+
+	assert.Equal(t, true, transferResponse.Success)
+
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
+
+	assert.Equal(t, oldFirstBalance+oldSecondBalance, newFirstBalance)
+	assert.Equal(t, 0, newSecondBalance)
+
+}
+
+func _TestTransferMoreThanAvailableAmount(t *testing.T) {
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     10000000000,
+	})
+
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, body, transferResponse)
+
+	// Add checking than contract gives specific error
+
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
+
+	assert.Equal(t, oldFirstBalance, newFirstBalance)
+	assert.Equal(t, oldSecondBalance, newSecondBalance)
+}
+
+func _TestTransferToMyself(t *testing.T) {
+	memberRef := createMember(t)
+	oldBalance := getBalance(t, memberRef)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       memberRef,
+		"to":         memberRef,
+		"amount":     oldBalance - 1,
+	})
+
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, body, transferResponse)
+
+	assert.Equal(t, true, transferResponse.Success)
+
+	newBalance := getBalance(t, memberRef)
+
+	assert.Equal(t, oldBalance, newBalance)
+}
+
+// TODO: test to check overflow of balance
+// TODO: check transfer zero amount
+
+func TestTransferTwoTimes(t *testing.T) {
+	firstMemberRef := createMember(t)
+	secondMemberRef := createMember(t)
+	oldFirstBalance := getBalance(t, firstMemberRef)
+	oldSecondBalance := getBalance(t, secondMemberRef)
+
+	firstBody := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     100,
+	})
+	transferResponse := &sendMoneyResponse{}
+	unmarshalResponse(t, firstBody, transferResponse)
+	assert.Equal(t, true, transferResponse.Success)
+
+	secondBody := getResponseBody(t, postParams{
+		"query_type": "send_money",
+		"from":       secondMemberRef,
+		"to":         firstMemberRef,
+		"amount":     100,
+	})
+	unmarshalResponse(t, secondBody, transferResponse)
+	assert.Equal(t, true, transferResponse.Success)
+
+	newFirstBalance := getBalance(t, firstMemberRef)
+	newSecondBalance := getBalance(t, secondMemberRef)
+
+	assert.Equal(t, oldFirstBalance+200, newFirstBalance)
+	assert.Equal(t, oldSecondBalance-200, newSecondBalance)
+}
+
+func TestCreateMembersWithSameName(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       "NameForTestCreateMembersWithSameName",
+	})
+
+	memberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, memberResponse)
+
+	firstMemberRef := memberResponse.Reference
+	assert.NotEqual(t, "", firstMemberRef)
+
+	body = getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       "NameForTestCreateMembersWithSameName",
+	})
+
+	unmarshalResponse(t, body, memberResponse)
+
+	secondMemberRef := memberResponse.Reference
+	assert.NotEqual(t, "", secondMemberRef)
+
+	assert.NotEqual(t, firstMemberRef, secondMemberRef)
 }

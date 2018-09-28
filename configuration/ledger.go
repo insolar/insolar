@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// Storage configures Ledger's storage.
 type Storage struct {
 	// DataDirectory is a directory where database's files live.
 	DataDirectory string

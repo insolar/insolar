@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
+// PulseManager implements core.PulseManager.
 type PulseManager struct {
 	db          *storage.DB
 	coordinator *jetcoordinator.JetCoordinator

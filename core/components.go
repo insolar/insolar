@@ -28,7 +28,7 @@ type Components struct {
 	Network      Network
 	Ledger       Ledger
 	LogicRunner  LogicRunner
-	EventBus     EventBus
+	MessageBus   MessageBus
 	Bootstrapper Bootstrapper
 	APIRunner    Component
 	Metrics      Component
