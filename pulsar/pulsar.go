@@ -94,6 +94,7 @@ func NewPulsar(
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator EntropyGenerator,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
+
 	// Listen for incoming connections.
 	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
 	if err != nil {

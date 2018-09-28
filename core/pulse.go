@@ -18,6 +18,7 @@ package core
 
 import (
 	"encoding/binary"
+	"time"
 )
 
 const (
@@ -61,6 +62,22 @@ type PulseSenderConfirmation struct {
 
 // Hardcoded date of first pulse
 const FirstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
+const FirstPulseNumber = 65536
+
+func CalculatePulseNumber(now time.Time) PulseNumber {
+	return PulseNumber(now.Unix() - FirstPulseDate + FirstPulseNumber)
+}
+
+func CalculateMsToNextPulse(previousPulse PulseNumber, now time.Time) time.Duration {
+	nextPulseCalculated := int64(previousPulse-FirstPulseNumber+FirstPulseDate) + 10
+	nextTime := time.Unix(nextPulseCalculated, 0).Sub(now)
+
+	if nextTime < 0 {
+		nextTime = 0
+	}
+
+	return nextTime
+}
 
 // PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {

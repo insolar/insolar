@@ -24,6 +24,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/storage"
@@ -49,10 +50,6 @@ func main() {
 	fmt.Println("Version: ", version.GetFullVersion())
 
 	storage, err := pulsarstorage.NewStorageBadger(cfgHolder.Configuration.Pulsar, nil)
-	if err != nil {
-		log.Fatal(err)
-		panic(err)
-	}
 
 	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
 	if err != nil {
@@ -63,9 +60,30 @@ func main() {
 	go server.StartServer()
 
 	server.RefreshConnections()
-	ticker := time.NewTicker(5 * time.Second)
+
+	var nextPulseNumber core.PulseNumber
+	if server.LastPulse.PulseNumber == core.FirstPulseDate {
+		nextPulseNumber = core.CalculatePulseNumber(time.Now())
+		server.StartConsensusProcess(nextPulseNumber)
+	} else {
+		waitTime := core.CalculateMsToNextPulse(server.LastPulse.PulseNumber, time.Now())
+		if waitTime != 0 {
+			nextPulseNumber = server.LastPulse.PulseNumber + core.PulseNumber(cfgHolder.Configuration.Pulsar.PulseTime)
+		}
+		time.Sleep(waitTime)
+
+	}
+	server.StartConsensusProcess(nextPulseNumber)
+	pulseTicker := time.NewTicker(time.Duration(cfgHolder.Configuration.Pulsar.PulseTime) * time.Second)
 	go func() {
-		for range ticker.C {
+		for range pulseTicker.C {
+			server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
+		}
+	}()
+
+	refreshTicker := time.NewTicker(1 * time.Second)
+	go func() {
+		for range refreshTicker.C {
 			server.RefreshConnections()
 		}
 	}()
@@ -81,9 +99,15 @@ func main() {
 		log.Warn(err)
 	}
 
-	// Need to think about the shutdown mechanism
-	ticker.Stop()
-	defer server.StopServer()
+	refreshTicker.Stop()
+	defer func() {
+		err := storage.Close()
+		if err != nil {
+			log.Error(err)
+		}
+		server.StopServer()
+	}()
+
 }
 
 func initLogger(cfg configuration.Log) {
