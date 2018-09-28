@@ -39,3 +39,8 @@ func (p *Pulse) Target() *core.RecordRef {
 func (p *Pulse) TargetRole() core.JetRole {
 	return core.RoleAllRoles
 }
+
+// GetCaller returns nil
+func (p *Pulse) GetCaller() *core.RecordRef {
+	return nil
+}
