@@ -28,6 +28,10 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
+	transport2 "github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/insolar/insolar/pulsar/storage"
 )
 
@@ -68,7 +72,7 @@ type Pulsar struct {
 
 	EntropyForNodes       core.Entropy
 	PulseSenderToNodes    string
-	SignsConfirmedSending map[string]*core.PulseSenderConfirmation
+	SignsConfirmedSending map[string]core.PulseSenderConfirmation
 
 	ProcessingPulseNumber core.PulseNumber
 	LastPulse             *core.Pulse
@@ -91,7 +95,7 @@ func NewPulsar(
 	entropyGenerator EntropyGenerator,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 	// Listen for incoming connections.
-	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.ListenAddress)
+	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +127,7 @@ func NewPulsar(
 	pulsar.LastPulse = lastPulse
 
 	// Adding other pulsars
-	for _, neighbour := range configuration.ListOfNeighbours {
+	for _, neighbour := range configuration.Neighbours {
 		if len(neighbour.PublicKey) == 0 {
 			continue
 		}
@@ -718,9 +722,71 @@ func (pulsar *Pulsar) stateSwitchedToSendingSignForChosen() {
 }
 
 func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
-	if pulsar.State == Failed {
+	if pulsar.State == Failed || len(pulsar.Config.BootstrapNodes) == 0 {
 		return
 	}
+
+	pulseForSeinding := core.Pulse{
+		PulseNumber: pulsar.ProcessingPulseNumber,
+		Entropy:     pulsar.EntropyForNodes,
+		Signs:       pulsar.SignsConfirmedSending,
+	}
+
+	t, err := transport2.NewTransport(pulsar.Config.BootstrapListener, relay.NewProxy())
+	if err != nil {
+		log.Error(err)
+		pulsar.switchStateTo(Failed, err)
+	}
+	t.Start()
+	pulsarHostAddress, err := host.NewAddress(pulsar.Config.BootstrapListener.Address)
+	if err != nil {
+		log.Error(err)
+		pulsar.switchStateTo(Failed, err)
+	}
+	pulsarHost := host.NewHost(pulsarHostAddress)
+
+	for _, bootstrapNode := range pulsar.Config.BootstrapNodes {
+		receiverAddress, err := host.NewAddress(bootstrapNode)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		receiverHost := host.NewHost(receiverAddress)
+
+		b := packet.NewBuilder()
+		request := b.Sender(pulsarHost).Receiver(receiverHost).Request(packet.RequestGetRandomHosts{HostsNumber: 5}).Type(packet.TypeGetRandomHosts).Build()
+
+		call, err := t.SendRequest(request)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		result := <-call.Result()
+		if result.Error != nil {
+			log.Error(result.Error)
+			continue
+		}
+		body := result.Data.(packet.ResponseGetRandomHosts)
+		if len(body.Error) != 0 {
+			log.Error(body.Error)
+			continue
+		}
+
+		for _, pulseReceiver := range body.Hosts {
+			pulseRequest := b.Sender(pulsarHost).Receiver(&pulseReceiver).Request(packet.RequestPulse{Pulse: pulseForSeinding}).Type(packet.TypePulse).Build()
+			call, err := t.SendRequest(pulseRequest)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			result := <-call.Result()
+			if result.Error != nil {
+				log.Error(result.Error)
+			}
+		}
+
+	}
+
 }
 
 func (pulsar *Pulsar) stateSwitchedToFailed(err error) {

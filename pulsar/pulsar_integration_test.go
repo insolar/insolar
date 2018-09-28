@@ -48,10 +48,10 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	storage := &pulsartestutil.MockStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
-		ConnectionType: "tcp",
-		ListenAddress:  ":1639",
-		PrivateKey:     firstPublicExported,
-		ListOfNeighbours: []*configuration.PulsarNodeAddress{
+		ConnectionType:      "tcp",
+		MainListenerAddress: ":1639",
+		PrivateKey:          firstPublicExported,
+		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1641"},
@@ -64,10 +64,10 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	assert.NoError(t, err)
 
 	secondPulsar, err := NewPulsar(configuration.Pulsar{
-		ConnectionType: "tcp",
-		ListenAddress:  ":1640",
-		PrivateKey:     secondPublicExported,
-		ListOfNeighbours: []*configuration.PulsarNodeAddress{
+		ConnectionType:      "tcp",
+		MainListenerAddress: ":1640",
+		PrivateKey:          secondPublicExported,
+		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1641"},
@@ -104,9 +104,9 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 //	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: core.PulseNumber(firstPulse)}, nil)
 //	pulsar, err := NewPulsar(configuration.Pulsar{
 //		ConnectionType:   "tcp",
-//		ListenAddress:    ":1639",
+//		MainListenerAddress:    ":1639",
 //		PrivateKey:       firstPublicExported,
-//		ListOfNeighbours: []*configuration.PulsarNodeAddress{},
+//		Neighbours: []*configuration.PulsarNodeAddress{},
 //		PulseTime: 10000,
 //		ReceivingSignTimeout:   1000,
 //		ReceivingNumberTimeout: 1000,
@@ -149,9 +149,9 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 //	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: core.PulseNumber(firstPulse)}, nil)
 //	firstPulsar, err := NewPulsar(configuration.Pulsar{
 //		ConnectionType: "tcp",
-//		ListenAddress:  ":1639",
+//		MainListenerAddress:  ":1639",
 //		PrivateKey:     firstPublicExported,
-//		ListOfNeighbours: []*configuration.PulsarNodeAddress{
+//		Neighbours: []*configuration.PulsarNodeAddress{
 //			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
 //		}},
 //		storage,
@@ -163,9 +163,9 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 //
 //	secondPulsar, err := NewPulsar(configuration.Pulsar{
 //		ConnectionType: "tcp",
-//		ListenAddress:  ":1640",
+//		MainListenerAddress:  ":1640",
 //		PrivateKey:     secondPublicExported,
-//		ListOfNeighbours: []*configuration.PulsarNodeAddress{
+//		Neighbours: []*configuration.PulsarNodeAddress{
 //			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 //		}},
 //		storage,

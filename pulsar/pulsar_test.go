@@ -46,9 +46,9 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	expectedPrivateKey, _ := ExportPrivateKey(privateKey)
 	config := configuration.Pulsar{
-		ConnectionType: "testType",
-		ListenAddress:  "listedAddress",
-		PrivateKey:     expectedPrivateKey,
+		ConnectionType:      "testType",
+		MainListenerAddress: "listedAddress",
+		PrivateKey:          expectedPrivateKey,
 	}
 	actualConnectionType := ""
 	actualAddress := ""
@@ -91,10 +91,10 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	expectedPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	parsedExpectedPrivateKey, _ := ExportPrivateKey(expectedPrivateKey)
 	config := configuration.Pulsar{
-		ConnectionType: "testType",
-		ListenAddress:  "listedAddress",
-		PrivateKey:     parsedExpectedPrivateKey,
-		ListOfNeighbours: []*configuration.PulsarNodeAddress{
+		ConnectionType:      "testType",
+		MainListenerAddress: "listedAddress",
+		PrivateKey:          parsedExpectedPrivateKey,
+		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "first", PublicKey: firstExpectedKey},
 			{ConnectionType: "pct", Address: "second", PublicKey: secondExpectedKey},
 		},

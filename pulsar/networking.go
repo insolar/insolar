@@ -287,7 +287,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		return errors.New("signature check failed")
 	}
 
-	handler.pulsar.SignsConfirmedSending[request.PublicKey] = &core.PulseSenderConfirmation{
+	handler.pulsar.SignsConfirmedSending[request.PublicKey] = core.PulseSenderConfirmation{
 		ChosenPublicKey: requestBody.ChosenPublicKey,
 		Signature:       requestBody.Signature,
 	}
