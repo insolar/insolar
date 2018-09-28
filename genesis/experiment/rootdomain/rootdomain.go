@@ -17,8 +17,12 @@
 package rootdomain
 
 import (
+	"crypto/ecdsa"
+	"crypto/rand"
+	"encoding/asn1"
 	"encoding/json"
 
+	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
 	"github.com/insolar/insolar/genesis/proxy/member"
 	"github.com/insolar/insolar/genesis/proxy/nodedomain"
 	"github.com/insolar/insolar/genesis/proxy/wallet"
@@ -43,6 +47,54 @@ func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	nd := nodedomain.GetObject(domainRefs[0])
 
 	return nd.RegisterNode(publicKey, role).String()
+}
+
+func sign(seed []byte, key *ecdsa.PrivateKey) []byte {
+
+	hash := utils.MakeHash(seed)
+
+	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
+
+	if err != nil {
+		panic(err)
+	}
+
+	data, err := asn1.Marshal(utils.EcdsaPair{First: r, Second: s})
+	if err != nil {
+		panic(err)
+	}
+
+	return data
+}
+
+func makeSeed() []byte {
+	seed := make([]byte, 32)
+	_, err := rand.Read(seed)
+	if err != nil {
+		panic(err)
+	}
+
+	return seed
+}
+
+func (rd *RootDomain) IsAuthorized() bool {
+	privateKey, err := ecdsa.GenerateKey(utils.GetCurve(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+
+	// Make signature
+	seed := makeSeed()
+	signature := sign(seed, privateKey)
+
+	// Register node
+	serPubKey, err := utils.SerializePublicKey(privateKey.PublicKey)
+	nodeRef := rd.RegisterNode(serPubKey, "virtual")
+
+	// Validate
+	domainRefs, _ := rd.GetChildrenTyped(nodedomain.ClassReference)
+	nd := nodedomain.GetObject(domainRefs[0])
+	return nd.IsAuthorized(core.NewRefFromBase58(nodeRef), seed, signature)
 }
 
 func (rd *RootDomain) CreateMember(name string) string {
