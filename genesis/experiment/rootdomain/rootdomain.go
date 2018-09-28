@@ -17,8 +17,11 @@
 package rootdomain
 
 import (
+	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/json"
 
+	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
 	"github.com/insolar/insolar/genesis/proxy/member"
 	"github.com/insolar/insolar/genesis/proxy/nodedomain"
 	"github.com/insolar/insolar/genesis/proxy/wallet"
@@ -27,10 +30,12 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
+// RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
 }
 
+// RegisterNode processes register node request
 func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
@@ -45,6 +50,38 @@ func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	return nd.RegisterNode(publicKey, role).String()
 }
 
+// IsAuthorized checks is node authorized
+func (rd *RootDomain) IsAuthorized() bool {
+	privateKey, err := ecdsa.GenerateKey(utils.GetCurve(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+
+	// Make signature
+	seed := utils.MakeSeed()
+	signature, err := utils.Sign(seed, privateKey)
+	if err != nil {
+		panic(err)
+	}
+
+	// Register node
+	serPubKey, err := utils.SerializePublicKey(privateKey.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+	nodeRef := rd.RegisterNode(serPubKey, "virtual")
+
+	// Validate
+	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
+	if err != nil {
+		panic(err)
+	}
+	nd := nodedomain.GetObject(domainRefs[0])
+
+	return nd.IsAuthorized(core.NewRefFromBase58(nodeRef), seed, signature)
+}
+
+// CreateMember processes create member request
 func (rd *RootDomain) CreateMember(name string) string {
 	memberHolder := member.New(name)
 	m := memberHolder.AsChild(rd.GetReference())
@@ -53,11 +90,13 @@ func (rd *RootDomain) CreateMember(name string) string {
 	return m.GetReference().String()
 }
 
+// GetBalance processes get balance request
 func (rd *RootDomain) GetBalance(reference string) uint {
 	w := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
 	return w.GetTotalBalance()
 }
 
+// SendMoney processes send money request
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
 
@@ -76,6 +115,7 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
 	return res
 }
 
+// DumpUserInfo processes dump user info request
 func (rd *RootDomain) DumpUserInfo(reference string) []byte {
 	m := member.GetObject(core.NewRefFromBase58(reference))
 	res := rd.getUserInfoMap(m)
@@ -83,6 +123,7 @@ func (rd *RootDomain) DumpUserInfo(reference string) []byte {
 	return resJSON
 }
 
+// DumpAllUsers processes dump all users request
 func (rd *RootDomain) DumpAllUsers() []byte {
 	res := []map[string]interface{}{}
 	crefs, err := rd.GetChildrenTyped(member.ClassReference)
@@ -98,6 +139,7 @@ func (rd *RootDomain) DumpAllUsers() []byte {
 	return resJSON
 }
 
+// NewRootDomain creates new RootDomain
 func NewRootDomain() *RootDomain {
 	return &RootDomain{}
 }
