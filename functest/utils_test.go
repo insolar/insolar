@@ -63,6 +63,11 @@ type getBalanceResponse struct {
 	Currency string `json:"currency"`
 }
 
+type isAuthorized struct {
+	baseResponse
+	IsAuthorized bool `json:"is_authorized"`
+}
+
 type userInfo struct {
 	Member string `json:"member"`
 	Wallet uint   `json:"wallet"`

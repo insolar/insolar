@@ -37,7 +37,7 @@ func (*TestMessageBus) Stop() error { return nil }
 
 // Send executes message on LogicRunner.
 func (eb *TestMessageBus) Send(msg core.Message) (resp core.Reply, err error) {
-	return eb.LogicRunner.Execute(msg.(core.LogicRunnerEvent))
+	return eb.LogicRunner.Execute(msg)
 }
 
 func (*TestMessageBus) SendAsync(msg core.Message) {}

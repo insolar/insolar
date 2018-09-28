@@ -32,6 +32,19 @@ const (
 	// ReturnValidated
 )
 
+// BaseLogicEvent base of event class family, do not use it standalone
+type BaseLogicEvent struct {
+	Caller core.RecordRef
+}
+
+func (e *BaseLogicEvent) GetCaller() *core.RecordRef {
+	return &e.Caller
+}
+
+func (e *BaseLogicEvent) TargetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
 // CallMethod - Simply call method and return result
 type CallMethod struct {
 	BaseLogicEvent
@@ -44,10 +57,6 @@ type CallMethod struct {
 
 func (e *CallMethod) Type() core.MessageType {
 	return TypeCallMethod
-}
-
-func (e *CallMethod) TargetRole() core.JetRole {
-	return core.RoleVirtualExecutor
 }
 
 func (e *CallMethod) Target() *core.RecordRef {
@@ -68,8 +77,4 @@ func (e *CallConstructor) Type() core.MessageType {
 
 func (e *CallConstructor) Target() *core.RecordRef {
 	return &e.ClassRef
-}
-
-func (e *CallConstructor) TargetRole() core.JetRole {
-	return core.RoleVirtualExecutor
 }

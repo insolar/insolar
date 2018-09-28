@@ -29,15 +29,21 @@ import (
 const (
 	// Logicrunner
 
-	TypeCommon = core.ReplyType(iota) // TypeCommonReaction - two binary fields: data and results
+	// TypeCommon - two binary fields: data and results.
+	TypeCommon = core.ReplyType(iota)
 
 	// Ledger
 
-	TypeCode      // TypeCode is code from storage.
-	TypeClass     // TypeClass is class from storage.
-	TypeObject    // TypeObject is object from storage.
-	TypeDelegate  // TypeDelegate is delegate reference from storage.
-	TypeReference // TypeReference is common reply for methods returning reference to created records.
+	// TypeCode is code from storage.
+	TypeCode
+	// TypeClass is class from storage.
+	TypeClass
+	// TypeObject is object from storage.
+	TypeObject
+	// TypeDelegate is delegate reference from storage.
+	TypeDelegate
+	// TypeReference is common reply for methods returning reference to created records.
+	TypeReference
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {

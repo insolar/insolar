@@ -20,146 +20,160 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+type ledgerMessage struct{}
+
+// GetCaller implementation of Message interface.
+func (ledgerMessage) GetCaller() *core.RecordRef {
+	return nil
+}
+
+// TargetRole implementation of Message interface.
+func (ledgerMessage) TargetRole() core.JetRole {
+	return core.RoleLightExecutor
+}
+
+// GetCode retrieves code from storage.
 type GetCode struct {
+	ledgerMessage
 	Code        core.RecordRef
 	MachinePref []core.MachineType
 }
 
+// Type implementation of Message interface.
 func (e *GetCode) Type() core.MessageType {
 	return TypeGetCode
 }
 
+// Target implementation of Message interface.
 func (e *GetCode) Target() *core.RecordRef {
 	return &e.Code
 }
 
-func (e *GetCode) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// GetClass retrieves class from storage.
 type GetClass struct {
+	ledgerMessage
 	Head  core.RecordRef
 	State *core.RecordRef // If nil, will fetch the latest state.
 }
 
+// Type implementation of Message interface.
 func (e *GetClass) Type() core.MessageType {
 	return TypeGetClass
 }
 
+// Target implementation of Message interface.
 func (e *GetClass) Target() *core.RecordRef {
 	return &e.Head
 }
 
-func (e *GetClass) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// GetObject retrieves object from storage.
 type GetObject struct {
+	ledgerMessage
 	Head  core.RecordRef
 	State *core.RecordRef // If nil, will fetch the latest state.
 }
 
+// Type implementation of Message interface.
 func (e *GetObject) Type() core.MessageType {
 	return TypeGetObject
 }
 
+// Target implementation of Message interface.
 func (e *GetObject) Target() *core.RecordRef {
 	return &e.Head
 }
 
-func (e *GetObject) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// GetDelegate retrieves object represented as provided class.
 type GetDelegate struct {
+	ledgerMessage
 	Head    core.RecordRef
 	AsClass core.RecordRef
 }
 
+// Type implementation of Message interface.
 func (e *GetDelegate) Type() core.MessageType {
 	return TypeGetDelegate
 }
 
+// Target implementation of Message interface.
 func (e *GetDelegate) Target() *core.RecordRef {
 	return &e.Head
 }
 
-func (e *GetDelegate) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// DeclareType creates new type.
 type DeclareType struct {
+	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	TypeDec []byte
 }
 
+// Type implementation of Message interface.
 func (e *DeclareType) Type() core.MessageType {
 	return TypeDeclareType
 }
 
+// Target implementation of Message interface.
 func (e *DeclareType) Target() *core.RecordRef {
 	return &e.Request
 }
 
-func (e *DeclareType) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// DeployCode creates new code.
 type DeployCode struct {
+	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	CodeMap map[core.MachineType][]byte
 }
 
+// Type implementation of Message interface.
 func (e *DeployCode) Type() core.MessageType {
 	return TypeDeployCode
 }
 
+// Target implementation of Message interface.
 func (e *DeployCode) Target() *core.RecordRef {
 	return &e.Request
 }
 
-func (e *DeployCode) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// ActivateClass activates class.
 type ActivateClass struct {
+	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 }
 
+// Type implementation of Message interface.
 func (e *ActivateClass) Type() core.MessageType {
 	return TypeActivateClass
 }
 
+// Target implementation of Message interface.
 func (e *ActivateClass) Target() *core.RecordRef {
 	return &e.Request
 }
 
-func (e *ActivateClass) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// DeactivateClass deactivates class.
 type DeactivateClass struct {
+	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Class   core.RecordRef
 }
 
+// Type implementation of Message interface.
 func (e *DeactivateClass) Type() core.MessageType {
 	return TypeDeactivateClass
 }
 
+// Target implementation of Message interface.
 func (e *DeactivateClass) Target() *core.RecordRef {
 	return &e.Class
 }
 
-func (e *DeactivateClass) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// UpdateClass amends class.
 type UpdateClass struct {
+	ledgerMessage
 	Domain     core.RecordRef
 	Request    core.RecordRef
 	Class      core.RecordRef
@@ -167,19 +181,19 @@ type UpdateClass struct {
 	Migrations []core.RecordRef
 }
 
+// Type implementation of Message interface.
 func (e *UpdateClass) Type() core.MessageType {
 	return TypeUpdateClass
 }
 
+// Target implementation of Message interface.
 func (e *UpdateClass) Target() *core.RecordRef {
 	return &e.Class
 }
 
-func (e *UpdateClass) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// ActivateObject activates object.
 type ActivateObject struct {
+	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Class   core.RecordRef
@@ -187,19 +201,19 @@ type ActivateObject struct {
 	Memory  []byte
 }
 
+// Type implementation of Message interface.
 func (e *ActivateObject) Type() core.MessageType {
 	return TypeActivateObject
 }
 
+// Target implementation of Message interface.
 func (e *ActivateObject) Target() *core.RecordRef {
 	return &e.Class
 }
 
-func (e *ActivateObject) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// ActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
 type ActivateObjectDelegate struct {
+	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Class   core.RecordRef
@@ -207,52 +221,49 @@ type ActivateObjectDelegate struct {
 	Memory  []byte
 }
 
+// Type implementation of Message interface.
 func (e *ActivateObjectDelegate) Type() core.MessageType {
 	return TypeActivateObjectDelegate
 }
 
+// Target implementation of Message interface.
 func (e *ActivateObjectDelegate) Target() *core.RecordRef {
 	return &e.Class
 }
 
-func (e *ActivateObjectDelegate) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
+// DeactivateObject deactivates object.
 type DeactivateObject struct {
+	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Object  core.RecordRef
 }
 
+// Type implementation of Message interface.
 func (e *DeactivateObject) Type() core.MessageType {
 	return TypeDeactivateObject
 }
 
+// Target implementation of Message interface.
 func (e *DeactivateObject) Target() *core.RecordRef {
 	return &e.Object
 }
 
-func (e *DeactivateObject) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
-}
-
-// UpdateObject for call of core.ArtifactManager.UpdateObj
+// UpdateObject amends object.
 type UpdateObject struct {
+	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
 	Object  core.RecordRef
 	Memory  []byte
 }
 
+// Type implementation of Message interface.
 func (e *UpdateObject) Type() core.MessageType {
 	return TypeUpdateObject
 }
 
+// Target implementation of Message interface.
 func (e *UpdateObject) Target() *core.RecordRef {
 	return &e.Object
-}
-
-func (e *UpdateObject) TargetRole() core.JetRole {
-	return core.RoleLightExecutor
 }

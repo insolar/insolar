@@ -42,7 +42,7 @@ func (r *runner) OnPulse(pulse core.Pulse) error { return nil }
 func (r *runner) Start(components core.Components) error { return nil }
 func (r *runner) Stop() error                            { return nil }
 
-func (r *runner) Execute(msg core.LogicRunnerEvent) (core.Reply, error) {
+func (r *runner) Execute(msg core.Message) (core.Reply, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}

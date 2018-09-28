@@ -190,11 +190,7 @@ func (eb *testMessageBus) Register(p core.MessageType, handler core.MessageHandl
 func (*testMessageBus) Start(components core.Components) error { return nil }
 func (*testMessageBus) Stop() error                            { return nil }
 func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) {
-	e, ok := event.(core.LogicRunnerEvent)
-	if !ok {
-		panic("Called with not logicrunner event")
-	}
-	return eb.LogicRunner.Execute(e)
+	return eb.LogicRunner.Execute(event)
 }
 func (*testMessageBus) SendAsync(msg core.Message) {}
 
@@ -819,7 +815,7 @@ func TestProxyGeneration(t *testing.T) {
 			proxyPath, err := preprocessor.GetRealGenesisDir("proxy")
 			assert.NoError(t, err)
 
-			name, err := preprocessor.ProxyPackageName(parsed)
+			name, err := parsed.ProxyPackageName()
 			assert.NoError(t, err)
 
 			proxy := path.Join(proxyPath, name, name+".go")
@@ -827,7 +823,7 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err)
 
 			buff := bytes.NewBufferString("")
-			preprocessor.GenerateContractProxy(parsed, "", buff)
+			parsed.WriteProxy("", buff)
 
 			cmd := exec.Command("diff", proxy, "-")
 			cmd.Stdin = buff
