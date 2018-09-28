@@ -70,5 +70,5 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 
 	hash := utils.MakeHash(seed)
 
-	return ecdsa.Verify(savedKey, hash[:], ecdsaP.First, ecdsaP.Second)
+	return ecdsa.Verify(savedKey, hash[:], ecdsaPair.First, ecdsaPair.Second)
 }
