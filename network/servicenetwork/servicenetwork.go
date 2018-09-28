@@ -180,7 +180,9 @@ func (network *ServiceNetwork) bootstrap() {
 	err := network.hostNetwork.Bootstrap()
 	if err != nil {
 		log.Errorln("Failed to bootstrap network", err.Error())
+		return
 	}
+	network.hostNetwork.GetHostsFromBootstrap()
 }
 
 func (network *ServiceNetwork) listen() {

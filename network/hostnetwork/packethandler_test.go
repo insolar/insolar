@@ -101,6 +101,9 @@ func (hh *mockHostHandler) Bootstrap() error {
 	return nil
 }
 
+func (hh *mockHostHandler) GetHostsFromBootstrap() {
+}
+
 func (hh *mockHostHandler) ObtainIP() error {
 	return nil
 }

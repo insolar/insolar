@@ -265,16 +265,15 @@ func (dht *DHT) Bootstrap() error {
 		dht.iterateBootstrapHosts(ht, cb)
 	}
 
-	err := dht.iterateHt(cb)
-	if err != nil {
-		return errors.Wrap(err, "error bootstrapping dht network")
-	}
+	return dht.iterateHt(cb)
+}
+
+func (dht *DHT) GetHostsFromBootstrap() {
+	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
 		dht.iterateHtGetNearestHosts(ht, cb)
 	}
-
-	return nil
 }
 
 func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilder) {
@@ -285,28 +284,37 @@ func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilde
 	}
 
 	futures := make([]transport.Future, 0)
-	for _, host := range dht.options.BootstrapHosts {
-		p := packet.NewBuilder().Type(packet.TypeFindHost).Sender(ht.Origin).Receiver(host).
+	bootstrapHosts := ht.GetMulticastHosts()
+
+	for _, host := range bootstrapHosts {
+		p := packet.NewBuilder().Type(packet.TypeFindHost).Sender(ht.Origin).Receiver(host.Host).
 			Request(&packet.RequestDataFindHost{Target: ht.Origin.ID}).Build()
-		future, err := dht.transport.SendRequest(p)
+		f, err := dht.transport.SendRequest(p)
 		if err != nil {
 			log.Errorf("Error sending GetNearestHosts packet to host: %s", host.String())
 			continue
 		}
-		futures = append(futures, future)
+		futures = append(futures, f)
 	}
 
-	total := 0
+	wg := sync.WaitGroup{}
+	wg.Add(len(futures))
 	for _, f := range futures {
-		result := <-f.Result()
-		data := result.Data.(*packet.ResponseDataFindHost)
-		for _, host := range data.Closest {
-			dht.AddHost(ctx, routing.NewRouteHost(host))
-			log.Debugf("Added host to DHT routing table: %s %s", host.ID, host.Address)
-		}
-		total += len(data.Closest)
+		go func(f transport.Future) {
+			select {
+			case r := <-f.Result():
+				data := r.Data.(*packet.ResponseDataFindHost)
+				for _, host := range data.Closest {
+					dht.AddHost(ctx, routing.NewRouteHost(host))
+					log.Debugf("Added host to DHT routing table: %s %s", host.ID, host.Address)
+				}
+			case <-time.After(dht.options.PacketTimeout):
+				log.Error("Error getting nearest hosts: timeout")
+			}
+			wg.Done()
+		}(f)
 	}
-	log.Infof("Added %d additional hosts to DHT routing table", total)
+	wg.Wait()
 }
 
 func (dht *DHT) iterateHt(cb ContextBuilder) error {
