@@ -17,12 +17,17 @@
 package functest
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInsolardResponseNotErr(t *testing.T) {
+func TestDumpAllUsers(t *testing.T) {
+	createMember(t)
+
 	body := getResponseBody(t, postParams{
 		"query_type": "dump_all_users",
 	})
@@ -30,5 +35,34 @@ func TestInsolardResponseNotErr(t *testing.T) {
 	response := &dumpAllUsersResponse{}
 	unmarshalResponse(t, body, response)
 
-	assert.Nil(t, response.Err)
+	assert.NotEqual(t, []userInfo{}, response.DumpInfo)
+}
+
+func TestDumpUser(t *testing.T) {
+	memberRef := createMember(t)
+
+	body := getResponseBody(t, postParams{
+		"query_type": "dump_user_info",
+		"reference":  memberRef,
+	})
+
+	response := &dumpUserInfoResponse{}
+	unmarshalResponse(t, body, response)
+	fmt.Println(response)
+
+	assert.NotEmpty(t, response.DumpInfo.Member)
+	assert.Equal(t, getBalance(t, memberRef), int(response.DumpInfo.Wallet))
+}
+
+func TestDumpUserWrongRef(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "dump_user_info",
+		"reference":  core.RandomRef(),
+	})
+
+	response := &dumpUserInfoResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.BadRequest, response.Err.Code)
+	assert.Equal(t, "Bad request", response.Err.Message)
 }
