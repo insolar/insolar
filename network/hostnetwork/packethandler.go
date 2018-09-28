@@ -113,7 +113,10 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		}
 
 		pulse := &message.Pulse{Pulse: data.Pulse}
-		mb.Send(pulse)
+		_, err = mb.Send(pulse)
+		if err != nil {
+			log.Error(err)
+		}
 		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
 		ht := hostHandler.HtFromCtx(ctx)
 		hosts := ht.GetMulticastHosts()
