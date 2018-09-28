@@ -54,6 +54,7 @@ func MakeTestName(file string, contractType string) string {
 }
 
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
+	t.Parallel()
 	contractNames, err := GetRealContractsNames()
 	assert.NoError(t, err)
 	contractsDir, err := GetRealGenesisDir("experiment")
@@ -61,6 +62,7 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 	for _, name := range contractNames {
 		file := contractPath(name, contractsDir)
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
+			t.Parallel()
 			parsed, err := ParseFile(file)
 			assert.NoError(t, err)
 
@@ -76,6 +78,7 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 }
 
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
+	t.Parallel()
 	contractNames, err := GetRealContractsNames()
 	assert.NoError(t, err)
 	contractsDir, err := GetRealGenesisDir("experiment")
@@ -83,6 +86,7 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 	for _, name := range contractNames {
 		file := contractPath(name, contractsDir)
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
+			t.Parallel()
 			parsed, err := ParseFile(file)
 			assert.NoError(t, err)
 
@@ -98,6 +102,7 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 }
 
 func TestCompilingRealSmartContracts(t *testing.T) {
+	t.Parallel()
 	contracts := make(map[string]string)
 	contractNames, err := GetRealContractsNames()
 	assert.NoError(t, err)
