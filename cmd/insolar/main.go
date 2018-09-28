@@ -17,12 +17,15 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
@@ -80,6 +83,22 @@ func randomRef(out io.Writer) {
 	}
 }
 
+func GenKey() string {
+	privateKey, err := ecdsa.GenerateKey(utils.GetCurve(), rand.Reader)
+	if err != nil {
+		fmt.Println("Can't generate key", err)
+		os.Exit(1)
+	}
+
+	pubKeyStr, err := utils.SerializePublicKey(privateKey.PublicKey)
+	if err != nil {
+		fmt.Println("Can't serialize key", err)
+		os.Exit(1)
+	}
+
+	return "Public key: " + pubKeyStr
+}
+
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
@@ -95,5 +114,7 @@ func main() {
 		randomRef(out)
 	case "version":
 		fmt.Println(version.GetFullVersion())
+	case "gen_key":
+		fmt.Println(GenKey())
 	}
 }
