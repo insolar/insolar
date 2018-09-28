@@ -59,14 +59,19 @@ func TestMain(m *testing.M) {
 }
 
 func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testutil.ContractsBuilder, func()) {
-	rundCleaner, err := testutils.StartInsgorund(runnerbin, "127.0.0.1:7777", "127.0.0.1:7778")
+	lrSock := os.TempDir() + "/" + core.RandomRef().String()[0:10] + ".sock"
+	rundSock := os.TempDir() + "/" + core.RandomRef().String()[0:10] + ".sock"
+
+	rundCleaner, err := testutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
 	assert.NoError(t, err)
 
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
-		RPCListen: "127.0.0.1:7778",
+		RPCListen:   lrSock,
+		RPCProtocol: "unix",
 		GoPlugin: &configuration.GoPlugin{
-			RunnerListen: "127.0.0.1:7777",
+			RunnerListen:   rundSock,
+			RunnerProtocol: "unix",
 		},
 	})
 	assert.NoError(t, err, "Initialize runner")

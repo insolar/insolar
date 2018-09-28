@@ -33,6 +33,7 @@ import (
 
 var rpcService *RPC
 
+// StartRPC starts RPC server for isolated executors to use
 func StartRPC(lr *LogicRunner) *RPC {
 	if rpcService == nil {
 		rpcService = &RPC{lr: lr}
@@ -44,9 +45,9 @@ func StartRPC(lr *LogicRunner) *RPC {
 	}
 	rpcService.lr = lr
 
-	l, e := net.Listen("tcp", lr.Cfg.RPCListen)
+	l, e := net.Listen(lr.Cfg.RPCProtocol, lr.Cfg.RPCListen)
 	if e != nil {
-		log.Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"': ", e)
+		log.Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"' over "+lr.Cfg.RPCProtocol+": ", e)
 	}
 	lr.sock = l
 	log.Infof("starting LogicRunner RPC service on %q", lr.Cfg.RPCListen)
