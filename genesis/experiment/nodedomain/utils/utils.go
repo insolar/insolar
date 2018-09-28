@@ -124,7 +124,10 @@ func Verify(seed []byte, signatureRaw []byte, pubKey string) (bool, error) {
 // MakeSeed makes random seed
 func MakeSeed() []byte {
 	seed := make([]byte, 32)
-	rand.Read(seed)
+	_, err := rand.Read(seed)
+	if err != nil {
+		panic(err)
+	}
 
 	return seed
 }
