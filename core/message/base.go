@@ -26,40 +26,45 @@ import (
 	"github.com/pkg/errors"
 )
 
-// BaseLogicEvent base of event class family, do not use it standalone
-type BaseLogicEvent struct {
-	Caller  core.RecordRef
-	Request core.RecordRef
-	Domain  core.RecordRef
-}
-
-func (be BaseLogicEvent) GetCaller() *core.RecordRef {
-	return &be.Caller
-}
-
 const (
 	// Logicrunner
 
-	TypeCallMethod      = core.MessageType(iota) // TypeCallMethod calls method and returns result
-	TypeCallConstructor                          // TypeCallConstructor is a message for calling constructor and obtain its reply
+	// TypeCallMethod calls method and returns result
+	TypeCallMethod = core.MessageType(iota)
+	// TypeCallConstructor is a message for calling constructor and obtain its reply
+	TypeCallConstructor
 
 	// Ledger
 
-	TypeGetCode                // TypeGetCode retrieves code from storage.
-	TypeGetClass               // TypeGetClass retrieves class from storage.
-	TypeGetObject              // TypeGetObject retrieves object from storage.
-	TypeGetDelegate            // TypeGetDelegate retrieves object represented as provided class.
-	TypeDeclareType            // TypeDeclareType creates new type.
-	TypeDeployCode             // TypeDeployCode creates new code.
-	TypeActivateClass          // TypeActivateClass activates class.
-	TypeDeactivateClass        // TypeDeactivateClass deactivates class.
-	TypeUpdateClass            // TypeUpdateClass amends class.
-	TypeActivateObject         // TypeActivateObject activates object.
-	TypeActivateObjectDelegate // TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
-	TypeDeactivateObject       // TypeDeactivateObject deactivates object.
-	TypeUpdateObject           // TypeUpdateObject amends object.
+	// TypeGetCode retrieves code from storage.
+	TypeGetCode
+	// TypeGetClass retrieves class from storage.
+	TypeGetClass
+	// TypeGetObject retrieves object from storage.
+	TypeGetObject
+	// TypeGetDelegate retrieves object represented as provided class.
+	TypeGetDelegate
+	// TypeDeclareType creates new type.
+	TypeDeclareType
+	// TypeDeployCode creates new code.
+	TypeDeployCode
+	// TypeActivateClass activates class.
+	TypeActivateClass
+	// TypeDeactivateClass deactivates class.
+	TypeDeactivateClass
+	// TypeUpdateClass amends class.
+	TypeUpdateClass
+	// TypeActivateObject activates object.
+	TypeActivateObject
+	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
+	TypeActivateObjectDelegate
+	// TypeDeactivateObject deactivates object.
+	TypeDeactivateObject
+	// TypeUpdateObject amends object.
+	TypeUpdateObject
 
-	TypePulse // TypePulse is a type for pulse message.
+	// TypePulse is a type for pulse message.
+	TypePulse
 )
 
 // GetEmptyMessage constructs specified message

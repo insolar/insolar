@@ -157,11 +157,11 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 	return result, nil
 }
 
-func extractSendMoneyResponse(data []byte) (bool, error) {
+func extractBoolResponse(data []byte) (bool, error) {
 	var typeHolder bool
 	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
-		return false, errors.Wrap(err, "[ extractSendMoneyResponse ]")
+		return false, errors.Wrap(err, "[ extractBoolResponse ]")
 	}
 
 	isSent, ok := dataUnmarsh[0].(bool)
@@ -193,7 +193,8 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
 
-	isSent, err := extractSendMoneyResponse(routResult.(*reply.Common).Result)
+	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
@@ -278,4 +279,22 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 
 	return result, nil
 
+}
+
+// ProcessIsAuthorized processes is_auth query type
+func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	routResult, err := rh.sendRequest("IsAuthorized", []interface{}{})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
+	}
+
+	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
+	}
+
+	result["is_authorized"] = isSent
+
+	return result, nil
 }

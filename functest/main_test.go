@@ -302,6 +302,11 @@ type sendMoneyResponse struct {
 	Success bool `json:"success"`
 }
 
+type isAuthorized struct {
+	baseResponse
+	IsAuthorized bool `json:"is_authorized"`
+}
+
 type getBalanceResponse struct {
 	baseResponse
 	Amount   uint   `json:"amount"`
@@ -674,4 +679,15 @@ func TestCreateMembersWithSameName(t *testing.T) {
 	assert.NotEqual(t, "", secondMemberRef)
 
 	assert.NotEqual(t, firstMemberRef, secondMemberRef)
+}
+
+func TestIsAuthorized(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "is_auth",
+	})
+
+	isAuthResponse := &isAuthorized{}
+	unmarshalResponse(t, body, isAuthResponse)
+
+	assert.True(t, isAuthResponse.IsAuthorized)
 }

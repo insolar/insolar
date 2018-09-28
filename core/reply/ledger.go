@@ -26,7 +26,7 @@ type Code struct {
 	MachineType core.MachineType
 }
 
-// Type serializes to gob.
+// Type implementation of Reply interface.
 func (e *Code) Type() core.ReplyType {
 	return TypeCode
 }
@@ -38,7 +38,7 @@ type Class struct {
 	Code  *core.RecordRef // Can be nil.
 }
 
-// Type serializes to gob.
+// Type implementation of Reply interface.
 func (e *Class) Type() core.ReplyType {
 	return TypeClass
 }
@@ -52,7 +52,7 @@ type Object struct {
 	Children []core.RecordRef
 }
 
-// Serialize serializes to gob.
+// Type implementation of Reply interface.
 func (e *Object) Type() core.ReplyType {
 	return TypeObject
 }
@@ -62,7 +62,7 @@ type Delegate struct {
 	Head core.RecordRef
 }
 
-// Serialize serializes to gob.
+// Type implementation of Reply interface.
 func (e *Delegate) Type() core.ReplyType {
 	return TypeDelegate
 }
@@ -72,7 +72,7 @@ type Reference struct {
 	Ref core.RecordRef
 }
 
-// Serialize serializes to gob.
+// Type implementation of Reply interface.
 func (e *Reference) Type() core.ReplyType {
 	return TypeReference
 }

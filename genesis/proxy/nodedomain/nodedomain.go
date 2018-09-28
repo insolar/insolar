@@ -219,3 +219,52 @@ func (r *NodeDomain) RemoveNodeNoWait( nodeRef core.RecordRef ) {
     }
 }
 
+func (r *NodeDomain) IsAuthorized( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) ( bool ) {
+    var args [3]interface{}
+	args[0] = nodeRef
+	args[1] = seed
+	args[2] = signatureRaw
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsAuthorized", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [1]interface{}{}
+	var a0 bool
+	resList[0] = a0
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].(bool)
+}
+
+func (r *NodeDomain) IsAuthorizedNoWait( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) {
+    var args [3]interface{}
+	args[0] = nodeRef
+	args[1] = seed
+	args[2] = signatureRaw
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "IsAuthorized", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
