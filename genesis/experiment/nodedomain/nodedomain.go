@@ -17,9 +17,6 @@
 package nodedomain
 
 import (
-	"crypto/ecdsa"
-	"encoding/asn1"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
 	"github.com/insolar/insolar/genesis/proxy/noderecord"
@@ -56,20 +53,10 @@ func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 
 // IsAuthorized checks is signature correct
 func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
-
-	var ecdsaPair utils.EcdsaPair
-	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaPair)
-	if err != nil || len(rest) != 0 {
-		panic("Something wrong with decoding of signature")
-	}
-
 	nodeR := nd.GetNodeRecord(nodeRef)
-	savedKey, err := utils.DeserializePublicKey(nodeR.GetPublicKey())
+	ok, err := utils.Verify(seed, signatureRaw, nodeR.GetPublicKey())
 	if err != nil {
-		return false
+		panic(err)
 	}
-
-	hash := utils.MakeHash(seed)
-
-	return ecdsa.Verify(savedKey, hash[:], ecdsaPair.First, ecdsaPair.Second)
+	return ok
 }

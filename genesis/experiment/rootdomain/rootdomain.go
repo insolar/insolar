@@ -50,16 +50,6 @@ func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	return nd.RegisterNode(publicKey, role).String()
 }
 
-func makeSeed() []byte {
-	seed := make([]byte, 32)
-	_, err := rand.Read(seed)
-	if err != nil {
-		panic(err)
-	}
-
-	return seed
-}
-
 // IsAuthorized checks is node authorized
 func (rd *RootDomain) IsAuthorized() bool {
 	privateKey, err := ecdsa.GenerateKey(utils.GetCurve(), rand.Reader)
@@ -68,8 +58,11 @@ func (rd *RootDomain) IsAuthorized() bool {
 	}
 
 	// Make signature
-	seed := makeSeed()
-	signature := utils.Sign(seed, privateKey)
+	seed := utils.MakeSeed()
+	signature, err := utils.Sign(seed, privateKey)
+	if err != nil {
+		panic(err)
+	}
 
 	// Register node
 	serPubKey, err := utils.SerializePublicKey(privateKey.PublicKey)

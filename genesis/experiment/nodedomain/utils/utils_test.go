@@ -26,9 +26,7 @@ import (
 
 func TestSerializeDeserializePublicKey(t *testing.T) {
 	privateKey, err := ecdsa.GenerateKey(GetCurve(), rand.Reader)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	serPubKey, err := SerializePublicKey(privateKey.PublicKey)
 	assert.NoError(t, err)
@@ -36,4 +34,20 @@ func TestSerializeDeserializePublicKey(t *testing.T) {
 	newPK, err := DeserializePublicKey(serPubKey)
 	assert.NoError(t, err)
 	assert.Equal(t, newPK, &privateKey.PublicKey)
+}
+
+func TestSignVerify(t *testing.T) {
+	privateKey, err := ecdsa.GenerateKey(GetCurve(), rand.Reader)
+	assert.NoError(t, err)
+
+	pubKey, err := SerializePublicKey(privateKey.PublicKey)
+	assert.NoError(t, err)
+
+	seed := MakeSeed()
+
+	signature, err := Sign(seed, privateKey)
+	assert.NoError(t, err)
+	ok, err := Verify(seed, signature, pubKey)
+	assert.NoError(t, err)
+	assert.True(t, ok)
 }

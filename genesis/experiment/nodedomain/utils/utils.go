@@ -81,21 +81,50 @@ type EcdsaPair struct {
 	Second *big.Int
 }
 
-// Sign signa given seed
-func Sign(seed []byte, key *ecdsa.PrivateKey) []byte {
+// Sign signs given seed
+func Sign(seed []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 
 	hash := MakeHash(seed)
 
 	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
 
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "[ Sign ]")
 	}
 
 	data, err := asn1.Marshal(EcdsaPair{First: r, Second: s})
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "[ Sign ]")
 	}
 
-	return data
+	return data, nil
+}
+
+// Verifies signature
+func Verify(seed []byte, signatureRaw []byte, pubKey string) (bool, error) {
+	var ecdsaPair EcdsaPair
+	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaPair)
+	if err != nil {
+		return false, errors.Wrap(err, "[ Verify ]")
+	}
+	if len(rest) != 0 {
+		return false, errors.New("[ Verify ] len of  rest must be 0")
+	}
+
+	savedKey, err := DeserializePublicKey(pubKey)
+	if err != nil {
+		return false, errors.Wrap(err, "[ Verify ]")
+	}
+
+	hash := MakeHash(seed)
+
+	return ecdsa.Verify(savedKey, hash[:], ecdsaPair.First, ecdsaPair.Second), nil
+}
+
+// MakeSeed makes random seed
+func MakeSeed() []byte {
+	seed := make([]byte, 32)
+	rand.Read(seed)
+
+	return seed
 }
