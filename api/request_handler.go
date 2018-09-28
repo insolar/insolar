@@ -284,10 +284,13 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	routResult, err := rh.sendRequest("IsAuthorized", []interface{}{})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
+	}
 
 	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ IsAuthorized ]")
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
 	result["is_authorized"] = isSent
