@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -39,6 +40,7 @@ import (
 type mockNetworkCommonFacade struct {
 	cascade *cascade.Cascade
 	pm      core.PulseManager
+	mb      core.MessageBus
 }
 
 func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
@@ -49,6 +51,7 @@ func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
 	return &mockNetworkCommonFacade{
 		cascade: &c,
 		pm:      &MockPulseManager{},
+		mb:      ledgertestutil.NewMessageBusMock(),
 	}
 }
 
@@ -65,6 +68,13 @@ func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
 }
 
 func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
+}
+
+func (fac *mockNetworkCommonFacade) SetMessageBus(bus core.MessageBus) {
+}
+
+func (fac *mockNetworkCommonFacade) GetMessageBus() core.MessageBus {
+	return fac.mb
 }
 
 type mockHostHandler struct {

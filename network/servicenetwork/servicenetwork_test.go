@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/stretchr/testify/assert"
@@ -322,6 +323,9 @@ func Test_processPulse(t *testing.T) {
 	})
 	secondLedger := &mockLedger{PM: &mpm}
 
+	firstNode.hostNetwork.GetNetworkCommonFacade().SetMessageBus(ledgertestutil.NewMessageBusMock())
+	secondNode.hostNetwork.GetNetworkCommonFacade().SetMessageBus(ledgertestutil.NewMessageBusMock())
+
 	secondNode.Start(core.Components{Ledger: secondLedger})
 	firstNode.Start(core.Components{Ledger: firstLedger})
 
@@ -361,7 +365,7 @@ func Test_processPulse2(t *testing.T) {
 	}
 
 	prefix := "127.0.0.1:"
-	port := 10000
+	port := 11000
 	bootstrapNodes := nodeIds[len(nodeIds)-2:]
 	bootstrapHosts := make([]string, 0)
 	services := make([]*ServiceNetwork, 0)
@@ -389,6 +393,7 @@ func Test_processPulse2(t *testing.T) {
 
 		host = prefix + strconv.Itoa(port)
 		service, _ := NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
+		service.hostNetwork.GetNetworkCommonFacade().SetMessageBus(ledgertestutil.NewMessageBusMock())
 		service.Start(core.Components{Ledger: ledger})
 		port++
 		services = append(services, service)
