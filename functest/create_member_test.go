@@ -19,8 +19,48 @@ package functest
 import (
 	"testing"
 
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestCreateMember(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       testutils.RandomString(),
+	})
+
+	memberResponse := &createMemberResponse{}
+	unmarshalResponse(t, body, memberResponse)
+
+	firstMemberRef := memberResponse.Reference
+	assert.NotEqual(t, "", firstMemberRef)
+}
+
+func TestCreateMemberWrongType(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+		"name":       1111,
+	})
+
+	memberResponse := &createMemberResponse{}
+	unmarshalResponseWithError(t, body, memberResponse)
+
+	assert.Equal(t, api.BadRequest, memberResponse.Err.Code)
+	assert.Equal(t, "Bad request", memberResponse.Err.Message)
+}
+
+func TestCreateMemberWithoutName(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "create_member",
+	})
+
+	memberResponse := &createMemberResponse{}
+	unmarshalResponseWithError(t, body, memberResponse)
+
+	assert.Equal(t, api.HandlerError, memberResponse.Err.Code)
+	assert.Equal(t, "Handler error: field 'name' is required", memberResponse.Err.Message)
+}
 
 func TestCreateMembersWithSameName(t *testing.T) {
 	body := getResponseBody(t, postParams{
