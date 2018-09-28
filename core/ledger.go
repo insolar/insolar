@@ -20,8 +20,10 @@ package core
 type JetRole int
 
 const (
+	// RoleAllRoles is responsible for sending pulse.
+	RoleAllRoles = JetRole(iota + 1)
 	// RoleVirtualExecutor is responsible for current pulse CPU operations.
-	RoleVirtualExecutor = JetRole(iota + 1)
+	RoleVirtualExecutor
 	// RoleVirtualValidator is responsible for previous pulse CPU operations.
 	RoleVirtualValidator
 	// RoleLightExecutor is responsible for current pulse Disk operations.

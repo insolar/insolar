@@ -58,6 +58,8 @@ const (
 	TypeActivateObjectDelegate // TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
 	TypeDeactivateObject       // TypeDeactivateObject deactivates object.
 	TypeUpdateObject           // TypeUpdateObject amends object.
+
+	TypePulse // TypePulse is a type for pulse message.
 )
 
 // GetEmptyMessage constructs specified message
@@ -95,6 +97,9 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &DeactivateObject{}, nil
 	case TypeUpdateObject:
 		return &UpdateObject{}, nil
+
+	case TypePulse:
+		return &Pulse{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
@@ -148,4 +153,6 @@ func init() {
 	gob.Register(&ActivateObjectDelegate{})
 	gob.Register(&DeactivateObject{})
 	gob.Register(&UpdateObject{})
+
+	gob.Register(&Pulse{})
 }
