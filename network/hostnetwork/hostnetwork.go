@@ -17,11 +17,9 @@
 package hostnetwork
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -31,37 +29,34 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/pkg/errors"
 )
 
-type NodeNetwork interface {
-	ResolveHostID(ref core.RecordRef) string
-	GetID() core.RecordRef
-}
-
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
+func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
-		return nil, errors.New("Couldn't start at 0.0.0.0")
+		return nil, errors.New("couldn't start at 0.0.0.0")
 	}
 
 	proxy := relay.NewProxy()
 
 	tp, err := transport.NewTransport(cfg.Transport, proxy)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create transport")
 	}
 
 	originAddress, err := host.NewAddress(tp.PublicAddress())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to ")
 	}
 
 	encodedOriginID := nn.ResolveHostID(nn.GetID())
 	originID := id.FromBase58(encodedOriginID)
 	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create Origin")
 	}
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
@@ -74,9 +69,11 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn NodeNetwork, cascade *casc
 		ncf,
 		options,
 		proxy,
+		cfg.Timeout,
+		cfg.InfinityBootstrap,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create DHT")
 	}
 
 	return network, nil

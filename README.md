@@ -68,6 +68,9 @@ See [package readme](genesis) for more details.
 
 Provides configuration params for all Insolar components and helper for config resources management.
 
+### [Metrics](metrics)
+
+Using Prometheus monitoring system and time series database for collecting and store metrics
 
 Installation
 ------------
@@ -80,6 +83,16 @@ Generate default configuration file
 
     go run cmd/insolar/* -output=-
 
+Example
+------------
+    # Start node
+    ./scripts/insolard/launch.sh
+
+    # In other terminal:
+    # Create user
+    curl --data '{"query_type": "create_member", "name": "Peter"}' "localhost:19191/api/v1?"
+    # Dump user info
+    curl --data '{"query_type": "dump_all_users"}' "localhost:19191/api/v1?"
 
 Docker container
 ------------
@@ -91,6 +104,7 @@ Docker container
 Contributing
 ------------
 See [Contributing Guidelines](.github/CONTRIBUTING.md).
+
 
 License
 -------

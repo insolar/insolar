@@ -16,14 +16,20 @@
 
 package core
 
+// JetRole is number representing a node role.
 type JetRole int
 
 const (
-	RoleVirtualExecutor  = JetRole(iota + 1) // Role responsible for current pulse CPU operations.
-	RoleVirtualValidator                     // Role responsible for previous pulse CPU operations.
-	RoleLightExecutor                        // Role responsible for current pulse Disk operations.
-	RoleLightValidator                       // Role responsible for previous pulse Disk operations.
-	RoleHeavyExecutor                        // Role responsible for permanent Disk operations.
+	// RoleVirtualExecutor is responsible for current pulse CPU operations.
+	RoleVirtualExecutor = JetRole(iota + 1)
+	// RoleVirtualValidator is responsible for previous pulse CPU operations.
+	RoleVirtualValidator
+	// RoleLightExecutor is responsible for current pulse Disk operations.
+	RoleLightExecutor
+	// RoleLightValidator is responsible for previous pulse Disk operations.
+	RoleLightValidator
+	// RoleHeavyExecutor is responsible for permanent Disk operations.
+	RoleHeavyExecutor
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
@@ -38,6 +44,8 @@ type Ledger interface {
 	GetPulseManager() PulseManager
 }
 
+// JetCoordinator provides methods for calculating Jet affinity
+// (e.g. to which Jet a message should be sent).
 type JetCoordinator interface {
 	// IsAuthorized checks for role on concrete pulse for the address.
 	IsAuthorized(role JetRole, obj RecordRef, pulse PulseNumber, node RecordRef) (bool, error)
@@ -48,46 +56,33 @@ type JetCoordinator interface {
 
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
-	// HandleEvent performs event processing.
-	HandleEvent(event Event) (Reaction, error)
-
 	// RootRef returns the root record reference.
 	//
 	// Root record is the parent for all top-level records.
 	RootRef() *RecordRef
 
-	// SetArchPref stores a list of preferred VM architectures memory.
-	//
-	// When returning classes storage will return compiled code according to this preferences. VM is responsible for
-	// calling this method before fetching object in a new process. If preference is not provided, object getters will
-	// return an error.
-	SetArchPref(pref []MachineType)
-
-	// GetCode returns code from code record by provided reference.
+	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
-	GetCode(code RecordRef) (CodeDescriptor, error)
+	GetCode(ref RecordRef, machinePref []MachineType) (CodeDescriptor, error)
 
-	// GetLatestClass returns descriptor for latest state of the class known to storage.
-	// If the class is deactivated, an error should be returned.
+	// GetClass returns descriptor for provided state.
 	//
-	// Returned descriptor will provide methods for fetching all related data.
-	GetLatestClass(head RecordRef) (ClassDescriptor, error)
+	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
+	// provide methods for fetching all related data.
+	GetClass(head RecordRef, state *RecordRef) (ClassDescriptor, error)
 
-	// GetLatestObj returns descriptor for latest state of the object known to storage.
-	// If the object or the class is deactivated, an error should be returned.
+	// GetObject returns descriptor for provided state.
 	//
-	// Returned descriptor will provide methods for fetching all related data.
-	GetLatestObj(head RecordRef) (ObjectDescriptor, error)
+	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
+	// provide methods for fetching all related data.
+	GetObject(head RecordRef, state *RecordRef) (ObjectDescriptor, error)
 
-	// GetObjChildren returns provided object's children references.
-	GetObjChildren(head RecordRef) (RefIterator, error)
-
-	// GetObjDelegate returns provided object's delegate reference for provided class.
+	// GetDelegate returns provided object's delegate reference for provided class.
 	//
 	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
 	// be returned.
-	GetObjDelegate(head, asClass RecordRef) (*RecordRef, error)
+	GetDelegate(head, asClass RecordRef) (*RecordRef, error)
 
 	// DeclareType creates new type record in storage.
 	//
@@ -117,26 +112,26 @@ type ArtifactManager interface {
 	// migrate objects memory in the order they appear in provided slice.
 	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordRef, error)
 
-	// ActivateObj creates activate object record in storage. Provided class reference will be used as object's class.
+	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's class.
 	// If memory is not provided, the class default memory will be used.
 	//
 	// Activation reference will be this object's identifier and referred as "object head".
-	ActivateObj(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
+	ActivateObject(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
 
-	// ActivateObjDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
-	ActivateObjDelegate(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
+	// ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
+	ActivateObjectDelegate(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
 
-	// DeactivateObj creates deactivate object record in storage. Provided reference should be a reference to the head
+	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObj(domain, request, obj RecordRef) (*RecordRef, error)
+	DeactivateObject(domain, request, obj RecordRef) (*RecordRef, error)
 
-	// UpdateObj creates amend object record in storage. Provided reference should be a reference to the head of the
+	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObj(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
+	UpdateObject(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
@@ -144,18 +139,11 @@ type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *RecordRef
 
-	// MachineType fetches code from storage and returns first available machine type according to architecture
-	// preferences.
-	//
-	// Code for returned machine type will be fetched by Code method.
-	MachineType() (MachineType, error)
+	// MachineType returns first available machine type for provided machine preference.
+	MachineType() MachineType
 
-	// Code fetches code from storage. Code will be fetched according to architecture preferences
-	// set via SetArchPref in artifact manager. If preferences are not provided, an error will be returned.
-	Code() ([]byte, error)
-
-	// Validate checks code record integrity.
-	Validate() error
+	// Code returns code for first available machine type for provided machine preference.
+	Code() []byte
 }
 
 // ClassDescriptor represents meta info required to fetch all object data.
@@ -164,10 +152,7 @@ type ClassDescriptor interface {
 	HeadRef() *RecordRef
 
 	// StateRef returns reference to represented class state record.
-	StateRef() (*RecordRef, error)
-
-	// IsActive checks if class is active.
-	IsActive() (bool, error)
+	StateRef() *RecordRef
 
 	// CodeDescriptor returns descriptor for fetching class's code data.
 	CodeDescriptor(machinePref []MachineType) (CodeDescriptor, error)
@@ -179,18 +164,19 @@ type ObjectDescriptor interface {
 	HeadRef() *RecordRef
 
 	// StateRef returns reference to object state record.
-	StateRef() (*RecordRef, error)
+	StateRef() *RecordRef
 
 	// Memory fetches object memory from storage.
-	Memory() ([]byte, error)
-
-	// IsActive checks if object is active.
-	IsActive() (bool, error)
+	Memory() []byte
 
 	// ClassDescriptor returns descriptor for fetching object's class data.
 	ClassDescriptor(state *RecordRef) (ClassDescriptor, error)
+
+	// Children returns object's children references.
+	Children() RefIterator
 }
 
+// RefIterator is used for iteration over affined children(parts) of container.
 type RefIterator interface {
 	Next() (RecordRef, error)
 	HasNext() bool

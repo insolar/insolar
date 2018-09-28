@@ -11,25 +11,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:315c5f2f60c76d89b871c73f9bd5fe689cad96597afd50fb9992228ef80bdd34"
-  name = "github.com/alecthomas/template"
-  packages = [
-    ".",
-    "parse",
-  ]
-  pruneopts = "UT"
-  revision = "a0175ee3bccc567396460bf5acd36800cb10c49c"
-
-[[projects]]
-  branch = "master"
-  digest = "1:c198fdc381e898e8fb62b8eb62758195091c313ad18e52a3067366e1dda2fb3c"
-  name = "github.com/alecthomas/units"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "2efee857e7cfd4f3d0138cc3cbb1b4966962b93a"
-
-[[projects]]
-  branch = "master"
   digest = "1:d7e398c16b9c85f33ea98182809bfefe4e3ec8bf01f56de20f9721f9f7ab23de"
   name = "github.com/anacrolix/missinggo"
   packages = [
@@ -256,12 +237,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2e87c336c7d1830b28d0a4eba428c6e0d66aa6ddcc8fddd994eb80f1f6dd6a62"
+  digest = "1:63b68062b8968092eb86bedc4e68894bd096ea6b24920faca8b9dcf451f54bb5"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
-    "log",
     "model",
   ]
   pruneopts = "UT"
@@ -393,12 +373,19 @@
   version = "v1.1"
 
 [[projects]]
-  digest = "1:03aa6e485e528acb119fb32901cf99582c380225fc7d5a02758e08b180cb56c3"
+  branch = "master"
+  digest = "1:4262ea367f180f3865bad721123c6eefb389762190b3c90de6f7723fbe5ca6f2"
+  name = "github.com/tylerb/gls"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e606233f194d6c314156dc6a35f21a42a470c6f6"
+
+[[projects]]
+  digest = "1:59a32808dc731a74dba0fefcac75c5b66ebeeeadae04538b95b81c986722ccaa"
   name = "github.com/ugorji/go"
   packages = ["codec"]
   pruneopts = "UT"
-  revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
-  version = "v1.1.1"
+  revision = "587a7e6ca264903eb19416288533bea8ff898ec0"
 
 [[projects]]
   digest = "1:6430cb8f5f61e9550411648f06f0bba8771c9b4b13ce8e5dc4b8ecb9236dcf3f"
@@ -446,13 +433,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0de22c7d04d01a093726c19358517a83ae2d16bf1d72f8fbf63e1442ddaa1a2f"
+  digest = "1:9c99029818a3d4f53bcfd6c0158ca068aeacfecb29283f82a1f9c79b8d2a7da4"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
-    "windows/registry",
-    "windows/svc/eventlog",
   ]
   pruneopts = "UT"
   revision = "d99a578cf41bfccdeaf48b0845c823a4b8b0ad5e"
@@ -471,14 +456,6 @@
   pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
-
-[[projects]]
-  digest = "1:c06d9e11d955af78ac3bbb26bd02e01d2f61f689e1a3bce2ef6fb683ef8a7f2d"
-  name = "gopkg.in/alecthomas/kingpin.v2"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "947dcec5ba9c011838740e680966fd7087a71d0d"
-  version = "v2.2.6"
 
 [[projects]]
   digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
@@ -501,7 +478,6 @@
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
-    "github.com/prometheus/common/log",
     "github.com/satori/go.uuid",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
@@ -511,6 +487,7 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/suite",
+    "github.com/tylerb/gls",
     "github.com/ugorji/go/codec",
     "github.com/xtaci/kcp-go",
     "golang.org/x/crypto/sha3",

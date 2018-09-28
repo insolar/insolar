@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -30,9 +30,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DispatchPacketType checks event type.
-func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	// TODO: add counter
+// DispatchPacketType checks message type.
+func DispatchPacketType(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder,
+) (*packet.Packet, error) { // nolint: gocyclo
 	switch msg.Type {
 	case packet.TypeFindHost:
 		return processFindHost(hostHandler, ctx, msg, packetBuilder)
@@ -61,7 +65,7 @@ func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	case packet.TypeCascadeSend:
 		return processCascadeSend(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypePulse:
-		return processPulse(hostHandler, msg, packetBuilder)
+		return processPulse(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeGetRandomHosts:
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
 	default:
@@ -86,7 +90,7 @@ func processGetRandomHosts(
 	return packetBuilder.Response(&packet.ResponseGetRandomHosts{Hosts: hosts, Error: ""}).Build(), nil
 }
 
-func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestPulse)
 	pm := hostHandler.GetNetworkCommonFacade().GetPulseManager()
 	if pm == nil {
@@ -94,15 +98,18 @@ func processPulse(hostHandler hosthandler.HostHandler, msg *packet.Packet, packe
 	}
 	currentPulse, err := pm.Current()
 	if err != nil {
-		return nil, errors.New("could not get current pulse")
+		return nil, errors.Wrap(err, "could not get current pulse")
 	}
 	log.Debugf("got new pulse number: %d", currentPulse.PulseNumber)
 	if data.Pulse.PulseNumber > currentPulse.PulseNumber {
 		err = pm.Set(data.Pulse)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
 		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
+		ht := hostHandler.HtFromCtx(ctx)
+		hosts := ht.GetMulticastHosts()
+		go ResendPulseToKnownHosts(hostHandler, hosts, data)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }
@@ -146,11 +153,11 @@ func processRelayOwnership(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		hostHandler.RemovePossibleProxyID(msg.Sender.ID.String())
 		err := AuthenticationRequest(hostHandler, "begin", msg.Sender.ID.String())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "AuthenticationRequest failed")
 		}
 		err = RelayRequest(hostHandler, "start", msg.Sender.ID.String())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "RelayRequest failed")
 		}
 	}
 	response := &packet.ResponseRelayOwnership{Accepted: true}
@@ -191,13 +198,13 @@ func processStore(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	replication := time.Now().Add(hostHandler.GetReplicationTime())
 	err := hostHandler.Store(key, data.Data, replication, expiration, false)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to store data")
 	}
 	return nil, nil
 }
 
 func processPing(msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	log.Debugln("recv ping event from " + msg.Sender.Address.String())
+	log.Debugln("recv ping message from " + msg.Sender.Address.String())
 	return packetBuilder.Response(nil).Build(), nil
 }
 
@@ -272,7 +279,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		key := make([]byte, 512)
 		_, err := rand.Read(key) // crypto/rand
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Failed to generate random key")
 		}
 		hostHandler.AddAuthSentKey(msg.Sender.ID.String(), key)
 		response := &packet.ResponseAuth{
@@ -284,7 +291,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		// confirmed
 		err = CheckOriginRequest(hostHandler, msg.Sender.ID.String())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "CheckOriginRequest failed")
 		}
 
 		return packetBuilder.Response(response).Build(), nil
@@ -328,7 +335,7 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	}
 	err = hostHandler.GetNetworkCommonFacade().GetCascade().SendToNextLayer(data.Data, data.RPC.Method, data.RPC.Args)
 	if err != nil {
-		log.Debug("failed to send event to next cascade layer")
+		log.Debug("failed to send message to next cascade layer")
 	}
 
 	return packetBuilder.Response(response).Build(), err

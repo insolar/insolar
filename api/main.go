@@ -33,22 +33,22 @@ import (
 
 const (
 	_            int = 0
-	handlerError int = -1
-	badRequest   int = -2
+	HandlerError int = -1
+	BadRequest   int = -2
 )
 
 func writeError(message string, code int) map[string]interface{} {
 	errJSON := map[string]interface{}{
 		"error": map[string]interface{}{
-			"event": message,
-			"code":  code,
+			"message": message,
+			"code":    code,
 		},
 	}
 	return errJSON
 }
 
 func makeHandlerMarshalErrorJSON() []byte {
-	jsonErr := writeError("Invalid data from handler", handlerError)
+	jsonErr := writeError("Invalid data from handler", HandlerError)
 	serJSON, err := json.Marshal(jsonErr)
 	if err != nil {
 		log.Fatal("Can't marshal base error")
@@ -74,16 +74,20 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 		answer, hError = rh.ProcessGetBalance()
 	case SendMoney:
 		answer, hError = rh.ProcessSendMoney()
+	case RegisterNode:
+		answer, hError = rh.ProcessRegisterNode()
+	case IsAuth:
+		answer, hError = rh.ProcessIsAuthorized()
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
-		answer = writeError(msg, badRequest)
+		answer = writeError(msg, BadRequest)
 		log.Warnf("[QID=%s] %s\n", rh.qid, msg)
 		return answer
 	}
 	if hError != nil {
 		errMsg := "Handler error: " + hError.Error()
 		log.Errorf("[QID=%s] %s\n", rh.qid, errMsg)
-		answer = writeError(errMsg, handlerError)
+		answer = writeError(errMsg, HandlerError)
 	}
 
 	return answer
@@ -118,7 +122,7 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func wrapAPIV1Handler(eventBus core.EventBus, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
+func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		answer := make(map[string]interface{})
 		var params *Params
@@ -145,11 +149,11 @@ func wrapAPIV1Handler(eventBus core.EventBus, rootDomainReference core.RecordRef
 
 		params, err := preprocessRequest(req)
 		if err != nil {
-			answer = writeError("Bad request", badRequest)
+			answer = writeError("Bad request", BadRequest)
 			log.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, eventBus, rootDomainReference)
+		rh := NewRequestHandler(params, messageBus, rootDomainReference)
 
 		answer = processQueryType(rh, params.QType)
 	}
@@ -157,9 +161,9 @@ func wrapAPIV1Handler(eventBus core.EventBus, rootDomainReference core.RecordRef
 
 // Runner implements Component for API
 type Runner struct {
-	eventBus core.EventBus
-	server   *http.Server
-	cfg      *configuration.APIRunner
+	messageBus core.MessageBus
+	server     *http.Server
+	cfg        *configuration.APIRunner
 }
 
 // NewRunner is C-tor for API Runner
@@ -183,23 +187,22 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 	return &ar, nil
 }
 
-func (ar *Runner) reloadEventBus(c core.Components) {
-	_, ok := c["core.EventBus"]
-	if !ok {
-		log.Warn("Working in demo mode: without EventBus")
+func (ar *Runner) reloadMessageBus(c core.Components) {
+	if c.MessageBus == nil {
+		log.Warn("Working in demo mode: without MessageBus")
 	} else {
-		ar.eventBus = c["core.EventBus"].(core.EventBus)
+		ar.messageBus = c.MessageBus
 	}
 }
 
 // Start runs api server
 func (ar *Runner) Start(c core.Components) error {
 
-	ar.reloadEventBus(c)
+	ar.reloadMessageBus(c)
 
-	rootDomainReference := c["core.Bootstrapper"].(core.Bootstrapper).GetRootDomainRef()
+	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
 
-	fw := wrapAPIV1Handler(ar.eventBus, *rootDomainReference)
+	fw := wrapAPIV1Handler(ar.messageBus, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
 	log.Info("Starting ApiRunner ...")
 	log.Info("Config: ", ar.cfg)

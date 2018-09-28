@@ -5,6 +5,8 @@ host:
     behindnat: false
   bootstraphosts: []
   isrelay: false
+  infinitybootstrap: false
+  timeout: 4
 node:
   node:
     id: "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
@@ -41,17 +43,15 @@ ledger:
       5: 1
 
 log:
-  level: Info
+  level: Debug
   adapter: logrus
 stats:
   listenaddress: 0.0.0.0:8080
 logicrunner:
+  rpclisten: 127.0.0.1:18182
   builtin: {}
   goplugin:
     runnerlisten: 127.0.0.1:18181
-    runnerpath: ../testdata/logicrunner/ginsider-cli
-    runnercodepath: contractstorage
-    mainlisten: 127.0.0.1:18182
 pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090

@@ -17,8 +17,6 @@
 package ginsider
 
 import (
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -26,10 +24,15 @@ import (
 	"plugin"
 	"sync"
 
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/tylerb/gls"
 )
 
 // GoInsider is an RPC interface to run code of plugins
@@ -68,12 +71,14 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	}
 
 	wrapper, ok := symbol.(func(ph proxyctx.ProxyHelper, object []byte,
-		data []byte, context *core.LogicCallContext) ([]byte, []byte, error))
+		data []byte) ([]byte, []byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	state, result, err := wrapper(t.GI, args.Data, args.Arguments, args.Context) // may be entire args???
+	gls.Set("ctx", args.Context)
+	state, result, err := wrapper(t.GI, args.Data, args.Arguments) // may be entire args???
+	gls.Cleanup()
 
 	if err != nil {
 		return errors.Wrapf(err, "Method call returned error")
@@ -145,7 +150,7 @@ func (gi *GoInsider) ObtainCode(ref core.RecordRef) (string, error) {
 
 	log.Debugf("obtaining code %q", ref)
 	res := rpctypes.UpGetCodeResp{}
-	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Code: ref}, &res)
+	err = client.Call("RPC.GetCode", rpctypes.UpGetCodeReq{Code: ref, MType: core.MachineTypeGoPlugin}, &res)
 	if err != nil {
 		return "", errors.Wrap(err, "on calling main API")
 	}
@@ -183,14 +188,24 @@ func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 	return p, nil
 }
 
+// MakeUpBaseReq makes base of request from current CallContext
+func MakeUpBaseReq() rpctypes.UpBaseReq {
+	if ctx, ok := gls.Get("ctx").(*core.LogicCallContext); ok {
+		return rpctypes.UpBaseReq{
+			Me: *ctx.Callee,
+		}
+	}
+	panic("Wrong or unexistent context")
+}
+
 // RouteCall ...
 func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
 	}
-
 	req := rpctypes.UpRouteReq{
+		UpBaseReq: MakeUpBaseReq(),
 		Wait:      wait,
 		Object:    ref,
 		Method:    method,
@@ -214,6 +229,7 @@ func (gi *GoInsider) RouteConstructorCall(ref core.RecordRef, name string, args 
 	}
 
 	req := rpctypes.UpRouteConstructorReq{
+		UpBaseReq:   MakeUpBaseReq(),
 		Reference:   ref,
 		Constructor: name,
 		Arguments:   args,
@@ -236,9 +252,10 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, data []byte
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
-		Parent: parentRef,
-		Class:  classRef,
-		Data:   data,
+		UpBaseReq: MakeUpBaseReq(),
+		Parent:    parentRef,
+		Class:     classRef,
+		Data:      data,
 	}
 
 	res := rpctypes.UpSaveAsChildResp{}
@@ -258,7 +275,11 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([
 	}
 
 	res := rpctypes.UpGetObjChildrenResp{}
-	req := rpctypes.UpGetObjChildrenReq{Obj: obj, Class: class}
+	req := rpctypes.UpGetObjChildrenReq{
+		UpBaseReq: MakeUpBaseReq(),
+		Obj:       obj,
+		Class:     class,
+	}
 	err = client.Call("RPC.GetObjChildren", req, &res)
 	if err != nil {
 		return nil, errors.Wrap(err, "on calling main API RPC.GetObjChildren")
@@ -275,9 +296,10 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byt
 	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
-		Into:  intoRef,
-		Class: classRef,
-		Data:  data,
+		UpBaseReq: MakeUpBaseReq(),
+		Into:      intoRef,
+		Class:     classRef,
+		Data:      data,
 	}
 
 	res := rpctypes.UpSaveAsDelegateResp{}
@@ -297,8 +319,9 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 	}
 
 	req := rpctypes.UpGetDelegateReq{
-		Object: object,
-		OfType: ofType,
+		UpBaseReq: MakeUpBaseReq(),
+		Object:    object,
+		OfType:    ofType,
 	}
 
 	res := rpctypes.UpGetDelegateResp{}
@@ -322,4 +345,12 @@ func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 	ch := new(codec.CborHandle)
 	log.Debugf("de-serializing %+v", from)
 	return codec.NewDecoderBytes(from, ch).Decode(into)
+}
+
+// MakeErrorSerializable converts errors satisfying error interface to foundation.Error
+func (gi *GoInsider) MakeErrorSerializable(e error) error {
+	if e == nil {
+		return nil
+	}
+	return &foundation.Error{S: e.Error()}
 }

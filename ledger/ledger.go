@@ -28,18 +28,21 @@ import (
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	db          *storage.DB
-	am          *artifactmanager.LedgerArtifactManager
-	pm          *pulsemanager.PulseManager
-	coordinator *jetcoordinator.JetCoordinator
+	db      *storage.DB
+	am      *artifactmanager.LedgerArtifactManager
+	pm      *pulsemanager.PulseManager
+	jc      *jetcoordinator.JetCoordinator
+	handler *artifactmanager.MessageHandler
 }
 
+// GetPulseManager returns PulseManager.
 func (l *Ledger) GetPulseManager() core.PulseManager {
 	return l.pm
 }
 
+// GetJetCoordinator returns JetCoordinator.
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
-	return l.coordinator
+	return l.jc
 }
 
 // GetArtifactManager returns artifact manager to work with.
@@ -54,22 +57,21 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "DB creation failed")
 	}
-	return NewLedgerWithDB(db, conf)
-}
-
-// NewLedgerWithDB creates new ledger with preconfigured storage.DB instance.
-func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error) {
 	am, err := artifactmanager.NewArtifactManger(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "artifact manager creation failed")
 	}
-	coordinator, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
+	jc, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}
-	pm, err := pulsemanager.NewPulseManager(db, coordinator)
+	pm, err := pulsemanager.NewPulseManager(db, jc)
 	if err != nil {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
+	}
+	handler, err := artifactmanager.NewMessageHandler(db)
+	if err != nil {
+		return nil, err
 	}
 
 	err = db.Bootstrap()
@@ -77,18 +79,42 @@ func NewLedgerWithDB(db *storage.DB, conf configuration.Ledger) (*Ledger, error)
 		return nil, err
 	}
 
+	ledger := Ledger{
+		db:      db,
+		am:      am,
+		pm:      pm,
+		jc:      jc,
+		handler: handler,
+	}
+
+	return &ledger, nil
+}
+
+// NewTestLedger is the util function for creation of Ledger with provided
+// private members (suitable for tests).
+func NewTestLedger(
+	db *storage.DB,
+	am *artifactmanager.LedgerArtifactManager,
+	pm *pulsemanager.PulseManager,
+	jc *jetcoordinator.JetCoordinator,
+	amh *artifactmanager.MessageHandler,
+) *Ledger {
 	return &Ledger{
-		db:          db,
-		am:          am,
-		pm:          pm,
-		coordinator: coordinator,
-	}, nil
+		db:      db,
+		am:      am,
+		pm:      pm,
+		jc:      jc,
+		handler: amh,
+	}
 }
 
 // Start initializes external ledger dependencies.
 func (l *Ledger) Start(c core.Components) error {
 	var err error
 	if err = l.am.Link(c); err != nil {
+		return err
+	}
+	if err = l.handler.Link(c); err != nil {
 		return err
 	}
 

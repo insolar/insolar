@@ -30,4 +30,5 @@ var (
 	ErrInconsistentIndex          = errors.New("inconsistent index")
 	ErrWrongObject                = errors.New("provided object is not and instance of provided class")
 	ErrNotFound                   = errors.New("object not found")
+	ErrUnexpectedReply            = errors.New("unexpected reply")
 )

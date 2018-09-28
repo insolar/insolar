@@ -120,4 +120,91 @@ func TestHashTable_GetHosts(t *testing.T) {
 
 	assert.Equal(t, 10, len(ht.GetHosts(100)))
 	assert.Equal(t, 4, len(ht.GetHosts(4)))
+	assert.Equal(t, 10, len(ht.GetMulticastHosts()))
+}
+
+func TestHashTable_MarkHostAsSeen(t *testing.T) {
+	prefix := "127.0.0.1:"
+	port := 3000
+
+	origin, _ := id.NewID()
+	addr, _ := host.NewAddress(prefix + strconv.Itoa(port))
+	ht, _ := NewHashTable(origin, addr)
+	port++
+
+	id1, _ := id.NewID()
+	addr, _ = host.NewAddress(prefix + strconv.Itoa(port))
+	h := NewRouteHost(&host.Host{ID: id1, Address: addr})
+
+	index := GetBucketIndexFromDifferingBit(origin, id1)
+	bucket := ht.RoutingTable[index]
+	bucket = append(bucket, h)
+	ht.RoutingTable[index] = bucket
+
+	ht.MarkHostAsSeen(h.ID.Bytes())
+}
+
+func TestHashTable_DoesHostExistInBucket(t *testing.T) {
+	prefix := "127.0.0.1:"
+	port := 3000
+
+	origin, _ := id.NewID()
+	addr, _ := host.NewAddress(prefix + strconv.Itoa(port))
+	ht, _ := NewHashTable(origin, addr)
+	port++
+
+	id1, _ := id.NewID()
+	addr, _ = host.NewAddress(prefix + strconv.Itoa(port))
+	h := NewRouteHost(&host.Host{ID: id1, Address: addr})
+
+	index := GetBucketIndexFromDifferingBit(origin, id1)
+	assert.False(t, ht.DoesHostExistInBucket(index, h.ID.Bytes()))
+
+	bucket := ht.RoutingTable[index]
+	bucket = append(bucket, h)
+	ht.RoutingTable[index] = bucket
+
+	assert.True(t, ht.DoesHostExistInBucket(index, h.ID.Bytes()))
+}
+
+func TestHashTable_GetClosestContacts(t *testing.T) {
+	prefix := "127.0.0.1:"
+	port := 3000
+
+	origin, _ := id.NewID()
+	addr, _ := host.NewAddress(prefix + strconv.Itoa(port))
+	ht, _ := NewHashTable(origin, addr)
+	port++
+
+	id1, _ := id.NewID()
+	addr, _ = host.NewAddress(prefix + strconv.Itoa(port))
+	h := NewRouteHost(&host.Host{ID: id1, Address: addr})
+
+	index := GetBucketIndexFromDifferingBit(origin, id1)
+	bucket := ht.RoutingTable[index]
+	bucket = append(bucket, h)
+	ht.RoutingTable[index] = bucket
+
+	assert.NotNil(t, ht.GetClosestContacts(1, h.ID.Bytes(), nil))
+}
+
+func TestHashTable_GetAllHostsInBucketCloserThan(t *testing.T) {
+	prefix := "127.0.0.1:"
+	port := 3000
+
+	origin, _ := id.NewID()
+	addr, _ := host.NewAddress(prefix + strconv.Itoa(port))
+	ht, _ := NewHashTable(origin, addr)
+	port++
+
+	id1, _ := id.NewID()
+	addr, _ = host.NewAddress(prefix + strconv.Itoa(port))
+	h := NewRouteHost(&host.Host{ID: id1, Address: addr})
+
+	index := GetBucketIndexFromDifferingBit(origin, id1)
+	bucket := ht.RoutingTable[index]
+	bucket = append(bucket, h)
+	ht.RoutingTable[index] = bucket
+
+	ht.GetAllHostsInBucketCloserThan(index, h.ID.Bytes())
 }

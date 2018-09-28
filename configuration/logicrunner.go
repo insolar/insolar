@@ -17,27 +17,23 @@
 package configuration
 
 type LogicRunner struct {
-	BuiltIn  *BuiltIn
-	GoPlugin *GoPlugin
+	RPCListen string // ip:port of main system connectivity socket
+	BuiltIn   *BuiltIn
+	GoPlugin  *GoPlugin
 }
 
 type BuiltIn struct{}
 
 type GoPlugin struct {
-	RunnerListen   string // ip:port of ginsider connectivity socket
-	RunnerPath     string // path to gincider executable
-	RunnerCodePath string // path where ginsider caches code
-	MainListen     string // ip:port of main system connectivity socket
+	RunnerListen string // ip:port of ginsider connectivity socket
 }
 
 func NewLogicRunner() LogicRunner {
 	return LogicRunner{
-		BuiltIn: &BuiltIn{},
+		RPCListen: "127.0.0.1:7778",
+		BuiltIn:   &BuiltIn{},
 		GoPlugin: &GoPlugin{
-			RunnerPath:     "testdata/logicrunner/ginsider-cli",
-			RunnerListen:   "127.0.0.1:7777",
-			RunnerCodePath: "",
-			MainListen:     "127.0.0.1:7778",
+			RunnerListen: "127.0.0.1:7777",
 		},
 	}
 }

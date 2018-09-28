@@ -19,8 +19,11 @@ package hostnetwork
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -94,7 +97,9 @@ func TestRelayRequest(t *testing.T) {
 	err = RelayRequest(hh, "begin auth", receiver.ID.String())
 	assert.Error(t, err, "unknown command")
 	err = RelayRequest(hh, "start", receiver.ID.String())
+	assert.NoError(t, err)
 	err = RelayRequest(hh, "stop", receiver.ID.String())
+	assert.NoError(t, err)
 }
 
 func TestRelayOwnershipRequest(t *testing.T) {
@@ -111,4 +116,24 @@ func TestRelayOwnershipRequest(t *testing.T) {
 
 	hh.FoundHost = receiver
 	err = RelayOwnershipRequest(hh, receiver.ID.String())
+	assert.NoError(t, err)
+}
+
+func TestCascadeSendMessage(t *testing.T) {
+	hh := newMockHostHandler()
+	data := core.Cascade{}
+	err := CascadeSendMessage(hh, data, "", "", nil)
+	assert.NotNil(t, err)
+}
+
+func TestResendPulseToKnownHosts(t *testing.T) {
+	hh := newMockHostHandler()
+	hosts := make([]*routing.RouteHost, 0)
+	for i := 0; i < 5; i++ {
+		id, _ := id.NewID()
+		addr, _ := host.NewAddress("0.0.0.0:0")
+		rhost := routing.NewRouteHost(&host.Host{ID: id, Address: addr})
+		hosts = append(hosts, rhost)
+	}
+	ResendPulseToKnownHosts(hh, hosts, &packet.RequestPulse{})
 }

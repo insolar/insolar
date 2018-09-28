@@ -20,13 +20,15 @@ package logicrunner
 import (
 	"time"
 
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
+
+	"net"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
@@ -35,12 +37,18 @@ import (
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
-	EventBus        core.EventBus
-	Cfg             configuration.LogicRunner
+	MessageBus      core.MessageBus
+	machinePrefs    []core.MachineType
+	Cfg             *configuration.LogicRunner
+	cb              CaseBind
+	sock            net.Listener
 }
 
 // NewLogicRunner is constructor for LogicRunner
-func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
+func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
+	if cfg == nil {
+		return nil, errors.New("LogicRunner have nil configuration")
+	}
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
@@ -50,26 +58,38 @@ func NewLogicRunner(cfg configuration.LogicRunner) (*LogicRunner, error) {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(c core.Components) error {
-	am := c["core.Ledger"].(core.Ledger).GetArtifactManager()
+	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
-	eventBus := c["core.EventBus"].(core.EventBus)
-	lr.EventBus = eventBus
+	messageBus := c.MessageBus
+	lr.MessageBus = messageBus
+
+	StartRPC(lr)
 
 	if lr.Cfg.BuiltIn != nil {
-		bi := builtin.NewBuiltIn(eventBus, am)
+		bi := builtin.NewBuiltIn(messageBus, am)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
 			return err
 		}
+		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeBuiltin)
 	}
 
 	if lr.Cfg.GoPlugin != nil {
-		gp, err := goplugin.NewGoPlugin(lr.Cfg.GoPlugin, eventBus, am)
+		gp, err := goplugin.NewGoPlugin(lr.Cfg, messageBus, am)
 		if err != nil {
 			return err
 		}
 		if err := lr.RegisterExecutor(core.MachineTypeGoPlugin, gp); err != nil {
 			return err
 		}
+		lr.machinePrefs = append(lr.machinePrefs, core.MachineTypeGoPlugin)
+	}
+
+	// TODO: use separate handlers
+	if err := messageBus.Register(message.TypeCallMethod, lr.Execute); err != nil {
+		return err
+	}
+	if err := messageBus.Register(message.TypeCallConstructor, lr.Execute); err != nil {
+		return err
 	}
 
 	return nil
@@ -87,6 +107,13 @@ func (lr *LogicRunner) Stop() error {
 			reterr = errors.Wrap(reterr, err.Error())
 		}
 	}
+
+	if lr.sock != nil {
+		if err := lr.sock.Close(); err != nil {
+			return err
+		}
+	}
+
 	return reterr
 }
 
@@ -107,163 +134,154 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(e core.Event) (core.Reaction, error) {
+func (lr *LogicRunner) Execute(msg core.Message) (core.Reply, error) {
 	ctx := core.LogicCallContext{
-		Time: time.Now(), // TODO: probably we should take it from e
+		Caller: msg.GetCaller(),
+		Time:   time.Now(), // TODO: probably we should take it from e
+		Pulse:  lr.cb.P,
 	}
 
-	machinePref := []core.MachineType{
-		core.MachineTypeBuiltin,
-		core.MachineTypeGoPlugin,
-	}
+	switch m := msg.(type) {
+	case *message.CallMethod:
+		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
+			Type: CaseRecordTypeMethodCall,
+			Resp: msg,
+		})
+		re, err := lr.executeMethodCall(ctx, m)
+		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
+			Type: CaseRecordTypeMethodCallResult,
+			Resp: re,
+		})
+		return re, err
 
-	switch m := e.(type) {
-	case *event.CallMethodEvent:
-		return lr.executeMethodCall(ctx, m)
-	case *event.CallConstructorEvent:
-		classDesc, err := lr.ArtifactManager.GetLatestClass(m.ClassRef)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get class")
-		}
-		ctx.Class = classDesc.HeadRef()
-
-		codeDesc, err := classDesc.CodeDescriptor(machinePref)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get class's code descriptor")
-		}
-
-		mt, err := codeDesc.MachineType()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get machine type")
-		}
-
-		executor, err := lr.GetExecutor(mt)
-		if err != nil {
-			return nil, errors.Wrap(err, "no executer registered")
-		}
-
-		newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
-		if err != nil {
-			return nil, errors.Wrap(err, "executer error")
-		}
-
-		return &reaction.CommonReaction{Data: newData}, nil
-
-	case *event.DelegateEvent:
-		ref, err := lr.ArtifactManager.ActivateObjDelegate(
-			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save new object")
-		}
-		return &reaction.CommonReaction{Data: []byte(ref.String())}, nil
-
-	case *event.ChildEvent:
-		ref, err := lr.ArtifactManager.ActivateObj(
-			core.RecordRef{}, core.RecordRef{}, m.Class, m.Into, m.Body,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't save new object")
-		}
-		return &reaction.CommonReaction{Data: []byte(ref.String())}, nil
-
-	case *event.UpdateObjectEvent:
-		_, err := lr.ArtifactManager.UpdateObj(
-			core.RecordRef{}, core.RecordRef{}, m.Object, m.Body,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
-		}
-		return &reaction.CommonReaction{}, nil
-
-	case *event.GetObjectEvent:
-		objDesc, err := lr.ArtifactManager.GetLatestObj(m.Object)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object")
-		}
-
-		classDesc, err := objDesc.ClassDescriptor(nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's class")
-		}
-
-		data, err := objDesc.Memory()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's data")
-		}
-
-		codeDesc, err := classDesc.CodeDescriptor(machinePref)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object's code descriptor")
-		}
-
-		mt, err := codeDesc.MachineType()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get machine type")
-		}
-
-		return &reaction.ObjectBodyReaction{
-			Body:        data,
-			Code:        *codeDesc.Ref(),
-			Class:       *classDesc.HeadRef(),
-			MachineType: mt,
-		}, nil
+	case *message.CallConstructor:
+		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
+			Type: CaseRecordTypeConstructorCall,
+			Resp: msg,
+		})
+		re, err := lr.executeConstructorCall(ctx, m)
+		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
+			Type: CaseRecordTypeConstructorCallResult,
+			Resp: re,
+		})
+		return re, err
 
 	default:
 		panic("Unknown e type")
 	}
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *event.CallMethodEvent) (core.Reaction, error) {
-	resp, err := lr.EventBus.Dispatch(&event.GetObjectEvent{
-		Object: e.ObjectRef,
-	})
+type objectBody struct {
+	Body        []byte
+	Code        core.RecordRef
+	Class       core.RecordRef
+	MachineType core.MachineType
+}
+
+func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, error) {
+	objDesc, err := lr.ArtifactManager.GetObject(objref, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
-	info := resp.(*reaction.ObjectBodyReaction)
 
-	ctx.Callee = &e.ObjectRef
-	ctx.Class = &info.Class
-
-	executor, err := lr.GetExecutor(info.MachineType)
+	classDesc, err := objDesc.ClassDescriptor(nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "no executer registered")
+		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
 
-	executer := func() (*reaction.CommonReaction, error) {
+	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
+	}
+
+	return &objectBody{
+		Body:        objDesc.Memory(),
+		Code:        *codeDesc.Ref(),
+		Class:       *classDesc.HeadRef(),
+		MachineType: codeDesc.MachineType(),
+	}, nil
+}
+
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.CallMethod) (core.Reply, error) {
+	objbody, err := lr.getObjectMessage(e.ObjectRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get object")
+	}
+
+	ctx.Callee = &e.ObjectRef
+	ctx.Class = &objbody.Class
+
+	executor, err := lr.GetExecutor(objbody.MachineType)
+	if err != nil {
+		return nil, errors.Wrap(err, "no executor registered")
+	}
+
+	executer := func() (*reply.Common, error) {
 		newData, result, err := executor.CallMethod(
-			&ctx, info.Code, info.Body, e.Method, e.Arguments,
+			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "executer error")
+			return nil, errors.Wrap(err, "executor error")
 		}
 
-		_, err = lr.EventBus.Dispatch(
-			&event.UpdateObjectEvent{
-				Object: e.ObjectRef,
-				Body:   newData,
-			},
+		_, err = lr.ArtifactManager.UpdateObject(
+			core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
 
-		return &reaction.CommonReaction{Data: newData, Result: result}, nil
+		return &reply.Common{Data: newData, Result: result}, nil
 	}
 
 	switch e.ReturnMode {
-	case event.ReturnResult:
+	case message.ReturnResult:
 		return executer()
-	case event.ReturnNoWait:
+	case message.ReturnNoWait:
 		go func() {
 			_, err := executer()
 			if err != nil {
 				log.Error(err)
 			}
 		}()
-		return &reaction.CommonReaction{}, nil
-	default:
-		return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
+		return &reply.Common{}, nil
 	}
+	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
+}
+
+func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor) (core.Reply, error) {
+
+	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get class")
+	}
+	ctx.Class = classDesc.HeadRef()
+
+	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get class's code descriptor")
+	}
+
+	executor, err := lr.GetExecutor(codeDesc.MachineType())
+	if err != nil {
+		return nil, errors.Wrap(err, "no executer registered")
+	}
+
+	newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
+	if err != nil {
+		return nil, errors.Wrap(err, "executer error")
+	}
+	return &reply.Common{Data: newData}, nil
+}
+
+func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
+	lr.cb = CaseBind{
+		P: pulse,
+		R: make(map[core.RecordRef][]CaseRecord),
+	}
+	return nil
+}
+
+func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr CaseRecord) {
+	lr.cb.R[ref] = append(lr.cb.R[ref], cr)
 }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ func BuildContext(cb ContextBuilder, msg *packet.Packet) hosthandler.Context {
 	}
 	if err != nil {
 		// TODO: Do something sane with error!
-		log.Debugln(err) // don't return this error cuz don't know what to do with
+		log.Error(err) // don't return this error cuz don't know what to do with
 	}
 	return ctx
 }

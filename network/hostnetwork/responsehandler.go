@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -40,11 +40,11 @@ func handleKnownOuterHosts(hostHandler hosthandler.HostHandler, response *packet
 		(hostHandler.GetProxyHostsCount() == 0) {
 		err = AuthenticationRequest(hostHandler, "begin", targetID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "AuthenticationRequest failed")
 		}
 		err = RelayRequest(hostHandler, "start", targetID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "RelayRequest failed")
 		}
 	}
 	return nil
@@ -121,7 +121,7 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 	return nil
 }
 
-func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet, ctx hosthandler.Context) {
+func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet) {
 	_, err := hostHandler.SendRequest(request)
 	if err != nil {
 		log.Debugln(err)

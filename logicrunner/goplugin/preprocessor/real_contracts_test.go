@@ -20,19 +20,33 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os/exec"
+	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-var contractNames = []string{"wallet", "member", "allowance", "rootdomain"}
-var pathWithContracts = "../../../genesis/experiment"
+var icc = ""
+var runnerbin = ""
 
-func contractPath(name string) string {
-	return filepath.Join(pathWithContracts, name, name+".go")
+func TestMain(m *testing.M) {
+	var err error
+	err = log.SetLevel("Debug")
+	if err != nil {
+		log.Errorln(err.Error())
+	}
+	if runnerbin, icc, err = testutil.Build(); err != nil {
+		fmt.Println("Logic runner build failed, skip tests:", err.Error())
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
+
+func contractPath(name string, contractsDir string) string {
+	return filepath.Join(contractsDir, name, name+".go")
 }
 
 func MakeTestName(file string, contractType string) string {
@@ -40,14 +54,18 @@ func MakeTestName(file string, contractType string) string {
 }
 
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
+	contractNames, err := GetRealContractsNames()
+	assert.NoError(t, err)
+	contractsDir, err := GetRealGenesisDir("experiment")
+	assert.NoError(t, err)
 	for _, name := range contractNames {
-		file := contractPath(name)
+		file := contractPath(name, contractsDir)
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
 			parsed, err := ParseFile(file)
 			assert.NoError(t, err)
 
 			var buf bytes.Buffer
-			err = GenerateContractProxy(parsed, "testRef", &buf)
+			err = parsed.WriteProxy("testRef", &buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)
@@ -58,14 +76,18 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 }
 
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
+	contractNames, err := GetRealContractsNames()
+	assert.NoError(t, err)
+	contractsDir, err := GetRealGenesisDir("experiment")
+	assert.NoError(t, err)
 	for _, name := range contractNames {
-		file := contractPath(name)
+		file := contractPath(name, contractsDir)
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
 			parsed, err := ParseFile(file)
 			assert.NoError(t, err)
 
 			var buf bytes.Buffer
-			err = GenerateContractWrapper(parsed, &buf)
+			err = parsed.WriteWrapper(&buf)
 			assert.NoError(t, err)
 
 			code, err := ioutil.ReadAll(&buf)
@@ -76,20 +98,19 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 }
 
 func TestCompilingRealSmartContracts(t *testing.T) {
-	iccDir := "../../../cmd/insgocc"
-
-	_, err := exec.Command("go", "build", "-o", filepath.Join(iccDir, "insgocc"), iccDir).CombinedOutput()
-	assert.NoError(t, err)
-
 	contracts := make(map[string]string)
+	contractNames, err := GetRealContractsNames()
+	assert.NoError(t, err)
+	contractsDir, err := GetRealGenesisDir("experiment")
+	assert.NoError(t, err)
 	for _, name := range contractNames {
-		code, err := ioutil.ReadFile(contractPath(name))
+		code, err := ioutil.ReadFile(contractPath(name, contractsDir))
 		assert.NoError(t, err)
 		contracts[name] = string(code)
 	}
 
 	am := testutil.NewTestArtifactManager()
-	cb := testutil.NewContractBuilder(am, filepath.Join(iccDir, "insgocc"))
+	cb := testutil.NewContractBuilder(am, icc)
 	defer cb.Clean()
 	err = cb.Build(contracts)
 	assert.NoError(t, err)

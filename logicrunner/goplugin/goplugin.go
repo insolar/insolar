@@ -18,20 +18,12 @@
 package goplugin
 
 import (
-	"log"
-	"net"
-	"net/http"
 	"net/rpc"
-	"os"
 	"os/exec"
-	"syscall"
-
 	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -52,252 +44,26 @@ type RunnerOptions struct {
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
-	Cfg             *configuration.GoPlugin
-	EventBus        core.EventBus
+	Cfg             *configuration.LogicRunner
+	MessageBus      core.MessageBus
 	ArtifactManager core.ArtifactManager
-	sock            net.Listener
 	runner          *exec.Cmd
 	client          *rpc.Client
 }
 
-// RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
-type RPC struct {
-	gp *GoPlugin
-}
-
-// GetCode is an RPC retrieving a code by its reference
-func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
-	am := gpr.gp.ArtifactManager
-	am.SetArchPref([]core.MachineType{core.MachineTypeGoPlugin})
-	codeDescriptor, err := am.GetCode(req.Code)
-	if err != nil {
-		return err
-	}
-
-	code, err := codeDescriptor.Code()
-	if err != nil {
-		return err
-	}
-
-	reply.Code = code
-	return nil
-}
-
-// RouteCall routes call from a contract to a contract through event bus.
-func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, reply *rpctypes.UpRouteResp) error {
-	if gpr.gp.EventBus == nil {
-		return errors.New("event bus was not set during initialization")
-	}
-
-	var mode event.MethodReturnMode
-	if req.Wait {
-		mode = event.ReturnResult
-	} else {
-		mode = event.ReturnNoWait
-	}
-
-	e := &event.CallMethodEvent{
-		ReturnMode: mode,
-		ObjectRef:  req.Object,
-		Method:     req.Method,
-		Arguments:  req.Arguments,
-	}
-
-	res, err := gpr.gp.EventBus.Dispatch(e)
-	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
-	}
-
-	reply.Result = res.(*reaction.CommonReaction).Result
-
-	return nil
-}
-
-// RouteConstructorCall routes call from a contract to a constructor of another contract
-func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, reply *rpctypes.UpRouteConstructorResp) error {
-	if gpr.gp.EventBus == nil {
-		return errors.New("event bus was not set during initialization")
-	}
-
-	e := &event.CallConstructorEvent{
-		ClassRef:  req.Reference,
-		Name:      req.Constructor,
-		Arguments: req.Arguments,
-	}
-
-	res, err := gpr.gp.EventBus.Dispatch(e)
-	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
-	}
-
-	reply.Data = res.(*reaction.CommonReaction).Data
-	return nil
-}
-
-// SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
-	e := &event.ChildEvent{
-		Into:  req.Parent,
-		Class: req.Class,
-		Body:  req.Data,
-	}
-
-	res, err := gpr.gp.EventBus.Dispatch(e)
-	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
-	}
-
-	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
-
-	return nil
-}
-
-// GetObjChildren is an RPC returns set of object children
-func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes.UpGetObjChildrenResp) error {
-	// TODO: INS-408
-	am := gpr.gp.ArtifactManager
-	i, err := am.GetObjChildren(req.Obj)
-	if err != nil {
-		return errors.Wrap(err, "am.GetObjChildren failed")
-	}
-	for i.HasNext() {
-		r, err := i.Next()
-		if err != nil {
-			return err
-		}
-		o, err := am.GetLatestObj(r)
-		if err != nil {
-			return errors.Wrap(err, "Have ref, have no object")
-		}
-		cd, err := o.ClassDescriptor(nil)
-		if err != nil {
-			return errors.Wrap(err, "Have ref, have no object")
-		}
-		ref := cd.HeadRef()
-		if ref.Equal(req.Class) {
-			reply.Children = append(reply.Children, r)
-		}
-	}
-	return nil
-}
-
-// SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
-	e := &event.DelegateEvent{
-		Into:  req.Into,
-		Class: req.Class,
-		Body:  req.Data,
-	}
-
-	res, err := gpr.gp.EventBus.Dispatch(e)
-	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
-	}
-
-	reply.Reference = core.NewRefFromBase58(string(res.(*reaction.CommonReaction).Data))
-
-	return nil
-}
-
-// GetDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGetDelegateResp) error {
-	am := gpr.gp.ArtifactManager
-	ref, err := am.GetObjDelegate(req.Object, req.OfType)
-	if err != nil {
-		return err
-	}
-
-	reply.Object = *ref
-	return nil
-}
-
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.GoPlugin, eb core.EventBus, am core.ArtifactManager) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.LogicRunner, eb core.MessageBus, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
-		EventBus:        eb,
+		MessageBus:      eb,
 		ArtifactManager: am,
 	}
-	if gp.Cfg.MainListen == "" {
-		gp.Cfg.MainListen = "127.0.0.1:7777"
-	}
 
-	err := gp.StartRunner()
-	if err != nil {
-		return nil, err
-	}
-
-	go gp.Start()
 	return &gp, nil
-}
-
-var rpcService *RPC
-
-// Start starts RPC interface to help runner, note that NewGoPlugin does
-// this for you
-func (gp *GoPlugin) Start() {
-	if rpcService == nil {
-		rpcService = &RPC{}
-		_ = rpc.Register(rpcService)
-		rpc.HandleHTTP()
-	}
-	rpcService.gp = gp
-
-	l, e := net.Listen("tcp", gp.Cfg.MainListen)
-	if e != nil {
-		log.Fatal("couldn't setup listener on '"+gp.Cfg.MainListen+"': ", e)
-	}
-	gp.sock = l
-	log.Printf("starting goplugin RPC service on %q", gp.Cfg.MainListen)
-	_ = http.Serve(l, nil)
-	log.Printf("STOP")
-}
-
-// StartRunner starts ginsider process
-func (gp *GoPlugin) StartRunner() error {
-	var runnerArguments []string
-	if gp.Cfg.RunnerListen != "" {
-		runnerArguments = append(runnerArguments, "-l", gp.Cfg.RunnerListen)
-	} else {
-		return errors.New("listen is not optional in gp.RunnerOptions")
-	}
-	if gp.Cfg.RunnerCodePath != "" {
-		runnerArguments = append(runnerArguments, "-d", gp.Cfg.RunnerCodePath)
-	}
-	runnerArguments = append(runnerArguments, "--rpc", gp.Cfg.MainListen)
-
-	execPath := "testdata/logicrunner/ginsider-cli"
-	if gp.Cfg.RunnerPath != "" {
-		execPath = gp.Cfg.RunnerPath
-	}
-
-	runner := exec.Command(execPath, runnerArguments...)
-	runner.Stdout = os.Stdout
-	runner.Stderr = os.Stderr
-	err := runner.Start()
-	if err != nil {
-		return err
-	}
-	time.Sleep(200 * time.Millisecond)
-	gp.runner = runner
-
-	return nil
 }
 
 // Stop stops runner(s) and RPC service
 func (gp *GoPlugin) Stop() error {
-	err := gp.runner.Process.Signal(syscall.SIGINT)
-	if err != nil {
-		return err
-	}
-	time.Sleep(200 * time.Millisecond)
-
-	if gp.sock != nil {
-		err = gp.sock.Close()
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -307,9 +73,9 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 		return gp.client, nil
 	}
 
-	client, err := rpc.DialHTTP("tcp", gp.Cfg.RunnerListen)
+	client, err := rpc.DialHTTP("tcp", gp.Cfg.GoPlugin.RunnerListen)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s'", gp.Cfg.RunnerListen)
+		return nil, errors.Wrapf(err, "couldn't dial '%s'", gp.Cfg.GoPlugin.RunnerListen)
 	}
 
 	gp.client = client

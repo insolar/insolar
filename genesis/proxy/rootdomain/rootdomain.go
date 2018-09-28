@@ -2,13 +2,12 @@ package rootdomain
 
 import (
         "github.com/insolar/insolar/core"
-        "github.com/insolar/insolar/genesis/proxy/member"
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 
 
-// Reference to class of this contract
+// ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
 // Contract proxy type
@@ -83,6 +82,96 @@ func (r *RootDomain) GetClass() core.RecordRef {
     return ClassReference
 }
 
+
+func (r *RootDomain) RegisterNode( publicKey string, role string ) ( string ) {
+    var args [2]interface{}
+	args[0] = publicKey
+	args[1] = role
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [1]interface{}{}
+	var a0 string
+	resList[0] = a0
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].(string)
+}
+
+func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
+    var args [2]interface{}
+	args[0] = publicKey
+	args[1] = role
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
+func (r *RootDomain) IsAuthorized(  ) ( bool ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsAuthorized", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [1]interface{}{}
+	var a0 bool
+	resList[0] = a0
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].(bool)
+}
+
+func (r *RootDomain) IsAuthorizedNoWait(  ) {
+    var args [0]interface{}
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "IsAuthorized", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
 
 func (r *RootDomain) CreateMember( name string ) ( string ) {
     var args [1]interface{}
@@ -218,51 +307,6 @@ func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
     }
 
     _, err = proxyctx.Current.RouteCall(r.Reference, false, "SendMoney", argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-}
-
-func (r *RootDomain) getUserInfoMap( m *member.Member ) ( map[string]interface{} ) {
-    var args [1]interface{}
-	args[0] = m
-
-    var argsSerialized []byte
-
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "getUserInfoMap", argsSerialized)
-    if err != nil {
-   		panic(err)
-    }
-
-    resList := [1]interface{}{}
-	var a0 map[string]interface{}
-	resList[0] = a0
-
-    err = proxyctx.Current.Deserialize(res, &resList)
-    if err != nil {
-        panic(err)
-    }
-
-    return resList[0].(map[string]interface{})
-}
-
-func (r *RootDomain) getUserInfoMapNoWait( m *member.Member ) {
-    var args [1]interface{}
-	args[0] = m
-
-    var argsSerialized []byte
-
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "getUserInfoMap", argsSerialized)
     if err != nil {
         panic(err)
     }

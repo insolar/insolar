@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
@@ -54,16 +55,6 @@ func NewServiceNetwork(
 		return nil, err
 	}
 
-	err = dht.ObtainIP()
-	if err != nil {
-		return nil, err
-	}
-
-	err = dht.AnalyzeNetwork(createContext(dht))
-	if err != nil {
-		return nil, err
-	}
-
 	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
 	f := func(data core.Cascade, method string, args [][]byte) error {
 		return service.initCascadeSendMessage(data, true, method, args)
@@ -82,42 +73,42 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
 }
 
-// SendEvent sends a event from EventBus.
-func (network *ServiceNetwork) SendEvent(nodeID core.RecordRef, method string, event core.Event) ([]byte, error) {
-	if event == nil {
-		return nil, errors.New("event is nil")
+// SendMessage sends a message from MessageBus.
+func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+	if msg == nil {
+		return nil, errors.New("message is nil")
 	}
 	hostID := network.nodeNetwork.ResolveHostID(nodeID)
-	buff, err := eventToBytes(event)
+	buff, err := messageToBytes(msg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
 
-	log.Debugf("SendEvent with nodeID = %s method = %s, event reference = %s", nodeID.String(),
-		method, event.GetReference().String())
+	log.Debugf("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
+		method, msg.Target().String())
 
 	metrics.NetworkMessageSentTotal.Inc()
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	return res, err
 }
 
-// SendCascadeEvent sends a event from EventBus to a cascade of nodes. Event reference is ignored
-func (network *ServiceNetwork) SendCascadeEvent(data core.Cascade, method string, event core.Event) error {
-	if event == nil {
-		return errors.New("event is nil")
+// SendCascadeMessage sends a message from MessageBus to a cascade of nodes. Message reference is ignored
+func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
+	if msg == nil {
+		return errors.New("message is nil")
 	}
-	buff, err := eventToBytes(event)
+	buff, err := messageToBytes(msg)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to serialize event")
 	}
 
 	return network.initCascadeSendMessage(data, false, method, [][]byte{buff})
 }
 
-func eventToBytes(event core.Event) ([]byte, error) {
-	reqBuff, err := event.Serialize()
+func messageToBytes(msg core.Message) ([]byte, error) {
+	reqBuff, err := message.Serialize(msg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
 	return ioutil.ReadAll(reqBuff)
 }
@@ -133,22 +124,28 @@ func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hostha
 }
 
 func getPulseManager(components core.Components) (core.PulseManager, error) {
-	ledgerComponent, exists := components["core.Ledger"]
-	if !exists {
+	if components.Ledger == nil {
 		return nil, errors.New("no core.Ledger in components")
 	}
-	ledger, cast := ledgerComponent.(core.Ledger)
-	if !cast {
-		return nil, errors.New("bad cast to core.Ledger")
-	}
-	return ledger.GetPulseManager(), nil
+	return components.Ledger.GetPulseManager(), nil
 }
 
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
+
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
+
+	err := network.hostNetwork.ObtainIP()
+	if err != nil {
+		return errors.Wrap(err, "Failed to ObtainIP")
+	}
+
+	err = network.hostNetwork.AnalyzeNetwork(createContext(network.hostNetwork))
+	if err != nil {
+		return errors.Wrap(err, "Failed to AnalyzeNetwork")
+	}
 
 	pm, err := getPulseManager(components)
 	if err != nil {
@@ -157,16 +154,18 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 		network.hostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
 	}
 
+	// TODO: may be merge bug, check copy-paste
 	ctx := createContext(network.hostNetwork)
 	err = network.hostNetwork.ObtainIP()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to ObtainIP")
 	}
 
 	err = network.hostNetwork.AnalyzeNetwork(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to AnalyzeNetwork")
 	}
+	// todo: end
 
 	return nil
 }
@@ -201,7 +200,7 @@ func createContext(handler hosthandler.HostHandler) hosthandler.Context {
 	return ctx
 }
 
-// InitCascadeSendMessage initiates the RPC call on target host and sends messages to next cascade layers
+// initCascadeSendMessage initiates the RPC call on target host and sends messages to next cascade layers
 func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCurrentNode bool, method string, args [][]byte) error {
 	if len(data.NodeIds) == 0 {
 		return errors.New("node IDs list should not be empty")
@@ -220,7 +219,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 		nextNodes, err = cascade.CalculateNextNodes(data, nil)
 	}
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to CalculateNextNodes")
 	}
 	if len(nextNodes) == 0 {
 		return nil
@@ -231,13 +230,13 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 		hostID := network.nodeNetwork.ResolveHostID(nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
-			log.Debugln("failed to send cascade event: ", err)
+			log.Debugln("failed to send cascade message: ", err)
 			failedNodes = append(failedNodes, nextNode.String())
 		}
 	}
 
 	if len(failedNodes) > 0 {
-		return errors.New("failed to send cascade event to nodes: " + strings.Join(failedNodes, ", "))
+		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
 	}
 
 	return nil

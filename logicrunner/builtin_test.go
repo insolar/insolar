@@ -23,12 +23,13 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/pulsar"
 )
 
 func byteRecorRef(b byte) core.RecordRef {
@@ -42,31 +43,30 @@ func TestBareHelloworld(t *testing.T) {
 	defer cleaner()
 
 	am := l.GetArtifactManager()
-	lr, err := NewLogicRunner(configuration.LogicRunner{
+	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	eb := &testEventBus{lr}
+	eb := &testMessageBus{lr}
 
 	assert.NoError(t, lr.Start(core.Components{
-		"core.Ledger":   l,
-		"core.EventBus": eb,
+		Ledger:     l,
+		MessageBus: eb,
 	}), "starting logicrunner")
+	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
 
 	hw := helloworld.NewHelloWorld()
-
-	am.SetArchPref([]core.MachineType{core.MachineTypeBuiltin})
 
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
 	_, _, classRef, err := testutil.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 
-	contract, err := am.ActivateObj(request, domain, *classRef, *am.RootRef(), testutil.CBORMarshal(t, hw))
+	contract, err := am.ActivateObject(request, domain, *classRef, *am.RootRef(), testutil.CBORMarshal(t, hw))
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
-	resp, err := lr.Execute(&event.CallMethodEvent{
+	resp, err := lr.Execute(&message.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
@@ -74,13 +74,13 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	d := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Data)
-	r := testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
+	d := testutil.CBORUnMarshal(t, resp.(*reply.Common).Data)
+	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
-	resp, err = lr.Execute(&event.CallMethodEvent{
+	resp, err = lr.Execute(&message.CallMethod{
 		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
@@ -88,8 +88,8 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	d = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Data)
-	r = testutil.CBORUnMarshal(t, resp.(*reaction.CommonReaction).Result)
+	d = testutil.CBORUnMarshal(t, resp.(*reply.Common).Data)
+	r = testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }

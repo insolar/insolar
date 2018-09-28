@@ -17,22 +17,87 @@
 package ledgertestutil
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
+type messageBusMock struct {
+	handlers map[core.MessageType]core.MessageHandler
+}
+
+func NewMessageBusMock() *messageBusMock {
+	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
+}
+
+func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandler) error {
+	_, ok := mb.handlers[p]
+	if ok {
+		return errors.New("handler for this type already exists")
+	}
+
+	mb.handlers[p] = handler
+	return nil
+}
+
+func (mb *messageBusMock) Start(components core.Components) error {
+	panic("implement me")
+}
+
+func (mb *messageBusMock) Stop() error {
+	panic("implement me")
+}
+
+func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
+	handler, ok := mb.handlers[m.Type()]
+	if !ok {
+		return nil, errors.New("no handler for this message type")
+	}
+
+	return handler(m)
+}
+
+func (mb *messageBusMock) SendAsync(m core.Message) {
+	panic("implement me")
+}
+
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger andh cleanup function.
 func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
+	var err error
+	// Init subcomponents.
+	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(t, dir)
-	l, err := ledger.NewLedgerWithDB(db, configuration.NewLedger())
+	handler, err := artifactmanager.NewMessageHandler(db)
 	assert.NoError(t, err)
-	am := l.GetArtifactManager()
-	assert.NotNil(t, am)
+	am, err := artifactmanager.NewArtifactManger(db)
+	assert.NoError(t, err)
+	jc, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
+	assert.NoError(t, err)
+	pm, err := pulsemanager.NewPulseManager(db, jc)
+	assert.NoError(t, err)
+
+	// Bootstrap
+	err = db.Bootstrap()
+	assert.NoError(t, err)
+
+	// Init components.
+	mb := NewMessageBusMock()
+	components := core.Components{MessageBus: mb}
+
+	// Create ledger.
+	l := ledger.NewTestLedger(db, am, pm, jc, handler)
+	err = l.Start(components)
+	assert.NoError(t, err)
+
 	return l, dbcancel
 }

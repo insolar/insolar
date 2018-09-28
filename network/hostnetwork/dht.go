@@ -18,7 +18,6 @@ package hostnetwork
 
 import (
 	"bytes"
-	"errors"
 	"math"
 	"sort"
 	"strings"
@@ -38,6 +37,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
 )
 
 // DHT represents the state of the local host in the distributed hash table.
@@ -47,13 +47,15 @@ type DHT struct {
 
 	origin *host.Origin
 
-	transport transport.Transport
-	store     store.Store
-	ncf       hosthandler.NetworkCommonFacade
-	relay     relay.Relay
-	proxy     relay.Proxy
-	auth      AuthInfo
-	subnet    Subnet
+	transport         transport.Transport
+	store             store.Store
+	ncf               hosthandler.NetworkCommonFacade
+	relay             relay.Relay
+	proxy             relay.Proxy
+	auth              AuthInfo
+	subnet            Subnet
+	timeout           int // bootstrap reconnect timeout
+	infinityBootstrap bool
 }
 
 // AuthInfo collects some information about authentication.
@@ -119,6 +121,8 @@ func NewDHT(
 	ncf hosthandler.NetworkCommonFacade,
 	options *Options,
 	proxy relay.Proxy,
+	timeout int,
+	infbootstrap bool,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -128,14 +132,16 @@ func NewDHT(
 	rel := relay.NewRelay()
 
 	dht = &DHT{
-		options:   options,
-		origin:    origin,
-		ncf:       ncf,
-		transport: transport,
-		tables:    tables,
-		store:     store,
-		relay:     rel,
-		proxy:     proxy,
+		options:           options,
+		origin:            origin,
+		ncf:               ncf,
+		transport:         transport,
+		tables:            tables,
+		store:             store,
+		relay:             rel,
+		proxy:             proxy,
+		timeout:           timeout,
+		infinityBootstrap: infbootstrap,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -177,7 +183,7 @@ func newTables(origin *host.Origin) ([]*routing.HashTable, error) {
 	for i, id1 := range origin.IDs {
 		ht, err := routing.NewHashTable(id1, origin.Address)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Failed to create HashTable")
 		}
 
 		tables[i] = ht
@@ -194,11 +200,11 @@ func (dht *DHT) StoreData(ctx hosthandler.Context, data []byte) (id string, err 
 	replication := time.Now().Add(dht.options.ReplicateTime)
 	err = dht.store.Store(key, data, replication, expiration, true)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Failed to store data")
 	}
 	_, _, err = dht.iterate(ctx, routing.IterateStore, key, data)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "Failed to iterate")
 	}
 	str := base58.Encode(key)
 	return str, nil
@@ -217,7 +223,7 @@ func (dht *DHT) Get(ctx hosthandler.Context, key string) ([]byte, bool, error) {
 		var err error
 		value, _, err = dht.iterate(ctx, routing.IterateFindValue, keyBytes, nil)
 		if err != nil {
-			return nil, false, err
+			return nil, false, errors.Wrap(err, "Failed to iterate")
 		}
 		if value != nil {
 			exists = true
@@ -250,41 +256,15 @@ func (dht *DHT) Listen() error {
 // BootstrapHosts.
 func (dht *DHT) Bootstrap() error {
 	if len(dht.options.BootstrapHosts) == 0 {
+		log.Info("empty bootstrap hosts")
 		return nil
 	}
-	var futures []transport.Future
-	wg := &sync.WaitGroup{}
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
-		futures = dht.iterateBootstrapHosts(ht, cb, wg, futures)
+		dht.iterateBootstrapHosts(ht, cb)
 	}
 
-	for _, f := range futures {
-		go func(future transport.Future) {
-			select {
-			case result := <-future.Result():
-				// If result is nil, channel was closed
-				if result != nil {
-					ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
-					// TODO: must return error here
-					if err != nil {
-						log.Fatal(err)
-					}
-					dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
-				}
-				wg.Done()
-				return
-			case <-time.After(dht.options.PacketTimeout):
-				log.Warnln("bootstrap response timeout")
-				future.Cancel()
-				wg.Done()
-				return
-			}
-		}(f)
-	}
-
-	wg.Wait()
 	return dht.iterateHt(cb)
 }
 
@@ -292,12 +272,12 @@ func (dht *DHT) iterateHt(cb ContextBuilder) error {
 	for _, ht := range dht.tables {
 		ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Failed to SetHostByID")
 		}
 
 		if dht.NumHosts(ctx) > 0 {
 			_, _, err = dht.iterate(ctx, routing.IterateBootstrap, ht.Origin.ID.Bytes(), nil)
-			return err
+			return errors.Wrap(err, "Failed to iterate")
 		}
 	}
 	return nil
@@ -306,30 +286,68 @@ func (dht *DHT) iterateHt(cb ContextBuilder) error {
 func (dht *DHT) iterateBootstrapHosts(
 	ht *routing.HashTable,
 	cb ContextBuilder,
-	wg *sync.WaitGroup,
-	futures []transport.Future,
-) []transport.Future {
-	ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
-	if err != nil {
-		return futures
-	}
-	for _, bn := range dht.options.BootstrapHosts {
-		request := packet.NewPingPacket(ht.Origin, bn)
-
-		if bn.ID.Bytes() == nil {
-			res, err := dht.transport.SendRequest(request)
-			if err != nil {
-				continue
+) {
+	localwg := &sync.WaitGroup{}
+	log.Info("bootstrapping to each known hosts.")
+	for _, bh := range dht.options.BootstrapHosts {
+		localwg.Add(1)
+		go func(cb ContextBuilder, dht *DHT, bh *host.Host, ht *routing.HashTable, localwg *sync.WaitGroup) {
+			counter := 1
+			if dht.infinityBootstrap {
+				log.Info("do infinity mode bootstrap.")
+				for {
+					if dht.gotBootstrap(ht, bh, cb, localwg) {
+						return
+					}
+					if counter < dht.timeout {
+						counter = counter * 2
+					}
+					time.Sleep(time.Second * time.Duration(counter))
+				}
+			} else {
+				log.Info("do one time mode bootstrap.")
+				if !dht.gotBootstrap(ht, bh, cb, localwg) {
+					localwg.Done()
+				}
 			}
-			log.Debugln("sending ping to " + bn.Address.String())
-			wg.Add(1)
-			futures = append(futures, res)
-		} else {
-			routeHost := routing.NewRouteHost(bn)
-			dht.AddHost(ctx, routeHost)
-		}
+		}(cb, dht, bh, ht, localwg)
 	}
-	return futures
+	localwg.Wait()
+}
+
+func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBuilder, localwg *sync.WaitGroup) bool {
+	request := packet.NewPingPacket(ht.Origin, bh)
+	if bh.ID.Bytes() == nil {
+		log.Info("sending ping request")
+		res, err := dht.transport.SendRequest(request)
+		if err != nil {
+			log.Error(err)
+		} else {
+			result := <-res.Result()
+			log.Info("checking response")
+			if res != nil {
+				ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
+				if err != nil {
+					log.Error(err)
+				}
+				dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
+			}
+			localwg.Done()
+			return true
+		}
+	} else {
+		log.Info("bootstrap host known. creating new route host.")
+		routeHost := routing.NewRouteHost(bh)
+		ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
+		if err != nil {
+			log.Error("failed to create a context")
+			return false
+		}
+		dht.AddHost(ctx, routeHost)
+		localwg.Done()
+		return true
+	}
+	return false
 }
 
 // Disconnect will trigger a Stop from the network.
@@ -431,7 +449,10 @@ func (dht *DHT) iterateIsDone(
 					&packet.RequestDataStore{
 						Data: data,
 					}).Build()
-				future, _ := dht.transport.SendRequest(msg)
+				future, err := dht.transport.SendRequest(msg)
+				if err != nil {
+					return nil, nil, nil, errors.Wrap(err, "Failed transport to SendRequest")
+				}
 				// We do not need to handle result of this packet
 				future.Cancel()
 			}
@@ -469,7 +490,7 @@ func (dht *DHT) checkFuturesCountAndGo(
 
 		_, close, err = resultsIterate(t, results, routeSet, target)
 		if close != nil {
-			return nil, close, err
+			return nil, close, errors.Wrap(err, "Failed to resultsIterate")
 		}
 	}
 
@@ -717,7 +738,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 						Type:      msg.Type,
 						RequestID: msg.RequestID,
 						Data:      msg.Data}
-					sendRelayedRequest(dht, request, ctx)
+					sendRelayedRequest(dht, request)
 				}
 			}
 		case <-stop:
@@ -744,7 +765,7 @@ func (dht *DHT) CheckNodeRole(domainID string) error {
 	var err error
 	// TODO: change or choose another auth host
 	if len(dht.options.BootstrapHosts) > 0 {
-		err = checkNodePrivRequest(dht, dht.options.BootstrapHosts[0].ID.String(), domainID)
+		err = checkNodePrivRequest(dht, dht.options.BootstrapHosts[0].ID.String())
 	} else {
 		err = errors.New("bootstrap node not exist")
 	}
@@ -767,7 +788,7 @@ func (dht *DHT) ObtainIP() error {
 			for j := range table.RoutingTable[i] {
 				err := ObtainIPRequest(dht, table.RoutingTable[i][j].ID.String())
 				if err != nil {
-					return err
+					return errors.Wrap(err, "Failed to ObtainIPRequest")
 				}
 			}
 		}
@@ -775,6 +796,7 @@ func (dht *DHT) ObtainIP() error {
 	return nil
 }
 
+// GetNetworkCommonFacade returns a networkcommonfacade ptr.
 func (dht *DHT) GetNetworkCommonFacade() hosthandler.NetworkCommonFacade {
 	return dht.ncf
 }
@@ -790,7 +812,7 @@ func (dht *DHT) getHomeSubnetKey(ctx hosthandler.Context) (string, error) {
 		for _, id1 := range subnet {
 			target, exist, err := dht.FindHost(ctx, id1)
 			if err != nil {
-				return "", err
+				return "", errors.Wrap(err, "Failed to FindHost")
 			} else if !exist {
 				return "", errors.New("couldn't find a host")
 			}
@@ -821,7 +843,7 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 	var err error
 	dht.subnet.HomeSubnetKey, err = dht.getHomeSubnetKey(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to getHomeSubnetKey")
 	}
 	dht.countOuterHosts()
 	dht.subnet.HighKnownHosts.OuterHosts = dht.subnet.HighKnownHosts.SelfKnownOuterHosts
@@ -829,25 +851,18 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 	for _, ids := range hosts {
 		err = knownOuterHostsRequest(dht, ids, dht.subnet.HighKnownHosts.OuterHosts)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Failed to knownOuterHostsRequest")
 		}
 	}
 	if len(dht.subnet.SubnetIDs) == 1 {
 		if dht.subnet.HomeSubnetKey == "" { // current host have a static IP
 			for _, subnetIDs := range dht.subnet.SubnetIDs {
-				dht.sendRelayOwnership(subnetIDs)
+				SendRelayOwnership(dht, subnetIDs)
 			}
 		}
 	}
 
 	return nil
-}
-
-func (dht *DHT) sendRelayOwnership(subnetIDs []string) {
-	for _, id1 := range subnetIDs {
-		err := RelayOwnershipRequest(dht, id1)
-		log.Errorln(err.Error())
-	}
 }
 
 // HtFromCtx returns a routing hashtable known by ctx.
@@ -862,7 +877,7 @@ func (dht *DHT) ConfirmNodeRole(roleKey string) bool {
 	return true
 }
 
-// CascadeSendMessage sends a event to the next cascade layer.
+// CascadeSendMessage sends a message to the next cascade layer.
 func (dht *DHT) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
 	return CascadeSendMessage(dht, data, targetID, method, args)
 }
@@ -889,12 +904,12 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 	} else if dht.proxy.ProxyHostsCount() > 0 {
 		address, err := host.NewAddress(dht.proxy.GetNextProxyAddress())
 		if err != nil {
-			return nil, false, err
+			return nil, false, errors.Wrap(err, "Failed to parse host address")
 		}
 		// TODO: current key insertion
 		id1, err := id.NewID()
 		if err != nil {
-			return nil, false, err
+			return nil, false, errors.Wrap(err, "Failed to create host ID")
 		}
 		targetHost = &host.Host{ID: id1, Address: address}
 		return targetHost, true, nil
@@ -902,7 +917,7 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 		log.Infoln("Host not found in routing table. Iterating through network...")
 		_, closest, err := dht.iterate(ctx, routing.IterateFindHost, keyBytes, nil)
 		if err != nil {
-			return nil, false, err
+			return nil, false, errors.Wrap(err, "Failed to iterate")
 		}
 		for i := range closest {
 			if closest[i].ID.Equal(keyBytes) {
@@ -996,7 +1011,7 @@ func (dht *DHT) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time
 	return time.Now().Add(dur)
 }
 
-// StoreRetrieves should return the local key/value if it exists.
+// StoreRetrieve should return the local key/value if it exists.
 func (dht *DHT) StoreRetrieve(key store.Key) ([]byte, bool) {
 	return dht.store.Retrieve(key)
 }
@@ -1049,7 +1064,7 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 	ht := dht.HtFromCtx(ctx)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to FindHost")
 	}
 
 	if !exists {
@@ -1073,7 +1088,7 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 	// Send the async queries and wait for a future
 	future, err := dht.transport.SendRequest(request)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed transport to send request")
 	}
 
 	select {
