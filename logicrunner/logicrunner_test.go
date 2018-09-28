@@ -819,7 +819,7 @@ func TestProxyGeneration(t *testing.T) {
 			proxyPath, err := preprocessor.GetRealGenesisDir("proxy")
 			assert.NoError(t, err)
 
-			name, err := preprocessor.ProxyPackageName(parsed)
+			name, err := parsed.ProxyPackageName()
 			assert.NoError(t, err)
 
 			proxy := path.Join(proxyPath, name, name+".go")
@@ -827,7 +827,7 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err)
 
 			buff := bytes.NewBufferString("")
-			preprocessor.GenerateContractProxy(parsed, "", buff)
+			parsed.WriteProxy("", buff)
 
 			cmd := exec.Command("diff", proxy, "-")
 			cmd.Stdin = buff
