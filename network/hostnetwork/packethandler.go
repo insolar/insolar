@@ -20,6 +20,7 @@ import (
 	"crypto/rand"
 	"time"
 
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -92,7 +93,11 @@ func processGetRandomHosts(
 
 func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestPulse)
+	mb := hostHandler.GetNetworkCommonFacade().GetMessageBus()
 	pm := hostHandler.GetNetworkCommonFacade().GetPulseManager()
+	if mb == nil {
+		return nil, errors.New("MessageBus is not initialized")
+	}
 	if pm == nil {
 		return nil, errors.New("PulseManager is not initialized")
 	}
@@ -106,6 +111,9 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
+
+		pulse := &message.Pulse{Pulse: data.Pulse}
+		mb.Send(pulse)
 		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
 		ht := hostHandler.HtFromCtx(ctx)
 		hosts := ht.GetMulticastHosts()
