@@ -94,6 +94,7 @@ func (rd *RootDomain) IsAuthorized() bool {
 	// Validate
 	domainRefs, _ := rd.GetChildrenTyped(nodedomain.ClassReference)
 	nd := nodedomain.GetObject(domainRefs[0])
+
 	return nd.IsAuthorized(core.NewRefFromBase58(nodeRef), seed, signature)
 }
 

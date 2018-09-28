@@ -290,7 +290,7 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ IsAuthorized ]")
 	}
 
-	result["IsAuthorized_success"] = isSent
+	result["is_authorized"] = isSent
 
 	return result, nil
 }
