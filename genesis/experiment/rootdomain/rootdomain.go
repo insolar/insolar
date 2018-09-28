@@ -89,10 +89,16 @@ func (rd *RootDomain) IsAuthorized() bool {
 
 	// Register node
 	serPubKey, err := utils.SerializePublicKey(privateKey.PublicKey)
+	if err != nil {
+		return false
+	}
 	nodeRef := rd.RegisterNode(serPubKey, "virtual")
 
 	// Validate
-	domainRefs, _ := rd.GetChildrenTyped(nodedomain.ClassReference)
+	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
+	if err != nil {
+		return false
+	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
 	return nd.IsAuthorized(core.NewRefFromBase58(nodeRef), seed, signature)
