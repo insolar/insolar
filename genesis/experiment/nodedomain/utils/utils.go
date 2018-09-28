@@ -40,7 +40,7 @@ func SerializePublicKey(key ecdsa.PublicKey) (string, error) {
 	return base58.Encode(serKey), nil
 }
 
-// MakePublicKey makes pl from EcdsaPair
+// MakePublicKey makes PK from EcdsaPair
 func MakePublicKey(pair EcdsaPair) *ecdsa.PublicKey {
 	return &ecdsa.PublicKey{
 		Curve: GetCurve(),
@@ -59,7 +59,7 @@ func DeserializePublicKey(serPubKey string) (*ecdsa.PublicKey, error) {
 		return nil, errors.Wrap(err, "[ DeserializePublicKey ]")
 	}
 	if len(rest) != 0 {
-		return nil, errors.New("[ DeserializePublicKey ] Rest exists. Wtf?")
+		return nil, errors.New("[ DeserializePublicKey ] len of rest must be 0")
 	}
 
 	return MakePublicKey(*pk), nil
