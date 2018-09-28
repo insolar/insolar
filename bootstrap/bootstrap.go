@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -64,15 +65,20 @@ func (b *Bootstrapper) Start(c core.Components) error {
 
 	rootRefChildren, err := am.GetObjChildren(*am.RootRef())
 	if err != nil {
+		log.Errorln("Couldn't get children of RootRef object")
 		return errors.Wrap(err, "couldn't get children of RootRef object")
 	}
 	if rootRefChildren.HasNext() {
 		rootDomainRef, err := rootRefChildren.Next()
 		if err != nil {
+			log.Errorln("Couldn't get next child of RootRef object")
 			return errors.Wrap(err, "couldn't get next child of RootRef object")
 		}
 		b.rootDomainRef = &rootDomainRef
+		log.Debugf("Root domain ref: %s", b.rootDomainRef)
 		return nil
+	} else {
+		log.Errorln("RootRef object has no children")
 	}
 
 	// TODO: Denis Linnik
