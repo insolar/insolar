@@ -131,7 +131,7 @@ func (pf *ParsedFile) parseFunctionsAndMethods() error {
 	pf.constructors = make(map[string][]*ast.FuncDecl)
 	for _, decl := range pf.node.Decls {
 		fd, ok := decl.(*ast.FuncDecl)
-		if !ok {
+		if !ok || !fd.Name.IsExported() {
 			continue
 		}
 
