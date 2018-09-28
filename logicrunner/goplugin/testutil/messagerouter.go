@@ -20,24 +20,29 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// TestEventBus can execute messages on LogicRunner.
-type TestEventBus struct {
+// TestMessageBus can execute messages on LogicRunner.
+type TestMessageBus struct {
 	LogicRunner core.LogicRunner
 }
 
+func (eb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
+	return nil
+}
+
 // Start is the dummy mock of Start method.
-func (*TestEventBus) Start(components core.Components) error { return nil }
+func (*TestMessageBus) Start(components core.Components) error { return nil }
 
 // Stop is the dummy mock of Stop method.
-func (*TestEventBus) Stop() error { return nil }
+func (*TestMessageBus) Stop() error { return nil }
 
-// Dispatch executes event on LogicRunner.
-func (eb *TestEventBus) Dispatch(event core.Event) (resp core.Reaction, err error) {
-	return eb.LogicRunner.Execute(event)
+// Send executes message on LogicRunner.
+func (eb *TestMessageBus) Send(msg core.Message) (resp core.Reply, err error) {
+	return eb.LogicRunner.Execute(msg)
 }
-func (*TestEventBus) DispatchAsync(event core.Event) {}
 
-// NewTestEventBus creates TestEventBus which mocks the real one.
-func NewTestEventBus(lr core.LogicRunner) *TestEventBus {
-	return &TestEventBus{LogicRunner: lr}
+func (*TestMessageBus) SendAsync(msg core.Message) {}
+
+// NewTestMessageBus creates TestMessageBus which mocks the real one.
+func NewTestMessageBus(lr core.LogicRunner) *TestMessageBus {
+	return &TestMessageBus{LogicRunner: lr}
 }

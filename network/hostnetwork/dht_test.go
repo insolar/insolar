@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/nodenetwork"
 
@@ -991,21 +991,21 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	dht1.Bootstrap()
 	dht2.Bootstrap()
 
-	e := &event.CallMethod{
+	msg := &message.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
 
-	reqBuff, _ := e.Serialize()
-	event1, _ := ioutil.ReadAll(reqBuff)
+	reqBuff, _ := message.Serialize(msg)
+	msg1, _ := ioutil.ReadAll(reqBuff)
 
-	dht2.RemoteProcedureCall(GetDefaultCtx(dht1), dht2.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
+	dht2.RemoteProcedureCall(GetDefaultCtx(dht1), dht2.GetOriginHost().IDs[0].String(), "test", [][]byte{msg1})
 	dht1.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 		return nil, nil
 	})
 
-	dht2.RemoteProcedureCall(GetDefaultCtx(dht1), dht1.GetOriginHost().IDs[0].String(), "test", [][]byte{event1})
+	dht2.RemoteProcedureCall(GetDefaultCtx(dht1), dht1.GetOriginHost().IDs[0].String(), "test", [][]byte{msg1})
 }
 
 func TestDHT_Getters(t *testing.T) {

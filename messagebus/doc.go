@@ -14,12 +14,12 @@
  *    limitations under the License.
  */
 
-package event
+/*
+Package messagebus routes messages (contract calls & responses) and delivers'em to relevant modules.
 
-import (
-	"github.com/insolar/insolar/core"
-)
+Usage:
 
-func logicRunnerHandle(e core.Event, c core.Components) (core.Reaction, error) {
-	return c.LogicRunner.Execute(e)
-}
+	TODO:
+
+*/
+package messagebus

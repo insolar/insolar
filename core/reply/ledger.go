@@ -14,11 +14,9 @@
  *    limitations under the License.
  */
 
-package reaction
+package reply
 
 import (
-	"io"
-
 	"github.com/insolar/insolar/core"
 )
 
@@ -28,9 +26,9 @@ type Code struct {
 	MachineType core.MachineType
 }
 
-// Serialize serializes to gob.
-func (e *Code) Serialize() (io.Reader, error) {
-	return serialize(e, TypeCode)
+// Type implementation of Reply interface.
+func (e *Code) Type() core.ReplyType {
+	return TypeCode
 }
 
 // Class is class from storage.
@@ -40,9 +38,9 @@ type Class struct {
 	Code  *core.RecordRef // Can be nil.
 }
 
-// Serialize serializes to gob.
-func (e *Class) Serialize() (io.Reader, error) {
-	return serialize(e, TypeClass)
+// Type implementation of Reply interface.
+func (e *Class) Type() core.ReplyType {
+	return TypeClass
 }
 
 // Object is object from storage.
@@ -54,9 +52,9 @@ type Object struct {
 	Children []core.RecordRef
 }
 
-// Serialize serializes to gob.
-func (e *Object) Serialize() (io.Reader, error) {
-	return serialize(e, TypeObject)
+// Type implementation of Reply interface.
+func (e *Object) Type() core.ReplyType {
+	return TypeObject
 }
 
 // Delegate is delegate reference from storage.
@@ -64,9 +62,9 @@ type Delegate struct {
 	Head core.RecordRef
 }
 
-// Serialize serializes to gob.
-func (e *Delegate) Serialize() (io.Reader, error) {
-	return serialize(e, TypeDelegate)
+// Type implementation of Reply interface.
+func (e *Delegate) Type() core.ReplyType {
+	return TypeDelegate
 }
 
 // Reference is common reaction for methods returning reference to created records.
@@ -74,7 +72,7 @@ type Reference struct {
 	Ref core.RecordRef
 }
 
-// Serialize serializes to gob.
-func (e *Reference) Serialize() (io.Reader, error) {
-	return serialize(e, TypeReference)
+// Type implementation of Reply interface.
+func (e *Reference) Type() core.ReplyType {
+	return TypeReference
 }

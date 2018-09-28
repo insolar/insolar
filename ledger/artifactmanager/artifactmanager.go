@@ -18,15 +18,15 @@ package artifactmanager
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
-	db       *storage.DB
-	eventBus core.EventBus
+	db         *storage.DB
+	messageBus core.MessageBus
 }
 
 // NewArtifactManger creates new manager instance.
@@ -36,7 +36,7 @@ func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
 
 // Link links external components.
 func (m *LedgerArtifactManager) Link(components core.Components) error {
-	m.eventBus = components.EventBus
+	m.messageBus = components.MessageBus
 
 	return nil
 }
@@ -54,7 +54,7 @@ func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
 func (m *LedgerArtifactManager) GetCode(
 	code core.RecordRef, machinePref []core.MachineType,
 ) (core.CodeDescriptor, error) {
-	genericReact, err := m.eventBus.Dispatch(&event.GetCode{
+	genericReact, err := m.messageBus.Send(&message.GetCode{
 		Code:        code,
 		MachinePref: machinePref,
 	})
@@ -63,9 +63,9 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reaction.Code)
+	react, ok := genericReact.(*reply.Code)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	desc := CodeDescriptor{
 		machinePref: machinePref,
@@ -83,7 +83,7 @@ func (m *LedgerArtifactManager) GetCode(
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
-	genericReact, err := m.eventBus.Dispatch(&event.GetClass{
+	genericReact, err := m.messageBus.Send(&message.GetClass{
 		Head:  head,
 		State: state,
 	})
@@ -92,9 +92,9 @@ func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.Record
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reaction.Class)
+	react, ok := genericReact.(*reply.Class)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	desc := ClassDescriptor{
 		am:    m,
@@ -110,7 +110,7 @@ func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.Record
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
-	genericReact, err := m.eventBus.Dispatch(&event.GetObject{
+	genericReact, err := m.messageBus.Send(&message.GetObject{
 		Head:  head,
 		State: state,
 	})
@@ -119,9 +119,9 @@ func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.Recor
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reaction.Object)
+	react, ok := genericReact.(*reply.Object)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	desc := ObjectDescriptor{
 		am:       m,
@@ -139,7 +139,7 @@ func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.Recor
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
 // be returned.
 func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
-	genericReact, err := m.eventBus.Dispatch(&event.GetDelegate{
+	genericReact, err := m.messageBus.Send(&message.GetDelegate{
 		Head:    head,
 		AsClass: asClass,
 	})
@@ -148,9 +148,9 @@ func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reaction.Delegate)
+	react, ok := genericReact.(*reply.Delegate)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	return &react.Head, nil
 }
@@ -161,7 +161,7 @@ func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core
 func (m *LedgerArtifactManager) DeclareType(
 	domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.DeclareType{
+	return m.sendReference(&message.DeclareType{
 		Domain:  domain,
 		Request: request,
 		TypeDec: typeDec,
@@ -174,7 +174,7 @@ func (m *LedgerArtifactManager) DeclareType(
 func (m *LedgerArtifactManager) DeployCode(
 	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.DeployCode{
+	return m.sendReference(&message.DeployCode{
 		Domain:  domain,
 		Request: request,
 		CodeMap: codeMap,
@@ -187,7 +187,7 @@ func (m *LedgerArtifactManager) DeployCode(
 func (m *LedgerArtifactManager) ActivateClass(
 	domain, request core.RecordRef,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.ActivateClass{
+	return m.sendReference(&message.ActivateClass{
 		Domain:  domain,
 		Request: request,
 	})
@@ -200,7 +200,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 func (m *LedgerArtifactManager) DeactivateClass(
 	domain, request, class core.RecordRef,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.DeactivateClass{
+	return m.sendReference(&message.DeactivateClass{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
@@ -215,7 +215,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 func (m *LedgerArtifactManager) UpdateClass(
 	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.UpdateClass{
+	return m.sendReference(&message.UpdateClass{
 		Domain:     domain,
 		Request:    request,
 		Class:      class,
@@ -231,7 +231,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 func (m *LedgerArtifactManager) ActivateObject(
 	domain, request, class, parent core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.ActivateObject{
+	return m.sendReference(&message.ActivateObject{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
@@ -244,7 +244,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 func (m *LedgerArtifactManager) ActivateObjectDelegate(
 	domain, request, class, parent core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.ActivateObjectDelegate{
+	return m.sendReference(&message.ActivateObjectDelegate{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
@@ -260,7 +260,7 @@ func (m *LedgerArtifactManager) ActivateObjectDelegate(
 func (m *LedgerArtifactManager) DeactivateObject(
 	domain, request, object core.RecordRef,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.DeactivateObject{
+	return m.sendReference(&message.DeactivateObject{
 		Domain:  domain,
 		Request: request,
 		Object:  object,
@@ -274,7 +274,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 func (m *LedgerArtifactManager) UpdateObject(
 	domain, request, object core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&event.UpdateObject{
+	return m.sendReference(&message.UpdateObject{
 		Domain:  domain,
 		Request: request,
 		Object:  object,
@@ -282,16 +282,16 @@ func (m *LedgerArtifactManager) UpdateObject(
 	})
 }
 
-func (m *LedgerArtifactManager) sendReference(ev core.Event) (*core.RecordRef, error) {
-	genericReact, err := m.eventBus.Dispatch(ev)
+func (m *LedgerArtifactManager) sendReference(ev core.Message) (*core.RecordRef, error) {
+	genericReact, err := m.messageBus.Send(ev)
 
 	if err != nil {
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reaction.Reference)
+	react, ok := genericReact.(*reply.Reference)
 	if !ok {
-		return nil, ErrUnexpectedReaction
+		return nil, ErrUnexpectedReply
 	}
 	return &react.Ref, nil
 }

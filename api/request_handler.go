@@ -22,8 +22,8 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
-	"github.com/insolar/insolar/eventbus/reaction"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 )
 
@@ -47,34 +47,34 @@ func extractStringResponse(data []byte) (*string, error) {
 type RequestHandler struct {
 	qid                 string
 	params              *Params
-	eventBus            core.EventBus
+	messageBus          core.MessageBus
 	rootDomainReference core.RecordRef
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, eventBus core.EventBus, rootDomainReference core.RecordRef) *RequestHandler {
+func NewRequestHandler(params *Params, messageBus core.MessageBus, rootDomainReference core.RecordRef) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
-		eventBus:            eventBus,
+		messageBus:          messageBus,
 		rootDomainReference: rootDomainReference,
 	}
 }
 
-func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reaction, error) {
-	if rh.eventBus == nil {
-		return nil, errors.New("[ RouteCall ] event bus was not set during initialization")
+func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
+	if rh.messageBus == nil {
+		return nil, errors.New("[ RouteCall ] message bus was not set during initialization")
 	}
 
-	e := &event.CallMethod{
+	e := &message.CallMethod{
 		ObjectRef: ref,
 		Method:    method,
 		Arguments: args,
 	}
 
-	res, err := rh.eventBus.Dispatch(e)
+	res, err := rh.messageBus.Send(e)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ RouteCall ] couldn't dispatch event")
+		return nil, errors.Wrap(err, "[ RouteCall ] couldn't send message")
 	}
 
 	return res, nil
@@ -93,7 +93,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractStringResponse(routResult.(*reaction.CommonReaction).Result)
+	memberRef, err := extractStringResponse(routResult.(*reply.Common).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -119,7 +119,7 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 	return balance, nil
 }
 
-func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reaction, error) {
+func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
@@ -147,7 +147,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
 
-	amount, err := extractGetBalanceResponse(routResult.(*reaction.CommonReaction).Result)
+	amount, err := extractGetBalanceResponse(routResult.(*reply.Common).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -157,11 +157,11 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 	return result, nil
 }
 
-func extractSendMoneyResponse(data []byte) (bool, error) {
+func extractBoolResponse(data []byte) (bool, error) {
 	var typeHolder bool
 	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
-		return false, errors.Wrap(err, "[ extractSendMoneyResponse ]")
+		return false, errors.Wrap(err, "[ extractBoolResponse ]")
 	}
 
 	isSent, ok := dataUnmarsh[0].(bool)
@@ -193,7 +193,8 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
 
-	isSent, err := extractSendMoneyResponse(routResult.(*reaction.CommonReaction).Result)
+	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
@@ -224,7 +225,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	result := make(map[string]interface{})
 
 	var err error
-	var routResult core.Reaction
+	var routResult core.Reply
 	if all {
 		routResult, err = rh.sendRequest("DumpAllUsers", []interface{}{})
 	} else {
@@ -238,7 +239,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reaction.CommonReaction).Result)
+	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reply.Common).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
@@ -269,7 +270,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	nodeRef, err := extractStringResponse(routResult.(*reaction.CommonReaction).Result)
+	nodeRef, err := extractStringResponse(routResult.(*reply.Common).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
@@ -278,4 +279,22 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 
 	return result, nil
 
+}
+
+// ProcessIsAuthorized processes is_auth query type
+func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	routResult, err := rh.sendRequest("IsAuthorized", []interface{}{})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
+	}
+
+	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
+	}
+
+	result["is_authorized"] = isSent
+
+	return result, nil
 }

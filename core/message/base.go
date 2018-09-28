@@ -14,8 +14,8 @@
  *    limitations under the License.
  */
 
-// Package event represents event that eventbus can route
-package event
+// Package message represents message that messagebus can route
+package message
 
 import (
 	"bytes"
@@ -26,47 +26,52 @@ import (
 	"github.com/pkg/errors"
 )
 
-// BaseMessage base of event class family, do not use it standalone
-type baseEvent struct {
-	Request core.RecordRef
-	Domain  core.RecordRef
-}
-
-// Type is a enum type of event
-type Type byte
-
 const (
-	TypeBase            = Type(iota)
-	TypeCallMethod      // TypeCallMethod calls method and returns result
-	TypeCallConstructor // TypeCallConstructor is a event for calling constructor and obtain its reaction
+	// Logicrunner
+
+	// TypeCallMethod calls method and returns result
+	TypeCallMethod = core.MessageType(iota)
+	// TypeCallConstructor is a message for calling constructor and obtain its reply
+	TypeCallConstructor
 
 	// Ledger
 
-	TypeGetCode                // TypeGetCode retrieves code from storage.
-	TypeGetClass               // TypeGetClass retrieves class from storage.
-	TypeGetObject              // TypeGetObject retrieves object from storage.
-	TypeGetDelegate            // TypeGetDelegate retrieves object represented as provided class.
-	TypeDeclareType            // TypeDeclareType creates new type.
-	TypeDeployCode             // TypeDeployCode creates new code.
-	TypeActivateClass          // TypeActivateClass activates class.
-	TypeDeactivateClass        // TypeDeactivateClass deactivates class.
-	TypeUpdateClass            // TypeUpdateClass amends class.
-	TypeActivateObject         // TypeActivateObject activates object.
-	TypeActivateObjectDelegate // TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
-	TypeDeactivateObject       // TypeDeactivateObject deactivates object.
-	TypeUpdateObject           // TypeUpdateObject amends object.
+	// TypeGetCode retrieves code from storage.
+	TypeGetCode
+	// TypeGetClass retrieves class from storage.
+	TypeGetClass
+	// TypeGetObject retrieves object from storage.
+	TypeGetObject
+	// TypeGetDelegate retrieves object represented as provided class.
+	TypeGetDelegate
+	// TypeDeclareType creates new type.
+	TypeDeclareType
+	// TypeDeployCode creates new code.
+	TypeDeployCode
+	// TypeActivateClass activates class.
+	TypeActivateClass
+	// TypeDeactivateClass deactivates class.
+	TypeDeactivateClass
+	// TypeUpdateClass amends class.
+	TypeUpdateClass
+	// TypeActivateObject activates object.
+	TypeActivateObject
+	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
+	TypeActivateObjectDelegate
+	// TypeDeactivateObject deactivates object.
+	TypeDeactivateObject
+	// TypeUpdateObject amends object.
+	TypeUpdateObject
 )
 
-// GetEmptyMessage constructs specified event
-func getEmptyEvent(mt Type) (core.Event, error) {
+// GetEmptyMessage constructs specified message
+func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	switch mt {
-	case TypeBase:
-		return nil, errors.New("working with event type == 0 is prohibited")
+	// Logicrunner
 	case TypeCallMethod:
 		return &CallMethod{}, nil
 	case TypeCallConstructor:
 		return &CallConstructor{}, nil
-
 	// Ledger
 	case TypeGetCode:
 		return &GetCode{}, nil
@@ -95,43 +100,44 @@ func getEmptyEvent(mt Type) (core.Event, error) {
 	case TypeUpdateObject:
 		return &UpdateObject{}, nil
 	default:
-		return nil, errors.Errorf("unimplemented event type %d", mt)
+		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
 }
 
-func serialize(event core.Event, t Type) (io.Reader, error) {
+// Serialize returns encoded message.
+func Serialize(msg core.Message) (io.Reader, error) {
 	buff := &bytes.Buffer{}
-	_, err := buff.Write([]byte{byte(t)})
+	_, err := buff.Write([]byte{byte(msg.Type())})
 	if err != nil {
 		return nil, err
 	}
 
 	enc := gob.NewEncoder(buff)
-	err = enc.Encode(event)
+	err = enc.Encode(msg)
 	return buff, err
 }
 
-// Deserialize returns a event
-func Deserialize(buff io.Reader) (core.Event, error) {
+// Deserialize returns decoded message.
+func Deserialize(buff io.Reader) (core.Message, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
-		return nil, errors.New("too short slice for deserialize event")
+		return nil, errors.New("too short slice for deserialize message")
 	}
 
-	event, err := getEmptyEvent(Type(b[0]))
+	msg, err := getEmptyMessage(core.MessageType(b[0]))
 	if err != nil {
 		return nil, err
 	}
 	enc := gob.NewDecoder(buff)
-	err = enc.Decode(event)
-	return event, err
+	err = enc.Decode(msg)
+	return msg, err
 }
 
 func init() {
+	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
-
 	// Ledger
 	gob.Register(&GetCode{})
 	gob.Register(&GetClass{})

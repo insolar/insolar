@@ -14,12 +14,21 @@
  *    limitations under the License.
  */
 
-/*
-Package eventbus routes messages (contract calls & responses) and delivers'em to relevant modules.
+package functest
 
-Usage:
+import (
+	"testing"
 
-	TODO:
+	"github.com/stretchr/testify/assert"
+)
 
-*/
-package eventbus
+func TestIsAuthorized(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "is_auth",
+	})
+
+	isAuthResponse := &isAuthorized{}
+	unmarshalResponse(t, body, isAuthResponse)
+
+	assert.True(t, isAuthResponse.IsAuthorized)
+}

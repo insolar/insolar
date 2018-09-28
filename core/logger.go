@@ -25,46 +25,46 @@ type Logger interface {
 	// GetLevel gets log level.
 	GetLevel() string
 
-	// Debug logs a event at level Debug.
+	// Debug logs a message at level Debug.
 	Debug(...interface{})
-	// Debugln logs a event at level Debug.
+	// Debugln logs a message at level Debug.
 	Debugln(...interface{})
-	// Debugf formatted logs a event at level Debug.
+	// Debugf formatted logs a message at level Debug.
 	Debugf(string, ...interface{})
 
-	// Info logs a event at level Info.
+	// Info logs a message at level Info.
 	Info(...interface{})
-	// Infoln logs a event at level Info.
+	// Infoln logs a message at level Info.
 	Infoln(...interface{})
-	// Infof formatted logs a event at level Info.
+	// Infof formatted logs a message at level Info.
 	Infof(string, ...interface{})
 
-	// Warn logs a event at level Warn.
+	// Warn logs a message at level Warn.
 	Warn(...interface{})
-	// Warnln logs a event at level Warn.
+	// Warnln logs a message at level Warn.
 	Warnln(...interface{})
-	// Warnf formatted logs a event at level Warn.
+	// Warnf formatted logs a message at level Warn.
 	Warnf(string, ...interface{})
 
-	// Error logs a event at level Error.
+	// Error logs a message at level Error.
 	Error(...interface{})
-	// Errorln logs a event at level Error.
+	// Errorln logs a message at level Error.
 	Errorln(...interface{})
-	// Errorf formatted logs a event at level Error.
+	// Errorf formatted logs a message at level Error.
 	Errorf(string, ...interface{})
 
-	// Fatal logs a event at level Fatal and than call os.exit().
+	// Fatal logs a message at level Fatal and than call os.exit().
 	Fatal(...interface{})
-	// Fatalln logs a event at level Fatal and than call os.exit().
+	// Fatalln logs a message at level Fatal and than call os.exit().
 	Fatalln(...interface{})
-	// Fatalf formatted logs a event at level Fatal and than call os.exit().
+	// Fatalf formatted logs a message at level Fatal and than call os.exit().
 	Fatalf(string, ...interface{})
 
-	// Panic logs a event at level Panic and than call panic().
+	// Panic logs a message at level Panic and than call panic().
 	Panic(...interface{})
-	// Panicln logs a event at level Panic and than call panic().
+	// Panicln logs a message at level Panic and than call panic().
 	Panicln(...interface{})
-	// Panicf formatted logs a event at level Panic and than call panic().
+	// Panicf formatted logs a message at level Panic and than call panic().
 	Panicf(string, ...interface{})
 
 	// SetOutput sets the output destination for the logger.

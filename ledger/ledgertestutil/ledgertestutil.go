@@ -17,6 +17,7 @@
 package ledgertestutil
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -30,24 +31,43 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
-type eventBusMock struct {
-	handler *artifactmanager.EventHandler
+type messageBusMock struct {
+	handlers map[core.MessageType]core.MessageHandler
 }
 
-func (m *eventBusMock) Start(components core.Components) error {
+func NewMessageBusMock() *messageBusMock {
+	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
+}
+
+func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandler) error {
+	_, ok := mb.handlers[p]
+	if ok {
+		return errors.New("handler for this type already exists")
+	}
+
+	mb.handlers[p] = handler
+	return nil
+}
+
+func (mb *messageBusMock) Start(components core.Components) error {
 	panic("implement me")
 }
 
-func (m *eventBusMock) Stop() error {
+func (mb *messageBusMock) Stop() error {
 	panic("implement me")
 }
 
-func (m *eventBusMock) Dispatch(e core.Event) (core.Reaction, error) {
-	return m.handler.Handle(e)
+func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
+	handler, ok := mb.handlers[m.Type()]
+	if !ok {
+		return nil, errors.New("no handler for this message type")
+	}
+
+	return handler(m)
 }
 
-func (m *eventBusMock) DispatchAsync(e core.Event) {
-	m.handler.Handle(e) // nolint
+func (mb *messageBusMock) SendAsync(m core.Message) {
+	panic("implement me")
 }
 
 // TmpLedger crteates ledger on top of temporary database.
@@ -57,7 +77,7 @@ func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 	// Init subcomponents.
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(t, dir)
-	handler, err := artifactmanager.NewEventHandler(db)
+	handler, err := artifactmanager.NewMessageHandler(db)
 	assert.NoError(t, err)
 	am, err := artifactmanager.NewArtifactManger(db)
 	assert.NoError(t, err)
@@ -71,8 +91,8 @@ func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 	assert.NoError(t, err)
 
 	// Init components.
-	eb := eventBusMock{handler: handler}
-	components := core.Components{EventBus: &eb}
+	mb := NewMessageBusMock()
+	components := core.Components{MessageBus: mb}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)

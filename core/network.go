@@ -18,7 +18,7 @@ package core
 
 // Cascade contains routing data for cascade sending
 type Cascade struct {
-	// NodeIds contains the slice of node identifiers that will receive the event
+	// NodeIds contains the slice of node identifiers that will receive the message
 	NodeIds []RecordRef
 	// GeneratedEntropy is used for pseudorandom cascade building
 	Entropy Entropy
@@ -31,10 +31,10 @@ type RemoteProcedure func(args [][]byte) ([]byte, error)
 
 // Network is interface for network modules facade.
 type Network interface {
-	// SendEvent sends a event.
-	SendEvent(nodeID RecordRef, method string, event Event) ([]byte, error)
-	// SendEvent sends a event.
-	SendCascadeEvent(data Cascade, method string, event Event) error
+	// SendMessage sends a message.
+	SendMessage(nodeID RecordRef, method string, msg Message) ([]byte, error)
+	// SendCascadeMessage sends a message.
+	SendCascadeMessage(data Cascade, method string, msg Message) error
 	// GetAddress returns an origin address.
 	GetAddress() string
 	// RemoteProcedureRegister is remote procedure register func.

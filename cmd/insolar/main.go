@@ -23,7 +23,7 @@ import (
 	"os"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
@@ -72,7 +72,7 @@ func printDefaultConfig(out io.Writer) {
 }
 
 func randomRef(out io.Writer) {
-	ref := testutils.RandomRef()
+	ref := core.RandomRef()
 	_, err := out.Write([]byte(ref.String() + "\n"))
 	if err != nil {
 		fmt.Println("Can't write data to output", err)
