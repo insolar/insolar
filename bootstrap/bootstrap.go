@@ -166,7 +166,7 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *testutil.
 	}
 
 	contract, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+		core.RecordRef{}, core.RandomRef(),
 		*cb.Classes[rootDomain],
 		*am.RootRef(),
 		instanceData,
@@ -186,7 +186,7 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.
 	}
 
 	contract, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+		core.RecordRef{}, core.RandomRef(),
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
 		instanceData,
