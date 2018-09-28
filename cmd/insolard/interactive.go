@@ -132,7 +132,7 @@ func doRPC(input []string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.C
 
 func displayInteractiveHelp() {
 	fmt.Println(`
-help - This event
+help - This message
 findhost <key> - Find node's real network address
 info - Display information about this node
 exit - Exit programm

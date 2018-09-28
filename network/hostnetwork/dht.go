@@ -926,7 +926,7 @@ func (dht *DHT) ConfirmNodeRole(roleKey string) bool {
 	return true
 }
 
-// CascadeSendMessage sends a event to the next cascade layer.
+// CascadeSendMessage sends a message to the next cascade layer.
 func (dht *DHT) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
 	return CascadeSendMessage(dht, data, targetID, method, args)
 }

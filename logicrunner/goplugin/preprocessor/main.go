@@ -44,6 +44,7 @@ var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 var corePath = "github.com/insolar/insolar/core"
 
+// ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
 	name    string
 	code    []byte
@@ -56,42 +57,31 @@ type ParsedFile struct {
 	contract     string
 }
 
-func (r *ParsedFile) codeOfNode(n ast.Node) string {
-	return string(r.code[n.Pos()-1 : n.End()-1])
-}
-
-func slurpFile(fileName string) ([]byte, error) {
-	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "Can't open file '"+fileName+"'")
-	}
-	defer file.Close() //nolint: errcheck
-
-	res, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, errors.Wrap(err, "Can't read file '"+fileName+"'")
-	}
-	return res, nil
-}
-
+// ParseFile parses a file as Go source code of a smart contract
+// and returns it as `ParsedFile`
 func ParseFile(fileName string) (*ParsedFile, error) {
-	res := ParsedFile{
+	res := &ParsedFile{
 		name: fileName,
 	}
 	sourceCode, err := slurpFile(fileName)
 	if err != nil {
-		return &res, errors.Wrap(err, "Can't read slurp file")
+		return nil, errors.Wrap(err, "Can't read file")
 	}
 	res.code = sourceCode
 
 	res.fileSet = token.NewFileSet()
 	node, err := parser.ParseFile(res.fileSet, res.name, res.code, parser.ParseComments)
 	if err != nil {
-		return &res, errors.Wrapf(err, "Can't parse %s", fileName)
+		return nil, errors.Wrapf(err, "Can't parse %s", fileName)
 	}
 	res.node = node
 
-	err = getMethods(&res)
+	err = res.parseTypes()
+	if err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+
+	err = res.parseFunctionsAndMethods()
 	if err != nil {
 		return nil, errors.Wrap(err, "")
 	}
@@ -99,7 +89,257 @@ func ParseFile(fileName string) (*ParsedFile, error) {
 		return nil, errors.New("Only one smart contract must exist")
 	}
 
-	return &res, nil
+	return res, nil
+}
+
+func (pf *ParsedFile) parseTypes() error {
+	pf.types = make(map[string]*ast.TypeSpec)
+	for _, decl := range pf.node.Decls {
+		tDecl, ok := decl.(*ast.GenDecl)
+		if !ok || tDecl.Tok != token.TYPE {
+			continue
+		}
+
+		for _, e := range tDecl.Specs {
+			typeNode := e.(*ast.TypeSpec)
+
+			err := pf.parseTypeSpec(typeNode)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) parseTypeSpec(typeSpec *ast.TypeSpec) error {
+	if isContractTypeSpec(typeSpec) {
+		if pf.contract != "" {
+			return errors.New("more than one contract in a file")
+		}
+		pf.contract = typeSpec.Name.Name
+	} else {
+		pf.types[typeSpec.Name.Name] = typeSpec
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) parseFunctionsAndMethods() error {
+	pf.methods = make(map[string][]*ast.FuncDecl)
+	pf.constructors = make(map[string][]*ast.FuncDecl)
+	for _, decl := range pf.node.Decls {
+		fd, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+
+		if fd.Recv == nil || fd.Recv.NumFields() == 0 {
+			pf.parseConstructor(fd)
+		} else {
+			typename := typeName(fd.Recv.List[0].Type)
+			pf.methods[typename] = append(pf.methods[typename], fd)
+		}
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) parseConstructor(fd *ast.FuncDecl) {
+	if !strings.HasPrefix(fd.Name.Name, "New") {
+		return // doesn't look like a constructor
+	}
+
+	if fd.Type.Results.NumFields() < 1 {
+		log.Infof("Ignored %q as constructor, not enought returned values", fd.Name.Name)
+		return
+	}
+
+	if fd.Type.Results.NumFields() > 1 {
+		log.Errorf("Constructor %q returns more than one argument, not supported at the moment", fd.Name.Name)
+		return
+	}
+
+	typename := typeName(fd.Type.Results.List[0].Type)
+	pf.constructors[typename] = append(pf.constructors[typename], fd)
+}
+
+// ProxyPackageName guesses user friendly contract "name" from file name
+// and/or package in the file
+func (pf *ParsedFile) ProxyPackageName() (string, error) {
+	match := regexp.MustCompile("([^/]+)/([^/]+).(go|insgoc)$").FindStringSubmatch(pf.name)
+	if match == nil {
+		return "", errors.New("couldn't match filename without extension and path")
+	}
+
+	packageName := pf.node.Name.Name
+
+	proxyPackageName := packageName
+	if proxyPackageName == "main" {
+		proxyPackageName = match[2]
+	}
+	if proxyPackageName == "main" {
+		proxyPackageName = match[1]
+	}
+	return proxyPackageName, nil
+}
+
+// ContractName returns name of the contract
+func (pf *ParsedFile) ContractName() string {
+	return pf.node.Name.Name
+}
+
+// WriteWrapper generates and writes into `out` source code
+// of wrapper for the contract
+func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
+	packageName := pf.node.Name.Name
+
+	tmpl, err := openTemplate("templates/wrapper.go.tpl")
+	if err != nil {
+		return errors.Wrap(err, "couldn't open template file for wrapper")
+	}
+
+	data := map[string]interface{}{
+		"PackageName":    packageName,
+		"ContractType":   pf.contract,
+		"Methods":        pf.functionInfoForWrapper(pf.methods[pf.contract]),
+		"Functions":      pf.functionInfoForWrapper(pf.constructors[pf.contract]),
+		"ParsedCode":     pf.code,
+		"FoundationPath": foundationPath,
+		"Imports":        pf.generateImports(true),
+	}
+	err = tmpl.Execute(out, data)
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
+	var res []map[string]interface{}
+	for _, fun := range list {
+		argsInit, argsList := generateZeroListOfTypes(pf, "args", fun.Type.Params)
+
+		info := map[string]interface{}{
+			"Name":                fun.Name.Name,
+			"ArgumentsZeroList":   argsInit,
+			"Arguments":           argsList,
+			"Results":             numberedVars(fun.Type.Results, "ret"),
+			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, "error"),
+		}
+		res = append(res, info)
+	}
+	return res
+}
+
+// WriteProxy generates and writes into `out` source code of contract's proxy
+func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
+	proxyPackageName, err := pf.ProxyPackageName()
+	if err != nil {
+		return err
+	}
+
+	tmpl, err := openTemplate("templates/proxy.go.tpl")
+	if err != nil {
+		return errors.Wrap(err, "couldn't open template file for proxy")
+	}
+
+	data := map[string]interface{}{
+		"PackageName":         proxyPackageName,
+		"Types":               generateTypes(pf),
+		"ContractType":        pf.contract,
+		"MethodsProxies":      pf.functionInfoForProxy(pf.methods[pf.contract]),
+		"ConstructorsProxies": pf.functionInfoForProxy(pf.constructors[pf.contract]),
+		"ClassReference":      classReference,
+		"Imports":             pf.generateImports(false),
+	}
+	err = tmpl.Execute(out, data)
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]string {
+	var res []map[string]string
+
+	for _, fun := range list {
+		resInit, resList := generateZeroListOfTypes(pf, "resList", fun.Type.Results)
+
+		info := map[string]string{
+			"Name":           fun.Name.Name,
+			"Arguments":      genFieldList(pf, fun.Type.Params, true),
+			"InitArgs":       generateInitArguments(fun.Type.Params),
+			"ResultZeroList": resInit,
+			"Results":        resList,
+			"ResultsTypes":   genFieldList(pf, fun.Type.Results, false),
+		}
+		res = append(res, info)
+	}
+	return res
+}
+
+// ChangePackageToMain changes package of the parsed code to "main"
+func (pf *ParsedFile) ChangePackageToMain() {
+	pf.node.Name.Name = "main"
+}
+
+// ReplaceFoundationImport replaces import of "client" foundation with "server"
+// version
+func (pf *ParsedFile) ReplaceFoundationImport() {
+	quoted := strconv.Quote(clientFoundation)
+	for _, d := range pf.node.Decls {
+		td, ok := d.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		if td.Tok != token.IMPORT {
+			continue
+		}
+		for _, s := range td.Specs {
+			is, ok := s.(*ast.ImportSpec)
+			if !ok {
+				continue
+			}
+			if is.Path.Value == quoted {
+				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
+			}
+		}
+	}
+}
+
+// Write prints `out` contract's code, it could be changed with a few methods
+func (pf *ParsedFile) Write(out io.Writer) error {
+	return printer.Fprint(out, pf.fileSet, pf.node)
+}
+
+// codeOfNode returns source code of an AST node
+func (pf *ParsedFile) codeOfNode(n ast.Node) string {
+	return string(pf.code[n.Pos()-1 : n.End()-1])
+}
+
+func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
+	imports := make(map[string]bool)
+	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
+	if !wrapper {
+		imports[fmt.Sprintf(`"%s"`, corePath)] = true
+	}
+	for _, method := range pf.methods[pf.contract] {
+		extendImportsMap(pf, method.Type.Params, imports)
+		if !wrapper {
+			extendImportsMap(pf, method.Type.Results, imports)
+		}
+	}
+	for _, fun := range pf.constructors[pf.contract] {
+		extendImportsMap(pf, fun.Type.Params, imports)
+		if !wrapper {
+			extendImportsMap(pf, fun.Type.Results, imports)
+		}
+	}
+	return imports
 }
 
 func openTemplate(fileName string) (*template.Template, error) {
@@ -141,141 +381,6 @@ func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
 	return rets
 }
 
-func generateContractMethodsInfo(parsed *ParsedFile) ([]map[string]interface{}, []map[string]interface{}, map[string]bool) {
-	imports := make(map[string]bool)
-	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
-	imports[fmt.Sprintf(`"%s"`, corePath)] = true
-
-	var methodsInfo []map[string]interface{}
-	for _, method := range parsed.methods[parsed.contract] {
-		argsInit, argsList := generateZeroListOfTypes(parsed, "args", method.Type.Params)
-		extendImportsMap(parsed, method.Type.Params, imports)
-
-		info := map[string]interface{}{
-			"Name":                method.Name.Name,
-			"ArgumentsZeroList":   argsInit,
-			"Arguments":           argsList,
-			"Results":             numberedVars(method.Type.Results, "ret"),
-			"ErrorInterfaceInRes": typeIndexes(parsed, method.Type.Results, "error"),
-		}
-		methodsInfo = append(methodsInfo, info)
-	}
-
-	var funcInfo []map[string]interface{}
-	for _, f := range parsed.constructors[parsed.contract] {
-		argsInit, argsList := generateZeroListOfTypes(parsed, "args", f.Type.Params)
-		extendImportsMap(parsed, f.Type.Params, imports)
-
-		info := map[string]interface{}{
-			"Name":              f.Name.Name,
-			"ArgumentsZeroList": argsInit,
-			"Arguments":         argsList,
-			"Results":           numberedVars(f.Type.Results, "ret"),
-		}
-		funcInfo = append(funcInfo, info)
-	}
-
-	return methodsInfo, funcInfo, imports
-}
-
-func GenerateContractWrapper(parsed *ParsedFile, out io.Writer) error {
-	packageName := parsed.node.Name.Name
-
-	tmpl, err := openTemplate("templates/wrapper.go.tpl")
-	if err != nil {
-		return errors.Wrap(err, "couldn't open template file for wrapper")
-	}
-
-	methodsInfo, funcInfo, imports := generateContractMethodsInfo(parsed)
-
-	data := struct {
-		PackageName    string
-		ContractType   string
-		Methods        []map[string]interface{}
-		Functions      []map[string]interface{}
-		ParsedCode     []byte
-		FoundationPath string
-		Imports        map[string]bool
-	}{
-		packageName,
-		parsed.contract,
-		methodsInfo,
-		funcInfo,
-		parsed.code,
-		foundationPath,
-		imports,
-	}
-	err = tmpl.Execute(out, data)
-	if err != nil {
-		return errors.Wrap(err, "couldn't write code output handle")
-	}
-
-	return nil
-}
-
-func ProxyPackageName(parsed *ParsedFile) (string, error) {
-	match := regexp.MustCompile("([^/]+)/([^/]+).(go|insgoc)$").FindStringSubmatch(parsed.name)
-	if match == nil {
-		return "", errors.New("couldn't match filename without extension and path")
-	}
-
-	packageName := parsed.node.Name.Name
-
-	proxyPackageName := packageName
-	if proxyPackageName == "main" {
-		proxyPackageName = match[2]
-	}
-	if proxyPackageName == "main" {
-		proxyPackageName = match[1]
-	}
-	return proxyPackageName, nil
-}
-
-func GenerateContractProxy(parsed *ParsedFile, classReference string, out io.Writer) error {
-
-	proxyPackageName, err := ProxyPackageName(parsed)
-	if err != nil {
-		return err
-	}
-
-	types := generateTypes(parsed)
-
-	methodsProxies := generateMethodsProxies(parsed)
-
-	constructorProxies := generateConstructorProxies(parsed)
-
-	imports := generateImports(parsed)
-
-	tmpl, err := openTemplate("templates/proxy.go.tpl")
-	if err != nil {
-		return errors.Wrap(err, "couldn't open template file for proxy")
-	}
-
-	data := struct {
-		PackageName         string
-		Types               []string
-		ContractType        string
-		MethodsProxies      []map[string]interface{}
-		ConstructorsProxies []map[string]string
-		ClassReference      string
-		Imports             map[string]bool
-	}{
-		proxyPackageName,
-		types,
-		parsed.contract,
-		methodsProxies,
-		constructorProxies,
-		classReference,
-		imports,
-	}
-	err = tmpl.Execute(out, data)
-	if err != nil {
-		return errors.Wrap(err, "couldn't write code output handle")
-	}
-
-	return nil
-}
-
 func typeName(t ast.Expr) string {
 	if tmp, ok := t.(*ast.StarExpr); ok { // *type
 		t = tmp.X
@@ -283,81 +388,33 @@ func typeName(t ast.Expr) string {
 	return t.(*ast.Ident).Name
 }
 
-func IsContract(typeNode *ast.TypeSpec) bool {
+func isContractTypeSpec(typeNode *ast.TypeSpec) bool {
 	baseContract := "foundation.BaseContract"
-	switch st := typeNode.Type.(type) {
-	case *ast.StructType:
-		if st.Fields == nil {
-			return false
+	st, ok := typeNode.Type.(*ast.StructType)
+	if !ok {
+		return false
+	}
+	if st.Fields == nil || st.Fields.NumFields() == 0 {
+		return false
+	}
+	for _, fd := range st.Fields.List {
+		if len(fd.Names) != 0 {
+			continue // named struct field
 		}
-		for _, fd := range st.Fields.List {
-			selectField, ok := fd.Type.(*ast.SelectorExpr)
-			if !ok {
-				continue
-			}
-			pack := selectField.X.(*ast.Ident).Name
-			class := selectField.Sel.Name
-			if (baseContract == (pack + "." + class)) && len(fd.Names) == 0 {
-				return true
-			}
+		selectField, ok := fd.Type.(*ast.SelectorExpr)
+		if !ok {
+			continue
+		}
+		pack := selectField.X.(*ast.Ident).Name
+		class := selectField.Sel.Name
+		if baseContract == (pack + "." + class) {
+			return true
 		}
 	}
 
 	return false
 }
 
-func getMethods(parsed *ParsedFile) error {
-	parsed.types = make(map[string]*ast.TypeSpec)
-	parsed.methods = make(map[string][]*ast.FuncDecl)
-	parsed.constructors = make(map[string][]*ast.FuncDecl)
-	for _, d := range parsed.node.Decls {
-		switch td := d.(type) {
-		case *ast.GenDecl:
-			if td.Tok != token.TYPE {
-				continue
-			}
-
-			for _, e := range td.Specs {
-				typeNode := e.(*ast.TypeSpec)
-
-				if IsContract(typeNode) {
-					if parsed.contract != "" {
-						return errors.New("more than one contract in a file")
-					}
-					parsed.contract = typeNode.Name.Name
-				} else {
-					parsed.types[typeNode.Name.Name] = typeNode
-				}
-			}
-		case *ast.FuncDecl:
-			if td.Recv == nil || td.Recv.NumFields() == 0 {
-				if !strings.HasPrefix(td.Name.Name, "New") {
-					continue // doesn't look like a constructor
-				}
-
-				if td.Type.Results.NumFields() < 1 {
-					log.Infof("Ignored %q as constructor, not enought returned values", td.Name.Name)
-					continue
-				}
-
-				if td.Type.Results.NumFields() > 1 {
-					log.Errorf("Constructor %q returns more than one argument, not supported at the moment", td.Name.Name)
-					continue
-				}
-
-				typename := typeName(td.Type.Results.List[0].Type)
-				parsed.constructors[typename] = append(parsed.constructors[typename], td)
-			} else {
-				typename := typeName(td.Recv.List[0].Type)
-				parsed.methods[typename] = append(parsed.methods[typename], td)
-			}
-		}
-	}
-
-	return nil
-}
-
-// nolint
 func generateTypes(parsed *ParsedFile) []string {
 	var types []string
 	for _, t := range parsed.types {
@@ -462,101 +519,6 @@ func generateInitArguments(list *ast.FieldList) string {
 	return initArgs
 }
 
-func generateMethodProxyInfo(parsed *ParsedFile, method *ast.FuncDecl) map[string]interface{} {
-
-	resInit, resList := generateZeroListOfTypes(parsed, "resList", method.Type.Results)
-
-	return map[string]interface{}{
-		"Name":           method.Name.Name,
-		"ResultZeroList": resInit,
-		"Results":        resList,
-		"Arguments":      genFieldList(parsed, method.Type.Params, true),
-		"ResultsTypes":   genFieldList(parsed, method.Type.Results, false),
-		"InitArgs":       generateInitArguments(method.Type.Params),
-	}
-}
-
-func generateMethodsProxies(parsed *ParsedFile) []map[string]interface{} {
-	var methodsProxies []map[string]interface{}
-
-	for _, method := range parsed.methods[parsed.contract] {
-		methodsProxies = append(methodsProxies, generateMethodProxyInfo(parsed, method))
-	}
-
-	return methodsProxies
-}
-
-func generateImports(parsed *ParsedFile) map[string]bool {
-	imports := make(map[string]bool)
-	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
-	imports[fmt.Sprintf(`"%s"`, corePath)] = true
-	for _, method := range parsed.methods[parsed.contract] {
-		extendImportsMap(parsed, method.Type.Params, imports)
-		extendImportsMap(parsed, method.Type.Results, imports)
-	}
-	for _, fun := range parsed.constructors[parsed.contract] {
-		extendImportsMap(parsed, fun.Type.Params, imports)
-		extendImportsMap(parsed, fun.Type.Results, imports)
-	}
-	return imports
-}
-
-func generateConstructorProxies(parsed *ParsedFile) []map[string]string {
-	var res []map[string]string
-
-	for _, e := range parsed.constructors[parsed.contract] {
-		info := map[string]string{
-			"Name":      e.Name.Name,
-			"Arguments": genFieldList(parsed, e.Type.Params, true),
-			"InitArgs":  generateInitArguments(e.Type.Params),
-		}
-		res = append(res, info)
-	}
-	return res
-}
-
-func CmdRewriteImports(parsed *ParsedFile, w io.Writer) error {
-	if err := rewriteImports(parsed); err != nil {
-		return errors.Wrap(err, "couldn't process")
-	}
-	if err := printer.Fprint(w, parsed.fileSet, parsed.node); err != nil {
-		return errors.Wrap(err, "couldn't save")
-	}
-	return nil
-}
-
-func rewriteImports(p *ParsedFile) error {
-	quoted := strconv.Quote(clientFoundation)
-	for _, d := range p.node.Decls {
-		td, ok := d.(*ast.GenDecl)
-		if !ok {
-			continue
-		}
-		if td.Tok != token.IMPORT {
-			continue
-		}
-		for _, s := range td.Specs {
-			is, ok := s.(*ast.ImportSpec)
-			if !ok {
-				continue
-			}
-			if is.Path.Value == quoted {
-				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
-			}
-		}
-	}
-	return nil
-}
-
-func GetContractName(p *ParsedFile) string {
-	return p.node.Name.Name
-}
-
-func RewriteContractPackage(p *ParsedFile, w io.Writer) {
-	p.node.Name.Name = "main"
-	printer.Fprint(w, p.fileSet, p.node)
-}
-
 // GetRealGenesisDir return dir under genesis dir
 func GetRealGenesisDir(dir string) (string, error) {
 	gopath := build.Default.GOPATH
@@ -596,4 +558,18 @@ func GetRealContractsNames() ([]string, error) {
 	}
 
 	return result, nil
+}
+
+func slurpFile(fileName string) ([]byte, error) {
+	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't open file '"+fileName+"'")
+	}
+	defer file.Close() //nolint: errcheck
+
+	res, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't read file '"+fileName+"'")
+	}
+	return res, nil
 }

@@ -14,11 +14,9 @@
  *    limitations under the License.
  */
 
-package event
+package message
 
 import (
-	"io"
-
 	"github.com/insolar/insolar/core"
 )
 
@@ -34,9 +32,22 @@ const (
 	// ReturnValidated
 )
 
+// BaseLogicEvent base of event class family, do not use it standalone
+type BaseLogicEvent struct {
+	Caller core.RecordRef
+}
+
+func (e *BaseLogicEvent) GetCaller() *core.RecordRef {
+	return &e.Caller
+}
+
+func (e *BaseLogicEvent) TargetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	baseEvent
+	BaseLogicEvent
 	ReturnMode MethodReturnMode
 	ObjectRef  core.RecordRef
 	Request    core.RecordRef
@@ -44,22 +55,26 @@ type CallMethod struct {
 	Arguments  core.Arguments
 }
 
-// React handles event and returns associated reaction.
-func (e *CallMethod) React(c core.Components) (core.Reaction, error) {
-	return logicRunnerHandle(e, c)
+func (e *CallMethod) Type() core.MessageType {
+	return TypeCallMethod
 }
 
-// GetOperatingRole returns operating jet role for given event type.
-func (e *CallMethod) GetOperatingRole() core.JetRole {
-	return core.RoleVirtualExecutor
+func (e *CallMethod) Target() *core.RecordRef {
+	return &e.ObjectRef
 }
 
-// GetReference returns referenced object.
-func (e *CallMethod) GetReference() core.RecordRef {
-	return e.ObjectRef
+// CallConstructor is a message for calling constructor and obtain its reply
+type CallConstructor struct {
+	BaseLogicEvent
+	ClassRef  core.RecordRef
+	Name      string
+	Arguments core.Arguments
 }
 
-// Serialize serializes event.
-func (e *CallMethod) Serialize() (io.Reader, error) {
-	return serialize(e, TypeCallMethod)
+func (e *CallConstructor) Type() core.MessageType {
+	return TypeCallConstructor
+}
+
+func (e *CallConstructor) Target() *core.RecordRef {
+	return &e.ClassRef
 }

@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/stretchr/testify/assert"
@@ -57,13 +57,13 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	network, err := NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
 
-	e := &event.CallMethod{
+	e := &message.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
 
-	network.SendEvent(core.NewRefFromBase58("test"), "test", e)
+	network.SendMessage(core.NewRefFromBase58("test"), "test", e)
 }
 
 func TestServiceNetwork_Start(t *testing.T) {
@@ -120,10 +120,6 @@ func (l *mockLedger) GetPulseManager() core.PulseManager {
 	return l.PM
 }
 
-func (l *mockLedger) HandleEvent(core.Event) (core.Reaction, error) {
-	return nil, nil
-}
-
 func TestServiceNetwork_SendMessage2(t *testing.T) {
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -153,13 +149,13 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		return nil, nil
 	})
 
-	e := &event.CallMethod{
+	e := &message.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
 
-	firstNode.SendEvent(core.NewRefFromBase58(secondNodeId), "test", e)
+	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
@@ -194,7 +190,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		return nil, nil
 	})
 
-	e := &event.CallMethod{
+	e := &message.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
@@ -206,19 +202,19 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		Entropy:           core.Entropy{0},
 	}
 
-	firstNode.SendCascadeEvent(c, "test", e)
+	firstNode.SendCascadeMessage(c, "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
 
-	err := firstNode.SendCascadeEvent(c, "test", nil)
+	err := firstNode.SendCascadeMessage(c, "test", nil)
 	assert.NotNil(t, err)
 	c.ReplicationFactor = 0
-	err = firstNode.SendCascadeEvent(c, "test", e)
+	err = firstNode.SendCascadeMessage(c, "test", e)
 	assert.NotNil(t, err)
 	c.ReplicationFactor = 2
 	c.NodeIds = nil
-	err = firstNode.SendCascadeEvent(c, "test", e)
+	err = firstNode.SendCascadeMessage(c, "test", e)
 	assert.NotNil(t, err)
 }
 
@@ -271,7 +267,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		bootstrapHosts = append(bootstrapHosts, host)
 	}
 	nodes := nodeIds[:len(nodeIds)-2]
-	// first node that will send cascade event to all other nodes
+	// first node that will send cascade message to all other nodes
 	var firstService *ServiceNetwork
 	for i, node := range nodes {
 		service, _ := initService(node.String(), bootstrapHosts)
@@ -280,18 +276,18 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 		}
 	}
 
-	e := &event.CallMethod{
+	e := &message.CallMethod{
 		ObjectRef: core.NewRefFromBase58("test"),
 		Method:    "test",
 		Arguments: []byte("test"),
 	}
-	// send cascade event to all nodes except the first
+	// send cascade message to all nodes except the first
 	c := core.Cascade{
 		NodeIds:           nodeIds[1:],
 		ReplicationFactor: 2,
 		Entropy:           core.Entropy{0},
 	}
-	firstService.SendCascadeEvent(c, "test", e)
+	firstService.SendCascadeMessage(c, "test", e)
 	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)

@@ -14,14 +14,14 @@
  *    limitations under the License.
  */
 
-package eventbus
+package messagebus
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/eventbus/event"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/assert"
 )
@@ -34,7 +34,7 @@ type req struct {
 
 type runner struct {
 	requests  []req
-	responses []core.Reaction
+	responses []core.Reply
 }
 
 func (r *runner) OnPulse(pulse core.Pulse) error { return nil }
@@ -42,12 +42,12 @@ func (r *runner) OnPulse(pulse core.Pulse) error { return nil }
 func (r *runner) Start(components core.Components) error { return nil }
 func (r *runner) Stop() error                            { return nil }
 
-func (r *runner) Execute(e core.Event) (core.Reaction, error) {
+func (r *runner) Execute(msg core.Message) (core.Reply, error) {
 	if len(r.responses) == 0 {
 		panic("no request expected")
 	}
-	m := e.(*event.CallMethod)
-	r.requests = append(r.requests, req{e.GetReference(), m.Method, m.Arguments})
+	m := msg.(*message.CallMethod)
+	r.requests = append(r.requests, req{*msg.Target(), m.Method, m.Arguments})
 	resp := r.responses[0]
 	r.responses = r.responses[1:]
 
@@ -58,11 +58,11 @@ func TestNew(t *testing.T) {
 	t.Skip("need repair")
 	r := new(runner)
 	r.requests = make([]req, 0)
-	r.responses = make([]core.Reaction, 0)
+	r.responses = make([]core.Reply, 0)
 	cfg := configuration.NewConfiguration()
 	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
 	assert.NoError(t, err)
-	eb, err := New(configuration.Configuration{})
+	eb, err := NewMessageBus(configuration.Configuration{})
 	eb.Start(core.Components{
 		LogicRunner: r,
 		Network:     network,
@@ -79,19 +79,19 @@ func TestNew(t *testing.T) {
 // func TestRoute(t *testing.T) {
 // 	r := new(runner)
 // 	r.requests = make([]req, 0)
-// 	r.responses = make([]core.Reaction, 0)
+// 	r.responses = make([]core.Reply, 0)
 //
 // 	dht, err := NewNode()
 // 	assert.NoError(t, err)
 // 	ctx := getDefaultCtx(dht)
 //
-// 	mr, _ := New(r, dht)
+// 	mr, _ := NewMessageBus(r, dht)
 // 	reference := dht.GetOriginHost(ctx).ID.String()
 //
 // 	t.Run("success", func(t *testing.T) {
-// 		r.responses = append(r.responses, core.Reaction{Data: []byte("data"), Result: []byte("result"), Error: nil})
-// 		resp, err := mr.Dispatch(
-// 			ctx, core.Event{Reference: core.NewRefFromBase58(reference), Method: "SomeMethod", Arguments: []byte("args")},
+// 		r.responses = append(r.responses, core.Reply{Data: []byte("data"), Result: []byte("result"), Error: nil})
+// 		resp, err := mr.Send(
+// 			ctx, core.Message{Reference: core.NewRefFromBase58(reference), Method: "SomeMethod", Arguments: []byte("args")},
 // 		)
 // 		if err != nil {
 // 			t.Fatal(err)
@@ -119,9 +119,9 @@ func TestNew(t *testing.T) {
 // 		}
 // 	})
 // 	t.Run("error", func(t *testing.T) {
-// 		r.responses = append(r.responses, core.Reaction{Data: []byte{}, Result: []byte{}, Error: errors.New("wtf")})
-// 		_, err := mr.Dispatch(
-// 			ctx, core.Event{Reference: core.NewRefFromBase58(reference), Method: "SomeMethod", Arguments: []byte("args")},
+// 		r.responses = append(r.responses, core.Reply{Data: []byte{}, Result: []byte{}, Error: errors.NewMessageBus("wtf")})
+// 		_, err := mr.Send(
+// 			ctx, core.Message{Reference: core.NewRefFromBase58(reference), Method: "SomeMethod", Arguments: []byte("args")},
 // 		)
 // 		if err == nil {
 // 			t.Fatal("error expected")
@@ -145,9 +145,9 @@ func TestNew(t *testing.T) {
 // 	})
 //
 // 	t.Run("referenceNotFound", func(t *testing.T) {
-// 		_, err := mr.Dispatch(
+// 		_, err := mr.Send(
 // 			ctx,
-// 			core.Event{
+// 			core.Message{
 // 				Reference: core.NewRefFromBase58("refNotFound"),
 // 				Method:    "SomeMethod",
 // 				Arguments: []byte("args"),
