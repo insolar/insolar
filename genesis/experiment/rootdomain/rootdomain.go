@@ -19,7 +19,6 @@ package rootdomain
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"encoding/asn1"
 	"encoding/json"
 
 	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
@@ -51,24 +50,6 @@ func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	return nd.RegisterNode(publicKey, role).String()
 }
 
-func sign(seed []byte, key *ecdsa.PrivateKey) []byte {
-
-	hash := utils.MakeHash(seed)
-
-	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
-
-	if err != nil {
-		panic(err)
-	}
-
-	data, err := asn1.Marshal(utils.EcdsaPair{First: r, Second: s})
-	if err != nil {
-		panic(err)
-	}
-
-	return data
-}
-
 func makeSeed() []byte {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
@@ -88,7 +69,7 @@ func (rd *RootDomain) IsAuthorized() bool {
 
 	// Make signature
 	seed := makeSeed()
-	signature := sign(seed, privateKey)
+	signature := utils.Sign(seed, privateKey)
 
 	// Register node
 	serPubKey, err := utils.SerializePublicKey(privateKey.PublicKey)

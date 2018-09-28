@@ -19,6 +19,7 @@ package utils
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/asn1"
 	"math/big"
@@ -27,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// SerializePublicKey serializes pk string
 func SerializePublicKey(key ecdsa.PublicKey) (string, error) {
 
 	escdaPair := EcdsaPair{First: key.X, Second: key.Y}
@@ -38,6 +40,7 @@ func SerializePublicKey(key ecdsa.PublicKey) (string, error) {
 	return base58.Encode(serKey), nil
 }
 
+// MakePublicKey makes pl from EcdsaPair
 func MakePublicKey(pair EcdsaPair) *ecdsa.PublicKey {
 	return &ecdsa.PublicKey{
 		Curve: GetCurve(),
@@ -46,6 +49,7 @@ func MakePublicKey(pair EcdsaPair) *ecdsa.PublicKey {
 	}
 }
 
+// DeserializePublicKey deserializes pk from string
 func DeserializePublicKey(serPubKey string) (*ecdsa.PublicKey, error) {
 	rawPubKey := base58.Decode(serPubKey)
 	pk := &EcdsaPair{}
@@ -61,15 +65,37 @@ func DeserializePublicKey(serPubKey string) (*ecdsa.PublicKey, error) {
 	return MakePublicKey(*pk), nil
 }
 
+// MakeHash makes hash from seed
 func MakeHash(seed []byte) [sha256.Size]byte {
 	return sha256.Sum256(seed)
 }
 
+// GetCurve gets default curve
 func GetCurve() elliptic.Curve {
 	return elliptic.P256()
 }
 
+// EcdsaPair represents two ints for ecdsa
 type EcdsaPair struct {
 	First  *big.Int
 	Second *big.Int
+}
+
+// Sign signa given seed
+func Sign(seed []byte, key *ecdsa.PrivateKey) []byte {
+
+	hash := MakeHash(seed)
+
+	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
+
+	if err != nil {
+		panic(err)
+	}
+
+	data, err := asn1.Marshal(EcdsaPair{First: r, Second: s})
+	if err != nil {
+		panic(err)
+	}
+
+	return data
 }
