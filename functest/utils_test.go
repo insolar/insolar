@@ -64,9 +64,13 @@ type getBalanceResponse struct {
 }
 
 type userInfo struct {
-	baseResponse
 	Member string `json:"member"`
 	Wallet uint   `json:"wallet"`
+}
+
+type dumpUserInfoResponse struct {
+	baseResponse
+	DumpInfo userInfo `json:"dump_info"`
 }
 
 type dumpAllUsersResponse struct {
