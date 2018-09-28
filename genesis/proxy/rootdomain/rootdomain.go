@@ -2,7 +2,6 @@ package rootdomain
 
 import (
         "github.com/insolar/insolar/core"
-        "github.com/insolar/insolar/genesis/proxy/member"
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -308,51 +307,6 @@ func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
     }
 
     _, err = proxyctx.Current.RouteCall(r.Reference, false, "SendMoney", argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-}
-
-func (r *RootDomain) getUserInfoMap( m *member.Member ) ( map[string]interface{} ) {
-    var args [1]interface{}
-	args[0] = m
-
-    var argsSerialized []byte
-
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "getUserInfoMap", argsSerialized)
-    if err != nil {
-   		panic(err)
-    }
-
-    resList := [1]interface{}{}
-	var a0 map[string]interface{}
-	resList[0] = a0
-
-    err = proxyctx.Current.Deserialize(res, &resList)
-    if err != nil {
-        panic(err)
-    }
-
-    return resList[0].(map[string]interface{})
-}
-
-func (r *RootDomain) getUserInfoMapNoWait( m *member.Member ) {
-    var args [1]interface{}
-	args[0] = m
-
-    var argsSerialized []byte
-
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "getUserInfoMap", argsSerialized)
     if err != nil {
         panic(err)
     }
