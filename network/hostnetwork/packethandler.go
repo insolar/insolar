@@ -30,10 +30,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DispatchPacketType checks event type.
-// nolint: gocyclo
-func DispatchPacketType(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	// TODO: add counter
+// DispatchPacketType checks message type.
+func DispatchPacketType(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder,
+) (*packet.Packet, error) { // nolint: gocyclo
 	switch msg.Type {
 	case packet.TypeFindHost:
 		return processFindHost(hostHandler, ctx, msg, packetBuilder)
@@ -201,7 +204,7 @@ func processStore(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 }
 
 func processPing(msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	log.Debugln("recv ping event from " + msg.Sender.Address.String())
+	log.Debugln("recv ping message from " + msg.Sender.Address.String())
 	return packetBuilder.Response(nil).Build(), nil
 }
 
@@ -332,7 +335,7 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	}
 	err = hostHandler.GetNetworkCommonFacade().GetCascade().SendToNextLayer(data.Data, data.RPC.Method, data.RPC.Args)
 	if err != nil {
-		log.Debug("failed to send event to next cascade layer")
+		log.Debug("failed to send message to next cascade layer")
 	}
 
 	return packetBuilder.Response(response).Build(), err

@@ -14,8 +14,8 @@
  *    limitations under the License.
  */
 
-// Package event represents event that eventbus can route
-package event
+// Package message represents message that messagebus can route
+package message
 
 import (
 	"bytes"
@@ -26,19 +26,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-// BaseMessage base of event class family, do not use it standalone
-type baseEvent struct {
+// BaseLogicEvent base of event class family, do not use it standalone
+type BaseLogicEvent struct {
+	Caller  core.RecordRef
 	Request core.RecordRef
 	Domain  core.RecordRef
 }
 
-// Type is a enum type of event
-type Type byte
+func (be BaseLogicEvent) GetCaller() *core.RecordRef {
+	return &be.Caller
+}
 
 const (
-	TypeBase            = Type(iota)
-	TypeCallMethod      // TypeCallMethod calls method and returns result
-	TypeCallConstructor // TypeCallConstructor is a event for calling constructor and obtain its reaction
+	// Logicrunner
+
+	TypeCallMethod      = core.MessageType(iota) // TypeCallMethod calls method and returns result
+	TypeCallConstructor                          // TypeCallConstructor is a message for calling constructor and obtain its reply
 
 	// Ledger
 
@@ -57,16 +60,14 @@ const (
 	TypeUpdateObject           // TypeUpdateObject amends object.
 )
 
-// GetEmptyMessage constructs specified event
-func getEmptyEvent(mt Type) (core.Event, error) {
+// GetEmptyMessage constructs specified message
+func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	switch mt {
-	case TypeBase:
-		return nil, errors.New("working with event type == 0 is prohibited")
+	// Logicrunner
 	case TypeCallMethod:
 		return &CallMethod{}, nil
 	case TypeCallConstructor:
 		return &CallConstructor{}, nil
-
 	// Ledger
 	case TypeGetCode:
 		return &GetCode{}, nil
@@ -95,43 +96,44 @@ func getEmptyEvent(mt Type) (core.Event, error) {
 	case TypeUpdateObject:
 		return &UpdateObject{}, nil
 	default:
-		return nil, errors.Errorf("unimplemented event type %d", mt)
+		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
 }
 
-func serialize(event core.Event, t Type) (io.Reader, error) {
+// Serialize returns encoded message.
+func Serialize(msg core.Message) (io.Reader, error) {
 	buff := &bytes.Buffer{}
-	_, err := buff.Write([]byte{byte(t)})
+	_, err := buff.Write([]byte{byte(msg.Type())})
 	if err != nil {
 		return nil, err
 	}
 
 	enc := gob.NewEncoder(buff)
-	err = enc.Encode(event)
+	err = enc.Encode(msg)
 	return buff, err
 }
 
-// Deserialize returns a event
-func Deserialize(buff io.Reader) (core.Event, error) {
+// Deserialize returns decoded message.
+func Deserialize(buff io.Reader) (core.Message, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
-		return nil, errors.New("too short slice for deserialize event")
+		return nil, errors.New("too short slice for deserialize message")
 	}
 
-	event, err := getEmptyEvent(Type(b[0]))
+	msg, err := getEmptyMessage(core.MessageType(b[0]))
 	if err != nil {
 		return nil, err
 	}
 	enc := gob.NewDecoder(buff)
-	err = enc.Decode(event)
-	return event, err
+	err = enc.Decode(msg)
+	return msg, err
 }
 
 func init() {
+	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
-
 	// Ledger
 	gob.Register(&GetCode{})
 	gob.Register(&GetClass{})

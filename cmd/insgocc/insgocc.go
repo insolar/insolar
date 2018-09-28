@@ -91,7 +91,7 @@ func main() {
 					fmt.Println(err)
 					os.Exit(1)
 				}
-				proxyPackage, err := preprocessor.ProxyPackageName(parsed)
+				proxyPackage, err := parsed.ProxyPackageName()
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)
@@ -113,7 +113,7 @@ func main() {
 				}
 			}
 
-			err = preprocessor.GenerateContractProxy(parsed, reference, proxyOut.writer)
+			err = parsed.WriteProxy(reference, proxyOut.writer)
 
 			if err != nil {
 				fmt.Println(err)
@@ -138,7 +138,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			err = preprocessor.GenerateContractWrapper(parsed, output.writer)
+			err = parsed.WriteWrapper(output.writer)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -161,7 +161,9 @@ func main() {
 				os.Exit(1)
 			}
 
-			err = preprocessor.CmdRewriteImports(parsed, output.writer)
+			parsed.ReplaceFoundationImport()
+
+			err = parsed.Write(output.writer)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -197,7 +199,7 @@ func main() {
 			}
 			defer os.RemoveAll(tmpDir) // nolint: errcheck
 
-			name := preprocessor.GetContractName(parsed)
+			name := parsed.ContractName()
 
 			contract, err := os.Create(filepath.Join(tmpDir, name+".go"))
 			if err != nil {
@@ -206,7 +208,12 @@ func main() {
 			}
 			defer contract.Close()
 
-			preprocessor.RewriteContractPackage(parsed, contract)
+			parsed.ChangePackageToMain()
+			err = parsed.Write(contract)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 
 			wrapper, err := os.Create(filepath.Join(tmpDir, name+".wrapper.go"))
 			if err != nil {
@@ -215,7 +222,7 @@ func main() {
 			}
 			defer wrapper.Close()
 
-			err = preprocessor.GenerateContractWrapper(parsed, wrapper)
+			err = parsed.WriteWrapper(wrapper)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)

@@ -31,9 +31,11 @@ type CaseRecordType int
 
 // Types of records
 const (
-	CaseRecordTypeUnexistent CaseRecordType = iota
+	caseRecordTypeUnexistent CaseRecordType = iota
 	CaseRecordTypeMethodCall
 	CaseRecordTypeConstructorCall
+	CaseRecordTypeMethodCallResult
+	CaseRecordTypeConstructorCallResult
 	CaseRecordTypeRouteCall
 	CaseRecordTypeSaveAsChild
 	CaseRecordTypeGetObjChildren

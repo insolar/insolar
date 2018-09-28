@@ -7,8 +7,7 @@ import (
 )
 
 {{ range $method := .Methods }}
-func INSMETHOD_{{ $method.Name }}(ph proxyctx.ProxyHelper, object []byte,
-                data []byte, context *core.LogicCallContext) ([]byte, []byte, error) {
+func INSMETHOD_{{ $method.Name }}(ph proxyctx.ProxyHelper, object []byte, data []byte) ([]byte, []byte, error) {
 
     self := new({{ $.ContractType }})
 
@@ -16,8 +15,6 @@ func INSMETHOD_{{ $method.Name }}(ph proxyctx.ProxyHelper, object []byte,
     if err != nil {
         return nil, nil, err
     }
-
-    self.SetContext(context)
 
     {{ $method.ArgumentsZeroList }}
     err = ph.Deserialize(data, &args)

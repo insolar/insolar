@@ -58,7 +58,7 @@ type Params struct {
 	From      string `json:"from"`
 	To        string `json:"to"`
 	QID       string `json:"qid"`
-	Amount    int    `json:"amount"`
+	Amount    uint   `json:"amount"`
 	PublicKey string `json:"public_key"`
 	Role      string `json:"role"`
 }
