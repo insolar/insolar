@@ -2,7 +2,6 @@ package rootdomain
 
 import (
         "github.com/insolar/insolar/core"
-        "github.com/insolar/insolar/genesis/proxy/member"
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
