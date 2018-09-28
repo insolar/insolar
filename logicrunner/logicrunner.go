@@ -85,10 +85,10 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	}
 
 	// TODO: use separate handlers
-	if err := messageBus.Register(message.TypeCallMethod, lr.HandleMessage); err != nil {
+	if err := messageBus.Register(message.TypeCallMethod, lr.Execute); err != nil {
 		return err
 	}
-	if err := messageBus.Register(message.TypeCallConstructor, lr.HandleMessage); err != nil {
+	if err := messageBus.Register(message.TypeCallConstructor, lr.Execute); err != nil {
 		return err
 	}
 
@@ -133,12 +133,8 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
-func (lr *LogicRunner) HandleMessage(msg core.Message) (core.Reply, error) {
-	return lr.Execute(msg.(core.LogicRunnerEvent))
-}
-
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(msg core.LogicRunnerEvent) (core.Reply, error) {
+func (lr *LogicRunner) Execute(msg core.Message) (core.Reply, error) {
 	ctx := core.LogicCallContext{
 		Caller: msg.GetCaller(),
 		Time:   time.Now(), // TODO: probably we should take it from e
