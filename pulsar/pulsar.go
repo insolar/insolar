@@ -38,17 +38,17 @@ import (
 type State int
 
 const (
-	WaitingForTheStart    State = 0
-	WaitingForTheSigns    State = 2
-	SendingEntropy        State = 3
-	WaitingForTheEntropy  State = 4
-	SendingVector         State = 5
-	WaitingForTheVectors  State = 6
-	Verifying             State = 7
-	SendingSignForChosen  State = 8
-	WaitingForChosenSigns State = 9
-	SendingEntropyToNodes State = 10
-	Failed                State = -1
+	WaitingForTheStart State = iota + 1
+	WaitingForTheSigns
+	SendingEntropy
+	WaitingForTheEntropy
+	SendingVector
+	WaitingForTheVectors
+	Verifying
+	SendingSignForChosen
+	WaitingForChosenSigns
+	SendingEntropyToNodes
+	Failed
 )
 
 // Base pulsar's struct
@@ -87,7 +87,7 @@ type BftCell struct {
 	IsEntropyReceived bool
 }
 
-// Creation new pulsar-node
+// NewPulse creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
 	configuration configuration.Pulsar,
 	storage pulsarstorage.PulsarStorage,
@@ -156,6 +156,7 @@ func NewPulsar(
 	return pulsar, nil
 }
 
+// StartServer starts listening of the rpc-server
 func (pulsar *Pulsar) StartServer() {
 	server := rpc.NewServer()
 
@@ -168,6 +169,7 @@ func (pulsar *Pulsar) StartServer() {
 	server.Accept(pulsar.Sock)
 }
 
+// StopServer stops listening of the rpc-server
 func (pulsar *Pulsar) StopServer() {
 	for _, neighbour := range pulsar.Neighbours {
 		if neighbour.OutgoingClient != nil && neighbour.OutgoingClient.IsInitialised() {
@@ -421,6 +423,7 @@ func (pulsar *Pulsar) BroadcastEntropy() {
 }
 
 func (pulsar *Pulsar) switchStateTo(state State, arg interface{}) {
+	log.Debug("Switch state from %v to %v", pulsar.State, state)
 	pulsar.State = state
 	switch state {
 	case WaitingForTheStart:
@@ -737,7 +740,12 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 		log.Error(err)
 		pulsar.switchStateTo(Failed, err)
 	}
-	t.Start()
+	err = t.Start()
+	if err != nil {
+		log.Error(err)
+		pulsar.switchStateTo(Failed, err)
+	}
+
 	pulsarHostAddress, err := host.NewAddress(pulsar.Config.BootstrapListener.Address)
 	if err != nil {
 		log.Error(err)
@@ -787,6 +795,7 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 
 	}
 
+	t.Stop()
 }
 
 func (pulsar *Pulsar) stateSwitchedToFailed(err error) {
