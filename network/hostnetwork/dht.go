@@ -251,6 +251,16 @@ func (dht *DHT) Listen() error {
 	return dht.transport.Start()
 }
 
+func (dht *DHT) getResultWithTimeout(future transport.Future, duration time.Duration) (result *packet.Packet, timeout bool) {
+	select {
+	case result = <-future.Result():
+		return result, false
+	case <-time.After(duration):
+		future.Cancel()
+		return nil, true
+	}
+}
+
 // Bootstrap attempts to bootstrap the network using the BootstrapHosts provided
 // to the Options struct. This will trigger an iterateBootstrap to the provided
 // BootstrapHosts.
@@ -301,17 +311,17 @@ func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilde
 	wg.Add(len(futures))
 	for _, f := range futures {
 		go func(f transport.Future) {
-			select {
-			case r := <-f.Result():
-				data := r.Data.(*packet.ResponseDataFindHost)
-				for _, host := range data.Closest {
-					dht.AddHost(ctx, routing.NewRouteHost(host))
-					log.Debugf("Added host to DHT routing table: %s %s", host.ID, host.Address)
-				}
-			case <-time.After(dht.options.PacketTimeout):
+			defer wg.Done()
+			result, timeout := dht.getResultWithTimeout(f, dht.options.PacketTimeout)
+			if timeout {
 				log.Error("Error getting nearest hosts: timeout")
+				return
 			}
-			wg.Done()
+			data := result.Data.(*packet.ResponseDataFindHost)
+			for _, host := range data.Closest {
+				dht.AddHost(ctx, routing.NewRouteHost(host))
+				log.Debugf("Added host to DHT routing table: %s %s", host.ID, host.Address)
+			}
 		}(f)
 	}
 	wg.Wait()
@@ -345,7 +355,8 @@ func (dht *DHT) iterateBootstrapHosts(
 			if dht.infinityBootstrap {
 				log.Info("do infinity mode bootstrap.")
 				for {
-					if dht.gotBootstrap(ht, bh, cb, localwg) {
+					if dht.gotBootstrap(ht, bh, cb) {
+						localwg.Done()
 						return
 					}
 					if counter < dht.timeout {
@@ -355,35 +366,38 @@ func (dht *DHT) iterateBootstrapHosts(
 				}
 			} else {
 				log.Info("do one time mode bootstrap.")
-				if !dht.gotBootstrap(ht, bh, cb, localwg) {
-					localwg.Done()
-				}
+				_ = dht.gotBootstrap(ht, bh, cb)
+				localwg.Done()
 			}
 		}(cb, dht, bh, ht, localwg)
 	}
 	localwg.Wait()
 }
 
-func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBuilder, localwg *sync.WaitGroup) bool {
+func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBuilder) bool {
 	request := packet.NewPingPacket(ht.Origin, bh)
 	if bh.ID.Bytes() == nil {
 		log.Info("sending ping request")
 		res, err := dht.transport.SendRequest(request)
 		if err != nil {
 			log.Error(err)
-		} else {
-			result := <-res.Result()
-			log.Info("checking response")
-			if res != nil {
-				ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
-				if err != nil {
-					log.Error(err)
-				}
-				dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
-			}
-			localwg.Done()
-			return true
+			return false
 		}
+		result, timeout := dht.getResultWithTimeout(res, dht.options.PingTimeout)
+		if timeout {
+			log.Warn("gotBootstrap: timeout")
+			return false
+		}
+		log.Info("checking response")
+		if result == nil {
+			log.Warn("gotBootstrap: result is nil")
+			return false
+		}
+		ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
+		if err != nil {
+			log.Error(err)
+		}
+		dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
 	} else {
 		log.Info("bootstrap host known. creating new route host.")
 		routeHost := routing.NewRouteHost(bh)
@@ -393,10 +407,8 @@ func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBui
 			return false
 		}
 		dht.AddHost(ctx, routeHost)
-		localwg.Done()
-		return true
 	}
-	return false
+	return true
 }
 
 // Disconnect will trigger a Stop from the network.
@@ -616,19 +628,13 @@ func (dht *DHT) selectResultChan(
 func (dht *DHT) setUpResultChan(futures []transport.Future, ctx hosthandler.Context, resultChan chan *packet.Packet) {
 	for _, f := range futures {
 		go func(future transport.Future) {
-			select {
-			case result := <-future.Result():
-				if result == nil {
-					// Channel was closed
-					return
-				}
-				dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
-				resultChan <- result
-				return
-			case <-time.After(dht.options.PacketTimeout):
-				future.Cancel()
+			result, timeout := dht.getResultWithTimeout(f, dht.options.PacketTimeout)
+			if timeout || result == nil {
+				// Timeout occurred or channel was closed
 				return
 			}
+			dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
+			resultChan <- result
 		}(f)
 	}
 }
@@ -1014,13 +1020,12 @@ func (dht *DHT) AddHost(ctx hosthandler.Context, host *routing.RouteHost) {
 			bucket = append(bucket, host)
 			bucket = bucket[1:]
 		} else {
-			select {
-			case <-future.Result():
+			_, timeout := dht.getResultWithTimeout(future, dht.options.PingTimeout)
+			if !timeout {
 				return
-			case <-time.After(dht.options.PingTimeout):
-				bucket = bucket[1:]
-				bucket = append(bucket, host)
 			}
+			bucket = bucket[1:]
+			bucket = append(bucket, host)
 		}
 	} else {
 		bucket = append(bucket, host)
@@ -1140,23 +1145,22 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 		return nil, errors.Wrap(err, "Failed transport to send request")
 	}
 
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			// Channel was closed
-			return nil, errors.New("chanel closed unexpectedly")
-		}
-		dht.AddHost(ctx, routing.NewRouteHost(rsp.Sender))
+	rsp, timeout := dht.getResultWithTimeout(future, dht.options.PacketTimeout)
 
-		response := rsp.Data.(*packet.ResponseDataRPC)
-		if response.Success {
-			return response.Result, nil
-		}
-		return nil, errors.New(response.Error)
-	case <-time.After(dht.options.PacketTimeout):
-		future.Cancel()
+	if timeout {
 		return nil, errors.New("timeout")
 	}
+	if rsp == nil {
+		// Channel was closed
+		return nil, errors.New("chanel closed unexpectedly")
+	}
+	dht.AddHost(ctx, routing.NewRouteHost(rsp.Sender))
+
+	response := rsp.Data.(*packet.ResponseDataRPC)
+	if response.Success {
+		return response.Result, nil
+	}
+	return nil, errors.New(response.Error)
 }
 
 // AddReceivedKey adds a new received key from target.
