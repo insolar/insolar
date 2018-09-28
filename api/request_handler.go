@@ -281,6 +281,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 
 }
 
+// ProcessIsAuthorized processes is_auth query type
 func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	routResult, err := rh.sendRequest("IsAuthorized", []interface{}{})

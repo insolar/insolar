@@ -54,6 +54,7 @@ func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 	node.Destroy()
 }
 
+// IsAuthorized checks is signature correct
 func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
 
 	var ecdsaPair utils.EcdsaPair
