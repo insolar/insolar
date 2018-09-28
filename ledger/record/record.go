@@ -117,3 +117,8 @@ func (ref Reference) IsEqual(ref2 Reference) bool {
 func (ref Reference) IsNotEqual(ref2 Reference) bool {
 	return !ref.IsEqual(ref2)
 }
+
+// String returns Base58 string representation of Reference.
+func (ref Reference) String() string {
+	return ref.CoreRef().String()
+}
