@@ -42,7 +42,7 @@ func TestTransferMoney(t *testing.T) {
 	transferResponse := &sendMoneyResponse{}
 	unmarshalResponse(t, body, transferResponse)
 
-	assert.Equal(t, true, transferResponse.Success)
+	assert.True(t, transferResponse.Success)
 
 	newFirstBalance := getBalance(t, firstMemberRef)
 	newSecondBalance := getBalance(t, secondMemberRef)
@@ -94,7 +94,7 @@ func TestTransferAllAmount(t *testing.T) {
 	transferResponse := &sendMoneyResponse{}
 	unmarshalResponse(t, body, transferResponse)
 
-	assert.Equal(t, true, transferResponse.Success)
+	assert.True(t, transferResponse.Success)
 
 	newFirstBalance := getBalance(t, firstMemberRef)
 	newSecondBalance := getBalance(t, secondMemberRef)
@@ -143,7 +143,7 @@ func _TestTransferToMyself(t *testing.T) {
 	transferResponse := &sendMoneyResponse{}
 	unmarshalResponse(t, body, transferResponse)
 
-	assert.Equal(t, true, transferResponse.Success)
+	assert.True(t, transferResponse.Success)
 
 	newBalance := getBalance(t, memberRef)
 
@@ -167,7 +167,7 @@ func TestTransferTwoTimes(t *testing.T) {
 	})
 	transferResponse := &sendMoneyResponse{}
 	unmarshalResponse(t, firstBody, transferResponse)
-	assert.Equal(t, true, transferResponse.Success)
+	assert.True(t, transferResponse.Success)
 
 	secondBody := getResponseBody(t, postParams{
 		"query_type": "send_money",
@@ -176,7 +176,7 @@ func TestTransferTwoTimes(t *testing.T) {
 		"amount":     100,
 	})
 	unmarshalResponse(t, secondBody, transferResponse)
-	assert.Equal(t, true, transferResponse.Success)
+	assert.True(t, transferResponse.Success)
 
 	newFirstBalance := getBalance(t, firstMemberRef)
 	newSecondBalance := getBalance(t, secondMemberRef)
