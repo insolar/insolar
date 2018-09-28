@@ -90,14 +90,14 @@ func (rd *RootDomain) IsAuthorized() bool {
 	// Register node
 	serPubKey, err := utils.SerializePublicKey(privateKey.PublicKey)
 	if err != nil {
-		return false
+		panic(err)
 	}
 	nodeRef := rd.RegisterNode(serPubKey, "virtual")
 
 	// Validate
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
-		return false
+		panic(err)
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 

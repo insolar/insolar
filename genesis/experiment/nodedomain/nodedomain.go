@@ -59,7 +59,7 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 	var ecdsaPair utils.EcdsaPair
 	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaPair)
 	if err != nil || len(rest) != 0 {
-		panic(err)
+		panic("Something wrong with decoding of signature")
 	}
 
 	nodeR := nd.GetNodeRecord(nodeRef)
