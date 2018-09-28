@@ -70,6 +70,6 @@ func GetCurve() elliptic.Curve {
 }
 
 type EcdsaPair struct {
-	First  *big.Int `asn1:"F"`
-	Second *big.Int `asn1:"S"`
+	First  *big.Int
+	Second *big.Int
 }
