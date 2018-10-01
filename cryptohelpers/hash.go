@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package crypto_helpers
+package cryptohelpers
 
 import "golang.org/x/crypto/sha3"
 

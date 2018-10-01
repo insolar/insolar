@@ -20,7 +20,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 
-	ecdsa_helper "github.com/insolar/insolar/crypto_helpers/ecdsa"
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/genesis/proxy/member"
 	"github.com/insolar/insolar/genesis/proxy/nodedomain"
 	"github.com/insolar/insolar/genesis/proxy/wallet"

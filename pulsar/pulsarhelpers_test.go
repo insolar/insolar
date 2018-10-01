@@ -3,7 +3,7 @@ package pulsar
 import (
 	"testing"
 
-	ecdsa_helper "github.com/insolar/insolar/crypto_helpers/ecdsa"
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/stretchr/testify/assert"
 )
 

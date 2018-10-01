@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	ecdsa_helper "github.com/insolar/insolar/crypto_helpers/ecdsa"
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

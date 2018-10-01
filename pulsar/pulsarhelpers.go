@@ -10,8 +10,8 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/crypto_helpers"
-	ecdsa_helper "github.com/insolar/insolar/crypto_helpers/ecdsa"
+	"github.com/insolar/insolar/cryptohelpers"
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/ledger/hash"
 )
 
@@ -33,7 +33,7 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 	r.SetBytes(signature[:(sigLen / 2)])
 	s.SetBytes(signature[(sigLen / 2):])
 
-	hash := crypto_helpers.MakeSha3Hash(b.Bytes())
+	hash := cryptohelpers.MakeSha3Hash(b.Bytes())
 	publicKey, err := ecdsa_helper.ImportPublicKey(pub)
 	if err != nil {
 		return false, err
@@ -50,7 +50,7 @@ func singData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	hash := crypto_helpers.MakeSha3Hash(b.Bytes())
+	hash := cryptohelpers.MakeSha3Hash(b.Bytes())
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
 	if err != nil {
 		return nil, err
