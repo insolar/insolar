@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -36,6 +35,45 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+type messageBusMock struct {
+	handlers map[core.MessageType]core.MessageHandler
+}
+
+func newMessageBusMock() *messageBusMock {
+	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
+}
+
+func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandler) error {
+	_, ok := mb.handlers[p]
+	if ok {
+		return errors.New("handler for this type already exists")
+	}
+
+	mb.handlers[p] = handler
+	return nil
+}
+
+func (mb *messageBusMock) Start(components core.Components) error {
+	panic("implement me")
+}
+
+func (mb *messageBusMock) Stop() error {
+	panic("implement me")
+}
+
+func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
+	handler, ok := mb.handlers[m.Type()]
+	if !ok {
+		return nil, errors.New("no handler for this message type")
+	}
+
+	return handler(m)
+}
+
+func (mb *messageBusMock) SendAsync(m core.Message) {
+	panic("implement me")
+}
 
 type mockNetworkCommonFacade struct {
 	cascade *cascade.Cascade
@@ -51,7 +89,7 @@ func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
 	return &mockNetworkCommonFacade{
 		cascade: &c,
 		pm:      &MockPulseManager{},
-		mb:      ledgertestutil.NewMessageBusMock(),
+		mb:      newMessageBusMock(),
 	}
 }
 
