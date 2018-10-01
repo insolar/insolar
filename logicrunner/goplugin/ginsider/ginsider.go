@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/tylerb/gls"
 )
@@ -70,14 +69,13 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return errors.Wrapf(err, "Can't find wrapper for %s", args.Method)
 	}
 
-	wrapper, ok := symbol.(func(ph proxyctx.ProxyHelper, object []byte,
-		data []byte) ([]byte, []byte, error))
+	wrapper, ok := symbol.(func(object []byte, data []byte) ([]byte, []byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
 	gls.Set("ctx", args.Context)
-	state, result, err := wrapper(t.GI, args.Data, args.Arguments) // may be entire args???
+	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
 	gls.Cleanup()
 
 	if err != nil {
@@ -101,12 +99,12 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
 	}
 
-	f, ok := symbol.(func(ph proxyctx.ProxyHelper, data []byte) ([]byte, error))
+	f, ok := symbol.(func(data []byte) ([]byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	resValues, err := f(t.GI, args.Arguments)
+	resValues, err := f(args.Arguments)
 	if err != nil {
 		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
