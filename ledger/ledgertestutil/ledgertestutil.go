@@ -35,7 +35,7 @@ type messageBusMock struct {
 	handlers map[core.MessageType]core.MessageHandler
 }
 
-func NewMessageBusMock() *messageBusMock {
+func newMessageBusMock() *messageBusMock {
 	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
 }
 
@@ -91,7 +91,7 @@ func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 	assert.NoError(t, err)
 
 	// Init components.
-	mb := NewMessageBusMock()
+	mb := newMessageBusMock()
 	components := core.Components{MessageBus: mb}
 
 	// Create ledger.
