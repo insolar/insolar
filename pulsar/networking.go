@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/crypto_helpers/ecdsa"
 	"github.com/insolar/insolar/log"
 )
 
@@ -98,7 +99,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	}
 
 	generator := StandardEntropyGenerator{}
-	convertedKey, err := ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
+	convertedKey, err := ecdsa.ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		return err
 	}
@@ -133,7 +134,7 @@ func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) 
 		return err
 	}
 
-	convertedKey, err := ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
+	convertedKey, err := ecdsa.ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		panic(err)
 	}

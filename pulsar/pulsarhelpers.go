@@ -10,8 +10,8 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
+	ecdsa_helper "github.com/insolar/insolar/crypto_helpers/ecdsa"
 	"github.com/insolar/insolar/ledger/hash"
-	"golang.org/x/crypto/sha3"
 )
 
 func checkPayloadSignature(request *Payload) (bool, error) {
@@ -32,18 +32,13 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 	r.SetBytes(signature[:(sigLen / 2)])
 	s.SetBytes(signature[(sigLen / 2):])
 
-	h := sha3.New256()
-	_, err = h.Write(b.Bytes())
-	if err != nil {
-		return false, err
-	}
-	hash := h.Sum(nil)
-	publicKey, err := ImportPublicKey(pub)
+	hash := ecdsa_helper.MakeHash(b.Bytes())
+	publicKey, err := ecdsa_helper.ImportPublicKey(pub)
 	if err != nil {
 		return false, err
 	}
 
-	return ecdsa.Verify(publicKey, hash, &r, &s), nil
+	return ecdsa.Verify(publicKey, hash[:], &r, &s), nil
 }
 
 func singData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
@@ -54,13 +49,8 @@ func singData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	h := sha3.New256()
-	_, err = h.Write(b.Bytes())
-	if err != nil {
-		return nil, err
-	}
-	hash := h.Sum(nil)
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
+	hash := ecdsa_helper.MakeHash(b.Bytes())
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
 	if err != nil {
 		return nil, err
 	}

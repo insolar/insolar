@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	ecdsa_helper "github.com/insolar/insolar/crypto_helpers/ecdsa"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -103,19 +104,19 @@ func NewPulsar(
 	}
 
 	// Parse private key from config
-	privateKey, err := ImportPrivateKey(configuration.PrivateKey)
+	privateKey, err := ecdsa_helper.ImportPrivateKey(configuration.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 	pulsar := &Pulsar{
-		Sock:                  listenerImpl,
-		SockConnectionType:    configuration.ConnectionType,
-		Neighbours:            map[string]*Neighbour{},
-		PrivateKey:            privateKey,
-		Config:                configuration,
-		Storage:               storage,
-		EntropyGenerator:      entropyGenerator,
-		State:                 WaitingForTheStart,
+		Sock:               listenerImpl,
+		SockConnectionType: configuration.ConnectionType,
+		Neighbours:         map[string]*Neighbour{},
+		PrivateKey:         privateKey,
+		Config:             configuration,
+		Storage:            storage,
+		EntropyGenerator:   entropyGenerator,
+		State:              WaitingForTheStart,
 		EntropyGenerationLock: sync.Mutex{},
 		OwnedBftRow:           map[string]*BftCell{},
 		BftGrid:               map[string]map[string]*BftCell{},
@@ -133,7 +134,7 @@ func NewPulsar(
 		if len(neighbour.PublicKey) == 0 {
 			continue
 		}
-		publicKey, err := ImportPublicKey(neighbour.PublicKey)
+		publicKey, err := ecdsa_helper.ImportPublicKey(neighbour.PublicKey)
 		if err != nil {
 			continue
 		}
@@ -235,7 +236,7 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 func (pulsar *Pulsar) RefreshConnections() {
 	for _, neighbour := range pulsar.Neighbours {
 		if neighbour.OutgoingClient == nil {
-			publicKey, err := ExportPublicKey(neighbour.PublicKey)
+			publicKey, err := ecdsa_helper.ExportPublicKey(neighbour.PublicKey)
 			if err != nil {
 				continue
 			}
@@ -298,7 +299,7 @@ func (pulsar *Pulsar) SyncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pu
 	signedPulsars := 0
 
 	for _, node := range pulsar.Neighbours {
-		nodeKey, err := ExportPublicKey(node.PublicKey)
+		nodeKey, err := ecdsa_helper.ExportPublicKey(node.PublicKey)
 		if err != nil {
 			log.Error(err)
 			continue
@@ -374,7 +375,7 @@ func (pulsar *Pulsar) BroadcastVector() {
 		return
 	}
 
-	pubKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	pubKey, err := ecdsa_helper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		pulsar.switchStateTo(Failed, err)
 		return
@@ -592,7 +593,7 @@ func (pulsar *Pulsar) stateSwitchedToReceivingVector() {
 }
 
 func (pulsar *Pulsar) stateSwitchedToVerifying() {
-	currentPulsarRow, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	currentPulsarRow, err := ecdsa_helper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		pulsar.switchStateTo(Failed, err)
 	}
@@ -841,7 +842,7 @@ func (pulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
 	if err != nil {
 		return nil, err
 	}
-	pubKey, err := ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	pubKey, err := ecdsa_helper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		return nil, err
 	}

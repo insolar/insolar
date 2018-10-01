@@ -14,11 +14,10 @@
  *    limitations under the License.
  */
 
-package pulsar
+package ecdsa
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"testing"
 
@@ -26,7 +25,7 @@ import (
 )
 
 func TestExportImportPrivateKey(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	privateKey, _ := ecdsa.GenerateKey(GetCurve(), rand.Reader)
 
 	encoded, err := ExportPrivateKey(privateKey)
 	decoded, err := ImportPrivateKey(encoded)
@@ -36,7 +35,7 @@ func TestExportImportPrivateKey(t *testing.T) {
 }
 
 func TestExportImportPublicKey(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	privateKey, _ := ecdsa.GenerateKey(GetCurve(), rand.Reader)
 	publicKey := &privateKey.PublicKey
 
 	encoded, err := ExportPublicKey(publicKey)
