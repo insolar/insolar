@@ -10,17 +10,24 @@ import (
 )
 
 // StartInsgorund starts `insgorund` process
-func StartInsgorund(cmdPath string, listen string, upstreamAddr string) (func(), error) {
+func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string) (func(), error) {
 	var args []string
 	if listen != "" {
 		args = append(args, "-l", listen)
 	} else {
 		return nil, errors.New("listen is required to start `insgorund`")
 	}
+	if lProto != "" {
+		args = append(args, "--proto", lProto)
+	}
+
 	if upstreamAddr != "" {
 		args = append(args, "--rpc", upstreamAddr)
 	} else {
 		return nil, errors.New("address of the upstream is required to start `insgorund`")
+	}
+	if upstreamProto != "" {
+		args = append(args, "--rpc-proto", upstreamProto)
 	}
 
 	if cmdPath == "" {

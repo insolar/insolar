@@ -177,7 +177,7 @@ func stopInsolard() error {
 var insgorundCleaner func()
 
 func startInsgorund() (err error) {
-	insgorundCleaner, err = testutils.StartInsgorund(insgorundPath, "127.0.0.1:18181", "127.0.0.1:18182")
+	insgorundCleaner, err = testutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:18181", "tcp", "127.0.0.1:18182")
 	if err != nil {
 		return errors.Wrap(err, "[ startInsolard ] could't wait for insolard to start completely: ")
 	}
