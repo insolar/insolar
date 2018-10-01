@@ -68,6 +68,14 @@ func (f *mockFuture) Result() <-chan *packet.Packet {
 	return f.result
 }
 
+func (f *mockFuture) GetResult(duration time.Duration) (*packet.Packet, error) {
+	result, ok := <-f.Result()
+	if !ok || result == nil {
+		return nil, errors.New("channel is closed")
+	}
+	return result, nil
+}
+
 func (f *mockFuture) SetResult(msg *packet.Packet) {
 	f.result <- msg
 }

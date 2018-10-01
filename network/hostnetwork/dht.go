@@ -251,16 +251,6 @@ func (dht *DHT) Listen() error {
 	return dht.transport.Start()
 }
 
-func (dht *DHT) getResultWithTimeout(future transport.Future, duration time.Duration) (result *packet.Packet, timeout bool) {
-	select {
-	case result = <-future.Result():
-		return result, false
-	case <-time.After(duration):
-		future.Cancel()
-		return nil, true
-	}
-}
-
 // Bootstrap attempts to bootstrap the network using the BootstrapHosts provided
 // to the Options struct. This will trigger an iterateBootstrap to the provided
 // BootstrapHosts.
@@ -312,9 +302,9 @@ func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilde
 	for _, f := range futures {
 		go func(f transport.Future) {
 			defer wg.Done()
-			result, timeout := dht.getResultWithTimeout(f, dht.options.PacketTimeout)
-			if timeout {
-				log.Error("Error getting nearest hosts: timeout")
+			result, err := f.GetResult(dht.options.PacketTimeout)
+			if err != nil {
+				log.Errorln("Error getting nearest hosts:", err.Error())
 				return
 			}
 			data := result.Data.(*packet.ResponseDataFindHost)
@@ -383,9 +373,9 @@ func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBui
 			log.Error(err)
 			return false
 		}
-		result, timeout := dht.getResultWithTimeout(res, dht.options.PingTimeout)
-		if timeout {
-			log.Warn("gotBootstrap: timeout")
+		result, err := res.GetResult(dht.options.PingTimeout)
+		if err != nil {
+			log.Warn("gotBootstrap:", err.Error())
 			return false
 		}
 		log.Info("checking response")
@@ -628,9 +618,9 @@ func (dht *DHT) selectResultChan(
 func (dht *DHT) setUpResultChan(futures []transport.Future, ctx hosthandler.Context, resultChan chan *packet.Packet) {
 	for _, f := range futures {
 		go func(future transport.Future, ctx hosthandler.Context, resultChan chan *packet.Packet) {
-			result, timeout := dht.getResultWithTimeout(future, dht.options.PacketTimeout)
-			if timeout || result == nil {
-				// Timeout occurred or channel was closed
+			result, err := future.GetResult(dht.options.PacketTimeout)
+			if err != nil {
+				log.Warn("setUpResultChan future error:", err.Error())
 				return
 			}
 			dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
@@ -1020,8 +1010,8 @@ func (dht *DHT) AddHost(ctx hosthandler.Context, host *routing.RouteHost) {
 			bucket = append(bucket, host)
 			bucket = bucket[1:]
 		} else {
-			_, timeout := dht.getResultWithTimeout(future, dht.options.PingTimeout)
-			if !timeout {
+			_, err := future.GetResult(dht.options.PingTimeout)
+			if err == nil {
 				return
 			}
 			bucket = bucket[1:]
@@ -1145,14 +1135,9 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 		return nil, errors.Wrap(err, "Failed transport to send request")
 	}
 
-	rsp, timeout := dht.getResultWithTimeout(future, dht.options.PacketTimeout)
-
-	if timeout {
-		return nil, errors.New("timeout")
-	}
-	if rsp == nil {
-		// Channel was closed
-		return nil, errors.New("chanel closed unexpectedly")
+	rsp, err := future.GetResult(dht.options.PacketTimeout)
+	if err != nil {
+		return nil, errors.Wrap(err, "RemoteProcedureCall error")
 	}
 	dht.AddHost(ctx, routing.NewRouteHost(rsp.Sender))
 
