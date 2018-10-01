@@ -26,6 +26,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -194,4 +195,40 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		firstPulsar.StopServer()
 		secondPulsar.StopServer()
 	}()
+}
+
+func TestPulsar_ConnectToNode(t *testing.T) {
+	cfg := configuration.NewConfiguration()
+	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
+	assert.NoError(t, err)
+	err = network.Start(core.Components{})
+	assert.NoError(t, err)
+
+	hostAddress := network.GetAddress()
+
+	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	firstPublicExported, err := ExportPrivateKey(firstKey)
+	assert.NoError(t, err)
+	storage := &pulsartestutil.MockStorage{}
+	storage.On("GetLastPulse").Return(&core.Pulse{PulseNumber: 123}, nil)
+
+	newPulsar, err := NewPulsar(configuration.Pulsar{
+		ConnectionType:      "tcp",
+		MainListenerAddress: ":1640",
+		PrivateKey:          firstPublicExported,
+		BootstrapNodes:      []string{hostAddress},
+		BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "0.0.0.0:18091", BehindNAT: false},
+		Neighbours:          []configuration.PulsarNodeAddress{}},
+		storage,
+		&RPCClientWrapperFactoryImpl{},
+		pulsartestutil.MockEntropyGenerator{},
+		net.Listen,
+	)
+
+	newPulsar.StartConsensusProcess(core.PulseNumber(1543))
+	time.Sleep(10 * time.Minute)
+
+	defer network.Stop()
+	defer newPulsar.StopServer()
 }

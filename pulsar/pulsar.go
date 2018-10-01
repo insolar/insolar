@@ -777,6 +777,16 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 		receiverHost := host.NewHost(receiverAddress)
 
 		b := packet.NewBuilder()
+		pingPacket := packet.NewPingPacket(pulsarHost, receiverHost)
+		pingCall, err := t.SendRequest(pingPacket)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		pingResult := <-pingCall.Result()
+		receiverHost.ID = pingResult.Sender.ID
+
+		b = packet.NewBuilder()
 		request := b.Sender(pulsarHost).Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(packet.TypeGetRandomHosts).Build()
 
 		call, err := t.SendRequest(request)
@@ -789,7 +799,7 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 			log.Error(result.Error)
 			continue
 		}
-		body := result.Data.(packet.ResponseGetRandomHosts)
+		body := result.Data.(*packet.ResponseGetRandomHosts)
 		if len(body.Error) != 0 {
 			log.Error(body.Error)
 			continue
