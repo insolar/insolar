@@ -49,9 +49,14 @@ func Bytes2PulseNumber(buf []byte) PulseNumber {
 
 // Pulse is base data structure for a pulse.
 type Pulse struct {
-	PulseNumber PulseNumber
-	Entropy     Entropy
-	Signs       map[string]PulseSenderConfirmation
+	PulseNumber     PulseNumber
+	NextPulseNumber PulseNumber
+	Entropy         Entropy
+	Signs           map[string]PulseSenderConfirmation
+}
+
+func (p *Pulse) PulseDuration() time.Duration {
+	return time.Second * time.Duration(p.NextPulseNumber-p.PulseNumber)
 }
 
 // Information about pulse's confirmations
