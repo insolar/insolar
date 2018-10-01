@@ -17,9 +17,6 @@
 package pulsar
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"net"
 	"net/rpc"
 	"testing"
@@ -44,7 +41,7 @@ func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RPCClientWrapper {
 
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	assertObj := assert.New(t)
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	privateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	expectedPrivateKey, _ := ecdsa_helper.ExportPrivateKey(privateKey)
 	config := configuration.Pulsar{
 		ConnectionType:      "testType",
@@ -83,13 +80,13 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 func TestNewPulsar_WithNeighbours(t *testing.T) {
 	assertObj := assert.New(t)
 
-	firstPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	firstExpectedKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
 
-	secondPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	secondPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	secondExpectedKey, _ := ecdsa_helper.ExportPublicKey(&secondPrivateKey.PublicKey)
 
-	expectedPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	expectedPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	parsedExpectedPrivateKey, _ := ecdsa_helper.ExportPrivateKey(expectedPrivateKey)
 	config := configuration.Pulsar{
 		ConnectionType:      "testType",
@@ -123,7 +120,7 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(true)
 
-	firstPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
@@ -143,7 +140,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 	mockClientWrapper.On("Lock")
 	mockClientWrapper.On("Unlock")
 
-	firstPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
@@ -156,7 +153,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *testing.T) {
-	mainPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
@@ -171,7 +168,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 	replyChan := &rpc.Call{Done: done}
 	mockClientWrapper.Done = replyChan
 
-	firstPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
@@ -182,7 +179,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.T) {
-	mainPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
@@ -197,7 +194,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 	replyChan := &rpc.Call{Done: done}
 	mockClientWrapper.Done = replyChan
 
-	firstPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
@@ -208,14 +205,14 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
-	mainPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
 		PrivateKey:       mainPrivateKey,
 		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
 	}
-	firstPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	payload := Payload{Body: HandshakePayload{Entropy: pulsartestutil.MockEntropy}}
 	sign, err := singData(firstPrivateKey, payload.Body)
@@ -238,7 +235,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 }
 
 //func TestPulsar_stateSwitchedToVerifying_OnePulsar(t *testing.T) {
-//	mainPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+//	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
 //	assert.NoError(t, err)
 //	pulsar := &Pulsar{
 //		Neighbours:       map[string]*Neighbour{},

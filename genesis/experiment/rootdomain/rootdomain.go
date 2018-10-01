@@ -49,8 +49,7 @@ func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	return nd.RegisterNode(publicKey, role).String()
 }
 
-// MakeSeed makes random seed
-func MakeSeed() []byte {
+func makeSeed() []byte {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	if err != nil {
@@ -68,7 +67,7 @@ func (rd *RootDomain) IsAuthorized() bool {
 	}
 
 	// Make signature
-	seed := MakeSeed()
+	seed := makeSeed()
 	signature, err := ecdsa_helper.Sign(seed, privateKey)
 	if err != nil {
 		panic(err)

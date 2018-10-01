@@ -1,8 +1,6 @@
 package pulsar
 
 import (
-	"crypto/ecdsa"
-	"crypto/rand"
 	"testing"
 
 	ecdsa_helper "github.com/insolar/insolar/crypto_helpers/ecdsa"
@@ -11,8 +9,10 @@ import (
 
 func TestSingAndVerify(t *testing.T) {
 	assertObj := assert.New(t)
-	privateKey, _ := ecdsa.GenerateKey(ecdsa_helper.GetCurve(), rand.Reader)
-	publicKey, _ := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
+	privateKey, err := ecdsa_helper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	publicKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
+	assert.NoError(t, err)
 
 	signature, err := singData(privateKey, "This is the message to be signed and verified!")
 	assertObj.NoError(err)

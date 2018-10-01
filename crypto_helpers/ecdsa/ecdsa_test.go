@@ -17,7 +17,6 @@
 package ecdsa
 
 import (
-	"crypto/ecdsa"
 	"crypto/rand"
 	"testing"
 
@@ -25,22 +24,48 @@ import (
 )
 
 func TestExportImportPrivateKey(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(GetCurve(), rand.Reader)
+	privateKey, _ := GeneratePrivateKey()
 
 	encoded, err := ExportPrivateKey(privateKey)
-	decoded, err := ImportPrivateKey(encoded)
-
 	assert.NoError(t, err)
+	decoded, err := ImportPrivateKey(encoded)
+	assert.NoError(t, err)
+
 	assert.ObjectsAreEqual(decoded, privateKey)
 }
 
 func TestExportImportPublicKey(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(GetCurve(), rand.Reader)
+	privateKey, _ := GeneratePrivateKey()
 	publicKey := &privateKey.PublicKey
 
 	encoded, err := ExportPublicKey(publicKey)
-	decoded, err := ImportPublicKey(encoded)
-
 	assert.NoError(t, err)
+	decoded, err := ImportPublicKey(encoded)
+	assert.NoError(t, err)
+
 	assert.ObjectsAreEqual(decoded, privateKey)
+}
+
+func makeSeed() []byte {
+	seed := make([]byte, 32)
+	_, err := rand.Read(seed)
+	if err != nil {
+		panic(err)
+	}
+
+	return seed
+}
+
+func TestSignVerify(t *testing.T) {
+	privateKey, _ := GeneratePrivateKey()
+	seed := makeSeed()
+	sign, err := Sign(seed, privateKey)
+	assert.NoError(t, err)
+
+	pubKeyStr, err := ExportPublicKey(&privateKey.PublicKey)
+	assert.NoError(t, err)
+
+	ok, err := Verify(seed, sign, pubKeyStr)
+	assert.NoError(t, err)
+	assert.True(t, ok)
 }

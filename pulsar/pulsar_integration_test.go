@@ -17,9 +17,6 @@
 package pulsar
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"net"
 	"testing"
 	"time"
@@ -33,14 +30,14 @@ import (
 )
 
 func TestTwoPulsars_Handshake(t *testing.T) {
-	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	firstPublic, err := ecdsa_helper.ExportPublicKey(&firstKey.PublicKey)
 	assert.NoError(t, err)
 	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 
-	secondKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	secondKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	secondPublic, err := ecdsa_helper.ExportPublicKey(&secondKey.PublicKey)
 	assert.NoError(t, err)
@@ -97,7 +94,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 
 func TestOnePulsar_FullStatesTransition(t *testing.T) {
 	t.Skip("should be re-written after refactoring the body of pulsar")
-	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
@@ -133,14 +130,14 @@ func TestOnePulsar_FullStatesTransition(t *testing.T) {
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	t.Skip("should be re-written after refactoring the body of pulsar")
-	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	firstKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	firstPublic, err := ecdsa_helper.ExportPublicKey(&firstKey.PublicKey)
 	assert.NoError(t, err)
 	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 
-	secondKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	secondKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	secondPublic, err := ecdsa_helper.ExportPublicKey(&secondKey.PublicKey)
 	assert.NoError(t, err)

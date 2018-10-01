@@ -62,23 +62,24 @@ func parseInputParams() {
 	flag.Parse()
 }
 
-func printDefaultConfig(out io.Writer) {
-	cfgHolder := configuration.NewHolder()
-
-	_, err := out.Write([]byte(configuration.ToString(cfgHolder.Configuration)))
+func writeToOutput(out io.Writer, data string) {
+	_, err := out.Write([]byte(data))
 	if err != nil {
 		fmt.Println("Can't write data to output", err)
 		os.Exit(1)
 	}
 }
 
+func printDefaultConfig(out io.Writer) {
+	cfgHolder := configuration.NewHolder()
+
+	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
+}
+
 func randomRef(out io.Writer) {
 	ref := core.RandomRef()
-	_, err := out.Write([]byte(ref.String() + "\n"))
-	if err != nil {
-		fmt.Println("Can't write data to output", err)
-		os.Exit(1)
-	}
+
+	writeToOutput(out, ref.String()+"\n")
 }
 
 func generateKeysPair(out io.Writer) {
@@ -103,7 +104,7 @@ func generateKeysPair(out io.Writer) {
 	result := fmt.Sprintf("Public key:\n %s\n", pubKeyStr)
 	result += fmt.Sprintf("Private key:\n %s", privKeyStr)
 
-	out.Write([]byte(result))
+	writeToOutput(out, result)
 }
 
 func main() {

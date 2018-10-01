@@ -64,12 +64,12 @@ func ExportPublicKey(publicKey *ecdsa.PublicKey) (string, error) {
 func ImportPrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
 	block, _ := pem.Decode([]byte(pemEncoded))
 	if block == nil {
-		return nil, errors.New("[ ImportPrivateKey ] Problems with parsing")
+		return nil, errors.New("[ ImportPrivateKey ] Problems with decoding")
 	}
 	x509Encoded := block.Bytes
 	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("[ ImportPrivateKey ] Problems with parsing")
 	}
 	return privateKey, nil
 }
@@ -78,27 +78,29 @@ func ImportPrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
 func ImportPublicKey(pemPubEncoded string) (*ecdsa.PublicKey, error) {
 	blockPub, _ := pem.Decode([]byte(pemPubEncoded))
 	if blockPub == nil {
-		return nil, errors.New("[ ImportPublicKey ] Problems with parsing")
+		return nil, errors.New("[ ImportPublicKey ] Problems with decoding")
 	}
 	x509EncodedPub := blockPub.Bytes
 	genericPublicKey, err := x509.ParsePKIXPublicKey(x509EncodedPub)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("[ ImportPublicKey ] Problems with parsing")
 	}
-	publicKey := genericPublicKey.(*ecdsa.PublicKey)
+	publicKey, ok := genericPublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("[ ImportPublicKey ] Problems with casting")
+	}
 	return publicKey, nil
 }
 
-// EcdsaPair represents two ints for ecdsa
-type EcdsaPair struct {
+type ecdsaPair struct {
 	First  *big.Int
 	Second *big.Int
 }
 
 // Sign signs given seed
-func Sign(seed []byte, key *ecdsa.PrivateKey) ([]byte, error) {
+func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 
-	hash := MakeHash(seed)
+	hash := MakeHash(data)
 
 	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
 
@@ -106,18 +108,18 @@ func Sign(seed []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Sign ]")
 	}
 
-	data, err := asn1.Marshal(EcdsaPair{First: r, Second: s})
+	signature, err := asn1.Marshal(ecdsaPair{First: r, Second: s})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ]")
 	}
 
-	return data, nil
+	return signature, nil
 }
 
 // Verifies signature
 func Verify(seed []byte, signatureRaw []byte, pubKey string) (bool, error) {
-	var ecdsaPair EcdsaPair
-	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaPair)
+	var ecdsaP ecdsaPair
+	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaP)
 	if err != nil {
 		return false, errors.Wrap(err, "[ Verify ]")
 	}
@@ -132,7 +134,7 @@ func Verify(seed []byte, signatureRaw []byte, pubKey string) (bool, error) {
 
 	hash := MakeHash(seed)
 
-	return ecdsa.Verify(savedKey, hash[:], ecdsaPair.First, ecdsaPair.Second), nil
+	return ecdsa.Verify(savedKey, hash[:], ecdsaP.First, ecdsaP.Second), nil
 }
 
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
