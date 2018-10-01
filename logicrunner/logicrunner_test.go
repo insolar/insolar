@@ -59,14 +59,19 @@ func TestMain(m *testing.M) {
 }
 
 func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testutil.ContractsBuilder, func()) {
-	rundCleaner, err := testutils.StartInsgorund(runnerbin, "127.0.0.1:7777", "127.0.0.1:7778")
+	lrSock := os.TempDir() + "/" + core.RandomRef().String()[0:10] + ".sock"
+	rundSock := os.TempDir() + "/" + core.RandomRef().String()[0:10] + ".sock"
+
+	rundCleaner, err := testutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
 	assert.NoError(t, err)
 
 	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
-		RPCListen: "127.0.0.1:7778",
+		RPCListen:   lrSock,
+		RPCProtocol: "unix",
 		GoPlugin: &configuration.GoPlugin{
-			RunnerListen: "127.0.0.1:7777",
+			RunnerListen:   rundSock,
+			RunnerProtocol: "unix",
 		},
 	})
 	assert.NoError(t, err, "Initialize runner")
@@ -135,6 +140,7 @@ func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.Rec
 }
 
 func TestBasics(t *testing.T) {
+	t.Parallel()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{})
 	assert.NoError(t, err)
 	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
@@ -195,6 +201,7 @@ func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) 
 func (*testMessageBus) SendAsync(msg core.Message) {}
 
 func TestExecution(t *testing.T) {
+	t.Parallel()
 	am := testutil.NewTestArtifactManager()
 	ld := &testLedger{am: am}
 	eb := &testMessageBus{}
@@ -238,6 +245,7 @@ func TestExecution(t *testing.T) {
 }
 
 func TestContractCallingContract(t *testing.T) {
+	t.Parallel()
 	var contractOneCode = `
 package main
 
@@ -311,6 +319,7 @@ func (r *Two) Hello(s string) string {
 }
 
 func TestInjectingDelegate(t *testing.T) {
+	t.Parallel()
 	var contractOneCode = `
 package main
 
@@ -398,6 +407,7 @@ func (r *Two) Hello(s string) string {
 }
 
 func TestBasicNotificationCall(t *testing.T) {
+	t.Parallel()
 	var contractOneCode = `
 package main
 
@@ -464,6 +474,7 @@ func (r *Two) Hello() string {
 }
 
 func TestContextPassing(t *testing.T) {
+	t.Parallel()
 	var code = `
 package main
 
@@ -498,6 +509,7 @@ func (r *One) Hello() string {
 }
 
 func TestGetChildren(t *testing.T) {
+	t.Parallel()
 	goContract := `
 package main
 
@@ -602,6 +614,7 @@ func New(n int) *Child {
 }
 
 func TestErrorInterface(t *testing.T) {
+	t.Parallel()
 	var contractOneCode = `
 package main
 
@@ -671,6 +684,7 @@ func (r *Two) AnError() error {
 }
 
 func TestRootDomainContract(t *testing.T) {
+	t.Parallel()
 	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.go" +
 		"")
 	if err != nil {
@@ -804,6 +818,7 @@ func (c *Child) GetNum() int {
 }
 
 func TestProxyGeneration(t *testing.T) {
+	t.Parallel()
 	contracts, err := preprocessor.GetRealContractsNames()
 	assert.NoError(t, err)
 

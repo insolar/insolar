@@ -16,24 +16,40 @@
 
 package configuration
 
+// LogicRunner configuration
 type LogicRunner struct {
-	RPCListen string // ip:port of main system connectivity socket
-	BuiltIn   *BuiltIn
-	GoPlugin  *GoPlugin
+	// RPCListen - address logic runner binds RPC API to
+	RPCListen string
+	// RPCProtoco - protocol (network) of above address,
+	// e.g. "tcp", "unix"... see `net.Dial`
+	RPCProtocol string
+	// BuiltIn - configuration of builtin executor
+	BuiltIn *BuiltIn
+	// GoPlugin - configuration of executor based on Go plugins
+	GoPlugin *GoPlugin
 }
 
+// BuiltIn configuration, no options at the moment
 type BuiltIn struct{}
 
+// GoPlugin configuration
 type GoPlugin struct {
-	RunnerListen string // ip:port of ginsider connectivity socket
+	// RunnerListen - address Go plugins executor listens to
+	RunnerListen string
+	// RunnerProtocol - protocol (network) of above address,
+	// e.g. "tcp", "unix"... see `net.Dial`
+	RunnerProtocol string
 }
 
+// NewLogicRunner - returns default config of the logic runner
 func NewLogicRunner() LogicRunner {
 	return LogicRunner{
-		RPCListen: "127.0.0.1:7778",
-		BuiltIn:   &BuiltIn{},
+		RPCListen:   "127.0.0.1:7778",
+		RPCProtocol: "tcp",
+		BuiltIn:     &BuiltIn{},
 		GoPlugin: &GoPlugin{
-			RunnerListen: "127.0.0.1:7777",
+			RunnerListen:   "127.0.0.1:7777",
+			RunnerProtocol: "tcp",
 		},
 	}
 }

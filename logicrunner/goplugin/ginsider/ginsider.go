@@ -37,17 +37,18 @@ import (
 
 // GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
-	dir                string
-	UpstreamRPCAddress string
-	UpstreamRPCClient  *rpc.Client
-	plugins            map[string]*plugin.Plugin
-	pluginsMutex       sync.Mutex
+	dir              string
+	UpstreamProtocol string
+	UpstreamAddress  string
+	UpstreamClient   *rpc.Client
+	plugins          map[string]*plugin.Plugin
+	pluginsMutex     sync.Mutex
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
-func NewGoInsider(path string, address string) *GoInsider {
+func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	res := GoInsider{dir: path, UpstreamRPCAddress: address}
+	res := GoInsider{dir: path, UpstreamProtocol: network, UpstreamAddress: address}
 	res.plugins = make(map[string]*plugin.Plugin)
 	return &res
 }
@@ -118,17 +119,17 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 
 // Upstream returns RPC client connected to upstream server (goplugin)
 func (gi *GoInsider) Upstream() (*rpc.Client, error) {
-	if gi.UpstreamRPCClient != nil {
-		return gi.UpstreamRPCClient, nil
+	if gi.UpstreamClient != nil {
+		return gi.UpstreamClient, nil
 	}
 
-	client, err := rpc.DialHTTP("tcp", gi.UpstreamRPCAddress)
+	client, err := rpc.DialHTTP(gi.UpstreamProtocol, gi.UpstreamAddress)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s'", gi.UpstreamRPCAddress)
+		return nil, errors.Wrapf(err, "couldn't dial '%s' over %s", gi.UpstreamAddress, gi.UpstreamProtocol)
 	}
 
-	gi.UpstreamRPCClient = client
-	return gi.UpstreamRPCClient, nil
+	gi.UpstreamClient = client
+	return gi.UpstreamClient, nil
 }
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
