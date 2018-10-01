@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -62,7 +61,7 @@ func main() {
 	server.RefreshConnections()
 
 	var nextPulseNumber core.PulseNumber
-	if server.LastPulse.PulseNumber == core.FirstPulseDate {
+	if server.LastPulse.PulseNumber == core.FirstPulseNumber {
 		nextPulseNumber = core.CalculatePulseNumber(time.Now())
 	} else {
 		waitTime := core.CalculateMsToNextPulse(server.LastPulse.PulseNumber, time.Now())
@@ -77,36 +76,33 @@ func main() {
 		log.Fatal(err)
 		panic(err)
 	}
-	pulseTicker := time.NewTicker(time.Duration(cfgHolder.Configuration.Pulsar.PulseTime) * time.Second)
-	go func() {
-		for range pulseTicker.C {
-			err = server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
-			if err != nil {
-				log.Fatal(err)
-				panic(err)
-			}
-		}
-	}()
+	//pulseTicker := time.NewTicker(time.Duration(cfgHolder.Configuration.Pulsar.PulseTime) * time.Second)
+	//go func() {
+	//	for range pulseTicker.C {
+	//		err = server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
+	//		if err != nil {
+	//			log.Fatal(err)
+	//			panic(err)
+	//		}
+	//	}
+	//}()
+	//
+	//refreshTicker := time.NewTicker(1 * time.Second)
+	//go func() {
+	//	for range refreshTicker.C {
+	//		server.RefreshConnections()
+	//	}
+	//}()
 
-	refreshTicker := time.NewTicker(1 * time.Second)
-	go func() {
-		for range refreshTicker.C {
-			server.RefreshConnections()
-		}
-	}()
+	time.Sleep(10 * time.Minute)
 
-	rl, err := readline.New("> ")
-	if err != nil {
-		panic(err)
-	}
+	//fmt.Println("Press any button to exit")
+	//_, err = rl.Readline()
+	//if err != nil {
+	//	log.Warn(err)
+	//}
 
-	fmt.Println("Press any button to exit")
-	_, err = rl.Readline()
-	if err != nil {
-		log.Warn(err)
-	}
-
-	refreshTicker.Stop()
+	//refreshTicker.Stop()
 	defer func() {
 		err := storage.Close()
 		if err != nil {

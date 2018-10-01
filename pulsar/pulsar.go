@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	transport2 "github.com/insolar/insolar/network/hostnetwork/transport"
@@ -741,7 +742,14 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 		log.Error(err)
 		pulsar.switchStateTo(Failed, err)
 	}
-	err = t.Start()
+
+	go func() {
+		err = t.Start()
+		if err != nil {
+			log.Error(err)
+		}
+	}()
+
 	if err != nil {
 		log.Error(err)
 		pulsar.switchStateTo(Failed, err)
@@ -752,7 +760,13 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 		log.Error(err)
 		pulsar.switchStateTo(Failed, err)
 	}
+	id, err := id.NewID()
+	if err != nil {
+		log.Error(err)
+		pulsar.switchStateTo(Failed, err)
+	}
 	pulsarHost := host.NewHost(pulsarHostAddress)
+	pulsarHost.ID = id
 
 	for _, bootstrapNode := range pulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)
@@ -763,7 +777,7 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 		receiverHost := host.NewHost(receiverAddress)
 
 		b := packet.NewBuilder()
-		request := b.Sender(pulsarHost).Receiver(receiverHost).Request(packet.RequestGetRandomHosts{HostsNumber: 5}).Type(packet.TypeGetRandomHosts).Build()
+		request := b.Sender(pulsarHost).Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(packet.TypeGetRandomHosts).Build()
 
 		call, err := t.SendRequest(request)
 		if err != nil {
