@@ -30,6 +30,8 @@ const (
 	RoleLightValidator
 	// RoleHeavyExecutor is responsible for permanent Disk operations.
 	RoleHeavyExecutor
+	// RoleAllRoles is responsible for sending pulse.
+	RoleAllRoles
 )
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
