@@ -349,7 +349,7 @@ func (ht *HashTable) totalHosts() int {
 	return total
 }
 
-// GetHosts returns hostsNumber (or less) hosts from the HashTable, starting from the first bucket
+// GetHosts returns hostsNumber (or less) hosts from the HashTable, starting from the last bucket
 func (ht *HashTable) GetHosts(hostsNumber int) []host.Host {
 	ht.Lock()
 	defer ht.Unlock()
@@ -357,7 +357,8 @@ func (ht *HashTable) GetHosts(hostsNumber int) []host.Host {
 	result := make([]host.Host, 0)
 
 Loop:
-	for _, bucket := range ht.RoutingTable {
+	for i := len(ht.RoutingTable) - 1; i >= 0; i-- {
+		bucket := ht.RoutingTable[i]
 		for _, routeHost := range bucket {
 			result = append(result, *routeHost.Host)
 			if len(result) == hostsNumber {

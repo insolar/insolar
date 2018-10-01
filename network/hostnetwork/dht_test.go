@@ -202,6 +202,12 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	return st, origin, tp, ncf, err
 }
 
+func realDhtParamsWithId(address string) (store.Store, *host.Origin, transport.Transport, hosthandler.NetworkCommonFacade, error) {
+	ids := make([]id.ID, 1)
+	ids[0], _ = id.NewID()
+	return realDhtParams(ids, address)
+}
+
 // Creates twenty DHTs and bootstraps each with the previous
 // at the end all should know about each other
 func TestBootstrapManyHosts(t *testing.T) {
@@ -1056,4 +1062,48 @@ func TestDHT_Getters(t *testing.T) {
 	dht1.RemovePossibleProxyID(node.GetID().String())
 	dht1.RemoveProxyHost(node.GetID().String())
 	dht1.RemoveAuthHost(node.GetID().String())
+}
+
+func TestDHT_GetHostsFromBootstrap(t *testing.T) {
+	prefix := "127.0.0.1:"
+	port := 10000
+	bootstrapAdresses := make([]string, 0)
+	dhts := make([]*DHT, 0)
+
+	defer func() {
+		for _, dht := range dhts {
+			dht.Disconnect()
+		}
+	}()
+
+	for i := 0; i < 3; i++ {
+		host := prefix + strconv.Itoa(port)
+		st, s, tp, r, _ := realDhtParamsWithId(host)
+		bootstrapAdresses = append(bootstrapAdresses, host)
+		dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false)
+		dhts = append(dhts, dht)
+		go dht.Listen()
+		dht.Bootstrap()
+		port++
+	}
+
+	bootstrapHosts := make([]*host.Host, len(bootstrapAdresses))
+	for i, h := range bootstrapAdresses {
+		address, _ := host.NewAddress(h)
+		bootstrapHosts[i] = host.NewHost(address)
+	}
+
+	for i := 0; i < 17; i++ {
+		host := prefix + strconv.Itoa(port)
+		st, s, tp, r, _ := realDhtParamsWithId(host)
+		dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 4, false)
+		dhts = append(dhts, dht)
+		go dht.Listen()
+		dht.Bootstrap()
+		dht.GetHostsFromBootstrap()
+		port++
+	}
+	lastDht := dhts[len(dhts)-1]
+	hostsCount := lastDht.HtFromCtx(GetDefaultCtx(lastDht)).TotalHosts()
+	assert.Equal(t, 19, hostsCount)
 }
