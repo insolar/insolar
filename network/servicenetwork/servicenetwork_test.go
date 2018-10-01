@@ -424,8 +424,8 @@ func Test_processPulse2(t *testing.T) {
 	firstStoredPulse, _ = ll.GetPulseManager().Current()
 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 
-	// pulse is passed to the other 11 nodes and stored there, too
-	success := waitTimeout(&wg, time.Millisecond*200)
+	// pulse is passed to the other 4 nodes and stored there, too
+	success := waitTimeout(&wg, time.Second)
 	assert.True(t, success)
 
 	for _, ldgr := range ledgers {
