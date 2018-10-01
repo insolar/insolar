@@ -29,11 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func getCurve() elliptic.Curve {
-	return elliptic.P256()
-}
-
-var P256Curve = getCurve()
+var P256Curve = elliptic.P256()
 
 // Helper-function for exporting ecdsa.PrivateKey to PEM string
 func ExportPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
