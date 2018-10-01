@@ -204,13 +204,13 @@ func (ht *HashTable) selectParallelCalls(
 	target []byte,
 	ignoredHosts []*host.Host) *RouteSet {
 
-	routeSet := NewRouteSetWithComparator(target)
+	routeSet := NewRouteSet(target)
 	var index int
 	for leftToAdd > 0 && len(indexList) > 0 {
 		index, indexList = indexList[0], indexList[1:]
 		bucketContacts := len(ht.RoutingTable[index])
 
-		rt := NewRouteSetWithComparator(target)
+		rt := NewRouteSet(target)
 
 		for i := 0; i < bucketContacts; i++ {
 			rt.Append(ht.RoutingTable[index][i])

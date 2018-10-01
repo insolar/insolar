@@ -68,7 +68,7 @@ func TestHasBit(t *testing.T) {
 }
 
 func TestRouteSet(t *testing.T) {
-	nl := NewRouteSet()
+	nl := NewRouteSet(zeros)
 	comparator := getIDWithValues()
 	n1 := &host.Host{ID: getZerodIDWithNthByte(19, 1)}
 	n2 := &host.Host{ID: getZerodIDWithNthByte(18, 1)}

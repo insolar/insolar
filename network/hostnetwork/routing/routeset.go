@@ -31,11 +31,7 @@ type RouteSet struct {
 }
 
 // NewRouteSet creates new RouteSet.
-func NewRouteSet() *RouteSet {
-	return &RouteSet{}
-}
-
-func NewRouteSetWithComparator(comparator []byte) *RouteSet {
+func NewRouteSet(comparator []byte) *RouteSet {
 	return &RouteSet{comparator: comparator}
 }
 
