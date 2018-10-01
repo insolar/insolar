@@ -18,7 +18,7 @@ package crypto_helpers
 
 import "golang.org/x/crypto/sha3"
 
-// MakeSha3Hash makes hash from seed
-func MakeSha3Hash(seed []byte) [32]byte {
-	return sha3.Sum256(seed)
+// MakeSha3Hash makes sha3 256 hash
+func MakeSha3Hash(data []byte) [32]byte {
+	return sha3.Sum256(data)
 }
