@@ -25,19 +25,15 @@ import (
 	"encoding/pem"
 	"math/big"
 
+	"github.com/insolar/insolar/crypto_helpers"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/sha3"
 )
 
-// MakeHash makes hash from seed
-func MakeHash(seed []byte) [32]byte {
-	return sha3.Sum256(seed)
-}
-
-// GetCurve gets default curve
-func GetCurve() elliptic.Curve {
+func getCurve() elliptic.Curve {
 	return elliptic.P256()
 }
+
+var P256Curve elliptic.Curve = getCurve()
 
 // Helper-function for exporting ecdsa.PrivateKey to PEM string
 func ExportPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
@@ -100,7 +96,7 @@ type ecdsaPair struct {
 // Sign signs given seed
 func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 
-	hash := MakeHash(data)
+	hash := crypto_helpers.MakeSha3Hash(data)
 
 	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
 
@@ -132,11 +128,11 @@ func Verify(seed []byte, signatureRaw []byte, pubKey string) (bool, error) {
 		return false, errors.Wrap(err, "[ Verify ]")
 	}
 
-	hash := MakeHash(seed)
+	hash := crypto_helpers.MakeSha3Hash(seed)
 
 	return ecdsa.Verify(savedKey, hash[:], ecdsaP.First, ecdsaP.Second), nil
 }
 
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(GetCurve(), rand.Reader)
+	return ecdsa.GenerateKey(P256Curve, rand.Reader)
 }
