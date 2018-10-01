@@ -198,8 +198,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 }
 
 func TestPulsar_ConnectToNode(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
+	bootstrapNodeConfg := configuration.NewConfiguration()
+	network, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfg.Host, bootstrapNodeConfg.Node)
 	assert.NoError(t, err)
 	err = network.Start(core.Components{})
 	assert.NoError(t, err)

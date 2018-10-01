@@ -820,7 +820,7 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 
 	}
 
-	t.Stop()
+	defer t.Stop()
 }
 
 func (pulsar *Pulsar) stateSwitchedToFailed(err error) {

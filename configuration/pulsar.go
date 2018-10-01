@@ -74,6 +74,6 @@ BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
 
 		NumberOfRandomHosts: 1,
 		BootstrapListener:   Transport{Protocol: "UTP", Address: "0.0.0.0:18091", BehindNAT: false},
-		BootstrapNodes:      []string{"127.0.0.1:64278"},
+		BootstrapNodes:      []string{"127.0.0.1:51155"},
 	}
 }
