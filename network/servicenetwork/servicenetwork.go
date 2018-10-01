@@ -84,7 +84,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
 
-	log.Debugln("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
+	log.Debugf("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
 		method, msg.Target().String())
 
 	metrics.NetworkMessageSentTotal.Inc()
