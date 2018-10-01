@@ -44,6 +44,10 @@ func (*MockStorage) SavePulse(pulse *core.Pulse) error {
 	panic("implement me")
 }
 
+func (*MockStorage) Close() error {
+	panic("implement me")
+}
+
 // MockEntropy generator for pulsar's tests
 var MockEntropy = [64]byte{1, 2, 3, 4, 5, 6, 7, 8}
 
