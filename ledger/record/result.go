@@ -21,15 +21,23 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ClassState is common class state record.
 type ClassState interface {
+	// IsDeactivation determines if current state is deactivation.
 	IsDeactivation() bool
+	// IsAmend determines if current state is amend.
 	IsAmend() bool
+	// GetCode returns state code.
 	GetCode() *Reference
 }
 
+// ObjectState is common object state record.
 type ObjectState interface {
+	// IsDeactivation determines if current state is deactivation.
 	IsDeactivation() bool
+	// IsAmend determines if current state is amend.
 	IsAmend() bool
+	// GetMemory returns state memory.
 	GetMemory() []byte
 }
 
@@ -138,12 +146,17 @@ type ClassActivateRecord struct {
 	DefaultMemory Memory
 }
 
+// IsDeactivation determines if current state is deactivation.
 func (r *ClassActivateRecord) IsDeactivation() bool {
 	return false
 }
+
+// IsAmend determines if current state is amend.
 func (r *ClassActivateRecord) IsAmend() bool {
 	return false
 }
+
+// GetCode returns state code.
 func (r *ClassActivateRecord) GetCode() *Reference {
 	return nil
 }
@@ -158,14 +171,17 @@ type ObjectActivateRecord struct {
 	Delegate            bool
 }
 
+// IsDeactivation determines if current state is deactivation.
 func (r *ObjectActivateRecord) IsDeactivation() bool {
 	return false
 }
 
+// IsAmend determines if current state is amend.
 func (r *ObjectActivateRecord) IsAmend() bool {
 	return false
 }
 
+// GetMemory returns state memory.
 func (r *ObjectActivateRecord) GetMemory() []byte {
 	return r.Memory
 }
@@ -218,14 +234,17 @@ type ClassAmendRecord struct {
 	Migrations []Reference // CodeRecord
 }
 
+// IsDeactivation determines if current state is deactivation.
 func (r *ClassAmendRecord) IsDeactivation() bool {
 	return false
 }
 
+// IsAmend determines if current state is amend.
 func (r *ClassAmendRecord) IsAmend() bool {
 	return true
 }
 
+// GetCode returns state code.
 func (r *ClassAmendRecord) GetCode() *Reference {
 	return &r.NewCode
 }
@@ -235,18 +254,22 @@ type DeactivationRecord struct {
 	AmendRecord
 }
 
+// IsDeactivation determines if current state is deactivation.
 func (*DeactivationRecord) IsDeactivation() bool {
 	return true
 }
 
+// IsAmend determines if current state is amend.
 func (*DeactivationRecord) IsAmend() bool {
 	return false
 }
 
+// GetMemory returns state memory.
 func (*DeactivationRecord) GetMemory() []byte {
 	return nil
 }
 
+// GetCode returns state code.
 func (*DeactivationRecord) GetCode() *Reference {
 	return nil
 }
@@ -258,14 +281,17 @@ type ObjectAmendRecord struct {
 	NewMemory Memory
 }
 
+// IsDeactivation determines if current state is deactivation.
 func (r *ObjectAmendRecord) IsDeactivation() bool {
 	return false
 }
 
+// IsAmend determines if current state is amend.
 func (r *ObjectAmendRecord) IsAmend() bool {
 	return true
 }
 
+// GetMemory returns state memory.
 func (r *ObjectAmendRecord) GetMemory() []byte {
 	return r.NewMemory
 }

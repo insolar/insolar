@@ -17,33 +17,20 @@
 package pulsar
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/pulsar/pulsartestutil"
+	"github.com/stretchr/testify/assert"
 )
 
-var mockEntropy = [64]byte{1, 2, 3, 4, 5, 6, 7, 8}
-
-type MockEntropyGenerator struct {
-}
-
-func (generator *MockEntropyGenerator) GenerateEntropy() core.Entropy {
-	return mockEntropy
-}
-
 func TestNewPulse(t *testing.T) {
-	generator := &MockEntropyGenerator{}
+	generator := &pulsartestutil.MockEntropyGenerator{}
 	previousPulse := core.PulseNumber(876)
 	expectedPulse := previousPulse + 1
 
 	result := NewPulse(previousPulse, generator)
 
-	if !bytes.Equal(result.Entropy[:], mockEntropy[:]) {
-		t.Errorf("Expeced and actual entropies are different, got: %v, want: %v", result.Entropy, mockEntropy)
-	}
-
-	if result.PulseNumber != core.PulseNumber(expectedPulse) {
-		t.Errorf("Expeced and actual pulse numbers are different, got: %v, want: %v", result.PulseNumber, expectedPulse)
-	}
+	assert.Equal(t, result.Entropy[:], pulsartestutil.MockEntropy[:])
+	assert.Equal(t, result.PulseNumber, core.PulseNumber(expectedPulse))
 }

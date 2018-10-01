@@ -18,6 +18,7 @@ package storage
 
 import (
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
@@ -56,6 +57,7 @@ func (m *TransactionManager) Discard() {
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(ref *record.Reference) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
+	log.Debugf("Getting record %s", ref)
 	item, err := m.txn.Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
@@ -164,7 +166,7 @@ func (m *TransactionManager) SetObjectIndex(ref *record.Reference, idx *index.Ob
 
 // GetEntropy returns entropy from storage for given pulse.
 //
-// Entropy is used for calculating node roles.
+// GeneratedEntropy is used for calculating node roles.
 func (m *TransactionManager) GetEntropy(pulse core.PulseNumber) (*core.Entropy, error) {
 	k := prefixkey(scopeIDEntropy, pulse.Bytes())
 	item, err := m.txn.Get(k)
@@ -185,7 +187,7 @@ func (m *TransactionManager) GetEntropy(pulse core.PulseNumber) (*core.Entropy, 
 
 // SetEntropy stores given entropy for given pulse in storage.
 //
-// Entropy is used for calculating node roles.
+// GeneratedEntropy is used for calculating node roles.
 func (m *TransactionManager) SetEntropy(pulse core.PulseNumber, entropy core.Entropy) error {
 	k := prefixkey(scopeIDEntropy, pulse.Bytes())
 	return m.txn.Set(k, entropy[:])

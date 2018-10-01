@@ -30,12 +30,12 @@ type StandardEntropyGenerator struct {
 }
 
 func (generator *StandardEntropyGenerator) GenerateEntropy() core.Entropy {
-	entropy := make([]byte, len(core.Entropy{}))
+	entropy := make([]byte, core.EntropySize)
 	_, err := rand.Read(entropy)
 	if err != nil {
 		panic(err)
 	}
 	var result core.Entropy
-	copy(result[:], entropy[:len(core.Entropy{})])
+	copy(result[:], entropy[:core.EntropySize])
 	return result
 }

@@ -108,6 +108,7 @@ func JustExportedStaticFunction(int, int) {}
 `
 
 func TestBasicGeneration(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
@@ -115,12 +116,14 @@ func TestBasicGeneration(t *testing.T) {
 	err = testutil.WriteFile(tmpDir, "main.go", randomTestCode)
 	assert.NoError(t, err)
 
+	parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
+	assert.NoError(t, err)
+	assert.NotNil(t, parsed)
+
 	t.Run("wrapper", func(t *testing.T) {
+		t.Parallel()
+
 		buf := bytes.Buffer{}
-
-		parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
-		assert.NoError(t, err)
-
 		err = parsed.WriteWrapper(&buf)
 		assert.NoError(t, err)
 
@@ -130,11 +133,9 @@ func TestBasicGeneration(t *testing.T) {
 	})
 
 	t.Run("proxy", func(t *testing.T) {
+		t.Parallel()
+
 		buf := bytes.Buffer{}
-
-		parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
-		assert.NoError(t, err)
-
 		err = parsed.WriteProxy("testRef", &buf)
 		assert.NoError(t, err)
 
@@ -145,6 +146,7 @@ func TestBasicGeneration(t *testing.T) {
 }
 
 func TestConstructorsParsing(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
@@ -181,6 +183,7 @@ func NewWrong() {
 }
 
 func TestCompileContractProxy(t *testing.T) {
+	t.Parallel()
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
 	defer os.Chdir(cwd) // nolint: errcheck
@@ -237,6 +240,7 @@ func main() {
 }
 
 func TestGenerateProxyAndWrapperWithoutReturnValue(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -273,6 +277,7 @@ func ( A ) Get(){
 }
 
 func TestFailIfThereAreNoContract(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
@@ -291,6 +296,7 @@ type A struct{
 }
 
 func TestInitializationFunctionParamsProxy(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
@@ -331,6 +337,7 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 }
 
 func TestInitializationFunctionParamsWrapper(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
@@ -370,6 +377,7 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 }
 
 func TestContractOnlyIfEmbedBaseContract(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
@@ -390,6 +398,7 @@ type A struct{
 }
 
 func TestOnlyOneSmartContractMustExist(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
@@ -414,6 +423,7 @@ type B struct{
 }
 
 func TestImportsFromContract(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -462,6 +472,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType){
 }
 
 func TestAliasImportsFromContract(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -504,6 +515,7 @@ func ( A ) Get(i someAlias.SomeType){
 }
 
 func TestImportsFromContractUseInsideFunc(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -545,6 +557,7 @@ func ( A ) Get() {
 }
 
 func TestImportsFromContractUseForReturnValue(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -586,6 +599,7 @@ func ( A ) Get() path.SomeValue {
 }
 
 func TestNotMatchFileNameForProxy(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
