@@ -32,8 +32,10 @@ import (
 
 func main() {
 	listen := pflag.StringP("listen", "l", ":7777", "address and port to listen")
+	protocol := pflag.String("proto", "tcp", "listen protocol")
 	path := pflag.StringP("directory", "d", "", "directory where to store code of go plugins")
 	rpcAddress := pflag.String("rpc", "localhost:7778", "address and port of RPC API")
+	rpcProtocol := pflag.String("rpc-proto", "tcp", "protocol of RPC API")
 	pflag.Parse()
 
 	err := log.SetLevel("Debug")
@@ -51,7 +53,7 @@ func main() {
 		*path = tmpDir
 	}
 
-	insider := ginsider.NewGoInsider(*path, *rpcAddress)
+	insider := ginsider.NewGoInsider(*path, *rpcProtocol, *rpcAddress)
 	proxyctx.Current = insider
 
 	err = rpc.Register(&ginsider.RPC{GI: insider})
@@ -61,7 +63,7 @@ func main() {
 	}
 
 	rpc.HandleHTTP()
-	listener, err := net.Listen("tcp", *listen)
+	listener, err := net.Listen(*protocol, *listen)
 	if err != nil {
 		log.Fatal("couldn't setup listener on '"+*listen+"':", err)
 		os.Exit(1)

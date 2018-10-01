@@ -30,24 +30,24 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/tylerb/gls"
 )
 
 // GoInsider is an RPC interface to run code of plugins
 type GoInsider struct {
-	dir                string
-	UpstreamRPCAddress string
-	UpstreamRPCClient  *rpc.Client
-	plugins            map[string]*plugin.Plugin
-	pluginsMutex       sync.Mutex
+	dir              string
+	UpstreamProtocol string
+	UpstreamAddress  string
+	UpstreamClient   *rpc.Client
+	plugins          map[string]*plugin.Plugin
+	pluginsMutex     sync.Mutex
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
-func NewGoInsider(path string, address string) *GoInsider {
+func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
-	res := GoInsider{dir: path, UpstreamRPCAddress: address}
+	res := GoInsider{dir: path, UpstreamProtocol: network, UpstreamAddress: address}
 	res.plugins = make(map[string]*plugin.Plugin)
 	return &res
 }
@@ -70,14 +70,13 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 		return errors.Wrapf(err, "Can't find wrapper for %s", args.Method)
 	}
 
-	wrapper, ok := symbol.(func(ph proxyctx.ProxyHelper, object []byte,
-		data []byte) ([]byte, []byte, error))
+	wrapper, ok := symbol.(func(object []byte, data []byte) ([]byte, []byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
 	gls.Set("ctx", args.Context)
-	state, result, err := wrapper(t.GI, args.Data, args.Arguments) // may be entire args???
+	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
 	gls.Cleanup()
 
 	if err != nil {
@@ -101,12 +100,12 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
 	}
 
-	f, ok := symbol.(func(ph proxyctx.ProxyHelper, data []byte) ([]byte, error))
+	f, ok := symbol.(func(data []byte) ([]byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	resValues, err := f(t.GI, args.Arguments)
+	resValues, err := f(args.Arguments)
 	if err != nil {
 		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
@@ -118,17 +117,17 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 
 // Upstream returns RPC client connected to upstream server (goplugin)
 func (gi *GoInsider) Upstream() (*rpc.Client, error) {
-	if gi.UpstreamRPCClient != nil {
-		return gi.UpstreamRPCClient, nil
+	if gi.UpstreamClient != nil {
+		return gi.UpstreamClient, nil
 	}
 
-	client, err := rpc.DialHTTP("tcp", gi.UpstreamRPCAddress)
+	client, err := rpc.DialHTTP(gi.UpstreamProtocol, gi.UpstreamAddress)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't dial '%s'", gi.UpstreamRPCAddress)
+		return nil, errors.Wrapf(err, "couldn't dial '%s' over %s", gi.UpstreamAddress, gi.UpstreamProtocol)
 	}
 
-	gi.UpstreamRPCClient = client
-	return gi.UpstreamRPCClient, nil
+	gi.UpstreamClient = client
+	return gi.UpstreamClient, nil
 }
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
