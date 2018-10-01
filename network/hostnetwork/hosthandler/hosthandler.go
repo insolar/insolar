@@ -39,7 +39,9 @@ type Context context.Context
 type NetworkCommonFacade interface {
 	GetRPC() rpc.RPC
 	GetCascade() *cascade.Cascade
+	GetMessageBus() core.MessageBus
 	GetPulseManager() core.PulseManager
+	SetMessageBus(messageBus core.MessageBus)
 	SetPulseManager(manager core.PulseManager)
 }
 
@@ -47,12 +49,13 @@ type NetworkCommonFacade interface {
 type CommonFacade struct {
 	rpcPtr  rpc.RPC
 	cascade *cascade.Cascade
+	mb      core.MessageBus
 	pm      core.PulseManager
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
 func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
-	return &CommonFacade{rpcPtr: r, cascade: casc, pm: nil}
+	return &CommonFacade{rpcPtr: r, cascade: casc, mb: nil, pm: nil}
 }
 
 // GetRPC return an RPC pointer.
@@ -65,14 +68,24 @@ func (fac *CommonFacade) GetCascade() *cascade.Cascade {
 	return fac.cascade
 }
 
-// GetPulseManager returns a pulse manager pointer.
-func (fac *CommonFacade) GetPulseManager() core.PulseManager {
-	return fac.pm
+// GetMessageBus returns a message bus pointer.
+func (fac *CommonFacade) GetMessageBus() core.MessageBus {
+	return fac.mb
+}
+
+// SetMessageBus sets a message bus to common facade.
+func (fac *CommonFacade) SetMessageBus(messageBus core.MessageBus) {
+	fac.mb = messageBus
 }
 
 // SetPulseManager sets a pulse manager to common facade.
 func (fac *CommonFacade) SetPulseManager(manager core.PulseManager) {
 	fac.pm = manager
+}
+
+// GetPulseManager sets a pulse manager to common facade.
+func (fac *CommonFacade) GetPulseManager() core.PulseManager {
+	return fac.pm
 }
 
 // HostHandler is an interface which uses for host network implementation.

@@ -123,9 +123,19 @@ func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hostha
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
 
+func getMessageBus(components core.Components) (core.MessageBus, error) {
+	if components.MessageBus == nil {
+		return nil, errors.New("no core.MessageBus in components")
+	}
+	return components.MessageBus, nil
+}
+
 func getPulseManager(components core.Components) (core.PulseManager, error) {
 	if components.Ledger == nil {
-		return nil, errors.New("no core.Ledger in components")
+		return nil, errors.New("no Ledger in components")
+	}
+	if components.Ledger.GetPulseManager() == nil {
+		return nil, errors.New("no core.PulseManager in components")
 	}
 	return components.Ledger.GetPulseManager(), nil
 }
@@ -152,6 +162,13 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 		log.Error(err)
 	} else {
 		network.hostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
+	}
+
+	mb, err := getMessageBus(components)
+	if err != nil {
+		log.Error(err)
+	} else {
+		network.hostNetwork.GetNetworkCommonFacade().SetMessageBus(mb)
 	}
 
 	// TODO: may be merge bug, check copy-paste
