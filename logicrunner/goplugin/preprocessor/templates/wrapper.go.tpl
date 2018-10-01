@@ -7,7 +7,8 @@ import (
 )
 
 {{ range $method := .Methods }}
-func INSMETHOD_{{ $method.Name }}(ph proxyctx.ProxyHelper, object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, error) {
+    ph := proxyctx.Current
 
     self := new({{ $.ContractType }})
 
@@ -47,8 +48,8 @@ func INSMETHOD_{{ $method.Name }}(ph proxyctx.ProxyHelper, object []byte, data [
 
 
 {{ range $f := .Functions }}
-func INSCONSTRUCTOR_{{ $f.Name }}(ph proxyctx.ProxyHelper, data []byte) ([]byte, error) {
-
+func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
+    ph := proxyctx.Current
     {{ $f.ArgumentsZeroList }}
     err := ph.Deserialize(data, &args)
     if err != nil {
