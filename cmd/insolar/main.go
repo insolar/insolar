@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	ecdsa_helper "github.com/insolar/insolar/crypto_helpers/ecdsa"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
@@ -51,7 +52,7 @@ func chooseOutput(path string) (io.Writer, error) {
 
 func parseInputParams() {
 	flag.StringVar(&output, "output", defaultStdoutPath, "output file (use - for STDOUT)")
-	flag.StringVar(&cmd, "cmd", "default_config", "available commands: default_config | random_ref | version")
+	flag.StringVar(&cmd, "cmd", "default_config", "available commands: default_config | random_ref | version | gen_keys")
 
 	if len(os.Args) == 1 {
 		flag.Usage()
@@ -80,6 +81,31 @@ func randomRef(out io.Writer) {
 	}
 }
 
+func generateKeysPair(out io.Writer) {
+	privKey, err := ecdsa_helper.GeneratePrivateKey()
+	if err != nil {
+		fmt.Println("Problems with generating of private key:", err)
+		os.Exit(1)
+	}
+
+	privKeyStr, err := ecdsa_helper.ExportPrivateKey(privKey)
+	if err != nil {
+		fmt.Println("Problems with serialization of private key:", err)
+		os.Exit(1)
+	}
+
+	pubKeyStr, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+	if err != nil {
+		fmt.Println("Problems with serialization of public key:", err)
+		os.Exit(1)
+	}
+
+	result := fmt.Sprintf("Public key:\n %s\n", pubKeyStr)
+	result += fmt.Sprintf("Private key:\n %s", privKeyStr)
+
+	out.Write([]byte(result))
+}
+
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
@@ -95,5 +121,7 @@ func main() {
 		randomRef(out)
 	case "version":
 		fmt.Println(version.GetFullVersion())
+	case "gen_keys":
+		generateKeysPair(out)
 	}
 }

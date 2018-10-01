@@ -134,3 +134,7 @@ func Verify(seed []byte, signatureRaw []byte, pubKey string) (bool, error) {
 
 	return ecdsa.Verify(savedKey, hash[:], ecdsaPair.First, ecdsaPair.Second), nil
 }
+
+func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(GetCurve(), rand.Reader)
+}

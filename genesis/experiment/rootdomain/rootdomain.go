@@ -17,7 +17,6 @@
 package rootdomain
 
 import (
-	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/json"
 
@@ -63,7 +62,7 @@ func MakeSeed() []byte {
 
 // IsAuthorized checks is node authorized
 func (rd *RootDomain) IsAuthorized() bool {
-	privateKey, err := ecdsa.GenerateKey(ecdsa_helper.GetCurve(), rand.Reader)
+	privateKey, err := ecdsa_helper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +75,7 @@ func (rd *RootDomain) IsAuthorized() bool {
 	}
 
 	// Register node
-	serPubKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey) //utils.SerializePublicKey(privateKey.PublicKey)
+	serPubKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		panic(err)
 	}
