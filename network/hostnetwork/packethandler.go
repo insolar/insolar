@@ -115,7 +115,7 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		pulse := &message.Pulse{Pulse: data.Pulse}
 		_, err = mb.Send(pulse)
 		if err != nil {
-			errors.Wrap(err, "Failed to send a pulse")
+			log.Error(err)
 		}
 		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
 		ht := hostHandler.HtFromCtx(ctx)

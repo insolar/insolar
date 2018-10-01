@@ -323,7 +323,7 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 func SendRelayOwnership(hostHandler hosthandler.HostHandler, subnetIDs []string) {
 	for _, id1 := range subnetIDs {
 		err := RelayOwnershipRequest(hostHandler, id1)
-		errors.Wrap(err, "Failed to relay ownership request")
+		log.Errorln(err.Error())
 	}
 }
 

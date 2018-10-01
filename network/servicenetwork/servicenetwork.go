@@ -159,14 +159,14 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 
 	pm, err := getPulseManager(components)
 	if err != nil {
-		errors.Wrap(err, "Failed to get a pulse manager")
+		log.Error(err)
 	} else {
 		network.hostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
 	}
 
 	mb, err := getMessageBus(components)
 	if err != nil {
-		errors.Wrap(err, "Failed to get a message bus")
+		log.Error(err)
 	} else {
 		network.hostNetwork.GetNetworkCommonFacade().SetMessageBus(mb)
 	}
@@ -197,7 +197,7 @@ func (network *ServiceNetwork) Stop() error {
 func (network *ServiceNetwork) bootstrap() {
 	err := network.hostNetwork.Bootstrap()
 	if err != nil {
-		errors.Wrap(err, "Failed to bootstrap network")
+		log.Errorln("Failed to bootstrap network", err.Error())
 	}
 }
 
@@ -205,7 +205,7 @@ func (network *ServiceNetwork) listen() {
 	log.Infoln("Network starts listening")
 	err := network.hostNetwork.Listen()
 	if err != nil {
-		errors.Wrap(err, "Failed to start listening")
+		log.Errorln("Listen failed:", err.Error())
 	}
 }
 

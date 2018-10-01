@@ -75,7 +75,7 @@ func (t *kcpTransport) Stop() {
 	log.Info("Stop KCP transport")
 	err := t.listener.Close()
 	if err != nil {
-		errors.Wrap(err, "Failed to close socket")
+		log.Errorln("Failed to close socket:", err.Error())
 	}
 
 	t.disconnectStarted <- true
@@ -102,7 +102,7 @@ func (t *kcpTransport) handleAcceptedConnection(session *kcp.UDPSession) {
 	for {
 		err := session.SetDeadline(time.Now().Add(time.Millisecond * 50))
 		if err != nil {
-			errors.Wrap(err, "Failed to set dead line")
+			log.Errorln(err.Error())
 		}
 		// Wait for Packets
 		msg, err := packet.DeserializePacket(session)
