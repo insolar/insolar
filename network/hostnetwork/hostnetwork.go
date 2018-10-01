@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -84,7 +83,7 @@ func getBootstrapHosts(addresses []string) []*host.Host {
 	for _, a := range addresses {
 		address, err := host.NewAddress(a)
 		if err != nil {
-			log.Errorln("Failed to create bootstrap address:", err.Error())
+			errors.Wrap(err, "Failed to create bootstrap address:")
 		}
 		hosts = append(hosts, host.NewHost(address))
 	}

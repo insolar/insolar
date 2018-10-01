@@ -17,9 +17,9 @@
 package hostnetwork
 
 import (
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/pkg/errors"
 )
 
 // ParseIncomingPacket detects a packet type.
@@ -38,7 +38,8 @@ func BuildContext(cb ContextBuilder, msg *packet.Packet) hosthandler.Context {
 	}
 	if err != nil {
 		// TODO: Do something sane with error!
-		log.Error(err) // don't return this error cuz don't know what to do with
+		// don't return this error cuz don't know what to do with
+		errors.Wrap(err, "Failed to build a context")
 	}
 	return ctx
 }

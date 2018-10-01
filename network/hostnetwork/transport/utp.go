@@ -75,7 +75,7 @@ func (t *utpTransport) Stop() {
 
 	err := t.socket.CloseNow()
 	if err != nil {
-		log.Errorln("Failed to close socket:", err.Error())
+		errors.Wrap(err, "Failed to close socket")
 	}
 }
 

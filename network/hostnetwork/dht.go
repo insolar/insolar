@@ -321,14 +321,14 @@ func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBui
 		log.Info("sending ping request")
 		res, err := dht.transport.SendRequest(request)
 		if err != nil {
-			log.Error(err)
+			errors.Wrap(err, "Error to send request")
 		} else {
 			result := <-res.Result()
 			log.Info("checking response")
 			if res != nil {
 				ctx, err := cb.SetHostByID(result.Receiver.ID).Build()
 				if err != nil {
-					log.Error(err)
+					errors.Wrap(err, "Failed to build a context")
 				}
 				dht.AddHost(ctx, routing.NewRouteHost(result.Sender))
 			}
@@ -340,7 +340,7 @@ func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBui
 		routeHost := routing.NewRouteHost(bh)
 		ctx, err := cb.SetHostByID(ht.Origin.ID).Build()
 		if err != nil {
-			log.Error("failed to create a context")
+			errors.Wrap(err, "failed to create a context")
 			return false
 		}
 		dht.AddHost(ctx, routeHost)
@@ -728,7 +728,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 			} else {
 				targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.String())
 				if err != nil {
-					log.Errorln(err)
+					errors.Wrap(err, "Failed to find a host")
 				} else if !exist {
 					log.Warnln("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
 				} else {
@@ -751,11 +751,11 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 	response, err := ParseIncomingPacket(dht, ctx, msg, packetBuilder)
 	if err != nil {
-		log.Errorln(err)
+		errors.Wrap(err, "Failed to parse a packet")
 	} else if response != nil {
 		err = dht.transport.SendResponse(msg.RequestID, response)
 		if err != nil {
-			log.Errorln("Failed to send response:", err.Error())
+			errors.Wrap(err, "Failed to send response:")
 		}
 	}
 }
