@@ -49,7 +49,10 @@ func main() {
 	fmt.Println("Version: ", version.GetFullVersion())
 
 	storage, err := pulsarstorage.NewStorageBadger(cfgHolder.Configuration.Pulsar, nil)
-
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
 	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
 	if err != nil {
 		log.Fatal(err)
