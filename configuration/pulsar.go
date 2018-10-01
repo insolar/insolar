@@ -28,11 +28,22 @@ func (ct ConnectionType) String() string {
 
 // Pulsar holds configuration for pulsar node.
 type Pulsar struct {
-	ConnectionType ConnectionType
-	ListenAddress  string
-	PrivateKey     string
+	ConnectionType      ConnectionType
+	MainListenerAddress string
+	PrivateKey          string
+	Storage             Storage
 
-	ListOfNeighbours []*PulsarNodeAddress
+	PulseTime                      int32 // ms
+	ReceivingSignTimeout           int32 // ms
+	ReceivingNumberTimeout         int32 // ms
+	ReceivingVectorTimeout         int32 // ms
+	ReceivingSignsForChosenTimeout int32 // ms
+
+	Neighbours []PulsarNodeAddress
+
+	NumberOfRandomHosts int
+	BootstrapListener   Transport
+	BootstrapNodes      []string
 }
 
 type PulsarNodeAddress struct {
@@ -43,5 +54,26 @@ type PulsarNodeAddress struct {
 
 // NewPulsar creates new default configuration for pulsar node.
 func NewPulsar() Pulsar {
-	return Pulsar{ListenAddress: "0.0.0.0:8090", ConnectionType: TCP, ListOfNeighbours: []*PulsarNodeAddress{}}
+	return Pulsar{
+		MainListenerAddress: "0.0.0.0:18090",
+
+		ConnectionType: TCP,
+		PrivateKey: `-----BEGIN PRIVATE KEY-----
+MHcCAQEEID6XJHMb2aiaK1bp2GHHw0r4LrzZZ4exlcmx8GrjGsMFoAoGCCqGSM49
+AwEHoUQDQgAE7DE4ArqxIYbY/UAyLLFBGuFu2gROPaqp4vxbEeie7mnZeqsYexmN
+BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
+-----END PRIVATE KEY-----`,
+
+		PulseTime:              10000,
+		ReceivingSignTimeout:   1000,
+		ReceivingNumberTimeout: 1000,
+		ReceivingVectorTimeout: 1000,
+
+		Neighbours: []PulsarNodeAddress{},
+		Storage:    Storage{DataDirectory: "./data/pulsar"},
+
+		NumberOfRandomHosts: 1,
+		BootstrapListener:   Transport{Protocol: "UTP", Address: "0.0.0.0:18091", BehindNAT: false},
+		BootstrapNodes:      []string{"127.0.0.1:64278"},
+	}
 }

@@ -18,11 +18,15 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"strings"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -44,9 +48,72 @@ func main() {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	privateKey, err := pulsar.ImportPrivateKey(cfgHolder.Configuration.Pulsar.PrivateKey)
-	fmt.Printf("%v", privateKey)
-	fmt.Printf("%v", err)
+	storage, err := pulsarstorage.NewStorageBadger(cfgHolder.Configuration.Pulsar, nil)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+
+	go server.StartServer()
+
+	server.RefreshConnections()
+
+	var nextPulseNumber core.PulseNumber
+	if server.LastPulse.PulseNumber == core.FirstPulseNumber {
+		nextPulseNumber = core.CalculatePulseNumber(time.Now())
+	} else {
+		waitTime := core.CalculateMsToNextPulse(server.LastPulse.PulseNumber, time.Now())
+		if waitTime != 0 {
+			nextPulseNumber = server.LastPulse.PulseNumber + core.PulseNumber(cfgHolder.Configuration.Pulsar.PulseTime)
+		}
+		time.Sleep(waitTime)
+
+	}
+	err = server.StartConsensusProcess(nextPulseNumber)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+	//pulseTicker := time.NewTicker(time.Duration(cfgHolder.Configuration.Pulsar.PulseTime) * time.Second)
+	//go func() {
+	//	for range pulseTicker.C {
+	//		err = server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
+	//		if err != nil {
+	//			log.Fatal(err)
+	//			panic(err)
+	//		}
+	//	}
+	//}()
+	//
+	//refreshTicker := time.NewTicker(1 * time.Second)
+	//go func() {
+	//	for range refreshTicker.C {
+	//		server.RefreshConnections()
+	//	}
+	//}()
+
+	time.Sleep(10 * time.Minute)
+
+	//fmt.Println("Press any button to exit")
+	//_, err = rl.Readline()
+	//if err != nil {
+	//	log.Warn(err)
+	//}
+
+	//refreshTicker.Stop()
+	defer func() {
+		err := storage.Close()
+		if err != nil {
+			log.Error(err)
+		}
+		server.StopServer()
+	}()
+
 }
 
 func initLogger(cfg configuration.Log) {

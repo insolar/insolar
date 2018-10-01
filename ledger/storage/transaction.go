@@ -166,7 +166,7 @@ func (m *TransactionManager) SetObjectIndex(ref *record.Reference, idx *index.Ob
 
 // GetEntropy returns entropy from storage for given pulse.
 //
-// Entropy is used for calculating node roles.
+// GeneratedEntropy is used for calculating node roles.
 func (m *TransactionManager) GetEntropy(pulse core.PulseNumber) (*core.Entropy, error) {
 	k := prefixkey(scopeIDEntropy, pulse.Bytes())
 	item, err := m.txn.Get(k)
@@ -187,7 +187,7 @@ func (m *TransactionManager) GetEntropy(pulse core.PulseNumber) (*core.Entropy, 
 
 // SetEntropy stores given entropy for given pulse in storage.
 //
-// Entropy is used for calculating node roles.
+// GeneratedEntropy is used for calculating node roles.
 func (m *TransactionManager) SetEntropy(pulse core.PulseNumber, entropy core.Entropy) error {
 	k := prefixkey(scopeIDEntropy, pulse.Bytes())
 	return m.txn.Set(k, entropy[:])
