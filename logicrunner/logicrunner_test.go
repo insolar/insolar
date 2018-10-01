@@ -478,13 +478,21 @@ func TestContextPassing(t *testing.T) {
 	var code = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import ( 
+"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+)
 
 type One struct {
 	foundation.BaseContract
 }
 
 func (r *One) Hello() string {
+	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	return r.GetClass().String()
 }
 `

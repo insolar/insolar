@@ -18,7 +18,7 @@ package nodedomain
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/genesis/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -54,7 +54,7 @@ func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 // IsAuthorized checks is signature correct
 func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
 	nodeR := nd.GetNodeRecord(nodeRef)
-	ok, err := utils.Verify(seed, signatureRaw, nodeR.GetPublicKey())
+	ok, err := ecdsa.Verify(seed, signatureRaw, nodeR.GetPublicKey())
 	if err != nil {
 		panic(err)
 	}
