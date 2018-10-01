@@ -31,29 +31,28 @@ import (
 	"github.com/pkg/errors"
 )
 
-var rpcService *RPC
-
 // StartRPC starts RPC server for isolated executors to use
 func StartRPC(lr *LogicRunner) *RPC {
-	if rpcService == nil {
-		rpcService = &RPC{lr: lr}
-		err := rpc.Register(rpcService)
-		if err != nil {
-			panic("Fail to register LogicRunner RPC Service: " + err.Error())
-		}
-		rpc.HandleHTTP()
+	rpcService := &RPC{lr: lr}
+
+	rpcServer := rpc.NewServer()
+	err := rpcServer.Register(rpcService)
+	if err != nil {
+		panic("Fail to register LogicRunner RPC Service: " + err.Error())
 	}
-	rpcService.lr = lr
 
 	l, e := net.Listen(lr.Cfg.RPCProtocol, lr.Cfg.RPCListen)
 	if e != nil {
 		log.Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"' over "+lr.Cfg.RPCProtocol+": ", e)
 	}
 	lr.sock = l
+
+	httpServer := &http.Server{Handler: rpcServer}
+
 	log.Infof("starting LogicRunner RPC service on %q", lr.Cfg.RPCListen)
 	go func() {
-		if err := http.Serve(l, nil); err != nil {
-			log.Warn("Can't Listen LogicRunner RPC Socket: ", err)
+		if err := httpServer.Serve(l); err != nil {
+			log.Error("Can't Listen LogicRunner RPC Socket: ", err)
 		}
 		log.Info("LogicRunner RPC service stopped")
 	}()
