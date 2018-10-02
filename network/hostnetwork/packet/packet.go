@@ -44,8 +44,8 @@ const (
 	TypeRPC
 	// TypeRelay is packet type for request target to be a relay.
 	TypeRelay
-	// TypeAuth is packet type for authentication between hosts.
-	TypeAuth
+	// TypeAuthentication is packet type for authentication between hosts.
+	TypeAuthentication
 	// TypeCheckOrigin is packet to check originality of some host.
 	TypeCheckOrigin
 	// TypeObtainIP is packet to get itself IP from another host.
@@ -56,12 +56,14 @@ const (
 	TypeKnownOuterHosts
 	// TypeCheckNodePriv is packet to check preset node privileges.
 	TypeCheckNodePriv
-	// TypeCascadeSend is the packet type for the cascade send message feature
+	// TypeCascadeSend is the packet type for the cascade send message feature.
 	TypeCascadeSend
-	// TypePulse is packet type for the messages received from pulsars
+	// TypePulse is packet type for the messages received from pulsars.
 	TypePulse
-	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network
+	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network.
 	TypeGetRandomHosts
+	// TypeAuthorization is packet to request an authorization in the network.
+	TypeAuthorization
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -104,8 +106,8 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestDataRPC)
 	case TypeRelay:
 		_, valid = m.Data.(*RequestRelay)
-	case TypeAuth:
-		_, valid = m.Data.(*RequestAuth)
+	case TypeAuthentication:
+		_, valid = m.Data.(*RequestAuthentication)
 	case TypeCheckOrigin:
 		_, valid = m.Data.(*RequestCheckOrigin)
 	case TypeObtainIP:
@@ -195,7 +197,7 @@ func init() {
 	gob.Register(&RequestDataStore{})
 	gob.Register(&RequestDataRPC{})
 	gob.Register(&RequestRelay{})
-	gob.Register(&RequestAuth{})
+	gob.Register(&RequestAuthentication{})
 	gob.Register(&RequestCheckOrigin{})
 	gob.Register(&RequestObtainIP{})
 	gob.Register(&RequestRelayOwnership{})
@@ -210,7 +212,7 @@ func init() {
 	gob.Register(&ResponseDataStore{})
 	gob.Register(&ResponseDataRPC{})
 	gob.Register(&ResponseRelay{})
-	gob.Register(&ResponseAuth{})
+	gob.Register(&ResponseAuthentication{})
 	gob.Register(&ResponseCheckOrigin{})
 	gob.Register(&ResponseObtainIP{})
 	gob.Register(&ResponseRelayOwnership{})

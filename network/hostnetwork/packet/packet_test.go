@@ -69,7 +69,7 @@ func TestPacket_IsValid_Ok(t *testing.T) {
 		{"TypeStore", TypeStore, &RequestDataStore{}},
 		{"TypeRPC", TypeRPC, &RequestDataRPC{"test", [][]byte{}}},
 		{"TypeRelay", TypeRelay, &RequestRelay{Unknown}},
-		{"TypeAuth", TypeAuth, &RequestAuth{Unknown}},
+		{"TypeAuthentication", TypeAuthentication, &RequestAuthentication{Unknown}},
 		{"TypeCheckOrigin", TypeCheckOrigin, &RequestCheckOrigin{}},
 		{"TypeObtainIP", TypeObtainIP, &RequestObtainIP{}},
 		{"TypeRelayOwnership", TypeRelayOwnership, &RequestRelayOwnership{true}},

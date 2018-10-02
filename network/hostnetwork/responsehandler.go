@@ -94,7 +94,7 @@ func handleCheckNodePrivResponse(hostHandler hosthandler.HostHandler, response *
 	return nil
 }
 
-func handleAuthResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuth, target string) error {
+func handleAuthResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuthentication, target string) error {
 	var err error
 	if (len(response.AuthUniqueKey) != 0) && response.Success {
 		hostHandler.AddReceivedKey(target, response.AuthUniqueKey)

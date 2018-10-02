@@ -28,10 +28,10 @@ const (
 	StartRelay
 	// StopRelay - command stop relay.
 	StopRelay
-	// BeginAuth - begin authentication.
-	BeginAuth
-	// RevokeAuth - revoke authentication.
-	RevokeAuth
+	// BeginAuthentication - begin authentication.
+	BeginAuthentication
+	// RevokeAuthentication - revoke authentication.
+	RevokeAuthentication
 )
 
 // RequestCheckNodePriv is data for check node privileges.
@@ -82,8 +82,8 @@ type RequestRelay struct {
 	Command CommandType
 }
 
-// RequestAuth is data for authentication.
-type RequestAuth struct {
+// RequestAuthentication is data for authentication.
+type RequestAuthentication struct {
 	Command CommandType
 }
 

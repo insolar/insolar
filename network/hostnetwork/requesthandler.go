@@ -117,18 +117,18 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetI
 	var authCommand packet.CommandType
 	switch command {
 	case "begin":
-		authCommand = packet.BeginAuth
+		authCommand = packet.BeginAuthentication
 	case "revoke":
-		authCommand = packet.RevokeAuth
+		authCommand = packet.RevokeAuthentication
 	default:
 		err = errors.New("AuthenticationRequest: unknown command")
 		return err
 	}
 	builder := packet.NewBuilder()
-	request := builder.Type(packet.TypeAuth).
+	request := builder.Type(packet.TypeAuthentication).
 		Sender(origin).
 		Receiver(targetHost).
-		Request(&packet.RequestAuth{Command: authCommand}).
+		Request(&packet.RequestAuthentication{Command: authCommand}).
 		Build()
 	future, err := hostHandler.SendRequest(request)
 
@@ -338,8 +338,8 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 	case packet.TypeCheckOrigin:
 		response := rsp.Data.(*packet.ResponseCheckOrigin)
 		handleCheckOriginResponse(hostHandler, response, targetID)
-	case packet.TypeAuth:
-		response := rsp.Data.(*packet.ResponseAuth)
+	case packet.TypeAuthentication:
+		response := rsp.Data.(*packet.ResponseAuthentication)
 		err = handleAuthResponse(hostHandler, response, targetID)
 	case packet.TypeObtainIP:
 		response := rsp.Data.(*packet.ResponseObtainIP)

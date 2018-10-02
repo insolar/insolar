@@ -52,7 +52,7 @@ func DispatchPacketType(
 		return processRelay(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeCheckOrigin:
 		return processCheckOriginRequest(hostHandler, msg, packetBuilder)
-	case packet.TypeAuth:
+	case packet.TypeAuthentication:
 		return processAuthentication(hostHandler, msg, packetBuilder)
 	case packet.TypeObtainIP:
 		return processObtainIPRequest(msg, packetBuilder)
@@ -265,12 +265,12 @@ func processRelay(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 }
 
 func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	data := msg.Data.(*packet.RequestAuth)
+	data := msg.Data.(*packet.RequestAuthentication)
 	switch data.Command {
-	case packet.BeginAuth:
+	case packet.BeginAuthentication:
 		if hostHandler.HostIsAuthenticated(msg.Sender.ID.String()) {
 			// TODO: whats next?
-			response := &packet.ResponseAuth{
+			response := &packet.ResponseAuthentication{
 				Success:       false,
 				AuthUniqueKey: nil,
 			}
@@ -283,7 +283,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 			return nil, errors.Wrap(err, "Failed to generate random key")
 		}
 		hostHandler.AddAuthSentKey(msg.Sender.ID.String(), key)
-		response := &packet.ResponseAuth{
+		response := &packet.ResponseAuthentication{
 			Success:       true,
 			AuthUniqueKey: key,
 		}
@@ -296,9 +296,9 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		}
 
 		return packetBuilder.Response(response).Build(), nil
-	case packet.RevokeAuth:
+	case packet.RevokeAuthentication:
 		hostHandler.RemoveAuthHost(msg.Sender.ID.String())
-		response := &packet.ResponseAuth{
+		response := &packet.ResponseAuthentication{
 			Success:       true,
 			AuthUniqueKey: nil,
 		}
