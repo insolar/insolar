@@ -54,7 +54,7 @@ func TestBareHelloworld(t *testing.T) {
 		Ledger:     l,
 		MessageBus: eb,
 	}), "starting logicrunner")
-	lr.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar(), 0, &pulsar.StandardEntropyGenerator{}))
 
 	hw := helloworld.NewHelloWorld()
 
