@@ -35,8 +35,7 @@ func TestStore_GetRecordNotFound(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	ref := &record.Reference{}
-	rec, err := db.GetRecord(ref)
+	rec, err := db.GetRecord(&record.ID{})
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, rec)
 }
@@ -46,11 +45,7 @@ func TestStore_SetRecord(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	rec, err := db.GetRecord(&record.Reference{})
-	assert.Nil(t, rec)
-	assert.Equal(t, storage.ErrNotFound, err)
-
-	rec = &record.LockUnlockRequest{}
+	rec := &record.LockUnlockRequest{}
 	gotRef, err := db.SetRecord(rec)
 	assert.Nil(t, err)
 
@@ -67,11 +62,7 @@ func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	ref := &record.Reference{
-		Record: record.ID{Pulse: 1},
-	}
-
-	idx, err := db.GetClassIndex(ref)
+	idx, err := db.GetClassIndex(&record.ID{Pulse: 1})
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, idx)
 }
@@ -81,31 +72,21 @@ func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	zerodomain := record.ID{Hash: zerohash()}
-	refgen := func() record.Reference {
-		recID := record.ID{
-			Hash: randhash(),
-		}
-		return record.Reference{
-			Domain: zerodomain,
-			Record: recID,
-		}
+	idgen := func() record.ID {
+		return record.ID{Hash: randhash()}
 	}
-	latestRef := refgen()
+	latestRef := idgen()
 	idx := index.ClassLifeline{
-		LatestStateRef: latestRef,
-		AmendRefs:      []record.Reference{refgen(), refgen(), refgen()},
+		LatestState: latestRef,
+		AmendRefs:   []record.ID{idgen(), idgen(), idgen()},
 	}
-	zeroRef := record.Reference{
-		Domain: zerodomain,
-		Record: record.ID{
-			Hash: hexhash("122444"),
-		},
+	zeroID := record.ID{
+		Hash: hexhash("122444"),
 	}
-	err := db.SetClassIndex(&zeroRef, &idx)
+	err := db.SetClassIndex(&zeroID, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, err := db.GetClassIndex(&zeroRef)
+	storedIndex, err := db.GetClassIndex(&zeroID)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }
@@ -115,8 +96,7 @@ func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	ref := referenceWithHashes("1000", "5000")
-	idx, err := db.GetObjectIndex(&ref)
+	idx, err := db.GetObjectIndex(&record.ID{Hash: hexhash("5000")})
 	assert.Equal(t, storage.ErrNotFound, err)
 	assert.Nil(t, idx)
 }
@@ -127,19 +107,19 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	defer cleaner()
 
 	idx := index.ObjectLifeline{
-		ClassRef:       referenceWithHashes("50", "60"),
-		LatestStateRef: referenceWithHashes("10", "20"),
+		ClassRef:    referenceWithHashes("50", "60"),
+		LatestState: record.ID{Hash: hexhash("20")},
 		Children: []record.Reference{
 			referenceWithHashes("", "1"),
 			referenceWithHashes("", "2"),
 			referenceWithHashes("", "3"),
 		},
 	}
-	zeroref := referenceWithHashes("", "")
-	err := db.SetObjectIndex(&zeroref, &idx)
+	zeroid := record.ID{Hash: hexhash("")}
+	err := db.SetObjectIndex(&zeroid, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, err := db.GetObjectIndex(&zeroref)
+	storedIndex, err := db.GetObjectIndex(&zeroid)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }
