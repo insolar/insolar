@@ -21,7 +21,8 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
+	//"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/genesis/proxy/member"
 	"github.com/insolar/insolar/genesis/proxy/rootdomain"
 	"github.com/insolar/insolar/genesis/proxy/wallet"
@@ -72,7 +73,7 @@ func (m *Member) AuthorizedCall(ref string, method string, params []interface{},
 	if err != nil {
 		return nil, &foundation.Error{err.Error()}
 	}
-	verified, err := utils.Verify(serialized, sign, m.PublicKey)
+	verified, err := ecdsa.Verify(serialized, sign, m.PublicKey)
 	if err != nil {
 		return nil, &foundation.Error{err.Error()}
 	}

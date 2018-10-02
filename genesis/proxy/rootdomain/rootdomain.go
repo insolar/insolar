@@ -221,51 +221,6 @@ func (r *RootDomain) CreateMemberNoWait( name string, key string ) {
     }
 }
 
-func (r *RootDomain) GetBalance( reference string ) ( uint ) {
-    var args [1]interface{}
-	args[0] = reference
-
-    var argsSerialized []byte
-
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalance", argsSerialized)
-    if err != nil {
-   		panic(err)
-    }
-
-    resList := [1]interface{}{}
-	var a0 uint
-	resList[0] = a0
-
-    err = proxyctx.Current.Deserialize(res, &resList)
-    if err != nil {
-        panic(err)
-    }
-
-    return resList[0].(uint)
-}
-
-func (r *RootDomain) GetBalanceNoWait( reference string ) {
-    var args [1]interface{}
-	args[0] = reference
-
-    var argsSerialized []byte
-
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalance", argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-}
-
 func (r *RootDomain) getUserInfoMap( m *member.Member ) ( map[string]interface{} ) {
     var args [1]interface{}
 	args[0] = m
@@ -439,12 +394,6 @@ func (r *RootDomain) SetRootNoWait( adminKey string ) {
     }
 
     _, err = proxyctx.Current.RouteCall(r.Reference, false, "SetRoot", argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-}
-
-Reference, false, "DumpAllUsers", argsSerialized)
     if err != nil {
         panic(err)
     }

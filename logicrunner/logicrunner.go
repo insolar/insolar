@@ -63,8 +63,6 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	messageBus := c.MessageBus
 	lr.MessageBus = messageBus
 
-	StartRPC(lr)
-
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(messageBus, am)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
@@ -74,6 +72,10 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	}
 
 	if lr.Cfg.GoPlugin != nil {
+		if lr.Cfg.RPCListen != "" {
+			StartRPC(lr)
+		}
+
 		gp, err := goplugin.NewGoPlugin(lr.Cfg, messageBus, am)
 		if err != nil {
 			return err

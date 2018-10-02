@@ -17,8 +17,18 @@
 package transport
 
 import (
+	"errors"
+	"time"
+
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+)
+
+var (
+	// ErrTimeout is returned when the operation timeout is exceeded.
+	ErrTimeout = errors.New("timeout")
+	// ErrChannelClosed is returned when the input channel is closed.
+	ErrChannelClosed = errors.New("channel closed")
 )
 
 // Future is network response future.
@@ -38,6 +48,9 @@ type Future interface {
 
 	// SetResult makes packet to appear in result channel.
 	SetResult(*packet.Packet)
+
+	// GetResult gets the future result from Result() channel with a timeout set to `duration`.
+	GetResult(duration time.Duration) (*packet.Packet, error)
 
 	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()
@@ -88,6 +101,20 @@ func (future *future) Result() <-chan *packet.Packet {
 // SetResult write packet to the result channel.
 func (future *future) SetResult(msg *packet.Packet) {
 	future.result <- msg
+}
+
+// GetResult gets the future result from Result() channel with a timeout set to `duration`.
+func (future *future) GetResult(duration time.Duration) (*packet.Packet, error) {
+	select {
+	case result, ok := <-future.Result():
+		if !ok {
+			return nil, ErrChannelClosed
+		}
+		return result, nil
+	case <-time.After(duration):
+		future.Cancel()
+		return nil, ErrTimeout
+	}
 }
 
 // Cancel allows to cancel Future processing.

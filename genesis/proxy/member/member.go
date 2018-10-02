@@ -10,6 +10,7 @@ type Msg struct {
 	Ref    string
 	Method string
 	Params []interface{}
+	Seed   []byte
 }
 
 
@@ -177,12 +178,13 @@ func (r *Member) GetPublicKeyNoWait(  ) {
     }
 }
 
-func (r *Member) AuthorizedCall( ref string, method string, params []interface{}, sign []byte ) ( []interface{}, *foundation.Error ) {
-    var args [4]interface{}
+func (r *Member) AuthorizedCall( ref string, method string, params []interface{}, seed []byte, sign []byte ) ( []interface{}, *foundation.Error ) {
+    var args [5]interface{}
 	args[0] = ref
 	args[1] = method
 	args[2] = params
-	args[3] = sign
+	args[3] = seed
+	args[4] = sign
 
     var argsSerialized []byte
 
@@ -210,12 +212,13 @@ func (r *Member) AuthorizedCall( ref string, method string, params []interface{}
     return resList[0].([]interface{}), resList[1].(*foundation.Error)
 }
 
-func (r *Member) AuthorizedCallNoWait( ref string, method string, params []interface{}, sign []byte ) {
-    var args [4]interface{}
+func (r *Member) AuthorizedCallNoWait( ref string, method string, params []interface{}, seed []byte, sign []byte ) {
+    var args [5]interface{}
 	args[0] = ref
 	args[1] = method
 	args[2] = params
-	args[3] = sign
+	args[3] = seed
+	args[4] = sign
 
     var argsSerialized []byte
 

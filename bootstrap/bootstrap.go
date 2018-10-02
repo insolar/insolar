@@ -114,10 +114,10 @@ func isLightExecutor(c core.Components) (bool, error) {
 func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	am := c.Ledger.GetArtifactManager()
 	rootObj, err := am.GetObject(*am.RootRef(), nil)
-	rootRefChildren := rootObj.Children()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of RootRef object")
 	}
+	rootRefChildren := rootObj.Children()
 	if rootRefChildren.HasNext() {
 		rootDomainRef, err := rootRefChildren.Next()
 		if err != nil {

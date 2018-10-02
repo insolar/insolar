@@ -19,6 +19,7 @@ package pulsar
 import (
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/stretchr/testify/assert"
@@ -27,9 +28,9 @@ import (
 func TestNewPulse(t *testing.T) {
 	generator := &pulsartestutil.MockEntropyGenerator{}
 	previousPulse := core.PulseNumber(876)
-	expectedPulse := previousPulse + 1
+	expectedPulse := previousPulse + core.PulseNumber(configuration.NewPulsar().NumberDelta)
 
-	result := NewPulse(previousPulse, generator)
+	result := NewPulse(configuration.NewPulsar().NumberDelta, previousPulse, generator)
 
 	assert.Equal(t, result.Entropy[:], pulsartestutil.MockEntropy[:])
 	assert.Equal(t, result.PulseNumber, core.PulseNumber(expectedPulse))

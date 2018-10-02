@@ -14,30 +14,22 @@
  *    limitations under the License.
  */
 
-package helloworld
+package ledger
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/hash"
+	"github.com/insolar/insolar/ledger/record"
+)
 
-// HelloWorld contract
-type HelloWorld struct {
-	// Greeted - how many callers we "greated"
-	Greeted int
-}
-
-// CodeRef returns something strange
-func CodeRef() core.RecordRef {
-	var ref core.RecordRef
-	ref[core.RecordRefSize-1] = 1
-	return ref
-}
-
-// NewHelloWorld returns a new empty contract
-func NewHelloWorld() *HelloWorld {
-	return &HelloWorld{}
-}
-
-// Greet greats the caller
-func (hw *HelloWorld) Greet(name string) string {
-	hw.Greeted++
-	return "Hello " + name + "'s world"
+// GenRequestRecordID generates record's RecordID byte for VM request
+// on objects implemented hash.Writer.
+func GenRequestRecordID(pn core.PulseNumber, hw hash.Writer) *core.RecordID {
+	var recid core.RecordID
+	b := record.ID2Bytes(record.ID{
+		Pulse: pn,
+		Hash:  hash.SHA3hash224(hw),
+	})
+	copy(recid[:], b)
+	return &recid
 }

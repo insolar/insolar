@@ -31,9 +31,13 @@ const (
 	RecordRefSize = RecordIDSize * 2
 )
 
-// RecordRef is unified record reference.
+// RecordRef is a unified record reference.
 type RecordRef [RecordRefSize]byte
 
+// RecordID is a unified record ID.
+type RecordID [RecordIDSize]byte
+
+// String outputs base58 RecordRef representation.
 func (ref RecordRef) String() string {
 	return base58.Encode(ref[:])
 }
@@ -44,8 +48,8 @@ func (ref RecordRef) Equal(other RecordRef) bool {
 }
 
 // Domain returns domain ID part of reference.
-func (ref RecordRef) Domain() [RecordIDSize]byte {
-	var domain [RecordIDSize]byte
+func (ref RecordRef) Domain() RecordID {
+	var domain RecordID
 	copy(domain[:], ref[RecordIDSize:])
 	return domain
 }

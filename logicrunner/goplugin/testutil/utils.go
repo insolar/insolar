@@ -36,7 +36,7 @@ import (
 
 // ChangeGoPath prepends `path` to GOPATH environment variable
 // accounting for possibly for default value. Returns original
-// value of the enviroment variable, don't forget to restore
+// value of the environment variable, don't forget to restore
 // it with defer:
 //    defer os.Setenv("GOPATH", origGoPath)
 func ChangeGoPath(path string) (string, error) {
