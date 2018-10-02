@@ -17,16 +17,15 @@
 package pulsar
 
 import (
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 )
 
 // NewPulse creates a new pulse with using of custom GeneratedEntropy Generator
-func NewPulse(cfg configuration.Pulsar, previousPulseNumber core.PulseNumber, entropyGenerator EntropyGenerator) *core.Pulse {
-	previousPulseNumber = previousPulseNumber + core.PulseNumber(cfg.NumberDelta)
+func NewPulse(numberDelta uint32, previousPulseNumber core.PulseNumber, entropyGenerator EntropyGenerator) *core.Pulse {
+	previousPulseNumber = previousPulseNumber + core.PulseNumber(numberDelta)
 	return &core.Pulse{
 		PulseNumber:     core.PulseNumber(previousPulseNumber),
-		NextPulseNumber: previousPulseNumber + core.PulseNumber(cfg.NumberDelta),
+		NextPulseNumber: previousPulseNumber + core.PulseNumber(numberDelta),
 		Entropy:         entropyGenerator.GenerateEntropy(),
 	}
 }

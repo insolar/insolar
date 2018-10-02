@@ -30,7 +30,7 @@ func TestNewPulse(t *testing.T) {
 	previousPulse := core.PulseNumber(876)
 	expectedPulse := previousPulse + core.PulseNumber(configuration.NewPulsar().NumberDelta)
 
-	result := NewPulse(configuration.NewPulsar(), previousPulse, generator)
+	result := NewPulse(configuration.NewPulsar().NumberDelta, previousPulse, generator)
 
 	assert.Equal(t, result.Entropy[:], pulsartestutil.MockEntropy[:])
 	assert.Equal(t, result.PulseNumber, core.PulseNumber(expectedPulse))

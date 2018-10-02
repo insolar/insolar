@@ -80,7 +80,7 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 		Ledger:     l,
 		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar(), 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
 
 	am := l.GetArtifactManager()
 	cb := testutil.NewContractBuilder(am, icc)
@@ -143,7 +143,7 @@ func TestBasics(t *testing.T) {
 	t.Parallel()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{})
 	assert.NoError(t, err)
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar(), 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
 
 	comps := core.Components{
 		Ledger:     &testLedger{am: testutil.NewTestArtifactManager()},
@@ -211,7 +211,7 @@ func TestExecution(t *testing.T) {
 		Ledger:     ld,
 		MessageBus: eb,
 	})
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar(), 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
 	eb.LogicRunner = lr
 
 	codeRef := core.NewRefFromBase58("someCode")
