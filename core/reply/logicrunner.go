@@ -20,12 +20,13 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// Common - the most common reaction.
+// Common - the most common reply
 type Common struct {
 	Data   []byte
 	Result []byte
 }
 
+// Type returns type of the reply
 func (r *Common) Type() core.ReplyType {
 	return TypeCommon
 }
