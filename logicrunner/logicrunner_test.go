@@ -588,7 +588,6 @@ func New(n int) *Child {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(&message.CallMethod{
-		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
@@ -602,7 +601,6 @@ func New(n int) *Child {
 	assert.Equal(t, 20, len(rlr.cb.R[*contract]), "right number of caserecords")
 
 	resp, err = lr.Execute(&message.CallMethod{
-		Request:   core.NewRefFromBase58("r3"),
 		ObjectRef: *contract,
 		Method:    "SumChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
@@ -669,7 +667,6 @@ func (r *Two) AnError() error {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(&message.CallMethod{
-		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "AnError",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
@@ -715,7 +712,6 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp1, err := lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "CreateMember",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"member1"}),
@@ -725,7 +721,6 @@ func TestRootDomainContract(t *testing.T) {
 	member1Ref := r1.([]interface{})[0].(string)
 
 	resp2, err := lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "CreateMember",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"member2"}),
@@ -735,7 +730,6 @@ func TestRootDomainContract(t *testing.T) {
 	member2Ref := r2.([]interface{})[0].(string)
 
 	_, err = lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "SendMoney",
 		Arguments: testutil.CBORMarshal(t, []interface{}{member1Ref, member2Ref, 1}),
@@ -743,7 +737,6 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err, "contract call")
 
 	resp4, err := lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "DumpAllUsers",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
@@ -806,7 +799,6 @@ func (c *Child) GetNum() int {
 	b.N = 1000
 	for i := 0; i < b.N; i++ {
 		resp, err := lr.Execute(&message.CallMethod{
-			Request:   core.NewRefFromBase58("rr"),
 			ObjectRef: *parent,
 			Method:    "CCC",
 			Arguments: testutil.CBORMarshal(b, []interface{}{child}),
