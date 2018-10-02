@@ -199,8 +199,8 @@ func (m *LedgerArtifactManager) ActivateClass(
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
 	domain, request, class core.RecordRef,
-) (*core.RecordRef, error) {
-	return m.sendReference(&message.DeactivateClass{
+) (*core.RecordID, error) {
+	return m.sendID(&message.DeactivateClass{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
@@ -214,8 +214,8 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
 	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
-) (*core.RecordRef, error) {
-	return m.sendReference(&message.UpdateClass{
+) (*core.RecordID, error) {
+	return m.sendID(&message.UpdateClass{
 		Domain:     domain,
 		Request:    request,
 		Class:      class,
@@ -259,8 +259,8 @@ func (m *LedgerArtifactManager) ActivateObjectDelegate(
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObject(
 	domain, request, object core.RecordRef,
-) (*core.RecordRef, error) {
-	return m.sendReference(&message.DeactivateObject{
+) (*core.RecordID, error) {
+	return m.sendID(&message.DeactivateObject{
 		Domain:  domain,
 		Request: request,
 		Object:  object,
@@ -273,8 +273,8 @@ func (m *LedgerArtifactManager) DeactivateObject(
 // Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdateObject(
 	domain, request, object core.RecordRef, memory []byte,
-) (*core.RecordRef, error) {
-	return m.sendReference(&message.UpdateObject{
+) (*core.RecordID, error) {
+	return m.sendID(&message.UpdateObject{
 		Domain:  domain,
 		Request: request,
 		Object:  object,
@@ -294,4 +294,18 @@ func (m *LedgerArtifactManager) sendReference(ev core.Message) (*core.RecordRef,
 		return nil, ErrUnexpectedReply
 	}
 	return &react.Ref, nil
+}
+
+func (m *LedgerArtifactManager) sendID(ev core.Message) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(ev)
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+	return &react.ID, nil
 }
