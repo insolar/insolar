@@ -14,24 +14,29 @@
  *    limitations under the License.
  */
 
-package pulsar
+package ledger
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/ledger/hash"
 )
 
-func TestNewPulse(t *testing.T) {
-	generator := &pulsartestutil.MockEntropyGenerator{}
-	previousPulse := core.PulseNumber(876)
-	expectedPulse := previousPulse + core.PulseNumber(configuration.NewPulsar().NumberDelta)
-
-	result := NewPulse(configuration.NewPulsar().NumberDelta, previousPulse, generator)
-
-	assert.Equal(t, result.Entropy[:], pulsartestutil.MockEntropy[:])
-	assert.Equal(t, result.PulseNumber, core.PulseNumber(expectedPulse))
+func TestGenRequestRecordID(t *testing.T) {
+	tt := map[string]hash.Writer{
+		"constructor": &message.CallConstructor{},
+		"call":        &message.CallMethod{},
+	}
+	for name := range tt {
+		t.Run(name, func(t *testing.T) {
+			h := tt[name]
+			res := GenRequestRecordID(0, h)
+			fmt.Printf("%T %+v => %x\n", h, h, res)
+			assert.NotNil(t, res)
+		})
+	}
 }

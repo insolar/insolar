@@ -14,24 +14,22 @@
  *    limitations under the License.
  */
 
-package pulsar
+package ledger
 
 import (
-	"testing"
-
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/pulsar/pulsartestutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/ledger/hash"
+	"github.com/insolar/insolar/ledger/record"
 )
 
-func TestNewPulse(t *testing.T) {
-	generator := &pulsartestutil.MockEntropyGenerator{}
-	previousPulse := core.PulseNumber(876)
-	expectedPulse := previousPulse + core.PulseNumber(configuration.NewPulsar().NumberDelta)
-
-	result := NewPulse(configuration.NewPulsar().NumberDelta, previousPulse, generator)
-
-	assert.Equal(t, result.Entropy[:], pulsartestutil.MockEntropy[:])
-	assert.Equal(t, result.PulseNumber, core.PulseNumber(expectedPulse))
+// GenRequestRecordID generates record's RecordID byte for VM request
+// on objects implemented hash.Writer.
+func GenRequestRecordID(pn core.PulseNumber, hw hash.Writer) *core.RecordID {
+	var recid core.RecordID
+	b := record.ID2Bytes(record.ID{
+		Pulse: pn,
+		Hash:  hash.SHA3hash224(hw),
+	})
+	copy(recid[:], b)
+	return &recid
 }
