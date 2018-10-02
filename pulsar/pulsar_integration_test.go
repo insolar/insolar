@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -35,16 +37,16 @@ import (
 func TestTwoPulsars_Handshake(t *testing.T) {
 	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	firstPublic, err := ExportPublicKey(&firstKey.PublicKey)
+	firstPublic, err := ecdsa_helper.ExportPublicKey(&firstKey.PublicKey)
 	assert.NoError(t, err)
-	firstPublicExported, err := ExportPrivateKey(firstKey)
+	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 
 	secondKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	secondPublic, err := ExportPublicKey(&secondKey.PublicKey)
+	secondPublic, err := ecdsa_helper.ExportPublicKey(&secondKey.PublicKey)
 	assert.NoError(t, err)
-	secondPublicExported, err := ExportPrivateKey(secondKey)
+	secondPublicExported, err := ecdsa_helper.ExportPrivateKey(secondKey)
 	assert.NoError(t, err)
 
 	storage := &pulsartestutil.MockStorage{}
@@ -101,7 +103,7 @@ func TestOnePulsar_FullStatesTransition(t *testing.T) {
 	t.Skip("should be re-written after refactoring the body of pulsar")
 	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	firstPublicExported, err := ExportPrivateKey(firstKey)
+	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 
 	storage := &pulsartestutil.MockStorage{}
@@ -138,16 +140,16 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	t.Skip("should be re-written after refactoring the body of pulsar")
 	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	firstPublic, err := ExportPublicKey(&firstKey.PublicKey)
+	firstPublic, err := ecdsa_helper.ExportPublicKey(&firstKey.PublicKey)
 	assert.NoError(t, err)
-	firstPublicExported, err := ExportPrivateKey(firstKey)
+	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 
 	secondKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	secondPublic, err := ExportPublicKey(&secondKey.PublicKey)
+	secondPublic, err := ecdsa_helper.ExportPublicKey(&secondKey.PublicKey)
 	assert.NoError(t, err)
-	secondPublicExported, err := ExportPrivateKey(secondKey)
+	secondPublicExported, err := ecdsa_helper.ExportPrivateKey(secondKey)
 	assert.NoError(t, err)
 
 	storage := &pulsartestutil.MockStorage{}
@@ -214,7 +216,7 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 
 	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	firstPublicExported, err := ExportPrivateKey(firstKey)
+	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 	storage := &pulsartestutil.MockStorage{}
 	storage.On("GetLastPulse").Return(&core.Pulse{PulseNumber: 123}, nil)

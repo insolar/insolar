@@ -25,6 +25,8 @@ import (
 	"math/big"
 	"sort"
 
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/hash"
 	"golang.org/x/crypto/sha3"
@@ -54,7 +56,7 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 		return false, err
 	}
 	calculatedHash := h.Sum(nil)
-	publicKey, err := ImportPublicKey(pub)
+	publicKey, err := ecdsa_helper.ImportPublicKey(pub)
 	if err != nil {
 		return false, err
 	}
