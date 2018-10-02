@@ -25,6 +25,8 @@ type NodeKeeper interface {
 	GetActiveNodes() []*core.ActiveNode
 	// GetUnsyncHash get hash computed based on the list of unsync nodes, and the size of this list.
 	GetUnsyncHash() (hash []byte, unsyncCount int)
+	// GetUnsync gets the local unsync list (excluding other nodes unsync lists)
+	GetUnsync() []*core.ActiveNode
 	// Sync initiate transferring unsync -> sync, sync -> active. If approved is false, unsync is not transferred to sync
 	Sync(approved bool)
 	// AddUnsync add unsync node to the local unsync list
