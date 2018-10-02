@@ -17,7 +17,8 @@
 package main
 
 import (
-	"flag"
+	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 	"io"
 	"os"
@@ -27,11 +28,7 @@ import (
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
-)
-
-var (
-	output string
-	cmd    string
+	"github.com/spf13/cobra"
 )
 
 const defaultStdoutPath = "-"
@@ -50,23 +47,39 @@ func chooseOutput(path string) (io.Writer, error) {
 	return res, nil
 }
 
-func parseInputParams() {
-	flag.StringVar(&output, "output", defaultStdoutPath, "output file (use - for STDOUT)")
-	flag.StringVar(&cmd, "cmd", "default_config", "available commands: default_config | random_ref | version | gen_keys")
+func Exit(msg string, err error) {
+	fmt.Println(msg, err)
+	os.Exit(1)
+}
 
-	if len(os.Args) == 1 {
-		flag.Usage()
-		os.Exit(1)
+var (
+	output             string
+	cmd                string
+	numberCertificates uint
+)
+
+func parseInputParams() {
+	var rootCmd = &cobra.Command{Use: "insolar"}
+	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificates")
+	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
+	rootCmd.Flags().UintVarP(&numberCertificates, "num_serts", "n", 3, "number of certificates")
+	err := rootCmd.Execute()
+
+	if len(cmd) == 0 {
+		rootCmd.Usage()
+		os.Exit(0)
 	}
 
-	flag.Parse()
+	if err != nil {
+		Exit("Wrong input params:", err)
+	}
 }
 
 func writeToOutput(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	if err != nil {
-		fmt.Println("Can't write data to output", err)
-		os.Exit(1)
+		Exit("Can't write data to output", err)
 	}
 }
 
@@ -85,26 +98,56 @@ func randomRef(out io.Writer) {
 func generateKeysPair(out io.Writer) {
 	privKey, err := ecdsa_helper.GeneratePrivateKey()
 	if err != nil {
-		fmt.Println("Problems with generating of private key:", err)
-		os.Exit(1)
+		Exit("Problems with generating of private key:", err)
 	}
 
 	privKeyStr, err := ecdsa_helper.ExportPrivateKey(privKey)
 	if err != nil {
-		fmt.Println("Problems with serialization of private key:", err)
-		os.Exit(1)
+		Exit("Problems with serialization of private key:", err)
 	}
 
 	pubKeyStr, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
 	if err != nil {
-		fmt.Println("Problems with serialization of public key:", err)
-		os.Exit(1)
+		Exit("Problems with serialization of public key:", err)
 	}
 
 	result := fmt.Sprintf("Public key:\n %s\n", pubKeyStr)
 	result += fmt.Sprintf("Private key:\n %s", privKeyStr)
 
 	writeToOutput(out, result)
+}
+
+func generateCertificates(out io.Writer) {
+
+	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
+	var recordsBuf bytes.Buffer
+	for i := uint(0); i < numberCertificates; i++ {
+		ref := core.RandomRef()
+		privKey, err := ecdsa_helper.GeneratePrivateKey()
+		if err != nil {
+			Exit("[ generateCertificates ]:", err)
+		}
+		records[ref] = privKey
+		pubKey, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+		if err != nil {
+			Exit("[ generateCertificates ]:", err)
+		}
+		recordsBuf.WriteString(ref.String() + " " + pubKey)
+	}
+
+	var signatures bytes.Buffer
+	for _, k := range records {
+		sign, err := ecdsa_helper.Sign(recordsBuf.Bytes(), k)
+		if err != nil {
+			Exit("[ generateCertificates ]:", err)
+		}
+		signatures.WriteString(ecdsa_helper.ExportSignature(sign) + "\n")
+	}
+
+	recordsBuf.ReadFrom(&signatures)
+
+	writeToOutput(out, recordsBuf.String())
+
 }
 
 func main() {
@@ -124,5 +167,7 @@ func main() {
 		fmt.Println(version.GetFullVersion())
 	case "gen_keys":
 		generateKeysPair(out)
+	case "gen_certificates":
+		generateCertificates(out)
 	}
 }
