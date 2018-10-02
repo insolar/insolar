@@ -598,7 +598,7 @@ func New(n int) *Child {
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 	rlr := lr.(*LogicRunner)
-	assert.Equal(t, configuration.NewPulsar().NumberDelta, int(rlr.cb.P.PulseNumber), "right pulsenumber")
+	assert.Equal(t, configuration.NewPulsar().NumberDelta, rlr.cb.P.PulseNumber, "right pulsenumber")
 	assert.Equal(t, 20, len(rlr.cb.R[*contract]), "right number of caserecords")
 
 	resp, err = lr.Execute(&message.CallMethod{
