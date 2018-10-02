@@ -81,6 +81,7 @@ type HostHandler interface {
 	Listen() error
 	ObtainIP() error
 	Bootstrap() error
+	GetHostsFromBootstrap()
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
