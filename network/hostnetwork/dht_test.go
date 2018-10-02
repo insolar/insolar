@@ -68,6 +68,14 @@ func (f *mockFuture) Result() <-chan *packet.Packet {
 	return f.result
 }
 
+func (f *mockFuture) GetResult(duration time.Duration) (*packet.Packet, error) {
+	result, ok := <-f.Result()
+	if !ok || result == nil {
+		return nil, errors.New("channel is closed")
+	}
+	return result, nil
+}
+
 func (f *mockFuture) SetResult(msg *packet.Packet) {
 	f.result <- msg
 }
@@ -200,6 +208,12 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	cascade1 := &cascade.Cascade{}
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
 	return st, origin, tp, ncf, err
+}
+
+func realDhtParamsWithId(address string) (store.Store, *host.Origin, transport.Transport, hosthandler.NetworkCommonFacade, error) {
+	ids := make([]id.ID, 1)
+	ids[0], _ = id.NewID()
+	return realDhtParams(ids, address)
 }
 
 // Creates twenty DHTs and bootstraps each with the previous
@@ -1056,4 +1070,76 @@ func TestDHT_Getters(t *testing.T) {
 	dht1.RemovePossibleProxyID(node.GetID().String())
 	dht1.RemoveProxyHost(node.GetID().String())
 	dht1.RemoveAuthHost(node.GetID().String())
+}
+
+func TestDHT_GetHostsFromBootstrap(t *testing.T) {
+	prefix := "127.0.0.1:"
+	port := 10000
+	bootstrapAdresses := make([]string, 0)
+	dhts := make([]*DHT, 0)
+
+	defer func() {
+		for _, dht := range dhts {
+			dht.Disconnect()
+		}
+	}()
+
+	for i := 0; i < 3; i++ {
+		host1 := prefix + strconv.Itoa(port)
+		st, s, tp, r, _ := realDhtParamsWithId(host1)
+		bootstrapAdresses = append(bootstrapAdresses, host1)
+		dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false)
+		dhts = append(dhts, dht)
+		go dht.Listen()
+		dht.Bootstrap()
+		port++
+	}
+
+	bootstrapHosts := make([]*host.Host, len(bootstrapAdresses))
+	for i, h := range bootstrapAdresses {
+		address, _ := host.NewAddress(h)
+		bootstrapHosts[i] = host.NewHost(address)
+	}
+
+	for i := 0; i < 17; i++ {
+		host1 := prefix + strconv.Itoa(port)
+		st, s, tp, r, _ := realDhtParamsWithId(host1)
+		dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 4, false)
+		dhts = append(dhts, dht)
+		go dht.Listen()
+		dht.Bootstrap()
+		dht.GetHostsFromBootstrap()
+		port++
+	}
+	lastDht := dhts[len(dhts)-1]
+	hostsCount := lastDht.HtFromCtx(GetDefaultCtx(lastDht)).TotalHosts()
+	assert.Equal(t, 19, hostsCount)
+}
+
+func TestDHT_BootstrapInfinity(t *testing.T) {
+	bootstrapAddress := "127.0.0.1:10000"
+	address := "127.0.0.1:10001"
+
+	st, s, tp, r, _ := realDhtParamsWithId(bootstrapAddress)
+	bootstrapDht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false)
+	go func() {
+		time.Sleep(time.Second * 5)
+		bootstrapDht.Bootstrap()
+		bootstrapDht.Listen()
+	}()
+
+	bootstrapHosts := make([]*host.Host, 1)
+	a, _ := host.NewAddress(bootstrapAddress)
+	bootstrapHosts[0] = host.NewHost(a)
+	st, s, tp, r, _ = realDhtParamsWithId(address)
+	dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 2, true)
+
+	defer func() {
+		dht.Disconnect()
+		bootstrapDht.Disconnect()
+	}()
+
+	go dht.Listen()
+	err := dht.Bootstrap()
+	assert.NoError(t, err)
 }

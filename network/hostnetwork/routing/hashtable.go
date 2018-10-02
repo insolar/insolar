@@ -189,12 +189,10 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredHosts []*
 		j++
 	}
 
-	routeSet := NewRouteSet()
 	leftToAdd := num
 
 	// Next we select ParallelCalls contacts and add them to the route set
-	ht.selectParallelCalls(leftToAdd, indexList, ignoredHosts, routeSet)
-
+	routeSet := ht.selectParallelCalls(leftToAdd, indexList, target, ignoredHosts)
 	sort.Sort(routeSet)
 
 	return routeSet
@@ -203,22 +201,32 @@ func (ht *HashTable) GetClosestContacts(num int, target []byte, ignoredHosts []*
 func (ht *HashTable) selectParallelCalls(
 	leftToAdd int,
 	indexList []int,
-	ignoredHosts []*host.Host,
-	routeSet *RouteSet,
-) {
+	target []byte,
+	ignoredHosts []*host.Host) *RouteSet {
+
+	routeSet := NewRouteSet(target)
 	var index int
 	for leftToAdd > 0 && len(indexList) > 0 {
 		index, indexList = indexList[0], indexList[1:]
 		bucketContacts := len(ht.RoutingTable[index])
+
+		rt := NewRouteSet(target)
+
 		for i := 0; i < bucketContacts; i++ {
+			rt.Append(ht.RoutingTable[index][i])
+		}
+
+		sort.Sort(rt)
+
+		for _, host := range rt.Hosts() {
 			ignored := false
 			for j := 0; j < len(ignoredHosts); j++ {
-				if ht.RoutingTable[index][i].ID.Equal(ignoredHosts[j].ID.Bytes()) {
+				if host.ID.Equal(ignoredHosts[j].ID.Bytes()) {
 					ignored = true
 				}
 			}
 			if !ignored {
-				routeSet.Append(ht.RoutingTable[index][i])
+				routeSet.Append(NewRouteHost(host))
 				leftToAdd--
 				if leftToAdd == 0 {
 					break
@@ -226,6 +234,7 @@ func (ht *HashTable) selectParallelCalls(
 			}
 		}
 	}
+	return routeSet
 }
 
 // GetAllHostsInBucketCloserThan returns all hosts from given bucket that are closer to id then our host.
@@ -340,7 +349,7 @@ func (ht *HashTable) totalHosts() int {
 	return total
 }
 
-// GetHosts returns hostsNumber (or less) hosts from the HashTable, starting from the first bucket
+// GetHosts returns hostsNumber (or less) hosts from the HashTable, starting from the last bucket
 func (ht *HashTable) GetHosts(hostsNumber int) []host.Host {
 	ht.Lock()
 	defer ht.Unlock()
@@ -348,7 +357,8 @@ func (ht *HashTable) GetHosts(hostsNumber int) []host.Host {
 	result := make([]host.Host, 0)
 
 Loop:
-	for _, bucket := range ht.RoutingTable {
+	for i := len(ht.RoutingTable) - 1; i >= 0; i-- {
+		bucket := ht.RoutingTable[i]
 		for _, routeHost := range bucket {
 			result = append(result, *routeHost.Host)
 			if len(result) == hostsNumber {

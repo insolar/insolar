@@ -101,6 +101,9 @@ func (hh *mockHostHandler) Bootstrap() error {
 	return nil
 }
 
+func (hh *mockHostHandler) GetHostsFromBootstrap() {
+}
+
 func (hh *mockHostHandler) ObtainIP() error {
 	return nil
 }
@@ -263,11 +266,11 @@ func (hh *mockHostHandler) GetSelfKnownOuterHosts() int {
 }
 
 func (hh *mockHostHandler) GetPacketTimeout() time.Duration {
-	return 0
+	return 10 * time.Microsecond
 }
 
 func (hh *mockHostHandler) GetReplicationTime() time.Duration {
-	return 2
+	return 20 * time.Microsecond
 }
 
 func (hh *mockHostHandler) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time {

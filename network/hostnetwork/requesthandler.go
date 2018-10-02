@@ -17,8 +17,6 @@
 package hostnetwork
 
 import (
-	"time"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -329,54 +327,43 @@ func SendRelayOwnership(hostHandler hosthandler.HostHandler, subnetIDs []string)
 
 func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future, targetID string, request *packet.Packet) error {
 	var err error
-	select {
-	case rsp := <-future.Result():
-		if rsp == nil {
-			return err
-		}
-
-		// todo: add couner ?
-		switch request.Type {
-		case packet.TypeKnownOuterHosts:
-			response := rsp.Data.(*packet.ResponseKnownOuterHosts)
-			err = handleKnownOuterHosts(hostHandler, response, targetID)
-		case packet.TypeCheckOrigin:
-			response := rsp.Data.(*packet.ResponseCheckOrigin)
-			handleCheckOriginResponse(hostHandler, response, targetID)
-		case packet.TypeAuth:
-			response := rsp.Data.(*packet.ResponseAuth)
-			err = handleAuthResponse(hostHandler, response, targetID)
-		case packet.TypeObtainIP:
-			response := rsp.Data.(*packet.ResponseObtainIP)
-			err = handleObtainIPResponse(hostHandler, response, targetID)
-		case packet.TypeRelayOwnership:
-			response := rsp.Data.(*packet.ResponseRelayOwnership)
-			handleRelayOwnership(hostHandler, response, targetID)
-		case packet.TypeCheckNodePriv:
-			response := rsp.Data.(*packet.ResponseCheckNodePriv)
-			err = handleCheckNodePrivResponse(hostHandler, response)
-		case packet.TypeRelay:
-			response := rsp.Data.(*packet.ResponseRelay)
-			err = handleRelayResponse(hostHandler, response, targetID)
-		case packet.TypeCascadeSend:
-			response := rsp.Data.(*packet.ResponseCascadeSend)
-			if !response.Success {
-				err = errors.New(response.Error)
-			}
-		case packet.TypePulse:
-			response := rsp.Data.(*packet.ResponsePulse)
-			if !response.Success {
-				err = errors.New(response.Error)
-			}
-		}
-
-		if err != nil {
-			return err
-		}
-
-	case <-time.After(hostHandler.GetPacketTimeout()):
-		future.Cancel()
-		return errors.New(request.Type.String() + ": timeout")
+	rsp, err := future.GetResult(hostHandler.GetPacketTimeout())
+	if err != nil {
+		return errors.Wrap(err, "checkResponse error")
 	}
-	return nil
+	switch request.Type {
+	case packet.TypeKnownOuterHosts:
+		response := rsp.Data.(*packet.ResponseKnownOuterHosts)
+		err = handleKnownOuterHosts(hostHandler, response, targetID)
+	case packet.TypeCheckOrigin:
+		response := rsp.Data.(*packet.ResponseCheckOrigin)
+		handleCheckOriginResponse(hostHandler, response, targetID)
+	case packet.TypeAuth:
+		response := rsp.Data.(*packet.ResponseAuth)
+		err = handleAuthResponse(hostHandler, response, targetID)
+	case packet.TypeObtainIP:
+		response := rsp.Data.(*packet.ResponseObtainIP)
+		err = handleObtainIPResponse(hostHandler, response, targetID)
+	case packet.TypeRelayOwnership:
+		response := rsp.Data.(*packet.ResponseRelayOwnership)
+		handleRelayOwnership(hostHandler, response, targetID)
+	case packet.TypeCheckNodePriv:
+		response := rsp.Data.(*packet.ResponseCheckNodePriv)
+		err = handleCheckNodePrivResponse(hostHandler, response)
+	case packet.TypeRelay:
+		response := rsp.Data.(*packet.ResponseRelay)
+		err = handleRelayResponse(hostHandler, response, targetID)
+	case packet.TypeCascadeSend:
+		response := rsp.Data.(*packet.ResponseCascadeSend)
+		if !response.Success {
+			err = errors.New(response.Error)
+		}
+	case packet.TypePulse:
+		response := rsp.Data.(*packet.ResponsePulse)
+		if !response.Success {
+			err = errors.New(response.Error)
+		}
+	}
+
+	return err
 }
