@@ -141,7 +141,7 @@ func main() {
 	}
 
 	cm.linkAll()
-	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(0, &pulsar.StandardEntropyGenerator{}))
+	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(0, 1, &pulsar.StandardEntropyGenerator{}, nil))
 	if err != nil {
 		log.Fatalln("Failed init pulse for LogicRunner: ", err.Error())
 	}

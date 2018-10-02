@@ -89,7 +89,7 @@ type BftCell struct {
 	IsEntropyReceived bool
 }
 
-// NewPulse creates a new pulse with using of custom GeneratedEntropy Generator
+// NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
 	configuration configuration.Pulsar,
 	storage pulsarstorage.PulsarStorage,
@@ -468,6 +468,9 @@ func (pulsar *Pulsar) switchStateTo(state State, arg interface{}) {
 		pulsar.stateSwitchedToFailed(arg.(error))
 	}
 }
+func (pulsar *Pulsar) stateSwitchedToWaitingForTheStart() {
+	pulsar.clearState()
+}
 
 func (pulsar *Pulsar) stateSwitchedToSendingVector() {
 	log.Debug("[stateSwitchedToSendingVector]")
@@ -751,21 +754,13 @@ func (pulsar *Pulsar) stateSwitchedToSendingSignForChosen() {
 }
 
 func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
-	log.Debug("[stateSwitchedToSendingEntropyToNodes]")
-	log.Infof("Pulse - %v", time.Now())
-	pulsar.State = WaitingForTheStart
-	pulsar.LastPulse = &core.Pulse{
-		PulseNumber: pulsar.ProcessingPulseNumber,
-		Entropy:     pulsar.EntropyForNodes,
-		Signs:       pulsar.SignsConfirmedSending,
-	}
-	return
+	log.Debug("[stateSwitchedToSendingEntropyToNodes]. Pulse - %v", time.Now())
 
 	if pulsar.State == Failed || len(pulsar.Config.BootstrapNodes) == 0 {
 		return
 	}
 
-	pulseForSeinding := core.Pulse{
+	pulseForSending := core.Pulse{
 		PulseNumber: pulsar.ProcessingPulseNumber,
 		Entropy:     pulsar.EntropyForNodes,
 		Signs:       pulsar.SignsConfirmedSending,
@@ -840,7 +835,7 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 		}
 
 		for _, pulseReceiver := range body.Hosts {
-			pulseRequest := b.Sender(pulsarHost).Receiver(&pulseReceiver).Request(packet.RequestPulse{Pulse: pulseForSeinding}).Type(packet.TypePulse).Build()
+			pulseRequest := b.Sender(pulsarHost).Receiver(&pulseReceiver).Request(packet.RequestPulse{Pulse: pulseForSending}).Type(packet.TypePulse).Build()
 			call, err := t.SendRequest(pulseRequest)
 			if err != nil {
 				log.Error(err)
@@ -854,10 +849,12 @@ func (pulsar *Pulsar) stateSwitchedToSendingEntropyToNodes() {
 
 	}
 
-	err = pulsar.Storage.SavePulse(&pulseForSeinding)
+	err = pulsar.Storage.SavePulse(&pulseForSending)
 	if err != nil {
 		log.Error(err)
 	}
+	pulsar.LastPulse = &pulseForSending
+	pulsar.switchStateTo(WaitingForTheStart, nil)
 	defer t.Stop()
 }
 
@@ -866,12 +863,23 @@ func (pulsar *Pulsar) stateSwitchedToFailed(err error) {
 	log.Error(err)
 
 	pulsar.State = Failed
-	pulsar.GeneratedEntropy = [core.EntropySize]byte{}
-	pulsar.GeneratedEntropySign = []byte{}
-	pulsar.OwnedBftRow = map[string]*BftCell{}
-	pulsar.BftGrid = map[string]map[string]*BftCell{}
+	pulsar.clearState()
 
 	pulsar.EntropyGenerationLock.Unlock()
+}
+
+func (pulsar *Pulsar) clearState() {
+	pulsar.GeneratedEntropy = [core.EntropySize]byte{}
+	pulsar.GeneratedEntropySign = []byte{}
+
+	pulsar.EntropyForNodes = core.Entropy{}
+	pulsar.PulseSenderToNodes = ""
+	pulsar.SignsConfirmedSending = map[string]core.PulseSenderConfirmation{}
+
+	pulsar.ProcessingPulseNumber = 0
+
+	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.BftGrid = map[string]map[string]*BftCell{}
 }
 
 func (pulsar *Pulsar) generateNewEntropyAndSign() error {

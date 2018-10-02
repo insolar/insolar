@@ -20,8 +20,8 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// Create a new pulse with using of custom GeneratedEntropy Generator
-func NewPulse(previousPulseNumber core.PulseNumber, entropyGenerator EntropyGenerator) *core.Pulse {
-	previousPulseNumber++
-	return &core.Pulse{PulseNumber: core.PulseNumber(previousPulseNumber), Entropy: entropyGenerator.GenerateEntropy()}
+// NewPulse creates a new pulse with using of custom GeneratedEntropy Generator
+func NewPulse(previousPulseNumber core.PulseNumber, delta int, entropyGenerator EntropyGenerator, signs map[string]core.PulseSenderConfirmation) *core.Pulse {
+	previousPulseNumber += core.PulseNumber(delta)
+	return &core.Pulse{PulseNumber: core.PulseNumber(previousPulseNumber), Entropy: entropyGenerator.GenerateEntropy(), Signs: signs}
 }
