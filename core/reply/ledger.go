@@ -84,5 +84,5 @@ type ID struct {
 
 // Type implementation of Reply interface.
 func (e *ID) Type() core.ReplyType {
-	return TypeReference
+	return TypeID
 }
