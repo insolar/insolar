@@ -17,11 +17,10 @@
 package rootdomain
 
 import (
-	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/json"
 
-	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/genesis/proxy/member"
 	"github.com/insolar/insolar/genesis/proxy/nodedomain"
 	"github.com/insolar/insolar/genesis/proxy/wallet"
@@ -50,22 +49,32 @@ func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	return nd.RegisterNode(publicKey, role).String()
 }
 
+func makeSeed() []byte {
+	seed := make([]byte, 32)
+	_, err := rand.Read(seed)
+	if err != nil {
+		panic(err)
+	}
+
+	return seed
+}
+
 // IsAuthorized checks is node authorized
 func (rd *RootDomain) IsAuthorized() bool {
-	privateKey, err := ecdsa.GenerateKey(utils.GetCurve(), rand.Reader)
+	privateKey, err := ecdsa_helper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
 	}
 
 	// Make signature
-	seed := utils.MakeSeed()
-	signature, err := utils.Sign(seed, privateKey)
+	seed := makeSeed()
+	signature, err := ecdsa_helper.Sign(seed, privateKey)
 	if err != nil {
 		panic(err)
 	}
 
 	// Register node
-	serPubKey, err := utils.SerializePublicKey(privateKey.PublicKey)
+	serPubKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		panic(err)
 	}
