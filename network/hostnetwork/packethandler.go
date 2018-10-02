@@ -101,7 +101,7 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		return nil, errors.Wrap(err, "could not get current pulse")
 	}
 	log.Debugf("got new pulse number: %d", currentPulse.PulseNumber)
-	if data.Pulse.PulseNumber > currentPulse.PulseNumber {
+	if data.Pulse.PulseNumber >= currentPulse.NextPulseNumber {
 		err = pm.Set(data.Pulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to set pulse")
