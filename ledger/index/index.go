@@ -23,14 +23,14 @@ import (
 
 // ClassLifeline represents meta information for record object
 type ClassLifeline struct {
-	LatestStateRef record.Reference   // Amend or activate record
-	AmendRefs      []record.Reference // ClassAmendRecord
+	LatestState record.ID   // Amend or activate record
+	AmendRefs   []record.ID // ClassAmendRecord
 }
 
 // ObjectLifeline represents meta information for record object
 type ObjectLifeline struct {
-	ClassRef       record.Reference
-	LatestStateRef record.Reference   // Amend or activate record
-	Children       []record.Reference // ActivateObjectRecord
-	Delegates      map[core.RecordRef]record.Reference
+	ClassRef    record.Reference
+	LatestState record.ID          // Amend or activate record
+	Children    []record.Reference // ActivateObjectRecord
+	Delegates   map[core.RecordRef]record.Reference
 }

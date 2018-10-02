@@ -18,20 +18,25 @@ package helloworld
 
 import "github.com/insolar/insolar/core"
 
+// HelloWorld contract
 type HelloWorld struct {
+	// Greeted - how many callers we "greated"
 	Greeted int
 }
 
+// CodeRef returns something strange
 func CodeRef() core.RecordRef {
 	var ref core.RecordRef
 	ref[core.RecordRefSize-1] = 1
 	return ref
 }
 
+// NewHelloWorld returns a new empty contract
 func NewHelloWorld() *HelloWorld {
 	return &HelloWorld{}
 }
 
+// Greet greats the caller
 func (hw *HelloWorld) Greet(name string) string {
 	hw.Greeted++
 	return "Hello " + name + "'s world"
