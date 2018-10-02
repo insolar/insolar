@@ -50,7 +50,6 @@ type CallMethod struct {
 	BaseLogicEvent
 	ReturnMode MethodReturnMode
 	ObjectRef  core.RecordRef
-	Request    core.RecordRef
 	Method     string
 	Arguments  core.Arguments
 }

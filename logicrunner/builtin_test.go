@@ -69,7 +69,6 @@ func TestBareHelloworld(t *testing.T) {
 
 	// #1
 	resp, err := lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"Vany"}),
@@ -83,7 +82,6 @@ func TestBareHelloworld(t *testing.T) {
 
 	// #2
 	resp, err = lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"Ruz"}),
