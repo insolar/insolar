@@ -2,6 +2,7 @@ package rootdomain
 
 import (
         "github.com/insolar/insolar/core"
+        "github.com/insolar/insolar/genesis/proxy/member"
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -173,9 +174,10 @@ func (r *RootDomain) IsAuthorizedNoWait(  ) {
     }
 }
 
-func (r *RootDomain) CreateMember( name string ) ( string ) {
-    var args [1]interface{}
+func (r *RootDomain) CreateMember( name string, key string ) ( string ) {
+    var args [2]interface{}
 	args[0] = name
+	args[1] = key
 
     var argsSerialized []byte
 
@@ -201,9 +203,10 @@ func (r *RootDomain) CreateMember( name string ) ( string ) {
     return resList[0].(string)
 }
 
-func (r *RootDomain) CreateMemberNoWait( name string ) {
-    var args [1]interface{}
+func (r *RootDomain) CreateMemberNoWait( name string, key string ) {
+    var args [2]interface{}
 	args[0] = name
+	args[1] = key
 
     var argsSerialized []byte
 
@@ -263,11 +266,9 @@ func (r *RootDomain) GetBalanceNoWait( reference string ) {
     }
 }
 
-func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
-    var args [3]interface{}
-	args[0] = from
-	args[1] = to
-	args[2] = amount
+func (r *RootDomain) getUserInfoMap( m *member.Member ) ( map[string]interface{} ) {
+    var args [1]interface{}
+	args[0] = m
 
     var argsSerialized []byte
 
@@ -276,13 +277,13 @@ func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
         panic(err)
     }
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "SendMoney", argsSerialized)
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "getUserInfoMap", argsSerialized)
     if err != nil {
    		panic(err)
     }
 
     resList := [1]interface{}{}
-	var a0 bool
+	var a0 map[string]interface{}
 	resList[0] = a0
 
     err = proxyctx.Current.Deserialize(res, &resList)
@@ -290,14 +291,12 @@ func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
         panic(err)
     }
 
-    return resList[0].(bool)
+    return resList[0].(map[string]interface{})
 }
 
-func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
-    var args [3]interface{}
-	args[0] = from
-	args[1] = to
-	args[2] = amount
+func (r *RootDomain) getUserInfoMapNoWait( m *member.Member ) {
+    var args [1]interface{}
+	args[0] = m
 
     var argsSerialized []byte
 
@@ -306,7 +305,7 @@ func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
         panic(err)
     }
 
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "SendMoney", argsSerialized)
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "getUserInfoMap", argsSerialized)
     if err != nil {
         panic(err)
     }
@@ -395,6 +394,57 @@ func (r *RootDomain) DumpAllUsersNoWait(  ) {
     }
 
     _, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllUsers", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
+func (r *RootDomain) SetRoot( adminKey string ) ( string ) {
+    var args [1]interface{}
+	args[0] = adminKey
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "SetRoot", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [1]interface{}{}
+	var a0 string
+	resList[0] = a0
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].(string)
+}
+
+func (r *RootDomain) SetRootNoWait( adminKey string ) {
+    var args [1]interface{}
+	args[0] = adminKey
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "SetRoot", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
+Reference, false, "DumpAllUsers", argsSerialized)
     if err != nil {
         panic(err)
     }

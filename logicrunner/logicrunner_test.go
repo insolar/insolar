@@ -18,7 +18,9 @@ package logicrunner
 
 import (
 	"bytes"
-	"encoding/json"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,6 +32,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -670,6 +673,44 @@ func (r *Two) AnError() error {
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 }
 
+type Msg struct {
+	Ref    string
+	Method string
+	Params []interface{}
+	Seed   []byte
+}
+
+type Caller struct {
+	member string
+	key    *ecdsa.PrivateKey
+	lr     core.LogicRunner
+	req    core.RecordRef
+	t      *testing.T
+}
+
+func (s *Caller) SignedCall(ref string, method string, params []interface{}) interface{} {
+	seed := make([]byte, 32)
+	_, err := rand.Read(seed)
+
+	msg := Msg{ref, method, params, seed}
+	var buf []byte
+	ch := new(codec.CborHandle)
+	err = codec.NewEncoderBytes(&buf, ch).Encode(msg)
+	assert.NoError(s.t, err)
+	sign, err := utils.Sign(buf, s.key)
+	assert.NoError(s.t, err)
+	resp, err := s.lr.Execute(&message.CallMethod{
+		Request:   s.req,
+		ObjectRef: core.NewRefFromBase58(s.member),
+		Method:    "AuthorizedCall",
+		Arguments: testutil.CBORMarshal(s.t, []interface{}{ref, method, params, seed, sign}),
+	})
+	assert.NoError(s.t, err, "contract call")
+	res := testutil.CBORUnMarshal(s.t, resp.(*reply.Common).Result)
+	assert.Nil(s.t, res.([]interface{})[1])
+	return res.([]interface{})[0]
+}
+
 func TestRootDomainContract(t *testing.T) {
 	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.go" +
 		"")
@@ -691,60 +732,63 @@ func TestRootDomainContract(t *testing.T) {
 
 	lr, am, cb, cleaner := PrepareLrAmCb(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootDomain": string(rootDomainCode)})
+	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
 	assert.NoError(t, err)
 
+	// Initializing Root Domain
 	domain := core.NewRefFromBase58("c1")
 	request := core.NewRefFromBase58("c2")
-	contract, err := am.ActivateObject(domain, request, *cb.Classes["rootDomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.ActivateObject(domain, request, *cb.Classes["rootdomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp1, err := lr.Execute(&message.CallMethod{
-		Request:   request,
-		ObjectRef: *contract,
-		Method:    "CreateMember",
-		Arguments: testutil.CBORMarshal(t, []interface{}{"member1"}),
-	})
-	assert.NoError(t, err, "contract call")
-	r1 := testutil.CBORUnMarshal(t, resp1.(*reply.Common).Result)
-	member1Ref := r1.([]interface{})[0].(string)
-
-	resp2, err := lr.Execute(&message.CallMethod{
-		Request:   request,
-		ObjectRef: *contract,
-		Method:    "CreateMember",
-		Arguments: testutil.CBORMarshal(t, []interface{}{"member2"}),
-	})
-	assert.NoError(t, err, "contract call")
-	r2 := testutil.CBORUnMarshal(t, resp2.(*reply.Common).Result)
-	member2Ref := r2.([]interface{})[0].(string)
-
-	_, err = lr.Execute(&message.CallMethod{
-		Request:   request,
-		ObjectRef: *contract,
-		Method:    "SendMoney",
-		Arguments: testutil.CBORMarshal(t, []interface{}{member1Ref, member2Ref, 1}),
-	})
-	assert.NoError(t, err, "contract call")
-
-	resp4, err := lr.Execute(&message.CallMethod{
-		Request:   request,
-		ObjectRef: *contract,
-		Method:    "DumpAllUsers",
-		Arguments: testutil.CBORMarshal(t, []interface{}{}),
-	})
-	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp4.(*reply.Common).Result)
-
-	var res []map[string]interface{}
-	var expected = map[interface{}]float64{"member1": 999, "member2": 1001}
-
-	err = json.Unmarshal(r.([]interface{})[0].([]byte), &res)
+	// Creating and setting Root member
+	rootKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	assert.NoError(t, err)
-	for _, member := range res {
-		assert.Equal(t, expected[member["member"]], member["wallet"])
-	}
+	rootPubKey, err := utils.SerializePublicKey(rootKey.PublicKey)
+	assert.NoError(t, err)
+	resp, err := lr.Execute(&message.CallMethod{
+		Request:   request,
+		ObjectRef: *contract,
+		Method:    "SetRoot",
+		Arguments: testutil.CBORMarshal(t, []interface{}{rootPubKey}),
+	})
+	assert.NoError(t, err, "contract call")
+	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	rootRef := r.([]interface{})[0].(string)
+	assert.NotEqual(t, "", rootRef)
+
+	root := Caller{rootRef, rootKey, lr, request, t}
+
+	// Creating Member1
+	member1Key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	member1PubKey, err := utils.SerializePublicKey(member1Key.PublicKey)
+	assert.NoError(t, err)
+	resp1 := root.SignedCall(contract.String(), "CreateMember", []interface{}{"Member1", member1PubKey})
+	member1Ref := resp1.([]interface{})[0].(string)
+	assert.NotEqual(t, "", member1Ref)
+
+	// Creating Member2
+	member2Key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	member2PubKey, err := utils.SerializePublicKey(member2Key.PublicKey)
+	assert.NoError(t, err)
+	resp2 := root.SignedCall(contract.String(), "CreateMember", []interface{}{"Member2", member2PubKey})
+	member2Ref := resp2.([]interface{})[0].(string)
+	assert.NotEqual(t, "", member2Ref)
+
+	// Transfer 1 coin from Member1 to Member2
+	member1 := Caller{member1Ref, member1Key, lr, request, t}
+	member1.SignedCall(member1Ref, "SendMoney", []interface{}{1, member2Ref})
+
+	// Verify Member1 balance
+	resp1 = root.SignedCall(member1Ref, "GetBalance", []interface{}{})
+	assert.Equal(t, 999, int(resp1.([]interface{})[0].(uint64)))
+
+	// Verify Member2 balance
+	resp2 = root.SignedCall(member2Ref, "GetBalance", []interface{}{})
+	assert.Equal(t, 1001, int(resp2.([]interface{})[0].(uint64)))
 }
 
 func BenchmarkContractCall(b *testing.B) {

@@ -2,9 +2,15 @@ package member
 
 import (
         "github.com/insolar/insolar/core"
+        "github.com/insolar/insolar/logicrunner/goplugin/foundation"
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
+type Msg struct {
+	Ref    string
+	Method string
+	Params []interface{}
+}
 
 
 // ClassReference to class of this contract
@@ -53,9 +59,10 @@ func GetImplementationFrom(object core.RecordRef) *Member {
 }
 
 
-func New( name string ) *ContractHolder {
-    var args [1]interface{}
+func New( name string, key string ) *ContractHolder {
+    var args [2]interface{}
 	args[0] = name
+	args[1] = key
 
 
     var argsSerialized []byte
@@ -127,7 +134,7 @@ func (r *Member) GetNameNoWait(  ) {
     }
 }
 
-func (r *Member) GetPublicKey(  ) ( []byte ) {
+func (r *Member) GetPublicKey(  ) ( string ) {
     var args [0]interface{}
 
     var argsSerialized []byte
@@ -143,7 +150,7 @@ func (r *Member) GetPublicKey(  ) ( []byte ) {
     }
 
     resList := [1]interface{}{}
-	var a0 []byte
+	var a0 string
 	resList[0] = a0
 
     err = proxyctx.Current.Deserialize(res, &resList)
@@ -151,7 +158,7 @@ func (r *Member) GetPublicKey(  ) ( []byte ) {
         panic(err)
     }
 
-    return resList[0].([]byte)
+    return resList[0].(string)
 }
 
 func (r *Member) GetPublicKeyNoWait(  ) {
@@ -165,6 +172,59 @@ func (r *Member) GetPublicKeyNoWait(  ) {
     }
 
     _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
+func (r *Member) AuthorizedCall( ref string, method string, params []interface{}, sign []byte ) ( []interface{}, *foundation.Error ) {
+    var args [4]interface{}
+	args[0] = ref
+	args[1] = method
+	args[2] = params
+	args[3] = sign
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "AuthorizedCall", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [2]interface{}{}
+	var a0 []interface{}
+	resList[0] = a0
+	var a1 *foundation.Error
+	resList[1] = a1
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].([]interface{}), resList[1].(*foundation.Error)
+}
+
+func (r *Member) AuthorizedCallNoWait( ref string, method string, params []interface{}, sign []byte ) {
+    var args [4]interface{}
+	args[0] = ref
+	args[1] = method
+	args[2] = params
+	args[3] = sign
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "AuthorizedCall", argsSerialized)
     if err != nil {
         panic(err)
     }

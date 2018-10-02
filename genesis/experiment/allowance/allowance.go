@@ -17,6 +17,7 @@
 package allowance
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -35,14 +36,13 @@ func (a *Allowance) IsExpired() bool {
 }
 
 func (a *Allowance) TakeAmount() uint {
-	//caller := a.GetContext().Caller
-	//if *caller == a.To && !a.IsExpired() {
-
+	caller := a.GetContext().Caller
+	if *caller == a.To && !a.IsExpired() {
 		a.SelfDestructRequest()
 		r := a.Amount
 		a.Amount = 0
 		return r
-	//}
+	}
 	return 0
 }
 
@@ -62,5 +62,6 @@ func (a *Allowance) DeleteExpiredAllowance() uint {
 }
 
 func New(to *core.RecordRef, amount uint, expire int64) *Allowance {
+	fmt.Println("ALLOWANCE CREATING", to, amount)
 	return &Allowance{To: *to, Amount: amount, ExpireTime: expire}
 }
