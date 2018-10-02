@@ -31,6 +31,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 )
 
+// Need to fix problem with start pulsar
 func main() {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
@@ -39,74 +40,28 @@ func main() {
 		log.Warnln("Failed to load configuration from file: ", err.Error())
 	}
 
+	cfgHolder.Configuration.Log.Level = "Debug"
 	err = cfgHolder.LoadEnv()
 	if err != nil {
 		log.Warnln("Failed to load configuration from env:", err.Error())
 	}
-
 	initLogger(cfgHolder.Configuration.Log)
-	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
-	fmt.Println("Version: ", version.GetFullVersion())
-
-	storage, err := pulsarstorage.NewStorageBadger(cfgHolder.Configuration.Pulsar, nil)
-	if err != nil {
-		log.Fatal(err)
-		panic(err)
-	}
-	server, err := pulsar.NewPulsar(cfgHolder.Configuration.Pulsar, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
-	if err != nil {
-		log.Fatal(err)
-		panic(err)
-	}
+	server, storage := initPulsar(cfgHolder.Configuration.Pulsar)
 
 	go server.StartServer()
+	pulseTicker, refreshTicker := runPulsar(server, cfgHolder.Configuration.Pulsar)
 
-	server.RefreshConnections()
-
-	var nextPulseNumber core.PulseNumber
-	if server.LastPulse.PulseNumber == core.FirstPulseNumber {
-		nextPulseNumber = core.CalculatePulseNumber(time.Now())
-	} else {
-		waitTime := core.CalculateMsToNextPulse(server.LastPulse.PulseNumber, time.Now())
-		if waitTime != 0 {
-			nextPulseNumber = server.LastPulse.PulseNumber + core.PulseNumber(cfgHolder.Configuration.Pulsar.PulseTime)
-		}
-		time.Sleep(waitTime)
-
-	}
-	err = server.StartConsensusProcess(nextPulseNumber)
-	if err != nil {
-		log.Fatal(err)
-		panic(err)
-	}
-	//pulseTicker := time.NewTicker(time.Duration(cfgHolder.Configuration.Pulsar.PulseTime) * time.Second)
-	//go func() {
-	//	for range pulseTicker.C {
-	//		err = server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
-	//		if err != nil {
-	//			log.Fatal(err)
-	//			panic(err)
-	//		}
-	//	}
-	//}()
-	//
-	//refreshTicker := time.NewTicker(1 * time.Second)
-	//go func() {
-	//	for range refreshTicker.C {
-	//		server.RefreshConnections()
-	//	}
-	//}()
-
-	time.Sleep(10 * time.Minute)
-
-	//fmt.Println("Press any button to exit")
+	fmt.Println("Press any button to exit")
+	time.Sleep(2 * time.Hour)
+	//rl, err := readline.New("> ")
 	//_, err = rl.Readline()
 	//if err != nil {
 	//	log.Warn(err)
 	//}
 
-	//refreshTicker.Stop()
 	defer func() {
+		pulseTicker.Stop()
+		refreshTicker.Stop()
 		err := storage.Close()
 		if err != nil {
 			log.Error(err)
@@ -121,4 +76,52 @@ func initLogger(cfg configuration.Log) {
 	if err != nil {
 		log.Errorln(err.Error())
 	}
+}
+
+func initPulsar(cfg configuration.Pulsar) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
+	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
+	fmt.Println("Version: ", version.GetFullVersion())
+
+	storage, err := pulsarstorage.NewStorageBadger(cfg, nil)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+	server, err := pulsar.NewPulsar(cfg, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+
+	return server, storage
+}
+
+func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
+	server.RefreshConnections()
+
+	nextPulseNumber := core.CalculatePulseNumber(time.Now())
+	err := server.StartConsensusProcess(nextPulseNumber)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+	pulseTicker = time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
+	go func() {
+		for range pulseTicker.C {
+			err = server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
+			if err != nil {
+				log.Fatal(err)
+				panic(err)
+			}
+		}
+	}()
+
+	refreshTicker = time.NewTicker(1 * time.Second)
+	go func() {
+		for range refreshTicker.C {
+			server.RefreshConnections()
+		}
+	}()
+
+	return
 }

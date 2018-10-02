@@ -55,7 +55,7 @@ type PulsarNodeAddress struct {
 // NewPulsar creates new default configuration for pulsar node.
 func NewPulsar() Pulsar {
 	return Pulsar{
-		MainListenerAddress: "0.0.0.0:18090",
+		MainListenerAddress: "127.0.0.1:18090",
 
 		ConnectionType: TCP,
 		PrivateKey: `-----BEGIN PRIVATE KEY-----
@@ -73,7 +73,7 @@ BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
 		Storage:    Storage{DataDirectory: "./data/pulsar"},
 
 		NumberOfRandomHosts: 1,
-		BootstrapListener:   Transport{Protocol: "UTP", Address: "0.0.0.0:18091", BehindNAT: false},
-		BootstrapNodes:      []string{"127.0.0.1:51155"},
+		BootstrapListener:   Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
+		BootstrapNodes:      []string{},
 	}
 }

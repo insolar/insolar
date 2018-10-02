@@ -22,8 +22,10 @@ import (
 )
 
 const (
+	// PulseNumberSize declares the number of bytes in the pulse number
 	PulseNumberSize = 4
-	EntropySize     = 64
+	// EntropySize declares the number of bytes in the pulse entropy
+	EntropySize = 64
 )
 
 // Entropy is 64 random bytes used in every pseudo-random calculations.
@@ -42,7 +44,7 @@ func (pn PulseNumber) Bytes() []byte {
 	return buff
 }
 
-// Bytes2PulseNumber deserializes pulse number.
+// Bytes2PulseNumber deserialize pulse number.
 func Bytes2PulseNumber(buf []byte) PulseNumber {
 	return PulseNumber(binary.BigEndian.Uint32(buf))
 }
@@ -54,29 +56,23 @@ type Pulse struct {
 	Signs       map[string]PulseSenderConfirmation
 }
 
-// Information about pulse's confirmations
+// PulseSenderConfirmation contains confirmations of the pulse from other pulsars
+// Because the system is using BFT for consensus between pulsars, because of it
+// All pulsar send to the chosen pulsar their confirmations
+// Every node in the network can verify the signatures
 type PulseSenderConfirmation struct {
 	ChosenPublicKey string
 	Signature       []byte
 }
 
-// Hardcoded date of first pulse
-const FirstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
+// FirstPulseDate is the hardcoded date of the first pulse
+const firstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
+// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
 const FirstPulseNumber = 65536
 
+// CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
 func CalculatePulseNumber(now time.Time) PulseNumber {
-	return PulseNumber(now.Unix() - FirstPulseDate + FirstPulseNumber)
-}
-
-func CalculateMsToNextPulse(previousPulse PulseNumber, now time.Time) time.Duration {
-	nextPulseCalculated := int64(previousPulse-FirstPulseNumber+FirstPulseDate) + 10
-	nextTime := time.Unix(nextPulseCalculated, 0).Sub(now)
-
-	if nextTime < 0 {
-		nextTime = 0
-	}
-
-	return nextTime
+	return PulseNumber(now.Unix() - firstPulseDate + FirstPulseNumber)
 }
 
 // PulseManager provides Ledger's methods related to Pulse.
