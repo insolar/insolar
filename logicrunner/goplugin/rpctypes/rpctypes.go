@@ -146,10 +146,3 @@ type UpGetDelegateReq struct {
 type UpGetDelegateResp struct {
 	Object core.RecordRef
 }
-
-// Object is an inner representation of storage object for transfering it over API
-type Object struct {
-	MachineType core.MachineType
-	Reference   core.RecordRef
-	Data        []byte
-}
