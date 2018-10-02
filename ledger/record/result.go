@@ -222,8 +222,7 @@ func (r *CodeRecord) GetCode(archPref []core.MachineType) ([]byte, core.MachineT
 type AmendRecord struct {
 	StatefulResult
 
-	HeadRecord    Reference
-	AmendedRecord Reference
+	AmendedRecord ID
 }
 
 // ClassAmendRecord is an amendment record for classes.

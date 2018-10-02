@@ -26,6 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var zeros id.ID
+
 func createRouteHost(addrString string) *RouteHost {
 	addr, _ := host.NewAddress(addrString)
 	newHost := host.NewHost(addr)
@@ -34,14 +36,14 @@ func createRouteHost(addrString string) *RouteHost {
 }
 
 func TestNewRouteSet(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 
 	assert.Equal(t, &RouteSet{}, rs)
 	assert.Implements(t, (*sort.Interface)(nil), rs)
 }
 
 func TestRouteSet_Hosts(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 
 	assert.Empty(t, rs.Hosts())
 
@@ -56,7 +58,7 @@ func TestRouteSet_Hosts(t *testing.T) {
 }
 
 func TestRouteSet_Hosts_ReturnsCopy(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 	rs.Append(createRouteHost("127.0.0.1:41337"))
 	rs.Append(createRouteHost("10.10.11.11:22345"))
 
@@ -67,7 +69,7 @@ func TestRouteSet_Hosts_ReturnsCopy(t *testing.T) {
 }
 
 func TestRouteSet_FirstHost(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 	host1 := createRouteHost("127.0.0.1:35337")
 	host2 := createRouteHost("10.10.11.11:15345")
 	rs.Append(host1)
@@ -77,7 +79,7 @@ func TestRouteSet_FirstHost(t *testing.T) {
 }
 
 func TestRouteSet_Contains(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 	host1 := createRouteHost("127.0.0.1:34337")
 	host2 := createRouteHost("10.10.11.11:14345")
 	host3 := createRouteHost("192.168.1.1:14666")
@@ -90,7 +92,7 @@ func TestRouteSet_Contains(t *testing.T) {
 }
 
 func TestRouteSet_Append(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 
 	assert.Empty(t, rs.hosts)
 
@@ -104,7 +106,7 @@ func TestRouteSet_Append(t *testing.T) {
 }
 
 func TestRouteSet_Remove(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 	host1 := createRouteHost("127.0.0.1:32337")
 	host2 := createRouteHost("10.10.11.11:13345")
 	host3 := createRouteHost("192.168.1.1:14666")
@@ -124,7 +126,7 @@ func TestRouteSet_Remove(t *testing.T) {
 }
 
 func TestRouteSet_RemoveMany(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 	var hosts []*RouteHost
 	hosts = append(hosts, createRouteHost("127.0.0.1:31937"))
 	hosts = append(hosts, createRouteHost("10.10.11.11:12245"))
@@ -143,7 +145,7 @@ func TestRouteSet_RemoveMany(t *testing.T) {
 }
 
 func TestRouteSet_AppendMany(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 
 	assert.Empty(t, rs.hosts)
 
@@ -156,7 +158,7 @@ func TestRouteSet_AppendMany(t *testing.T) {
 }
 
 func TestRouteSet_Len(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 
 	assert.Equal(t, 0, rs.Len())
 
@@ -170,7 +172,7 @@ func TestRouteSet_Len(t *testing.T) {
 }
 
 func TestRouteSet_Swap(t *testing.T) {
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 
 	assert.Empty(t, rs.hosts)
 
@@ -193,7 +195,7 @@ func TestRouteSet_Less(t *testing.T) {
 	host1.ID = getIDWithValues()
 	host2 := host.NewHost(addr)
 	host2.ID = getIDWithValues()
-	rs := NewRouteSet()
+	rs := NewRouteSet(zeros)
 	rs.Append(NewRouteHost(host1))
 	rs.Append(NewRouteHost(host2))
 

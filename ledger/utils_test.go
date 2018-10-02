@@ -14,30 +14,29 @@
  *    limitations under the License.
  */
 
-package helloworld
+package ledger
 
-import "github.com/insolar/insolar/core"
+import (
+	"fmt"
+	"testing"
 
-// HelloWorld contract
-type HelloWorld struct {
-	// Greeted - how many callers we "greated"
-	Greeted int
-}
+	"github.com/stretchr/testify/assert"
 
-// CodeRef returns something strange
-func CodeRef() core.RecordRef {
-	var ref core.RecordRef
-	ref[core.RecordRefSize-1] = 1
-	return ref
-}
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/ledger/hash"
+)
 
-// NewHelloWorld returns a new empty contract
-func NewHelloWorld() *HelloWorld {
-	return &HelloWorld{}
-}
-
-// Greet greats the caller
-func (hw *HelloWorld) Greet(name string) string {
-	hw.Greeted++
-	return "Hello " + name + "'s world"
+func TestGenRequestRecordID(t *testing.T) {
+	tt := map[string]hash.Writer{
+		"constructor": &message.CallConstructor{},
+		"call":        &message.CallMethod{},
+	}
+	for name := range tt {
+		t.Run(name, func(t *testing.T) {
+			h := tt[name]
+			res := GenRequestRecordID(0, h)
+			fmt.Printf("%T %+v => %x\n", h, h, res)
+			assert.NotNil(t, res)
+		})
+	}
 }

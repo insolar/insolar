@@ -54,20 +54,21 @@ func TestBareHelloworld(t *testing.T) {
 		Ledger:     l,
 		MessageBus: eb,
 	}), "starting logicrunner")
-	lr.OnPulse(*pulsar.NewPulse(0, 1, &pulsar.StandardEntropyGenerator{}, nil))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
 
 	hw := helloworld.NewHelloWorld()
 
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
 	_, _, classRef, err := testutil.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
+	assert.NoError(t, err)
 
 	contract, err := am.ActivateObject(request, domain, *classRef, *am.RootRef(), testutil.CBORMarshal(t, hw))
+	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
 	resp, err := lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"Vany"}),
@@ -81,7 +82,6 @@ func TestBareHelloworld(t *testing.T) {
 
 	// #2
 	resp, err = lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"Ruz"}),

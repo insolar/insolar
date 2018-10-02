@@ -25,6 +25,7 @@ type TestMessageBus struct {
 	LogicRunner core.LogicRunner
 }
 
+// Register is the dummy mock of Register method
 func (eb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
 	return nil
 }
@@ -40,6 +41,7 @@ func (eb *TestMessageBus) Send(msg core.Message) (resp core.Reply, err error) {
 	return eb.LogicRunner.Execute(msg)
 }
 
+// SendAsync sends message async
 func (*TestMessageBus) SendAsync(msg core.Message) {}
 
 // NewTestMessageBus creates TestMessageBus which mocks the real one.

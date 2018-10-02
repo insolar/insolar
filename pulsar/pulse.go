@@ -21,7 +21,11 @@ import (
 )
 
 // NewPulse creates a new pulse with using of custom GeneratedEntropy Generator
-func NewPulse(previousPulseNumber core.PulseNumber, delta int, entropyGenerator EntropyGenerator, signs map[string]core.PulseSenderConfirmation) *core.Pulse {
-	previousPulseNumber += core.PulseNumber(delta)
-	return &core.Pulse{PulseNumber: core.PulseNumber(previousPulseNumber), Entropy: entropyGenerator.GenerateEntropy(), Signs: signs}
+func NewPulse(numberDelta uint32, previousPulseNumber core.PulseNumber, entropyGenerator EntropyGenerator) *core.Pulse {
+	previousPulseNumber = previousPulseNumber + core.PulseNumber(numberDelta)
+	return &core.Pulse{
+		PulseNumber:     core.PulseNumber(previousPulseNumber),
+		NextPulseNumber: previousPulseNumber + core.PulseNumber(numberDelta),
+		Entropy:         entropyGenerator.GenerateEntropy(),
+	}
 }

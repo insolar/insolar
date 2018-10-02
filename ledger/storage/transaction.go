@@ -55,9 +55,9 @@ func (m *TransactionManager) Discard() {
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ref *record.Reference) (record.Record, error) {
-	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
-	log.Debugf("Getting record %s", ref)
+func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
+	k := prefixkey(scopeIDRecord, record.ID2Bytes(*id))
+	log.Debugf("Getting record %s", id)
 	item, err := m.txn.Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
@@ -79,19 +79,16 @@ func (m *TransactionManager) GetRecord(ref *record.Reference) (record.Record, er
 // SetRecord stores record in BadgerDB and returns *record.Reference of new record.
 //
 // If record exists returns ErrOverride error.
-func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, error) {
+func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	raw, err := record.EncodeToRaw(rec)
 	if err != nil {
 		return nil, err
 	}
-	ref := &record.Reference{
-		Domain: rec.Domain().Record,
-		Record: record.ID{
-			Pulse: m.db.GetCurrentPulse(),
-			Hash:  raw.Hash(),
-		},
+	id := record.ID{
+		Pulse: m.db.GetCurrentPulse(),
+		Hash:  raw.Hash(),
 	}
-	k := prefixkey(scopeIDRecord, ref.CoreRef()[:])
+	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
 	_, geterr := m.txn.Get(k)
 	if geterr == nil {
 		return nil, ErrOverride
@@ -104,12 +101,12 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.Reference, er
 	if err != nil {
 		return nil, err
 	}
-	return ref, nil
+	return &id, nil
 }
 
 // GetClassIndex fetches class lifeline's index.
-func (m *TransactionManager) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
+func (m *TransactionManager) GetClassIndex(id *record.ID) (*index.ClassLifeline, error) {
+	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
 	item, err := m.txn.Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
@@ -125,8 +122,8 @@ func (m *TransactionManager) GetClassIndex(ref *record.Reference) (*index.ClassL
 }
 
 // SetClassIndex stores class lifeline index.
-func (m *TransactionManager) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
+func (m *TransactionManager) SetClassIndex(id *record.ID, idx *index.ClassLifeline) error {
+	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
 	encoded, err := index.EncodeClassLifeline(idx)
 	if err != nil {
 		return err
@@ -135,8 +132,8 @@ func (m *TransactionManager) SetClassIndex(ref *record.Reference, idx *index.Cla
 }
 
 // GetObjectIndex fetches object lifeline index.
-func (m *TransactionManager) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
+func (m *TransactionManager) GetObjectIndex(id *record.ID) (*index.ObjectLifeline, error) {
+	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
 	item, err := m.txn.Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
@@ -152,8 +149,8 @@ func (m *TransactionManager) GetObjectIndex(ref *record.Reference) (*index.Objec
 }
 
 // SetObjectIndex stores object lifeline index.
-func (m *TransactionManager) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
-	k := prefixkey(scopeIDLifeline, ref.CoreRef()[:])
+func (m *TransactionManager) SetObjectIndex(id *record.ID, idx *index.ObjectLifeline) error {
+	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]record.Reference{}
 	}
