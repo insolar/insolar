@@ -354,10 +354,10 @@ func Test_processPulse(t *testing.T) {
 
 func Test_processPulse2(t *testing.T) {
 	nodeIds := []core.RecordRef{
-		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
-		core.NewRefFromBase58("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"),
-		core.NewRefFromBase58("9uE5MEWQB2yfKY8kTgTNovWii88D4anmf7GAiovgcxx6Uc6EBmZ212mpyMa1L22u9TcUUd94i8LvULdsdBoG8ed"),
-		core.NewRefFromBase58("4qXdYkfL9U4tL3qRPthdbdajtafR4KArcXjpyQSEgEMtpuin3t8aZYmMzKGRnXHBauytaPQ6bfwZyKZzRPpR6gyX"),
+		core.NewRefFromBase58("5owQeqWyHcobFaJqS2BZU2o2ZRQ33GojXkQK6f8vNLgvNx6xeWRwenJMc53eEsS7MCxrpXvAhtpTaNMPr3rjMHA"),
+		core.NewRefFromBase58("xF12WfbkcWrjrPXvauSYpEGhkZT2Zha53xpYh5KQdmGHMywJNNgnemfDN2JfPV45aNQobkdma4dsx1N7Xf5wCJ9"),
+		core.NewRefFromBase58("4VgDz9o23wmYXN9mEiLnnsGqCEEARGByx1oys2MXtC6M94K85ZpB9sEJwiGDER61gHkBxkwfJqtg9mAFR7PQcssq"),
+		core.NewRefFromBase58("48g7C8QnH2CGMa62sNaL1gVVyygkto8EbMRHv168psCBuFR2FXkpTfwk4ZwpY8awFFXKSnWspYWWQ7sMMk5W7s3T"),
 	}
 
 	prefix := "127.0.0.1:"
@@ -424,8 +424,8 @@ func Test_processPulse2(t *testing.T) {
 	firstStoredPulse, _ = ll.GetPulseManager().Current()
 	assert.Equal(t, core.PulseNumber(1), firstStoredPulse.PulseNumber)
 
-	// pulse is passed to the other 11 nodes and stored there, too
-	success := waitTimeout(&wg, time.Millisecond*200)
+	// pulse is passed to the other 4 nodes and stored there, too
+	success := waitTimeout(&wg, time.Second)
 	assert.True(t, success)
 
 	for _, ldgr := range ledgers {
