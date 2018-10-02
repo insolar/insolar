@@ -24,17 +24,17 @@ import (
 type State int
 
 const (
-	WaitingForTheStart State = iota + 1
-	WaitingForTheSigns
-	SendingEntropy
-	WaitingForTheEntropy
-	SendingVector
-	WaitingForTheVectors
-	Verifying
-	SendingSignForChosen
-	WaitingForChosenSigns
-	SendingEntropyToNodes
-	Failed
+	waitingForStart State = iota + 1
+	waitingForEntropySigns
+	sendingEntropy
+	waitingForEntropy
+	sendingVector
+	waitingForVectors
+	verifying
+	sendingPulseSign
+	waitingForPulseSigns
+	sendingPulse
+	failed
 )
 
 // StateSwitcher is a base for pulsar's state machine
@@ -53,33 +53,33 @@ func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
 
 func (switcher *StateSwitcherImpl) switchToState(state State, args interface{}) {
 	log.Debugf("Switch state from %v to %v", switcher.pulsar.State.String(), state.String())
-	if state < switcher.pulsar.State && state != WaitingForTheStart {
+	if state < switcher.pulsar.State && state != waitingForStart {
 		panic("Attempt to set a backward step")
 	}
 
 	switcher.pulsar.State = state
 	switch state {
-	case WaitingForTheStart:
-		log.Info("Switch to start")
-	case WaitingForTheSigns:
-		switcher.pulsar.stateSwitchedToWaitingForSigns()
-	case SendingEntropy:
-		switcher.pulsar.stateSwitchedToSendingEntropy()
-	case WaitingForTheEntropy:
-		switcher.pulsar.stateSwitchedWaitingForTheEntropy()
-	case SendingVector:
-		switcher.pulsar.stateSwitchedToSendingVector()
-	case WaitingForTheVectors:
-		switcher.pulsar.stateSwitchedToReceivingVector()
-	case Verifying:
-		switcher.pulsar.stateSwitchedToVerifying()
-	case WaitingForChosenSigns:
-		switcher.pulsar.stateSwitchedToWaitingForChosenSigns()
-	case SendingSignForChosen:
-		switcher.pulsar.stateSwitchedToSendingSignForChosen()
-	case SendingEntropyToNodes:
-		switcher.pulsar.stateSwitchedToSendingEntropyToNodes()
-	case Failed:
+	case waitingForStart:
+		switcher.pulsar.clearState()
+	case waitingForEntropySigns:
+		switcher.pulsar.waitForEntropySigns()
+	case sendingEntropy:
+		switcher.pulsar.sendEntropy()
+	case waitingForEntropy:
+		switcher.pulsar.waitForEntropy()
+	case sendingVector:
+		switcher.pulsar.sendVector()
+	case waitingForVectors:
+		switcher.pulsar.receiveVectors()
+	case verifying:
+		switcher.pulsar.verify()
+	case waitingForPulseSigns:
+		switcher.pulsar.waitForPulseSigns()
+	case sendingPulseSign:
+		switcher.pulsar.sendPulseSign()
+	case sendingPulse:
+		switcher.pulsar.sendPulse()
+	case failed:
 		switcher.pulsar.stateSwitchedToFailed(args.(error))
 	}
 }

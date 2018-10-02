@@ -245,6 +245,6 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 //		OwnedBftRow:      map[string]*bftCell{"test": &bftCell{}},
 //	}
 //
-//	pulsar.stateSwitchedToVerifying()
+//	pulsar.verify()
 //
 //}

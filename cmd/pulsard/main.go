@@ -37,13 +37,13 @@ func main() {
 	cfgHolder := configuration.NewHolder()
 	err := cfgHolder.Load()
 	if err != nil {
-		log.Warnln("Failed to load configuration from file: ", err.Error())
+		log.Warnln("failed to load configuration from file: ", err.Error())
 	}
 
 	cfgHolder.Configuration.Log.Level = "Debug"
 	err = cfgHolder.LoadEnv()
 	if err != nil {
-		log.Warnln("Failed to load configuration from env:", err.Error())
+		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 	initLogger(cfgHolder.Configuration.Log)
 	server, storage := initPulsar(cfgHolder.Configuration.Pulsar)
@@ -87,11 +87,13 @@ func initPulsar(cfg configuration.Pulsar) (*pulsar.Pulsar, pulsarstorage.PulsarS
 		log.Fatal(err)
 		panic(err)
 	}
-	server, err := pulsar.NewPulsar(cfg, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, net.Listen)
+	switcher := &pulsar.StateSwitcherImpl{}
+	server, err := pulsar.NewPulsar(cfg, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, switcher, net.Listen)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
 	}
+	switcher.SetPulsar(server)
 
 	return server, storage
 }

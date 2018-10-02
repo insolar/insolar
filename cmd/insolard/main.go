@@ -91,12 +91,12 @@ func main() {
 		err = cfgHolder.Load()
 	}
 	if err != nil {
-		log.Warnln("Failed to load configuration from file: ", err.Error())
+		log.Warnln("failed to load configuration from file: ", err.Error())
 	}
 
 	err = cfgHolder.LoadEnv()
 	if err != nil {
-		log.Warnln("Failed to load configuration from env:", err.Error())
+		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
 	initLogger(cfgHolder.Configuration.Log)
@@ -106,44 +106,44 @@ func main() {
 	cm := componentManager{}
 	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration.Host, cfgHolder.Configuration.Node)
 	if err != nil {
-		log.Fatalln("Failed to start Network: ", err.Error())
+		log.Fatalln("failed to start Network: ", err.Error())
 	}
 	cm.components.Network = nw
 
 	cm.components.Ledger, err = ledger.NewLedger(cfgHolder.Configuration.Ledger)
 	if err != nil {
-		log.Fatalln("Failed to start Ledger: ", err.Error())
+		log.Fatalln("failed to start Ledger: ", err.Error())
 	}
 
 	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
 	if err != nil {
-		log.Fatalln("Failed to start LogicRunner: ", err.Error())
+		log.Fatalln("failed to start LogicRunner: ", err.Error())
 	}
 
 	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("Failed to start LogicRunner: ", err.Error())
+		log.Fatalln("failed to start LogicRunner: ", err.Error())
 	}
 
 	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("Failed to start Bootstrapper: ", err.Error())
+		log.Fatalln("failed to start Bootstrapper: ", err.Error())
 	}
 
 	cm.components.APIRunner, err = api.NewRunner(&cfgHolder.Configuration.APIRunner)
 	if err != nil {
-		log.Fatalln("Failed to start ApiRunner: ", err.Error())
+		log.Fatalln("failed to start ApiRunner: ", err.Error())
 	}
 
 	cm.components.Metrics, err = metrics.NewMetrics(cfgHolder.Configuration.Metrics)
 	if err != nil {
-		log.Fatalln("Failed to start Metrics: ", err.Error())
+		log.Fatalln("failed to start Metrics: ", err.Error())
 	}
 
 	cm.linkAll()
 	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(cfgHolder.Configuration.Pulsar.NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
 	if err != nil {
-		log.Fatalln("Failed init pulse for LogicRunner: ", err.Error())
+		log.Fatalln("failed init pulse for LogicRunner: ", err.Error())
 	}
 
 	defer func() {

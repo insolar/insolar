@@ -129,7 +129,7 @@ func TestOnePulsar_FullStatesTransition(t *testing.T) {
 
 	pulsar.StartConsensusProcess(core.PulseNumber(firstPulse + 1))
 
-	for pulsar.State != SendingEntropyToNodes {
+	for pulsar.State != sendingPulse {
 		time.Sleep(1 * time.Millisecond)
 	}
 
