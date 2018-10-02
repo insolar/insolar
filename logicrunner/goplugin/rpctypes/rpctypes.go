@@ -55,7 +55,7 @@ type UpBaseReq struct {
 	Me core.RecordRef
 }
 
-// UpReqIface interface for UpBaseReq descendant responses
+// UpRespIface interface for UpBaseReq descendant responses
 type UpRespIface interface{}
 
 // UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
@@ -110,14 +110,14 @@ type UpSaveAsChildResp struct {
 	Reference core.RecordRef
 }
 
-// UpSaveAsChildResp is a set of arguments for GetObjChildren RPC in goplugin
+// UpGetObjChildrenReq is a set of arguments for GetObjChildren RPC in goplugin
 type UpGetObjChildrenReq struct {
 	UpBaseReq
 	Obj   core.RecordRef
 	Class core.RecordRef
 }
 
-// UpSaveAsChildResp is a set of arguments for GetObjChildren RPC in goplugin
+// UpGetObjChildrenResp is response from GetObjChildren RPC in goplugin
 type UpGetObjChildrenResp struct {
 	Children []core.RecordRef
 }
@@ -130,7 +130,7 @@ type UpSaveAsDelegateReq struct {
 	Data  []byte
 }
 
-// UpSaveAsDelegateResp is a set of arguments for SaveAsDelegate RPC in goplugin
+// UpSaveAsDelegateResp is response from SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateResp struct {
 	Reference core.RecordRef
 }
@@ -142,7 +142,7 @@ type UpGetDelegateReq struct {
 	OfType core.RecordRef
 }
 
-// UpGetDelegateResp is a set of arguments for GetDelegate RPC in goplugin
+// UpGetDelegateResp is response from GetDelegate RPC in goplugin
 type UpGetDelegateResp struct {
 	Object core.RecordRef
 }
