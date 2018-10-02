@@ -42,6 +42,7 @@ type Pulsar struct {
 	Neighbours []PulsarNodeAddress
 
 	NumberOfRandomHosts int
+	NumberDelta         uint32
 	BootstrapListener   Transport
 	BootstrapNodes      []string
 }
@@ -73,6 +74,7 @@ BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
 		Storage:    Storage{DataDirectory: "./data/pulsar"},
 
 		NumberOfRandomHosts: 1,
+		NumberDelta:         10,
 		BootstrapListener:   Transport{Protocol: "UTP", Address: "0.0.0.0:18091", BehindNAT: false},
 		BootstrapNodes:      []string{"127.0.0.1:64278"},
 	}

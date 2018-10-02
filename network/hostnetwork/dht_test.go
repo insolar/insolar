@@ -1085,9 +1085,9 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 	}()
 
 	for i := 0; i < 3; i++ {
-		host := prefix + strconv.Itoa(port)
-		st, s, tp, r, _ := realDhtParamsWithId(host)
-		bootstrapAdresses = append(bootstrapAdresses, host)
+		host1 := prefix + strconv.Itoa(port)
+		st, s, tp, r, _ := realDhtParamsWithId(host1)
+		bootstrapAdresses = append(bootstrapAdresses, host1)
 		dht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false)
 		dhts = append(dhts, dht)
 		go dht.Listen()
@@ -1102,8 +1102,8 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 	}
 
 	for i := 0; i < 17; i++ {
-		host := prefix + strconv.Itoa(port)
-		st, s, tp, r, _ := realDhtParamsWithId(host)
+		host1 := prefix + strconv.Itoa(port)
+		st, s, tp, r, _ := realDhtParamsWithId(host1)
 		dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 4, false)
 		dhts = append(dhts, dht)
 		go dht.Listen()
