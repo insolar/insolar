@@ -1115,3 +1115,31 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 	hostsCount := lastDht.HtFromCtx(GetDefaultCtx(lastDht)).TotalHosts()
 	assert.Equal(t, 19, hostsCount)
 }
+
+func TestDHT_BootstrapInfinity(t *testing.T) {
+	bootstrapAddress := "127.0.0.1:10000"
+	address := "127.0.0.1:10001"
+
+	st, s, tp, r, _ := realDhtParamsWithId(bootstrapAddress)
+	bootstrapDht, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false)
+	go func() {
+		time.Sleep(time.Second * 5)
+		bootstrapDht.Bootstrap()
+		bootstrapDht.Listen()
+	}()
+
+	bootstrapHosts := make([]*host.Host, 1)
+	a, _ := host.NewAddress(bootstrapAddress)
+	bootstrapHosts[0] = host.NewHost(a)
+	st, s, tp, r, _ = realDhtParamsWithId(address)
+	dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 2, true)
+
+	defer func() {
+		dht.Disconnect()
+		bootstrapDht.Disconnect()
+	}()
+
+	go dht.Listen()
+	err := dht.Bootstrap()
+	assert.NoError(t, err)
+}
