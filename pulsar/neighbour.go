@@ -52,8 +52,6 @@ type RPCClientWrapper interface {
 
 	// Check if client initialised
 	IsInitialised() bool
-	// Set wrapper's undercover rpc client
-	SetRPCClient(client *rpc.Client)
 	// Create connection and reinit client
 	CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error
 	// Close wrapped client
@@ -61,6 +59,8 @@ type RPCClientWrapper interface {
 
 	// Make rpc call in async-style
 	Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call
+
+	ResetClient()
 }
 
 // Base RPCClientWrapper impl for rpc.Client
@@ -106,6 +106,10 @@ func (impl *RPCClientWrapperImpl) CreateConnection(connectionType configuration.
 // Make a call in async style, with done channel as async-marker
 func (impl *RPCClientWrapperImpl) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
 	return impl.Client.Go(serviceMethod, args, reply, done)
+}
+
+func (impl *RPCClientWrapperImpl) ResetClient() {
+	impl.Client = nil
 }
 
 // Helper for functionality of connection to another pulsar

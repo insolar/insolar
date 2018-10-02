@@ -66,7 +66,7 @@ type EntropyPayload struct {
 
 type VectorPayload struct {
 	PulseNumber core.PulseNumber
-	Vector      map[string]*BftCell
+	Vector      map[string]*bftCell
 }
 
 type SenderConfirmationPayload struct {
@@ -178,14 +178,14 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	if handler.pulsar.State == WaitingForTheStart {
 		err = handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
 		if err != nil {
-			handler.pulsar.switchStateTo(Failed, err)
+			handler.pulsar.stateSwitcher.switchToState(Failed, err)
 			handler.pulsar.EntropyGenerationLock.Unlock()
 			return nil
 		}
 	}
 	handler.pulsar.EntropyGenerationLock.Unlock()
 
-	handler.pulsar.OwnedBftRow[request.PublicKey] = &BftCell{Sign: requestBody.Signature}
+	handler.pulsar.OwnedBftRow[request.PublicKey] = &bftCell{Sign: requestBody.Signature}
 
 	return nil
 }
