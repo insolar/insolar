@@ -30,29 +30,35 @@ import (
 )
 
 type NodeKeeper interface {
-	// GetActiveNode get active node by its reference. Returns nil if node is not found
+	// GetActiveNode get active node by its reference. Returns nil if node is not found.
 	GetActiveNode(ref core.RecordRef) *core.ActiveNode
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []*core.ActiveNode
 	// GetUnsyncHash get hash computed based on the list of unsync nodes, and the size of this list.
 	GetUnsyncHash() (hash []byte, unsyncCount int, err error)
-	// GetUnsync gets the local unsync list (excluding other nodes unsync lists)
+	// GetUnsync gets the local unsync list (excluding other nodes unsync lists).
 	GetUnsync() []*core.ActiveNode
+	// SetPulse sets internal PulseNumber to number.
+	SetPulse(number core.PulseNumber)
 	// Sync initiate transferring unsync -> sync, sync -> active. If approved is false, unsync is not transferred to sync.
-	// This function also sets internal PulseNumber to `number`.
-	Sync(number core.PulseNumber, approved bool)
+	Sync(approved bool)
 	// AddUnsync add unsync node to the local unsync list.
-	// Returns error if node's PulseNumber is not equal to the NodeKeeper internal PulseNumber
+	// Returns error if node's PulseNumber is not equal to the NodeKeeper internal PulseNumber.
 	AddUnsync(*core.ActiveNode) error
 	// AddUnsyncGossip merge unsync list from another node to the local unsync list.
 	// Returns error if:
-	// 1. One of the nodes PulseNumber is not equal to the NodeKeeper internal PulseNumber
-	// 2. One of the nodes reference is equal to one of the local unsync nodes reference
+	// 1. One of the nodes' PulseNumber is not equal to the NodeKeeper internal PulseNumber;
+	// 2. One of the nodes' reference is equal to one of the local unsync nodes' reference.
 	AddUnsyncGossip([]*core.ActiveNode) error
 }
 
 func NewNodeKeeper() NodeKeeper {
-	return &nodekeeper{}
+	return &nodekeeper{
+		active:       make(map[core.RecordRef]*core.ActiveNode),
+		sync:         make([]*core.ActiveNode, 0),
+		unsync:       make([]*core.ActiveNode, 0),
+		unsyncGossip: make(map[core.RecordRef]*core.ActiveNode),
+	}
 }
 
 type nodekeeper struct {
@@ -107,7 +113,11 @@ func (nk *nodekeeper) GetUnsync() []*core.ActiveNode {
 	return result
 }
 
-func (nk *nodekeeper) Sync(number core.PulseNumber, approved bool) {
+func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
+	nk.pulse = number
+}
+
+func (nk *nodekeeper) Sync(approved bool) {
 	nk.unsyncLock.Lock()
 	nk.activeLock.Lock()
 
@@ -116,9 +126,25 @@ func (nk *nodekeeper) Sync(number core.PulseNumber, approved bool) {
 		nk.unsyncLock.Unlock()
 	}()
 
-	nk.pulse = number
-	// TODO: unsync discard logic due to timeout
+	// sync -> active
+	for _, node := range nk.sync {
+		nk.active[node.NodeID] = node
+	}
 
+	if approved {
+		// unsync -> sync
+		unsync := nk.collectUnsync()
+		nk.sync = unsync
+		// clear unsync
+		nk.unsync = make([]*core.ActiveNode, 0)
+	} else {
+		// clear sync
+		nk.sync = make([]*core.ActiveNode, 0)
+
+		// TODO: nk.unsync discard logic due to timeout
+	}
+	// clear unsyncGossip
+	nk.unsyncGossip = make(map[core.RecordRef]*core.ActiveNode)
 }
 
 func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
