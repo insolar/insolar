@@ -45,7 +45,9 @@ type NodeKeeper interface {
 	// Returns error if node's PulseNumber is not equal to the NodeKeeper internal PulseNumber
 	AddUnsync(*core.ActiveNode) error
 	// AddUnsyncGossip merge unsync list from another node to the local unsync list.
-	// Returns error if one of the nodes' PulseNumber is not equal to the NodeKeeper internal PulseNumber
+	// Returns error if:
+	// 1. One of the nodes PulseNumber is not equal to the NodeKeeper internal PulseNumber
+	// 2. One of the nodes reference is equal to one of the local unsync nodes reference
 	AddUnsyncGossip([]*core.ActiveNode) error
 }
 
@@ -58,9 +60,7 @@ type nodekeeper struct {
 
 	activeLock sync.RWMutex
 	active     map[core.RecordRef]*core.ActiveNode
-
-	syncLock sync.Mutex
-	sync     []*core.ActiveNode
+	sync       []*core.ActiveNode
 
 	unsyncLock   sync.Mutex
 	unsync       []*core.ActiveNode
@@ -85,6 +85,94 @@ func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
 	defer nk.activeLock.RUnlock()
 
 	return nk.active[ref]
+}
+
+func (nk *nodekeeper) GetUnsyncHash() ([]byte, int, error) {
+	nk.unsyncLock.Lock()
+	unsync := nk.collectUnsync()
+	nk.unsyncLock.Unlock()
+	hash, err := calculateHash(unsync)
+	if err != nil {
+		return nil, 0, err
+	}
+	return hash, len(unsync), nil
+}
+
+func (nk *nodekeeper) GetUnsync() []*core.ActiveNode {
+	nk.unsyncLock.Lock()
+	defer nk.unsyncLock.Unlock()
+
+	result := make([]*core.ActiveNode, len(nk.unsync))
+	copy(result, nk.unsync)
+	return result
+}
+
+func (nk *nodekeeper) Sync(number core.PulseNumber, approved bool) {
+	nk.unsyncLock.Lock()
+	nk.activeLock.Lock()
+
+	defer func() {
+		nk.activeLock.Unlock()
+		nk.unsyncLock.Unlock()
+	}()
+
+	nk.pulse = number
+	// TODO: unsync discard logic due to timeout
+
+}
+
+func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
+	nk.unsyncLock.Lock()
+	defer nk.unsyncLock.Unlock()
+
+	checkedList := []*core.ActiveNode{node}
+	if err := nk.checkPulse(checkedList); err != nil {
+		return errors.Wrap(err, "Error adding local unsync node")
+	}
+
+	nk.unsync = append(nk.unsync, node)
+	return nil
+}
+
+func (nk *nodekeeper) AddUnsyncGossip(nodes []*core.ActiveNode) error {
+	nk.unsyncLock.Lock()
+	defer nk.unsyncLock.Unlock()
+
+	if err := nk.checkPulse(nodes); err != nil {
+		return errors.Wrap(err, "Error adding unsync gossip nodes")
+	}
+
+	if err := nk.checkReference(nodes); err != nil {
+		return errors.Wrap(err, "Error adding unsync gossip nodes")
+	}
+
+	for _, node := range nodes {
+		nk.unsyncGossip[node.NodeID] = node
+	}
+	return nil
+}
+
+func (nk *nodekeeper) checkPulse(nodes []*core.ActiveNode) error {
+	for _, node := range nodes {
+		if node.PulseNum != nk.pulse {
+			return errors.Errorf("Node ID:%s pulse:%d is not equal to NodeKeeper current pulse:%d",
+				node.NodeID.String(), node.PulseNum, nk.pulse)
+		}
+	}
+	return nil
+}
+
+func (nk *nodekeeper) checkReference(nodes []*core.ActiveNode) error {
+	// quadratic, should not be a problem because unsync lists are usually empty or have few elements
+	for _, localNode := range nk.unsync {
+		for _, node := range nodes {
+			if node.NodeID.Equal(localNode.NodeID) {
+				return errors.Errorf("Node %s cannot be added to gossip unsync list "+
+					"because it is in local unsync list", node.NodeID.String())
+			}
+		}
+	}
+	return nil
 }
 
 func (nk *nodekeeper) collectUnsync() []*core.ActiveNode {
@@ -140,67 +228,4 @@ func calculateHash(list []*core.ActiveNode) (result []byte, err error) {
 		hashWriteChecked(hash, nodeHash)
 	}
 	return hash.Sum(nil), nil
-}
-
-func (nk *nodekeeper) GetUnsyncHash() ([]byte, int, error) {
-	nk.unsyncLock.Lock()
-	unsync := nk.collectUnsync()
-	nk.unsyncLock.Unlock()
-	hash, err := calculateHash(unsync)
-	if err != nil {
-		return nil, 0, err
-	}
-	return hash, len(unsync), nil
-}
-
-func (nk *nodekeeper) GetUnsync() []*core.ActiveNode {
-	nk.unsyncLock.Lock()
-	defer nk.unsyncLock.Unlock()
-
-	result := make([]*core.ActiveNode, len(nk.unsync))
-	copy(result, nk.unsync)
-	return result
-}
-
-func (nk *nodekeeper) Sync(number core.PulseNumber, approved bool) {
-	nk.pulse = number
-	// TODO: unsync discard logic due to timeout
-	// TODO: sync logic
-}
-
-func (nk *nodekeeper) checkPulse(nodes []*core.ActiveNode) error {
-	for _, node := range nodes {
-		if node.PulseNum != nk.pulse {
-			return errors.Errorf("Node ID:%s pulse:%d is not equal to NodeKeeper current pulse:%d",
-				node.NodeID.String(), node.PulseNum, nk.pulse)
-		}
-	}
-	return nil
-}
-
-func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
-	nk.unsyncLock.Lock()
-	defer nk.unsyncLock.Unlock()
-
-	checkedList := []*core.ActiveNode{node}
-	if err := nk.checkPulse(checkedList); err != nil {
-		return err
-	}
-
-	nk.unsync = append(nk.unsync, node)
-	return nil
-}
-
-func (nk *nodekeeper) AddUnsyncGossip(nodes []*core.ActiveNode) error {
-	nk.unsyncLock.Lock()
-	defer nk.unsyncLock.Unlock()
-
-	if err := nk.checkPulse(nodes); err != nil {
-		return err
-	}
-
-	for _, node := range nodes {
-		nk.unsyncGossip[node.NodeID] = node
-	}
-	return nil
 }
