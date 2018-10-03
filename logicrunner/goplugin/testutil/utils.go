@@ -424,6 +424,7 @@ func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
 
 // Clean deletes tmp directory used for contracts building
 func (cb *ContractsBuilder) Clean() {
+	log.Debugf("Cleaning build directory %q", cb.root)
 	err := os.RemoveAll(cb.root) // nolint: errcheck
 	if err != nil {
 		panic(err)
@@ -445,6 +446,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			return err
 		}
 
+		log.Debugf("Registered class %q for contract %q in %q", class.String(), name, cb.root)
 		cb.Classes[name] = class
 	}
 
@@ -466,12 +468,12 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	}
 
 	for name := range contracts {
-		log.Debugf("Start to build plugin for %s", name)
+		log.Debugf("Building plugin for contract %q in %q", name, cb.root)
 		err := cb.plugin(name)
 		if err != nil {
 			return err
 		}
-		log.Debugf("Stop to build plugin for %s", name)
+		log.Debugf("Built plugin for contract %q", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
@@ -485,6 +487,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		if err != nil {
 			return err
 		}
+		log.Debugf("Deployed code %q for contract %q in %q", code.String(), name, cb.root)
 		cb.Codes[name] = code
 
 		_, err = cb.ArtifactManager.UpdateClass(
