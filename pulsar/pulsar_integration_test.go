@@ -21,6 +21,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -206,7 +207,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 }
 
 func TestPulsar_ConnectToNode(t *testing.T) {
-	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "")
+	os.MkdirAll("bootstrapLedger", os.ModePerm)
+	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "bootstrapLedger")
 	bootstrapNodeConfig := configuration.NewConfiguration()
 	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig.Host, bootstrapNodeConfig.Node)
 	assert.NoError(t, err)
@@ -214,7 +216,8 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	assert.NoError(t, err)
 	bootstrapAddress := bootstrapNodeNetwork.GetAddress()
 
-	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, "")
+	os.MkdirAll("usualLedger", os.ModePerm)
+	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, "usualLedger")
 	usualNodeConfig := configuration.NewConfiguration()
 	usualNodeConfig.Host.BootstrapHosts = []string{bootstrapAddress}
 	usualNodeNetwork, err := servicenetwork.NewServiceNetwork(usualNodeConfig.Host, usualNodeConfig.Node)
@@ -257,6 +260,14 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 		newPulsar.StopServer()
 		bootstrapLedgerCleaner()
 		usualLedgerCleaner()
+		err = os.Remove("bootstrapLedger")
+		if err != nil {
+			assert.NoError(t, err)
+		}
+		err = os.Remove("usualLedger")
+		if err != nil {
+			assert.NoError(t, err)
+		}
 	}()
 
 }
