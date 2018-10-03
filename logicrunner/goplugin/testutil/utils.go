@@ -421,6 +421,8 @@ func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
 		IccPath:         icc}
 	return cb
 }
+
+// Clean deletes tmp directory used for contracts building
 func (cb *ContractsBuilder) Clean() {
 	err := os.RemoveAll(cb.root) // nolint: errcheck
 	if err != nil {
