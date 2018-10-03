@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -47,9 +48,15 @@ func chooseOutput(path string) (io.Writer, error) {
 	return res, nil
 }
 
-func Exit(msg string, err error) {
+func exit(msg string, err error) {
 	fmt.Println(msg, err)
 	os.Exit(1)
+}
+
+func check(msg string, err error) {
+	if err != nil {
+		exit(msg, err)
+	}
 }
 
 var (
@@ -72,14 +79,14 @@ func parseInputParams() {
 	}
 
 	if err != nil {
-		Exit("Wrong input params:", err)
+		exit("Wrong input params:", err)
 	}
 }
 
 func writeToOutput(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	if err != nil {
-		Exit("Can't write data to output", err)
+		exit("Can't write data to output", err)
 	}
 }
 
@@ -97,19 +104,13 @@ func randomRef(out io.Writer) {
 
 func generateKeysPair(out io.Writer) {
 	privKey, err := ecdsa_helper.GeneratePrivateKey()
-	if err != nil {
-		Exit("Problems with generating of private key:", err)
-	}
+	check("Problems with generating of private key:", err)
 
 	privKeyStr, err := ecdsa_helper.ExportPrivateKey(privKey)
-	if err != nil {
-		Exit("Problems with serialization of private key:", err)
-	}
+	check("Problems with serialization of private key:", err)
 
 	pubKeyStr, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
-	if err != nil {
-		Exit("Problems with serialization of public key:", err)
-	}
+	check("Problems with serialization of public key:", err)
 
 	result := fmt.Sprintf("Public key:\n %s\n", pubKeyStr)
 	result += fmt.Sprintf("Private key:\n %s", privKeyStr)
@@ -117,46 +118,86 @@ func generateKeysPair(out io.Writer) {
 	writeToOutput(out, result)
 }
 
+type record struct {
+	NodeRef   string
+	PublicKey string
+}
+
+type certRecords = []record
+
+func serializeToJSON(data interface{}) ([]byte, error) {
+	return json.MarshalIndent(data, "", "    ")
+}
+
+func makeCertificate(cRecords certRecords, keys []*ecdsa.PrivateKey) ([]byte, error) {
+	cert := map[string]interface{}{}
+	cert["nodes"] = cRecords
+	certData, err := serializeToJSON(cert)
+	check("[ makeCertificate ]", err)
+
+	var signList []string
+	for _, k := range keys {
+		sign, err := ecdsa_helper.Sign(certData, k)
+		check("[ makeCertificate ]:", err)
+
+		signList = append(signList, ecdsa_helper.ExportSignature(sign))
+	}
+
+	cert["signatures"] = signList
+	check("[ makeCertificate ]", err)
+
+	return serializeToJSON(map[string]interface{}{"certificate": cert})
+}
+
+func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
+	kk := []map[string]string{}
+	for _, key := range keys {
+		pubKey, err := ecdsa_helper.ExportPublicKey(&key.PublicKey)
+		check("[ makeKeysJSON ]", err)
+
+		privKey, err := ecdsa_helper.ExportPrivateKey(key)
+		check("[ makeKeysJSON ]", err)
+
+		kk = append(kk, map[string]string{"public_key": pubKey, "private_key": privKey})
+	}
+
+	return serializeToJSON(map[string]interface{}{"keys": kk})
+}
+
 func generateCertificates(out io.Writer) {
 
 	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
 	var recordsBuf bytes.Buffer
+	cRecords := certRecords{}
+	keys := []*ecdsa.PrivateKey{}
 	for i := uint(0); i < numberCertificates; i++ {
 		ref := core.RandomRef()
 		privKey, err := ecdsa_helper.GeneratePrivateKey()
-		if err != nil {
-			Exit("[ generateCertificates ]:", err)
-		}
+		check("[ generateCertificates ]:", err)
+
 		records[ref] = privKey
 		pubKey, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
-		if err != nil {
-			Exit("[ generateCertificates ]:", err)
-		}
+		check("[ generateCertificates ]:", err)
+
+		cRecords = append(cRecords, record{NodeRef: ref.String(), PublicKey: pubKey})
+		keys = append(keys, privKey)
+
 		recordsBuf.WriteString(ref.String() + " " + pubKey)
 	}
 
-	var signatures bytes.Buffer
-	for _, k := range records {
-		sign, err := ecdsa_helper.Sign(recordsBuf.Bytes(), k)
-		if err != nil {
-			Exit("[ generateCertificates ]:", err)
-		}
-		signatures.WriteString(ecdsa_helper.ExportSignature(sign) + "\n")
-	}
+	cert, err := makeCertificate(cRecords, keys)
+	check("[ generateCertificates ]:", err)
+	writeToOutput(out, string(cert)+"\n")
 
-	recordsBuf.ReadFrom(&signatures)
-
-	writeToOutput(out, recordsBuf.String())
-
+	keysList, err := makeKeysJSON(keys)
+	check("[ generateCertificates ]:", err)
+	writeToOutput(out, string(keysList)+"\n")
 }
 
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
-	if err != nil {
-		fmt.Println("Problems with parsing input:", err)
-		os.Exit(1)
-	}
+	check("Problems with parsing input:", err)
 
 	switch cmd {
 	case "default_config":
