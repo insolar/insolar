@@ -28,6 +28,7 @@ func TestCreateMember(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"name":       testutils.RandomString(),
+		"public_key": "000",
 	})
 
 	memberResponse := &createMemberResponse{}
@@ -41,6 +42,7 @@ func TestCreateMemberWrongType(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"name":       1111,
+		"public_key": "000",
 	})
 
 	memberResponse := &createMemberResponse{}
@@ -66,6 +68,7 @@ func TestCreateMembersWithSameName(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"name":       "NameForTestCreateMembersWithSameName",
+		"public_key": "000",
 	})
 
 	memberResponse := &createMemberResponse{}
@@ -77,6 +80,7 @@ func TestCreateMembersWithSameName(t *testing.T) {
 	body = getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"name":       "NameForTestCreateMembersWithSameName",
+		"public_key": "000",
 	})
 
 	unmarshalResponse(t, body, memberResponse)

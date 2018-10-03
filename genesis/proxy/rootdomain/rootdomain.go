@@ -220,6 +220,100 @@ func (r *RootDomain) CreateMemberNoWait( name string, key string ) {
     }
 }
 
+func (r *RootDomain) GetBalance( reference string ) ( uint ) {
+    var args [1]interface{}
+	args[0] = reference
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalance", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [1]interface{}{}
+	var a0 uint
+	resList[0] = a0
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].(uint)
+}
+
+func (r *RootDomain) GetBalanceNoWait( reference string ) {
+    var args [1]interface{}
+	args[0] = reference
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetBalance", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
+func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
+    var args [3]interface{}
+	args[0] = from
+	args[1] = to
+	args[2] = amount
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    res, err := proxyctx.Current.RouteCall(r.Reference, true, "SendMoney", argsSerialized)
+    if err != nil {
+   		panic(err)
+    }
+
+    resList := [1]interface{}{}
+	var a0 bool
+	resList[0] = a0
+
+    err = proxyctx.Current.Deserialize(res, &resList)
+    if err != nil {
+        panic(err)
+    }
+
+    return resList[0].(bool)
+}
+
+func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
+    var args [3]interface{}
+	args[0] = from
+	args[1] = to
+	args[2] = amount
+
+    var argsSerialized []byte
+
+    err := proxyctx.Current.Serialize(args, &argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+
+    _, err = proxyctx.Current.RouteCall(r.Reference, false, "SendMoney", argsSerialized)
+    if err != nil {
+        panic(err)
+    }
+}
+
 func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
     var args [1]interface{}
 	args[0] = reference

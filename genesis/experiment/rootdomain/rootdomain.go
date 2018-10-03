@@ -93,14 +93,28 @@ func (rd *RootDomain) IsAuthorized() bool {
 
 // CreateMember processes create member request
 func (rd *RootDomain) CreateMember(name string, key string) string {
-	if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.Root {
-		memberHolder := member.New(name, key)
-		m := memberHolder.AsChild(rd.GetReference())
-		wHolder := wallet.New(1000)
-		wHolder.AsDelegate(m.GetReference())
-		return m.GetReference().String()
-	}
-	return ""
+	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.Root {
+	memberHolder := member.New(name, key)
+	m := memberHolder.AsChild(rd.GetReference())
+	wHolder := wallet.New(1000)
+	wHolder.AsDelegate(m.GetReference())
+	return m.GetReference().String()
+	//}
+	//return ""
+}
+
+// GetBalance processes get balance request		return ""
+func (rd *RootDomain) GetBalance(reference string) uint {
+	w := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
+	return w.GetTotalBalance()
+}
+
+// SendMoney processes send money request
+func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
+	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
+	v := core.NewRefFromBase58(to)
+	walletFrom.Transfer(amount, &v)
+	return true
 }
 
 func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
