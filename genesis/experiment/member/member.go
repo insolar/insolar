@@ -49,14 +49,14 @@ func New(name string, key string) *Member {
 func (m *Member) AuthorizedCall(ref string, method string, params []interface{}, seed []byte, sign []byte) ([]interface{}, *foundation.Error) {
 	serialized, err := signer.Serialize(ref, method, params, seed)
 	if err != nil {
-		return nil, &foundation.Error{err.Error()}
+		return nil, &foundation.Error{S: err.Error()}
 	}
 	verified, err := ecdsa.Verify(serialized, sign, m.PublicKey)
 	if err != nil {
-		return nil, &foundation.Error{err.Error()}
+		return nil, &foundation.Error{S: err.Error()}
 	}
 	if !verified {
-		return nil, &foundation.Error{"Incorrect signature"}
+		return nil, &foundation.Error{S: "Incorrect signature"}
 	}
 
 	switch method {
@@ -64,11 +64,11 @@ func (m *Member) AuthorizedCall(ref string, method string, params []interface{},
 		domain := rootdomain.GetObject(core.NewRefFromBase58(ref))
 		name, ok := params[0].(string)
 		if !ok {
-			return nil, &foundation.Error{"First parameter must be string"}
+			return nil, &foundation.Error{S: "First parameter must be string"}
 		}
 		key, ok := params[1].(string)
 		if !ok {
-			return nil, &foundation.Error{"Second parameter must be string"}
+			return nil, &foundation.Error{S: "Second parameter must be string"}
 		}
 		return []interface{}{domain.CreateMember(name, key)}, nil
 	case "GetName":
@@ -84,11 +84,11 @@ func (m *Member) AuthorizedCall(ref string, method string, params []interface{},
 		wallet := wallet.GetImplementationFrom(core.NewRefFromBase58(ref))
 		amount, ok := params[0].(uint64)
 		if !ok {
-			return nil, &foundation.Error{"First parameter must be uint"}
+			return nil, &foundation.Error{S: "First parameter must be uint"}
 		}
 		to, ok := params[1].(string)
 		if !ok {
-			return nil, &foundation.Error{"Second parameter must be string"}
+			return nil, &foundation.Error{S: "Second parameter must be string"}
 		}
 		v := core.NewRefFromBase58(to)
 		wallet.Transfer(uint(amount), &v)
@@ -97,5 +97,5 @@ func (m *Member) AuthorizedCall(ref string, method string, params []interface{},
 		domain := rootdomain.GetObject(core.NewRefFromBase58(ref))
 		return []interface{}{domain.DumpAllUsers()}, nil
 	}
-	return nil, &foundation.Error{"Unknown method"}
+	return nil, &foundation.Error{S: "Unknown method"}
 }
