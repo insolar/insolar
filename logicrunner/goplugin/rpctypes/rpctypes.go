@@ -100,9 +100,10 @@ type UpRouteConstructorResp struct {
 // UpSaveAsChildReq is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildReq struct {
 	UpBaseReq
-	Parent core.RecordRef
-	Class  core.RecordRef
-	Data   []byte
+	Parent          core.RecordRef
+	Class           core.RecordRef
+	ConstructorName string
+	ArgsSerialized  []byte
 }
 
 // UpSaveAsChildResp is a set of arguments for SaveAsChild RPC in goplugin
@@ -127,7 +128,8 @@ type UpSaveAsDelegateReq struct {
 	UpBaseReq
 	Into  core.RecordRef
 	Class core.RecordRef
-	Data  []byte
+	ConstructorName string
+	ArgsSerialized  []byte
 }
 
 // UpSaveAsDelegateResp is response from SaveAsDelegate RPC in goplugin

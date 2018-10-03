@@ -15,20 +15,21 @@ type Member struct {
     Reference core.RecordRef
 }
 
-type ContractHolder struct {
-	data []byte
+type ContractConstructorHolder struct {
+	constructorName string
+    argsSerialized []byte
 }
 
-func (r *ContractHolder) AsChild(objRef core.RecordRef) *Member {
-    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
+func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Member {
+    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
     if err != nil {
         panic(err)
     }
     return &Member{Reference: ref}
 }
 
-func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *Member {
-    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
+func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Member {
+    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
     if err != nil {
         panic(err)
     }
@@ -53,7 +54,7 @@ func GetImplementationFrom(object core.RecordRef) *Member {
 }
 
 
-func New( name string ) *ContractHolder {
+func New( name string ) *ContractConstructorHolder {
     var args [1]interface{}
 	args[0] = name
 
@@ -64,12 +65,7 @@ func New( name string ) *ContractHolder {
         panic(err)
     }
 
-    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "New", argsSerialized)
-    if err != nil {
-		panic(err)
-    }
-
-    return &ContractHolder{data: data}
+    return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
 
 

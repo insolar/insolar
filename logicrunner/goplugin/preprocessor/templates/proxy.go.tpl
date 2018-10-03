@@ -18,20 +18,21 @@ type {{ .ContractType }} struct {
     Reference core.RecordRef
 }
 
-type ContractHolder struct {
-	data []byte
+type ContractConstructorHolder struct {
+	constructorName string
+    argsSerialized []byte
 }
 
-func (r *ContractHolder) AsChild(objRef core.RecordRef) *{{ .ContractType }} {
-    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
+func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *{{ .ContractType }} {
+    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
     if err != nil {
         panic(err)
     }
     return &{{ .ContractType }}{Reference: ref}
 }
 
-func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *{{ .ContractType }} {
-    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
+func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *{{ .ContractType }} {
+    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
     if err != nil {
         panic(err)
     }
@@ -56,7 +57,7 @@ func GetImplementationFrom(object core.RecordRef) *{{ .ContractType }} {
 }
 
 {{ range $func := .ConstructorsProxies }}
-func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractHolder {
+func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractConstructorHolder {
     {{ $func.InitArgs }}
 
     var argsSerialized []byte
@@ -65,12 +66,7 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractHolder {
         panic(err)
     }
 
-    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "{{ $func.Name }}", argsSerialized)
-    if err != nil {
-		panic(err)
-    }
-
-    return &ContractHolder{data: data}
+    return &ContractConstructorHolder{constructorName: "{{ $func.Name }}", argsSerialized: argsSerialized}
 }
 {{ end }}
 

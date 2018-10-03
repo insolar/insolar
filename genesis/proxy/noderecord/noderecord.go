@@ -16,20 +16,21 @@ type NodeRecord struct {
     Reference core.RecordRef
 }
 
-type ContractHolder struct {
-	data []byte
+type ContractConstructorHolder struct {
+	constructorName string
+    argsSerialized []byte
 }
 
-func (r *ContractHolder) AsChild(objRef core.RecordRef) *NodeRecord {
-    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
+func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeRecord {
+    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
     if err != nil {
         panic(err)
     }
     return &NodeRecord{Reference: ref}
 }
 
-func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *NodeRecord {
-    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
+func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *NodeRecord {
+    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
     if err != nil {
         panic(err)
     }
@@ -54,7 +55,7 @@ func GetImplementationFrom(object core.RecordRef) *NodeRecord {
 }
 
 
-func NewNodeRecord( pk string, roleS string ) *ContractHolder {
+func NewNodeRecord( pk string, roleS string ) *ContractConstructorHolder {
     var args [2]interface{}
 	args[0] = pk
 	args[1] = roleS
@@ -66,12 +67,7 @@ func NewNodeRecord( pk string, roleS string ) *ContractHolder {
         panic(err)
     }
 
-    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "NewNodeRecord", argsSerialized)
-    if err != nil {
-		panic(err)
-    }
-
-    return &ContractHolder{data: data}
+    return &ContractConstructorHolder{constructorName: "NewNodeRecord", argsSerialized: argsSerialized}
 }
 
 

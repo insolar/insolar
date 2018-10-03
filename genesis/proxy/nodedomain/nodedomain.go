@@ -16,20 +16,21 @@ type NodeDomain struct {
     Reference core.RecordRef
 }
 
-type ContractHolder struct {
-	data []byte
+type ContractConstructorHolder struct {
+	constructorName string
+    argsSerialized []byte
 }
 
-func (r *ContractHolder) AsChild(objRef core.RecordRef) *NodeDomain {
-    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.data)
+func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeDomain {
+    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
     if err != nil {
         panic(err)
     }
     return &NodeDomain{Reference: ref}
 }
 
-func (r *ContractHolder) AsDelegate(objRef core.RecordRef) *NodeDomain {
-    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.data)
+func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *NodeDomain {
+    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
     if err != nil {
         panic(err)
     }
@@ -54,7 +55,7 @@ func GetImplementationFrom(object core.RecordRef) *NodeDomain {
 }
 
 
-func NewNodeDomain(  ) *ContractHolder {
+func NewNodeDomain(  ) *ContractConstructorHolder {
     var args [0]interface{}
 
 
@@ -64,12 +65,7 @@ func NewNodeDomain(  ) *ContractHolder {
         panic(err)
     }
 
-    data, err := proxyctx.Current.RouteConstructorCall(ClassReference, "NewNodeDomain", argsSerialized)
-    if err != nil {
-		panic(err)
-    }
-
-    return &ContractHolder{data: data}
+    return &ContractConstructorHolder{constructorName: "NewNodeDomain", argsSerialized: argsSerialized}
 }
 
 

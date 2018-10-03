@@ -147,8 +147,19 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rp
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
+	constructorReq := rpctypes.UpRouteConstructorReq{
+		UpBaseReq:   req.UpBaseReq,
+		Reference:   req.Class,
+		Constructor: req.ConstructorName,
+		Arguments:   req.ArgsSerialized,
+	}
+
+	constructorRes := rpctypes.UpRouteConstructorResp{}
+
+	gpr.RouteConstructorCall(constructorReq, &constructorRes)
+
 	ref, err := gpr.lr.ArtifactManager.ActivateObject(
-		core.RecordRef{}, core.RandomRef(), req.Class, req.Parent, req.Data,
+		core.RecordRef{}, core.RandomRef(), req.Class, req.Parent, constructorRes.Data,
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object")
@@ -199,8 +210,19 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
+	constructorReq := rpctypes.UpRouteConstructorReq{
+		UpBaseReq:   req.UpBaseReq,
+		Reference:   req.Class,
+		Constructor: req.ConstructorName,
+		Arguments:   req.ArgsSerialized,
+	}
+
+	constructorRes := rpctypes.UpRouteConstructorResp{}
+
+	gpr.RouteConstructorCall(constructorReq, &constructorRes)
+
 	ref, err := gpr.lr.ArtifactManager.ActivateObjectDelegate(
-		core.RecordRef{}, core.RandomRef(), req.Class, req.Into, req.Data,
+		core.RecordRef{}, core.RandomRef(), req.Class, req.Into, constructorRes.Data,
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save delegate")
