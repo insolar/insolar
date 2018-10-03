@@ -156,7 +156,10 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 
 	constructorRes := rpctypes.UpRouteConstructorResp{}
 
-	gpr.RouteConstructorCall(constructorReq, &constructorRes)
+	err := gpr.RouteConstructorCall(constructorReq, &constructorRes)
+	if err != nil {
+		return errors.Wrap(err, "couldn't save new object")
+	}
 
 	ref, err := gpr.lr.ArtifactManager.ActivateObject(
 		core.RecordRef{}, core.RandomRef(), req.Class, req.Parent, constructorRes.Data,
@@ -219,7 +222,10 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes
 
 	constructorRes := rpctypes.UpRouteConstructorResp{}
 
-	gpr.RouteConstructorCall(constructorReq, &constructorRes)
+	err := gpr.RouteConstructorCall(constructorReq, &constructorRes)
+	if err != nil {
+		return errors.Wrap(err, "couldn't save delegate")
+	}
 
 	ref, err := gpr.lr.ArtifactManager.ActivateObjectDelegate(
 		core.RecordRef{}, core.RandomRef(), req.Class, req.Into, constructorRes.Data,
