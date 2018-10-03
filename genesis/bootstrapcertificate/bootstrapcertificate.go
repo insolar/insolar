@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
+	"path/filepath"
 	"strconv"
 
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -46,7 +47,7 @@ type Certificate struct {
 }
 
 func NewCertificateFromFile(path string) (*Certificate, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := ioutil.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewCertificateFromFile ]")
 	}
