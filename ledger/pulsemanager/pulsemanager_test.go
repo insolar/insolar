@@ -34,8 +34,5 @@ func TestPulseManager_Current(t *testing.T) {
 
 	pulse, err := pm.Current()
 	assert.NoError(t, err)
-	assert.Equal(t, core.Pulse{
-		PulseNumber: 0,
-		Entropy:     core.Entropy{},
-	}, *pulse)
+	assert.Equal(t, *core.GenesisPulse, *pulse)
 }

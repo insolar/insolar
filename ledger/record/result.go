@@ -50,11 +50,6 @@ type ResultRecord struct {
 	RequestRecord Reference
 }
 
-// Domain implements Record interface
-func (rec *ResultRecord) Domain() *Reference {
-	return &rec.DomainRecord
-}
-
 // WipeOutRecord is a special record that takes place of another record
 // when we need to completely wipe out some information from storage
 // (think GDPR).

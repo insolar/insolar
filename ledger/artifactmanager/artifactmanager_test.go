@@ -68,6 +68,13 @@ func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandl
 	return nil
 }
 
+func (mb *messageBusMock) MustRegister(p core.MessageType, handler core.MessageHandler) {
+	err := mb.Register(p, handler)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (mb *messageBusMock) Start(components core.Components) error {
 	panic("implement me")
 }
@@ -413,6 +420,12 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		Parent:              record.Reference{Domain: td.requestRef.Domain, Record: *parentID},
 		Delegate:            false,
 	})
+
+	idx, err := td.db.GetObjectIndex(parentID)
+	assert.NoError(t, err)
+	childRec, err := td.db.GetRecord(&idx.LatestChild)
+	assert.NoError(t, err)
+	assert.Equal(t, activateRef, childRec.(*record.ChildRecord).Child)
 }
 
 func TestLedgerArtifactManager_ActivateObjectDelegate_VerifiesRecord(t *testing.T) {
@@ -670,7 +683,7 @@ func TestLedgerArtifactManager_GetClass_ReturnsCorrectDescriptors(t *testing.T) 
 	expectedClassDesc := &ClassDescriptor{
 		am:    td.manager,
 		head:  *classRef,
-		state: *getReference(td.requestRef.CoreRef(), classAmendID),
+		state: *classAmendID.CoreID(),
 		code:  codeRef.CoreRef(),
 	}
 
@@ -752,7 +765,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 		am: td.manager,
 
 		head:     *getReference(td.requestRef.CoreRef(), objectID),
-		state:    *getReference(td.requestRef.CoreRef(), objectAmendID),
+		state:    *objectAmendID.CoreID(),
 		class:    *getReference(td.requestRef.CoreRef(), classID),
 		memory:   []byte{4},
 		children: expectedChildren,

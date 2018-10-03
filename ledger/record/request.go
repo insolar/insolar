@@ -26,12 +26,6 @@ type RequestRecord struct {
 	Target    Reference
 }
 
-// Domain implements Record interface
-func (rec *RequestRecord) Domain() *Reference {
-	// FIXME: return proper domain ID
-	return &Reference{}
-}
-
 // CallRequest is a contract execution request.
 // Implements io.ReadWriter interface.
 type CallRequest struct {
