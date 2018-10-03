@@ -106,8 +106,8 @@ func (t *TestClassDescriptor) HeadRef() *core.RecordRef {
 	return t.ARef
 }
 
-// StateRef ...
-func (t *TestClassDescriptor) StateRef() *core.RecordRef {
+// StateID ...
+func (t *TestClassDescriptor) StateID() *core.RecordID {
 	panic("not implemented")
 }
 
@@ -135,8 +135,8 @@ func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
 	panic("not implemented")
 }
 
-// StateRef implementation for tests
-func (t *TestObjectDescriptor) StateRef() *core.RecordRef {
+// StateID implementation for tests
+func (t *TestObjectDescriptor) StateID() *core.RecordID {
 	panic("not implemented")
 }
 

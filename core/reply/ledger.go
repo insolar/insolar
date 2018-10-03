@@ -34,7 +34,7 @@ func (e *Code) Type() core.ReplyType {
 // Class is class from storage.
 type Class struct {
 	Head  core.RecordRef
-	State core.RecordRef
+	State core.RecordID
 	Code  *core.RecordRef // Can be nil.
 }
 
@@ -46,7 +46,7 @@ func (e *Class) Type() core.ReplyType {
 // Object is object from storage.
 type Object struct {
 	Head     core.RecordRef
-	State    core.RecordRef
+	State    core.RecordID
 	Class    core.RecordRef
 	Memory   []byte
 	Children []core.RecordRef
