@@ -66,7 +66,7 @@ func parseInputParams() {
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
 		"available commands: default_config | random_ref | version | gen_keys | gen_certificates")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
-	rootCmd.Flags().UintVarP(&numberCertificates, "num_serts", "n", 3, "number of certificates")
+	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 

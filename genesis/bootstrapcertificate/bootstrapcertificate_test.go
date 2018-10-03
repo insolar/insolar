@@ -90,13 +90,13 @@ func TestComplexCheck(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Dump to tmp file
-	dumpSert, err := cert.Dump()
+	dumpCert, err := cert.Dump()
 	assert.NoError(t, err)
 	tmpDir, err := ioutil.TempDir("", "test-")
 	defer os.RemoveAll(tmpDir)
 	assert.NoError(t, err)
 	tmpFile := tmpDir + "/test_cert.json"
-	ioutil.WriteFile(tmpFile, []byte(dumpSert), 0644)
+	ioutil.WriteFile(tmpFile, []byte(dumpCert), 0644)
 
 	// Read from tmp file
 	newCert, err := NewCertificateFromFile(tmpFile)
