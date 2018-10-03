@@ -224,6 +224,7 @@ func init() {
 	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
 	gob.Register(&ResponseGetRandomHosts{})
+	gob.Register(&ResponseAuthorization{})
 
 	gob.Register(&id.ID{})
 }

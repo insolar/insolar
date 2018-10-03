@@ -111,3 +111,8 @@ type ResponseKnownOuterHosts struct {
 	ID         string //	id of host in which more known outer hosts
 	OuterHosts int    // number of known outer hosts
 }
+
+// ResponseAuthorization is data to answer to authorization request.
+type ResponseAuthorization struct {
+	Authorized bool
+}

@@ -127,3 +127,10 @@ func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Pac
 		log.Debugln(err)
 	}
 }
+
+func handleAuthorizationResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuthorization) error {
+	if !response.Authorized {
+		return errors.New("unsuccessful authorization")
+	}
+	return nil
+}
