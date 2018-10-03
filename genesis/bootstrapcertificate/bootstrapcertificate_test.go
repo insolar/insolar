@@ -23,6 +23,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,6 +38,25 @@ func TestNewCertificateFromFile(t *testing.T) {
 	assert.NoError(t, err)
 	err = cert.Validate()
 	assert.NoError(t, err)
+}
+
+func TestNewCertificateFromFields(t *testing.T) {
+	privKeys := []*ecdsa.PrivateKey{}
+	records := CertRecords{}
+	for i := 0; i < 10; i++ {
+		key, err := ecdsa_helper.GeneratePrivateKey()
+		assert.NoError(t, err)
+		privKeys = append(privKeys, key)
+
+		pubKey, err := ecdsa_helper.ExportPublicKey(&key.PublicKey)
+		assert.NoError(t, err)
+		records = append(records, Record{NodeRef: core.RandomRef().String(), PublicKey: pubKey})
+	}
+
+	cert, err := NewCertificateFromFields(records, privKeys)
+	assert.NoError(t, err)
+	assert.NoError(t, cert.Validate())
+
 }
 
 func TestNewCertifiacteFromFile_BadFile(t *testing.T) {
