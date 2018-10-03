@@ -1,6 +1,6 @@
 builds:
   - # Insolar daemon
-    main: './cmd/insolard/*.go'
+    main: './cmd/insolard'
     binary: insolard
     env:
       - CGO_ENABLED=0
@@ -11,7 +11,7 @@ builds:
       - amd64
 
   - # Insolar client tool
-    main: './cmd/insolar/*.go'
+    main: './cmd/insolar'
     binary: insolar
     env:
       - CGO_ENABLED=0
@@ -22,7 +22,7 @@ builds:
       - amd64
 
   - # Pulsar daemon
-    main: './cmd/pulsard/*.go'
+    main: './cmd/pulsard'
     binary: pulsard
     env:
       - CGO_ENABLED=0
@@ -33,7 +33,7 @@ builds:
       - amd64
 
   - # Go runner daemon
-    main: './cmd/insgorund/*.go'
+    main: './cmd/insgorund'
     binary: insgorund
     env:
       - CGO_ENABLED=0
@@ -44,7 +44,7 @@ builds:
       - amd64
 
   - # Golang contracts compiler tool
-    main: './cmd/insgocc/*.go'
+    main: './cmd/insgocc'
     binary: insgocc
     env:
       - CGO_ENABLED=0
