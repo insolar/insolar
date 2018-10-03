@@ -19,6 +19,8 @@ package nodekeeper
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"hash"
 	"sort"
 
 	"github.com/anacrolix/sync"
@@ -91,33 +93,49 @@ func (nk *nodekeeper) collectUnsync() []*core.ActiveNode {
 	return unsync
 }
 
-func calculateNodeHash(node *core.ActiveNode) (result []byte, err error) {
-	// TODO: check Write
-	hash := sha3.New224()
+func hashWriteChecked(hash hash.Hash, data []byte) {
+	n, err := hash.Write(data)
+	if n != len(data) {
+		panic(fmt.Sprintf("Error writing hash. Bytes expected: %d; bytes actual: %d", len(data), n))
+	}
+	if err != nil {
+		panic(err.Error())
+	}
+}
 
-	hash.Write(node.NodeID[:])
+func calculateNodeHash(node *core.ActiveNode) (result []byte, err error) {
+	hash := sha3.New224()
+	hashWriteChecked(hash, node.NodeID[:])
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(node.JetRoles))
-	hash.Write(b[:])
+	hashWriteChecked(hash, b[:])
 	binary.LittleEndian.PutUint32(b, uint32(node.PulseNum))
-	hash.Write(b[:4])
+	hashWriteChecked(hash, b[:4])
 	b[0] = byte(node.State)
-	hash.Write(b[:1])
-	hash.Write(node.PublicKey)
+	hashWriteChecked(hash, b[:1])
+	hashWriteChecked(hash, node.PublicKey)
 	return hash.Sum(nil), nil
 }
 
-func calculateHash(list []*core.ActiveNode) ([]byte, error) {
-	hash := sha3.New224()
+func calculateHash(list []*core.ActiveNode) (result []byte, err error) {
 	sort.Slice(list[:], func(i, j int) bool {
 		return bytes.Compare(list[i].NodeID[:], list[j].NodeID[:]) < 0
 	})
+
+	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
+	defer func() {
+		if r := recover(); r != nil {
+			result, err = nil, fmt.Errorf("panic: %s", r)
+		}
+	}()
+
+	hash := sha3.New224()
 	for _, node := range list {
 		nodeHash, err := calculateNodeHash(node)
 		if err != nil {
 			return nil, errors.Wrap(err, "error calculating hash")
 		}
-		hash.Write(nodeHash)
+		hashWriteChecked(hash, nodeHash)
 	}
 	return hash.Sum(nil), nil
 }
