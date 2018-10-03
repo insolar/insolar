@@ -267,3 +267,20 @@ func (e *UpdateObject) Type() core.MessageType {
 func (e *UpdateObject) Target() *core.RecordRef {
 	return &e.Object
 }
+
+// RegisterChild amends object.
+type RegisterChild struct {
+	ledgerMessage
+	Parent core.RecordRef
+	Child  core.RecordRef
+}
+
+// Type implementation of Message interface.
+func (e *RegisterChild) Type() core.MessageType {
+	return TypeRegisterChild
+}
+
+// Target implementation of Message interface.
+func (e *RegisterChild) Target() *core.RecordRef {
+	return &e.Parent
+}
