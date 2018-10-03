@@ -249,7 +249,7 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	stateSwitcher.SetPulsar(newPulsar)
 	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
 	assert.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
