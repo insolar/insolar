@@ -103,14 +103,14 @@ type ArtifactManager interface {
 	// the class. If class is already deactivated, an error should be returned.
 	//
 	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(domain, request, class RecordRef) (*RecordRef, error)
+	DeactivateClass(domain, request, class RecordRef) (*RecordID, error)
 
 	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 	// the class. Migrations are references to code records.
 	//
 	// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
 	// migrate objects memory in the order they appear in provided slice.
-	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordRef, error)
+	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordID, error)
 
 	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's class.
 	// If memory is not provided, the class default memory will be used.
@@ -125,13 +125,13 @@ type ArtifactManager interface {
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(domain, request, obj RecordRef) (*RecordRef, error)
+	DeactivateObject(domain, request, obj RecordRef) (*RecordID, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(domain, request, obj RecordRef, memory []byte) (*RecordRef, error)
+	UpdateObject(domain, request, obj RecordRef, memory []byte) (*RecordID, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.

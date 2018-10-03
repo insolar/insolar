@@ -161,7 +161,7 @@ func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core
 func (m *LedgerArtifactManager) DeclareType(
 	domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&message.DeclareType{
+	return m.fetchReference(&message.DeclareType{
 		Domain:  domain,
 		Request: request,
 		TypeDec: typeDec,
@@ -174,7 +174,7 @@ func (m *LedgerArtifactManager) DeclareType(
 func (m *LedgerArtifactManager) DeployCode(
 	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&message.DeployCode{
+	return m.fetchReference(&message.DeployCode{
 		Domain:  domain,
 		Request: request,
 		CodeMap: codeMap,
@@ -187,7 +187,7 @@ func (m *LedgerArtifactManager) DeployCode(
 func (m *LedgerArtifactManager) ActivateClass(
 	domain, request core.RecordRef,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&message.ActivateClass{
+	return m.fetchReference(&message.ActivateClass{
 		Domain:  domain,
 		Request: request,
 	})
@@ -199,8 +199,8 @@ func (m *LedgerArtifactManager) ActivateClass(
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
 	domain, request, class core.RecordRef,
-) (*core.RecordRef, error) {
-	return m.sendReference(&message.DeactivateClass{
+) (*core.RecordID, error) {
+	return m.fetchID(&message.DeactivateClass{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
@@ -214,8 +214,8 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
 	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
-) (*core.RecordRef, error) {
-	return m.sendReference(&message.UpdateClass{
+) (*core.RecordID, error) {
+	return m.fetchID(&message.UpdateClass{
 		Domain:     domain,
 		Request:    request,
 		Class:      class,
@@ -231,7 +231,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 func (m *LedgerArtifactManager) ActivateObject(
 	domain, request, class, parent core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&message.ActivateObject{
+	return m.fetchReference(&message.ActivateObject{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
@@ -244,7 +244,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 func (m *LedgerArtifactManager) ActivateObjectDelegate(
 	domain, request, class, parent core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
-	return m.sendReference(&message.ActivateObjectDelegate{
+	return m.fetchReference(&message.ActivateObjectDelegate{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
@@ -259,8 +259,8 @@ func (m *LedgerArtifactManager) ActivateObjectDelegate(
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObject(
 	domain, request, object core.RecordRef,
-) (*core.RecordRef, error) {
-	return m.sendReference(&message.DeactivateObject{
+) (*core.RecordID, error) {
+	return m.fetchID(&message.DeactivateObject{
 		Domain:  domain,
 		Request: request,
 		Object:  object,
@@ -273,8 +273,8 @@ func (m *LedgerArtifactManager) DeactivateObject(
 // Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdateObject(
 	domain, request, object core.RecordRef, memory []byte,
-) (*core.RecordRef, error) {
-	return m.sendReference(&message.UpdateObject{
+) (*core.RecordID, error) {
+	return m.fetchID(&message.UpdateObject{
 		Domain:  domain,
 		Request: request,
 		Object:  object,
@@ -282,7 +282,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 	})
 }
 
-func (m *LedgerArtifactManager) sendReference(ev core.Message) (*core.RecordRef, error) {
+func (m *LedgerArtifactManager) fetchReference(ev core.Message) (*core.RecordRef, error) {
 	genericReact, err := m.messageBus.Send(ev)
 
 	if err != nil {
@@ -294,4 +294,18 @@ func (m *LedgerArtifactManager) sendReference(ev core.Message) (*core.RecordRef,
 		return nil, ErrUnexpectedReply
 	}
 	return &react.Ref, nil
+}
+
+func (m *LedgerArtifactManager) fetchID(ev core.Message) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(ev)
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+	return &react.ID, nil
 }
