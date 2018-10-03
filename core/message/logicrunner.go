@@ -35,22 +35,22 @@ const (
 	// ReturnValidated
 )
 
-// BaseLogicEvent base of event class family, do not use it standalone
-type BaseLogicEvent struct {
+// BaseLogicMessage base of event class family, do not use it standalone
+type BaseLogicMessage struct {
 	Caller core.RecordRef
 }
 
-func (e *BaseLogicEvent) GetCaller() *core.RecordRef {
+func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &e.Caller
 }
 
-func (e *BaseLogicEvent) TargetRole() core.JetRole {
+func (e *BaseLogicMessage) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	BaseLogicEvent
+	BaseLogicMessage
 	ReturnMode MethodReturnMode
 	ObjectRef  core.RecordRef
 	Method     string
@@ -76,7 +76,7 @@ func (e *CallMethod) WriteHash(w io.Writer) {
 
 // CallConstructor is a message for calling constructor and obtain its reply
 type CallConstructor struct {
-	BaseLogicEvent
+	BaseLogicMessage
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments

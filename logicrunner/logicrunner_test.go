@@ -49,6 +49,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
+var parallel = false
 
 func TestMain(m *testing.M) {
 	var err error
@@ -145,7 +146,9 @@ func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.Rec
 }
 
 func TestBasics(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	lr, err := NewLogicRunner(&configuration.LogicRunner{})
 	assert.NoError(t, err)
 	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
@@ -209,7 +212,9 @@ func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) 
 func (*testMessageBus) SendAsync(msg core.Message) {}
 
 func TestExecution(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	am := testutil.NewTestArtifactManager()
 	ld := &testLedger{am: am}
 	eb := &testMessageBus{}
@@ -253,7 +258,9 @@ func TestExecution(t *testing.T) {
 }
 
 func TestContractCallingContract(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var contractOneCode = `
 package main
 
@@ -327,7 +334,9 @@ func (r *Two) Hello(s string) string {
 }
 
 func TestInjectingDelegate(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var contractOneCode = `
 package main
 
@@ -415,7 +424,9 @@ func (r *Two) Hello(s string) string {
 }
 
 func TestBasicNotificationCall(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var contractOneCode = `
 package main
 
@@ -482,7 +493,9 @@ func (r *Two) Hello() string {
 }
 
 func TestContextPassing(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var code = `
 package main
 
@@ -517,7 +530,9 @@ func (r *One) Hello() string {
 }
 
 func TestGetChildren(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	goContract := `
 package main
 
@@ -620,7 +635,9 @@ func New(n int) *Child {
 }
 
 func TestErrorInterface(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var contractOneCode = `
 package main
 
@@ -717,7 +734,9 @@ func (s *Caller) SignedCall(ref string, method string, params []interface{}) int
 }
 
 func TestRootDomainContract(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.go" +
 		"")
 	if err != nil {
@@ -852,7 +871,9 @@ func (c *Child) GetNum() int {
 }
 
 func TestProxyGeneration(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	contracts, err := preprocessor.GetRealContractsNames()
 	assert.NoError(t, err)
 
