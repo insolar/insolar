@@ -111,10 +111,6 @@ func generateKeysPair(out io.Writer) {
 	writeToOutput(out, result)
 }
 
-func serializeToJSON(data interface{}) ([]byte, error) {
-	return json.MarshalIndent(data, "", "    ")
-}
-
 func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 	kk := []map[string]string{}
 	for _, key := range keys {
@@ -127,7 +123,7 @@ func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 		kk = append(kk, map[string]string{"public_key": pubKey, "private_key": privKey})
 	}
 
-	return serializeToJSON(map[string]interface{}{"keys": kk})
+	return json.MarshalIndent(map[string]interface{}{"keys": kk}, "", "    ")
 }
 
 type certRecords = bootstrapcertificate.CertRecords
