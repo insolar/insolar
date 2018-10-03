@@ -17,17 +17,13 @@
 package member
 
 import (
-	"fmt"
-	"reflect"
-
 	"github.com/insolar/insolar/core"
-	//"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/genesis/experiment/member/signer"
 	"github.com/insolar/insolar/genesis/proxy/member"
 	"github.com/insolar/insolar/genesis/proxy/rootdomain"
 	"github.com/insolar/insolar/genesis/proxy/wallet"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 type Member struct {
@@ -50,26 +46,8 @@ func New(name string, key string) *Member {
 	}
 }
 
-/*func (m *Member) Check(val []byte, sign []byte) bool {
-	res, err := utils.Verify(val, sign, m.PublicKey)
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-	return res
-}*/
-
-type Msg struct {
-	Ref    string
-	Method string
-	Params []interface{}
-	Seed   []byte
-}
-
 func (m *Member) AuthorizedCall(ref string, method string, params []interface{}, seed []byte, sign []byte) ([]interface{}, *foundation.Error) {
-	args := Msg{ref, method, params, seed}
-	var serialized []byte
-	err := proxyctx.Current.Serialize(args, &serialized)
+	serialized, err := signer.Serialize(ref, method, params, seed)
 	if err != nil {
 		return nil, &foundation.Error{err.Error()}
 	}
@@ -103,11 +81,9 @@ func (m *Member) AuthorizedCall(ref string, method string, params []interface{},
 		wallet := wallet.GetImplementationFrom(core.NewRefFromBase58(ref))
 		return []interface{}{wallet.GetTotalBalance()}, nil
 	case "SendMoney":
-		fmt.Println("SENDING", params, reflect.TypeOf(params[0]), reflect.TypeOf(params[1]))
 		wallet := wallet.GetImplementationFrom(core.NewRefFromBase58(ref))
 		amount, ok := params[0].(uint64)
 		if !ok {
-			fmt.Println(params[0])
 			return nil, &foundation.Error{"First parameter must be uint"}
 		}
 		to, ok := params[1].(string)
@@ -115,7 +91,6 @@ func (m *Member) AuthorizedCall(ref string, method string, params []interface{},
 			return nil, &foundation.Error{"Second parameter must be string"}
 		}
 		v := core.NewRefFromBase58(to)
-		fmt.Println("HERE", wallet, amount, to)
 		wallet.Transfer(uint(amount), &v)
 		return nil, nil
 	case "DumpAllUsers":

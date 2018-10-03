@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/genesis/experiment/member/signer"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -684,30 +685,21 @@ func (r *Two) AnError() error {
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 }
 
-type Msg struct {
-	Ref    string
-	Method string
-	Params []interface{}
-	Seed   []byte
-}
-
 type Caller struct {
 	member string
 	key    *ecdsa.PrivateKey
 	lr     core.LogicRunner
-	//req    core.RecordRef
-	t *testing.T
+	t      *testing.T
 }
 
 func (s *Caller) SignedCall(ref string, method string, params []interface{}) interface{} {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
-
-	msg := Msg{ref, method, params, seed}
-	var buf []byte
-	ch := new(codec.CborHandle)
-	err = codec.NewEncoderBytes(&buf, ch).Encode(msg)
 	assert.NoError(s.t, err)
+
+	buf, err := signer.Serialize(ref, method, params, seed)
+	assert.NoError(s.t, err)
+
 	sign, err := cryptoHelper.Sign(buf, s.key)
 	assert.NoError(s.t, err)
 	resp, err := s.lr.Execute(&message.CallMethod{

@@ -6,12 +6,6 @@ import (
         "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-type Msg struct {
-	Ref    string
-	Method string
-	Params []interface{}
-	Seed   []byte
-}
 
 
 // ClassReference to class of this contract

@@ -17,7 +17,6 @@
 package allowance
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -62,6 +61,5 @@ func (a *Allowance) DeleteExpiredAllowance() uint {
 }
 
 func New(to *core.RecordRef, amount uint, expire int64) *Allowance {
-	fmt.Println("ALLOWANCE CREATING", to, amount)
 	return &Allowance{To: *to, Amount: amount, ExpireTime: expire}
 }
