@@ -48,14 +48,10 @@ func chooseOutput(path string) (io.Writer, error) {
 	return res, nil
 }
 
-func exit(msg string, err error) {
-	fmt.Println(msg, err)
-	os.Exit(1)
-}
-
 func check(msg string, err error) {
 	if err != nil {
-		exit(msg, err)
+		fmt.Println(msg, err)
+		os.Exit(1)
 	}
 }
 
@@ -72,6 +68,7 @@ func parseInputParams() {
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_serts", "n", 3, "number of certificates")
 	err := rootCmd.Execute()
+	check("Wrong input params:", err)
 
 	if len(cmd) == 0 {
 		err = rootCmd.Usage()
@@ -79,16 +76,11 @@ func parseInputParams() {
 		os.Exit(0)
 	}
 
-	if err != nil {
-		exit("Wrong input params:", err)
-	}
 }
 
 func writeToOutput(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
-	if err != nil {
-		exit("Can't write data to output", err)
-	}
+	check("Can't write data to output", err)
 }
 
 func printDefaultConfig(out io.Writer) {
