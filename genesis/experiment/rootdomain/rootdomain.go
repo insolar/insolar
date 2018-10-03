@@ -32,6 +32,7 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
+	Root *core.RecordRef
 }
 
 // RegisterNode processes register node request
@@ -91,12 +92,15 @@ func (rd *RootDomain) IsAuthorized() bool {
 }
 
 // CreateMember processes create member request
-func (rd *RootDomain) CreateMember(name string) string {
-	memberHolder := member.New(name)
+func (rd *RootDomain) CreateMember(name string, key string) string {
+	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.Root {
+	memberHolder := member.New(name, key)
 	m := memberHolder.AsChild(rd.GetReference())
 	wHolder := wallet.New(1000)
 	wHolder.AsDelegate(m.GetReference())
 	return m.GetReference().String()
+	//}
+	//return ""
 }
 
 // GetBalance processes get balance request
@@ -108,10 +112,8 @@ func (rd *RootDomain) GetBalance(reference string) uint {
 // SendMoney processes send money request
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
-
 	v := core.NewRefFromBase58(to)
 	walletFrom.Transfer(amount, &v)
-
 	return true
 }
 
@@ -146,6 +148,17 @@ func (rd *RootDomain) DumpAllUsers() []byte {
 	}
 	resJSON, _ := json.Marshal(res)
 	return resJSON
+}
+
+func (rd *RootDomain) SetRoot(adminKey string) (string, *foundation.Error) {
+	if rd.Root == nil {
+		memberHolder := member.New("root", adminKey)
+		m := memberHolder.AsChild(rd.GetReference())
+		root := m.GetReference()
+		rd.Root = &root
+		return root.String(), nil
+	}
+	return "", &foundation.Error{S: "Root is already set"}
 }
 
 // NewRootDomain creates new RootDomain
