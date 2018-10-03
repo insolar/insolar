@@ -75,7 +75,8 @@ func parseInputParams() {
 	err := rootCmd.Execute()
 
 	if len(cmd) == 0 {
-		rootCmd.Usage()
+		err = rootCmd.Usage()
+		check("[ parseInputParams ]", err)
 		os.Exit(0)
 	}
 
