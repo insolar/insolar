@@ -56,6 +56,7 @@ type NodeKeeper interface {
 // NewNodeKeeper create new NodeKeeper. unsyncDiscardAfter = timeout after which each unsync node is discarded
 func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
 	return &nodekeeper{
+		timeout:      unsyncDiscardAfter,
 		active:       make(map[core.RecordRef]*core.ActiveNode),
 		sync:         make([]*core.ActiveNode, 0),
 		unsync:       make([]*core.ActiveNode, 0),
@@ -160,7 +161,8 @@ func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
 	}
 
 	nk.unsync = append(nk.unsync, node)
-	nk.unsyncTimeout = append(nk.unsyncTimeout, time.Now().Add(nk.timeout))
+	tm := time.Now().Add(nk.timeout)
+	nk.unsyncTimeout = append(nk.unsyncTimeout, tm)
 	return nil
 }
 

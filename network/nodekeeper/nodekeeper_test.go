@@ -19,38 +19,41 @@ package nodekeeper
 import (
 	"encoding/hex"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	nullHash = "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7"
+)
+
+func newActiveNode(ref byte, pulse int) *core.ActiveNode {
+	var mask core.JetRoleMask
+	mask.Set(core.RoleVirtualExecutor)
+
+	return &core.ActiveNode{
+		NodeID:    core.RecordRef{ref},
+		PulseNum:  core.PulseNumber(pulse),
+		State:     core.NodeActive,
+		JetRoles:  mask,
+		PublicKey: []byte{0, 0, 0},
+	}
+}
+
 func TestNodekeeper_calculateNodeHash(t *testing.T) {
 	hash1, _ := calculateHash(nil)
 	hash2, _ := calculateHash([]*core.ActiveNode{})
 
-	assert.Equal(t, "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7", hex.EncodeToString(hash1))
+	assert.Equal(t, nullHash, hex.EncodeToString(hash1))
 	assert.Equal(t, hash1, hash2)
 
-	var mask1 core.JetRoleMask
-	mask1.Set(core.RoleVirtualExecutor)
+	activeNode1 := newActiveNode(0, 0)
+	activeNode2 := newActiveNode(0, 0)
 
-	activeNode1 := core.ActiveNode{
-		NodeID:    core.RecordRef{0},
-		PulseNum:  core.PulseNumber(0),
-		State:     core.NodeActive,
-		JetRoles:  mask1,
-		PublicKey: []byte{0, 0, 0},
-	}
-	activeNode2 := core.ActiveNode{
-		NodeID:    core.RecordRef{0},
-		PulseNum:  core.PulseNumber(0),
-		State:     core.NodeActive,
-		JetRoles:  mask1,
-		PublicKey: []byte{0, 0, 0},
-	}
-
-	activeNode1Slice := []*core.ActiveNode{&activeNode1}
-	activeNode2Slice := []*core.ActiveNode{&activeNode2}
+	activeNode1Slice := []*core.ActiveNode{activeNode1}
+	activeNode2Slice := []*core.ActiveNode{activeNode2}
 
 	hash1, _ = calculateHash(activeNode1Slice)
 	hash2, _ = calculateHash(activeNode2Slice)
@@ -60,9 +63,76 @@ func TestNodekeeper_calculateNodeHash(t *testing.T) {
 	assert.NotEqual(t, hash1, hash2)
 
 	// nodes order in slice should not affect hash calculating
-	slice1 := []*core.ActiveNode{&activeNode1, &activeNode2}
-	slice2 := []*core.ActiveNode{&activeNode2, &activeNode1}
+	slice1 := []*core.ActiveNode{activeNode1, activeNode2}
+	slice2 := []*core.ActiveNode{activeNode2, activeNode1}
 	hash1, _ = calculateHash(slice1)
 	hash2, _ = calculateHash(slice2)
 	assert.Equal(t, hash1, hash2)
+}
+
+func TestNodekeeper_AddUnsync(t *testing.T) {
+	keeper := NewNodeKeeper(time.Hour)
+	keeper.SetPulse(core.PulseNumber(0))
+	_ = keeper.AddUnsync(newActiveNode(0, 0))
+	_ = keeper.AddUnsync(newActiveNode(1, 0))
+	gossip := []*core.ActiveNode{newActiveNode(2, 0), newActiveNode(3, 0)}
+	_ = keeper.AddUnsyncGossip(gossip)
+	keeper.Sync(true)
+	keeper.Sync(true)
+	assert.Equal(t, 4, len(keeper.GetActiveNodes()))
+	for i := 0; i < 4; i++ {
+		assert.NotNil(t, keeper.GetActiveNode(core.RecordRef{byte(i)}))
+	}
+}
+
+func TestNodekeeper_GetUnsyncHash(t *testing.T) {
+	keeper := NewNodeKeeper(time.Hour)
+	hash, count, _ := keeper.GetUnsyncHash()
+	assert.Equal(t, nullHash, hex.EncodeToString(hash))
+	assert.Equal(t, 0, count)
+
+	keeper.SetPulse(core.PulseNumber(0))
+	_ = keeper.AddUnsync(newActiveNode(0, 0))
+	_ = keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(1, 0)})
+
+	keeper2 := NewNodeKeeper(time.Hour)
+	keeper2.SetPulse(core.PulseNumber(0))
+	_ = keeper2.AddUnsync(newActiveNode(1, 0))
+	_ = keeper2.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(0, 0)})
+
+	hash, count, _ = keeper.GetUnsyncHash()
+	hash2, count2, _ := keeper2.GetUnsyncHash()
+	assert.Equal(t, hash, hash2)
+	assert.Equal(t, count, count2)
+}
+
+func TestNodekeeper_AddUnsync_checks(t *testing.T) {
+	keeper := NewNodeKeeper(time.Hour)
+	keeper.SetPulse(core.PulseNumber(0))
+
+	// Unsync node pulse number should be equal to the NodeKeeper pulse number
+	err := keeper.AddUnsync(newActiveNode(0, 1))
+	assert.Error(t, err)
+	err = keeper.AddUnsync(newActiveNode(0, 0))
+	assert.NoError(t, err)
+
+	// Gossip unsync node should not have reference id equal to one of the local unsync nodes
+	err = keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(0, 0)})
+	assert.Error(t, err)
+	// Gossip unsync node pulse number should be equal to the NodeKeeper pulse number
+	err = keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(1, 1)})
+	assert.Error(t, err)
+	err = keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(1, 0)})
+	assert.NoError(t, err)
+}
+
+func TestNodekeeper_discardTimedOutUnsync(t *testing.T) {
+	keeper := NewNodeKeeper(250 * time.Millisecond)
+	for i := 0; i < 4; i++ {
+		keeper.SetPulse(core.PulseNumber(i))
+		_ = keeper.AddUnsync(newActiveNode(byte(i), i))
+		time.Sleep(100 * time.Millisecond)
+		keeper.Sync(false)
+	}
+	assert.Equal(t, 2, len(keeper.GetUnsync()))
 }
