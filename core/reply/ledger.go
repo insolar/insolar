@@ -76,3 +76,13 @@ type Reference struct {
 func (e *Reference) Type() core.ReplyType {
 	return TypeReference
 }
+
+// ID is common reaction for methods returning id to lifeline states.
+type ID struct {
+	ID core.RecordID
+}
+
+// Type implementation of Reply interface.
+func (e *ID) Type() core.ReplyType {
+	return TypeID
+}
