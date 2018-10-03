@@ -78,7 +78,7 @@ const FirstPulseNumber = 65537
 // GenesisPulse is a first pulse for the system
 // Because first 2 bites of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
 // for calculation pulse numbers we use the formula = unix.Now() - firstPulseDate + 65536
-var GenesisPulse *Pulse = &Pulse{PulseNumber: FirstPulseNumber, Entropy: [EntropySize]byte{}}
+var GenesisPulse = &Pulse{PulseNumber: FirstPulseNumber, Entropy: [EntropySize]byte{}}
 
 // CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
 func CalculatePulseNumber(now time.Time) PulseNumber {

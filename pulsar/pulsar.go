@@ -427,10 +427,6 @@ func (pulsar *Pulsar) broadcastEntropy() {
 	}
 }
 
-func (pulsar *Pulsar) stateSwitchedToWaitingForTheStart() {
-	pulsar.clearState()
-}
-
 func (pulsar *Pulsar) sendVector() {
 	log.Debug("[sendVector]")
 	if pulsar.State == failed {
@@ -753,12 +749,12 @@ func (pulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t transpo
 	if err != nil {
 		return
 	}
-	pulsarHostId, err := id.NewID()
+	pulsarHostID, err := id.NewID()
 	if err != nil {
 		return
 	}
 	pulsarHost = host.NewHost(pulsarHostAddress)
-	pulsarHost.ID = pulsarHostId
+	pulsarHost.ID = pulsarHostID
 
 	return
 }
