@@ -35,9 +35,8 @@ type key struct {
 func TestNewCertificateFromFile(t *testing.T) {
 	cert, err := NewCertificateFromFile("testdata/cert.json")
 	assert.NoError(t, err)
-	ok, err := cert.Validate()
+	err = cert.Validate()
 	assert.NoError(t, err)
-	assert.True(t, ok)
 }
 
 func TestNewCertificateFromFile_WrongSignature(t *testing.T) {
@@ -101,8 +100,7 @@ func TestComplexCheck(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, newCert.CertRecords, new2Cert.CertRecords)
 
-	ok, err := cert.Validate()
+	err = cert.Validate()
 	assert.NoError(t, err)
-	assert.True(t, ok)
 
 }

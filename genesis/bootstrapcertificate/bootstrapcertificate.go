@@ -57,12 +57,9 @@ func NewCertificateFromFile(path string) (*Certificate, error) {
 		return nil, errors.Wrap(err, "[ NewCertificateFromFile ]")
 	}
 
-	ok, err := cert.Validate()
+	err = cert.Validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewCertificateFromFile ]")
-	}
-	if !ok {
-		return nil, errors.New("[ NewCertificateFromFile ] Validation failed")
 	}
 
 	return &cert, nil
@@ -99,35 +96,35 @@ func dumpRecords(cRecords CertRecords) ([]byte, error) {
 	return serializeToJSON(cRecords)
 }
 
-func (cr *Certificate) Validate() (bool, error) {
+func (cr *Certificate) Validate() error {
 	if len(cr.Signs) != len(cr.CertRecords) {
-		return false, errors.New("[ Validate ] Wrong number of nodes and signatures")
+		return errors.New("[ Validate ] Wrong number of nodes and signatures")
 	}
 
 	if len(cr.Signs) == 0 {
-		return false, errors.New("[ Validate ] Empty fields")
+		return errors.New("[ Validate ] Empty fields")
 	}
 
 	size := len(cr.Signs)
 	certData, err := dumpRecords(cr.CertRecords)
 	if err != nil {
-		return false, errors.Wrap(err, "[ Validate ]")
+		return errors.Wrap(err, "[ Validate ]")
 	}
 	for i := 0; i < size; i++ {
 		sign, err := ecdsa_helper.ImportSignature(cr.Signs[i])
 		if err != nil {
-			return false, errors.Wrap(err, "[ Validate ]")
+			return errors.Wrap(err, "[ Validate ]")
 		}
 		ok, err := ecdsa_helper.Verify(certData, sign, cr.CertRecords[i].PublicKey)
 		if err != nil {
-			return false, errors.Wrap(err, "[ Validate ]")
+			return errors.Wrap(err, "[ Validate ]")
 		}
 		if !ok {
-			return false, errors.New("[ Validate ] invalid signature: " + strconv.Itoa(i))
+			return errors.New("[ Validate ] invalid signature: " + strconv.Itoa(i))
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
 func (cr *Certificate) Dump() (string, error) {
