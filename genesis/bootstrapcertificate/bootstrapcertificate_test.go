@@ -40,6 +40,17 @@ func TestNewCertificateFromFile(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestNewCertificateFromFields_DifferentFieldsLength(t *testing.T) {
+	privKeys := []*ecdsa.PrivateKey{}
+	privKeys = append(privKeys, nil)
+	privKeys = append(privKeys, nil)
+
+	cRecords := CertRecords{}
+
+	_, err := NewCertificateFromFields(cRecords, privKeys)
+	assert.EqualError(t, err, "[ NewCertificateFromFields ] params must be the same length")
+}
+
 func TestNewCertificateFromFields(t *testing.T) {
 	privKeys := []*ecdsa.PrivateKey{}
 	records := CertRecords{}
