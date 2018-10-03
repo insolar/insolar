@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"hash"
 	"sort"
+	"time"
 
 	"github.com/anacrolix/sync"
 	"github.com/insolar/insolar/core"
@@ -52,7 +53,8 @@ type NodeKeeper interface {
 	AddUnsyncGossip([]*core.ActiveNode) error
 }
 
-func NewNodeKeeper() NodeKeeper {
+// NewNodeKeeper create new NodeKeeper. unsyncDiscardAfter = timeout after which each unsync node is discarded
+func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
 	return &nodekeeper{
 		active:       make(map[core.RecordRef]*core.ActiveNode),
 		sync:         make([]*core.ActiveNode, 0),
@@ -62,15 +64,17 @@ func NewNodeKeeper() NodeKeeper {
 }
 
 type nodekeeper struct {
-	pulse core.PulseNumber
+	pulse   core.PulseNumber
+	timeout time.Duration
 
 	activeLock sync.RWMutex
 	active     map[core.RecordRef]*core.ActiveNode
 	sync       []*core.ActiveNode
 
-	unsyncLock   sync.Mutex
-	unsync       []*core.ActiveNode
-	unsyncGossip map[core.RecordRef]*core.ActiveNode
+	unsyncLock    sync.Mutex
+	unsync        []*core.ActiveNode
+	unsyncTimeout []time.Time
+	unsyncGossip  map[core.RecordRef]*core.ActiveNode
 }
 
 func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
@@ -140,8 +144,7 @@ func (nk *nodekeeper) Sync(approved bool) {
 	} else {
 		// clear sync
 		nk.sync = make([]*core.ActiveNode, 0)
-
-		// TODO: nk.unsync discard logic due to timeout
+		nk.discardTimedOutUnsync()
 	}
 	// clear unsyncGossip
 	nk.unsyncGossip = make(map[core.RecordRef]*core.ActiveNode)
@@ -157,6 +160,7 @@ func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
 	}
 
 	nk.unsync = append(nk.unsync, node)
+	nk.unsyncTimeout = append(nk.unsyncTimeout, time.Now().Add(nk.timeout))
 	return nil
 }
 
@@ -176,6 +180,22 @@ func (nk *nodekeeper) AddUnsyncGossip(nodes []*core.ActiveNode) error {
 		nk.unsyncGossip[node.NodeID] = node
 	}
 	return nil
+}
+
+func (nk *nodekeeper) discardTimedOutUnsync() {
+	index := 0
+	for _, tm := range nk.unsyncTimeout {
+		if tm.After(time.Now()) {
+			break
+		}
+		index++
+	}
+	if index == 0 {
+		return
+	}
+	// discard all unsync nodes before index
+	nk.unsyncTimeout = nk.unsyncTimeout[index:]
+	nk.unsync = nk.unsync[index:]
 }
 
 func (nk *nodekeeper) checkPulse(nodes []*core.ActiveNode) error {
