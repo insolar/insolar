@@ -114,5 +114,11 @@ type ResponseKnownOuterHosts struct {
 
 // ResponseCheckPublicKey is data to answer to authorization request.
 type ResponseCheckPublicKey struct {
-	Seed []byte
+	Exist bool
+	Nonce []byte
+}
+
+// ResponseCheckSignedNonce returns true if signed nonce is ok.
+type ResponseCheckSignedNonce struct {
+	Success bool
 }

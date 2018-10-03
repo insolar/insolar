@@ -68,9 +68,20 @@ func DispatchPacketType(
 		return processPulse(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeGetRandomHosts:
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeCheckSignedNonce:
+		return processCheckSignedNonce(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processCheckSignedNonce(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder) (*packet.Packet, error) {
+	parsed := true
+	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{parsed}).Build(), nil
 }
 
 func processGetRandomHosts(

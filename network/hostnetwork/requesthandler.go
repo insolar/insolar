@@ -388,7 +388,9 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 			err = errors.New(response.Error)
 		}
 	case packet.TypeCheckPublicKey:
-		err = handleAuthorizationResponse(hostHandler, rsp.Data.(*packet.ResponseCheckPublicKey))
+		err = handleCheckPublicKeyResponse(hostHandler, rsp.Data.(*packet.ResponseCheckPublicKey))
+	case packet.TypeCheckSignedNonce:
+		err = handleCheckSignedNonceResponse(hostHandler, rsp.Data.(*packet.ResponseCheckSignedNonce))
 	}
 
 	return err
