@@ -193,6 +193,9 @@ func (eb *testMessageBus) Register(p core.MessageType, handler core.MessageHandl
 	return nil
 }
 
+func (eb *testMessageBus) MustRegister(p core.MessageType, handler core.MessageHandler) {
+}
+
 func (*testMessageBus) Start(components core.Components) error { return nil }
 func (*testMessageBus) Stop() error                            { return nil }
 func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) {

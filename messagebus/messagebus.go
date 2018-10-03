@@ -66,6 +66,14 @@ func (mb *MessageBus) Register(p core.MessageType, handler core.MessageHandler) 
 	return nil
 }
 
+// MustRegister is a Register wrapper that panics if an error was returned.
+func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandler) {
+	err := mb.Register(p, handler)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // Send an `Message` and get a `Reply` or error from remote host.
 func (mb *MessageBus) Send(msg core.Message) (core.Reply, error) {
 	jc := mb.ledger.GetJetCoordinator()
