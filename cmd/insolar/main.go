@@ -17,7 +17,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -144,7 +143,6 @@ type certRecords = bootstrapcertificate.CertRecords
 func generateCertificates(out io.Writer) {
 
 	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
-	var recordsBuf bytes.Buffer
 	cRecords := certRecords{}
 	keys := []*ecdsa.PrivateKey{}
 	for i := uint(0); i < numberCertificates; i++ {
@@ -158,8 +156,6 @@ func generateCertificates(out io.Writer) {
 
 		cRecords = append(cRecords, bootstrapcertificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
 		keys = append(keys, privKey)
-
-		recordsBuf.WriteString(ref.String() + " " + pubKey)
 	}
 
 	cert, err := bootstrapcertificate.NewCertificateFromFields(cRecords, keys)
