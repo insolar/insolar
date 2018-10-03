@@ -34,23 +34,16 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// ChangeGoPath prepends `path` to GOPATH environment variable
-// accounting for possibly for default value. Returns original
-// value of the environment variable, don't forget to restore
-// it with defer:
-//    defer os.Setenv("GOPATH", origGoPath)
-func ChangeGoPath(path string) (string, error) {
-	gopathOrigEnv := os.Getenv("GOPATH")
-	gopath := gopathOrigEnv
+// PrependGoPath prepends `path` to GOPATH environment variable
+// accounting for possibly for default value. Returns new value.
+// NOTE: that environment is not changed
+func PrependGoPath(path string) string {
+	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		gopath = build.Default.GOPATH
 	}
 
-	err := os.Setenv("GOPATH", path+string(os.PathListSeparator)+gopath)
-	if err != nil {
-		return "", err
-	}
-	return gopathOrigEnv, nil
+	return path + string(os.PathListSeparator) + gopath
 }
 
 // WriteFile dumps `text` into file named `name` into directory `dir`.
@@ -548,20 +541,14 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		return err
 	}
 
-	origGoPath, err := ChangeGoPath(cb.root)
-	if err != nil {
-		return err
-	}
-	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
-
-	// contractPath := filepath.Join(root, "src/contract", name, "main.go")
-
-	out, err := exec.Command(
+	cmd := exec.Command(
 		"go", "build",
 		"-buildmode=plugin",
 		"-o", filepath.Join(dstDir, name+".so"),
-		"contract/"+name,
-	).CombinedOutput()
+		filepath.Join(cb.root, "src/contract", name),
+	)
+	cmd.Env = append(os.Environ(), "GOPATH="+PrependGoPath(cb.root))
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))
 	}
