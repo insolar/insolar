@@ -64,6 +64,8 @@ const (
 	TypeGetRandomHosts
 	// TypeCheckPublicKey is packet to request an authorization in the network.
 	TypeCheckPublicKey
+	// TypeCheckSignedNonce is packet to check a signed nonce.
+	TypeCheckSignedNonce
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -126,6 +128,8 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestGetRandomHosts)
 	case TypeCheckPublicKey:
 		_, valid = m.Data.(*RequestCheckPublicKey)
+	case TypeCheckSignedNonce:
+		_, valid = m.Data.(*RequestCheckSignedNonce)
 	default:
 		valid = false
 	}
@@ -209,6 +213,7 @@ func init() {
 	gob.Register(&RequestPulse{})
 	gob.Register(&RequestGetRandomHosts{})
 	gob.Register(&RequestCheckPublicKey{})
+	gob.Register(&RequestCheckSignedNonce{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
