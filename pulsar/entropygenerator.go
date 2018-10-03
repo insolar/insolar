@@ -22,13 +22,16 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// EntropyGenerator is the base interface for generation of entropy for pulses
 type EntropyGenerator interface {
 	GenerateEntropy() core.Entropy
 }
 
+// StandardEntropyGenerator is the base impl of EntropyGenerator with using of crypto/rand
 type StandardEntropyGenerator struct {
 }
 
+// GenerateEntropy generate entropy with using of EntropyGenerator
 func (generator *StandardEntropyGenerator) GenerateEntropy() core.Entropy {
 	entropy := make([]byte, core.EntropySize)
 	_, err := rand.Read(entropy)

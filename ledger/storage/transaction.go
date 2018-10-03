@@ -166,14 +166,7 @@ func (m *TransactionManager) SetObjectIndex(id *record.ID, idx *index.ObjectLife
 // GeneratedEntropy is used for calculating node roles.
 func (m *TransactionManager) GetEntropy(pulse core.PulseNumber) (*core.Entropy, error) {
 	k := prefixkey(scopeIDEntropy, pulse.Bytes())
-	item, err := m.txn.Get(k)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	buf, err := item.Value()
+	buf, err := m.Get(k)
 	if err != nil {
 		return nil, err
 	}

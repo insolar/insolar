@@ -65,6 +65,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		storage,
 		clientFactory,
 		pulsartestutil.MockEntropyGenerator{},
+		nil,
 		mockListener)
 
 	assertObj.NoError(err)
@@ -103,7 +104,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})
 
 	result, err := NewPulsar(config, storage, clientFactory,
-		pulsartestutil.MockEntropyGenerator{}, func(connectionType string, address string) (net.Listener, error) {
+		pulsartestutil.MockEntropyGenerator{}, nil, func(connectionType string, address string) (net.Listener, error) {
 			return &pulsartestutil.MockListener{}, nil
 		})
 
@@ -241,9 +242,9 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 //		Neighbours:       map[string]*Neighbour{},
 //		PrivateKey:       mainPrivateKey,
 //		GeneratedEntropy: pulsartestutil.MockEntropy,
-//		OwnedBftRow:      map[string]*BftCell{"test": &BftCell{}},
+//		OwnedBftRow:      map[string]*bftCell{"test": &bftCell{}},
 //	}
 //
-//	pulsar.stateSwitchedToVerifying()
+//	pulsar.verify()
 //
 //}

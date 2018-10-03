@@ -26,74 +26,68 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-// Interface for factory of rpc wrappers
-// Needed for creation wrappers objects
+// RPCClientWrapperFactory describes interface for the wrappers factory
 type RPCClientWrapperFactory interface {
 	CreateWrapper() RPCClientWrapper
 }
 
-// Standard factory implementation
-// Returns RPCClientWrapperImpl
+// RPCClientWrapperFactoryImpl is a base impl of the RPCClientWrapperFactory
 type RPCClientWrapperFactoryImpl struct {
 }
 
-// Standard factory implementation
-// Returns RPCClientWrapperImpl
+// CreateWrapper return new RPCClientWrapper
 func (RPCClientWrapperFactoryImpl) CreateWrapper() RPCClientWrapper {
 	return &RPCClientWrapperImpl{Mutex: &sync.Mutex{}}
 }
 
-// Interface for wrappers around rpc clients
+// RPCClientWrapper describes interface of the wrapper around rpc-client
 type RPCClientWrapper interface {
-	// Take current neighbour's lock
+	// Lock takes current neighbour's lock
 	Lock()
-	// Release current neighbour's lock
+	// Unlock releases current neighbour's lock
 	Unlock()
 
-	// Check if client initialised
+	// IsInitialised compares underhood rpc-client with nil
 	IsInitialised() bool
-	// Set wrapper's undercover rpc client
-	SetRPCClient(client *rpc.Client)
-	// Create connection and reinit client
+	// CreateConnection creates connection to an another pulsar
 	CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error
-	// Close wrapped client
+	// Close closes connection
 	Close() error
 
-	// Make rpc call in async-style
+	// Go makes rpc-call to an another pulsar
 	Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call
+
+	// ResetClient clears rpc-client
+	ResetClient()
 }
 
-// Base RPCClientWrapper impl for rpc.Client
+// RPCClientWrapperImpl is a standard impl of RPCClientWrapper
 type RPCClientWrapperImpl struct {
 	*sync.Mutex
 	*rpc.Client
 }
 
+// IsInitialised compares underhood rpc-client with nil
 func (impl *RPCClientWrapperImpl) IsInitialised() bool {
 	return impl.Client != nil
 }
 
-// Close wrapped client
+// Close closes connection
 func (impl *RPCClientWrapperImpl) Close() error {
 	return impl.Client.Close()
 }
 
-// Take current neighbour's lock
+// Lock takes current neighbour's lock
 func (impl *RPCClientWrapperImpl) Lock() {
 	impl.Mutex.Lock()
 }
 
-// Release current neighbour's lock
+// Unlock releases current neighbour's lock
 func (impl *RPCClientWrapperImpl) Unlock() {
 	impl.Mutex.Unlock()
 }
 
-// Set wrapper's undercover rpc client
-func (impl *RPCClientWrapperImpl) SetRPCClient(client *rpc.Client) {
-	impl.Client = client
-}
-
-// Create base rpc connection
+// CreateConnection creates connection to an another pulsar
 func (impl *RPCClientWrapperImpl) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
 	conn, err := net.Dial(connectionType.String(), connectionAddress)
 	if err != nil {
@@ -103,12 +97,17 @@ func (impl *RPCClientWrapperImpl) CreateConnection(connectionType configuration.
 	return nil
 }
 
-// Make a call in async style, with done channel as async-marker
+// Go makes rpc-call to an another pulsar
 func (impl *RPCClientWrapperImpl) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
 	return impl.Client.Go(serviceMethod, args, reply, done)
 }
 
-// Helper for functionality of connection to another pulsar
+// ResetClient clears rpc-client
+func (impl *RPCClientWrapperImpl) ResetClient() {
+	impl.Client = nil
+}
+
+// Neighbour is a helper struct, which contains info about pulsar-neighbour
 type Neighbour struct {
 	ConnectionType    configuration.ConnectionType
 	ConnectionAddress string
@@ -116,7 +115,7 @@ type Neighbour struct {
 	PublicKey         *ecdsa.PublicKey
 }
 
-// Check connection error, write it to the log and try to refresh connection
+// CheckAndRefreshConnection checks connection error, writes it to the log and tries to refresh connection
 func (neighbour *Neighbour) CheckAndRefreshConnection(rpcErr error) error {
 	log.Infof("Restarting RPC Connection to %v due to error %v", neighbour.ConnectionAddress, rpcErr)
 
