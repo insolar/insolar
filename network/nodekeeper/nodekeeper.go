@@ -108,7 +108,7 @@ func hashWriteChecked(hash hash.Hash, data []byte) {
 	}
 }
 
-func calculateNodeHash(node *core.ActiveNode) (result []byte, err error) {
+func calculateNodeHash(node *core.ActiveNode) []byte {
 	hash := sha3.New224()
 	hashWriteChecked(hash, node.NodeID[:])
 	b := make([]byte, 8)
@@ -119,7 +119,7 @@ func calculateNodeHash(node *core.ActiveNode) (result []byte, err error) {
 	b[0] = byte(node.State)
 	hashWriteChecked(hash, b[:1])
 	hashWriteChecked(hash, node.PublicKey)
-	return hash.Sum(nil), nil
+	return hash.Sum(nil)
 }
 
 func calculateHash(list []*core.ActiveNode) (result []byte, err error) {
@@ -130,16 +130,13 @@ func calculateHash(list []*core.ActiveNode) (result []byte, err error) {
 	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
 	defer func() {
 		if r := recover(); r != nil {
-			result, err = nil, fmt.Errorf("panic: %s", r)
+			result, err = nil, fmt.Errorf("error calculating hash: %s", r)
 		}
 	}()
 
 	hash := sha3.New224()
 	for _, node := range list {
-		nodeHash, err := calculateNodeHash(node)
-		if err != nil {
-			return nil, errors.Wrap(err, "error calculating hash")
-		}
+		nodeHash := calculateNodeHash(node)
 		hashWriteChecked(hash, nodeHash)
 	}
 	return hash.Sum(nil), nil
