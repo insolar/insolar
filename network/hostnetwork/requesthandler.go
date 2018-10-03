@@ -234,12 +234,36 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
+func AuthorizationRequest(hostHandler hosthandler.HostHandler, targetID string) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return errors.Wrap(err, "failed to build a context")
+	}
+	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
+	if err != nil {
+		return errors.Wrap(err, "failed to find a target host")
+	}
+	if !exist {
+		return errors.Wrap(err, "couldn't find a target host")
+	}
+
+	// TODO: feel request fields.
+	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(targetHost).Type(packet.TypeAuthorization).Request(&packet.RequestAuthorization{}).Build()
+
+	future, err := hostHandler.SendRequest(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to send an authorization request")
+	}
+	return checkResponse(hostHandler, future, targetID, request)
+}
+
 // ResendPulseToKnownHosts resends received pulse to all known hosts
 func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []*routing.RouteHost, pulse *packet.RequestPulse) {
-	for _, host := range hosts {
-		err := sendPulse(hostHandler, host.Host, pulse)
+	for _, host1 := range hosts {
+		err := sendPulse(hostHandler, host1.Host, pulse)
 		if err != nil {
-			log.Debug("error resending pulse to host %s: %s", host.ID, err.Error())
+			log.Debug("error resending pulse to host %s: %s", host1.ID, err.Error())
 		}
 	}
 }
@@ -363,6 +387,8 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		if !response.Success {
 			err = errors.New(response.Error)
 		}
+	case packet.TypeAuthorization:
+		err = handleAuthorizationResponse(hostHandler, rsp.Data.(*packet.ResponseAuthorization))
 	}
 
 	return err

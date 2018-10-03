@@ -105,3 +105,10 @@ type RequestKnownOuterHosts struct {
 	ID         string // origin ID
 	OuterHosts int    // number of known outer hosts
 }
+
+// RequestAuthorization is data to authorization request.
+type RequestAuthorization struct {
+	Signature []byte
+	Seed      []byte
+	NodeRef   core.RecordRef
+}
