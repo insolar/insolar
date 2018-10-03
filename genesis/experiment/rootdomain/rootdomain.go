@@ -103,7 +103,7 @@ func (rd *RootDomain) CreateMember(name string, key string) string {
 	//return ""
 }
 
-// GetBalance processes get balance request		return ""
+// GetBalance processes get balance request
 func (rd *RootDomain) GetBalance(reference string) uint {
 	w := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
 	return w.GetTotalBalance()
@@ -150,15 +150,15 @@ func (rd *RootDomain) DumpAllUsers() []byte {
 	return resJSON
 }
 
-func (rd *RootDomain) SetRoot(adminKey string) string {
+func (rd *RootDomain) SetRoot(adminKey string) (string, *foundation.Error) {
 	if rd.Root == nil {
 		memberHolder := member.New("root", adminKey)
 		m := memberHolder.AsChild(rd.GetReference())
 		root := m.GetReference()
 		rd.Root = &root
-		return root.String()
+		return root.String(), nil
 	}
-	return ""
+	return "", &foundation.Error{S: "Root is already set"}
 }
 
 // NewRootDomain creates new RootDomain

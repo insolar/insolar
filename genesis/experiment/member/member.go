@@ -93,9 +93,6 @@ func (m *Member) AuthorizedCall(ref string, method string, params []interface{},
 		v := core.NewRefFromBase58(to)
 		wallet.Transfer(uint(amount), &v)
 		return nil, nil
-	case "DumpAllUsers":
-		domain := rootdomain.GetObject(core.NewRefFromBase58(ref))
-		return []interface{}{domain.DumpAllUsers()}, nil
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
