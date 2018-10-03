@@ -231,11 +231,9 @@ func main() {
 	err = os.Chdir(tmpDir)
 	assert.NoError(t, err)
 
-	origGoPath, err := testutil.ChangeGoPath(tmpDir)
-	assert.NoError(t, err)
-	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
-
-	out, err := exec.Command("go", "build", "test.go").CombinedOutput()
+	cmd := exec.Command("go", "build", "test.go")
+	cmd.Env = append(os.Environ(), "GOPATH="+testutil.PrependGoPath(tmpDir))
+	out, err := cmd.CombinedOutput()
 	assert.NoError(t, err, string(out))
 }
 

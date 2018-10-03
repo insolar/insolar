@@ -53,7 +53,7 @@ type ClassDescriptor struct {
 	am core.ArtifactManager
 
 	head  core.RecordRef
-	state core.RecordRef
+	state core.RecordID
 	code  *core.RecordRef // Can be nil.
 }
 
@@ -62,8 +62,8 @@ func (d *ClassDescriptor) HeadRef() *core.RecordRef {
 	return &d.head
 }
 
-// StateRef returns reference to represented class state record.
-func (d *ClassDescriptor) StateRef() *core.RecordRef {
+// StateID returns reference to represented class state record.
+func (d *ClassDescriptor) StateID() *core.RecordID {
 	return &d.state
 }
 
@@ -88,7 +88,7 @@ type ObjectDescriptor struct {
 	am core.ArtifactManager
 
 	head     core.RecordRef
-	state    core.RecordRef
+	state    core.RecordID
 	class    core.RecordRef
 	memory   []byte
 	children []core.RecordRef
@@ -99,8 +99,8 @@ func (d *ObjectDescriptor) HeadRef() *core.RecordRef {
 	return &d.head
 }
 
-// StateRef returns reference to object state record.
-func (d *ObjectDescriptor) StateRef() *core.RecordRef {
+// StateID returns reference to object state record.
+func (d *ObjectDescriptor) StateID() *core.RecordID {
 	return &d.state
 }
 

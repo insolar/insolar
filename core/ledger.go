@@ -151,8 +151,8 @@ type ClassDescriptor interface {
 	// HeadRef returns head reference to represented class record.
 	HeadRef() *RecordRef
 
-	// StateRef returns reference to represented class state record.
-	StateRef() *RecordRef
+	// StateID returns reference to represented class state record.
+	StateID() *RecordID
 
 	// CodeDescriptor returns descriptor for fetching class's code data.
 	CodeDescriptor(machinePref []MachineType) (CodeDescriptor, error)
@@ -163,8 +163,8 @@ type ObjectDescriptor interface {
 	// HeadRef returns head reference to represented object record.
 	HeadRef() *RecordRef
 
-	// StateRef returns reference to object state record.
-	StateRef() *RecordRef
+	// StateID returns reference to object state record.
+	StateID() *RecordID
 
 	// Memory fetches object memory from storage.
 	Memory() []byte

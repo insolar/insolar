@@ -49,6 +49,13 @@ func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandl
 	return nil
 }
 
+func (mb *messageBusMock) MustRegister(p core.MessageType, handler core.MessageHandler) {
+	err := mb.Register(p, handler)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (mb *messageBusMock) Start(components core.Components) error {
 	panic("implement me")
 }

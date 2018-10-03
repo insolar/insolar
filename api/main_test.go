@@ -132,6 +132,9 @@ func (eb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandl
 	return nil
 }
 
+func (eb *TestMessageBus) MustRegister(p core.MessageType, handler core.MessageHandler) {
+}
+
 func (eb *TestMessageBus) Start(c core.Components) error {
 	return nil
 }
