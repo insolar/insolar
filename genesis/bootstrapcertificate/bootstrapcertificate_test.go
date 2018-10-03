@@ -39,13 +39,24 @@ func TestNewCertificateFromFile(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestNewCertifiacteFromFile_BadFile(t *testing.T) {
+	_, err := NewCertificateFromFile("______")
+	assert.EqualError(t, err, "[ NewCertificateFromFile ]: open ______: no such file or directory")
+}
+
+func TestNewCertifiacteFromFile_BadFileData(t *testing.T) {
+	_, err := NewCertificateFromFile("testdata/private_keys.json")
+	assert.EqualError(t, err, "[ NewCertificateFromFile ]: json: cannot unmarshal array into Go value of type bootstrapcertificate.Certificate")
+}
+
 func TestNewCertificateFromFile_WrongSignature(t *testing.T) {
 	_, err := NewCertificateFromFile("testdata/cert_wrong_signature.json")
 	assert.EqualError(t, err, "[ NewCertificateFromFile ]: [ Validate ] invalid signature: 0")
 }
 
-func TestNewCertificateFromFields(t *testing.T) {
-	NewCertificateFromFields(nil, nil)
+func TestNewCertificateFromFields_EmptyLists(t *testing.T) {
+	_, err := NewCertificateFromFields(nil, nil)
+	assert.EqualError(t, err, "[ NewCertificateFromFields ] params must not be empty")
 }
 
 func readPrivateKeys() ([]*ecdsa.PrivateKey, error) {

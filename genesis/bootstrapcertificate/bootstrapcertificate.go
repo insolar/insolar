@@ -70,6 +70,9 @@ func NewCertificateFromFields(cRecords CertRecords, keys []*ecdsa.PrivateKey) (*
 	if len(cRecords) != len(keys) {
 		return nil, errors.New("[ NewCertificateFromFields ] params must be the same length")
 	}
+	if len(cRecords) == 0 {
+		return nil, errors.New("[ NewCertificateFromFields ] params must not be empty")
+	}
 	certData, err := dumpRecords(cRecords)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewCertificateFromFields ]")
