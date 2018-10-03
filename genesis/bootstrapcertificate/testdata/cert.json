@@ -1,0 +1,21 @@
+{
+  "nodes": [
+    {
+      "NodeRef": "4mnc2oYEgtoiiHEq7zppmZTWvh6tpJc9enXzurQFh25jW55WDmKrQ2JFhLDZHiwY5tBe1AP9uFhDecpmvxLUzbwU",
+      "PublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE4FkItLG/S4gChXj5/8l+iFuXTplb\neZQ5Q9i6ipQTATUzv7cWWJvqFPMJj9rx4CrcC8dGiwMDNJ3lagLr+PeO0g==\n-----END PUBLIC KEY-----\n"
+    },
+    {
+      "NodeRef": "3ckN6UYin8Y67u2ZXviHx2g6i6EvfRtgMpycn2hMApyEoZfserAmMZdbGWeSnWewXGnnRCEZDn8JLPaA64LLUaeE",
+      "PublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELwjFdebO+M1XpTo3fR/uoX5/c2Hm\nUO4c28WoKs0sbEsJDmF5b3CKEJQs3MZM5P4EXWWJBLfPrzW8q82t7ngpnw==\n-----END PUBLIC KEY-----\n"
+    },
+    {
+      "NodeRef": "3xbYpTDjS2FJZTqGKAMffXqfSJTsC19EtrTm24TxY8XVP74My62HoXtSbTsCowQ2AMSMENkdEtNGakJR2zVULsav",
+      "PublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEznyGUiTcdJrgwqKP3k93bNUccI7K\nofr7zQi5ArbRcakgEokJ/ceHpycLqbRVsXYJTyCeJGDg57U249Ekzap+lg==\n-----END PUBLIC KEY-----\n"
+    }
+  ],
+  "signatures": [
+    "MEUCIEJNAcbgjLB+f2f2W5b+dW/4MZFg0rzC4OTggxQyptKaAiEA5C3VxB3CojmT2tOlmvm4idFQabAnSn7TBkGuch7QluM=",
+    "MEUCICjkiIgiNqTRzhdLHWxTcUryJtJ8u3NEDv/lxc8KXfZFAiEA+n5M5+IWrUC46OsweRWwFl4ezYN4rY3tiXFcY7kTtEA=",
+    "MEUCIQD/gNmch4unNbyZ7gqLLuI6SJfNb+0IZZOAUlG0hNhlxQIgBfa7PzQlKXBCHfO1hynt2FQT2oMfm8CdRjoflWqEjkQ="
+  ]
+}

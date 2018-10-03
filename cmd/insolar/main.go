@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/genesis/bootstrapcertificate"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -118,35 +119,8 @@ func generateKeysPair(out io.Writer) {
 	writeToOutput(out, result)
 }
 
-type record struct {
-	NodeRef   string
-	PublicKey string
-}
-
-type certRecords = []record
-
 func serializeToJSON(data interface{}) ([]byte, error) {
 	return json.MarshalIndent(data, "", "    ")
-}
-
-func makeCertificate(cRecords certRecords, keys []*ecdsa.PrivateKey) ([]byte, error) {
-	cert := map[string]interface{}{}
-	cert["nodes"] = cRecords
-	certData, err := serializeToJSON(cert)
-	check("[ makeCertificate ]", err)
-
-	var signList []string
-	for _, k := range keys {
-		sign, err := ecdsa_helper.Sign(certData, k)
-		check("[ makeCertificate ]:", err)
-
-		signList = append(signList, ecdsa_helper.ExportSignature(sign))
-	}
-
-	cert["signatures"] = signList
-	check("[ makeCertificate ]", err)
-
-	return serializeToJSON(map[string]interface{}{"certificate": cert})
 }
 
 func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
@@ -164,6 +138,8 @@ func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 	return serializeToJSON(map[string]interface{}{"keys": kk})
 }
 
+type certRecords = bootstrapcertificate.CertRecords
+
 func generateCertificates(out io.Writer) {
 
 	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
@@ -179,15 +155,19 @@ func generateCertificates(out io.Writer) {
 		pubKey, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
 		check("[ generateCertificates ]:", err)
 
-		cRecords = append(cRecords, record{NodeRef: ref.String(), PublicKey: pubKey})
+		cRecords = append(cRecords, bootstrapcertificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
 		keys = append(keys, privKey)
 
 		recordsBuf.WriteString(ref.String() + " " + pubKey)
 	}
 
-	cert, err := makeCertificate(cRecords, keys)
+	cert, err := bootstrapcertificate.NewCertificateFromFields(cRecords, keys)
 	check("[ generateCertificates ]:", err)
-	writeToOutput(out, string(cert)+"\n")
+
+	certStr, err := cert.Dump()
+	check("[ generateCertificates ]:", err)
+
+	writeToOutput(out, certStr+"\n")
 
 	keysList, err := makeKeysJSON(keys)
 	check("[ generateCertificates ]:", err)
