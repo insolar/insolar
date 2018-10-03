@@ -250,21 +250,22 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
 	time.Sleep(100 * time.Millisecond)
+	usualNodeNetwork.Stop()
+	bootstrapNodeNetwork.Stop()
+	newPulsar.StopServer()
+	bootstrapLedgerCleaner()
+
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
 	assert.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
 
 	defer func() {
-		usualNodeNetwork.Stop()
-		bootstrapNodeNetwork.Stop()
-		newPulsar.StopServer()
-		bootstrapLedgerCleaner()
 		usualLedgerCleaner()
-		err = os.Remove("bootstrapLedger")
+		err = os.RemoveAll("bootstrapLedger")
 		if err != nil {
 			assert.NoError(t, err)
 		}
-		err = os.Remove("usualLedger")
+		err = os.RemoveAll("usualLedger")
 		if err != nil {
 			assert.NoError(t, err)
 		}
