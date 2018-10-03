@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"hash"
 	"sort"
+	"sync/atomic"
 	"time"
 
 	"github.com/anacrolix/sync"
@@ -65,7 +66,7 @@ func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
 }
 
 type nodekeeper struct {
-	pulse   core.PulseNumber
+	pulse   uint32
 	timeout time.Duration
 
 	activeLock sync.RWMutex
@@ -119,7 +120,7 @@ func (nk *nodekeeper) GetUnsync() []*core.ActiveNode {
 }
 
 func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
-	nk.pulse = number
+	atomic.StoreUint32(&nk.pulse, uint32(number))
 }
 
 func (nk *nodekeeper) Sync(approved bool) {
@@ -201,8 +202,9 @@ func (nk *nodekeeper) discardTimedOutUnsync() {
 }
 
 func (nk *nodekeeper) checkPulse(nodes []*core.ActiveNode) error {
+	pulse := core.PulseNumber(atomic.LoadUint32(&nk.pulse))
 	for _, node := range nodes {
-		if node.PulseNum != nk.pulse {
+		if node.PulseNum != pulse {
 			return errors.Errorf("Node ID:%s pulse:%d is not equal to NodeKeeper current pulse:%d",
 				node.NodeID.String(), node.PulseNum, nk.pulse)
 		}
