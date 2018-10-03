@@ -58,8 +58,11 @@ func NewCertificateFromFile(path string) (*Certificate, error) {
 	}
 
 	ok, err := cert.Validate()
-	if err != nil || !ok {
+	if err != nil {
 		return nil, errors.Wrap(err, "[ NewCertificateFromFile ]")
+	}
+	if !ok {
+		return nil, errors.New("[ NewCertificateFromFile ] Validation failed")
 	}
 
 	return &cert, nil

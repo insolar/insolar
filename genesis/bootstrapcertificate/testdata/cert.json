@@ -1,8 +1,8 @@
 {
   "nodes": [
     {
-      "NodeRef": "2yvzYS66UvJsU72ciUxJfX4U3KFuz3XmBKBSRGxuE8nn74B5tundk4Cci5ZSsGbCATh3qFwit1AyWepamqoGx1am",
-      "PublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBFY2igzF3YE66vOi9cctSgxZK02Y\nzj4Sav+mh9Knb0xCXR/ONRXGHYUTpk8M9R+yQG5CAz6lFql6H4tDa/x8nw==\n-----END PUBLIC KEY-----\n"
+      "PublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBFY2igzF3YE66vOi9cctSgxZK02Y\nzj4Sav+mh9Knb0xCXR/ONRXGHYUTpk8M9R+yQG5CAz6lFql6H4tDa/x8nw==\n-----END PUBLIC KEY-----\n",
+      "NodeRef": "2yvzYS66UvJsU72ciUxJfX4U3KFuz3XmBKBSRGxuE8nn74B5tundk4Cci5ZSsGbCATh3qFwit1AyWepamqoGx1am"
     },
     {
       "NodeRef": "4wd3b7Vxz1taEAduB3EWSZxNTPkwN4mdLNKdJreRYck5rs9b3yJnJeyRiZim7nWn3QRfgyrVvkqmU2xKfjq9n3zk",
