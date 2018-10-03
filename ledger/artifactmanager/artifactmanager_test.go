@@ -229,12 +229,12 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 		LatestState: *classID,
 	})
 
-	deactivateCoreRef, err := td.manager.DeactivateClass(
+	deactivateCoreID, err := td.manager.DeactivateClass(
 		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID),
 	)
 	assert.NoError(t, err)
-	deactivateRef := record.Core2Reference(*deactivateCoreRef)
-	deactivateRec, err := td.db.GetRecord(&deactivateRef.Record)
+	deactivateID := record.Bytes2ID(deactivateCoreID[:])
+	deactivateRec, err := td.db.GetRecord(&deactivateID)
 	assert.NoError(t, err)
 	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
 		AmendRecord: record.AmendRecord{
@@ -320,13 +320,13 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 	})
 	migrationRefs := []record.Reference{{Domain: td.domainRef.Domain, Record: *migrationID}}
 	migrationCoreRefs := []core.RecordRef{*migrationRefs[0].CoreRef()}
-	updateCoreRef, err := td.manager.UpdateClass(
+	updateCoreID, err := td.manager.UpdateClass(
 		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(codeID),
 		migrationCoreRefs,
 	)
 	assert.NoError(t, err)
-	updateRef := record.Core2Reference(*updateCoreRef)
-	updateRec, getErr := td.db.GetRecord(&updateRef.Record)
+	updateID := record.Bytes2ID(updateCoreID[:])
+	updateRec, getErr := td.db.GetRecord(&updateID)
 	assert.Nil(t, getErr)
 	assert.Equal(t, updateRec, &record.ClassAmendRecord{
 		AmendRecord: record.AmendRecord{
@@ -544,12 +544,12 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 	td.db.SetObjectIndex(objID, &index.ObjectLifeline{
 		LatestState: *objID,
 	})
-	deactivateCoreRef, err := td.manager.DeactivateObject(
+	deactivateCoreID, err := td.manager.DeactivateObject(
 		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(objID),
 	)
 	assert.Nil(t, err)
-	deactivateRef := record.Core2Reference(*deactivateCoreRef)
-	deactivateRec, err := td.db.GetRecord(&deactivateRef.Record)
+	deactivateID := record.Bytes2ID(deactivateCoreID[:])
+	deactivateRec, err := td.db.GetRecord(&deactivateID)
 	assert.Nil(t, err)
 	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
 		AmendRecord: record.AmendRecord{
@@ -613,11 +613,11 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 		LatestState: *objID,
 	})
 	memory := []byte{1, 2, 3}
-	updateCoreRef, err := td.manager.UpdateObject(
+	updateCoreID, err := td.manager.UpdateObject(
 		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(objID), memory)
 	assert.Nil(t, err)
-	updateRef := record.Core2Reference(*updateCoreRef)
-	updateRec, err := td.db.GetRecord(&updateRef.Record)
+	updateID := record.Bytes2ID(updateCoreID[:])
+	updateRec, err := td.db.GetRecord(&updateID)
 	assert.Nil(t, err)
 	assert.Equal(t, updateRec, &record.ObjectAmendRecord{
 		AmendRecord: record.AmendRecord{

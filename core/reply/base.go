@@ -44,6 +44,8 @@ const (
 	TypeDelegate
 	// TypeReference is common reply for methods returning reference to created records.
 	TypeReference
+	// TypeID is common reaction for methods returning id to lifeline states.
+	TypeID
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
@@ -60,6 +62,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &Delegate{}, nil
 	case TypeReference:
 		return &Reference{}, nil
+	case TypeID:
+		return &ID{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -102,4 +106,5 @@ func init() {
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})
 	gob.Register(&Reference{})
+	gob.Register(&ID{})
 }
