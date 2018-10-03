@@ -62,8 +62,8 @@ const (
 	TypePulse
 	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network.
 	TypeGetRandomHosts
-	// TypeAuthorization is packet to request an authorization in the network.
-	TypeAuthorization
+	// TypeCheckPublicKey is packet to request an authorization in the network.
+	TypeCheckPublicKey
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -124,8 +124,8 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestPulse)
 	case TypeGetRandomHosts:
 		_, valid = m.Data.(*RequestGetRandomHosts)
-	case TypeAuthorization:
-		_, valid = m.Data.(*RequestAuthorization)
+	case TypeCheckPublicKey:
+		_, valid = m.Data.(*RequestCheckPublicKey)
 	default:
 		valid = false
 	}
@@ -208,7 +208,7 @@ func init() {
 	gob.Register(&RequestCascadeSend{})
 	gob.Register(&RequestPulse{})
 	gob.Register(&RequestGetRandomHosts{})
-	gob.Register(&RequestAuthorization{})
+	gob.Register(&RequestCheckPublicKey{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -224,7 +224,7 @@ func init() {
 	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
 	gob.Register(&ResponseGetRandomHosts{})
-	gob.Register(&ResponseAuthorization{})
+	gob.Register(&ResponseCheckPublicKey{})
 
 	gob.Register(&id.ID{})
 }

@@ -128,9 +128,6 @@ func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Pac
 	}
 }
 
-func handleAuthorizationResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuthorization) error {
-	if !response.Authorized {
-		return errors.New("unsuccessful authorization")
-	}
+func handleAuthorizationResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckPublicKey) error {
 	return nil
 }

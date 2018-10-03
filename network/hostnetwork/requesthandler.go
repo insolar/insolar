@@ -249,7 +249,7 @@ func AuthorizationRequest(hostHandler hosthandler.HostHandler, targetID string) 
 
 	// TODO: feel request fields.
 	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(targetHost).Type(packet.TypeAuthorization).Request(&packet.RequestAuthorization{}).Build()
+		Receiver(targetHost).Type(packet.TypeCheckPublicKey).Request(&packet.RequestCheckPublicKey{}).Build()
 
 	future, err := hostHandler.SendRequest(request)
 	if err != nil {
@@ -387,8 +387,8 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		if !response.Success {
 			err = errors.New(response.Error)
 		}
-	case packet.TypeAuthorization:
-		err = handleAuthorizationResponse(hostHandler, rsp.Data.(*packet.ResponseAuthorization))
+	case packet.TypeCheckPublicKey:
+		err = handleAuthorizationResponse(hostHandler, rsp.Data.(*packet.ResponseCheckPublicKey))
 	}
 
 	return err

@@ -16,7 +16,10 @@
 
 package packet
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/hostnetwork/id"
+)
 
 // CommandType - type for commands.
 type CommandType int
@@ -106,9 +109,8 @@ type RequestKnownOuterHosts struct {
 	OuterHosts int    // number of known outer hosts
 }
 
-// RequestAuthorization is data to authorization request.
-type RequestAuthorization struct {
-	Signature []byte
-	Seed      []byte
-	NodeRef   core.RecordRef
+// RequestCheckPublicKey is data to authorization request.
+type RequestCheckPublicKey struct {
+	NodeRef core.RecordRef
+	NodeID  id.ID
 }

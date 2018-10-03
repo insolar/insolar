@@ -112,7 +112,7 @@ type ResponseKnownOuterHosts struct {
 	OuterHosts int    // number of known outer hosts
 }
 
-// ResponseAuthorization is data to answer to authorization request.
-type ResponseAuthorization struct {
-	Authorized bool
+// ResponseCheckPublicKey is data to answer to authorization request.
+type ResponseCheckPublicKey struct {
+	Seed []byte
 }
