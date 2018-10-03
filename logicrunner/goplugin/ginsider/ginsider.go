@@ -62,7 +62,7 @@ type RPC struct {
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
 	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
 	}
 
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
