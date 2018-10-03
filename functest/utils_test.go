@@ -87,6 +87,7 @@ func createMember(t *testing.T) string {
 	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"name":       testutils.RandomString(),
+		"public_key": "000",
 	})
 
 	firstMemberResponse := &createMemberResponse{}

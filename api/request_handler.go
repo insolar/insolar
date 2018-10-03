@@ -87,8 +87,11 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 	if len(rh.params.Name) == 0 {
 		return nil, errors.New("field 'name' is required")
 	}
+	if len(rh.params.PublicKey) == 0 {
+		return nil, errors.New("field 'public_key' is required")
+	}
 
-	routResult, err := rh.sendRequest("CreateMember", []interface{}{rh.params.Name})
+	routResult, err := rh.sendRequest("CreateMember", []interface{}{rh.params.Name, rh.params.PublicKey})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}

@@ -47,9 +47,7 @@ type ID struct {
 }
 
 // Record is base interface for all records.
-type Record interface {
-	Domain() *Reference
-}
+type Record interface{}
 
 // SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
 func SHA3Hash224(rec Record) []byte {
@@ -88,6 +86,13 @@ func (id TypeID) WriteHash(w io.Writer) {
 	if err != nil {
 		panic("binary.Write failed:" + err.Error())
 	}
+}
+
+// CoreID generates Reference byte representation (key without prefix).
+func (id *ID) CoreID() *core.RecordID {
+	var b core.RecordID
+	_ = copy(b[:], ID2Bytes(*id))
+	return &b
 }
 
 // Reference allows to address any record across the whole network.

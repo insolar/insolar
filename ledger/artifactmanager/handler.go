@@ -39,50 +39,24 @@ func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 
 // Link links external components.
 func (h *MessageHandler) Link(components core.Components) error {
-	var err error
 	bus := components.MessageBus
 
-	if err = bus.Register(message.TypeGetCode, h.handleGetCode); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeGetClass, h.handleGetClass); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeGetObject, h.handleGetObject); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeGetDelegate, h.handleGetDelegate); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeDeclareType, h.handleDeclareType); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeDeployCode, h.handleDeployCode); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeActivateClass, h.handleActivateClass); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeDeactivateClass, h.handleDeactivateClass); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeUpdateClass, h.handleUpdateClass); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeActivateObject, h.handleActivateObject); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeActivateObjectDelegate, h.handleActivateObjectDelegate); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeDeactivateObject, h.handleDeactivateObject); err != nil {
-		return err
-	}
-	if err = bus.Register(message.TypeUpdateObject, h.handleUpdateObject); err != nil {
-		return err
-	}
+	bus.MustRegister(message.TypeGetCode, h.handleGetCode)
+	bus.MustRegister(message.TypeGetClass, h.handleGetClass)
+	bus.MustRegister(message.TypeGetObject, h.handleGetObject)
+	bus.MustRegister(message.TypeGetDelegate, h.handleGetDelegate)
+	bus.MustRegister(message.TypeDeclareType, h.handleDeclareType)
+	bus.MustRegister(message.TypeDeployCode, h.handleDeployCode)
+	bus.MustRegister(message.TypeActivateClass, h.handleActivateClass)
+	bus.MustRegister(message.TypeDeactivateClass, h.handleDeactivateClass)
+	bus.MustRegister(message.TypeUpdateClass, h.handleUpdateClass)
+	bus.MustRegister(message.TypeActivateObject, h.handleActivateObject)
+	bus.MustRegister(message.TypeActivateObjectDelegate, h.handleActivateObjectDelegate)
+	bus.MustRegister(message.TypeDeactivateObject, h.handleDeactivateObject)
+	bus.MustRegister(message.TypeUpdateObject, h.handleUpdateObject)
+	bus.MustRegister(message.TypeRegisterChild, h.handleRegisterChild)
 
-	return err
+	return nil
 }
 
 func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {
@@ -111,8 +85,9 @@ func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, err
 
 func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.GetClass)
+	headRef := record.Core2Reference(msg.Head)
 
-	_, stateRef, state, err := getClass(h.db, &msg.Head, msg.State)
+	_, stateID, state, err := getClass(h.db, &headRef.Record, msg.State)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +101,7 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 
 	react := reply.Class{
 		Head:  msg.Head,
-		State: *stateRef,
+		State: *stateID,
 		Code:  code,
 	}
 
@@ -135,8 +110,9 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 
 func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.GetObject)
+	headRef := record.Core2Reference(msg.Head)
 
-	idx, stateRef, state, err := getObject(h.db, &msg.Head, msg.State)
+	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +124,7 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 
 	react := reply.Object{
 		Head:     msg.Head,
-		State:    *stateRef,
+		State:    *stateID,
 		Class:    *idx.ClassRef.CoreRef(),
 		Memory:   state.GetMemory(),
 		Children: children,
@@ -159,8 +135,9 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 
 func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.GetDelegate)
+	headRef := record.Core2Reference(msg.Head)
 
-	idx, _, _, err := getObject(h.db, &msg.Head, nil)
+	idx, _, _, err := getObject(h.db, &headRef.Record, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +256,7 @@ func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Re
 		deactivationID *record.ID
 	)
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getClass(tx, &msg.Class, nil)
+		idx, _, _, err := getClass(tx, &classRef.Record, nil)
 		if err != nil {
 			return err
 		}
@@ -312,7 +289,7 @@ func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Re
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, deactivationID)}, nil
+	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply, error) {
@@ -340,7 +317,7 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 
 	var amendID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getClass(tx, &msg.Class, nil)
+		idx, _, _, err := getClass(tx, &classRef.Record, nil)
 		if err != nil {
 			return err
 		}
@@ -376,7 +353,7 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, amendID)}, nil
+	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Reply, error) {
@@ -388,11 +365,11 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 	parentRef := record.Core2Reference(msg.Parent)
 
 	var err error
-	_, _, _, err = getClass(h.db, &msg.Class, nil)
+	_, _, _, err = getClass(h.db, &classRef.Record, nil)
 	if err != nil {
 		return nil, err
 	}
-	_, _, _, err = getObject(h.db, &msg.Parent, nil)
+	_, _, _, err = getObject(h.db, &parentRef.Record, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -464,11 +441,11 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 	parentRef := record.Core2Reference(msg.Parent)
 
 	var err error
-	_, _, _, err = getClass(h.db, &msg.Class, nil)
+	_, _, _, err = getClass(h.db, &classRef.Record, nil)
 	if err != nil {
 		return nil, err
 	}
-	_, _, _, err = getObject(h.db, &msg.Parent, nil)
+	_, _, _, err = getObject(h.db, &parentRef.Record, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -543,7 +520,7 @@ func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.R
 		deactivationID *record.ID
 	)
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &msg.Object, nil)
+		idx, _, _, err := getObject(tx, &objRef.Record, nil)
 		if err != nil {
 			return err
 		}
@@ -576,7 +553,7 @@ func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.R
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, deactivationID)}, nil
+	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply, error) {
@@ -591,7 +568,7 @@ func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply
 		amendID *record.ID
 	)
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &msg.Object, nil)
+		idx, _, _, err := getObject(tx, &objRef.Record, nil)
 		if err != nil {
 			return err
 		}
@@ -626,7 +603,44 @@ func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, amendID)}, nil
+	return &reply.ID{ID: *amendID.CoreID()}, nil
+}
+
+func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.RegisterChild)
+	parentRef := record.Core2Reference(msg.Parent)
+
+	var child *record.ID
+	err := h.db.Update(func(tx *storage.TransactionManager) error {
+		idx, _, _, err := getObject(tx, &parentRef.Record, nil)
+		if err != nil {
+			return err
+		}
+
+		rec := record.ChildRecord{
+			ChainRecord: record.ChainRecord{
+				Prev: idx.LatestChild,
+			},
+			Child: record.Core2Reference(msg.Child),
+		}
+		child, err = tx.SetRecord(&rec)
+		if err != nil {
+			return err
+		}
+		idx.LatestChild = *child
+		err = tx.SetObjectIndex(&parentRef.Record, idx)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &reply.ID{ID: *child.CoreID()}, nil
 }
 
 func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
@@ -638,10 +652,9 @@ func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
 }
 
 func getClass(
-	s storage.Store, head *core.RecordRef, state *core.RecordRef,
-) (*index.ClassLifeline, *core.RecordRef, record.ClassState, error) {
-	headRef := record.Core2Reference(*head)
-	idx, err := s.GetClassIndex(&headRef.Record)
+	s storage.Store, head *record.ID, state *core.RecordRef,
+) (*index.ClassLifeline, *core.RecordID, record.ClassState, error) {
+	idx, err := s.GetClassIndex(head)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
@@ -665,14 +678,13 @@ func getClass(
 		return nil, nil, nil, ErrClassDeactivated
 	}
 
-	return idx, getReference(head, &stateID), stateRec, nil
+	return idx, stateID.CoreID(), stateRec, nil
 }
 
 func getObject(
-	s storage.Store, head *core.RecordRef, state *core.RecordRef,
-) (*index.ObjectLifeline, *core.RecordRef, record.ObjectState, error) {
-	headRef := record.Core2Reference(*head)
-	idx, err := s.GetObjectIndex(&headRef.Record)
+	s storage.Store, head *record.ID, state *core.RecordRef,
+) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
+	idx, err := s.GetObjectIndex(head)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
@@ -696,7 +708,7 @@ func getObject(
 		return nil, nil, nil, ErrObjectDeactivated
 	}
 
-	return idx, getReference(head, &stateID), stateRec, nil
+	return idx, stateID.CoreID(), stateRec, nil
 }
 
 func validateCode(s storage.Store, ref *core.RecordRef) error {
