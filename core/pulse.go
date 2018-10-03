@@ -76,7 +76,7 @@ const firstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
 const FirstPulseNumber = 65537
 
 // GenesisPulse is a first pulse for the system
-// Because first 2 bites of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
+// because first 2 bits of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
 // for calculation pulse numbers we use the formula = unix.Now() - firstPulseDate + 65536
 var GenesisPulse = &Pulse{PulseNumber: FirstPulseNumber, Entropy: [EntropySize]byte{}}
 
