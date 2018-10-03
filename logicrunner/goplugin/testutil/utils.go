@@ -271,18 +271,19 @@ func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.
 }
 
 // DeactivateClass implementation for tests
-func (t *TestArtifactManager) DeactivateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeactivateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
 // UpdateClass implementation for tests
-func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordRef, error) {
+func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordID, error) {
 	classDesc, ok := t.Classes[class]
 	if !ok {
 		return nil, errors.New("wrong class")
 	}
 	classDesc.ACode = &code
-	return randomRef()
+
+	return randomID()
 }
 
 func randomRef() (*core.RecordRef, error) {
@@ -295,6 +296,18 @@ func randomRef() (*core.RecordRef, error) {
 	ref := core.RecordRef{}
 	copy(ref[:], b[0:64])
 	return &ref, nil
+}
+
+func randomID() (*core.RecordID, error) {
+	b := make([]byte, core.RecordIDSize)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+
+	id := core.RecordID{}
+	copy(id[:], b[:])
+	return &id, nil
 }
 
 // ActivateObject implementation for tests
@@ -333,12 +346,12 @@ func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, par
 }
 
 // DeactivateObject implementation for tests
-func (t *TestArtifactManager) DeactivateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeactivateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
 // UpdateObject implementation for tests
-func (t *TestArtifactManager) UpdateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) UpdateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordID, error) {
 	objDesc, ok := t.Objects[obj]
 	if !ok {
 		return nil, errors.New("No object to update")
@@ -347,7 +360,7 @@ func (t *TestArtifactManager) UpdateObject(domain core.RecordRef, request core.R
 	objDesc.Data = memory
 
 	// TODO: return real exact "ref"
-	return &core.RecordRef{}, nil
+	return &core.RecordID{}, nil
 }
 
 // CBORMarshal - testing serialize helper

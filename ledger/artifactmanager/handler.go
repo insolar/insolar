@@ -312,7 +312,7 @@ func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Re
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, deactivationID)}, nil
+	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply, error) {
@@ -376,7 +376,7 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, amendID)}, nil
+	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Reply, error) {
@@ -576,7 +576,7 @@ func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.R
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, deactivationID)}, nil
+	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply, error) {
@@ -626,7 +626,7 @@ func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, amendID)}, nil
+	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
