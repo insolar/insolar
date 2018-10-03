@@ -34,23 +34,16 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// ChangeGoPath prepends `path` to GOPATH environment variable
-// accounting for possibly for default value. Returns original
-// value of the environment variable, don't forget to restore
-// it with defer:
-//    defer os.Setenv("GOPATH", origGoPath)
-func ChangeGoPath(path string) (string, error) {
-	gopathOrigEnv := os.Getenv("GOPATH")
-	gopath := gopathOrigEnv
+// PrependGoPath prepends `path` to GOPATH environment variable
+// accounting for possibly for default value. Returns new value.
+// NOTE: that environment is not changed
+func PrependGoPath(path string) string {
+	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		gopath = build.Default.GOPATH
 	}
 
-	err := os.Setenv("GOPATH", path+string(os.PathListSeparator)+gopath)
-	if err != nil {
-		return "", err
-	}
-	return gopathOrigEnv, nil
+	return path + string(os.PathListSeparator) + gopath
 }
 
 // WriteFile dumps `text` into file named `name` into directory `dir`.
@@ -441,7 +434,10 @@ func NewContractBuilder(am core.ArtifactManager, icc string) *ContractsBuilder {
 		IccPath:         icc}
 	return cb
 }
+
+// Clean deletes tmp directory used for contracts building
 func (cb *ContractsBuilder) Clean() {
+	log.Debugf("Cleaning build directory %q", cb.root)
 	err := os.RemoveAll(cb.root) // nolint: errcheck
 	if err != nil {
 		panic(err)
@@ -463,6 +459,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			return err
 		}
 
+		log.Debugf("Registered class %q for contract %q in %q", class.String(), name, cb.root)
 		cb.Classes[name] = class
 	}
 
@@ -484,12 +481,12 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	}
 
 	for name := range contracts {
-		log.Debugf("Start to build plugin for %s", name)
+		log.Debugf("Building plugin for contract %q in %q", name, cb.root)
 		err := cb.plugin(name)
 		if err != nil {
 			return err
 		}
-		log.Debugf("Stop to build plugin for %s", name)
+		log.Debugf("Built plugin for contract %q", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
@@ -503,6 +500,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		if err != nil {
 			return err
 		}
+		log.Debugf("Deployed code %q for contract %q in %q", code.String(), name, cb.root)
 		cb.Codes[name] = code
 
 		_, err = cb.ArtifactManager.UpdateClass(
@@ -561,20 +559,14 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		return err
 	}
 
-	origGoPath, err := ChangeGoPath(cb.root)
-	if err != nil {
-		return err
-	}
-	defer os.Setenv("GOPATH", origGoPath) // nolint: errcheck
-
-	// contractPath := filepath.Join(root, "src/contract", name, "main.go")
-
-	out, err := exec.Command(
+	cmd := exec.Command(
 		"go", "build",
 		"-buildmode=plugin",
 		"-o", filepath.Join(dstDir, name+".so"),
-		"contract/"+name,
-	).CombinedOutput()
+		filepath.Join(cb.root, "src/contract", name),
+	)
+	cmd.Env = append(os.Environ(), "GOPATH="+PrependGoPath(cb.root))
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))
 	}
