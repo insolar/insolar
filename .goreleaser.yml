@@ -1,0 +1,78 @@
+builds:
+  - # Insolar daemon
+    main: './cmd/insolard'
+    binary: insolard
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+
+  - # Insolar client tool
+    main: './cmd/insolar'
+    binary: insolar
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+
+  - # Pulsar daemon
+    main: './cmd/pulsard'
+    binary: pulsard
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+
+  - # Go runner daemon
+    main: './cmd/insgorund'
+    binary: insgorund
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+
+  - # Golang contracts compiler tool
+    main: './cmd/insgocc'
+    binary: insgocc
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+
+archive:
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+
+release:
+  draft: true
+  prerelease: true
+  name_template: "{{.Version}}"
