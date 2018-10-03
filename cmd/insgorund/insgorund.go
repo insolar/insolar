@@ -19,7 +19,6 @@ package main
 import (
 	"io/ioutil"
 	"net"
-	"net/http"
 	"net/rpc"
 	"os"
 
@@ -62,7 +61,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	rpc.HandleHTTP()
 	listener, err := net.Listen(*protocol, *listen)
 	if err != nil {
 		log.Fatal("couldn't setup listener on '"+*listen+"':", err)
@@ -70,10 +68,6 @@ func main() {
 	}
 
 	log.Debug("ginsider launched, listens " + *listen)
-	err = http.Serve(listener, nil)
-	if err != nil {
-		log.Fatal("couldn't start server: ", err)
-		os.Exit(1)
-	}
+	rpc.Accept(listener)
 	log.Debug("bye\n")
 }
