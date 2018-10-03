@@ -20,7 +20,6 @@ package logicrunner
 
 import (
 	"net"
-	"net/http"
 	"net/rpc"
 
 	"github.com/insolar/insolar/core"
@@ -47,13 +46,9 @@ func StartRPC(lr *LogicRunner) *RPC {
 	}
 	lr.sock = l
 
-	httpServer := &http.Server{Handler: rpcServer}
-
-	log.Infof("starting LogicRunner RPC service on %q", lr.Cfg.RPCListen)
+	log.Infof("starting LogicRunner RPC service on %q over %s", lr.Cfg.RPCListen, lr.Cfg.RPCProtocol)
 	go func() {
-		if err := httpServer.Serve(l); err != nil {
-			log.Error("Can't Listen LogicRunner RPC Socket: ", err)
-		}
+		rpcServer.Accept(l)
 		log.Info("LogicRunner RPC service stopped")
 	}()
 
