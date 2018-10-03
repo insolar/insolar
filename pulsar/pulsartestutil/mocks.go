@@ -57,7 +57,7 @@ func (*MockStorage) SetLastPulse(pulse *core.Pulse) error {
 }
 
 func (*MockStorage) SavePulse(pulse *core.Pulse) error {
-	panic("implement me")
+	return nil
 }
 
 func (*MockStorage) Close() error {

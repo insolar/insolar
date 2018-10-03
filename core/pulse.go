@@ -73,7 +73,12 @@ type PulseSenderConfirmation struct {
 // FirstPulseDate is the hardcoded date of the first pulse
 const firstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
 // FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
-const FirstPulseNumber = 65536
+const FirstPulseNumber = 65537
+
+// GenesisPulse is a first pulse for the system
+// Because first 2 bites of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
+// for calculation pulse numbers we use the formula = unix.Now() - firstPulseDate + 65536
+var GenesisPulse *Pulse = &Pulse{PulseNumber: FirstPulseNumber, Entropy: [EntropySize]byte{}}
 
 // CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
 func CalculatePulseNumber(now time.Time) PulseNumber {

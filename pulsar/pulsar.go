@@ -459,14 +459,7 @@ func (pulsar *Pulsar) isStandalone() bool {
 }
 
 func (pulsar *Pulsar) isEnoughPulsarsForConsensus() bool {
-	connectedNodes := 0
-	for _, item := range pulsar.Neighbours {
-		if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
-			connectedNodes++
-		}
-	}
-
-	return len(pulsar.Neighbours) == 0 || connectedNodes >= (len(pulsar.Neighbours)/2)+1
+	return len(pulsar.Neighbours) == 0 || pulsar.calculateConnectedNodes() >= (len(pulsar.Neighbours)/2)+1
 }
 
 func (pulsar *Pulsar) sendEntropy() {
@@ -493,14 +486,7 @@ func (pulsar *Pulsar) areAllEntropyFetched() bool {
 		}
 	}
 
-	connectedNodes := 0
-	for _, item := range pulsar.Neighbours {
-		if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
-			connectedNodes++
-		}
-	}
-
-	return pulsar.isEnoughPulsarsForConsensus() && entropyCount >= connectedNodes
+	return pulsar.isEnoughPulsarsForConsensus() && entropyCount >= pulsar.calculateConnectedNodes()
 }
 
 func (pulsar *Pulsar) waitForEntropy() {
@@ -530,14 +516,7 @@ func (pulsar *Pulsar) waitForEntropy() {
 }
 
 func (pulsar *Pulsar) areAllNumbersFetched() bool {
-	connectedNodes := 0
-	for _, item := range pulsar.Neighbours {
-		if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
-			connectedNodes++
-		}
-	}
-
-	return len(pulsar.OwnedBftRow) >= connectedNodes
+	return len(pulsar.OwnedBftRow) >= pulsar.calculateConnectedNodes()
 }
 
 func (pulsar *Pulsar) waitForEntropySigns() {
@@ -560,14 +539,7 @@ func (pulsar *Pulsar) waitForEntropySigns() {
 }
 
 func (pulsar *Pulsar) areAllVectorsFetched() bool {
-	connectedNodes := 0
-	for _, item := range pulsar.Neighbours {
-		if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
-			connectedNodes++
-		}
-	}
-
-	return len(pulsar.BftGrid) >= connectedNodes
+	return len(pulsar.BftGrid) >= pulsar.calculateConnectedNodes()
 }
 
 func (pulsar *Pulsar) receiveVectors() {
@@ -741,10 +713,29 @@ func (pulsar *Pulsar) sendPulse() {
 		Signs:       pulsar.SignsConfirmedSending,
 	}
 
-	t, err := transport2.NewTransport(pulsar.Config.BootstrapListener, relay.NewProxy())
+	pulsarHost, t, err := pulsar.prepareForSendingPulse()
+	if err != nil {
+		pulsar.stateSwitcher.switchToState(failed, err)
+		return
+	}
+
+	pulsar.sendPulseToNetwork(pulsarHost, t, pulseForSending)
+
+	err = pulsar.Storage.SavePulse(&pulseForSending)
 	if err != nil {
 		log.Error(err)
-		pulsar.stateSwitcher.switchToState(failed, err)
+	}
+	pulsar.LastPulse = &pulseForSending
+
+	pulsar.stateSwitcher.switchToState(waitingForStart, nil)
+	defer t.Stop()
+}
+
+func (pulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t transport2.Transport, err error) {
+
+	t, err = transport2.NewTransport(pulsar.Config.BootstrapListener, relay.NewProxy())
+	if err != nil {
+		return
 	}
 
 	go func() {
@@ -755,23 +746,24 @@ func (pulsar *Pulsar) sendPulse() {
 	}()
 
 	if err != nil {
-		log.Error(err)
-		pulsar.stateSwitcher.switchToState(failed, err)
+		return
 	}
 
 	pulsarHostAddress, err := host.NewAddress(pulsar.Config.BootstrapListener.Address)
 	if err != nil {
-		log.Error(err)
-		pulsar.stateSwitcher.switchToState(failed, err)
+		return
 	}
 	pulsarHostId, err := id.NewID()
 	if err != nil {
-		log.Error(err)
-		pulsar.stateSwitcher.switchToState(failed, err)
+		return
 	}
-	pulsarHost := host.NewHost(pulsarHostAddress)
+	pulsarHost = host.NewHost(pulsarHostAddress)
 	pulsarHost.ID = pulsarHostId
 
+	return
+}
+
+func (pulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transport2.Transport, pulse core.Pulse) {
 	for _, bootstrapNode := range pulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)
 		if err != nil {
@@ -809,35 +801,30 @@ func (pulsar *Pulsar) sendPulse() {
 			continue
 		}
 
-		for _, pulseReceiver := range body.Hosts {
-			pulseRequest := b.Sender(pulsarHost).Receiver(&pulseReceiver).Request(packet.RequestPulse{Pulse: pulseForSending}).Type(packet.TypePulse).Build()
-			call, err := t.SendRequest(pulseRequest)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			result := <-call.Result()
-			if result.Error != nil {
-				log.Error(result.Error)
-			}
+		sendPulseToHosts(pulsarHost, t, body.Hosts, pulse)
+	}
+}
+
+func sendPulseToHosts(sender *host.Host, t transport2.Transport, hosts []host.Host, pulse core.Pulse) {
+	pb := packet.NewBuilder()
+	for _, pulseReceiver := range hosts {
+		pulseRequest := pb.Sender(sender).Receiver(&pulseReceiver).Request(&packet.RequestPulse{Pulse: pulse}).Type(packet.TypePulse).Build()
+		call, err := t.SendRequest(pulseRequest)
+		if err != nil {
+			log.Error(err)
+			continue
 		}
-
+		result := <-call.Result()
+		if result.Error != nil {
+			log.Error(result.Error)
+		}
 	}
-
-	err = pulsar.Storage.SavePulse(&pulseForSending)
-	if err != nil {
-		log.Error(err)
-	}
-	pulsar.LastPulse = &pulseForSending
-	pulsar.stateSwitcher.switchToState(waitingForStart, nil)
-	defer t.Stop()
 }
 
 func (pulsar *Pulsar) stateSwitchedToFailed(err error) {
 	log.Debug("[stateSwitchedToFailed]")
 	log.Error(err)
 
-	pulsar.State = failed
 	pulsar.clearState()
 
 	pulsar.EntropyGenerationLock.Unlock()
@@ -890,4 +877,14 @@ func (pulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
 		return nil, errors.New("forbidden connection")
 	}
 	return neighbour, nil
+}
+
+func (pulsar *Pulsar) calculateConnectedNodes() int {
+	connectedNodes := 0
+	for _, item := range pulsar.Neighbours {
+		if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
+			connectedNodes++
+		}
+	}
+	return connectedNodes
 }

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/ledger/ledgertestutil"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -205,29 +206,36 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 }
 
 func TestPulsar_ConnectToNode(t *testing.T) {
-	t.Skip("should be re-written after refactoring the body of pulsar")
-	bootstrapNodeConfg := configuration.NewConfiguration()
-	network, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfg.Host, bootstrapNodeConfg.Node)
+	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "")
+	bootstrapNodeConfig := configuration.NewConfiguration()
+	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig.Host, bootstrapNodeConfig.Node)
 	assert.NoError(t, err)
-	err = network.Start(core.Components{})
+	err = bootstrapNodeNetwork.Start(core.Components{Ledger: bootstrapLedger})
+	assert.NoError(t, err)
+	bootstrapAddress := bootstrapNodeNetwork.GetAddress()
+
+	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, "")
+	usualNodeConfig := configuration.NewConfiguration()
+	usualNodeConfig.Host.BootstrapHosts = []string{bootstrapAddress}
+	usualNodeNetwork, err := servicenetwork.NewServiceNetwork(usualNodeConfig.Host, usualNodeConfig.Node)
+	assert.NoError(t, err)
+	err = usualNodeNetwork.Start(core.Components{Ledger: usualLedger})
 	assert.NoError(t, err)
 
-	hostAddress := network.GetAddress()
-
-	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pulsarPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
-	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
+	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(pulsarPrivateKey)
 	assert.NoError(t, err)
 	storage := &pulsartestutil.MockStorage{}
-	storage.On("GetLastPulse").Return(&core.Pulse{PulseNumber: 123}, nil)
+	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
 
 	stateSwitcher := &StateSwitcherImpl{}
 	newPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1640",
 		PrivateKey:          firstPublicExported,
-		BootstrapNodes:      []string{hostAddress},
-		BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "0.0.0.0:18091", BehindNAT: false},
+		BootstrapNodes:      []string{bootstrapAddress},
+		BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
 		Neighbours:          []configuration.PulsarNodeAddress{}},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
@@ -236,10 +244,19 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 		net.Listen,
 	)
 	stateSwitcher.SetPulsar(newPulsar)
+	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	newPulsar.StartConsensusProcess(core.PulseNumber(1543))
-	time.Sleep(10 * time.Minute)
+	time.Sleep(50 * time.Millisecond)
+	currentPulse, err := usualLedger.GetPulseManager().Current()
+	assert.NoError(t, err)
+	assert.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
 
-	defer network.Stop()
-	defer newPulsar.StopServer()
+	defer func() {
+		usualNodeNetwork.Stop()
+		bootstrapNodeNetwork.Stop()
+		newPulsar.StopServer()
+		bootstrapLedgerCleaner()
+		usualLedgerCleaner()
+	}()
+
 }
