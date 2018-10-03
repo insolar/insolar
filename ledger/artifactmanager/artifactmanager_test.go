@@ -420,6 +420,12 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		Parent:              record.Reference{Domain: td.requestRef.Domain, Record: *parentID},
 		Delegate:            false,
 	})
+
+	idx, err := td.db.GetObjectIndex(parentID)
+	assert.NoError(t, err)
+	childRec, err := td.db.GetRecord(&idx.LatestChild)
+	assert.NoError(t, err)
+	assert.Equal(t, activateRef, childRec.(*record.ChildRecord).Child)
 }
 
 func TestLedgerArtifactManager_ActivateObjectDelegate_VerifiesRecord(t *testing.T) {

@@ -231,13 +231,27 @@ func (m *LedgerArtifactManager) UpdateClass(
 func (m *LedgerArtifactManager) ActivateObject(
 	domain, request, class, parent core.RecordRef, memory []byte,
 ) (*core.RecordRef, error) {
-	return m.fetchReference(&message.ActivateObject{
+	objRef, err := m.fetchReference(&message.ActivateObject{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
 		Parent:  parent,
 		Memory:  memory,
 	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = m.fetchID(&message.RegisterChild{
+		Parent: parent,
+		Child:  *objRef,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return objRef, nil
 }
 
 // ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
