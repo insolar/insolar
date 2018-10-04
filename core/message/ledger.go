@@ -331,3 +331,20 @@ func (e *GetChildren) Type() core.MessageType {
 func (e *GetChildren) Target() *core.RecordRef {
 	return &e.Parent
 }
+
+// JetDrop spreads jet drop
+type JetDrop struct {
+	ledgerMessage
+	Jet  core.RecordRef
+	Drop []byte
+}
+
+// Type implementation of Message interface.
+func (e *JetDrop) Type() core.MessageType {
+	return core.TypeJetDrop
+}
+
+// Target implementation of Message interface.
+func (e *JetDrop) Target() *core.RecordRef {
+	return &e.Jet
+}
