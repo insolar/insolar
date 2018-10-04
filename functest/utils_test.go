@@ -83,6 +83,11 @@ type dumpAllUsersResponse struct {
 	DumpInfo []userInfo `json:"dump_info"`
 }
 
+type registerNodeResponse struct {
+	baseResponse
+	Reference string `json:"reference"`
+}
+
 func createMember(t *testing.T) string {
 	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
