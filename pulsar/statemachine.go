@@ -24,7 +24,8 @@ import (
 type State int
 
 const (
-	waitingForStart State = iota + 1
+	failed State = iota + 1
+	waitingForStart
 	waitingForEntropySigns
 	sendingEntropy
 	waitingForEntropy
@@ -34,7 +35,6 @@ const (
 	sendingPulseSign
 	waitingForPulseSigns
 	sendingPulse
-	failed
 )
 
 // StateSwitcher is a base for pulsar's state machine

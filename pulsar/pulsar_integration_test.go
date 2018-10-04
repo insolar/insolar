@@ -89,7 +89,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 
 	go firstPulsar.StartServer()
 	go secondPulsar.StartServer()
-	err = secondPulsar.EstablishConnection(firstPublic)
+	err = secondPulsar.EstablishConnectionToPulsar(firstPublic)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, firstPulsar.Neighbours[secondPublic].OutgoingClient)
@@ -189,7 +189,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	go firstPulsar.StartServer()
 	go secondPulsar.StartServer()
-	err = secondPulsar.EstablishConnection(firstPublic)
+	err = secondPulsar.EstablishConnectionToPulsar(firstPublic)
 	assert.NoError(t, err)
 	assert.NotNil(t, firstPulsar.Neighbours[secondPublic].OutgoingClient)
 	assert.NotNil(t, secondPulsar.Neighbours[firstPublic].OutgoingClient)

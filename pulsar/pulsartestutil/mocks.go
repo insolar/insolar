@@ -107,7 +107,7 @@ func (mock *MockRPCClientWrapper) Close() error {
 }
 
 func (mock *MockRPCClientWrapper) ResetClient() {
-	panic("implement me!")
+	mock.Called()
 }
 
 func (mock *MockRPCClientWrapper) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {

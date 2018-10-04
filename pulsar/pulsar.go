@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"net"
 	"net/rpc"
 	"sync"
@@ -133,6 +134,7 @@ func NewPulsar(
 			ConnectionType:    neighbour.ConnectionType,
 			ConnectionAddress: neighbour.Address,
 			PublicKey:         publicKey,
+			PublicKeyRaw:      neighbour.PublicKey,
 			OutgoingClient:    rpcWrapperFactory.CreateWrapper(),
 		}
 	}
@@ -178,9 +180,9 @@ func (pulsar *Pulsar) StopServer() {
 	}
 }
 
-// EstablishConnection is a method for creating connection to another pulsar
-func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
-	log.Debug("[EstablishConnection]")
+// EstablishConnectionToPulsar is a method for creating connection to another pulsar
+func (pulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
+	log.Debug("[EstablishConnectionToPulsar]")
 	neighbour, err := pulsar.fetchNeighbour(pubKey)
 	if err != nil {
 		return err
@@ -224,17 +226,12 @@ func (pulsar *Pulsar) EstablishConnection(pubKey string) error {
 	return nil
 }
 
-// RefreshConnections is a method refreshing connections between pulsars
-func (pulsar *Pulsar) RefreshConnections() {
+// CheckConnectionsToPulsars is a method refreshing connections between pulsars
+func (pulsar *Pulsar) CheckConnectionsToPulsars() {
 	for _, neighbour := range pulsar.Neighbours {
-		log.Debugf("[RefreshConnections] refresh with %v", neighbour.ConnectionAddress)
-		if neighbour.OutgoingClient == nil {
-			publicKey, err := ecdsa_helper.ExportPublicKey(neighbour.PublicKey)
-			if err != nil {
-				continue
-			}
-
-			err = pulsar.EstablishConnection(publicKey)
+		log.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
+		if neighbour.OutgoingClient == nil || !neighbour.OutgoingClient.IsInitialised() {
+			err := pulsar.EstablishConnectionToPulsar(neighbour.PublicKeyRaw)
 			if err != nil {
 				log.Error(err)
 				continue
@@ -244,80 +241,16 @@ func (pulsar *Pulsar) RefreshConnections() {
 		healthCheckCall := neighbour.OutgoingClient.Go(HealthCheck.String(), nil, nil, nil)
 		replyCall := <-healthCheckCall.Done
 		if replyCall.Error != nil {
-			log.Warn("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
-			err := neighbour.CheckAndRefreshConnection(replyCall.Error)
+			log.Warnf("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
+			neighbour.OutgoingClient.ResetClient()
+			err := pulsar.EstablishConnectionToPulsar(neighbour.PublicKeyRaw)
 			if err != nil {
+				log.Errorf("Attempt of connection to %v failed with error - %v", neighbour.ConnectionAddress, err)
 				neighbour.OutgoingClient.ResetClient()
 				continue
 			}
 		}
-
-		fetchedPulse, err := pulsar.syncLastPulseWithNeighbour(neighbour)
-		if err != nil {
-			log.Warn("Problems with fetched pulse from %v, with error - %v", neighbour.ConnectionAddress, err)
-		}
-
-		savedPulse, err := pulsar.Storage.GetLastPulse()
-		if err != nil {
-			log.Fatal(err)
-			panic(err)
-		}
-
-		if savedPulse.PulseNumber < fetchedPulse.PulseNumber {
-			err := pulsar.Storage.SetLastPulse(fetchedPulse)
-			if err != nil {
-				log.Fatal(err)
-				panic(err)
-			}
-			pulsar.LastPulse = fetchedPulse
-		}
 	}
-}
-
-// SyncLastPulseWithNeighbour hepls to sync pulse of the current pulsar with others
-func (pulsar *Pulsar) syncLastPulseWithNeighbour(neighbour *Neighbour) (*core.Pulse, error) {
-	log.Debug("[SyncLastPulseWithNeighbour]")
-	var response Payload
-	getLastPulseCall := neighbour.OutgoingClient.Go(GetLastPulseNumber.String(), nil, response, nil)
-	replyCall := <-getLastPulseCall.Done
-	if replyCall.Error != nil {
-		log.Warn("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
-	}
-	payload := replyCall.Reply.(Payload)
-	ok, err := checkPayloadSignature(&payload)
-	if !ok {
-		log.Warn("Problems with connection to %v, with error - %v", err)
-	}
-
-	payloadData := payload.Body.(GetLastPulsePayload)
-
-	consensusNumber := (len(pulsar.Neighbours) / 2) + 1
-	signedPulsars := 0
-
-	for _, node := range pulsar.Neighbours {
-		nodeKey, err := ecdsa_helper.ExportPublicKey(node.PublicKey)
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		sign, ok := payloadData.Signs[nodeKey]
-
-		if !ok {
-			continue
-		}
-
-		verified, err := checkSignature(&core.Pulse{Entropy: payloadData.Entropy, PulseNumber: payloadData.PulseNumber}, nodeKey, sign.Signature)
-		if err != nil || !verified {
-			continue
-		}
-
-		signedPulsars++
-		if signedPulsars == consensusNumber {
-			return &payloadData.Pulse, nil
-		}
-	}
-
-	return nil, errors.New("signal signature isn't correct")
 }
 
 // StartConsensusProcess starts process of calculating consensus between pulsars
@@ -325,10 +258,10 @@ func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error 
 	log.Debugf("[StartConsensusProcess] pulse number - %v", pulseNumber)
 	pulsar.EntropyGenerationLock.Lock()
 
-	if pulsar.State > waitingForStart || pulseNumber < pulsar.ProcessingPulseNumber || pulseNumber < pulsar.LastPulse.PulseNumber {
+	if pulsar.State > waitingForStart || (pulsar.ProcessingPulseNumber != 0 && pulseNumber < pulsar.ProcessingPulseNumber) {
 		pulsar.EntropyGenerationLock.Unlock()
-		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", pulsar.State, pulseNumber, pulsar.LastPulse.PulseNumber, pulsar.ProcessingPulseNumber)
-		return nil
+		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", pulsar.State.String(), pulseNumber, pulsar.LastPulse.PulseNumber, pulsar.ProcessingPulseNumber)
+		return fmt.Errorf("wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", pulsar.State.String(), pulseNumber, pulsar.LastPulse.PulseNumber, pulsar.ProcessingPulseNumber)
 	}
 
 	err := pulsar.generateNewEntropyAndSign()
@@ -844,10 +777,10 @@ func (pulsar *Pulsar) generateNewEntropyAndSign() error {
 	log.Debug("[generateNewEntropyAndSign]")
 	pulsar.GeneratedEntropy = pulsar.EntropyGenerator.GenerateEntropy()
 	signature, err := singData(pulsar.PrivateKey, pulsar.GeneratedEntropy)
-	pulsar.GeneratedEntropySign = signature
 	if err != nil {
 		return err
 	}
+	pulsar.GeneratedEntropySign = signature
 
 	return nil
 }

@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/log"
 )
 
 // RPCClientWrapperFactory describes interface for the wrappers factory
@@ -65,6 +64,7 @@ type RPCClientWrapper interface {
 type RPCClientWrapperImpl struct {
 	*sync.Mutex
 	*rpc.Client
+	isMutexHeld bool
 }
 
 // IsInitialised compares underhood rpc-client with nil
@@ -80,11 +80,14 @@ func (impl *RPCClientWrapperImpl) Close() error {
 // Lock takes current neighbour's lock
 func (impl *RPCClientWrapperImpl) Lock() {
 	impl.Mutex.Lock()
+	impl.isMutexHeld = true
 }
 
 // Unlock releases current neighbour's lock
 func (impl *RPCClientWrapperImpl) Unlock() {
-	impl.Mutex.Unlock()
+	if impl.isMutexHeld {
+		impl.Mutex.Unlock()
+	}
 }
 
 // CreateConnection creates connection to an another pulsar
@@ -104,7 +107,9 @@ func (impl *RPCClientWrapperImpl) Go(serviceMethod string, args interface{}, rep
 
 // ResetClient clears rpc-client
 func (impl *RPCClientWrapperImpl) ResetClient() {
+	impl.Lock()
 	impl.Client = nil
+	impl.Unlock()
 }
 
 // Neighbour is a helper struct, which contains info about pulsar-neighbour
@@ -113,20 +118,21 @@ type Neighbour struct {
 	ConnectionAddress string
 	OutgoingClient    RPCClientWrapper
 	PublicKey         *ecdsa.PublicKey
+	PublicKeyRaw      string
 }
 
-// CheckAndRefreshConnection checks connection error, writes it to the log and tries to refresh connection
-func (neighbour *Neighbour) CheckAndRefreshConnection(rpcErr error) error {
-	log.Infof("Restarting RPC Connection to %v due to error %v", neighbour.ConnectionAddress, rpcErr)
-
-	neighbour.OutgoingClient.Lock()
-
-	err := neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
-	if err != nil {
-		log.Errorf("Refreshing connection to %v failed due to error %v", neighbour.ConnectionAddress, err)
-	}
-
-	neighbour.OutgoingClient.Unlock()
-
-	return err
-}
+// HandleConnectionError checks connection error, writes it to the log and tries to refresh connection
+//func (neighbour *Neighbour) HandleConnectionError(rpcErr error) error {
+//	log.Infof("Restarting RPC Connection to %v due to error %v", neighbour.ConnectionAddress, rpcErr)
+//
+//	neighbour.OutgoingClient.Lock()
+//
+//	err := neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
+//	if err != nil {
+//		log.Errorf("Refreshing connection to %v failed due to error %v", neighbour.ConnectionAddress, err)
+//	}
+//
+//	neighbour.OutgoingClient.Unlock()
+//
+//	return err
+//}
