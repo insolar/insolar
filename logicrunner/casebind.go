@@ -111,7 +111,6 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 			return step, errors.New("Validation stoped not on result")
 		}
 	}
-	panic("unreachable")
 }
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
