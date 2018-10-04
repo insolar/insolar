@@ -62,24 +62,28 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 		return 0, errors.New("casebind is empty")
 	}
 
-	lr.cbrmu.Lock()
-	if _, ok := lr.cbr[ref]; ok {
-		lr.cbrmu.Unlock()
-		return 0, errors.New("already validating this ref")
+	err := func() error {
+		lr.cbrmu.Lock()
+		defer lr.cbrmu.Unlock()
+		if _, ok := lr.cbr[ref]; ok {
+			return errors.New("already validating this ref")
+		}
+		lr.cbr[ref] = core.CaseBindReplay{
+			Pulse:      p,
+			Records:    cr,
+			RecordsLen: len(cr),
+			Step:       0,
+		}
+		return nil
+	}()
+	if err != nil {
+		return 0, err
 	}
-	r := core.CaseBindReplay{
-		Pulse:      p,
-		Records:    cr,
-		RecordsLen: len(cr),
-		Step:       0,
-	}
-	lr.cbr[ref] = r
-	lr.cbrmu.Unlock()
 
 	defer func() {
 		lr.cbrmu.Lock()
+		defer lr.cbrmu.Unlock()
 		delete(lr.cbr, ref)
-		lr.cbrmu.Unlock()
 	}()
 
 	for {
