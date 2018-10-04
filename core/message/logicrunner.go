@@ -74,9 +74,18 @@ func (e *CallMethod) WriteHash(w io.Writer) {
 	mustWrite(w, binary.BigEndian, e.Arguments)
 }
 
+type SaveAs int
+
+const (
+	Child SaveAs = iota
+	Delegate
+)
+
 // CallConstructor is a message for calling constructor and obtain its reply
 type CallConstructor struct {
 	BaseLogicEvent
+	ParentRef core.RecordRef
+	SaveAs    SaveAs
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
@@ -87,7 +96,7 @@ func (e *CallConstructor) Type() core.MessageType {
 }
 
 func (e *CallConstructor) Target() *core.RecordRef {
-	return &e.ClassRef
+	return &e.ParentRef // parent
 }
 
 // WriteHash implements ledger.hash.Hasher interface.

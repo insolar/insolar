@@ -30,3 +30,12 @@ type Common struct {
 func (r *Common) Type() core.ReplyType {
 	return TypeCommon
 }
+
+type CallConstructor struct {
+	Ref     *core.RecordRef
+}
+
+// Type returns type of the reply
+func (r *CallConstructor) Type() core.ReplyType {
+	return TypeCommon
+}

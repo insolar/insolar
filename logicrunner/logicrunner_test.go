@@ -245,8 +245,6 @@ func TestExecution(t *testing.T) {
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
 	resp, err = lr.Execute(&message.CallConstructor{ClassRef: classRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*reply.Common).Data)
-	assert.Equal(t, []byte(nil), resp.(*reply.Common).Result)
 }
 
 func TestContractCallingContract(t *testing.T) {

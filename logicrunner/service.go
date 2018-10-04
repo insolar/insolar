@@ -128,8 +128,10 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rp
 	msg := &message.CallConstructor{
 		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
 		ClassRef:       req.Reference,
+		ParentRef:      req.Owner,
 		Name:           req.Constructor,
 		Arguments:      req.Arguments,
+		SaveAs:         req.SaveAs,
 	}
 
 	res, err := gpr.lr.MessageBus.Send(msg)
@@ -141,7 +143,8 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rp
 		ReqSig: HashInterface(req),
 		Resp:   rep,
 	})
-	rep.Data = res.(*reply.Common).Data
+
+	rep.Ref = res.(*reply.CallConstructor).Ref
 	return nil
 }
 
@@ -149,9 +152,11 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rp
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
 	constructorReq := rpctypes.UpRouteConstructorReq{
 		UpBaseReq:   req.UpBaseReq,
+		Owner:       req.Parent,
 		Reference:   req.Class,
 		Constructor: req.ConstructorName,
 		Arguments:   req.ArgsSerialized,
+		SaveAs:      message.Child,
 	}
 
 	constructorRes := rpctypes.UpRouteConstructorResp{}
@@ -161,18 +166,12 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSav
 		return errors.Wrap(err, "couldn't save new object")
 	}
 
-	ref, err := gpr.lr.ArtifactManager.ActivateObject(
-		core.RecordRef{}, core.RandomRef(), req.Class, req.Parent, constructorRes.Data,
-	)
-	if err != nil {
-		return errors.Wrap(err, "couldn't save new object")
-	}
 	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
 		Type:   CaseRecordTypeSaveAsChild,
 		ReqSig: HashInterface(req),
 		Resp:   reply,
 	})
-	reply.Reference = *ref
+	reply.Reference = *constructorRes.Ref
 	return nil
 }
 
@@ -215,30 +214,27 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
 	constructorReq := rpctypes.UpRouteConstructorReq{
 		UpBaseReq:   req.UpBaseReq,
+		Owner:       req.Into,
 		Reference:   req.Class,
 		Constructor: req.ConstructorName,
 		Arguments:   req.ArgsSerialized,
+		SaveAs:      message.Delegate,
 	}
 
 	constructorRes := rpctypes.UpRouteConstructorResp{}
 
+	// TODO return ref
 	err := gpr.RouteConstructorCall(constructorReq, &constructorRes)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save delegate")
 	}
 
-	ref, err := gpr.lr.ArtifactManager.ActivateObjectDelegate(
-		core.RecordRef{}, core.RandomRef(), req.Class, req.Into, constructorRes.Data,
-	)
-	if err != nil {
-		return errors.Wrap(err, "couldn't save delegate")
-	}
 	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
 		Type:   CaseRecordTypeSaveAsDelegate,
 		ReqSig: HashInterface(req),
 		Resp:   reply,
 	})
-	reply.Reference = *ref
+	reply.Reference = *constructorRes.Ref
 	return nil
 }
 

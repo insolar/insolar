@@ -273,7 +273,21 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	if err != nil {
 		return nil, errors.Wrap(err, "executer error")
 	}
-	return &reply.Common{Data: newData}, nil
+
+	switch m.SaveAs {
+	case message.Child:
+		ref, err := lr.ArtifactManager.ActivateObject(
+			core.RecordRef{}, core.RandomRef(), m.ClassRef, m.ParentRef, newData,
+		)
+		return &reply.CallConstructor{Ref: ref}, err
+	case message.Delegate:
+		ref, err := lr.ArtifactManager.ActivateObjectDelegate(
+			core.RecordRef{}, core.RandomRef(), m.ClassRef, m.ParentRef, newData,
+		)
+		return &reply.CallConstructor{Ref: ref}, err
+	default:
+		return &reply.CallConstructor{}, err
+	}
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
