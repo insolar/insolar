@@ -56,6 +56,7 @@ type NodeKeeper interface {
 // NewNodeKeeper create new NodeKeeper. unsyncDiscardAfter = timeout after which each unsync node is discarded
 func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
 	return &nodekeeper{
+		state:        undefined,
 		timeout:      unsyncDiscardAfter,
 		active:       make(map[core.RecordRef]*core.ActiveNode),
 		sync:         make([]*core.ActiveNode, 0),
@@ -64,7 +65,17 @@ func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
 	}
 }
 
+type nodekeeperState uint8
+
+const (
+	undefined = nodekeeperState(iota + 1)
+	awaitUnsync
+	hashCalculated
+	synced
+)
+
 type nodekeeper struct {
+	state           nodekeeperState
 	pulse           core.PulseNumber
 	timeout         time.Duration
 	cacheUnsyncCalc []byte
@@ -104,7 +115,7 @@ func (nk *nodekeeper) GetUnsyncHash() ([]byte, int, error) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
-	if nk.isCached() {
+	if nk.state != awaitUnsync {
 		return nk.cacheUnsyncCalc, nk.cacheUnsyncSize, nil
 	}
 	unsync := nk.collectUnsync()
@@ -113,6 +124,7 @@ func (nk *nodekeeper) GetUnsyncHash() ([]byte, int, error) {
 		return nil, 0, err
 	}
 	nk.cacheUnsyncCalc, nk.cacheUnsyncSize = hash, len(unsync)
+	nk.state = hashCalculated
 	return nk.cacheUnsyncCalc, nk.cacheUnsyncSize, nil
 }
 
@@ -129,8 +141,26 @@ func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
+	if nk.state == undefined {
+		nk.pulse = number
+		nk.state = awaitUnsync
+		return
+	}
+
+	if number <= nk.pulse {
+		return
+	}
+
+	if nk.state == hashCalculated || nk.state == awaitUnsync {
+		nk.activeLock.Lock()
+		nk.syncUnsafe(false)
+		nk.activeLock.Unlock()
+	}
+
 	nk.pulse = number
+	nk.state = awaitUnsync
 	nk.invalidateCache()
+	// update unsync pulse
 }
 
 func (nk *nodekeeper) Sync(approved bool) {
@@ -142,6 +172,14 @@ func (nk *nodekeeper) Sync(approved bool) {
 		nk.unsyncLock.Unlock()
 	}()
 
+	if nk.state == synced || nk.state == undefined {
+		return
+	}
+
+	nk.syncUnsafe(approved)
+}
+
+func (nk *nodekeeper) syncUnsafe(approved bool) {
 	// sync -> active
 	for _, node := range nk.sync {
 		nk.active[node.NodeID] = node
@@ -160,13 +198,14 @@ func (nk *nodekeeper) Sync(approved bool) {
 	}
 	// clear unsyncGossip
 	nk.unsyncGossip = make(map[core.RecordRef]*core.ActiveNode)
+	nk.state = synced
 }
 
 func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
-	if nk.isCached() {
+	if nk.state != awaitUnsync {
 		return errors.New("Cannot add node to unsync list: try again in next pulse slot")
 	}
 
@@ -185,7 +224,7 @@ func (nk *nodekeeper) AddUnsyncGossip(nodes []*core.ActiveNode) error {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
-	if nk.isCached() {
+	if nk.state != awaitUnsync {
 		return errors.New("Cannot add node to unsync list: try again in next pulse slot")
 	}
 
@@ -251,10 +290,6 @@ func (nk *nodekeeper) collectUnsync() []*core.ActiveNode {
 	}
 	copy(unsync[index:], nk.unsync)
 	return unsync
-}
-
-func (nk *nodekeeper) isCached() bool {
-	return nk.cacheUnsyncCalc != nil
 }
 
 func (nk *nodekeeper) invalidateCache() {

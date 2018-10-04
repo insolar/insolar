@@ -78,6 +78,7 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 	gossip := []*core.ActiveNode{newActiveNode(2, 0), newActiveNode(3, 0)}
 	_ = keeper.AddUnsyncGossip(gossip)
 	keeper.Sync(true)
+	keeper.SetPulse(core.PulseNumber(1))
 	keeper.Sync(true)
 	assert.Equal(t, 4, len(keeper.GetActiveNodes()))
 	for i := 0; i < 4; i++ {
@@ -87,18 +88,19 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 
 func TestNodekeeper_GetUnsyncHash(t *testing.T) {
 	keeper := NewNodeKeeper(time.Hour)
+	keeper.SetPulse(core.PulseNumber(0))
 	hash, count, _ := keeper.GetUnsyncHash()
 	assert.Equal(t, nullHash, hex.EncodeToString(hash))
 	assert.Equal(t, 0, count)
 
-	keeper.SetPulse(core.PulseNumber(0))
-	_ = keeper.AddUnsync(newActiveNode(0, 0))
-	_ = keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(1, 0)})
+	keeper.SetPulse(core.PulseNumber(1))
+	_ = keeper.AddUnsync(newActiveNode(0, 1))
+	_ = keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(1, 1)})
 
 	keeper2 := NewNodeKeeper(time.Hour)
-	keeper2.SetPulse(core.PulseNumber(0))
-	_ = keeper2.AddUnsync(newActiveNode(1, 0))
-	_ = keeper2.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(0, 0)})
+	keeper2.SetPulse(core.PulseNumber(1))
+	_ = keeper2.AddUnsync(newActiveNode(1, 1))
+	_ = keeper2.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(0, 1)})
 
 	hash, count, _ = keeper.GetUnsyncHash()
 	hash2, count2, _ := keeper2.GetUnsyncHash()
@@ -139,6 +141,7 @@ func TestNodekeeper_discardTimedOutUnsync(t *testing.T) {
 
 func TestNodekeeper_cache(t *testing.T) {
 	keeper := &nodekeeper{
+		state:        undefined,
 		timeout:      time.Hour,
 		active:       make(map[core.RecordRef]*core.ActiveNode),
 		sync:         make([]*core.ActiveNode, 0),
@@ -146,7 +149,7 @@ func TestNodekeeper_cache(t *testing.T) {
 		unsyncGossip: make(map[core.RecordRef]*core.ActiveNode),
 	}
 	keeper.SetPulse(core.PulseNumber(0))
-	assert.False(t, keeper.isCached())
+	assert.Equal(t, awaitUnsync, keeper.state)
 	err := keeper.AddUnsync(newActiveNode(0, 0))
 	assert.NoError(t, err)
 	keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(1, 0)})
@@ -154,13 +157,14 @@ func TestNodekeeper_cache(t *testing.T) {
 	hash1, _, _ := keeper.GetUnsyncHash()
 	hash2, _, _ := keeper.GetUnsyncHash()
 	assert.Equal(t, hash1, hash2)
-	assert.True(t, keeper.isCached())
+	assert.Equal(t, hashCalculated, keeper.state)
 	err = keeper.AddUnsync(newActiveNode(2, 0))
 	assert.Error(t, err)
 	keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(3, 0)})
 	assert.Error(t, err)
 	keeper.Sync(true)
+	assert.Equal(t, synced, keeper.state)
 
 	keeper.SetPulse(core.PulseNumber(1))
-	assert.False(t, keeper.isCached())
+	assert.Equal(t, awaitUnsync, keeper.state)
 }
