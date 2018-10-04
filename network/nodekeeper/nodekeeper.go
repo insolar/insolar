@@ -35,6 +35,8 @@ type NodeKeeper interface {
 	GetActiveNode(ref core.RecordRef) *core.ActiveNode
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []*core.ActiveNode
+	// AddActiveNodes set active nodes.
+	AddActiveNodes([]*core.ActiveNode)
 	// GetUnsyncHash get hash computed based on the list of unsync nodes, and the size of this list.
 	GetUnsyncHash() (hash []byte, unsyncCount int, err error)
 	// GetUnsync gets the local unsync list (excluding other nodes unsync lists).
@@ -53,7 +55,7 @@ type NodeKeeper interface {
 	AddUnsyncGossip([]*core.ActiveNode) error
 }
 
-// NewNodeKeeper create new NodeKeeper. unsyncDiscardAfter = timeout after which each unsync node is discarded
+// NewNodeKeeper create new NodeKeeper. unsyncDiscardAfter = timeout after which each unsync node is discarded.
 func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
 	return &nodekeeper{
 		state:        undefined,
@@ -102,6 +104,15 @@ func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
 		index++
 	}
 	return result
+}
+
+func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
+	nk.activeLock.Lock()
+	defer nk.activeLock.Unlock()
+
+	for _, node := range nodes {
+		nk.active[node.NodeID] = node
+	}
 }
 
 func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
@@ -179,28 +190,6 @@ func (nk *nodekeeper) Sync(approved bool) {
 	nk.syncUnsafe(approved)
 }
 
-func (nk *nodekeeper) syncUnsafe(approved bool) {
-	// sync -> active
-	for _, node := range nk.sync {
-		nk.active[node.NodeID] = node
-	}
-
-	if approved {
-		// unsync -> sync
-		unsync := nk.collectUnsync()
-		nk.sync = unsync
-		// clear unsync
-		nk.unsync = make([]*core.ActiveNode, 0)
-	} else {
-		// clear sync
-		nk.sync = make([]*core.ActiveNode, 0)
-		nk.discardTimedOutUnsync()
-	}
-	// clear unsyncGossip
-	nk.unsyncGossip = make(map[core.RecordRef]*core.ActiveNode)
-	nk.state = synced
-}
-
 func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
@@ -240,6 +229,28 @@ func (nk *nodekeeper) AddUnsyncGossip(nodes []*core.ActiveNode) error {
 		nk.unsyncGossip[node.NodeID] = node
 	}
 	return nil
+}
+
+func (nk *nodekeeper) syncUnsafe(approved bool) {
+	// sync -> active
+	for _, node := range nk.sync {
+		nk.active[node.NodeID] = node
+	}
+
+	if approved {
+		// unsync -> sync
+		unsync := nk.collectUnsync()
+		nk.sync = unsync
+		// clear unsync
+		nk.unsync = make([]*core.ActiveNode, 0)
+	} else {
+		// clear sync
+		nk.sync = make([]*core.ActiveNode, 0)
+		nk.discardTimedOutUnsync()
+	}
+	// clear unsyncGossip
+	nk.unsyncGossip = make(map[core.RecordRef]*core.ActiveNode)
+	nk.state = synced
 }
 
 func (nk *nodekeeper) discardTimedOutUnsync() {

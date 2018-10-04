@@ -168,3 +168,41 @@ func TestNodekeeper_cache(t *testing.T) {
 	keeper.SetPulse(core.PulseNumber(1))
 	assert.Equal(t, awaitUnsync, keeper.state)
 }
+
+func TestNodekeeper_AddActiveNodes(t *testing.T) {
+	keeper := NewNodeKeeper(time.Hour)
+	keeper.SetPulse(core.PulseNumber(0))
+
+	node2 := newActiveNode(0, 0)
+	node1 := newActiveNode(1, 0)
+	nodes := []*core.ActiveNode{node1, node2}
+	keeper.AddActiveNodes(nodes)
+
+	assert.Equal(t, 2, len(keeper.GetActiveNodes()))
+	assert.NotNil(t, keeper.GetActiveNode(core.RecordRef{0}))
+	assert.NotNil(t, keeper.GetActiveNode(core.RecordRef{1}))
+}
+
+func TestNodekeeper_transitions1(t *testing.T) {
+	keeper := NewNodeKeeper(time.Hour)
+	keeper.SetPulse(core.PulseNumber(0))
+
+	keeper.AddUnsync(newActiveNode(0, 0))
+	// check that Sync is not called and the transition unsync -> sync -> active is not performed
+	keeper.SetPulse(core.PulseNumber(0))
+	keeper.SetPulse(core.PulseNumber(0))
+	assert.Equal(t, 0, len(keeper.GetActiveNodes()))
+}
+
+func TestNodekeeper_transitions2(t *testing.T) {
+	keeper := NewNodeKeeper(time.Hour)
+	keeper.SetPulse(core.PulseNumber(0))
+
+	keeper.AddUnsync(newActiveNode(0, 0))
+	// check that Sync is called correctly every time and the transition unsync -> sync -> active is performed
+	keeper.SetPulse(core.PulseNumber(1))
+	keeper.Sync(true)
+	keeper.SetPulse(core.PulseNumber(2))
+	keeper.Sync(true)
+	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
+}
