@@ -23,7 +23,7 @@ import (
 
 type Expiration = int64
 
-const TTL = time.Duration(5 * time.Second)
+const TTL = time.Duration(1 * time.Millisecond)
 
 // SeedManager manages working with seed pool
 // It's thread safe

@@ -17,8 +17,7 @@
 package seedmanager
 
 import (
-	"math/rand"
-	"time"
+	"crypto/rand"
 
 	"github.com/pkg/errors"
 )
@@ -28,10 +27,6 @@ type Seed = [32]byte
 
 // SeedGenerator holds logic with seed generation
 type SeedGenerator struct {
-}
-
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 // Next returns next random seed
