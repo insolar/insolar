@@ -19,8 +19,6 @@
 package logicrunner
 
 import (
-	"log"
-
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -53,7 +51,6 @@ func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseReco
 	} else if r.RecordsLen <= r.Step {
 		return nil, r.Step, nil
 	}
-	log.Printf("GNVS %d -> %d", r.RecordsLen, r.Step)
 	ret := r.Records[r.Step]
 	r.Step++
 	lr.cbr[ref] = r
