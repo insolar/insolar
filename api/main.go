@@ -125,7 +125,8 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.RecordRef, sm *seedmanager.SeedManager) func(w http.ResponseWriter, r *http.Request) {
+func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
+	sm := seedmanager.New()
 	return func(response http.ResponseWriter, req *http.Request) {
 		startTime := time.Now()
 		answer := make(map[string]interface{})
@@ -206,7 +207,7 @@ func (ar *Runner) Start(c core.Components) error {
 
 	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
 
-	fw := wrapAPIV1Handler(ar.messageBus, *rootDomainReference, seedmanager.New())
+	fw := wrapAPIV1Handler(ar.messageBus, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
 	log.Info("Starting ApiRunner ...")
 	log.Info("Config: ", ar.cfg)
