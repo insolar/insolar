@@ -188,7 +188,8 @@ func TestNodekeeper_transitions1(t *testing.T) {
 	keeper.SetPulse(core.PulseNumber(0))
 
 	keeper.AddUnsync(newActiveNode(0, 0))
-	// check that Sync is not called and the transition unsync -> sync -> active is not performed
+	keeper.Sync(true)
+	// check that Sync is not called and the transition sync -> active is not performed
 	keeper.SetPulse(core.PulseNumber(0))
 	keeper.SetPulse(core.PulseNumber(0))
 	assert.Equal(t, 0, len(keeper.GetActiveNodes()))

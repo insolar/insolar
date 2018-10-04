@@ -26,6 +26,7 @@ import (
 
 	"github.com/anacrolix/sync"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 )
@@ -127,6 +128,7 @@ func (nk *nodekeeper) GetUnsyncHash() ([]byte, int, error) {
 	defer nk.unsyncLock.Unlock()
 
 	if nk.state != awaitUnsync {
+		log.Warn("NodeKeeper: GetUnsyncHash called more than once during one pulse")
 		return nk.cacheUnsyncCalc, nk.cacheUnsyncSize, nil
 	}
 	unsync := nk.collectUnsync()
@@ -159,10 +161,12 @@ func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
 	}
 
 	if number <= nk.pulse {
+		log.Warnf("NodeKeeper: ignored SetPulse call with number=%d while current=%d", uint32(number), uint32(nk.pulse))
 		return
 	}
 
 	if nk.state == hashCalculated || nk.state == awaitUnsync {
+		log.Warn("NodeKeeper: SetPulse called not from `undefined` or `synced` state")
 		nk.activeLock.Lock()
 		nk.syncUnsafe(false)
 		nk.activeLock.Unlock()
@@ -184,6 +188,7 @@ func (nk *nodekeeper) Sync(approved bool) {
 	}()
 
 	if nk.state == synced || nk.state == undefined {
+		log.Warn("NodeKeeper: ignored Sync call from `synced` or `undefined` state")
 		return
 	}
 
@@ -267,6 +272,7 @@ func (nk *nodekeeper) discardTimedOutUnsync() {
 	// discard all unsync nodes before index
 	nk.unsyncTimeout = nk.unsyncTimeout[index:]
 	nk.unsync = nk.unsync[index:]
+	log.Infof("NodeKeeper: discarded %d unsync nodes due to timeout", index)
 }
 
 func (nk *nodekeeper) checkPulse(nodes []*core.ActiveNode) error {
@@ -311,6 +317,10 @@ func (nk *nodekeeper) invalidateCache() {
 func (nk *nodekeeper) updateUnsyncPulse() {
 	for _, node := range nk.unsync {
 		node.PulseNum = nk.pulse
+	}
+	count := len(nk.unsync)
+	if count != 0 {
+		log.Infof("NodeKeeper: updated pulse for %d stored unsync nodes", count)
 	}
 }
 
