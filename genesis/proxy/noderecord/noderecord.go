@@ -1,8 +1,8 @@
 package noderecord
 
 import (
-        "github.com/insolar/insolar/core"
-        "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+		"github.com/insolar/insolar/core"
+		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 type NodeRole int
@@ -13,7 +13,7 @@ var ClassReference = core.NewRefFromBase58("")
 
 // Contract proxy type
 type NodeRecord struct {
-    Reference core.RecordRef
+	Reference core.RecordRef
 }
 
 type ContractConstructorHolder struct {
@@ -22,190 +22,190 @@ type ContractConstructorHolder struct {
 }
 
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeRecord {
-    ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-    return &NodeRecord{Reference: ref}
+	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	if err != nil {
+	panic(err)
+	}
+	return &NodeRecord{Reference: ref}
 }
 
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *NodeRecord {
-    ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
-    if err != nil {
-        panic(err)
-    }
-    return &NodeRecord{Reference: ref}
+	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+	return &NodeRecord{Reference: ref}
 }
 
 // GetObject
 func GetObject(ref core.RecordRef) (r *NodeRecord) {
-    return &NodeRecord{Reference: ref}
+	return &NodeRecord{Reference: ref}
 }
 
 func GetClass() core.RecordRef {
-    return ClassReference
+	return ClassReference
 }
 
 func GetImplementationFrom(object core.RecordRef) *NodeRecord {
-    ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
-    if err != nil {
-        panic(err)
-    }
-    return GetObject(ref)
+	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
+	if err != nil {
+		panic(err)
+	}
+	return GetObject(ref)
 }
 
 
 func NewNodeRecord( pk string, roleS string ) *ContractConstructorHolder {
-    var args [2]interface{}
+	var args [2]interface{}
 	args[0] = pk
 	args[1] = roleS
 
 
-    var argsSerialized []byte
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	var argsSerialized []byte
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 
-    return &ContractConstructorHolder{constructorName: "NewNodeRecord", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "NewNodeRecord", argsSerialized: argsSerialized}
 }
 
 
 // GetReference
 func (r *NodeRecord) GetReference() core.RecordRef {
-    return r.Reference
+	return r.Reference
 }
 
 // GetClass
 func (r *NodeRecord) GetClass() core.RecordRef {
-    return ClassReference
+	return ClassReference
 }
 
 
 func (r *NodeRecord) GetPublicKey(  ) ( string ) {
-    var args [0]interface{}
+	var args [0]interface{}
 
-    var argsSerialized []byte
+	var argsSerialized []byte
 
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
-    if err != nil {
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
+	if err != nil {
    		panic(err)
-    }
+	}
 
-    resList := [1]interface{}{}
+	resList := [1]interface{}{}
 	var a0 string
 	resList[0] = a0
 
-    err = proxyctx.Current.Deserialize(res, &resList)
-    if err != nil {
-        panic(err)
-    }
+	err = proxyctx.Current.Deserialize(res, &resList)
+	if err != nil {
+		panic(err)
+	}
 
-    return resList[0].(string)
+	return resList[0].(string)
 }
 
 func (r *NodeRecord) GetPublicKeyNoWait(  ) {
-    var args [0]interface{}
+	var args [0]interface{}
 
-    var argsSerialized []byte
+	var argsSerialized []byte
 
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (r *NodeRecord) GetRole(  ) ( NodeRole ) {
-    var args [0]interface{}
+	var args [0]interface{}
 
-    var argsSerialized []byte
+	var argsSerialized []byte
 
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRole", argsSerialized)
-    if err != nil {
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRole", argsSerialized)
+	if err != nil {
    		panic(err)
-    }
+	}
 
-    resList := [1]interface{}{}
+	resList := [1]interface{}{}
 	var a0 NodeRole
 	resList[0] = a0
 
-    err = proxyctx.Current.Deserialize(res, &resList)
-    if err != nil {
-        panic(err)
-    }
+	err = proxyctx.Current.Deserialize(res, &resList)
+	if err != nil {
+		panic(err)
+	}
 
-    return resList[0].(NodeRole)
+	return resList[0].(NodeRole)
 }
 
 func (r *NodeRecord) GetRoleNoWait(  ) {
-    var args [0]interface{}
+	var args [0]interface{}
 
-    var argsSerialized []byte
+	var argsSerialized []byte
 
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (r *NodeRecord) Destroy(  ) (  ) {
-    var args [0]interface{}
+	var args [0]interface{}
 
-    var argsSerialized []byte
+	var argsSerialized []byte
 
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 
-    res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized)
-    if err != nil {
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized)
+	if err != nil {
    		panic(err)
-    }
+	}
 
-    resList := [0]interface{}{}
+	resList := [0]interface{}{}
 
-    err = proxyctx.Current.Deserialize(res, &resList)
-    if err != nil {
-        panic(err)
-    }
+	err = proxyctx.Current.Deserialize(res, &resList)
+	if err != nil {
+		panic(err)
+	}
 
-    return 
+	return 
 }
 
 func (r *NodeRecord) DestroyNoWait(  ) {
-    var args [0]interface{}
+	var args [0]interface{}
 
-    var argsSerialized []byte
+	var argsSerialized []byte
 
-    err := proxyctx.Current.Serialize(args, &argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 
-    _, err = proxyctx.Current.RouteCall(r.Reference, false, "Destroy", argsSerialized)
-    if err != nil {
-        panic(err)
-    }
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Destroy", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
 }
 
