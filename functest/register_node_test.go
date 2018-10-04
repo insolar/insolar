@@ -65,6 +65,20 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 	assert.NotEqual(t, "", nodeRef)
 }
 
+func _TestRegisterNodeNotExistRole(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "register_node",
+		"public_key": "some_fancy_public_key",
+		"role":       "some_not_fancy_role",
+	})
+
+	response := &registerNodeResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.HandlerError, response.Err.Code)
+	assert.Equal(t, "Error: role 'some_not_fancy_role' doesn't exist", response.Err.Message)
+}
+
 func TestRegisterNodeWithoutRole(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
