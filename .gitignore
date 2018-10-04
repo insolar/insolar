@@ -40,3 +40,6 @@ vm/wasm/test/data/*.wat
 data
 
 /bin
+
+# GoReleaser dist dir
+/dist

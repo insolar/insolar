@@ -60,14 +60,18 @@ type RPC struct {
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
+	log.Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
 	}
 
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
 	if err != nil {
-		return errors.Wrapf(err, "Can't find wrapper for %s", args.Method)
+		return errors.Wrapf(
+			err, "Can't find wrapper for %s (code ref: %s)",
+			args.Method, args.Code.String(),
+		)
 	}
 
 	wrapper, ok := symbol.(func(object []byte, data []byte) ([]byte, []byte, error))
@@ -121,7 +125,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 		return gi.UpstreamClient, nil
 	}
 
-	client, err := rpc.DialHTTP(gi.UpstreamProtocol, gi.UpstreamAddress)
+	client, err := rpc.Dial(gi.UpstreamProtocol, gi.UpstreamAddress)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't dial '%s' over %s", gi.UpstreamAddress, gi.UpstreamProtocol)
 	}

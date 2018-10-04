@@ -62,6 +62,8 @@ const (
 	TypeDeactivateObject
 	// TypeUpdateObject amends object.
 	TypeUpdateObject
+	// TypeRegisterChild registers child on the parent object.
+	TypeRegisterChild
 )
 
 // GetEmptyMessage constructs specified message
@@ -99,6 +101,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &DeactivateObject{}, nil
 	case TypeUpdateObject:
 		return &UpdateObject{}, nil
+	case TypeRegisterChild:
+		return &RegisterChild{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
@@ -152,4 +156,5 @@ func init() {
 	gob.Register(&ActivateObjectDelegate{})
 	gob.Register(&DeactivateObject{})
 	gob.Register(&UpdateObject{})
+	gob.Register(&RegisterChild{})
 }

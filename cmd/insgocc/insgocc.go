@@ -161,8 +161,6 @@ func main() {
 				os.Exit(1)
 			}
 
-			parsed.ReplaceFoundationImport()
-
 			err = parsed.Write(output.writer)
 			if err != nil {
 				fmt.Println(err)

@@ -73,7 +73,7 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 		return gp.client, nil
 	}
 
-	client, err := rpc.DialHTTP(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
+	client, err := rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't dial '%s' over %s",
