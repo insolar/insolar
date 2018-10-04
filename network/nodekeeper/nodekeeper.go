@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"hash"
 	"sort"
+	"sync"
 	"time"
 
-	"github.com/anacrolix/sync"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
