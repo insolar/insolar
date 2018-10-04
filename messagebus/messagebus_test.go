@@ -37,6 +37,10 @@ type runner struct {
 	responses []core.Reply
 }
 
+func (r *runner) Validate(ref core.RecordRef, p core.Pulse, cr []core.CaseRecord) (int, error) {
+	return 0, nil
+}
+
 func (r *runner) OnPulse(pulse core.Pulse) error { return nil }
 
 func (r *runner) Start(components core.Components) error { return nil }
