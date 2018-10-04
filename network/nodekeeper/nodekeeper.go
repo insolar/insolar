@@ -171,7 +171,7 @@ func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
 	nk.pulse = number
 	nk.state = awaitUnsync
 	nk.invalidateCache()
-	// update unsync pulse
+	nk.updateUnsyncPulse()
 }
 
 func (nk *nodekeeper) Sync(approved bool) {
@@ -306,6 +306,12 @@ func (nk *nodekeeper) collectUnsync() []*core.ActiveNode {
 func (nk *nodekeeper) invalidateCache() {
 	nk.cacheUnsyncCalc = nil
 	nk.cacheUnsyncSize = 0
+}
+
+func (nk *nodekeeper) updateUnsyncPulse() {
+	for _, node := range nk.unsync {
+		node.PulseNum = nk.pulse
+	}
 }
 
 func hashWriteChecked(hash hash.Hash, data []byte) {

@@ -206,3 +206,13 @@ func TestNodekeeper_transitions2(t *testing.T) {
 	keeper.Sync(true)
 	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
 }
+
+func TestNodekeeper_unsyncUpdatePulse(t *testing.T) {
+	keeper := NewNodeKeeper(time.Hour)
+	keeper.SetPulse(core.PulseNumber(0))
+
+	keeper.AddUnsync(newActiveNode(0, 0))
+	keeper.SetPulse(core.PulseNumber(1))
+	nodePulse := keeper.GetUnsync()[0].PulseNum
+	assert.Equal(t, uint32(1), uint32(nodePulse))
+}
