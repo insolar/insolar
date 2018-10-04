@@ -37,15 +37,15 @@ func HashInterface(in interface{}) []byte {
 }
 
 func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecord) {
-	lr.cbmu.Lock()
-	lr.cb.Records[ref] = append(lr.cb.Records[ref], cr)
-	lr.cbmu.Unlock()
+	lr.caseBindMutex.Lock()
+	lr.caseBind.Records[ref] = append(lr.caseBind.Records[ref], cr)
+	lr.caseBindMutex.Unlock()
 }
 
 func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseRecord, int) {
-	lr.cbrmu.Lock()
-	defer lr.cbrmu.Unlock()
-	r, ok := lr.cbr[ref]
+	lr.caseBindReplaysMutex.Lock()
+	defer lr.caseBindReplaysMutex.Unlock()
+	r, ok := lr.caseBindReplays[ref]
 	if !ok {
 		return nil, -1
 	} else if r.RecordsLen <= r.Step {
@@ -53,7 +53,7 @@ func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseReco
 	}
 	ret := r.Records[r.Step]
 	r.Step++
-	lr.cbr[ref] = r
+	lr.caseBindReplays[ref] = r
 	return &ret, r.Step
 }
 
@@ -63,12 +63,12 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 	}
 
 	err := func() error {
-		lr.cbrmu.Lock()
-		defer lr.cbrmu.Unlock()
-		if _, ok := lr.cbr[ref]; ok {
+		lr.caseBindReplaysMutex.Lock()
+		defer lr.caseBindReplaysMutex.Unlock()
+		if _, ok := lr.caseBindReplays[ref]; ok {
 			return errors.New("already validating this ref")
 		}
-		lr.cbr[ref] = core.CaseBindReplay{
+		lr.caseBindReplays[ref] = core.CaseBindReplay{
 			Pulse:      p,
 			Records:    cr,
 			RecordsLen: len(cr),
@@ -81,9 +81,9 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 	}
 
 	defer func() {
-		lr.cbrmu.Lock()
-		defer lr.cbrmu.Unlock()
-		delete(lr.cbr, ref)
+		lr.caseBindReplaysMutex.Lock()
+		defer lr.caseBindReplaysMutex.Unlock()
+		delete(lr.caseBindReplays, ref)
 	}()
 
 	for {

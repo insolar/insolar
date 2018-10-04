@@ -101,9 +101,9 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 
 func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
 	rlr := lr.(*LogicRunner)
-	for ref, cr := range rlr.cb.Records {
-		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.cb.Pulse.PulseNumber), "right pulsenumber")
-		vstep, err := lr.Validate(ref, rlr.cb.Pulse, cr)
+	for ref, cr := range rlr.caseBind.Records {
+		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
+		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
 		assert.NoError(t, err, "validation")
 		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
 	}

@@ -35,16 +35,16 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
-	ArtifactManager core.ArtifactManager
-	MessageBus      core.MessageBus
-	machinePrefs    []core.MachineType
-	Cfg             *configuration.LogicRunner
-	cb              core.CaseBind
-	cbmu            sync.Mutex
-	cbr             map[core.RecordRef]core.CaseBindReplay
-	cbrmu           sync.Mutex
-	sock            net.Listener
+	Executors            [core.MachineTypesLastID]core.MachineLogicExecutor
+	ArtifactManager      core.ArtifactManager
+	MessageBus           core.MessageBus
+	machinePrefs         []core.MachineType
+	Cfg                  *configuration.LogicRunner
+	caseBind             core.CaseBind
+	caseBindMutex        sync.Mutex
+	caseBindReplays      map[core.RecordRef]core.CaseBindReplay
+	caseBindReplaysMutex sync.Mutex
+	sock                 net.Listener
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -55,7 +55,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
-		cbr:             make(map[core.RecordRef]core.CaseBindReplay),
+		caseBindReplays: make(map[core.RecordRef]core.CaseBindReplay),
 	}
 	return &res, nil
 }
@@ -147,9 +147,9 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	}
 
 	ref := msg.GetReference()
-	lr.cbrmu.Lock()
-	cb, validate := lr.cbr[ref]
-	lr.cbrmu.Unlock()
+	lr.caseBindReplaysMutex.Lock()
+	cb, validate := lr.caseBindReplays[ref]
+	lr.caseBindReplaysMutex.Unlock()
 
 	var vb ValidationBehaviour
 	if validate {
@@ -161,7 +161,7 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	ctx := core.LogicCallContext{
 		Caller: msg.GetCaller(),
 		Time:   time.Now(), // TODO: probably we should take it from e
-		Pulse:  lr.cb.Pulse,
+		Pulse:  lr.caseBind.Pulse,
 	}
 
 	switch m := msg.(type) {
@@ -309,11 +309,11 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	lr.cbmu.Lock()
-	lr.cb = core.CaseBind{
+	lr.caseBindMutex.Lock()
+	lr.caseBind = core.CaseBind{
 		Pulse:   pulse,
 		Records: make(map[core.RecordRef][]core.CaseRecord),
 	}
-	lr.cbmu.Unlock()
+	lr.caseBindMutex.Unlock()
 	return nil
 }
