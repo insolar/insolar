@@ -22,21 +22,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func askApi(t *testing.T) *getSeedResponse {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_seed",
-	})
-
-	getSeedResponse := &getSeedResponse{}
-	unmarshalResponse(t, body, getSeedResponse)
-
-	return getSeedResponse
-}
-
 func TestGetSeed(t *testing.T) {
-	resp1 := askApi(t)
-	resp2 := askApi(t)
+	seed1 := getSeed(t)
+	seed2 := getSeed(t)
 
-	assert.NotEqual(t, resp1.Seed, resp2.Seed)
+	assert.NotEqual(t, seed1, seed2)
 
 }
