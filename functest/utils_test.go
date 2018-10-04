@@ -63,6 +63,11 @@ type getBalanceResponse struct {
 	Currency string `json:"currency"`
 }
 
+type getSeedResponse struct {
+	baseResponse
+	Seed string `json:"seed"`
+}
+
 type isAuthorized struct {
 	baseResponse
 	IsAuthorized bool `json:"is_authorized"`

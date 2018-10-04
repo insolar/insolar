@@ -52,7 +52,7 @@ rebuild_binaries()
 
 check_working_dir()
 {
-    if ! pwd | grep -q "go/src/github.com/insolar/insolar$"
+    if ! pwd | grep -q "src/github.com/insolar/insolar$"
     then
         echo "Run me from insolar root"
         exit 1
