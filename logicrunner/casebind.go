@@ -57,13 +57,6 @@ func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseReco
 	return &ret, r.Step
 }
 
-func (lr *LogicRunner) getCBR(ref core.RecordRef) (core.CaseBindReplay, bool) {
-	lr.cbrmu.Lock()
-	defer lr.cbrmu.Unlock()
-	cbr, ok := lr.cbr[ref]
-	return cbr, ok
-}
-
 func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.CaseRecord) (int, error) {
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
