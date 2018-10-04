@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"hash"
 	"sort"
-	"sync/atomic"
 	"time"
 
 	"github.com/anacrolix/sync"
@@ -66,8 +65,10 @@ func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
 }
 
 type nodekeeper struct {
-	pulse   uint32
-	timeout time.Duration
+	pulse           core.PulseNumber
+	timeout         time.Duration
+	cacheUnsyncCalc []byte
+	cacheUnsyncSize int
 
 	activeLock sync.RWMutex
 	active     map[core.RecordRef]*core.ActiveNode
@@ -101,13 +102,18 @@ func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
 
 func (nk *nodekeeper) GetUnsyncHash() ([]byte, int, error) {
 	nk.unsyncLock.Lock()
+	defer nk.unsyncLock.Unlock()
+
+	if nk.isCached() {
+		return nk.cacheUnsyncCalc, nk.cacheUnsyncSize, nil
+	}
 	unsync := nk.collectUnsync()
-	nk.unsyncLock.Unlock()
 	hash, err := calculateHash(unsync)
 	if err != nil {
 		return nil, 0, err
 	}
-	return hash, len(unsync), nil
+	nk.cacheUnsyncCalc, nk.cacheUnsyncSize = hash, len(unsync)
+	return nk.cacheUnsyncCalc, nk.cacheUnsyncSize, nil
 }
 
 func (nk *nodekeeper) GetUnsync() []*core.ActiveNode {
@@ -120,7 +126,11 @@ func (nk *nodekeeper) GetUnsync() []*core.ActiveNode {
 }
 
 func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
-	atomic.StoreUint32(&nk.pulse, uint32(number))
+	nk.unsyncLock.Lock()
+	defer nk.unsyncLock.Unlock()
+
+	nk.pulse = number
+	nk.invalidateCache()
 }
 
 func (nk *nodekeeper) Sync(approved bool) {
@@ -156,6 +166,10 @@ func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
+	if nk.isCached() {
+		return errors.New("Cannot add node to unsync list: try again in next pulse slot")
+	}
+
 	checkedList := []*core.ActiveNode{node}
 	if err := nk.checkPulse(checkedList); err != nil {
 		return errors.Wrap(err, "Error adding local unsync node")
@@ -170,6 +184,10 @@ func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
 func (nk *nodekeeper) AddUnsyncGossip(nodes []*core.ActiveNode) error {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
+
+	if nk.isCached() {
+		return errors.New("Cannot add node to unsync list: try again in next pulse slot")
+	}
 
 	if err := nk.checkPulse(nodes); err != nil {
 		return errors.Wrap(err, "Error adding unsync gossip nodes")
@@ -202,9 +220,8 @@ func (nk *nodekeeper) discardTimedOutUnsync() {
 }
 
 func (nk *nodekeeper) checkPulse(nodes []*core.ActiveNode) error {
-	pulse := core.PulseNumber(atomic.LoadUint32(&nk.pulse))
 	for _, node := range nodes {
-		if node.PulseNum != pulse {
+		if node.PulseNum != nk.pulse {
 			return errors.Errorf("Node ID:%s pulse:%d is not equal to NodeKeeper current pulse:%d",
 				node.NodeID.String(), node.PulseNum, nk.pulse)
 		}
@@ -234,6 +251,15 @@ func (nk *nodekeeper) collectUnsync() []*core.ActiveNode {
 	}
 	copy(unsync[index:], nk.unsync)
 	return unsync
+}
+
+func (nk *nodekeeper) isCached() bool {
+	return nk.cacheUnsyncCalc != nil
+}
+
+func (nk *nodekeeper) invalidateCache() {
+	nk.cacheUnsyncCalc = nil
+	nk.cacheUnsyncSize = 0
 }
 
 func hashWriteChecked(hash hash.Hash, data []byte) {
