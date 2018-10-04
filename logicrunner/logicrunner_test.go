@@ -620,12 +620,12 @@ func New(n int) *Child {
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 	rlr := lr.(*LogicRunner)
-	cr := rlr.cb.Records[*contract]
-	assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.cb.Pulse.PulseNumber), "right pulsenumber")
-	assert.Equal(t, 20, len(cr), "right number of caserecords")
-	vstep, err := lr.Validate(*contract, rlr.cb.Pulse, cr)
-	assert.NoError(t, err, "validation")
-	assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+	for ref, cr := range rlr.cb.Records {
+		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.cb.Pulse.PulseNumber), "right pulsenumber")
+		vstep, err := lr.Validate(ref, rlr.cb.Pulse, cr)
+		assert.NoError(t, err, "validation")
+		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+	}
 
 	resp, err = lr.Execute(&message.CallMethod{
 		ObjectRef: *contract,
