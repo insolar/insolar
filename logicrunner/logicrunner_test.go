@@ -99,6 +99,16 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	}
 }
 
+func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
+	rlr := lr.(*LogicRunner)
+	for ref, cr := range rlr.cb.Records {
+		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.cb.Pulse.PulseNumber), "right pulsenumber")
+		vstep, err := lr.Validate(ref, rlr.cb.Pulse, cr)
+		assert.NoError(t, err, "validation")
+		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+	}
+}
+
 func TestTypeCompatibility(t *testing.T) {
 	var _ core.LogicRunner = (*LogicRunner)(nil)
 }
@@ -619,19 +629,16 @@ func New(n int) *Child {
 	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
-	rlr := lr.(*LogicRunner)
-	for ref, cr := range rlr.cb.Records {
-		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.cb.Pulse.PulseNumber), "right pulsenumber")
-		vstep, err := lr.Validate(ref, rlr.cb.Pulse, cr)
-		assert.NoError(t, err, "validation")
-		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
-	}
+	ValidateAllResults(t, lr)
 
 	resp, err = lr.Execute(&message.CallMethod{
 		ObjectRef: *contract,
 		Method:    "SumChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
+
+	ValidateAllResults(t, lr)
+
 	assert.NoError(t, err, "contract call")
 	r = testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
@@ -701,6 +708,8 @@ func (r *Two) AnError() error {
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
+
+	ValidateAllResults(t, lr)
 
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}

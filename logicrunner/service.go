@@ -251,7 +251,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{ // bad idea, we can store gadzillion of children
 		Type:   core.CaseRecordTypeGetObjChildren,
 		ReqSig: HashInterface(req),
-		Resp:   rep,
+		Resp:   rep.Children,
 	})
 	return nil
 }
