@@ -40,6 +40,11 @@ type BaseLogicMessage struct {
 	Caller core.RecordRef
 }
 
+type IBaseLogicMessage interface {
+	core.Message
+	GetReference() core.RecordRef
+}
+
 func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &e.Caller
 }
@@ -55,6 +60,10 @@ type CallMethod struct {
 	ObjectRef  core.RecordRef
 	Method     string
 	Arguments  core.Arguments
+}
+
+func (e *CallMethod) GetReference() core.RecordRef {
+	return e.ObjectRef
 }
 
 func (e *CallMethod) Type() core.MessageType {
@@ -80,6 +89,10 @@ type CallConstructor struct {
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
+}
+
+func (e *CallConstructor) GetReference() core.RecordRef {
+	return e.ClassRef
 }
 
 func (e *CallConstructor) Type() core.MessageType {

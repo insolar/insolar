@@ -75,8 +75,8 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	}()
 	wg.Wait()
 
-	log.Debugln("R: tx end t:", txFin)
-	log.Debugln("R: drop   t:", dropFin)
+	log.Debugln("Records: tx end t:", txFin)
+	log.Debugln("Records: drop   t:", dropFin)
 
 	assert.Conditionf(t, func() bool {
 		return dropFin.After(txFin)

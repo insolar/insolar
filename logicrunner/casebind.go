@@ -19,42 +19,13 @@
 package logicrunner
 
 import (
+	"log"
+
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
 )
-
-type trf = core.RecordRef
-
-type CaseRecordType int
-
-// Types of records
-const (
-	caseRecordTypeUnexistent CaseRecordType = iota
-	CaseRecordTypeMethodCall
-	CaseRecordTypeConstructorCall
-	CaseRecordTypeMethodCallResult
-	CaseRecordTypeConstructorCallResult
-	CaseRecordTypeRouteCall
-	CaseRecordTypeSaveAsChild
-	CaseRecordTypeGetObjChildren
-	CaseRecordTypeSaveAsDelegate
-	CaseRecordTypeGetDelegate
-)
-
-// CaseRecord is one record of validateable object calling history
-type CaseRecord struct {
-	Type   CaseRecordType
-	ReqSig []byte
-	Resp   rpctypes.UpRespIface
-}
-
-// CaseBinder is a whole result of executor efforts on every object it seen on this pulse
-type CaseBind struct {
-	P core.Pulse           // pulse info for this bind
-	R map[trf][]CaseRecord // ordered cases for each object
-}
 
 func HashInterface(in interface{}) []byte {
 	s := []byte{}
@@ -65,4 +36,132 @@ func HashInterface(in interface{}) []byte {
 	}
 	sh := sha3.New224()
 	return sh.Sum(s)
+}
+
+func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecord) {
+	lr.cbmu.Lock()
+	lr.cb.Records[ref] = append(lr.cb.Records[ref], cr)
+	lr.cbmu.Unlock()
+}
+
+func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseRecord, int, error) {
+	lr.cbrmu.Lock()
+	defer lr.cbrmu.Unlock()
+	r, ok := lr.cbr[ref]
+	if !ok {
+		return nil, -1, errors.New("ref not in validation mode")
+	} else if r.RecordsLen <= r.Step {
+		return nil, r.Step, nil
+	}
+	log.Printf("GNVS %d -> %d", r.RecordsLen, r.Step)
+	ret := r.Records[r.Step]
+	r.Step++
+	lr.cbr[ref] = r
+	return &ret, r.Step, nil
+}
+
+func (lr *LogicRunner) getCBR(ref core.RecordRef) (core.CaseBindReplay, bool) {
+	lr.cbrmu.Lock()
+	defer lr.cbrmu.Unlock()
+	cbr, ok := lr.cbr[ref]
+	return cbr, ok
+}
+
+func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.CaseRecord) (int, error) {
+	if len(cr) < 1 {
+		return 0, errors.New("casebind is empty")
+	}
+
+	lr.cbrmu.Lock()
+	if _, ok := lr.cbr[ref]; ok {
+		lr.cbrmu.Unlock()
+		return 0, errors.New("already validating this ref")
+	}
+	r := core.CaseBindReplay{
+		Pulse:      p,
+		Records:    cr,
+		RecordsLen: len(cr),
+		Step:       0,
+	}
+	lr.cbr[ref] = r
+	lr.cbrmu.Unlock()
+
+	defer func() {
+		lr.cbrmu.Lock()
+		delete(lr.cbr, ref)
+		lr.cbrmu.Unlock()
+	}()
+
+	for {
+		start, step, err := lr.getNextValidationStep(ref)
+		if err != nil {
+			return step, errors.Wrap(err, "no next step")
+		} else if start == nil { // finish
+			return step, nil
+		}
+		if start.Type != core.CaseRecordTypeStart {
+			return step, errors.Wrap(err, "step between two shores")
+		}
+
+		msg := start.Resp.(core.Message)
+		if _, err := lr.Execute(msg); err != nil {
+			return 0, errors.Wrap(err, "validation step failed")
+		}
+
+		if stop, step, err := lr.getNextValidationStep(ref); err != nil {
+			return 0, errors.Wrap(err, "validation container failed")
+		} else if stop.Type != core.CaseRecordTypeResult {
+			return step, errors.New("Validation stoped not on result")
+		}
+	}
+	panic("unreachable")
+}
+
+// ValidationBehaviour is a special object that responsible for validation behavior of other methods.
+type ValidationBehaviour interface {
+	Begin(refs core.RecordRef, record core.CaseRecord)
+	End(refs core.RecordRef, record core.CaseRecord)
+	ModifyContext(ctx *core.LogicCallContext)
+	NeedSave() bool
+}
+
+type ValidationSaver struct {
+	lr *LogicRunner
+}
+
+func (vb ValidationSaver) NeedSave() bool {
+	return true
+}
+
+func (vb ValidationSaver) ModifyContext(ctx *core.LogicCallContext) {
+	// nothing need
+}
+
+func (vb ValidationSaver) Begin(refs core.RecordRef, record core.CaseRecord) {
+	vb.lr.addObjectCaseRecord(refs, record)
+}
+
+func (vb ValidationSaver) End(refs core.RecordRef, record core.CaseRecord) {
+	vb.lr.addObjectCaseRecord(refs, record)
+}
+
+type ValidationChecker struct {
+	lr *LogicRunner
+	cb core.CaseBindReplay
+}
+
+func (vb ValidationChecker) NeedSave() bool {
+	return false
+}
+
+func (vb ValidationChecker) ModifyContext(ctx *core.LogicCallContext) {
+	ctx.Pulse = vb.cb.Pulse
+}
+
+func (vb ValidationChecker) Begin(refs core.RecordRef, record core.CaseRecord) {
+	// do nothing, everything done in lr.Validate
+}
+
+func (vb ValidationChecker) End(refs core.RecordRef, record core.CaseRecord) {
+	// do nothing, everything done in lr.Validate
 }
