@@ -32,7 +32,7 @@ func (r *Common) Type() core.ReplyType {
 }
 
 type CallConstructor struct {
-	Ref     *core.RecordRef
+	Ref *core.RecordRef
 }
 
 // Type returns type of the reply
