@@ -96,7 +96,7 @@ func (e *CallConstructor) Type() core.MessageType {
 }
 
 func (e *CallConstructor) Target() *core.RecordRef {
-	return &e.ParentRef // parent
+	return &e.ParentRef
 }
 
 // WriteHash implements ledger.hash.Hasher interface.
