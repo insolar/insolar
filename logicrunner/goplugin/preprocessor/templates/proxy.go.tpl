@@ -20,7 +20,7 @@ type {{ .ContractType }} struct {
 
 type ContractConstructorHolder struct {
 	constructorName string
-    argsSerialized []byte
+	argsSerialized []byte
 }
 
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *{{ .ContractType }} {
