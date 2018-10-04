@@ -307,6 +307,7 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 	return result, nil
 }
 
+// ProcessGetSeed processes get seed request
 func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	seed, err := rh.seedGenerator.Next()
