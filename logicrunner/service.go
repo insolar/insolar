@@ -85,7 +85,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		return errors.New("event bus was not set during initialization")
 	}
 
-	cr, step, _ := gpr.lr.getNextValidationStep(req.Me)
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeRouteCall != cr.Type {
 			return errors.New("Wrong validation type on RouteCall")
@@ -137,7 +137,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rp
 		return errors.New("event bus was not set during initialization")
 	}
 
-	cr, step, _ := gpr.lr.getNextValidationStep(req.Me)
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeRouteCall != cr.Type {
 			return errors.New("Wrong validation type on RouteCall")
@@ -175,7 +175,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rp
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
-	cr, step, _ := gpr.lr.getNextValidationStep(req.Me)
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsChild != cr.Type {
 			return errors.New("Wrong validation type on RouteCall")
@@ -210,7 +210,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.UpGetObjChildrenResp) error {
 	// TODO: INS-408
 
-	cr, step, _ := gpr.lr.getNextValidationStep(req.Me)
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObjChildren != cr.Type {
 			return errors.New("Wrong validation type on RouteCall")
@@ -258,7 +258,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
-	cr, step, _ := gpr.lr.getNextValidationStep(req.Me)
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
 			return errors.New("Wrong validation type on RouteCall")
@@ -289,7 +289,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
-	cr, step, _ := gpr.lr.getNextValidationStep(req.Me)
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetDelegate != cr.Type {
 			return errors.New("Wrong validation type on RouteCall")

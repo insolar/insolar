@@ -42,19 +42,19 @@ func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecor
 	lr.cbmu.Unlock()
 }
 
-func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseRecord, int, error) {
+func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseRecord, int) {
 	lr.cbrmu.Lock()
 	defer lr.cbrmu.Unlock()
 	r, ok := lr.cbr[ref]
 	if !ok {
-		return nil, -1, errors.New("ref not in validation mode")
+		return nil, -1
 	} else if r.RecordsLen <= r.Step {
-		return nil, r.Step, nil
+		return nil, r.Step
 	}
 	ret := r.Records[r.Step]
 	r.Step++
 	lr.cbr[ref] = r
-	return &ret, r.Step, nil
+	return &ret, r.Step
 }
 
 func (lr *LogicRunner) getCBR(ref core.RecordRef) (core.CaseBindReplay, bool) {
@@ -90,14 +90,14 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 	}()
 
 	for {
-		start, step, err := lr.getNextValidationStep(ref)
-		if err != nil {
-			return step, errors.Wrap(err, "no next step")
+		start, step := lr.getNextValidationStep(ref)
+		if step < 0 {
+			return step, errors.New("no validation data")
 		} else if start == nil { // finish
 			return step, nil
 		}
 		if start.Type != core.CaseRecordTypeStart {
-			return step, errors.Wrap(err, "step between two shores")
+			return step, errors.New("step between two shores")
 		}
 
 		msg := start.Resp.(core.Message)
@@ -105,8 +105,8 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 			return 0, errors.Wrap(err, "validation step failed")
 		}
 
-		if stop, step, err := lr.getNextValidationStep(ref); err != nil {
-			return 0, errors.Wrap(err, "validation container failed")
+		if stop, step := lr.getNextValidationStep(ref); step < 0 {
+			return 0, errors.New("validation container broken")
 		} else if stop.Type != core.CaseRecordTypeResult {
 			return step, errors.New("Validation stoped not on result")
 		}
