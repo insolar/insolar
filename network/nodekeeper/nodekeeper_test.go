@@ -136,3 +136,31 @@ func TestNodekeeper_discardTimedOutUnsync(t *testing.T) {
 	}
 	assert.Equal(t, 2, len(keeper.GetUnsync()))
 }
+
+func TestNodekeeper_cache(t *testing.T) {
+	keeper := &nodekeeper{
+		timeout:      time.Hour,
+		active:       make(map[core.RecordRef]*core.ActiveNode),
+		sync:         make([]*core.ActiveNode, 0),
+		unsync:       make([]*core.ActiveNode, 0),
+		unsyncGossip: make(map[core.RecordRef]*core.ActiveNode),
+	}
+	keeper.SetPulse(core.PulseNumber(0))
+	assert.False(t, keeper.isCached())
+	err := keeper.AddUnsync(newActiveNode(0, 0))
+	assert.NoError(t, err)
+	keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(1, 0)})
+	assert.NoError(t, err)
+	hash1, _, _ := keeper.GetUnsyncHash()
+	hash2, _, _ := keeper.GetUnsyncHash()
+	assert.Equal(t, hash1, hash2)
+	assert.True(t, keeper.isCached())
+	err = keeper.AddUnsync(newActiveNode(2, 0))
+	assert.Error(t, err)
+	keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(3, 0)})
+	assert.Error(t, err)
+	keeper.Sync(true)
+
+	keeper.SetPulse(core.PulseNumber(1))
+	assert.False(t, keeper.isCached())
+}
