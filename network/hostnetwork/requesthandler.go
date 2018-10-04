@@ -234,7 +234,7 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-func AuthorizationRequest(hostHandler hosthandler.HostHandler, targetID string) error {
+func CheckPublicKeyRequest(hostHandler hosthandler.HostHandler, targetID string) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
 		return errors.Wrap(err, "failed to build a context")
@@ -247,9 +247,10 @@ func AuthorizationRequest(hostHandler hosthandler.HostHandler, targetID string) 
 		return errors.Wrap(err, "couldn't find a target host")
 	}
 
-	// TODO: feel request fields.
 	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(targetHost).Type(packet.TypeCheckPublicKey).Request(&packet.RequestCheckPublicKey{}).Build()
+		Receiver(targetHost).Type(packet.TypeCheckPublicKey).
+		Request(&packet.RequestCheckPublicKey{}).
+		Build()
 
 	future, err := hostHandler.SendRequest(request)
 	if err != nil {
@@ -346,6 +347,13 @@ func SendRelayOwnership(hostHandler hosthandler.HostHandler, subnetIDs []string)
 	for _, id1 := range subnetIDs {
 		err := RelayOwnershipRequest(hostHandler, id1)
 		log.Errorln(err.Error())
+	}
+}
+
+func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet) {
+	_, err := hostHandler.SendRequest(request)
+	if err != nil {
+		log.Debugln(err)
 	}
 }
 

@@ -70,9 +70,25 @@ func DispatchPacketType(
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeCheckSignedNonce:
 		return processCheckSignedNonce(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeCheckPublicKey:
+		return processCheckPublicKey(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processCheckPublicKey(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder) (*packet.Packet, error) {
+	// TODO: do real check key.
+	exist := true
+	nonce, err := time.Now().MarshalBinary()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal nonce")
+	}
+	return packetBuilder.Response(&packet.ResponseCheckPublicKey{Nonce: nonce, Exist: exist}).Build(), nil
 }
 
 func processCheckSignedNonce(
@@ -80,8 +96,9 @@ func processCheckSignedNonce(
 	ctx hosthandler.Context,
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
+	// TODO: do real check sign.
 	parsed := true
-	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{parsed}).Build(), nil
+	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Success: parsed}).Build(), nil
 }
 
 func processGetRandomHosts(
