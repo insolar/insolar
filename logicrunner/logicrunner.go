@@ -18,13 +18,11 @@
 package logicrunner
 
 import (
+	"net"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
-
-	"net"
-
-	"sync"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
