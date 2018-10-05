@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -85,11 +86,11 @@ func (mb *messageBusMock) Stop() error {
 }
 
 func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
-	handler, ok := mb.handlers[m.Type()]
+	typ := m.Type()
+	handler, ok := mb.handlers[typ]
 	if !ok {
-		return nil, errors.New("no handler for this message type")
+		return nil, errors.New(fmt.Sprintf("no handler for this message type %s", typ))
 	}
-
 	return handler(m)
 }
 
