@@ -52,6 +52,31 @@ func (m *TransactionManager) Discard() {
 	m.txn.Discard()
 }
 
+// GetRequest returns request record from BadgerDB by *record.Reference.
+//
+// It returns ErrNotFound if the DB does not contain the key.
+func (m *TransactionManager) GetRequest(id *record.ID) (record.Request, error) {
+	rec, err := m.GetRecord(id)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: return error if record is not a request.
+	req := rec.(record.Request)
+	return req, nil
+}
+
+// SetRequest stores request record in BadgerDB and returns *record.ID of new record.
+//
+// If record exists SetRequest just returns *record.ID without error.
+func (m *TransactionManager) SetRequest(req record.Request) (*record.ID, error) {
+	log.Debugf("SetRequest call")
+	id, err := m.SetRecord(req)
+	if err != nil && err != ErrOverride {
+		return nil, err
+	}
+	return id, nil
+}
+
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
@@ -85,9 +110,17 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var h []byte
+	if req, ok := rec.(record.Request); ok {
+		// we should calculate request hashes consistently with logicrunner.
+		h = record.HashBytes(req.GetPayload())
+	} else {
+		h = raw.Hash()
+	}
 	id := record.ID{
 		Pulse: m.db.GetCurrentPulse(),
-		Hash:  raw.Hash(),
+		Hash:  h,
 	}
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
 	_, geterr := m.txn.Get(k)

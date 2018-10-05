@@ -79,6 +79,11 @@ func (raw *Raw) Hash() []byte {
 	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
 }
 
+// HashBytes generates hash for byte slice.
+func HashBytes(payload []byte) []byte {
+	return hash.SHA3hash224(hashableBytes(payload))
+}
+
 // ToRecord decodes Raw to Record.
 func (raw *Raw) ToRecord() Record {
 	cborH := &codec.CborHandle{}
