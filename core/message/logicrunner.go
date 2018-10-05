@@ -112,6 +112,9 @@ func (e *CallConstructor) Type() core.MessageType {
 // TODO:
 // implement case for stateful call (construct delegates?) -> return &e.ParentRef
 func (e *CallConstructor) Target() *core.RecordRef {
+	if e.SaveAs == Delegate {
+		return &e.ParentRef
+	}
 	requestRef := core.ComposeRecordRef(
 		core.RecordID{},
 		core.GenRecordID(e.PulseNum, hash.SHA3Bytes(e.Payload())),
