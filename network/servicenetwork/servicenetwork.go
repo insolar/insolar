@@ -138,9 +138,12 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	network.bootstrap()
 
 	log.Infoln("Searching for an active nodes...")
-	network.hostNetwork.GetActiveNodes()
+	err := network.hostNetwork.GetActiveNodes()
+	if err != nil {
+		return errors.Wrap(err, "failed to get active nodes")
+	}
 
-	err := network.hostNetwork.ObtainIP()
+	err = network.hostNetwork.ObtainIP()
 	if err != nil {
 		return errors.Wrap(err, "Failed to ObtainIP")
 	}
