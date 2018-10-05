@@ -257,14 +257,12 @@ func TestExecution(t *testing.T) {
 
 	resp, err := lr.Execute(&message.CallMethod{ObjectRef: dataRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*reply.Common).Data)
-	assert.Equal(t, []byte("res"), resp.(*reply.Common).Result)
+	assert.Equal(t, []byte("data"), resp.(*reply.CallMethod).Data)
+	assert.Equal(t, []byte("res"), resp.(*reply.CallMethod).Result)
 
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
 	resp, err = lr.Execute(&message.CallConstructor{ClassRef: classRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*reply.Common).Data)
-	assert.Equal(t, []byte(nil), resp.(*reply.Common).Result)
 }
 
 func TestContractCallingContract(t *testing.T) {
@@ -626,10 +624,8 @@ func New(n int) *Child {
 		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
 	})
 	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
-
-	ValidateAllResults(t, lr)
 
 	resp, err = lr.Execute(&message.CallMethod{
 		ObjectRef: *contract,
@@ -640,7 +636,7 @@ func New(n int) *Child {
 	ValidateAllResults(t, lr)
 
 	assert.NoError(t, err, "contract call")
-	r = testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	r = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 }
@@ -713,7 +709,7 @@ func (r *Two) AnError() error {
 
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
-	err = codec.NewDecoderBytes(resp.(*reply.Common).Result, ch).Decode(&res)
+	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 }
@@ -741,7 +737,7 @@ func (s *Caller) SignedCall(ref string, method string, params []interface{}) int
 		Arguments: testutil.CBORMarshal(s.t, []interface{}{ref, method, params, seed, sign}),
 	})
 	assert.NoError(s.t, err, "contract call")
-	res := testutil.CBORUnMarshal(s.t, resp.(*reply.Common).Result)
+	res := testutil.CBORUnMarshal(s.t, resp.(*reply.CallMethod).Result)
 	assert.Nil(s.t, res.([]interface{})[1])
 	return res.([]interface{})[0]
 }
@@ -791,7 +787,7 @@ func TestRootDomainContract(t *testing.T) {
 		Arguments: testutil.CBORMarshal(t, []interface{}{rootPubKey}),
 	})
 	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	rootRef := r.([]interface{})[0].(string)
 	assert.NotEqual(t, "", rootRef)
 
@@ -878,7 +874,7 @@ func (c *Child) GetNum() int {
 			Arguments: testutil.CBORMarshal(b, []interface{}{child}),
 		})
 		assert.NoError(b, err, "parent call")
-		r := testutil.CBORUnMarshal(b, resp.(*reply.Common).Result)
+		r := testutil.CBORUnMarshal(b, resp.(*reply.CallMethod).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
 }

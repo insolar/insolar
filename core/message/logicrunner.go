@@ -80,9 +80,18 @@ func (e *CallMethod) Payload() []byte {
 	return MustSerializeBytes(e)
 }
 
+type SaveAs int
+
+const (
+	Child SaveAs = iota
+	Delegate
+)
+
 // CallConstructor is a message for calling constructor and obtain its reply
 type CallConstructor struct {
 	BaseLogicMessage
+	ParentRef core.RecordRef
+	SaveAs    SaveAs
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
@@ -101,7 +110,7 @@ func (e *CallConstructor) Type() core.MessageType {
 // Target returns request ref as routing target.
 //
 // TODO:
-// implement case for stateful call (construct delegates) -> return &e.ClassRef
+// implement case for stateful call (construct delegates?) -> return &e.ParentRef
 func (e *CallConstructor) Target() *core.RecordRef {
 	requestRef := core.ComposeRecordRef(
 		core.RecordID{},

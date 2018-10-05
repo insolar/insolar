@@ -229,7 +229,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 		return nil, errors.Wrap(err, "no executor registered")
 	}
 
-	executer := func() (*reply.Common, error) {
+	executer := func() (*reply.CallMethod, error) {
 		newData, result, err := executor.CallMethod(
 			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
 		)
@@ -246,7 +246,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 			}
 		}
 
-		re := &reply.Common{Data: newData, Result: result}
+		re := &reply.CallMethod{Data: newData, Result: result}
 
 		vb.End(e.ObjectRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
@@ -266,7 +266,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 				log.Error(err)
 			}
 		}()
-		return &reply.Common{}, nil
+		return &reply.CallMethod{}, nil
 	}
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 }
@@ -298,14 +298,32 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		return nil, errors.Wrap(err, "executer error")
 	}
 
-	re := &reply.Common{Data: newData}
+	switch m.SaveAs {
+	case message.Child:
+		ref, err := lr.ArtifactManager.ActivateObject(
+			core.RecordRef{}, core.RandomRef(), m.ClassRef, m.ParentRef, newData,
+		)
 
-	vb.End(m.ClassRef, core.CaseRecord{
-		Type: core.CaseRecordTypeResult,
-		Resp: re,
-	})
+		vb.End(m.ClassRef, core.CaseRecord{
+			Type: core.CaseRecordTypeResult,
+			Resp: &reply.CallConstructor{Object: ref},
+		})
 
-	return re, nil
+		return &reply.CallConstructor{Object: ref}, err
+	case message.Delegate:
+		ref, err := lr.ArtifactManager.ActivateObjectDelegate(
+			core.RecordRef{}, core.RandomRef(), m.ClassRef, m.ParentRef, newData,
+		)
+
+		vb.End(m.ClassRef, core.CaseRecord{
+			Type: core.CaseRecordTypeResult,
+			Resp: &reply.CallConstructor{Object: ref},
+		})
+
+		return &reply.CallConstructor{Object: ref}, err
+	default:
+		return nil, errors.New("unsupported type of save object")
+	}
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
