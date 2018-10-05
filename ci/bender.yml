@@ -25,15 +25,15 @@ resources:
         curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' >> ${SMUGGLER_OUTPUT_DIR}/metadata
 
 - name: pull-requests
-    webhook_token: helloinsolar
-    type: smuggler
-    source:
-      smuggler_debug: true
-      commands:
-        check: |
-          curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '.[] | .url ' | sed s/\"//g > ${SMUGGLER_OUTPUT_DIR}/versions
-        in: |
-          curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '{ "branches": [.[] | {number: .number, title: .title} ]} '  > ${SMUGGLER_DESTINATION_DIR}/pulls.json
+  webhook_token: helloinsolar
+  type: smuggler
+  source:
+    smuggler_debug: true
+    commands:
+      check: |
+        curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '.[] | .url ' | sed s/\"//g > ${SMUGGLER_OUTPUT_DIR}/versions
+      in: |
+        curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '{ "pulls": [.[] | {number: .number, title: .title} ]} '  > ${SMUGGLER_DESTINATION_DIR}/pulls.json
 
 - name: deploy
   type: concourse-pipeline
