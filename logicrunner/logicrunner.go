@@ -286,7 +286,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		)
 		return &reply.CallConstructor{Object: ref}, err
 	default:
-		return &reply.CallConstructor{}, err
+		return nil, errors.New("unsupported type of save object")
 	}
 }
 
