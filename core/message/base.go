@@ -108,7 +108,20 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	}
 }
 
-// Serialize returns encoded message.
+// MustSerializeBytes returns encoded core.Message, panics on error.
+func MustSerializeBytes(msg core.Message) []byte {
+	r, err := Serialize(msg)
+	if err != nil {
+		panic(err)
+	}
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// Serialize returns io.Reader on buffer with encoded core.Message.
 func Serialize(msg core.Message) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	_, err := buff.Write([]byte{byte(msg.Type())})
