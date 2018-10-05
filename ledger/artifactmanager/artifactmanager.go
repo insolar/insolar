@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -46,6 +47,38 @@ func (m *LedgerArtifactManager) Link(components core.Components) error {
 // Root record is the parent for all top-level records.
 func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
 	return m.db.RootRef().CoreRef()
+}
+
+// GenRequest returns core.RecordRef for provided pulse number and request message.
+//
+// Exists for sharing hashing logic with AM consumers (i.e. LogicRunner).
+//
+// FIXME: what happens if pulse at store time and gen time are different?
+func (*LedgerArtifactManager) GenRequest(pn core.PulseNumber, reqmsg core.RequestMessage) core.RecordRef {
+	id := &record.ID{
+		Pulse: pn,
+		Hash:  record.HashBytes(reqmsg.Payload()),
+	}
+	var tagretRef core.RecordRef
+	tagretRef.SetRecord(*id.CoreID())
+	return tagretRef
+}
+
+// RegisterRequest sends message for request registration,
+// returns request record Ref if request successfuly created or already exists.
+func (m *LedgerArtifactManager) RegisterRequest(
+	target core.RecordRef, msg core.RequestMessage,
+) (*core.RecordRef, error) {
+	id, err := m.fetchID(&message.RequestCall{
+		RequestMessage: msg,
+		TargetRef:      target,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var tagretRef core.RecordRef
+	(&tagretRef).SetRecord(*id)
+	return &tagretRef, nil
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.

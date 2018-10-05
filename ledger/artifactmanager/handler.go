@@ -55,8 +55,23 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(message.TypeDeactivateObject, h.handleDeactivateObject)
 	bus.MustRegister(message.TypeUpdateObject, h.handleUpdateObject)
 	bus.MustRegister(message.TypeRegisterChild, h.handleRegisterChild)
+	bus.MustRegister(message.TypeRequestCall, h.handleRegisterRequest)
 
 	return nil
+}
+
+func (h *MessageHandler) handleRegisterRequest(
+	genericMsg core.Message,
+) (core.Reply, error) {
+	msg := genericMsg.(*message.RequestCall)
+	requestRec := &record.CallRequest{
+		Payload: msg.Payload(),
+	}
+	id, err := h.db.SetRequest(requestRec)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to set request record")
+	}
+	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {
