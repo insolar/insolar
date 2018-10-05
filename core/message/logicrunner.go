@@ -49,6 +49,7 @@ func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &e.Caller
 }
 
+// TargetRole returns RoleVirtualExecutor as routing target role.
 func (e *BaseLogicMessage) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
@@ -66,10 +67,12 @@ func (e *CallMethod) GetReference() core.RecordRef {
 	return e.ObjectRef
 }
 
+// Type returns TypeCallMethod.
 func (e *CallMethod) Type() core.MessageType {
 	return TypeCallMethod
 }
 
+// Target returns ObjectRef as routing target.
 func (e *CallMethod) Target() *core.RecordRef {
 	return &e.ObjectRef
 }
@@ -95,10 +98,12 @@ func (e *CallConstructor) GetReference() core.RecordRef {
 	return e.ClassRef
 }
 
+// Type returns TypeCallConstructor.
 func (e *CallConstructor) Type() core.MessageType {
 	return TypeCallConstructor
 }
 
+// Target returns ClassRef as routing target.
 func (e *CallConstructor) Target() *core.RecordRef {
 	return &e.ClassRef
 }
