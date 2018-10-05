@@ -27,21 +27,22 @@ resources:
     pull_request: {{ pull.number }}
     #ssh_key: ((meta.github.private_key))
     type: get
-{% endfor %}
-- name: status
+- name: status-{{ pull.number }}
   type: pull-request
   source:
     owner: ((meta.github.owner))
     repo: ((meta.github.repo))
+    pull_request: {{ pull.number }}
     access_token: ((meta.github.access_token))
     type: put
+{% endfor %}
 
 jobs:
 {% for pull in pulls %}
 - name: unit-{{ pull.number }}
   public: true
   plan:
-  - put: status
+  - put: status-{{ pull.number }}
     params:
       state: pending
       pull_request: {{ pull.number }}
@@ -80,12 +81,12 @@ jobs:
              dep ensure
              go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
     on_success:
-      put: status
+      put: status-{{ pull.number }}
       params:
         pull_request: {{ pull.number }}
         status: success
     on_failure:
-      put: status
+      put: status-{{ pull.number }}
       params:
         pull_request: {{ pull.number }}
         status: failure
