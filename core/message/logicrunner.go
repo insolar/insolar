@@ -18,7 +18,6 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/hash"
 )
 
 // MethodReturnMode ENUM to set when method returns its result
@@ -108,18 +107,11 @@ func (e *CallConstructor) Type() core.MessageType {
 }
 
 // Target returns request ref as routing target.
-//
-// TODO:
-// implement case for stateful call (construct delegates?) -> return &e.ParentRef
 func (e *CallConstructor) Target() *core.RecordRef {
 	if e.SaveAs == Delegate {
 		return &e.ParentRef
 	}
-	requestRef := core.ComposeRecordRef(
-		core.RecordID{},
-		core.GenRecordID(e.PulseNum, hash.SHA3Bytes(e.Payload())),
-	)
-	return &requestRef
+	return core.GenRequest(e.PulseNum, e.Payload())
 }
 
 // Payload returns hashable payload of record.

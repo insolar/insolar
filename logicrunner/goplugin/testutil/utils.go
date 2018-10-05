@@ -189,11 +189,6 @@ func (t *TestArtifactManager) Stop() error { return nil }
 // RootRef implementation for tests
 func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef{} }
 
-// GenRequest implementation for tests
-func (t *TestArtifactManager) GenRequest(pn core.PulseNumber, reqmsg core.RequestMessage) (recref core.RecordRef) {
-	return
-}
-
 // RegisterRequest implementation for tests
 func (t *TestArtifactManager) RegisterRequest(target core.RecordRef, message core.RequestMessage) (*core.RecordRef, error) {
 	return nil, errors.New("RegisterRequest not implemented onTestArtifactManager ")

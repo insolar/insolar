@@ -20,6 +20,8 @@ import (
 	"crypto/rand"
 
 	"github.com/jbenet/go-base58"
+
+	"github.com/insolar/insolar/core/hash"
 )
 
 const (
@@ -93,6 +95,15 @@ func (ref RecordRef) Domain() RecordID {
 	var domain RecordID
 	copy(domain[:], ref[RecordIDSize:])
 	return domain
+}
+
+// GenRequest calculates RecordRef for request message from pulse number and request's payload.
+func GenRequest(pn PulseNumber, payload []byte) *RecordRef {
+	ref := ComposeRecordRef(
+		RecordID{},
+		GenRecordID(pn, hash.SHA3Bytes(payload)),
+	)
+	return &ref
 }
 
 // NewRefFromBase58 deserializes reference from base58 encoded string.

@@ -18,10 +18,8 @@ package artifactmanager
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/hash"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -48,21 +46,6 @@ func (m *LedgerArtifactManager) Link(components core.Components) error {
 // Root record is the parent for all top-level records.
 func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
 	return m.db.RootRef().CoreRef()
-}
-
-// GenRequest returns core.RecordRef for provided pulse number and request message.
-//
-// Exists for sharing hashing logic with AM consumers (i.e. LogicRunner).
-//
-// FIXME: what happens if pulse at store time and gen time are different?
-func (*LedgerArtifactManager) GenRequest(pn core.PulseNumber, reqmsg core.RequestMessage) core.RecordRef {
-	id := &record.ID{
-		Pulse: pn,
-		Hash:  hash.SHA3Bytes(reqmsg.Payload()),
-	}
-	var tagretRef core.RecordRef
-	tagretRef.SetRecord(*id.CoreID())
-	return tagretRef
 }
 
 // RegisterRequest sends message for request registration,

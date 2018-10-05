@@ -61,10 +61,6 @@ type ArtifactManager interface {
 	// Root record is the parent for all top-level records.
 	RootRef() *RecordRef
 
-	// GenRequest calculates RecordRef for request message.
-	// (used by VM on calling side)
-	GenRequest(pn PulseNumber, reqmsg RequestMessage) RecordRef
-
 	// RegisterRequest creates or check call request record and returns it RecordRef.
 	// (used by VM on executing side)
 	RegisterRequest(target RecordRef, message RequestMessage) (*RecordRef, error)

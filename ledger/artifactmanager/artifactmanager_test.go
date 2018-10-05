@@ -123,7 +123,7 @@ func TestLedgerArtifactManager_RegisterRequest_ConstructorCall(t *testing.T) {
 	defer cleaner()
 
 	msg := &message.CallConstructor{}
-	tagretRef := td.manager.GenRequest(0, msg)
+	tagretRef := core.GenRequest(0, msg.Payload())
 	reqCoreRef1, err := td.manager.RegisterRequest(tagretRef, msg)
 	assert.NoError(t, err)
 	reqCoreID := reqCoreRef1.GetRecordID()
@@ -153,7 +153,7 @@ func TestLedgerArtifactManager_RegisterRequest_MethodCall(t *testing.T) {
 
 	msg := &message.CallMethod{}
 	// FIXME: just use any random tagretRef to avoid future confusion
-	tagretRef := td.manager.GenRequest(0, msg)
+	tagretRef := core.GenRequest(0, msg.Payload())
 	reqCoreRef1, err := td.manager.RegisterRequest(tagretRef, msg)
 	assert.NoError(t, err)
 	reqCoreID := reqCoreRef1.GetRecordID()
