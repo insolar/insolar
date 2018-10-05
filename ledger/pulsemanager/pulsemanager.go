@@ -63,7 +63,19 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 		return err
 	}
 
-	_, err = m.bus.Send(&message.JetDrop{Drop: dropSerialized})
+	var records [][]byte
+	m.db.ProcessSlot(pulse.PulseNumber, func(it storage.Iterator) error {
+		for i := 1; it.Next(); i++ {
+			rec, err := it.Value()
+			if err != nil {
+				return err
+			}
+			records = append(records, rec)
+		}
+		return nil
+	})
+
+	_, err = m.bus.Send(&message.JetDrop{Drop: dropSerialized, Records: records})
 	if err != nil {
 		return err
 	}
