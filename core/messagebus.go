@@ -64,3 +64,46 @@ type MessageBus interface {
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
 type MessageHandler func(Message) (Reply, error)
+
+//go:generate stringer -type=MessageType
+const (
+	// Logicrunner
+
+	// TypeCallMethod calls method and returns result
+	TypeCallMethod MessageType = iota
+	// TypeCallConstructor is a message for calling constructor and obtain its reply
+	TypeCallConstructor
+
+	// Ledger
+
+	// TypeRequestCall registers call on storage.
+	TypeRequestCall
+	// TypeGetCode retrieves code from storage.
+	TypeGetCode
+	// TypeGetClass retrieves class from storage.
+	TypeGetClass
+	// TypeGetObject retrieves object from storage.
+	TypeGetObject
+	// TypeGetDelegate retrieves object represented as provided class.
+	TypeGetDelegate
+	// TypeDeclareType creates new type.
+	TypeDeclareType
+	// TypeDeployCode creates new code.
+	TypeDeployCode
+	// TypeActivateClass activates class.
+	TypeActivateClass
+	// TypeDeactivateClass deactivates class.
+	TypeDeactivateClass
+	// TypeUpdateClass amends class.
+	TypeUpdateClass
+	// TypeActivateObject activates object.
+	TypeActivateObject
+	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
+	TypeActivateObjectDelegate
+	// TypeDeactivateObject deactivates object.
+	TypeDeactivateObject
+	// TypeUpdateObject amends object.
+	TypeUpdateObject
+	// TypeRegisterChild registers child on the parent object.
+	TypeRegisterChild
+)

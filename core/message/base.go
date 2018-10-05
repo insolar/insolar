@@ -28,86 +28,44 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-const (
-	// Logicrunner
-
-	// TypeCallMethod calls method and returns result
-	TypeCallMethod = core.MessageType(iota)
-	// TypeCallConstructor is a message for calling constructor and obtain its reply
-	TypeCallConstructor
-
-	// Ledger
-
-	// TypeRequestCall registers call on storage.
-	TypeRequestCall
-	// TypeGetCode retrieves code from storage.
-	TypeGetCode
-	// TypeGetClass retrieves class from storage.
-	TypeGetClass
-	// TypeGetObject retrieves object from storage.
-	TypeGetObject
-	// TypeGetDelegate retrieves object represented as provided class.
-	TypeGetDelegate
-	// TypeDeclareType creates new type.
-	TypeDeclareType
-	// TypeDeployCode creates new code.
-	TypeDeployCode
-	// TypeActivateClass activates class.
-	TypeActivateClass
-	// TypeDeactivateClass deactivates class.
-	TypeDeactivateClass
-	// TypeUpdateClass amends class.
-	TypeUpdateClass
-	// TypeActivateObject activates object.
-	TypeActivateObject
-	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
-	TypeActivateObjectDelegate
-	// TypeDeactivateObject deactivates object.
-	TypeDeactivateObject
-	// TypeUpdateObject amends object.
-	TypeUpdateObject
-	// TypeRegisterChild registers child on the parent object.
-	TypeRegisterChild
-)
-
 // GetEmptyMessage constructs specified message
 func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	switch mt {
 	// Logicrunner
-	case TypeCallMethod:
+	case core.TypeCallMethod:
 		return &CallMethod{}, nil
-	case TypeCallConstructor:
+	case core.TypeCallConstructor:
 		return &CallConstructor{}, nil
 	// Ledger
-	case TypeRequestCall:
+	case core.TypeRequestCall:
 		return &RequestCall{}, nil
-	case TypeGetCode:
+	case core.TypeGetCode:
 		return &GetCode{}, nil
-	case TypeGetClass:
+	case core.TypeGetClass:
 		return &GetClass{}, nil
-	case TypeGetObject:
+	case core.TypeGetObject:
 		return &GetObject{}, nil
-	case TypeGetDelegate:
+	case core.TypeGetDelegate:
 		return &GetDelegate{}, nil
-	case TypeDeclareType:
+	case core.TypeDeclareType:
 		return &DeclareType{}, nil
-	case TypeDeployCode:
+	case core.TypeDeployCode:
 		return &DeployCode{}, nil
-	case TypeActivateClass:
+	case core.TypeActivateClass:
 		return &ActivateClass{}, nil
-	case TypeDeactivateClass:
+	case core.TypeDeactivateClass:
 		return &DeactivateClass{}, nil
-	case TypeUpdateClass:
+	case core.TypeUpdateClass:
 		return &UpdateClass{}, nil
-	case TypeActivateObject:
+	case core.TypeActivateObject:
 		return &ActivateObject{}, nil
-	case TypeActivateObjectDelegate:
+	case core.TypeActivateObjectDelegate:
 		return &ActivateObjectDelegate{}, nil
-	case TypeDeactivateObject:
+	case core.TypeDeactivateObject:
 		return &DeactivateObject{}, nil
-	case TypeUpdateObject:
+	case core.TypeUpdateObject:
 		return &UpdateObject{}, nil
-	case TypeRegisterChild:
+	case core.TypeRegisterChild:
 		return &RegisterChild{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented message type %d", mt)

@@ -66,7 +66,7 @@ func (e *CallMethod) GetReference() core.RecordRef {
 
 // Type returns TypeCallMethod.
 func (e *CallMethod) Type() core.MessageType {
-	return TypeCallMethod
+	return core.TypeCallMethod
 }
 
 // Target returns ObjectRef as routing target.
@@ -93,7 +93,7 @@ func (e *CallConstructor) GetReference() core.RecordRef {
 
 // Type returns TypeCallConstructor.
 func (e *CallConstructor) Type() core.MessageType {
-	return TypeCallConstructor
+	return core.TypeCallConstructor
 }
 
 // Target returns ClassRef as routing target.
