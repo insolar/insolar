@@ -17,10 +17,12 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"reflect"
 
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -49,15 +51,18 @@ type RequestHandler struct {
 	params              *Params
 	messageBus          core.MessageBus
 	rootDomainReference core.RecordRef
+	seedManager         *seedmanager.SeedManager
+	seedGenerator       seedmanager.SeedGenerator
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, messageBus core.MessageBus, rootDomainReference core.RecordRef) *RequestHandler {
+func NewRequestHandler(params *Params, messageBus core.MessageBus, rootDomainReference core.RecordRef, smanager *seedmanager.SeedManager) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
 		messageBus:          messageBus,
 		rootDomainReference: rootDomainReference,
+		seedManager:         smanager,
 	}
 }
 
@@ -298,6 +303,20 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 	}
 
 	result["is_authorized"] = isSent
+
+	return result, nil
+}
+
+// ProcessGetSeed processes get seed request
+func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	seed, err := rh.seedGenerator.Next()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessGetSeed ]")
+	}
+	rh.seedManager.Add(*seed)
+
+	result["seed"] = base64.StdEncoding.EncodeToString(seed[:])
 
 	return result, nil
 }
