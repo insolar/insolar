@@ -40,8 +40,8 @@ resources:
   source:
     teams:
     - name: insolar
-      username: ((username))
-      password: ((password))
+      username: ((meta.concourse.username))
+      password: ((meta.concourse.password))
 
 - name: insolar
   type: git
