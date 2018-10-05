@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
@@ -114,7 +115,7 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	var h []byte
 	if req, ok := rec.(record.Request); ok {
 		// we should calculate request hashes consistently with logicrunner.
-		h = record.HashBytes(req.GetPayload())
+		h = hash.HashBytes(req.GetPayload())
 	} else {
 		h = raw.Hash()
 	}

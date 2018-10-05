@@ -22,7 +22,7 @@ type Request interface {
 	GetPayload() []byte
 }
 
-// CallRequest persist requests.
+// CallRequest is a contract execution request.
 type CallRequest struct {
 	Payload []byte
 }

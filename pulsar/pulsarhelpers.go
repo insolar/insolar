@@ -26,10 +26,10 @@ import (
 	"sort"
 
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/hash"
-	"golang.org/x/crypto/sha3"
+	"github.com/insolar/insolar/core/hash"
 )
 
 func checkPayloadSignature(request *Payload) (bool, error) {

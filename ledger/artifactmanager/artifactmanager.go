@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/hash"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/record"
@@ -57,7 +58,7 @@ func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
 func (*LedgerArtifactManager) GenRequest(pn core.PulseNumber, reqmsg core.RequestMessage) core.RecordRef {
 	id := &record.ID{
 		Pulse: pn,
-		Hash:  record.HashBytes(reqmsg.Payload()),
+		Hash:  hash.HashBytes(reqmsg.Payload()),
 	}
 	var tagretRef core.RecordRef
 	tagretRef.SetRecord(*id.CoreID())

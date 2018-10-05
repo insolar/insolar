@@ -21,11 +21,11 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/ledger/hash"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"

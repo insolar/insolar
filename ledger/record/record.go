@@ -21,7 +21,7 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/hash"
+	"github.com/insolar/insolar/core/hash"
 )
 
 // ProjectionType is a "view filter" for record.

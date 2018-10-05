@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/hash"
 	"github.com/ugorji/go/codec"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/hash"
 )
 
 // Raw struct contains raw serialized record.
@@ -77,11 +78,6 @@ func (b hashableBytes) WriteHash(w io.Writer) {
 // Hash generates hash for Raw record.
 func (raw *Raw) Hash() []byte {
 	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
-}
-
-// HashBytes generates hash for byte slice.
-func HashBytes(payload []byte) []byte {
-	return hash.SHA3hash224(hashableBytes(payload))
 }
 
 // ToRecord decodes Raw to Record.
