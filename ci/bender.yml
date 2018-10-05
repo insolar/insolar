@@ -24,6 +24,17 @@ resources:
         echo "date=$(date)" > ${SMUGGLER_OUTPUT_DIR}/metadata
         curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' >> ${SMUGGLER_OUTPUT_DIR}/metadata
 
+- name: pull-requests
+    webhook_token: helloinsolar
+    type: smuggler
+    source:
+      smuggler_debug: true
+      commands:
+        check: |
+          curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '.[] | .url ' | sed s/\"//g > ${SMUGGLER_OUTPUT_DIR}/versions
+        in: |
+          curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '{ "branches": [.[] | {number: .number, title: .title} ]} '  > ${SMUGGLER_DESTINATION_DIR}/pulls.json
+
 - name: deploy
   type: concourse-pipeline
   source:
@@ -41,7 +52,7 @@ resources:
       - 'ci'
 
 jobs:
-- name: magic
+- name: branches
   plan:
   - get: branches
     trigger: true
@@ -76,4 +87,38 @@ jobs:
           team: insolar
           config_file: pipelines/branches.yml
 
+- name: pull-requests
+  plan:
+    - get: pull-requests
+      trigger: true
+    - get: insolar
+      trigger: false
+    - task: generate-pulls
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: chemist/alpine-jinja-cli
+        inputs:
+          - name: pull-requests
+          - name: insolar
+        outputs:
+          - name: pipelines
+        run:
+          path: sh
+          args:
+            - -ec
+            - |
+              echo generate pull requests
+              echo "Input: $(cat pull-requests/pulls.json)"
+              jinja2 insolar/ci/templates/pull-requests.yml.j2 pull-requests/pulls.json > pipelines/pulls.yml
+              echo "Output: "
+              cat pipelines/pulls.yml
+    - put: deploy
+      params:
+        pipelines:
+          - name: pull-requests
+            team: insolar
+            config_file: pipelines/pulls.yml
 
