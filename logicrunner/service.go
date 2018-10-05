@@ -19,6 +19,7 @@
 package logicrunner
 
 import (
+	"bytes"
 	"net"
 	"net/rpc"
 
@@ -71,9 +72,9 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
-// MakeBaseEvent makes base of logicrunner event from base of up request
-func MakeBaseEvent(req rpctypes.UpBaseReq) message.BaseLogicEvent {
-	return message.BaseLogicEvent{
+// MakeBaseMessage makes base of logicrunner event from base of up request
+func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
+	return message.BaseLogicMessage{
 		Caller: req.Me,
 	}
 }
@@ -84,6 +85,21 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		return errors.New("event bus was not set during initialization")
 	}
 
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeRouteCall != cr.Type {
+			return errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(req)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return errors.New("Wrong validation sig on RouteCall")
+		}
+
+		rep.Result = cr.Resp.(core.Arguments)
+		return nil
+
+	}
+
 	var mode message.MethodReturnMode
 	if req.Wait {
 		mode = message.ReturnResult
@@ -92,11 +108,11 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	}
 
 	msg := &message.CallMethod{
-		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
-		ReturnMode:     mode,
-		ObjectRef:      req.Object,
-		Method:         req.Method,
-		Arguments:      req.Arguments,
+		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
+		ReturnMode:       mode,
+		ObjectRef:        req.Object,
+		Method:           req.Method,
+		Arguments:        req.Arguments,
 	}
 
 	res, err := gpr.lr.MessageBus.Send(msg)
@@ -104,12 +120,13 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
-		Type:   CaseRecordTypeRouteCall,
-		ReqSig: HashInterface(req),
-		Resp:   rep,
-	})
 	rep.Result = res.(*reply.Common).Result
+
+	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
+		Type:   core.CaseRecordTypeRouteCall,
+		ReqSig: HashInterface(req),
+		Resp:   rep.Result,
+	})
 
 	return nil
 }
@@ -120,46 +137,93 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rp
 		return errors.New("event bus was not set during initialization")
 	}
 
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeRouteCall != cr.Type {
+			return errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(req)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return errors.New("Wrong validation sig on RouteCall")
+		}
+
+		rep.Data = cr.Resp.([]byte)
+		return nil
+
+	}
+
 	msg := &message.CallConstructor{
-		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
-		ClassRef:       req.Reference,
-		Name:           req.Constructor,
-		Arguments:      req.Arguments,
+		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
+		ClassRef:         req.Reference,
+		Name:             req.Constructor,
+		Arguments:        req.Arguments,
 	}
 
 	res, err := gpr.lr.MessageBus.Send(msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
-	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
-		Type:   CaseRecordTypeRouteCall,
-		ReqSig: HashInterface(req),
-		Resp:   rep,
-	})
+
 	rep.Data = res.(*reply.Common).Data
+	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
+		Type:   core.CaseRecordTypeRouteCall,
+		ReqSig: HashInterface(req),
+		Resp:   rep.Data,
+	})
 	return nil
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
+func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeSaveAsChild != cr.Type {
+			return errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(req)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return errors.New("Wrong validation sig on RouteCall")
+		}
+
+		rep.Reference = cr.Resp.(core.RecordRef)
+		return nil
+
+	}
+
 	ref, err := gpr.lr.ArtifactManager.ActivateObject(
 		core.RecordRef{}, core.RandomRef(), req.Class, req.Parent, req.Data,
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object")
 	}
-	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
-		Type:   CaseRecordTypeSaveAsChild,
+	rep.Reference = *ref
+
+	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
+		Type:   core.CaseRecordTypeSaveAsChild,
 		ReqSig: HashInterface(req),
-		Resp:   reply,
+		Resp:   rep.Reference,
 	})
-	reply.Reference = *ref
 	return nil
 }
 
 // GetObjChildren is an RPC returns set of object children
-func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes.UpGetObjChildrenResp) error {
+func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.UpGetObjChildrenResp) error {
 	// TODO: INS-408
+
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeGetObjChildren != cr.Type {
+			return errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(req)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return errors.New("Wrong validation sig on RouteCall")
+		}
+
+		rep.Children = cr.Resp.([]core.RecordRef)
+		return nil
+	}
+
 	am := gpr.lr.ArtifactManager
 	obj, err := am.GetObject(req.Obj, nil)
 	if err != nil {
@@ -181,46 +245,73 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 		}
 		ref := cd.HeadRef()
 		if ref.Equal(req.Class) {
-			reply.Children = append(reply.Children, r)
+			rep.Children = append(rep.Children, r)
 		}
 	}
-	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{ // bad idea, we can store gadzillion of children
-		Type:   CaseRecordTypeGetObjChildren,
+	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{ // bad idea, we can store gadzillion of children
+		Type:   core.CaseRecordTypeGetObjChildren,
 		ReqSig: HashInterface(req),
-		Resp:   reply,
+		Resp:   rep.Children,
 	})
 	return nil
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
+func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
+			return errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(req)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return errors.New("Wrong validation sig on RouteCall")
+		}
+
+		rep.Reference = cr.Resp.(core.RecordRef)
+		return nil
+	}
+
 	ref, err := gpr.lr.ArtifactManager.ActivateObjectDelegate(
 		core.RecordRef{}, core.RandomRef(), req.Class, req.Into, req.Data,
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save delegate")
 	}
-	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
-		Type:   CaseRecordTypeSaveAsDelegate,
+	rep.Reference = *ref
+	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
+		Type:   core.CaseRecordTypeSaveAsDelegate,
 		ReqSig: HashInterface(req),
-		Resp:   reply,
+		Resp:   rep.Reference,
 	})
-	reply.Reference = *ref
 	return nil
 }
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, reply *rpctypes.UpGetDelegateResp) error {
+func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeGetDelegate != cr.Type {
+			return errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(req)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return errors.New("Wrong validation sig on RouteCall")
+		}
+
+		rep.Object = cr.Resp.(core.RecordRef)
+		return nil
+	}
 	am := gpr.lr.ArtifactManager
 	ref, err := am.GetDelegate(req.Object, req.OfType)
 	if err != nil {
 		return err
 	}
-	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
-		Type:   CaseRecordTypeGetDelegate,
+	rep.Object = *ref
+	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
+		Type:   core.CaseRecordTypeGetDelegate,
 		ReqSig: HashInterface(req),
-		Resp:   reply,
+		Resp:   rep.Object,
 	})
-	reply.Object = *ref
 	return nil
 }

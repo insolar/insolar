@@ -18,11 +18,11 @@
 package logicrunner
 
 import (
+	"net"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
-
-	"net"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -35,13 +35,16 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
-	ArtifactManager core.ArtifactManager
-	MessageBus      core.MessageBus
-	machinePrefs    []core.MachineType
-	Cfg             *configuration.LogicRunner
-	cb              CaseBind
-	sock            net.Listener
+	Executors            [core.MachineTypesLastID]core.MachineLogicExecutor
+	ArtifactManager      core.ArtifactManager
+	MessageBus           core.MessageBus
+	machinePrefs         []core.MachineType
+	Cfg                  *configuration.LogicRunner
+	caseBind             core.CaseBind
+	caseBindMutex        sync.Mutex
+	caseBindReplays      map[core.RecordRef]core.CaseBindReplay
+	caseBindReplaysMutex sync.Mutex
+	sock                 net.Listener
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -52,6 +55,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
+		caseBindReplays: make(map[core.RecordRef]core.CaseBindReplay),
 	}
 	return &res, nil
 }
@@ -136,36 +140,37 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(msg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
+	msg, ok := inmsg.(message.IBaseLogicMessage)
+	if !ok {
+		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
+	}
+
+	ref := msg.GetReference()
+	lr.caseBindReplaysMutex.Lock()
+	cb, validate := lr.caseBindReplays[ref]
+	lr.caseBindReplaysMutex.Unlock()
+
+	var vb ValidationBehaviour
+	if validate {
+		vb = ValidationChecker{lr: lr, cb: cb}
+	} else {
+		vb = ValidationSaver{lr: lr}
+	}
+
 	ctx := core.LogicCallContext{
 		Caller: msg.GetCaller(),
 		Time:   time.Now(), // TODO: probably we should take it from e
-		Pulse:  lr.cb.P,
+		Pulse:  lr.caseBind.Pulse,
 	}
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
-			Type: CaseRecordTypeMethodCall,
-			Resp: msg,
-		})
-		re, err := lr.executeMethodCall(ctx, m)
-		lr.addObjectCaseRecord(m.ObjectRef, CaseRecord{
-			Type: CaseRecordTypeMethodCallResult,
-			Resp: re,
-		})
+		re, err := lr.executeMethodCall(ctx, m, vb)
 		return re, err
 
 	case *message.CallConstructor:
-		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
-			Type: CaseRecordTypeConstructorCall,
-			Resp: msg,
-		})
-		re, err := lr.executeConstructorCall(ctx, m)
-		lr.addObjectCaseRecord(m.ClassRef, CaseRecord{
-			Type: CaseRecordTypeConstructorCallResult,
-			Resp: re,
-		})
+		re, err := lr.executeConstructorCall(ctx, m, vb)
 		return re, err
 
 	default:
@@ -204,7 +209,12 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 	}, nil
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.CallMethod) (core.Reply, error) {
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
+	vb.Begin(e.ObjectRef, core.CaseRecord{
+		Type: core.CaseRecordTypeStart,
+		Resp: e,
+	})
+
 	objbody, err := lr.getObjectMessage(e.ObjectRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
@@ -212,6 +222,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 
 	ctx.Callee = &e.ObjectRef
 	ctx.Class = &objbody.Class
+	vb.ModifyContext(&ctx)
 
 	executor, err := lr.GetExecutor(objbody.MachineType)
 	if err != nil {
@@ -226,14 +237,23 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 			return nil, errors.Wrap(err, "executor error")
 		}
 
-		_, err = lr.ArtifactManager.UpdateObject(
-			core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't update object")
+		if vb.NeedSave() {
+			_, err = lr.ArtifactManager.UpdateObject(
+				core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
+			)
+			if err != nil {
+				return nil, errors.Wrap(err, "couldn't update object")
+			}
 		}
 
-		return &reply.Common{Data: newData, Result: result}, nil
+		re := &reply.Common{Data: newData, Result: result}
+
+		vb.End(e.ObjectRef, core.CaseRecord{
+			Type: core.CaseRecordTypeResult,
+			Resp: re,
+		})
+
+		return re, nil
 	}
 
 	switch e.ReturnMode {
@@ -251,7 +271,11 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 }
 
-func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor) (core.Reply, error) {
+func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
+	vb.Begin(m.ClassRef, core.CaseRecord{
+		Type: core.CaseRecordTypeStart,
+		Resp: m,
+	})
 
 	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 	if err != nil {
@@ -273,17 +297,23 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	if err != nil {
 		return nil, errors.Wrap(err, "executer error")
 	}
-	return &reply.Common{Data: newData}, nil
+
+	re := &reply.Common{Data: newData}
+
+	vb.End(m.ClassRef, core.CaseRecord{
+		Type: core.CaseRecordTypeResult,
+		Resp: re,
+	})
+
+	return re, nil
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	lr.cb = CaseBind{
-		P: pulse,
-		R: make(map[core.RecordRef][]CaseRecord),
+	lr.caseBindMutex.Lock()
+	lr.caseBind = core.CaseBind{
+		Pulse:   pulse,
+		Records: make(map[core.RecordRef][]core.CaseRecord),
 	}
+	lr.caseBindMutex.Unlock()
 	return nil
-}
-
-func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr CaseRecord) {
-	lr.cb.R[ref] = append(lr.cb.R[ref], cr)
 }
