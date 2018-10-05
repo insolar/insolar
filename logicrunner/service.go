@@ -109,7 +109,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		ReqSig: HashInterface(req),
 		Resp:   rep,
 	})
-	rep.Result = res.(*reply.Common).Result
+	rep.Result = res.(*reply.CallMethod).Result
 
 	return nil
 }
@@ -139,7 +139,7 @@ func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rp
 		Resp:   rep,
 	})
 
-	rep.Ref = res.(*reply.CallConstructor).Ref
+	rep.Ref = res.(*reply.CallConstructor).Object
 	return nil
 }
 

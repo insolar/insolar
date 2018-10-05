@@ -29,8 +29,10 @@ import (
 const (
 	// Logicrunner
 
-	// TypeCommon - two binary fields: data and results.
-	TypeCommon = core.ReplyType(iota)
+	// TypeCallMethod - two binary fields: data and results.
+	TypeCallMethod = core.ReplyType(iota)
+	// TypeCallConstructor - reference on created object
+	TypeCallConstructor
 
 	// Ledger
 
@@ -50,8 +52,10 @@ const (
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 	switch t {
-	case TypeCommon:
-		return &Common{}, nil
+	case TypeCallMethod:
+		return &CallMethod{}, nil
+	case TypeCallConstructor:
+		return &CallConstructor{}, nil
 	case TypeCode:
 		return &Code{}, nil
 	case TypeClass:
@@ -100,7 +104,8 @@ func Deserialize(buff io.Reader) (core.Reply, error) {
 }
 
 func init() {
-	gob.Register(&Common{})
+	gob.Register(&CallMethod{})
+	gob.Register(&CallConstructor{})
 	gob.Register(&Code{})
 	gob.Register(&Class{})
 	gob.Register(&Object{})

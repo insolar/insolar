@@ -75,8 +75,8 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	d := testutil.CBORUnMarshal(t, resp.(*reply.Common).Data)
-	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	d := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
@@ -88,8 +88,8 @@ func TestBareHelloworld(t *testing.T) {
 	})
 	assert.NoError(t, err, "contract call")
 
-	d = testutil.CBORUnMarshal(t, resp.(*reply.Common).Data)
-	r = testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	d = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
+	r = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }

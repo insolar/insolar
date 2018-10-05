@@ -96,7 +96,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractStringResponse(routResult.(*reply.Common).Result)
+	memberRef, err := extractStringResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -150,7 +150,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
 
-	amount, err := extractGetBalanceResponse(routResult.(*reply.Common).Result)
+	amount, err := extractGetBalanceResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -196,7 +196,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
 
-	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+	isSent, err := extractBoolResponse(routResult.(*reply.CallMethod).Result)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
@@ -242,7 +242,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reply.Common).Result)
+	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
@@ -273,7 +273,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	nodeRef, err := extractStringResponse(routResult.(*reply.Common).Result)
+	nodeRef, err := extractStringResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
@@ -292,7 +292,7 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+	isSent, err := extractBoolResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}

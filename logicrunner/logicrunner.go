@@ -218,7 +218,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 		return nil, errors.Wrap(err, "no executor registered")
 	}
 
-	executer := func() (*reply.Common, error) {
+	executer := func() (*reply.CallMethod, error) {
 		newData, result, err := executor.CallMethod(
 			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
 		)
@@ -233,7 +233,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 			return nil, errors.Wrap(err, "couldn't update object")
 		}
 
-		return &reply.Common{Data: newData, Result: result}, nil
+		return &reply.CallMethod{Data: newData, Result: result}, nil
 	}
 
 	switch e.ReturnMode {
@@ -246,7 +246,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 				log.Error(err)
 			}
 		}()
-		return &reply.Common{}, nil
+		return &reply.CallMethod{}, nil
 	}
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 }
@@ -279,12 +279,12 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		ref, err := lr.ArtifactManager.ActivateObject(
 			core.RecordRef{}, core.RandomRef(), m.ClassRef, m.ParentRef, newData,
 		)
-		return &reply.CallConstructor{Ref: ref}, err
+		return &reply.CallConstructor{Object: ref}, err
 	case message.Delegate:
 		ref, err := lr.ArtifactManager.ActivateObjectDelegate(
 			core.RecordRef{}, core.RandomRef(), m.ClassRef, m.ParentRef, newData,
 		)
-		return &reply.CallConstructor{Ref: ref}, err
+		return &reply.CallConstructor{Object: ref}, err
 	default:
 		return &reply.CallConstructor{}, err
 	}
