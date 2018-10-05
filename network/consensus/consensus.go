@@ -25,7 +25,6 @@ import (
 
 // Participant describes one consensus participant
 type Participant interface {
-	GetID() core.RecordRef
 	GetActiveNode() core.ActiveNode
 }
 
