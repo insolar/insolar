@@ -18,7 +18,7 @@ resources:
     uri: https://github.com/insolar/insolar.git
 
 {% for pull in pulls %}
-- name: pull-request
+- name: pull-request-{{ pull.number }}
   type: pull-request
   source:
     owner: ((meta.github.owner))
