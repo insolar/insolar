@@ -124,6 +124,10 @@ func (hh *mockHostHandler) GetOuterHostsCount() int {
 	return 0
 }
 
+func (hh *mockHostHandler) GetNodeID() core.RecordRef {
+	return core.RandomRef()
+}
+
 func (hh *mockHostHandler) ConfirmNodeRole(role string) bool {
 	return false
 }
