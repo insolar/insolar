@@ -123,8 +123,7 @@ func TestLedgerArtifactManager_RegisterRequest_ConstructorCall(t *testing.T) {
 	defer cleaner()
 
 	msg := &message.CallConstructor{}
-	tagretRef := core.GenRequest(0, msg.Payload())
-	reqCoreRef1, err := td.manager.RegisterRequest(tagretRef, msg)
+	reqCoreRef1, err := td.manager.RegisterRequest(msg)
 	assert.NoError(t, err)
 	reqCoreID := reqCoreRef1.GetRecordID()
 
@@ -138,7 +137,7 @@ func TestLedgerArtifactManager_RegisterRequest_ConstructorCall(t *testing.T) {
 	assert.Equal(t, rec, req)
 
 	// RegisterRequest should be idempotent.
-	reqCoreRef2, err := td.manager.RegisterRequest(tagretRef, msg)
+	reqCoreRef2, err := td.manager.RegisterRequest(msg)
 	assert.NoError(t, err)
 
 	reqCoreID2 := reqCoreRef2.GetRecordID()
@@ -152,9 +151,7 @@ func TestLedgerArtifactManager_RegisterRequest_MethodCall(t *testing.T) {
 	defer cleaner()
 
 	msg := &message.CallMethod{}
-	// FIXME: just use any random tagretRef to avoid future confusion
-	tagretRef := core.GenRequest(0, msg.Payload())
-	reqCoreRef1, err := td.manager.RegisterRequest(tagretRef, msg)
+	reqCoreRef1, err := td.manager.RegisterRequest(msg)
 	assert.NoError(t, err)
 	reqCoreID := reqCoreRef1.GetRecordID()
 
@@ -168,7 +165,7 @@ func TestLedgerArtifactManager_RegisterRequest_MethodCall(t *testing.T) {
 	assert.Equal(t, rec, req)
 
 	// RegisterRequest should be idempotent.
-	reqCoreRef2, err := td.manager.RegisterRequest(tagretRef, msg)
+	reqCoreRef2, err := td.manager.RegisterRequest(msg)
 	assert.NoError(t, err)
 
 	reqCoreID2 := reqCoreRef2.GetRecordID()
