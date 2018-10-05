@@ -86,6 +86,7 @@ type CallConstructor struct {
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
+	PulseNum  core.PulseNumber
 }
 
 func (e *CallConstructor) GetReference() core.RecordRef {
@@ -97,9 +98,16 @@ func (e *CallConstructor) Type() core.MessageType {
 	return core.TypeCallConstructor
 }
 
-// Target returns ClassRef as routing target.
+// Target returns request ref as routing target.
+//
+// TODO:
+// implement case for stateful call (construct delegates) -> return &e.ClassRef
 func (e *CallConstructor) Target() *core.RecordRef {
-	return &e.ClassRef
+	requestRef := core.ComposeRecordRef(
+		core.RecordID{},
+		core.GenRecordID(e.PulseNum, hash.SHA3Bytes(e.Payload())),
+	)
+	return &requestRef
 }
 
 // Payload returns hashable payload of record.
