@@ -63,6 +63,11 @@ type getBalanceResponse struct {
 	Currency string `json:"currency"`
 }
 
+type getSeedResponse struct {
+	baseResponse
+	Seed string `json:"seed"`
+}
+
 type isAuthorized struct {
 	baseResponse
 	IsAuthorized bool `json:"is_authorized"`
@@ -133,4 +138,15 @@ func unmarshalResponseWithError(t *testing.T, body []byte, response responseInte
 	err := json.Unmarshal(body, &response)
 	assert.NoError(t, err)
 	assert.NotNil(t, response.getError())
+}
+
+func getSeed(t *testing.T) string {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_seed",
+	})
+
+	getSeedResponse := &getSeedResponse{}
+	unmarshalResponse(t, body, getSeedResponse)
+
+	return getSeedResponse.Seed
 }
