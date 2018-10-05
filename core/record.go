@@ -34,8 +34,35 @@ const (
 // RecordRef is a unified record reference.
 type RecordRef [RecordRefSize]byte
 
+// SetRecord set record's RecordID.
+func (ref *RecordRef) SetRecord(recID RecordID) {
+	copy(ref[:RecordIDSize], recID[:])
+}
+
+// SetDomain set domain's RecordID.
+func (ref *RecordRef) SetDomain(recID RecordID) {
+	copy(ref[RecordIDSize:], recID[:])
+}
+
+// GetRecordID returns record's RecordID.
+func (ref *RecordRef) GetRecordID() (id RecordID) {
+	copy(id[:], ref[:RecordIDSize])
+	return id
+}
+
+// GetDomainID returns domain's RecordID.
+func (ref *RecordRef) GetDomainID() (id RecordID) {
+	copy(id[:], ref[RecordIDSize:])
+	return id
+}
+
 // RecordID is a unified record ID.
 type RecordID [RecordIDSize]byte
+
+// Bytes returns byte slice of RecordID.
+func (id *RecordID) Bytes() []byte {
+	return id[:]
+}
 
 // String outputs base58 RecordRef representation.
 func (ref RecordRef) String() string {
