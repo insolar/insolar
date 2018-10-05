@@ -77,7 +77,9 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 	_ = keeper.AddUnsync(newActiveNode(1, 0))
 	gossip := []*core.ActiveNode{newActiveNode(2, 0), newActiveNode(3, 0)}
 	_ = keeper.AddUnsyncGossip(gossip)
+	assert.Equal(t, 2, len(keeper.GetUnsync()))
 	keeper.Sync(true)
+	assert.Equal(t, 0, len(keeper.GetUnsync()))
 	keeper.SetPulse(core.PulseNumber(1))
 	keeper.Sync(true)
 	assert.Equal(t, 4, len(keeper.GetActiveNodes()))
