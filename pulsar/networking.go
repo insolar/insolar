@@ -151,7 +151,7 @@ func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) 
 }
 
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
-	if handler.pulsar.State == failed {
+	if handler.pulsar.isStateFailed() {
 		return nil
 	}
 
@@ -175,16 +175,13 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
 	}
 
-	handler.pulsar.EntropyGenerationLock.Lock()
-	if handler.pulsar.State == waitingForStart {
+	if handler.pulsar.stateSwitcher.getState() == waitingForStart {
 		err = handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
 		if err != nil {
 			handler.pulsar.stateSwitcher.switchToState(failed, err)
-			handler.pulsar.EntropyGenerationLock.Unlock()
 			return nil
 		}
 	}
-	handler.pulsar.EntropyGenerationLock.Unlock()
 
 	handler.pulsar.OwnedBftRow[request.PublicKey] = &bftCell{Sign: requestBody.Signature}
 
@@ -192,7 +189,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 }
 
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
-	if handler.pulsar.State == failed {
+	if handler.pulsar.isStateFailed() {
 		return nil
 	}
 
@@ -230,7 +227,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 }
 
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
-	if handler.pulsar.State == failed {
+	if handler.pulsar.isStateFailed() {
 		return nil
 	}
 
@@ -259,7 +256,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 }
 
 func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
-	if handler.pulsar.State == failed {
+	if handler.pulsar.isStateFailed() {
 		return nil
 	}
 

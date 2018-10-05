@@ -17,6 +17,8 @@
 package pulsar
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/log"
 )
 
@@ -24,7 +26,8 @@ import (
 type State int
 
 const (
-	waitingForStart State = iota + 1
+	failed State = iota
+	waitingForStart
 	waitingForEntropySigns
 	sendingEntropy
 	waitingForEntropy
@@ -34,17 +37,33 @@ const (
 	sendingPulseSign
 	waitingForPulseSigns
 	sendingPulse
-	failed
 )
 
 // StateSwitcher is a base for pulsar's state machine
 type StateSwitcher interface {
 	switchToState(state State, args interface{})
+	getState() State
+	setState(state State)
+	SetPulsar(pulsar *Pulsar)
 }
 
 // StateSwitcherImpl is a base implementation of the pulsar's state machine
 type StateSwitcherImpl struct {
 	pulsar *Pulsar
+	state  State
+	lock   sync.RWMutex
+}
+
+func (switcher *StateSwitcherImpl) getState() State {
+	switcher.lock.RLock()
+	defer switcher.lock.RUnlock()
+	return switcher.state
+}
+
+func (switcher *StateSwitcherImpl) setState(state State) {
+	switcher.lock.Lock()
+	defer switcher.lock.Unlock()
+	switcher.state = state
 }
 
 func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
@@ -52,12 +71,13 @@ func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
 }
 
 func (switcher *StateSwitcherImpl) switchToState(state State, args interface{}) {
-	log.Debugf("Switch state from %v to %v", switcher.pulsar.State.String(), state.String())
-	if state < switcher.pulsar.State && state != waitingForStart {
+	log.Debugf("Switch state from %v to %v", switcher.getState().String(), state.String())
+	if state < switcher.getState() && state != waitingForStart {
 		panic("Attempt to set a backward step")
 	}
 
-	switcher.pulsar.State = state
+	switcher.setState(state)
+
 	switch state {
 	case waitingForStart:
 		switcher.pulsar.clearState()
@@ -80,6 +100,6 @@ func (switcher *StateSwitcherImpl) switchToState(state State, args interface{}) 
 	case sendingPulse:
 		switcher.pulsar.sendPulse()
 	case failed:
-		switcher.pulsar.stateSwitchedToFailed(args.(error))
+		switcher.pulsar.handleErrorState(args.(error))
 	}
 }

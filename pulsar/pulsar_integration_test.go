@@ -89,7 +89,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 
 	go firstPulsar.StartServer()
 	go secondPulsar.StartServer()
-	err = secondPulsar.EstablishConnection(firstPublic)
+	err = secondPulsar.EstablishConnectionToPulsar(firstPublic)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, firstPulsar.Neighbours[secondPublic].OutgoingClient)
@@ -131,11 +131,13 @@ func TestOnePulsar_FullStatesTransition(t *testing.T) {
 
 	pulsar.StartConsensusProcess(core.PulseNumber(firstPulse + 1))
 
-	for pulsar.State != sendingPulse {
+	for pulsar.stateSwitcher.getState() != sendingPulse {
 		time.Sleep(1 * time.Millisecond)
 	}
 
 	assert.NoError(t, err)
+
+	defer pulsar.StopServer()
 }
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
@@ -189,7 +191,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	go firstPulsar.StartServer()
 	go secondPulsar.StartServer()
-	err = secondPulsar.EstablishConnection(firstPublic)
+	err = secondPulsar.EstablishConnectionToPulsar(firstPublic)
 	assert.NoError(t, err)
 	assert.NotNil(t, firstPulsar.Neighbours[secondPublic].OutgoingClient)
 	assert.NotNil(t, secondPulsar.Neighbours[firstPublic].OutgoingClient)
@@ -270,5 +272,4 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}()
-
 }
