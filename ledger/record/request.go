@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -24,12 +24,6 @@ import (
 type RequestRecord struct {
 	Requester Reference
 	Target    Reference
-}
-
-// Domain implements Record interface
-func (rec *RequestRecord) Domain() ID {
-	// FIXME: return proper domain ID
-	return ID{}
 }
 
 // CallRequest is a contract execution request.

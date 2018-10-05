@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,24 +17,111 @@
 package ledger
 
 import (
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/pkg/errors"
 )
 
-// Ledgerer is high level Ledger interface
-// TODO: signature probably will change
-type Ledgerer interface {
-	Get(id record.Hash) (bool, record.Record)
-	Set(record record.Record) error
-}
-
-// Ledger defines parameters for running ledger storer
-// TODO: should implements Ledgerer interface
+// Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	Store storage.LedgerStorer
+	db      *storage.DB
+	am      *artifactmanager.LedgerArtifactManager
+	pm      *pulsemanager.PulseManager
+	jc      *jetcoordinator.JetCoordinator
+	handler *artifactmanager.MessageHandler
 }
 
-// NewLedger creates new Ledger
-func NewLedger() (Ledger, error) {
-	panic("implement me")
+// GetPulseManager returns PulseManager.
+func (l *Ledger) GetPulseManager() core.PulseManager {
+	return l.pm
+}
+
+// GetJetCoordinator returns JetCoordinator.
+func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
+	return l.jc
+}
+
+// GetArtifactManager returns artifact manager to work with.
+func (l *Ledger) GetArtifactManager() core.ArtifactManager {
+	return l.am
+}
+
+// NewLedger creates new ledger instance.
+func NewLedger(conf configuration.Ledger) (*Ledger, error) {
+	var err error
+	db, err := storage.NewDB(conf, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "DB creation failed")
+	}
+	am, err := artifactmanager.NewArtifactManger(db)
+	if err != nil {
+		return nil, errors.Wrap(err, "artifact manager creation failed")
+	}
+	jc, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
+	if err != nil {
+		return nil, errors.Wrap(err, "jet coordinator creation failed")
+	}
+	pm, err := pulsemanager.NewPulseManager(db, jc)
+	if err != nil {
+		return nil, errors.Wrap(err, "pulse manager creation failed")
+	}
+	handler, err := artifactmanager.NewMessageHandler(db)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Bootstrap()
+	if err != nil {
+		return nil, err
+	}
+
+	ledger := Ledger{
+		db:      db,
+		am:      am,
+		pm:      pm,
+		jc:      jc,
+		handler: handler,
+	}
+
+	return &ledger, nil
+}
+
+// NewTestLedger is the util function for creation of Ledger with provided
+// private members (suitable for tests).
+func NewTestLedger(
+	db *storage.DB,
+	am *artifactmanager.LedgerArtifactManager,
+	pm *pulsemanager.PulseManager,
+	jc *jetcoordinator.JetCoordinator,
+	amh *artifactmanager.MessageHandler,
+) *Ledger {
+	return &Ledger{
+		db:      db,
+		am:      am,
+		pm:      pm,
+		jc:      jc,
+		handler: amh,
+	}
+}
+
+// Start initializes external ledger dependencies.
+func (l *Ledger) Start(c core.Components) error {
+	var err error
+	if err = l.am.Link(c); err != nil {
+		return err
+	}
+	if err = l.handler.Link(c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Stop stops Ledger gracefully.
+func (l *Ledger) Stop() error {
+	return l.db.Close()
 }

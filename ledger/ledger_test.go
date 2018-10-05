@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,45 +19,8 @@ package ledger
 import (
 	"os"
 	"testing"
-
-	"github.com/insolar/insolar/ledger/record"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/leveldb"
-	"github.com/stretchr/testify/assert"
 )
 
-var storer storage.LedgerStorer
-
 func TestMain(m *testing.M) {
-	storer = levelDBInit()
-	retCode := m.Run()
-	os.Exit(retCode)
-}
-
-func TestLedger_LevelDB_Init(t *testing.T) {
-	ledger := Ledger{
-		Store: storer,
-	}
-	rec := &record.RejectionResult{SpecialResult: record.SpecialResult{
-		ReasonCode: 1,
-	}}
-	s := ledger.Store
-	gotID, err := s.SetRecord(rec)
-	assert.Nil(t, err)
-
-	var emptyID record.ID
-	assert.NotEqual(t, emptyID, gotID)
-
-	gotRec, err := s.GetRecord(gotID)
-	assert.Nil(t, err)
-	assert.Equal(t, rec, gotRec)
-}
-
-func levelDBInit() storage.LedgerStorer {
-	// ledger, err := newLedger()
-	store, err := leveldb.InitDB()
-	if err != nil {
-		panic(err)
-	}
-	return store
+	os.Exit(m.Run())
 }

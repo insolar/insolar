@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ package record
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/hash"
 	"github.com/ugorji/go/codec"
 )
@@ -64,12 +64,7 @@ func EncodeRaw(raw *Raw) ([]byte, error) {
 	return b.Bytes(), err
 }
 
-// we can't use Hash on data?
-// Hash returns 28 bytes of SHA3 hash on Data field.
-// func (raw *Raw) Hash() Hash {
-// 	return sha3.Sum224(raw.Data)
-// }
-
+// hashableBytes exists just to allow []byte implements hash.Writer
 type hashableBytes []byte
 
 func (b hashableBytes) WriteHash(w io.Writer) {
@@ -84,12 +79,6 @@ func (raw *Raw) Hash() []byte {
 	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
 }
 
-// SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
-func SHA3Hash224(rec Record) []byte {
-	cborBlob := MustEncode(rec)
-	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
-}
-
 // ToRecord decodes Raw to Record.
 func (raw *Raw) ToRecord() Record {
 	cborH := &codec.CborHandle{}
@@ -102,35 +91,34 @@ func (raw *Raw) ToRecord() Record {
 	return rec
 }
 
-// Key2ID converts record Key to ID.
-func Key2ID(k Key) ID {
-	var id ID
-	var err error
-	buf := bytes.NewBuffer(id[:0])
-
-	err = binary.Write(buf, binary.BigEndian, k.Pulse)
-	if err != nil {
-		panic("binary.Write failed to write PulseNum:" + err.Error())
+// Bytes2ID converts ID from byte representation to struct.
+func Bytes2ID(b []byte) ID {
+	return ID{
+		Pulse: core.Bytes2PulseNumber(b[:core.PulseNumberSize]),
+		Hash:  b[core.PulseNumberSize:],
 	}
-	err = binary.Write(buf, binary.BigEndian, k.Hash)
-	if err != nil {
-		panic("binary.Write failed to write Hash:" + err.Error())
-	}
-	return id
 }
 
-// ID2Key converts record ID to Key.
-func ID2Key(id ID) Key {
-	return Key{
-		Pulse: PulseNum(binary.BigEndian.Uint32(id[:PulseNumSize])),
-		Hash:  id[PulseNumSize:],
+// Core2Reference converts commonly used reference to Ledger-specific.
+func Core2Reference(cRef core.RecordRef) Reference {
+	return Reference{
+		Record: Bytes2ID(cRef[:core.RecordIDSize]),
+		Domain: Bytes2ID(cRef[core.RecordIDSize:]),
 	}
+}
+
+// ID2Bytes converts ID struct to it's byte representation.
+func ID2Bytes(id ID) []byte {
+	var buf = make([]byte, core.RecordIDSize)
+	copy(buf[:core.PulseNumberSize], id.Pulse.Bytes())
+	copy(buf[core.PulseNumberSize:], id.Hash)
+	return buf
 }
 
 // record type ids for record types
 // in use mostly for hashing and deserialization
 // (we don't use iota for clarity and predictable ids,
-// not depended on defenition order)
+// not depended on definition order)
 const (
 	// request record ids
 	requestRecordID       TypeID = 1
@@ -155,13 +143,14 @@ const (
 	codeRecordID                TypeID = 19
 	amendRecordID               TypeID = 20
 	classAmendRecordID          TypeID = 21
-	memoryMigrationCodeID       TypeID = 22
-	deactivationRecordID        TypeID = 23
-	objectAmendRecordID         TypeID = 24
-	statefulCallResultID        TypeID = 25
-	statefulExceptionResultID   TypeID = 26
-	enforcedObjectAmendRecordID TypeID = 27
-	objectAppendRecordID        TypeID = 28
+	deactivationRecordID        TypeID = 22
+	objectAmendRecordID         TypeID = 23
+	statefulCallResultID        TypeID = 24
+	statefulExceptionResultID   TypeID = 25
+	enforcedObjectAmendRecordID TypeID = 26
+	objectAppendRecordID        TypeID = 27
+	typeRecordID                TypeID = 28
+	childRecordID               TypeID = 29
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -211,8 +200,6 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 		return &AmendRecord{}
 	case classAmendRecordID:
 		return &ClassAmendRecord{}
-	case memoryMigrationCodeID:
-		return &MemoryMigrationCode{}
 	case deactivationRecordID:
 		return &DeactivationRecord{}
 	case objectAmendRecordID:
@@ -225,6 +212,10 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 		return &EnforcedObjectAmendRecord{}
 	case objectAppendRecordID:
 		return &ObjectAppendRecord{}
+	case typeRecordID:
+		return &TypeRecord{}
+	case childRecordID:
+		return &ChildRecord{}
 	default:
 		panic(fmt.Errorf("unknown record type id %v", id))
 	}
@@ -277,8 +268,6 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 		return amendRecordID
 	case *ClassAmendRecord:
 		return classAmendRecordID
-	case *MemoryMigrationCode:
-		return memoryMigrationCodeID
 	case *DeactivationRecord:
 		return deactivationRecordID
 	case *ObjectAmendRecord:
@@ -291,6 +280,10 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 		return enforcedObjectAmendRecordID
 	case *ObjectAppendRecord:
 		return objectAppendRecordID
+	case *TypeRecord:
+		return typeRecordID
+	case *ChildRecord:
+		return childRecordID
 	default:
 		panic(fmt.Errorf("can't find record id by type %T", v))
 	}

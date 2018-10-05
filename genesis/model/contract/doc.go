@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -23,6 +23,38 @@ Usage:
 	child := NewBaseSmartContract(parent)
 
 	classID := child.GetClassID()
+
+
+
+SmartContractProxy is public interface to call object's methods. If you want to make proxy for your object inherit BaseSmartContractProxy
+
+Usage:
+
+	// make your custom domain proxy
+
+	type customDomainProxy struct {
+		object.BaseSmartContractProxy
+	}
+
+	// create proxy for your custom domain
+
+	func newCustomDomainProxy(parent object.Parent) (*customDomainProxy, error) {
+		instance, err := newCustomDomain(parent)
+		if err != nil {
+			return nil, err
+		}
+		return &customDomainProxy{
+			BaseSmartContractProxy: object.BaseSmartContractProxy{
+				Instance: instance,
+			},
+		}, nil
+	}
+
+	proxy, err := newCustomDomainProxy(...)
+
+	proxy.GetClassID() is a proxy call for instance method.
+	proxy.GetParent() is a proxy call for instance method.
+	proxy.GetOrCreateComposite() is a proxy call for instance method if instance inherit ComposingContainer.
 
 */
 package contract

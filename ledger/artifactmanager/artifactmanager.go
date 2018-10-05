@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,323 +17,309 @@
 package artifactmanager
 
 import (
-	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// LedgerArtifactManager provides concrete API to storage for virtual processing module
+// LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
-	storer   storage.LedgerStorer
-	archPref []record.ArchType
+	db         *storage.DB
+	messageBus core.MessageBus
 }
 
-func (m *LedgerArtifactManager) storeRecord(rec record.Record) (record.Reference, error) {
-	id, err := m.storer.SetRecord(rec)
+// NewArtifactManger creates new manager instance.
+func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
+	return &LedgerArtifactManager{db: db}, nil
+}
+
+// Link links external components.
+func (m *LedgerArtifactManager) Link(components core.Components) error {
+	m.messageBus = components.MessageBus
+
+	return nil
+}
+
+// RootRef returns the root record reference.
+//
+// Root record is the parent for all top-level records.
+func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
+	return m.db.RootRef().CoreRef()
+}
+
+// GetCode returns code from code record by provided reference according to provided machine preference.
+//
+// This method is used by VM to fetch code for execution.
+func (m *LedgerArtifactManager) GetCode(
+	code core.RecordRef, machinePref []core.MachineType,
+) (core.CodeDescriptor, error) {
+	genericReact, err := m.messageBus.Send(&message.GetCode{
+		Code:        code,
+		MachinePref: machinePref,
+	})
+
 	if err != nil {
-		return record.Reference{}, errors.Wrap(err, "record store failed")
+		return nil, err
 	}
-	return record.Reference{Domain: rec.Domain(), Record: id}, nil
+
+	react, ok := genericReact.(*reply.Code)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+	desc := CodeDescriptor{
+		machinePref: machinePref,
+		ref:         code,
+
+		machineType: react.MachineType,
+		code:        react.Code,
+	}
+
+	return &desc, nil
 }
 
-func (m *LedgerArtifactManager) getActiveClassIndex(classRef record.Reference) (*index.ClassLifeline, error) {
-	classRecord, err := m.storer.GetRecord(classRef.Record)
+// GetClass returns descriptor for provided state.
+//
+// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
+// provide methods for fetching all related data.
+func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
+	genericReact, err := m.messageBus.Send(&message.GetClass{
+		Head:  head,
+		State: state,
+	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "class record is not found")
-	}
-	if _, ok := classRecord.(*record.ClassActivateRecord); !ok {
-		return nil, errors.New("provided reference is not a class record")
+		return nil, err
 	}
 
-	classIndex, isFound := m.storer.GetClassIndex(classRef.Record)
-	if !isFound {
-		return nil, errors.New("class is not activated")
+	react, ok := genericReact.(*reply.Class)
+	if !ok {
+		return nil, ErrUnexpectedReply
 	}
-	latestClassRecord, err := m.storer.GetRecord(classIndex.LatestStateID)
+	desc := ClassDescriptor{
+		am:    m,
+		head:  react.Head,
+		state: react.State,
+		code:  react.Code,
+	}
+	return &desc, nil
+}
+
+// GetObject returns descriptor for provided state.
+//
+// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
+// provide methods for fetching all related data.
+func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
+	genericReact, err := m.messageBus.Send(&message.GetObject{
+		Head:  head,
+		State: state,
+	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "latest class record is not found")
-	}
-	if _, ok := latestClassRecord.(*record.DeactivationRecord); ok {
-		return nil, errors.New("class is deactivated")
+		return nil, err
 	}
 
-	return classIndex, nil
+	react, ok := genericReact.(*reply.Object)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+	desc := ObjectDescriptor{
+		am:       m,
+		head:     react.Head,
+		state:    react.State,
+		class:    react.Class,
+		memory:   react.Memory,
+		children: react.Children,
+	}
+	return &desc, nil
 }
 
-func (m *LedgerArtifactManager) getActiveObjectIndex(objRef record.Reference) (*index.ObjectLifeline, error) {
-	objRecord, err := m.storer.GetRecord(objRef.Record)
+// GetDelegate returns provided object's delegate reference for provided class.
+//
+// Object delegate should be previously created for this object. If object delegate does not exist, an error will
+// be returned.
+func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+	genericReact, err := m.messageBus.Send(&message.GetDelegate{
+		Head:    head,
+		AsClass: asClass,
+	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "object record is not found")
-	}
-	if _, ok := objRecord.(*record.ObjectActivateRecord); !ok {
-		return nil, errors.New("provided reference is not an object record")
+		return nil, err
 	}
 
-	objIndex, isFound := m.storer.GetObjectIndex(objRef.Record)
-	if !isFound {
-		return nil, errors.New("object is not activated")
+	react, ok := genericReact.(*reply.Delegate)
+	if !ok {
+		return nil, ErrUnexpectedReply
 	}
-	latestObjRecord, err := m.storer.GetRecord(objIndex.LatestStateID)
-	if err != nil {
-		return nil, errors.Wrap(err, "latest object record is not found")
-	}
-	if _, ok := latestObjRecord.(*record.DeactivationRecord); ok {
-		return nil, errors.New("object is deactivated")
-	}
-
-	return objIndex, nil
+	return &react.Head, nil
 }
 
-func (m *LedgerArtifactManager) SetArchPref(pref []record.ArchType) {
-	m.archPref = pref
+// DeclareType creates new type record in storage.
+//
+// Type is a contract interface. It contains one method signature.
+func (m *LedgerArtifactManager) DeclareType(
+	domain, request core.RecordRef, typeDec []byte,
+) (*core.RecordRef, error) {
+	return m.fetchReference(&message.DeclareType{
+		Domain:  domain,
+		Request: request,
+		TypeDec: typeDec,
+	})
 }
 
-// DeployCode deploys new code to storage (CodeRecord).
-func (m *LedgerArtifactManager) DeployCode(requestRef record.Reference) (record.Reference, error) {
-	rec := record.CodeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
-				},
-			},
-		},
-		// TODO: require and fill code params
-	}
-	return m.storeRecord(&rec)
+// DeployCode creates new code record in storage.
+//
+// Code records are used to activate class or as migration code for an object.
+func (m *LedgerArtifactManager) DeployCode(
+	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
+) (*core.RecordRef, error) {
+	return m.fetchReference(&message.DeployCode{
+		Domain:  domain,
+		Request: request,
+		CodeMap: codeMap,
+	})
 }
 
-// ActivateClass activates class from given code (ClassActivateRecord).
+// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
+//
+// Activation reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	requestRef, codeRef record.Reference, memory record.Memory,
-) (record.Reference, error) {
-	codeRecord, err := m.storer.GetRecord(codeRef.Record)
-	// TODO: add not found
-	if err != nil {
-		return record.Reference{}, errors.Wrap(err, "code reference is not found")
-	}
-	if _, ok := codeRecord.(*record.CodeRecord); !ok {
-		return record.Reference{}, errors.New("provided reference is not a code reference")
-	}
-	rec := record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
-				},
-			},
-		},
-		CodeRecord:    codeRef,
-		DefaultMemory: memory,
-	}
-	return m.storeRecord(&rec)
+	domain, request core.RecordRef,
+) (*core.RecordRef, error) {
+	return m.fetchReference(&message.ActivateClass{
+		Domain:  domain,
+		Request: request,
+	})
 }
 
-// DeactivateClass deactivates class (DeactivationRecord)
+// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
+// the class. If class is already deactivated, an error should be returned.
+//
+// Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
-	requestRef, classRef record.Reference,
-) (record.Reference, error) {
-	classIndex, err := m.getActiveClassIndex(classRef)
-	if err != nil {
-		return record.Reference{}, err
-	}
-
-	rec := record.DeactivationRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
-				},
-			},
-			AmendedRecord: record.Reference{
-				Domain: classRef.Domain,
-				Record: classIndex.LatestStateID,
-			},
-		},
-	}
-	deactivationRef, err := m.storeRecord(&rec)
-	if err != nil {
-		return record.Reference{}, errors.New("failed to store deactivation record")
-	}
-	classIndex.LatestStateID = deactivationRef.Record
-	err = m.storer.SetClassIndex(classRef.Record, classIndex)
-	if err != nil {
-		// TODO: add transaction
-		return record.Reference{}, errors.New("failed to store lifeline index")
-	}
-
-	return deactivationRef, nil
+	domain, request, class core.RecordRef,
+) (*core.RecordID, error) {
+	return m.fetchID(&message.DeactivateClass{
+		Domain:  domain,
+		Request: request,
+		Class:   class,
+	})
 }
 
-// UpdateClass allows to change class code etc. (ClassAmendRecord).
+// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
+// the class. Migrations are references to code records.
+//
+// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
+// migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
-	requestRef, classRef record.Reference, migrations []record.MemoryMigrationCode,
-) (record.Reference, error) {
-	classIndex, err := m.getActiveClassIndex(classRef)
-	if err != nil {
-		return record.Reference{}, err
-	}
-
-	rec := record.ClassAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
-				},
-			},
-			AmendedRecord: record.Reference{
-				Domain: classRef.Domain,
-				Record: classIndex.LatestStateID,
-			},
-		},
-		// TODO: require and fill code and migration params
-	}
-
-	amendRef, err := m.storeRecord(&rec)
-	if err != nil {
-		return record.Reference{}, errors.New("failed to store amend record")
-	}
-	classIndex.LatestStateID = amendRef.Record
-	err = m.storer.SetClassIndex(classRef.Record, classIndex)
-	if err != nil {
-		// TODO: add transaction
-		return record.Reference{}, errors.New("failed to store lifeline index")
-	}
-
-	return amendRef, nil
+	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
+) (*core.RecordID, error) {
+	return m.fetchID(&message.UpdateClass{
+		Domain:     domain,
+		Request:    request,
+		Class:      class,
+		Code:       code,
+		Migrations: migrations,
+	})
 }
 
-// ActivateObj creates and activates new object from given class (ObjectActivateRecord).
-func (m *LedgerArtifactManager) ActivateObj(
-	requestRef, classRef record.Reference, memory record.Memory,
-) (record.Reference, error) {
+// ActivateObject creates activate object record in storage. Provided class reference will be used as objects class
+// memory as memory of crated object. If memory is not provided, the class default memory will be used.
+//
+// Activation reference will be this object's identifier and referred as "object head".
+func (m *LedgerArtifactManager) ActivateObject(
+	domain, request, class, parent core.RecordRef, memory []byte,
+) (*core.RecordRef, error) {
+	objRef, err := m.fetchReference(&message.ActivateObject{
+		Domain:  domain,
+		Request: request,
+		Class:   class,
+		Parent:  parent,
+		Memory:  memory,
+	})
 
-	_, err := m.getActiveClassIndex(classRef)
 	if err != nil {
-		return record.Reference{}, err
+		return nil, err
 	}
 
-	rec := record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
-				},
-			},
-		},
-		ClassActivateRecord: classRef,
-		Memory:              memory,
+	_, err = m.fetchID(&message.RegisterChild{
+		Parent: parent,
+		Child:  *objRef,
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	return m.storeRecord(&rec)
+	return objRef, nil
 }
 
-// DeactivateObj deactivates object (DeactivationRecord).
-func (m *LedgerArtifactManager) DeactivateObj(requestRef, objRef record.Reference) (record.Reference, error) {
-	objIndex, err := m.getActiveObjectIndex(objRef)
-	if err != nil {
-		return record.Reference{}, err
-	}
-
-	rec := record.DeactivationRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
-				},
-			},
-			AmendedRecord: record.Reference{
-				Domain: objRef.Domain,
-				Record: objIndex.LatestStateID,
-			},
-		},
-	}
-	deactivationRef, err := m.storeRecord(&rec)
-	if err != nil {
-		return record.Reference{}, errors.New("failed to store deactivation record")
-	}
-	objIndex.LatestStateID = deactivationRef.Record
-	err = m.storer.SetObjectIndex(objRef.Record, objIndex)
-	if err != nil {
-		// TODO: add transaction
-		return record.Reference{}, errors.New("failed to store lifeline index")
-	}
-	return deactivationRef, nil
+// ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
+func (m *LedgerArtifactManager) ActivateObjectDelegate(
+	domain, request, class, parent core.RecordRef, memory []byte,
+) (*core.RecordRef, error) {
+	return m.fetchReference(&message.ActivateObjectDelegate{
+		Domain:  domain,
+		Request: request,
+		Class:   class,
+		Parent:  parent,
+		Memory:  memory,
+	})
 }
 
-// UpdateObj allows to change object state (ObjectAmendRecord).
-func (m *LedgerArtifactManager) UpdateObj(
-	requestRef, objRef record.Reference, memory record.Memory,
-) (record.Reference, error) {
-	objIndex, err := m.getActiveObjectIndex(objRef)
-	if err != nil {
-		return record.Reference{}, err
-	}
-
-	rec := record.ObjectAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
-				},
-			},
-			AmendedRecord: record.Reference{
-				Domain: objRef.Domain,
-				Record: objIndex.LatestStateID,
-			},
-		},
-		NewMemory: memory,
-	}
-
-	amendRef, err := m.storeRecord(&rec)
-	if err != nil {
-		return record.Reference{}, errors.New("failed to store amend record")
-	}
-	objIndex.LatestStateID = amendRef.Record
-	objIndex.AppendIDs = []record.ID{}
-	err = m.storer.SetObjectIndex(objRef.Record, objIndex)
-	if err != nil {
-		// TODO: add transaction
-		return record.Reference{}, errors.New("failed to store lifeline index")
-	}
-	return amendRef, nil
+// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
+// of the object. If object is already deactivated, an error should be returned.
+//
+// Deactivated object cannot be changed.
+func (m *LedgerArtifactManager) DeactivateObject(
+	domain, request, object core.RecordRef,
+) (*core.RecordID, error) {
+	return m.fetchID(&message.DeactivateObject{
+		Domain:  domain,
+		Request: request,
+		Object:  object,
+	})
 }
 
-func (m *LedgerArtifactManager) AppendObjDelegate(
-	requestRef, objRef record.Reference, memory record.Memory,
-) (record.Reference, error) {
-	objIndex, err := m.getActiveObjectIndex(objRef)
+// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
+// object. Provided memory well be the new object memory.
+//
+// Returned reference will be the latest object state (exact) reference.
+func (m *LedgerArtifactManager) UpdateObject(
+	domain, request, object core.RecordRef, memory []byte,
+) (*core.RecordID, error) {
+	return m.fetchID(&message.UpdateObject{
+		Domain:  domain,
+		Request: request,
+		Object:  object,
+		Memory:  memory,
+	})
+}
+
+func (m *LedgerArtifactManager) fetchReference(ev core.Message) (*core.RecordRef, error) {
+	genericReact, err := m.messageBus.Send(ev)
+
 	if err != nil {
-		return record.Reference{}, err
+		return nil, err
 	}
 
-	rec := record.ObjectAppendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
-				},
-			},
-			AmendedRecord: record.Reference{
-				Domain: objRef.Domain,
-				Record: objIndex.LatestStateID,
-			},
-		},
-		AppendMemory: memory,
+	react, ok := genericReact.(*reply.Reference)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+	return &react.Ref, nil
+}
+
+func (m *LedgerArtifactManager) fetchID(ev core.Message) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(ev)
+
+	if err != nil {
+		return nil, err
 	}
 
-	appendRef, err := m.storeRecord(&rec)
-	if err != nil {
-		return record.Reference{}, errors.New("failed to store append record")
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
 	}
-	objIndex.LatestStateID = appendRef.Record
-	objIndex.AppendIDs = append(objIndex.AppendIDs, appendRef.Record)
-	err = m.storer.SetObjectIndex(objRef.Record, objIndex)
-	if err != nil {
-		// TODO: add transaction
-		return record.Reference{}, errors.New("failed to store lifeline index")
-	}
-	return appendRef, nil
+	return &react.ID, nil
 }

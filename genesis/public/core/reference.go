@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -20,10 +20,9 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // ReferenceDomainName is a name for reference domain.
@@ -34,22 +33,22 @@ type ReferenceDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// RegisterReference is used to publish new global references.
-	RegisterReference(object.Reference, string) (string, error)
+	RegisterReference(object.Reference, object.Proxy) (string, error)
 	// ResolveReference provides reference instance from record.
 	ResolveReference(string) (object.Reference, error)
 	// InitGlobalMap sets globalResolverMap for references register/resolving.
-	InitGlobalMap(globalInstanceMap *map[string]resolver.Proxy)
+	InitGlobalMap(globalInstanceMap *map[string]object.Proxy)
 }
 
 type referenceDomain struct {
 	domain.BaseDomain
-	globalResolverMap *map[string]resolver.Proxy
+	globalResolverMap *map[string]object.Proxy
 }
 
 // newReferenceDomain creates new instance of ReferenceDomain.
-func newReferenceDomain(parent object.Parent) *referenceDomain {
+func newReferenceDomain(parent object.Parent, class object.Factory) *referenceDomain {
 	refDomain := &referenceDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, ReferenceDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, class, ReferenceDomainName),
 	}
 	// Bootstrap case
 	if parent == nil {
@@ -64,7 +63,7 @@ func (rd *referenceDomain) GetClassID() string {
 }
 
 // InitGlobalMap sets globalResolverMap for register/resolve references.
-func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]resolver.Proxy) {
+func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	if rd.globalResolverMap != nil {
 		return
 	}
@@ -72,17 +71,18 @@ func (rd *referenceDomain) InitGlobalMap(globalInstanceMap *map[string]resolver.
 }
 
 // RegisterReference sets new reference as a child to domain storage.
-func (rd *referenceDomain) RegisterReference(ref object.Reference, classID string) (string, error) {
-	record, err := rd.ChildStorage.Set(ref)
+func (rd *referenceDomain) RegisterReference(ref object.Reference, class object.Proxy) (string, error) {
+	container := object.NewReferenceContainer(ref)
+	record, err := rd.ChildStorage.Set(container)
 	if err != nil {
 		return "", err
 	}
 	res := rd.GetResolver()
-	obj, err := res.GetObject(ref, classID)
+	obj, err := res.GetObject(ref, class)
 	if err != nil {
 		return "", err
 	}
-	proxy, ok := obj.(resolver.Proxy)
+	proxy, ok := obj.(object.Proxy)
 	if !ok {
 		return "", fmt.Errorf("object with reference `%s` is not `Proxy` instance", ref)
 	}
@@ -98,31 +98,31 @@ func (rd *referenceDomain) ResolveReference(record string) (object.Reference, er
 		return nil, err
 	}
 
-	result, ok := reference.(object.Reference)
+	container, ok := reference.(*object.ReferenceContainer)
 	if !ok {
-		return nil, fmt.Errorf("object with record `%s` is not `Reference` instance", record)
+		return nil, fmt.Errorf("object with record `%s` is not `ReferenceContainer` instance", record)
 	}
 
-	return result, nil
+	return container.GetStoredReference(), nil
 }
 
 type referenceDomainProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 // newReferenceDomainProxy creates new proxy and associate it with new instance of ReferenceDomain.
-func newReferenceDomainProxy(parent object.Parent) *referenceDomainProxy {
+func newReferenceDomainProxy(parent object.Parent, class object.Factory) *referenceDomainProxy {
 	return &referenceDomainProxy{
-		BaseProxy: resolver.BaseProxy{
-			Instance: newReferenceDomain(parent),
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: newReferenceDomain(parent, class),
 		},
 	}
 }
 
 // RegisterReference is a proxy call for instance method.
 
-func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, classID string) (string, error) {
-	return rdp.Instance.(ReferenceDomain).RegisterReference(address, classID)
+func (rdp *referenceDomainProxy) RegisterReference(address object.Reference, class object.Proxy) (string, error) {
+	return rdp.Instance.(ReferenceDomain).RegisterReference(address, class)
 }
 
 // ResolveReference is a proxy call for instance method.
@@ -131,17 +131,17 @@ func (rdp *referenceDomainProxy) ResolveReference(record string) (object.Referen
 }
 
 // InitGlobalMap is a proxy call for instance method.
-func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]resolver.Proxy) {
+func (rdp *referenceDomainProxy) InitGlobalMap(globalInstanceMap *map[string]object.Proxy) {
 	rdp.Instance.(ReferenceDomain).InitGlobalMap(globalInstanceMap)
 }
 
 type referenceDomainFactory struct {
-	object.BaseCallable
+	object.BaseFactory
 	parent object.Parent
 }
 
 // NewReferenceDomainFactory creates new factory for ReferenceDomain.
-func NewReferenceDomainFactory(parent object.Parent) factory.Factory {
+func NewReferenceDomainFactory(parent object.Parent) object.Factory {
 	return &referenceDomainFactory{
 		parent: parent,
 	}
@@ -158,9 +158,13 @@ func (rdf *referenceDomainFactory) GetClassID() string {
 	return class.ReferenceDomainID
 }
 
+func (rdf *referenceDomainFactory) GetClass() object.Proxy {
+	return rdf
+}
+
 // Create factory is a method for new ReferenceDomain instances.
-func (rdf *referenceDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
-	proxy := newReferenceDomainProxy(parent)
+func (rdf *referenceDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
+	proxy := newReferenceDomainProxy(parent, rdf)
 	_, err := parent.AddChild(proxy)
 	if err != nil {
 		return nil, err

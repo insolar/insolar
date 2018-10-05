@@ -36,4 +36,10 @@ _db
 vm/wasm/test/data/!simple!.wasm
 vm/wasm/test/data/*.wat
 
-logicrunner/goplugin/ginsider/ginsider
+/testdata
+data
+
+/bin
+
+# GoReleaser dist dir
+/dist

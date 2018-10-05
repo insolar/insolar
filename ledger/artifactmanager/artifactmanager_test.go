@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,487 +17,759 @@
 package artifactmanager
 
 import (
-	"os"
+	"math/rand"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/index"
-	"github.com/insolar/insolar/ledger/record"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/ledger/storage"
+
+	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
-// Mock to imitate storage
-type LedgerMock struct {
-	Records       map[record.ID]record.Record
-	ClassIndexes  map[record.ID]*index.ClassLifeline
-	ObjectIndexes map[record.ID]*index.ObjectLifeline
+func genRandomRef() *record.Reference {
+	var coreRef core.RecordRef
+	coreRef[core.RecordIDSize-1] = byte(rand.Int() % 256)
+	ref := record.Core2Reference(coreRef)
+	return &ref
 }
 
-func (mock *LedgerMock) GetRecord(id record.ID) (record.Record, error) {
-	rec, ok := mock.Records[id]
+func genRefWithID(id *record.ID) *core.RecordRef {
+	ref := record.Reference{Record: *id}
+	return ref.CoreRef()
+}
+
+type preparedAMTestData struct {
+	db         *storage.DB
+	manager    core.ArtifactManager
+	domainRef  *record.Reference
+	requestRef *record.Reference
+}
+
+type messageBusMock struct {
+	handlers map[core.MessageType]core.MessageHandler
+}
+
+func NewMessageBusMock() *messageBusMock {
+	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
+}
+
+func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandler) error {
+	_, ok := mb.handlers[p]
+	if ok {
+		return errors.New("handler for this type already exists")
+	}
+
+	mb.handlers[p] = handler
+	return nil
+}
+
+func (mb *messageBusMock) MustRegister(p core.MessageType, handler core.MessageHandler) {
+	err := mb.Register(p, handler)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (mb *messageBusMock) Start(components core.Components) error {
+	panic("implement me")
+}
+
+func (mb *messageBusMock) Stop() error {
+	panic("implement me")
+}
+
+func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
+	handler, ok := mb.handlers[m.Type()]
 	if !ok {
-		return nil, errors.New("Record not found")
+		return nil, errors.New("no handler for this message type")
 	}
-	return rec, nil
+
+	return handler(m)
 }
 
-func (mock *LedgerMock) SetRecord(rec record.Record) (record.ID, error) {
-	raw, _ := record.EncodeToRaw(rec)
-	raw.Hash()
-	var id record.ID
-	copy(raw.Hash(), id[:])
-	mock.Records[record.ID{}] = rec
-	return id, nil
+func (mb *messageBusMock) SendAsync(m core.Message) {
+	panic("implement me")
 }
 
-func (mock *LedgerMock) GetClassIndex(id record.ID) (*index.ClassLifeline, bool) {
-	idx, ok := mock.ClassIndexes[id]
-	return idx, ok
+func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
+	db, cleaner := storagetest.TmpDB(t, "")
+
+	mb := NewMessageBusMock()
+	components := core.Components{MessageBus: mb}
+	handler := MessageHandler{db: db}
+	handler.Link(components)
+
+	return preparedAMTestData{
+		db: db,
+		manager: &LedgerArtifactManager{
+			db:         db,
+			messageBus: mb,
+		},
+		domainRef:  genRandomRef(),
+		requestRef: genRandomRef(),
+	}, cleaner
 }
 
-func (mock *LedgerMock) SetClassIndex(id record.ID, idx *index.ClassLifeline) error {
-	mock.ClassIndexes[id] = idx
-	return nil
-}
+func TestLedgerArtifactManager_DeclareType(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
 
-func (mock *LedgerMock) GetObjectIndex(id record.ID) (*index.ObjectLifeline, bool) {
-	idx, ok := mock.ObjectIndexes[id]
-	return idx, ok
-}
-
-func (mock *LedgerMock) SetObjectIndex(id record.ID, idx *index.ObjectLifeline) error {
-	mock.ObjectIndexes[id] = idx
-	return nil
-}
-
-func (mock *LedgerMock) Close() error {
-	return nil
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
-}
-
-// helper to workaround reference generation from id
-func addRecord(mock *LedgerMock, rec record.Record) record.Reference {
-	id, _ := mock.SetRecord(rec)
-	return record.Reference{
-		Domain: rec.Domain(),
-		Record: id,
-	}
-}
-
-func TestDeployCodeCreatesRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	ref, err := manager.DeployCode(requestRef)
-	assert.Nil(t, err)
-	assert.Equal(t, ledger.Records[ref.Record], &record.CodeRecord{
+	typeDec := []byte{1, 2, 3}
+	coreRef, err := td.manager.DeclareType(*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), typeDec)
+	assert.NoError(t, err)
+	ref := record.Core2Reference(*coreRef)
+	typeRec, err := td.db.GetRecord(&ref.Record)
+	assert.NoError(t, err)
+	assert.Equal(t, &record.TypeRecord{
 		StorageRecord: record.StorageRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
 				},
 			},
 		},
+		TypeDeclaration: typeDec,
+	}, typeRec)
+}
+
+func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	codeMap := map[core.MachineType][]byte{1: {1}}
+	coreRef, err := td.manager.DeployCode(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), codeMap,
+	)
+	assert.NoError(t, err)
+	ref := record.Core2Reference(*coreRef)
+	codeRec, err := td.db.GetRecord(&ref.Record)
+	assert.NoError(t, err)
+	assert.Equal(t, codeRec, &record.CodeRecord{
+		StorageRecord: record.StorageRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
+				},
+			},
+		},
+		TargetedCode: codeMap,
 	})
 }
 
-func TestActivateClassVerifiesCodeReference(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.ActivateClass(requestRef, record.Reference{}, record.Memory{})
-	assert.NotNil(t, err)
-	notCodeRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	_, err = manager.ActivateClass(requestRef, notCodeRef, record.Memory{})
-	assert.NotNil(t, err)
-}
+func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
 
-func TestActivateClassCreatesActivateRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	memory := record.Memory{1, 2, 3}
-	codeRef := addRecord(&ledger, &record.CodeRecord{})
-	activateRef, err := manager.ActivateClass(requestRef, codeRef, memory)
+	activateCoreRef, err := td.manager.ActivateClass(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(),
+	)
+	activateRef := record.Core2Reference(*activateCoreRef)
 	assert.Nil(t, err)
-	activateRec, getErr := ledger.GetRecord(activateRef.Record)
+	activateRec, getErr := td.db.GetRecord(&activateRef.Record)
 	assert.Nil(t, getErr)
 	assert.Equal(t, activateRec, &record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
 				},
 			},
 		},
-		CodeRecord:    codeRef,
-		DefaultMemory: memory,
 	})
 }
 
-func TestDeactivateClassVerifiesClassReference(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.DeactivateClass(requestRef, record.Reference{})
+func TestLedgerArtifactManager_DeactivateClass_VerifiesRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	_, err := td.manager.DeactivateClass(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(),
+	)
 	assert.NotNil(t, err)
-	notClassRef := addRecord(&ledger, &record.CodeRecord{})
-	_, err = manager.DeactivateClass(requestRef, notClassRef)
+
+	notClassID, _ := td.db.SetRecord(&record.CodeRecord{})
+	_, err = td.manager.DeactivateClass(*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID))
 	assert.NotNil(t, err)
 }
 
-func TestDeactivateClassVerifiesClassIsActive(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
-	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
-		LatestStateID: deactivateRef.Record,
+func TestLedgerArtifactManager_DeactivateClass_VerifiesClassIsActive(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{})
+	deactivateRef, _ := td.db.SetRecord(&record.DeactivationRecord{})
+	td.db.SetClassIndex(classID, &index.ClassLifeline{
+		LatestState: *deactivateRef,
 	})
-	_, err := manager.DeactivateClass(requestRef, classRef)
+	_, err := td.manager.DeactivateClass(*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID))
 	assert.NotNil(t, err)
 }
 
-func TestDeactivateClassCreatesDeactivateRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
-		LatestStateID: classRef.Record,
+func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
 	})
-	deactivateRef, err := manager.DeactivateClass(requestRef, classRef)
-	assert.Nil(t, err)
-	deactivateRec, getErr := ledger.GetRecord(deactivateRef.Record)
-	assert.Nil(t, getErr)
+	td.db.SetClassIndex(classID, &index.ClassLifeline{
+		LatestState: *classID,
+	})
+
+	deactivateCoreID, err := td.manager.DeactivateClass(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID),
+	)
+	assert.NoError(t, err)
+	deactivateID := record.Bytes2ID(deactivateCoreID[:])
+	deactivateRec, err := td.db.GetRecord(&deactivateID)
+	assert.NoError(t, err)
 	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
 				},
 			},
-			AmendedRecord: classRef,
+			AmendedRecord: *classID,
 		},
 	})
 }
 
-func TestUpdateClassVerifiesClassReference(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.UpdateClass(requestRef, record.Reference{}, []record.MemoryMigrationCode{})
+func TestLedgerArtifactManager_UpdateClass_VerifiesRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	_, err := td.manager.UpdateClass(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(), *genRandomRef().CoreRef(), nil,
+	)
 	assert.NotNil(t, err)
-	notClassRef := addRecord(&ledger, &record.CodeRecord{})
-	_, err = manager.UpdateClass(requestRef, notClassRef, []record.MemoryMigrationCode{})
+	notClassID, _ := td.db.SetRecord(&record.CodeRecord{})
+	_, err = td.manager.UpdateClass(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID), *genRandomRef().CoreRef(), nil,
+	)
 	assert.NotNil(t, err)
 }
 
-func TestUpdateClassVerifiesClassIsActive(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
-	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
-		LatestStateID: deactivateRef.Record,
+func TestLedgerArtifactManager_UpdateClass_VerifiesClassIsActive(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{})
+	deactivateID, _ := td.db.SetRecord(&record.DeactivationRecord{})
+	codeRef, _ := td.db.SetRecord(&record.CodeRecord{})
+	td.db.SetClassIndex(classID, &index.ClassLifeline{
+		LatestState: *deactivateID,
 	})
-	_, err := manager.UpdateClass(requestRef, classRef, nil)
+	_, err := td.manager.UpdateClass(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(codeRef), nil)
 	assert.NotNil(t, err)
 }
 
-func TestUpdateClassCreatesAmendRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{
-		LatestStateID: classRef.Record,
+func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
 	})
-	updateRef, err := manager.UpdateClass(requestRef, classRef, nil)
-	assert.Nil(t, err)
-	updateRec, getErr := ledger.GetRecord(updateRef.Record)
+	td.db.SetClassIndex(classID, &index.ClassLifeline{
+		LatestState: *classID,
+	})
+	codeID, _ := td.db.SetRecord(&record.CodeRecord{
+		StorageRecord: record.StorageRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+		TargetedCode: map[core.MachineType][]byte{core.MachineTypeBuiltin: {}},
+	})
+	migrationID, _ := td.db.SetRecord(&record.CodeRecord{
+		StorageRecord: record.StorageRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+		TargetedCode: map[core.MachineType][]byte{core.MachineTypeBuiltin: {}},
+	})
+	migrationRefs := []record.Reference{{Domain: td.domainRef.Domain, Record: *migrationID}}
+	migrationCoreRefs := []core.RecordRef{*migrationRefs[0].CoreRef()}
+	updateCoreID, err := td.manager.UpdateClass(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(codeID),
+		migrationCoreRefs,
+	)
+	assert.NoError(t, err)
+	updateID := record.Bytes2ID(updateCoreID[:])
+	updateRec, getErr := td.db.GetRecord(&updateID)
 	assert.Nil(t, getErr)
 	assert.Equal(t, updateRec, &record.ClassAmendRecord{
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
 				},
 			},
-			AmendedRecord: classRef,
+			AmendedRecord: *classID,
 		},
+		NewCode:    record.Reference{Domain: td.requestRef.Domain, Record: *codeID},
+		Migrations: migrationRefs,
 	})
 }
 
-func TestActivateObjVerifiesClassReference(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.ActivateObj(requestRef, record.Reference{}, record.Memory{})
+func TestLedgerArtifactManager_ActivateObject_VerifiesRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	_, err := td.manager.ActivateObject(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(), *genRandomRef().CoreRef(),
+		[]byte{},
+	)
 	assert.NotNil(t, err)
-	notClassRef := addRecord(&ledger, &record.ObjectActivateRecord{})
-	_, err = manager.ActivateClass(requestRef, notClassRef, record.Memory{})
+	notClassID, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
+	_, err = td.manager.ActivateObject(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID), *genRandomRef().CoreRef(), []byte{},
+	)
 	assert.NotNil(t, err)
 }
 
-func TestActivateObjCreatesActivateRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	memory := record.Memory{1, 2, 3}
-	classRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	ledger.SetClassIndex(classRef.Record, &index.ClassLifeline{})
-	activateRef, err := manager.ActivateObj(requestRef, classRef, memory)
+func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	memory := []byte{1, 2, 3}
+	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	td.db.SetClassIndex(classID, &index.ClassLifeline{
+		LatestState: *classID,
+	})
+	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	td.db.SetObjectIndex(parentID, &index.ObjectLifeline{
+		ClassRef:    record.Reference{Record: *classID},
+		LatestState: *parentID,
+	})
+
+	activateCoreRef, err := td.manager.ActivateObject(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(parentID), memory,
+	)
 	assert.Nil(t, err)
-	activateRec, err := ledger.GetRecord(activateRef.Record)
+	activateRef := record.Core2Reference(*activateCoreRef)
+	activateRec, err := td.db.GetRecord(&activateRef.Record)
 	assert.Nil(t, err)
 	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
 				},
 			},
 		},
-		ClassActivateRecord: classRef,
+		ClassActivateRecord: record.Reference{Domain: td.requestRef.Domain, Record: *classID},
 		Memory:              memory,
+		Parent:              record.Reference{Domain: td.requestRef.Domain, Record: *parentID},
+		Delegate:            false,
 	})
+
+	idx, err := td.db.GetObjectIndex(parentID)
+	assert.NoError(t, err)
+	childRec, err := td.db.GetRecord(&idx.LatestChild)
+	assert.NoError(t, err)
+	assert.Equal(t, activateRef, childRec.(*record.ChildRecord).Child)
 }
 
-func TestDeactivateObjVerifiesObjReference(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.DeactivateClass(requestRef, record.Reference{})
+func TestLedgerArtifactManager_ActivateObjectDelegate_VerifiesRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	_, err := td.manager.ActivateObjectDelegate(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(), *genRandomRef().CoreRef(),
+		[]byte{},
+	)
 	assert.NotNil(t, err)
-	notObjRef := addRecord(&ledger, &record.ClassActivateRecord{})
-	_, err = manager.DeactivateClass(requestRef, notObjRef)
+	notClassID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	_, err = td.manager.ActivateObjectDelegate(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID), *genRefWithID(notClassID),
+		[]byte{},
+	)
 	assert.NotNil(t, err)
 }
 
-func TestDeactivateObjVerifiesObjectIsActive(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	objRef := addRecord(&ledger, &record.ObjectActivateRecord{})
-	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
-	ledger.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
-		LatestStateID: deactivateRef.Record,
-	})
-	_, err := manager.DeactivateObj(requestRef, objRef)
-	assert.NotNil(t, err)
-}
+func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
 
-func TestDeactivateObjCreatesDeactivateRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	objRef := addRecord(&ledger, &record.ObjectActivateRecord{})
-	ledger.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
-		LatestStateID: objRef.Record,
+	memory := []byte{1, 2, 3}
+	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
 	})
-	deactivateRef, err := manager.DeactivateObj(requestRef, objRef)
+	td.db.SetClassIndex(classID, &index.ClassLifeline{
+		LatestState: *classID,
+	})
+	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	td.db.SetObjectIndex(parentID, &index.ObjectLifeline{
+		ClassRef:    record.Reference{Domain: td.requestRef.Domain, Record: *classID},
+		LatestState: *parentID,
+	})
+
+	activateCoreRef, err := td.manager.ActivateObjectDelegate(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(parentID), memory,
+	)
 	assert.Nil(t, err)
-	deactivateRec, err := ledger.GetRecord(deactivateRef.Record)
+	activateRef := record.Core2Reference(*activateCoreRef)
+	activateRec, err := td.db.GetRecord(&activateRef.Record)
+	assert.Nil(t, err)
+	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
+				},
+			},
+		},
+		ClassActivateRecord: record.Reference{Domain: td.domainRef.Domain, Record: *classID},
+		Memory:              memory,
+		Parent:              record.Reference{Domain: td.domainRef.Domain, Record: *parentID},
+		Delegate:            true,
+	})
+
+	delegate, err := td.manager.GetDelegate(*genRefWithID(parentID), *genRefWithID(classID))
+	assert.NoError(t, err)
+	assert.Equal(t, activateCoreRef, delegate)
+}
+
+func TestLedgerArtifactManager_DeActivateObject_VerifiesRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	_, err := td.manager.DeactivateClass(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef())
+	assert.NotNil(t, err)
+	notObjID, _ := td.db.SetRecord(&record.ClassActivateRecord{})
+	_, err = td.manager.DeactivateClass(*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notObjID))
+	assert.NotNil(t, err)
+}
+
+func TestLedgerArtifactManager_DeActivateObject_VerifiesObjectIsActive(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	objRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
+	deactivateID, _ := td.db.SetRecord(&record.DeactivationRecord{})
+	td.db.SetObjectIndex(objRef, &index.ObjectLifeline{
+		LatestState: *deactivateID,
+	})
+	_, err := td.manager.DeactivateObject(*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(deactivateID))
+	assert.NotNil(t, err)
+}
+
+func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	objID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
+	})
+	td.db.SetObjectIndex(objID, &index.ObjectLifeline{
+		LatestState: *objID,
+	})
+	deactivateCoreID, err := td.manager.DeactivateObject(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(objID),
+	)
+	assert.Nil(t, err)
+	deactivateID := record.Bytes2ID(deactivateCoreID[:])
+	deactivateRec, err := td.db.GetRecord(&deactivateID)
 	assert.Nil(t, err)
 	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
 				},
 			},
-			AmendedRecord: objRef,
+			AmendedRecord: *objID,
 		},
 	})
 }
 
-func TestUpdateObjVerifiesObjectReference(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.UpdateObj(requestRef, record.Reference{}, nil)
+func TestLedgerArtifactManager_UpdateObject_VerifiesRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	_, err := td.manager.UpdateObject(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef().CoreRef(), nil)
 	assert.NotNil(t, err)
-	notObjRef := addRecord(&ledger, &record.CodeRecord{})
-	_, err = manager.UpdateObj(requestRef, notObjRef, nil)
+	notObjID, _ := td.db.SetRecord(&record.CodeRecord{})
+	_, err = td.manager.UpdateObject(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notObjID), nil,
+	)
 	assert.NotNil(t, err)
 }
 
-func TestUpdateObjVerifiesObjectIsActive(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	objRef := addRecord(&ledger, &record.ObjectActivateRecord{})
-	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
-	ledger.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
-		LatestStateID: deactivateRef.Record,
+func TestLedgerArtifactManager_UpdateObject_VerifiesObjectIsActive(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	objRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
+	deactivateID, _ := td.db.SetRecord(&record.DeactivationRecord{})
+	td.db.SetObjectIndex(objRef, &index.ObjectLifeline{
+		LatestState: *deactivateID,
 	})
-	_, err := manager.UpdateClass(requestRef, objRef, nil)
+	_, err := td.manager.UpdateObject(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(deactivateID), nil,
+	)
 	assert.NotNil(t, err)
 }
 
-func TestUpdateObjCreatesAmendRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	objRef := addRecord(&ledger, &record.ObjectActivateRecord{})
-	ledger.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
-		LatestStateID: objRef.Record,
+func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	objID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *genRandomRef(),
+				},
+			},
+		},
 	})
-	memory := record.Memory{1, 2, 3}
-	updateRef, err := manager.UpdateObj(requestRef, objRef, memory)
+	td.db.SetObjectIndex(objID, &index.ObjectLifeline{
+		LatestState: *objID,
+	})
+	memory := []byte{1, 2, 3}
+	updateCoreID, err := td.manager.UpdateObject(
+		*td.domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(objID), memory)
 	assert.Nil(t, err)
-	updateRec, err := ledger.GetRecord(updateRef.Record)
+	updateID := record.Bytes2ID(updateCoreID[:])
+	updateRec, err := td.db.GetRecord(&updateID)
 	assert.Nil(t, err)
 	assert.Equal(t, updateRec, &record.ObjectAmendRecord{
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
 				},
 			},
-			AmendedRecord: objRef,
+			AmendedRecord: *objID,
 		},
 		NewMemory: memory,
 	})
 }
 
-func TestAppendObjDelegateVerifiesObjRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	_, err := manager.AppendObjDelegate(requestRef, record.Reference{}, nil)
-	assert.NotNil(t, err)
-	notObjRef := addRecord(&ledger, &record.CodeRecord{})
-	_, err = manager.AppendObjDelegate(requestRef, notObjRef, nil)
-	assert.NotNil(t, err)
-}
+func TestLedgerArtifactManager_GetClass_ReturnsCorrectDescriptors(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
 
-func TestAppendObjDelegateVerifiesObjectIsActive(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	objRef := addRecord(&ledger, &record.ObjectActivateRecord{})
-	deactivateRef := addRecord(&ledger, &record.DeactivationRecord{})
-	ledger.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
-		LatestStateID: deactivateRef.Record,
+	codeRef := *genRandomRef()
+	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *td.domainRef,
+				},
+			},
+		},
 	})
-	_, err := manager.AppendObjDelegate(requestRef, objRef, nil)
-	assert.NotNil(t, err)
-}
-
-func TestAppendObjDelegateCreatesAmendRecord(t *testing.T) {
-	ledger := LedgerMock{
-		Records:       map[record.ID]record.Record{},
-		ClassIndexes:  map[record.ID]*index.ClassLifeline{},
-		ObjectIndexes: map[record.ID]*index.ObjectLifeline{},
-	}
-	manager := LedgerArtifactManager{storer: &ledger}
-	requestRef := record.Reference{Domain: record.ID{1}, Record: record.ID{2}}
-	objRef := addRecord(&ledger, &record.ObjectActivateRecord{})
-	ledger.SetObjectIndex(objRef.Record, &index.ObjectLifeline{
-		LatestStateID: objRef.Record,
-	})
-	memory := record.Memory{1, 2, 3}
-	appendRef, err := manager.AppendObjDelegate(requestRef, objRef, memory)
-	assert.Nil(t, err)
-	appendRec, err := ledger.GetRecord(appendRef.Record)
-	objIndex, ok := ledger.GetObjectIndex(objRef.Record)
-	assert.True(t, ok)
-	assert.Equal(t, objIndex.AppendIDs, []record.ID{appendRef.Record})
-	assert.Nil(t, err)
-	assert.Equal(t, appendRec, &record.ObjectAppendRecord{
+	classAmendID, _ := td.db.SetRecord(&record.ClassAmendRecord{
 		AmendRecord: record.AmendRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
-					RequestRecord: requestRef,
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
 				},
 			},
-			AmendedRecord: objRef,
 		},
-		AppendMemory: memory,
+		NewCode: codeRef,
 	})
+	classIndex := index.ClassLifeline{
+		LatestState: *classAmendID,
+	}
+	td.db.SetClassIndex(classID, &classIndex)
+
+	classRef := genRefWithID(classID)
+	classDesc, err := td.manager.GetClass(*classRef, nil)
+	assert.NoError(t, err)
+	expectedClassDesc := &ClassDescriptor{
+		am:    td.manager,
+		head:  *classRef,
+		state: *classAmendID.CoreID(),
+		code:  codeRef.CoreRef(),
+	}
+
+	assert.Equal(t, *expectedClassDesc, *classDesc.(*ClassDescriptor))
+}
+
+func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	_, err := td.manager.GetObject(*genRandomRef().CoreRef(), nil)
+	assert.NotNil(t, err)
+}
+
+func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *td.domainRef,
+				},
+			},
+		},
+	})
+	classAmendRef, _ := td.db.SetRecord(&record.ClassAmendRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord:  *td.domainRef,
+					RequestRecord: *td.requestRef,
+				},
+			},
+		},
+	})
+	classIndex := index.ClassLifeline{
+		LatestState: *classAmendRef,
+	}
+	td.db.SetClassIndex(classID, &classIndex)
+
+	objectID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *td.domainRef,
+				},
+			},
+		},
+		Memory: []byte{3},
+	})
+	objectAmendID, _ := td.db.SetRecord(&record.ObjectAmendRecord{
+		AmendRecord: record.AmendRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: *td.domainRef,
+				},
+			},
+		},
+		NewMemory: []byte{4},
+	})
+	objectIndex := index.ObjectLifeline{
+		LatestState: *objectAmendID,
+		ClassRef:    record.Reference{Domain: td.requestRef.Domain, Record: *classID},
+		Children:    []record.Reference{*genRandomRef(), *genRandomRef()},
+	}
+	td.db.SetObjectIndex(objectID, &objectIndex)
+
+	objDesc, err := td.manager.GetObject(*genRefWithID(objectID), nil)
+	assert.NoError(t, err)
+	expectedChildren := make([]core.RecordRef, 0, len(objectIndex.Children))
+	for _, c := range objectIndex.Children {
+		expectedChildren = append(expectedChildren, *c.CoreRef())
+	}
+	expectedObjDesc := &ObjectDescriptor{
+		am: td.manager,
+
+		head:     *getReference(td.requestRef.CoreRef(), objectID),
+		state:    *objectAmendID.CoreID(),
+		class:    *getReference(td.requestRef.CoreRef(), classID),
+		memory:   []byte{4},
+		children: expectedChildren,
+	}
+
+	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
 }

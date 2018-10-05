@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -18,6 +18,9 @@ package class
 
 // ObjectID is a string representation of class for Object interface implementations.
 const ObjectID = "Object"
+
+// ProxyID is a string representation of class for Proxy interface implementations.
+const ProxyID = "Proxy"
 
 // ReferenceID is a string representation of class for Reference interface implementations.
 const ReferenceID = "Reference"
@@ -39,3 +42,18 @@ const InstanceDomainID = "InstanceDomain"
 
 // MemberDomainID is a string representation of class for MemberDomain interface implementations.
 const MemberDomainID = "MemberDomain"
+
+// MemberID is a string representation of class for Member interface implementations.
+const MemberID = "Member"
+
+// WalletDomainID is a string representation of class for WalletDomain interface implementations.
+const WalletDomainID = "WalletDomain"
+
+// AllowanceID is a string representation of class for Allowance interface implementations.
+const AllowanceID = "Allowance"
+
+// WalletID is a string representation of class for Wallet interface implementations.
+const WalletID = "Wallet"
+
+// CompositeCollectionID is a string representation of class for CompositeCollection interface implementations.
+const CompositeCollectionID = "CompositeCollection"

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package hash
 
 import (
+	"hash"
 	"io"
 
 	"golang.org/x/crypto/sha3"
@@ -31,9 +32,16 @@ type Writer interface {
 
 // SHA3hash224 returns SHA3 hash calculated on data received from Writer.
 func SHA3hash224(hw ...Writer) []byte {
-	h := sha3.New224()
+	h := NewSHA3()
 	for _, w := range hw {
 		w.WriteHash(h)
 	}
 	return h.Sum(nil)
+}
+
+// NewSHA3 just wrapper around sha3.New224.
+//
+// Just to avoid of binding on golang.org/x/crypto/sha3 in codebase.
+func NewSHA3() hash.Hash {
+	return sha3.New224()
 }

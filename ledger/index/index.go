@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,18 +17,21 @@
 package index
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/record"
 )
 
 // ClassLifeline represents meta information for record object
 type ClassLifeline struct {
-	LatestStateID record.ID
-	MigrationIDs  []record.ID
+	LatestState record.ID   // Amend or activate record
+	AmendRefs   []record.ID // ClassAmendRecord
 }
 
 // ObjectLifeline represents meta information for record object
 type ObjectLifeline struct {
-	ClassID       record.ID
-	LatestStateID record.ID
-	AppendIDs     []record.ID
+	ClassRef    record.Reference
+	LatestState record.ID          // Amend or activate record
+	LatestChild record.ID          // Meta record about child activation
+	Children    []record.Reference // ActivateObjectRecord
+	Delegates   map[core.RecordRef]record.Reference
 }

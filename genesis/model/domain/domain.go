@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -27,17 +27,23 @@ type Domain interface {
 	contract.SmartContract
 }
 
+type InternalDomain interface {
+	contract.InternalSmartContract
+}
+
 // BaseDomain is a base implementation of Domain interface.
 type BaseDomain struct {
 	contract.BaseSmartContract
+	//class object.Factory
 	Name string
 }
 
 // NewBaseDomain creates new BaseDomain instance.
-func NewBaseDomain(parent object.Parent, name string) *BaseDomain {
+func NewBaseDomain(parent object.Parent, class object.Factory, name string) *BaseDomain {
 	return &BaseDomain{
-		BaseSmartContract: *contract.NewBaseSmartContract(parent),
-		Name:              name,
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, class.(object.Proxy)),
+		//class:             class,
+		Name: name,
 	}
 }
 
@@ -45,6 +51,10 @@ func NewBaseDomain(parent object.Parent, name string) *BaseDomain {
 func (d *BaseDomain) GetClassID() string {
 	return class.DomainID
 }
+
+/*func (d *BaseDomain) GetClass() object.Factory {
+	return d.class
+}*/
 
 // GetName return name of domain.
 func (d *BaseDomain) GetName() string {

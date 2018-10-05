@@ -1,0 +1,18 @@
+insolar:
+  host:
+    transport:
+      protocol: UTP
+      address: 127.0.0.1:0
+      behindnat: false
+    bootstraphosts: []
+    isrelay: false
+    infinitybootstrap: false
+    timeout: 4
+  node:
+    nodes: []
+  log:
+    format: ""
+    level: Info
+    output: insolar.log
+  stats:
+    listenaddress: 0.0.0.0:8080

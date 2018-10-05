@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,17 +16,38 @@
 
 package record
 
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
+)
+
+// ClassState is common class state record.
+type ClassState interface {
+	// IsDeactivation determines if current state is deactivation.
+	IsDeactivation() bool
+	// IsAmend determines if current state is amend.
+	IsAmend() bool
+	// GetCode returns state code.
+	GetCode() *Reference
+}
+
+// ObjectState is common object state record.
+type ObjectState interface {
+	// IsDeactivation determines if current state is deactivation.
+	IsDeactivation() bool
+	// IsAmend determines if current state is amend.
+	IsAmend() bool
+	// GetMemory returns state memory.
+	GetMemory() []byte
+}
+
 // ReasonCode is an error reason code.
 type ReasonCode uint32
 
 // ResultRecord is a common type for all results.
 type ResultRecord struct {
+	DomainRecord  Reference
 	RequestRecord Reference
-}
-
-// Domain implements Record interface
-func (rec *ResultRecord) Domain() ID {
-	return rec.RequestRecord.Domain
 }
 
 // WipeOutRecord is a special record that takes place of another record
@@ -36,7 +57,7 @@ type WipeOutRecord struct {
 	ResultRecord
 
 	Replacement Reference
-	WipedHash   Hash
+	WipedHash   [core.RecordHashSize]byte
 }
 
 // StatelessResult is a result type that does not need to be stored.
@@ -117,8 +138,22 @@ type ActivationRecord struct {
 type ClassActivateRecord struct {
 	ActivationRecord
 
-	CodeRecord    Reference
 	DefaultMemory Memory
+}
+
+// IsDeactivation determines if current state is deactivation.
+func (r *ClassActivateRecord) IsDeactivation() bool {
+	return false
+}
+
+// IsAmend determines if current state is amend.
+func (r *ClassActivateRecord) IsAmend() bool {
+	return false
+}
+
+// GetCode returns state code.
+func (r *ClassActivateRecord) GetCode() *Reference {
+	return nil
 }
 
 // ObjectActivateRecord is produced when we instantiate new object from an available class.
@@ -127,6 +162,23 @@ type ObjectActivateRecord struct {
 
 	ClassActivateRecord Reference
 	Memory              Memory
+	Parent              Reference
+	Delegate            bool
+}
+
+// IsDeactivation determines if current state is deactivation.
+func (r *ObjectActivateRecord) IsDeactivation() bool {
+	return false
+}
+
+// IsAmend determines if current state is amend.
+func (r *ObjectActivateRecord) IsAmend() bool {
+	return false
+}
+
+// GetMemory returns state memory.
+func (r *ObjectActivateRecord) GetMemory() []byte {
+	return r.Memory
 }
 
 // StorageRecord is produced when we store something in ledger. Code, data etc.
@@ -138,37 +190,57 @@ type StorageRecord struct {
 type CodeRecord struct {
 	StorageRecord
 
-	Interfaces   []Reference
-	TargetedCode map[ArchType][]byte // []MachineBinaryCode
-	SourceCode   string              // ObjectSourceCode
+	TargetedCode map[core.MachineType][]byte
+	SourceCode   string
+}
+
+// TypeRecord is a code interface declaration.
+type TypeRecord struct {
+	StorageRecord
+
+	TypeDeclaration []byte
+}
+
+// GetCode returns class code according to provided architecture preferences. If preferences are not provided or the
+// record does not contain code for any of provided architectures an error will be returned.
+func (r *CodeRecord) GetCode(archPref []core.MachineType) ([]byte, core.MachineType, error) {
+	for _, arch := range archPref {
+		code, ok := r.TargetedCode[arch]
+		if ok {
+			return code, arch, nil
+		}
+	}
+	return nil, 0, errors.New("code for preferred architectures not found")
 }
 
 // AmendRecord is produced when we modify another record in ledger.
 type AmendRecord struct {
 	StatefulResult
 
-	BaseRecord    Reference
-	AmendedRecord Reference
+	AmendedRecord ID
 }
 
 // ClassAmendRecord is an amendment record for classes.
 type ClassAmendRecord struct {
 	AmendRecord
 
-	NewCode []byte // ObjectBinaryCode
+	NewCode    Reference   // CodeRecord
+	Migrations []Reference // CodeRecord
 }
 
-// MigrationCodes returns a list of data migration procedures for a given code change.
-func (r *ClassAmendRecord) MigrationCodes() []*MemoryMigrationCode {
-	panic("not implemented")
+// IsDeactivation determines if current state is deactivation.
+func (r *ClassAmendRecord) IsDeactivation() bool {
+	return false
 }
 
-// MemoryMigrationCode is a data migration procedure.
-type MemoryMigrationCode struct {
-	ClassAmendRecord
+// IsAmend determines if current state is amend.
+func (r *ClassAmendRecord) IsAmend() bool {
+	return true
+}
 
-	GeneratedByClassRecord Reference
-	MigrationCodeRecord    Reference
+// GetCode returns state code.
+func (r *ClassAmendRecord) GetCode() *Reference {
+	return &r.NewCode
 }
 
 // DeactivationRecord marks targeted object as disabled.
@@ -176,11 +248,46 @@ type DeactivationRecord struct {
 	AmendRecord
 }
 
+// IsDeactivation determines if current state is deactivation.
+func (*DeactivationRecord) IsDeactivation() bool {
+	return true
+}
+
+// IsAmend determines if current state is amend.
+func (*DeactivationRecord) IsAmend() bool {
+	return false
+}
+
+// GetMemory returns state memory.
+func (*DeactivationRecord) GetMemory() []byte {
+	return nil
+}
+
+// GetCode returns state code.
+func (*DeactivationRecord) GetCode() *Reference {
+	return nil
+}
+
 // ObjectAmendRecord is an amendment record for objects.
 type ObjectAmendRecord struct {
 	AmendRecord
 
 	NewMemory Memory
+}
+
+// IsDeactivation determines if current state is deactivation.
+func (r *ObjectAmendRecord) IsDeactivation() bool {
+	return false
+}
+
+// IsAmend determines if current state is amend.
+func (r *ObjectAmendRecord) IsAmend() bool {
+	return true
+}
+
+// GetMemory returns state memory.
+func (r *ObjectAmendRecord) GetMemory() []byte {
+	return r.NewMemory
 }
 
 // StatefulCallResult is a contract call result that produces new state.

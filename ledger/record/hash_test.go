@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -48,7 +48,6 @@ var emptyRecordsGens = []recordgen{
 	func() Record { return &CodeRecord{} },
 	func() Record { return &AmendRecord{} },
 	func() Record { return &ClassAmendRecord{} },
-	func() Record { return &MemoryMigrationCode{} },
 	func() Record { return &DeactivationRecord{} },
 	func() Record { return &ObjectAmendRecord{} },
 	func() Record { return &StatefulCallResult{} },
@@ -91,6 +90,13 @@ func Test_HashesTheSame(t *testing.T) {
 	}
 }
 
+func newMockID() ID {
+	return ID{
+		Pulse: 0x0a,
+		Hash:  str2Bytes("21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+	}
+}
+
 var hashtestsRecordsMutate = []struct {
 	typ     string
 	records []Record
@@ -110,14 +116,14 @@ var hashtestsRecordsMutate = []struct {
 			&ReadObjectComposite{ReadObject: ReadObject{ProjectionType: 1}},
 			&ReadObjectComposite{ReadObject: ReadObject{ProjectionType: 2}},
 			&ReadObjectComposite{CompositeType: Reference{
-				Domain: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
-				Record: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+				Domain: newMockID(),
+				Record: newMockID(),
 			}},
 			&ReadObjectComposite{CompositeType: Reference{
-				Domain: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+				Domain: newMockID(),
 			}},
 			&ReadObjectComposite{CompositeType: Reference{
-				Record: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
+				Record: newMockID(),
 			}},
 		},
 	},

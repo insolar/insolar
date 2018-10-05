@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/genesis/model/class"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,16 +44,6 @@ func TestNewReference_Error(t *testing.T) {
 
 	assert.EqualError(t, err, "unknown scope type: 100")
 	assert.Nil(t, ref)
-}
-
-func TestReference_GetReferenceID(t *testing.T) {
-	domain := "134"
-	record := "156"
-	ref, _ := NewReference(domain, record, GlobalScope)
-
-	refID := ref.GetClassID()
-
-	assert.Equal(t, class.ReferenceID, refID)
 }
 
 func TestReference_String(t *testing.T) {

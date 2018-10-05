@@ -2,9 +2,12 @@ Insolar
 ===============
 Blockchain platform
 
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2150/badge)](https://bestpractices.coreinfrastructure.org/projects/2150)
+
 [![Build Status](https://travis-ci.org/insolar/insolar.svg?branch=master)](https://travis-ci.org/insolar/insolar)
 [![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar)](https://goreportcard.com/report/github.com/insolar/insolar)
 [![GoDoc](https://godoc.org/github.com/insolar/insolar?status.svg)](https://godoc.org/github.com/insolar/insolar)
+[![codecov](https://codecov.io/gh/insolar/insolar/branch/master/graph/badge.svg)](https://codecov.io/gh/insolar/insolar)
 
 _This project is still in early development state.
 It is not recommended to use it in production environment._
@@ -34,18 +37,18 @@ for a range of scenarios and collaborate with other entities on the platform.
 
 Components
 ----------
-### [Network](network/host)
+### [Network](network/hostnetwork)
 Kademlia DHT based blockchain network layer.
  - Support of heterogeneous network topology.
- - Network routing with a node or node group becoming relays for others nodes.
- - Ability to limit number of gateways to corporate node group via relays
-   to keep the node group secure.
+ - Network routing with a host or host group becoming relays for others hosts.
+ - Ability to limit number of gateways to corporate host group via relays
+   to keep the host group secure.
 
-See [package readme](network/host) for more details.
+See [package readme](network/hostnetwork) for more details.
 
 
 ### [Ledger](ledger)
-Record storage engine backed by [LevelDB](https://github.com/syndtr/goleveldb).
+Record storage engine backed by [BadgerDB](https://github.com/dgraph-io/badger).
 
 
 
@@ -61,6 +64,13 @@ Domains define the visibility scope for the child contracts and their interactio
 
 See [package readme](genesis) for more details.
 
+### [Configuration](configuration)
+
+Provides configuration params for all Insolar components and helper for config resources management.
+
+### [Metrics](metrics)
+
+Using Prometheus monitoring system and time series database for collecting and store metrics
 
 Installation
 ------------
@@ -68,11 +78,33 @@ Installation
     go get github.com/insolar/insolar
 
 
+Generate default configuration file
+------------
+
+    go run cmd/insolar/* --cmd=default_config
+
+Example
+------------
+    # Start node
+    ./scripts/insolard/launch.sh
+
+    # In other terminal:
+    # Create user
+    curl --data '{"query_type": "create_member", "name": "Peter"}' "localhost:19191/api/v1?"
+    # Dump user info
+    curl --data '{"query_type": "dump_all_users"}' "localhost:19191/api/v1?"
+
+Docker container
+------------
+
+    docker pull insolar/insolar
+    docker run -ti insolar/insolar
+
+
 Contributing
 ------------
-Please feel free to submit issues, fork the repository and send pull requests!
+See [Contributing Guidelines](.github/CONTRIBUTING.md).
 
-When submitting an issue, we ask that you please include a complete test function that demonstrates the issue.
 
 License
 -------

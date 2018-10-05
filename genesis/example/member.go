@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -20,131 +20,119 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
-	"github.com/insolar/insolar/genesis/model/domain"
-	"github.com/insolar/insolar/genesis/model/factory"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
-// MemberDomainName is a name for member domain.
-const MemberDomainName = "MemberDomain"
-
-// MemberDomain is a contract that allows to add new members to system.
-type MemberDomain interface {
-	// Base domain implementation.
-	domain.Domain
-	// CreateMember is used to create new member as a child to domain storage.
-	CreateMember(factory.Factory) (string, error)
-	// GetMember returns member from its record in domain storage.
-	GetMember(string) (resolver.Proxy, error)
+type Member interface {
+	object.ComposingContainer
+	contract.SmartContract
+	GetUsername() string
+	GetPublicKey() string
 }
 
-type memberDomain struct {
-	domain.BaseDomain
+type member struct {
+	contract.BaseSmartContract
+	username  string
+	publicKey string
 }
 
-// newMemberDomain creates new instance of MemberDomain.
-func newMemberDomain(parent object.Parent) (*memberDomain, error) {
+// newMember creates new instance of member.
+func newMember(parent object.Parent, class object.Factory) (Member, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
-
-	return &memberDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, MemberDomainName),
+	return &member{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, class.(object.Proxy)),
 	}, nil
 }
 
-// GetClassID returns string representation of MemberDomain's class.
-func (md *memberDomain) GetClassID() string {
-	return class.MemberDomainID
+// GetClassID returns string representation of member's class.
+func (m *member) GetClassID() string {
+	return class.MemberID
 }
 
-// CreateMember creates new member as a child to domain storage.
-func (md *memberDomain) CreateMember(fc factory.Factory) (string, error) {
-	member, err := fc.Create(md)
-	if err != nil {
-		return "", err
-	}
-	if member == nil {
-		return "", fmt.Errorf("factory returns nil")
-	}
-
-	record, err := md.ChildStorage.Set(member)
-	if err != nil {
-		return "", err
-	}
-
-	return record, nil
+// GetUsername returns member's username.
+func (m *member) GetUsername() string {
+	return m.username
 }
 
-// GetMember returns member from its record in domain storage.
-func (md *memberDomain) GetMember(record string) (resolver.Proxy, error) {
-	member, err := md.ChildStorage.Get(record)
+// GetPublicKey returns member's public key.
+func (m *member) GetPublicKey() string {
+	return m.publicKey
+}
+
+type memberProxy struct {
+	contract.BaseSmartContractProxy
+}
+
+// newMemberProxy creates new proxy and associates it with new instance of Member.
+func newMemberProxy(parent object.Parent, class object.Factory) (*memberProxy, error) {
+	instance, err := newMember(parent, class)
 	if err != nil {
 		return nil, err
 	}
-
-	result, ok := member.(resolver.Proxy)
-	if !ok {
-		return nil, fmt.Errorf("object with record `%s` is not `Proxy` instance", record)
-	}
-
-	return result, nil
-}
-
-type memberDomainProxy struct {
-	resolver.BaseProxy
-}
-
-// newMemberDomainProxy creates new proxy and associates it with new instance of MemberDomain.
-func newMemberDomainProxy(parent object.Parent) (*memberDomainProxy, error) {
-	instance, err := newMemberDomain(parent)
-	if err != nil {
-		return nil, err
-	}
-	return &memberDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+	return &memberProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: instance,
 		},
 	}, nil
 }
 
-// CreateMember is a proxy call for instance method.
-func (mdp *memberDomainProxy) CreateMember(fc factory.Factory) (string, error) {
-	return mdp.Instance.(MemberDomain).CreateMember(fc)
+// GetUsername is a proxy call for instance method.
+func (mp *memberProxy) GetUsername() string {
+	return mp.Instance.(Member).GetUsername()
 }
 
-// GetMember is a proxy call for instance method.
-func (mdp *memberDomainProxy) GetMember(record string) (resolver.Proxy, error) {
-	return mdp.Instance.(MemberDomain).GetMember(record)
+// GetPublicKey is a proxy call for instance method.
+func (mp *memberProxy) GetPublicKey() string {
+	return mp.Instance.(Member).GetPublicKey()
 }
 
-type memberDomainFactory struct {
-	object.BaseCallable
+// CreateComposite is a proxy call for instance method.
+func (mp *memberProxy) CreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
+	return mp.Instance.(Member).CreateComposite(compositeFactory)
+}
+
+// GetComposite is a proxy call for instance method.
+func (mp *memberProxy) GetComposite(interfaceKey string, class object.CompositeFactory) (object.Composite, error) {
+	return mp.Instance.(Member).GetComposite(interfaceKey, class)
+}
+
+// GetOrCreateComposite is a proxy call for instance method.
+func (mp *memberProxy) GetOrCreateComposite(compositeFactory object.CompositeFactory) (object.Composite, error) {
+	return mp.Instance.(Member).GetOrCreateComposite(compositeFactory)
+}
+
+type memberFactory struct {
+	object.BaseProxy
 	parent object.Parent
 }
 
-// NewMemberDomainFactory creates new factory for MemberDomain.
-func NewMemberDomainFactory(parent object.Parent) factory.Factory {
-	return &memberDomainFactory{
+// NewMemberFactory creates new factory for Member.
+func NewMemberFactory(parent object.Parent) object.Factory {
+	return &memberFactory{
 		parent: parent,
 	}
 }
 
-// GetClassID returns string representation of MemberDomain's class.
-func (mdf *memberDomainFactory) GetClassID() string {
-	return class.MemberDomainID
+// GetClassID returns string representation of Member's class.
+func (mf *memberFactory) GetClassID() string {
+	return class.MemberID
 }
 
-// GetParent returns parent
-func (mdf *memberDomainFactory) GetParent() object.Parent {
-	// TODO: return real parent, fix tests
-	return nil
+func (mf *memberFactory) GetClass() object.Proxy {
+	return mf
 }
 
-// Create is a factory method for new MemberDomain instances.
-func (mdf *memberDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
-	proxy, err := newMemberDomainProxy(parent)
+// GetParent returns parent.
+func (mf *memberFactory) GetParent() object.Parent {
+	return mf.parent
+}
+
+// Create is a factory method for new Member instances.
+func (mf *memberFactory) Create(parent object.Parent) (object.Proxy, error) {
+	proxy, err := newMemberProxy(parent, mf)
 	if err != nil {
 		return nil, err
 	}

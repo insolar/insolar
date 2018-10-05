@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,310 +17,255 @@
 package example
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/genesis/mock/storage"
 	"github.com/insolar/insolar/genesis/model/class"
-	"github.com/insolar/insolar/genesis/model/domain"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCallable struct {
-	reference object.Reference
+type BaseComposite struct {
+	class object.CompositeFactory
 }
 
-func (c *mockCallable) GetReference() object.Reference {
-	return c.reference
+func (c *BaseComposite) GetInterfaceKey() string {
+	return "BaseComposite"
 }
 
-func (c *mockCallable) SetReference(reference object.Reference) {
-	c.reference = reference
+func (c *BaseComposite) GetClassID() string {
+	return "BaseComposite"
 }
 
-type mockChild struct {
-	mockCallable
-	ContextStorage storage.Storage
-	parent         object.Parent
+func (c *BaseComposite) GetClass() object.Proxy {
+	return c.class
 }
 
-func (c *mockChild) GetClassID() string {
-	return "mockChild"
-}
-
-func (c *mockChild) GetParent() object.Parent {
-	return c.parent
-}
-
-var child = &mockChild{}
-
-type mockParent struct {
-	mockCallable
-	ContextStorage storage.Storage
-	parent         object.Parent
-}
-
-func (p *mockParent) GetParent() object.Parent {
-	return p.parent
-}
-
-func (p *mockParent) GetClassID() string {
-	return "mockParent"
-}
-
-func (p *mockParent) GetChildStorage() storage.Storage {
+func (c *BaseComposite) GetParent() object.Parent {
 	return nil
 }
 
-func (p *mockParent) AddChild(child object.Child) (string, error) {
-	return "", nil
+func (c *BaseComposite) GetReference() object.Reference {
+	return nil
 }
 
-func (p *mockParent) GetChild(key string) (object.Child, error) {
-	return child, nil
+func (c *BaseComposite) SetReference(reference object.Reference) {}
+
+type MockBaseCompositeFactory struct{}
+
+func (bcf *MockBaseCompositeFactory) SetReference(reference object.Reference) {
 }
 
-func (p *mockParent) GetContext() []string {
-	return []string{}
+func (bcf *MockBaseCompositeFactory) GetReference() object.Reference {
+	return nil
 }
 
-func (p *mockParent) GetContextStorage() storage.Storage {
-	return p.ContextStorage
+func (bcf *MockBaseCompositeFactory) GetParent() object.Parent {
+	return nil
 }
 
-type mockParentWithError struct {
-	mockParent
+func (bcf *MockBaseCompositeFactory) GetClassID() string {
+	return "BaseCompositeFactory_ID"
 }
 
-func (p *mockParentWithError) AddChild(child object.Child) (string, error) {
-	return "", fmt.Errorf("add child error")
+func (bcf *MockBaseCompositeFactory) GetClass() object.Proxy {
+	return nil
 }
 
-type mockProxy struct {
-	mockCallable
-	parent object.Parent
+func (bcf *MockBaseCompositeFactory) GetInterfaceKey() string {
+	return class.MemberID
 }
 
-func (p *mockProxy) GetClassID() string {
-	return "mockProxy"
-}
-
-func (p *mockProxy) GetParent() object.Parent {
-	return p.parent
-}
-
-type mockFactory struct {
-	mockCallable
-}
-
-func (f *mockFactory) Create(parent object.Parent) (resolver.Proxy, error) {
-	return &mockProxy{
-		parent: parent,
+func (bcf *MockBaseCompositeFactory) Create(parent object.Parent) (object.Composite, error) {
+	return &BaseComposite{
+		class: bcf,
 	}, nil
 }
 
-func (f *mockFactory) GetClassID() string {
-	return "mockFactory"
-}
-
-func (f *mockFactory) GetParent() object.Parent {
-	return nil
-}
-
-type mockFactoryError struct {
-	mockFactory
-}
-
-func (f *mockFactoryError) Create(parent object.Parent) (resolver.Proxy, error) {
-	return nil, fmt.Errorf("factory create error")
-}
-
-type mockFactoryNilError struct {
-	mockFactory
-}
-
-func (f *mockFactoryNilError) Create(parent object.Parent) (resolver.Proxy, error) {
-	return nil, nil
-}
-
-func TestNewMemberDomain(t *testing.T) {
+func TestNewMember(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	mDomain, err := newMemberDomain(parent)
+	testMember, err := newMember(parent, factory)
 
 	assert.NoError(t, err)
-	assert.Equal(t, &memberDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, MemberDomainName),
-	}, mDomain)
+	expectedMember := &member{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, factory),
+	}
+	assert.Equal(t, expectedMember, testMember)
 }
 
-func TestNewMemberDomain_WithNilParent(t *testing.T) {
-	_, err := newMemberDomain(nil)
+func TestNewMember_WithNilParent(t *testing.T) {
+	factory := &mockFactory{}
+	_, err := newMember(nil, factory)
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
-func TestMemberDomain_GetClassID(t *testing.T) {
-	parent := &mockParent{}
-	mDomain, _ := newMemberDomain(parent)
-	domainID := mDomain.GetClassID()
-	assert.Equal(t, class.MemberDomainID, domainID)
-}
-
-func TestMemberDomain_CreateMember(t *testing.T) {
-	parent := &mockParent{}
-	mDomain, _ := newMemberDomain(parent)
-
+func TestMember_GetClassID(t *testing.T) {
 	factory := &mockFactory{}
-	member, err := mDomain.CreateMember(factory)
-	assert.NoError(t, err)
+	parent := &mockParent{}
+	testMember, _ := newMember(parent, factory)
 
-	_, err = uuid.FromString(member)
-	assert.NoError(t, err)
+	memberID := testMember.GetClassID()
+	assert.Equal(t, class.MemberID, memberID)
 }
 
-func TestMemberDomain_CreateMember_WithError(t *testing.T) {
-	parent := &mockParent{}
-	mDomain, _ := newMemberDomain(parent)
-
-	factory := &mockFactoryError{}
-	_, err := mDomain.CreateMember(factory)
-	assert.EqualError(t, err, "factory create error")
-}
-
-func TestMemberDomain_CreateMember_WithNilError(t *testing.T) {
-	parent := &mockParent{}
-	mDomain, _ := newMemberDomain(parent)
-
-	factory := &mockFactoryNilError{}
-	_, err := mDomain.CreateMember(factory)
-	assert.EqualError(t, err, "factory returns nil")
-}
-
-func TestMemberDomain_GetMember(t *testing.T) {
-	parent := &mockParent{}
-	mDomain, _ := newMemberDomain(parent)
-
+func TestMember_GetUsername(t *testing.T) {
 	factory := &mockFactory{}
-	member, err := mDomain.CreateMember(factory)
-	assert.NoError(t, err)
+	parent := &mockParent{}
+	testMember, _ := newMember(parent, factory)
 
-	resolved, err := mDomain.GetMember(member)
-	assert.NoError(t, err)
-
-	assert.Equal(t, &mockProxy{
-		parent: mDomain,
-	}, resolved)
+	username := testMember.GetUsername()
+	assert.Equal(t, "", username)
 }
 
-func TestMemberDomain_GetMember_IncorrectRef(t *testing.T) {
+func TestMember_GetPublicKey(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	mDomain, _ := newMemberDomain(parent)
+	testMember, _ := newMember(parent, factory)
 
-	_, err := mDomain.GetMember("1")
-	assert.EqualError(t, err, "object with record 1 does not exist")
+	publicKey := testMember.GetPublicKey()
+	assert.Equal(t, "", publicKey)
 }
 
-func TestNewMemberDomainProxy(t *testing.T) {
+func TestNewMemberProxy(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	mDomain, err := newMemberDomain(parent)
+	_, err := newMember(parent, factory)
 	assert.NoError(t, err)
 
-	proxy, err := newMemberDomainProxy(parent)
+	proxy, err := newMemberProxy(parent, factory)
 	assert.NoError(t, err)
 
-	assert.Equal(t, &memberDomainProxy{
-		BaseProxy: resolver.BaseProxy{
-			Instance: mDomain,
+	expectedMember := &member{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, factory),
+	}
+
+	expectedMember.CompositeMap = make(map[string]object.Reference)
+	expectedMember.ChildStorage = storage.NewMapStorage()
+	assert.Equal(t, &memberProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: expectedMember,
 		},
 	}, proxy)
 }
 
-func TestNewMemberDomainProxy_WithNilParent(t *testing.T) {
-	_, err := newMemberDomainProxy(nil)
+func TestNewMemberProxy_WithNilParent(t *testing.T) {
+	factory := &mockFactory{}
+	_, err := newMemberProxy(nil, factory)
 	assert.EqualError(t, err, "parent must not be nil")
 }
 
-func TestMemberDomainProxy_CreateMember(t *testing.T) {
-	parent := &mockParent{}
-	proxy, _ := newMemberDomainProxy(parent)
-
+func TestMemberProxy_GetUsername(t *testing.T) {
 	factory := &mockFactory{}
-	member, err := proxy.CreateMember(factory)
-	assert.NoError(t, err)
+	parent := &mockParent{}
+	proxy, _ := newMemberProxy(parent, factory)
 
-	_, err = uuid.FromString(member)
-	assert.NoError(t, err)
+	username := proxy.GetUsername()
+	assert.Equal(t, "", username)
 }
 
-func TestMemberDomainProxy_GetMember(t *testing.T) {
-	parent := &mockParent{}
-	proxy, _ := newMemberDomainProxy(parent)
-
+func TestMemberProxy_GetPublicKey(t *testing.T) {
 	factory := &mockFactory{}
-	member, err := proxy.CreateMember(factory)
-	assert.NoError(t, err)
+	parent := &mockParent{}
+	proxy, _ := newMemberProxy(parent, factory)
 
-	resolved, err := proxy.GetMember(member)
-	assert.NoError(t, err)
-
-	assert.Equal(t, &mockProxy{
-		parent: proxy.Instance.(object.Parent),
-	}, resolved)
+	publicKey := proxy.GetPublicKey()
+	assert.Equal(t, "", publicKey)
 }
 
-func TestNewMemberDomainFactory(t *testing.T) {
+func TestMemberProxy_GetOrCreateComposite_Get(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
-	expected := &memberDomainFactory{parent: parent}
+	proxy, _ := newMemberProxy(parent, factory)
+	compositeFactory := &MockBaseCompositeFactory{}
+	composite := &BaseComposite{
+		class: compositeFactory,
+	}
 
-	factory := NewMemberDomainFactory(parent)
+	res, err := proxy.GetOrCreateComposite(compositeFactory)
+
+	assert.NoError(t, err)
+	assert.Equal(t, composite, res)
+}
+
+func TestMemberProxy_GetOrCreateComposite_Create(t *testing.T) {
+	factory := &mockFactory{}
+	parent := &mockParent{}
+	proxy, _ := newMemberProxy(parent, factory)
+	compositeFactory := &MockBaseCompositeFactory{}
+
+	_, err := proxy.GetOrCreateComposite(compositeFactory)
+	assert.NoError(t, err)
+	assert.Len(t, proxy.Instance.(*member).CompositeMap, 1)
+
+	ref := proxy.Instance.(*member).CompositeMap[compositeFactory.GetInterfaceKey()]
+
+	record := proxy.Instance.(*member).ChildStorage.GetKeys()[0]
+
+	assert.Equal(t, record, ref.GetRecord())
+	assert.Equal(t, "", ref.GetDomain())
+	assert.Equal(t, object.ChildScope, ref.GetScope())
+}
+
+func TestNewMemberFactory(t *testing.T) {
+	parent := &mockParent{}
+	expected := &memberFactory{parent: parent}
+
+	factory := NewMemberFactory(parent)
 
 	assert.Equal(t, expected, factory)
 }
 
-func TestMemberDomainFactory_GetClassID(t *testing.T) {
+func TestMemberFactory_GetClassID(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewMemberDomainFactory(parent)
+	factory := NewMemberFactory(parent)
 	id := factory.GetClassID()
 
-	assert.Equal(t, class.MemberDomainID, id)
+	assert.Equal(t, class.MemberID, id)
 }
 
-func TestMemberDomainFactory_GetParent(t *testing.T) {
+func TestMemberFactory_GetParent(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewMemberDomainFactory(parent)
-	reference := factory.GetParent()
+	factory := NewMemberFactory(parent)
+	p := factory.GetParent()
 
-	assert.Nil(t, reference)
+	assert.Equal(t, parent, p)
 }
 
-func TestMemberDomainFactory_Create(t *testing.T) {
+func TestMemberFactory_Create(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewMemberDomainFactory(parent)
-	proxy, err := factory.Create(parent)
-	mDomain, _ := newMemberDomain(parent)
+	mFactory := NewMemberFactory(parent)
+
+	proxy, err := mFactory.Create(parent)
 
 	assert.NoError(t, err)
-	assert.Equal(t, &memberDomainProxy{
-		BaseProxy: resolver.BaseProxy{
-			Instance: mDomain,
+
+	expectedMember := &member{
+		BaseSmartContract: *contract.NewBaseSmartContract(parent, mFactory),
+	}
+
+	expectedMember.CompositeMap = make(map[string]object.Reference)
+	expectedMember.ChildStorage = storage.NewMapStorage()
+	assert.Equal(t, &memberProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
+			Instance: expectedMember,
 		},
 	}, proxy)
 }
 
-func TestMemberDomainFactory_CreateWithNoParent(t *testing.T) {
+func TestMemberFactory_CreateWithNoParent(t *testing.T) {
 	parent := &mockParent{}
-	factory := NewMemberDomainFactory(parent)
+	factory := NewMemberFactory(parent)
 	proxy, err := factory.Create(nil)
 
 	assert.EqualError(t, err, "parent must not be nil")
 	assert.Nil(t, proxy)
 }
 
-func TestMemberDomainFactory_CreateWithError(t *testing.T) {
+func TestMemberFactory_CreateWithError(t *testing.T) {
 	parent := &mockParentWithError{}
-	factory := NewMemberDomainFactory(parent)
+	factory := NewMemberFactory(parent)
 	proxy, err := factory.Create(parent)
 
 	assert.EqualError(t, err, "add child error")

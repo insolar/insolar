@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,35 +19,31 @@ package record
 import (
 	"encoding/hex"
 	"fmt"
-	"log"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
 func str2Bytes(s string) []byte {
-	// var b bytes.Buffer
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	return b
 }
 
-func str2Hash(s string) Hash {
+func str2Hash(s string) [core.RecordHashSize]byte {
 	// TODO: add check for s length
-	var h Hash
+	var h [core.RecordHashSize]byte
 	b := str2Bytes(s)
 	_ = copy(h[:], b)
 	return h
 }
 
 func str2ID(s string) ID {
-	// TODO: add check for s length
-	var id ID
-	b := str2Bytes(s)
-	_ = copy(id[:], b)
-	return id
+	k := str2Bytes(s)
+	return Bytes2ID(k)
 }
 
 // Test_str2hash is a test for test helper str2Hash.
@@ -57,8 +53,8 @@ func Test_str2Hash(t *testing.T) {
 	assert.Equal(t, hashStr, fmt.Sprintf("%x", h))
 }
 
-func Test_str2ID(t *testing.T) {
+func Test_str2Bytes(t *testing.T) {
 	idStr := "00001111" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"
-	id := str2ID(idStr)
+	id := str2Bytes(idStr)
 	assert.Equal(t, idStr, fmt.Sprintf("%x", id))
 }

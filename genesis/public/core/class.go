@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -20,10 +20,9 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/genesis/model/class"
+	"github.com/insolar/insolar/genesis/model/contract"
 	"github.com/insolar/insolar/genesis/model/domain"
-	"github.com/insolar/insolar/genesis/model/factory"
 	"github.com/insolar/insolar/genesis/model/object"
-	"github.com/insolar/insolar/genesis/model/resolver"
 )
 
 // ClassDomainName is a name for class domain.
@@ -34,9 +33,9 @@ type ClassDomain interface {
 	// Base domain implementation.
 	domain.Domain
 	// RegisterClass is used to publish new Class.
-	RegisterClass(factory.Factory) (string, error)
+	RegisterClass(object.Factory) (string, error)
 	// GetClass provides factory instance from record.
-	GetClass(string) (factory.Factory, error)
+	GetStoredClass(string) (object.Factory, error)
 }
 
 type classDomain struct {
@@ -44,13 +43,13 @@ type classDomain struct {
 }
 
 // newClassDomain creates new instance of ClassDomain.
-func newClassDomain(parent object.Parent) (*classDomain, error) {
+func newClassDomain(parent object.Parent, class object.Factory) (*classDomain, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent must not be nil")
 	}
 
 	classDomain := &classDomain{
-		BaseDomain: *domain.NewBaseDomain(parent, ClassDomainName),
+		BaseDomain: *domain.NewBaseDomain(parent, class, ClassDomainName),
 	}
 	return classDomain, nil
 }
@@ -61,7 +60,7 @@ func (cd *classDomain) GetClassID() string {
 }
 
 // RegisterClass method used to create new public Class.
-func (cd *classDomain) RegisterClass(fc factory.Factory) (string, error) {
+func (cd *classDomain) RegisterClass(fc object.Factory) (string, error) {
 	recordID, err := cd.AddChild(fc)
 	if err != nil {
 		return "", fmt.Errorf("class registration error")
@@ -71,13 +70,13 @@ func (cd *classDomain) RegisterClass(fc factory.Factory) (string, error) {
 }
 
 // GetClass method used for retrieve class information from record.
-func (cd *classDomain) GetClass(recordID string) (factory.Factory, error) {
+func (cd *classDomain) GetStoredClass(recordID string) (object.Factory, error) {
 	cls, err := cd.GetChild(recordID)
 	if err != nil {
 		return nil, err
 	}
 
-	result, ok := cls.(factory.Factory)
+	result, ok := cls.(object.Factory)
 	if !ok {
 		return nil, fmt.Errorf("object with record `%s` is not a Class", recordID)
 	}
@@ -86,40 +85,40 @@ func (cd *classDomain) GetClass(recordID string) (factory.Factory, error) {
 }
 
 type classDomainProxy struct {
-	resolver.BaseProxy
+	contract.BaseSmartContractProxy
 }
 
 // newClassDomainProxy creates new proxy and associates it with new instance of ClassDomain.
-func newClassDomainProxy(parent object.Parent) (*classDomainProxy, error) {
-	instance, err := newClassDomain(parent)
+func newClassDomainProxy(parent object.Parent, class object.Factory) (*classDomainProxy, error) {
+	instance, err := newClassDomain(parent, class)
 	if err != nil {
 		return nil, err
 	}
 
 	return &classDomainProxy{
-		BaseProxy: resolver.BaseProxy{
+		BaseSmartContractProxy: contract.BaseSmartContractProxy{
 			Instance: instance,
 		},
 	}, nil
 }
 
 // RegisterClass is a proxy call for instance method.
-func (cdp *classDomainProxy) RegisterClass(fc factory.Factory) (string, error) {
+func (cdp *classDomainProxy) RegisterClass(fc object.Factory) (string, error) {
 	return cdp.Instance.(ClassDomain).RegisterClass(fc)
 }
 
 // GetClass is a proxy call for instance method.
-func (cdp *classDomainProxy) GetClass(record string) (factory.Factory, error) {
-	return cdp.Instance.(ClassDomain).GetClass(record)
+func (cdp *classDomainProxy) GetStoredClass(record string) (object.Factory, error) {
+	return cdp.Instance.(ClassDomain).GetStoredClass(record)
 }
 
 type classDomainFactory struct {
-	object.BaseCallable
+	object.BaseFactory
 	parent object.Parent
 }
 
 // NewClassDomainFactory creates new factory for ClassDomain.
-func NewClassDomainFactory(parent object.Parent) factory.Factory {
+func NewClassDomainFactory(parent object.Parent) object.Factory {
 	return &classDomainFactory{
 		parent: parent,
 	}
@@ -136,9 +135,13 @@ func (cdf *classDomainFactory) GetClassID() string {
 	return class.ClsDomainID
 }
 
+func (cdf *classDomainFactory) GetClass() object.Proxy {
+	return cdf
+}
+
 // Create is a factory method for new ClassDomain instances.
-func (cdf *classDomainFactory) Create(parent object.Parent) (resolver.Proxy, error) {
-	proxy, err := newClassDomainProxy(parent)
+func (cdf *classDomainFactory) Create(parent object.Parent) (object.Proxy, error) {
+	proxy, err := newClassDomainProxy(parent, cdf)
 	if err != nil {
 		return nil, err
 	}

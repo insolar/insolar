@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import (
 )
 
 type mockParent struct {
-	Reference      object.Reference
 	ContextStorage storage.Storage
 }
 
@@ -35,12 +34,8 @@ func (p *mockParent) GetClassID() string {
 	return "mockParent"
 }
 
-func (p *mockParent) GetReference() object.Reference {
-	return p.Reference
-}
-
-func (p *mockParent) SetReference(reference object.Reference) {
-	p.Reference = reference
+func (p *mockParent) GetClass() object.Proxy {
+	return nil
 }
 
 func (p *mockParent) GetChildStorage() storage.Storage {
@@ -63,35 +58,102 @@ func (p *mockParent) GetContextStorage() storage.Storage {
 	return p.ContextStorage
 }
 
+type mockProxy struct {
+	reference object.Reference
+}
+
+func (p *mockProxy) GetClassID() string {
+	return "mockProxy"
+}
+
+func (p *mockProxy) GetClass() object.Proxy {
+	return nil
+}
+
+func (p *mockProxy) GetReference() object.Reference {
+	return p.reference
+}
+
+func (p *mockProxy) SetReference(reference object.Reference) {
+	p.reference = reference
+}
+
+type mockChildProxy struct {
+	mockProxy
+	ContextStorage storage.Storage
+	parent         object.Parent
+}
+
+func (c *mockChildProxy) GetClassID() string {
+	return "mockChild"
+}
+
+func (c *mockChildProxy) GetParent() object.Parent {
+	return c.parent
+}
+
+type mockFactory struct {
+}
+
+func (f *mockFactory) Create(parent object.Parent) (object.Proxy, error) {
+	return &mockChildProxy{
+		parent: parent,
+	}, nil
+}
+
+func (f *mockFactory) GetClassID() string {
+	return "mockFactory"
+}
+
+func (f *mockFactory) GetClass() object.Proxy {
+	return &mockFactory{}
+}
+
+func (f *mockFactory) GetReference() object.Reference {
+	return nil
+}
+
+func (f *mockFactory) GetParent() object.Parent {
+	return nil
+}
+
+func (f *mockFactory) SetReference(reference object.Reference) {
+
+}
+
 func TestNewBaseDomain(t *testing.T) {
+	factory := &mockFactory{}
 	parent := &mockParent{}
 
-	domain := NewBaseDomain(parent, "NewDomain")
+	domain := NewBaseDomain(parent, factory, "NewDomain")
 
-	sc := contract.BaseSmartContract{
-		CompositeMap: make(map[string]object.Composite),
-		ChildStorage: storage.NewMapStorage(),
-		Parent:       parent,
-	}
-
+	sc := contract.NewBaseSmartContract(parent, factory)
 	assert.Equal(t, &BaseDomain{
-		BaseSmartContract: sc,
+		BaseSmartContract: *sc,
 		Name:              "NewDomain",
 	}, domain)
 }
 
 func TestBaseDomain_GetClassID(t *testing.T) {
 	parent := &mockParent{}
-	domain := NewBaseDomain(parent, "NewDomain")
+	domain := NewBaseDomain(parent, &mockFactory{}, "NewDomain")
 
 	classID := domain.GetClassID()
 
 	assert.Equal(t, class.DomainID, classID)
 }
 
+func TestBaseDomain_GetClass(t *testing.T) {
+	factory := &mockFactory{}
+	parent := &mockParent{}
+	domain := NewBaseDomain(parent, factory, "NewDomain")
+
+	assert.Equal(t, factory, domain.GetClass())
+}
+
 func TestBaseDomain_GetName(t *testing.T) {
 	parent := &mockParent{}
-	domain := NewBaseDomain(parent, "NewDomain")
+	domain := NewBaseDomain(parent, &mockFactory{}, "NewDomain")
 
 	name := domain.GetName()
 

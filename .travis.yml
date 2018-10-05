@@ -4,22 +4,24 @@ language: go
 sudo: false
 
 go:
-  - "1.10.x"
+  - "1.11.x"
 
-jobs:
-  include:
-    - stage: "test"
-      before_install:
-        - "go get -u github.com/golang/dep/cmd/dep"
-      install:
-        - "dep ensure"
-      script:
-        - "go test -v --race --coverprofile=coverage.txt --covermode=atomic ./..."
-      after_success:
-        - "bash <(curl -s https://codecov.io/bash)"
+env:
+  global:
+    - CGO_ENABLED=0
+    - GORACE="halt_on_error=1"
+# «For parallel processes running at the same time, try to reduce the number. More than two to four processes should be fine, beyond that, resources are likely to be exhausted.»
+# https://docs.travis-ci.com/user/common-build-problems/#my-build-script-is-killed-without-any-error
+    - GOMAXPROCS=2
+# debug logging by default
+    - INSOLAR_LOG_LEVEL=debug
 
-#    - stage: "lint"
-#      before_script:
-#        - "go get -u gopkg.in/alecthomas/gometalinter.v2"
-#        - "gometalinter.v2 --install"
-#      script: "gometalinter.v2 --vendor ./..."
+before_install:
+  - make install-deps
+install:
+  - make pre-build
+script:
+  - make build
+  - make test_with_coverage
+after_success:
+  - "bash <(curl -s https://codecov.io/bash)"

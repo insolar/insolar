@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 // Object marks that instance has ClassID (string representation of class).
 type Object interface {
 	GetClassID() string
+	GetClass() Proxy
 }
 
 // BaseObject is a base implementation of Object interface.
@@ -35,23 +36,8 @@ func (bo *BaseObject) GetClassID() string {
 	return class.ObjectID
 }
 
-// Composite marks that instance have ability to be compose in another object.
-type Composite interface {
-	Object
-	GetInterfaceKey() string // string ID of interface/type of Composite object; basically, GetClassID()
-}
-
-// CompositeFactory allows to create new composites.
-type CompositeFactory interface {
-	Create() (Composite, error)
-}
-
-// ComposingContainer allows to store composites.
-type ComposingContainer interface {
-	Object
-	CreateComposite(compositeFactory CompositeFactory) (Composite, error)
-	GetComposite(interfaceKey string) (Composite, error)
-	GetOrCreateComposite(interfaceKey string, compositeFactory CompositeFactory) (Composite, error)
+func (bo *BaseObject) GetClass() Proxy {
+	return nil
 }
 
 // Parent allows to create objects (smart contracts) inside itself as children.

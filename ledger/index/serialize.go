@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -23,45 +23,45 @@ import (
 )
 
 // EncodeClassLifeline converts lifeline index into binary format
-func EncodeClassLifeline(index *ClassLifeline) []byte {
+func EncodeClassLifeline(index *ClassLifeline) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(index)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
 // DecodeClassLifeline converts byte array into lifeline index struct
-func DecodeClassLifeline(buf []byte) ClassLifeline {
+func DecodeClassLifeline(buf []byte) (*ClassLifeline, error) {
 	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
 	var idx ClassLifeline
 	err := dec.Decode(&idx)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return idx
+	return &idx, nil
 }
 
-// EncodeClassLifeline converts lifeline index into binary format
-func EncodeObjectLifeline(index *ObjectLifeline) []byte {
+// EncodeObjectLifeline converts lifeline index into binary format.
+func EncodeObjectLifeline(index *ObjectLifeline) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(index)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
-// DecodeClassLifeline converts byte array into lifeline index struct
-func DecodeObjectLifeline(buf []byte) ObjectLifeline {
+// DecodeObjectLifeline converts byte array into lifeline index struct.
+func DecodeObjectLifeline(buf []byte) (*ObjectLifeline, error) {
 	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
 	var index ObjectLifeline
 	err := dec.Decode(&index)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return index
+	return &index, nil
 }

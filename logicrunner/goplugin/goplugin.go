@@ -1,18 +1,30 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+// Package goplugin - golang plugin in docker runner
 package goplugin
 
 import (
-	"io/ioutil"
-	"log"
-	"net"
-	"net/http"
 	"net/rpc"
-	"os"
 	"os/exec"
-
 	"time"
 
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/goplugin/girpc"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
 
@@ -20,8 +32,6 @@ import (
 type Options struct {
 	// Listen  is address `GoPlugin` listens on and provides RPC interface for runner(s)
 	Listen string
-	// CodePath is path to directory with plugin's code, this should go away at some point
-	CodePath string
 }
 
 // RunnerOptions - set of options to control internal isolated code runner(s)
@@ -34,104 +44,93 @@ type RunnerOptions struct {
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
-	Options       Options
-	RunnerOptions RunnerOptions
-	sock          net.Listener
-	runner        *exec.Cmd
-}
-
-// GoPluginRPC is a RPC interface for runner to use for variouse tasks, e.g. code fetching
-type GoPluginRPC struct {
-	gp *GoPlugin
-}
-
-// GetObject is an RPC retriving an object by its reference, so far short circueted to return
-// code of the plugin
-func (gpr *GoPluginRPC) GetObject(ref logicrunner.Reference, reply *logicrunner.Object) error {
-	f, err := os.Open(gpr.gp.Options.CodePath + string(ref) + ".so")
-	if err != nil {
-		return err
-	}
-	reply.Data, err = ioutil.ReadAll(f)
-	return err
+	Cfg             *configuration.LogicRunner
+	MessageBus      core.MessageBus
+	ArtifactManager core.ArtifactManager
+	runner          *exec.Cmd
+	client          *rpc.Client
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(options Options, runnerOptions RunnerOptions) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.LogicRunner, eb core.MessageBus, am core.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
-		Options:       options,
-		RunnerOptions: runnerOptions,
+		Cfg:             conf,
+		MessageBus:      eb,
+		ArtifactManager: am,
 	}
 
-	if gp.Options.Listen == "" {
-		gp.Options.Listen = "127.0.0.1:7777"
-	}
-
-	var runnerArguments []string
-	if gp.RunnerOptions.Listen != "" {
-		runnerArguments = append(runnerArguments, "-l", gp.RunnerOptions.Listen)
-	} else {
-		return nil, errors.New("listen is not optional in gp.RunnerOptions")
-	}
-	if gp.RunnerOptions.CodeStoragePath != "" {
-		runnerArguments = append(runnerArguments, "-d", gp.RunnerOptions.CodeStoragePath)
-	}
-	runnerArguments = append(runnerArguments, "--rpc", gp.Options.Listen)
-
-	runner := exec.Command("ginsider/ginsider", runnerArguments...)
-	runner.Stdout = os.Stdout
-	runner.Stderr = os.Stderr
-	err := runner.Start()
-	if err != nil {
-		return nil, err
-	}
-	time.Sleep(200 * time.Millisecond)
-	gp.runner = runner
-	go gp.Start()
 	return &gp, nil
 }
 
-// Start starts runner and RPC interface to help runner, note that NewGoPlugin does
-// this for you
-func (gp *GoPlugin) Start() {
-	r := GoPluginRPC{gp: gp}
-	_ = rpc.Register(&r)
-	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", gp.Options.Listen)
-	if e != nil {
-		log.Fatal("listen error:", e)
-	}
-	gp.sock = l
-	log.Printf("START")
-	_ = http.Serve(l, nil)
-	log.Printf("STOP")
-}
-
 // Stop stops runner(s) and RPC service
-func (gp *GoPlugin) Stop() {
-	err := gp.runner.Process.Kill()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if gp.sock != nil {
-		err = gp.sock.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+func (gp *GoPlugin) Stop() error {
+	return nil
 }
 
-// Exec runs a method on an object in controlled environment
-func (gp *GoPlugin) Exec(object logicrunner.Object, method string, args []logicrunner.Argument) ([]byte, logicrunner.Argument, error) {
-	client, err := rpc.DialHTTP("tcp", gp.RunnerOptions.Listen)
+// Downstream returns a connection to `ginsider`
+func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
+	if gp.client != nil {
+		return gp.client, nil
+	}
+
+	client, err := rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't dial '%s' over %s",
+			gp.Cfg.GoPlugin.RunnerListen, gp.Cfg.GoPlugin.RunnerProtocol,
+		)
+	}
+
+	gp.client = client
+	return gp.client, nil
+}
+
+const timeout = time.Second * 60
+
+// CallMethod runs a method on an object in controlled environment
+func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
 	}
-	res := girpc.CallResp{}
-	err = client.Call("GoInsider.Call", girpc.CallReq{Object: object, Method: method, Arguments: args}, &res)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "problem with API call")
+
+	res := rpctypes.DownCallMethodResp{}
+	req := rpctypes.DownCallMethodReq{
+		Context:   ctx,
+		Code:      code,
+		Data:      data,
+		Method:    method,
+		Arguments: args,
 	}
-	return res.Data, res.Ret, res.Err
+
+	select {
+	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
+		if call.Error != nil {
+			return nil, nil, errors.Wrap(call.Error, "problem with API call")
+		}
+	case <-time.After(timeout):
+		return nil, nil, errors.New("timeout")
+	}
+	return res.Data, res.Ret, nil
+}
+
+// CallConstructor runs a constructor of a contract in controlled environment
+func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
+	client, err := gp.Downstream()
+	if err != nil {
+		return nil, errors.Wrap(err, "problem with rpc connection")
+	}
+
+	res := rpctypes.DownCallConstructorResp{}
+	req := rpctypes.DownCallConstructorReq{Code: code, Name: name, Arguments: args}
+
+	select {
+	case call := <-client.Go("RPC.CallConstructor", req, &res, nil).Done:
+		if call.Error != nil {
+			return nil, errors.Wrap(call.Error, "problem with API call")
+		}
+	case <-time.After(timeout):
+		return nil, errors.New("timeout")
+	}
+	return res.Ret, nil
 }

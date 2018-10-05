@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 INS Ecosystem
+ *    Copyright 2018 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -35,8 +35,6 @@ type aRec struct {
 }
 
 func (rec *aRec) WriteHash(w io.Writer) {
-	// log.Println("Call aRec.WriteHash")
-
 	var data = []interface{}{
 		int16(aRecTypeID),
 		rec.A1,
@@ -58,7 +56,6 @@ type bRec struct {
 }
 
 func (rec *bRec) WriteHash(w io.Writer) {
-	// log.Println("Call bRec.WriteHash")
 	rec.aRec.WriteHash(w)
 	var data = []interface{}{
 		int16(bRecTypeID),
@@ -81,7 +78,6 @@ type cRec struct {
 
 func (rec *cRec) WriteHash(w io.Writer) {
 	rec.bRec.WriteHash(w)
-	// log.Println("Call cRec.WriteHash")
 	var data = []interface{}{
 		int16(cRecTypeID),
 		rec.C1,
@@ -171,8 +167,6 @@ func Test_sha3hash224_IfChangedNotTheSame(t *testing.T) {
 			hashBytes2 := SHA3hash224(tt.hw2)
 			hashHexStr1 := fmt.Sprintf("%x", hashBytes1)
 			hashHexStr2 := fmt.Sprintf("%x", hashBytes2)
-			// log.Println(t.Name(), "hashBytes:", hashHexStr)
-			// assert.NotEqual(t, hashBytes1, hashBytes2)
 
 			if hashHexStr1 == hashHexStr2 {
 				t.Errorf("struct should not be with the same hash:\n%s", hashHexStr1)
