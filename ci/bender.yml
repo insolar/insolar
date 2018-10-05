@@ -31,7 +31,7 @@ resources:
     smuggler_debug: true
     commands:
       check: |
-        curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '.[] | .url ' | sed s/\"//g > ${SMUGGLER_OUTPUT_DIR}/versions
+        curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '.[] | .url ' | md5sum > ${SMUGGLER_OUTPUT_DIR}/versions
       in: |
         curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '{ "pulls": [.[] | {number: .number, title: .title} ]} '  > ${SMUGGLER_DESTINATION_DIR}/pulls.json
 
