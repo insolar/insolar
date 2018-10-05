@@ -58,7 +58,7 @@ func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
 func (*LedgerArtifactManager) GenRequest(pn core.PulseNumber, reqmsg core.RequestMessage) core.RecordRef {
 	id := &record.ID{
 		Pulse: pn,
-		Hash:  hash.HashBytes(reqmsg.Payload()),
+		Hash:  hash.SHA3Bytes(reqmsg.Payload()),
 	}
 	var tagretRef core.RecordRef
 	tagretRef.SetRecord(*id.CoreID())

@@ -46,9 +46,9 @@ func NewSHA3() hash.Hash {
 	return sha3.New224()
 }
 
-// HashBytes generates hash for byte slice.
-func HashBytes(payload []byte) []byte {
-	return SHA3hash224(hashableBytes(payload))
+// SHA3Bytes generates hash for byte slice.
+func SHA3Bytes(b []byte) []byte {
+	return SHA3hash224(hashableBytes(b))
 }
 
 // hashableBytes exists just to allow []byte implements hash.Writer
