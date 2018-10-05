@@ -26,7 +26,7 @@ import (
 	"encoding/pem"
 	"math/big"
 
-	"github.com/insolar/insolar/cryptohelpers"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 )
 
@@ -93,9 +93,7 @@ type ecdsaPair struct {
 // Sign signs given seed
 func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 
-	hash := cryptohelpers.MakeSha3Hash(data)
-
-	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
+	r, s, err := ecdsa.Sign(rand.Reader, key, hash.SHA3Bytes(data))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ]")
@@ -125,9 +123,8 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 		return false, errors.Wrap(err, "[ Verify ]")
 	}
 
-	hash := cryptohelpers.MakeSha3Hash(data)
-
-	return ecdsa.Verify(savedKey, hash[:], ecdsaP.First, ecdsaP.Second), nil
+	h := hash.SHA3Bytes(data)
+	return ecdsa.Verify(savedKey, h, ecdsaP.First, ecdsaP.Second), nil
 }
 
 // ExportSignature serializes signature to string
