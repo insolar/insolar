@@ -29,7 +29,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/hash"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 func checkPayloadSignature(request *Payload) (bool, error) {

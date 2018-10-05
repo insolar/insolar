@@ -24,7 +24,7 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/hash"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 // Raw struct contains raw serialized record.
