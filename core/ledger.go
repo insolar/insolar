@@ -61,6 +61,10 @@ type ArtifactManager interface {
 	// Root record is the parent for all top-level records.
 	RootRef() *RecordRef
 
+	// RegisterRequest creates or check call request record and returns it RecordRef.
+	// (used by VM on executing side)
+	RegisterRequest(message Message) (*RecordRef, error)
+
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.

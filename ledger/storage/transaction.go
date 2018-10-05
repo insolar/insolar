@@ -18,11 +18,12 @@ package storage
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/log"
 )
 
 // TransactionManager is used to ensure persistent writes to disk.
@@ -52,12 +53,37 @@ func (m *TransactionManager) Discard() {
 	m.txn.Discard()
 }
 
+// GetRequest returns request record from BadgerDB by *record.Reference.
+//
+// It returns ErrNotFound if the DB does not contain the key.
+func (m *TransactionManager) GetRequest(id *record.ID) (record.Request, error) {
+	rec, err := m.GetRecord(id)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: return error if record is not a request.
+	req := rec.(record.Request)
+	return req, nil
+}
+
+// SetRequest stores request record in BadgerDB and returns *record.ID of new record.
+//
+// If record exists SetRequest just returns *record.ID without error.
+func (m *TransactionManager) SetRequest(req record.Request) (*record.ID, error) {
+	log.Debugf("SetRequest call")
+	id, err := m.SetRecord(req)
+	if err != nil && err != ErrOverride {
+		return nil, err
+	}
+	return id, nil
+}
+
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(*id))
-	log.Debugf("Getting record %s", id)
+	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
 	item, err := m.txn.Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
@@ -76,25 +102,34 @@ func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 	return raw.ToRecord(), nil
 }
 
-// SetRecord stores record in BadgerDB and returns *record.Reference of new record.
+// SetRecord stores record in BadgerDB and returns *record.ID of new record.
 //
-// If record exists returns ErrOverride error.
+// If record exists returns both *record.ID and ErrOverride error.
+// If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	raw, err := record.EncodeToRaw(rec)
 	if err != nil {
 		return nil, err
 	}
+
+	var h []byte
+	if req, ok := rec.(record.Request); ok {
+		// we should calculate request hashes consistently with logicrunner.
+		h = hash.SHA3Bytes(req.GetPayload())
+	} else {
+		h = raw.Hash()
+	}
 	id := record.ID{
 		Pulse: m.db.GetCurrentPulse(),
-		Hash:  raw.Hash(),
+		Hash:  h,
 	}
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
 	_, geterr := m.txn.Get(k)
 	if geterr == nil {
-		return nil, ErrOverride
+		return &id, ErrOverride
 	}
 	if geterr != badger.ErrKeyNotFound {
-		return nil, geterr
+		return nil, ErrNotFound
 	}
 
 	err = m.txn.Set(k, record.MustEncodeRaw(raw))

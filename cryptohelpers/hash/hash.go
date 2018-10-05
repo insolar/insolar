@@ -45,3 +45,18 @@ func SHA3hash224(hw ...Writer) []byte {
 func NewSHA3() hash.Hash {
 	return sha3.New224()
 }
+
+// SHA3Bytes generates hash for byte slice.
+func SHA3Bytes(b []byte) []byte {
+	return SHA3hash224(hashableBytes(b))
+}
+
+// hashableBytes exists just to allow []byte implements hash.Writer
+type hashableBytes []byte
+
+func (b hashableBytes) WriteHash(w io.Writer) {
+	_, err := w.Write(b)
+	if err != nil {
+		panic(err)
+	}
+}

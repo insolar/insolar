@@ -91,10 +91,10 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	}
 
 	// TODO: use separate handlers
-	if err := messageBus.Register(message.TypeCallMethod, lr.Execute); err != nil {
+	if err := messageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
 		return err
 	}
-	if err := messageBus.Register(message.TypeCallConstructor, lr.Execute); err != nil {
+	if err := messageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
 		return err
 	}
 
