@@ -57,7 +57,7 @@ func (m *TransactionManager) Discard() {
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(*id))
-	log.Debugf("Getting record %s", id)
+	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
 	item, err := m.txn.Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
@@ -76,9 +76,10 @@ func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 	return raw.ToRecord(), nil
 }
 
-// SetRecord stores record in BadgerDB and returns *record.Reference of new record.
+// SetRecord stores record in BadgerDB and returns *record.ID of new record.
 //
-// If record exists returns ErrOverride error.
+// If record exists returns both *record.ID and ErrOverride error.
+// If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	raw, err := record.EncodeToRaw(rec)
 	if err != nil {
@@ -91,10 +92,10 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
 	_, geterr := m.txn.Get(k)
 	if geterr == nil {
-		return nil, ErrOverride
+		return &id, ErrOverride
 	}
 	if geterr != badger.ErrKeyNotFound {
-		return nil, geterr
+		return nil, ErrNotFound
 	}
 
 	err = m.txn.Set(k, record.MustEncodeRaw(raw))
