@@ -55,9 +55,9 @@ type Pulsar struct {
 	Storage          pulsarstorage.PulsarStorage
 	EntropyGenerator EntropyGenerator
 
-	EntropyGenerationLock sync.Mutex
-	GeneratedEntropy      core.Entropy
-	GeneratedEntropySign  []byte
+	StartProcessLock     sync.Mutex
+	GeneratedEntropy     core.Entropy
+	GeneratedEntropySign []byte
 
 	EntropyForNodes       core.Entropy
 	PulseSenderToNodes    string
@@ -263,31 +263,36 @@ func (pulsar *Pulsar) CheckConnectionsToPulsars() {
 // StartConsensusProcess starts process of calculating consensus between pulsars
 func (pulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error {
 	log.Debugf("[StartConsensusProcess] pulse number - %v", pulseNumber)
-	pulsar.EntropyGenerationLock.Lock()
+	pulsar.StartProcessLock.Lock()
+
+	if pulseNumber == pulsar.ProcessingPulseNumber {
+		return nil
+	}
 
 	if pulsar.stateSwitcher.getState() > waitingForStart || (pulsar.ProcessingPulseNumber != 0 && pulseNumber < pulsar.ProcessingPulseNumber) {
-		pulsar.EntropyGenerationLock.Unlock()
+		pulsar.StartProcessLock.Unlock()
 		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", pulsar.stateSwitcher.getState().String(), pulseNumber, pulsar.LastPulse.PulseNumber, pulsar.ProcessingPulseNumber)
 		return fmt.Errorf("wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", pulsar.stateSwitcher.getState().String(), pulseNumber, pulsar.LastPulse.PulseNumber, pulsar.ProcessingPulseNumber)
 	}
 
 	err := pulsar.generateNewEntropyAndSign()
 	if err != nil {
+		pulsar.StartProcessLock.Unlock()
 		pulsar.stateSwitcher.switchToState(failed, err)
 		return err
 	}
 
 	pulsar.ProcessingPulseNumber = pulseNumber
-	pulsar.stateSwitcher.switchToState(waitingForEntropySigns, nil)
-	go pulsar.broadcastSignatureOfEntropy()
+	pulsar.StartProcessLock.Unlock()
 
-	pulsar.EntropyGenerationLock.Unlock()
+	pulsar.broadcastSignatureOfEntropy()
+	pulsar.stateSwitcher.switchToState(waitingForEntropySigns, nil)
 	return nil
 }
 
 func (pulsar *Pulsar) broadcastSignatureOfEntropy() {
 	log.Debug("[broadcastSignatureOfEntropy]")
-	if pulsar.stateSwitcher.getState() == failed {
+	if pulsar.isStateFailed() {
 		return
 	}
 
@@ -311,7 +316,7 @@ func (pulsar *Pulsar) broadcastSignatureOfEntropy() {
 
 func (pulsar *Pulsar) broadcastVector() {
 	log.Debug("[broadcastVector]")
-	if pulsar.stateSwitcher.getState() == failed {
+	if pulsar.isStateFailed() {
 		return
 	}
 
@@ -340,7 +345,7 @@ func (pulsar *Pulsar) broadcastVector() {
 
 func (pulsar *Pulsar) broadcastEntropy() {
 	log.Debug("[broadcastEntropy]")
-	if pulsar.stateSwitcher.getState() == failed {
+	if pulsar.isStateFailed() {
 		return
 	}
 
@@ -364,7 +369,7 @@ func (pulsar *Pulsar) broadcastEntropy() {
 
 func (pulsar *Pulsar) sendVector() {
 	log.Debug("[sendVector]")
-	if pulsar.stateSwitcher.getState() == failed {
+	if pulsar.isStateFailed() {
 		return
 	}
 
@@ -384,7 +389,7 @@ func (pulsar *Pulsar) isStandalone() bool {
 
 func (pulsar *Pulsar) sendEntropy() {
 	log.Debug("[sendEntropy]")
-	if pulsar.stateSwitcher.getState() == failed {
+	if pulsar.isStateFailed() {
 		return
 	}
 
@@ -418,7 +423,7 @@ func (pulsar *Pulsar) waitForEntropy() {
 	timeout := time.Now().Add(time.Duration(pulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if pulsar.stateSwitcher.getState() == failed || pulsar.stateSwitcher.getState() == sendingVector {
+			if pulsar.isStateFailed() || pulsar.stateSwitcher.getState() == sendingVector {
 				ticker.Stop()
 				return
 			}
@@ -448,7 +453,7 @@ func (pulsar *Pulsar) waitForEntropySigns() {
 	currentTimeOut := time.Now().Add(time.Duration(pulsar.Config.ReceivingSignTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if pulsar.stateSwitcher.getState() == failed || pulsar.stateSwitcher.getState() == sendingEntropy {
+			if pulsar.isStateFailed() || pulsar.stateSwitcher.getState() == sendingEntropy {
 				ticker.Stop()
 				return
 			}
@@ -471,7 +476,7 @@ func (pulsar *Pulsar) receiveVectors() {
 	currentTimeOut := time.Now().Add(time.Duration(pulsar.Config.ReceivingVectorTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if pulsar.stateSwitcher.getState() == failed || pulsar.stateSwitcher.getState() == verifying {
+			if pulsar.isStateFailed() || pulsar.stateSwitcher.getState() == verifying {
 				ticker.Stop()
 				return
 			}
@@ -485,7 +490,7 @@ func (pulsar *Pulsar) receiveVectors() {
 
 func (pulsar *Pulsar) verify() {
 	log.Debug("[verify]")
-	if pulsar.stateSwitcher.getState() == failed {
+	if pulsar.isStateFailed() {
 		return
 	}
 	currentPulsarKey, err := ecdsa_helper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
@@ -568,7 +573,7 @@ func (pulsar *Pulsar) waitForPulseSigns() {
 	//currentTimeOut := time.Now().Add(time.Duration(pulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if pulsar.stateSwitcher.getState() == failed || pulsar.stateSwitcher.getState() == sendingPulse {
+			if pulsar.isStateFailed() || pulsar.stateSwitcher.getState() == sendingPulse {
 				ticker.Stop()
 				return
 			}
@@ -597,7 +602,7 @@ func (pulsar *Pulsar) waitForPulseSigns() {
 
 func (pulsar *Pulsar) sendPulseSign() {
 	log.Debug("[sendPulseSign]")
-	if pulsar.stateSwitcher.getState() == failed {
+	if pulsar.isStateFailed() {
 		return
 	}
 	confirmation := SenderConfirmationPayload{PulseNumber: pulsar.ProcessingPulseNumber, ChosenPublicKey: pulsar.PulseSenderToNodes}
@@ -626,7 +631,7 @@ func (pulsar *Pulsar) sendPulseSign() {
 func (pulsar *Pulsar) sendPulse() {
 	log.Debug("[sendPulse]. Pulse - %v", time.Now())
 
-	if pulsar.stateSwitcher.getState() == failed {
+	if pulsar.isStateFailed() {
 		return
 	}
 
@@ -749,8 +754,6 @@ func (pulsar *Pulsar) handleErrorState(err error) {
 	log.Error(err)
 
 	pulsar.clearState()
-
-	pulsar.EntropyGenerationLock.Unlock()
 }
 
 func (pulsar *Pulsar) clearState() {
@@ -806,4 +809,8 @@ func (pulsar *Pulsar) calculateConnectedNodes() int {
 		}
 	}
 	return connectedNodes
+}
+
+func (pulsar *Pulsar) isStateFailed() bool {
+	return pulsar.stateSwitcher.getState() == failed
 }

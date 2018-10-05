@@ -64,7 +64,6 @@ type RPCClientWrapper interface {
 type RPCClientWrapperImpl struct {
 	*sync.Mutex
 	*rpc.Client
-	isMutexHeld bool
 }
 
 // IsInitialised compares underhood rpc-client with nil
@@ -80,15 +79,11 @@ func (impl *RPCClientWrapperImpl) Close() error {
 // Lock takes current neighbour's lock
 func (impl *RPCClientWrapperImpl) Lock() {
 	impl.Mutex.Lock()
-	impl.isMutexHeld = true
 }
 
 // Unlock releases current neighbour's lock
 func (impl *RPCClientWrapperImpl) Unlock() {
-	if impl.isMutexHeld {
-		impl.isMutexHeld = false
-		impl.Mutex.Unlock()
-	}
+	impl.Mutex.Unlock()
 }
 
 // CreateConnection creates connection to an another pulsar
