@@ -21,9 +21,11 @@ import (
 	"bytes"
 	"encoding/gob"
 	"io"
+	"io/ioutil"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -36,6 +38,8 @@ const (
 
 	// Ledger
 
+	// TypeRequestCall registers call on storage.
+	TypeRequestCall
 	// TypeGetCode retrieves code from storage.
 	TypeGetCode
 	// TypeGetClass retrieves class from storage.
@@ -75,6 +79,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	case TypeCallConstructor:
 		return &CallConstructor{}, nil
 	// Ledger
+	case TypeRequestCall:
+		return &RequestCall{}, nil
 	case TypeGetCode:
 		return &GetCode{}, nil
 	case TypeGetClass:
@@ -156,6 +162,7 @@ func init() {
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
 	// Ledger
+	gob.Register(&RequestCall{})
 	gob.Register(&GetCode{})
 	gob.Register(&GetClass{})
 	gob.Register(&GetObject{})

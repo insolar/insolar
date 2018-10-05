@@ -34,6 +34,8 @@ const (
 
 	// Ledger
 
+	// TypeRequest is request from storage.
+	TypeRequest
 	// TypeCode is code from storage.
 	TypeCode
 	// TypeClass is class from storage.

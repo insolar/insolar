@@ -17,9 +17,6 @@
 package message
 
 import (
-	"encoding/binary"
-	"io"
-
 	"github.com/insolar/insolar/core"
 )
 
@@ -77,13 +74,9 @@ func (e *CallMethod) Target() *core.RecordRef {
 	return &e.ObjectRef
 }
 
-// WriteHash implements ledger.hash.Hasher interface.
-func (e *CallMethod) WriteHash(w io.Writer) {
-	mustWrite(w, binary.BigEndian, e.Caller)
-	mustWrite(w, binary.BigEndian, uint32(e.ReturnMode))
-	mustWrite(w, binary.BigEndian, e.ObjectRef)
-	mustWrite(w, binary.BigEndian, []byte(e.Method))
-	mustWrite(w, binary.BigEndian, e.Arguments)
+// Payload returns hashable payload of record.
+func (e *CallMethod) Payload() []byte {
+	return MustSerializeBytes(e)
 }
 
 // CallConstructor is a message for calling constructor and obtain its reply
@@ -108,16 +101,7 @@ func (e *CallConstructor) Target() *core.RecordRef {
 	return &e.ClassRef
 }
 
-// WriteHash implements ledger.hash.Hasher interface.
-func (e *CallConstructor) WriteHash(w io.Writer) {
-	mustWrite(w, binary.BigEndian, e.Caller)
-	mustWrite(w, binary.BigEndian, e.ClassRef)
-	mustWrite(w, binary.BigEndian, []byte(e.Name))
-	mustWrite(w, binary.BigEndian, e.Arguments)
-}
-
-func mustWrite(w io.Writer, order binary.ByteOrder, data interface{}) {
-	if err := binary.Write(w, order, data); err != nil {
-		panic(err)
-	}
+// Payload returns hashable payload of record.
+func (e *CallConstructor) Payload() []byte {
+	return MustSerializeBytes(e)
 }
