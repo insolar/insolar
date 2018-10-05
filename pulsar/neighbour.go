@@ -120,19 +120,3 @@ type Neighbour struct {
 	PublicKey         *ecdsa.PublicKey
 	PublicKeyRaw      string
 }
-
-// HandleConnectionError checks connection error, writes it to the log and tries to refresh connection
-//func (neighbour *Neighbour) HandleConnectionError(rpcErr error) error {
-//	log.Infof("Restarting RPC Connection to %v due to error %v", neighbour.ConnectionAddress, rpcErr)
-//
-//	neighbour.OutgoingClient.Lock()
-//
-//	err := neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
-//	if err != nil {
-//		log.Errorf("Refreshing connection to %v failed due to error %v", neighbour.ConnectionAddress, err)
-//	}
-//
-//	neighbour.OutgoingClient.Unlock()
-//
-//	return err
-//}

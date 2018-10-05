@@ -17,18 +17,29 @@
 package pulsar
 
 import (
+	"bytes"
 	"net"
 	"net/rpc"
+	"os"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func capture(f func()) string {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	f()
+	log.SetOutput(os.Stderr)
+	return buf.String()
+}
 
 type MockRpcClientFactoryWrapper struct {
 	mock.Mock
