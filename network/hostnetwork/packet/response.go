@@ -17,6 +17,7 @@
 package packet
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
@@ -114,5 +115,5 @@ type ResponseKnownOuterHosts struct {
 
 // ResponseActiveNodes is data to answer to active nodes request.
 type ResponseActiveNodes struct {
-	ActiveNodes []ActiveNode
+	ActiveNodes []*core.ActiveNode
 }

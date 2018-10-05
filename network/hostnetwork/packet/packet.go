@@ -22,8 +22,6 @@ import (
 	"encoding/gob"
 	"io"
 
-	"github.com/insolar/insolar/core"
-
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -82,12 +80,6 @@ type Packet struct {
 	Data       interface{}
 	Error      error
 	IsResponse bool
-}
-
-type ActiveNode struct {
-	ID        id.ID
-	Address   string
-	Reference core.RecordRef
 }
 
 // NewPingPacket can be used as a shortcut for creating ping packets instead of packet Builder.

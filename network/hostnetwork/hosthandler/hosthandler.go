@@ -98,7 +98,7 @@ type HostHandler interface {
 	RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error)
 
 	AddPossibleProxyID(id string)
-	AddActiveNode(activeNode *core.ActiveNode)
+	AddActiveNodes(activeNode []*core.ActiveNode)
 	AddPossibleRelayID(id string)
 	AddProxyHost(targetID string)
 	AddSubnetID(ip, targetID string)
