@@ -81,10 +81,6 @@ func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
-	if gpr.lr.MessageBus == nil {
-		return errors.New("event bus was not set during initialization")
-	}
-
 	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeRouteCall != cr.Type {
@@ -120,8 +116,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
 
-	rep.Result = res.(*reply.Common).Result
-
+	rep.Result = res.(*reply.CallMethod).Result
 	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
 		Type:   core.CaseRecordTypeRouteCall,
 		ReqSig: HashInterface(req),
@@ -131,78 +126,48 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	return nil
 }
 
-// RouteConstructorCall routes call from a contract to a constructor of another contract
-func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rpctypes.UpRouteConstructorResp) error {
+// SaveAsChild is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
 	if gpr.lr.MessageBus == nil {
 		return errors.New("event bus was not set during initialization")
 	}
 
 	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
-		if core.CaseRecordTypeRouteCall != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
+		if core.CaseRecordTypeSaveAsChild != cr.Type {
+			return errors.New("Wrong validation type on SaveAsChild")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
+			return errors.New("Wrong validation sig on SaveAsChild")
 		}
 
-		rep.Data = cr.Resp.([]byte)
+		rep.Reference = cr.Resp.(*core.RecordRef)
 		return nil
-
 	}
 
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		ClassRef:         req.Reference,
-		Name:             req.Constructor,
-		Arguments:        req.Arguments,
+		ClassRef:       req.Class,
+		ParentRef:      req.Parent,
+		Name:           req.ConstructorName,
+		Arguments:      req.ArgsSerialized,
+		SaveAs:         message.Child,
 	}
 
 	res, err := gpr.lr.MessageBus.Send(msg)
 	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
+		return errors.Wrap(err, "couldn't save new object as child")
 	}
 
-	rep.Data = res.(*reply.Common).Data
-	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
-		Type:   core.CaseRecordTypeRouteCall,
-		ReqSig: HashInterface(req),
-		Resp:   rep.Data,
-	})
-	return nil
-}
-
-// SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
-	cr, step := gpr.lr.getNextValidationStep(req.Me)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeSaveAsChild != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
-		}
-		sig := HashInterface(req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
-		}
-
-		rep.Reference = cr.Resp.(core.RecordRef)
-		return nil
-
-	}
-
-	ref, err := gpr.lr.ArtifactManager.ActivateObject(
-		core.RecordRef{}, core.RandomRef(), req.Class, req.Parent, req.Data,
-	)
-	if err != nil {
-		return errors.Wrap(err, "couldn't save new object")
-	}
-	rep.Reference = *ref
+	rep.Reference = res.(*reply.CallConstructor).Object
 
 	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
 		Type:   core.CaseRecordTypeSaveAsChild,
 		ReqSig: HashInterface(req),
 		Resp:   rep.Reference,
 	})
+
 	return nil
 }
 
@@ -213,11 +178,11 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObjChildren != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
+			return errors.New("Wrong validation type on GetObjChildren")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
+			return errors.New("Wrong validation sig on GetObjChildren")
 		}
 
 		rep.Children = cr.Resp.([]core.RecordRef)
@@ -261,29 +226,39 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	cr, step := gpr.lr.getNextValidationStep(req.Me)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
+			return errors.New("Wrong validation type on SaveAsDelegate")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
+			return errors.New("Wrong validation sig on SaveAsDelegate")
 		}
 
-		rep.Reference = cr.Resp.(core.RecordRef)
+		rep.Reference = cr.Resp.(*core.RecordRef)
 		return nil
 	}
 
-	ref, err := gpr.lr.ArtifactManager.ActivateObjectDelegate(
-		core.RecordRef{}, core.RandomRef(), req.Class, req.Into, req.Data,
-	)
-	if err != nil {
-		return errors.Wrap(err, "couldn't save delegate")
+	msg := &message.CallConstructor{
+		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
+		ClassRef:       req.Class,
+		ParentRef:      req.Into,
+		Name:           req.ConstructorName,
+		Arguments:      req.ArgsSerialized,
+		SaveAs:         message.Delegate,
 	}
-	rep.Reference = *ref
+
+	res, err := gpr.lr.MessageBus.Send(msg)
+
+	if err != nil {
+		return errors.Wrap(err, "couldn't save new object as delegate")
+	}
+
+	rep.Reference = res.(*reply.CallConstructor).Object
 	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
 		Type:   core.CaseRecordTypeSaveAsDelegate,
 		ReqSig: HashInterface(req),
 		Resp:   rep.Reference,
 	})
+
 	return nil
 }
 
