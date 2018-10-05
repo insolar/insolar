@@ -58,7 +58,7 @@ jobs:
         type: docker-image
         source: {repository: golang}
       inputs:
-      - name: unit-{{ pull.number }}
+      - name: pull-request-{{ pull.number }}
         path: /go/src/github.com/insolar/insolar
       run:
         path: sh
