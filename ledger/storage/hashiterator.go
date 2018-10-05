@@ -41,6 +41,14 @@ type HashIterator interface {
 	ShallowHash() []byte
 }
 
+// Iterator iterates over a database records.
+// An iterator provides methods for record access hashes and values
+type Iterator interface {
+	HashIterator
+
+	Value() ([]byte, error)
+}
+
 func pulseNumRecordPrefix(pulse core.PulseNumber) []byte {
 	prefix := make([]byte, core.PulseNumberSize+1)
 	prefix[0] = scopeIDRecord
@@ -54,10 +62,24 @@ func pulseNumRecordPrefix(pulse core.PulseNumber) []byte {
 // Error returned by the ProcessSlotRecords is based on iteration function
 // result or BadgerDB iterator error if any.
 func (db *DB) ProcessSlotHashes(n core.PulseNumber, ifn func(it HashIterator) error) error {
-	prefix := pulseNumRecordPrefix(n)
-
 	iopts := badger.DefaultIteratorOptions
 	iopts.PrefetchValues = false
+	return db.processPulse(n, iopts, func(it Iterator) error { return ifn(it.(HashIterator)) })
+}
+
+// ProcessSlot executes a iteration function ifn and provides Iterator
+// inside it to iterate over all records with the same record.PulseNum.
+//
+// Error returned is based on iteration function result or BadgerDB
+// iterator error if any.
+func (db *DB) ProcessSlot(n core.PulseNumber, ifn func(it Iterator) error) error {
+	iopts := badger.DefaultIteratorOptions
+	iopts.PrefetchValues = true
+	return db.processPulse(n, iopts, ifn)
+}
+
+func (db *DB) processPulse(n core.PulseNumber, iopts badger.IteratorOptions, ifn func(it Iterator) error) error {
+	prefix := pulseNumRecordPrefix(n)
 
 	// TODO: add transaction conflict processing
 	return db.db.View(func(txn *badger.Txn) error {
@@ -113,4 +135,9 @@ func (it *iter) Hash() []byte {
 func (it *iter) ShallowHash() []byte {
 	item := it.i.Item()
 	return item.Key()[1:]
+}
+
+func (it *iter) Value() ([]byte, error) {
+	item := it.i.Item()
+	return item.ValueCopy(nil)
 }
