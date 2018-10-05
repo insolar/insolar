@@ -357,6 +357,30 @@ func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Pac
 	}
 }
 
+func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *host.Host, nonce []byte) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
+
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeCheckSignedNonce).
+		Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(target).
+		Request(&packet.RequestCheckSignedNonce{}).
+		Build()
+
+	future, err := hostHandler.SendRequest(request)
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to SendRequest")
+	}
+
+	return checkResponse(hostHandler, future, target.ID.String(), request)
+
+	return nil
+}
+
 func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future, targetID string, request *packet.Packet) error {
 	var err error
 	rsp, err := future.GetResult(hostHandler.GetPacketTimeout())
@@ -396,7 +420,11 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 			err = errors.New(response.Error)
 		}
 	case packet.TypeCheckPublicKey:
-		err = handleCheckPublicKeyResponse(hostHandler, rsp.Data.(*packet.ResponseCheckPublicKey))
+		response := rsp.Data.(*packet.ResponseCheckPublicKey)
+		err = handleCheckPublicKeyResponse(hostHandler, response)
+		if err == nil {
+			err = sendCheckSignedNonceRequest(hostHandler, rsp.Sender, response.Nonce)
+		}
 	case packet.TypeCheckSignedNonce:
 		err = handleCheckSignedNonceResponse(hostHandler, rsp.Data.(*packet.ResponseCheckSignedNonce))
 	}
