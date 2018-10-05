@@ -115,7 +115,10 @@ jobs:
               jinja2 insolar/ci/templates/pull-requests.yml.j2 pull-requests/pulls.json > pipelines/pulls.yml
               echo "Output: "
               cat pipelines/pulls.yml
-              echo ((meta.concourse.vars)) > vars.yml
+              echo hello
+              cat << EOF > /pipelines/vars.yml
+              ((meta.concourse.vars))
+              EOF
     - put: deploy
       params:
         pipelines:
@@ -123,5 +126,5 @@ jobs:
             team: insolar
             config_file: pipelines/pulls.yml
             vars_files:
-              - vars.yml
+              - pipelines/vars.yml
 
