@@ -116,7 +116,7 @@ jobs:
               echo "Output: "
               cat pipelines/pulls.yml
               echo hello
-              cat << EOF > /pipelines/vars.yml
+              cat << EOF > pipelines/vars.yml
               ((meta.concourse.vars))
               EOF
     - put: deploy
