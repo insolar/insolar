@@ -190,7 +190,7 @@ func (t *TestArtifactManager) Stop() error { return nil }
 func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(target core.RecordRef, message core.RequestMessage) (*core.RecordRef, error) {
+func (t *TestArtifactManager) RegisterRequest(message core.RequestMessage) (*core.RecordRef, error) {
 	return nil, errors.New("RegisterRequest not implemented onTestArtifactManager ")
 }
 
