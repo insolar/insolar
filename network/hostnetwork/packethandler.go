@@ -345,15 +345,6 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 }
 
 func processActiveNodes(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {
-	// TODO: get active node from hostHandler
-	nodes := make([]packet.ActiveNode, 0)
-	activeNodes := make([]packet.ActiveNode, 0)
-
-	for _, node := range nodes {
-		activeNodes = append(activeNodes, node)
-	}
-
-	response := &packet.ResponseActiveNodes{ActiveNodes: activeNodes}
-
+	response := &packet.ResponseActiveNodes{ActiveNodes: hostHandler.GetActiveNodesList()}
 	return packetBuilder.Response(response).Build(), nil
 }

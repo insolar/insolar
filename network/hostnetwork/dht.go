@@ -912,10 +912,12 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 	return nil
 }
 
+// GetActiveNodesList returns an active nodes list.
 func (dht *DHT) GetActiveNodesList() []*core.ActiveNode {
 	return dht.activeNodeKeeper.GetActiveNodes()
 }
 
+// GetActiveNodes starts getting active nodes from other nodes.
 func (dht *DHT) GetActiveNodes() error {
 	var err error
 	// TODO: fix it.
@@ -925,8 +927,9 @@ func (dht *DHT) GetActiveNodes() error {
 	return err
 }
 
-func (dht *DHT) AddActiveNode(activeNode *core.ActiveNode) {
-	dht.activeNodeKeeper.add
+// AddActiveNodes adds an active nodes slice.
+func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) {
+	dht.activeNodeKeeper.AddActiveNodes(activeNodes)
 }
 
 // HtFromCtx returns a routing hashtable known by ctx.

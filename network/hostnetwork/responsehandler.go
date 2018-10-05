@@ -121,9 +121,6 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 }
 
 func handleActiveNodesResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseActiveNodes) error {
-	for _, node := range response.ActiveNodes {
-		// TODO: set nodes to hostHandler
-		_ = node.Address // dummy for node
-	}
+	hostHandler.AddActiveNodes(response.ActiveNodes)
 	return nil
 }
