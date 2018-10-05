@@ -86,6 +86,7 @@ func (impl *RPCClientWrapperImpl) Lock() {
 // Unlock releases current neighbour's lock
 func (impl *RPCClientWrapperImpl) Unlock() {
 	if impl.isMutexHeld {
+		impl.isMutexHeld = false
 		impl.Mutex.Unlock()
 	}
 }
