@@ -1,0 +1,89 @@
+groups:
+{% for pull in pulls %}
+- name: {{ pull.number }}
+  jobs:
+    - unit-{{ pull.number }}
+{% endfor %}
+
+resource_types:
+  - name: pull-request
+    type: docker-image
+    source:
+      repository: chemist/pull-request
+
+resources:
+- name: master
+  type: git
+  source:
+    uri: https://github.com/insolar/insolar.git
+
+- name: pull-request
+  type: pull-request
+  source:
+    owner: ((meta.github.owner))
+    repo: ((meta.github.repo))
+    access_token: ((meta.github.access_token))
+    #ssh_key: ((meta.github.private_key))
+    type: get
+- name: status
+  type: pull-request
+  source:
+    owner: ((meta.github.owner))
+    repo: ((meta.github.repo))
+    access_token: ((meta.github.access_token))
+    type: put
+
+jobs:
+{% for pull in pulls %}
+- name: unit-{{ pull.number }}
+  public: true
+  plan:
+  - put: status
+    params:
+      state: pending
+      pull_request: {{ pull.number }}
+  - get: master
+    trigger: true
+  - get: pull-request
+    trigger: true
+    params:
+      pull_request: {{ pull.number }}
+  - task: unit
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: golang}
+      inputs:
+      - name: unit-{{ pull.number }}
+        path: /go/src/github.com/insolar/insolar
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+             echo tests
+             pwd
+             ls -alh go
+             export GOPATH=$(pwd)/go
+             mkdir $GOPATH/bin
+             export PATH=$PATH:$GOPATH/bin
+             ls -alh
+             env
+             cd $GOPATH/src/github.com/insolar/insolar
+             echo "fetching dependencies..."
+             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+             #go get -t -d ./...
+             dep ensure
+             go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
+    on_success:
+      put: status
+      params:
+        pull_request: {{ pull.number }}
+        status: success
+    on_failure:
+      put: status
+      params:
+        pull_request: {{ pull.number }}
+        status: failure
+{% endfor %}
