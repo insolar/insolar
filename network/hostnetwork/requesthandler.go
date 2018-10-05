@@ -249,7 +249,7 @@ func CheckPublicKeyRequest(hostHandler hosthandler.HostHandler, targetID string)
 
 	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(targetHost).Type(packet.TypeCheckPublicKey).
-		Request(&packet.RequestCheckPublicKey{}).
+		Request(&packet.RequestCheckPublicKey{NodeID: hostHandler.GetNodeID(), HostID: hostHandler.GetOriginHost().IDs[0]}).
 		Build()
 
 	future, err := hostHandler.SendRequest(request)

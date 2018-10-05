@@ -111,8 +111,8 @@ type RequestKnownOuterHosts struct {
 
 // RequestCheckPublicKey is data to check a public key.
 type RequestCheckPublicKey struct {
-	NodeRef core.RecordRef
-	NodeID  id.ID
+	NodeID core.RecordRef
+	HostID id.ID
 }
 
 // RequestCheckSignedNonce is data to check a signed nonce.
