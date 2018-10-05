@@ -245,7 +245,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructor
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference, nil
+	return *res.Reference, nil
 }
 
 // GetObjChildren ...
@@ -290,7 +290,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructo
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference, nil
+	return *res.Reference, nil
 }
 
 // GetDelegate ...

@@ -18,7 +18,6 @@ package rpctypes
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 )
 
 // Types for RPC requests and responses between goplugin and goinsider.
@@ -87,21 +86,6 @@ type UpRouteResp struct {
 	Result core.Arguments
 }
 
-// UpRouteConstructorReq is a set of arguments for RouteConstructor RPC in goplugin
-type UpRouteConstructorReq struct {
-	UpBaseReq
-	Owner       core.RecordRef
-	SaveAs      message.SaveAs
-	Reference   core.RecordRef
-	Constructor string
-	Arguments   core.Arguments
-}
-
-// UpRouteConstructorResp is response from RouteConstructor RPC in goplugin
-type UpRouteConstructorResp struct {
-	Ref *core.RecordRef
-}
-
 // UpSaveAsChildReq is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildReq struct {
 	UpBaseReq
@@ -113,7 +97,7 @@ type UpSaveAsChildReq struct {
 
 // UpSaveAsChildResp is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildResp struct {
-	Reference core.RecordRef
+	Reference *core.RecordRef
 }
 
 // UpGetObjChildrenReq is a set of arguments for GetObjChildren RPC in goplugin
@@ -139,7 +123,7 @@ type UpSaveAsDelegateReq struct {
 
 // UpSaveAsDelegateResp is response from SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateResp struct {
-	Reference core.RecordRef
+	Reference *core.RecordRef
 }
 
 // UpGetDelegateReq is a set of arguments for GetDelegate RPC in goplugin

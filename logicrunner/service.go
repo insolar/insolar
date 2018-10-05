@@ -114,59 +114,32 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	return nil
 }
 
-// RouteConstructorCall routes call from a contract to a constructor of another contract
-func (gpr *RPC) RouteConstructorCall(req rpctypes.UpRouteConstructorReq, rep *rpctypes.UpRouteConstructorResp) error {
+// SaveAsChild is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
 	if gpr.lr.MessageBus == nil {
 		return errors.New("event bus was not set during initialization")
 	}
 
 	msg := &message.CallConstructor{
 		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
-		ClassRef:       req.Reference,
-		ParentRef:      req.Owner,
-		Name:           req.Constructor,
-		Arguments:      req.Arguments,
-		SaveAs:         req.SaveAs,
+		ClassRef:       req.Class,
+		ParentRef:      req.Parent,
+		Name:           req.ConstructorName,
+		Arguments:      req.ArgsSerialized,
+		SaveAs:         message.Child,
 	}
 
 	res, err := gpr.lr.MessageBus.Send(msg)
 	if err != nil {
-		return errors.Wrap(err, "couldn't dispatch event")
-	}
-	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
-		Type:   CaseRecordTypeRouteCall,
-		ReqSig: HashInterface(req),
-		Resp:   rep,
-	})
-
-	rep.Ref = res.(*reply.CallConstructor).Object
-	return nil
-}
-
-// SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, reply *rpctypes.UpSaveAsChildResp) error {
-	constructorReq := rpctypes.UpRouteConstructorReq{
-		UpBaseReq:   req.UpBaseReq,
-		Owner:       req.Parent,
-		Reference:   req.Class,
-		Constructor: req.ConstructorName,
-		Arguments:   req.ArgsSerialized,
-		SaveAs:      message.Child,
-	}
-
-	constructorRes := rpctypes.UpRouteConstructorResp{}
-
-	err := gpr.RouteConstructorCall(constructorReq, &constructorRes)
-	if err != nil {
-		return errors.Wrap(err, "couldn't save new object")
+		return errors.Wrap(err, "couldn't save new object as child")
 	}
 
 	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
 		Type:   CaseRecordTypeSaveAsChild,
 		ReqSig: HashInterface(req),
-		Resp:   reply,
+		Resp:   rep,
 	})
-	reply.Reference = *constructorRes.Ref
+	rep.Reference = res.(*reply.CallConstructor).Object
 	return nil
 }
 
@@ -206,30 +179,31 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, reply *rpctypes
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, reply *rpctypes.UpSaveAsDelegateResp) error {
-	constructorReq := rpctypes.UpRouteConstructorReq{
-		UpBaseReq:   req.UpBaseReq,
-		Owner:       req.Into,
-		Reference:   req.Class,
-		Constructor: req.ConstructorName,
-		Arguments:   req.ArgsSerialized,
-		SaveAs:      message.Delegate,
+func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
+	if gpr.lr.MessageBus == nil {
+		return errors.New("event bus was not set during initialization")
 	}
 
-	constructorRes := rpctypes.UpRouteConstructorResp{}
+	msg := &message.CallConstructor{
+		BaseLogicEvent: MakeBaseEvent(req.UpBaseReq),
+		ClassRef:       req.Class,
+		ParentRef:      req.Into,
+		Name:           req.ConstructorName,
+		Arguments:      req.ArgsSerialized,
+		SaveAs:         message.Delegate,
+	}
 
-	// TODO return ref
-	err := gpr.RouteConstructorCall(constructorReq, &constructorRes)
+	res, err := gpr.lr.MessageBus.Send(msg)
 	if err != nil {
-		return errors.Wrap(err, "couldn't save delegate")
+		return errors.Wrap(err, "couldn't save new object as delegate")
 	}
 
 	gpr.lr.addObjectCaseRecord(req.Me, CaseRecord{
 		Type:   CaseRecordTypeSaveAsDelegate,
 		ReqSig: HashInterface(req),
-		Resp:   reply,
+		Resp:   rep,
 	})
-	reply.Reference = *constructorRes.Ref
+	rep.Reference = res.(*reply.CallConstructor).Object
 	return nil
 }
 
