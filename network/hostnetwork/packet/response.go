@@ -111,3 +111,8 @@ type ResponseKnownOuterHosts struct {
 	ID         string //	id of host in which more known outer hosts
 	OuterHosts int    // number of known outer hosts
 }
+
+// ResponseActiveNodes is data to answer to active nodes request.
+type ResponseActiveNodes struct {
+	ActiveNodes []ActiveNode
+}

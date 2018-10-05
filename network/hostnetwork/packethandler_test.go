@@ -207,6 +207,10 @@ func (hh *mockHostHandler) Store(key store.Key, data []byte, replication time.Ti
 	return nil
 }
 
+func (hh *mockHostHandler) GetActiveNodes() error {
+	return nil
+}
+
 func (hh *mockHostHandler) AddPossibleProxyID(id string) {
 }
 

@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
@@ -56,6 +57,7 @@ type DHT struct {
 	subnet            Subnet
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
+	activeNodeKeeper  nodekeeper.NodeKeeper
 }
 
 // AuthInfo collects some information about authentication.
@@ -908,6 +910,23 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 	}
 
 	return nil
+}
+
+func (dht *DHT) GetActiveNodesList() []*core.ActiveNode {
+	return dht.activeNodeKeeper.GetActiveNodes()
+}
+
+func (dht *DHT) GetActiveNodes() error {
+	var err error
+	// TODO: fix it.
+	for _, target := range dht.options.BootstrapHosts {
+		err = SendActiveNodesRequest(dht, target)
+	}
+	return err
+}
+
+func (dht *DHT) AddActiveNode(activeNode *core.ActiveNode) {
+	dht.activeNodeKeeper.add
 }
 
 // HtFromCtx returns a routing hashtable known by ctx.
