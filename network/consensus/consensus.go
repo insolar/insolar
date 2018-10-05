@@ -23,24 +23,16 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-//go:generate stringer -type=step
-type step int
-
-const (
-	stepUndefined step = iota + 1
-	stepExchageData
-	stepExchageHash
-)
-
 // Participant describes one consensus participant
 type Participant interface {
 	GetID() core.RecordRef
+	GetActiveNode() core.ActiveNode
 }
 
 // DataProvider for data manipulation
 type DataProvider interface {
-	GetDataList() []interface{}
-	MergeDataList([]interface{}, error)
+	GetDataList() []*core.ActiveNode
+	MergeDataList([]*core.ActiveNode) error
 }
 
 // Consensus interface provides method to make consensus between participants
@@ -53,7 +45,7 @@ type Consensus interface {
 // Communicator interface is used to exchange messages between participants
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, p Participant, data []byte) ([]byte, error)
+	ExchangeData(ctx context.Context, p Participant, data []*core.ActiveNode) ([]byte, error)
 
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
 	ExchangeHash(ctx context.Context, p Participant, data []byte) ([]byte, error)
