@@ -287,7 +287,7 @@ func (e *RegisterChild) Target() *core.RecordRef {
 
 // RequestCall is a Ledger's message wrapping logicrunner's Call messages.
 type RequestCall struct {
-	core.RequestMessage
+	core.Message
 }
 
 // TargetRole implementation of Message interface.

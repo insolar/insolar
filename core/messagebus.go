@@ -38,12 +38,6 @@ type Message interface {
 	GetCaller() *RecordRef
 }
 
-// RequestMessage extends Message interface with Payload method.
-type RequestMessage interface {
-	Message
-	Payload() []byte
-}
-
 // Reply for an `Message`
 type Reply interface {
 	// Type returns message type.

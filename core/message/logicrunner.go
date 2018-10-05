@@ -74,11 +74,6 @@ func (e *CallMethod) Target() *core.RecordRef {
 	return &e.ObjectRef
 }
 
-// Payload returns hashable payload of record.
-func (e *CallMethod) Payload() []byte {
-	return MustSerializeBytes(e)
-}
-
 type SaveAs int
 
 const (
@@ -111,10 +106,5 @@ func (e *CallConstructor) Target() *core.RecordRef {
 	if e.SaveAs == Delegate {
 		return &e.ParentRef
 	}
-	return core.GenRequest(e.PulseNum, e.Payload())
-}
-
-// Payload returns hashable payload of record.
-func (e *CallConstructor) Payload() []byte {
-	return MustSerializeBytes(e)
+	return core.GenRequest(e.PulseNum, MustSerializeBytes(e))
 }

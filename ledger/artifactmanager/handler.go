@@ -65,7 +65,7 @@ func (h *MessageHandler) handleRegisterRequest(
 ) (core.Reply, error) {
 	msg := genericMsg.(*message.RequestCall)
 	requestRec := &record.CallRequest{
-		Payload: msg.Payload(),
+		Payload: message.MustSerializeBytes(msg.Message),
 	}
 	id, err := h.db.SetRequest(requestRec)
 	if err != nil {

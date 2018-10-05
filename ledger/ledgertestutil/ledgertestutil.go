@@ -69,7 +69,7 @@ func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
 	t := m.Type()
 	handler, ok := mb.handlers[t]
 	if !ok {
-		return nil, errors.New(fmt.Sprint("no handler for message type", t))
+		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
 	return handler(m)

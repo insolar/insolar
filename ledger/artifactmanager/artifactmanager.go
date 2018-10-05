@@ -51,11 +51,9 @@ func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfuly created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
-	msg core.RequestMessage,
+	msg core.Message,
 ) (*core.RecordRef, error) {
-	id, err := m.fetchID(&message.RequestCall{
-		RequestMessage: msg,
-	})
+	id, err := m.fetchID(&message.RequestCall{Message: msg})
 	if err != nil {
 		return nil, err
 	}
