@@ -109,7 +109,7 @@ func (db *DB) Bootstrap() error {
 	}
 
 	createRootRecord := func() (*record.Reference, error) {
-		rootRef, err := db.SetRecord(&record.ObjectActivateRecord{
+		rootID, err := db.SetRecord(&record.ObjectActivateRecord{
 			ActivationRecord: record.ActivationRecord{
 				StatefulResult: record.StatefulResult{
 					ResultRecord: record.ResultRecord{
@@ -122,18 +122,23 @@ func (db *DB) Bootstrap() error {
 		if err != nil {
 			return nil, err
 		}
-		err = db.SetObjectIndex(rootRef, &index.ObjectLifeline{LatestStateRef: *rootRef})
+		err = db.SetObjectIndex(rootID, &index.ObjectLifeline{LatestState: *rootID})
 		if err != nil {
 			return nil, err
 		}
 
-		// TODO: temporary fake entropy
-		err = db.SetEntropy(db.GetCurrentPulse(), core.Entropy{})
+		db.SetCurrentPulse(core.GenesisPulse.PulseNumber)
+		err = db.SetEntropy(core.GenesisPulse.PulseNumber, core.GenesisPulse.Entropy)
+		if err != nil {
+			return nil, err
+		}
+		_, err = db.SetDrop(core.GenesisPulse.PulseNumber, &jetdrop.JetDrop{})
 		if err != nil {
 			return nil, err
 		}
 
-		return rootRef, db.Set([]byte(rootKey), rootRef.CoreRef()[:])
+		rootRef := record.Reference{Domain: *rootID, Record: *rootID}
+		return &rootRef, db.Set([]byte(rootKey), rootRef.CoreRef()[:])
 	}
 
 	var err error
@@ -180,10 +185,10 @@ func (db *DB) Set(key, value []byte) error {
 }
 
 // GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(ref *record.Reference) (record.Record, error) {
+func (db *DB) GetRecord(id *record.ID) (record.Record, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
-	rec, err := tx.GetRecord(ref)
+	rec, err := tx.GetRecord(id)
 	if err != nil {
 		return nil, err
 	}
@@ -191,23 +196,27 @@ func (db *DB) GetRecord(ref *record.Reference) (record.Record, error) {
 }
 
 // SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(rec record.Record) (ref *record.Reference, err error) {
+func (db *DB) SetRecord(rec record.Record) (*record.ID, error) {
+	var (
+		id  *record.ID
+		err error
+	)
 	err = db.Update(func(tx *TransactionManager) error {
-		ref, err = tx.SetRecord(rec)
+		id, err = tx.SetRecord(rec)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	return ref, nil
+	return id, nil
 }
 
 // GetClassIndex wraps matching transaction manager method.
-func (db *DB) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error) {
+func (db *DB) GetClassIndex(id *record.ID) (*index.ClassLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	idx, err := tx.GetClassIndex(ref)
+	idx, err := tx.GetClassIndex(id)
 	if err != nil {
 		return nil, err
 	}
@@ -215,18 +224,18 @@ func (db *DB) GetClassIndex(ref *record.Reference) (*index.ClassLifeline, error)
 }
 
 // SetClassIndex wraps matching transaction manager method.
-func (db *DB) SetClassIndex(ref *record.Reference, idx *index.ClassLifeline) error {
+func (db *DB) SetClassIndex(id *record.ID, idx *index.ClassLifeline) error {
 	return db.Update(func(tx *TransactionManager) error {
-		return tx.SetClassIndex(ref, idx)
+		return tx.SetClassIndex(id, idx)
 	})
 }
 
 // GetObjectIndex wraps matching transaction manager method.
-func (db *DB) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, error) {
+func (db *DB) GetObjectIndex(id *record.ID) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(ref)
+	idx, err := tx.GetObjectIndex(id)
 	if err != nil {
 		return nil, err
 	}
@@ -234,9 +243,9 @@ func (db *DB) GetObjectIndex(ref *record.Reference) (*index.ObjectLifeline, erro
 }
 
 // SetObjectIndex wraps matching transaction manager method.
-func (db *DB) SetObjectIndex(ref *record.Reference, idx *index.ObjectLifeline) error {
+func (db *DB) SetObjectIndex(id *record.ID, idx *index.ObjectLifeline) error {
 	return db.Update(func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(ref, idx)
+		return tx.SetObjectIndex(id, idx)
 	})
 }
 

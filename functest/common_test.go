@@ -93,6 +93,7 @@ func TestTooMuchParams(t *testing.T) {
 		"query_type": "create_member",
 		"some_param": "irrelevant info",
 		"name":       testutils.RandomString(),
+		"public_key": "000",
 	})
 
 	firstMemberResponse := &createMemberResponse{}
@@ -118,6 +119,7 @@ func TestWrongTypeInParams(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "create_member",
 		"name":       128182187,
+		"public_key": "000",
 	})
 
 	response := &baseResponse{}

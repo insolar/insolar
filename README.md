@@ -81,7 +81,7 @@ Installation
 Generate default configuration file
 ------------
 
-    go run cmd/insolar/* -output=-
+    go run cmd/insolar/* --cmd=default_config
 
 Example
 ------------

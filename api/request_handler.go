@@ -17,10 +17,12 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"reflect"
 
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -49,15 +51,18 @@ type RequestHandler struct {
 	params              *Params
 	messageBus          core.MessageBus
 	rootDomainReference core.RecordRef
+	seedManager         *seedmanager.SeedManager
+	seedGenerator       seedmanager.SeedGenerator
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, messageBus core.MessageBus, rootDomainReference core.RecordRef) *RequestHandler {
+func NewRequestHandler(params *Params, messageBus core.MessageBus, rootDomainReference core.RecordRef, smanager *seedmanager.SeedManager) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
 		messageBus:          messageBus,
 		rootDomainReference: rootDomainReference,
+		seedManager:         smanager,
 	}
 }
 
@@ -87,13 +92,16 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 	if len(rh.params.Name) == 0 {
 		return nil, errors.New("field 'name' is required")
 	}
+	if len(rh.params.PublicKey) == 0 {
+		return nil, errors.New("field 'public_key' is required")
+	}
 
-	routResult, err := rh.sendRequest("CreateMember", []interface{}{rh.params.Name})
+	routResult, err := rh.sendRequest("CreateMember", []interface{}{rh.params.Name, rh.params.PublicKey})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractStringResponse(routResult.(*reply.Common).Result)
+	memberRef, err := extractStringResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -147,7 +155,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
 
-	amount, err := extractGetBalanceResponse(routResult.(*reply.Common).Result)
+	amount, err := extractGetBalanceResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -193,7 +201,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
 
-	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+	isSent, err := extractBoolResponse(routResult.(*reply.CallMethod).Result)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
@@ -239,7 +247,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reply.Common).Result)
+	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
@@ -270,7 +278,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	nodeRef, err := extractStringResponse(routResult.(*reply.Common).Result)
+	nodeRef, err := extractStringResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
@@ -289,12 +297,26 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+	isSent, err := extractBoolResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
 	result["is_authorized"] = isSent
+
+	return result, nil
+}
+
+// ProcessGetSeed processes get seed request
+func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	seed, err := rh.seedGenerator.Next()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessGetSeed ]")
+	}
+	rh.seedManager.Add(*seed)
+
+	result["seed"] = base64.StdEncoding.EncodeToString(seed[:])
 
 	return result, nil
 }

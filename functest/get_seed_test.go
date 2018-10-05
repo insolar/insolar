@@ -14,34 +14,18 @@
  *    limitations under the License.
  */
 
-package pulsar
+package functest
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExportImportPrivateKey(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+func TestGetSeed(t *testing.T) {
+	seed1 := getSeed(t)
+	seed2 := getSeed(t)
 
-	encoded, err := ExportPrivateKey(privateKey)
-	decoded, err := ImportPrivateKey(encoded)
+	assert.NotEqual(t, seed1, seed2)
 
-	assert.NoError(t, err)
-	assert.ObjectsAreEqual(decoded, privateKey)
-}
-
-func TestExportImportPublicKey(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	encoded, err := ExportPublicKey(publicKey)
-	decoded, err := ImportPublicKey(encoded)
-
-	assert.NoError(t, err)
-	assert.ObjectsAreEqual(decoded, privateKey)
 }

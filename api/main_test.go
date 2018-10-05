@@ -132,6 +132,9 @@ func (eb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandl
 	return nil
 }
 
+func (eb *TestMessageBus) MustRegister(p core.MessageType, handler core.MessageHandler) {
+}
+
 func (eb *TestMessageBus) Start(c core.Components) error {
 	return nil
 }
@@ -147,7 +150,7 @@ const TestBalance = 100500
 func (eb *TestMessageBus) Send(core.Message) (core.Reply, error) {
 	data, _ := MarshalArgs(TestBalance)
 
-	return &reply.Common{
+	return &reply.CallMethod{
 		Result: data,
 	}, nil
 }

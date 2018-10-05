@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package pulsartestutil
 
 import (
@@ -41,7 +57,7 @@ func (*MockStorage) SetLastPulse(pulse *core.Pulse) error {
 }
 
 func (*MockStorage) SavePulse(pulse *core.Pulse) error {
-	panic("implement me")
+	return nil
 }
 
 func (*MockStorage) Close() error {
@@ -90,6 +106,10 @@ func (mock *MockRPCClientWrapper) Close() error {
 	return args.Error(0)
 }
 
+func (mock *MockRPCClientWrapper) ResetClient() {
+	panic("implement me!")
+}
+
 func (mock *MockRPCClientWrapper) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
 	mockArgs := mock.Mock.Called(serviceMethod, args, reply, done)
 	return mockArgs.Get(0).(*rpc.Call)
@@ -123,4 +143,8 @@ func (*CustomRPCWrapperMock) Close() error {
 
 func (impl *CustomRPCWrapperMock) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
 	return impl.Done
+}
+
+func (impl *CustomRPCWrapperMock) ResetClient() {
+	panic("implement me!")
 }

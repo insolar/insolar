@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
 )
 
@@ -66,7 +67,7 @@ type EntropyPayload struct {
 
 type VectorPayload struct {
 	PulseNumber core.PulseNumber
-	Vector      map[string]*BftCell
+	Vector      map[string]*bftCell
 }
 
 type SenderConfirmationPayload struct {
@@ -98,7 +99,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	}
 
 	generator := StandardEntropyGenerator{}
-	convertedKey, err := ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
+	convertedKey, err := ecdsa.ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		return err
 	}
@@ -133,7 +134,7 @@ func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) 
 		return err
 	}
 
-	convertedKey, err := ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
+	convertedKey, err := ecdsa.ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		panic(err)
 	}
@@ -150,7 +151,7 @@ func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) 
 }
 
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
-	if handler.pulsar.State == Failed {
+	if handler.pulsar.State == failed {
 		return nil
 	}
 
@@ -175,23 +176,23 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	}
 
 	handler.pulsar.EntropyGenerationLock.Lock()
-	if handler.pulsar.State == WaitingForTheStart {
+	if handler.pulsar.State == waitingForStart {
 		err = handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
 		if err != nil {
-			handler.pulsar.switchStateTo(Failed, err)
+			handler.pulsar.stateSwitcher.switchToState(failed, err)
 			handler.pulsar.EntropyGenerationLock.Unlock()
 			return nil
 		}
 	}
 	handler.pulsar.EntropyGenerationLock.Unlock()
 
-	handler.pulsar.OwnedBftRow[request.PublicKey] = &BftCell{Sign: requestBody.Signature}
+	handler.pulsar.OwnedBftRow[request.PublicKey] = &bftCell{Sign: requestBody.Signature}
 
 	return nil
 }
 
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
-	if handler.pulsar.State == Failed {
+	if handler.pulsar.State == failed {
 		return nil
 	}
 
@@ -229,7 +230,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 }
 
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
-	if handler.pulsar.State == Failed {
+	if handler.pulsar.State == failed {
 		return nil
 	}
 
@@ -258,7 +259,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 }
 
 func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
-	if handler.pulsar.State == Failed {
+	if handler.pulsar.State == failed {
 		return nil
 	}
 

@@ -30,7 +30,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -39,7 +38,6 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 var corePath = "github.com/insolar/insolar/core"
@@ -285,30 +283,6 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]st
 // ChangePackageToMain changes package of the parsed code to "main"
 func (pf *ParsedFile) ChangePackageToMain() {
 	pf.node.Name.Name = "main"
-}
-
-// ReplaceFoundationImport replaces import of "client" foundation with "server"
-// version
-func (pf *ParsedFile) ReplaceFoundationImport() {
-	quoted := strconv.Quote(clientFoundation)
-	for _, d := range pf.node.Decls {
-		td, ok := d.(*ast.GenDecl)
-		if !ok {
-			continue
-		}
-		if td.Tok != token.IMPORT {
-			continue
-		}
-		for _, s := range td.Specs {
-			is, ok := s.(*ast.ImportSpec)
-			if !ok {
-				continue
-			}
-			if is.Path.Value == quoted {
-				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
-			}
-		}
-	}
 }
 
 // Write prints `out` contract's code, it could be changed with a few methods

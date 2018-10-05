@@ -61,35 +61,35 @@ func TestBareHelloworld(t *testing.T) {
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
 	_, _, classRef, err := testutil.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
+	assert.NoError(t, err)
 
 	contract, err := am.ActivateObject(request, domain, *classRef, *am.RootRef(), testutil.CBORMarshal(t, hw))
+	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
 	resp, err := lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"Vany"}),
 	})
 	assert.NoError(t, err, "contract call")
 
-	d := testutil.CBORUnMarshal(t, resp.(*reply.Common).Data)
-	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	d := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
 	resp, err = lr.Execute(&message.CallMethod{
-		Request:   request,
 		ObjectRef: *contract,
 		Method:    "Greet",
 		Arguments: testutil.CBORMarshal(t, []interface{}{"Ruz"}),
 	})
 	assert.NoError(t, err, "contract call")
 
-	d = testutil.CBORUnMarshal(t, resp.(*reply.Common).Data)
-	r = testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	d = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
+	r = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }

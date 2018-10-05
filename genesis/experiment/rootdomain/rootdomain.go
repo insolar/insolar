@@ -17,11 +17,10 @@
 package rootdomain
 
 import (
-	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/json"
 
-	"github.com/insolar/insolar/genesis/experiment/nodedomain/utils"
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/genesis/proxy/member"
 	"github.com/insolar/insolar/genesis/proxy/nodedomain"
 	"github.com/insolar/insolar/genesis/proxy/wallet"
@@ -33,6 +32,7 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
+	Root *core.RecordRef
 }
 
 // RegisterNode processes register node request
@@ -50,22 +50,32 @@ func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	return nd.RegisterNode(publicKey, role).String()
 }
 
+func makeSeed() []byte {
+	seed := make([]byte, 32)
+	_, err := rand.Read(seed)
+	if err != nil {
+		panic(err)
+	}
+
+	return seed
+}
+
 // IsAuthorized checks is node authorized
 func (rd *RootDomain) IsAuthorized() bool {
-	privateKey, err := ecdsa.GenerateKey(utils.GetCurve(), rand.Reader)
+	privateKey, err := ecdsa_helper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
 	}
 
 	// Make signature
-	seed := utils.MakeSeed()
-	signature, err := utils.Sign(seed, privateKey)
+	seed := makeSeed()
+	signature, err := ecdsa_helper.Sign(seed, privateKey)
 	if err != nil {
 		panic(err)
 	}
 
 	// Register node
-	serPubKey, err := utils.SerializePublicKey(privateKey.PublicKey)
+	serPubKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		panic(err)
 	}
@@ -82,12 +92,15 @@ func (rd *RootDomain) IsAuthorized() bool {
 }
 
 // CreateMember processes create member request
-func (rd *RootDomain) CreateMember(name string) string {
-	memberHolder := member.New(name)
+func (rd *RootDomain) CreateMember(name string, key string) string {
+	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.Root {
+	memberHolder := member.New(name, key)
 	m := memberHolder.AsChild(rd.GetReference())
 	wHolder := wallet.New(1000)
 	wHolder.AsDelegate(m.GetReference())
 	return m.GetReference().String()
+	//}
+	//return ""
 }
 
 // GetBalance processes get balance request
@@ -99,10 +112,8 @@ func (rd *RootDomain) GetBalance(reference string) uint {
 // SendMoney processes send money request
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
-
 	v := core.NewRefFromBase58(to)
 	walletFrom.Transfer(amount, &v)
-
 	return true
 }
 
@@ -137,6 +148,17 @@ func (rd *RootDomain) DumpAllUsers() []byte {
 	}
 	resJSON, _ := json.Marshal(res)
 	return resJSON
+}
+
+func (rd *RootDomain) SetRoot(adminKey string) (string, *foundation.Error) {
+	if rd.Root == nil {
+		memberHolder := member.New("root", adminKey)
+		m := memberHolder.AsChild(rd.GetReference())
+		root := m.GetReference()
+		rd.Root = &root
+		return root.String(), nil
+	}
+	return "", &foundation.Error{S: "Root is already set"}
 }
 
 // NewRootDomain creates new RootDomain

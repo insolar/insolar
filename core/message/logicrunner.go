@@ -17,6 +17,9 @@
 package message
 
 import (
+	"encoding/binary"
+	"io"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -32,27 +35,35 @@ const (
 	// ReturnValidated
 )
 
-// BaseLogicEvent base of event class family, do not use it standalone
-type BaseLogicEvent struct {
+// BaseLogicMessage base of event class family, do not use it standalone
+type BaseLogicMessage struct {
 	Caller core.RecordRef
 }
 
-func (e *BaseLogicEvent) GetCaller() *core.RecordRef {
+type IBaseLogicMessage interface {
+	core.Message
+	GetReference() core.RecordRef
+}
+
+func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &e.Caller
 }
 
-func (e *BaseLogicEvent) TargetRole() core.JetRole {
+func (e *BaseLogicMessage) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	BaseLogicEvent
+	BaseLogicMessage
 	ReturnMode MethodReturnMode
 	ObjectRef  core.RecordRef
-	Request    core.RecordRef
 	Method     string
 	Arguments  core.Arguments
+}
+
+func (e *CallMethod) GetReference() core.RecordRef {
+	return e.ObjectRef
 }
 
 func (e *CallMethod) Type() core.MessageType {
@@ -63,12 +74,34 @@ func (e *CallMethod) Target() *core.RecordRef {
 	return &e.ObjectRef
 }
 
+// WriteHash implements ledger.hash.Hasher interface.
+func (e *CallMethod) WriteHash(w io.Writer) {
+	mustWrite(w, binary.BigEndian, e.Caller)
+	mustWrite(w, binary.BigEndian, uint32(e.ReturnMode))
+	mustWrite(w, binary.BigEndian, e.ObjectRef)
+	mustWrite(w, binary.BigEndian, []byte(e.Method))
+	mustWrite(w, binary.BigEndian, e.Arguments)
+}
+
+type SaveAs int
+
+const (
+	Child SaveAs = iota
+	Delegate
+)
+
 // CallConstructor is a message for calling constructor and obtain its reply
 type CallConstructor struct {
-	BaseLogicEvent
+	BaseLogicMessage
+	ParentRef core.RecordRef
+	SaveAs    SaveAs
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
+}
+
+func (e *CallConstructor) GetReference() core.RecordRef {
+	return e.ClassRef
 }
 
 func (e *CallConstructor) Type() core.MessageType {
@@ -76,5 +109,19 @@ func (e *CallConstructor) Type() core.MessageType {
 }
 
 func (e *CallConstructor) Target() *core.RecordRef {
-	return &e.ClassRef
+	return &e.ParentRef
+}
+
+// WriteHash implements ledger.hash.Hasher interface.
+func (e *CallConstructor) WriteHash(w io.Writer) {
+	mustWrite(w, binary.BigEndian, e.Caller)
+	mustWrite(w, binary.BigEndian, e.ClassRef)
+	mustWrite(w, binary.BigEndian, []byte(e.Name))
+	mustWrite(w, binary.BigEndian, e.Arguments)
+}
+
+func mustWrite(w io.Writer, order binary.ByteOrder, data interface{}) {
+	if err := binary.Write(w, order, data); err != nil {
+		panic(err)
+	}
 }

@@ -60,14 +60,18 @@ type RPC struct {
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
 func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
+	log.Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
 	}
 
 	symbol, err := p.Lookup("INSMETHOD_" + args.Method)
 	if err != nil {
-		return errors.Wrapf(err, "Can't find wrapper for %s", args.Method)
+		return errors.Wrapf(
+			err, "Can't find wrapper for %s (code ref: %s)",
+			args.Method, args.Code.String(),
+		)
 	}
 
 	wrapper, ok := symbol.(func(object []byte, data []byte) ([]byte, []byte, error))
@@ -121,7 +125,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 		return gi.UpstreamClient, nil
 	}
 
-	client, err := rpc.DialHTTP(gi.UpstreamProtocol, gi.UpstreamAddress)
+	client, err := rpc.Dial(gi.UpstreamProtocol, gi.UpstreamAddress)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't dial '%s' over %s", gi.UpstreamAddress, gi.UpstreamProtocol)
 	}
@@ -220,41 +224,19 @@ func (gi *GoInsider) RouteCall(ref core.RecordRef, wait bool, method string, arg
 	return []byte(res.Result), nil
 }
 
-// RouteConstructorCall ...
-func (gi *GoInsider) RouteConstructorCall(ref core.RecordRef, name string, args []byte) ([]byte, error) {
-	client, err := gi.Upstream()
-	if err != nil {
-		return []byte{}, err
-	}
-
-	req := rpctypes.UpRouteConstructorReq{
-		UpBaseReq:   MakeUpBaseReq(),
-		Reference:   ref,
-		Constructor: name,
-		Arguments:   args,
-	}
-
-	res := rpctypes.UpRouteConstructorResp{}
-	err = client.Call("RPC.RouteConstructorCall", req, &res)
-	if err != nil {
-		return []byte{}, errors.Wrap(err, "on calling main API")
-	}
-
-	return res.Data, nil
-}
-
 // SaveAsChild ...
-func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error) {
+func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return core.NewRefFromBase58(""), err
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
-		UpBaseReq: MakeUpBaseReq(),
-		Parent:    parentRef,
-		Class:     classRef,
-		Data:      data,
+		UpBaseReq:       MakeUpBaseReq(),
+		Parent:          parentRef,
+		Class:           classRef,
+		ConstructorName: constructorName,
+		ArgsSerialized:  argsSerialized,
 	}
 
 	res := rpctypes.UpSaveAsChildResp{}
@@ -263,7 +245,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef core.RecordRef, data []byte
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference, nil
+	return *res.Reference, nil
 }
 
 // GetObjChildren ...
@@ -288,17 +270,18 @@ func (gi *GoInsider) GetObjChildren(obj core.RecordRef, class core.RecordRef) ([
 }
 
 // SaveAsDelegate ...
-func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byte) (core.RecordRef, error) {
+func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return core.NewRefFromBase58(""), err
 	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
-		UpBaseReq: MakeUpBaseReq(),
-		Into:      intoRef,
-		Class:     classRef,
-		Data:      data,
+		UpBaseReq:       MakeUpBaseReq(),
+		Into:            intoRef,
+		Class:           classRef,
+		ConstructorName: constructorName,
+		ArgsSerialized:  argsSerialized,
 	}
 
 	res := rpctypes.UpSaveAsDelegateResp{}
@@ -307,7 +290,7 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef core.RecordRef, data []byt
 		return core.NewRefFromBase58(""), errors.Wrap(err, "on calling main API")
 	}
 
-	return res.Reference, nil
+	return *res.Reference, nil
 }
 
 // GetDelegate ...

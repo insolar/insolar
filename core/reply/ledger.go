@@ -34,7 +34,7 @@ func (e *Code) Type() core.ReplyType {
 // Class is class from storage.
 type Class struct {
 	Head  core.RecordRef
-	State core.RecordRef
+	State core.RecordID
 	Code  *core.RecordRef // Can be nil.
 }
 
@@ -46,7 +46,7 @@ func (e *Class) Type() core.ReplyType {
 // Object is object from storage.
 type Object struct {
 	Head     core.RecordRef
-	State    core.RecordRef
+	State    core.RecordID
 	Class    core.RecordRef
 	Memory   []byte
 	Children []core.RecordRef
@@ -75,4 +75,14 @@ type Reference struct {
 // Type implementation of Reply interface.
 func (e *Reference) Type() core.ReplyType {
 	return TypeReference
+}
+
+// ID is common reaction for methods returning id to lifeline states.
+type ID struct {
+	ID core.RecordID
+}
+
+// Type implementation of Reply interface.
+func (e *ID) Type() core.ReplyType {
+	return TypeID
 }

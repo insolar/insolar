@@ -50,11 +50,6 @@ type ResultRecord struct {
 	RequestRecord Reference
 }
 
-// Domain implements Record interface
-func (rec *ResultRecord) Domain() *Reference {
-	return &rec.DomainRecord
-}
-
 // WipeOutRecord is a special record that takes place of another record
 // when we need to completely wipe out some information from storage
 // (think GDPR).
@@ -222,8 +217,7 @@ func (r *CodeRecord) GetCode(archPref []core.MachineType) ([]byte, core.MachineT
 type AmendRecord struct {
 	StatefulResult
 
-	HeadRecord    Reference
-	AmendedRecord Reference
+	AmendedRecord ID
 }
 
 // ClassAmendRecord is an amendment record for classes.

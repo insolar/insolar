@@ -52,6 +52,8 @@ type MessageBus interface {
 	SendAsync(Message)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
+	// MustRegister is a Register wrapper that panics if an error was returned.
+	MustRegister(p MessageType, handler MessageHandler)
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.

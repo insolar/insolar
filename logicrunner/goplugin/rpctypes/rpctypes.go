@@ -16,7 +16,9 @@
 
 package rpctypes
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+)
 
 // Types for RPC requests and responses between goplugin and goinsider.
 // Calls from goplugin to goinsider go "downwards" and names are
@@ -55,7 +57,7 @@ type UpBaseReq struct {
 	Me core.RecordRef
 }
 
-// UpReqIface interface for UpBaseReq descendant responses
+// UpRespIface interface for UpBaseReq descendant responses
 type UpRespIface interface{}
 
 // UpGetCodeReq is a set of arguments for GetCode RPC in goplugin
@@ -84,40 +86,28 @@ type UpRouteResp struct {
 	Result core.Arguments
 }
 
-// UpRouteConstructorReq is a set of arguments for RouteConstructor RPC in goplugin
-type UpRouteConstructorReq struct {
-	UpBaseReq
-	Reference   core.RecordRef
-	Constructor string
-	Arguments   core.Arguments
-}
-
-// UpRouteConstructorResp is response from RouteConstructor RPC in goplugin
-type UpRouteConstructorResp struct {
-	Data []byte
-}
-
 // UpSaveAsChildReq is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildReq struct {
 	UpBaseReq
-	Parent core.RecordRef
-	Class  core.RecordRef
-	Data   []byte
+	Parent          core.RecordRef
+	Class           core.RecordRef
+	ConstructorName string
+	ArgsSerialized  []byte
 }
 
 // UpSaveAsChildResp is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildResp struct {
-	Reference core.RecordRef
+	Reference *core.RecordRef
 }
 
-// UpSaveAsChildResp is a set of arguments for GetObjChildren RPC in goplugin
+// UpGetObjChildrenReq is a set of arguments for GetObjChildren RPC in goplugin
 type UpGetObjChildrenReq struct {
 	UpBaseReq
 	Obj   core.RecordRef
 	Class core.RecordRef
 }
 
-// UpSaveAsChildResp is a set of arguments for GetObjChildren RPC in goplugin
+// UpGetObjChildrenResp is response from GetObjChildren RPC in goplugin
 type UpGetObjChildrenResp struct {
 	Children []core.RecordRef
 }
@@ -125,14 +115,15 @@ type UpGetObjChildrenResp struct {
 // UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateReq struct {
 	UpBaseReq
-	Into  core.RecordRef
-	Class core.RecordRef
-	Data  []byte
+	Into            core.RecordRef
+	Class           core.RecordRef
+	ConstructorName string
+	ArgsSerialized  []byte
 }
 
-// UpSaveAsDelegateResp is a set of arguments for SaveAsDelegate RPC in goplugin
+// UpSaveAsDelegateResp is response from SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateResp struct {
-	Reference core.RecordRef
+	Reference *core.RecordRef
 }
 
 // UpGetDelegateReq is a set of arguments for GetDelegate RPC in goplugin
@@ -142,14 +133,7 @@ type UpGetDelegateReq struct {
 	OfType core.RecordRef
 }
 
-// UpGetDelegateResp is a set of arguments for GetDelegate RPC in goplugin
+// UpGetDelegateResp is response from GetDelegate RPC in goplugin
 type UpGetDelegateResp struct {
 	Object core.RecordRef
-}
-
-// Object is an inner representation of storage object for transfering it over API
-type Object struct {
-	MachineType core.MachineType
-	Reference   core.RecordRef
-	Data        []byte
 }

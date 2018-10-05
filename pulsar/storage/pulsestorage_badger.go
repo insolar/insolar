@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package pulsarstorage
 
 import (
@@ -42,20 +58,11 @@ func NewStorageBadger(conf configuration.Pulsar, opts *badger.Options) (PulsarSt
 
 	pulse, err := db.GetLastPulse()
 	if pulse.PulseNumber == 0 || err != nil {
-		// Because first 2 bites of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
-		// for calculation pulse numbers we use the formula = unix.Now() - firstPulseDate + 65536
-		genesisPulse := core.Pulse{PulseNumber: core.FirstPulseNumber}
-		predefinedEntropy := []byte{138, 67, 169, 65, 13, 4, 211, 121, 35, 73, 128, 81, 138, 164, 87, 139,
-			150, 104, 24, 255, 159, 10, 172, 233, 183, 61, 183, 192, 169, 103, 187, 209,
-			181, 235, 43, 188, 164, 151, 138, 213, 231, 222, 27, 244, 42, 194, 55, 133,
-			30, 202, 50, 246, 119, 180, 59, 143, 130, 248, 87, 28, 155, 33, 157, 30}
-		copy(genesisPulse.Entropy[:], predefinedEntropy[:core.EntropySize])
-
-		err = db.SavePulse(&genesisPulse)
+		err = db.SavePulse(core.GenesisPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "problems with init database")
 		}
-		err = db.SetLastPulse(&genesisPulse)
+		err = db.SetLastPulse(core.GenesisPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "problems with init database")
 		}

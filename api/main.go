@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -78,6 +79,8 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 		answer, hError = rh.ProcessRegisterNode()
 	case IsAuth:
 		answer, hError = rh.ProcessIsAuthorized()
+	case GetSeed:
+		answer, hError = rh.ProcessGetSeed()
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = writeError(msg, BadRequest)
@@ -123,7 +126,9 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 }
 
 func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
+	sm := seedmanager.New()
 	return func(response http.ResponseWriter, req *http.Request) {
+		startTime := time.Now()
 		answer := make(map[string]interface{})
 		var params *Params
 		defer func() {
@@ -144,7 +149,7 @@ func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.Recor
 			if err != nil {
 				log.Errorf("[QID=%s] Can't write response\n", params.QID)
 			}
-			log.Infof("[QID=%s] Request completed\n", params.QID)
+			log.Infof("[QID=%s] Request completed. Total time: %s\n", params.QID, time.Since(startTime))
 		}()
 
 		params, err := preprocessRequest(req)
@@ -153,7 +158,7 @@ func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.Recor
 			log.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, messageBus, rootDomainReference)
+		rh := NewRequestHandler(params, messageBus, rootDomainReference, sm)
 
 		answer = processQueryType(rh, params.QType)
 	}

@@ -18,13 +18,18 @@ package logicrunner
 
 import (
 	"bytes"
-	"encoding/json"
+
+	"crypto/ecdsa"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"testing"
+
+	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/genesis/experiment/member/signer"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -44,6 +49,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
+var parallel = true
 
 func TestMain(m *testing.M) {
 	var err error
@@ -90,6 +96,16 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 		lr.Stop()
 		cleaner()
 		rundCleaner()
+	}
+}
+
+func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
+	rlr := lr.(*LogicRunner)
+	for ref, cr := range rlr.caseBind.Records {
+		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
+		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
+		assert.NoError(t, err, "validation")
+		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
 	}
 }
 
@@ -140,7 +156,9 @@ func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.Rec
 }
 
 func TestBasics(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	lr, err := NewLogicRunner(&configuration.LogicRunner{})
 	assert.NoError(t, err)
 	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
@@ -193,6 +211,9 @@ func (eb *testMessageBus) Register(p core.MessageType, handler core.MessageHandl
 	return nil
 }
 
+func (eb *testMessageBus) MustRegister(p core.MessageType, handler core.MessageHandler) {
+}
+
 func (*testMessageBus) Start(components core.Components) error { return nil }
 func (*testMessageBus) Stop() error                            { return nil }
 func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) {
@@ -201,7 +222,9 @@ func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) 
 func (*testMessageBus) SendAsync(msg core.Message) {}
 
 func TestExecution(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	am := testutil.NewTestArtifactManager()
 	ld := &testLedger{am: am}
 	eb := &testMessageBus{}
@@ -234,18 +257,18 @@ func TestExecution(t *testing.T) {
 
 	resp, err := lr.Execute(&message.CallMethod{ObjectRef: dataRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*reply.Common).Data)
-	assert.Equal(t, []byte("res"), resp.(*reply.Common).Result)
+	assert.Equal(t, []byte("data"), resp.(*reply.CallMethod).Data)
+	assert.Equal(t, []byte("res"), resp.(*reply.CallMethod).Result)
 
 	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
 	resp, err = lr.Execute(&message.CallConstructor{ClassRef: classRef})
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("data"), resp.(*reply.Common).Data)
-	assert.Equal(t, []byte(nil), resp.(*reply.Common).Result)
 }
 
 func TestContractCallingContract(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var contractOneCode = `
 package main
 
@@ -319,7 +342,9 @@ func (r *Two) Hello(s string) string {
 }
 
 func TestInjectingDelegate(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var contractOneCode = `
 package main
 
@@ -407,7 +432,9 @@ func (r *Two) Hello(s string) string {
 }
 
 func TestBasicNotificationCall(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var contractOneCode = `
 package main
 
@@ -474,7 +501,9 @@ func (r *Two) Hello() string {
 }
 
 func TestContextPassing(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var code = `
 package main
 
@@ -509,7 +538,9 @@ func (r *One) Hello() string {
 }
 
 func TestGetChildren(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	goContract := `
 package main
 
@@ -588,33 +619,32 @@ func New(n int) *Child {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(&message.CallMethod{
-		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "NewChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{10}),
 	})
 	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
-	rlr := lr.(*LogicRunner)
-	assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.cb.P.PulseNumber), "right pulsenumber")
-	assert.Equal(t, 20, len(rlr.cb.R[*contract]), "right number of caserecords")
-
 	resp, err = lr.Execute(&message.CallMethod{
-		Request:   core.NewRefFromBase58("r3"),
 		ObjectRef: *contract,
 		Method:    "SumChilds",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
+
+	ValidateAllResults(t, lr)
+
 	assert.NoError(t, err, "contract call")
-	r = testutil.CBORUnMarshal(t, resp.(*reply.Common).Result)
+	r = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 }
 
 func TestErrorInterface(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	var contractOneCode = `
 package main
 
@@ -669,22 +699,53 @@ func (r *Two) AnError() error {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(&message.CallMethod{
-		Request:   core.NewRefFromBase58("r2"),
 		ObjectRef: *contract,
 		Method:    "AnError",
 		Arguments: testutil.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
 
+	ValidateAllResults(t, lr)
+
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
-	err = codec.NewDecoderBytes(resp.(*reply.Common).Result, ch).Decode(&res)
+	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 }
 
+type Caller struct {
+	member string
+	key    *ecdsa.PrivateKey
+	lr     core.LogicRunner
+	t      *testing.T
+}
+
+func (s *Caller) SignedCall(ref string, method string, params []interface{}) interface{} {
+	seed := make([]byte, 32)
+	_, err := rand.Read(seed)
+	assert.NoError(s.t, err)
+
+	buf, err := signer.Serialize(ref, method, params, seed)
+	assert.NoError(s.t, err)
+
+	sign, err := cryptoHelper.Sign(buf, s.key)
+	assert.NoError(s.t, err)
+	resp, err := s.lr.Execute(&message.CallMethod{
+		ObjectRef: core.NewRefFromBase58(s.member),
+		Method:    "AuthorizedCall",
+		Arguments: testutil.CBORMarshal(s.t, []interface{}{ref, method, params, seed, sign}),
+	})
+	assert.NoError(s.t, err, "contract call")
+	res := testutil.CBORUnMarshal(s.t, resp.(*reply.CallMethod).Result)
+	assert.Nil(s.t, res.([]interface{})[1])
+	return res.([]interface{})[0]
+}
+
 func TestRootDomainContract(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.go" +
 		"")
 	if err != nil {
@@ -705,60 +766,62 @@ func TestRootDomainContract(t *testing.T) {
 
 	lr, am, cb, cleaner := PrepareLrAmCb(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootDomain": string(rootDomainCode)})
+	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
 	assert.NoError(t, err)
 
+	// Initializing Root Domain
 	domain := core.NewRefFromBase58("c1")
 	request := core.NewRefFromBase58("c2")
-	contract, err := am.ActivateObject(domain, request, *cb.Classes["rootDomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.ActivateObject(domain, request, *cb.Classes["rootdomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	resp1, err := lr.Execute(&message.CallMethod{
-		Request:   request,
-		ObjectRef: *contract,
-		Method:    "CreateMember",
-		Arguments: testutil.CBORMarshal(t, []interface{}{"member1"}),
-	})
-	assert.NoError(t, err, "contract call")
-	r1 := testutil.CBORUnMarshal(t, resp1.(*reply.Common).Result)
-	member1Ref := r1.([]interface{})[0].(string)
-
-	resp2, err := lr.Execute(&message.CallMethod{
-		Request:   request,
-		ObjectRef: *contract,
-		Method:    "CreateMember",
-		Arguments: testutil.CBORMarshal(t, []interface{}{"member2"}),
-	})
-	assert.NoError(t, err, "contract call")
-	r2 := testutil.CBORUnMarshal(t, resp2.(*reply.Common).Result)
-	member2Ref := r2.([]interface{})[0].(string)
-
-	_, err = lr.Execute(&message.CallMethod{
-		Request:   request,
-		ObjectRef: *contract,
-		Method:    "SendMoney",
-		Arguments: testutil.CBORMarshal(t, []interface{}{member1Ref, member2Ref, 1}),
-	})
-	assert.NoError(t, err, "contract call")
-
-	resp4, err := lr.Execute(&message.CallMethod{
-		Request:   request,
-		ObjectRef: *contract,
-		Method:    "DumpAllUsers",
-		Arguments: testutil.CBORMarshal(t, []interface{}{}),
-	})
-	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp4.(*reply.Common).Result)
-
-	var res []map[string]interface{}
-	var expected = map[interface{}]float64{"member1": 999, "member2": 1001}
-
-	err = json.Unmarshal(r.([]interface{})[0].([]byte), &res)
+	// Creating and setting Root member
+	rootKey, err := cryptoHelper.GeneratePrivateKey()
 	assert.NoError(t, err)
-	for _, member := range res {
-		assert.Equal(t, expected[member["member"]], member["wallet"])
-	}
+	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
+	assert.NoError(t, err)
+	resp, err := lr.Execute(&message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "SetRoot",
+		Arguments: testutil.CBORMarshal(t, []interface{}{rootPubKey}),
+	})
+	assert.NoError(t, err, "contract call")
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	rootRef := r.([]interface{})[0].(string)
+	assert.NotEqual(t, "", rootRef)
+
+	root := Caller{rootRef, rootKey, lr, t}
+
+	// Creating Member1
+	member1Key, err := cryptoHelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	member1PubKey, err := cryptoHelper.ExportPublicKey(&member1Key.PublicKey)
+	assert.NoError(t, err)
+	resp1 := root.SignedCall(contract.String(), "CreateMember", []interface{}{"Member1", member1PubKey})
+	member1Ref := resp1.([]interface{})[0].(string)
+	assert.NotEqual(t, "", member1Ref)
+
+	// Creating Member2
+	member2Key, err := cryptoHelper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	member2PubKey, err := cryptoHelper.ExportPublicKey(&member2Key.PublicKey)
+	assert.NoError(t, err)
+	resp2 := root.SignedCall(contract.String(), "CreateMember", []interface{}{"Member2", member2PubKey})
+	member2Ref := resp2.([]interface{})[0].(string)
+	assert.NotEqual(t, "", member2Ref)
+
+	// Transfer 1 coin from Member1 to Member2
+	member1 := Caller{member1Ref, member1Key, lr, t}
+	member1.SignedCall(member1Ref, "SendMoney", []interface{}{1, member2Ref})
+
+	// Verify Member1 balance
+	resp1 = root.SignedCall(member1Ref, "GetBalance", []interface{}{})
+	assert.Equal(t, 999, int(resp1.([]interface{})[0].(uint64)))
+
+	// Verify Member2 balance
+	resp2 = root.SignedCall(member2Ref, "GetBalance", []interface{}{})
+	assert.Equal(t, 1001, int(resp2.([]interface{})[0].(uint64)))
 }
 
 func BenchmarkContractCall(b *testing.B) {
@@ -806,19 +869,20 @@ func (c *Child) GetNum() int {
 	b.N = 1000
 	for i := 0; i < b.N; i++ {
 		resp, err := lr.Execute(&message.CallMethod{
-			Request:   core.NewRefFromBase58("rr"),
 			ObjectRef: *parent,
 			Method:    "CCC",
 			Arguments: testutil.CBORMarshal(b, []interface{}{child}),
 		})
 		assert.NoError(b, err, "parent call")
-		r := testutil.CBORUnMarshal(b, resp.(*reply.Common).Result)
+		r := testutil.CBORUnMarshal(b, resp.(*reply.CallMethod).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
 }
 
 func TestProxyGeneration(t *testing.T) {
-	t.Parallel()
+	if parallel {
+		t.Parallel()
+	}
 	contracts, err := preprocessor.GetRealContractsNames()
 	assert.NoError(t, err)
 

@@ -29,6 +29,7 @@ const (
 	DumpAllUsers
 	RegisterNode
 	IsAuth
+	GetSeed
 )
 
 // QTypeFromString converts string representation to enum
@@ -48,6 +49,8 @@ func QTypeFromString(strQType string) QueryType {
 		return RegisterNode
 	case "is_auth":
 		return IsAuth
+	case "get_seed":
+		return GetSeed
 	}
 
 	return UNDEFINED

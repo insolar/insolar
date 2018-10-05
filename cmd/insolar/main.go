@@ -17,20 +17,19 @@
 package main
 
 import (
-	"flag"
+	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/genesis/bootstrapcertificate"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
-)
-
-var (
-	output string
-	cmd    string
+	"github.com/spf13/cobra"
 )
 
 const defaultStdoutPath = "-"
@@ -49,44 +48,121 @@ func chooseOutput(path string) (io.Writer, error) {
 	return res, nil
 }
 
-func parseInputParams() {
-	flag.StringVar(&output, "output", defaultStdoutPath, "output file (use - for STDOUT)")
-	flag.StringVar(&cmd, "cmd", "default_config", "available commands: default_config | random_ref | version")
-
-	if len(os.Args) == 1 {
-		flag.Usage()
+func check(msg string, err error) {
+	if err != nil {
+		fmt.Println(msg, err)
 		os.Exit(1)
 	}
+}
 
-	flag.Parse()
+var (
+	output             string
+	cmd                string
+	numberCertificates uint
+)
+
+func parseInputParams() {
+	var rootCmd = &cobra.Command{Use: "insolar"}
+	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificates")
+	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
+	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
+	err := rootCmd.Execute()
+	check("Wrong input params:", err)
+
+	if len(cmd) == 0 {
+		err = rootCmd.Usage()
+		check("[ parseInputParams ]", err)
+		os.Exit(0)
+	}
+
+}
+
+func writeToOutput(out io.Writer, data string) {
+	_, err := out.Write([]byte(data))
+	check("Can't write data to output", err)
 }
 
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
 
-	_, err := out.Write([]byte(configuration.ToString(cfgHolder.Configuration)))
-	if err != nil {
-		fmt.Println("Can't write data to output", err)
-		os.Exit(1)
-	}
+	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
 }
 
 func randomRef(out io.Writer) {
 	ref := core.RandomRef()
-	_, err := out.Write([]byte(ref.String() + "\n"))
-	if err != nil {
-		fmt.Println("Can't write data to output", err)
-		os.Exit(1)
+
+	writeToOutput(out, ref.String()+"\n")
+}
+
+func generateKeysPair(out io.Writer) {
+	privKey, err := ecdsa_helper.GeneratePrivateKey()
+	check("Problems with generating of private key:", err)
+
+	privKeyStr, err := ecdsa_helper.ExportPrivateKey(privKey)
+	check("Problems with serialization of private key:", err)
+
+	pubKeyStr, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+	check("Problems with serialization of public key:", err)
+
+	result := fmt.Sprintf("Public key:\n %s\n", pubKeyStr)
+	result += fmt.Sprintf("Private key:\n %s", privKeyStr)
+
+	writeToOutput(out, result)
+}
+
+func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
+	kk := []map[string]string{}
+	for _, key := range keys {
+		pubKey, err := ecdsa_helper.ExportPublicKey(&key.PublicKey)
+		check("[ makeKeysJSON ]", err)
+
+		privKey, err := ecdsa_helper.ExportPrivateKey(key)
+		check("[ makeKeysJSON ]", err)
+
+		kk = append(kk, map[string]string{"public_key": pubKey, "private_key": privKey})
 	}
+
+	return json.MarshalIndent(map[string]interface{}{"keys": kk}, "", "    ")
+}
+
+type certRecords = bootstrapcertificate.CertRecords
+
+func generateCertificates(out io.Writer) {
+
+	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
+	cRecords := certRecords{}
+	keys := []*ecdsa.PrivateKey{}
+	for i := uint(0); i < numberCertificates; i++ {
+		ref := core.RandomRef()
+		privKey, err := ecdsa_helper.GeneratePrivateKey()
+		check("[ generateCertificates ]:", err)
+
+		records[ref] = privKey
+		pubKey, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+		check("[ generateCertificates ]:", err)
+
+		cRecords = append(cRecords, bootstrapcertificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
+		keys = append(keys, privKey)
+	}
+
+	cert, err := bootstrapcertificate.NewCertificateFromFields(cRecords, keys)
+	check("[ generateCertificates ]:", err)
+
+	certStr, err := cert.Dump()
+	check("[ generateCertificates ]:", err)
+
+	writeToOutput(out, certStr+"\n")
+
+	keysList, err := makeKeysJSON(keys)
+	check("[ generateCertificates ]:", err)
+	writeToOutput(out, string(keysList)+"\n")
 }
 
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
-	if err != nil {
-		fmt.Println("Problems with parsing input:", err)
-		os.Exit(1)
-	}
+	check("Problems with parsing input:", err)
 
 	switch cmd {
 	case "default_config":
@@ -95,5 +171,9 @@ func main() {
 		randomRef(out)
 	case "version":
 		fmt.Println(version.GetFullVersion())
+	case "gen_keys":
+		generateKeysPair(out)
+	case "gen_certificates":
+		generateCertificates(out)
 	}
 }
