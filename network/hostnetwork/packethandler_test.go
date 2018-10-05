@@ -136,6 +136,14 @@ func (hh *mockHostHandler) CascadeSendMessage(data core.Cascade, targetID string
 	return nil
 }
 
+func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
+	return nil
+}
+
+func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) {
+
+}
+
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
 	address, _ := host.NewAddress("0.0.0.0:0")
 	id1, _ := id.NewID()
