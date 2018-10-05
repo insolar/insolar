@@ -110,10 +110,8 @@ func Core2Reference(cRef core.RecordRef) Reference {
 
 // ID2Bytes converts ID struct to it's byte representation.
 func ID2Bytes(id ID) []byte {
-	var buf = make([]byte, core.RecordIDSize)
-	copy(buf[:core.PulseNumberSize], id.Pulse.Bytes())
-	copy(buf[core.PulseNumberSize:], id.Hash)
-	return buf
+	rec := core.GenRecordID(id.Pulse, id.Hash)
+	return rec[:]
 }
 
 // record type ids for record types

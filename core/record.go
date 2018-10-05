@@ -34,6 +34,13 @@ const (
 // RecordRef is a unified record reference.
 type RecordRef [RecordRefSize]byte
 
+// ComposeRecordRef returns RecordRef composed from domain and record
+func ComposeRecordRef(domain RecordID, record RecordID) (ref RecordRef) {
+	(&ref).SetDomain(domain)
+	(&ref).SetRecord(record)
+	return
+}
+
 // SetRecord set record's RecordID.
 func (ref *RecordRef) SetRecord(recID RecordID) {
 	copy(ref[:RecordIDSize], recID[:])
@@ -58,6 +65,13 @@ func (ref *RecordRef) GetDomainID() (id RecordID) {
 
 // RecordID is a unified record ID.
 type RecordID [RecordIDSize]byte
+
+// GenRecordID generates RecordID byte representation.
+func GenRecordID(pn PulseNumber, h []byte) (recid RecordID) {
+	copy(recid[:PulseNumberSize], pn.Bytes())
+	copy(recid[PulseNumberSize:], h)
+	return
+}
 
 // Bytes returns byte slice of RecordID.
 func (id *RecordID) Bytes() []byte {

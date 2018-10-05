@@ -18,6 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/hash"
 )
 
 // MethodReturnMode ENUM to set when method returns its result
