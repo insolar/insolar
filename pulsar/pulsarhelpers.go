@@ -64,7 +64,7 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 	return ecdsa.Verify(publicKey, calculatedHash, &r, &s), nil
 }
 
-func singData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
+func signData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
 	err := e.Encode(data)

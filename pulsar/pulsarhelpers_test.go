@@ -31,7 +31,7 @@ func TestSingAndVerify(t *testing.T) {
 	assert.NoError(t, err)
 	testString := "message"
 
-	signature, err := singData(privateKey, testString)
+	signature, err := signData(privateKey, testString)
 	assertObj.NoError(err)
 
 	checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: testString})

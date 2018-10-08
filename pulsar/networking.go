@@ -30,7 +30,6 @@ type RequestType string
 const (
 	HealthCheck                RequestType = "Pulsar.HealthCheck"
 	Handshake                  RequestType = "Pulsar.MakeHandshake"
-	GetLastPulseNumber         RequestType = "Pulsar.SyncLastPulseWithNeighbour"
 	ReceiveSignatureForEntropy RequestType = "Pulsar.ReceiveSignatureForEntropy"
 	ReceiveEntropy             RequestType = "Pulsar.ReceiveEntropy"
 	ReceiveVector              RequestType = "Pulsar.ReceiveVector"
@@ -104,7 +103,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
-	message.Signature, err = singData(handler.pulsar.PrivateKey, message.Body)
+	message.Signature, err = signData(handler.pulsar.PrivateKey, message.Body)
 	if err != nil {
 		return err
 	}
@@ -140,7 +139,7 @@ func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) 
 	}
 
 	message := Payload{PublicKey: convertedKey, Body: GetLastPulsePayload{Pulse: *pulse}}
-	message.Signature, err = singData(handler.pulsar.PrivateKey, message.Body)
+	message.Signature, err = signData(handler.pulsar.PrivateKey, message.Body)
 	if err != nil {
 		panic(err)
 	}
@@ -285,7 +284,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		return errors.New("signature check failed")
 	}
 
-	handler.pulsar.SignsConfirmedSending[request.PublicKey] = core.PulseSenderConfirmation{
+	handler.pulsar.CurrentSlotSenderConfirmations[request.PublicKey] = core.PulseSenderConfirmation{
 		ChosenPublicKey: requestBody.ChosenPublicKey,
 		Signature:       requestBody.Signature,
 	}
