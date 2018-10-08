@@ -17,7 +17,10 @@
 package consensus
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/pkg/errors"
 )
@@ -49,17 +52,48 @@ func (dt *dataProviderWrapper) MergeDataList(data []*core.ActiveNode) error {
 	return nil
 }
 
+type selfWrapper struct {
+	keeper nodekeeper.NodeKeeper
+}
+
+func (s *selfWrapper) GetActiveNode() *core.ActiveNode {
+	return s.keeper.GetSelf()
+}
+
 // InsolarConsensus binds all functionality related to consensus with the network layer
 type InsolarConsensus struct {
 	consensus       Consensus
 	communicatorSnd Communicator
 	communicatorRcv Communicator
-	nodekeeper      nodekeeper.NodeKeeper
+	keeper          nodekeeper.NodeKeeper
+	self            *selfWrapper
 }
 
 // ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
-func (ic *InsolarConsensus) ProcessPulse(pulse core.Pulse) {
+func (ic *InsolarConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) {
+	activeNodes := ic.keeper.GetActiveNodes()
+	if len(activeNodes) == 0 {
+		return
+	}
+	participants := make([]Participant, len(activeNodes))
+	for i, activeNode := range activeNodes {
+		participants[i] = &participantWrapper{activeNode}
+	}
+	// TODO: check SetPulse
+	ic.keeper.SetPulse(pulse.PulseNumber)
+	// TODO: check pulse before and after the DoConsensus. If pulse changed, we don't have to Sync.
+	// the check should be performed in Sync to avoid races
+	approve, err := ic.consensus.DoConsensus(ctx, ic.self, participants)
+	if err != nil {
+		log.Errorf("Error performing consensus steps: %s", err.Error())
+		approve = false
+	}
+	ic.keeper.Sync(approve)
+}
 
+// IsPartOfConsensus returns whether we should perform all consensus interactions or not
+func (ic *InsolarConsensus) IsPartOfConsensus() bool {
+	return ic.keeper.GetSelf() != nil
 }
 
 // NewInsolarConsensus creates new object to handle all consensus events
@@ -74,6 +108,7 @@ func NewInsolarConsensus(keeper nodekeeper.NodeKeeper) (*InsolarConsensus, error
 		consensus:       consensus,
 		communicatorSnd: communicatorSnd,
 		communicatorRcv: communicatorRcv,
-		nodekeeper:      keeper,
+		keeper:          keeper,
+		self:            &selfWrapper{keeper},
 	}, nil
 }

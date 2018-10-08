@@ -137,7 +137,7 @@ func NewDHT(
 
 	rel := relay.NewRelay()
 
-	keeper := nodekeeper.NewNodeKeeper(time.Minute)
+	keeper := nodekeeper.NewNodeKeeper(nodeID, time.Minute)
 	insolarConsensus, err := consensus.NewInsolarConsensus(keeper)
 	if err != nil {
 		// TODO: return error on check (do nothing for now to evade breaking the binary and all tests)

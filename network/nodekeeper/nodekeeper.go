@@ -32,6 +32,8 @@ import (
 )
 
 type NodeKeeper interface {
+	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node
+	GetSelf() *core.ActiveNode
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
 	GetActiveNode(ref core.RecordRef) *core.ActiveNode
 	// GetActiveNodes get active nodes.
@@ -57,8 +59,9 @@ type NodeKeeper interface {
 }
 
 // NewNodeKeeper create new NodeKeeper. unsyncDiscardAfter = timeout after which each unsync node is discarded.
-func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
+func NewNodeKeeper(nodeID core.RecordRef, unsyncDiscardAfter time.Duration) NodeKeeper {
 	return &nodekeeper{
+		nodeID:       nodeID,
 		state:        undefined,
 		timeout:      unsyncDiscardAfter,
 		active:       make(map[core.RecordRef]*core.ActiveNode),
@@ -78,6 +81,8 @@ const (
 )
 
 type nodekeeper struct {
+	nodeID          core.RecordRef
+	self            *core.ActiveNode
 	state           nodekeeperState
 	pulse           core.PulseNumber
 	timeout         time.Duration
@@ -92,6 +97,13 @@ type nodekeeper struct {
 	unsync        []*core.ActiveNode
 	unsyncTimeout []time.Time
 	unsyncGossip  map[core.RecordRef]*core.ActiveNode
+}
+
+func (nk *nodekeeper) GetSelf() *core.ActiveNode {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	return nk.self
 }
 
 func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
@@ -112,6 +124,10 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 	defer nk.activeLock.Unlock()
 
 	for _, node := range nodes {
+		if node.NodeID.Equal(nk.nodeID) {
+			log.Warnf("AddActiveNodes: trying to add self ID: %s. Typically it must happen via Sync", nk.nodeID)
+			nk.self = node
+		}
 		nk.active[node.NodeID] = node
 	}
 }
@@ -240,6 +256,10 @@ func (nk *nodekeeper) syncUnsafe(approved bool) {
 	// sync -> active
 	for _, node := range nk.sync {
 		nk.active[node.NodeID] = node
+		if node.NodeID.Equal(nk.nodeID) {
+			log.Infof("Sync: current node %s reached the active node list", nk.nodeID)
+			nk.self = node
+		}
 	}
 
 	if approved {

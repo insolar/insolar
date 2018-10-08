@@ -141,8 +141,10 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		ht := hostHandler.HtFromCtx(ctx)
 		hosts := ht.GetMulticastHosts()
 		if hostHandler.Consensus() != nil {
-			// TODO: remove check when consensus will be fully implemented
-			go hostHandler.Consensus().ProcessPulse(data.Pulse)
+			// TODO: remove nil check when consensus will be fully implemented
+			if hostHandler.Consensus().IsPartOfConsensus() {
+				go hostHandler.Consensus().ProcessPulse(ctx, data.Pulse)
+			}
 		}
 		go ResendPulseToKnownHosts(hostHandler, hosts, data)
 	}
