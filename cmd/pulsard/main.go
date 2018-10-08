@@ -99,7 +99,7 @@ func initPulsar(cfg configuration.Pulsar) (*pulsar.Pulsar, pulsarstorage.PulsarS
 }
 
 func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
-	server.RefreshConnections()
+	server.CheckConnectionsToPulsars()
 
 	nextPulseNumber := core.CalculatePulseNumber(time.Now())
 	err := server.StartConsensusProcess(nextPulseNumber)
@@ -121,7 +121,7 @@ func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *ti
 	refreshTicker = time.NewTicker(1 * time.Second)
 	go func() {
 		for range refreshTicker.C {
-			server.RefreshConnections()
+			server.CheckConnectionsToPulsars()
 		}
 	}()
 

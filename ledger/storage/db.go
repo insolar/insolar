@@ -21,11 +21,11 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/ledger/hash"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
@@ -182,6 +182,29 @@ func (db *DB) Set(key, value []byte) error {
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.Set(key, value)
 	})
+}
+
+// GetRequest wraps matching transaction manager method.
+func (db *DB) GetRequest(id *record.ID) (record.Request, error) {
+	tx := db.BeginTransaction(false)
+	defer tx.Discard()
+	return tx.GetRequest(id)
+}
+
+// SetRequest wraps matching transaction manager method.
+func (db *DB) SetRequest(req record.Request) (*record.ID, error) {
+	var (
+		id  *record.ID
+		err error
+	)
+	txerr := db.Update(func(tx *TransactionManager) error {
+		id, err = tx.SetRequest(req)
+		return err
+	})
+	if txerr != nil {
+		return nil, txerr
+	}
+	return id, nil
 }
 
 // GetRecord wraps matching transaction manager method.

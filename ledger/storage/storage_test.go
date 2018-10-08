@@ -45,7 +45,7 @@ func TestStore_SetRecord(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	rec := &record.LockUnlockRequest{}
+	rec := &record.CallRequest{}
 	gotRef, err := db.SetRecord(rec)
 	assert.Nil(t, err)
 

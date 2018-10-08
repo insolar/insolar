@@ -48,6 +48,20 @@ func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
 	return m.db.RootRef().CoreRef()
 }
 
+// RegisterRequest sends message for request registration,
+// returns request record Ref if request successfuly created or already exists.
+func (m *LedgerArtifactManager) RegisterRequest(
+	msg core.Message,
+) (*core.RecordRef, error) {
+	id, err := m.fetchID(&message.RequestCall{Message: msg})
+	if err != nil {
+		return nil, err
+	}
+	var tagretRef core.RecordRef
+	(&tagretRef).SetRecord(*id)
+	return &tagretRef, nil
+}
+
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.

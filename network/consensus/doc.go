@@ -14,29 +14,7 @@
  *    limitations under the License.
  */
 
-package ledger
-
-import (
-	"fmt"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/hash"
-)
-
-func TestGenRequestRecordID(t *testing.T) {
-	tt := map[string]hash.Writer{
-		"constructor": &message.CallConstructor{},
-		"call":        &message.CallMethod{},
-	}
-	for name := range tt {
-		t.Run(name, func(t *testing.T) {
-			h := tt[name]
-			res := GenRequestRecordID(0, h)
-			fmt.Printf("%T %+v => %x\n", h, h, res)
-			assert.NotNil(t, res)
-		})
-	}
-}
+/*
+Package consensus provides BFT-like algorithm to distribute list of records between participants
+*/
+package consensus

@@ -18,6 +18,7 @@ package ledgertestutil
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -65,9 +66,10 @@ func (mb *messageBusMock) Stop() error {
 }
 
 func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
-	handler, ok := mb.handlers[m.Type()]
+	t := m.Type()
+	handler, ok := mb.handlers[t]
 	if !ok {
-		return nil, errors.New("no handler for this message type")
+		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
 	return handler(m)

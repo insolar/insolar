@@ -39,12 +39,12 @@ type MessageBus struct {
 	handlers    map[core.MessageType]core.MessageHandler
 }
 
-// NewMessageBus is a `MessageBus` constructor, takes an executor object
-// that satisfies LogicRunner interface
+// NewMessageBus is a `MessageBus` constructor
 func NewMessageBus(configuration.Configuration) (*MessageBus, error) {
 	return &MessageBus{handlers: map[core.MessageType]core.MessageHandler{}}, nil
 }
 
+// Start initializes message bus
 func (mb *MessageBus) Start(c core.Components) error {
 	mb.logicRunner = c.LogicRunner
 	mb.service = c.Network
@@ -54,8 +54,11 @@ func (mb *MessageBus) Start(c core.Components) error {
 	return nil
 }
 
+// Stop releases resources and stops the bus
 func (mb *MessageBus) Stop() error { return nil }
 
+// Register sets a function as a hadler for particular message type,
+// only one handler per type is allowed
 func (mb *MessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
 	_, ok := mb.handlers[p]
 	if ok {

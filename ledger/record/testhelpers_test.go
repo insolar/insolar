@@ -42,8 +42,8 @@ func str2Hash(s string) [core.RecordHashSize]byte {
 }
 
 func str2ID(s string) ID {
-	k := str2Bytes(s)
-	return Bytes2ID(k)
+	k := str2Hash(s)
+	return Bytes2ID(k[:])
 }
 
 // Test_str2hash is a test for test helper str2Hash.

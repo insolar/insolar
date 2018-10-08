@@ -150,7 +150,7 @@ const TestBalance = 100500
 func (eb *TestMessageBus) Send(core.Message) (core.Reply, error) {
 	data, _ := MarshalArgs(TestBalance)
 
-	return &reply.Common{
+	return &reply.CallMethod{
 		Result: data,
 	}, nil
 }

@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
@@ -84,11 +86,11 @@ func (mb *messageBusMock) Stop() error {
 }
 
 func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
-	handler, ok := mb.handlers[m.Type()]
+	typ := m.Type()
+	handler, ok := mb.handlers[typ]
 	if !ok {
-		return nil, errors.New("no handler for this message type")
+		return nil, errors.New(fmt.Sprintf("no handler for this message type %s", typ))
 	}
-
 	return handler(m)
 }
 
@@ -113,6 +115,62 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 		domainRef:  genRandomRef(),
 		requestRef: genRandomRef(),
 	}, cleaner
+}
+
+func TestLedgerArtifactManager_RegisterRequest_ConstructorCall(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	msg := &message.CallConstructor{}
+	reqCoreRef1, err := td.manager.RegisterRequest(msg)
+	assert.NoError(t, err)
+	reqCoreID := reqCoreRef1.GetRecordID()
+
+	reqID1 := record.Bytes2ID(reqCoreID.Bytes())
+	rec, err := td.db.GetRecord(&reqID1)
+	assert.NoError(t, err)
+
+	req, err := td.db.GetRequest(&reqID1)
+	assert.NoError(t, err)
+
+	assert.Equal(t, rec, req)
+
+	// RegisterRequest should be idempotent.
+	reqCoreRef2, err := td.manager.RegisterRequest(msg)
+	assert.NoError(t, err)
+
+	reqCoreID2 := reqCoreRef2.GetRecordID()
+	assert.NotNil(t, reqCoreID2)
+	assert.Equal(t, reqCoreID, reqCoreID2)
+}
+
+func TestLedgerArtifactManager_RegisterRequest_MethodCall(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	msg := &message.CallMethod{}
+	reqCoreRef1, err := td.manager.RegisterRequest(msg)
+	assert.NoError(t, err)
+	reqCoreID := reqCoreRef1.GetRecordID()
+
+	reqID1 := record.Bytes2ID(reqCoreID.Bytes())
+	rec, err := td.db.GetRecord(&reqID1)
+	assert.NoError(t, err)
+
+	req, err := td.db.GetRequest(&reqID1)
+	assert.NoError(t, err)
+
+	assert.Equal(t, rec, req)
+
+	// RegisterRequest should be idempotent.
+	reqCoreRef2, err := td.manager.RegisterRequest(msg)
+	assert.NoError(t, err)
+
+	reqCoreID2 := reqCoreRef2.GetRecordID()
+	assert.NotNil(t, reqCoreID2)
+	assert.Equal(t, reqCoreID, reqCoreID2)
 }
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {
