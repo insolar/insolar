@@ -45,11 +45,10 @@ func (e *Class) Type() core.ReplyType {
 
 // Object is object from storage.
 type Object struct {
-	Head     core.RecordRef
-	State    core.RecordID
-	Class    core.RecordRef
-	Memory   []byte
-	Children []core.RecordRef
+	Head   core.RecordRef
+	State  core.RecordID
+	Class  core.RecordRef
+	Memory []byte
 }
 
 // Type implementation of Reply interface.
@@ -85,4 +84,15 @@ type ID struct {
 // Type implementation of Reply interface.
 func (e *ID) Type() core.ReplyType {
 	return TypeID
+}
+
+// Children is common reaction for methods returning id to lifeline states.
+type Children struct {
+	Refs     []core.RecordRef
+	NextFrom *core.RecordID
+}
+
+// Type implementation of Reply interface.
+func (e *Children) Type() core.ReplyType {
+	return TypeChildren
 }

@@ -146,7 +146,7 @@ func (t *TestObjectDescriptor) Memory() []byte {
 }
 
 // Children implementation for tests
-func (t *TestObjectDescriptor) Children() core.RefIterator {
+func (t *TestObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
 	panic("not implemented")
 }
 
@@ -169,6 +169,11 @@ type TestArtifactManager struct {
 	Codes   map[core.RecordRef]*TestCodeDescriptor
 	Objects map[core.RecordRef]*TestObjectDescriptor
 	Classes map[core.RecordRef]*TestClassDescriptor
+}
+
+// GetChildren implementation for tests
+func (t *TestArtifactManager) GetChildren(parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+	panic("implement me")
 }
 
 // NewTestArtifactManager implementation for tests

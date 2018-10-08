@@ -88,6 +88,11 @@ type ArtifactManager interface {
 	// be returned.
 	GetDelegate(head, asClass RecordRef) (*RecordRef, error)
 
+	// GetChildren returns children iterator.
+	//
+	// During iteration children refs will be fetched from remote source (parent object).
+	GetChildren(parent RecordRef, pulse *PulseNumber) (RefIterator, error)
+
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
@@ -177,11 +182,11 @@ type ObjectDescriptor interface {
 	ClassDescriptor(state *RecordRef) (ClassDescriptor, error)
 
 	// Children returns object's children references.
-	Children() RefIterator
+	Children(pulse *PulseNumber) (RefIterator, error)
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.
 type RefIterator interface {
-	Next() (RecordRef, error)
+	Next() (*RecordRef, error)
 	HasNext() bool
 }

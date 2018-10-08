@@ -29,7 +29,6 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 func checkPayloadSignature(request *Payload) (bool, error) {
@@ -98,7 +97,7 @@ func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string
 
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
-		h := hash.NewSHA3()
+		h := sha3.New256()
 		_, err := h.Write(entropy[:])
 		if err != nil {
 			return nil, err

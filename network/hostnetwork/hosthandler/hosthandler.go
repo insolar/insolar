@@ -130,5 +130,6 @@ type HostHandler interface {
 	KeyIsReceived(targetID string) ([]byte, bool)
 	GetNetworkCommonFacade() NetworkCommonFacade
 	GetExpirationTime(ctx Context, key []byte) time.Time
+	GetNodeID() core.RecordRef
 	GetActiveNodesList() []*core.ActiveNode
 }
