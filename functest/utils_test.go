@@ -139,14 +139,3 @@ func unmarshalResponseWithError(t *testing.T, body []byte, response responseInte
 	assert.NoError(t, err)
 	assert.NotNil(t, response.getError())
 }
-
-func getSeed(t *testing.T) string {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_seed",
-	})
-
-	getSeedResponse := &getSeedResponse{}
-	unmarshalResponse(t, body, getSeedResponse)
-
-	return getSeedResponse.Seed
-}
