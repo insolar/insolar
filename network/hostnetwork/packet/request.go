@@ -16,7 +16,10 @@
 
 package packet
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/hostnetwork/id"
+)
 
 // CommandType - type for commands.
 type CommandType int
@@ -28,10 +31,10 @@ const (
 	StartRelay
 	// StopRelay - command stop relay.
 	StopRelay
-	// BeginAuth - begin authentication.
-	BeginAuth
-	// RevokeAuth - revoke authentication.
-	RevokeAuth
+	// BeginAuthentication - begin authentication.
+	BeginAuthentication
+	// RevokeAuthentication - revoke authentication.
+	RevokeAuthentication
 )
 
 // RequestCheckNodePriv is data for check node privileges.
@@ -82,8 +85,8 @@ type RequestRelay struct {
 	Command CommandType
 }
 
-// RequestAuth is data for authentication.
-type RequestAuth struct {
+// RequestAuthentication is data for authentication.
+type RequestAuthentication struct {
 	Command CommandType
 }
 
@@ -104,6 +107,17 @@ type RequestRelayOwnership struct {
 type RequestKnownOuterHosts struct {
 	ID         string // origin ID
 	OuterHosts int    // number of known outer hosts
+}
+
+// RequestCheckPublicKey is data to check a public key.
+type RequestCheckPublicKey struct {
+	NodeID core.RecordRef
+	HostID id.ID
+}
+
+// RequestCheckSignedNonce is data to check a signed nonce.
+type RequestCheckSignedNonce struct {
+	Signed []byte
 }
 
 // RequestActiveNodes is request to get an active nodes.

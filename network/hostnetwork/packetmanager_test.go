@@ -41,18 +41,18 @@ func TestBuildContext(t *testing.T) {
 	receiverAddress, _ := host.NewAddress("0.0.0.0:0")
 	receiver := host.NewHost(receiverAddress)
 	builder := packet.NewBuilder()
-	pckt := builder.Type(packet.TypeAuth).
+	pckt := builder.Type(packet.TypeAuthentication).
 		Sender(sender).
 		Receiver(receiver).
-		Request(&packet.RequestAuth{Command: packet.BeginAuth}).
+		Request(&packet.RequestAuthentication{Command: packet.BeginAuthentication}).
 		Build()
 	_ = BuildContext(cb, pckt)
 
 	receiver.ID, _ = id.NewID()
-	pckt = builder.Type(packet.TypeAuth).
+	pckt = builder.Type(packet.TypeAuthentication).
 		Sender(sender).
 		Receiver(receiver).
-		Request(&packet.RequestAuth{Command: packet.BeginAuth}).
+		Request(&packet.RequestAuthentication{Command: packet.BeginAuthentication}).
 		Build()
 	_ = BuildContext(cb, pckt)
 }

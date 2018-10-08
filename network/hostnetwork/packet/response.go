@@ -86,8 +86,8 @@ type ResponseRelay struct {
 	State relay.State
 }
 
-// ResponseAuth is data for authentication request response.
-type ResponseAuth struct {
+// ResponseAuthentication is data for authentication request response.
+type ResponseAuthentication struct {
 	Success       bool
 	AuthUniqueKey []byte
 }
@@ -111,6 +111,17 @@ type ResponseRelayOwnership struct {
 type ResponseKnownOuterHosts struct {
 	ID         string //	id of host in which more known outer hosts
 	OuterHosts int    // number of known outer hosts
+}
+
+// ResponseCheckPublicKey is data to answer to authorization request.
+type ResponseCheckPublicKey struct {
+	Exist bool
+	Nonce []byte
+}
+
+// ResponseCheckSignedNonce returns true if signed nonce is ok.
+type ResponseCheckSignedNonce struct {
+	Success bool
 }
 
 // ResponseActiveNodes is data to answer to active nodes request.
