@@ -18,6 +18,8 @@ package artifactmanager
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 )
 
@@ -123,20 +125,98 @@ func (d *ObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDes
 	return d.am.GetClass(d.class, state)
 }
 
-// RefIterator implements core.RefIterator.
-type RefIterator struct {
-	elements     []core.RecordRef
-	currentIndex int
+// ChildIterator is used to iterate over objects children.
+//
+// During iteration children refs will be fetched from remote source (parent object).
+type ChildIterator struct {
+	messageBus core.MessageBus
+	parent     core.RecordRef
+	chunkSize  int
+	fromPulse  *core.PulseNumber
+	fromChild  *core.RecordID
+	buff       []core.RecordRef
+	buffIndex  int
+	canFetch   bool
+}
+
+// NewChildIterator creates new child iterator.
+func NewChildIterator(
+	mb core.MessageBus, parent core.RecordRef, fromPulse *core.PulseNumber, chunkSize int,
+) (*ChildIterator, error) {
+	iter := ChildIterator{
+		messageBus: mb,
+		parent:     parent,
+		fromPulse:  fromPulse,
+		chunkSize:  chunkSize,
+		canFetch:   true,
+	}
+	err := iter.fetch()
+	if err != nil {
+		return nil, err
+	}
+	return &iter, nil
 }
 
 // HasNext checks if any elements left in iterator.
-func (i *RefIterator) HasNext() bool {
-	return len(i.elements) > i.currentIndex
+func (i *ChildIterator) HasNext() bool {
+	return i.hasInBuffer() || i.canFetch
 }
 
 // Next returns next element.
-func (i *RefIterator) Next() (core.RecordRef, error) {
-	el := i.elements[i.currentIndex]
-	i.currentIndex++
-	return el, nil
+func (i *ChildIterator) Next() (*core.RecordRef, error) {
+	// Get element from buffer.
+	if !i.hasInBuffer() && i.canFetch {
+		err := i.fetch()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	ref := i.nextFromBuffer()
+	if ref == nil {
+		return nil, errors.New("failed to fetch record")
+	}
+
+	return ref, nil
+}
+
+func (i *ChildIterator) nextFromBuffer() *core.RecordRef {
+	if !i.hasInBuffer() {
+		return nil
+	}
+	ref := i.buff[i.buffIndex]
+	i.buffIndex++
+	return &ref
+}
+
+func (i *ChildIterator) fetch() error {
+	if !i.canFetch {
+		return errors.New("failed to fetch record")
+	}
+	genericReply, err := i.messageBus.Send(&message.GetChildren{
+		Parent:    i.parent,
+		FromPulse: i.fromPulse,
+		FromChild: i.fromChild,
+		Amount:    i.chunkSize,
+	})
+	if err != nil {
+		return err
+	}
+	rep, ok := genericReply.(*reply.Children)
+	if !ok {
+		return errors.New("failed to fetch record")
+	}
+
+	if rep.NextFrom == nil {
+		i.canFetch = false
+	}
+	i.buff = rep.Refs
+	i.buffIndex = 0
+	i.fromChild = rep.NextFrom
+
+	return nil
+}
+
+func (i *ChildIterator) hasInBuffer() bool {
+	return i.buffIndex < len(i.buff)
 }
