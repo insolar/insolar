@@ -105,3 +105,7 @@ type RequestKnownOuterHosts struct {
 	ID         string // origin ID
 	OuterHosts int    // number of known outer hosts
 }
+
+// RequestActiveNodes is request to get an active nodes.
+type RequestActiveNodes struct {
+}

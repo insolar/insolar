@@ -62,6 +62,8 @@ const (
 	TypePulse
 	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network
 	TypeGetRandomHosts
+	// TypeActiveNodes is packet type to get an active nodes.
+	TypeActiveNodes
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -122,6 +124,8 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestPulse)
 	case TypeGetRandomHosts:
 		_, valid = m.Data.(*RequestGetRandomHosts)
+	case TypeActiveNodes:
+		_, valid = m.Data.(*RequestActiveNodes)
 	default:
 		valid = false
 	}
@@ -204,6 +208,7 @@ func init() {
 	gob.Register(&RequestCascadeSend{})
 	gob.Register(&RequestPulse{})
 	gob.Register(&RequestGetRandomHosts{})
+	gob.Register(&RequestActiveNodes{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -219,6 +224,7 @@ func init() {
 	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
 	gob.Register(&ResponseGetRandomHosts{})
+	gob.Register(&ResponseActiveNodes{})
 
 	gob.Register(&id.ID{})
 }
