@@ -102,12 +102,7 @@ func executePeer() {
 	}
 	out, err := exec.Command(path.Join(pwd, "insolard"), "--config", path.Join(pwd, "..", "scripts", "insolard", "insolar.yaml")).CombinedOutput()
 	if err != nil {
-		out, err := exec.Command(path.Join(pwd, "bin", "insolard"), "--config", path.Join(pwd, "scripts", "insolard", "insolar.yaml")).CombinedOutput()
-		if err != nil {
-			log.Warn("Cannot run insolar deamon, verify PATH to file 'insolard'")
-		} else {
-			log.Info(out)
-		}
+		log.Warn("Cannot run insolar deamon, verify PATH to file 'insolard'")
 	} else {
 		log.Info(out)
 	}

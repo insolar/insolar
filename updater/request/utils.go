@@ -16,7 +16,7 @@ func GetProtocol(address string) RequestUpdateNode {
 		switch protocol {
 		case "http":
 			{
-				return HttpRequestUpdateNode{}
+				return HTTPRequestUpdateNode{}
 			}
 		case "ftp":
 			{

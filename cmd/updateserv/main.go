@@ -19,14 +19,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"path"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/updater/request"
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/pflag"
-	"io/ioutil"
-	"net/http"
-	"path"
 )
 
 //const maxUploadSize = 50 * 1024 // 50 MB
