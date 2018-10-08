@@ -497,9 +497,9 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 
 	idx, err := td.db.GetObjectIndex(parentID)
 	assert.NoError(t, err)
-	childRec, err := td.db.GetRecord(&idx.LatestChild)
+	childRec, err := td.db.GetRecord(idx.LatestChild)
 	assert.NoError(t, err)
-	assert.Equal(t, activateRef, childRec.(*record.ChildRecord).Child)
+	assert.Equal(t, activateRef, childRec.(*record.ChildRecord).Ref)
 }
 
 func TestLedgerArtifactManager_ActivateObjectDelegate_VerifiesRecord(t *testing.T) {
@@ -825,25 +825,133 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 	objectIndex := index.ObjectLifeline{
 		LatestState: *objectAmendID,
 		ClassRef:    record.Reference{Domain: td.requestRef.Domain, Record: *classID},
-		Children:    []record.Reference{*genRandomRef(), *genRandomRef()},
 	}
 	td.db.SetObjectIndex(objectID, &objectIndex)
 
 	objDesc, err := td.manager.GetObject(*genRefWithID(objectID), nil)
 	assert.NoError(t, err)
-	expectedChildren := make([]core.RecordRef, 0, len(objectIndex.Children))
-	for _, c := range objectIndex.Children {
-		expectedChildren = append(expectedChildren, *c.CoreRef())
-	}
 	expectedObjDesc := &ObjectDescriptor{
 		am: td.manager,
 
-		head:     *getReference(td.requestRef.CoreRef(), objectID),
-		state:    *objectAmendID.CoreID(),
-		class:    *getReference(td.requestRef.CoreRef(), classID),
-		memory:   []byte{4},
-		children: expectedChildren,
+		head:   *getReference(td.requestRef.CoreRef(), objectID),
+		state:  *objectAmendID.CoreID(),
+		class:  *getReference(td.requestRef.CoreRef(), classID),
+		memory: []byte{4},
 	}
 
 	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
+}
+
+func TestLedgerArtifactManager_GetChildren(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
+		ActivationRecord: record.ActivationRecord{
+			StatefulResult: record.StatefulResult{
+				ResultRecord: record.ResultRecord{
+					DomainRecord: domainRef,
+				},
+			},
+		},
+		Memory: []byte{0},
+	})
+	child1Ref := genRandomRef(1)
+	child2Ref := genRandomRef(1)
+	child3Ref := genRandomRef(2)
+
+	childMeta1, _ := td.db.SetRecord(&record.ChildRecord{
+		Ref: *child1Ref,
+	})
+	childMeta2, _ := td.db.SetRecord(&record.ChildRecord{
+		PrevChild: childMeta1,
+		Ref:       *child2Ref,
+	})
+	childMeta3, _ := td.db.SetRecord(&record.ChildRecord{
+		PrevChild: childMeta2,
+		Ref:       *child3Ref,
+	})
+
+	parentIndex := index.ObjectLifeline{
+		LatestState: *parentID,
+		LatestChild: childMeta3,
+	}
+	td.db.SetObjectIndex(parentID, &parentIndex)
+
+	t.Run("returns correct children without pulse", func(t *testing.T) {
+		i, err := td.manager.GetChildren(*genRefWithID(parentID), nil)
+		assert.NoError(t, err)
+		child, err := i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child3Ref.CoreRef(), *child)
+		child, err = i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child2Ref.CoreRef(), *child)
+		child, err = i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child1Ref.CoreRef(), *child)
+		hasNext := i.HasNext()
+		assert.False(t, hasNext)
+		_, err = i.Next()
+		assert.Error(t, err)
+	})
+
+	t.Run("returns correct children with pulse", func(t *testing.T) {
+		pn := core.PulseNumber(1)
+		i, err := td.manager.GetChildren(*genRefWithID(parentID), &pn)
+		assert.NoError(t, err)
+		child, err := i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child2Ref.CoreRef(), *child)
+		child, err = i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child1Ref.CoreRef(), *child)
+		hasNext := i.HasNext()
+		assert.NoError(t, err)
+		assert.False(t, hasNext)
+		_, err = i.Next()
+		assert.Error(t, err)
+	})
+
+	t.Run("returns correct children in many chunks", func(t *testing.T) {
+		td.manager.getChildrenChunkSize = 1
+		i, err := td.manager.GetChildren(*genRefWithID(parentID), nil)
+		assert.NoError(t, err)
+		child, err := i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child3Ref.CoreRef(), *child)
+		child, err = i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child2Ref.CoreRef(), *child)
+		child, err = i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child1Ref.CoreRef(), *child)
+		hasNext := i.HasNext()
+		assert.NoError(t, err)
+		assert.False(t, hasNext)
+		_, err = i.Next()
+		assert.Error(t, err)
+	})
+
+	t.Run("doesn't fail when has no children to return", func(t *testing.T) {
+		td.manager.getChildrenChunkSize = 1
+		pn := core.PulseNumber(3)
+		i, err := td.manager.GetChildren(*genRefWithID(parentID), &pn)
+		assert.NoError(t, err)
+		child, err := i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child3Ref.CoreRef(), *child)
+		child, err = i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child2Ref.CoreRef(), *child)
+		child, err = i.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, *child1Ref.CoreRef(), *child)
+		hasNext := i.HasNext()
+		assert.NoError(t, err)
+		assert.False(t, hasNext)
+		_, err = i.Next()
+		assert.Error(t, err)
+	})
 }
