@@ -10,6 +10,7 @@ resource_types:
     type: docker-image
     source:
       repository: chemist/pull-request
+      tag: latest
 
 resources:
 - name: master
@@ -26,15 +27,6 @@ resources:
     access_token: ((meta.github.access_token))
     pull_request: {{ pull.number }}
     #ssh_key: ((meta.github.private_key))
-    type: get
-- name: status-{{ pull.number }}
-  type: pull-request
-  source:
-    owner: ((meta.github.owner))
-    repo: ((meta.github.repo))
-    pull_request: {{ pull.number }}
-    access_token: ((meta.github.access_token))
-    type: put
 {% endfor %}
 
 jobs:
@@ -42,7 +34,7 @@ jobs:
 - name: unit-{{ pull.number }}
   public: true
   plan:
-  - put: status-{{ pull.number }}
+  - put: pull-request-{{ pull.number }}
     params:
       state: pending
   - get: master
@@ -83,11 +75,11 @@ jobs:
              #dep ensure
              #go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
     on_success:
-      put: status-{{ pull.number }}
+      put: pull-request-{{ pull.number }}
       params:
         state: success
     on_failure:
-      put: status-{{ pull.number }}
+      put: pull-request-{{ pull.number }}
       params:
         state: failure
 {% endfor %}
