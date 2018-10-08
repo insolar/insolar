@@ -101,7 +101,7 @@ func (ref RecordRef) Domain() RecordID {
 func GenRequest(pn PulseNumber, payload []byte) *RecordRef {
 	ref := ComposeRecordRef(
 		RecordID{},
-		GenRecordID(pn, hash.SHA3Bytes(payload)),
+		GenRecordID(pn, hash.SHA3Bytes224(payload)),
 	)
 	return &ref
 }

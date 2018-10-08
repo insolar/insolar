@@ -115,7 +115,7 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	var h []byte
 	if req, ok := rec.(record.Request); ok {
 		// we should calculate request hashes consistently with logicrunner.
-		h = hash.SHA3Bytes(req.GetPayload())
+		h = hash.SHA3Bytes224(req.GetPayload())
 	} else {
 		h = raw.Hash()
 	}
