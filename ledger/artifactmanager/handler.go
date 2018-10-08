@@ -132,17 +132,11 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 		return nil, err
 	}
 
-	children := make([]core.RecordRef, 0, len(idx.Children))
-	for _, c := range idx.Children {
-		children = append(children, *c.CoreRef())
-	}
-
 	react := reply.Object{
-		Head:     msg.Head,
-		State:    *stateID,
-		Class:    *idx.ClassRef.CoreRef(),
-		Memory:   state.GetMemory(),
-		Children: children,
+		Head:   msg.Head,
+		State:  *stateID,
+		Class:  *idx.ClassRef.CoreRef(),
+		Memory: state.GetMemory(),
 	}
 
 	return &react, nil

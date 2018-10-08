@@ -138,12 +138,11 @@ func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.Recor
 		return nil, ErrUnexpectedReply
 	}
 	desc := ObjectDescriptor{
-		am:       m,
-		head:     react.Head,
-		state:    react.State,
-		class:    react.Class,
-		memory:   react.Memory,
-		children: react.Children,
+		am:     m,
+		head:   react.Head,
+		state:  react.State,
+		class:  react.Class,
+		memory: react.Memory,
 	}
 	return &desc, nil
 }

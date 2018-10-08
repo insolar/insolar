@@ -47,6 +47,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &GetObject{}, nil
 	case core.TypeGetDelegate:
 		return &GetDelegate{}, nil
+	case core.TypeGetChildren:
+		return &GetChildren{}, nil
 	case core.TypeDeclareType:
 		return &DeclareType{}, nil
 	case core.TypeDeployCode:

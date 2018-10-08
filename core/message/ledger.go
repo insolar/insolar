@@ -299,3 +299,22 @@ func (*RequestCall) TargetRole() core.JetRole {
 func (*RequestCall) Type() core.MessageType {
 	return core.TypeRequestCall
 }
+
+// GetChildren retrieves a chunk of children references.
+type GetChildren struct {
+	ledgerMessage
+	Parent    core.RecordRef
+	FromChild *core.RecordID
+	FromPulse *core.PulseNumber
+	Amount    int
+}
+
+// Type implementation of Message interface.
+func (e *GetChildren) Type() core.MessageType {
+	return core.TypeGetChildren
+}
+
+// Target implementation of Message interface.
+func (e *GetChildren) Target() *core.RecordRef {
+	return &e.Parent
+}
