@@ -46,15 +46,6 @@ func NewIDHash() hash.Hash {
 
 // SHA3Bytes224 generates SHA3-224 hash for byte slice.
 func SHA3Bytes224(b []byte) []byte {
-	return SHA3hash224(hashableBytes(b))
-}
-
-// hashableBytes exists just to allow []byte implements hash.Writer
-type hashableBytes []byte
-
-func (b hashableBytes) WriteHash(w io.Writer) {
-	_, err := w.Write(b)
-	if err != nil {
-		panic(err)
-	}
+	h := sha3.Sum224(b)
+	return h[:]
 }
