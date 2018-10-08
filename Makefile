@@ -3,6 +3,8 @@ INSOLARD = insolard
 INSGOCC = insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
+INSUPDATER = insupdater
+INSUPDATESERV = updateserv
 BIN_DIR = bin
 
 ALL_PACKAGES = ./...
@@ -35,7 +37,7 @@ metalint:
 clean:
 	go clean $(ALL_PACKAGES)
 	rm -f $(COVERPROFILE)
-	rm -rf $(BIN_DIR) 
+	rm -rf $(BIN_DIR)
 
 install-deps:
 	go get -u github.com/golang/dep/cmd/dep
@@ -45,9 +47,9 @@ pre-build:
 	dep ensure
 	go generate -x $(ALL_PACKAGES)
 
-build: 
+build:
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(INSUPDATER) $(INSUPDATESERV)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
@@ -63,6 +65,12 @@ $(PULSARD):
 
 $(INSGORUND):
 	go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
+
+$(INSUPDATER):
+	go build -o $(BIN_DIR)/$(INSUPDATER) -ldflags "${LDFLAGS}" cmd/insupdater/*.go
+
+$(INSUPDATESERV):
+	go build -o $(BIN_DIR)/$(INSUPDATESERV) -ldflags "${LDFLAGS}" cmd/updateserv/*.go
 
 test:
 	go test -v $(ALL_PACKAGES)
