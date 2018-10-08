@@ -97,7 +97,7 @@ func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string
 
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
-		h := sha3.New224()
+		h := sha3.New256()
 		_, err := h.Write(entropy[:])
 		if err != nil {
 			return nil, err
