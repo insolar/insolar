@@ -137,14 +137,13 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
-	// TODO: uncomment this if getting info from ledger is ready.
-	// log.Infoln("Searching for an active nodes...")
-	// err := network.hostNetwork.GetActiveNodes()
-	// if err != nil {
-	// 	return errors.Wrap(err, "failed to get active nodes")
-	// }
+	log.Infoln("Searching for an active nodes...")
+	err := network.hostNetwork.GetActiveNodes()
+	if err != nil {
+		return errors.Wrap(err, "failed to get active nodes")
+	}
 
-	err := network.hostNetwork.ObtainIP()
+	err = network.hostNetwork.ObtainIP()
 	if err != nil {
 		return errors.Wrap(err, "Failed to ObtainIP")
 	}
