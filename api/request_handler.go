@@ -190,7 +190,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 	}
 
 	if len(rh.params.To) == 0 {
-		return nil, errors.New("field 'from' is required")
+		return nil, errors.New("field 'to' is required")
 	}
 	if rh.params.Amount == 0 {
 		return nil, errors.New("field 'amount' is required")
