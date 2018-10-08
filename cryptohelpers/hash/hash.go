@@ -32,31 +32,26 @@ type Writer interface {
 
 // SHA3hash224 returns SHA3 hash calculated on data received from Writer.
 func SHA3hash224(hw ...Writer) []byte {
-	h := NewSHA3()
+	h := sha3.New224()
 	for _, w := range hw {
 		w.WriteHash(h)
 	}
 	return h.Sum(nil)
 }
 
-// NewSHA3 just wrapper around sha3.New224.
-//
-// Just to avoid of binding on golang.org/x/crypto/sha3 in codebase.
-func NewSHA3() hash.Hash {
+// NewIDHash returns hash used for records ID generation.
+func NewIDHash() hash.Hash {
 	return sha3.New224()
 }
 
-// SHA3Bytes generates hash for byte slice.
-func SHA3Bytes(b []byte) []byte {
-	return SHA3hash224(hashableBytes(b))
+// IDHashBytes generates hash for record ID from byte slice.
+func IDHashBytes(b []byte) []byte {
+	h := sha3.Sum224(b)
+	return h[:]
 }
 
-// hashableBytes exists just to allow []byte implements hash.Writer
-type hashableBytes []byte
-
-func (b hashableBytes) WriteHash(w io.Writer) {
-	_, err := w.Write(b)
-	if err != nil {
-		panic(err)
-	}
+// SHA3Bytes256 generates SHA3-256 hash for byte slice.
+func SHA3Bytes256(b []byte) []byte {
+	h := sha3.Sum256(b)
+	return h[:]
 }
