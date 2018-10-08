@@ -398,8 +398,6 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *ho
 	}
 
 	return checkResponse(hostHandler, future, target.ID.String(), request)
-
-	return nil
 }
 
 func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future, targetID string, request *packet.Packet) error {
