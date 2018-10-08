@@ -30,8 +30,7 @@ type ClassLifeline struct {
 // ObjectLifeline represents meta information for record object
 type ObjectLifeline struct {
 	ClassRef    record.Reference
-	LatestState record.ID          // Amend or activate record
-	LatestChild record.ID          // Meta record about child activation
-	Children    []record.Reference // ActivateObjectRecord
+	LatestState record.ID  // Amend or activate record
+	LatestChild *record.ID // Meta record about child activation
 	Delegates   map[core.RecordRef]record.Reference
 }

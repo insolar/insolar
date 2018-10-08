@@ -117,13 +117,16 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of RootRef object")
 	}
-	rootRefChildren := rootObj.Children()
+	rootRefChildren, err := rootObj.Children(nil)
+	if err != nil {
+		return nil, err
+	}
 	if rootRefChildren.HasNext() {
 		rootDomainRef, err := rootRefChildren.Next()
 		if err != nil {
 			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of RootRef object")
 		}
-		return &rootDomainRef, nil
+		return rootDomainRef, nil
 	}
 	return nil, nil
 }
