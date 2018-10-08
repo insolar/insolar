@@ -117,18 +117,18 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetI
 	var authCommand packet.CommandType
 	switch command {
 	case "begin":
-		authCommand = packet.BeginAuth
+		authCommand = packet.BeginAuthentication
 	case "revoke":
-		authCommand = packet.RevokeAuth
+		authCommand = packet.RevokeAuthentication
 	default:
 		err = errors.New("AuthenticationRequest: unknown command")
 		return err
 	}
 	builder := packet.NewBuilder()
-	request := builder.Type(packet.TypeAuth).
+	request := builder.Type(packet.TypeAuthentication).
 		Sender(origin).
 		Receiver(targetHost).
-		Request(&packet.RequestAuth{Command: authCommand}).
+		Request(&packet.RequestAuthentication{Command: authCommand}).
 		Build()
 	future, err := hostHandler.SendRequest(request)
 
@@ -234,12 +234,37 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
+func CheckPublicKeyRequest(hostHandler hosthandler.HostHandler, targetID string) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return errors.Wrap(err, "failed to build a context")
+	}
+	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
+	if err != nil {
+		return errors.Wrap(err, "failed to find a target host")
+	}
+	if !exist {
+		return errors.Wrap(err, "couldn't find a target host")
+	}
+
+	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(targetHost).Type(packet.TypeCheckPublicKey).
+		Request(&packet.RequestCheckPublicKey{NodeID: hostHandler.GetNodeID(), HostID: hostHandler.GetOriginHost().IDs[0]}).
+		Build()
+
+	future, err := hostHandler.SendRequest(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to send an authorization request")
+	}
+	return checkResponse(hostHandler, future, targetID, request)
+}
+
 // ResendPulseToKnownHosts resends received pulse to all known hosts
 func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []*routing.RouteHost, pulse *packet.RequestPulse) {
-	for _, host := range hosts {
-		err := sendPulse(hostHandler, host.Host, pulse)
+	for _, host1 := range hosts {
+		err := sendPulse(hostHandler, host1.Host, pulse)
 		if err != nil {
-			log.Debug("error resending pulse to host %s: %s", host.ID, err.Error())
+			log.Debug("error resending pulse to host %s: %s", host1.ID, err.Error())
 		}
 	}
 }
@@ -353,6 +378,28 @@ func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Pac
 	}
 }
 
+func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *host.Host, nonce []byte) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
+
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeCheckSignedNonce).
+		Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(target).
+		Request(&packet.RequestCheckSignedNonce{}).
+		Build()
+
+	future, err := hostHandler.SendRequest(request)
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to SendRequest")
+	}
+
+	return checkResponse(hostHandler, future, target.ID.String(), request)
+}
+
 func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future, targetID string, request *packet.Packet) error {
 	var err error
 	rsp, err := future.GetResult(hostHandler.GetPacketTimeout())
@@ -366,8 +413,8 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 	case packet.TypeCheckOrigin:
 		response := rsp.Data.(*packet.ResponseCheckOrigin)
 		handleCheckOriginResponse(hostHandler, response, targetID)
-	case packet.TypeAuth:
-		response := rsp.Data.(*packet.ResponseAuth)
+	case packet.TypeAuthentication:
+		response := rsp.Data.(*packet.ResponseAuthentication)
 		err = handleAuthResponse(hostHandler, response, targetID)
 	case packet.TypeObtainIP:
 		response := rsp.Data.(*packet.ResponseObtainIP)
@@ -391,6 +438,14 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		if !response.Success {
 			err = errors.New(response.Error)
 		}
+	case packet.TypeCheckPublicKey:
+		response := rsp.Data.(*packet.ResponseCheckPublicKey)
+		err = handleCheckPublicKeyResponse(hostHandler, response)
+		if err == nil {
+			err = sendCheckSignedNonceRequest(hostHandler, rsp.Sender, response.Nonce)
+		}
+	case packet.TypeCheckSignedNonce:
+		err = handleCheckSignedNonceResponse(hostHandler, rsp.Data.(*packet.ResponseCheckSignedNonce))
 	case packet.TypeActiveNodes:
 		response := rsp.Data.(*packet.ResponseActiveNodes)
 		err = handleActiveNodesResponse(hostHandler, response)

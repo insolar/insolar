@@ -109,11 +109,6 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	idx := index.ObjectLifeline{
 		ClassRef:    referenceWithHashes("50", "60"),
 		LatestState: record.ID{Hash: hexhash("20")},
-		Children: []record.Reference{
-			referenceWithHashes("", "1"),
-			referenceWithHashes("", "2"),
-			referenceWithHashes("", "3"),
-		},
 	}
 	zeroid := record.ID{Hash: hexhash("")}
 	err := db.SetObjectIndex(&zeroid, &idx)

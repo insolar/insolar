@@ -80,6 +80,8 @@ const (
 	TypeGetObject
 	// TypeGetDelegate retrieves object represented as provided class.
 	TypeGetDelegate
+	// TypeGetChildren retrieves object represented as provided class.
+	TypeGetChildren
 	// TypeDeclareType creates new type.
 	TypeDeclareType
 	// TypeDeployCode creates new code.

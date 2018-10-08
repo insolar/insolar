@@ -57,6 +57,7 @@ type DHT struct {
 	subnet            Subnet
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
+	nodeID            core.RecordRef
 	activeNodeKeeper  nodekeeper.NodeKeeper
 }
 
@@ -125,6 +126,7 @@ func NewDHT(
 	proxy relay.Proxy,
 	timeout int,
 	infbootstrap bool,
+	nodeID core.RecordRef,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -144,6 +146,7 @@ func NewDHT(
 		proxy:             proxy,
 		timeout:           timeout,
 		infinityBootstrap: infbootstrap,
+		nodeID:            nodeID,
 		activeNodeKeeper:  nodekeeper.NewNodeKeeper(time.Minute),
 	}
 
@@ -1253,6 +1256,11 @@ func (dht *DHT) GetHighKnownHostID() string {
 // GetPacketTimeout returns the maximum time to wait for a response to any packet.
 func (dht *DHT) GetPacketTimeout() time.Duration {
 	return dht.options.PacketTimeout
+}
+
+// GetNodeID returns a node ID.
+func (dht *DHT) GetNodeID() core.RecordRef {
+	return dht.nodeID
 }
 
 // KeyIsReceived returns true and a key from targetID if exist.

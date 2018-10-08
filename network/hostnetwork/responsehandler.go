@@ -93,7 +93,7 @@ func handleCheckNodePrivResponse(hostHandler hosthandler.HostHandler, response *
 	return nil
 }
 
-func handleAuthResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuth, target string) error {
+func handleAuthResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuthentication, target string) error {
 	var err error
 	if (len(response.AuthUniqueKey) != 0) && response.Success {
 		hostHandler.AddReceivedKey(target, response.AuthUniqueKey)
@@ -116,6 +116,20 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 		hostHandler.AddSubnetID(response.IP, targetID)
 	} else {
 		return errors.New("received empty IP")
+	}
+	return nil
+}
+
+func handleCheckPublicKeyResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckPublicKey) error {
+	if !response.Exist {
+		return errors.New("failed to find a public key")
+	}
+	return nil
+}
+
+func handleCheckSignedNonceResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckSignedNonce) error {
+	if !response.Success {
+		return errors.New("failed to parse a signed nonce")
 	}
 	return nil
 }
