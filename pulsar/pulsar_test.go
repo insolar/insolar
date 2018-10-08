@@ -132,6 +132,9 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(true)
+	mockClientWrapper.On("Lock")
+	mockClientWrapper.On("Unlock")
+	mockClientWrapper.On("CreateConnection")
 
 	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
@@ -141,7 +144,9 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 	err := pulsar.EstablishConnectionToPulsar(expectedNeighbourKey)
 
 	assert.NoError(t, err)
-	mockClientWrapper.AssertNotCalled(t, "Lock")
+	mockClientWrapper.AssertNumberOfCalls(t, "Lock", 1)
+	mockClientWrapper.AssertNumberOfCalls(t, "Unlock", 1)
+	mockClientWrapper.AssertNotCalled(t, "CreateConnection")
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t *testing.T) {
@@ -273,6 +278,9 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *testing.T) {
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(false)
+	mockClientWrapper.On("Lock")
+	mockClientWrapper.On("Unlock")
+	mockClientWrapper.On("CreateConnection", mock.Anything, mock.Anything).Return(errors.New("this will have to fall"))
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 	firstNeighbourPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
@@ -283,17 +291,28 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *tes
 
 	resultLog := capture(pulsar.CheckConnectionsToPulsars)
 
-	assert.Contains(t, resultLog, "forbidden connection")
+	assert.Contains(t, resultLog, "this will have to fall")
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *testing.T) {
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Error: errors.New("test error")}
 	replyChan := &rpc.Call{Done: done}
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
-	mockClientWrapper.On("IsInitialised").Return(true)
-	mockClientWrapper.On("Go", HealthCheck.String(), nil, nil, mock.Anything).Return(replyChan)
-	mockClientWrapper.On("ResetClient")
+	mockClientWrapper := &pulsartestutil.CustomRPCWrapperMock{}
+	mockClientWrapper.Done = replyChan
+	isInitTimeCalled := 0
+	mockClientWrapper.IsInitFunc = func() bool {
+		if isInitTimeCalled == 0 {
+			isInitTimeCalled++
+			return true
+		} else {
+			isInitTimeCalled++
+			return false
+		}
+	}
+	mockClientWrapper.CreateConnectionFunc = func() error {
+		return errors.New("this should failed")
+	}
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 	firstNeighbourPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
@@ -306,8 +325,8 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 	resultLog := capture(pulsar.CheckConnectionsToPulsars)
 
 	assert.Contains(t, resultLog, "Problems with connection to TestConnectionAddress, with error - test error")
-	assert.Contains(t, resultLog, "Attempt of connection to TestConnectionAddress failed with error - forbidden connection")
-	mockClientWrapper.AssertNumberOfCalls(t, "ResetClient", 2)
+	assert.Contains(t, resultLog, "Attempt of connection to TestConnectionAddress failed with error - this should failed")
+	assert.Equal(t, 2, isInitTimeCalled)
 }
 
 func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {

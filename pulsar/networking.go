@@ -34,6 +34,7 @@ const (
 	ReceiveEntropy             RequestType = "Pulsar.ReceiveEntropy"
 	ReceiveVector              RequestType = "Pulsar.ReceiveVector"
 	ReceiveChosenSignature     RequestType = "Pulsar.ReceiveChosenSignature"
+	ReceivePulse               RequestType = "Pulsar.ReceivePulse"
 )
 
 func (state RequestType) String() string {
@@ -73,6 +74,10 @@ type SenderConfirmationPayload struct {
 	PulseNumber     core.PulseNumber
 	Signature       []byte
 	ChosenPublicKey string
+}
+
+type PulsePayload struct {
+	Pulse core.Pulse
 }
 
 type Handler struct {

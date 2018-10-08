@@ -151,6 +151,7 @@ func NewPulsar(
 	gob.Register(GetLastPulsePayload{})
 	gob.Register(EntropySignaturePayload{})
 	gob.Register(EntropyPayload{})
+	gob.Register(PulsePayload{})
 
 	return pulsar, nil
 }
@@ -195,10 +196,6 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
 		return err
 	}
 
-	// Double-check lock
-	if neighbour.OutgoingClient.IsInitialised() {
-		return nil
-	}
 	neighbour.OutgoingClient.Lock()
 	if neighbour.OutgoingClient.IsInitialised() {
 		neighbour.OutgoingClient.Unlock()
@@ -593,7 +590,7 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 func (currentPulsar *Pulsar) waitForPulseSigns() {
 	log.Debug("[waitForPulseSigns]")
 	ticker := time.NewTicker(10 * time.Millisecond)
-	//currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
+	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
 			if currentPulsar.isStateFailed() || currentPulsar.stateSwitcher.getState() == sendingPulse {
@@ -601,24 +598,16 @@ func (currentPulsar *Pulsar) waitForPulseSigns() {
 				return
 			}
 
-			connections := 0
-			for _, item := range currentPulsar.Neighbours {
-				if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
-					connections++
-				}
+			if currentPulsar.getConsensusNumber() <= len(currentPulsar.CurrentSlotSenderConfirmations) {
+				ticker.Stop()
+				currentPulsar.stateSwitcher.switchToState(sendingPulse, nil)
+				return
 			}
 
-			// Here should be impl of checking signs recieved by the curren currentPulsar
-			//if    connections == 0 || len(currentPulsar.CurrentSlotSenderConfirmations) >= ((connections/2)+1) {
-			//	ticker.Stop()
-			//	currentPulsar.switchStateTo(SendingPulse, nil)
-			//	return
-			//}
-			//
-			//if time.Now().After(currentTimeOut) {
-			//	ticker.Stop()
-			//	currentPulsar.switchStateTo(failed, errors.New("not enought confirmation for sending result to network"))
-			//}
+			if time.Now().After(currentTimeOut) {
+				ticker.Stop()
+				currentPulsar.stateSwitcher.switchToState(failed, errors.New("not enought confirmation for sending result to network"))
+			}
 		}
 	}()
 }
@@ -753,6 +742,34 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 		}
 
 		sendPulseToHosts(pulsarHost, t, body.Hosts, pulse)
+	}
+}
+
+func (currentPulsar *Pulsar) broadcastPulse() {
+	log.Debug("[broadcastPulse]")
+	if currentPulsar.isStateFailed() {
+		return
+	}
+
+	payload, err := currentPulsar.preparePayload(PulsePayload{Pulse: core.Pulse{
+		PulseNumber: currentPulsar.ProcessingPulseNumber,
+		Entropy:     currentPulsar.CurrentSlotEntropy,
+		Signs:       currentPulsar.CurrentSlotSenderConfirmations,
+	}})
+	if err != nil {
+		currentPulsar.stateSwitcher.switchToState(failed, err)
+		return
+	}
+
+	for _, neighbour := range currentPulsar.Neighbours {
+		broadcastCall := neighbour.OutgoingClient.Go(ReceivePulse.String(),
+			payload,
+			nil,
+			nil)
+		reply := <-broadcastCall.Done
+		if reply.Error != nil {
+			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+		}
 	}
 }
 

@@ -116,7 +116,9 @@ func (mock *MockRPCClientWrapper) Go(serviceMethod string, args interface{}, rep
 }
 
 type CustomRPCWrapperMock struct {
-	Done *rpc.Call
+	Done                 *rpc.Call
+	IsInitFunc           func() bool
+	CreateConnectionFunc func() error
 }
 
 func (*CustomRPCWrapperMock) Lock() {
@@ -125,20 +127,27 @@ func (*CustomRPCWrapperMock) Lock() {
 func (*CustomRPCWrapperMock) Unlock() {
 }
 
-func (*CustomRPCWrapperMock) IsInitialised() bool {
-	return false
+func (impl *CustomRPCWrapperMock) IsInitialised() bool {
+	if impl.IsInitFunc == nil {
+		return false
+	} else {
+		return impl.IsInitFunc()
+	}
 }
 
 func (*CustomRPCWrapperMock) SetRPCClient(client *rpc.Client) {
-	panic("implement me")
 }
 
-func (*CustomRPCWrapperMock) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
-	return nil
+func (impl *CustomRPCWrapperMock) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
+	if impl.CreateConnectionFunc == nil {
+		return nil
+	} else {
+		return impl.CreateConnectionFunc()
+	}
 }
 
 func (*CustomRPCWrapperMock) Close() error {
-	panic("implement me")
+	return nil
 }
 
 func (impl *CustomRPCWrapperMock) Go(serviceMethod string, args interface{}, reply interface{}, done chan *rpc.Call) *rpc.Call {
@@ -146,5 +155,4 @@ func (impl *CustomRPCWrapperMock) Go(serviceMethod string, args interface{}, rep
 }
 
 func (impl *CustomRPCWrapperMock) ResetClient() {
-	panic("implement me!")
 }
