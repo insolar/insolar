@@ -68,12 +68,6 @@ jobs:
              make pre-build
              make build
              make test_with_coverage
-             #make insolard insolar insgocc pulsard insgorund
-             #echo "fetching dependencies..."
-             #curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-             ##go get -t -d ./...
-             #dep ensure
-             #go test -v --race --coverprofile=coverage.txt --covermode=atomic ./...
     on_success:
       put: pull-request-{{ pull.number }}
       params:
