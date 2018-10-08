@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
@@ -57,6 +58,7 @@ type DHT struct {
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
 	nodeID            core.RecordRef
+	activeNodeKeeper  nodekeeper.NodeKeeper
 }
 
 // AuthInfo collects some information about authentication.
@@ -145,6 +147,7 @@ func NewDHT(
 		timeout:           timeout,
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
+		activeNodeKeeper:  nodekeeper.NewNodeKeeper(time.Minute),
 	}
 
 	if options.ExpirationTime == 0 {
@@ -381,6 +384,7 @@ func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBui
 			log.Warn("gotBootstrap:", err.Error())
 			return false
 		}
+		dht.updateBootstrapHost(result.Sender.Address.String(), result.Sender.ID)
 		log.Info("checking response")
 		if result == nil {
 			log.Warn("gotBootstrap: result is nil")
@@ -402,6 +406,14 @@ func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBui
 		dht.AddHost(ctx, routeHost)
 	}
 	return true
+}
+
+func (dht *DHT) updateBootstrapHost(bootstrapAddress string, bootstrapID id.ID) {
+	for _, target := range dht.options.BootstrapHosts {
+		if target.Address.String() == bootstrapAddress {
+			target.ID = bootstrapID
+		}
+	}
 }
 
 // Disconnect will trigger a Stop from the network.
@@ -911,6 +923,26 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 	}
 
 	return nil
+}
+
+// GetActiveNodesList returns an active nodes list.
+func (dht *DHT) GetActiveNodesList() []*core.ActiveNode {
+	return dht.activeNodeKeeper.GetActiveNodes()
+}
+
+// GetActiveNodes starts getting active nodes from other nodes.
+func (dht *DHT) GetActiveNodes() error {
+	var err error
+	// TODO: fix it.
+	for _, target := range dht.options.BootstrapHosts {
+		err = SendActiveNodesRequest(dht, target)
+	}
+	return err
+}
+
+// AddActiveNodes adds an active nodes slice.
+func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) {
+	dht.activeNodeKeeper.AddActiveNodes(activeNodes)
 }
 
 // HtFromCtx returns a routing hashtable known by ctx.

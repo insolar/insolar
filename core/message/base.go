@@ -21,94 +21,71 @@ import (
 	"bytes"
 	"encoding/gob"
 	"io"
+	"io/ioutil"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
-)
-
-const (
-	// Logicrunner
-
-	// TypeCallMethod calls method and returns result
-	TypeCallMethod = core.MessageType(iota)
-	// TypeCallConstructor is a message for calling constructor and obtain its reply
-	TypeCallConstructor
-
-	// Ledger
-
-	// TypeGetCode retrieves code from storage.
-	TypeGetCode
-	// TypeGetClass retrieves class from storage.
-	TypeGetClass
-	// TypeGetObject retrieves object from storage.
-	TypeGetObject
-	// TypeGetDelegate retrieves object represented as provided class.
-	TypeGetDelegate
-	// TypeDeclareType creates new type.
-	TypeDeclareType
-	// TypeDeployCode creates new code.
-	TypeDeployCode
-	// TypeActivateClass activates class.
-	TypeActivateClass
-	// TypeDeactivateClass deactivates class.
-	TypeDeactivateClass
-	// TypeUpdateClass amends class.
-	TypeUpdateClass
-	// TypeActivateObject activates object.
-	TypeActivateObject
-	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
-	TypeActivateObjectDelegate
-	// TypeDeactivateObject deactivates object.
-	TypeDeactivateObject
-	// TypeUpdateObject amends object.
-	TypeUpdateObject
-	// TypeRegisterChild registers child on the parent object.
-	TypeRegisterChild
 )
 
 // GetEmptyMessage constructs specified message
 func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 	switch mt {
 	// Logicrunner
-	case TypeCallMethod:
+	case core.TypeCallMethod:
 		return &CallMethod{}, nil
-	case TypeCallConstructor:
+	case core.TypeCallConstructor:
 		return &CallConstructor{}, nil
 	// Ledger
-	case TypeGetCode:
+	case core.TypeRequestCall:
+		return &RequestCall{}, nil
+	case core.TypeGetCode:
 		return &GetCode{}, nil
-	case TypeGetClass:
+	case core.TypeGetClass:
 		return &GetClass{}, nil
-	case TypeGetObject:
+	case core.TypeGetObject:
 		return &GetObject{}, nil
-	case TypeGetDelegate:
+	case core.TypeGetDelegate:
 		return &GetDelegate{}, nil
-	case TypeDeclareType:
+	case core.TypeDeclareType:
 		return &DeclareType{}, nil
-	case TypeDeployCode:
+	case core.TypeDeployCode:
 		return &DeployCode{}, nil
-	case TypeActivateClass:
+	case core.TypeActivateClass:
 		return &ActivateClass{}, nil
-	case TypeDeactivateClass:
+	case core.TypeDeactivateClass:
 		return &DeactivateClass{}, nil
-	case TypeUpdateClass:
+	case core.TypeUpdateClass:
 		return &UpdateClass{}, nil
-	case TypeActivateObject:
+	case core.TypeActivateObject:
 		return &ActivateObject{}, nil
-	case TypeActivateObjectDelegate:
+	case core.TypeActivateObjectDelegate:
 		return &ActivateObjectDelegate{}, nil
-	case TypeDeactivateObject:
+	case core.TypeDeactivateObject:
 		return &DeactivateObject{}, nil
-	case TypeUpdateObject:
+	case core.TypeUpdateObject:
 		return &UpdateObject{}, nil
-	case TypeRegisterChild:
+	case core.TypeRegisterChild:
 		return &RegisterChild{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
 }
 
-// Serialize returns encoded message.
+// MustSerializeBytes returns encoded core.Message, panics on error.
+func MustSerializeBytes(msg core.Message) []byte {
+	r, err := Serialize(msg)
+	if err != nil {
+		panic(err)
+	}
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// Serialize returns io.Reader on buffer with encoded core.Message.
 func Serialize(msg core.Message) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	_, err := buff.Write([]byte{byte(msg.Type())})
@@ -143,6 +120,7 @@ func init() {
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
 	// Ledger
+	gob.Register(&RequestCall{})
 	gob.Register(&GetCode{})
 	gob.Register(&GetClass{})
 	gob.Register(&GetObject{})

@@ -119,3 +119,7 @@ type RequestCheckPublicKey struct {
 type RequestCheckSignedNonce struct {
 	Signed []byte
 }
+
+// RequestActiveNodes is request to get an active nodes.
+type RequestActiveNodes struct {
+}

@@ -140,6 +140,14 @@ func (hh *mockHostHandler) CascadeSendMessage(data core.Cascade, targetID string
 	return nil
 }
 
+func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
+	return nil
+}
+
+func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) {
+
+}
+
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
 	address, _ := host.NewAddress("0.0.0.0:0")
 	id1, _ := id.NewID()
@@ -208,6 +216,10 @@ func (hh *mockHostHandler) InvokeRPC(sender *host.Host, method string, args [][]
 }
 
 func (hh *mockHostHandler) Store(key store.Key, data []byte, replication time.Time, expiration time.Time, publisher bool) error {
+	return nil
+}
+
+func (hh *mockHostHandler) GetActiveNodes() error {
 	return nil
 }
 

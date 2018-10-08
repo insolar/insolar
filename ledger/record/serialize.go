@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/hash"
 	"github.com/ugorji/go/codec"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 // Raw struct contains raw serialized record.
@@ -109,10 +110,8 @@ func Core2Reference(cRef core.RecordRef) Reference {
 
 // ID2Bytes converts ID struct to it's byte representation.
 func ID2Bytes(id ID) []byte {
-	var buf = make([]byte, core.RecordIDSize)
-	copy(buf[:core.PulseNumberSize], id.Pulse.Bytes())
-	copy(buf[core.PulseNumberSize:], id.Hash)
-	return buf
+	rec := core.GenRecordID(id.Pulse, id.Hash)
+	return rec[:]
 }
 
 // record type ids for record types
@@ -121,12 +120,7 @@ func ID2Bytes(id ID) []byte {
 // not depended on definition order)
 const (
 	// request record ids
-	requestRecordID       TypeID = 1
-	callRequestID         TypeID = 2
-	lockUnlockRequestID   TypeID = 3
-	readRecordRequestID   TypeID = 4
-	readObjectID          TypeID = 5
-	readObjectCompositeID TypeID = 6
+	callRequestRecordID TypeID = 1
 	// result record ids
 	resultRecordID              TypeID = 7
 	wipeOutRecordID             TypeID = 8
@@ -158,20 +152,8 @@ const (
 func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	switch id {
 	// request records
-	case requestRecordID:
-		return &RequestRecord{}
-	case callRequestID:
+	case callRequestRecordID:
 		return &CallRequest{}
-	case lockUnlockRequestID:
-		return &LockUnlockRequest{}
-	case readRecordRequestID:
-		return &ReadRecordRequest{}
-	case readObjectID:
-		return &ReadObject{}
-	case readObjectCompositeID:
-		return &ReadObjectComposite{}
-	// result records
-	// case resultRecordID:
 	case wipeOutRecordID:
 		return &WipeOutRecord{}
 	case readRecordResultID:
@@ -225,18 +207,8 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 	switch v := rec.(type) {
 	// request records
-	case *RequestRecord:
-		return requestRecordID
 	case *CallRequest:
-		return callRequestID
-	case *LockUnlockRequest:
-		return lockUnlockRequestID
-	case *ReadRecordRequest:
-		return readRecordRequestID
-	case *ReadObject:
-		return readObjectID
-	case *ReadObjectComposite:
-		return readObjectCompositeID
+		return callRequestRecordID
 	// result records
 	case *ResultRecord:
 		return resultRecordID

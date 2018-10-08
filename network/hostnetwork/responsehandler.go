@@ -133,3 +133,8 @@ func handleCheckSignedNonceResponse(hostHandler hosthandler.HostHandler, respons
 	}
 	return nil
 }
+
+func handleActiveNodesResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseActiveNodes) error {
+	hostHandler.AddActiveNodes(response.ActiveNodes)
+	return nil
+}

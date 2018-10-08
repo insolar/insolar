@@ -342,6 +342,27 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
+func SendActiveNodesRequest(hostHandler hosthandler.HostHandler, target *host.Host) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
+
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeActiveNodes).
+		Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(target).
+		Request(&packet.RequestActiveNodes{}).
+		Build()
+	future, err := hostHandler.SendRequest(request)
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to SendRequest")
+	}
+
+	return checkResponse(hostHandler, future, target.ID.String(), request)
+}
+
 // SendRelayOwnership send a relay ownership request.
 func SendRelayOwnership(hostHandler hosthandler.HostHandler, subnetIDs []string) {
 	for _, id1 := range subnetIDs {
@@ -427,7 +448,9 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		}
 	case packet.TypeCheckSignedNonce:
 		err = handleCheckSignedNonceResponse(hostHandler, rsp.Data.(*packet.ResponseCheckSignedNonce))
+	case packet.TypeActiveNodes:
+		response := rsp.Data.(*packet.ResponseActiveNodes)
+		err = handleActiveNodesResponse(hostHandler, response)
 	}
-
 	return err
 }

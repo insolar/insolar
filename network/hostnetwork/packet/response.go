@@ -17,6 +17,7 @@
 package packet
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
@@ -121,4 +122,9 @@ type ResponseCheckPublicKey struct {
 // ResponseCheckSignedNonce returns true if signed nonce is ok.
 type ResponseCheckSignedNonce struct {
 	Success bool
+}
+
+// ResponseActiveNodes is data to answer to active nodes request.
+type ResponseActiveNodes struct {
+	ActiveNodes []*core.ActiveNode
 }

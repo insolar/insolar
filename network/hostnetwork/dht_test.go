@@ -1080,12 +1080,6 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 	bootstrapAdresses := make([]string, 0)
 	dhts := make([]*DHT, 0)
 
-	defer func() {
-		for _, dht := range dhts {
-			dht.Disconnect()
-		}
-	}()
-
 	for i := 0; i < 3; i++ {
 		host1 := prefix + strconv.Itoa(port)
 		st, s, tp, r, _ := realDhtParamsWithId(host1)
@@ -1116,6 +1110,10 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 	lastDht := dhts[len(dhts)-1]
 	hostsCount := lastDht.HtFromCtx(GetDefaultCtx(lastDht)).TotalHosts()
 	assert.Equal(t, 19, hostsCount)
+
+	for _, dht := range dhts {
+		dht.Disconnect()
+	}
 }
 
 func TestDHT_BootstrapInfinity(t *testing.T) {

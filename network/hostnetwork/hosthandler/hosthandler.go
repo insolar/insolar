@@ -80,6 +80,7 @@ type HostHandler interface {
 	Disconnect()
 	Listen() error
 	ObtainIP() error
+	GetActiveNodes() error
 	Bootstrap() error
 	GetHostsFromBootstrap()
 	NumHosts(ctx Context) int
@@ -97,6 +98,7 @@ type HostHandler interface {
 	RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error)
 
 	AddPossibleProxyID(id string)
+	AddActiveNodes(activeNode []*core.ActiveNode)
 	AddPossibleRelayID(id string)
 	AddProxyHost(targetID string)
 	AddSubnetID(ip, targetID string)
@@ -127,4 +129,5 @@ type HostHandler interface {
 	GetNetworkCommonFacade() NetworkCommonFacade
 	GetExpirationTime(ctx Context, key []byte) time.Time
 	GetNodeID() core.RecordRef
+	GetActiveNodesList() []*core.ActiveNode
 }

@@ -17,9 +17,6 @@
 package message
 
 import (
-	"encoding/binary"
-	"io"
-
 	"github.com/insolar/insolar/core"
 )
 
@@ -49,6 +46,7 @@ func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &e.Caller
 }
 
+// TargetRole returns RoleVirtualExecutor as routing target role.
 func (e *BaseLogicMessage) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
@@ -66,21 +64,14 @@ func (e *CallMethod) GetReference() core.RecordRef {
 	return e.ObjectRef
 }
 
+// Type returns TypeCallMethod.
 func (e *CallMethod) Type() core.MessageType {
-	return TypeCallMethod
+	return core.TypeCallMethod
 }
 
+// Target returns ObjectRef as routing target.
 func (e *CallMethod) Target() *core.RecordRef {
 	return &e.ObjectRef
-}
-
-// WriteHash implements ledger.hash.Hasher interface.
-func (e *CallMethod) WriteHash(w io.Writer) {
-	mustWrite(w, binary.BigEndian, e.Caller)
-	mustWrite(w, binary.BigEndian, uint32(e.ReturnMode))
-	mustWrite(w, binary.BigEndian, e.ObjectRef)
-	mustWrite(w, binary.BigEndian, []byte(e.Method))
-	mustWrite(w, binary.BigEndian, e.Arguments)
 }
 
 type SaveAs int
@@ -98,30 +89,22 @@ type CallConstructor struct {
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
+	PulseNum  core.PulseNumber
 }
 
 func (e *CallConstructor) GetReference() core.RecordRef {
 	return e.ClassRef
 }
 
+// Type returns TypeCallConstructor.
 func (e *CallConstructor) Type() core.MessageType {
-	return TypeCallConstructor
+	return core.TypeCallConstructor
 }
 
+// Target returns request ref as routing target.
 func (e *CallConstructor) Target() *core.RecordRef {
-	return &e.ParentRef
-}
-
-// WriteHash implements ledger.hash.Hasher interface.
-func (e *CallConstructor) WriteHash(w io.Writer) {
-	mustWrite(w, binary.BigEndian, e.Caller)
-	mustWrite(w, binary.BigEndian, e.ClassRef)
-	mustWrite(w, binary.BigEndian, []byte(e.Name))
-	mustWrite(w, binary.BigEndian, e.Arguments)
-}
-
-func mustWrite(w io.Writer, order binary.ByteOrder, data interface{}) {
-	if err := binary.Write(w, order, data); err != nil {
-		panic(err)
+	if e.SaveAs == Delegate {
+		return &e.ParentRef
 	}
+	return core.GenRequest(e.PulseNum, MustSerializeBytes(e))
 }

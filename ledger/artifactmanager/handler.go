@@ -41,22 +41,37 @@ func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 func (h *MessageHandler) Link(components core.Components) error {
 	bus := components.MessageBus
 
-	bus.MustRegister(message.TypeGetCode, h.handleGetCode)
-	bus.MustRegister(message.TypeGetClass, h.handleGetClass)
-	bus.MustRegister(message.TypeGetObject, h.handleGetObject)
-	bus.MustRegister(message.TypeGetDelegate, h.handleGetDelegate)
-	bus.MustRegister(message.TypeDeclareType, h.handleDeclareType)
-	bus.MustRegister(message.TypeDeployCode, h.handleDeployCode)
-	bus.MustRegister(message.TypeActivateClass, h.handleActivateClass)
-	bus.MustRegister(message.TypeDeactivateClass, h.handleDeactivateClass)
-	bus.MustRegister(message.TypeUpdateClass, h.handleUpdateClass)
-	bus.MustRegister(message.TypeActivateObject, h.handleActivateObject)
-	bus.MustRegister(message.TypeActivateObjectDelegate, h.handleActivateObjectDelegate)
-	bus.MustRegister(message.TypeDeactivateObject, h.handleDeactivateObject)
-	bus.MustRegister(message.TypeUpdateObject, h.handleUpdateObject)
-	bus.MustRegister(message.TypeRegisterChild, h.handleRegisterChild)
+	bus.MustRegister(core.TypeGetCode, h.handleGetCode)
+	bus.MustRegister(core.TypeGetClass, h.handleGetClass)
+	bus.MustRegister(core.TypeGetObject, h.handleGetObject)
+	bus.MustRegister(core.TypeGetDelegate, h.handleGetDelegate)
+	bus.MustRegister(core.TypeDeclareType, h.handleDeclareType)
+	bus.MustRegister(core.TypeDeployCode, h.handleDeployCode)
+	bus.MustRegister(core.TypeActivateClass, h.handleActivateClass)
+	bus.MustRegister(core.TypeDeactivateClass, h.handleDeactivateClass)
+	bus.MustRegister(core.TypeUpdateClass, h.handleUpdateClass)
+	bus.MustRegister(core.TypeActivateObject, h.handleActivateObject)
+	bus.MustRegister(core.TypeActivateObjectDelegate, h.handleActivateObjectDelegate)
+	bus.MustRegister(core.TypeDeactivateObject, h.handleDeactivateObject)
+	bus.MustRegister(core.TypeUpdateObject, h.handleUpdateObject)
+	bus.MustRegister(core.TypeRegisterChild, h.handleRegisterChild)
+	bus.MustRegister(core.TypeRequestCall, h.handleRegisterRequest)
 
 	return nil
+}
+
+func (h *MessageHandler) handleRegisterRequest(
+	genericMsg core.Message,
+) (core.Reply, error) {
+	msg := genericMsg.(*message.RequestCall)
+	requestRec := &record.CallRequest{
+		Payload: message.MustSerializeBytes(msg.Message),
+	}
+	id, err := h.db.SetRequest(requestRec)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to set request record")
+	}
+	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {

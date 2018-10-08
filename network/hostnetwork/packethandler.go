@@ -72,6 +72,8 @@ func DispatchPacketType(
 		return processCheckSignedNonce(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeCheckPublicKey:
 		return processCheckPublicKey(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeActiveNodes:
+		return processActiveNodes(hostHandler, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
@@ -368,4 +370,9 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	}
 
 	return packetBuilder.Response(response).Build(), err
+}
+
+func processActiveNodes(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {
+	response := &packet.ResponseActiveNodes{ActiveNodes: hostHandler.GetActiveNodesList()}
+	return packetBuilder.Response(response).Build(), nil
 }

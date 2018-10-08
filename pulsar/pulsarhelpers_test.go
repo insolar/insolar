@@ -29,11 +29,12 @@ func TestSingAndVerify(t *testing.T) {
 	assert.NoError(t, err)
 	publicKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
 	assert.NoError(t, err)
+	testString := "message"
 
-	signature, err := singData(privateKey, "This is the message to be signed and verified!")
+	signature, err := singData(privateKey, testString)
 	assertObj.NoError(err)
 
-	checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: "This is the message to be signed and verified!"})
+	checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: testString})
 
 	assertObj.Equal(true, checkSignature)
 }
