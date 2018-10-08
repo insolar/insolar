@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -91,6 +92,10 @@ func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID
 
 func (hh *mockHostHandler) Disconnect() {
 
+}
+
+func (hh *mockHostHandler) Consensus() *consensus.InsolarConsensus {
+	return nil
 }
 
 func (hh *mockHostHandler) Listen() error {

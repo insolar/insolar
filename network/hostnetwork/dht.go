@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -58,6 +59,7 @@ type DHT struct {
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
 	activeNodeKeeper  nodekeeper.NodeKeeper
+	insolarConsensus  *consensus.InsolarConsensus
 }
 
 // AuthInfo collects some information about authentication.
@@ -133,6 +135,13 @@ func NewDHT(
 
 	rel := relay.NewRelay()
 
+	keeper := nodekeeper.NewNodeKeeper(time.Minute)
+	insolarConsensus, err := consensus.NewInsolarConsensus(keeper)
+	if err != nil {
+		// TODO: return error on check (do nothing for now to evade breaking the binary and all tests)
+		log.Error("consensus not implemented")
+	}
+
 	dht = &DHT{
 		options:           options,
 		origin:            origin,
@@ -144,7 +153,8 @@ func NewDHT(
 		proxy:             proxy,
 		timeout:           timeout,
 		infinityBootstrap: infbootstrap,
-		activeNodeKeeper:  nodekeeper.NewNodeKeeper(time.Minute),
+		activeNodeKeeper:  keeper,
+		insolarConsensus:  insolarConsensus,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -211,6 +221,10 @@ func (dht *DHT) StoreData(ctx hosthandler.Context, data []byte) (id string, err 
 	}
 	str := base58.Encode(key)
 	return str, nil
+}
+
+func (dht *DHT) Consensus() *consensus.InsolarConsensus {
+	return dht.insolarConsensus
 }
 
 // Get retrieves data from the transport using key. Key is the base58 encoded

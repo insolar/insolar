@@ -102,16 +102,20 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get current pulse")
 	}
-	log.Debugf("got new pulse number: %d", currentPulse.PulseNumber)
+	log.Debugf("got new pulse number: %d", data.Pulse.PulseNumber)
 	if (data.Pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(data.Pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 		err = pm.Set(data.Pulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
-		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
+		log.Debugf("set new current pulse number: %d", data.Pulse.PulseNumber)
 		ht := hostHandler.HtFromCtx(ctx)
 		hosts := ht.GetMulticastHosts()
+		if hostHandler.Consensus() != nil {
+			// TODO: remove check when consensus will be fully implemented
+			go hostHandler.Consensus().ProcessPulse(data.Pulse)
+		}
 		go ResendPulseToKnownHosts(hostHandler, hosts, data)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil

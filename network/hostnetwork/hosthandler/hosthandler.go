@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
@@ -85,6 +86,7 @@ type HostHandler interface {
 	GetHostsFromBootstrap()
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
+	Consensus() *consensus.InsolarConsensus
 	ConfirmNodeRole(role string) bool
 	StoreRetrieve(key store.Key) ([]byte, bool)
 	HtFromCtx(ctx Context) *routing.HashTable

@@ -38,7 +38,7 @@ type DataProvider interface {
 type Consensus interface {
 	// DoConsensus is sync method, it make all consensus steps and returns boolean result
 	// method should be executed in goroutine
-	DoConsensus(ctx context.Context, self Participant, allParticipants []*Participant) (bool, error)
+	DoConsensus(ctx context.Context, self Participant, allParticipants []Participant) (bool, error)
 }
 
 // Communicator interface is used to exchange messages between participants
