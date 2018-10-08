@@ -81,6 +81,8 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 		answer, hError = rh.ProcessIsAuthorized()
 	case GetSeed:
 		answer, hError = rh.ProcessGetSeed()
+	case GetInfo:
+		answer, hError = rh.ProcessGetInfo()
 	default:
 		msg := fmt.Sprintf("Wrong query parameter 'query_type' = '%s'", qTypeStr)
 		answer = writeError(msg, BadRequest)
@@ -155,7 +157,7 @@ func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.Recor
 		params, err := preprocessRequest(req)
 		if err != nil {
 			answer = writeError("Bad request", BadRequest)
-			log.Errorf("[QID=]Can't parse input request: %s, error: %s\n", req.RequestURI, err)
+			log.Errorf("[QID=] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
 		rh := NewRequestHandler(params, messageBus, rootDomainReference, sm)

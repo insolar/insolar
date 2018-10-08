@@ -320,3 +320,9 @@ func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
 
 	return result, nil
 }
+
+func (rh *RequestHandler) ProcessGetInfo() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	result["root_domain_reference"] = rh.rootDomainReference.String()
+	return result, nil
+}
