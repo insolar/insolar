@@ -44,8 +44,8 @@ func NewIDHash() hash.Hash {
 	return sha3.New224()
 }
 
-// SHA3Bytes224 generates SHA3-224 hash for byte slice.
-func SHA3Bytes224(b []byte) []byte {
+// IDHashBytes generates hash for record ID from byte slice.
+func IDHashBytes(b []byte) []byte {
 	h := sha3.Sum224(b)
 	return h[:]
 }
