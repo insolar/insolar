@@ -23,15 +23,21 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
+const (
+	getChildrenChunkSize = 10 * 1000
+)
+
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
 	db         *storage.DB
 	messageBus core.MessageBus
+
+	getChildrenChunkSize int
 }
 
 // NewArtifactManger creates new manager instance.
 func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
-	return &LedgerArtifactManager{db: db}, nil
+	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}, nil
 }
 
 // Link links external components.
@@ -166,6 +172,13 @@ func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core
 		return nil, ErrUnexpectedReply
 	}
 	return &react.Head, nil
+}
+
+// GetChildren returns children iterator.
+//
+// During iteration children refs will be fetched from remote source (parent object).
+func (m *LedgerArtifactManager) GetChildren(parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+	return NewChildIterator(m.messageBus, parent, pulse, m.getChildrenChunkSize)
 }
 
 // DeclareType creates new type record in storage.
@@ -323,8 +336,8 @@ func (m *LedgerArtifactManager) fetchReference(ev core.Message) (*core.RecordRef
 	return &react.Ref, nil
 }
 
-func (m *LedgerArtifactManager) fetchID(ev core.Message) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(ev)
+func (m *LedgerArtifactManager) fetchID(msg core.Message) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(msg)
 
 	if err != nil {
 		return nil, err

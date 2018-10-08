@@ -87,7 +87,7 @@ type ObjectDescriptor struct {
 	cache struct {
 		classDescriptor core.ClassDescriptor
 	}
-	am core.ArtifactManager
+	am *LedgerArtifactManager
 
 	head     core.RecordRef
 	state    core.RecordID
@@ -112,8 +112,8 @@ func (d *ObjectDescriptor) Memory() []byte {
 }
 
 // Children returns object's children references.
-func (d *ObjectDescriptor) Children() core.RefIterator {
-	return &RefIterator{elements: d.children}
+func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
+	return d.am.GetChildren(d.head, pulse)
 }
 
 // ClassDescriptor returns descriptor for fetching object's class data.
