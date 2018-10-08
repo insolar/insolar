@@ -17,6 +17,7 @@
 package bootstrap
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -45,6 +46,7 @@ var contractNames = []string{wallet, member, allowance, rootDomain, nodeDomain, 
 // Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
+	rootKeysFile  string
 }
 
 // GetRootDomainRef returns reference to RootDomain instance
@@ -55,6 +57,7 @@ func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 // NewBootstrapper creates new Bootstrapper
 func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
+	bootstrapper.rootKeysFile = cfg.Bootstrap.RootKeys
 	bootstrapper.rootDomainRef = &core.RecordRef{}
 	return bootstrapper, nil
 }
@@ -215,6 +218,19 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testu
 	return nil
 }
 
+func getRootMemberPubKey(file string) (string, error) {
+	data, _ := ioutil.ReadFile(file)
+	var keys map[string]string
+	err := json.Unmarshal(data, &keys)
+	if err != nil {
+		return "", err
+	}
+	if keys["public_key"] == "" {
+		return "", errors.New("empty root public key")
+	}
+	return keys["public_key"], nil
+}
+
 // Start creates types and RootDomain instance
 func (b *Bootstrapper) Start(c core.Components) error {
 	log.Info("[ Bootstrapper ] Starting Bootstrap ...")
@@ -227,6 +243,10 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		b.rootDomainRef = rootDomainRef
 		log.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
+	}
+	_, err = getRootMemberPubKey(b.rootKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
 	}
 
 	isLightExecutor, err := isLightExecutor(c)
