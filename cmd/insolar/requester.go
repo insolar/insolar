@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 
 	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/core"
 
 	"github.com/pkg/errors"
 
@@ -34,22 +35,21 @@ type apiRequester struct {
 }
 
 type configJSON struct {
-	Private_key string `json:"private_key"`
+	PrivateKey       string `json:"private_key"`
+	privateKeyObject *ecdsa.PrivateKey
+	Params           map[string]interface{} `json:"params"`
+	Method           string                 `json:"method"`
+	Caller           string                 `json:"caller"`
+	Callee           string                 `json:"callee"`
 }
 
-type config struct {
-	PrivateKey *ecdsa.PrivateKey
-}
+// type config struct {
+// 	PrivateKey *ecdsa.PrivateKey
+// }
 
 const url = "http://localhost:19191/api/v1?"
 
-func getReferences() {
-	// add to api query_type = get_info
-	// which return references of root domain
-
-}
-
-func readConfigFromFile(path string) (*config, error) {
+func readConfigFromFile(path string) (*configJSON, error) {
 	rawConf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readConfigFromFile ] Problem with reading config")
@@ -61,10 +61,12 @@ func readConfigFromFile(path string) (*config, error) {
 		return nil, errors.Wrap(err, "[ readConfigFromFile ] Problem with unmarshaling config")
 	}
 
-	conf := &config{}
-	conf.PrivateKey, err = ecdsa_helper.ImportPrivateKey(cfgJSON.Private_key)
+	cfgJSON.privateKeyObject, err = ecdsa_helper.ImportPrivateKey(cfgJSON.PrivateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ readConfigFromFile ] Problem with reading private key")
+	}
 
-	return conf, nil
+	return cfgJSON, nil
 }
 
 func constructParams() ([]byte, error) {
@@ -87,17 +89,20 @@ func (r *apiRequester) Send(out io.Writer, confPath string) error {
 		return errors.Wrap(err, "[ Send ] Problem with creating request")
 	}
 
-	signature, err := ecdsa_helper.Sign(params, cfg.PrivateKey)
+	signature, err := ecdsa_helper.Sign(params, cfg.privateKeyObject)
 	if err != nil {
 		return errors.Wrap(err, "[ Send ] Problem with signing request")
 
 	}
 
-	pubKey, err := ecdsa_helper.ExportPublicKey(&cfg.PrivateKey.PublicKey)
+	pubKey, err := ecdsa_helper.ExportPublicKey(&cfg.privateKeyObject.PublicKey)
 	check("[ Send ] ", err)
 
 	body, err := requesters.GetResponseBody(url, requesters.PostParams{
 		"params":    base64.StdEncoding.EncodeToString(params),
+		"method":    cfg.Method,
+		"caller":    core.RandomRef().String(),
+		"callee":    core.RandomRef().String(),
 		"seed":      seed,
 		"signature": ecdsa_helper.ExportSignature(signature),
 		//
