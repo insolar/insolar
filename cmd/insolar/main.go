@@ -59,14 +59,16 @@ var (
 	output             string
 	cmd                string
 	numberCertificates uint
+	configPath         string
 )
 
 func parseInputParams() {
-	var rootCmd = &cobra.Command{Use: "insolar"}
+	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificates")
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificates| send_request")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
+	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
@@ -159,6 +161,12 @@ func generateCertificates(out io.Writer) {
 	writeToOutput(out, string(keysList)+"\n")
 }
 
+func sendRequest(out io.Writer) {
+	r := apiRequester{}
+	err := r.Send(out, configPath)
+	check("[ sendRequest ]", err)
+}
+
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
@@ -175,5 +183,7 @@ func main() {
 		generateKeysPair(out)
 	case "gen_certificates":
 		generateCertificates(out)
+	case "send_request":
+		sendRequest(out)
 	}
 }
