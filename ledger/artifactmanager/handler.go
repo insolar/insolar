@@ -45,7 +45,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeGetClass, h.handleGetClass)
 	bus.MustRegister(core.TypeGetObject, h.handleGetObject)
 	bus.MustRegister(core.TypeGetDelegate, h.handleGetDelegate)
-	bus.MustRegister(message.TypeGetChildren, h.handleGetChildren)
+	bus.MustRegister(core.TypeGetChildren, h.handleGetChildren)
 	bus.MustRegister(core.TypeDeclareType, h.handleDeclareType)
 	bus.MustRegister(core.TypeDeployCode, h.handleDeployCode)
 	bus.MustRegister(core.TypeActivateClass, h.handleActivateClass)
