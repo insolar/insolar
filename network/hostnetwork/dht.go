@@ -144,6 +144,7 @@ func NewDHT(
 		proxy:             proxy,
 		timeout:           timeout,
 		infinityBootstrap: infbootstrap,
+		activeNodeKeeper:  nodekeeper.NewNodeKeeper(time.Minute),
 	}
 
 	if options.ExpirationTime == 0 {
@@ -380,6 +381,7 @@ func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBui
 			log.Warn("gotBootstrap:", err.Error())
 			return false
 		}
+		dht.updateBootstrapHost(result.Sender.Address.String(), result.Sender.ID)
 		log.Info("checking response")
 		if result == nil {
 			log.Warn("gotBootstrap: result is nil")
@@ -401,6 +403,14 @@ func (dht *DHT) gotBootstrap(ht *routing.HashTable, bh *host.Host, cb ContextBui
 		dht.AddHost(ctx, routeHost)
 	}
 	return true
+}
+
+func (dht *DHT) updateBootstrapHost(bootstrapAddress string, bootstrapID id.ID) {
+	for _, target := range dht.options.BootstrapHosts {
+		if target.Address.String() == bootstrapAddress {
+			target.ID = bootstrapID
+		}
+	}
 }
 
 // Disconnect will trigger a Stop from the network.
