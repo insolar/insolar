@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 
 	"github.com/insolar/insolar/configuration"
@@ -30,51 +31,80 @@ import (
 	"github.com/spf13/pflag"
 )
 
-//const maxUploadSize = 50 * 1024 // 50 MB
-const uploadPath = "./data"
+type updateServer struct {
+	uploadPath    string
+	port          string
+	latestVersion string
+	//const maxUploadSize = 50 * 1024 // 50 MB
+}
 
 func main() {
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
 	initLogger(cfgHolder.Configuration.Log)
-	port := pflag.StringP("port", "p", "2345", "port to listen")
+	updServer := newUpdateServer()
+	port := pflag.StringP("port", "p", updServer.port, "port to listen")
 
 	//http.HandleFunc("/latest", uploadFileHandler())
 
-	ver := getLatestVersion()
-	if ver != "" {
-		http.HandleFunc("/latest", versionHandler(ver))
-		fs := http.FileServer(http.Dir(path.Join(uploadPath, ver)))
-		http.Handle("/"+ver+"/", http.StripPrefix("/"+ver, fs))
+	ver := updServer.getLatestVersion()
+	if ver != nil {
+		http.HandleFunc("/latest", updServer.versionHandler(ver))
+		fs := http.FileServer(http.Dir(path.Join(updServer.uploadPath, ver.Value)))
+		http.Handle("/"+ver.Value+"/", http.StripPrefix("/"+ver.Value, fs))
 	}
 	log.Info("Server started on localhost:" + *port + ", use /upload for uploading files and /{version}/{fileName} for downloading files.")
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }
 
-func getLatestVersion() string {
-	files, err := ioutil.ReadDir(path.Join(uploadPath, "latest"))
-	if err != nil {
-		log.Fatal(err)
+func newUpdateServer() *updateServer {
+	updServer := updateServer{}
+	if uploadPathValue := os.Getenv("upload_path"); uploadPathValue != "" {
+		updServer.uploadPath = uploadPathValue
+	} else {
+		updServer.uploadPath = "./data"
 	}
-
-	for _, f := range files {
-		fmt.Println(f.Name())
-		return f.Name()
+	if portValue := os.Getenv("updateserver_port"); portValue != "" {
+		updServer.port = portValue
+	} else {
+		updServer.port = "2345"
 	}
-	return ""
+	return &updServer
 }
 
-func versionHandler(ver string) http.HandlerFunc {
+func (updServer *updateServer) versionHandler(ver *request.Version) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		latest := request.NewVersion(ver)
-		response, err := json.Marshal(latest)
+		response, err := json.Marshal(ver)
 		if err != nil {
 			returnError(w, "MARSHAL_ERROR")
 		} else {
 			fmt.Fprintf(w, string(response))
 		}
 	})
+}
+
+func (updServer *updateServer) getLatestVersion() *request.Version {
+
+	latestVersion := os.Getenv("BUILD_VERSION")
+	//latestVersion := os.Getenv("version")
+	if latestVersion != "" {
+		return request.NewVersion(latestVersion)
+	}
+	files, err := ioutil.ReadDir(updServer.uploadPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	newVer := request.NewVersion("v0.0.0")
+	for _, f := range files {
+		if f.IsDir() {
+			newVer = request.GetMaxVersion(newVer, request.NewVersion(f.Name()))
+		}
+	}
+	if newVer.Value != "v0.0.0" {
+		return newVer
+	}
+	return nil
 }
 
 // ToDo: create uploader
@@ -134,7 +164,8 @@ func versionHandler(ver string) http.HandlerFunc {
 func returnError(w http.ResponseWriter, message string) {
 	log.Error(message)
 	w.WriteHeader(http.StatusBadRequest)
-	w.Write([]byte(message))
+	_, err := w.Write([]byte(message))
+	log.Error(err)
 }
 
 func initLogger(cfg configuration.Log) {

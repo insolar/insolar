@@ -34,27 +34,23 @@ func (updater *Updater) IsSameVersion(currentVersion string) (bool, string, erro
 		version, err := request.ReqCurrentVerFromAddress(request.GetProtocol(updater.lastSuccessServer), updater.lastSuccessServer)
 		if err == nil && version != "" {
 			versionFromUS := request.ExtractVersion(version)
-			if request.CompareVersion(versionFromUS, currentVer) > 0 {
-				return false, versionFromUS.Latest, nil
-			} else {
-				return true, versionFromUS.Latest, nil
-			}
+			return request.CompareVersion(versionFromUS, currentVer) < 0, versionFromUS.Value, nil
 		}
 	}
 	lastSuccessServer, versionFromUS, err := request.ReqCurrentVer(updater.serversList)
-	log.Debug("Get version=", versionFromUS.Latest, " from remote server: ", lastSuccessServer)
+	log.Debug("Get version=", versionFromUS.Value, " from remote server: ", lastSuccessServer)
 	updater.lastSuccessServer = lastSuccessServer
 	if err != nil {
-		return true, versionFromUS.Latest, err
+		return true, versionFromUS.Value, err
 	}
 	if versionFromUS == nil || updater.currentVer == "" {
 		return true, "unset", nil
 	} else
 	//if(updater.currentVer != versionFromUS){
 	if request.CompareVersion(versionFromUS, currentVer) > 0 {
-		return false, versionFromUS.Latest, nil
+		return false, versionFromUS.Value, nil
 	}
-	return true, versionFromUS.Latest, nil
+	return true, versionFromUS.Value, nil
 }
 
 func (updater Updater) DownloadFiles(version string) bool {

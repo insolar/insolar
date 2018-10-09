@@ -6,16 +6,16 @@ import (
 	"regexp"
 )
 
-type version struct {
-	Latest   string `json:"latest"`
+type Version struct {
+	Value    string `json:"latest"`
 	Major    int    `json:"major"`
 	Minor    int    `json:"minor"`
 	Revision int    `json:"revision"`
 }
 
-func NewVersion(ver string) *version {
-	v := version{}
-	v.Latest = ver
+func NewVersion(ver string) *Version {
+	v := Version{}
+	v.Value = ver
 	re := regexp.MustCompile("[0-9]+")
 	arr := re.FindAllString(ver, -1)
 	v.Major = extractIntValue(arr, 0)
@@ -24,7 +24,7 @@ func NewVersion(ver string) *version {
 	return &v
 }
 
-func ReqCurrentVer(addresses []string) (string, *version, error) {
+func ReqCurrentVer(addresses []string) (string, *Version, error) {
 	log.Debug("Found update server addresses: ", addresses)
 
 	for _, address := range addresses {

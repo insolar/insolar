@@ -68,8 +68,7 @@ func verifyAndUpdate(updater *upd.Updater) {
 	if !sameVersion {
 		log.Debug("Current version: ", version.Version, ", found version: ", newVersion)
 		// Run Update
-		success := updater.DownloadFiles(newVersion)
-		if success {
+		if updater.DownloadFiles(newVersion) {
 			// ToDo: send stop signal
 			// ToDo: copy files from folder=./${VERSION} to current folder
 		}

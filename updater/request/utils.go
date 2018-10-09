@@ -26,7 +26,11 @@ func GetProtocol(address string) RequestUpdateNode {
 			{
 				return SmbRequestUpdateNode{}
 			}
-			log.Warn("Unknown protocol ", protocol[0])
+		default:
+			{
+				log.Warn("Unknown protocol ", protocol[0])
+				return nil
+			}
 		}
 	}
 	return nil
@@ -52,8 +56,8 @@ func createCurrentPath(version string) string {
 	return pathToSave
 }
 
-func ExtractVersion(ver string) *version {
-	latestVersion := version{}
+func ExtractVersion(ver string) *Version {
+	latestVersion := Version{}
 	err := json.Unmarshal([]byte(ver), &latestVersion)
 	if err != nil {
 		log.Warn("Error parsing data: ", err)
@@ -65,7 +69,7 @@ func ExtractVersion(ver string) *version {
 // if ver1 < ver2   return -1
 // if ver1 == ver2  return 0
 // if ver1 > ver2   return 1
-func CompareVersion(ver1 *version, ver2 *version) (result int) {
+func CompareVersion(ver1 *Version, ver2 *Version) (result int) {
 	result = 0
 	if result = compare(ver1.Major, ver2.Major); result == 0 {
 		if result = compare(ver1.Minor, ver2.Minor); result == 0 {
@@ -73,6 +77,14 @@ func CompareVersion(ver1 *version, ver2 *version) (result int) {
 		}
 	}
 	return
+}
+
+func GetMaxVersion(ver1 *Version, ver2 *Version) *Version {
+	resultCompare := CompareVersion(ver1, ver2)
+	if resultCompare == 1 {
+		return ver1
+	}
+	return ver2
 }
 
 func compare(x int, y int) int {
