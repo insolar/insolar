@@ -307,7 +307,7 @@ func getRootMemberPubKey(file string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't find absolute path for root keys")
 	}
-	data, err := ioutil.ReadFile(fileWithPath)
+	data, err := ioutil.ReadFile(filepath.Clean(fileWithPath))
 	if err != nil {
 		return "", errors.New("couldn't read rootkeys file")
 	}
