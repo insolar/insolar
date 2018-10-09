@@ -20,7 +20,6 @@ package logicrunner
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
@@ -38,7 +37,6 @@ func HashInterface(in interface{}) []byte {
 }
 
 func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecord) {
-	log.Warnf("objcasere LR=%p", lr)
 	lr.caseBindMutex.Lock()
 	lr.caseBind.Records[ref] = append(lr.caseBind.Records[ref], cr)
 	lr.caseBindMutex.Unlock()

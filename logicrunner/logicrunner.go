@@ -327,7 +327,6 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	log.Warnf("SET PULSE ON LR=%p", lr)
 	lr.caseBindMutex.Lock()
 	lr.caseBind = core.CaseBind{
 		Pulse:   pulse,
