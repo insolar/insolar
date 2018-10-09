@@ -15,13 +15,3 @@
  */
 
 package nodedomain
-
-import (
-	"testing"
-)
-
-func TestNewNodeDomain(t *testing.T) {
-	d := [3]interface{}{}
-	d[0] = nil
-	_ = d[0].(error)
-}

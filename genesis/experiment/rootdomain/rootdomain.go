@@ -60,8 +60,8 @@ func makeSeed() []byte {
 	return seed
 }
 
-// IsAuthorized checks is node authorized
-func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
+// Authorize checks is node authorized
+func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
 	privateKey, err := ecdsa_helper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)

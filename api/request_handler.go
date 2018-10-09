@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
@@ -49,13 +48,17 @@ func extractStringResponse(data []byte) (*string, error) {
 func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	var pubKey string
 	var role core.NodeRole
-	var fErr foundation.Error
-	_, err := core.UnMarshalResponse(data, []interface{}{pubKey, role, fErr})
+	var fErr string
+	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
 	if err != nil {
 		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
 	}
 
-	return pubKey, role, errors.Wrap(&fErr, "[ extractAuthorizeResponse ]")
+	if len(fErr) != 0 {
+		return "", core.RoleUnknown, errors.New("[ extractAuthorizeResponse ] " + fErr)
+	}
+
+	return pubKey, role, nil
 }
 
 // RequestHandler encapsulate processing of request

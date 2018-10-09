@@ -20,7 +20,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
@@ -82,13 +81,17 @@ func (nc *NetworkCoordinator) sendRequest(ref core.RecordRef, method string, arg
 func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	var pubKey string
 	var role core.NodeRole
-	var fErr foundation.Error
+	var fErr string
 	_, err := core.UnMarshalResponse(data, []interface{}{pubKey, role, fErr})
 	if err != nil {
 		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
 	}
 
-	return pubKey, role, errors.Wrap(&fErr, "[ extractAuthorizeResponse ]")
+	if len(fErr) != 0 {
+		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ] "+fErr)
+	}
+
+	return pubKey, role, nil
 }
 
 func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
@@ -99,7 +102,7 @@ func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, sig
 
 	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ]")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ Auth	orize ]")
 	}
 
 	return pubKey, role, nil
