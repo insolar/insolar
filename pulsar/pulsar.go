@@ -27,10 +27,9 @@ import (
 	"sync"
 	"time"
 
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -152,6 +151,7 @@ func NewPulsar(
 	gob.Register(EntropySignaturePayload{})
 	gob.Register(EntropyPayload{})
 	gob.Register(VectorPayload{})
+	gob.Register(SenderConfirmationPayload{})
 	gob.Register(PulsePayload{})
 
 	return pulsar, nil
@@ -228,6 +228,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
 		return errors.New("signature check failed")
 	}
 
+	log.Infof("pulsar - %v connected to - %v", currentPulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
 	return nil
 }
 
@@ -260,7 +261,7 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars() {
 
 // StartConsensusProcess starts process of calculating consensus between pulsars
 func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error {
-	log.Debugf("[StartConsensusProcess] pulse number - %v", pulseNumber)
+	log.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
 	currentPulsar.StartProcessLock.Lock()
 
 	if pulseNumber == currentPulsar.ProcessingPulseNumber {
@@ -272,7 +273,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.stateSwitcher.getState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
 		return fmt.Errorf("wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.stateSwitcher.getState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
 	}
-	currentPulsar.stateSwitcher.setState(waitingForStart)
+	currentPulsar.stateSwitcher.setState(generateEntropy)
 
 	err := currentPulsar.generateNewEntropyAndSign()
 	if err != nil {
@@ -315,7 +316,9 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
 			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
+			continue
 		}
+		log.Infof("Sign of entropy sent to %v", neighbour.ConnectionAddress)
 	}
 }
 
@@ -468,6 +471,7 @@ func (currentPulsar *Pulsar) waitForEntropySigns() {
 			if currentPulsar.isStandalone() || currentPulsar.areAllNumbersFetched() {
 				ticker.Stop()
 				currentPulsar.stateSwitcher.switchToState(sendingEntropy, nil)
+				return
 			}
 
 			if time.Now().After(currentTimeOut) {
@@ -496,10 +500,13 @@ func (currentPulsar *Pulsar) receiveVectors() {
 				ticker.Stop()
 				return
 			}
+
 			if currentPulsar.isStandalone() || currentPulsar.areAllVectorsFetched() {
 				ticker.Stop()
 				currentPulsar.stateSwitcher.switchToState(verifying, nil)
+				return
 			}
+
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
 				if len(currentPulsar.BftGrid) >= currentPulsar.getConsensusNumber() {
@@ -607,6 +614,7 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
 
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
+		//here confirmation myself
 		currentPulsar.stateSwitcher.switchToState(waitingForPulseSigns, nil)
 	} else {
 		currentPulsar.stateSwitcher.switchToState(sendingPulseSign, nil)

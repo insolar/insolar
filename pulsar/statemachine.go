@@ -28,6 +28,7 @@ type State int
 const (
 	failed State = iota
 	waitingForStart
+	generateEntropy
 	waitingForEntropySigns
 	sendingEntropy
 	waitingForEntropy

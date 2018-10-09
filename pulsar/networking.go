@@ -110,7 +110,7 @@ func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
 }
 
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
-	log.Debug("[MakeHandshake]")
+	log.Infof("Request for handshake from from - %v", handler.pulsar.Config.MainListenerAddress)
 	neighbour, err := handler.pulsar.fetchNeighbour(request.PublicKey)
 	if err != nil {
 		log.Warn("Message from unknown host %v", request.PublicKey)
@@ -148,12 +148,12 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	if err != nil {
 		return err
 	}
-
+	log.Infof("pulsar - %v connected to - %v", handler.pulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
 	return nil
 }
 
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
-	log.Debug("[ReceiveSignatureForEntropy]")
+	log.Infof("Receive sign of entropy from %v", handler.pulsar.Config.MainListenerAddress)
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
@@ -168,7 +168,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
 	//}
 
-	if handler.pulsar.stateSwitcher.getState() < waitingForEntropySigns {
+	if handler.pulsar.stateSwitcher.getState() < generateEntropy {
 		err = handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
 		if err != nil {
 			handler.pulsar.stateSwitcher.switchToState(failed, err)
@@ -182,7 +182,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 }
 
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
-	log.Debugf("[ReceiveEntropy] - %v", handler.pulsar.Config.MainListenerAddress)
+	log.Infof("Receive entropy from %v", handler.pulsar.Config.MainListenerAddress)
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
@@ -211,7 +211,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 }
 
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
-	log.Debug("[ReceiveVector]")
+	log.Infof("Receive vector of entropy from %v", handler.pulsar.Config.MainListenerAddress)
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {

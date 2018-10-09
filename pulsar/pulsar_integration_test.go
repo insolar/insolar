@@ -206,9 +206,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 }
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
-	t.Skip()
-	os.MkdirAll("bootstrapLedger", os.ModePerm)
-	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "bootstrapLedger")
+	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "")
 	bootstrapNodeConfig := configuration.NewConfiguration()
 	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig.Host, bootstrapNodeConfig.Node)
 	assert.NoError(t, err)
@@ -216,8 +214,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 	bootstrapAddress := bootstrapNodeNetwork.GetAddress()
 
-	os.MkdirAll("usualLedger", os.ModePerm)
-	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, "usualLedger")
+	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, "")
 	usualNodeConfig := configuration.NewConfiguration()
 	usualNodeConfig.Host.BootstrapHosts = []string{bootstrapAddress}
 	usualNodeNetwork, err := servicenetwork.NewServiceNetwork(usualNodeConfig.Host, usualNodeConfig.Node)
@@ -234,7 +231,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	firstStateSwitcher := &StateSwitcherImpl{}
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
-		MainListenerAddress: ":1640",
+		MainListenerAddress: ":1140",
 		PrivateKey:          parsedPrivKeyFirst,
 		BootstrapNodes:      []string{bootstrapAddress},
 		BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
@@ -258,12 +255,12 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		BootstrapNodes:      []string{bootstrapAddress},
 		BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
 		Neighbours: []configuration.PulsarNodeAddress{
-			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: firstPubKey},
+			{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: firstPubKey},
 		}},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutil.MockEntropyGenerator{},
-		firstStateSwitcher,
+		secondStateSwitcher,
 		net.Listen,
 	)
 	secondStateSwitcher.setState(waitingForStart)
@@ -277,7 +274,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	time.Sleep(100 * time.Second)
+	time.Sleep(200 * time.Millisecond)
 	usualNodeNetwork.Stop()
 	bootstrapNodeNetwork.Stop()
 	bootstrapLedgerCleaner()
