@@ -128,3 +128,9 @@ type ResponseCheckSignedNonce struct {
 type ResponseActiveNodes struct {
 	ActiveNodes []*core.ActiveNode
 }
+
+// ResponseDisconnect id data to answer to disconnected node.
+type ResponseDisconnect struct {
+	Disconnected bool
+	Error        error
+}

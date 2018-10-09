@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
@@ -59,6 +60,7 @@ type DHT struct {
 	infinityBootstrap bool
 	nodeID            core.RecordRef
 	activeNodeKeeper  nodekeeper.NodeKeeper
+	majorityRule      int
 }
 
 // AuthInfo collects some information about authentication.
@@ -127,6 +129,7 @@ func NewDHT(
 	timeout int,
 	infbootstrap bool,
 	nodeID core.RecordRef,
+	majorityRole int,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -148,6 +151,7 @@ func NewDHT(
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
 		activeNodeKeeper:  nodekeeper.NewNodeKeeper(time.Minute),
+		majorityRule:      majorityRole,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -941,8 +945,28 @@ func (dht *DHT) GetActiveNodes() error {
 }
 
 // AddActiveNodes adds an active nodes slice.
-func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) {
-	dht.activeNodeKeeper.AddActiveNodes(activeNodes)
+func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
+	err := dht.checkMajorityRule(activeNodes)
+	if err != nil {
+		return err
+	}
+	if len(dht.activeNodeKeeper.GetActiveNodes()) > 0 {
+		currentHash, err := nodekeeper.CalculateHash(dht.activeNodeKeeper.GetActiveNodes())
+		if err != nil {
+			return err
+		}
+		newHash, err := nodekeeper.CalculateHash(activeNodes)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(currentHash, newHash) {
+			// TODO: disconnect from all or what?
+			return errors.New("two or more active node lists are different but majority check was passed")
+		}
+	} else {
+		dht.activeNodeKeeper.AddActiveNodes(activeNodes)
+	}
+	return errors.New("failed to add active node. unknown error")
 }
 
 // HtFromCtx returns a routing hashtable known by ctx.
@@ -1088,6 +1112,27 @@ func (dht *DHT) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time
 	seconds := day.Nanoseconds() * int64(math.Exp(float64(routing.MaxContactsInBucket/score)))
 	dur := time.Second * time.Duration(seconds)
 	return time.Now().Add(dur)
+}
+
+func (dht *DHT) checkMajorityRule(nodes []*core.ActiveNode) error {
+	if len(nodes) < dht.majorityRule {
+		return errors.New("failed majority role check")
+	}
+
+	count := 0
+	for _, activeNode := range nodes {
+		for _, bootstrapNode := range dht.options.BootstrapHosts {
+			if strings.EqualFold(bootstrapNode.ID.String(), nodenetwork.ResolveHostID(activeNode.NodeID)) {
+				count++
+			}
+		}
+	}
+
+	if count < dht.majorityRule {
+		return errors.New("discovery nodes count < majority number")
+	}
+
+	return nil
 }
 
 // StoreRetrieve should return the local key/value if it exists.
