@@ -12,7 +12,7 @@ INSGORUND_RPS_PORT=18182
 
 stop_listening()
 {
-    ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 18182 8090"
+    ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 8090 8080"
     echo "Stop listening..."
     for port in $ports
     do
