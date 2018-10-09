@@ -17,8 +17,6 @@
 package pulsemanager
 
 import (
-	"fmt"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/storage"
@@ -47,11 +45,6 @@ func (m *PulseManager) Current() (*core.Pulse, error) {
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(pulse core.Pulse) error {
-	current := m.db.GetCurrentPulse()
-	if pulse.PulseNumber-current != 1 {
-		panic(fmt.Sprintf("Wrong pulse, got %v, but current is %v\n", pulse, current))
-	}
-
 	err := m.db.SetEntropy(pulse.PulseNumber, pulse.Entropy)
 	if err != nil {
 		return err
@@ -62,10 +55,8 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	}
 
 	_ = drop // TODO: send drop to the validators
-
 	m.db.SetCurrentPulse(pulse.PulseNumber)
-	m.lr.OnPulse(pulse)
-	return nil
+	return m.lr.OnPulse(pulse)
 }
 
 // NewPulseManager creates PulseManager instance.

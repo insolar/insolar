@@ -49,7 +49,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
-var parallel = true
+var parallel = false
 
 func TestMain(m *testing.M) {
 	var err error
@@ -71,7 +71,6 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	rundCleaner, err := testutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
 	assert.NoError(t, err)
 
-	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		RPCListen:   lrSock,
 		RPCProtocol: "unix",
@@ -82,12 +81,19 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	})
 	assert.NoError(t, err, "Initialize runner")
 
+	l, cleaner := ledgertestutil.TmpLedger(t, lr, "")
+
 	assert.NoError(t, lr.Start(core.Components{
 		Ledger:     l,
 		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
-
+	log.Warn("SETTING PULSE")
+	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 100, &pulsar.StandardEntropyGenerator{}))
+	assert.NoError(t, err, "pulse set")
+	if err != nil {
+		t.Fatal("pulse set died, ", err)
+		panic(42)
+	}
 	am := l.GetArtifactManager()
 	cb := testutil.NewContractBuilder(am, icc)
 
@@ -102,7 +108,7 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
 	rlr := lr.(*LogicRunner)
 	for ref, cr := range rlr.caseBind.Records {
-		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
+		//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
 		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
 		assert.NoError(t, err, "validation")
 		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
