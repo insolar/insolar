@@ -20,18 +20,16 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-type msg struct {
-	Ref    string
-	Method string
-	Params []interface{}
-	Seed   []byte
-}
-
-func Serialize(ref string, method string, params []interface{}, seed []byte) ([]byte, error) {
-	message := msg{ref, method, params, seed}
+func Serialize(ref string, impl string, method string, params []byte, seed []byte) ([]byte, error) {
 	var serialized []byte
 	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&serialized, ch).Encode(message)
+	err := codec.NewEncoderBytes(&serialized, ch).Encode([]interface{}{
+		ref,
+		impl,
+		method,
+		params,
+		seed,
+	})
 	if err != nil {
 		return nil, err
 	}
