@@ -43,8 +43,8 @@ func newActiveNode(ref byte, pulse int) *core.ActiveNode {
 }
 
 func TestNodekeeper_calculateNodeHash(t *testing.T) {
-	hash1, _ := calculateHash(nil)
-	hash2, _ := calculateHash([]*core.ActiveNode{})
+	hash1, _ := CalculateHash(nil)
+	hash2, _ := CalculateHash([]*core.ActiveNode{})
 
 	assert.Equal(t, nullHash, hex.EncodeToString(hash1))
 	assert.Equal(t, hash1, hash2)
@@ -55,18 +55,18 @@ func TestNodekeeper_calculateNodeHash(t *testing.T) {
 	activeNode1Slice := []*core.ActiveNode{activeNode1}
 	activeNode2Slice := []*core.ActiveNode{activeNode2}
 
-	hash1, _ = calculateHash(activeNode1Slice)
-	hash2, _ = calculateHash(activeNode2Slice)
+	hash1, _ = CalculateHash(activeNode1Slice)
+	hash2, _ = CalculateHash(activeNode2Slice)
 	assert.Equal(t, hash1, hash2)
 	activeNode2.NodeID = core.RecordRef{1}
-	hash2, _ = calculateHash(activeNode2Slice)
+	hash2, _ = CalculateHash(activeNode2Slice)
 	assert.NotEqual(t, hash1, hash2)
 
 	// nodes order in slice should not affect hash calculating
 	slice1 := []*core.ActiveNode{activeNode1, activeNode2}
 	slice2 := []*core.ActiveNode{activeNode2, activeNode1}
-	hash1, _ = calculateHash(slice1)
-	hash2, _ = calculateHash(slice2)
+	hash1, _ = CalculateHash(slice1)
+	hash2, _ = CalculateHash(slice2)
 	assert.Equal(t, hash1, hash2)
 }
 
