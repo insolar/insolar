@@ -16,7 +16,7 @@ func (mock *MockPulsarStorage) GetLastPulse() (*core.Pulse, error) {
 }
 
 func (*MockPulsarStorage) SetLastPulse(pulse *core.Pulse) error {
-	panic("implement me")
+	return nil
 }
 
 func (*MockPulsarStorage) SavePulse(pulse *core.Pulse) error {

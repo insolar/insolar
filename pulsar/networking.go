@@ -18,7 +18,6 @@ package pulsar
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -111,11 +110,18 @@ func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
 }
 
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
-	ok, neighbour, err := handler.isRequestValid(request)
-	if !ok {
-		if err != nil {
-			log.Error(err)
-		}
+	log.Debug("[MakeHandshake]")
+	neighbour, err := handler.pulsar.fetchNeighbour(request.PublicKey)
+	if err != nil {
+		log.Warn("Message from unknown host %v", request.PublicKey)
+		return err
+	}
+
+	result, err := checkPayloadSignature(request)
+	if err != nil {
+		return err
+	}
+	if !result {
 		return err
 	}
 
@@ -131,25 +137,23 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	}
 	*response = message
 
-	// Double check lock
-	if !neighbour.OutgoingClient.IsInitialised() {
-		neighbour.OutgoingClient.Lock()
+	neighbour.OutgoingClient.Lock()
 
-		if neighbour.OutgoingClient.IsInitialised() {
-			neighbour.OutgoingClient.Unlock()
-			return nil
-		}
-		err = neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
+	if neighbour.OutgoingClient.IsInitialised() {
 		neighbour.OutgoingClient.Unlock()
-		if err != nil {
-			return err
-		}
+		return nil
+	}
+	err = neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
+	neighbour.OutgoingClient.Unlock()
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
+	log.Debug("[ReceiveSignatureForEntropy]")
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
@@ -160,11 +164,11 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 
 	requestBody := request.Body.(EntropySignaturePayload)
 	// this if should pe replaced with another realisation.INS-528
-	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
-	}
+	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//}
 
-	if handler.pulsar.stateSwitcher.getState() == waitingForStart {
+	if handler.pulsar.stateSwitcher.getState() < waitingForEntropySigns {
 		err = handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
 		if err != nil {
 			handler.pulsar.stateSwitcher.switchToState(failed, err)
@@ -178,6 +182,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 }
 
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
+	log.Debugf("[ReceiveEntropy] - %v", handler.pulsar.Config.MainListenerAddress)
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
@@ -188,14 +193,14 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 
 	requestBody := request.Body.(EntropyPayload)
 	// this if should pe replaced with another realisation.INS-528
-	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
-	}
+	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//}
 	if btfCell, ok := handler.pulsar.OwnedBftRow[request.PublicKey]; ok {
 		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
-		if err != nil || isVerified {
+		if err != nil || !isVerified {
 			handler.pulsar.OwnedBftRow[request.PublicKey] = nil
-			return errors.New("You are banned")
+			return errors.New("signature and entropy aren't matched")
 		}
 
 		btfCell.Entropy = requestBody.Entropy
@@ -206,6 +211,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 }
 
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
+	log.Debug("[ReceiveVector]")
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
@@ -216,15 +222,16 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 
 	requestBody := request.Body.(VectorPayload)
 	// this if should pe replaced with another realisation.INS-528
-	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
-	}
+	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//}
 	handler.pulsar.BftGrid[request.PublicKey] = requestBody.Vector
 
 	return nil
 }
 
 func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
+	log.Debug("[ReceiveVector]")
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
@@ -235,9 +242,9 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 
 	requestBody := request.Body.(SenderConfirmationPayload)
 	// this if should pe replaced with another realisation.INS-528
-	if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
-	}
+	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//}
 
 	isVerified, err := checkSignature(requestBody.ChosenPublicKey, request.PublicKey, requestBody.Signature)
 	if !isVerified || err != nil {
@@ -253,6 +260,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 }
 
 func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error {
+	log.Debug("[ReceivePulse]")
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
@@ -263,9 +271,9 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 
 	requestBody := request.Body.(PulsePayload)
 	// this if should pe replaced with another realisation.INS-528
-	if requestBody.Pulse.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
-	}
+	//if requestBody.Pulse.PulseNumber != handler.pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//}
 
 	err = handler.pulsar.Storage.SetLastPulse(&requestBody.Pulse)
 	if err != nil {

@@ -365,7 +365,11 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 	assert.NoError(t, err)
 	mockSwitcher := MockStateSwitcher{}
 	mockSwitcher.On("switchToState", waitingForEntropySigns, nil)
-	pulsar := &Pulsar{EntropyGenerator: pulsartestutil.MockEntropyGenerator{}, PrivateKey: mainPrivateKey}
+	pulsar := &Pulsar{
+		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
+		PrivateKey:       mainPrivateKey,
+		OwnedBftRow:      map[string]*bftCell{},
+	}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(120)
 	pulsar.LastPulse = &core.Pulse{PulseNumber: core.PulseNumber(2)}
 	pulsar.stateSwitcher = &mockSwitcher
@@ -459,9 +463,6 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 	mockClientWrapper.AssertNumberOfCalls(t, "Go", 2)
 	assert.Equal(t, 0, len(done))
 	assert.Contains(t, resultLog, "finished with error - failed")
-	assert.Equal(t, 1, len(pulsar.OwnedBftRow))
-	assert.Equal(t, pulsar.OwnedBftRow[pulsar.PublicKeyRaw].Entropy, pulsar.GeneratedEntropy)
-	assert.Equal(t, pulsar.OwnedBftRow[pulsar.PublicKeyRaw].Sign, pulsar.GeneratedEntropySign)
 }
 
 func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
@@ -539,7 +540,12 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 	assert.NoError(t, err)
 
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
-	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, OwnedBftRow: map[string]*bftCell{}}
+	pulsar := Pulsar{
+		Neighbours:  map[string]*Neighbour{},
+		PrivateKey:  mainPrivateKey,
+		OwnedBftRow: map[string]*bftCell{},
+		BftGrid:     map[string]map[string]*bftCell{},
+	}
 
 	pulsar.GeneratedEntropy = pulsartestutil.MockEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
@@ -645,10 +651,12 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 	mockSwitcher.AssertCalled(t, "switchToState", failed, mock.Anything)
 }
 
-func generatePrivateAndConvertPublic(t *testing.T) (privateKey *ecdsa.PrivateKey, pubKey string) {
+func generatePrivateAndConvertPublic(t *testing.T) (privateKey *ecdsa.PrivateKey, privateKeyPem string, pubKey string) {
 	privateKey, err := ecdsa_helper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	pubKey, err = ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
+	assert.NoError(t, err)
+	privateKeyPem, err = ecdsa_helper.ExportPrivateKey(privateKey)
 	assert.NoError(t, err)
 
 	return
@@ -666,9 +674,9 @@ func TestPulsar_verify_Success(t *testing.T) {
 	mockSwitcher.On("switchToState", waitingForPulseSigns, nil)
 	mockSwitcher.On("switchToState", sendingPulseSign, nil)
 
-	privateKey, currentPulsarPublicKey := generatePrivateAndConvertPublic(t)
-	privateKeySecond, publicKeySecond := generatePrivateAndConvertPublic(t)
-	privateKeyThird, publicKeyThird := generatePrivateAndConvertPublic(t)
+	privateKey, _, currentPulsarPublicKey := generatePrivateAndConvertPublic(t)
+	privateKeySecond, _, publicKeySecond := generatePrivateAndConvertPublic(t)
+	privateKeyThird, _, publicKeyThird := generatePrivateAndConvertPublic(t)
 
 	clientMock := pulsartestutil.MockRPCClientWrapper{}
 	clientMock.On("IsInitialised").Return(true)
@@ -689,9 +697,11 @@ func TestPulsar_verify_Success(t *testing.T) {
 	secondEntropy, secondSign := prepareEntropy(t, privateKeySecond)
 	thirdEntropy, thirdSign := prepareEntropy(t, privateKeyThird)
 
-	pulsar.OwnedBftRow[currentPulsarPublicKey] = &bftCell{Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true}
-	pulsar.OwnedBftRow[publicKeySecond] = &bftCell{Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true}
-	pulsar.OwnedBftRow[publicKeyThird] = &bftCell{Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true}
+	pulsar.BftGrid[currentPulsarPublicKey] = map[string]*bftCell{
+		currentPulsarPublicKey: {Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true},
+		publicKeySecond:        {Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true},
+		publicKeyThird:         {Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true},
+	}
 
 	pulsar.BftGrid[publicKeySecond] = map[string]*bftCell{
 		currentPulsarPublicKey: {Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true},

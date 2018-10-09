@@ -151,6 +151,7 @@ func NewPulsar(
 	gob.Register(GetLastPulsePayload{})
 	gob.Register(EntropySignaturePayload{})
 	gob.Register(EntropyPayload{})
+	gob.Register(VectorPayload{})
 	gob.Register(PulsePayload{})
 
 	return pulsar, nil
@@ -271,12 +272,19 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.stateSwitcher.getState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
 		return fmt.Errorf("wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.stateSwitcher.getState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
 	}
+	currentPulsar.stateSwitcher.setState(waitingForStart)
 
 	err := currentPulsar.generateNewEntropyAndSign()
 	if err != nil {
 		currentPulsar.StartProcessLock.Unlock()
 		currentPulsar.stateSwitcher.switchToState(failed, err)
 		return err
+	}
+
+	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &bftCell{
+		Entropy:           currentPulsar.GeneratedEntropy,
+		IsEntropyReceived: true,
+		Sign:              currentPulsar.GeneratedEntropySign,
 	}
 
 	currentPulsar.ProcessingPulseNumber = pulseNumber
@@ -316,10 +324,6 @@ func (currentPulsar *Pulsar) broadcastVector() {
 	if currentPulsar.isStateFailed() {
 		return
 	}
-
-	// adding our own number before sending vector
-	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &bftCell{Entropy: currentPulsar.GeneratedEntropy, IsEntropyReceived: true, Sign: currentPulsar.GeneratedEntropySign}
-
 	payload, err := currentPulsar.preparePayload(VectorPayload{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
 		Vector:      currentPulsar.OwnedBftRow})
@@ -377,6 +381,8 @@ func (currentPulsar *Pulsar) sendVector() {
 
 	currentPulsar.broadcastVector()
 
+	currentPulsar.BftGrid[currentPulsar.PublicKeyRaw] = currentPulsar.OwnedBftRow
+	log.Infof("len of grid %v", len(currentPulsar.BftGrid))
 	currentPulsar.stateSwitcher.switchToState(waitingForVectors, nil)
 }
 
@@ -432,9 +438,13 @@ func (currentPulsar *Pulsar) waitForEntropy() {
 				return
 			}
 
-			if time.Now().After(timeout) && fetchedEntropyCount() >= currentPulsar.getConsensusNumber() {
+			if time.Now().After(timeout) {
 				ticker.Stop()
-				currentPulsar.stateSwitcher.switchToState(sendingVector, nil)
+				if fetchedEntropyCount() >= currentPulsar.getConsensusNumber() {
+					currentPulsar.stateSwitcher.switchToState(sendingVector, nil)
+				} else {
+					currentPulsar.stateSwitcher.switchToState(failed, errors.New("not enough entropy for continuing process of consensus"))
+				}
 			}
 		}
 	}()
@@ -455,9 +465,18 @@ func (currentPulsar *Pulsar) waitForEntropySigns() {
 				return
 			}
 
-			if currentPulsar.isStandalone() || currentPulsar.areAllNumbersFetched() || time.Now().After(currentTimeOut) {
+			if currentPulsar.isStandalone() || currentPulsar.areAllNumbersFetched() {
 				ticker.Stop()
 				currentPulsar.stateSwitcher.switchToState(sendingEntropy, nil)
+			}
+
+			if time.Now().After(currentTimeOut) {
+				ticker.Stop()
+				if len(currentPulsar.OwnedBftRow) >= currentPulsar.getConsensusNumber() {
+					currentPulsar.stateSwitcher.switchToState(sendingEntropy, nil)
+				} else {
+					currentPulsar.stateSwitcher.switchToState(failed, errors.New("not enough entropy signs for continuing process of consensus"))
+				}
 			}
 		}
 	}()
@@ -477,9 +496,17 @@ func (currentPulsar *Pulsar) receiveVectors() {
 				ticker.Stop()
 				return
 			}
-			if currentPulsar.isStandalone() || currentPulsar.areAllVectorsFetched() || time.Now().After(currentTimeOut) {
+			if currentPulsar.isStandalone() || currentPulsar.areAllVectorsFetched() {
 				ticker.Stop()
 				currentPulsar.stateSwitcher.switchToState(verifying, nil)
+			}
+			if time.Now().After(currentTimeOut) {
+				ticker.Stop()
+				if len(currentPulsar.BftGrid) >= currentPulsar.getConsensusNumber() {
+					currentPulsar.stateSwitcher.switchToState(verifying, nil)
+				} else {
+					currentPulsar.stateSwitcher.switchToState(failed, errors.New("not enough vectors for continuing process of consensus"))
+				}
 			}
 		}
 	}()
@@ -500,7 +527,7 @@ func (currentPulsar *Pulsar) checkStateBeforeVerifying() (minConsensusNumber int
 	}
 
 	minConsensusNumber = int(math.Ceil((float64(len(currentPulsar.Neighbours)) * 2.0) / 3.0))
-	if len(currentPulsar.OwnedBftRow) < minConsensusNumber {
+	if len(currentPulsar.BftGrid) < minConsensusNumber {
 		currentPulsar.stateSwitcher.switchToState(failed, errors.New("not enough peers for consensus"))
 		success = false
 		return
@@ -512,7 +539,6 @@ func (currentPulsar *Pulsar) checkStateBeforeVerifying() (minConsensusNumber int
 
 func (currentPulsar *Pulsar) verify() {
 	log.Debug("[verify]")
-	currentPulsar.BftGrid[currentPulsar.PublicKeyRaw] = currentPulsar.OwnedBftRow
 	minConsensusNumber, ok := currentPulsar.checkStateBeforeVerifying()
 	if !ok {
 		return
@@ -545,7 +571,7 @@ func (currentPulsar *Pulsar) verify() {
 		maxConfirmationsForEntropy := int(0)
 		var chosenEntropy core.Entropy
 		for key, value := range currentColumnStat {
-			if value > maxConfirmationsForEntropy {
+			if value > maxConfirmationsForEntropy && key != "nil" {
 				maxConfirmationsForEntropy = value
 				copy(chosenEntropy[:], []byte(key)[:core.EntropySize])
 			}
