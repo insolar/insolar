@@ -723,14 +723,14 @@ type Caller struct {
 	t      *testing.T
 }
 
-func (s *Caller) SignedCall(ref string, impl string, method string, params []interface{}, resp []interface{}) {
+func (s *Caller) SignedCall(ref string, delegate string, method string, params []interface{}, resp []interface{}) {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	assert.NoError(s.t, err)
 
 	buf := testutil.CBORMarshal(s.t, params)
 
-	serialized, err := signer.Serialize(ref, impl, method, buf, seed)
+	serialized, err := signer.Serialize(ref, delegate, method, buf, seed)
 	assert.NoError(s.t, err)
 
 	sign, err := cryptoHelper.Sign(serialized, s.key)
@@ -738,7 +738,7 @@ func (s *Caller) SignedCall(ref string, impl string, method string, params []int
 	res, err := s.lr.Execute(&message.CallMethod{
 		ObjectRef: core.NewRefFromBase58(s.member),
 		Method:    "AuthorizedCall",
-		Arguments: testutil.CBORMarshal(s.t, []interface{}{ref, impl, method, buf, seed, sign}),
+		Arguments: testutil.CBORMarshal(s.t, []interface{}{ref, delegate, method, buf, seed, sign}),
 	})
 	assert.NoError(s.t, err, "contract call")
 	result := testutil.CBORUnMarshal(s.t, res.(*reply.CallMethod).Result).([]interface{})

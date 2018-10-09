@@ -44,8 +44,8 @@ func New(name string, key string) *Member {
 	}
 }
 
-func (m *Member) AuthorizedCall(ref string, class string, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
-	serialized, err := signer.Serialize(ref, class, method, params, seed)
+func (m *Member) AuthorizedCall(ref string, delegate string, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
+	serialized, err := signer.Serialize(ref, delegate, method, params, seed)
 	if err != nil {
 		return nil, &foundation.Error{S: err.Error()}
 	}
@@ -58,8 +58,8 @@ func (m *Member) AuthorizedCall(ref string, class string, method string, params 
 	}
 
 	var contract core.RecordRef
-	if class != "" {
-		contract, err = foundation.GetImplementationFor(core.NewRefFromBase58(ref), core.NewRefFromBase58(class))
+	if delegate != "" {
+		contract, err = foundation.GetImplementationFor(core.NewRefFromBase58(ref), core.NewRefFromBase58(delegate))
 		if err != nil {
 			return nil, &foundation.Error{S: err.Error()}
 		}
