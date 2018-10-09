@@ -55,7 +55,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		return nil, errors.Wrap(err, "Failed to ")
 	}
 
-	encodedOriginID := nn.ResolveHostID(nn.GetID())
+	encodedOriginID := nodenetwork.ResolveHostID(nn.GetID())
 	originID := id.FromBase58(encodedOriginID)
 	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
@@ -78,11 +78,12 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		cfg.InfinityBootstrap,
 		nn.GetID(),
 		keeper,
+		5,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")
 	}
-	networkConsensus, err := consensus.NewInsolarConsensus(keeper, network, nn)
+	networkConsensus, err := consensus.NewInsolarConsensus(keeper, network)
 	if err != nil {
 		// TODO: return error when consensus is implemented
 		log.Warn("Consensus is not implemented!")

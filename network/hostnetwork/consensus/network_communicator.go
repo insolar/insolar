@@ -35,7 +35,6 @@ type communicatorReceiver struct {
 
 type communicatorSender struct {
 	handler hosthandler.HostHandler
-	network *nodenetwork.NodeNetwork
 }
 
 func (c *communicatorReceiver) ExchangeData(number core.PulseNumber, ctx context.Context,
@@ -99,7 +98,7 @@ func (c *communicatorSender) ExchangeHash(number core.PulseNumber, ctx context.C
 func (c *communicatorSender) getSenderAndReceiver(ctx context.Context, p consensus.Participant) (*host.Host, *host.Host, error) {
 	ht := c.handler.HtFromCtx(ctx)
 	sender := ht.Origin
-	receiverID := c.network.ResolveHostID(p.GetActiveNode().NodeID)
+	receiverID := nodenetwork.ResolveHostID(p.GetActiveNode().NodeID)
 	receiver, exists, err := c.handler.FindHost(ctx, receiverID)
 	if err != nil || !exists {
 		return nil, nil, errors.Wrap(err, "Error resolving receiver HostID -> Address")

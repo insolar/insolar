@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/nodekeeper"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
 
@@ -111,10 +110,9 @@ func (ic *NetworkConsensus) IsPartOfConsensus() bool {
 }
 
 // NewInsolarConsensus creates new object to handle all consensus events
-func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler,
-	network *nodenetwork.NodeNetwork) (consensus.InsolarConsensus, error) {
+func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.InsolarConsensus, error) {
 
-	communicatorSnd := &communicatorSender{handler, network}
+	communicatorSnd := &communicatorSender{handler}
 	communicatorRcv := &communicatorReceiver{keeper}
 	consensus, err := consensus.NewConsensus(&dataProviderWrapper{keeper}, communicatorSnd)
 	if err != nil {

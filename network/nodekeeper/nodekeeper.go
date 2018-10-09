@@ -154,7 +154,7 @@ func (nk *nodekeeper) GetUnsyncHash() ([]byte, int, error) {
 		return nk.cacheUnsyncCalc, nk.cacheUnsyncSize, nil
 	}
 	unsync := nk.collectUnsync()
-	hash, err := calculateHash(unsync)
+	hash, err := CalculateHash(unsync)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -381,7 +381,7 @@ func calculateNodeHash(node *core.ActiveNode) []byte {
 	return hash.Sum(nil)
 }
 
-func calculateHash(list []*core.ActiveNode) (result []byte, err error) {
+func CalculateHash(list []*core.ActiveNode) (result []byte, err error) {
 	sort.Slice(list[:], func(i, j int) bool {
 		return bytes.Compare(list[i].NodeID[:], list[j].NodeID[:]) < 0
 	})

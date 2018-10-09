@@ -92,8 +92,8 @@ type HostHandler interface {
 	Disconnect()
 	Listen() error
 	ObtainIP() error
-	GetActiveNodes() error
 	Bootstrap() error
+	GetActiveNodes() error
 	GetHostsFromBootstrap()
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
@@ -110,7 +110,6 @@ type HostHandler interface {
 	RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error)
 
 	AddPossibleProxyID(id string)
-	AddActiveNodes(activeNode []*core.ActiveNode)
 	AddPossibleRelayID(id string)
 	AddProxyHost(targetID string)
 	AddSubnetID(ip, targetID string)
@@ -118,6 +117,7 @@ type HostHandler interface {
 	AddRelayClient(host *host.Host) error
 	AddReceivedKey(target string, key []byte)
 	AddHost(ctx Context, host *routing.RouteHost)
+	AddActiveNodes(activeNode []*core.ActiveNode) error
 
 	RemoveAuthHost(key string)
 	RemoveProxyHost(targetID string)
@@ -131,6 +131,7 @@ type HostHandler interface {
 
 	GetProxyHostsCount() int
 	GetOuterHostsCount() int
+	GetNodeID() core.RecordRef
 	GetHighKnownHostID() string
 	GetSelfKnownOuterHosts() int
 	GetOriginHost() *host.Origin
@@ -140,6 +141,5 @@ type HostHandler interface {
 	KeyIsReceived(targetID string) ([]byte, bool)
 	GetNetworkCommonFacade() NetworkCommonFacade
 	GetExpirationTime(ctx Context, key []byte) time.Time
-	GetNodeID() core.RecordRef
 	GetActiveNodesList() []*core.ActiveNode
 }

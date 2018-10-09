@@ -140,3 +140,9 @@ type ResponseExchangeUnsyncHash struct {
 	UnsyncHash []byte
 	Error      string
 }
+
+// ResponseDisconnect id data to answer to disconnected node.
+type ResponseDisconnect struct {
+	Disconnected bool
+	Error        error
+}

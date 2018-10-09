@@ -135,3 +135,7 @@ type RequestExchangeUnsyncHash struct {
 	Pulse      core.PulseNumber
 	UnsyncHash []byte
 }
+
+// RequestDisconnect is request to disconnect from active list.
+type RequestDisconnect struct {
+}

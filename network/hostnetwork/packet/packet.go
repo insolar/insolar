@@ -72,6 +72,8 @@ const (
 	TypeExchangeUnsyncLists
 	// TypeExchangeUnsyncHash is packet type to exchange hash of merged unsync lists during consensus
 	TypeExchangeUnsyncHash
+	// TypeDisconnect is packet to disconnect from active list.
+	TypeDisconnect
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -142,6 +144,8 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestExchangeUnsyncLists)
 	case TypeExchangeUnsyncHash:
 		_, valid = m.Data.(*RequestExchangeUnsyncHash)
+	case TypeDisconnect:
+		_, valid = m.Data.(*RequestDisconnect)
 	default:
 		valid = false
 	}
@@ -229,6 +233,7 @@ func init() {
 	gob.Register(&RequestActiveNodes{})
 	gob.Register(&RequestExchangeUnsyncLists{})
 	gob.Register(&RequestExchangeUnsyncHash{})
+	gob.Register(&RequestDisconnect{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -249,6 +254,7 @@ func init() {
 	gob.Register(&ResponseActiveNodes{})
 	gob.Register(&ResponseExchangeUnsyncLists{})
 	gob.Register(&ResponseExchangeUnsyncHash{})
+	gob.Register(&ResponseDisconnect{})
 
 	gob.Register(&id.ID{})
 }
