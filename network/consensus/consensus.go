@@ -30,7 +30,9 @@ type Participant interface {
 
 // DataProvider for data manipulation
 type DataProvider interface {
+	// GetDataList get active nodes to exchange with other parties of the consensus
 	GetDataList() []*core.ActiveNode
+	// MergeDataList merge actiove nodes from other parties of the consensus
 	MergeDataList([]*core.ActiveNode) error
 }
 

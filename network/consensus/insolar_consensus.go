@@ -34,19 +34,16 @@ func (an *participantWrapper) GetActiveNode() *core.ActiveNode {
 	return an.node
 }
 
-// NewParticipant create new participant for consensus interfaces.
-func NewParticipant(node *core.ActiveNode) Participant {
-	return &participantWrapper{node: node}
-}
-
 type dataProviderWrapper struct {
 	nodekeeper nodekeeper.NodeKeeper
 }
 
+// GetDataList implements DataProvider interface for NodeKeeper wrapper.
 func (dt *dataProviderWrapper) GetDataList() []*core.ActiveNode {
 	return dt.nodekeeper.GetUnsync()
 }
 
+// MergeDataList implements DataProvider interface for NodeKeeper wrapper.
 func (dt *dataProviderWrapper) MergeDataList(data []*core.ActiveNode) error {
 	dt.nodekeeper.AddUnsyncGossip(data)
 	return nil
@@ -56,6 +53,7 @@ type selfWrapper struct {
 	keeper nodekeeper.NodeKeeper
 }
 
+// GetActiveNode implements Participant interface for NodeKeeper wrapper.
 func (s *selfWrapper) GetActiveNode() *core.ActiveNode {
 	return s.keeper.GetSelf()
 }
