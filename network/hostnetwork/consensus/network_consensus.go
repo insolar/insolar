@@ -116,8 +116,8 @@ func (ic *NetworkConsensus) IsPartOfConsensus() bool {
 func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler,
 	network *nodenetwork.NodeNetwork) (consensus.InsolarConsensus, error) {
 
-	communicatorSnd := &communicatorSender{}
-	communicatorRcv := &communicatorReceiver{}
+	communicatorSnd := &communicatorSender{handler, network}
+	communicatorRcv := &communicatorReceiver{keeper}
 	consensus, err := consensus.NewConsensus(&dataProviderWrapper{keeper}, communicatorSnd)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating insolar consensus")
