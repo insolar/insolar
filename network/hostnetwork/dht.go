@@ -60,7 +60,7 @@ type DHT struct {
 	infinityBootstrap bool
 	nodeID            core.RecordRef
 	activeNodeKeeper  nodekeeper.NodeKeeper
-	majorityRole      int
+	majorityRule      int
 }
 
 // AuthInfo collects some information about authentication.
@@ -151,7 +151,7 @@ func NewDHT(
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
 		activeNodeKeeper:  nodekeeper.NewNodeKeeper(time.Minute),
-		majorityRole:      majorityRole,
+		majorityRule:      majorityRole,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -946,7 +946,7 @@ func (dht *DHT) GetActiveNodes() error {
 
 // AddActiveNodes adds an active nodes slice.
 func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
-	err := dht.checkMajorityRole(activeNodes)
+	err := dht.checkMajorityRule(activeNodes)
 	if err != nil {
 		return err
 	}
@@ -1114,8 +1114,8 @@ func (dht *DHT) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time
 	return time.Now().Add(dur)
 }
 
-func (dht *DHT) checkMajorityRole(nodes []*core.ActiveNode) error {
-	if len(nodes) < dht.majorityRole {
+func (dht *DHT) checkMajorityRule(nodes []*core.ActiveNode) error {
+	if len(nodes) < dht.majorityRule {
 		return errors.New("failed majority role check")
 	}
 
@@ -1128,8 +1128,8 @@ func (dht *DHT) checkMajorityRole(nodes []*core.ActiveNode) error {
 		}
 	}
 
-	if count >= dht.majorityRole {
-		return errors.New("discovery nodes count >= majority number")
+	if count < dht.majorityRule {
+		return errors.New("discovery nodes count < majority number")
 	}
 
 	return nil
