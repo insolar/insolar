@@ -32,5 +32,5 @@ type Components struct {
 	Bootstrapper       Bootstrapper
 	APIRunner          Component
 	Metrics            Component
-	NetworkCoordinator Component
+	NetworkCoordinator NetworkCoordinator
 }

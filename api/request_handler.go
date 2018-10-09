@@ -318,7 +318,7 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	result["pubKey"] = pubKey
+	result["public_key"] = pubKey
 	result["role"] = role
 
 	return result, nil
