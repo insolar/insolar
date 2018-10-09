@@ -61,7 +61,7 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 	return ok
 }
 
-func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, *foundation.Error) {
+func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
 	nodeR := nd.GetNodeRecord(nodeRef)
 	role, pubKey := nodeR.GetRoleAndPublicKey()
 	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)

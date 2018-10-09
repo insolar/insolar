@@ -265,7 +265,7 @@ func (r *NodeDomain) IsAuthorizedNoWait( nodeRef core.RecordRef, seed []byte, si
 	}
 }
 
-func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) ( string, core.NodeRole, *foundation.Error ) {
+func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) ( string, core.NodeRole, error ) {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -296,7 +296,7 @@ func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRa
 		panic(err)
 	}
 
-	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(*foundation.Error)
+	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(error)
 }
 
 func (r *NodeDomain) AuthorizeNoWait( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) {

@@ -88,7 +88,7 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	return nd.Authorize(core.NewRefFromBase58(nodeRef+"33"), seed, signature)
+	return nd.Authorize(core.NewRefFromBase58(nodeRef), seed, signature)
 }
 
 // CreateMember processes create member request
