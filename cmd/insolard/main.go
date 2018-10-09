@@ -50,7 +50,7 @@ func (cm *componentManager) linkAll() {
 	for i := 0; i < v.NumField(); i++ {
 		err := v.Field(i).Interface().(core.Component).Start(cm.components)
 		if err != nil {
-			log.Errorf("failed to start component %s : %s", v.Field(i).String(), err.Error())
+			log.Fatalf("failed to start component %s : %s", v.Field(i).String(), err.Error())
 		}
 	}
 }
