@@ -168,10 +168,10 @@ func (r *Member) GetPublicKeyNoWait(  ) {
 	}
 }
 
-func (r *Member) AuthorizedCall( ref string, class string, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
+func (r *Member) AuthorizedCall( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
 	var args [6]interface{}
 	args[0] = ref
-	args[1] = class
+	args[1] = delegate
 	args[2] = method
 	args[3] = params
 	args[4] = seed
@@ -203,10 +203,10 @@ func (r *Member) AuthorizedCall( ref string, class string, method string, params
 	return resList[0].([]byte), resList[1].(*foundation.Error)
 }
 
-func (r *Member) AuthorizedCallNoWait( ref string, class string, method string, params []byte, seed []byte, sign []byte ) {
+func (r *Member) AuthorizedCallNoWait( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) {
 	var args [6]interface{}
 	args[0] = ref
-	args[1] = class
+	args[1] = delegate
 	args[2] = method
 	args[3] = params
 	args[4] = seed
