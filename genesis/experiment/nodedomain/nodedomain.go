@@ -60,3 +60,17 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 	}
 	return ok
 }
+
+func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, *foundation.Error) {
+	nodeR := nd.GetNodeRecord(nodeRef)
+	role, pubKey := nodeR.GetRoleAndPublicKey()
+	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
+	if err != nil {
+		return "", core.RoleUnknown, &foundation.Error{S: "[ Authorize ] Problem with verifying of signature: " + err.Error()}
+	}
+	if !ok {
+		return "", core.RoleUnknown, &foundation.Error{S: "[ Authorize ] Can't verify signature: " + err.Error()}
+	}
+
+	return pubKey, role, nil
+}

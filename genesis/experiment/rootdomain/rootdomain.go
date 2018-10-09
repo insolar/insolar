@@ -61,7 +61,7 @@ func makeSeed() []byte {
 }
 
 // IsAuthorized checks is node authorized
-func (rd *RootDomain) IsAuthorized() bool {
+func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
 	privateKey, err := ecdsa_helper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
@@ -88,7 +88,7 @@ func (rd *RootDomain) IsAuthorized() bool {
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	return nd.IsAuthorized(core.NewRefFromBase58(nodeRef), seed, signature)
+	return nd.Authorize(core.NewRefFromBase58(nodeRef+"33"), seed, signature)
 }
 
 // CreateMember processes create member request
