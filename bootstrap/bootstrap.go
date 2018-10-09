@@ -238,8 +238,8 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
-func (b *Bootstrapper) setRootInRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
-	updateData, err := serializeInstance(&rootdomain.RootDomain{Root: *b.rootMemberRef})
+func (b *Bootstrapper) setRootMemberToRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef})
 	if err != nil {
 		return errors.Wrap(err, "[ SetRootInRootDomain ]")
 	}
@@ -254,7 +254,7 @@ func (b *Bootstrapper) setRootInRootDomain(am core.ArtifactManager, cb *testutil
 	return nil
 }
 
-func (b *Bootstrapper) activateRootWallet(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
 	instanceData, err := serializeInstance(wallet.New(b.rootBalance))
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
@@ -290,11 +290,11 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testu
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.setRootInRootDomain(am, cb)
+	err = b.setRootMemberToRootDomain(am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.activateRootWallet(am, cb)
+	err = b.activateRootMemberWallet(am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}

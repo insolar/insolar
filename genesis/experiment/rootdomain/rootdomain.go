@@ -32,7 +32,7 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	Root core.RecordRef
+	RootMember core.RecordRef
 }
 
 // RegisterNode processes register node request
@@ -93,7 +93,7 @@ func (rd *RootDomain) IsAuthorized() bool {
 
 // CreateMember processes create member request
 func (rd *RootDomain) CreateMember(name string, key string) string {
-	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.Root {
+	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.RootMember {
 	memberHolder := member.New(name, key)
 	m := memberHolder.AsChild(rd.GetReference())
 	wHolder := wallet.New(1000)

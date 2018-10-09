@@ -788,7 +788,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(domain, request, *contract, testutil.CBORMarshal(t, rootdomain.RootDomain{Root: *rootMemberRef}))
+	_, err = am.UpdateObject(domain, request, *contract, testutil.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
 	root := Caller{rootMemberRef.String(), rootKey, lr, t}
