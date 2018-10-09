@@ -30,5 +30,6 @@ func TestIsAuthorized(t *testing.T) {
 	isAuthResponse := &isAuthorized{}
 	unmarshalResponse(t, body, isAuthResponse)
 
-	assert.True(t, isAuthResponse.IsAuthorized)
+	assert.Equal(t, 1, isAuthResponse.Role)
+	assert.NotEmpty(t, isAuthResponse.PublicKey)
 }
