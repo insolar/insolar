@@ -26,12 +26,13 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
 func extractStringResponse(data []byte) (*string, error) {
 	var typeHolder string
-	refOrig, err := UnMarshalResponse(data, []interface{}{typeHolder})
+	refOrig, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractStringResponse ]")
 	}
@@ -43,6 +44,18 @@ func extractStringResponse(data []byte) (*string, error) {
 	}
 
 	return &reference, nil
+}
+
+func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
+	var pubKey string
+	var role core.NodeRole
+	var fErr foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{pubKey, role, fErr})
+	if err != nil {
+		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
+	}
+
+	return pubKey, role, errors.Wrap(&fErr, "[ extractAuthorizeResponse ]")
 }
 
 // RequestHandler encapsulate processing of request
@@ -64,6 +77,20 @@ func NewRequestHandler(params *Params, messageBus core.MessageBus, rootDomainRef
 		rootDomainReference: rootDomainReference,
 		seedManager:         smanager,
 	}
+}
+
+func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reply, error) {
+	args, err := core.MarshalArgs(argsIn...)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SendRequest ]")
+	}
+
+	routResult, err := rh.routeCall(rh.rootDomainReference, method, args)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SendRequest ]")
+	}
+
+	return routResult, nil
 }
 
 func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
@@ -113,7 +140,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 
 func extractGetBalanceResponse(data []byte) (uint, error) {
 	var typeHolder uint
-	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
+	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return 0, errors.Wrap(err, "[ extractGetBalanceResponse ]")
 	}
@@ -125,20 +152,6 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 	}
 
 	return balance, nil
-}
-
-func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reply, error) {
-	args, err := MarshalArgs(argsIn...)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SendRequest ]")
-	}
-
-	routResult, err := rh.routeCall(rh.rootDomainReference, method, args)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SendRequest ]")
-	}
-
-	return routResult, nil
 }
 
 // ProcessGetBalance processes get_balance query type
@@ -167,7 +180,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 
 func extractBoolResponse(data []byte) (bool, error) {
 	var typeHolder bool
-	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
+	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return false, errors.Wrap(err, "[ extractBoolResponse ]")
 	}
@@ -214,7 +227,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 
 func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
 	var typeHolder []byte
-	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
+	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractDumpAllUsersResponse ]")
 	}
@@ -292,17 +305,18 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 // ProcessIsAuthorized processes is_auth query type
 func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	routResult, err := rh.sendRequest("IsAuthorized", []interface{}{})
+	routResult, err := rh.sendRequest("Authorize", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	isSent, err := extractBoolResponse(routResult.(*reply.CallMethod).Result)
+	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	result["is_authorized"] = isSent
+	result["pubKey"] = pubKey
+	result["role"] = role
 
 	return result, nil
 }
