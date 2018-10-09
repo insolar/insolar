@@ -27,6 +27,7 @@ import (
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
 	db          *storage.DB
+	lr          core.LogicRunner
 	coordinator *jetcoordinator.JetCoordinator
 }
 
@@ -63,7 +64,7 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	_ = drop // TODO: send drop to the validators
 
 	m.db.SetCurrentPulse(pulse.PulseNumber)
-
+	m.lr.OnPulse(pulse)
 	return nil
 }
 
@@ -74,4 +75,9 @@ func NewPulseManager(db *storage.DB, coordinator *jetcoordinator.JetCoordinator)
 		coordinator: coordinator,
 	}
 	return &pm, nil
+}
+
+func (m *PulseManager) Link(c core.Components) error {
+	m.lr = c.LogicRunner
+	return nil
 }
