@@ -3,7 +3,6 @@ package nodedomain
 import (
 		"github.com/insolar/insolar/core"
 		"github.com/insolar/insolar/genesis/proxy/noderecord"
-		"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -265,7 +264,7 @@ func (r *NodeDomain) IsAuthorizedNoWait( nodeRef core.RecordRef, seed []byte, si
 	}
 }
 
-func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) ( string, core.NodeRole, error ) {
+func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) ( string, core.NodeRole, string ) {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -288,7 +287,7 @@ func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRa
 	resList[0] = a0
 	var a1 core.NodeRole
 	resList[1] = a1
-	var a2 *foundation.Error
+	var a2 string
 	resList[2] = a2
 
 	err = proxyctx.Current.Deserialize(res, &resList)
@@ -296,7 +295,7 @@ func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRa
 		panic(err)
 	}
 
-	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(error)
+	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(string)
 }
 
 func (r *NodeDomain) AuthorizeNoWait( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) {

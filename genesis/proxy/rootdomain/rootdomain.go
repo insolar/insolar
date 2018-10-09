@@ -127,7 +127,7 @@ func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
 	}
 }
 
-func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, error ) {
+func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, string ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -147,7 +147,7 @@ func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, error ) {
 	resList[0] = a0
 	var a1 core.NodeRole
 	resList[1] = a1
-	var a2 *foundation.Error
+	var a2 string
 	resList[2] = a2
 
 	err = proxyctx.Current.Deserialize(res, &resList)
@@ -155,7 +155,7 @@ func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, error ) {
 		panic(err)
 	}
 
-	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(error)
+	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(string)
 }
 
 func (r *RootDomain) AuthorizeNoWait(  ) {
