@@ -3,6 +3,7 @@ package nodedomain
 import (
 		"github.com/insolar/insolar/core"
 		"github.com/insolar/insolar/genesis/proxy/noderecord"
+		"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -259,6 +260,59 @@ func (r *NodeDomain) IsAuthorizedNoWait( nodeRef core.RecordRef, seed []byte, si
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "IsAuthorized", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) ( string, core.NodeRole, *foundation.Error ) {
+	var args [3]interface{}
+	args[0] = nodeRef
+	args[1] = seed
+	args[2] = signatureRaw
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
+	if err != nil {
+   		panic(err)
+	}
+
+	resList := [3]interface{}{}
+	var a0 string
+	resList[0] = a0
+	var a1 core.NodeRole
+	resList[1] = a1
+	var a2 *foundation.Error
+	resList[2] = a2
+
+	err = proxyctx.Current.Deserialize(res, &resList)
+	if err != nil {
+		panic(err)
+	}
+
+	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(*foundation.Error)
+}
+
+func (r *NodeDomain) AuthorizeNoWait( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) {
+	var args [3]interface{}
+	args[0] = nodeRef
+	args[1] = seed
+	args[2] = signatureRaw
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Authorize", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
