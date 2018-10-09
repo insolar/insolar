@@ -20,106 +20,12 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/nodekeeper"
-	"github.com/pkg/errors"
 )
 
-type participantWrapper struct {
-	node *core.ActiveNode
-}
-
-// GetActiveNode implements Participant interface for ActiveNode wrapper.
-func (an *participantWrapper) GetActiveNode() *core.ActiveNode {
-	return an.node
-}
-
-type dataProviderWrapper struct {
-	nodekeeper nodekeeper.NodeKeeper
-}
-
-// GetDataList implements DataProvider interface for NodeKeeper wrapper.
-func (dt *dataProviderWrapper) GetDataList() []*core.ActiveNode {
-	return dt.nodekeeper.GetUnsync()
-}
-
-// MergeDataList implements DataProvider interface for NodeKeeper wrapper.
-func (dt *dataProviderWrapper) MergeDataList(data []*core.ActiveNode) error {
-	dt.nodekeeper.AddUnsyncGossip(data)
-	return nil
-}
-
-func (dt *dataProviderWrapper) GetHash() ([]byte, error) {
-	hash, _, err := dt.nodekeeper.GetUnsyncHash()
-	return hash, err
-}
-
-type selfWrapper struct {
-	keeper nodekeeper.NodeKeeper
-}
-
-// GetActiveNode implements Participant interface for NodeKeeper wrapper.
-func (s *selfWrapper) GetActiveNode() *core.ActiveNode {
-	return s.keeper.GetSelf()
-}
-
-// InsolarConsensus binds all functionality related to consensus with the network layer
-type InsolarConsensus struct {
-	consensus       Consensus
-	communicatorSnd Communicator
-	communicatorRcv Communicator
-	keeper          nodekeeper.NodeKeeper
-	self            *selfWrapper
-}
-
-// ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
-func (ic *InsolarConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) {
-	activeNodes := ic.keeper.GetActiveNodes()
-	if len(activeNodes) == 0 {
-		return
-	}
-	participants := make([]Participant, len(activeNodes))
-	for i, activeNode := range activeNodes {
-		participants[i] = &participantWrapper{activeNode}
-	}
-	success := ic.keeper.SetPulse(pulse.PulseNumber)
-	if !success {
-		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
-		return
-	}
-	approve, err := ic.consensus.DoConsensus(pulse.PulseNumber, ctx, ic.self, participants)
-	if err != nil {
-		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
-		approve = false
-	}
-	// We have to keep in mind a scenario when DoConsensus takes too long time and a new ProcessPulse is called
-	// simultaneously with the current call. It will happen if DoConsensus takes more time than the delay between two
-	// consecutive pulses.
-	// In this scenario ic.keeper.SetPulse(pulse + 1) will happen earlier than ic.keeper.Sync(approve, pulse).
-	// ic.keeper.SetPulse(pulse + 1) will internally call Sync(false) to update NodeKeeper's unsync, sync and active lists.
-	// That's why we have to pass PulseNumber to ic.keeper.Sync to check relevance of the pulse and to ignore the call
-	// if we detect this kind of race condition.
-	ic.keeper.Sync(approve, pulse.PulseNumber)
-}
-
-// IsPartOfConsensus returns whether we should perform all consensus interactions or not
-func (ic *InsolarConsensus) IsPartOfConsensus() bool {
-	return ic.keeper.GetSelf() != nil
-}
-
-// NewInsolarConsensus creates new object to handle all consensus events
-func NewInsolarConsensus(keeper nodekeeper.NodeKeeper) (*InsolarConsensus, error) {
-	communicatorSnd := &communicatorSender{}
-	communicatorRcv := &communicatorReceiver{}
-	consensus, err := NewConsensus(&dataProviderWrapper{keeper}, communicatorSnd)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating insolar consensus")
-	}
-	return &InsolarConsensus{
-		consensus:       consensus,
-		communicatorSnd: communicatorSnd,
-		communicatorRcv: communicatorRcv,
-		keeper:          keeper,
-		self:            &selfWrapper{keeper},
-	}, nil
+// InsolarConsensus is an interface to bind all functionality related to consensus with the network layer
+type InsolarConsensus interface {
+	// ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
+	ProcessPulse(ctx context.Context, pulse core.Pulse)
+	// IsPartOfConsensus returns whether we should perform all consensus interactions or not
+	IsPartOfConsensus() bool
 }

@@ -18,6 +18,7 @@ package hostnetwork
 
 import (
 	"strings"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
@@ -29,6 +30,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
@@ -72,6 +74,8 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		cfg.Timeout,
 		cfg.InfinityBootstrap,
 		nn.GetID(),
+		nodekeeper.NewNodeKeeper(nn.GetID(), time.Minute),
+		nil,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")

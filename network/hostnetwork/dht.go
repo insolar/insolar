@@ -129,6 +129,8 @@ func NewDHT(
 	timeout int,
 	infbootstrap bool,
 	nodeID core.RecordRef,
+	keeper nodekeeper.NodeKeeper,
+	insolarConsensus *consensus.InsolarConsensus,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -136,12 +138,12 @@ func NewDHT(
 	}
 
 	rel := relay.NewRelay()
-
-	keeper := nodekeeper.NewNodeKeeper(nodeID, time.Minute)
-	insolarConsensus, err := consensus.NewInsolarConsensus(keeper)
 	if err != nil {
 		// TODO: return error on check (do nothing for now to evade breaking the binary and all tests)
 		log.Error("consensus not implemented")
+	}
+	if keeper == nil {
+		keeper = nodekeeper.NewNodeKeeper(nodeID, time.Minute)
 	}
 
 	dht = &DHT{
@@ -224,10 +226,6 @@ func (dht *DHT) StoreData(ctx hosthandler.Context, data []byte) (id string, err 
 	}
 	str := base58.Encode(key)
 	return str, nil
-}
-
-func (dht *DHT) Consensus() *consensus.InsolarConsensus {
-	return dht.insolarConsensus
 }
 
 // Get retrieves data from the transport using key. Key is the base58 encoded

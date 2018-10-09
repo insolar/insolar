@@ -36,44 +36,55 @@ import (
 // Context is used in all actions to select specific ID to work with.
 type Context context.Context
 
-// NetworkCommonFacade is used for implementation of rpc and cascade.
+// NetworkCommonFacade is used to implement additional features in network to evade showing them in the main HostHandler interface
 type NetworkCommonFacade interface {
 	GetRPC() rpc.RPC
 	GetCascade() *cascade.Cascade
 	GetPulseManager() core.PulseManager
 	SetPulseManager(manager core.PulseManager)
+	SetConsensus(insolarConsensus consensus.InsolarConsensus)
+	GetConsensus() consensus.InsolarConsensus
 }
 
-// CommonFacade implements a NetworkCommonFacade.
-type CommonFacade struct {
+// commonFacade implements a NetworkCommonFacade.
+type commonFacade struct {
 	rpcPtr  rpc.RPC
 	cascade *cascade.Cascade
 	pm      core.PulseManager
+	ic      consensus.InsolarConsensus
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
-func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
-	return &CommonFacade{rpcPtr: r, cascade: casc, pm: nil}
+func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) *commonFacade {
+	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil}
 }
 
 // GetRPC return an RPC pointer.
-func (fac *CommonFacade) GetRPC() rpc.RPC {
+func (fac *commonFacade) GetRPC() rpc.RPC {
 	return fac.rpcPtr
 }
 
 // GetCascade returns a cascade pointer.
-func (fac *CommonFacade) GetCascade() *cascade.Cascade {
+func (fac *commonFacade) GetCascade() *cascade.Cascade {
 	return fac.cascade
 }
 
 // GetPulseManager returns a pulse manager pointer.
-func (fac *CommonFacade) GetPulseManager() core.PulseManager {
+func (fac *commonFacade) GetPulseManager() core.PulseManager {
 	return fac.pm
 }
 
 // SetPulseManager sets a pulse manager to common facade.
-func (fac *CommonFacade) SetPulseManager(manager core.PulseManager) {
+func (fac *commonFacade) SetPulseManager(manager core.PulseManager) {
 	fac.pm = manager
+}
+
+func (fac *commonFacade) SetConsensus(insolarConsensus consensus.InsolarConsensus) {
+	fac.ic = insolarConsensus
+}
+
+func (fac *commonFacade) GetConsensus() consensus.InsolarConsensus {
+	return fac.ic
 }
 
 // HostHandler is an interface which uses for host network implementation.
@@ -86,7 +97,6 @@ type HostHandler interface {
 	GetHostsFromBootstrap()
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
-	Consensus() *consensus.InsolarConsensus
 	ConfirmNodeRole(role string) bool
 	StoreRetrieve(key store.Key) ([]byte, bool)
 	HtFromCtx(ctx Context) *routing.HashTable

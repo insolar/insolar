@@ -68,6 +68,13 @@ func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
 func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
 }
 
+func (fac *mockNetworkCommonFacade) GetConsensus() consensus.InsolarConsensus {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) SetConsensus(consensus.InsolarConsensus) {
+}
+
 type mockHostHandler struct {
 	AuthenticatedHost string
 	ReceivedKey       string
@@ -92,10 +99,6 @@ func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID
 
 func (hh *mockHostHandler) Disconnect() {
 
-}
-
-func (hh *mockHostHandler) Consensus() *consensus.InsolarConsensus {
-	return nil
 }
 
 func (hh *mockHostHandler) Listen() error {
