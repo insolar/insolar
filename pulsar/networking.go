@@ -84,22 +84,39 @@ type Handler struct {
 	pulsar *Pulsar
 }
 
+func (handler *Handler) isRequestValid(request *Payload) (success bool, neighbour *Neighbour, err error) {
+	if handler.pulsar.isStateFailed() {
+		return false, nil, nil
+	}
+
+	neighbour, err = handler.pulsar.fetchNeighbour(request.PublicKey)
+	if err != nil {
+		log.Warn("Message from unknown host %v", request.PublicKey)
+		return false, neighbour, err
+	}
+
+	result, err := checkPayloadSignature(request)
+	if err != nil {
+		return false, neighbour, err
+	}
+	if !result {
+		return false, neighbour, errors.New("signature check failed")
+	}
+
+	return true, neighbour, nil
+}
+
 func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
 	return nil
 }
 
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
-	neighbour, err := handler.pulsar.fetchNeighbour(request.PublicKey)
-	if err != nil {
+	ok, neighbour, err := handler.isRequestValid(request)
+	if !ok {
+		if err != nil {
+			log.Error(err)
+		}
 		return err
-	}
-
-	result, err := checkPayloadSignature(request)
-	if err != nil {
-		return err
-	}
-	if !result {
-		return errors.New("signature check failed")
 	}
 
 	generator := StandardEntropyGenerator{}
@@ -132,45 +149,13 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	return nil
 }
 
-func (handler *Handler) GetLastPulseNumber(request *Payload, response *Payload) error {
-	pulse, err := handler.pulsar.Storage.GetLastPulse()
-	if err != nil {
-		return err
-	}
-
-	convertedKey, err := ecdsa.ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
-	if err != nil {
-		panic(err)
-	}
-
-	message := Payload{PublicKey: convertedKey, Body: GetLastPulsePayload{Pulse: *pulse}}
-	message.Signature, err = signData(handler.pulsar.PrivateKey, message.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	*response = message
-
-	return nil
-}
-
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
-	if handler.pulsar.isStateFailed() {
-		return nil
-	}
-
-	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
-	if err != nil {
-		log.Warn("Message from unknown host %v", request.PublicKey)
+	ok, _, err := handler.isRequestValid(request)
+	if !ok {
+		if err != nil {
+			log.Error(err)
+		}
 		return err
-	}
-
-	result, err := checkPayloadSignature(request)
-	if err != nil {
-		return err
-	}
-	if !result {
-		return errors.New("signature check failed")
 	}
 
 	requestBody := request.Body.(EntropySignaturePayload)
@@ -193,22 +178,12 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 }
 
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
-	if handler.pulsar.isStateFailed() {
-		return nil
-	}
-
-	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
-	if err != nil {
-		log.Warn("Message from unknown host %v", request.PublicKey)
+	ok, _, err := handler.isRequestValid(request)
+	if !ok {
+		if err != nil {
+			log.Error(err)
+		}
 		return err
-	}
-
-	result, err := checkPayloadSignature(request)
-	if err != nil {
-		return err
-	}
-	if !result {
-		return errors.New("signature check failed")
 	}
 
 	requestBody := request.Body.(EntropyPayload)
@@ -231,22 +206,12 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 }
 
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
-	if handler.pulsar.isStateFailed() {
-		return nil
-	}
-
-	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
-	if err != nil {
-		log.Warn("Message from unknown host %v", request.PublicKey)
+	ok, _, err := handler.isRequestValid(request)
+	if !ok {
+		if err != nil {
+			log.Error(err)
+		}
 		return err
-	}
-
-	result, err := checkPayloadSignature(request)
-	if err != nil {
-		return err
-	}
-	if !result {
-		return errors.New("signature check failed")
 	}
 
 	requestBody := request.Body.(VectorPayload)
@@ -260,22 +225,12 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 }
 
 func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
-	if handler.pulsar.isStateFailed() {
-		return nil
-	}
-
-	_, err := handler.pulsar.fetchNeighbour(request.PublicKey)
-	if err != nil {
-		log.Warn("Message from unknown host %v.", request.PublicKey)
+	ok, _, err := handler.isRequestValid(request)
+	if !ok {
+		if err != nil {
+			log.Error(err)
+		}
 		return err
-	}
-
-	result, err := checkPayloadSignature(request)
-	if err != nil {
-		return err
-	}
-	if !result {
-		return errors.New("signature check failed")
 	}
 
 	requestBody := request.Body.(SenderConfirmationPayload)
@@ -293,6 +248,38 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		ChosenPublicKey: requestBody.ChosenPublicKey,
 		Signature:       requestBody.Signature,
 	}
+
+	return nil
+}
+
+func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error {
+	ok, _, err := handler.isRequestValid(request)
+	if !ok {
+		if err != nil {
+			log.Error(err)
+		}
+		return err
+	}
+
+	requestBody := request.Body.(PulsePayload)
+	// this if should pe replaced with another realisation.INS-528
+	if requestBody.Pulse.PulseNumber != handler.pulsar.ProcessingPulseNumber {
+		return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	}
+
+	err = handler.pulsar.Storage.SetLastPulse(&requestBody.Pulse)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = handler.pulsar.Storage.SavePulse(&requestBody.Pulse)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	handler.pulsar.clearState()
+	handler.pulsar.LastPulse = &requestBody.Pulse
 
 	return nil
 }

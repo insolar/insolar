@@ -51,7 +51,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	secondPublicExported, err := ecdsa_helper.ExportPrivateKey(secondKey)
 	assert.NoError(t, err)
 
-	storage := &pulsartestutil.MockStorage{}
+	storage := &pulsartestutil.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
@@ -108,7 +108,7 @@ func TestOnePulsar_FullStatesTransition(t *testing.T) {
 	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 
-	storage := &pulsartestutil.MockStorage{}
+	storage := &pulsartestutil.MockPulsarStorage{}
 	firstPulse := 123
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: core.PulseNumber(firstPulse)}, nil)
 	pulsar, err := NewPulsar(configuration.Pulsar{
@@ -156,7 +156,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	secondPublicExported, err := ecdsa_helper.ExportPrivateKey(secondKey)
 	assert.NoError(t, err)
 
-	storage := &pulsartestutil.MockStorage{}
+	storage := &pulsartestutil.MockPulsarStorage{}
 	firstPulse := 123
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: core.PulseNumber(firstPulse)}, nil)
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
@@ -231,7 +231,7 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	assert.NoError(t, err)
 	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(pulsarPrivateKey)
 	assert.NoError(t, err)
-	storage := &pulsartestutil.MockStorage{}
+	storage := &pulsartestutil.MockPulsarStorage{}
 	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
 
 	stateSwitcher := &StateSwitcherImpl{}

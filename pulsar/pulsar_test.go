@@ -68,7 +68,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		actualAddress = address
 		return &pulsartestutil.MockListener{}, nil
 	}
-	storage := &pulsartestutil.MockStorage{}
+	storage := &pulsartestutil.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	clientFactory := &MockRpcClientFactoryWrapper{}
 	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})
@@ -110,7 +110,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 			{ConnectionType: "pct", Address: "second", PublicKey: secondExpectedKey},
 		},
 	}
-	storage := &pulsartestutil.MockStorage{}
+	storage := &pulsartestutil.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	clientFactory := &MockRpcClientFactoryWrapper{}
 	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})

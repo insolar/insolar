@@ -660,8 +660,13 @@ func (currentPulsar *Pulsar) sendPulse() {
 	}
 
 	currentPulsar.sendPulseToNetwork(pulsarHost, t, pulseForSending)
+	currentPulsar.broadcastPulse()
 
 	err = currentPulsar.Storage.SavePulse(&pulseForSending)
+	if err != nil {
+		log.Error(err)
+	}
+	err = currentPulsar.Storage.SetLastPulse(&pulseForSending)
 	if err != nil {
 		log.Error(err)
 	}
