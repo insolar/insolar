@@ -45,6 +45,7 @@ var contractNames = []string{wallet, member, allowance, rootDomain, nodeDomain, 
 // Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
+	nodeDomainRef *core.RecordRef
 }
 
 // GetRootDomainRef returns reference to RootDomain instance
@@ -197,6 +198,8 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.
 	if contract == nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
+
+	b.nodeDomainRef = contract
 
 	return nil
 }
