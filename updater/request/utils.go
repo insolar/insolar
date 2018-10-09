@@ -1,13 +1,14 @@
 package request
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/log"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+
+	"encoding/json"
+	"github.com/insolar/insolar/log"
 )
 
 func GetProtocol(address string) RequestUpdateNode {
@@ -50,7 +51,7 @@ func createCurrentPath(version string) string {
 		fmt.Println(err)
 	}
 	pathToSave := path.Join(pwd, version)
-	if err := os.Mkdir(pathToSave, 0777); err != nil {
+	if err := os.Mkdir(pathToSave, 0750); err != nil {
 		log.Warn("Error while create folder: ", err)
 	}
 	return pathToSave

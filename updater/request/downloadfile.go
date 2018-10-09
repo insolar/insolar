@@ -8,7 +8,7 @@ import (
 
 func DownloadFiles(version string, binariesList []string, url string) (success bool) {
 	success = false
-	errors := 0
+	errs := 0
 	total := 0
 
 	pathToSave := createCurrentPath(version)
@@ -20,13 +20,13 @@ func DownloadFiles(version string, binariesList []string, url string) (success b
 		total++
 		if err != nil {
 			log.Error(err)
-			errors++
+			errs++
 		} else {
 			log.Info("SUCCESS")
 		}
 	}
-	log.Info("Download complete, TOTAL:", total, ", ERRORS: ", errors)
-	if errors == 0 && total == len(binariesList) {
+	log.Info("Download complete, TOTAL:", total, ", ERRORS: ", errs)
+	if errs == 0 && total == len(binariesList) {
 		success = true
 	}
 	return

@@ -32,9 +32,9 @@ import (
 )
 
 type updateServer struct {
-	uploadPath    string
-	port          string
-	latestVersion string
+	uploadPath string
+	port       string
+	//latestVersion string
 	//const maxUploadSize = 50 * 1024 // 50 MB
 }
 

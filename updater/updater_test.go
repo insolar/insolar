@@ -16,11 +16,14 @@
 package updater
 
 import (
+	"github.com/insolar/insolar/version"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 // Just to make Goland happy
 func TestStub(t *testing.T) {
-	assert.NotNil(t, NewUpdater())
+	updater := NewUpdater()
+	assert.NotNil(t, updater)
+	assert.Equal(t, updater.currentVer, version.Version, "Version verify success")
 }

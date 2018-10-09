@@ -31,9 +31,9 @@ func (updater *Updater) IsSameVersion(currentVersion string) (bool, string, erro
 	currentVer := request.NewVersion(currentVersion)
 	if updater.lastSuccessServer != "" {
 		log.Debug("Latest update server was: ", updater.lastSuccessServer)
-		version, err := request.ReqCurrentVerFromAddress(request.GetProtocol(updater.lastSuccessServer), updater.lastSuccessServer)
-		if err == nil && version != "" {
-			versionFromUS := request.ExtractVersion(version)
+		vers, err := request.ReqCurrentVerFromAddress(request.GetProtocol(updater.lastSuccessServer), updater.lastSuccessServer)
+		if err == nil && vers != "" {
+			versionFromUS := request.ExtractVersion(vers)
 			return request.CompareVersion(versionFromUS, currentVer) < 0, versionFromUS.Value, nil
 		}
 	}
@@ -53,12 +53,10 @@ func (updater *Updater) IsSameVersion(currentVersion string) (bool, string, erro
 	return true, versionFromUS.Value, nil
 }
 
-func (updater Updater) DownloadFiles(version string) bool {
+func (updater Updater) DownloadFiles(version string) (success bool) {
 	log.Info("Start download files from remote server")
-	if updater.lastSuccessServer != "" {
-		return request.DownloadFiles(version, updater.binariesList, updater.lastSuccessServer)
-	} else {
+	if updater.lastSuccessServer == "" {
 		return false
 	}
-
+	return request.DownloadFiles(version, updater.binariesList, updater.lastSuccessServer)
 }

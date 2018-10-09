@@ -18,12 +18,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/chzyer/readline"
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/log"
-	upd "github.com/insolar/insolar/updater"
-	"github.com/insolar/insolar/version"
-	jww "github.com/spf13/jwalterweatherman"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -31,6 +25,13 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/chzyer/readline"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/log"
+	upd "github.com/insolar/insolar/updater"
+	"github.com/insolar/insolar/version"
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 func main() {
@@ -68,10 +69,9 @@ func verifyAndUpdate(updater *upd.Updater) {
 	if !sameVersion {
 		log.Debug("Current version: ", version.Version, ", found version: ", newVersion)
 		// Run Update
-		if updater.DownloadFiles(newVersion) {
-			// ToDo: send stop signal
-			// ToDo: copy files from folder=./${VERSION} to current folder
-		}
+		//if updater.DownloadFiles(newVersion) {
+		//	// ToDo: send stop signal, then copy files from folder=./${VERSION} to current folder
+		//}
 	} else {
 		log.Info("Already updated!")
 	}
