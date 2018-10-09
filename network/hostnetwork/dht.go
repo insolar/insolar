@@ -948,7 +948,7 @@ func (dht *DHT) GetActiveNodes() error {
 func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	err := dht.checkMajorityRole(activeNodes)
 	if err != nil {
-		// TODO: send disconnect request
+		return err
 	} else {
 		if len(dht.activeNodeKeeper.GetActiveNodes()) > 0 {
 			currentHash, err := nodekeeper.CalculateHash(dht.activeNodeKeeper.GetActiveNodes())
