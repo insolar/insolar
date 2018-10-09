@@ -24,10 +24,10 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	memberContract "github.com/insolar/insolar/genesis/experiment/member"
+	"github.com/insolar/insolar/genesis/experiment/member"
 	"github.com/insolar/insolar/genesis/experiment/nodedomain"
 	"github.com/insolar/insolar/genesis/experiment/rootdomain"
-	walletContract "github.com/insolar/insolar/genesis/experiment/wallet"
+	"github.com/insolar/insolar/genesis/experiment/wallet"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
@@ -35,15 +35,15 @@ import (
 )
 
 const (
-	nodeDomain = "nodedomain"
-	nodeRecord = "noderecord"
-	rootDomain = "rootdomain"
-	wallet     = "wallet"
-	member     = "member"
-	allowance  = "allowance"
+	nodeDomain        = "nodedomain"
+	nodeRecord        = "noderecord"
+	rootDomain        = "rootdomain"
+	walletContract    = "wallet"
+	memberContract    = "member"
+	allowanceContract = "allowance"
 )
 
-var contractNames = []string{wallet, member, allowance, rootDomain, nodeDomain, nodeRecord}
+var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
 // Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
@@ -217,14 +217,14 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.
 }
 
 func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.ContractsBuilder) (*core.RecordRef, error) {
-	instanceData, err := serializeInstance(memberContract.New("RootMember", b.rootPubKey))
+	instanceData, err := serializeInstance(member.New("RootMember", b.rootPubKey))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
 	rootMemberRef, err := am.ActivateObject(
 		core.RecordRef{}, core.RandomRef(),
-		*cb.Classes[member],
+		*cb.Classes[memberContract],
 		*b.rootDomainRef,
 		instanceData,
 	)
@@ -251,14 +251,14 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.
 }
 
 func (b *Bootstrapper) activateRootWallet(am core.ArtifactManager, cb *testutil.ContractsBuilder, rootMemberRef *core.RecordRef) error {
-	instanceData, err := serializeInstance(walletContract.New(b.rootBalance))
+	instanceData, err := serializeInstance(wallet.New(b.rootBalance))
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
 	rootRef, err := am.ActivateObjectDelegate(
 		core.RecordRef{}, core.RandomRef(),
-		*cb.Classes[wallet],
+		*cb.Classes[walletContract],
 		*rootMemberRef,
 		instanceData,
 	)
