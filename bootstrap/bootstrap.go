@@ -233,7 +233,7 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.
 		return nil, errors.Wrap(err, "[ ActivateActivateRootMember ] couldn't create root member")
 	}
 
-	updateData, err := serializeInstance(&rootdomain.RootDomain{Root: rootMemberRef})
+	updateData, err := serializeInstance(&rootdomain.RootDomain{Root: *rootMemberRef})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
 	}

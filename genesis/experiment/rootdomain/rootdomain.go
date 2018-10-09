@@ -32,7 +32,7 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	Root *core.RecordRef
+	Root core.RecordRef
 }
 
 // RegisterNode processes register node request
