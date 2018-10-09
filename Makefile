@@ -20,9 +20,9 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps install build test test_with_coverage regen_proxyes
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen_proxies
 
-all: clean install-deps install build test
+all: clean install-deps pre-build build test
 
 lint: ci-lint
 
