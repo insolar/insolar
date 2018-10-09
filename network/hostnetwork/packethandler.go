@@ -74,9 +74,16 @@ func DispatchPacketType(
 		return processCheckPublicKey(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeActiveNodes:
 		return processActiveNodes(hostHandler, packetBuilder)
+	case packet.TypeDisconnect:
+		return processDisconnect(hostHandler, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processDisconnect(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {
+	// TODO: disconnect from active list
+	return packetBuilder.Response(&packet.ResponseDisconnect{Disconnected: true, Error: nil}).Build(), nil
 }
 
 func processCheckPublicKey(

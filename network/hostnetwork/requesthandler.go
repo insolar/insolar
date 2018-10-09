@@ -449,6 +449,8 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 	case packet.TypeActiveNodes:
 		response := rsp.Data.(*packet.ResponseActiveNodes)
 		err = handleActiveNodesResponse(hostHandler, response)
+	case packet.TypeDisconnect:
+		// TODO: be a disconnected sad node
 	}
 	return err
 }
