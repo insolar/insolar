@@ -87,12 +87,9 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 		Ledger:     l,
 		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
-	log.Warn("SETTING PULSE")
 	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 100, &pulsar.StandardEntropyGenerator{}))
-	assert.NoError(t, err, "pulse set")
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
-		panic(42)
 	}
 	am := l.GetArtifactManager()
 	cb := testutil.NewContractBuilder(am, icc)
