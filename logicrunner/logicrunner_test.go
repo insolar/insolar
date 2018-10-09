@@ -29,7 +29,9 @@ import (
 	"testing"
 
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/genesis/experiment/member"
 	"github.com/insolar/insolar/genesis/experiment/member/signer"
+	"github.com/insolar/insolar/genesis/experiment/rootdomain"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -776,22 +778,20 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	// Creating and setting Root member
+	// Creating Root member
 	rootKey, err := cryptoHelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
 	assert.NoError(t, err)
-	resp, err := lr.Execute(&message.CallMethod{
-		ObjectRef: *contract,
-		Method:    "SetRoot",
-		Arguments: testutil.CBORMarshal(t, []interface{}{rootPubKey}),
-	})
-	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	rootRef := r.([]interface{})[0].(string)
-	assert.NotEqual(t, "", rootRef)
 
-	root := Caller{rootRef, rootKey, lr, t}
+	rootMemberRef, err := am.ActivateObject(domain, request, *cb.Classes["member"], *contract, testutil.CBORMarshal(t, member.New("root", rootPubKey)))
+	assert.NoError(t, err)
+
+	// Updating root domain with root member
+	_, err = am.UpdateObject(domain, request, *contract, testutil.CBORMarshal(t, rootdomain.RootDomain{Root: rootMemberRef}))
+	assert.NoError(t, err)
+
+	root := Caller{rootMemberRef.String(), rootKey, lr, t}
 
 	// Creating Member1
 	member1Key, err := cryptoHelper.GeneratePrivateKey()

@@ -150,17 +150,6 @@ func (rd *RootDomain) DumpAllUsers() []byte {
 	return resJSON
 }
 
-func (rd *RootDomain) SetRoot(adminKey string) (string, *foundation.Error) {
-	if rd.Root == nil {
-		memberHolder := member.New("root", adminKey)
-		m := memberHolder.AsChild(rd.GetReference())
-		root := m.GetReference()
-		rd.Root = &root
-		return root.String(), nil
-	}
-	return "", &foundation.Error{S: "Root is already set"}
-}
-
 // NewRootDomain creates new RootDomain
 func NewRootDomain() *RootDomain {
 	return &RootDomain{}
