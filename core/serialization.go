@@ -14,10 +14,9 @@
  *    limitations under the License.
  */
 
-package api
+package core
 
 import (
-	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -36,7 +35,7 @@ func cborUnMarshal(data []byte, to interface{}) error {
 }
 
 // MarshalArgs marshals arguments by cbor
-func MarshalArgs(args ...interface{}) (core.Arguments, error) {
+func MarshalArgs(args ...interface{}) (Arguments, error) {
 	var argsSerialized []byte
 
 	argsSerialized, err := cborMarshal(args)
@@ -44,7 +43,7 @@ func MarshalArgs(args ...interface{}) (core.Arguments, error) {
 		return nil, errors.Wrap(err, "[ MarshalArgs ]")
 	}
 
-	result := core.Arguments(argsSerialized)
+	result := Arguments(argsSerialized)
 
 	return result, nil
 }
