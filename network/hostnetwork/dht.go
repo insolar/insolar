@@ -949,23 +949,22 @@ func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	err := dht.checkMajorityRole(activeNodes)
 	if err != nil {
 		return err
-	} else {
-		if len(dht.activeNodeKeeper.GetActiveNodes()) > 0 {
-			currentHash, err := nodekeeper.CalculateHash(dht.activeNodeKeeper.GetActiveNodes())
-			if err != nil {
-				return err
-			}
-			newHash, err := nodekeeper.CalculateHash(activeNodes)
-			if err != nil {
-				return err
-			}
-			if !bytes.Equal(currentHash, newHash) {
-				// TODO: disconnect from all or what?
-				return errors.New("two or more active node lists are different but majority check was passed")
-			}
-		} else {
-			dht.activeNodeKeeper.AddActiveNodes(activeNodes)
+	}
+	if len(dht.activeNodeKeeper.GetActiveNodes()) > 0 {
+		currentHash, err := nodekeeper.CalculateHash(dht.activeNodeKeeper.GetActiveNodes())
+		if err != nil {
+			return err
 		}
+		newHash, err := nodekeeper.CalculateHash(activeNodes)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(currentHash, newHash) {
+			// TODO: disconnect from all or what?
+			return errors.New("two or more active node lists are different but majority check was passed")
+		}
+	} else {
+		dht.activeNodeKeeper.AddActiveNodes(activeNodes)
 	}
 	return errors.New("failed to add active node. unknown error")
 }
