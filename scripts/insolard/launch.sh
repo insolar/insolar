@@ -52,6 +52,11 @@ rebuild_binaries()
     build_binaries
 }
 
+generate_bootstrap_keys()
+{
+	bin/insolar -c gen_keys > scripts/insolard/bootstrap_keys.json
+}
+
 check_working_dir()
 {
     if ! pwd | grep -q "src/github.com/insolar/insolar$"
@@ -109,6 +114,7 @@ process_input_params $param
 
 prepare
 build_binaries
+generate_bootstrap_keys
 
 if [ "$gorund_only" == "1" ]
 then

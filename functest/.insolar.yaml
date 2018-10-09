@@ -56,3 +56,6 @@ pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
   nodesaddresses: []
+bootstrap:
+  rootkeys: "testdata/functional/bootstrap_keys.json"
+  rootbalance: 10000

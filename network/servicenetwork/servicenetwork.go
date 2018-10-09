@@ -78,7 +78,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID := network.nodeNetwork.ResolveHostID(nodeID)
+	hostID := nodenetwork.ResolveHostID(nodeID)
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
@@ -235,7 +235,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 
 	var failedNodes []string
 	for _, nextNode := range nextNodes {
-		hostID := network.nodeNetwork.ResolveHostID(nextNode)
+		hostID := nodenetwork.ResolveHostID(nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
 			log.Debugln("failed to send cascade message: ", err)

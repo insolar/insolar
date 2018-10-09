@@ -81,7 +81,7 @@ func (mb *messageBusMock) SendAsync(m core.Message) {
 
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger andh cleanup function.
-func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
+func TmpLedger(t testing.TB, lr core.LogicRunner, dir string) (*ledger.Ledger, func()) {
 	var err error
 	// Init subcomponents.
 	conf := configuration.NewLedger()
@@ -101,7 +101,7 @@ func TmpLedger(t testing.TB, dir string) (*ledger.Ledger, func()) {
 
 	// Init components.
 	mb := newMessageBusMock()
-	components := core.Components{MessageBus: mb}
+	components := core.Components{MessageBus: mb, LogicRunner: lr}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)

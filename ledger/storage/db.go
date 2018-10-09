@@ -296,7 +296,7 @@ func (db *DB) waitinflight() {
 func (db *DB) SetDrop(pulse core.PulseNumber, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	db.waitinflight()
 
-	hw := hash.NewSHA3()
+	hw := hash.NewIDHash()
 	err := db.ProcessSlotHashes(pulse, func(it HashIterator) error {
 		for i := 1; it.Next(); i++ {
 			b := it.ShallowHash()

@@ -32,7 +32,7 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	Root *core.RecordRef
+	RootMember core.RecordRef
 }
 
 // RegisterNode processes register node request
@@ -93,7 +93,7 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
 
 // CreateMember processes create member request
 func (rd *RootDomain) CreateMember(name string, key string) string {
-	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.Root {
+	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.RootMember {
 	memberHolder := member.New(name, key)
 	m := memberHolder.AsChild(rd.GetReference())
 	wHolder := wallet.New(1000)
@@ -148,17 +148,6 @@ func (rd *RootDomain) DumpAllUsers() []byte {
 	}
 	resJSON, _ := json.Marshal(res)
 	return resJSON
-}
-
-func (rd *RootDomain) SetRoot(adminKey string) (string, *foundation.Error) {
-	if rd.Root == nil {
-		memberHolder := member.New("root", adminKey)
-		m := memberHolder.AsChild(rd.GetReference())
-		root := m.GetReference()
-		rd.Root = &root
-		return root.String(), nil
-	}
-	return "", &foundation.Error{S: "Root is already set"}
 }
 
 // NewRootDomain creates new RootDomain
