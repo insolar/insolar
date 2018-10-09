@@ -717,6 +717,13 @@ func (r *One) AnError() error {
 
 	return friend.AnError()
 }
+
+func (r *One) NoError() error {
+	holder := two.New()
+	friend := holder.AsChild(r.GetReference())
+
+	return friend.NoError()
+}
 `
 
 	var contractTwoCode = `
@@ -736,6 +743,9 @@ func New() *Two {
 }
 func (r *Two) AnError() error {
 	return errors.New("an error")
+}
+func (r *Two) NoError() error {
+	return nil
 }
 `
 	lr, am, cb, cleaner := PrepareLrAmCb(t)
@@ -768,6 +778,18 @@ func (r *Two) AnError() error {
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 
+	resp, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "NoError",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+
+	ValidateAllResults(t, lr)
+
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}([]interface{}{nil}), r)
+	
 	SendDataToValidate(lr)
 }
 
