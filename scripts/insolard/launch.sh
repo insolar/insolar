@@ -50,6 +50,11 @@ rebuild_binaries()
     build_binaries
 }
 
+generate_bootstrap_keys()
+{
+	bin/insolar -c gen_keys > scripts/insolard/bootstrap_keys.json
+}
+
 check_working_dir()
 {
     if ! pwd | grep -q "src/github.com/insolar/insolar$"
@@ -92,6 +97,7 @@ process_input_params $param
 
 prepare
 build_binaries
+generate_bootstrap_keys
 
 $INSGORUND -l 127.0.0.1:18181 --rpc 127.0.0.1:18182 &
 $INSOLARD --config scripts/insolard/insolar.yaml
