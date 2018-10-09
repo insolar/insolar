@@ -11,21 +11,21 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-func GetProtocol(address string) RequestUpdateNode {
+func GetProtocol(address string) UpdateNode {
 	protocol := getProtocolFromAddress(address)
 	if protocol != "" {
 		switch protocol {
 		case "http":
 			{
-				return HTTPRequestUpdateNode{}
+				return HTTPUpdateNode{}
 			}
 		case "ftp":
 			{
-				return FtpRequestUpdateNode{}
+				return FtpUpdateNode{}
 			}
 		case "smb":
 			{
-				return SmbRequestUpdateNode{}
+				return SmbUpdateNode{}
 			}
 		default:
 			{

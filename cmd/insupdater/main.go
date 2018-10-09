@@ -19,9 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -76,7 +74,7 @@ func verifyAndUpdate(updater *upd.Updater) {
 		log.Info("Already updated!")
 	}
 	// Run peer
-	executePeer()
+	//executePeer()
 	// ToDo: Run update service with timer
 	// exit
 }
@@ -93,19 +91,19 @@ func onErr(text string, err error) {
 	os.Exit(1)
 }
 
-func executePeer() {
-	pwd, err := os.Getwd()
-	if err != nil {
-		log.Warn(err)
-		pwd = "."
-	}
-	out, err := exec.Command(path.Join(pwd, "insolard"), "--config", path.Join(pwd, "..", "scripts", "insolard", "insolar.yaml")).CombinedOutput()
-	if err != nil {
-		log.Warn("Cannot run insolar deamon, verify PATH to file 'insolard'")
-	} else {
-		log.Info(out)
-	}
-}
+//func executePeer() {
+//	pwd, err := os.Getwd()
+//	if err != nil {
+//		log.Warn(err)
+//		pwd = "."
+//	}
+//	out, err := exec.Command(path.Join(pwd, "insolard"), "--config", path.Join(pwd, "..", "scripts", "insolard", "insolar.yaml")).CombinedOutput()
+//	if err != nil {
+//		log.Warn("Cannot run insolar deamon, verify PATH to file 'insolard'")
+//	} else {
+//		log.Info(out)
+//	}
+//}
 
 func service(updater *upd.Updater) {
 	delay := time.Duration(updater.Delay)

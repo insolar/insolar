@@ -32,7 +32,7 @@ func DownloadFiles(version string, binariesList []string, url string) (success b
 	return
 }
 
-func downloadFromAddress(request RequestUpdateNode, filePath string, url string) error {
+func downloadFromAddress(request UpdateNode, filePath string, url string) error {
 	if request == nil {
 		return errors.New("Unknown protocol")
 	}

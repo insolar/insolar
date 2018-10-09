@@ -9,11 +9,11 @@ import (
 	"os"
 )
 
-type HTTPRequestUpdateNode struct {
-	RequestUpdateNode
+type HTTPUpdateNode struct {
+	UpdateNode
 }
 
-func (request HTTPRequestUpdateNode) getCurrentVer(address string) (string, error) {
+func (request HTTPUpdateNode) getCurrentVer(address string) (string, error) {
 	response, err := http.Get(address + "/latest")
 	if err != nil {
 		return "Error during http request", err
@@ -27,7 +27,7 @@ func (request HTTPRequestUpdateNode) getCurrentVer(address string) (string, erro
 	return string(content), nil
 }
 
-func (request HTTPRequestUpdateNode) downloadFile(filepath string, url string) error {
+func (request HTTPUpdateNode) downloadFile(filepath string, url string) error {
 
 	//Create the file
 	out, err := os.Create(filepath)

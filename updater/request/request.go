@@ -1,6 +1,6 @@
 package request
 
-type RequestUpdateNode interface {
+type UpdateNode interface {
 	getCurrentVer(address string) (string, error)
 	downloadFile(filePath string, url string) error
 }
