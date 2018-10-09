@@ -48,6 +48,7 @@ var contractNames = []string{walletContract, memberContract, allowanceContract, 
 // Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
+	rootMemberRef *core.RecordRef
 	rootKeysFile  string
 	rootPubKey    string
 	rootBalance   uint
@@ -216,41 +217,44 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
-func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.ContractsBuilder) (*core.RecordRef, error) {
+func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
 	instanceData, err := serializeInstance(member.New("RootMember", b.rootPubKey))
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
+		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	rootMemberRef, err := am.ActivateObject(
+	b.rootMemberRef, err = am.ActivateObject(
 		core.RecordRef{}, core.RandomRef(),
 		*cb.Classes[memberContract],
 		*b.rootDomainRef,
 		instanceData,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
+		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
-	if rootMemberRef == nil {
-		return nil, errors.Wrap(err, "[ ActivateActivateRootMember ] couldn't create root member")
+	if b.rootMemberRef == nil {
+		return errors.Wrap(err, "[ ActivateActivateRootMember ] couldn't create root member")
 	}
+	return nil
+}
 
-	updateData, err := serializeInstance(&rootdomain.RootDomain{Root: *rootMemberRef})
+func (b *Bootstrapper) setRootInRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+	updateData, err := serializeInstance(&rootdomain.RootDomain{Root: *b.rootMemberRef})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
+		return errors.Wrap(err, "[ SetRootInRootDomain ]")
 	}
 	_, err = am.UpdateObject(
 		core.RecordRef{}, core.RandomRef(),
 		*b.rootDomainRef, updateData,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
+		return errors.Wrap(err, "[ SetRootInRootDomain ]")
 	}
 
-	return rootMemberRef, nil
+	return nil
 }
 
-func (b *Bootstrapper) activateRootWallet(am core.ArtifactManager, cb *testutil.ContractsBuilder, rootMemberRef *core.RecordRef) error {
+func (b *Bootstrapper) activateRootWallet(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
 	instanceData, err := serializeInstance(wallet.New(b.rootBalance))
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
@@ -259,7 +263,7 @@ func (b *Bootstrapper) activateRootWallet(am core.ArtifactManager, cb *testutil.
 	rootRef, err := am.ActivateObjectDelegate(
 		core.RecordRef{}, core.RandomRef(),
 		*cb.Classes[walletContract],
-		*rootMemberRef,
+		*b.rootMemberRef,
 		instanceData,
 	)
 	if err != nil {
@@ -282,11 +286,15 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testu
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	rootMemberRef, err := b.activateRootMember(am, cb)
+	err = b.activateRootMember(am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.activateRootWallet(am, cb, rootMemberRef)
+	err = b.setRootInRootDomain(am, cb)
+	if err != nil {
+		return errors.Wrap(err, errMsg)
+	}
+	err = b.activateRootWallet(am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
