@@ -70,7 +70,7 @@ func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 
 var pathToContracts = "genesis/experiment/"
 
-func getFullPath(relativePath string) (string, error) {
+func getAbsolutePath(relativePath string) (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		return "", errors.Wrap(nil, "[ getFullPath ] couldn't find info about current file")
@@ -80,7 +80,7 @@ func getFullPath(relativePath string) (string, error) {
 }
 
 func getContractPath(name string) (string, error) {
-	contractDir, err := getFullPath(pathToContracts)
+	contractDir, err := getAbsolutePath(pathToContracts)
 	if err != nil {
 		return "", errors.Wrap(nil, "[ getContractPath ] couldn't get absolute path to contracts")
 	}
@@ -303,7 +303,7 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testu
 }
 
 func getRootMemberPubKey(file string) (string, error) {
-	fileWithPath, err := getFullPath(file)
+	fileWithPath, err := getAbsolutePath(file)
 	if err != nil {
 		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't find absolute path for root keys")
 	}
