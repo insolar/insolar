@@ -87,7 +87,7 @@ func (ic *InsolarConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
-	approve, err := ic.consensus.DoConsensus(ctx, ic.self, participants)
+	approve, err := ic.consensus.DoConsensus(pulse.PulseNumber, ctx, ic.self, participants)
 	if err != nil {
 		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
 		approve = false

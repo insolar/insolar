@@ -29,18 +29,18 @@ type communicatorReceiver struct {
 type communicatorSender struct {
 }
 
-func (communicatorReceiver) ExchangeData(ctx context.Context, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
+func (communicatorReceiver) ExchangeData(number core.PulseNumber, ctx context.Context, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (communicatorReceiver) ExchangeHash(ctx context.Context, p Participant, data []byte) ([]byte, error) {
+func (communicatorReceiver) ExchangeHash(number core.PulseNumber, ctx context.Context, p Participant, data []byte) ([]byte, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (communicatorSender) ExchangeData(ctx context.Context, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
+func (communicatorSender) ExchangeData(number core.PulseNumber, ctx context.Context, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (communicatorSender) ExchangeHash(ctx context.Context, p Participant, data []byte) ([]byte, error) {
+func (communicatorSender) ExchangeHash(number core.PulseNumber, ctx context.Context, p Participant, data []byte) ([]byte, error) {
 	return nil, errors.New("not implemented")
 }
