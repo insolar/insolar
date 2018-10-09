@@ -24,8 +24,10 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	memberContract "github.com/insolar/insolar/genesis/experiment/member"
 	"github.com/insolar/insolar/genesis/experiment/nodedomain"
 	"github.com/insolar/insolar/genesis/experiment/rootdomain"
+	walletContract "github.com/insolar/insolar/genesis/experiment/wallet"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
@@ -47,6 +49,7 @@ var contractNames = []string{wallet, member, allowance, rootDomain, nodeDomain, 
 type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
 	rootKeysFile  string
+	rootPubKey    string
 }
 
 // GetRootDomainRef returns reference to RootDomain instance
@@ -211,6 +214,62 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
+func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.ContractsBuilder) (*core.RecordRef, error) {
+	instanceData, err := serializeInstance(memberContract.New("RootMember", b.rootPubKey))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
+	}
+
+	rootMemberRef, err := am.ActivateObject(
+		core.RecordRef{}, core.RandomRef(),
+		*cb.Classes[member],
+		*b.rootDomainRef,
+		instanceData,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
+	}
+	if rootMemberRef == nil {
+		return nil, errors.Wrap(err, "[ ActivateActivateRootMember ] couldn't create root member")
+	}
+
+	updateData, err := serializeInstance(&rootdomain.RootDomain{Root: rootMemberRef})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
+	}
+	_, err = am.UpdateObject(
+		core.RecordRef{}, core.RandomRef(),
+		*b.rootDomainRef, updateData,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ActivateRootMember ]")
+	}
+
+	return rootMemberRef, nil
+}
+
+func (b *Bootstrapper) activateRootWallet(am core.ArtifactManager, cb *testutil.ContractsBuilder, rootMemberRef *core.RecordRef) error {
+	instanceData, err := serializeInstance(walletContract.New(1000))
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootWallet ]")
+	}
+
+	rootRef, err := am.ActivateObjectDelegate(
+		core.RecordRef{}, core.RandomRef(),
+		*cb.Classes[wallet],
+		*rootMemberRef,
+		instanceData,
+	)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootWallet ]")
+	}
+	if rootRef == nil {
+		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
+	}
+
+	return nil
+}
+
 func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
 	err := b.activateRootDomain(am, cb)
 	errMsg := "[ ActivateSmartContracts ]"
@@ -218,6 +277,14 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testu
 		return errors.Wrap(err, errMsg)
 	}
 	err = b.activateNodeDomain(am, cb)
+	if err != nil {
+		return errors.Wrap(err, errMsg)
+	}
+	rootMemberRef, err := b.activateRootMember(am, cb)
+	if err != nil {
+		return errors.Wrap(err, errMsg)
+	}
+	err = b.activateRootWallet(am, cb, rootMemberRef)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
@@ -230,7 +297,7 @@ func getRootMemberPubKey(file string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't find absolute path for root keys")
 	}
-	data, err := ioutil.ReadFile(fileWithPath) // nolint: errcheck
+	data, err := ioutil.ReadFile(fileWithPath)
 	if err != nil {
 		return "", errors.New("couldn't read rootkeys file")
 	}
@@ -259,7 +326,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return nil
 	}
 
-	_, err = getRootMemberPubKey(b.rootKeysFile)
+	b.rootPubKey, err = getRootMemberPubKey(b.rootKeysFile)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
 	}
