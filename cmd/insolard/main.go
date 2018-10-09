@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
@@ -138,6 +139,11 @@ func main() {
 	cm.components.Metrics, err = metrics.NewMetrics(cfgHolder.Configuration.Metrics)
 	if err != nil {
 		log.Fatalln("failed to start Metrics: ", err.Error())
+	}
+
+	cm.components.NetworkCoordinator, err = networkcoordinator.New()
+	if err != nil {
+		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
 	}
 
 	cm.linkAll()
