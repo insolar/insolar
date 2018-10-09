@@ -44,10 +44,12 @@ type NodeKeeper interface {
 	GetUnsyncHash() (hash []byte, unsyncCount int, err error)
 	// GetUnsync gets the local unsync list (excluding other nodes unsync lists).
 	GetUnsync() []*core.ActiveNode
-	// SetPulse sets internal PulseNumber to number.
-	SetPulse(number core.PulseNumber)
+	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
+	// or equal to internal PulseNumber
+	SetPulse(number core.PulseNumber) bool
 	// Sync initiate transferring unsync -> sync, sync -> active. If approved is false, unsync is not transferred to sync.
-	Sync(approved bool)
+	// If number is less than internal PulseNumber then ignore Sync.
+	Sync(approved bool, number core.PulseNumber)
 	// AddUnsync add unsync node to the local unsync list.
 	// Returns error if node's PulseNumber is not equal to the NodeKeeper internal PulseNumber.
 	AddUnsync(*core.ActiveNode) error
@@ -166,19 +168,19 @@ func (nk *nodekeeper) GetUnsync() []*core.ActiveNode {
 	return result
 }
 
-func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
+func (nk *nodekeeper) SetPulse(number core.PulseNumber) bool {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
 	if nk.state == undefined {
 		nk.pulse = number
 		nk.state = awaitUnsync
-		return
+		return true
 	}
 
 	if number <= nk.pulse {
 		log.Warnf("NodeKeeper: ignored SetPulse call with number=%d while current=%d", uint32(number), uint32(nk.pulse))
-		return
+		return false
 	}
 
 	if nk.state == hashCalculated || nk.state == awaitUnsync {
@@ -192,9 +194,10 @@ func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
 	nk.state = awaitUnsync
 	nk.invalidateCache()
 	nk.updateUnsyncPulse()
+	return true
 }
 
-func (nk *nodekeeper) Sync(approved bool) {
+func (nk *nodekeeper) Sync(approved bool, number core.PulseNumber) {
 	nk.unsyncLock.Lock()
 	nk.activeLock.Lock()
 
@@ -205,6 +208,12 @@ func (nk *nodekeeper) Sync(approved bool) {
 
 	if nk.state == synced || nk.state == undefined {
 		log.Warn("NodeKeeper: ignored Sync call from `synced` or `undefined` state")
+		return
+	}
+
+	if nk.pulse > number {
+		log.Warnf("NodeKeeper: ignored Sync call because passed number %d is less than internal number %d",
+			number, nk.pulse)
 		return
 	}
 

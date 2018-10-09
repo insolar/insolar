@@ -79,16 +79,17 @@ func (ic *InsolarConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	for i, activeNode := range activeNodes {
 		participants[i] = &participantWrapper{activeNode}
 	}
-	// TODO: check SetPulse
-	ic.keeper.SetPulse(pulse.PulseNumber)
-	// TODO: check pulse before and after the DoConsensus. If pulse changed, we don't have to Sync.
-	// the check should be performed in Sync to avoid races
+	success := ic.keeper.SetPulse(pulse.PulseNumber)
+	if !success {
+		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
+		return
+	}
 	approve, err := ic.consensus.DoConsensus(ctx, ic.self, participants)
 	if err != nil {
-		log.Errorf("Error performing consensus steps: %s", err.Error())
+		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
 		approve = false
 	}
-	ic.keeper.Sync(approve)
+	ic.keeper.Sync(approve, pulse.PulseNumber)
 }
 
 // IsPartOfConsensus returns whether we should perform all consensus interactions or not
