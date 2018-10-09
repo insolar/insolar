@@ -36,7 +36,7 @@ import (
 const HOST = "http://localhost:19191"
 const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
-const insolarRootKeysPath = "functest/bootstrap_keys.json"
+const insolarRootKeys = "bootstrap_keys.json"
 
 var cmd *exec.Cmd
 var stdin io.WriteCloser
@@ -44,6 +44,7 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
+var insolarRootKeysPath = filepath.Join(testdataPath(), insolarRootKeys)
 
 func testdataPath() string {
 	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
@@ -93,7 +94,7 @@ func deleteDirForData() error {
 
 func generateRootKeys() error {
 	out, err := exec.Command(
-		insolarPath, "gen_keys",
+		insolarPath, "-c", "gen_keys",
 		"-o", insolarRootKeysPath).CombinedOutput()
 	return errors.Wrapf(err, "[ generateRootKeys ] could't generate root keys: %s", out)
 }

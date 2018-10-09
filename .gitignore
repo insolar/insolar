@@ -45,4 +45,4 @@ data
 /dist
 
 /scripts/insolard/bootstrap_keys.json
-/functest/bootstrap_keys.json
+/testdata/functional/bootstrap_keys.json

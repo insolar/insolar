@@ -64,13 +64,20 @@ func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 
 var pathToContracts = "genesis/experiment/"
 
-func getContractPath(name string) (string, error) {
+func getFullPath(relativePath string) (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
-		return "", errors.Wrap(nil, "[ getContractPath ] couldn't find info about current file")
+		return "", errors.Wrap(nil, "[ getFullPath ] couldn't find info about current file")
 	}
 	rootDir := filepath.Dir(filepath.Dir(currentFile))
-	contractDir := filepath.Join(rootDir, pathToContracts)
+	return filepath.Join(rootDir, relativePath), nil
+}
+
+func getContractPath(name string) (string, error) {
+	contractDir, err := getFullPath(pathToContracts)
+	if err != nil {
+		return "", errors.Wrap(nil, "[ getContractPath ] couldn't get absolute path to contracts")
+	}
 	contractFile := name + ".go"
 	return filepath.Join(contractDir, name, contractFile), nil
 }
@@ -219,9 +226,16 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testu
 }
 
 func getRootMemberPubKey(file string) (string, error) {
-	data, _ := ioutil.ReadFile(file)
+	fileWithPath, err := getFullPath(file)
+	if err != nil {
+		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't find absolute path for root keys")
+	}
+	data, err := ioutil.ReadFile(fileWithPath)
+	if err != nil {
+		return "", errors.New("couldn't read rootkeys file")
+	}
 	var keys map[string]string
-	err := json.Unmarshal(data, &keys)
+	err = json.Unmarshal(data, &keys)
 	if err != nil {
 		return "", err
 	}
@@ -244,6 +258,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		log.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
 	}
+
 	_, err = getRootMemberPubKey(b.rootKeysFile)
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
