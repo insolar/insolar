@@ -16,10 +16,11 @@
 package updater
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 // Just to make Goland happy
 func TestStub(t *testing.T) {
-
+	assert.NotNil(t, NewUpdater())
 }

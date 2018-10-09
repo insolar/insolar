@@ -48,7 +48,7 @@ func (request HTTPRequestUpdateNode) downloadFile(filepath string, url string) e
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
 		log.Error("HTTP bad status: ", resp.Status)
-		return errors.Errorf("HTTP error, ", resp.Status)
+		return errors.Errorf("HTTP error: %s ", resp.Status)
 	}
 
 	// Writer the body to file
