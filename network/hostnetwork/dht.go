@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -60,7 +59,6 @@ type DHT struct {
 	infinityBootstrap bool
 	nodeID            core.RecordRef
 	activeNodeKeeper  nodekeeper.NodeKeeper
-	insolarConsensus  *consensus.InsolarConsensus
 }
 
 // AuthInfo collects some information about authentication.
@@ -130,7 +128,6 @@ func NewDHT(
 	infbootstrap bool,
 	nodeID core.RecordRef,
 	keeper nodekeeper.NodeKeeper,
-	insolarConsensus *consensus.InsolarConsensus,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -138,10 +135,7 @@ func NewDHT(
 	}
 
 	rel := relay.NewRelay()
-	if err != nil {
-		// TODO: return error on check (do nothing for now to evade breaking the binary and all tests)
-		log.Error("consensus not implemented")
-	}
+
 	if keeper == nil {
 		keeper = nodekeeper.NewNodeKeeper(nodeID, time.Minute)
 	}
@@ -159,7 +153,6 @@ func NewDHT(
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
 		activeNodeKeeper:  keeper,
-		insolarConsensus:  insolarConsensus,
 	}
 
 	if options.ExpirationTime == 0 {

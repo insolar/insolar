@@ -114,7 +114,7 @@ func (ic *NetworkConsensus) IsPartOfConsensus() bool {
 
 // NewInsolarConsensus creates new object to handle all consensus events
 func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler,
-	network nodenetwork.NodeNetwork) (*NetworkConsensus, error) {
+	network *nodenetwork.NodeNetwork) (consensus.InsolarConsensus, error) {
 
 	communicatorSnd := &communicatorSender{}
 	communicatorRcv := &communicatorReceiver{}
