@@ -17,7 +17,8 @@
 package configuration
 
 type Bootstrap struct {
-	RootKeys string
+	RootKeys    string
+	RootBalance uint
 }
 
 func NewBootstrap() Bootstrap {

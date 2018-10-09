@@ -58,3 +58,4 @@ pulsar:
   nodesaddresses: []
 bootstrap:
   rootkeys: "testdata/functional/bootstrap_keys.json"
+  rootbalance: 10000

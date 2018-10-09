@@ -50,6 +50,7 @@ type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
 	rootKeysFile  string
 	rootPubKey    string
+	rootBalance   uint
 }
 
 // GetRootDomainRef returns reference to RootDomain instance
@@ -61,6 +62,7 @@ func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
 	bootstrapper.rootKeysFile = cfg.Bootstrap.RootKeys
+	bootstrapper.rootBalance = cfg.Bootstrap.RootBalance
 	bootstrapper.rootDomainRef = &core.RecordRef{}
 	return bootstrapper, nil
 }
@@ -249,7 +251,7 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.
 }
 
 func (b *Bootstrapper) activateRootWallet(am core.ArtifactManager, cb *testutil.ContractsBuilder, rootMemberRef *core.RecordRef) error {
-	instanceData, err := serializeInstance(walletContract.New(1000))
+	instanceData, err := serializeInstance(walletContract.New(b.rootBalance))
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}

@@ -58,4 +58,5 @@ pulsar:
   nodesaddresses: []
 bootstrap:
   rootkeys: "scripts/insolard/bootstrap_keys.json"
+  rootbalance: 10000
 
