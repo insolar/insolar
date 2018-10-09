@@ -110,14 +110,18 @@ func (nk *nodekeeper) GetSelf() *core.ActiveNode {
 
 func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
 	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
 	result := make([]*core.ActiveNode, len(nk.active))
 	index := 0
 	for _, node := range nk.active {
 		result[index] = node
 		index++
 	}
+	nk.activeLock.RUnlock()
+	// Sort active nodes to return list with determinate order on every node.
+	// If we have more than 10k nodes, we need to optimize this
+	sort.Slice(result, func(i, j int) bool {
+		return bytes.Compare(result[i].NodeID[:], result[j].NodeID[:]) < 0
+	})
 	return result
 }
 

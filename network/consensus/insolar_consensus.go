@@ -49,6 +49,11 @@ func (dt *dataProviderWrapper) MergeDataList(data []*core.ActiveNode) error {
 	return nil
 }
 
+func (dt *dataProviderWrapper) GetHash() ([]byte, error) {
+	hash, _, err := dt.nodekeeper.GetUnsyncHash()
+	return hash, err
+}
+
 type selfWrapper struct {
 	keeper nodekeeper.NodeKeeper
 }
@@ -87,6 +92,13 @@ func (ic *InsolarConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
 		approve = false
 	}
+	// We have to keep in mind a scenario when DoConsensus takes too long time and a new ProcessPulse is called
+	// simultaneously with the current call. It will happen if DoConsensus takes more time than the delay between two
+	// consecutive pulses.
+	// In this scenario ic.keeper.SetPulse(pulse + 1) will happen earlier than ic.keeper.Sync(approve, pulse).
+	// ic.keeper.SetPulse(pulse + 1) will internally call Sync(false) to update NodeKeeper's unsync, sync and active lists.
+	// That's why we have to pass PulseNumber to ic.keeper.Sync to check relevance of the pulse and to ignore the call
+	// if we detect this kind of race condition.
 	ic.keeper.Sync(approve, pulse.PulseNumber)
 }
 

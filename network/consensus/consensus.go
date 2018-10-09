@@ -32,8 +32,10 @@ type Participant interface {
 type DataProvider interface {
 	// GetDataList get active nodes to exchange with other parties of the consensus
 	GetDataList() []*core.ActiveNode
-	// MergeDataList merge actiove nodes from other parties of the consensus
+	// MergeDataList merge active nodes from other parties of the consensus
 	MergeDataList([]*core.ActiveNode) error
+	// GetHash get hash of merged data vectors
+	GetHash() (hash []byte, err error)
 }
 
 // Consensus interface provides method to make consensus between participants
