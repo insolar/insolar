@@ -57,4 +57,4 @@ pulsar:
   listenaddress: 0.0.0.0:8090
   nodesaddresses: []
 bootstrap:
-  rootkeys: "scripts/insolard/bootstrap_keys.json"
+  rootkeys: "functest/bootstrap_keys.json"

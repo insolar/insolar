@@ -36,11 +36,13 @@ import (
 const HOST = "http://localhost:19191"
 const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
+const insolarRootKeysPath = "functest/bootstrap_keys.json"
 
 var cmd *exec.Cmd
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
+var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
 
 func testdataPath() string {
@@ -57,6 +59,15 @@ func functestPath() string {
 		panic(err)
 	}
 	return filepath.Join(p.Dir, "functest")
+}
+
+func buildInsolar() error {
+	out, err := exec.Command(
+		"go", "build",
+		"-o", insolarPath,
+		insolarImportPath+"/cmd/insolar/",
+	).CombinedOutput()
+	return errors.Wrapf(err, "[ buildInsolar ] could't build insolar: %s", out)
 }
 
 func buildInsolard() error {
@@ -78,6 +89,13 @@ func deleteDirForContracts() error {
 
 func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
+}
+
+func generateRootKeys() error {
+	out, err := exec.Command(
+		insolarPath, "gen_keys",
+		"-o", insolarRootKeysPath).CombinedOutput()
+	return errors.Wrapf(err, "[ generateRootKeys ] could't generate root keys: %s", out)
 }
 
 var insgorundPath string
@@ -203,6 +221,18 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't build ginsider CLI: ")
 	}
 	fmt.Println("[ setup ] ginsider CLI was successfully builded")
+
+	err = buildInsolar()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't build insolar: ")
+	}
+	fmt.Println("[ setup ] insolar was successfully builded")
+
+	err = generateRootKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't generate root keys: ")
+	}
+	fmt.Println("[ setup ] root keys successfully generated")
 
 	err = buildInsolard()
 	if err != nil {
