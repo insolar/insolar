@@ -115,7 +115,6 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 
 	for _, node := range nodes {
 		if node.NodeID.Equal(nk.nodeID) {
-			log.Warnf("AddActiveNodes: trying to add self ID: %s. Typically it must happen via Sync", nk.nodeID)
 			nk.self = node
 		}
 		nk.active[node.NodeID] = node
@@ -198,10 +197,6 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.ActiveNode) {
 	// sync -> active
 	for _, node := range nk.sync {
 		nk.active[node.NodeID] = node
-		if node.NodeID.Equal(nk.nodeID) {
-			log.Infof("Sync: current node %s reached the active node list", nk.nodeID)
-			nk.self = node
-		}
 	}
 	// unsync -> sync
 	nk.sync = syncCandidates
