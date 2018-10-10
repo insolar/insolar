@@ -7,43 +7,43 @@ import (
 )
 
 type Updater struct {
-	serversList       []string
-	binariesList      []string
-	lastSuccessServer string
-	currentVer        string
+	ServersList       []string
+	BinariesList      []string
+	LastSuccessServer string
+	CurrentVer        string
 	Delay             int64
 }
 
 func NewUpdater() *Updater {
-	newUpdater := Updater{}
-	newUpdater.serversList = []string{"http://localhost:2345"}
-	newUpdater.lastSuccessServer = ""
-	newUpdater.binariesList = []string{"insgocc", "insgorund", "insolar", "insolard", "pulsard", "insupdater"}
-	newUpdater.currentVer = version.Version
-	newUpdater.Delay = 60
-	log.Debug("Create new Updater: ", newUpdater)
-	return &newUpdater
+	return &Updater{
+		[]string{"http://localhost:2345"},
+		[]string{"insgocc", "insgorund", "insolar", "insolard", "pulsard", "insupdater"},
+		"",
+		version.Version,
+		60,
+	}
 }
 
 func (updater *Updater) IsSameVersion(currentVersion string) (bool, string, error) {
 	log.Debug("Verify latest peer version from remote server")
-	updater.currentVer = currentVersion
+	updater.CurrentVer = currentVersion
 	currentVer := request.NewVersion(currentVersion)
-	if updater.lastSuccessServer != "" {
-		log.Debug("Latest update server was: ", updater.lastSuccessServer)
-		vers, err := request.ReqCurrentVerFromAddress(request.GetProtocol(updater.lastSuccessServer), updater.lastSuccessServer)
+	if updater.LastSuccessServer != "" {
+		log.Debug("Latest update server was: ", updater.LastSuccessServer)
+		vers, err := request.ReqCurrentVerFromAddress(request.GetProtocol(updater.LastSuccessServer), updater.LastSuccessServer)
 		if err == nil && vers != "" {
 			versionFromUS := request.ExtractVersion(vers)
 			return request.CompareVersion(versionFromUS, currentVer) < 0, versionFromUS.Value, nil
 		}
 	}
-	lastSuccessServer, versionFromUS, err := request.ReqCurrentVer(updater.serversList)
-	log.Debug("Get version=", versionFromUS.Value, " from remote server: ", lastSuccessServer)
-	updater.lastSuccessServer = lastSuccessServer
+	lastSuccessServer, versionFromUS, err := request.ReqCurrentVer(updater.ServersList)
 	if err != nil {
-		return true, versionFromUS.Value, err
+		return true, "", err
 	}
-	if versionFromUS == nil || updater.currentVer == "" {
+	log.Debug("Get version=", versionFromUS.Value, " from remote server: ", lastSuccessServer)
+	updater.LastSuccessServer = lastSuccessServer
+
+	if versionFromUS == nil || updater.CurrentVer == "" {
 		return true, "unset", nil
 	} else
 	//if(updater.currentVer != versionFromUS){
@@ -55,8 +55,8 @@ func (updater *Updater) IsSameVersion(currentVersion string) (bool, string, erro
 
 func (updater Updater) DownloadFiles(version string) (success bool) {
 	log.Info("Start download files from remote server")
-	if updater.lastSuccessServer == "" {
+	if updater.LastSuccessServer == "" {
 		return false
 	}
-	return request.DownloadFiles(version, updater.binariesList, updater.lastSuccessServer)
+	return request.DownloadFiles(version, updater.BinariesList, updater.LastSuccessServer)
 }

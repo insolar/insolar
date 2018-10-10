@@ -28,17 +28,18 @@ func ReqCurrentVer(addresses []string) (string, *Version, error) {
 	log.Debug("Found update server addresses: ", addresses)
 
 	for _, address := range addresses {
+		if address != "" {
+			log.Info("Found update server address: ", address)
+			ver, err := ReqCurrentVerFromAddress(GetProtocol(address), address)
 
-		log.Info("Found update server address: ", address)
-		ver, err := ReqCurrentVerFromAddress(GetProtocol(address), address)
-
-		if err == nil && ver != "" {
-			currentVer := ExtractVersion(ver)
-			return address, currentVer, err
+			if err == nil && ver != "" {
+				currentVer := ExtractVersion(ver)
+				return address, currentVer, err
+			}
 		}
 	}
 	log.Warn("No Update Servers available")
-	return "", nil, nil
+	return "", nil, errors.New("No Update Servers available")
 }
 
 func ReqCurrentVerFromAddress(request UpdateNode, address string) (string, error) {

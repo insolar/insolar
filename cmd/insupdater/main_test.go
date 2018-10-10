@@ -17,10 +17,20 @@
 package main
 
 import (
+	"github.com/insolar/insolar/version"
+	"github.com/stretchr/testify/assert"
 	"testing"
+
+	upd "github.com/insolar/insolar/updater"
 )
 
 // Just to make Goland happy
 func TestStub(t *testing.T) {
-
+	updater := upd.NewUpdater()
+	assert.NotNil(t, updater)
+	assert.Equal(t, updater.CurrentVer, version.Version)
+	assert.Equal(t, updater.BinariesList, []string{"insgocc", "insgorund", "insolar", "insolard", "pulsard", "insupdater"})
+	assert.NotEqual(t, updater.ServersList, []string{""})
+	assert.Equal(t, updater.LastSuccessServer, "")
+	verifyAndUpdate(updater)
 }

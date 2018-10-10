@@ -17,10 +17,33 @@
 package main
 
 import (
+	"io/ioutil"
+	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+const (
+	TestUrl = "http://localhost:2345/latest"
+)
+
+func TestRequest(t *testing.T) {
+	resp, err := http.Get(TestUrl)
+	assert.NoError(t, err)
+	body, err := ioutil.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	assert.NotNil(t, body)
+}
 
 // Just to make Goland happy
 func TestStub(t *testing.T) {
-
+	us := newUpdateServer()
+	assert.NotNil(t, us)
+	assert.Equal(t, us.uploadPath, "./data")
+	assert.Equal(t, us.port, "2345")
+	ver := us.getLatestVersion()
+	handler := us.versionHandler(ver)
+	assert.NotNil(t, handler)
+	assert.Nil(t, ver)
 }

@@ -25,5 +25,21 @@ import (
 func TestStub(t *testing.T) {
 	updater := NewUpdater()
 	assert.NotNil(t, updater)
-	assert.Equal(t, updater.currentVer, version.Version, "Version verify success")
+	assert.Equal(t, updater.CurrentVer, version.Version, "Version verify success")
+	assert.Equal(t, updater.BinariesList, []string{"insgocc", "insgorund", "insolar", "insolard", "pulsard", "insupdater"})
+	assert.Equal(t, updater.ServersList, []string{"http://localhost:2345"})
+	assert.NotEqual(t, updater.LastSuccessServer, "http://localhost:2345")
+}
+
+func TestStubSameVersion(t *testing.T) {
+	updater := NewUpdater()
+	updater.ServersList = []string{""}
+	assert.NotNil(t, updater)
+	b, s, e := updater.IsSameVersion("v0.0.0")
+	assert.Error(t, e)
+	assert.Equal(t, s, "")
+	assert.Equal(t, updater.CurrentVer, "v0.0.0")
+	assert.Equal(t, b, true)
+	assert.Equal(t, updater.DownloadFiles("v0.0.0"), false)
+
 }
