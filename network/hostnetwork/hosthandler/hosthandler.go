@@ -55,7 +55,7 @@ type commonFacade struct {
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
-func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) *commonFacade {
+func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) NetworkCommonFacade {
 	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil}
 }
 

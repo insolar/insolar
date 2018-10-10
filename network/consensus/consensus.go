@@ -42,16 +42,16 @@ type DataProvider interface {
 type Consensus interface {
 	// DoConsensus is sync method, it make all consensus steps and returns boolean result
 	// method should be executed in goroutine
-	DoConsensus(number core.PulseNumber, ctx context.Context, self Participant, allParticipants []Participant) (bool, error)
+	DoConsensus(ctx context.Context, number core.PulseNumber, self Participant, allParticipants []Participant) (bool, error)
 }
 
 // Communicator interface is used to exchange messages between participants
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(number core.PulseNumber, ctx context.Context, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error)
+	ExchangeData(ctx context.Context, number core.PulseNumber, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error)
 
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
-	ExchangeHash(number core.PulseNumber, ctx context.Context, p Participant, data []byte) ([]byte, error)
+	ExchangeHash(ctx context.Context, number core.PulseNumber, p Participant, data []byte) ([]byte, error)
 }
 
 // NewConsensus creates consensus
