@@ -1,18 +1,89 @@
-insolar:
-  host:
-    transport:
-      protocol: UTP
-      address: 127.0.0.1:0
-      behindnat: false
-    bootstraphosts: []
-    isrelay: false
-    infinitybootstrap: false
-    timeout: 4
+host:
+  transport:
+    protocol: UTP
+    address: 127.0.0.1:0
+    behindnat: false
+  bootstraphosts: []
+  isrelay: false
+  infinitybootstrap: false
+  timeout: 4
+node:
   node:
-    nodes: []
-  log:
-    format: ""
-    level: Info
-    output: insolar.log
-  stats:
-    listenaddress: 0.0.0.0:8080
+    id: 4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj
+service:
+  service: {}
+ledger:
+  storage:
+    datadirectory: ./data
+    txretriesonconflict: 3
+  jetcoordinator:
+    rolecandidates:
+      1:
+      - ve1
+      - ve2
+      2:
+      - vv1
+      - vv2
+      - vv3
+      - vv4
+      3:
+      - le1
+      - le2
+      4:
+      - lv1
+      - lv2
+      - lv3
+      - lv4
+      5:
+      - he1
+      - he2
+    rolecounts:
+      1: 1
+      2: 3
+      3: 1
+      4: 3
+      5: 1
+log:
+  level: Info
+  adapter: logrus
+metrics:
+  listenaddress: 0.0.0.0:8080
+logicrunner:
+  rpclisten: 127.0.0.1:7778
+  rpcprotocol: tcp
+  builtin: {}
+  goplugin:
+    runnerlisten: 127.0.0.1:7777
+    runnerprotocol: tcp
+apirunner:
+  port: 19191
+  location: /api/v1
+pulsar:
+  connectiontype: tcp
+  mainlisteneraddress: 0.0.0.0:18090
+  privatekey: |-
+    -----BEGIN PRIVATE KEY-----
+    MHcCAQEEID6XJHMb2aiaK1bp2GHHw0r4LrzZZ4exlcmx8GrjGsMFoAoGCCqGSM49
+    AwEHoUQDQgAE7DE4ArqxIYbY/UAyLLFBGuFu2gROPaqp4vxbEeie7mnZeqsYexmN
+    BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
+    -----END PRIVATE KEY-----
+  storage:
+    datadirectory: ./data/pulsar
+    txretriesonconflict: 0
+  pulsetime: 10000
+  receivingsigntimeout: 1000
+  receivingnumbertimeout: 1000
+  receivingvectortimeout: 1000
+  receivingsignsforchosentimeout: 0
+  neighbours: []
+  numberofrandomhosts: 1
+  numberdelta: 10
+  bootstraplistener:
+    protocol: UTP
+    address: 0.0.0.0:18091
+    behindnat: false
+  bootstrapnodes:
+  - 127.0.0.1:64278
+bootstrap:
+  rootkeys: ""
+  rootbalance: 0
