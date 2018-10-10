@@ -72,10 +72,15 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
+var serial = 0
+
 // MakeBaseMessage makes base of logicrunner event from base of up request
 func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
+	serial++
+	log.Warnf("NONCE = %d", serial)
 	return message.BaseLogicMessage{
 		Caller: req.Me,
+		Nonce:  serial,
 	}
 }
 
@@ -93,7 +98,6 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 
 		rep.Result = cr.Resp.(core.Arguments)
 		return nil
-
 	}
 
 	var mode message.MethodReturnMode
