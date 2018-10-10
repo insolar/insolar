@@ -44,8 +44,8 @@ const (
 	TypeRPC
 	// TypeRelay is packet type for request target to be a relay.
 	TypeRelay
-	// TypeAuth is packet type for authentication between hosts.
-	TypeAuth
+	// TypeAuthentication is packet type for authentication between hosts.
+	TypeAuthentication
 	// TypeCheckOrigin is packet to check originality of some host.
 	TypeCheckOrigin
 	// TypeObtainIP is packet to get itself IP from another host.
@@ -56,12 +56,24 @@ const (
 	TypeKnownOuterHosts
 	// TypeCheckNodePriv is packet to check preset node privileges.
 	TypeCheckNodePriv
-	// TypeCascadeSend is the packet type for the cascade send message feature
+	// TypeCascadeSend is the packet type for the cascade send message feature.
 	TypeCascadeSend
-	// TypePulse is packet type for the messages received from pulsars
+	// TypePulse is packet type for the messages received from pulsars.
 	TypePulse
-	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network
+	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network.
 	TypeGetRandomHosts
+	// TypeCheckPublicKey is packet to request an authorization in the network.
+	TypeCheckPublicKey
+	// TypeCheckSignedNonce is packet to check a signed nonce.
+	TypeCheckSignedNonce
+	// TypeActiveNodes is packet type to get active nodes.
+	TypeActiveNodes
+	// TypeExchangeUnsyncLists is packet type to exchange unsync lists during consensus
+	TypeExchangeUnsyncLists
+	// TypeExchangeUnsyncHash is packet type to exchange hash of merged unsync lists during consensus
+	TypeExchangeUnsyncHash
+	// TypeDisconnect is packet to disconnect from active list.
+	TypeDisconnect
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -104,8 +116,8 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestDataRPC)
 	case TypeRelay:
 		_, valid = m.Data.(*RequestRelay)
-	case TypeAuth:
-		_, valid = m.Data.(*RequestAuth)
+	case TypeAuthentication:
+		_, valid = m.Data.(*RequestAuthentication)
 	case TypeCheckOrigin:
 		_, valid = m.Data.(*RequestCheckOrigin)
 	case TypeObtainIP:
@@ -122,6 +134,18 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestPulse)
 	case TypeGetRandomHosts:
 		_, valid = m.Data.(*RequestGetRandomHosts)
+	case TypeCheckPublicKey:
+		_, valid = m.Data.(*RequestCheckPublicKey)
+	case TypeCheckSignedNonce:
+		_, valid = m.Data.(*RequestCheckSignedNonce)
+	case TypeActiveNodes:
+		_, valid = m.Data.(*RequestActiveNodes)
+	case TypeExchangeUnsyncLists:
+		_, valid = m.Data.(*RequestExchangeUnsyncLists)
+	case TypeExchangeUnsyncHash:
+		_, valid = m.Data.(*RequestExchangeUnsyncHash)
+	case TypeDisconnect:
+		_, valid = m.Data.(*RequestDisconnect)
 	default:
 		valid = false
 	}
@@ -195,7 +219,7 @@ func init() {
 	gob.Register(&RequestDataStore{})
 	gob.Register(&RequestDataRPC{})
 	gob.Register(&RequestRelay{})
-	gob.Register(&RequestAuth{})
+	gob.Register(&RequestAuthentication{})
 	gob.Register(&RequestCheckOrigin{})
 	gob.Register(&RequestObtainIP{})
 	gob.Register(&RequestRelayOwnership{})
@@ -204,13 +228,19 @@ func init() {
 	gob.Register(&RequestCascadeSend{})
 	gob.Register(&RequestPulse{})
 	gob.Register(&RequestGetRandomHosts{})
+	gob.Register(&RequestCheckPublicKey{})
+	gob.Register(&RequestCheckSignedNonce{})
+	gob.Register(&RequestActiveNodes{})
+	gob.Register(&RequestExchangeUnsyncLists{})
+	gob.Register(&RequestExchangeUnsyncHash{})
+	gob.Register(&RequestDisconnect{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
 	gob.Register(&ResponseDataStore{})
 	gob.Register(&ResponseDataRPC{})
 	gob.Register(&ResponseRelay{})
-	gob.Register(&ResponseAuth{})
+	gob.Register(&ResponseAuthentication{})
 	gob.Register(&ResponseCheckOrigin{})
 	gob.Register(&ResponseObtainIP{})
 	gob.Register(&ResponseRelayOwnership{})
@@ -219,6 +249,12 @@ func init() {
 	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
 	gob.Register(&ResponseGetRandomHosts{})
+	gob.Register(&ResponseCheckPublicKey{})
+	gob.Register(&ResponseCheckSignedNonce{})
+	gob.Register(&ResponseActiveNodes{})
+	gob.Register(&ResponseExchangeUnsyncLists{})
+	gob.Register(&ResponseExchangeUnsyncHash{})
+	gob.Register(&ResponseDisconnect{})
 
 	gob.Register(&id.ID{})
 }

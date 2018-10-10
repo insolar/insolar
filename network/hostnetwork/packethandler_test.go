@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -65,6 +66,13 @@ func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
 }
 
 func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
+}
+
+func (fac *mockNetworkCommonFacade) GetConsensus() consensus.InsolarConsensus {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) SetConsensus(consensus.InsolarConsensus) {
 }
 
 type mockHostHandler struct {
@@ -124,6 +132,10 @@ func (hh *mockHostHandler) GetOuterHostsCount() int {
 	return 0
 }
 
+func (hh *mockHostHandler) GetNodeID() core.RecordRef {
+	return core.RandomRef()
+}
+
 func (hh *mockHostHandler) ConfirmNodeRole(role string) bool {
 	return false
 }
@@ -133,6 +145,14 @@ func (hh *mockHostHandler) StoreRetrieve(key store.Key) ([]byte, bool) {
 }
 
 func (hh *mockHostHandler) CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error {
+	return nil
+}
+
+func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
+	return nil
+}
+
+func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	return nil
 }
 
@@ -163,9 +183,9 @@ func (hh *mockHostHandler) SendRequest(request *packet.Packet) (transport.Future
 			response = builder.Response(&packet.ResponseRelay{State: relay.Started}).Build()
 		case packet.StopRelay:
 			response = builder.Response(&packet.ResponseRelay{State: relay.Stopped}).Build()
-		case packet.BeginAuth:
+		case packet.BeginAuthentication:
 			response = builder.Response(&packet.ResponseRelay{State: relay.NoAuth}).Build()
-		case packet.RevokeAuth:
+		case packet.RevokeAuthentication:
 			response = builder.Response(&packet.ResponseRelay{State: relay.NoAuth}).Build()
 		case packet.Unknown:
 			response = builder.Response(&packet.ResponseRelay{State: relay.Unknown}).Build()
@@ -176,8 +196,8 @@ func (hh *mockHostHandler) SendRequest(request *packet.Packet) (transport.Future
 		response = builder.Response(&packet.ResponseObtainIP{IP: "0.0.0.0"}).Build()
 	case packet.TypeCheckOrigin:
 		response = builder.Response(&packet.ResponseCheckOrigin{AuthUniqueKey: []byte("asd")}).Build()
-	case packet.TypeAuth:
-		response = builder.Response(&packet.ResponseAuth{Success: true, AuthUniqueKey: []byte("asd")}).Build()
+	case packet.TypeAuthentication:
+		response = builder.Response(&packet.ResponseAuthentication{Success: true, AuthUniqueKey: []byte("asd")}).Build()
 	case packet.TypeRelayOwnership:
 		response = builder.Response(&packet.ResponseRelayOwnership{Accepted: true}).Build()
 	}
@@ -204,6 +224,10 @@ func (hh *mockHostHandler) InvokeRPC(sender *host.Host, method string, args [][]
 }
 
 func (hh *mockHostHandler) Store(key store.Key, data []byte, replication time.Time, expiration time.Time, publisher bool) error {
+	return nil
+}
+
+func (hh *mockHostHandler) GetActiveNodes() error {
 	return nil
 }
 
@@ -331,34 +355,34 @@ func TestDispatchPacketType(t *testing.T) {
 	})
 
 	t.Run("authentication", func(t *testing.T) {
-		pckt := builder.Type(packet.TypeAuth).
+		pckt := builder.Type(packet.TypeAuthentication).
 			Sender(sender).
 			Receiver(receiver).
-			Request(&packet.RequestAuth{Command: packet.Unknown}).
+			Request(&packet.RequestAuthentication{Command: packet.Unknown}).
 			Build()
 		DispatchPacketType(hh, GetDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = builder.Type(packet.TypeAuth).
+		pckt = builder.Type(packet.TypeAuthentication).
 			Sender(sender).
 			Receiver(receiver).
-			Request(&packet.RequestAuth{Command: packet.BeginAuth}).
+			Request(&packet.RequestAuthentication{Command: packet.BeginAuthentication}).
 			Build()
 		DispatchPacketType(hh, GetDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = builder.Type(packet.TypeAuth).
+		pckt = builder.Type(packet.TypeAuthentication).
 			Sender(sender).
 			Receiver(receiver).
-			Request(&packet.RequestAuth{Command: packet.RevokeAuth}).
+			Request(&packet.RequestAuthentication{Command: packet.RevokeAuthentication}).
 			Build()
 		DispatchPacketType(hh, GetDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = builder.Type(packet.TypeAuth).
+		pckt = builder.Type(packet.TypeAuthentication).
 			Sender(authenticatedSender).
 			Receiver(receiver).
-			Request(&packet.RequestAuth{Command: packet.BeginAuth}).
+			Request(&packet.RequestAuthentication{Command: packet.BeginAuthentication}).
 			Build()
 		DispatchPacketType(hh, GetDefaultCtx(hh), pckt, packet.NewBuilder())
-		pckt = builder.Type(packet.TypeAuth).
+		pckt = builder.Type(packet.TypeAuthentication).
 			Sender(authenticatedSender).
 			Receiver(receiver).
-			Request(&packet.RequestAuth{Command: packet.RevokeAuth}).
+			Request(&packet.RequestAuthentication{Command: packet.RevokeAuthentication}).
 			Build()
 		DispatchPacketType(hh, GetDefaultCtx(hh), pckt, packet.NewBuilder())
 	})

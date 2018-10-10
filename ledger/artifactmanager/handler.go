@@ -45,6 +45,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeGetClass, h.handleGetClass)
 	bus.MustRegister(core.TypeGetObject, h.handleGetObject)
 	bus.MustRegister(core.TypeGetDelegate, h.handleGetDelegate)
+	bus.MustRegister(core.TypeGetChildren, h.handleGetChildren)
 	bus.MustRegister(core.TypeDeclareType, h.handleDeclareType)
 	bus.MustRegister(core.TypeDeployCode, h.handleDeployCode)
 	bus.MustRegister(core.TypeActivateClass, h.handleActivateClass)
@@ -90,12 +91,12 @@ func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, err
 		return nil, errors.Wrap(err, "failed to retrieve code from record")
 	}
 
-	react := reply.Code{
+	rep := reply.Code{
 		Code:        code,
 		MachineType: mt,
 	}
 
-	return &react, nil
+	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, error) {
@@ -114,13 +115,13 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 		code = state.GetCode().CoreRef()
 	}
 
-	react := reply.Class{
+	rep := reply.Class{
 		Head:  msg.Head,
 		State: *stateID,
 		Code:  code,
 	}
 
-	return &react, nil
+	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, error) {
@@ -132,20 +133,14 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 		return nil, err
 	}
 
-	children := make([]core.RecordRef, 0, len(idx.Children))
-	for _, c := range idx.Children {
-		children = append(children, *c.CoreRef())
+	rep := reply.Object{
+		Head:   msg.Head,
+		State:  *stateID,
+		Class:  *idx.ClassRef.CoreRef(),
+		Memory: state.GetMemory(),
 	}
 
-	react := reply.Object{
-		Head:     msg.Head,
-		State:    *stateID,
-		Class:    *idx.ClassRef.CoreRef(),
-		Memory:   state.GetMemory(),
-		Children: children,
-	}
-
-	return &react, nil
+	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply, error) {
@@ -162,11 +157,63 @@ func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply,
 		return nil, ErrNotFound
 	}
 
-	react := reply.Delegate{
+	rep := reply.Delegate{
 		Head: *delegateRef.CoreRef(),
 	}
 
-	return &react, nil
+	return &rep, nil
+}
+
+func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.GetChildren)
+	parentRef := record.Core2Reference(msg.Parent)
+
+	idx, _, _, err := getObject(h.db, &parentRef.Record, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		refs      []core.RecordRef
+		fromChild *record.ID
+	)
+
+	// Counting from specified child or the latest.
+	if msg.FromChild != nil {
+		id := record.Bytes2ID(msg.FromChild[:])
+		fromChild = &id
+	} else {
+		fromChild = idx.LatestChild
+	}
+
+	i := storage.NewChainIterator(h.db, fromChild)
+	counter := 0
+	for i.HasNext() {
+		id, rec, err := i.Next()
+		if err != nil {
+			return nil, errors.New("failed to retrieve children")
+		}
+
+		// We have enough results.
+		if counter >= msg.Amount {
+			return &reply.Children{Refs: refs, NextFrom: id.CoreID()}, nil
+		}
+		counter++
+
+		child, ok := rec.(*record.ChildRecord)
+		if !ok {
+			return nil, errors.New("failed to retrieve children")
+		}
+
+		// Skip records later than specified pulse.
+		if msg.FromPulse != nil && child.Ref.Record.Pulse > *msg.FromPulse {
+			continue
+		}
+
+		refs = append(refs, *child.Ref.CoreRef())
+	}
+
+	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
 func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply, error) {
@@ -186,12 +233,12 @@ func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply,
 		},
 		TypeDeclaration: msg.TypeDec,
 	}
-	codeID, err := h.db.SetRecord(&rec)
+	typeID, err := h.db.SetRecord(&rec)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, codeID)}, nil
+	return &reply.Reference{Ref: *getReference(&msg.Request, typeID)}, nil
 }
 
 func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, error) {
@@ -211,11 +258,11 @@ func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, 
 		},
 		TargetedCode: msg.CodeMap,
 	}
-	codeRef, err := h.db.SetRecord(&rec)
+	codeID, err := h.db.SetRecord(&rec)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
-	return &reply.Reference{Ref: *getReference(&msg.Request, codeRef)}, nil
+	return &reply.Reference{Ref: *getReference(&msg.Request, codeID)}, nil
 }
 
 func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Reply, error) {
@@ -428,10 +475,6 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 				return errors.Wrap(err, "inconsistent index")
 			}
 		}
-		parentIdx.Children = append(parentIdx.Children, record.Reference{
-			Record: *objID,
-			Domain: record.Core2Reference(msg.Request).Domain,
-		})
 		err = tx.SetObjectIndex(&parentRef.Record, parentIdx)
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -633,16 +676,14 @@ func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Repl
 		}
 
 		rec := record.ChildRecord{
-			ChainRecord: record.ChainRecord{
-				Prev: idx.LatestChild,
-			},
-			Child: record.Core2Reference(msg.Child),
+			PrevChild: idx.LatestChild,
+			Ref:       record.Core2Reference(msg.Child),
 		}
 		child, err = tx.SetRecord(&rec)
 		if err != nil {
 			return err
 		}
-		idx.LatestChild = *child
+		idx.LatestChild = child
 		err = tx.SetObjectIndex(&parentRef.Record, idx)
 		if err != nil {
 			return err

@@ -17,7 +17,6 @@
 package hostnetwork
 
 import (
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
@@ -94,7 +93,7 @@ func handleCheckNodePrivResponse(hostHandler hosthandler.HostHandler, response *
 	return nil
 }
 
-func handleAuthResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuth, target string) error {
+func handleAuthResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseAuthentication, target string) error {
 	var err error
 	if (len(response.AuthUniqueKey) != 0) && response.Success {
 		hostHandler.AddReceivedKey(target, response.AuthUniqueKey)
@@ -121,9 +120,21 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 	return nil
 }
 
-func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Packet) {
-	_, err := hostHandler.SendRequest(request)
-	if err != nil {
-		log.Debugln(err)
+func handleCheckPublicKeyResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckPublicKey) error {
+	if !response.Exist {
+		return errors.New("failed to find a public key")
 	}
+	return nil
+}
+
+func handleCheckSignedNonceResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckSignedNonce) error {
+	if !response.Success {
+		return errors.New("failed to parse a signed nonce")
+	}
+	return nil
+}
+
+func handleActiveNodesResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseActiveNodes) error {
+	err := hostHandler.AddActiveNodes(response.ActiveNodes)
+	return err
 }

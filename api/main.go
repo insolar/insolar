@@ -127,7 +127,7 @@ func preprocessRequest(req *http.Request) (*Params, error) {
 	return &params, nil
 }
 
-func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
+func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
 	sm := seedmanager.New()
 	return func(response http.ResponseWriter, req *http.Request) {
 		startTime := time.Now()
@@ -160,7 +160,7 @@ func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.Recor
 			log.Errorf("[QID=] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, messageBus, rootDomainReference, sm)
+		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, sm)
 
 		answer = processQueryType(rh, params.QType)
 	}
@@ -168,9 +168,10 @@ func wrapAPIV1Handler(messageBus core.MessageBus, rootDomainReference core.Recor
 
 // Runner implements Component for API
 type Runner struct {
-	messageBus core.MessageBus
-	server     *http.Server
-	cfg        *configuration.APIRunner
+	messageBus     core.MessageBus
+	server         *http.Server
+	cfg            *configuration.APIRunner
+	netCoordinator core.NetworkCoordinator
 }
 
 // NewRunner is C-tor for API Runner
@@ -208,8 +209,9 @@ func (ar *Runner) Start(c core.Components) error {
 	ar.reloadMessageBus(c)
 
 	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
+	ar.netCoordinator = c.NetworkCoordinator
 
-	fw := wrapAPIV1Handler(ar.messageBus, *rootDomainReference)
+	fw := wrapAPIV1Handler(ar, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
 	log.Info("Starting ApiRunner ...")
 	log.Info("Config: ", ar.cfg)

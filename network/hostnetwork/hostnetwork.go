@@ -18,10 +18,12 @@ package hostnetwork
 
 import (
 	"strings"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/hostnetwork/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -29,6 +31,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
@@ -52,7 +55,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		return nil, errors.Wrap(err, "Failed to ")
 	}
 
-	encodedOriginID := nn.ResolveHostID(nn.GetID())
+	encodedOriginID := nodenetwork.ResolveHostID(nn.GetID())
 	originID := id.FromBase58(encodedOriginID)
 	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
@@ -61,6 +64,8 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade)
+
+	keeper := nodekeeper.NewNodeKeeper(nn.GetID(), time.Minute)
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),
@@ -71,10 +76,19 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		proxy,
 		cfg.Timeout,
 		cfg.InfinityBootstrap,
+		nn.GetID(),
+		keeper,
+		5,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")
 	}
+	networkConsensus, err := consensus.NewInsolarConsensus(keeper, network)
+	if err != nil {
+		// TODO: return error when consensus is implemented
+		log.Warn("Consensus is not implemented!")
+	}
+	network.GetNetworkCommonFacade().SetConsensus(networkConsensus)
 
 	return network, nil
 }

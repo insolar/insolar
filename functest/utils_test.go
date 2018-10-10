@@ -70,7 +70,9 @@ type getSeedResponse struct {
 
 type isAuthorized struct {
 	baseResponse
-	IsAuthorized bool `json:"is_authorized"`
+	PublicKey     string `json:"public_key"`
+	Role          int    `json:"role"`
+	NetCoordCheck bool   `json:"netcoord_auth_success"`
 }
 
 type userInfo struct {

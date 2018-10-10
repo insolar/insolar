@@ -2,7 +2,6 @@ package rootdomain
 
 import (
 		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -127,7 +126,7 @@ func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
 	}
 }
 
-func (r *RootDomain) IsAuthorized(  ) ( bool ) {
+func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, string ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -137,24 +136,28 @@ func (r *RootDomain) IsAuthorized(  ) ( bool ) {
 		panic(err)
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsAuthorized", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
 	if err != nil {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 bool
+	resList := [3]interface{}{}
+	var a0 string
 	resList[0] = a0
+	var a1 core.NodeRole
+	resList[1] = a1
+	var a2 string
+	resList[2] = a2
 
 	err = proxyctx.Current.Deserialize(res, &resList)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(bool)
+	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(string)
 }
 
-func (r *RootDomain) IsAuthorizedNoWait(  ) {
+func (r *RootDomain) AuthorizeNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -164,7 +167,7 @@ func (r *RootDomain) IsAuthorizedNoWait(  ) {
 		panic(err)
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "IsAuthorized", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Authorize", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -394,53 +397,6 @@ func (r *RootDomain) DumpAllUsersNoWait(  ) {
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "DumpAllUsers", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (r *RootDomain) SetRoot( adminKey string ) ( string, *foundation.Error ) {
-	var args [1]interface{}
-	args[0] = adminKey
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "SetRoot", argsSerialized)
-	if err != nil {
-   		panic(err)
-	}
-
-	resList := [2]interface{}{}
-	var a0 string
-	resList[0] = a0
-	var a1 *foundation.Error
-	resList[1] = a1
-
-	err = proxyctx.Current.Deserialize(res, &resList)
-	if err != nil {
-		panic(err)
-	}
-
-	return resList[0].(string), resList[1].(*foundation.Error)
-}
-
-func (r *RootDomain) SetRootNoWait( adminKey string ) {
-	var args [1]interface{}
-	args[0] = adminKey
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "SetRoot", argsSerialized)
 	if err != nil {
 		panic(err)
 	}

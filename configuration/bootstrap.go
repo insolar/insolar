@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2018 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,23 +14,13 @@
  *    limitations under the License.
  */
 
-package core
+package configuration
 
-// Component controller methods
-type Component interface {
-	Start(components Components) error
-	Stop() error
+type Bootstrap struct {
+	RootKeys    string
+	RootBalance uint
 }
 
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-type Components struct {
-	Network            Network
-	Ledger             Ledger
-	LogicRunner        LogicRunner
-	MessageBus         MessageBus
-	Bootstrapper       Bootstrapper
-	APIRunner          Component
-	Metrics            Component
-	NetworkCoordinator NetworkCoordinator
+func NewBootstrap() Bootstrap {
+	return Bootstrap{}
 }

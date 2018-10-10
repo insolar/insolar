@@ -25,29 +25,33 @@ import (
 
 // Participant describes one consensus participant
 type Participant interface {
-	GetActiveNode() core.ActiveNode
+	GetActiveNode() *core.ActiveNode
 }
 
 // DataProvider for data manipulation
 type DataProvider interface {
+	// GetDataList get active nodes to exchange with other parties of the consensus
 	GetDataList() []*core.ActiveNode
+	// MergeDataList merge active nodes from other parties of the consensus
 	MergeDataList([]*core.ActiveNode) error
+	// GetHash get hash of merged data vectors
+	GetHash() (hash []byte, err error)
 }
 
 // Consensus interface provides method to make consensus between participants
 type Consensus interface {
 	// DoConsensus is sync method, it make all consensus steps and returns boolean result
 	// method should be executed in goroutine
-	DoConsensus(ctx context.Context, self Participant, allParticipants []*Participant) (bool, error)
+	DoConsensus(ctx context.Context, number core.PulseNumber, self Participant, allParticipants []Participant) (bool, error)
 }
 
 // Communicator interface is used to exchange messages between participants
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, p Participant, data []*core.ActiveNode) ([]byte, error)
+	ExchangeData(ctx context.Context, number core.PulseNumber, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error)
 
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
-	ExchangeHash(ctx context.Context, p Participant, data []byte) ([]byte, error)
+	ExchangeHash(ctx context.Context, number core.PulseNumber, p Participant, data []byte) ([]byte, error)
 }
 
 // NewConsensus creates consensus

@@ -5,7 +5,6 @@ import (
 		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-type NodeRole int
 
 
 // ClassReference to class of this contract
@@ -125,7 +124,7 @@ func (r *NodeRecord) GetPublicKeyNoWait(  ) {
 	}
 }
 
-func (r *NodeRecord) GetRole(  ) ( NodeRole ) {
+func (r *NodeRecord) GetRole(  ) ( core.NodeRole ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -141,7 +140,7 @@ func (r *NodeRecord) GetRole(  ) ( NodeRole ) {
 	}
 
 	resList := [1]interface{}{}
-	var a0 NodeRole
+	var a0 core.NodeRole
 	resList[0] = a0
 
 	err = proxyctx.Current.Deserialize(res, &resList)
@@ -149,7 +148,7 @@ func (r *NodeRecord) GetRole(  ) ( NodeRole ) {
 		panic(err)
 	}
 
-	return resList[0].(NodeRole)
+	return resList[0].(core.NodeRole)
 }
 
 func (r *NodeRecord) GetRoleNoWait(  ) {
@@ -163,6 +162,51 @@ func (r *NodeRecord) GetRoleNoWait(  ) {
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (r *NodeRecord) GetRoleAndPublicKey(  ) ( core.NodeRole, string ) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRoleAndPublicKey", argsSerialized)
+	if err != nil {
+   		panic(err)
+	}
+
+	resList := [2]interface{}{}
+	var a0 core.NodeRole
+	resList[0] = a0
+	var a1 string
+	resList[1] = a1
+
+	err = proxyctx.Current.Deserialize(res, &resList)
+	if err != nil {
+		panic(err)
+	}
+
+	return resList[0].(core.NodeRole), resList[1].(string)
+}
+
+func (r *NodeRecord) GetRoleAndPublicKeyNoWait(  ) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRoleAndPublicKey", argsSerialized)
 	if err != nil {
 		panic(err)
 	}

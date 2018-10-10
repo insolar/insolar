@@ -43,8 +43,8 @@ func newActiveNode(ref byte, pulse int) *core.ActiveNode {
 }
 
 func TestNodekeeper_calculateNodeHash(t *testing.T) {
-	hash1, _ := calculateHash(nil)
-	hash2, _ := calculateHash([]*core.ActiveNode{})
+	hash1, _ := CalculateHash(nil)
+	hash2, _ := CalculateHash([]*core.ActiveNode{})
 
 	assert.Equal(t, nullHash, hex.EncodeToString(hash1))
 	assert.Equal(t, hash1, hash2)
@@ -55,33 +55,33 @@ func TestNodekeeper_calculateNodeHash(t *testing.T) {
 	activeNode1Slice := []*core.ActiveNode{activeNode1}
 	activeNode2Slice := []*core.ActiveNode{activeNode2}
 
-	hash1, _ = calculateHash(activeNode1Slice)
-	hash2, _ = calculateHash(activeNode2Slice)
+	hash1, _ = CalculateHash(activeNode1Slice)
+	hash2, _ = CalculateHash(activeNode2Slice)
 	assert.Equal(t, hash1, hash2)
 	activeNode2.NodeID = core.RecordRef{1}
-	hash2, _ = calculateHash(activeNode2Slice)
+	hash2, _ = CalculateHash(activeNode2Slice)
 	assert.NotEqual(t, hash1, hash2)
 
 	// nodes order in slice should not affect hash calculating
 	slice1 := []*core.ActiveNode{activeNode1, activeNode2}
 	slice2 := []*core.ActiveNode{activeNode2, activeNode1}
-	hash1, _ = calculateHash(slice1)
-	hash2, _ = calculateHash(slice2)
+	hash1, _ = CalculateHash(slice1)
+	hash2, _ = CalculateHash(slice2)
 	assert.Equal(t, hash1, hash2)
 }
 
 func TestNodekeeper_AddUnsync(t *testing.T) {
-	keeper := NewNodeKeeper(time.Hour)
-	keeper.SetPulse(core.PulseNumber(0))
+	keeper := NewNodeKeeper(core.RecordRef{}, time.Hour)
+	_ = keeper.SetPulse(core.PulseNumber(0))
 	_ = keeper.AddUnsync(newActiveNode(0, 0))
 	_ = keeper.AddUnsync(newActiveNode(1, 0))
 	gossip := []*core.ActiveNode{newActiveNode(2, 0), newActiveNode(3, 0)}
 	_ = keeper.AddUnsyncGossip(gossip)
 	assert.Equal(t, 2, len(keeper.GetUnsync()))
-	keeper.Sync(true)
+	keeper.Sync(true, core.PulseNumber(0))
 	assert.Equal(t, 0, len(keeper.GetUnsync()))
-	keeper.SetPulse(core.PulseNumber(1))
-	keeper.Sync(true)
+	_ = keeper.SetPulse(core.PulseNumber(1))
+	keeper.Sync(true, core.PulseNumber(1))
 	assert.Equal(t, 4, len(keeper.GetActiveNodes()))
 	for i := 0; i < 4; i++ {
 		assert.NotNil(t, keeper.GetActiveNode(core.RecordRef{byte(i)}))
@@ -89,18 +89,18 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 }
 
 func TestNodekeeper_GetUnsyncHash(t *testing.T) {
-	keeper := NewNodeKeeper(time.Hour)
-	keeper.SetPulse(core.PulseNumber(0))
+	keeper := NewNodeKeeper(core.RecordRef{}, time.Hour)
+	_ = keeper.SetPulse(core.PulseNumber(0))
 	hash, count, _ := keeper.GetUnsyncHash()
 	assert.Equal(t, nullHash, hex.EncodeToString(hash))
 	assert.Equal(t, 0, count)
 
-	keeper.SetPulse(core.PulseNumber(1))
+	_ = keeper.SetPulse(core.PulseNumber(1))
 	_ = keeper.AddUnsync(newActiveNode(0, 1))
 	_ = keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(1, 1)})
 
-	keeper2 := NewNodeKeeper(time.Hour)
-	keeper2.SetPulse(core.PulseNumber(1))
+	keeper2 := NewNodeKeeper(core.RecordRef{}, time.Hour)
+	_ = keeper2.SetPulse(core.PulseNumber(1))
 	_ = keeper2.AddUnsync(newActiveNode(1, 1))
 	_ = keeper2.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(0, 1)})
 
@@ -111,8 +111,8 @@ func TestNodekeeper_GetUnsyncHash(t *testing.T) {
 }
 
 func TestNodekeeper_AddUnsync_checks(t *testing.T) {
-	keeper := NewNodeKeeper(time.Hour)
-	keeper.SetPulse(core.PulseNumber(0))
+	keeper := NewNodeKeeper(core.RecordRef{}, time.Hour)
+	_ = keeper.SetPulse(core.PulseNumber(0))
 
 	// Unsync node pulse number should be equal to the NodeKeeper pulse number
 	err := keeper.AddUnsync(newActiveNode(0, 1))
@@ -131,12 +131,12 @@ func TestNodekeeper_AddUnsync_checks(t *testing.T) {
 }
 
 func TestNodekeeper_discardTimedOutUnsync(t *testing.T) {
-	keeper := NewNodeKeeper(250 * time.Millisecond)
+	keeper := NewNodeKeeper(core.RecordRef{}, 250*time.Millisecond)
 	for i := 0; i < 4; i++ {
-		keeper.SetPulse(core.PulseNumber(i))
+		_ = keeper.SetPulse(core.PulseNumber(i))
 		_ = keeper.AddUnsync(newActiveNode(byte(i), i))
 		time.Sleep(100 * time.Millisecond)
-		keeper.Sync(false)
+		keeper.Sync(false, core.PulseNumber(i))
 	}
 	assert.Equal(t, 2, len(keeper.GetUnsync()))
 }
@@ -150,7 +150,7 @@ func TestNodekeeper_cache(t *testing.T) {
 		unsync:       make([]*core.ActiveNode, 0),
 		unsyncGossip: make(map[core.RecordRef]*core.ActiveNode),
 	}
-	keeper.SetPulse(core.PulseNumber(0))
+	_ = keeper.SetPulse(core.PulseNumber(0))
 	assert.Equal(t, awaitUnsync, keeper.state)
 	err := keeper.AddUnsync(newActiveNode(0, 0))
 	assert.NoError(t, err)
@@ -164,16 +164,16 @@ func TestNodekeeper_cache(t *testing.T) {
 	assert.Error(t, err)
 	keeper.AddUnsyncGossip([]*core.ActiveNode{newActiveNode(3, 0)})
 	assert.Error(t, err)
-	keeper.Sync(true)
+	keeper.Sync(true, core.PulseNumber(0))
 	assert.Equal(t, synced, keeper.state)
 
-	keeper.SetPulse(core.PulseNumber(1))
+	_ = keeper.SetPulse(core.PulseNumber(1))
 	assert.Equal(t, awaitUnsync, keeper.state)
 }
 
 func TestNodekeeper_AddActiveNodes(t *testing.T) {
-	keeper := NewNodeKeeper(time.Hour)
-	keeper.SetPulse(core.PulseNumber(0))
+	keeper := NewNodeKeeper(core.RecordRef{}, time.Hour)
+	_ = keeper.SetPulse(core.PulseNumber(0))
 
 	node2 := newActiveNode(0, 0)
 	node1 := newActiveNode(1, 0)
@@ -186,36 +186,36 @@ func TestNodekeeper_AddActiveNodes(t *testing.T) {
 }
 
 func TestNodekeeper_transitions1(t *testing.T) {
-	keeper := NewNodeKeeper(time.Hour)
-	keeper.SetPulse(core.PulseNumber(0))
+	keeper := NewNodeKeeper(core.RecordRef{}, time.Hour)
+	_ = keeper.SetPulse(core.PulseNumber(0))
 
 	keeper.AddUnsync(newActiveNode(0, 0))
-	keeper.Sync(true)
+	keeper.Sync(true, core.PulseNumber(0))
 	// check that Sync is not called and the transition sync -> active is not performed
-	keeper.SetPulse(core.PulseNumber(0))
-	keeper.SetPulse(core.PulseNumber(0))
+	_ = keeper.SetPulse(core.PulseNumber(0))
+	_ = keeper.SetPulse(core.PulseNumber(0))
 	assert.Equal(t, 0, len(keeper.GetActiveNodes()))
 }
 
 func TestNodekeeper_transitions2(t *testing.T) {
-	keeper := NewNodeKeeper(time.Hour)
-	keeper.SetPulse(core.PulseNumber(0))
+	keeper := NewNodeKeeper(core.RecordRef{}, time.Hour)
+	_ = keeper.SetPulse(core.PulseNumber(0))
 
 	keeper.AddUnsync(newActiveNode(0, 0))
 	// check that Sync is called correctly every time and the transition unsync -> sync -> active is performed
-	keeper.SetPulse(core.PulseNumber(1))
-	keeper.Sync(true)
-	keeper.SetPulse(core.PulseNumber(2))
-	keeper.Sync(true)
+	_ = keeper.SetPulse(core.PulseNumber(1))
+	keeper.Sync(true, core.PulseNumber(1))
+	_ = keeper.SetPulse(core.PulseNumber(2))
+	keeper.Sync(true, core.PulseNumber(2))
 	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
 }
 
 func TestNodekeeper_unsyncUpdatePulse(t *testing.T) {
-	keeper := NewNodeKeeper(time.Hour)
-	keeper.SetPulse(core.PulseNumber(0))
+	keeper := NewNodeKeeper(core.RecordRef{}, time.Hour)
+	_ = keeper.SetPulse(core.PulseNumber(0))
 
 	keeper.AddUnsync(newActiveNode(0, 0))
-	keeper.SetPulse(core.PulseNumber(1))
+	_ = keeper.SetPulse(core.PulseNumber(1))
 	nodePulse := keeper.GetUnsync()[0].PulseNum
 	assert.Equal(t, uint32(1), uint32(nodePulse))
 }

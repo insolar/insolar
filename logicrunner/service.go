@@ -148,11 +148,11 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		ClassRef:       req.Class,
-		ParentRef:      req.Parent,
-		Name:           req.ConstructorName,
-		Arguments:      req.ArgsSerialized,
-		SaveAs:         message.Child,
+		ClassRef:         req.Class,
+		ParentRef:        req.Parent,
+		Name:             req.ConstructorName,
+		Arguments:        req.ArgsSerialized,
+		SaveAs:           message.Child,
 	}
 
 	res, err := gpr.lr.MessageBus.Send(msg)
@@ -190,17 +190,16 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	}
 
 	am := gpr.lr.ArtifactManager
-	obj, err := am.GetObject(req.Obj, nil)
+	i, err := am.GetChildren(req.Obj, nil)
 	if err != nil {
-		return errors.Wrap(err, "am.GetObject failed")
+		return err
 	}
-	i := obj.Children()
 	for i.HasNext() {
 		r, err := i.Next()
 		if err != nil {
 			return err
 		}
-		o, err := am.GetObject(r, nil)
+		o, err := am.GetObject(*r, nil)
 		if err != nil {
 			return errors.Wrap(err, "Have ref, have no object")
 		}
@@ -210,7 +209,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 		}
 		ref := cd.HeadRef()
 		if ref.Equal(req.Class) {
-			rep.Children = append(rep.Children, r)
+			rep.Children = append(rep.Children, *r)
 		}
 	}
 	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{ // bad idea, we can store gadzillion of children
@@ -239,11 +238,11 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 	msg := &message.CallConstructor{
 		BaseLogicMessage: MakeBaseMessage(req.UpBaseReq),
-		ClassRef:       req.Class,
-		ParentRef:      req.Into,
-		Name:           req.ConstructorName,
-		Arguments:      req.ArgsSerialized,
-		SaveAs:         message.Delegate,
+		ClassRef:         req.Class,
+		ParentRef:        req.Into,
+		Name:             req.ConstructorName,
+		Arguments:        req.ArgsSerialized,
+		SaveAs:           message.Delegate,
 	}
 
 	res, err := gpr.lr.MessageBus.Send(msg)
