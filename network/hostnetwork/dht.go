@@ -129,7 +129,8 @@ func NewDHT(
 	timeout int,
 	infbootstrap bool,
 	nodeID core.RecordRef,
-	majorityRole int,
+	keeper nodekeeper.NodeKeeper,
+	majorityRule int,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -137,6 +138,10 @@ func NewDHT(
 	}
 
 	rel := relay.NewRelay()
+
+	if keeper == nil {
+		keeper = nodekeeper.NewNodeKeeper(nodeID, time.Minute)
+	}
 
 	dht = &DHT{
 		options:           options,
@@ -150,8 +155,8 @@ func NewDHT(
 		timeout:           timeout,
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
-		activeNodeKeeper:  nodekeeper.NewNodeKeeper(time.Minute),
-		majorityRule:      majorityRole,
+		activeNodeKeeper:  keeper,
+		majorityRule:      majorityRule,
 	}
 
 	if options.ExpirationTime == 0 {

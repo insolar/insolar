@@ -129,6 +129,18 @@ type ResponseActiveNodes struct {
 	ActiveNodes []*core.ActiveNode
 }
 
+// RequestExchangeUnsyncLists is request to exchange unsync lists during consensus
+type ResponseExchangeUnsyncLists struct {
+	UnsyncList []*core.ActiveNode
+	Error      string
+}
+
+// RequestExchangeUnsyncHash is request to exchange hash of merged unsync lists during consensus
+type ResponseExchangeUnsyncHash struct {
+	UnsyncHash []byte
+	Error      string
+}
+
 // ResponseDisconnect id data to answer to disconnected node.
 type ResponseDisconnect struct {
 	Disconnected bool
