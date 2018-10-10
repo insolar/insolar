@@ -28,8 +28,8 @@ import (
 	"path"
 	"testing"
 
+	"github.com/insolar/insolar/application/experiment/member/signer"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/genesis/experiment/member/signer"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -273,7 +273,7 @@ func TestContractCallingContract(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/genesis/proxy/two"
+import "github.com/insolar/insolar/application/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -349,7 +349,7 @@ func TestInjectingDelegate(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/genesis/proxy/two"
+import "github.com/insolar/insolar/application/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -439,7 +439,7 @@ func TestBasicNotificationCall(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/genesis/proxy/two"
+import "github.com/insolar/insolar/application/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -546,7 +546,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/genesis/proxy/child"
+	"github.com/insolar/insolar/application/proxy/child"
 )
 
 type Contract struct {
@@ -650,7 +650,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/genesis/proxy/two"
+	"github.com/insolar/insolar/application/proxy/two"
 )
 
 type One struct {
@@ -746,20 +746,20 @@ func TestRootDomainContract(t *testing.T) {
 	if parallel {
 		t.Parallel()
 	}
-	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.go" +
+	rootDomainCode, err := ioutil.ReadFile("../application/experiment/rootdomain/rootdomain.go" +
 		"")
 	if err != nil {
 		fmt.Print(err)
 	}
-	memberCode, err := ioutil.ReadFile("../genesis/experiment/member/member.go")
+	memberCode, err := ioutil.ReadFile("../application/experiment/member/member.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	allowanceCode, err := ioutil.ReadFile("../genesis/experiment/allowance/allowance.go")
+	allowanceCode, err := ioutil.ReadFile("../application/experiment/allowance/allowance.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	walletCode, err := ioutil.ReadFile("../genesis/experiment/wallet/wallet.go")
+	walletCode, err := ioutil.ReadFile("../application/experiment/wallet/wallet.go")
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -829,7 +829,7 @@ func BenchmarkContractCall(b *testing.B) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/genesis/proxy/child"
+import "github.com/insolar/insolar/application/proxy/child"
 import "github.com/insolar/insolar/core"
 
 type Parent struct {
@@ -888,10 +888,10 @@ func TestProxyGeneration(t *testing.T) {
 
 	for _, contract := range contracts {
 		t.Run(contract, func(t *testing.T) {
-			parsed, err := preprocessor.ParseFile("../genesis/experiment/" + contract + "/" + contract + ".go")
+			parsed, err := preprocessor.ParseFile("../application/experiment/" + contract + "/" + contract + ".go")
 			assert.NoError(t, err)
 
-			proxyPath, err := preprocessor.GetRealGenesisDir("proxy")
+			proxyPath, err := preprocessor.GetRealApplicationDir("proxy")
 			assert.NoError(t, err)
 
 			name, err := parsed.ProxyPackageName()

@@ -57,12 +57,12 @@ Various engines for smart contract execution:
  - [wasm](vm/wasm) - WebAssembly implementation of smart contracts
 
 
-### [Genesis](genesis)
-Genesis module describes interaction of system components with each other.
+### [Application layer](application)
+Application module describes interaction of system components with each other.
 Every component of the system is a `SmartContract`. Members of the system are given the opportunity to build their own dApps by publishing smart contracts in `Domain` instances.
 Domains define the visibility scope for the child contracts and their interaction policies. Actually, `Domain` is subclass of `SmartContract`.
 
-See [package readme](genesis) for more details.
+See [package readme](application) for more details.
 
 ### [Configuration](configuration)
 

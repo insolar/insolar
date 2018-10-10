@@ -1,8 +1,8 @@
 run:
   tests: false
   skip-dirs:
-    - genesis/example/
-    - genesis/proxy/
+    - application/example/
+    - application/proxy/
 
 linters:
   enable:
