@@ -16,6 +16,7 @@
 
 package core
 
+// NodeRole holds role of node
 type NodeRole int
 
 const (
@@ -25,6 +26,7 @@ const (
 	RoleLightMaterial
 )
 
+// GetRoleFromString converts role from string to NodeRole
 func GetRoleFromString(role string) NodeRole {
 	switch role {
 	case "virtual":
