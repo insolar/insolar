@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"net"
 	"net/rpc"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -72,15 +73,13 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
-var serial = 0
+var serial uint64 = 1
 
 // MakeBaseMessage makes base of logicrunner event from base of up request
 func MakeBaseMessage(req rpctypes.UpBaseReq) message.BaseLogicMessage {
-	serial++
-	log.Warnf("NONCE = %d", serial)
 	return message.BaseLogicMessage{
 		Caller: req.Me,
-		Nonce:  serial,
+		Nonce:  atomicLoadAndIncrementUint64(&serial),
 	}
 }
 
@@ -292,4 +291,14 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 		Resp:   rep.Object,
 	})
 	return nil
+}
+
+// atomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
+func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
+	for {
+		val := atomic.LoadUint64(addr)
+		if atomic.CompareAndSwapUint64(addr, val, val+1) {
+			return val
+		}
+	}
 }
