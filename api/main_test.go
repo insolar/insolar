@@ -23,13 +23,11 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -123,53 +121,4 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 	cfg.Location = "test"
 	_, err = NewRunner(&cfg)
 	assert.NoError(t, err)
-}
-
-type TestMessageBus struct {
-}
-
-func (eb *TestMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
-	return nil
-}
-
-func (eb *TestMessageBus) MustRegister(p core.MessageType, handler core.MessageHandler) {
-}
-
-func (eb *TestMessageBus) Start(c core.Components) error {
-	return nil
-}
-
-func (eb *TestMessageBus) Stop() error {
-	return nil
-}
-
-func (*TestMessageBus) SendAsync(core.Message) {}
-
-const TestBalance = 100500
-
-func (eb *TestMessageBus) Send(core.Message) (core.Reply, error) {
-	data, _ := core.MarshalArgs(TestBalance)
-
-	return &reply.CallMethod{
-		Result: data,
-	}, nil
-}
-
-func TestWithFakeMessageBus(t *testing.T) {
-	eb := TestMessageBus{}
-
-	const LOCATION = "/test/test"
-
-	fw := wrapAPIV1Handler(&eb, core.RecordRef{})
-	http.HandleFunc(LOCATION, fw)
-
-	const TestUrl2 = HOST + LOCATION + "?query_type=PPPPPPPP"
-
-	postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
-	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestUrl2, "application/json", bytes.NewBuffer(jsonValue))
-	assert.NoError(t, err)
-	body, err := ioutil.ReadAll(postResp.Body)
-	assert.NoError(t, err)
-	assert.Contains(t, string(body[:]), `"amount": `+strconv.Itoa(TestBalance))
 }

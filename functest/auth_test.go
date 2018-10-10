@@ -25,8 +25,6 @@ import (
 func TestIsAuthorized(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "is_auth",
-		"t":          "d",
-		"zzz":        1,
 	})
 
 	isAuthResponse := &isAuthorized{}

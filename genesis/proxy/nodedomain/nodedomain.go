@@ -2,7 +2,6 @@ package nodedomain
 
 import (
 		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/genesis/proxy/noderecord"
 		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -122,51 +121,6 @@ func (r *NodeDomain) RegisterNodeNoWait( pk string, role string ) {
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (r *NodeDomain) GetNodeRecord( ref core.RecordRef ) ( *noderecord.NodeRecord ) {
-	var args [1]interface{}
-	args[0] = ref
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeRecord", argsSerialized)
-	if err != nil {
-   		panic(err)
-	}
-
-	resList := [1]interface{}{}
-	var a0 *noderecord.NodeRecord
-	resList[0] = a0
-
-	err = proxyctx.Current.Deserialize(res, &resList)
-	if err != nil {
-		panic(err)
-	}
-
-	return resList[0].(*noderecord.NodeRecord)
-}
-
-func (r *NodeDomain) GetNodeRecordNoWait( ref core.RecordRef ) {
-	var args [1]interface{}
-	args[0] = ref
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeRecord", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
