@@ -54,8 +54,8 @@ func (m *TransactionManager) releaseLocks() {
 
 // Commit tries to write transaction on disk. Returns error on fail.
 func (m *TransactionManager) Commit() error {
-	err := m.txn.Commit(nil)
 	m.releaseLocks()
+	err := m.txn.Commit(nil)
 	if err != nil {
 		return err
 	}
