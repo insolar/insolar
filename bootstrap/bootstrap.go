@@ -235,7 +235,7 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.
 
 	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootMember"})
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
 	_, err = am.ActivateObject(
 		core.RecordRef{}, *contract,
@@ -245,7 +245,7 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.
 	)
 
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
 	b.rootMemberRef = contract
 	return nil
