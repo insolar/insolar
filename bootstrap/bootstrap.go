@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/genesis/experiment/member"
 	"github.com/insolar/insolar/genesis/experiment/nodedomain"
 	"github.com/insolar/insolar/genesis/experiment/rootdomain"
@@ -116,7 +117,7 @@ func isLightExecutor(c core.Components) (bool, error) {
 	network := c.Network
 	nodeID := network.GetNodeID()
 
-	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
+	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.GenesisRef(), currentPulse.PulseNumber, nodeID)
 	if err != nil {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
 	}
@@ -129,9 +130,9 @@ func isLightExecutor(c core.Components) (bool, error) {
 
 func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	am := c.Ledger.GetArtifactManager()
-	rootObj, err := am.GetObject(*am.RootRef(), nil)
+	rootObj, err := am.GetObject(*am.GenesisRef(), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of RootRef object")
+		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
 	}
 	rootRefChildren, err := rootObj.Children(nil)
 	if err != nil {
@@ -140,7 +141,7 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	if rootRefChildren.HasNext() {
 		rootDomainRef, err := rootRefChildren.Next()
 		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of RootRef object")
+			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
 		}
 		return rootDomainRef, nil
 	}
@@ -187,7 +188,7 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *testutil.
 	contract, err := am.ActivateObject(
 		core.RecordRef{}, core.RandomRef(),
 		*cb.Classes[rootDomain],
-		*am.RootRef(),
+		*am.GenesisRef(),
 		instanceData,
 	)
 	if contract == nil {

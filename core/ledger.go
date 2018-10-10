@@ -56,10 +56,10 @@ type JetCoordinator interface {
 
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
-	// RootRef returns the root record reference.
+	// GenesisRef returns the root record reference.
 	//
 	// Root record is the parent for all top-level records.
-	RootRef() *RecordRef
+	GenesisRef() *RecordRef
 
 	// RegisterRequest creates or check call request record and returns it RecordRef.
 	// (used by VM on executing side)

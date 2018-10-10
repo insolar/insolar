@@ -41,11 +41,11 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	pulse, err := pm.Current()
 	assert.NoError(t, err)
 
-	selected, err := jc.QueryRole(core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber)
+	selected, err := jc.QueryRole(core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
 	assert.Equal(t, []core.RecordRef{core.NewRefFromBase58("ve2")}, selected)
 
-	selected, err = jc.QueryRole(core.RoleVirtualValidator, *am.RootRef(), pulse.PulseNumber)
+	selected, err = jc.QueryRole(core.RoleVirtualValidator, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
 	assert.Equal(t, []core.RecordRef{
 		core.NewRefFromBase58("vv3"),
@@ -70,13 +70,13 @@ func TestJetCoordinator_IsAuthorized(t *testing.T) {
 	assert.NoError(t, err)
 
 	authorized, err := jc.IsAuthorized(
-		core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber, core.NewRefFromBase58("ve1"),
+		core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber, core.NewRefFromBase58("ve1"),
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, false, authorized)
 
 	authorized, err = jc.IsAuthorized(
-		core.RoleVirtualExecutor, *am.RootRef(), pulse.PulseNumber, core.NewRefFromBase58("ve2"),
+		core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber, core.NewRefFromBase58("ve2"),
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, true, authorized)

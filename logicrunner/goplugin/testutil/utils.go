@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
@@ -191,12 +192,16 @@ func (t *TestArtifactManager) Start(components core.Components) error { return n
 // Stop implementation for tests
 func (t *TestArtifactManager) Stop() error { return nil }
 
-// RootRef implementation for tests
-func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef{} }
+// GenesisRef implementation for tests
+func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
 func (t *TestArtifactManager) RegisterRequest(message core.Message) (*core.RecordRef, error) {
-	return nil, errors.New("RegisterRequest not implemented onTestArtifactManager ")
+	nonce, err := randomRef()
+	if err != nil {
+		return nil, err
+	}
+	return nonce, nil
 }
 
 // GetClass implementation for tests

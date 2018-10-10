@@ -331,7 +331,7 @@ func (r *Two) Hello(s string) string {
 	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
-		*am.RootRef(),
+		*am.GenesisRef(),
 		data,
 	)
 	assert.NoError(t, err)
@@ -411,7 +411,7 @@ func (r *Two) Hello(s string) string {
 	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
-		*am.RootRef(),
+		*am.GenesisRef(),
 		data,
 	)
 	assert.NoError(t, err)
@@ -493,7 +493,7 @@ func (r *Two) Hello() string {
 	obj, err := am.ActivateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*cb.Classes["one"],
-		*am.RootRef(),
+		*am.GenesisRef(),
 		data,
 	)
 	assert.NoError(t, err)

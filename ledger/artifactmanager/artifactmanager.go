@@ -47,11 +47,11 @@ func (m *LedgerArtifactManager) Link(components core.Components) error {
 	return nil
 }
 
-// RootRef returns the root record reference.
+// GenesisRef returns the root record reference.
 //
 // Root record is the parent for all top-level records.
-func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
-	return m.db.RootRef().CoreRef()
+func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
+	return m.db.GenesisRef().CoreRef()
 }
 
 // RegisterRequest sends message for request registration,
