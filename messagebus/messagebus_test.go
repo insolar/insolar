@@ -64,7 +64,7 @@ func TestNew(t *testing.T) {
 	r.requests = make([]req, 0)
 	r.responses = make([]core.Reply, 0)
 	cfg := configuration.NewConfiguration()
-	network, err := servicenetwork.NewServiceNetwork(cfg.Host, cfg.Node)
+	network, err := servicenetwork.NewServiceNetwork(cfg)
 	assert.NoError(t, err)
 	eb, err := NewMessageBus(configuration.Configuration{})
 	eb.Start(core.Components{

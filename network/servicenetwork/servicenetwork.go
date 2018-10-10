@@ -39,18 +39,15 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(
-	hostConf configuration.HostNetwork,
-	nodeConf configuration.NodeNetwork,
-) (*ServiceNetwork, error) {
+func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
 
-	node := nodenetwork.NewNodeNetwork(nodeConf)
+	node := nodenetwork.NewNodeNetwork(conf)
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
 	}
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(hostConf, node, cascade1)
+	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1)
 	if err != nil {
 		return nil, err
 	}

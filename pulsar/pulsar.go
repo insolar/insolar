@@ -86,7 +86,8 @@ func NewPulsar(
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator EntropyGenerator,
 	stateSwitcher StateSwitcher,
-	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
+	listener func(string, string) (net.Listener, error),
+	privKey string) (*Pulsar, error) {
 
 	log.Debug("[NewPulsar]")
 
@@ -97,7 +98,7 @@ func NewPulsar(
 	}
 
 	// Parse private key from config
-	privateKey, err := ecdsa_helper.ImportPrivateKey(configuration.PrivateKey)
+	privateKey, err := ecdsa_helper.ImportPrivateKey(privKey)
 	if err != nil {
 		return nil, err
 	}

@@ -57,7 +57,6 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1639",
-		PrivateKey:          firstPublicExported,
 		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
@@ -68,13 +67,13 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
+		configuration.NewConfiguration().PrivateKey,
 	)
 	assert.NoError(t, err)
 
 	secondPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1640",
-		PrivateKey:          secondPublicExported,
 		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
@@ -85,6 +84,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
+		configuration.NewConfiguration().PrivateKey,
 	)
 	assert.NoError(t, err)
 

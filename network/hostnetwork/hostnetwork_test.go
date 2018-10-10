@@ -63,7 +63,7 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 	}
 
 	cascade1 := &cascade.Cascade{}
-	nodenet := nodenetwork.NewNodeNetwork(configuration.NewNodeNetwork())
+	nodenet := nodenetwork.NewNodeNetwork(configuration.NewConfiguration())
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			network, err := NewHostNetwork(test.cfg, nodenet, cascade1)

@@ -29,8 +29,8 @@ type NodeNetwork struct {
 }
 
 // NewNodeNetwork creates a new node network.
-func NewNodeNetwork(nodeCfg configuration.NodeNetwork) *NodeNetwork {
-	node := NewNode(core.NewRefFromBase58(nodeCfg.Node.ID))
+func NewNodeNetwork(nodeCfg configuration.Configuration) *NodeNetwork {
+	node := NewNode(core.NewRefFromBase58(nodeCfg.Node.Node.ID), nodeCfg.PrivateKey)
 	network := &NodeNetwork{
 		node: node,
 	}
@@ -47,4 +47,9 @@ func ResolveHostID(ref core.RecordRef) string {
 // GetID returns current node id
 func (network *NodeNetwork) GetID() core.RecordRef {
 	return network.node.GetID()
+}
+
+// GetPrivateKey returns a private key.
+func (network *NodeNetwork) GetPrivateKey() string {
+	return network.node.GetPrivateKey()
 }

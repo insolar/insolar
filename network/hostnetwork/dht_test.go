@@ -1042,7 +1042,7 @@ func TestDHT_Getters(t *testing.T) {
 	ref1 := core.NewRefFromBase58(str1)
 
 	host1 := host.NewHost(hostAddr)
-	node := nodenetwork.NewNode(ref1)
+	node := nodenetwork.NewNode(ref1, "")
 
 	assert.False(t, dht1.HostIsAuthenticated(node.GetID().String()))
 	_, check := dht1.KeyIsReceived(node.GetID().String())
