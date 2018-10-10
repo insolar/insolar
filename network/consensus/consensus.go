@@ -19,6 +19,7 @@ package consensus
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/insolar/insolar/core"
 )
@@ -28,29 +29,42 @@ type Participant interface {
 	GetActiveNode() *core.ActiveNode
 }
 
-// DataProvider for data manipulation
-type DataProvider interface {
-	GetDataList() []*core.ActiveNode
-	MergeDataList([]*core.ActiveNode) error
+type NodeUnsyncHash struct {
+	NodeID core.RecordRef
+	Hash   []byte
+	// TODO: add signature
+}
+
+// UnsyncHolder
+type UnsyncHolder interface {
+	// GetUnsync returns list of local unsync nodes. This list is created
+	GetUnsync() []*core.ActiveNode
+	// GetPulse returns actual pulse for current consensus process.
+	GetPulse() core.PulseNumber
+	// SetHash sets hash of unsync lists for each node of consensus.
+	SetHash([]*NodeUnsyncHash)
+	// GetHash get hash of unsync lists for each node of consensus. If hash is not calculated yet, then this call blocks
+	// until the hash is calculated with SetHash() call
+	GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error)
 }
 
 // Consensus interface provides method to make consensus between participants
 type Consensus interface {
-	// DoConsensus is sync method, it make all consensus steps and returns boolean result
+	// DoConsensus is sync method, it performs all consensus steps and returns list of synced nodes
 	// method should be executed in goroutine
-	DoConsensus(ctx context.Context, self Participant, allParticipants []*Participant) (bool, error)
+	DoConsensus(holder UnsyncHolder, ctx context.Context, self Participant, allParticipants []Participant) ([]*core.ActiveNode, error)
 }
 
 // Communicator interface is used to exchange messages between participants
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error)
+	ExchangeData(pulse core.PulseNumber, ctx context.Context, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error)
 
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
-	ExchangeHash(ctx context.Context, p Participant, data []byte) ([]byte, error)
+	ExchangeHash(pulse core.PulseNumber, ctx context.Context, p Participant, data []*NodeUnsyncHash) ([]byte, error)
 }
 
 // NewConsensus creates consensus
-func NewConsensus(provider DataProvider, communicator Communicator) (Consensus, error) {
+func NewConsensus(communicator Communicator) (Consensus, error) {
 	return nil, errors.New("not implemented")
 }
