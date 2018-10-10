@@ -47,8 +47,7 @@ func (dt *dataProviderWrapper) GetDataList() []*core.ActiveNode {
 
 // MergeDataList implements DataProvider interface for NodeKeeper wrapper.
 func (dt *dataProviderWrapper) MergeDataList(data []*core.ActiveNode) error {
-	dt.nodekeeper.AddUnsyncGossip(data)
-	return nil
+	return dt.nodekeeper.AddUnsyncGossip(data)
 }
 
 func (dt *dataProviderWrapper) GetHash() ([]byte, error) {
@@ -89,7 +88,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
-	approve, err := ic.consensus.DoConsensus(pulse.PulseNumber, ctx, ic.self, participants)
+	approve, err := ic.consensus.DoConsensus(ctx, pulse.PulseNumber, ic.self, participants)
 	if err != nil {
 		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
 		approve = false
