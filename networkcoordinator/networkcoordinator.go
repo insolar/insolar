@@ -85,7 +85,7 @@ func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	var pubKey string
 	var role core.NodeRole
 	var fErr string
-	_, err := core.UnMarshalResponse(data, []interface{}{pubKey, role, fErr})
+	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
 	if err != nil {
 		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
 	}
