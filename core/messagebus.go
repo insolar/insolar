@@ -102,4 +102,9 @@ const (
 	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
 	TypeRegisterChild
+
+	// Bootstrap
+
+	// TypeBootstrapRequest used for bootstrap object generation.
+	TypeBootstrapRequest
 )
