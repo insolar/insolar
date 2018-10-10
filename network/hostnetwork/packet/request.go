@@ -120,8 +120,20 @@ type RequestCheckSignedNonce struct {
 	Signed []byte
 }
 
-// RequestActiveNodes is request to get an active nodes.
+// RequestActiveNodes is request to get active nodes.
 type RequestActiveNodes struct {
+}
+
+// RequestExchangeUnsyncLists is request to exchange unsync lists during consensus
+type RequestExchangeUnsyncLists struct {
+	Pulse      core.PulseNumber
+	UnsyncList []*core.ActiveNode
+}
+
+// RequestExchangeUnsyncHash is request to exchange hash of merged unsync lists during consensus
+type RequestExchangeUnsyncHash struct {
+	Pulse      core.PulseNumber
+	UnsyncHash []byte
 }
 
 // RequestDisconnect is request to disconnect from active list.

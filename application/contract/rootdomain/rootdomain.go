@@ -60,8 +60,8 @@ func makeSeed() []byte {
 	return seed
 }
 
-// IsAuthorized checks is node authorized
-func (rd *RootDomain) IsAuthorized() bool {
+// Authorize checks is node authorized
+func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
 	privateKey, err := cryptoHelper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
@@ -88,7 +88,7 @@ func (rd *RootDomain) IsAuthorized() bool {
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	return nd.IsAuthorized(core.NewRefFromBase58(nodeRef), seed, signature)
+	return nd.Authorize(core.NewRefFromBase58(nodeRef), seed, signature)
 }
 
 // CreateMember processes create member request

@@ -16,21 +16,26 @@
 
 package core
 
-// Component controller methods
-type Component interface {
-	Start(components Components) error
-	Stop() error
-}
+// NodeRole holds role of node
+type NodeRole int
 
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-type Components struct {
-	Network            Network
-	Ledger             Ledger
-	LogicRunner        LogicRunner
-	MessageBus         MessageBus
-	Bootstrapper       Bootstrapper
-	APIRunner          Component
-	Metrics            Component
-	NetworkCoordinator NetworkCoordinator
+const (
+	RoleUnknown = NodeRole(iota)
+	RoleVirtual
+	RoleHeavyMaterial
+	RoleLightMaterial
+)
+
+// GetRoleFromString converts role from string to NodeRole
+func GetRoleFromString(role string) NodeRole {
+	switch role {
+	case "virtual":
+		return RoleVirtual
+	case "heavy_material":
+		return RoleHeavyMaterial
+	case "light_material":
+		return RoleLightMaterial
+	}
+
+	return RoleUnknown
 }
