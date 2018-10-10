@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/insolar/insolar/application/experiment/nodedomain"
-	"github.com/insolar/insolar/application/experiment/rootdomain"
+	"github.com/insolar/insolar/application/contract/nodedomain"
+	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -59,7 +59,7 @@ func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	return bootstrapper, nil
 }
 
-var pathToContracts = "application/experiment/"
+var pathToContracts = "application/contract/"
 
 func getContractPath(name string) (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)

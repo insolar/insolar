@@ -28,7 +28,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/insolar/insolar/application/experiment/member/signer"
+	"github.com/insolar/insolar/application/contract/member/signer"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 
 	"github.com/insolar/insolar/configuration"
@@ -746,20 +746,20 @@ func TestRootDomainContract(t *testing.T) {
 	if parallel {
 		t.Parallel()
 	}
-	rootDomainCode, err := ioutil.ReadFile("../application/experiment/rootdomain/rootdomain.go" +
+	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
 		"")
 	if err != nil {
 		fmt.Print(err)
 	}
-	memberCode, err := ioutil.ReadFile("../application/experiment/member/member.go")
+	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	allowanceCode, err := ioutil.ReadFile("../application/experiment/allowance/allowance.go")
+	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	walletCode, err := ioutil.ReadFile("../application/experiment/wallet/wallet.go")
+	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -888,7 +888,7 @@ func TestProxyGeneration(t *testing.T) {
 
 	for _, contract := range contracts {
 		t.Run(contract, func(t *testing.T) {
-			parsed, err := preprocessor.ParseFile("../application/experiment/" + contract + "/" + contract + ".go")
+			parsed, err := preprocessor.ParseFile("../application/contract/" + contract + "/" + contract + ".go")
 			assert.NoError(t, err)
 
 			proxyPath, err := preprocessor.GetRealApplicationDir("proxy")

@@ -17,7 +17,7 @@
 package member
 
 import (
-	"github.com/insolar/insolar/application/experiment/member/signer"
+	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"

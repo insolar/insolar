@@ -512,7 +512,7 @@ func GetRealApplicationDir(dir string) (string, error) {
 
 // GetRealContractsNames returns names of all real smart contracts
 func GetRealContractsNames() ([]string, error) {
-	pathWithContracts, err := GetRealApplicationDir("experiment")
+	pathWithContracts, err := GetRealApplicationDir("contract")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetContractNames ]")
 	}
