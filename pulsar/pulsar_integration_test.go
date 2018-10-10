@@ -206,7 +206,6 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 }
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
-	t.Skip()
 	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "")
 	bootstrapNodeConfig := configuration.NewConfiguration()
 	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig.Host, bootstrapNodeConfig.Node)
@@ -241,7 +240,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		}},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
-		pulsartestutil.MockEntropyGenerator{},
+		&StandardEntropyGenerator{},
 		firstStateSwitcher,
 		net.Listen,
 	)
@@ -260,7 +259,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		}},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
-		pulsartestutil.MockEntropyGenerator{},
+		&StandardEntropyGenerator{},
 		secondStateSwitcher,
 		net.Listen,
 	)
@@ -275,7 +274,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(20000000 * time.Millisecond)
 	usualNodeNetwork.Stop()
 	bootstrapNodeNetwork.Stop()
 	bootstrapLedgerCleaner()

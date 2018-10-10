@@ -335,6 +335,11 @@ func (currentPulsar *Pulsar) broadcastVector() {
 	payload, err := currentPulsar.preparePayload(VectorPayload{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
 		Vector:      currentPulsar.OwnedBftRow})
+
+	sign, err := signData(currentPulsar.PrivateKey, currentPulsar.OwnedBftRow)
+	log.Warnf("%v - %v", sign, err)
+	ok, err := checkSignature(currentPulsar.OwnedBftRow, currentPulsar.PublicKeyRaw, sign)
+	log.Warnf("%v - %v", ok, err)
 	if err != nil {
 		currentPulsar.stateSwitcher.switchToState(failed, err)
 		return
@@ -499,7 +504,7 @@ func (currentPulsar *Pulsar) getMinimumNonTraitorsCount() int {
 }
 
 func (currentPulsar *Pulsar) verify() {
-	log.Debug("[verify]")
+	log.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
 	if !currentPulsar.isVerifycationNeeded() {
 		return
 	}
@@ -802,7 +807,6 @@ func sendPulseToHosts(sender *host.Host, t transport2.Transport, hosts []host.Ho
 }
 
 func (currentPulsar *Pulsar) handleErrorState(err error) {
-	log.Debug("[handleErrorState]")
 	log.Error(err)
 
 	currentPulsar.clearState()
@@ -823,7 +827,6 @@ func (currentPulsar *Pulsar) clearState() {
 }
 
 func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
-	log.Debug("[generateNewEntropyAndSign]")
 	currentPulsar.GeneratedEntropy = currentPulsar.EntropyGenerator.GenerateEntropy()
 	signature, err := signData(currentPulsar.PrivateKey, currentPulsar.GeneratedEntropy)
 	if err != nil {
@@ -835,7 +838,6 @@ func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
 }
 
 func (currentPulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
-	log.Debug("[preparePayload]")
 	sign, err := signData(currentPulsar.PrivateKey, body)
 	if err != nil {
 		return nil, err
@@ -845,7 +847,6 @@ func (currentPulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) 
 }
 
 func (currentPulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
-	log.Debug("[fetchNeighbour]")
 	neighbour, ok := currentPulsar.Neighbours[pubKey]
 	if !ok {
 		return nil, errors.New("forbidden connection")

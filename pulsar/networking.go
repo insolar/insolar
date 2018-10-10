@@ -211,11 +211,11 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 }
 
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
-	log.Infof("Receive vector of entropy from %v", handler.pulsar.Config.MainListenerAddress)
+	log.Infof("Receive vector of entropy to %v", handler.pulsar.Config.MainListenerAddress)
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
-			log.Error(err)
+			log.Errorf("%v - %v", handler.pulsar.Config.MainListenerAddress, err)
 		}
 		return err
 	}
