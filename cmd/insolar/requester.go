@@ -37,10 +37,10 @@ type apiRequester struct {
 type configJSON struct {
 	PrivateKey       string `json:"private_key"`
 	privateKeyObject *ecdsa.PrivateKey
-	Params           map[string]interface{} `json:"params"`
-	Method           string                 `json:"method"`
-	Caller           string                 `json:"caller"`
-	Callee           string                 `json:"callee"`
+	Params           []interface{} `json:"params"`
+	Method           string        `json:"method"`
+	Caller           string        `json:"caller"`
+	Callee           string        `json:"callee"`
 }
 
 // type config struct {
@@ -69,8 +69,9 @@ func readConfigFromFile(path string) (*configJSON, error) {
 	return cfgJSON, nil
 }
 
-func constructParams() ([]byte, error) {
-	return nil, nil
+func constructParams(params []interface{}) ([]byte, error) {
+	args := []interface{}{}
+	return
 }
 
 func (r *apiRequester) Send(out io.Writer, confPath string) error {
@@ -84,7 +85,7 @@ func (r *apiRequester) Send(out io.Writer, confPath string) error {
 		return errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
 
-	params, err := constructParams()
+	params, err := constructParams(cfg.Params)
 	if err != nil {
 		return errors.Wrap(err, "[ Send ] Problem with creating request")
 	}
