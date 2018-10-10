@@ -41,20 +41,19 @@ func (nd *NodeDomain) RegisterNode(pk string, role string) core.RecordRef {
 	return record.GetReference()
 }
 
-// GetNodeRecord get node record by ref
-func (nd *NodeDomain) GetNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
+func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
 // RemoveNode deletes node from registry
 func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
-	node := noderecord.GetObject(nodeRef)
+	node := nd.getNodeRecord(nodeRef)
 	node.Destroy()
 }
 
 // IsAuthorized checks is signature correct
 func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
-	nodeR := nd.GetNodeRecord(nodeRef)
+	nodeR := nd.getNodeRecord(nodeRef)
 	ok, err := ecdsa.Verify(seed, signatureRaw, nodeR.GetPublicKey())
 	if err != nil {
 		panic(err)
@@ -62,9 +61,23 @@ func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatur
 	return ok
 }
 
-func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, string) {
-	nodeR := nd.GetNodeRecord(nodeRef)
-	role, pubKey := nodeR.GetRoleAndPublicKey()
+// Authorize checks node and returns node info
+func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (pubKey string, role core.NodeRole, errS string) {
+	// TODO: this should be removed when proxies stop panic
+	defer func() {
+		if r := recover(); r != nil {
+			pubKey = ""
+			role = core.RoleUnknown
+			err, ok := r.(error)
+			errTxt := ""
+			if ok {
+				errTxt = err.Error()
+			}
+			errS = "[ Authorize ] Recover after panic: " + errTxt
+		}
+	}()
+	nodeR := nd.getNodeRecord(nodeRef)
+	role, pubKey = nodeR.GetRoleAndPublicKey()
 	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
 	if err != nil {
 
