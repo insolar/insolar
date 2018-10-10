@@ -77,9 +77,39 @@ func DispatchPacketType(
 		return processActiveNodes(hostHandler, packetBuilder)
 	case packet.TypeDisconnect:
 		return processDisconnect(hostHandler, packetBuilder)
+	case packet.TypeExchangeUnsyncLists:
+		return processExchangeUnsyncLists(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeExchangeUnsyncHash:
+		return processExchangeUnsyncHash(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processExchangeUnsyncLists(hostHandler hosthandler.HostHandler, ctx hosthandler.Context,
+	msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+
+	data := msg.Data.(*packet.RequestExchangeUnsyncLists)
+	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
+	list, err := consensusHandler.ExchangeData(data.Pulse, ctx, nil, data.UnsyncList)
+	if err != nil {
+		log.Warn(err.Error())
+		return packetBuilder.Response(&packet.ResponseExchangeUnsyncLists{Error: err.Error()}).Build(), nil
+	}
+	return packetBuilder.Response(&packet.ResponseExchangeUnsyncLists{UnsyncList: list}).Build(), nil
+}
+
+func processExchangeUnsyncHash(hostHandler hosthandler.HostHandler, ctx hosthandler.Context,
+	msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+
+	data := msg.Data.(*packet.RequestExchangeUnsyncHash)
+	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
+	hash, err := consensusHandler.ExchangeHash(data.Pulse, ctx, nil, data.UnsyncHash)
+	if err != nil {
+		log.Warn(err.Error())
+		return packetBuilder.Response(&packet.ResponseExchangeUnsyncHash{Error: err.Error()}).Build(), nil
+	}
+	return packetBuilder.Response(&packet.ResponseExchangeUnsyncHash{UnsyncHash: hash}).Build(), nil
 }
 
 func processDisconnect(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {

@@ -109,6 +109,11 @@ func (ic *NetworkConsensus) IsPartOfConsensus() bool {
 	return ic.keeper.GetSelf() != nil
 }
 
+// ReceiverHandler return handler that is responsible to handle consensus network requests
+func (ic *NetworkConsensus) ReceiverHandler() consensus.Communicator {
+	return ic.communicatorRcv
+}
+
 // NewInsolarConsensus creates new object to handle all consensus events
 func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.InsolarConsensus, error) {
 

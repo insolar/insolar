@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -39,17 +40,38 @@ type communicatorSender struct {
 
 func (c *communicatorReceiver) ExchangeData(number core.PulseNumber, ctx context.Context,
 	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
-	return nil, errors.New("not implemented")
+
+	currentPulse := c.keeper.GetPulse()
+	if currentPulse > number {
+		return nil, errors.Errorf("Received consensus unsync list exchange request with pulse %d but current is %d",
+			number, currentPulse)
+	}
+	// TODO: block on getting unsync if currentPulse < number
+	// TODO: write to communicatorSender map to decrease network requests
+	return c.keeper.GetUnsync(), nil
 }
 
 func (c *communicatorReceiver) ExchangeHash(number core.PulseNumber, ctx context.Context,
 	p consensus.Participant, data []byte) ([]byte, error) {
-	return nil, errors.New("not implemented")
+
+	currentPulse := c.keeper.GetPulse()
+	if currentPulse > number {
+		return nil, errors.Errorf("Received consensus unsync hash exchange request with pulse %d but current is %d",
+			number, currentPulse)
+	}
+	// TODO: block on getting unsync hash if currentPulse < number
+	hash, _, err := c.keeper.GetUnsyncHash()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to calculate unsync hash")
+	}
+	// TODO: write to communicatorSender map to decrease network requests
+	return hash, nil
 }
 
 func (c *communicatorSender) ExchangeData(number core.PulseNumber, ctx context.Context,
 	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 
+	log.Infof("Sending consensus unsync list exchange request to %s", p.GetActiveNode().NodeID)
 	sender, receiver, err := c.getSenderAndReceiver(ctx, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
@@ -74,6 +96,7 @@ func (c *communicatorSender) ExchangeData(number core.PulseNumber, ctx context.C
 func (c *communicatorSender) ExchangeHash(number core.PulseNumber, ctx context.Context,
 	p consensus.Participant, data []byte) ([]byte, error) {
 
+	log.Infof("Sending consensus unsync hash exchange request to %s", p.GetActiveNode().NodeID)
 	sender, receiver, err := c.getSenderAndReceiver(ctx, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")

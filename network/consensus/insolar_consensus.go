@@ -28,4 +28,6 @@ type InsolarConsensus interface {
 	ProcessPulse(ctx context.Context, pulse core.Pulse)
 	// IsPartOfConsensus returns whether we should perform all consensus interactions or not
 	IsPartOfConsensus() bool
+	// ReceiverHandler return handler that is responsible to handle consensus network requests
+	ReceiverHandler() Communicator
 }
