@@ -635,11 +635,15 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 }
 
 func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
+	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	assert.NoError(t, err)
+
 	mockSwitcher := &MockStateSwitcher{}
 	mockSwitcher.On("switchToState", failed, mock.Anything)
 	pulsar := &Pulsar{stateSwitcher: mockSwitcher}
 	pulsar.stateSwitcher.setState(verifying)
 	pulsar.PublicKeyRaw = "testKey"
+	pulsar.PrivateKey = mainPrivateKey
 	pulsar.OwnedBftRow = map[string]*bftCell{}
 	pulsar.BftGrid = map[string]map[string]*bftCell{}
 	pulsar.Neighbours = map[string]*Neighbour{}
