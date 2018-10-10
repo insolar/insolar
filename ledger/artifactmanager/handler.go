@@ -270,6 +270,7 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 
 	domainRef := record.Core2Reference(msg.Domain)
 	requestRef := record.Core2Reference(msg.Request)
+	codeRef := record.Core2Reference(msg.Code)
 
 	rec := record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
@@ -280,17 +281,18 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 				},
 			},
 		},
+		Code: codeRef,
 	}
 
 	var err error
-	var classID *record.ID
+	var activateID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		classID, err = tx.SetRecord(&rec)
+		activateID, err = tx.SetRecord(&rec)
 		if err != nil {
 			return errors.Wrap(err, "failed to store record")
 		}
-		err = tx.SetClassIndex(classID, &index.ClassLifeline{
-			LatestState: *classID,
+		err = tx.SetClassIndex(&requestRef.Record, &index.ClassLifeline{
+			LatestState: *activateID,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -303,7 +305,7 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, classID)}, nil
+	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Reply, error) {
@@ -436,7 +438,7 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 		return nil, err
 	}
 
-	var objID *record.ID
+	var activateID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		rec := record.ObjectActivateRecord{
 			ActivationRecord: record.ActivationRecord{
@@ -447,20 +449,20 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 					},
 				},
 			},
-			ClassActivateRecord: classRef,
-			Memory:              msg.Memory,
-			Parent:              parentRef,
-			Delegate:            false,
+			Class:    classRef,
+			Memory:   msg.Memory,
+			Parent:   parentRef,
+			Delegate: false,
 		}
 
 		// save new record and it's index
-		objID, err = tx.SetRecord(&rec)
+		activateID, err = tx.SetRecord(&rec)
 		if err != nil {
 			return errors.Wrap(err, "failed to store record")
 		}
-		err = tx.SetObjectIndex(objID, &index.ObjectLifeline{
+		err = tx.SetObjectIndex(&requestRef.Record, &index.ObjectLifeline{
 			ClassRef:    classRef,
-			LatestState: *objID,
+			LatestState: *activateID,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -487,7 +489,7 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, objID)}, nil
+	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (core.Reply, error) {
@@ -508,7 +510,7 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 		return nil, err
 	}
 
-	var objID *record.ID
+	var activationID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		rec := record.ObjectActivateRecord{
 			ActivationRecord: record.ActivationRecord{
@@ -519,21 +521,20 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 					},
 				},
 			},
-			ClassActivateRecord: classRef,
-			Memory:              msg.Memory,
-			Parent:              parentRef,
-			Delegate:            true,
+			Class:    classRef,
+			Memory:   msg.Memory,
+			Parent:   parentRef,
+			Delegate: true,
 		}
 
 		// save new record and it's index
-		objID, err = tx.SetRecord(&rec)
+		activationID, err = tx.SetRecord(&rec)
 		if err != nil {
 			return errors.Wrap(err, "failed to store record")
 		}
-		err = tx.SetObjectIndex(objID, &index.ObjectLifeline{
+		err = tx.SetObjectIndex(&requestRef.Record, &index.ObjectLifeline{
 			ClassRef:    classRef,
-			LatestState: *objID,
-			Delegates:   map[core.RecordRef]record.Reference{},
+			LatestState: *activationID,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -547,10 +548,7 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 		if _, ok := parentIdx.Delegates[msg.Class]; ok {
 			return ErrClassDelegateAlreadyExists
 		}
-		parentIdx.Delegates[msg.Class] = record.Reference{
-			Record: *objID,
-			Domain: record.Core2Reference(msg.Request).Domain,
-		}
+		parentIdx.Delegates[msg.Class] = requestRef
 		err = tx.SetObjectIndex(&parentRef.Record, parentIdx)
 		if err != nil {
 			return errors.Wrap(err, "failed to store lifeline index")
@@ -563,7 +561,7 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 		return nil, err
 	}
 
-	return &reply.Reference{Ref: *getReference(&msg.Request, objID)}, nil
+	return &reply.ID{ID: *activationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.Reply, error) {

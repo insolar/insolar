@@ -16,6 +16,30 @@
 
 package record
 
+// GenesisRecord is the first record created on storage. It's used to link root objects to it.
+type GenesisRecord struct {
+}
+
+// IsDeactivation determines if current state is deactivation.
+func (*GenesisRecord) IsDeactivation() bool {
+	return false
+}
+
+// IsAmend determines if current state is amend.
+func (*GenesisRecord) IsAmend() bool {
+	return false
+}
+
+// GetMemory returns state memory.
+func (*GenesisRecord) GetMemory() []byte {
+	return nil
+}
+
+// GetCode returns state code.
+func (*GenesisRecord) GetCode() *Reference {
+	return nil
+}
+
 // ChildRecord is a child activation record. Its used for children iterating.
 type ChildRecord struct {
 	PrevChild *ID

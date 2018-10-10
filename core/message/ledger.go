@@ -141,6 +141,7 @@ type ActivateClass struct {
 	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
+	Code    core.RecordRef
 }
 
 // Type implementation of Message interface.

@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/application/contract/wallet"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/pkg/errors"
@@ -122,7 +123,7 @@ func isLightExecutor(c core.Components) (bool, error) {
 	network := c.Network
 	nodeID := network.GetNodeID()
 
-	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.RootRef(), currentPulse.PulseNumber, nodeID)
+	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.GenesisRef(), currentPulse.PulseNumber, nodeID)
 	if err != nil {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
 	}
@@ -135,9 +136,9 @@ func isLightExecutor(c core.Components) (bool, error) {
 
 func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	am := c.Ledger.GetArtifactManager()
-	rootObj, err := am.GetObject(*am.RootRef(), nil)
+	rootObj, err := am.GetObject(*am.GenesisRef(), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of RootRef object")
+		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
 	}
 	rootRefChildren, err := rootObj.Children(nil)
 	if err != nil {
@@ -146,7 +147,7 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	if rootRefChildren.HasNext() {
 		rootDomainRef, err := rootRefChildren.Next()
 		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of RootRef object")
+			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
 		}
 		return rootDomainRef, nil
 	}
@@ -190,13 +191,17 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *testutil.
 		return errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	contract, err := am.ActivateObject(
-		core.RecordRef{}, core.RandomRef(),
+	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootDomain"})
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+	}
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *contract,
 		*cb.Classes[rootDomain],
-		*am.RootRef(),
+		*am.GenesisRef(),
 		instanceData,
 	)
-	if contract == nil {
+	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	b.rootDomainRef = contract
@@ -210,13 +215,17 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	contract, err := am.ActivateObject(
-		core.RecordRef{}, core.RandomRef(),
+	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "NodeDomain"})
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+	}
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *contract,
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
 		instanceData,
 	)
-	if contract == nil {
+	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
@@ -226,23 +235,27 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.
 }
 
 func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+
 	instanceData, err := serializeInstance(member.New("RootMember", b.rootPubKey))
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	b.rootMemberRef, err = am.ActivateObject(
-		core.RecordRef{}, core.RandomRef(),
+	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootMember"})
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
+	}
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *contract,
 		*cb.Classes[memberContract],
 		*b.rootDomainRef,
 		instanceData,
 	)
+
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ]")
+		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
-	if b.rootMemberRef == nil {
-		return errors.Wrap(err, "[ ActivateActivateRootMember ] couldn't create root member")
-	}
+	b.rootMemberRef = contract
 	return nil
 }
 
@@ -252,7 +265,7 @@ func (b *Bootstrapper) setRootMemberToRootDomain(am core.ArtifactManager, cb *te
 		return errors.Wrap(err, "[ SetRootInRootDomain ]")
 	}
 	_, err = am.UpdateObject(
-		core.RecordRef{}, core.RandomRef(),
+		core.RecordRef{}, core.RecordRef{},
 		*b.rootDomainRef, updateData,
 	)
 	if err != nil {
@@ -268,16 +281,17 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *tes
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
-	rootRef, err := am.ActivateObjectDelegate(
-		core.RecordRef{}, core.RandomRef(),
+	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootMember"})
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
+	}
+	_, err = am.ActivateObjectDelegate(
+		core.RecordRef{}, *contract,
 		*cb.Classes[walletContract],
 		*b.rootMemberRef,
 		instanceData,
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootWallet ]")
-	}
-	if rootRef == nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
 
