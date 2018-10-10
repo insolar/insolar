@@ -17,6 +17,7 @@
 package api
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -27,6 +28,8 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
+
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 func extractStringResponse(data []byte) (*string, error) {
@@ -69,16 +72,18 @@ type RequestHandler struct {
 	rootDomainReference core.RecordRef
 	seedManager         *seedmanager.SeedManager
 	seedGenerator       seedmanager.SeedGenerator
+	netCoordinator      core.NetworkCoordinator
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, messageBus core.MessageBus, rootDomainReference core.RecordRef, smanager *seedmanager.SeedManager) *RequestHandler {
+func NewRequestHandler(params *Params, messageBus core.MessageBus, nc core.NetworkCoordinator, rootDomainReference core.RecordRef, smanager *seedmanager.SeedManager) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
 		messageBus:          messageBus,
 		rootDomainReference: rootDomainReference,
 		seedManager:         smanager,
+		netCoordinator:      nc,
 	}
 }
 
@@ -307,6 +312,8 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 
 // ProcessIsAuthorized processes is_auth query type
 func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
+
+	// Check calling smart contract
 	result := make(map[string]interface{})
 	routResult, err := rh.sendRequest("Authorize", []interface{}{})
 	if err != nil {
@@ -317,9 +324,37 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
-
 	result["public_key"] = pubKey
 	result["role"] = role
+
+	// Check calling via networkcoordinator
+	privKey, err := ecdsa_helper.GeneratePrivateKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with key generating")
+	}
+	seed := make([]byte, 4)
+	rand.Read(seed)
+	signature, err := ecdsa_helper.Sign(seed, privKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")
+	}
+	pubKey, err = ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
+	}
+	nodeRef, err := rh.netCoordinator.RegisterNode(pubKey, "virtual")
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
+	}
+	regPubKey, _, err := rh.netCoordinator.Authorize(*nodeRef, seed, signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
+	}
+	if regPubKey != pubKey {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] PubKeys are not the same. "+regPubKey+" "+pubKey)
+	}
+
+	result["netcoord_auth_success"] = true
 
 	return result, nil
 }

@@ -60,6 +60,11 @@ func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 	return b.rootDomainRef
 }
 
+// GetNodeDomainRef returns reference to RootDomain instance
+func (b *Bootstrapper) GetNodeDomainRef() *core.RecordRef {
+	return b.nodeDomainRef
+}
+
 // NewBootstrapper creates new Bootstrapper
 func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}

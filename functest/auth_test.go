@@ -25,6 +25,8 @@ import (
 func TestIsAuthorized(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "is_auth",
+		"t":          "d",
+		"zzz":        1,
 	})
 
 	isAuthResponse := &isAuthorized{}
@@ -32,4 +34,5 @@ func TestIsAuthorized(t *testing.T) {
 
 	assert.Equal(t, 1, isAuthResponse.Role)
 	assert.NotEmpty(t, isAuthResponse.PublicKey)
+	assert.Equal(t, true, isAuthResponse.NetCoordCheck)
 }

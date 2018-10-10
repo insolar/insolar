@@ -39,6 +39,7 @@ func New() (*NetworkCoordinator, error) {
 func (nc *NetworkCoordinator) Start(c core.Components) error {
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
+	nc.nodeDomainRef = *c.Bootstrapper.GetNodeDomainRef()
 
 	return nil
 }
@@ -61,7 +62,7 @@ func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args 
 
 	res, err := nc.messageBus.Send(e)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NetworkCoordinator::routeCall ] couldn't send message")
+		return nil, errors.Wrap(err, "[ NetworkCoordinator::routeCall ] couldn't send message: "+ref.String())
 	}
 
 	return res, nil
@@ -81,34 +82,32 @@ func (nc *NetworkCoordinator) sendRequest(ref core.RecordRef, method string, arg
 	return routResult, nil
 }
 
-func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
-	var pubKey string
-	var role core.NodeRole
-	var fErr string
-	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
+// Authorize authorizes node by verifying it's signature
+func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
+	routResult, err := nc.sendRequest(nc.nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't send request")
 	}
 
-	if len(fErr) != 0 {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ] "+fErr)
+	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
+	if err != nil {
+		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't extract response")
 	}
 
 	return pubKey, role, nil
 }
 
-// Authorize authorizes node by verifying it's signature
-func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
-	routResult, err := nc.sendRequest(nc.nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
+// RegisterNode registers node in nodedomain
+func (nc *NetworkCoordinator) RegisterNode(publicKey string, role string) (*core.RecordRef, error) {
+	routResult, err := nc.sendRequest(nc.nodeDomainRef, "RegisterNode", []interface{}{publicKey, role})
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "Can't sent request")
+		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
 	}
 
-	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
+	nodeRef, err := extractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ]")
+		return nil, errors.Wrap(err, "[ RegisterNode ] Can't extract response")
 	}
 
-	return pubKey, role, nil
-
+	return nodeRef, nil
 }

@@ -19,4 +19,5 @@ package core
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator interface {
 	Authorize(nodeRef RecordRef, seed []byte, signatureRaw []byte) (string, NodeRole, error)
+	RegisterNode(publicKey string, role string) (*RecordRef, error)
 }
