@@ -333,7 +333,10 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with key generating")
 	}
 	seed := make([]byte, 4)
-	rand.Read(seed)
+	_, err = rand.Read(seed)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with generating seed")
+	}
 	signature, err := ecdsa_helper.Sign(seed, privKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")
