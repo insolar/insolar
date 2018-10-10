@@ -17,9 +17,9 @@
 package member
 
 import (
+	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/genesis/experiment/member/signer"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
