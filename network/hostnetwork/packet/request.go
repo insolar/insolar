@@ -18,6 +18,7 @@ package packet
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 )
 
@@ -133,7 +134,7 @@ type RequestExchangeUnsyncLists struct {
 // RequestExchangeUnsyncHash is request to exchange hash of merged unsync lists during consensus
 type RequestExchangeUnsyncHash struct {
 	Pulse      core.PulseNumber
-	UnsyncHash []byte
+	UnsyncHash []*consensus.NodeUnsyncHash
 }
 
 // RequestDisconnect is request to disconnect from active list.

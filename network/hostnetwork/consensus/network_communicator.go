@@ -38,37 +38,39 @@ type communicatorSender struct {
 	handler hosthandler.HostHandler
 }
 
-func (c *communicatorReceiver) ExchangeData(ctx context.Context, number core.PulseNumber,
+func (c *communicatorReceiver) ExchangeData(pulse core.PulseNumber, ctx context.Context,
 	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 
 	currentPulse := c.keeper.GetPulse()
-	if currentPulse > number {
+	if currentPulse > pulse {
 		return nil, errors.Errorf("Received consensus unsync list exchange request with pulse %d but current is %d",
-			number, currentPulse)
+			pulse, currentPulse)
 	}
 	// TODO: block on getting unsync if currentPulse < number
 	// TODO: write to communicatorSender map to decrease network requests
-	return c.keeper.GetUnsync(), nil
+	// return c.keeper.GetUnsync(), nil
+	return nil, errors.New("not implemented")
 }
 
-func (c *communicatorReceiver) ExchangeHash(ctx context.Context, number core.PulseNumber,
-	p consensus.Participant, data []byte) ([]byte, error) {
+func (c *communicatorReceiver) ExchangeHash(pulse core.PulseNumber, ctx context.Context,
+	p consensus.Participant, data []*consensus.NodeUnsyncHash) ([]byte, error) {
 
 	currentPulse := c.keeper.GetPulse()
-	if currentPulse > number {
+	if currentPulse > pulse {
 		return nil, errors.Errorf("Received consensus unsync hash exchange request with pulse %d but current is %d",
-			number, currentPulse)
+			pulse, currentPulse)
 	}
 	// TODO: block on getting unsync hash if currentPulse < number
-	hash, _, err := c.keeper.GetUnsyncHash()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to calculate unsync hash")
-	}
+	// hash, _, err := c.keeper.GetUnsyncHash()
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "Failed to calculate unsync hash")
+	// }
 	// TODO: write to communicatorSender map to decrease network requests
-	return hash, nil
+	// return hash, nil
+	return nil, errors.New("not implemented")
 }
 
-func (c *communicatorSender) ExchangeData(ctx context.Context, number core.PulseNumber,
+func (c *communicatorSender) ExchangeData(pulse core.PulseNumber, ctx context.Context,
 	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 
 	log.Infof("Sending consensus unsync list exchange request to %s", p.GetActiveNode().NodeID)
@@ -77,7 +79,7 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, number core.Pulse
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
 	}
 	request := packet.NewBuilder().Type(packet.TypeExchangeUnsyncLists).Sender(sender).Receiver(receiver).
-		Request(&packet.RequestExchangeUnsyncLists{Pulse: number, UnsyncList: data}).Build()
+		Request(&packet.RequestExchangeUnsyncLists{Pulse: pulse, UnsyncList: data}).Build()
 	f, err := c.handler.SendRequest(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
@@ -93,8 +95,8 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, number core.Pulse
 	return responseData.UnsyncList, nil
 }
 
-func (c *communicatorSender) ExchangeHash(ctx context.Context, number core.PulseNumber,
-	p consensus.Participant, data []byte) ([]byte, error) {
+func (c *communicatorSender) ExchangeHash(pulse core.PulseNumber, ctx context.Context,
+	p consensus.Participant, data []*consensus.NodeUnsyncHash) ([]byte, error) {
 
 	log.Infof("Sending consensus unsync hash exchange request to %s", p.GetActiveNode().NodeID)
 	sender, receiver, err := c.getSenderAndReceiver(ctx, p)
@@ -102,7 +104,7 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, number core.Pulse
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
 	}
 	request := packet.NewBuilder().Type(packet.TypeExchangeUnsyncHash).Sender(sender).Receiver(receiver).
-		Request(&packet.RequestExchangeUnsyncHash{Pulse: number, UnsyncHash: data}).Build()
+		Request(&packet.RequestExchangeUnsyncHash{Pulse: pulse, UnsyncHash: data}).Build()
 	f, err := c.handler.SendRequest(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")

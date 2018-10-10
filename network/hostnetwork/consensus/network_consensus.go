@@ -36,25 +36,6 @@ func (an *participantWrapper) GetActiveNode() *core.ActiveNode {
 	return an.node
 }
 
-type dataProviderWrapper struct {
-	nodekeeper nodekeeper.NodeKeeper
-}
-
-// GetDataList implements DataProvider interface for NodeKeeper wrapper.
-func (dt *dataProviderWrapper) GetDataList() []*core.ActiveNode {
-	return dt.nodekeeper.GetUnsync()
-}
-
-// MergeDataList implements DataProvider interface for NodeKeeper wrapper.
-func (dt *dataProviderWrapper) MergeDataList(data []*core.ActiveNode) error {
-	return dt.nodekeeper.AddUnsyncGossip(data)
-}
-
-func (dt *dataProviderWrapper) GetHash() ([]byte, error) {
-	hash, _, err := dt.nodekeeper.GetUnsyncHash()
-	return hash, err
-}
-
 type selfWrapper struct {
 	keeper nodekeeper.NodeKeeper
 }
@@ -83,24 +64,24 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	for i, activeNode := range activeNodes {
 		participants[i] = &participantWrapper{activeNode}
 	}
-	success := ic.keeper.SetPulse(pulse.PulseNumber)
+	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
+	holder := nodekeeper.NewUnsyncHolder(pulse.PulseNumber, unsyncList)
 	if !success {
 		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
-	approve, err := ic.consensus.DoConsensus(ctx, pulse.PulseNumber, ic.self, participants)
+	unsyncCandidates, err := ic.consensus.DoConsensus(holder, ctx, ic.self, participants)
 	if err != nil {
 		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
-		approve = false
 	}
 	// We have to keep in mind a scenario when DoConsensus takes too long time and a new ProcessPulse is called
 	// simultaneously with the current call. It will happen if DoConsensus takes more time than the delay between two
 	// consecutive pulses.
-	// In this scenario ic.keeper.SetPulse(pulse + 1) will happen earlier than ic.keeper.Sync(approve, pulse).
-	// ic.keeper.SetPulse(pulse + 1) will internally call Sync(false) to update NodeKeeper's unsync, sync and active lists.
+	// In this scenario ic.keeper.SetPulse(pulse + 1) will happen earlier than ic.keeper.Sync(syncCandidates, pulse).
+	// ic.keeper.SetPulse(pulse + 1) will internally call Sync(nil) to update NodeKeeper's unsync, sync and active lists.
 	// That's why we have to pass PulseNumber to ic.keeper.Sync to check relevance of the pulse and to ignore the call
 	// if we detect this kind of race condition.
-	ic.keeper.Sync(approve, pulse.PulseNumber)
+	ic.keeper.Sync(unsyncCandidates, pulse.PulseNumber)
 }
 
 // IsPartOfConsensus returns whether we should perform all consensus interactions or not
@@ -115,10 +96,9 @@ func (ic *NetworkConsensus) ReceiverHandler() consensus.Communicator {
 
 // NewInsolarConsensus creates new object to handle all consensus events
 func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.InsolarConsensus, error) {
-
 	communicatorSnd := &communicatorSender{handler}
 	communicatorRcv := &communicatorReceiver{keeper}
-	consensus, err := consensus.NewConsensus(&dataProviderWrapper{keeper}, communicatorSnd)
+	consensus, err := consensus.NewConsensus(communicatorSnd)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating insolar consensus")
 	}

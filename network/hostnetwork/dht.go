@@ -140,7 +140,7 @@ func NewDHT(
 	rel := relay.NewRelay()
 
 	if keeper == nil {
-		keeper = nodekeeper.NewNodeKeeper(nodeID, time.Minute)
+		keeper = nodekeeper.NewNodeKeeper(nodeID)
 	}
 
 	dht = &DHT{

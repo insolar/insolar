@@ -91,7 +91,7 @@ func processExchangeUnsyncLists(hostHandler hosthandler.HostHandler, ctx hosthan
 
 	data := msg.Data.(*packet.RequestExchangeUnsyncLists)
 	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
-	list, err := consensusHandler.ExchangeData(ctx, data.Pulse, nil, data.UnsyncList)
+	list, err := consensusHandler.ExchangeData(data.Pulse, ctx, nil, data.UnsyncList)
 	if err != nil {
 		log.Warn(err.Error())
 		return packetBuilder.Response(&packet.ResponseExchangeUnsyncLists{Error: err.Error()}).Build(), nil
@@ -104,7 +104,7 @@ func processExchangeUnsyncHash(hostHandler hosthandler.HostHandler, ctx hosthand
 
 	data := msg.Data.(*packet.RequestExchangeUnsyncHash)
 	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
-	hash, err := consensusHandler.ExchangeHash(ctx, data.Pulse, nil, data.UnsyncHash)
+	hash, err := consensusHandler.ExchangeHash(data.Pulse, ctx, nil, data.UnsyncHash)
 	if err != nil {
 		log.Warn(err.Error())
 		return packetBuilder.Response(&packet.ResponseExchangeUnsyncHash{Error: err.Error()}).Build(), nil
