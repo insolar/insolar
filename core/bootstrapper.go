@@ -19,4 +19,5 @@ package core
 // Bootstrapper is the global bootstrapper handler. Other system parts communicate with bootstrapper through it.
 type Bootstrapper interface {
 	GetRootDomainRef() *RecordRef
+	Info() ([]byte, error)
 }

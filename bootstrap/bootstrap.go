@@ -52,6 +52,20 @@ type Bootstrapper struct {
 	rootKeysFile  string
 	rootPubKey    string
 	rootBalance   uint
+	classRefs     map[string]*core.RecordRef
+}
+
+// Info returns json with references for info api endpoint
+func (b *Bootstrapper) Info() ([]byte, error) {
+	classes := map[string][]byte{}
+	for class, ref := range b.classRefs {
+		classes[class] = ref[:]
+	}
+	return json.MarshalIndent(map[string]interface{}{
+		"root_domain": b.rootDomainRef[:],
+		"root_member": b.rootMemberRef[:],
+		"classes":     classes,
+	}, "", "   ")
 }
 
 // GetRootDomainRef returns reference to RootDomain instance
@@ -357,6 +371,7 @@ func (b *Bootstrapper) Start(c core.Components) error {
 
 	am := c.Ledger.GetArtifactManager()
 	cb := testutil.NewContractBuilder(am, insgocc)
+	b.classRefs = cb.Classes
 	defer cb.Clean()
 
 	err = buildSmartContracts(cb)
