@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (ar *Runner) InfoHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
+func (ar *Runner) infoHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		data, err := c.Bootstrapper.Info()
 		if err != nil {
