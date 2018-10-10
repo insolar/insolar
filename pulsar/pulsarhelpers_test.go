@@ -29,7 +29,7 @@ func TestSingAndVerify(t *testing.T) {
 	assert.NoError(t, err)
 	publicKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
 	assert.NoError(t, err)
-	testString := "message"
+	testString := (&StandardEntropyGenerator{}).GenerateEntropy()
 
 	signature, err := signData(privateKey, testString)
 	assertObj.NoError(err)

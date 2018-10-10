@@ -335,11 +335,9 @@ func (currentPulsar *Pulsar) broadcastVector() {
 	payload, err := currentPulsar.preparePayload(VectorPayload{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
 		Vector:      currentPulsar.OwnedBftRow})
+	a, b := checkPayloadSignature(payload)
+	log.Warn(a, b)
 
-	sign, err := signData(currentPulsar.PrivateKey, currentPulsar.OwnedBftRow)
-	log.Warnf("%v - %v", sign, err)
-	ok, err := checkSignature(currentPulsar.OwnedBftRow, currentPulsar.PublicKeyRaw, sign)
-	log.Warnf("%v - %v", ok, err)
 	if err != nil {
 		currentPulsar.stateSwitcher.switchToState(failed, err)
 		return
@@ -352,6 +350,10 @@ func (currentPulsar *Pulsar) broadcastVector() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
+			result, err := checkPayloadSignature(payload)
+			log.Warn(result)
+			log.Warn(err)
+			log.Warn(payload.PublicKey == currentPulsar.PublicKeyRaw)
 			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 		}
 	}

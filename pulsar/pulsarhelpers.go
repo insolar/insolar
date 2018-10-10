@@ -20,10 +20,12 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"encoding/gob"
-	"errors"
+	"encoding/asn1"
 	"math/big"
 	"sort"
+
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 
@@ -32,23 +34,31 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+type ecdsaSignature struct {
+	R, S *big.Int
+}
+
 func checkPayloadSignature(request *Payload) (bool, error) {
 	return checkSignature(request.Body, request.PublicKey, request.Signature)
 }
 
 func checkSignature(data interface{}, pub string, signature []byte) (bool, error) {
-	b := bytes.Buffer{}
-	e := gob.NewEncoder(&b)
-	err := e.Encode(data)
+	cborH := &codec.CborHandle{}
+	var b bytes.Buffer
+	enc := codec.NewEncoder(&b, cborH)
+	err := enc.Encode(data)
 	if err != nil {
 		return false, err
 	}
 
-	r := big.Int{}
-	s := big.Int{}
-	sigLen := len(signature)
-	r.SetBytes(signature[:(sigLen / 2)])
-	s.SetBytes(signature[(sigLen / 2):])
+	var ecdsaP ecdsaSignature
+	rest, err := asn1.Unmarshal(signature, &ecdsaP)
+	if err != nil {
+		return false, errors.Wrap(err, "[ checkSignature ]")
+	}
+	if len(rest) != 0 {
+		return false, errors.New("[ checkSignature ] len of  rest must be 0")
+	}
 
 	h := sha3.New256()
 	_, err = h.Write(b.Bytes())
@@ -61,13 +71,14 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 		return false, err
 	}
 
-	return ecdsa.Verify(publicKey, calculatedHash, &r, &s), nil
+	return ecdsa.Verify(publicKey, calculatedHash, ecdsaP.R, ecdsaP.S), nil
 }
 
 func signData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
-	b := bytes.Buffer{}
-	e := gob.NewEncoder(&b)
-	err := e.Encode(data)
+	cborH := &codec.CborHandle{}
+	var b bytes.Buffer
+	enc := codec.NewEncoder(&b, cborH)
+	err := enc.Encode(data)
 	if err != nil {
 		return nil, err
 	}
@@ -78,12 +89,8 @@ func signData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
 		return nil, err
 	}
 	calculatedHash := h.Sum(nil)
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, calculatedHash)
-	if err != nil {
-		return nil, err
-	}
 
-	return append(r.Bytes(), s.Bytes()...), nil
+	return privateKey.Sign(rand.Reader, calculatedHash, nil)
 }
 
 func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string, error) { // nolint: megacheck

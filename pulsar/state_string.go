@@ -4,9 +4,9 @@ package pulsar
 
 import "strconv"
 
-const _State_name = "failedwaitingForStartwaitingForEntropySignssendingEntropywaitingForEntropysendingVectorwaitingForVectorsverifyingsendingPulseSignwaitingForPulseSignssendingPulse"
+const _State_name = "failedwaitingForStartgenerateEntropywaitingForEntropySignssendingEntropywaitingForEntropysendingVectorwaitingForVectorsverifyingsendingPulseSignwaitingForPulseSignssendingPulse"
 
-var _State_index = [...]uint8{0, 6, 21, 43, 57, 74, 87, 104, 113, 129, 149, 161}
+var _State_index = [...]uint8{0, 6, 21, 36, 58, 72, 89, 102, 119, 128, 144, 164, 176}
 
 func (i State) String() string {
 	if i < 0 || i >= State(len(_State_index)-1) {

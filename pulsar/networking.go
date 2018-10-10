@@ -99,6 +99,9 @@ func (handler *Handler) isRequestValid(request *Payload) (success bool, neighbou
 		return false, neighbour, err
 	}
 	if !result {
+		result, err := checkPayloadSignature(request)
+		log.Warn(result)
+		log.Warn(err)
 		return false, neighbour, errors.New("signature check failed")
 	}
 
@@ -231,7 +234,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 }
 
 func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
-	log.Debug("[ReceiveVector]")
+	log.Debug("[ReceiveChosenSignature]")
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
