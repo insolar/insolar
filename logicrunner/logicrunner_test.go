@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"bytes"
-	"sync"
 
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -105,17 +104,9 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	}
 }
 
-var mutex = &sync.Mutex{}
-
 func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
 	rlr := lr.(*LogicRunner)
-	records := make(map[core.RecordRef][]core.CaseRecord)
-	mutex.Lock()
-	for k, v := range rlr.caseBind.Records {
-		records[k] = v
-	}
-	mutex.Unlock()
-	for ref, cr := range records {
+	for ref, cr := range rlr.caseBind.Records {
 		//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
 		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
 		assert.NoError(t, err, "validation")
