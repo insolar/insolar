@@ -88,14 +88,14 @@ func TestSerialization(t *testing.T) {
 	var b bool = true
 	var c string = "test"
 
-	serArgs, err := MarshalArgs(a, b, c)
+	serArgs, err := core.MarshalArgs(a, b, c)
 	assert.NoError(t, err)
 	assert.NotNil(t, serArgs)
 
 	var aR uint
 	var bR bool
 	var cR string
-	rowResp, err := UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
+	rowResp, err := core.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
 	assert.NoError(t, err)
 	assert.Len(t, rowResp, 3)
 	assert.Equal(t, reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))
@@ -148,7 +148,7 @@ func (*TestMessageBus) SendAsync(core.Message) {}
 const TestBalance = 100500
 
 func (eb *TestMessageBus) Send(core.Message) (core.Reply, error) {
-	data, _ := MarshalArgs(TestBalance)
+	data, _ := core.MarshalArgs(TestBalance)
 
 	return &reply.CallMethod{
 		Result: data,
