@@ -144,9 +144,9 @@ func (db *DB) Bootstrap() error {
 	return nil
 }
 
-// GenesisRef returns the root record reference.
+// GenesisRef returns the genesis record reference.
 //
-// Root record is the parent for all top-level records.
+// Genesis record is the parent for all top-level records.
 func (db *DB) GenesisRef() *record.Reference {
 	return db.genesisRef
 }
