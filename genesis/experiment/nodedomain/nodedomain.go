@@ -80,7 +80,6 @@ func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRa
 	role, pubKey = nodeR.GetRoleAndPublicKey()
 	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
 	if err != nil {
-
 		return "", core.RoleUnknown, "[ Authorize ] Problem with verifying of signature: " + err.Error()
 	}
 	if !ok {
