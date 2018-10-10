@@ -93,7 +93,8 @@ func (updServer *updateServer) getLatestVersion() *request.Version {
 	}
 	files, err := ioutil.ReadDir(updServer.uploadPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return nil
 	}
 	newVer := request.NewVersion("v0.0.0")
 	for _, f := range files {
