@@ -22,10 +22,10 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/rootdomain"
-	"github.com/insolar/insolar/application/proxy/member"
-	"github.com/insolar/insolar/application/proxy/wallet"
+	"github.com/insolar/insolar/application/contract/wallet"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"

@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -62,20 +62,20 @@ func makeSeed() []byte {
 
 // IsAuthorized checks is node authorized
 func (rd *RootDomain) IsAuthorized() bool {
-	privateKey, err := ecdsa_helper.GeneratePrivateKey()
+	privateKey, err := cryptoHelper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
 	}
 
 	// Make signature
 	seed := makeSeed()
-	signature, err := ecdsa_helper.Sign(seed, privateKey)
+	signature, err := cryptoHelper.Sign(seed, privateKey)
 	if err != nil {
 		panic(err)
 	}
 
 	// Register node
-	serPubKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
+	serPubKey, err := cryptoHelper.ExportPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		panic(err)
 	}

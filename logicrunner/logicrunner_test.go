@@ -28,9 +28,9 @@ import (
 	"path"
 	"testing"
 
+	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/member/signer"
-	"github.com/insolar/insolar/application/proxy/member"
-	"github.com/insolar/insolar/application/proxy/rootdomain"
+	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
