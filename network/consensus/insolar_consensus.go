@@ -14,23 +14,20 @@
  *    limitations under the License.
  */
 
-package core
+package consensus
 
-// Component controller methods
-type Component interface {
-	Start(components Components) error
-	Stop() error
-}
+import (
+	"context"
 
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-type Components struct {
-	Network            Network
-	Ledger             Ledger
-	LogicRunner        LogicRunner
-	MessageBus         MessageBus
-	Bootstrapper       Bootstrapper
-	APIRunner          Component
-	Metrics            Component
-	NetworkCoordinator NetworkCoordinator
+	"github.com/insolar/insolar/core"
+)
+
+// InsolarConsensus is an interface to bind all functionality related to consensus with the network layer
+type InsolarConsensus interface {
+	// ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
+	ProcessPulse(ctx context.Context, pulse core.Pulse)
+	// IsPartOfConsensus returns whether we should perform all consensus interactions or not
+	IsPartOfConsensus() bool
+	// ReceiverHandler return handler that is responsible to handle consensus network requests
+	ReceiverHandler() Communicator
 }

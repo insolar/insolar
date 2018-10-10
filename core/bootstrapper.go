@@ -20,4 +20,5 @@ package core
 type Bootstrapper interface {
 	GetRootDomainRef() *RecordRef
 	Info() ([]byte, error)
+	GetNodeDomainRef() *RecordRef
 }

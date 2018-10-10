@@ -19,6 +19,7 @@ package noderecord
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,16 +28,16 @@ const TestRole = "virtual"
 
 func TestNewNodeRecord(t *testing.T) {
 
-	r := GetRoleFromString(TestRole)
-	assert.NotEqual(t, RoleUnknown, r)
+	r := core.GetRoleFromString(TestRole)
+	assert.NotEqual(t, core.RoleUnknown, r)
 	record := NewNodeRecord(TestPubKey, TestRole)
 	assert.Equal(t, r, record.Role)
 	assert.Equal(t, TestPubKey, record.PublicKey)
 }
 
 func TestFromString(t *testing.T) {
-	role := GetRoleFromString("ZZZ")
-	assert.Equal(t, RoleUnknown, role)
+	role := core.GetRoleFromString("ZZZ")
+	assert.Equal(t, core.RoleUnknown, role)
 }
 
 func TestNodeRecord_GetPublicKey(t *testing.T) {
@@ -46,5 +47,5 @@ func TestNodeRecord_GetPublicKey(t *testing.T) {
 
 func TestNodeRecord_GetRole(t *testing.T) {
 	record := NewNodeRecord(TestPubKey, TestRole)
-	assert.Equal(t, RoleVirtual, record.GetRole())
+	assert.Equal(t, core.RoleVirtual, record.GetRole())
 }
