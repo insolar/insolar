@@ -209,7 +209,7 @@ func (ar *Runner) Start(c core.Components) error {
 
 	fw := wrapAPIV1Handler(ar.messageBus, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
-	http.HandleFunc("/info/", ar.InfoHandler(c))
+	http.HandleFunc(ar.cfg.Info, ar.InfoHandler(c))
 	log.Info("Starting ApiRunner ...")
 	log.Info("Config: ", ar.cfg)
 	go func() {
