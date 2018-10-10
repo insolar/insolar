@@ -20,6 +20,7 @@ import (
 	"crypto/rand"
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -76,9 +77,39 @@ func DispatchPacketType(
 		return processActiveNodes(hostHandler, packetBuilder)
 	case packet.TypeDisconnect:
 		return processDisconnect(hostHandler, packetBuilder)
+	case packet.TypeExchangeUnsyncLists:
+		return processExchangeUnsyncLists(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeExchangeUnsyncHash:
+		return processExchangeUnsyncHash(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processExchangeUnsyncLists(hostHandler hosthandler.HostHandler, ctx hosthandler.Context,
+	msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+
+	data := msg.Data.(*packet.RequestExchangeUnsyncLists)
+	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
+	list, err := consensusHandler.ExchangeData(ctx, data.Pulse, nil, data.UnsyncList)
+	if err != nil {
+		log.Warn(err.Error())
+		return packetBuilder.Response(&packet.ResponseExchangeUnsyncLists{Error: err.Error()}).Build(), nil
+	}
+	return packetBuilder.Response(&packet.ResponseExchangeUnsyncLists{UnsyncList: list}).Build(), nil
+}
+
+func processExchangeUnsyncHash(hostHandler hosthandler.HostHandler, ctx hosthandler.Context,
+	msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+
+	data := msg.Data.(*packet.RequestExchangeUnsyncHash)
+	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
+	hash, err := consensusHandler.ExchangeHash(ctx, data.Pulse, nil, data.UnsyncHash)
+	if err != nil {
+		log.Warn(err.Error())
+		return packetBuilder.Response(&packet.ResponseExchangeUnsyncHash{Error: err.Error()}).Build(), nil
+	}
+	return packetBuilder.Response(&packet.ResponseExchangeUnsyncHash{UnsyncHash: hash}).Build(), nil
 }
 
 func processDisconnect(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {
@@ -135,21 +166,38 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	}
 	currentPulse, err := pm.Current()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get current pulse")
+		return nil, errors.Wrap(err, "Could not get current pulse")
 	}
-	log.Debugf("got new pulse number: %d", currentPulse.PulseNumber)
+	log.Debugf("Got new pulse number: %d", data.Pulse.PulseNumber)
 	if (data.Pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(data.Pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 		err = pm.Set(data.Pulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
-		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
+		log.Debugf("Set new current pulse number: %d", data.Pulse.PulseNumber)
+
+		doConsensus(hostHandler, ctx, data.Pulse)
+
 		ht := hostHandler.HtFromCtx(ctx)
 		hosts := ht.GetMulticastHosts()
 		go ResendPulseToKnownHosts(hostHandler, hosts, data)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
+}
+
+func doConsensus(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, pulse core.Pulse) {
+	consensus := hostHandler.GetNetworkCommonFacade().GetConsensus()
+	if consensus == nil {
+		log.Warn("Consensus module is not initialized")
+		return
+	}
+	if !consensus.IsPartOfConsensus() {
+		log.Debug("Node is not active and does not participate in consensus")
+		return
+	}
+	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
+	go consensus.ProcessPulse(ctx, pulse)
 }
 
 func processKnownOuterHosts(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {

@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
@@ -191,12 +192,16 @@ func (t *TestArtifactManager) Start(components core.Components) error { return n
 // Stop implementation for tests
 func (t *TestArtifactManager) Stop() error { return nil }
 
-// RootRef implementation for tests
-func (t *TestArtifactManager) RootRef() *core.RecordRef { return &core.RecordRef{} }
+// GenesisRef implementation for tests
+func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
 func (t *TestArtifactManager) RegisterRequest(message core.Message) (*core.RecordRef, error) {
-	return nil, errors.New("RegisterRequest not implemented onTestArtifactManager ")
+	nonce, err := randomRef()
+	if err != nil {
+		return nil, err
+	}
+	return nonce, nil
 }
 
 // GetClass implementation for tests
@@ -261,16 +266,18 @@ func (t *TestArtifactManager) GetCode(code core.RecordRef, machinePref []core.Ma
 }
 
 // ActivateClass implementation for tests
-func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef) (*core.RecordRef, error) {
-	ref, err := randomRef()
+func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordID, error) {
+	t.Classes[request] = &TestClassDescriptor{
+		AM:   t,
+		ARef: &request,
+	}
+
+	id, err := randomID()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to generate ref")
 	}
-	t.Classes[*ref] = &TestClassDescriptor{
-		AM:   t,
-		ARef: ref,
-	}
-	return ref, nil
+
+	return id, nil
 }
 
 // DeactivateClass implementation for tests
@@ -314,27 +321,28 @@ func randomID() (*core.RecordID, error) {
 }
 
 // ActivateObject implementation for tests
-func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordID, error) {
 	codeRef := t.Classes[class].ACode
 
-	ref, err := randomRef()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
-	}
-
-	t.Objects[*ref] = &TestObjectDescriptor{
+	t.Objects[request] = &TestObjectDescriptor{
 		AM:        t,
 		Data:      memory,
 		Code:      codeRef,
 		Class:     &class,
 		Delegates: make(map[core.RecordRef]core.RecordRef),
 	}
-	return ref, nil
+
+	id, err := randomID()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to generate ref")
+	}
+
+	return id, nil
 }
 
 // ActivateObjectDelegate implementation for tests
-func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordRef, error) {
-	ref, err := t.ActivateObject(domain, request, class, parent, memory)
+func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordID, error) {
+	id, err := t.ActivateObject(domain, request, class, parent, memory)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to generate ref")
 	}
@@ -344,8 +352,9 @@ func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, par
 		return nil, errors.New("No parent to inject delegate into")
 	}
 
-	pObj.Delegates[class] = *ref
-	return ref, nil
+	pObj.Delegates[class] = request
+
+	return id, nil
 }
 
 // DeactivateObject implementation for tests
@@ -410,9 +419,11 @@ func AMPublishCode(
 	)
 	assert.NoError(t, err, "create code on ledger")
 
-	classRef, err = am.ActivateClass(domain, request)
-	assert.NoError(t, err, "create template for contract data")
-	_, err = am.UpdateClass(domain, request, *classRef, *codeRef, nil)
+	nonce, err := randomRef()
+	assert.NoError(t, err, "create class on ledger")
+	classRef, err = am.RegisterRequest(&message.CallConstructor{ClassRef: *nonce})
+	assert.NoError(t, err)
+	_, err = am.ActivateClass(domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, classRef, err
@@ -458,13 +469,11 @@ func (cb *ContractsBuilder) Clean() {
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 	for name := range contracts {
-		ref, err := randomRef()
+		nonce, err := randomRef()
 		if err != nil {
-			return errors.Wrap(err, "Failed to generate ref")
+			return err
 		}
-		class, err := cb.ArtifactManager.ActivateClass(
-			core.RecordRef{}, *ref,
-		)
+		class, err := cb.ArtifactManager.RegisterRequest(&message.CallConstructor{ClassRef: *nonce})
 		if err != nil {
 			return err
 		}
@@ -513,11 +522,9 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		log.Debugf("Deployed code %q for contract %q in %q", code.String(), name, cb.root)
 		cb.Codes[name] = code
 
-		_, err = cb.ArtifactManager.UpdateClass(
-			core.RecordRef{}, core.RecordRef{},
-			*cb.Classes[name],
+		_, err = cb.ArtifactManager.ActivateClass(
+			core.RecordRef{}, *cb.Classes[name],
 			*code,
-			[]core.RecordRef{},
 		)
 		if err != nil {
 			return err
@@ -528,7 +535,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {
-	dstDir := filepath.Join(cb.root, "src/github.com/insolar/insolar/genesis/proxy", name)
+	dstDir := filepath.Join(cb.root, "src/github.com/insolar/insolar/application/proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {

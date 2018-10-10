@@ -1,11 +1,12 @@
+BIN_DIR = bin
 INSOLAR = insolar
 INSOLARD = insolard
-INSGOCC = insgocc
+INSGOCC = $(BIN_DIR)/insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
 INSUPDATER = insupdater
 INSUPDATESERV = updateserv
-BIN_DIR = bin
+
 
 ALL_PACKAGES = ./...
 COVERPROFILE = coverage.txt
@@ -22,7 +23,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps install build test test_with_coverage
+.PHONY: all lint ci-lint metalint clean install-deps install build test test_with_coverage regen_proxyes
 
 all: clean install-deps install build test
 
@@ -58,7 +59,7 @@ $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 $(INSGOCC):
-	go build -o $(BIN_DIR)/$(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(PULSARD):
 	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
@@ -77,3 +78,8 @@ test:
 
 test_with_coverage:
 	CGO_ENABLED=1 go test --race --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+
+
+CONTRACTS = $(wildcard genesis/experiment/*)
+regen_proxyes: $(INSGOCC)
+	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy genesis/experiment/$(notdir $(c))/$(notdir $(c)).go; )
