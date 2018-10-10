@@ -54,6 +54,8 @@ type DB struct {
 	// and these conflicts we should resolve by ourself
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
+
+	idlocker *IDLocker
 }
 
 // SetTxRetiries sets number of retries on conflict in Update
@@ -91,6 +93,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	db := &DB{
 		db:         bdb,
 		txretiries: conf.Storage.TxRetriesOnConflict,
+		idlocker:   NewIDLocker(),
 	}
 	return db, nil
 }
@@ -239,6 +242,8 @@ func (db *DB) GetClassIndex(id *record.ID) (*index.ClassLifeline, error) {
 
 // SetClassIndex wraps matching transaction manager method.
 func (db *DB) SetClassIndex(id *record.ID, idx *index.ClassLifeline) error {
+	db.idlocker.Lock(id)
+	defer db.idlocker.Unlock(id)
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetClassIndex(id, idx)
 	})
@@ -258,6 +263,8 @@ func (db *DB) GetObjectIndex(id *record.ID) (*index.ObjectLifeline, error) {
 
 // SetObjectIndex wraps matching transaction manager method.
 func (db *DB) SetObjectIndex(id *record.ID, idx *index.ObjectLifeline) error {
+	db.idlocker.Lock(id)
+	defer db.idlocker.Unlock(id)
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(id, idx)
 	})
