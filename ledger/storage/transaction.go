@@ -31,6 +31,7 @@ type TransactionManager struct {
 	db     *DB
 	txn    *badger.Txn
 	update bool
+	locks  []*record.ID
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
@@ -40,9 +41,25 @@ func prefixkey(prefix byte, key []byte) []byte {
 	return k
 }
 
+func (m *TransactionManager) lockOnID(id *record.ID) {
+	m.db.idlocker.Lock(id)
+	m.locks = append(m.locks, id)
+}
+
+func (m *TransactionManager) releaseLocks() {
+	for _, id := range m.locks {
+		m.db.idlocker.Unlock(id)
+	}
+}
+
 // Commit tries to write transaction on disk. Returns error on fail.
 func (m *TransactionManager) Commit() error {
-	return m.txn.Commit(nil)
+	err := m.txn.Commit(nil)
+	m.releaseLocks()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Discard terminates transaction without disk writes.
@@ -140,7 +157,10 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 }
 
 // GetClassIndex fetches class lifeline's index.
-func (m *TransactionManager) GetClassIndex(id *record.ID) (*index.ClassLifeline, error) {
+func (m *TransactionManager) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline, error) {
+	if forupdate {
+		m.lockOnID(id)
+	}
 	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
 	item, err := m.txn.Get(k)
 	if err != nil {
@@ -167,7 +187,10 @@ func (m *TransactionManager) SetClassIndex(id *record.ID, idx *index.ClassLifeli
 }
 
 // GetObjectIndex fetches object lifeline index.
-func (m *TransactionManager) GetObjectIndex(id *record.ID) (*index.ObjectLifeline, error) {
+func (m *TransactionManager) GetObjectIndex(id *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
+	if forupdate {
+		m.lockOnID(id)
+	}
 	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
 	item, err := m.txn.Get(k)
 	if err != nil {

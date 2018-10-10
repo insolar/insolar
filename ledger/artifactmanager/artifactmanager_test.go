@@ -502,7 +502,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		Delegate: false,
 	})
 
-	idx, err := td.db.GetObjectIndex(parentID)
+	idx, err := td.db.GetObjectIndex(parentID, false)
 	assert.NoError(t, err)
 	childRec, err := td.db.GetRecord(idx.LatestChild)
 	assert.NoError(t, err)
