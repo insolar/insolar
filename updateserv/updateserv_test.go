@@ -14,21 +14,19 @@
  *    limitations under the License.
  */
 
-package main
+package updateserv
 
 import (
-	"github.com/insolar/insolar/configuration"
 	"io/ioutil"
 	"net/http"
 	"testing"
 
-	"github.com/insolar/insolar/updateserv"
 	"github.com/stretchr/testify/assert"
 )
 
 // Just to make Goland happy
 func TestStub(t *testing.T) {
-	us := updateserv.NewUpdateServer("2345", "../")
+	us := NewUpdateServer("2345", "../")
 	us.LatestVersion = "v0.3.1"
 	assert.Equal(t, us.LatestVersion, "v0.3.1")
 
@@ -40,12 +38,6 @@ func TestStub(t *testing.T) {
 
 	response, err := http.Get("http://localhost:2345/latest")
 	assert.NoError(t, err)
-
-	assert.Equal(t, getPort(), "2345")
-	assert.Equal(t, getUploadPath(), "./data")
-	cfgHolder := configuration.NewHolder()
-	assert.NotNil(t, cfgHolder)
-	assert.NoError(t, initLogger(cfgHolder.Configuration.Log))
 
 	body, err := ioutil.ReadAll(response.Body)
 	assert.NoError(t, err)

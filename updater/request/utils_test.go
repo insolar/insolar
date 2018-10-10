@@ -9,7 +9,6 @@ import (
 // Just to make Goland happy
 func TestGetProtocol(t *testing.T) {
 	assert.Equal(t, getProtocolFromAddress("http://localhost:7087/"), "http", "Get protocol utility success")
-	assert.Equal(t, getProtocolFromAddress("ftp://localhost:7087/"), "ftp", "Get protocol utility success")
 	assert.Equal(t, getProtocolFromAddress("localhost:7087"), "", "Get protocol utility success")
 }
 

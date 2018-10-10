@@ -16,9 +16,14 @@
 package updater
 
 import (
+	"github.com/insolar/insolar/updater/request"
+	"github.com/insolar/insolar/updateserv"
+	"io/ioutil"
+	"net/http"
+	"testing"
+
 	"github.com/insolar/insolar/version"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // Just to make Goland happy
@@ -41,5 +46,44 @@ func TestStubSameVersion(t *testing.T) {
 	assert.Equal(t, updater.CurrentVer, "v0.0.0")
 	assert.Equal(t, b, true)
 	assert.Equal(t, updater.DownloadFiles("v0.0.0"), false)
+}
 
+func TestHttp(t *testing.T) {
+	ver := request.NewVersion("v0.3.1")
+
+	us := updateserv.NewUpdateServer("2346", "./data")
+	us.LatestVersion = "v0.3.1"
+	assert.Equal(t, us.LatestVersion, "v0.3.1")
+
+	err := us.Start()
+	assert.NoError(t, err)
+	assert.NotNil(t, us)
+	assert.Equal(t, us.UploadPath, "./data")
+	assert.Equal(t, us.Port, "2346")
+
+	response, err := http.Get("http://localhost:2346/latest")
+	assert.NoError(t, err)
+
+	body, err := ioutil.ReadAll(response.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body[:]), `"latest":"v0.3.1"`)
+
+	addr, v, e := request.ReqCurrentVer([]string{"http://localhost:2346"})
+	assert.NoError(t, e)
+	assert.Equal(t, addr, "http://localhost:2346")
+	assert.Equal(t, v, ver)
+
+	up := NewUpdater()
+	b, s, e := up.IsSameVersion("v0.3.0")
+	assert.Error(t, e)
+	assert.Equal(t, s, "")
+	assert.Equal(t, b, true)
+
+	up.LastSuccessServer = "http://localhost:2346"
+	b, s, e = up.IsSameVersion("v0.3.0")
+	assert.NoError(t, e)
+	assert.Equal(t, s, "v0.3.1")
+	assert.Equal(t, b, false)
+
+	us.Stop()
 }

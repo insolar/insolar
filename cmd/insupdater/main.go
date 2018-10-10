@@ -24,7 +24,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
 	upd "github.com/insolar/insolar/updater"
@@ -42,7 +41,10 @@ func main() {
 	// send version.Version to update server
 	// if version != lastVersionResult in the Update Server => download and change files
 	updater := upd.NewUpdater()
-	verifyAndUpdate(updater)
+	err := verifyAndUpdate(updater)
+	if err != nil {
+		log.Warn(err)
+	}
 	service(updater)
 
 	var gracefulStop = make(chan os.Signal)
@@ -55,14 +57,13 @@ func main() {
 		os.Exit(0)
 	}()
 
-	interactive()
 }
 
-func verifyAndUpdate(updater *upd.Updater) {
+func verifyAndUpdate(updater *upd.Updater) error {
 	log.Info("Start verify for update ")
 	sameVersion, newVersion, err := updater.IsSameVersion(version.Version)
 	if err != nil {
-		onErr("Error at the Update Server access stage: ", err)
+		return err
 	}
 	if !sameVersion {
 		log.Debug("Current version: ", version.Version, ", found version: ", newVersion)
@@ -70,26 +71,26 @@ func verifyAndUpdate(updater *upd.Updater) {
 		//if updater.DownloadFiles(newVersion) {
 		//	// ToDo: send stop signal, then copy files from folder=./${VERSION} to current folder
 		//}
-	} else {
-		log.Info("Already updated!")
 	}
 	// Run peer
 	//executePeer()
 	// ToDo: Run update service with timer
 	// exit
+	return nil
 }
 
-func initLogger(cfg configuration.Log) {
-	err := log.SetLevel(strings.ToLower(cfg.Level))
+func initLogger(cfg configuration.Log) (err error) {
+	err = log.SetLevel(strings.ToLower(cfg.Level))
 	if err != nil {
 		log.Errorln(err.Error())
 	}
+	return
 }
 
-func onErr(text string, err error) {
-	fmt.Println(text, err)
-	os.Exit(1)
-}
+//func onErr(text string, err error) {
+//	fmt.Println(text, err)
+//	os.Exit(1)
+//}
 
 //func executePeer() {
 //	pwd, err := os.Getwd()
@@ -115,43 +116,10 @@ func service(updater *upd.Updater) {
 		}()
 
 		for range ticker.C {
-			verifyAndUpdate(updater)
-		}
-	}()
-}
-
-func interactive() {
-
-	rl, err := readline.New("> ")
-	if err != nil {
-		panic(err)
-	}
-	defer func() {
-		errRlClose := rl.Close()
-		if errRlClose != nil {
-			panic(errRlClose)
-		}
-	}()
-	for {
-		line, err := rl.Readline()
-		if err != nil {
-			break
-		}
-		input := strings.Split(line, " ")
-
-		switch input[0] {
-		case "exit":
-			fallthrough
-		case "quit":
-			{
-				return
-			}
-		case "version":
-			{
-				fmt.Println(version.GetFullVersion())
+			err := verifyAndUpdate(updater)
+			if err != nil {
+				log.Warn(err)
 			}
 		}
-
-	}
-
+	}()
 }

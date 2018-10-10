@@ -19,14 +19,6 @@ func GetProtocol(address string) UpdateNode {
 			{
 				return HTTPUpdateNode{}
 			}
-		case "ftp":
-			{
-				return FtpUpdateNode{}
-			}
-		case "smb":
-			{
-				return SmbUpdateNode{}
-			}
 		default:
 			{
 				log.Warn("Unknown protocol ", protocol[0])
