@@ -97,7 +97,7 @@ func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	return pubKey, role, nil
 }
 
-// Authorize authorized node by verifying it's signature
+// Authorize authorizes node by verifying it's signature
 func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
 	routResult, err := nc.sendRequest(nc.nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
 	if err != nil {
