@@ -19,16 +19,20 @@ package jetcoordinator_test
 import (
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/logicrunner"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestJetCoordinator_QueryRole(t *testing.T) {
-	ledger, cleaner := ledgertestutil.TmpLedger(t, "")
+	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
+		BuiltIn: &configuration.BuiltIn{},
+	})
+	assert.NoError(t, err)
+	ledger, cleaner := ledgertestutil.TmpLedger(t, lr, "")
 	defer cleaner()
-
-	var err error
 
 	am := ledger.GetArtifactManager()
 	pm := ledger.GetPulseManager()
@@ -51,10 +55,12 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 }
 
 func TestJetCoordinator_IsAuthorized(t *testing.T) {
-	ledger, cleaner := ledgertestutil.TmpLedger(t, "")
+	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
+		BuiltIn: &configuration.BuiltIn{},
+	})
+	assert.NoError(t, err)
+	ledger, cleaner := ledgertestutil.TmpLedger(t, lr, "")
 	defer cleaner()
-
-	var err error
 
 	am := ledger.GetArtifactManager()
 	pm := ledger.GetPulseManager()

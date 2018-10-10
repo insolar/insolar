@@ -168,13 +168,14 @@ func (r *Member) GetPublicKeyNoWait(  ) {
 	}
 }
 
-func (r *Member) AuthorizedCall( ref string, method string, params []interface{}, seed []byte, sign []byte ) ( []interface{}, *foundation.Error ) {
-	var args [5]interface{}
+func (r *Member) AuthorizedCall( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
+	var args [6]interface{}
 	args[0] = ref
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = delegate
+	args[2] = method
+	args[3] = params
+	args[4] = seed
+	args[5] = sign
 
 	var argsSerialized []byte
 
@@ -189,7 +190,7 @@ func (r *Member) AuthorizedCall( ref string, method string, params []interface{}
 	}
 
 	resList := [2]interface{}{}
-	var a0 []interface{}
+	var a0 []byte
 	resList[0] = a0
 	var a1 *foundation.Error
 	resList[1] = a1
@@ -199,16 +200,17 @@ func (r *Member) AuthorizedCall( ref string, method string, params []interface{}
 		panic(err)
 	}
 
-	return resList[0].([]interface{}), resList[1].(*foundation.Error)
+	return resList[0].([]byte), resList[1].(*foundation.Error)
 }
 
-func (r *Member) AuthorizedCallNoWait( ref string, method string, params []interface{}, seed []byte, sign []byte ) {
-	var args [5]interface{}
+func (r *Member) AuthorizedCallNoWait( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) {
+	var args [6]interface{}
 	args[0] = ref
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = delegate
+	args[2] = method
+	args[3] = params
+	args[4] = seed
+	args[5] = sign
 
 	var argsSerialized []byte
 

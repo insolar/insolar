@@ -400,6 +400,28 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *ho
 	return checkResponse(hostHandler, future, target.ID.String(), request)
 }
 
+func sendDisconnectRequest(hostHandler hosthandler.HostHandler, target *host.Host) error {
+	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
+	if err != nil {
+		return err
+	}
+
+	builder := packet.NewBuilder()
+	request := builder.Type(packet.TypeDisconnect).
+		Sender(hostHandler.HtFromCtx(ctx).Origin).
+		Receiver(target).
+		Request(&packet.RequestDisconnect{}).
+		Build()
+
+	future, err := hostHandler.SendRequest(request)
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to send disconnect request")
+	}
+
+	return checkResponse(hostHandler, future, target.ID.String(), request)
+}
+
 func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future, targetID string, request *packet.Packet) error {
 	var err error
 	rsp, err := future.GetResult(hostHandler.GetPacketTimeout())
@@ -449,6 +471,16 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 	case packet.TypeActiveNodes:
 		response := rsp.Data.(*packet.ResponseActiveNodes)
 		err = handleActiveNodesResponse(hostHandler, response)
+		if err != nil {
+			err = sendDisconnectRequest(hostHandler, rsp.Sender)
+		}
+	case packet.TypeDisconnect:
+		response := rsp.Data.(*packet.ResponseDisconnect)
+		if (response.Error == nil) && response.Disconnected {
+			// TODO: be a disconnected sad node
+		} else {
+			return response.Error
+		}
 	}
 	return err
 }

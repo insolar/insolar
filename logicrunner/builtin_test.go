@@ -39,13 +39,13 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
-	l, cleaner := ledgertestutil.TmpLedger(t, "")
-	defer cleaner()
-
-	am := l.GetArtifactManager()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
+
+	l, cleaner := ledgertestutil.TmpLedger(t, lr, "")
+	defer cleaner()
+	am := l.GetArtifactManager()
 	assert.NoError(t, err, "Initialize runner")
 
 	eb := &testMessageBus{lr}
