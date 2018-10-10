@@ -63,7 +63,10 @@ func TestBareHelloworld(t *testing.T) {
 	_, _, classRef, err := testutil.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
-	contract, err := am.ActivateObject(request, domain, *classRef, *am.RootRef(), testutil.CBORMarshal(t, hw))
+	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: byteRecorRef(4)})
+	assert.NoError(t, err)
+
+	_, err = am.ActivateObject(domain, *contract, *classRef, *am.GenesisRef(), testutil.CBORMarshal(t, hw))
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 
