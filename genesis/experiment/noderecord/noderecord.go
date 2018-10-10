@@ -17,44 +17,23 @@
 package noderecord
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
-
-type NodeRole int
-
-const (
-	RoleUnknown = NodeRole(iota)
-	RoleVirtual
-	RoleHeavyMaterial
-	RoleLightMaterial
-)
-
-func GetRoleFromString(role string) NodeRole {
-	switch role {
-	case "virtual":
-		return RoleVirtual
-	case "heavy_material":
-		return RoleHeavyMaterial
-	case "light_material":
-		return RoleLightMaterial
-	}
-
-	return RoleUnknown
-}
 
 // NodeRecord contains info about node
 type NodeRecord struct {
 	foundation.BaseContract
 
 	PublicKey string
-	Role      NodeRole
+	Role      core.NodeRole
 }
 
 // New creates new NodeRecord
 func NewNodeRecord(pk string, roleS string) *NodeRecord {
 
-	role := GetRoleFromString(roleS)
-	if role == RoleUnknown {
+	role := core.GetRoleFromString(roleS)
+	if role == core.RoleUnknown {
 		// TODO: return error
 		panic("Can't unsupported role")
 	}
@@ -65,12 +44,19 @@ func NewNodeRecord(pk string, roleS string) *NodeRecord {
 	}
 }
 
+// GetPublicKey returns public key
 func (nr *NodeRecord) GetPublicKey() string {
 	return nr.PublicKey
 }
 
-func (nr *NodeRecord) GetRole() NodeRole {
+// GetRole returns role
+func (nr *NodeRecord) GetRole() core.NodeRole {
 	return nr.Role
+}
+
+// GetRoleAndPublicKey returns role-pubKey pair
+func (nr *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
+	return nr.Role, nr.PublicKey
 }
 
 // SelfDestroy makes request to destroy current node record

@@ -217,7 +217,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 
 	objbody, err := lr.getObjectMessage(e.ObjectRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object")
+		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
 	ctx.Callee = &e.ObjectRef

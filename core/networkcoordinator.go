@@ -16,21 +16,10 @@
 
 package core
 
-// Component controller methods
-type Component interface {
-	Start(components Components) error
-	Stop() error
-}
-
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-type Components struct {
-	Network            Network
-	Ledger             Ledger
-	LogicRunner        LogicRunner
-	MessageBus         MessageBus
-	Bootstrapper       Bootstrapper
-	APIRunner          Component
-	Metrics            Component
-	NetworkCoordinator NetworkCoordinator
+// NetworkCoordinator encapsulates logic of network configuration
+type NetworkCoordinator interface {
+	// Authorize authorizes node by verifying it's signature
+	Authorize(nodeRef RecordRef, seed []byte, signatureRaw []byte) (string, NodeRole, error)
+	// RegisterNode registers node in nodedomain
+	RegisterNode(publicKey string, role string) (*RecordRef, error)
 }
