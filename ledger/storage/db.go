@@ -229,11 +229,11 @@ func (db *DB) SetRecord(rec record.Record) (*record.ID, error) {
 }
 
 // GetClassIndex wraps matching transaction manager method.
-func (db *DB) GetClassIndex(id *record.ID) (*index.ClassLifeline, error) {
-	tx := db.BeginTransaction(false)
+func (db *DB) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline, error) {
+	tx := db.BeginTransaction(forupdate)
 	defer tx.Discard()
 
-	idx, err := tx.GetClassIndex(id)
+	idx, err := tx.GetClassIndex(id, false)
 	if err != nil {
 		return nil, err
 	}
@@ -242,19 +242,17 @@ func (db *DB) GetClassIndex(id *record.ID) (*index.ClassLifeline, error) {
 
 // SetClassIndex wraps matching transaction manager method.
 func (db *DB) SetClassIndex(id *record.ID, idx *index.ClassLifeline) error {
-	db.idlocker.Lock(id)
-	defer db.idlocker.Unlock(id)
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetClassIndex(id, idx)
 	})
 }
 
 // GetObjectIndex wraps matching transaction manager method.
-func (db *DB) GetObjectIndex(id *record.ID) (*index.ObjectLifeline, error) {
+func (db *DB) GetObjectIndex(id *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
 	tx := db.BeginTransaction(false)
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(id)
+	idx, err := tx.GetObjectIndex(id, forupdate)
 	if err != nil {
 		return nil, err
 	}
@@ -263,8 +261,6 @@ func (db *DB) GetObjectIndex(id *record.ID) (*index.ObjectLifeline, error) {
 
 // SetObjectIndex wraps matching transaction manager method.
 func (db *DB) SetObjectIndex(id *record.ID, idx *index.ObjectLifeline) error {
-	db.idlocker.Lock(id)
-	defer db.idlocker.Unlock(id)
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(id, idx)
 	})
