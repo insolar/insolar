@@ -51,7 +51,6 @@ See [package readme](network/hostnetwork) for more details.
 Record storage engine backed by [BadgerDB](https://github.com/dgraph-io/badger).
 
 
-
 ### [Virtual machines](vm)
 Various engines for smart contract execution:
  - [wasm](vm/wasm) - WebAssembly implementation of smart contracts
@@ -64,13 +63,16 @@ Domains define the visibility scope for the child contracts and their interactio
 
 See [package readme](application) for more details.
 
+
 ### [Configuration](configuration)
 
 Provides configuration params for all Insolar components and helper for config resources management.
 
+
 ### [Metrics](metrics)
 
 Using Prometheus monitoring system and time series database for collecting and store metrics
+
 
 Installation
 ------------
