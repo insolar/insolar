@@ -68,6 +68,8 @@ const (
 	TypeCheckSignedNonce
 	// TypeActiveNodes is packet type to get an active nodes.
 	TypeActiveNodes
+	// TypeDisconnect is packet to disconnect from active list.
+	TypeDisconnect
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -134,6 +136,8 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestCheckSignedNonce)
 	case TypeActiveNodes:
 		_, valid = m.Data.(*RequestActiveNodes)
+	case TypeDisconnect:
+		_, valid = m.Data.(*RequestDisconnect)
 	default:
 		valid = false
 	}
@@ -219,6 +223,7 @@ func init() {
 	gob.Register(&RequestCheckPublicKey{})
 	gob.Register(&RequestCheckSignedNonce{})
 	gob.Register(&RequestActiveNodes{})
+	gob.Register(&RequestDisconnect{})
 
 	gob.Register(&ResponseDataFindHost{})
 	gob.Register(&ResponseDataFindValue{})
@@ -237,6 +242,7 @@ func init() {
 	gob.Register(&ResponseCheckPublicKey{})
 	gob.Register(&ResponseCheckSignedNonce{})
 	gob.Register(&ResponseActiveNodes{})
+	gob.Register(&ResponseDisconnect{})
 
 	gob.Register(&id.ID{})
 }

@@ -105,10 +105,13 @@ func generateKeysPair(out io.Writer) {
 	pubKeyStr, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
 	check("Problems with serialization of public key:", err)
 
-	result := fmt.Sprintf("Public key:\n %s\n", pubKeyStr)
-	result += fmt.Sprintf("Private key:\n %s", privKeyStr)
+	result, err := json.MarshalIndent(map[string]interface{}{
+		"private_key": privKeyStr,
+		"public_key":  pubKeyStr,
+	}, "", "    ")
+	check("Problems with marshaling keys:", err)
 
-	writeToOutput(out, result)
+	writeToOutput(out, string(result))
 }
 
 func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {

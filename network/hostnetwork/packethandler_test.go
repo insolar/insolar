@@ -144,8 +144,8 @@ func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
 	return nil
 }
 
-func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) {
-
+func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error {
+	return nil
 }
 
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
