@@ -32,7 +32,7 @@ func NewAPIRunner() APIRunner {
 	return APIRunner{
 		Port:     19191,
 		Location: "/api/v1",
-		Info:     "/info/",
+		Info:     "/api/v1/info/",
 	}
 }
 
