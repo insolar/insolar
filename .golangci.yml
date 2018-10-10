@@ -1,7 +1,7 @@
 run:
   tests: false
   skip-dirs:
-    - application/example/
+    - application/contract/
     - application/proxy/
 
 linters:
