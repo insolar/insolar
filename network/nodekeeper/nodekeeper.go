@@ -32,6 +32,8 @@ import (
 )
 
 type NodeKeeper interface {
+	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node
+	GetSelf() *core.ActiveNode
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
 	GetActiveNode(ref core.RecordRef) *core.ActiveNode
 	// GetActiveNodes get active nodes.
@@ -42,10 +44,14 @@ type NodeKeeper interface {
 	GetUnsyncHash() (hash []byte, unsyncCount int, err error)
 	// GetUnsync gets the local unsync list (excluding other nodes unsync lists).
 	GetUnsync() []*core.ActiveNode
-	// SetPulse sets internal PulseNumber to number.
-	SetPulse(number core.PulseNumber)
+	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
+	// or equal to internal PulseNumber
+	SetPulse(number core.PulseNumber) bool
+	// GetPulse returns internal NodeKeeper pulse
+	GetPulse() core.PulseNumber
 	// Sync initiate transferring unsync -> sync, sync -> active. If approved is false, unsync is not transferred to sync.
-	Sync(approved bool)
+	// If number is less than internal PulseNumber then ignore Sync.
+	Sync(approved bool, number core.PulseNumber)
 	// AddUnsync add unsync node to the local unsync list.
 	// Returns error if node's PulseNumber is not equal to the NodeKeeper internal PulseNumber.
 	AddUnsync(*core.ActiveNode) error
@@ -57,8 +63,9 @@ type NodeKeeper interface {
 }
 
 // NewNodeKeeper create new NodeKeeper. unsyncDiscardAfter = timeout after which each unsync node is discarded.
-func NewNodeKeeper(unsyncDiscardAfter time.Duration) NodeKeeper {
+func NewNodeKeeper(nodeID core.RecordRef, unsyncDiscardAfter time.Duration) NodeKeeper {
 	return &nodekeeper{
+		nodeID:       nodeID,
 		state:        undefined,
 		timeout:      unsyncDiscardAfter,
 		active:       make(map[core.RecordRef]*core.ActiveNode),
@@ -78,6 +85,8 @@ const (
 )
 
 type nodekeeper struct {
+	nodeID          core.RecordRef
+	self            *core.ActiveNode
 	state           nodekeeperState
 	pulse           core.PulseNumber
 	timeout         time.Duration
@@ -92,6 +101,13 @@ type nodekeeper struct {
 	unsync        []*core.ActiveNode
 	unsyncTimeout []time.Time
 	unsyncGossip  map[core.RecordRef]*core.ActiveNode
+}
+
+func (nk *nodekeeper) GetSelf() *core.ActiveNode {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	return nk.self
 }
 
 func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
@@ -116,6 +132,10 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 	defer nk.activeLock.Unlock()
 
 	for _, node := range nodes {
+		if node.NodeID.Equal(nk.nodeID) {
+			log.Warnf("AddActiveNodes: trying to add self ID: %s. Typically it must happen via Sync", nk.nodeID)
+			nk.self = node
+		}
 		nk.active[node.NodeID] = node
 	}
 }
@@ -154,19 +174,26 @@ func (nk *nodekeeper) GetUnsync() []*core.ActiveNode {
 	return result
 }
 
-func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
+func (nk *nodekeeper) GetPulse() core.PulseNumber {
+	nk.unsyncLock.Lock()
+	defer nk.unsyncLock.Unlock()
+
+	return nk.pulse
+}
+
+func (nk *nodekeeper) SetPulse(number core.PulseNumber) bool {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
 	if nk.state == undefined {
 		nk.pulse = number
 		nk.state = awaitUnsync
-		return
+		return true
 	}
 
 	if number <= nk.pulse {
 		log.Warnf("NodeKeeper: ignored SetPulse call with number=%d while current=%d", uint32(number), uint32(nk.pulse))
-		return
+		return false
 	}
 
 	if nk.state == hashCalculated || nk.state == awaitUnsync {
@@ -180,9 +207,10 @@ func (nk *nodekeeper) SetPulse(number core.PulseNumber) {
 	nk.state = awaitUnsync
 	nk.invalidateCache()
 	nk.updateUnsyncPulse()
+	return true
 }
 
-func (nk *nodekeeper) Sync(approved bool) {
+func (nk *nodekeeper) Sync(approved bool, number core.PulseNumber) {
 	nk.unsyncLock.Lock()
 	nk.activeLock.Lock()
 
@@ -193,6 +221,12 @@ func (nk *nodekeeper) Sync(approved bool) {
 
 	if nk.state == synced || nk.state == undefined {
 		log.Warn("NodeKeeper: ignored Sync call from `synced` or `undefined` state")
+		return
+	}
+
+	if nk.pulse > number {
+		log.Warnf("NodeKeeper: ignored Sync call because passed number %d is less than internal number %d",
+			number, nk.pulse)
 		return
 	}
 
@@ -244,6 +278,10 @@ func (nk *nodekeeper) syncUnsafe(approved bool) {
 	// sync -> active
 	for _, node := range nk.sync {
 		nk.active[node.NodeID] = node
+		if node.NodeID.Equal(nk.nodeID) {
+			log.Infof("Sync: current node %s reached the active node list", nk.nodeID)
+			nk.self = node
+		}
 	}
 
 	if approved {

@@ -66,8 +66,12 @@ const (
 	TypeCheckPublicKey
 	// TypeCheckSignedNonce is packet to check a signed nonce.
 	TypeCheckSignedNonce
-	// TypeActiveNodes is packet type to get an active nodes.
+	// TypeActiveNodes is packet type to get active nodes.
 	TypeActiveNodes
+	// TypeExchangeUnsyncLists is packet type to exchange unsync lists during consensus
+	TypeExchangeUnsyncLists
+	// TypeExchangeUnsyncHash is packet type to exchange hash of merged unsync lists during consensus
+	TypeExchangeUnsyncHash
 	// TypeDisconnect is packet to disconnect from active list.
 	TypeDisconnect
 )
@@ -136,6 +140,10 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestCheckSignedNonce)
 	case TypeActiveNodes:
 		_, valid = m.Data.(*RequestActiveNodes)
+	case TypeExchangeUnsyncLists:
+		_, valid = m.Data.(*RequestExchangeUnsyncLists)
+	case TypeExchangeUnsyncHash:
+		_, valid = m.Data.(*RequestExchangeUnsyncHash)
 	case TypeDisconnect:
 		_, valid = m.Data.(*RequestDisconnect)
 	default:
@@ -223,6 +231,8 @@ func init() {
 	gob.Register(&RequestCheckPublicKey{})
 	gob.Register(&RequestCheckSignedNonce{})
 	gob.Register(&RequestActiveNodes{})
+	gob.Register(&RequestExchangeUnsyncLists{})
+	gob.Register(&RequestExchangeUnsyncHash{})
 	gob.Register(&RequestDisconnect{})
 
 	gob.Register(&ResponseDataFindHost{})
@@ -242,6 +252,8 @@ func init() {
 	gob.Register(&ResponseCheckPublicKey{})
 	gob.Register(&ResponseCheckSignedNonce{})
 	gob.Register(&ResponseActiveNodes{})
+	gob.Register(&ResponseExchangeUnsyncLists{})
+	gob.Register(&ResponseExchangeUnsyncHash{})
 	gob.Register(&ResponseDisconnect{})
 
 	gob.Register(&id.ID{})

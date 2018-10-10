@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -65,6 +66,13 @@ func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
 }
 
 func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
+}
+
+func (fac *mockNetworkCommonFacade) GetConsensus() consensus.InsolarConsensus {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) SetConsensus(consensus.InsolarConsensus) {
 }
 
 type mockHostHandler struct {
