@@ -1,7 +1,6 @@
 package nodedomain
 
 import (
-		"github.com/insolar/insolar/application/proxy/noderecord"
 		"github.com/insolar/insolar/core"
 		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )

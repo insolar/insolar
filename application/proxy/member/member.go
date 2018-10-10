@@ -1,10 +1,12 @@
 package member
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+		"github.com/insolar/insolar/core"
+		"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
+
+
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -16,13 +18,13 @@ type Member struct {
 
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized  []byte
+	argsSerialized []byte
 }
 
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Member {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-		panic(err)
+	panic(err)
 	}
 	return &Member{Reference: ref}
 }
@@ -52,10 +54,12 @@ func GetImplementationFrom(object core.RecordRef) *Member {
 	return GetObject(ref)
 }
 
-func New(name string, key string) *ContractConstructorHolder {
+
+func New( name string, key string ) *ContractConstructorHolder {
 	var args [2]interface{}
 	args[0] = name
 	args[1] = key
+
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -65,6 +69,7 @@ func New(name string, key string) *ContractConstructorHolder {
 
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
+
 
 // GetReference
 func (r *Member) GetReference() core.RecordRef {
@@ -76,7 +81,8 @@ func (r *Member) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-func (r *Member) GetName() string {
+
+func (r *Member) GetName(  ) ( string ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -88,7 +94,7 @@ func (r *Member) GetName() string {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetName", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -103,7 +109,7 @@ func (r *Member) GetName() string {
 	return resList[0].(string)
 }
 
-func (r *Member) GetNameNoWait() {
+func (r *Member) GetNameNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -119,7 +125,7 @@ func (r *Member) GetNameNoWait() {
 	}
 }
 
-func (r *Member) GetPublicKey() string {
+func (r *Member) GetPublicKey(  ) ( string ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -131,7 +137,7 @@ func (r *Member) GetPublicKey() string {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -146,7 +152,7 @@ func (r *Member) GetPublicKey() string {
 	return resList[0].(string)
 }
 
-func (r *Member) GetPublicKeyNoWait() {
+func (r *Member) GetPublicKeyNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -162,7 +168,7 @@ func (r *Member) GetPublicKeyNoWait() {
 	}
 }
 
-func (r *Member) AuthorizedCall(ref string, delegate string, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
+func (r *Member) AuthorizedCall( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
@@ -180,7 +186,7 @@ func (r *Member) AuthorizedCall(ref string, delegate string, method string, para
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "AuthorizedCall", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [2]interface{}{}
@@ -197,7 +203,7 @@ func (r *Member) AuthorizedCall(ref string, delegate string, method string, para
 	return resList[0].([]byte), resList[1].(*foundation.Error)
 }
 
-func (r *Member) AuthorizedCallNoWait(ref string, delegate string, method string, params []byte, seed []byte, sign []byte) {
+func (r *Member) AuthorizedCallNoWait( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
@@ -218,3 +224,4 @@ func (r *Member) AuthorizedCallNoWait(ref string, delegate string, method string
 		panic(err)
 	}
 }
+
