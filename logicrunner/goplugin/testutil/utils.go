@@ -422,6 +422,7 @@ func AMPublishCode(
 	nonce, err := randomRef()
 	assert.NoError(t, err, "create class on ledger")
 	classRef, err = am.RegisterRequest(&message.CallConstructor{ClassRef: *nonce})
+	assert.NoError(t, err)
 	_, err = am.ActivateClass(domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
 
@@ -469,6 +470,9 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 	for name := range contracts {
 		nonce, err := randomRef()
+		if err != nil {
+			return err
+		}
 		class, err := cb.ArtifactManager.RegisterRequest(&message.CallConstructor{ClassRef: *nonce})
 		if err != nil {
 			return err
