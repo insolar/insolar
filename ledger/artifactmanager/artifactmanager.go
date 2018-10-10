@@ -209,13 +209,14 @@ func (m *LedgerArtifactManager) DeployCode(
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 //
-// Activation reference will be this class'es identifier and referred as "class head".
+// Request reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	domain, request core.RecordRef,
-) (*core.RecordRef, error) {
-	return m.fetchReference(&message.ActivateClass{
+	domain, request, code core.RecordRef,
+) (*core.RecordID, error) {
+	return m.fetchID(&message.ActivateClass{
 		Domain:  domain,
 		Request: request,
+		Code:    code,
 	})
 }
 
@@ -253,13 +254,13 @@ func (m *LedgerArtifactManager) UpdateClass(
 // ActivateObject creates activate object record in storage. Provided class reference will be used as objects class
 // memory as memory of crated object. If memory is not provided, the class default memory will be used.
 //
-// Activation reference will be this object's identifier and referred as "object head".
+// Request reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObject(
-	domain, request, class, parent core.RecordRef, memory []byte,
-) (*core.RecordRef, error) {
-	objRef, err := m.fetchReference(&message.ActivateObject{
+	domain, object, class, parent core.RecordRef, memory []byte,
+) (*core.RecordID, error) {
+	objID, err := m.fetchID(&message.ActivateObject{
 		Domain:  domain,
-		Request: request,
+		Request: object,
 		Class:   class,
 		Parent:  parent,
 		Memory:  memory,
@@ -271,20 +272,20 @@ func (m *LedgerArtifactManager) ActivateObject(
 
 	_, err = m.fetchID(&message.RegisterChild{
 		Parent: parent,
-		Child:  *objRef,
+		Child:  object,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return objRef, nil
+	return objID, nil
 }
 
 // ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
 func (m *LedgerArtifactManager) ActivateObjectDelegate(
 	domain, request, class, parent core.RecordRef, memory []byte,
-) (*core.RecordRef, error) {
-	return m.fetchReference(&message.ActivateObjectDelegate{
+) (*core.RecordID, error) {
+	return m.fetchID(&message.ActivateObjectDelegate{
 		Domain:  domain,
 		Request: request,
 		Class:   class,

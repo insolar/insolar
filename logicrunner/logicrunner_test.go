@@ -328,8 +328,9 @@ func (r *Two) Hello(s string) string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
 		data,
@@ -408,8 +409,9 @@ func (r *Two) Hello(s string) string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
 		data,
@@ -490,8 +492,10 @@ func (r *Two) Hello() string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{},
+		*obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
 		data,
@@ -619,7 +623,8 @@ func New(n int) *Child {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -699,7 +704,8 @@ func (r *Two) AnError() error {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["one"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -780,11 +786,10 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	domain := core.NewRefFromBase58("c1")
-	request := core.NewRefFromBase58("c2")
-	contract, err := am.ActivateObject(domain, request, *cb.Classes["rootdomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	rootDomainRef, err := am.RegisterRequest(&message.BootstrapRequest{Name: "c1"})
+	_, err = am.ActivateObject(core.RecordRef{}, *rootDomainRef, *cb.Classes["rootdomain"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	assert.NotEqual(t, rootDomainRef, nil, "contract created")
 
 	// Creating Root member
 	rootKey, err := cryptoHelper.GeneratePrivateKey()
@@ -792,11 +797,13 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
 	assert.NoError(t, err)
 
-	rootMemberRef, err := am.ActivateObject(domain, request, *cb.Classes["member"], *contract, testutil.CBORMarshal(t, member.New("root", rootPubKey)))
+	rootMemberRef, err := am.RegisterRequest(&message.BootstrapRequest{Name: "c2"})
+	assert.NoError(t, err)
+	_, err = am.ActivateObject(core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef, testutil.CBORMarshal(t, member.New("root", rootPubKey)))
 	assert.NoError(t, err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(domain, request, *contract, testutil.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(core.RecordRef{}, core.RecordRef{}, *rootDomainRef, testutil.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
 	root := Caller{rootMemberRef.String(), rootKey, lr, t}
@@ -808,7 +815,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	res1 := []interface{}{""}
-	root.SignedCall(contract.String(), "", "CreateMember", []interface{}{"Member1", member1PubKey}, res1)
+	root.SignedCall(rootDomainRef.String(), "", "CreateMember", []interface{}{"Member1", member1PubKey}, res1)
 	member1Ref := res1[0].(string)
 	assert.NotEqual(t, "", member1Ref)
 
@@ -819,7 +826,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	res2 := []interface{}{""}
-	root.SignedCall(contract.String(), "", "CreateMember", []interface{}{"Member2", member2PubKey}, res2)
+	root.SignedCall(rootDomainRef.String(), "", "CreateMember", []interface{}{"Member2", member2PubKey}, res2)
 	member2Ref := res2[0].(string)
 	assert.NotEqual(t, "", member2Ref)
 
@@ -874,10 +881,12 @@ func (c *Child) GetNum() int {
 	assert.NoError(b, err)
 
 	domain := core.NewRefFromBase58("c1")
-	parent, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	parent, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(domain, *parent, *cb.Classes["parent"], *am.GenesisRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create parent")
 	assert.NotEqual(b, parent, nil, "parent created")
-	child, err := am.ActivateObject(core.NewRefFromBase58("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	child, err := am.RegisterRequest(&message.CallConstructor{ParentRef: *parent})
+	_, err = am.ActivateObject(domain, *child, *cb.Classes["child"], *am.GenesisRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create child")
 	assert.NotEqual(b, child, nil, "child created")
 

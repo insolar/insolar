@@ -300,10 +300,17 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 
 	switch m.SaveAs {
 	case message.Child:
-		ref, err := lr.ArtifactManager.ActivateObject(
-			core.RecordRef{}, core.RandomRef(), m.ClassRef, m.ParentRef, newData,
-		)
-
+		log.Warn()
+		log.Warnf("M = %+v", m)
+		ref, err := lr.ArtifactManager.RegisterRequest(m)
+		if err != nil {
+			return nil, err
+		}
+		if vb.NeedSave() {
+			_, err = lr.ArtifactManager.ActivateObject(
+				core.RecordRef{}, *ref, m.ClassRef, m.ParentRef, newData,
+			)
+		}
 		vb.End(m.ClassRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
 			Resp: &reply.CallConstructor{Object: ref},
@@ -311,10 +318,15 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 
 		return &reply.CallConstructor{Object: ref}, err
 	case message.Delegate:
-		ref, err := lr.ArtifactManager.ActivateObjectDelegate(
-			core.RecordRef{}, core.RandomRef(), m.ClassRef, m.ParentRef, newData,
-		)
-
+		ref, err := lr.ArtifactManager.RegisterRequest(m)
+		if err != nil {
+			return nil, err
+		}
+		if vb.NeedSave() {
+			_, err = lr.ArtifactManager.ActivateObjectDelegate(
+				core.RecordRef{}, *ref, m.ClassRef, m.ParentRef, newData,
+			)
+		}
 		vb.End(m.ClassRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
 			Resp: &reply.CallConstructor{Object: ref},
