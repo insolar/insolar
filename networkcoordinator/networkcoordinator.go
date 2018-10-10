@@ -30,10 +30,12 @@ type NetworkCoordinator struct {
 	nodeDomainRef core.RecordRef
 }
 
+// New creates new NetworkCoordinator
 func New() (*NetworkCoordinator, error) {
 	return &NetworkCoordinator{}, nil
 }
 
+// Start implements interface of Component
 func (nc *NetworkCoordinator) Start(c core.Components) error {
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
@@ -41,6 +43,7 @@ func (nc *NetworkCoordinator) Start(c core.Components) error {
 	return nil
 }
 
+// Stop implements interface of Component
 func (nc *NetworkCoordinator) Stop() error {
 	return nil
 }
@@ -94,6 +97,7 @@ func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	return pubKey, role, nil
 }
 
+// Authorize authorized node by verifying it's signature
 func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
 	routResult, err := nc.sendRequest(nc.nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
 	if err != nil {
@@ -102,7 +106,7 @@ func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, sig
 
 	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ Auth	orize ]")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ]")
 	}
 
 	return pubKey, role, nil
