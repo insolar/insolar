@@ -29,7 +29,9 @@ import (
 	"testing"
 
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/genesis/experiment/member"
 	"github.com/insolar/insolar/genesis/experiment/member/signer"
+	"github.com/insolar/insolar/genesis/experiment/rootdomain"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -71,7 +73,6 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	rundCleaner, err := testutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
 	assert.NoError(t, err)
 
-	l, cleaner := ledgertestutil.TmpLedger(t, "")
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		RPCListen:   lrSock,
 		RPCProtocol: "unix",
@@ -82,12 +83,16 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	})
 	assert.NoError(t, err, "Initialize runner")
 
+	l, cleaner := ledgertestutil.TmpLedger(t, lr, "")
+
 	assert.NoError(t, lr.Start(core.Components{
 		Ledger:     l,
 		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
-
+	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 100, &pulsar.StandardEntropyGenerator{}))
+	if err != nil {
+		t.Fatal("pulse set died, ", err)
+	}
 	am := l.GetArtifactManager()
 	cb := testutil.NewContractBuilder(am, icc)
 
@@ -102,7 +107,7 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
 	rlr := lr.(*LogicRunner)
 	for ref, cr := range rlr.caseBind.Records {
-		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
+		//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
 		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
 		assert.NoError(t, err, "validation")
 		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
@@ -721,25 +726,30 @@ type Caller struct {
 	t      *testing.T
 }
 
-func (s *Caller) SignedCall(ref string, method string, params []interface{}) interface{} {
+func (s *Caller) SignedCall(ref string, delegate string, method string, params []interface{}, resp []interface{}) {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	assert.NoError(s.t, err)
 
-	buf, err := signer.Serialize(ref, method, params, seed)
+	buf := testutil.CBORMarshal(s.t, params)
+
+	serialized, err := signer.Serialize(ref, delegate, method, buf, seed)
 	assert.NoError(s.t, err)
 
-	sign, err := cryptoHelper.Sign(buf, s.key)
+	sign, err := cryptoHelper.Sign(serialized, s.key)
 	assert.NoError(s.t, err)
-	resp, err := s.lr.Execute(&message.CallMethod{
+	res, err := s.lr.Execute(&message.CallMethod{
 		ObjectRef: core.NewRefFromBase58(s.member),
 		Method:    "AuthorizedCall",
-		Arguments: testutil.CBORMarshal(s.t, []interface{}{ref, method, params, seed, sign}),
+		Arguments: testutil.CBORMarshal(s.t, []interface{}{ref, delegate, method, buf, seed, sign}),
 	})
 	assert.NoError(s.t, err, "contract call")
-	res := testutil.CBORUnMarshal(s.t, resp.(*reply.CallMethod).Result)
-	assert.Nil(s.t, res.([]interface{})[1])
-	return res.([]interface{})[0]
+	result := testutil.CBORUnMarshal(s.t, res.(*reply.CallMethod).Result).([]interface{})
+	assert.Nil(s.t, result[1])
+	if result[0] != nil {
+		ch := new(codec.CborHandle)
+		err = codec.NewDecoderBytes(result[0].([]byte), ch).Decode(&resp)
+	}
 }
 
 func TestRootDomainContract(t *testing.T) {
@@ -776,30 +786,30 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
-	// Creating and setting Root member
+	// Creating Root member
 	rootKey, err := cryptoHelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
 	assert.NoError(t, err)
-	resp, err := lr.Execute(&message.CallMethod{
-		ObjectRef: *contract,
-		Method:    "SetRoot",
-		Arguments: testutil.CBORMarshal(t, []interface{}{rootPubKey}),
-	})
-	assert.NoError(t, err, "contract call")
-	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	rootRef := r.([]interface{})[0].(string)
-	assert.NotEqual(t, "", rootRef)
 
-	root := Caller{rootRef, rootKey, lr, t}
+	rootMemberRef, err := am.ActivateObject(domain, request, *cb.Classes["member"], *contract, testutil.CBORMarshal(t, member.New("root", rootPubKey)))
+	assert.NoError(t, err)
+
+	// Updating root domain with root member
+	_, err = am.UpdateObject(domain, request, *contract, testutil.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	assert.NoError(t, err)
+
+	root := Caller{rootMemberRef.String(), rootKey, lr, t}
 
 	// Creating Member1
 	member1Key, err := cryptoHelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	member1PubKey, err := cryptoHelper.ExportPublicKey(&member1Key.PublicKey)
 	assert.NoError(t, err)
-	resp1 := root.SignedCall(contract.String(), "CreateMember", []interface{}{"Member1", member1PubKey})
-	member1Ref := resp1.([]interface{})[0].(string)
+
+	res1 := []interface{}{""}
+	root.SignedCall(contract.String(), "", "CreateMember", []interface{}{"Member1", member1PubKey}, res1)
+	member1Ref := res1[0].(string)
 	assert.NotEqual(t, "", member1Ref)
 
 	// Creating Member2
@@ -807,21 +817,26 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 	member2PubKey, err := cryptoHelper.ExportPublicKey(&member2Key.PublicKey)
 	assert.NoError(t, err)
-	resp2 := root.SignedCall(contract.String(), "CreateMember", []interface{}{"Member2", member2PubKey})
-	member2Ref := resp2.([]interface{})[0].(string)
+
+	res2 := []interface{}{""}
+	root.SignedCall(contract.String(), "", "CreateMember", []interface{}{"Member2", member2PubKey}, res2)
+	member2Ref := res2[0].(string)
 	assert.NotEqual(t, "", member2Ref)
 
 	// Transfer 1 coin from Member1 to Member2
 	member1 := Caller{member1Ref, member1Key, lr, t}
-	member1.SignedCall(member1Ref, "SendMoney", []interface{}{1, member2Ref})
+	z := core.NewRefFromBase58(member2Ref)
+	member1.SignedCall(member1Ref, cb.Classes["wallet"].String(), "Transfer", []interface{}{1, &z}, nil)
 
 	// Verify Member1 balance
-	resp1 = root.SignedCall(member1Ref, "GetBalance", []interface{}{})
-	assert.Equal(t, 999, int(resp1.([]interface{})[0].(uint64)))
+	res3 := []interface{}{0}
+	root.SignedCall(member1Ref, cb.Classes["wallet"].String(), "GetTotalBalance", []interface{}{}, res3)
+	assert.Equal(t, 999, res3[0])
 
 	// Verify Member2 balance
-	resp2 = root.SignedCall(member2Ref, "GetBalance", []interface{}{})
-	assert.Equal(t, 1001, int(resp2.([]interface{})[0].(uint64)))
+	res4 := []interface{}{0}
+	root.SignedCall(member2Ref, cb.Classes["wallet"].String(), "GetTotalBalance", []interface{}{}, res4)
+	assert.Equal(t, 1001, res4[0])
 }
 
 func BenchmarkContractCall(b *testing.B) {

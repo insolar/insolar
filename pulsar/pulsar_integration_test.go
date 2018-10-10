@@ -30,6 +30,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/stretchr/testify/assert"
@@ -209,8 +210,13 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 }
 
 func TestPulsar_ConnectToNode(t *testing.T) {
+	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
+		BuiltIn: &configuration.BuiltIn{},
+	})
+	assert.NoError(t, err)
+
 	os.MkdirAll("bootstrapLedger", os.ModePerm)
-	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "bootstrapLedger")
+	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, lr, "bootstrapLedger")
 	bootstrapNodeConfig := configuration.NewConfiguration()
 	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig.Host, bootstrapNodeConfig.Node)
 	assert.NoError(t, err)
@@ -219,7 +225,7 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	bootstrapAddress := bootstrapNodeNetwork.GetAddress()
 
 	os.MkdirAll("usualLedger", os.ModePerm)
-	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, "usualLedger")
+	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, lr, "usualLedger")
 	usualNodeConfig := configuration.NewConfiguration()
 	usualNodeConfig.Host.BootstrapHosts = []string{bootstrapAddress}
 	usualNodeNetwork, err := servicenetwork.NewServiceNetwork(usualNodeConfig.Host, usualNodeConfig.Node)

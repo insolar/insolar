@@ -123,3 +123,7 @@ type RequestCheckSignedNonce struct {
 // RequestActiveNodes is request to get an active nodes.
 type RequestActiveNodes struct {
 }
+
+// RequestDisconnect is request to disconnect from active list.
+type RequestDisconnect struct {
+}

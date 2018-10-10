@@ -115,7 +115,7 @@ func (jc *JetCoordinator) QueryRole(
 
 // CreateDrop creates jet drop for provided pulse number.
 func (jc *JetCoordinator) CreateDrop(pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
-	prevDrop, err := jc.db.GetDrop(pulse - 1)
+	prevDrop, err := jc.db.GetDrop(jc.db.GetCurrentPulse())
 	if err != nil {
 		return nil, err
 	}

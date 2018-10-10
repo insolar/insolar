@@ -14,24 +14,13 @@
  *    limitations under the License.
  */
 
-package signer
+package configuration
 
-import (
-	"github.com/ugorji/go/codec"
-)
+type Bootstrap struct {
+	RootKeys    string
+	RootBalance uint
+}
 
-func Serialize(ref string, delegate string, method string, params []byte, seed []byte) ([]byte, error) {
-	var serialized []byte
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&serialized, ch).Encode([]interface{}{
-		ref,
-		delegate,
-		method,
-		params,
-		seed,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return serialized, nil
+func NewBootstrap() Bootstrap {
+	return Bootstrap{}
 }

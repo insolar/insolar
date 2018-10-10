@@ -20,10 +20,8 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/genesis/experiment/member/signer"
-	"github.com/insolar/insolar/genesis/proxy/member"
-	"github.com/insolar/insolar/genesis/proxy/rootdomain"
-	"github.com/insolar/insolar/genesis/proxy/wallet"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 type Member struct {
@@ -46,8 +44,8 @@ func New(name string, key string) *Member {
 	}
 }
 
-func (m *Member) AuthorizedCall(ref string, method string, params []interface{}, seed []byte, sign []byte) ([]interface{}, *foundation.Error) {
-	serialized, err := signer.Serialize(ref, method, params, seed)
+func (m *Member) AuthorizedCall(ref string, delegate string, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
+	serialized, err := signer.Serialize(ref, delegate, method, params, seed)
 	if err != nil {
 		return nil, &foundation.Error{S: err.Error()}
 	}
@@ -59,40 +57,18 @@ func (m *Member) AuthorizedCall(ref string, method string, params []interface{},
 		return nil, &foundation.Error{S: "Incorrect signature"}
 	}
 
-	switch method {
-	case "CreateMember":
-		domain := rootdomain.GetObject(core.NewRefFromBase58(ref))
-		name, ok := params[0].(string)
-		if !ok {
-			return nil, &foundation.Error{S: "First parameter must be string"}
+	var contract core.RecordRef
+	if delegate != "" {
+		contract, err = foundation.GetImplementationFor(core.NewRefFromBase58(ref), core.NewRefFromBase58(delegate))
+		if err != nil {
+			return nil, &foundation.Error{S: err.Error()}
 		}
-		key, ok := params[1].(string)
-		if !ok {
-			return nil, &foundation.Error{S: "Second parameter must be string"}
-		}
-		return []interface{}{domain.CreateMember(name, key)}, nil
-	case "GetName":
-		membr := member.GetObject(core.NewRefFromBase58(ref))
-		return []interface{}{membr.GetName()}, nil
-	case "GetPublicKey":
-		membr := member.GetObject(core.NewRefFromBase58(ref))
-		return []interface{}{membr.GetPublicKey()}, nil
-	case "GetBalance":
-		wallet := wallet.GetImplementationFrom(core.NewRefFromBase58(ref))
-		return []interface{}{wallet.GetTotalBalance()}, nil
-	case "SendMoney":
-		wallet := wallet.GetImplementationFrom(core.NewRefFromBase58(ref))
-		amount, ok := params[0].(uint64)
-		if !ok {
-			return nil, &foundation.Error{S: "First parameter must be uint"}
-		}
-		to, ok := params[1].(string)
-		if !ok {
-			return nil, &foundation.Error{S: "Second parameter must be string"}
-		}
-		v := core.NewRefFromBase58(to)
-		wallet.Transfer(uint(amount), &v)
-		return nil, nil
+	} else {
+		contract = core.NewRefFromBase58(ref)
 	}
-	return nil, &foundation.Error{S: "Unknown method"}
+	ret, err := proxyctx.Current.RouteCall(contract, true, method, params)
+	if err != nil {
+		return nil, &foundation.Error{S: err.Error()}
+	}
+	return ret, nil
 }

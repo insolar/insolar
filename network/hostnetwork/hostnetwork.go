@@ -52,7 +52,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		return nil, errors.Wrap(err, "Failed to ")
 	}
 
-	encodedOriginID := nn.ResolveHostID(nn.GetID())
+	encodedOriginID := nodenetwork.ResolveHostID(nn.GetID())
 	originID := id.FromBase58(encodedOriginID)
 	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
@@ -72,6 +72,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		cfg.Timeout,
 		cfg.InfinityBootstrap,
 		nn.GetID(),
+		5,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")
