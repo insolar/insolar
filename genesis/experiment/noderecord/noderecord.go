@@ -44,14 +44,17 @@ func NewNodeRecord(pk string, roleS string) *NodeRecord {
 	}
 }
 
+// GetPublicKey returns public key
 func (nr *NodeRecord) GetPublicKey() string {
 	return nr.PublicKey
 }
 
+// GetRole returns role
 func (nr *NodeRecord) GetRole() core.NodeRole {
 	return nr.Role
 }
 
+// GetRoleAndPublicKey returns role-pubKey pair
 func (nr *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
 	return nr.Role, nr.PublicKey
 }
