@@ -42,7 +42,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	assert.NoError(t, err)
 	firstPublic, err := ecdsa_helper.ExportPublicKey(&firstKey.PublicKey)
 	assert.NoError(t, err)
-	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
+	firstPrivateExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
 	assert.NoError(t, err)
 
 	secondKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -67,7 +67,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
-		configuration.NewConfiguration().PrivateKey,
+		firstPrivateExported,
 	)
 	assert.NoError(t, err)
 
@@ -84,7 +84,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
-		configuration.NewConfiguration().PrivateKey,
+		secondPublicExported,
 	)
 	assert.NoError(t, err)
 
@@ -115,7 +115,6 @@ func TestOnePulsar_FullStatesTransition(t *testing.T) {
 	pulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:         "tcp",
 		MainListenerAddress:    ":1639",
-		PrivateKey:             firstPublicExported,
 		Neighbours:             []configuration.PulsarNodeAddress{},
 		PulseTime:              10000,
 		ReceivingSignTimeout:   1000,
@@ -127,6 +126,7 @@ func TestOnePulsar_FullStatesTransition(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
+		firstPublicExported,
 	)
 	assert.NoError(t, err)
 
@@ -163,7 +163,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1639",
-		PrivateKey:          firstPublicExported,
 		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublic},
 		}},
@@ -172,13 +171,13 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
+		firstPublicExported,
 	)
 	assert.NoError(t, err)
 
 	secondPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1640",
-		PrivateKey:          secondPublicExported,
 		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublic},
 		}},
@@ -187,6 +186,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
+		secondPublicExported,
 	)
 	assert.NoError(t, err)
 
@@ -218,7 +218,7 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	os.MkdirAll("bootstrapLedger", os.ModePerm)
 	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, lr, "bootstrapLedger")
 	bootstrapNodeConfig := configuration.NewConfiguration()
-	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig.Host, bootstrapNodeConfig.Node)
+	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig)
 	assert.NoError(t, err)
 	err = bootstrapNodeNetwork.Start(core.Components{Ledger: bootstrapLedger})
 	assert.NoError(t, err)
@@ -228,7 +228,7 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, lr, "usualLedger")
 	usualNodeConfig := configuration.NewConfiguration()
 	usualNodeConfig.Host.BootstrapHosts = []string{bootstrapAddress}
-	usualNodeNetwork, err := servicenetwork.NewServiceNetwork(usualNodeConfig.Host, usualNodeConfig.Node)
+	usualNodeNetwork, err := servicenetwork.NewServiceNetwork(usualNodeConfig)
 	assert.NoError(t, err)
 	err = usualNodeNetwork.Start(core.Components{Ledger: usualLedger})
 	assert.NoError(t, err)
@@ -244,7 +244,6 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	newPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1640",
-		PrivateKey:          firstPublicExported,
 		BootstrapNodes:      []string{bootstrapAddress},
 		BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
 		Neighbours:          []configuration.PulsarNodeAddress{}},
@@ -253,6 +252,7 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		stateSwitcher,
 		net.Listen,
+		firstPublicExported,
 	)
 	stateSwitcher.SetPulsar(newPulsar)
 	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
