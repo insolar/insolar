@@ -38,6 +38,7 @@ type Configuration struct {
 	APIRunner   APIRunner
 	Pulsar      Pulsar
 	Bootstrap   Bootstrap
+	Updater     Updater
 }
 
 // Holder provides methods to manage configuration
@@ -59,6 +60,7 @@ func NewConfiguration() Configuration {
 		APIRunner:   NewAPIRunner(),
 		Pulsar:      NewPulsar(),
 		Bootstrap:   NewBootstrap(),
+		Updater:     NewUpdater(),
 	}
 
 	return cfg

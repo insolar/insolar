@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/updater"
 	"os"
 	"os/signal"
 	"reflect"
@@ -144,6 +145,11 @@ func main() {
 	cm.components.NetworkCoordinator, err = networkcoordinator.New()
 	if err != nil {
 		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
+	}
+
+	cm.components.Updater, err = updater.NewUpdater(&cfgHolder.Configuration.Updater)
+	if err != nil {
+		log.Fatalln("failed to start Update Service: ", err.Error())
 	}
 
 	cm.linkAll()
