@@ -138,6 +138,7 @@ type ActivationRecord struct {
 type ClassActivateRecord struct {
 	ActivationRecord
 
+	Code          Reference
 	DefaultMemory Memory
 }
 
@@ -153,17 +154,17 @@ func (r *ClassActivateRecord) IsAmend() bool {
 
 // GetCode returns state code.
 func (r *ClassActivateRecord) GetCode() *Reference {
-	return nil
+	return &r.Code
 }
 
 // ObjectActivateRecord is produced when we instantiate new object from an available class.
 type ObjectActivateRecord struct {
 	ActivationRecord
 
-	ClassActivateRecord Reference
-	Memory              Memory
-	Parent              Reference
-	Delegate            bool
+	Class    Reference
+	Memory   Memory
+	Parent   Reference
+	Delegate bool
 }
 
 // IsDeactivation determines if current state is deactivation.

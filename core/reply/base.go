@@ -29,8 +29,10 @@ import (
 const (
 	// Logicrunner
 
-	// TypeCommon - two binary fields: data and results.
-	TypeCommon = core.ReplyType(iota)
+	// TypeCallMethod - two binary fields: data and results.
+	TypeCallMethod = core.ReplyType(iota)
+	// TypeCallConstructor - reference on created object
+	TypeCallConstructor
 
 	// Ledger
 
@@ -44,14 +46,18 @@ const (
 	TypeDelegate
 	// TypeReference is common reply for methods returning reference to created records.
 	TypeReference
-	// TypeID is common reaction for methods returning id to lifeline states.
+	// TypeID is common reply for methods returning id to lifeline states.
 	TypeID
+	// TypeChildren is a reply for fetching objects children in chunks.
+	TypeChildren
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 	switch t {
-	case TypeCommon:
-		return &Common{}, nil
+	case TypeCallMethod:
+		return &CallMethod{}, nil
+	case TypeCallConstructor:
+		return &CallConstructor{}, nil
 	case TypeCode:
 		return &Code{}, nil
 	case TypeClass:
@@ -64,6 +70,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &Reference{}, nil
 	case TypeID:
 		return &ID{}, nil
+	case TypeChildren:
+		return &Children{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -100,11 +108,13 @@ func Deserialize(buff io.Reader) (core.Reply, error) {
 }
 
 func init() {
-	gob.Register(&Common{})
+	gob.Register(&CallMethod{})
+	gob.Register(&CallConstructor{})
 	gob.Register(&Code{})
 	gob.Register(&Class{})
 	gob.Register(&Object{})
 	gob.Register(&Delegate{})
 	gob.Register(&Reference{})
 	gob.Register(&ID{})
+	gob.Register(&Children{})
 }

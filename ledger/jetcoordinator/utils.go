@@ -22,7 +22,7 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/hash"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) ([]core.RecordRef, error) { // nolint: megacheck
@@ -37,7 +37,7 @@ func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) (
 
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
-		h := hash.NewSHA3()
+		h := hash.NewIDHash()
 		_, err := h.Write(entropy[:])
 		if err != nil {
 			return nil, err

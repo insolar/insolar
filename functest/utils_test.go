@@ -63,9 +63,16 @@ type getBalanceResponse struct {
 	Currency string `json:"currency"`
 }
 
+type getSeedResponse struct {
+	baseResponse
+	Seed string `json:"seed"`
+}
+
 type isAuthorized struct {
 	baseResponse
-	IsAuthorized bool `json:"is_authorized"`
+	PublicKey     string `json:"public_key"`
+	Role          int    `json:"role"`
+	NetCoordCheck bool   `json:"netcoord_auth_success"`
 }
 
 type userInfo struct {
@@ -81,6 +88,11 @@ type dumpUserInfoResponse struct {
 type dumpAllUsersResponse struct {
 	baseResponse
 	DumpInfo []userInfo `json:"dump_info"`
+}
+
+type registerNodeResponse struct {
+	baseResponse
+	Reference string `json:"reference"`
 }
 
 func createMember(t *testing.T) string {
@@ -128,4 +140,15 @@ func unmarshalResponseWithError(t *testing.T, body []byte, response responseInte
 	err := json.Unmarshal(body, &response)
 	assert.NoError(t, err)
 	assert.NotNil(t, response.getError())
+}
+
+func getSeed(t *testing.T) string {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_seed",
+	})
+
+	getSeedResponse := &getSeedResponse{}
+	unmarshalResponse(t, body, getSeedResponse)
+
+	return getSeedResponse.Seed
 }

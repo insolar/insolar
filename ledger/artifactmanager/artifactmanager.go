@@ -23,15 +23,21 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
+const (
+	getChildrenChunkSize = 10 * 1000
+)
+
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
 	db         *storage.DB
 	messageBus core.MessageBus
+
+	getChildrenChunkSize int
 }
 
 // NewArtifactManger creates new manager instance.
 func NewArtifactManger(db *storage.DB) (*LedgerArtifactManager, error) {
-	return &LedgerArtifactManager{db: db}, nil
+	return &LedgerArtifactManager{db: db, getChildrenChunkSize: getChildrenChunkSize}, nil
 }
 
 // Link links external components.
@@ -41,11 +47,25 @@ func (m *LedgerArtifactManager) Link(components core.Components) error {
 	return nil
 }
 
-// RootRef returns the root record reference.
+// GenesisRef returns the root record reference.
 //
 // Root record is the parent for all top-level records.
-func (m *LedgerArtifactManager) RootRef() *core.RecordRef {
-	return m.db.RootRef().CoreRef()
+func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
+	return m.db.GenesisRef().CoreRef()
+}
+
+// RegisterRequest sends message for request registration,
+// returns request record Ref if request successfuly created or already exists.
+func (m *LedgerArtifactManager) RegisterRequest(
+	msg core.Message,
+) (*core.RecordRef, error) {
+	id, err := m.fetchID(&message.RequestCall{Message: msg})
+	if err != nil {
+		return nil, err
+	}
+	var tagretRef core.RecordRef
+	(&tagretRef).SetRecord(*id)
+	return &tagretRef, nil
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -124,12 +144,11 @@ func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.Recor
 		return nil, ErrUnexpectedReply
 	}
 	desc := ObjectDescriptor{
-		am:       m,
-		head:     react.Head,
-		state:    react.State,
-		class:    react.Class,
-		memory:   react.Memory,
-		children: react.Children,
+		am:     m,
+		head:   react.Head,
+		state:  react.State,
+		class:  react.Class,
+		memory: react.Memory,
 	}
 	return &desc, nil
 }
@@ -153,6 +172,13 @@ func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core
 		return nil, ErrUnexpectedReply
 	}
 	return &react.Head, nil
+}
+
+// GetChildren returns children iterator.
+//
+// During iteration children refs will be fetched from remote source (parent object).
+func (m *LedgerArtifactManager) GetChildren(parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+	return NewChildIterator(m.messageBus, parent, pulse, m.getChildrenChunkSize)
 }
 
 // DeclareType creates new type record in storage.
@@ -183,13 +209,14 @@ func (m *LedgerArtifactManager) DeployCode(
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 //
-// Activation reference will be this class'es identifier and referred as "class head".
+// Request reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	domain, request core.RecordRef,
-) (*core.RecordRef, error) {
-	return m.fetchReference(&message.ActivateClass{
+	domain, request, code core.RecordRef,
+) (*core.RecordID, error) {
+	return m.fetchID(&message.ActivateClass{
 		Domain:  domain,
 		Request: request,
+		Code:    code,
 	})
 }
 
@@ -227,13 +254,13 @@ func (m *LedgerArtifactManager) UpdateClass(
 // ActivateObject creates activate object record in storage. Provided class reference will be used as objects class
 // memory as memory of crated object. If memory is not provided, the class default memory will be used.
 //
-// Activation reference will be this object's identifier and referred as "object head".
+// Request reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObject(
-	domain, request, class, parent core.RecordRef, memory []byte,
-) (*core.RecordRef, error) {
-	objRef, err := m.fetchReference(&message.ActivateObject{
+	domain, object, class, parent core.RecordRef, memory []byte,
+) (*core.RecordID, error) {
+	objID, err := m.fetchID(&message.ActivateObject{
 		Domain:  domain,
-		Request: request,
+		Request: object,
 		Class:   class,
 		Parent:  parent,
 		Memory:  memory,
@@ -245,20 +272,20 @@ func (m *LedgerArtifactManager) ActivateObject(
 
 	_, err = m.fetchID(&message.RegisterChild{
 		Parent: parent,
-		Child:  *objRef,
+		Child:  object,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return objRef, nil
+	return objID, nil
 }
 
 // ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
 func (m *LedgerArtifactManager) ActivateObjectDelegate(
 	domain, request, class, parent core.RecordRef, memory []byte,
-) (*core.RecordRef, error) {
-	return m.fetchReference(&message.ActivateObjectDelegate{
+) (*core.RecordID, error) {
+	return m.fetchID(&message.ActivateObjectDelegate{
 		Domain:  domain,
 		Request: request,
 		Class:   class,
@@ -310,8 +337,8 @@ func (m *LedgerArtifactManager) fetchReference(ev core.Message) (*core.RecordRef
 	return &react.Ref, nil
 }
 
-func (m *LedgerArtifactManager) fetchID(ev core.Message) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(ev)
+func (m *LedgerArtifactManager) fetchID(msg core.Message) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(msg)
 
 	if err != nil {
 		return nil, err

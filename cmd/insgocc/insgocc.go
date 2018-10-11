@@ -86,7 +86,7 @@ func main() {
 			}
 
 			if proxyOut.String() == "" {
-				p, err := preprocessor.GetRealGenesisDir("proxy")
+				p, err := preprocessor.GetRealApplicationDir("proxy")
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)
@@ -160,8 +160,6 @@ func main() {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
 			}
-
-			parsed.ReplaceFoundationImport()
 
 			err = parsed.Write(output.writer)
 			if err != nil {

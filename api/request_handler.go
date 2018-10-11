@@ -17,19 +17,24 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"reflect"
 
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
+
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 func extractStringResponse(data []byte) (*string, error) {
 	var typeHolder string
-	refOrig, err := UnMarshalResponse(data, []interface{}{typeHolder})
+	refOrig, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractStringResponse ]")
 	}
@@ -43,22 +48,57 @@ func extractStringResponse(data []byte) (*string, error) {
 	return &reference, nil
 }
 
+func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
+	var pubKey string
+	var role core.NodeRole
+	var fErr string
+	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
+	if err != nil {
+		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
+	}
+
+	if len(fErr) != 0 {
+		return "", core.RoleUnknown, errors.New("[ extractAuthorizeResponse ] " + fErr)
+	}
+
+	return pubKey, role, nil
+}
+
 // RequestHandler encapsulate processing of request
 type RequestHandler struct {
 	qid                 string
 	params              *Params
 	messageBus          core.MessageBus
 	rootDomainReference core.RecordRef
+	seedManager         *seedmanager.SeedManager
+	seedGenerator       seedmanager.SeedGenerator
+	netCoordinator      core.NetworkCoordinator
 }
 
 // NewRequestHandler creates new query handler
-func NewRequestHandler(params *Params, messageBus core.MessageBus, rootDomainReference core.RecordRef) *RequestHandler {
+func NewRequestHandler(params *Params, messageBus core.MessageBus, nc core.NetworkCoordinator, rootDomainReference core.RecordRef, smanager *seedmanager.SeedManager) *RequestHandler {
 	return &RequestHandler{
 		qid:                 params.QID,
 		params:              params,
 		messageBus:          messageBus,
 		rootDomainReference: rootDomainReference,
+		seedManager:         smanager,
+		netCoordinator:      nc,
 	}
+}
+
+func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reply, error) {
+	args, err := core.MarshalArgs(argsIn...)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SendRequest ]")
+	}
+
+	routResult, err := rh.routeCall(rh.rootDomainReference, method, args)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SendRequest ]")
+	}
+
+	return routResult, nil
 }
 
 func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
@@ -96,7 +136,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	memberRef, err := extractStringResponse(routResult.(*reply.Common).Result)
+	memberRef, err := extractStringResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
@@ -108,7 +148,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 
 func extractGetBalanceResponse(data []byte) (uint, error) {
 	var typeHolder uint
-	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
+	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return 0, errors.Wrap(err, "[ extractGetBalanceResponse ]")
 	}
@@ -120,20 +160,6 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 	}
 
 	return balance, nil
-}
-
-func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reply, error) {
-	args, err := MarshalArgs(argsIn...)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SendRequest ]")
-	}
-
-	routResult, err := rh.routeCall(rh.rootDomainReference, method, args)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SendRequest ]")
-	}
-
-	return routResult, nil
 }
 
 // ProcessGetBalance processes get_balance query type
@@ -150,7 +176,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
 
-	amount, err := extractGetBalanceResponse(routResult.(*reply.Common).Result)
+	amount, err := extractGetBalanceResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessGetBalance ]")
 	}
@@ -162,7 +188,7 @@ func (rh *RequestHandler) ProcessGetBalance() (map[string]interface{}, error) {
 
 func extractBoolResponse(data []byte) (bool, error) {
 	var typeHolder bool
-	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
+	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return false, errors.Wrap(err, "[ extractBoolResponse ]")
 	}
@@ -196,7 +222,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
 	}
 
-	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+	isSent, err := extractBoolResponse(routResult.(*reply.CallMethod).Result)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessSendMoney ]")
@@ -209,7 +235,7 @@ func (rh *RequestHandler) ProcessSendMoney() (map[string]interface{}, error) {
 
 func extractDumpAllUsersResponse(data []byte) ([]byte, error) {
 	var typeHolder []byte
-	dataUnmarsh, err := UnMarshalResponse(data, []interface{}{typeHolder})
+	dataUnmarsh, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractDumpAllUsersResponse ]")
 	}
@@ -242,7 +268,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
 
-	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reply.Common).Result)
+	serJSONDump, err := extractDumpAllUsersResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessDumpUsers ]")
 	}
@@ -273,7 +299,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	nodeRef, err := extractStringResponse(routResult.(*reply.Common).Result)
+	nodeRef, err := extractStringResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
@@ -286,18 +312,66 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 
 // ProcessIsAuthorized processes is_auth query type
 func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
+
+	// Check calling smart contract
 	result := make(map[string]interface{})
-	routResult, err := rh.sendRequest("IsAuthorized", []interface{}{})
+	routResult, err := rh.sendRequest("Authorize", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	isSent, err := extractBoolResponse(routResult.(*reply.Common).Result)
+	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
+	result["public_key"] = pubKey
+	result["role"] = role
 
-	result["is_authorized"] = isSent
+	// Check calling via networkcoordinator
+	privKey, err := ecdsa_helper.GeneratePrivateKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with key generating")
+	}
+	seed := make([]byte, 4)
+	_, err = rand.Read(seed)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with generating seed")
+	}
+	signature, err := ecdsa_helper.Sign(seed, privKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")
+	}
+	pubKey, err = ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
+	}
+	nodeRef, err := rh.netCoordinator.RegisterNode(pubKey, "virtual")
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
+	}
+	regPubKey, _, err := rh.netCoordinator.Authorize(*nodeRef, seed, signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
+	}
+	if regPubKey != pubKey {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] PubKeys are not the same. "+regPubKey+" "+pubKey)
+	}
+
+	result["netcoord_auth_success"] = true
+
+	return result, nil
+}
+
+// ProcessGetSeed processes get seed request
+func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	seed, err := rh.seedGenerator.Next()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessGetSeed ]")
+	}
+	rh.seedManager.Add(*seed)
+
+	result["seed"] = base64.StdEncoding.EncodeToString(seed[:])
 
 	return result, nil
 }

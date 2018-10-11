@@ -22,10 +22,11 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/base64"
 	"encoding/pem"
 	"math/big"
 
-	"github.com/insolar/insolar/cryptohelpers"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 )
 
@@ -92,9 +93,7 @@ type ecdsaPair struct {
 // Sign signs given seed
 func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 
-	hash := cryptohelpers.MakeSha3Hash(data)
-
-	r, s, err := ecdsa.Sign(rand.Reader, key, hash[:])
+	r, s, err := ecdsa.Sign(rand.Reader, key, hash.SHA3Bytes256(data))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ]")
@@ -109,7 +108,7 @@ func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 }
 
 // Verifies signature
-func Verify(seed []byte, signatureRaw []byte, pubKey string) (bool, error) {
+func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	var ecdsaP ecdsaPair
 	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaP)
 	if err != nil {
@@ -124,9 +123,22 @@ func Verify(seed []byte, signatureRaw []byte, pubKey string) (bool, error) {
 		return false, errors.Wrap(err, "[ Verify ]")
 	}
 
-	hash := cryptohelpers.MakeSha3Hash(seed)
+	h := hash.SHA3Bytes256(data)
+	return ecdsa.Verify(savedKey, h, ecdsaP.First, ecdsaP.Second), nil
+}
 
-	return ecdsa.Verify(savedKey, hash[:], ecdsaP.First, ecdsaP.Second), nil
+// ExportSignature serializes signature to string
+func ExportSignature(signature []byte) string {
+	return base64.StdEncoding.EncodeToString(signature)
+}
+
+// ImportSignature deserialize signature from string
+func ImportSignature(data string) ([]byte, error) {
+	result, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ImportSignature ]")
+	}
+	return result, nil
 }
 
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {

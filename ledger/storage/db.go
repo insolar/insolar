@@ -21,11 +21,11 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/ledger/hash"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/record"
@@ -45,7 +45,7 @@ const (
 type DB struct {
 	db           *badger.DB
 	currentPulse core.PulseNumber
-	rootRef      *record.Reference
+	genesisRef   *record.Reference
 
 	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
@@ -97,7 +97,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 
 // Bootstrap creates initial records in storage.
 func (db *DB) Bootstrap() error {
-	getRootRef := func() (*record.Reference, error) {
+	getGenesisRef := func() (*record.Reference, error) {
 		rootRefBuff, err := db.Get([]byte(rootKey))
 		if err != nil {
 			return nil, err
@@ -108,21 +108,12 @@ func (db *DB) Bootstrap() error {
 		return &rootRef, nil
 	}
 
-	createRootRecord := func() (*record.Reference, error) {
-		rootID, err := db.SetRecord(&record.ObjectActivateRecord{
-			ActivationRecord: record.ActivationRecord{
-				StatefulResult: record.StatefulResult{
-					ResultRecord: record.ResultRecord{
-						RequestRecord: record.Core2Reference(core.RecordRef{}),
-						DomainRecord:  record.Core2Reference(core.RecordRef{}),
-					},
-				},
-			},
-		})
+	createGenesisRecord := func() (*record.Reference, error) {
+		genesisID, err := db.SetRecord(&record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
-		err = db.SetObjectIndex(rootID, &index.ObjectLifeline{LatestState: *rootID})
+		err = db.SetObjectIndex(genesisID, &index.ObjectLifeline{LatestState: *genesisID})
 		if err != nil {
 			return nil, err
 		}
@@ -137,14 +128,14 @@ func (db *DB) Bootstrap() error {
 			return nil, err
 		}
 
-		rootRef := record.Reference{Domain: *rootID, Record: *rootID}
-		return &rootRef, db.Set([]byte(rootKey), rootRef.CoreRef()[:])
+		genesisRef := record.Reference{Domain: *genesisID, Record: *genesisID}
+		return &genesisRef, db.Set([]byte(rootKey), genesisRef.CoreRef()[:])
 	}
 
 	var err error
-	db.rootRef, err = getRootRef()
+	db.genesisRef, err = getGenesisRef()
 	if err == ErrNotFound {
-		db.rootRef, err = createRootRecord()
+		db.genesisRef, err = createGenesisRecord()
 	}
 	if err != nil {
 		return errors.Wrap(err, "bootstrap failed")
@@ -153,11 +144,11 @@ func (db *DB) Bootstrap() error {
 	return nil
 }
 
-// RootRef returns the root record reference.
+// GenesisRef returns the genesis record reference.
 //
-// Root record is the parent for all top-level records.
-func (db *DB) RootRef() *record.Reference {
-	return db.rootRef
+// Genesis record is the parent for all top-level records.
+func (db *DB) GenesisRef() *record.Reference {
+	return db.genesisRef
 }
 
 // Close wraps BadgerDB Close method.
@@ -182,6 +173,29 @@ func (db *DB) Set(key, value []byte) error {
 	return db.Update(func(tx *TransactionManager) error {
 		return tx.Set(key, value)
 	})
+}
+
+// GetRequest wraps matching transaction manager method.
+func (db *DB) GetRequest(id *record.ID) (record.Request, error) {
+	tx := db.BeginTransaction(false)
+	defer tx.Discard()
+	return tx.GetRequest(id)
+}
+
+// SetRequest wraps matching transaction manager method.
+func (db *DB) SetRequest(req record.Request) (*record.ID, error) {
+	var (
+		id  *record.ID
+		err error
+	)
+	txerr := db.Update(func(tx *TransactionManager) error {
+		id, err = tx.SetRequest(req)
+		return err
+	})
+	if txerr != nil {
+		return nil, txerr
+	}
+	return id, nil
 }
 
 // GetRecord wraps matching transaction manager method.
@@ -273,7 +287,7 @@ func (db *DB) waitinflight() {
 func (db *DB) SetDrop(pulse core.PulseNumber, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
 	db.waitinflight()
 
-	hw := hash.NewSHA3()
+	hw := hash.NewIDHash()
 	err := db.ProcessSlotHashes(pulse, func(it HashIterator) error {
 		for i := 1; it.Next(); i++ {
 			b := it.ShallowHash()

@@ -30,7 +30,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -39,7 +38,6 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-var clientFoundation = "github.com/insolar/insolar/toolkit/go/foundation"
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 var corePath = "github.com/insolar/insolar/core"
@@ -287,30 +285,6 @@ func (pf *ParsedFile) ChangePackageToMain() {
 	pf.node.Name.Name = "main"
 }
 
-// ReplaceFoundationImport replaces import of "client" foundation with "server"
-// version
-func (pf *ParsedFile) ReplaceFoundationImport() {
-	quoted := strconv.Quote(clientFoundation)
-	for _, d := range pf.node.Decls {
-		td, ok := d.(*ast.GenDecl)
-		if !ok {
-			continue
-		}
-		if td.Tok != token.IMPORT {
-			continue
-		}
-		for _, s := range td.Specs {
-			is, ok := s.(*ast.ImportSpec)
-			if !ok {
-				continue
-			}
-			if is.Path.Value == quoted {
-				is.Path = &ast.BasicLit{Value: strconv.Quote(foundationPath)}
-			}
-		}
-	}
-}
-
 // Write prints `out` contract's code, it could be changed with a few methods
 func (pf *ParsedFile) Write(out io.Writer) error {
 	return printer.Fprint(out, pf.fileSet, pf.node)
@@ -519,16 +493,15 @@ func generateInitArguments(list *ast.FieldList) string {
 	return initArgs
 }
 
-// GetRealGenesisDir return dir under genesis dir
-func GetRealGenesisDir(dir string) (string, error) {
+// GetRealApplicationDir return application dir path
+func GetRealApplicationDir(dir string) (string, error) {
 	gopath := build.Default.GOPATH
 	if gopath == "" {
 		return "", errors.Errorf("GOPATH is not set")
 	}
-
 	contractsPath := ""
 	for _, p := range strings.Split(gopath, ":") {
-		contractsPath = path.Join(p, "src/github.com/insolar/insolar/genesis/", dir)
+		contractsPath = path.Join(p, "src/github.com/insolar/insolar/application/", dir)
 		_, err := os.Stat(contractsPath)
 		if err == nil {
 			return contractsPath, nil
@@ -539,7 +512,7 @@ func GetRealGenesisDir(dir string) (string, error) {
 
 // GetRealContractsNames returns names of all real smart contracts
 func GetRealContractsNames() ([]string, error) {
-	pathWithContracts, err := GetRealGenesisDir("experiment")
+	pathWithContracts, err := GetRealApplicationDir("contract")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetContractNames ]")
 	}

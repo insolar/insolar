@@ -20,13 +20,22 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// Common - the most common reply
-type Common struct {
+// CallMethod - the most common reply
+type CallMethod struct {
 	Data   []byte
 	Result []byte
 }
 
 // Type returns type of the reply
-func (r *Common) Type() core.ReplyType {
-	return TypeCommon
+func (r *CallMethod) Type() core.ReplyType {
+	return TypeCallMethod
+}
+
+type CallConstructor struct {
+	Object *core.RecordRef
+}
+
+// Type returns type of the reply
+func (r *CallConstructor) Type() core.ReplyType {
+	return TypeCallConstructor
 }

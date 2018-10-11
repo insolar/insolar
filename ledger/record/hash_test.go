@@ -26,12 +26,8 @@ import (
 type recordgen func() Record
 
 var emptyRecordsGens = []recordgen{
-	func() Record { return &RequestRecord{} },
+	// request records
 	func() Record { return &CallRequest{} },
-	func() Record { return &LockUnlockRequest{} },
-	func() Record { return &ReadRecordRequest{} },
-	func() Record { return &ReadObject{} },
-	func() Record { return &ReadObjectComposite{} },
 	// result records
 	func() Record { return &ResultRecord{} },
 	func() Record { return &WipeOutRecord{} },
@@ -102,29 +98,22 @@ var hashtestsRecordsMutate = []struct {
 	records []Record
 }{
 	{
-		"ReadObject",
+		"CodeRecord",
 		[]Record{
-			&ReadObject{},
-			&ReadObject{ProjectionType: 1},
-			&ReadObject{ProjectionType: 2},
-		},
-	},
-	{
-		"ReadObjectComposite",
-		[]Record{
-			&ReadObjectComposite{},
-			&ReadObjectComposite{ReadObject: ReadObject{ProjectionType: 1}},
-			&ReadObjectComposite{ReadObject: ReadObject{ProjectionType: 2}},
-			&ReadObjectComposite{CompositeType: Reference{
-				Domain: newMockID(),
-				Record: newMockID(),
-			}},
-			&ReadObjectComposite{CompositeType: Reference{
-				Domain: newMockID(),
-			}},
-			&ReadObjectComposite{CompositeType: Reference{
-				Record: newMockID(),
-			}},
+			&CodeRecord{},
+			&CodeRecord{SourceCode: "ABC"},
+			&CodeRecord{
+				SourceCode: "ABC",
+				StorageRecord: StorageRecord{
+					StatefulResult: StatefulResult{
+						ResultRecord: ResultRecord{
+							DomainRecord: Reference{
+								Record: str2ID("0A"),
+							},
+						},
+					},
+				},
+			},
 		},
 	},
 }
