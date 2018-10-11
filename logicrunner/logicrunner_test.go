@@ -28,15 +28,14 @@ import (
 	"path"
 	"testing"
 
-	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/genesis/experiment/member"
-	"github.com/insolar/insolar/genesis/experiment/member/signer"
-	"github.com/insolar/insolar/genesis/experiment/rootdomain"
-
+	"github.com/insolar/insolar/application/contract/member"
+	"github.com/insolar/insolar/application/contract/member/signer"
+	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -106,7 +105,11 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 
 func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
 	rlr := lr.(*LogicRunner)
-	for ref, cr := range rlr.caseBind.Records {
+	rlr.caseBindMutex.Lock()
+	rlrcbr := rlr.caseBind.Records
+	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
+	rlr.caseBindMutex.Unlock()
+	for ref, cr := range rlrcbr {
 		//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
 		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
 		assert.NoError(t, err, "validation")
@@ -278,7 +281,7 @@ func TestContractCallingContract(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/genesis/proxy/two"
+import "github.com/insolar/insolar/application/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -328,10 +331,11 @@ func (r *Two) Hello(s string) string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
-		*am.RootRef(),
+		*am.GenesisRef(),
 		data,
 	)
 	assert.NoError(t, err)
@@ -354,7 +358,7 @@ func TestInjectingDelegate(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/genesis/proxy/two"
+import "github.com/insolar/insolar/application/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -408,10 +412,11 @@ func (r *Two) Hello(s string) string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
-		*am.RootRef(),
+		*am.GenesisRef(),
 		data,
 	)
 	assert.NoError(t, err)
@@ -444,7 +449,7 @@ func TestBasicNotificationCall(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/genesis/proxy/two"
+import "github.com/insolar/insolar/application/proxy/two"
 
 type One struct {
 	foundation.BaseContract
@@ -490,10 +495,12 @@ func (r *Two) Hello() string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.ActivateObject(
-		core.RecordRef{}, core.RecordRef{},
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{},
+		*obj,
 		*cb.Classes["one"],
-		*am.RootRef(),
+		*am.GenesisRef(),
 		data,
 	)
 	assert.NoError(t, err)
@@ -551,7 +558,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/genesis/proxy/child"
+	"github.com/insolar/insolar/application/proxy/child"
 )
 
 type Contract struct {
@@ -619,7 +626,8 @@ func New(n int) *Child {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["contract"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -655,7 +663,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/genesis/proxy/two"
+	"github.com/insolar/insolar/application/proxy/two"
 )
 
 type One struct {
@@ -699,7 +707,8 @@ func (r *Two) AnError() error {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["one"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -756,20 +765,20 @@ func TestRootDomainContract(t *testing.T) {
 	if parallel {
 		t.Parallel()
 	}
-	rootDomainCode, err := ioutil.ReadFile("../genesis/experiment/rootdomain/rootdomain.go" +
+	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
 		"")
 	if err != nil {
 		fmt.Print(err)
 	}
-	memberCode, err := ioutil.ReadFile("../genesis/experiment/member/member.go")
+	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	allowanceCode, err := ioutil.ReadFile("../genesis/experiment/allowance/allowance.go")
+	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
 	if err != nil {
 		fmt.Print(err)
 	}
-	walletCode, err := ioutil.ReadFile("../genesis/experiment/wallet/wallet.go")
+	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -780,11 +789,10 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	domain := core.NewRefFromBase58("c1")
-	request := core.NewRefFromBase58("c2")
-	contract, err := am.ActivateObject(domain, request, *cb.Classes["rootdomain"], *am.RootRef(), testutil.CBORMarshal(t, nil))
+	rootDomainRef, err := am.RegisterRequest(&message.BootstrapRequest{Name: "c1"})
+	_, err = am.ActivateObject(core.RecordRef{}, *rootDomainRef, *cb.Classes["rootdomain"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
-	assert.NotEqual(t, contract, nil, "contract created")
+	assert.NotEqual(t, rootDomainRef, nil, "contract created")
 
 	// Creating Root member
 	rootKey, err := cryptoHelper.GeneratePrivateKey()
@@ -792,11 +800,13 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
 	assert.NoError(t, err)
 
-	rootMemberRef, err := am.ActivateObject(domain, request, *cb.Classes["member"], *contract, testutil.CBORMarshal(t, member.New("root", rootPubKey)))
+	rootMemberRef, err := am.RegisterRequest(&message.BootstrapRequest{Name: "c2"})
+	assert.NoError(t, err)
+	_, err = am.ActivateObject(core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef, testutil.CBORMarshal(t, member.New("root", rootPubKey)))
 	assert.NoError(t, err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(domain, request, *contract, testutil.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(core.RecordRef{}, core.RecordRef{}, *rootDomainRef, testutil.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
 	root := Caller{rootMemberRef.String(), rootKey, lr, t}
@@ -808,7 +818,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	res1 := []interface{}{""}
-	root.SignedCall(contract.String(), "", "CreateMember", []interface{}{"Member1", member1PubKey}, res1)
+	root.SignedCall(rootDomainRef.String(), "", "CreateMember", []interface{}{"Member1", member1PubKey}, res1)
 	member1Ref := res1[0].(string)
 	assert.NotEqual(t, "", member1Ref)
 
@@ -819,7 +829,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	res2 := []interface{}{""}
-	root.SignedCall(contract.String(), "", "CreateMember", []interface{}{"Member2", member2PubKey}, res2)
+	root.SignedCall(rootDomainRef.String(), "", "CreateMember", []interface{}{"Member2", member2PubKey}, res2)
 	member2Ref := res2[0].(string)
 	assert.NotEqual(t, "", member2Ref)
 
@@ -844,7 +854,7 @@ func BenchmarkContractCall(b *testing.B) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/genesis/proxy/child"
+import "github.com/insolar/insolar/application/proxy/child"
 import "github.com/insolar/insolar/core"
 
 type Parent struct {
@@ -874,10 +884,12 @@ func (c *Child) GetNum() int {
 	assert.NoError(b, err)
 
 	domain := core.NewRefFromBase58("c1")
-	parent, err := am.ActivateObject(core.NewRefFromBase58("r1"), domain, *cb.Classes["parent"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	parent, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(domain, *parent, *cb.Classes["parent"], *am.GenesisRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create parent")
 	assert.NotEqual(b, parent, nil, "parent created")
-	child, err := am.ActivateObject(core.NewRefFromBase58("r2"), domain, *cb.Classes["child"], *am.RootRef(), testutil.CBORMarshal(b, nil))
+	child, err := am.RegisterRequest(&message.CallConstructor{ParentRef: *parent})
+	_, err = am.ActivateObject(domain, *child, *cb.Classes["child"], *am.GenesisRef(), testutil.CBORMarshal(b, nil))
 	assert.NoError(b, err, "create child")
 	assert.NotEqual(b, child, nil, "child created")
 
@@ -903,10 +915,10 @@ func TestProxyGeneration(t *testing.T) {
 
 	for _, contract := range contracts {
 		t.Run(contract, func(t *testing.T) {
-			parsed, err := preprocessor.ParseFile("../genesis/experiment/" + contract + "/" + contract + ".go")
+			parsed, err := preprocessor.ParseFile("../application/contract/" + contract + "/" + contract + ".go")
 			assert.NoError(t, err)
 
-			proxyPath, err := preprocessor.GetRealGenesisDir("proxy")
+			proxyPath, err := preprocessor.GetRealApplicationDir("proxy")
 			assert.NoError(t, err)
 
 			name, err := parsed.ProxyPackageName()

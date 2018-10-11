@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
@@ -49,7 +50,7 @@ func (cm *componentManager) linkAll() {
 	for i := 0; i < v.NumField(); i++ {
 		err := v.Field(i).Interface().(core.Component).Start(cm.components)
 		if err != nil {
-			log.Errorf("failed to start component %s : %s", v.Field(i).String(), err.Error())
+			log.Fatalf("failed to start component %s : %s", v.Field(i).String(), err.Error())
 		}
 	}
 }
@@ -138,6 +139,11 @@ func main() {
 	cm.components.Metrics, err = metrics.NewMetrics(cfgHolder.Configuration.Metrics)
 	if err != nil {
 		log.Fatalln("failed to start Metrics: ", err.Error())
+	}
+
+	cm.components.NetworkCoordinator, err = networkcoordinator.New()
+	if err != nil {
+		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
 	}
 
 	cm.linkAll()
