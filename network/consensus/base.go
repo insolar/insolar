@@ -66,7 +66,7 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
-			if p.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
+			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
 				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
 
 				// goroutine
@@ -84,7 +84,11 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 
 	hashes := make([]*NodeUnsyncHash, len(c.results))
 	for id, x := range c.results {
-		r, _ := CalculateNodeUnsyncHash(id, x)
+		r, err := CalculateNodeUnsyncHash(id, x)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
 		hashes = append(hashes, r)
 	}
 
@@ -99,7 +103,7 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
-			if p.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
+			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
 				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
 
 				// goroutine
