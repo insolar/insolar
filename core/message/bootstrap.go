@@ -24,6 +24,7 @@ import (
 type BootstrapRequest struct {
 	// Name should be unique for each bootstrap record.
 	Name string
+	sign []byte
 }
 
 // Type implementation for bootstrap request.
@@ -45,4 +46,12 @@ func (*BootstrapRequest) TargetRole() core.JetRole {
 // GetCaller implementation for bootstrap request.
 func (*BootstrapRequest) GetCaller() *core.RecordRef {
 	return nil
+}
+
+func (m *BootstrapRequest) GetSign() []byte {
+	return m.sign
+}
+
+func (m *BootstrapRequest) SetSign(sign []byte) {
+	m.sign = sign
 }
