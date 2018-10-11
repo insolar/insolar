@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 
 	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/application/bootstrapcertificate"
@@ -35,6 +36,29 @@ import (
 )
 
 const defaultStdoutPath = "-"
+const defaultUrl = "http://localhost:19191/api/v1?"
+
+func genDefaultConfig(r interface{}) ([]byte, error) {
+	t := reflect.TypeOf(r)
+	res := map[string]interface{}{}
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("json")
+		switch field.Type.Kind() {
+		case reflect.String:
+			res[tag] = ""
+		case reflect.Slice:
+			res[tag] = []int{}
+		}
+	}
+
+	rawJSON, err := json.MarshalIndent(res, "", "    ")
+	if err != nil {
+		return nil, errors.Wrap(err, "[ genDefaultConfig ]")
+	}
+
+	return rawJSON, nil
+}
 
 func chooseOutput(path string) (io.Writer, error) {
 	var res io.Writer
@@ -63,14 +87,16 @@ var (
 	numberCertificates uint
 	configPath         string
 	verbose            bool
+	sendUrls           string
 )
 
 func parseInputParams() {
 	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificates| send_request")
-	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose")
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificates | send_request | gen_send_configs")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
+	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultUrl, "api url")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
 	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
 	err := rootCmd.Execute()
@@ -185,11 +211,25 @@ func sendRequest(out io.Writer) {
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
 
-	const defaultUrl = "http://localhost:19191/api/v1?"
 	response, err := requesters.Send(defaultUrl, userCfg, reqCfg)
 	check("[ sendRequest ]", err)
 
 	writeToOutput(out, string(response))
+}
+
+func genSendConfigs(out io.Writer) {
+	reqConf, err := genDefaultConfig(requesters.RequestConfigJSON{})
+	check("[ genSendConfigs ]", err)
+
+	userConf, err := genDefaultConfig(requesters.UserConfigJSON{})
+	check("[ genSendConfigs ]", err)
+
+	writeToOutput(out, "Request config:\n")
+	writeToOutput(out, string(reqConf))
+	writeToOutput(out, "\n\n")
+
+	writeToOutput(out, "User config:\n")
+	writeToOutput(out, string(userConf)+"\n")
 }
 
 func main() {
@@ -210,5 +250,7 @@ func main() {
 		generateCertificates(out)
 	case "send_request":
 		sendRequest(out)
+	case "gen_send_configs":
+		genSendConfigs(out)
 	}
 }
