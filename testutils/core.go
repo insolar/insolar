@@ -23,7 +23,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-// RandomString generates random uuid and return it as string
+// RandomString generates random uuid and return it as a string
 func RandomString() string {
 	newUUID, _ := uuid.NewV4() // nolint
 	return newUUID.String()
@@ -36,7 +36,7 @@ func RandomRef() core.RecordRef {
 	return ref
 }
 
-// RandomRef generates random object reference
+// RandomID generates random object ID
 func RandomID() core.RecordID {
 	id := [core.RecordIDSize]byte{}
 	rand.Read(id[:]) // nolint
