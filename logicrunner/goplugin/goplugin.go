@@ -85,7 +85,7 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 	return gp.client, nil
 }
 
-const timeout = time.Second * 60
+const timeout = time.Minute * 10
 
 // CallMethod runs a method on an object in controlled environment
 func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
