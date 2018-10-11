@@ -18,7 +18,6 @@ package api
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -376,7 +375,7 @@ func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
 	}
 	rh.seedManager.Add(*seed)
 
-	result[SEED] = base64.StdEncoding.EncodeToString(seed[:])
+	result[SEED] = seed[:]
 
 	return result, nil
 }

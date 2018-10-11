@@ -18,6 +18,7 @@ package requesters
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const TESTSEED = "1111111"
+const TESTSEED = "VGVzdA=="
 const TESTREFERENCE = "222222"
 
 func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
@@ -117,23 +118,25 @@ func TestMain(m *testing.M) {
 func TestGetSeed(t *testing.T) {
 	seed, err := GetSeed(URL)
 	assert.NoError(t, err)
-	assert.Equal(t, TESTSEED, seed)
+	decodedSeed, err := base64.StdEncoding.DecodeString(TESTSEED)
+	assert.NoError(t, err)
+	assert.Equal(t, decodedSeed, seed)
 }
 
 func TestGetResponseBodyBadRequest(t *testing.T) {
-	_, err := GetResponseBody("test", map[string]string{})
+	_, err := GetResponseBody("test", PostParams{})
 	assert.EqualError(t, err, "[ getResponseBody ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
 
 func TestGetResponseBodyBadHttpStatus(t *testing.T) {
-	_, err := GetResponseBody(URL+"TEST", map[string]string{})
+	_, err := GetResponseBody(URL+"TEST", PostParams{})
 	assert.EqualError(t, err, "[ getResponseBody ] Bad http response code: 404")
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBody(URL, map[string]string{})
+	data, err := GetResponseBody(URL, PostParams{})
 	assert.NoError(t, err)
-	assert.Contains(t, string(data), `"random_data": "1111111"`)
+	assert.Contains(t, string(data), `"random_data": "VGVzdA=="`)
 }
 
 func TestSetVerbose(t *testing.T) {
@@ -160,19 +163,19 @@ func TestSend(t *testing.T) {
 
 func TestSendWithSeed(t *testing.T) {
 	userConf, reqConf := readConfigs(t)
-	resp, err := SendWithSeed(URL, userConf, reqConf, TESTSEED)
+	resp, err := SendWithSeed(URL, userConf, reqConf, []byte(TESTSEED))
 	assert.NoError(t, err)
 	assert.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
 	userConf, reqConf := readConfigs(t)
-	_, err := SendWithSeed(URL+"TTT", userConf, reqConf, TESTSEED)
+	_, err := SendWithSeed(URL+"TTT", userConf, reqConf, []byte(TESTSEED))
 	assert.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
-	_, err := SendWithSeed(URL, nil, nil, TESTSEED)
+	_, err := SendWithSeed(URL, nil, nil, []byte(TESTSEED))
 	assert.EqualError(t, err, "[ Send ] Configs must be initialized")
 }
 

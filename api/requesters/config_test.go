@@ -17,6 +17,7 @@
 package requesters
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,8 +37,10 @@ func TestReadRequestConfigFromFile(t *testing.T) {
 	conf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
 	assert.NoError(t, err)
 	assert.Equal(t, "CreateMember", conf.Method)
-	assert.Equal(t, "refRequester", conf.Requester)
-	assert.Equal(t, "refTarget", conf.Target)
+
+	decodedCallee, err := base64.StdEncoding.DecodeString("5APzToQsvhLJjJFk4tptkAavULrDAj1rAJidEcCizvJYJpdJN3CXZpCGzSdKg35PcvdZX2FFiNsu2tmLW4zjRSPh")
+	assert.NoError(t, err)
+	assert.Equal(t, decodedCallee, conf.Callee)
 	assert.Len(t, conf.Params, 2)
 	assert.Equal(t, float64(200), conf.Params[0])
 	assert.Equal(t, "Test", conf.Params[1])

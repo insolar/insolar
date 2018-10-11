@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -45,10 +46,10 @@ func SetVerbose(verb bool) {
 }
 
 // PostParams represents params struct
-type PostParams = map[string]string
+type PostParams = map[string]interface{}
 
 // GetResponseBody makes request and extracts body
-func GetResponseBody(url string, postP map[string]string) ([]byte, error) {
+func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
@@ -72,20 +73,20 @@ func GetResponseBody(url string, postP map[string]string) ([]byte, error) {
 }
 
 // GetSeed makes get_seed request and extracts it
-func GetSeed(url string) (string, error) {
+func GetSeed(url string) ([]byte, error) {
 	body, err := GetResponseBody(url, PostParams{
 		"query_type": "get_seed",
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "[ getSeed ]")
+		return nil, errors.Wrap(err, "[ getSeed ]")
 	}
 
-	type seedResponse struct{ Seed string }
+	type seedResponse struct{ Seed []byte }
 	seedResp := seedResponse{}
 
 	err = json.Unmarshal(body, &seedResp)
 	if err != nil {
-		return "", errors.Wrap(err, "[ getSeed ]")
+		return nil, errors.Wrap(err, "[ getSeed ]")
 	}
 
 	return seedResp.Seed, nil
@@ -100,7 +101,7 @@ func constructParams(params []interface{}) ([]byte, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed string) ([]byte, error) {
+func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
 	}
@@ -110,18 +111,23 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
 	}
 
-	verboseInfo("Signing params ...")
-	signature, err := ecdsa_helper.Sign(params, userCfg.privateKeyObject)
+	serData, err := signer.Serialize(string(userCfg.Caller), string(reqCfg.Delegate), reqCfg.Method, params, seed)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
+	}
+
+	verboseInfo("Signing request ...")
+	signature, err := ecdsa_helper.Sign(serData, userCfg.privateKeyObject)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
-	verboseInfo("Signing params completed")
+	verboseInfo("Signing request completed")
 
 	body, err := GetResponseBody(url, PostParams{
 		"params":    string(params),
 		"method":    reqCfg.Method,
-		"requester": reqCfg.Requester,
-		"target":    reqCfg.Target,
+		"caller":    userCfg.Caller,
+		"callee":    reqCfg.Callee,
 		"delegate":  reqCfg.Delegate,
 		"seed":      seed,
 		"signature": ecdsa_helper.ExportSignature(signature),
@@ -141,7 +147,7 @@ func Send(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
-	verboseInfo("GETSEED request completed. seed: " + seed)
+	verboseInfo("GETSEED request completed. seed: " + string(seed))
 
 	response, err := SendWithSeed(url, userCfg, reqCfg, seed)
 	if err != nil {

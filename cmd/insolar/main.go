@@ -100,7 +100,7 @@ func parseInputParams() {
 	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
 	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
-	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "params.json", "path to params file")
+	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
