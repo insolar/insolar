@@ -23,8 +23,25 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
+
+	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
+
+// verbose switches on verbose mode
+var verbose = false
+
+func verboseInfo(msg string) {
+	if verbose {
+		log.Infoln(msg)
+	}
+}
+
+func SetVerbose(verb bool) {
+	verbose = verb
+}
 
 type PostParams = map[string]string
 
@@ -35,7 +52,7 @@ func GetResponseBody(url string, postP map[string]string) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with sending request")
 	}
 	if http.StatusOK != postResp.StatusCode {
-		return nil, errors.Wrap(err, "[ getResponseBody ] Bad http response code: "+strconv.Itoa(postResp.StatusCode))
+		return nil, errors.New("[ getResponseBody ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -64,4 +81,70 @@ func GetSeed(url string) (string, error) {
 	}
 
 	return seedResp.Seed, nil
+}
+
+func constructParams(params []interface{}) ([]byte, error) {
+	args, err := core.MarshalArgs(params)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ constructParams ]")
+	}
+	return args, nil
+}
+
+func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed string) ([]byte, error) {
+	if userCfg == nil || reqCfg == nil {
+		return nil, errors.New("[ Send ] Configs must be initialized")
+	}
+
+	params, err := constructParams(reqCfg.Params)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
+	}
+
+	verboseInfo("Signing params ...")
+	signature, err := ecdsa_helper.Sign(params, userCfg.privateKeyObject)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
+	}
+	verboseInfo("Signing params completed")
+
+	pubKey, err := ecdsa_helper.ExportPublicKey(&userCfg.privateKeyObject.PublicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Problem with exporting public key")
+	}
+
+	body, err := GetResponseBody(url, PostParams{
+		"params":    string(params),
+		"method":    reqCfg.Method,
+		"requester": reqCfg.Requester,
+		"target":    reqCfg.Target,
+		"seed":      seed,
+		"signature": ecdsa_helper.ExportSignature(signature),
+		//
+		"query_type": "create_member",
+		"name":       "PUTIN",
+		"public_key": pubKey,
+	})
+
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Problem with sending target request")
+	}
+
+	return body, nil
+}
+
+func Send(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
+	verboseInfo("Sending GETSEED request ...")
+	seed, err := GetSeed(url)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
+	}
+	verboseInfo("GETSEED request completed. seed: " + seed)
+
+	response, err := SendWithSeed(url, userCfg, reqCfg, seed)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Send ]")
+	}
+
+	return response, nil
 }
