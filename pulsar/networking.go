@@ -249,7 +249,8 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
 	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
 	//}
-	handler.pulsar.BftGrid[request.PublicKey] = requestBody.Vector
+
+	handler.pulsar.setBftGridItem(request.PublicKey, requestBody.Vector)
 
 	return nil
 }

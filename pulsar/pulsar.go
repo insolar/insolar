@@ -66,9 +66,22 @@ type Pulsar struct {
 	LastPulse             *core.Pulse
 
 	OwnedBftRow map[string]*bftCell
-	BftGrid     map[string]map[string]*bftCell
+	bftGrid     map[string]map[string]*bftCell
+	BftGridLock sync.Mutex
 
 	stateSwitcher StateSwitcher
+}
+
+func (currentPulsar *Pulsar) setBftGridItem(key string, value map[string]*bftCell) {
+	currentPulsar.BftGridLock.Lock()
+	currentPulsar.bftGrid[key] = value
+	defer currentPulsar.BftGridLock.Unlock()
+}
+
+func (currentPulsar *Pulsar) getBftGridItem(key string) map[string]*bftCell {
+	currentPulsar.BftGridLock.Lock()
+	defer currentPulsar.BftGridLock.Unlock()
+	return currentPulsar.bftGrid[key]
 }
 
 // bftCell is a cell in NxN btf-grid
@@ -128,10 +141,11 @@ func NewPulsar(
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.Neighbours {
-		pulsar.BftGrid[neighbour.PublicKey] = map[string]*bftCell{}
+		currentMap := map[string]*bftCell{}
 		for _, gridColumn := range configuration.Neighbours {
-			pulsar.BftGrid[neighbour.PublicKey][gridColumn.PublicKey] = nil
+			currentMap[gridColumn.PublicKey] = nil
 		}
+		pulsar.setBftGridItem(neighbour.PublicKey, currentMap)
 
 		if len(neighbour.PublicKey) == 0 {
 			continue
@@ -335,8 +349,6 @@ func (currentPulsar *Pulsar) broadcastVector() {
 	payload, err := currentPulsar.preparePayload(VectorPayload{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
 		Vector:      currentPulsar.OwnedBftRow})
-	a, b := checkPayloadSignature(payload)
-	log.Warn(a, b)
 
 	if err != nil {
 		currentPulsar.stateSwitcher.switchToState(failed, err)
@@ -396,8 +408,7 @@ func (currentPulsar *Pulsar) sendVector() {
 
 	currentPulsar.broadcastVector()
 
-	currentPulsar.BftGrid[currentPulsar.PublicKeyRaw] = currentPulsar.OwnedBftRow
-	log.Infof("len of grid %v", len(currentPulsar.BftGrid))
+	currentPulsar.setBftGridItem(currentPulsar.PublicKeyRaw, currentPulsar.OwnedBftRow)
 	currentPulsar.stateSwitcher.switchToState(waitingForVectors, nil)
 }
 
@@ -529,7 +540,7 @@ func (currentPulsar *Pulsar) verify() {
 	for _, column := range activePulsars {
 		currentColumnStat := map[string]int{}
 		for _, row := range activePulsars {
-			bftCell := currentPulsar.BftGrid[row.PubPem][column.PubPem]
+			bftCell := currentPulsar.getBftGridItem(row.PubPem)[column.PubPem]
 
 			if bftCell == nil {
 				currentColumnStat["nil"]++
@@ -573,7 +584,6 @@ func (currentPulsar *Pulsar) verify() {
 			finalEntropy[byteIndex] ^= tempEntropy[byteIndex]
 		}
 	}
-
 	currentPulsar.finalizeBft(finalEntropy, keys)
 }
 
@@ -847,7 +857,9 @@ func (currentPulsar *Pulsar) clearState() {
 	currentPulsar.ProcessingPulseNumber = 0
 
 	currentPulsar.OwnedBftRow = map[string]*bftCell{}
-	currentPulsar.BftGrid = map[string]map[string]*bftCell{}
+	currentPulsar.BftGridLock.Lock()
+	currentPulsar.bftGrid = map[string]map[string]*bftCell{}
+	currentPulsar.BftGridLock.Unlock()
 }
 
 func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {

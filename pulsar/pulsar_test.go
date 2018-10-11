@@ -541,7 +541,7 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 		Neighbours:  map[string]*Neighbour{},
 		PrivateKey:  mainPrivateKey,
 		OwnedBftRow: map[string]*bftCell{},
-		BftGrid:     map[string]map[string]*bftCell{},
+		bftGrid:     map[string]map[string]*bftCell{},
 	}
 
 	pulsar.GeneratedEntropy = pulsartestutil.MockEntropy
@@ -609,7 +609,7 @@ func TestPulsar_verify_failedState(t *testing.T) {
 	pulsar.stateSwitcher.setState(failed)
 	pulsar.PublicKeyRaw = "testKey"
 	pulsar.OwnedBftRow = map[string]*bftCell{}
-	pulsar.BftGrid = map[string]map[string]*bftCell{}
+	pulsar.bftGrid = map[string]map[string]*bftCell{}
 
 	pulsar.verify()
 }
@@ -622,7 +622,7 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	pulsar.PublicKeyRaw = "testKey"
 	pulsar.GeneratedEntropy = pulsartestutil.MockEntropy
 	pulsar.OwnedBftRow = map[string]*bftCell{}
-	pulsar.BftGrid = map[string]map[string]*bftCell{}
+	pulsar.bftGrid = map[string]map[string]*bftCell{}
 
 	pulsar.verify()
 
@@ -642,7 +642,7 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 	pulsar.PublicKeyRaw = "testKey"
 	pulsar.PrivateKey = mainPrivateKey
 	pulsar.OwnedBftRow = map[string]*bftCell{}
-	pulsar.BftGrid = map[string]map[string]*bftCell{}
+	pulsar.bftGrid = map[string]map[string]*bftCell{}
 	pulsar.Neighbours = map[string]*Neighbour{}
 	pulsar.Neighbours["1"] = &Neighbour{}
 	pulsar.Neighbours["2"] = &Neighbour{}
@@ -686,7 +686,7 @@ func TestPulsar_verify_Success(t *testing.T) {
 		PrivateKey:                     privateKey,
 		PublicKeyRaw:                   currentPulsarPublicKey,
 		OwnedBftRow:                    map[string]*bftCell{},
-		BftGrid:                        map[string]map[string]*bftCell{},
+		bftGrid:                        map[string]map[string]*bftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: &privateKeySecond.PublicKey, OutgoingClient: &clientMock},
@@ -699,18 +699,18 @@ func TestPulsar_verify_Success(t *testing.T) {
 	secondEntropy, secondSign := prepareEntropy(t, privateKeySecond)
 	thirdEntropy, thirdSign := prepareEntropy(t, privateKeyThird)
 
-	pulsar.BftGrid[currentPulsarPublicKey] = map[string]*bftCell{
+	pulsar.bftGrid[currentPulsarPublicKey] = map[string]*bftCell{
 		currentPulsarPublicKey: {Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true},
 		publicKeySecond:        {Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true},
 		publicKeyThird:         {Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true},
 	}
 
-	pulsar.BftGrid[publicKeySecond] = map[string]*bftCell{
+	pulsar.bftGrid[publicKeySecond] = map[string]*bftCell{
 		currentPulsarPublicKey: {Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true},
 		publicKeySecond:        {Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true},
 		publicKeyThird:         {Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true},
 	}
-	pulsar.BftGrid[publicKeyThird] = map[string]*bftCell{
+	pulsar.bftGrid[publicKeyThird] = map[string]*bftCell{
 		currentPulsarPublicKey: {Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true},
 		publicKeySecond:        {Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true},
 		publicKeyThird:         {Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true},
