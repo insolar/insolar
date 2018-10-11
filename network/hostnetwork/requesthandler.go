@@ -468,7 +468,6 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		}
 	case packet.TypeCheckSignedNonce:
 		err = handleCheckSignedNonceResponse(hostHandler, rsp.Data.(*packet.ResponseCheckSignedNonce))
-		// TODO: add to unsync
 	case packet.TypeActiveNodes:
 		response := rsp.Data.(*packet.ResponseActiveNodes)
 		err = handleActiveNodesResponse(hostHandler, response)

@@ -137,6 +137,7 @@ func processCheckSignedNonce(
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 	// TODO: do real check sign.
+	// TODO: add to unsync and wait to advance to sync list
 	parsed := true
 	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Success: parsed}).Build(), nil
 }
