@@ -27,7 +27,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/consensus"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 )
@@ -44,7 +43,7 @@ type NodeKeeper interface {
 	AddActiveNodes([]*core.ActiveNode)
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
 	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list
-	SetPulse(number core.PulseNumber) (bool, consensus.UnsyncHolder)
+	SetPulse(number core.PulseNumber) (bool, *UnsyncList)
 	// GetPulse returns internal NodeKeeper pulse.
 	GetPulse() core.PulseNumber
 	// Sync initiates transferring syncCandidates -> sync, sync -> active.
@@ -56,7 +55,7 @@ type NodeKeeper interface {
 	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
 	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
 	// 3. If pulse is more than internal NodeKeeper pulse, blocks till next SetPulse or duration timeout and then acts like in par. 2
-	GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (consensus.UnsyncHolder, error)
+	GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (*UnsyncList, error)
 }
 
 // NewNodeKeeper create new NodeKeeper
@@ -67,7 +66,7 @@ func NewNodeKeeper(nodeID core.RecordRef) NodeKeeper {
 		active:        make(map[core.RecordRef]*core.ActiveNode),
 		sync:          make([]*core.ActiveNode, 0),
 		unsync:        make([]*core.ActiveNode, 0),
-		unsyncWaiters: make([]chan consensus.UnsyncHolder, 0),
+		unsyncWaiters: make([]chan *UnsyncList, 0),
 	}
 }
 
@@ -91,8 +90,8 @@ type nodekeeper struct {
 
 	unsyncLock    sync.Mutex
 	unsync        []*core.ActiveNode
-	unsyncHolder  consensus.UnsyncHolder
-	unsyncWaiters []chan consensus.UnsyncHolder
+	unsyncList    *UnsyncList
+	unsyncWaiters []chan *UnsyncList
 }
 
 func (nk *nodekeeper) GetSelf() *core.ActiveNode {
@@ -145,7 +144,7 @@ func (nk *nodekeeper) GetPulse() core.PulseNumber {
 	return nk.pulse
 }
 
-func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, consensus.UnsyncHolder) {
+func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, *UnsyncList) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
@@ -203,12 +202,12 @@ func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
 	return nil
 }
 
-func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (consensus.UnsyncHolder, error) {
+func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (*UnsyncList, error) {
 	nk.unsyncLock.Lock()
 	currentPulse := nk.pulse
 
 	if currentPulse == pulse {
-		result := nk.unsyncHolder
+		result := nk.unsyncList
 		nk.unsyncLock.Unlock()
 		return result, nil
 	}
@@ -217,7 +216,7 @@ func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Dura
 		return nil, errors.Errorf("GetUnsyncHolder called with pulse %d, but current NodeKeeper pulse is %d",
 			pulse, currentPulse)
 	}
-	ch := make(chan consensus.UnsyncHolder, 1)
+	ch := make(chan *UnsyncList, 1)
 	nk.unsyncWaiters = append(nk.unsyncWaiters, ch)
 	nk.unsyncLock.Unlock()
 	// TODO: timeout
@@ -239,7 +238,7 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.ActiveNode) {
 	nk.state = synced
 }
 
-func (nk *nodekeeper) collectUnsync(number core.PulseNumber) consensus.UnsyncHolder {
+func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
 	nk.pulse = number
 	nk.state = pulseSet
 
@@ -248,17 +247,17 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) consensus.UnsyncHol
 	}
 	tmp := nk.unsync
 	nk.unsync = make([]*core.ActiveNode, 0)
-	nk.unsyncHolder = NewUnsyncHolder(nk.pulse, tmp)
+	nk.unsyncList = NewUnsyncHolder(nk.pulse, tmp)
 	if len(nk.unsyncWaiters) == 0 {
-		return nk.unsyncHolder
+		return nk.unsyncList
 	}
 	// notify waiters that new unsync holder is available for read
 	for _, ch := range nk.unsyncWaiters {
-		ch <- nk.unsyncHolder
+		ch <- nk.unsyncList
 		close(ch)
 	}
-	nk.unsyncWaiters = make([]chan consensus.UnsyncHolder, 0)
-	return nk.unsyncHolder
+	nk.unsyncWaiters = make([]chan *UnsyncList, 0)
+	return nk.unsyncList
 }
 
 func hashWriteChecked(hash hash.Hash, data []byte) {

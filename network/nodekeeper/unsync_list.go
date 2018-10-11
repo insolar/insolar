@@ -24,33 +24,34 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 )
 
-type unsyncList struct {
-	unsync  []*core.ActiveNode
-	pulse   core.PulseNumber
-	hash    []*consensus.NodeUnsyncHash
-	waiters []chan []*consensus.NodeUnsyncHash
-	lock    sync.Mutex
+type UnsyncList struct {
+	unsync []*core.ActiveNode
+	pulse  core.PulseNumber
+	hash   []*consensus.NodeUnsyncHash
+
+	waiters     []chan []*consensus.NodeUnsyncHash
+	waitersLock sync.Mutex
 }
 
 // NewUnsyncHolder create new object to hold data for consensus
-func NewUnsyncHolder(pulse core.PulseNumber, unsync []*core.ActiveNode) consensus.UnsyncHolder {
-	return &unsyncList{pulse: pulse, unsync: unsync}
+func NewUnsyncHolder(pulse core.PulseNumber, unsync []*core.ActiveNode) *UnsyncList {
+	return &UnsyncList{pulse: pulse, unsync: unsync}
 }
 
 // GetUnsync returns list of local unsync nodes. This list is created
-func (u *unsyncList) GetUnsync() []*core.ActiveNode {
+func (u *UnsyncList) GetUnsync() []*core.ActiveNode {
 	return u.unsync
 }
 
 // GetPulse returns actual pulse for current consensus process.
-func (u *unsyncList) GetPulse() core.PulseNumber {
+func (u *UnsyncList) GetPulse() core.PulseNumber {
 	return u.pulse
 }
 
 // SetHash sets hash of unsync lists for each node of consensus.
-func (u *unsyncList) SetHash(hash []*consensus.NodeUnsyncHash) {
-	u.lock.Lock()
-	defer u.lock.Unlock()
+func (u *UnsyncList) SetHash(hash []*consensus.NodeUnsyncHash) {
+	u.waitersLock.Lock()
+	defer u.waitersLock.Unlock()
 
 	u.hash = hash
 	if len(u.waiters) == 0 {
@@ -65,16 +66,16 @@ func (u *unsyncList) SetHash(hash []*consensus.NodeUnsyncHash) {
 
 // GetHash get hash of unsync lists for each node of consensus. If hash is not calculated yet, then this call blocks
 // until the hash is calculated with SetHash() call
-func (u *unsyncList) GetHash(blockTimeout time.Duration) ([]*consensus.NodeUnsyncHash, error) {
-	u.lock.Lock()
+func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*consensus.NodeUnsyncHash, error) {
+	u.waitersLock.Lock()
 	if u.hash != nil {
 		result := u.hash
-		u.lock.Unlock()
+		u.waitersLock.Unlock()
 		return result, nil
 	}
 	ch := make(chan []*consensus.NodeUnsyncHash)
 	u.waiters = append(u.waiters, ch)
-	u.lock.Unlock()
+	u.waitersLock.Unlock()
 	// TODO: timeout
 	result := <-ch
 	return result, nil

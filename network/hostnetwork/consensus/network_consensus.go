@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -52,6 +53,11 @@ type NetworkConsensus struct {
 	communicatorRcv consensus.Communicator
 	keeper          nodekeeper.NodeKeeper
 	self            *selfWrapper
+
+	unsyncListCache map[core.RecordRef][]*core.ActiveNode
+	unsyncListLock  sync.Mutex
+	unsyncHashCache map[core.RecordRef][]*consensus.NodeUnsyncHash
+	unsyncHashLock  sync.Mutex
 }
 
 // ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
@@ -64,12 +70,12 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	for i, activeNode := range activeNodes {
 		participants[i] = &participantWrapper{activeNode}
 	}
-	success, unsyncHolder := ic.keeper.SetPulse(pulse.PulseNumber)
+	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
 	if !success {
 		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
-	unsyncCandidates, err := ic.consensus.DoConsensus(ctx, unsyncHolder, ic.self, participants)
+	unsyncCandidates, err := ic.consensus.DoConsensus(ctx, unsyncList, ic.self, participants)
 	if err != nil {
 		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
 	}
