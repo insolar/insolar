@@ -24,16 +24,6 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-/*
-//go:generate stringer -type=step
-type step int
-
-const (
-	stepUndefined step = iota + 1
-	stepExchageData
-	stepExchageHash
-)
-*/
 type exchangeResults map[core.RecordRef][]*core.ActiveNode
 
 type baseConsensus struct {
