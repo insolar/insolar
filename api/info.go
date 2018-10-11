@@ -14,11 +14,27 @@
  *    limitations under the License.
  */
 
-package core
+package api
 
-// Bootstrapper is the global bootstrapper handler. Other system parts communicate with bootstrapper through it.
-type Bootstrapper interface {
-	GetRootDomainRef() *RecordRef
-	Info() ([]byte, error)
-	GetNodeDomainRef() *RecordRef
+import (
+	"net/http"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
+)
+
+func (ar *Runner) infoHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
+	return func(response http.ResponseWriter, req *http.Request) {
+		data, err := c.Bootstrapper.Info()
+		if err != nil {
+			log.Error(errors.Wrap(err, "[ INFO ] Can't get bootstraper info"))
+		}
+
+		response.Header().Add("Content-Type", "application/json")
+		_, err = response.Write(data)
+		if err != nil {
+			log.Error(errors.Wrap(err, "[ INFO ] Can't write response"))
+		}
+	}
 }
