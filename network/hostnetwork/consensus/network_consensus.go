@@ -64,13 +64,12 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	for i, activeNode := range activeNodes {
 		participants[i] = &participantWrapper{activeNode}
 	}
-	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
-	holder := nodekeeper.NewUnsyncHolder(pulse.PulseNumber, unsyncList)
+	success, unsyncHolder := ic.keeper.SetPulse(pulse.PulseNumber)
 	if !success {
 		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
-	unsyncCandidates, err := ic.consensus.DoConsensus(holder, ctx, ic.self, participants)
+	unsyncCandidates, err := ic.consensus.DoConsensus(unsyncHolder, ctx, ic.self, participants)
 	if err != nil {
 		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
 	}

@@ -103,7 +103,7 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 	assert.NoError(t, err)
 	success, list := keeper.SetPulse(core.PulseNumber(0))
 	assert.True(t, success)
-	assert.Equal(t, 1, len(list))
+	assert.Equal(t, 1, len(list.GetUnsync()))
 }
 
 func TestNodekeeper_AddUnsync2(t *testing.T) {
@@ -112,7 +112,7 @@ func TestNodekeeper_AddUnsync2(t *testing.T) {
 	err := keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	assert.True(t, success)
-	assert.Equal(t, 0, len(list))
+	assert.Equal(t, 0, len(list.GetUnsync()))
 }
 
 func TestNodekeeper_AddUnsync3(t *testing.T) {
@@ -122,7 +122,7 @@ func TestNodekeeper_AddUnsync3(t *testing.T) {
 	err = keeper.AddUnsync(newActiveNode(1))
 	assert.NoError(t, err)
 	assert.True(t, success)
-	assert.Equal(t, 1, len(list))
+	assert.Equal(t, 1, len(list.GetUnsync()))
 }
 
 func TestNodekeeper_pipeline(t *testing.T) {
@@ -134,7 +134,7 @@ func TestNodekeeper_pipeline(t *testing.T) {
 		assert.True(t, success)
 		err = keeper.AddUnsync(newActiveNode(byte(2*i + 1)))
 		assert.NoError(t, err)
-		keeper.Sync(list, keeper.GetPulse())
+		keeper.Sync(list.GetUnsync(), keeper.GetPulse())
 	}
 	// 3 nodes should not advance to join active list
 	// 5 nodes should advance + 1 self node
@@ -151,10 +151,10 @@ func TestNodekeeper_doubleSync(t *testing.T) {
 	pulse := core.PulseNumber(0)
 	success, list := keeper.SetPulse(pulse)
 	assert.True(t, success)
-	assert.Equal(t, 1, len(list))
-	keeper.Sync(list, pulse)
+	assert.Equal(t, 1, len(list.GetUnsync()))
+	keeper.Sync(list.GetUnsync(), pulse)
 	// second sync should be ignored because pulse has not changed
-	keeper.Sync(list, pulse)
+	keeper.Sync(list.GetUnsync(), pulse)
 	// and added unsync node should not advance to active list (only one self node would be in the list)
 	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
 	assert.Equal(t, keeper.GetSelf().NodeID, keeper.GetActiveNodes()[0].NodeID)
@@ -166,7 +166,7 @@ func TestNodekeeper_doubleSetPulse(t *testing.T) {
 	assert.NoError(t, err)
 	pulse := core.PulseNumber(0)
 	_, list := keeper.SetPulse(pulse)
-	keeper.Sync(list, pulse)
+	keeper.Sync(list.GetUnsync(), pulse)
 	_, _ = keeper.SetPulse(core.PulseNumber(1))
 	_, _ = keeper.SetPulse(core.PulseNumber(2))
 	// node with ref 0 advanced to active list
@@ -189,7 +189,7 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 			assert.True(t, success)
 			// imitate long consensus process
 			time.Sleep(200 * time.Millisecond)
-			k.Sync(list, pulse)
+			k.Sync(list.GetUnsync(), pulse)
 			wg.Done()
 		}(keeper)
 	}
