@@ -40,6 +40,8 @@ type LogicRunner struct {
 	MessageBus           core.MessageBus
 	machinePrefs         []core.MachineType
 	Cfg                  *configuration.LogicRunner
+
+	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
 	caseBindMutex        sync.Mutex
 	caseBindReplays      map[core.RecordRef]core.CaseBindReplay
@@ -364,8 +366,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	lr.caseBindMutex.Lock()
 	lr.caseBindReplaysMutex.Lock()
 
-	records := lr.caseBind.Records
-	caseBind := lr.caseBind
+	objectsRecords := lr.caseBind.Records
 	caseBindReplays := lr.caseBindReplays
 
 	lr.caseBind = core.CaseBind{
@@ -377,21 +378,24 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	lr.caseBindReplaysMutex.Unlock()
 	lr.caseBindMutex.Unlock()
 
-	if len(records) == 0 {
+	if len(objectsRecords) == 0 {
 		return nil
 	}
 
-	for ref, record := range records {
-		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecord: record})
+	for ref, records := range objectsRecords {
+		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records})
 		if err != nil {
 			panic("Error while sending caseBind data to validators: " + err.Error())
 		}
+
+		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records, CaseBindReplays: caseBindReplays[ref]}
+		_, err = lr.MessageBus.Send(&temp)
+		if err != nil {
+			return errors.New("error while sending caseBind data to new executor")
+		}
 	}
 
-	_, err := lr.MessageBus.Send(&message.ExecutorResults{CaseBind: caseBind, CaseBindReplays: caseBindReplays})
-	if err != nil {
-		return errors.New("error while sending caseBind data to new executor")
-	}
+
 
 	return nil
 }
