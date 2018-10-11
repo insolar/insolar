@@ -18,7 +18,6 @@ package consensus
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -66,5 +65,5 @@ type Communicator interface {
 
 // NewConsensus creates consensus
 func NewConsensus(communicator Communicator) (Consensus, error) {
-	return nil, errors.New("not implemented")
+	return &baseConsensus{communicator: communicator}, nil
 }
