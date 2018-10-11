@@ -19,7 +19,10 @@
 package logicrunner
 
 import (
+	"bytes"
+
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
@@ -104,15 +107,34 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 			return step, errors.New("step between two shores")
 		}
 
-		msg := start.Resp.(core.Message)
-		if _, err := lr.Execute(msg); err != nil {
+		ret, err := lr.Execute(start.Resp.(core.Message))
+		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
-
-		if stop, step := lr.getNextValidationStep(ref); step < 0 {
+		stop, step := lr.getNextValidationStep(ref)
+		if step < 0 {
 			return 0, errors.New("validation container broken")
 		} else if stop.Type != core.CaseRecordTypeResult {
 			return step, errors.New("Validation stoped not on result")
+		}
+
+		switch need := stop.Resp.(type) {
+		case *reply.CallMethod:
+			if got, ok := ret.(*reply.CallMethod); !ok {
+				return step, errors.New("not result type callmethod")
+			} else if !bytes.Equal(got.Data, need.Data) {
+				return step, errors.New("body mismatch")
+			} else if !bytes.Equal(got.Result, need.Result) {
+				return step, errors.New("result mismatch")
+			}
+		case *reply.CallConstructor:
+			if got, ok := ret.(*reply.CallConstructor); !ok {
+				return step, errors.New("not result type callmethod")
+			} else if !got.Object.Equal(*need.Object) {
+				return step, errors.New("constructed refs mismatch mismatch")
+			}
+		default:
+			return step, errors.New("unknown result type")
 		}
 	}
 }
