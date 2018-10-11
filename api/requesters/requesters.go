@@ -108,11 +108,6 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 	}
 	verboseInfo("Signing params completed")
 
-	pubKey, err := ecdsa_helper.ExportPublicKey(&userCfg.privateKeyObject.PublicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with exporting public key")
-	}
-
 	body, err := GetResponseBody(url, PostParams{
 		"params":    string(params),
 		"method":    reqCfg.Method,
@@ -120,10 +115,6 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 		"target":    reqCfg.Target,
 		"seed":      seed,
 		"signature": ecdsa_helper.ExportSignature(signature),
-		//
-		"query_type": "create_member",
-		"name":       "PUTIN",
-		"public_key": pubKey,
 	})
 
 	if err != nil {
