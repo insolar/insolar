@@ -17,14 +17,28 @@
 package testutils
 
 import (
+	"crypto/rand"
+
+	"github.com/insolar/insolar/core"
 	"github.com/satori/go.uuid"
 )
 
 // RandomString generates random uuid and return it as string
 func RandomString() string {
-	newUUID, err := uuid.NewV4()
-	if err != nil {
-		return ""
-	}
+	newUUID, _ := uuid.NewV4() // nolint
 	return newUUID.String()
+}
+
+// RandomRef generates random object reference
+func RandomRef() core.RecordRef {
+	ref := [core.RecordRefSize]byte{}
+	rand.Read(ref[:]) // nolint
+	return ref
+}
+
+// RandomRef generates random object reference
+func RandomID() core.RecordID {
+	id := [core.RecordIDSize]byte{}
+	rand.Read(id[:]) // nolint
+	return id
 }
