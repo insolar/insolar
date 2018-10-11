@@ -66,8 +66,8 @@ func TestMain(m *testing.M) {
 }
 
 func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testutil.ContractsBuilder, func()) {
-	lrSock := os.TempDir() + "/" + core.RandomRef().String()[0:10] + ".sock"
-	rundSock := os.TempDir() + "/" + core.RandomRef().String()[0:10] + ".sock"
+	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
+	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
 	rundCleaner, err := testutils.StartInsgorund(runnerbin, "unix", rundSock, "unix", lrSock)
 	assert.NoError(t, err)

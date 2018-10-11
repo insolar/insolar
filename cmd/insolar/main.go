@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -90,7 +91,7 @@ func printDefaultConfig(out io.Writer) {
 }
 
 func randomRef(out io.Writer) {
-	ref := core.RandomRef()
+	ref := testutils.RandomRef()
 
 	writeToOutput(out, ref.String()+"\n")
 }
@@ -135,9 +136,10 @@ func generateCertificates(out io.Writer) {
 
 	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
 	cRecords := certRecords{}
-	keys := []*ecdsa.PrivateKey{}
+
+	var keys []*ecdsa.PrivateKey
 	for i := uint(0); i < numberCertificates; i++ {
-		ref := core.RandomRef()
+		ref := testutils.RandomRef()
 		privKey, err := ecdsa_helper.GeneratePrivateKey()
 		check("[ generateCertificates ]:", err)
 
