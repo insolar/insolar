@@ -284,6 +284,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	return nil
 }
 
+// here I need to check signs and last pulses and so on....
 func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error {
 	log.Infof("[ReceivePulse] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -310,8 +311,6 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 		log.Error(err)
 		return err
 	}
-
-	handler.pulsar.clearState()
 	handler.pulsar.LastPulse = &requestBody.Pulse
 
 	return nil

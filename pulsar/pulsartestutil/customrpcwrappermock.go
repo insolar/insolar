@@ -23,9 +23,8 @@ func (*CustomRPCWrapperMock) Unlock() {
 func (impl *CustomRPCWrapperMock) IsInitialised() bool {
 	if impl.IsInitFunc == nil {
 		return false
-	} else {
-		return impl.IsInitFunc()
 	}
+	return impl.IsInitFunc()
 }
 
 func (*CustomRPCWrapperMock) SetRPCClient(client *rpc.Client) {
@@ -34,9 +33,8 @@ func (*CustomRPCWrapperMock) SetRPCClient(client *rpc.Client) {
 func (impl *CustomRPCWrapperMock) CreateConnection(connectionType configuration.ConnectionType, connectionAddress string) error {
 	if impl.CreateConnectionFunc == nil {
 		return nil
-	} else {
-		return impl.CreateConnectionFunc()
 	}
+	return impl.CreateConnectionFunc()
 }
 
 func (*CustomRPCWrapperMock) Close() error {

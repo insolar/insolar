@@ -54,6 +54,10 @@ func main() {
 
 	fmt.Println("Press any button to exit")
 	rl, err := readline.New("")
+	if err != nil {
+		log.Error(err)
+		panic(err)
+	}
 	_, err = rl.Readline()
 	if err != nil {
 		log.Warn(err)

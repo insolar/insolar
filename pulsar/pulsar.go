@@ -766,7 +766,15 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 			continue
 		}
 
-		sendPulseToHosts(pulsarHost, t, body.Hosts, pulse)
+		if body.Hosts == nil || len(body.Hosts) == 0 {
+			err := sendPulseToHost(pulsarHost, t, receiverHost, &pulse)
+			if err != nil {
+				log.Error(err)
+			}
+			continue
+		}
+
+		sendPulseToHosts(pulsarHost, t, body.Hosts, &pulse)
 	}
 }
 
@@ -798,18 +806,26 @@ func (currentPulsar *Pulsar) broadcastPulse() {
 	}
 }
 
-func sendPulseToHosts(sender *host.Host, t transport2.Transport, hosts []host.Host, pulse core.Pulse) {
+func sendPulseToHost(sender *host.Host, t transport2.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
 	pb := packet.NewBuilder()
+	pulseRequest := pb.Sender(sender).Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(packet.TypePulse).Build()
+	call, err := t.SendRequest(pulseRequest)
+	if err != nil {
+		return err
+	}
+	result := <-call.Result()
+	if result.Error != nil {
+		return err
+	}
+
+	return nil
+}
+
+func sendPulseToHosts(sender *host.Host, t transport2.Transport, hosts []host.Host, pulse *core.Pulse) {
 	for _, pulseReceiver := range hosts {
-		pulseRequest := pb.Sender(sender).Receiver(&pulseReceiver).Request(&packet.RequestPulse{Pulse: pulse}).Type(packet.TypePulse).Build()
-		call, err := t.SendRequest(pulseRequest)
+		err := sendPulseToHost(sender, t, &pulseReceiver, pulse)
 		if err != nil {
 			log.Error(err)
-			continue
-		}
-		result := <-call.Result()
-		if result.Error != nil {
-			log.Error(result.Error)
 		}
 	}
 }
@@ -860,16 +876,6 @@ func (currentPulsar *Pulsar) fetchNeighbour(pubKey string) (*Neighbour, error) {
 		return nil, errors.New("forbidden connection")
 	}
 	return neighbour, nil
-}
-
-func (currentPulsar *Pulsar) calculateConnectedNodes() int {
-	connectedNodes := 0
-	for _, item := range currentPulsar.Neighbours {
-		if item.OutgoingClient != nil && item.OutgoingClient.IsInitialised() {
-			connectedNodes++
-		}
-	}
-	return connectedNodes
 }
 
 func (currentPulsar *Pulsar) isStateFailed() bool {
