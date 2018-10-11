@@ -168,7 +168,7 @@ func (r *Member) GetPublicKeyNoWait(  ) {
 	}
 }
 
-func (r *Member) AuthorizedCall( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
+func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
@@ -203,7 +203,7 @@ func (r *Member) AuthorizedCall( ref string, delegate string, method string, par
 	return resList[0].([]byte), resList[1].(*foundation.Error)
 }
 
-func (r *Member) AuthorizedCallNoWait( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) {
+func (r *Member) AuthorizedCallNoWait( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
