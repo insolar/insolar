@@ -1,4 +1,4 @@
-BIN_DIR = bin
+BIN_DIR ?= bin
 INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = $(BIN_DIR)/insgocc
@@ -75,7 +75,15 @@ CONTRACTS = $(wildcard genesis/experiment/*)
 regen_proxyes: $(INSGOCC)
 	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy genesis/experiment/$(notdir $(c))/$(notdir $(c)).go; )
 
-docker: build
-	echo "asdasd"
-	docker build --tag insolar_builder -f ./docker/Dockerfile.builder .
-	docker build --tag pulsard -f ./docker/Dockerfile.pulsar .
+docker-insolard:
+	docker build --tag insolar/insolard -f ./docker/Dockerfile.insolard .
+
+docker-pulsar:
+	docker build --tag insolar/pulsar -f ./docker/Dockerfile.pulsar .
+
+docker-insgorund:
+	docker build --tag insolar/insgorund -f ./docker/Dockerfile.insgorund .
+
+
+docker: docker-insolard docker-pulsar docker-insgorund
+
