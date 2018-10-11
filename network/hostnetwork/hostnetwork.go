@@ -18,7 +18,6 @@ package hostnetwork
 
 import (
 	"strings"
-	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
@@ -65,7 +64,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade)
 
-	keeper := nodekeeper.NewNodeKeeper(nn.GetID(), time.Minute)
+	keeper := nodekeeper.NewNodeKeeper(nn.GetID())
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),
