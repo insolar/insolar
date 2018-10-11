@@ -1,0 +1,7 @@
+FROM insolar/insolard as builder
+
+FROM alpine:latest
+RUN mkdir -p /go/bin
+COPY --from=builder /go/bin/insgorund /go/bin/insgorund
+EXPOSE 7777
+ENTRYPOINT ["/go/bin/insgorund"]
