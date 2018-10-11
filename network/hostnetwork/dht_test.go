@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/nodenetwork"
 
@@ -1042,7 +1043,8 @@ func TestDHT_Getters(t *testing.T) {
 	ref1 := core.NewRefFromBase58(str1)
 
 	host1 := host.NewHost(hostAddr)
-	node := nodenetwork.NewNode(ref1, "")
+	key, _ := ecdsa.ImportPrivateKey("asd")
+	node := nodenetwork.NewNode(ref1, key)
 
 	assert.False(t, dht1.HostIsAuthenticated(node.GetID().String()))
 	_, check := dht1.KeyIsReceived(node.GetID().String())

@@ -215,9 +215,15 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
+	pulsarPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	assert.NoError(t, err)
+	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(pulsarPrivateKey)
+	assert.NoError(t, err)
+
 	os.MkdirAll("bootstrapLedger", os.ModePerm)
 	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, lr, "bootstrapLedger")
 	bootstrapNodeConfig := configuration.NewConfiguration()
+	bootstrapNodeConfig.PrivateKey = firstPublicExported
 	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig)
 	assert.NoError(t, err)
 	err = bootstrapNodeNetwork.Start(core.Components{Ledger: bootstrapLedger})
@@ -228,15 +234,12 @@ func TestPulsar_ConnectToNode(t *testing.T) {
 	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, lr, "usualLedger")
 	usualNodeConfig := configuration.NewConfiguration()
 	usualNodeConfig.Host.BootstrapHosts = []string{bootstrapAddress}
+	usualNodeConfig.PrivateKey = firstPublicExported
 	usualNodeNetwork, err := servicenetwork.NewServiceNetwork(usualNodeConfig)
 	assert.NoError(t, err)
 	err = usualNodeNetwork.Start(core.Components{Ledger: usualLedger})
 	assert.NoError(t, err)
 
-	pulsarPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(pulsarPrivateKey)
-	assert.NoError(t, err)
 	storage := &pulsartestutil.MockStorage{}
 	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
 

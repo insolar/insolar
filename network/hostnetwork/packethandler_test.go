@@ -324,6 +324,10 @@ func (hh *mockHostHandler) GetOriginHost() *host.Origin {
 	return origin
 }
 
+func (hh *mockHostHandler) SetSignChecker(func(msg core.Message) bool) {
+
+}
+
 func mockSenderReceiver() (sender, receiver *host.Host) {
 	senderAddress, _ := host.NewAddress("0.0.0.0:0")
 	sender = host.NewHost(senderAddress)
