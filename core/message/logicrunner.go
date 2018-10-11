@@ -35,11 +35,22 @@ const (
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
 	Caller core.RecordRef
+	sign   []byte
 }
 
 type IBaseLogicMessage interface {
 	core.Message
 	GetReference() core.RecordRef
+}
+
+// SetSign sets a signature to message.
+func (b *BaseLogicMessage) SetSign(sign []byte) {
+	b.sign = sign
+}
+
+// GetSign returns a sign.
+func (b *BaseLogicMessage) GetSign() []byte {
+	return b.sign
 }
 
 func (e *BaseLogicMessage) GetCaller() *core.RecordRef {

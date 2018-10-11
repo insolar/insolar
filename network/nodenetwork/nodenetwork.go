@@ -17,9 +17,13 @@
 package nodenetwork
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -29,12 +33,16 @@ type NodeNetwork struct {
 }
 
 // NewNodeNetwork creates a new node network.
-func NewNodeNetwork(nodeCfg configuration.Configuration) *NodeNetwork {
-	node := NewNode(core.NewRefFromBase58(nodeCfg.Node.Node.ID), nodeCfg.PrivateKey)
+func NewNodeNetwork(nodeCfg configuration.Configuration) (*NodeNetwork, error) {
+	key, err := ecdsa2.ImportPrivateKey(nodeCfg.PrivateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to import private key")
+	}
+	node := NewNode(core.NewRefFromBase58(nodeCfg.Node.Node.ID), key)
 	network := &NodeNetwork{
 		node: node,
 	}
-	return network
+	return network, nil
 }
 
 // ResolveHostID returns a host found by reference.
@@ -50,6 +58,6 @@ func (network *NodeNetwork) GetID() core.RecordRef {
 }
 
 // GetPrivateKey returns a private key.
-func (network *NodeNetwork) GetPrivateKey() string {
+func (network *NodeNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 	return network.node.GetPrivateKey()
 }

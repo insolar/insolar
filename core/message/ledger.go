@@ -20,7 +20,19 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-type ledgerMessage struct{}
+type ledgerMessage struct {
+	sign []byte
+}
+
+// SetSign sets a signature to message.
+func (l *ledgerMessage) SetSign(sign []byte) {
+	l.sign = sign
+}
+
+// GetSign returns a sign.
+func (l *ledgerMessage) GetSign() []byte {
+	return l.sign
+}
 
 // GetCaller implementation of Message interface.
 func (ledgerMessage) GetCaller() *core.RecordRef {

@@ -104,7 +104,7 @@ func main() {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	cm := componentManager{}
-	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration.Host, cfgHolder.Configuration.Node)
+	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("failed to start Network: ", err.Error())
 	}

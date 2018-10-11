@@ -17,17 +17,19 @@
 package nodenetwork
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/core"
 )
 
 // Node is an essence which provides communication between network level and MessageBus.
 type Node struct {
 	id         core.RecordRef
-	privateKey string
+	privateKey *ecdsa.PrivateKey
 }
 
 // NewNode creates a node with given args.
-func NewNode(nodeID core.RecordRef, privKey string) *Node {
+func NewNode(nodeID core.RecordRef, privKey *ecdsa.PrivateKey) *Node {
 	return &Node{
 		id:         nodeID,
 		privateKey: privKey,
@@ -40,6 +42,6 @@ func (node Node) GetID() core.RecordRef {
 }
 
 // GetPrivateKey returns a private key.
-func (node Node) GetPrivateKey() string {
+func (node Node) GetPrivateKey() *ecdsa.PrivateKey {
 	return node.privateKey
 }
