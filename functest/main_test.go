@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
@@ -102,7 +102,7 @@ func generateRootKeys() error {
 var insgorundPath string
 
 func buildGinsiderCLI() (err error) {
-	insgorundPath, _, err = testutil.Build()
+	insgorundPath, _, err = goplugintestutils.Build()
 	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
 }
 

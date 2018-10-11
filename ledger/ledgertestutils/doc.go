@@ -15,4 +15,4 @@
  */
 
 // Package ledgertestutil contains high level API tests and test utils for other modules.
-package ledgertestutil
+package ledgertestutils
