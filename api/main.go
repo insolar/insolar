@@ -100,7 +100,8 @@ func processQueryType(rh *RequestHandler, qTypeStr string) map[string]interface{
 
 const qidQueryParam = "qid"
 
-func preprocessRequest(req *http.Request) (*Params, error) {
+// PreprocessRequest extracts params from requests
+func PreprocessRequest(req *http.Request) (*Params, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ PreprocessRequest ] Can't read body. So strange")
@@ -154,7 +155,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			log.Infof("[QID=%s] Request completed. Total time: %s\n", params.QID, time.Since(startTime))
 		}()
 
-		params, err := preprocessRequest(req)
+		params, err := PreprocessRequest(req)
 		if err != nil {
 			answer = writeError("Bad request", BadRequest)
 			log.Errorf("[QID=] Can't parse input request: %s, error: %s\n", req.RequestURI, err)

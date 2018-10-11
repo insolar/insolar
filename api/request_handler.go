@@ -32,6 +32,14 @@ import (
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
+// RESPONSEFIELD is name of response field
+type RESPONSEFIELD = string
+
+const (
+	REFERENCE = "reference"
+	SEED      = "seed"
+)
+
 func extractStringResponse(data []byte) (*string, error) {
 	var typeHolder string
 	refOrig, err := core.UnMarshalResponse(data, []interface{}{typeHolder})
@@ -141,7 +149,7 @@ func (rh *RequestHandler) ProcessCreateMember() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessCreateMember ]")
 	}
 
-	result["reference"] = memberRef
+	result[REFERENCE] = memberRef
 
 	return result, nil
 }
@@ -304,7 +312,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	result["reference"] = nodeRef
+	result[REFERENCE] = nodeRef
 
 	return result, nil
 
@@ -371,7 +379,7 @@ func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
 	}
 	rh.seedManager.Add(*seed)
 
-	result["seed"] = base64.StdEncoding.EncodeToString(seed[:])
+	result[SEED] = base64.StdEncoding.EncodeToString(seed[:])
 
 	return result, nil
 }
