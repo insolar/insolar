@@ -85,7 +85,9 @@ func writeToOutput(out io.Writer, data string) {
 
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
-
+	key, _ := ecdsa_helper.GeneratePrivateKey()
+	keyStr, _ := ecdsa_helper.ExportPrivateKey(key)
+	cfgHolder.Configuration.PrivateKey = keyStr
 	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
 }
 
