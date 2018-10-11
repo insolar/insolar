@@ -69,6 +69,7 @@ func (switcher *StateSwitcherImpl) setState(state State) {
 
 // SetPulsar sets pulsar of the current instance
 func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
+	switcher.setState(waitingForStart)
 	switcher.pulsar = pulsar
 }
 
