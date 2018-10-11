@@ -84,6 +84,7 @@ jobs:
     params:
       pipelines:
         - name: branches
+          unpaused: true
           team: insolar
           config_file: pipelines/branches.yml
 
@@ -124,6 +125,7 @@ jobs:
         pipelines:
           - name: pull-requests
             team: insolar
+            unpaused: true
             config_file: pipelines/pulls.yml
             vars_files:
               - pipelines/vars.yml
