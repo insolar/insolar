@@ -74,3 +74,8 @@ test_with_coverage:
 CONTRACTS = $(wildcard genesis/experiment/*)
 regen_proxyes: $(INSGOCC)
 	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy genesis/experiment/$(notdir $(c))/$(notdir $(c)).go; )
+
+docker: build
+	echo "asdasd"
+	docker build --tag insolar_builder -f ./docker/Dockerfile.builder .
+	docker build --tag pulsard -f ./docker/Dockerfile.pulsar .
