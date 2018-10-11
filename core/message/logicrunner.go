@@ -110,31 +110,31 @@ func (e *CallConstructor) Target() *core.RecordRef {
 	return core.GenRequest(e.PulseNum, MustSerializeBytes(e))
 }
 
-type ValidateExecutorResult struct {
+type ExecutorResults struct {
 	CaseBind        core.CaseBind
 	CaseBindReplays map[core.RecordRef]core.CaseBindReplay
 }
 
-func (e *ValidateExecutorResult) Type() core.MessageType {
-	return core.TypeValidateExecutorResult
+func (e *ExecutorResults) Type() core.MessageType {
+	return core.TypeExecutorResults
 }
 
-func (e *ValidateExecutorResult) TargetRole() core.JetRole {
+func (e *ExecutorResults) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
 // TODO change after changing pulsar
-func (e *ValidateExecutorResult) Target() *core.RecordRef {
+func (e *ExecutorResults) Target() *core.RecordRef {
 	return &core.RecordRef{}
 }
 
 // TODO change after changing pulsar
-func (e *ValidateExecutorResult) GetCaller() *core.RecordRef {
+func (e *ExecutorResults) GetCaller() *core.RecordRef {
 	return &core.RecordRef{}
 }
 
 // TODO change after changing pulsar
-func (e *ValidateExecutorResult) GetReference() core.RecordRef {
+func (e *ExecutorResults) GetReference() core.RecordRef {
 	return core.RecordRef{}
 }
 

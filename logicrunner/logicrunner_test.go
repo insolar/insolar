@@ -940,7 +940,7 @@ func TestProxyGeneration(t *testing.T) {
 	}
 }
 
-func SendDataToValidate(lr core.LogicRunner)  {
+func SendDataToValidate(lr core.LogicRunner) {
 	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
 	//TODO validate data on another node
 }
