@@ -24,6 +24,7 @@ import (
 type APIRunner struct {
 	Port     uint
 	Location string
+	Info     string
 }
 
 // NewAPIRunner creates new api config
@@ -31,6 +32,7 @@ func NewAPIRunner() APIRunner {
 	return APIRunner{
 		Port:     19191,
 		Location: "/api/v1",
+		Info:     "/api/v1/info/",
 	}
 }
 
