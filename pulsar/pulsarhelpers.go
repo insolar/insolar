@@ -21,12 +21,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
-	"encoding/json"
 	"math/big"
 	"sort"
 
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/hash"
@@ -41,14 +41,10 @@ func checkPayloadSignature(request *Payload) (bool, error) {
 }
 
 func checkSignature(data interface{}, pub string, signature []byte) (bool, error) {
-	//cborH := &codec.CborHandle{}
-	//var b bytes.Buffer
-	//enc := codec.NewEncoder(&b, cborH)
-	//err := enc.Encode(data)
-	//if err != nil {
-	//	return false, err
-	//}
-	b, err := json.Marshal(data)
+	cborH := &codec.CborHandle{}
+	var b bytes.Buffer
+	enc := codec.NewEncoder(&b, cborH)
+	err := enc.Encode(data)
 	if err != nil {
 		return false, err
 	}
@@ -67,22 +63,18 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 		return false, err
 	}
 
-	return ecdsa.Verify(publicKey, b, ecdsaP.R, ecdsaP.S), nil
+	return ecdsa.Verify(publicKey, b.Bytes(), ecdsaP.R, ecdsaP.S), nil
 }
 
 func signData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
-	//cborH := &codec.CborHandle{}
-	//var b bytes.Buffer
-	//enc := codec.NewEncoder(&b, cborH)
-	//err := enc.Encode(data)
-	//if err != nil {
-	//	return nil, err
-	//}
-	b, err := json.Marshal(data)
+	cborH := &codec.CborHandle{}
+	var b bytes.Buffer
+	enc := codec.NewEncoder(&b, cborH)
+	err := enc.Encode(data)
 	if err != nil {
 		return nil, err
 	}
-	return privateKey.Sign(rand.Reader, b, nil)
+	return privateKey.Sign(rand.Reader, b.Bytes(), nil)
 }
 
 func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string, error) { // nolint: megacheck

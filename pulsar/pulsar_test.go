@@ -52,13 +52,11 @@ func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RPCClientWrapper {
 }
 
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
-	assertObj := assert.New(t)
-	privateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	expectedPrivateKey, _ := ecdsa_helper.ExportPrivateKey(privateKey)
+	privateKey, privateKeyExported, _ := generatePrivateAndConvertPublic(t)
 	config := configuration.Pulsar{
 		ConnectionType:      "testType",
 		MainListenerAddress: "listedAddress",
-		PrivateKey:          expectedPrivateKey,
+		PrivateKey:          privateKeyExported,
 	}
 	actualConnectionType := ""
 	actualAddress := ""
@@ -80,13 +78,12 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		nil,
 		mockListener)
 
-	assertObj.NoError(err)
-	parsedKey, _ := ecdsa_helper.ImportPrivateKey(expectedPrivateKey)
-	assertObj.Equal(parsedKey, result.PrivateKey)
-	assertObj.Equal("testType", actualConnectionType)
-	assertObj.Equal("listedAddress", actualAddress)
-	assertObj.IsType(result.Sock, &pulsartestutil.MockListener{})
-	assertObj.NotNil(result.PrivateKey)
+	assert.NoError(t, err)
+	assert.Equal(t, privateKey, result.PrivateKey)
+	assert.Equal(t, "testType", actualConnectionType)
+	assert.Equal(t, "listedAddress", actualAddress)
+	assert.IsType(t, result.Sock, &pulsartestutil.MockListener{})
+	assert.NotNil(t, result.PrivateKey)
 	clientFactory.AssertNumberOfCalls(t, "CreateWrapper", 0)
 }
 
