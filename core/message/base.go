@@ -118,6 +118,8 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 }
 
 func init() {
+	// Bootstrap
+	gob.Register(&BootstrapRequest{})
 	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
