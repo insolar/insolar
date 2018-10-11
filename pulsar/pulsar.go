@@ -517,7 +517,7 @@ func (currentPulsar *Pulsar) verify() {
 
 	var finalEntropySet []core.Entropy
 
-	var keys []string
+	keys := []string{currentPulsar.PublicKeyRaw}
 	activePulsars := []*bftMember{{currentPulsar.PublicKeyRaw, &currentPulsar.PrivateKey.PublicKey}}
 	for key, neighbour := range currentPulsar.Neighbours {
 		activePulsars = append(activePulsars, &bftMember{key, neighbour.PublicKey})
@@ -584,7 +584,7 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 		currentPulsar.stateSwitcher.switchToState(failed, err)
 	}
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
-
+	log.Warn(currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw)
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
 		//here confirmation myself
 		signature, err := signData(currentPulsar.PrivateKey, currentPulsar.CurrentSlotPulseSender)
@@ -652,6 +652,8 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 		log.Error(reply.Error)
 		currentPulsar.stateSwitcher.switchToState(failed, log.Error)
 	}
+
+	currentPulsar.stateSwitcher.switchToState(waitingForStart, nil)
 }
 
 func (currentPulsar *Pulsar) sendPulse() {
@@ -687,7 +689,11 @@ func (currentPulsar *Pulsar) sendPulse() {
 	currentPulsar.LastPulse = &pulseForSending
 
 	currentPulsar.stateSwitcher.switchToState(waitingForStart, nil)
-	defer t.Stop()
+	defer func() {
+		go t.Stop()
+		<-t.Stopped()
+		t.Close()
+	}()
 }
 
 func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t transport2.Transport, err error) {

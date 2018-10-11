@@ -685,11 +685,12 @@ func TestPulsar_verify_Success(t *testing.T) {
 	clientMock := pulsartestutil.MockRPCClientWrapper{}
 	clientMock.On("IsInitialised").Return(true)
 	pulsar := &Pulsar{
-		stateSwitcher: mockSwitcher,
-		PrivateKey:    privateKey,
-		PublicKeyRaw:  currentPulsarPublicKey,
-		OwnedBftRow:   map[string]*bftCell{},
-		BftGrid:       map[string]map[string]*bftCell{},
+		stateSwitcher:                  mockSwitcher,
+		PrivateKey:                     privateKey,
+		PublicKeyRaw:                   currentPulsarPublicKey,
+		OwnedBftRow:                    map[string]*bftCell{},
+		BftGrid:                        map[string]map[string]*bftCell{},
+		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: &privateKeySecond.PublicKey, OutgoingClient: &clientMock},
 			publicKeyThird:  {PublicKey: &privateKeyThird.PublicKey, OutgoingClient: &clientMock},

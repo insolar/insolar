@@ -21,7 +21,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"net"
-	"os"
 	"testing"
 	"time"
 
@@ -29,7 +28,6 @@ import (
 	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/stretchr/testify/assert"
@@ -101,48 +99,8 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	}()
 }
 
-func TestOnePulsar_FullStatesTransition(t *testing.T) {
-	t.Skip("should be re-written after refactoring the body of pulsar")
-	firstKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	assert.NoError(t, err)
-	firstPublicExported, err := ecdsa_helper.ExportPrivateKey(firstKey)
-	assert.NoError(t, err)
-
-	storage := &pulsartestutil.MockPulsarStorage{}
-	firstPulse := 123
-	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: core.PulseNumber(firstPulse)}, nil)
-	pulsar, err := NewPulsar(configuration.Pulsar{
-		ConnectionType:         "tcp",
-		MainListenerAddress:    ":1639",
-		PrivateKey:             firstPublicExported,
-		Neighbours:             []configuration.PulsarNodeAddress{},
-		PulseTime:              10000,
-		ReceivingSignTimeout:   1000,
-		ReceivingNumberTimeout: 1000,
-		ReceivingVectorTimeout: 1000},
-		storage,
-
-		&RPCClientWrapperFactoryImpl{},
-		pulsartestutil.MockEntropyGenerator{},
-		nil,
-		net.Listen,
-	)
-	assert.NoError(t, err)
-
-	pulsar.StartConsensusProcess(core.PulseNumber(firstPulse + 1))
-
-	for pulsar.stateSwitcher.getState() != sendingPulse {
-		time.Sleep(1 * time.Millisecond)
-	}
-
-	assert.NoError(t, err)
-
-	defer pulsar.StopServer()
-}
-
 func TestPulsar_SendPulseToNode(t *testing.T) {
-	os.MkdirAll("bootstrapLedger", os.ModePerm)
-	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "bootstrapLedger")
+	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "")
 	bootstrapNodeConfig := configuration.NewConfiguration()
 	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig.Host, bootstrapNodeConfig.Node)
 	assert.NoError(t, err)
@@ -150,8 +108,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	assert.NoError(t, err)
 	bootstrapAddress := bootstrapNodeNetwork.GetAddress()
 
-	os.MkdirAll("usualLedger", os.ModePerm)
-	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, "usualLedger")
+	usualLedger, usualLedgerCleaner := ledgertestutil.TmpLedger(t, "")
 	usualNodeConfig := configuration.NewConfiguration()
 	usualNodeConfig.Host.BootstrapHosts = []string{bootstrapAddress}
 	usualNodeNetwork, err := servicenetwork.NewServiceNetwork(usualNodeConfig.Host, usualNodeConfig.Node)
@@ -186,26 +143,20 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	usualNodeNetwork.Stop()
 	bootstrapNodeNetwork.Stop()
-	bootstrapLedgerCleaner()
 
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
 	assert.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
 
 	defer func() {
+		newPulsar.StopServer()
+		bootstrapLedgerCleaner()
 		usualLedgerCleaner()
-		err = os.RemoveAll("bootstrapLedger")
-		if err != nil {
-			assert.NoError(t, err)
-		}
-		err = os.RemoveAll("usualLedger")
-		if err != nil {
-			assert.NoError(t, err)
-		}
 	}()
 }
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
+	// Arrange
 	bootstrapLedger, bootstrapLedgerCleaner := ledgertestutil.TmpLedger(t, "")
 	bootstrapNodeConfig := configuration.NewConfiguration()
 	bootstrapNodeNetwork, err := servicenetwork.NewServiceNetwork(bootstrapNodeConfig.Host, bootstrapNodeConfig.Node)
@@ -268,33 +219,32 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	go firstPulsar.StartServer()
 	go secondPulsar.StartServer()
-	log.SetLevel("Debug")
 	err = firstPulsar.EstablishConnectionToPulsar(secondPubKey)
 	assert.NoError(t, err)
 
+	// Act
 	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	time.Sleep(20000000 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 	usualNodeNetwork.Stop()
 	bootstrapNodeNetwork.Stop()
-	bootstrapLedgerCleaner()
 
+	// Assert
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
-	assert.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
+	assert.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
+	assert.Equal(t, waitingForStart, firstPulsar.stateSwitcher.getState())
+	assert.Equal(t, waitingForStart, secondPulsar.stateSwitcher.getState())
+	assert.Equal(t, core.GenesisPulse.PulseNumber+1, firstPulsar.LastPulse.PulseNumber)
+	assert.Equal(t, core.GenesisPulse.PulseNumber+1, secondPulsar.LastPulse.PulseNumber)
+	assert.Equal(t, 2, len(firstPulsar.LastPulse.Signs))
+	assert.Equal(t, 2, len(secondPulsar.LastPulse.Signs))
 
 	defer func() {
 		firstPulsar.StopServer()
 		secondPulsar.StopServer()
 
+		bootstrapLedgerCleaner()
 		usualLedgerCleaner()
-		err = os.RemoveAll("bootstrapLedger")
-		if err != nil {
-			assert.NoError(t, err)
-		}
-		err = os.RemoveAll("usualLedger")
-		if err != nil {
-			assert.NoError(t, err)
-		}
 	}()
 }
