@@ -244,23 +244,29 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
-	activateCoreRef, err := td.manager.ActivateClass(
-		*domainRef.CoreRef(), *td.requestRef.CoreRef(),
+	classRef := genRandomRef(0)
+	codeRef := genRandomRef(0)
+	activateCoreID, err := td.manager.ActivateClass(
+		*domainRef.CoreRef(), *classRef.CoreRef(), *codeRef.CoreRef(),
 	)
-	activateRef := record.Core2Reference(*activateCoreRef)
 	assert.Nil(t, err)
-	activateRec, getErr := td.db.GetRecord(&activateRef.Record)
+	activateID := record.Bytes2ID(activateCoreID[:])
+	activateRec, getErr := td.db.GetRecord(&activateID)
 	assert.Nil(t, getErr)
 	assert.Equal(t, activateRec, &record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
 					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
+					RequestRecord: *classRef,
 				},
 			},
 		},
+		Code: *codeRef,
 	})
+	idx, err := td.db.GetClassIndex(&classRef.Record)
+	assert.NoError(t, err)
+	assert.Equal(t, activateID, idx.LatestState)
 }
 
 func TestLedgerArtifactManager_DeactivateClass_VerifiesRecord(t *testing.T) {
@@ -473,33 +479,38 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		LatestState: *parentID,
 	})
 
-	activateCoreRef, err := td.manager.ActivateObject(
-		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(parentID), memory,
+	objRef := *genRandomRef(0)
+	activateCoreID, err := td.manager.ActivateObject(
+		*domainRef.CoreRef(), *objRef.CoreRef(), *genRefWithID(classID), *genRefWithID(parentID), memory,
 	)
 	assert.Nil(t, err)
-	activateRef := record.Core2Reference(*activateCoreRef)
-	activateRec, err := td.db.GetRecord(&activateRef.Record)
+	activateID := record.Bytes2ID(activateCoreID[:])
+	activateRec, err := td.db.GetRecord(&activateID)
 	assert.Nil(t, err)
 	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
 					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
+					RequestRecord: objRef,
 				},
 			},
 		},
-		ClassActivateRecord: record.Reference{Domain: td.requestRef.Domain, Record: *classID},
-		Memory:              memory,
-		Parent:              record.Reference{Domain: td.requestRef.Domain, Record: *parentID},
-		Delegate:            false,
+		Class:    record.Reference{Domain: td.requestRef.Domain, Record: *classID},
+		Memory:   memory,
+		Parent:   record.Reference{Domain: td.requestRef.Domain, Record: *parentID},
+		Delegate: false,
 	})
 
 	idx, err := td.db.GetObjectIndex(parentID)
 	assert.NoError(t, err)
 	childRec, err := td.db.GetRecord(idx.LatestChild)
 	assert.NoError(t, err)
-	assert.Equal(t, activateRef, childRec.(*record.ChildRecord).Ref)
+	assert.Equal(t, objRef, childRec.(*record.ChildRecord).Ref)
+
+	idx, err = td.db.GetObjectIndex(&objRef.Record)
+	assert.NoError(t, err)
+	assert.Equal(t, activateID, idx.LatestState)
 }
 
 func TestLedgerArtifactManager_ActivateObjectDelegate_VerifiesRecord(t *testing.T) {
@@ -534,6 +545,7 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 	defer cleaner()
 
 	memory := []byte{1, 2, 3}
+	classRef := genRandomRef(0)
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
@@ -543,9 +555,10 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 			},
 		},
 	})
-	td.db.SetClassIndex(classID, &index.ClassLifeline{
+	td.db.SetClassIndex(&classRef.Record, &index.ClassLifeline{
 		LatestState: *classID,
 	})
+	parentRef := genRandomRef(0)
 	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
@@ -555,39 +568,40 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 			},
 		},
 	})
-	td.db.SetObjectIndex(parentID, &index.ObjectLifeline{
+	td.db.SetObjectIndex(&parentRef.Record, &index.ObjectLifeline{
 		ClassRef:    record.Reference{Domain: td.requestRef.Domain, Record: *classID},
 		LatestState: *parentID,
 	})
 
-	activateCoreRef, err := td.manager.ActivateObjectDelegate(
-		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(parentID), memory,
+	delegateRef := genRandomRef(0)
+	activateCoreID, err := td.manager.ActivateObjectDelegate(
+		*domainRef.CoreRef(), *delegateRef.CoreRef(), *classRef.CoreRef(), *parentRef.CoreRef(), memory,
 	)
+	activateID := record.Bytes2ID(activateCoreID[:])
 	assert.Nil(t, err)
-	activateRef := record.Core2Reference(*activateCoreRef)
-	activateRec, err := td.db.GetRecord(&activateRef.Record)
+	activateRec, err := td.db.GetRecord(&activateID)
 	assert.Nil(t, err)
 	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
 				ResultRecord: record.ResultRecord{
 					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
+					RequestRecord: *delegateRef,
 				},
 			},
 		},
-		ClassActivateRecord: record.Reference{Domain: domainID, Record: *classID},
-		Memory:              memory,
-		Parent:              record.Reference{Domain: domainID, Record: *parentID},
-		Delegate:            true,
+		Class:    *classRef,
+		Memory:   memory,
+		Parent:   *parentRef,
+		Delegate: true,
 	})
 
-	delegate, err := td.manager.GetDelegate(*genRefWithID(parentID), *genRefWithID(classID))
+	delegate, err := td.manager.GetDelegate(*parentRef.CoreRef(), *classRef.CoreRef())
 	assert.NoError(t, err)
-	assert.Equal(t, activateCoreRef, delegate)
+	assert.Equal(t, *delegateRef.CoreRef(), *delegate)
 }
 
-func TestLedgerArtifactManager_DeActivateObject_VerifiesRecord(t *testing.T) {
+func TestLedgerArtifactManager_DeactivateObject_VerifiesRecord(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
@@ -600,7 +614,7 @@ func TestLedgerArtifactManager_DeActivateObject_VerifiesRecord(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestLedgerArtifactManager_DeActivateObject_VerifiesObjectIsActive(t *testing.T) {
+func TestLedgerArtifactManager_DeactivateObject_VerifiesObjectIsActive(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()

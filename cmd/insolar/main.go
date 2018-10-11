@@ -23,10 +23,10 @@ import (
 	"io"
 	"os"
 
+	"github.com/insolar/insolar/application/bootstrapcertificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/genesis/bootstrapcertificate"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

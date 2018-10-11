@@ -56,10 +56,10 @@ type JetCoordinator interface {
 
 // ArtifactManager is a high level storage interface.
 type ArtifactManager interface {
-	// RootRef returns the root record reference.
+	// GenesisRef returns the root record reference.
 	//
 	// Root record is the parent for all top-level records.
-	RootRef() *RecordRef
+	GenesisRef() *RecordRef
 
 	// RegisterRequest creates or check call request record and returns it RecordRef.
 	// (used by VM on executing side)
@@ -105,8 +105,8 @@ type ArtifactManager interface {
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 	//
-	// Activation reference will be this class'es identifier and referred as "class head".
-	ActivateClass(domain, request RecordRef) (*RecordRef, error)
+	// Request reference will be this class'es identifier and referred as "class head".
+	ActivateClass(domain, request, code RecordRef) (*RecordID, error)
 
 	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
 	// the class. If class is already deactivated, an error should be returned.
@@ -124,11 +124,11 @@ type ArtifactManager interface {
 	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's class.
 	// If memory is not provided, the class default memory will be used.
 	//
-	// Activation reference will be this object's identifier and referred as "object head".
-	ActivateObject(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
+	// Request reference will be this object's identifier and referred as "object head".
+	ActivateObject(domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
 
-	// ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
-	ActivateObjectDelegate(domain, request, class, parent RecordRef, memory []byte) (*RecordRef, error)
+	// ActivateObjectDelegate is similar to ActivateObject but it created object will be parent's delegate of provided class.
+	ActivateObjectDelegate(domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
