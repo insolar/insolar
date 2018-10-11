@@ -20,6 +20,7 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
+// Serialize serializes request params
 func Serialize(ref []byte, delegate []byte, method string, params []byte, seed []byte) ([]byte, error) {
 	var serialized []byte
 	ch := new(codec.CborHandle)
