@@ -41,7 +41,7 @@ func calculateNodeHash(node *core.ActiveNode) []byte {
 	hash := sha3.New224()
 	hashWriteChecked(hash, node.NodeID[:])
 	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(node.JetRoles))
+	binary.LittleEndian.PutUint64(b, uint64(node.Role))
 	hashWriteChecked(hash, b[:])
 	binary.LittleEndian.PutUint32(b, uint32(node.PulseNum))
 	hashWriteChecked(hash, b[:4])

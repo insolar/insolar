@@ -26,27 +26,21 @@ import (
 )
 
 func newActiveNode(ref byte) *core.ActiveNode {
-	var mask core.JetRoleMask
-	mask.Set(core.RoleVirtualExecutor)
-
 	return &core.ActiveNode{
 		NodeID:    core.RecordRef{ref},
 		PulseNum:  core.PulseNumber(0),
 		State:     core.NodeActive,
-		JetRoles:  mask,
+		Role:      core.RoleUnknown,
 		PublicKey: []byte{0, 0, 0},
 	}
 }
 
 func newSelfNode(ref core.RecordRef) *core.ActiveNode {
-	var mask core.JetRoleMask
-	mask.Set(core.RoleVirtualExecutor)
-
 	return &core.ActiveNode{
 		NodeID:    ref,
 		PulseNum:  core.PulseNumber(0),
 		State:     core.NodeActive,
-		JetRoles:  mask,
+		Role:      core.RoleUnknown,
 		PublicKey: []byte{0, 0, 0},
 	}
 }
@@ -174,4 +168,10 @@ func TestNodekeeper_SetPulse(t *testing.T) {
 	// Pulses should pass in ascending order
 	success, _ = keeper.SetPulse(core.PulseNumber(9))
 	assert.False(t, success)
+}
+
+func TestNodekeeper_notifyWaiters(t *testing.T) {
+	keeper := newNodeKeeper()
+	success, _ := keeper.SetPulse(core.PulseNumber(10))
+	assert.True(t, success)
 }

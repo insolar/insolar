@@ -168,14 +168,14 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not get current pulse")
 	}
-	log.Debugf("Got new pulse number: %d", data.Pulse.PulseNumber)
+	log.Infof("Got new pulse number: %d", data.Pulse.PulseNumber)
 	if (data.Pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(data.Pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 		err = pm.Set(data.Pulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
-		log.Debugf("Set new current pulse number: %d", data.Pulse.PulseNumber)
+		log.Infof("Set new current pulse number: %d", data.Pulse.PulseNumber)
 
 		doConsensus(hostHandler, ctx, data.Pulse)
 

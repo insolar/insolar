@@ -25,14 +25,11 @@ import (
 )
 
 func newActiveNode(ref byte, pulse int) *core.ActiveNode {
-	var mask core.JetRoleMask
-	mask.Set(core.RoleVirtualExecutor)
-
 	return &core.ActiveNode{
 		NodeID:    core.RecordRef{ref},
 		PulseNum:  core.PulseNumber(pulse),
 		State:     core.NodeActive,
-		JetRoles:  mask,
+		Role:      core.RoleUnknown,
 		PublicKey: []byte{0, 0, 0},
 	}
 }
