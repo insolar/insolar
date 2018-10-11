@@ -17,7 +17,6 @@
 package testutil
 
 import (
-	"crypto/rand"
 	"go/build"
 	"io/ioutil"
 	"os"
@@ -268,12 +267,8 @@ func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.
 		ARef: &request,
 	}
 
-	id, err := randomID()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
-	}
-
-	return id, nil
+	id := testutils.RandomID()
+	return &id, nil
 }
 
 // DeactivateClass implementation for tests
@@ -288,19 +283,7 @@ func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.Re
 		return nil, errors.New("wrong class")
 	}
 	classDesc.ACode = &code
-
-	return randomID()
-}
-
-func randomID() (*core.RecordID, error) {
-	b := make([]byte, core.RecordIDSize)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	id := core.RecordID{}
-	copy(id[:], b[:])
+	id := testutils.RandomID()
 	return &id, nil
 }
 
@@ -316,12 +299,8 @@ func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core
 		Delegates: make(map[core.RecordRef]core.RecordRef),
 	}
 
-	id, err := randomID()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
-	}
-
-	return id, nil
+	id := testutils.RandomID()
+	return &id, nil
 }
 
 // ActivateObjectDelegate implementation for tests
