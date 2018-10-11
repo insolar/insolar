@@ -111,26 +111,26 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
 	}
 
-	serData, err := signer.Serialize(string(userCfg.Caller), string(reqCfg.Delegate), reqCfg.Method, params, seed)
+	serRequest, err := signer.Serialize(userCfg.Caller, reqCfg.Delegate, reqCfg.Method, params, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
 	}
 
 	verboseInfo("Signing request ...")
-	signature, err := ecdsa_helper.Sign(serData, userCfg.privateKeyObject)
+	signature, err := ecdsa_helper.Sign(serRequest, userCfg.privateKeyObject)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
 	verboseInfo("Signing request completed")
 
 	body, err := GetResponseBody(url, PostParams{
-		"params":    string(params),
+		"params":    params,
 		"method":    reqCfg.Method,
 		"caller":    userCfg.Caller,
 		"callee":    reqCfg.Callee,
 		"delegate":  reqCfg.Delegate,
 		"seed":      seed,
-		"signature": ecdsa_helper.ExportSignature(signature),
+		"signature": signature,
 	})
 
 	if err != nil {
