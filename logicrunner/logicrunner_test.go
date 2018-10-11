@@ -105,8 +105,10 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 
 func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
 	rlr := lr.(*LogicRunner)
+	rlr.caseBindMutex.Lock()
 	rlrcbr := rlr.caseBind.Records
 	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
+	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
 		//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
 		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
