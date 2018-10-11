@@ -211,7 +211,7 @@ func sendRequest(out io.Writer) {
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
 
-	response, err := requesters.Send(defaultUrl, userCfg, reqCfg)
+	response, err := requesters.Send(defaultURL, userCfg, reqCfg)
 	check("[ sendRequest ]", err)
 
 	writeToOutput(out, string(response))
