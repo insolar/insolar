@@ -39,6 +39,7 @@ type RequestConfigJSON struct {
 	Method    string        `json:"method"`
 	Requester string        `json:"requester"`
 	Target    string        `json:"target"`
+	Delegate  string        `json:"delegate"`
 }
 
 func readFile(path string, configType interface{}) error {

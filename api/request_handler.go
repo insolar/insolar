@@ -32,9 +32,6 @@ import (
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
-// RESPONSEFIELD is name of response field
-type RESPONSEFIELD = string
-
 const (
 	REFERENCE = "reference"
 	SEED      = "seed"

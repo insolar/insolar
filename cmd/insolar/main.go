@@ -86,6 +86,7 @@ var (
 	cmd                string
 	numberCertificates uint
 	configPath         string
+	paramsPath         string
 	verbose            bool
 	sendUrls           string
 )
@@ -99,6 +100,7 @@ func parseInputParams() {
 	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
 	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
+	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "params.json", "path to params file")
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
@@ -205,7 +207,11 @@ func sendRequest(out io.Writer) {
 	userCfg, err := requesters.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
 
-	reqCfg, err := requesters.ReadRequestConfigFromFile(configPath)
+	pPath := paramsPath
+	if len(pPath) == 0 {
+		pPath = configPath
+	}
+	reqCfg, err := requesters.ReadRequestConfigFromFile(pPath)
 	check("[ sendRequest ]", err)
 
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))

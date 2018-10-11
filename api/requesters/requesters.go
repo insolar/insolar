@@ -122,6 +122,7 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 		"method":    reqCfg.Method,
 		"requester": reqCfg.Requester,
 		"target":    reqCfg.Target,
+		"delegate":  reqCfg.Delegate,
 		"seed":      seed,
 		"signature": ecdsa_helper.ExportSignature(signature),
 	})
