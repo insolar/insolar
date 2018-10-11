@@ -25,11 +25,11 @@ import (
 	"sort"
 
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/hash"
 )
 
 type ecdsaSignature struct {
@@ -89,7 +89,7 @@ func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string
 
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
-		h := hash.NewSHA3()
+		h := hash.NewIDHash()
 		_, err := h.Write(entropy[:])
 		if err != nil {
 			return nil, err

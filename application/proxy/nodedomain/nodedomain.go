@@ -1,11 +1,9 @@
 package nodedomain
 
 import (
-		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
-
-
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -17,13 +15,13 @@ type NodeDomain struct {
 
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized []byte
+	argsSerialized  []byte
 }
 
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeDomain {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	return &NodeDomain{Reference: ref}
 }
@@ -53,10 +51,8 @@ func GetImplementationFrom(object core.RecordRef) *NodeDomain {
 	return GetObject(ref)
 }
 
-
-func NewNodeDomain(  ) *ContractConstructorHolder {
+func NewNodeDomain() *ContractConstructorHolder {
 	var args [0]interface{}
-
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -66,7 +62,6 @@ func NewNodeDomain(  ) *ContractConstructorHolder {
 
 	return &ContractConstructorHolder{constructorName: "NewNodeDomain", argsSerialized: argsSerialized}
 }
-
 
 // GetReference
 func (r *NodeDomain) GetReference() core.RecordRef {
@@ -78,8 +73,7 @@ func (r *NodeDomain) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-
-func (r *NodeDomain) RegisterNode( pk string, role string ) ( core.RecordRef ) {
+func (r *NodeDomain) RegisterNode(pk string, role string) core.RecordRef {
 	var args [2]interface{}
 	args[0] = pk
 	args[1] = role
@@ -93,7 +87,7 @@ func (r *NodeDomain) RegisterNode( pk string, role string ) ( core.RecordRef ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -108,7 +102,7 @@ func (r *NodeDomain) RegisterNode( pk string, role string ) ( core.RecordRef ) {
 	return resList[0].(core.RecordRef)
 }
 
-func (r *NodeDomain) RegisterNodeNoWait( pk string, role string ) {
+func (r *NodeDomain) RegisterNodeNoWait(pk string, role string) {
 	var args [2]interface{}
 	args[0] = pk
 	args[1] = role
@@ -126,7 +120,7 @@ func (r *NodeDomain) RegisterNodeNoWait( pk string, role string ) {
 	}
 }
 
-func (r *NodeDomain) RemoveNode( nodeRef core.RecordRef ) (  ) {
+func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 	var args [1]interface{}
 	args[0] = nodeRef
 
@@ -139,7 +133,7 @@ func (r *NodeDomain) RemoveNode( nodeRef core.RecordRef ) (  ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RemoveNode", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [0]interface{}{}
@@ -149,10 +143,10 @@ func (r *NodeDomain) RemoveNode( nodeRef core.RecordRef ) (  ) {
 		panic(err)
 	}
 
-	return 
+	return
 }
 
-func (r *NodeDomain) RemoveNodeNoWait( nodeRef core.RecordRef ) {
+func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) {
 	var args [1]interface{}
 	args[0] = nodeRef
 
@@ -169,7 +163,7 @@ func (r *NodeDomain) RemoveNodeNoWait( nodeRef core.RecordRef ) {
 	}
 }
 
-func (r *NodeDomain) IsAuthorized( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) ( bool ) {
+func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -184,7 +178,7 @@ func (r *NodeDomain) IsAuthorized( nodeRef core.RecordRef, seed []byte, signatur
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsAuthorized", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -199,7 +193,7 @@ func (r *NodeDomain) IsAuthorized( nodeRef core.RecordRef, seed []byte, signatur
 	return resList[0].(bool)
 }
 
-func (r *NodeDomain) IsAuthorizedNoWait( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) {
+func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -218,7 +212,7 @@ func (r *NodeDomain) IsAuthorizedNoWait( nodeRef core.RecordRef, seed []byte, si
 	}
 }
 
-func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) ( string, core.NodeRole, string ) {
+func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, string) {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -233,7 +227,7 @@ func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRa
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [3]interface{}{}
@@ -252,7 +246,7 @@ func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRa
 	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(string)
 }
 
-func (r *NodeDomain) AuthorizeNoWait( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) {
+func (r *NodeDomain) AuthorizeNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -270,4 +264,3 @@ func (r *NodeDomain) AuthorizeNoWait( nodeRef core.RecordRef, seed []byte, signa
 		panic(err)
 	}
 }
-

@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"bytes"
-
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"

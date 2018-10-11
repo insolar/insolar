@@ -1,8 +1,8 @@
 run:
   tests: false
   skip-dirs:
-    - application/contract/
-    - application/proxy/
+  - application/contract/
+  - application/proxy/
 
 linters:
   enable:

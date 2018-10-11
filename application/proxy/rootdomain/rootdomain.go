@@ -1,11 +1,9 @@
 package rootdomain
 
 import (
-		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
-
-
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -17,13 +15,13 @@ type RootDomain struct {
 
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized []byte
+	argsSerialized  []byte
 }
 
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *RootDomain {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	return &RootDomain{Reference: ref}
 }
@@ -53,10 +51,8 @@ func GetImplementationFrom(object core.RecordRef) *RootDomain {
 	return GetObject(ref)
 }
 
-
-func NewRootDomain(  ) *ContractConstructorHolder {
+func NewRootDomain() *ContractConstructorHolder {
 	var args [0]interface{}
-
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -66,7 +62,6 @@ func NewRootDomain(  ) *ContractConstructorHolder {
 
 	return &ContractConstructorHolder{constructorName: "NewRootDomain", argsSerialized: argsSerialized}
 }
-
 
 // GetReference
 func (r *RootDomain) GetReference() core.RecordRef {
@@ -78,8 +73,7 @@ func (r *RootDomain) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-
-func (r *RootDomain) RegisterNode( publicKey string, role string ) ( string ) {
+func (r *RootDomain) RegisterNode(publicKey string, role string) string {
 	var args [2]interface{}
 	args[0] = publicKey
 	args[1] = role
@@ -93,7 +87,7 @@ func (r *RootDomain) RegisterNode( publicKey string, role string ) ( string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -108,7 +102,7 @@ func (r *RootDomain) RegisterNode( publicKey string, role string ) ( string ) {
 	return resList[0].(string)
 }
 
-func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
+func (r *RootDomain) RegisterNodeNoWait(publicKey string, role string) {
 	var args [2]interface{}
 	args[0] = publicKey
 	args[1] = role
@@ -126,7 +120,7 @@ func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
 	}
 }
 
-func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, string ) {
+func (r *RootDomain) Authorize() (string, core.NodeRole, string) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -138,7 +132,7 @@ func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [3]interface{}{}
@@ -157,7 +151,7 @@ func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, string ) {
 	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(string)
 }
 
-func (r *RootDomain) AuthorizeNoWait(  ) {
+func (r *RootDomain) AuthorizeNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -173,7 +167,7 @@ func (r *RootDomain) AuthorizeNoWait(  ) {
 	}
 }
 
-func (r *RootDomain) CreateMember( name string, key string ) ( string ) {
+func (r *RootDomain) CreateMember(name string, key string) string {
 	var args [2]interface{}
 	args[0] = name
 	args[1] = key
@@ -187,7 +181,7 @@ func (r *RootDomain) CreateMember( name string, key string ) ( string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "CreateMember", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -202,7 +196,7 @@ func (r *RootDomain) CreateMember( name string, key string ) ( string ) {
 	return resList[0].(string)
 }
 
-func (r *RootDomain) CreateMemberNoWait( name string, key string ) {
+func (r *RootDomain) CreateMemberNoWait(name string, key string) {
 	var args [2]interface{}
 	args[0] = name
 	args[1] = key
@@ -220,7 +214,7 @@ func (r *RootDomain) CreateMemberNoWait( name string, key string ) {
 	}
 }
 
-func (r *RootDomain) GetBalance( reference string ) ( uint ) {
+func (r *RootDomain) GetBalance(reference string) uint {
 	var args [1]interface{}
 	args[0] = reference
 
@@ -233,7 +227,7 @@ func (r *RootDomain) GetBalance( reference string ) ( uint ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalance", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -248,7 +242,7 @@ func (r *RootDomain) GetBalance( reference string ) ( uint ) {
 	return resList[0].(uint)
 }
 
-func (r *RootDomain) GetBalanceNoWait( reference string ) {
+func (r *RootDomain) GetBalanceNoWait(reference string) {
 	var args [1]interface{}
 	args[0] = reference
 
@@ -265,7 +259,7 @@ func (r *RootDomain) GetBalanceNoWait( reference string ) {
 	}
 }
 
-func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
+func (r *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	var args [3]interface{}
 	args[0] = from
 	args[1] = to
@@ -280,7 +274,7 @@ func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "SendMoney", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -295,7 +289,7 @@ func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
 	return resList[0].(bool)
 }
 
-func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
+func (r *RootDomain) SendMoneyNoWait(from string, to string, amount uint) {
 	var args [3]interface{}
 	args[0] = from
 	args[1] = to
@@ -314,7 +308,7 @@ func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
 	}
 }
 
-func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
+func (r *RootDomain) DumpUserInfo(reference string) []byte {
 	var args [1]interface{}
 	args[0] = reference
 
@@ -327,7 +321,7 @@ func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpUserInfo", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -342,7 +336,7 @@ func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
 	return resList[0].([]byte)
 }
 
-func (r *RootDomain) DumpUserInfoNoWait( reference string ) {
+func (r *RootDomain) DumpUserInfoNoWait(reference string) {
 	var args [1]interface{}
 	args[0] = reference
 
@@ -359,7 +353,7 @@ func (r *RootDomain) DumpUserInfoNoWait( reference string ) {
 	}
 }
 
-func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
+func (r *RootDomain) DumpAllUsers() []byte {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -371,7 +365,7 @@ func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DumpAllUsers", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -386,7 +380,7 @@ func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
 	return resList[0].([]byte)
 }
 
-func (r *RootDomain) DumpAllUsersNoWait(  ) {
+func (r *RootDomain) DumpAllUsersNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -401,4 +395,3 @@ func (r *RootDomain) DumpAllUsersNoWait(  ) {
 		panic(err)
 	}
 }
-

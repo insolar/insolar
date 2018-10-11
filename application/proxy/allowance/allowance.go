@@ -1,11 +1,9 @@
 package allowance
 
 import (
-		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
-
-
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -17,13 +15,13 @@ type Allowance struct {
 
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized []byte
+	argsSerialized  []byte
 }
 
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Allowance {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	return &Allowance{Reference: ref}
 }
@@ -53,13 +51,11 @@ func GetImplementationFrom(object core.RecordRef) *Allowance {
 	return GetObject(ref)
 }
 
-
-func New( to *core.RecordRef, amount uint, expire int64 ) *ContractConstructorHolder {
+func New(to *core.RecordRef, amount uint, expire int64) *ContractConstructorHolder {
 	var args [3]interface{}
 	args[0] = to
 	args[1] = amount
 	args[2] = expire
-
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -69,7 +65,6 @@ func New( to *core.RecordRef, amount uint, expire int64 ) *ContractConstructorHo
 
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
-
 
 // GetReference
 func (r *Allowance) GetReference() core.RecordRef {
@@ -81,8 +76,7 @@ func (r *Allowance) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-
-func (r *Allowance) IsExpired(  ) ( bool ) {
+func (r *Allowance) IsExpired() bool {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -94,7 +88,7 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsExpired", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -109,7 +103,7 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
 	return resList[0].(bool)
 }
 
-func (r *Allowance) IsExpiredNoWait(  ) {
+func (r *Allowance) IsExpiredNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -125,7 +119,7 @@ func (r *Allowance) IsExpiredNoWait(  ) {
 	}
 }
 
-func (r *Allowance) TakeAmount(  ) ( uint ) {
+func (r *Allowance) TakeAmount() uint {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -137,7 +131,7 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "TakeAmount", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -152,7 +146,7 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
 	return resList[0].(uint)
 }
 
-func (r *Allowance) TakeAmountNoWait(  ) {
+func (r *Allowance) TakeAmountNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -168,7 +162,7 @@ func (r *Allowance) TakeAmountNoWait(  ) {
 	}
 }
 
-func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
+func (r *Allowance) GetBalanceForOwner() uint {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -180,7 +174,7 @@ func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalanceForOwner", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -195,7 +189,7 @@ func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
 	return resList[0].(uint)
 }
 
-func (r *Allowance) GetBalanceForOwnerNoWait(  ) {
+func (r *Allowance) GetBalanceForOwnerNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -211,7 +205,7 @@ func (r *Allowance) GetBalanceForOwnerNoWait(  ) {
 	}
 }
 
-func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
+func (r *Allowance) DeleteExpiredAllowance() uint {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -223,7 +217,7 @@ func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DeleteExpiredAllowance", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -238,7 +232,7 @@ func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
 	return resList[0].(uint)
 }
 
-func (r *Allowance) DeleteExpiredAllowanceNoWait(  ) {
+func (r *Allowance) DeleteExpiredAllowanceNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -253,4 +247,3 @@ func (r *Allowance) DeleteExpiredAllowanceNoWait(  ) {
 		panic(err)
 	}
 }
-

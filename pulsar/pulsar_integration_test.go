@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/stretchr/testify/assert"
@@ -82,7 +83,11 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 }
 
 func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
-	tempLedger, cleaner := ledgertestutil.TmpLedger(t, "")
+	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
+		BuiltIn: &configuration.BuiltIn{},
+	})
+	assert.NoError(t, err)
+	tempLedger, cleaner := ledgertestutil.TmpLedger(t, lr, "")
 	nodeConfig := configuration.NewConfiguration()
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig.Host, nodeConfig.Node)
