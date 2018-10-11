@@ -378,18 +378,20 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	lr.caseBindReplaysMutex.Unlock()
 	lr.caseBindMutex.Unlock()
 
-	if len(records) > 0 {
-		for ref, record := range records {
-			_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecord: record})
-			if err != nil {
-				panic("Error while sending caseBind data to validators: " + err.Error())
-			}
-		}
+	if len(records) ==  0 {
+		return nil
+	}
 
-		_, err := lr.MessageBus.Send(&message.ValidateExecutorResult{CaseBind: caseBind, CaseBindReplays: caseBindReplays})
+	for ref, record := range records {
+		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecord: record})
 		if err != nil {
-			return errors.New("error while sending caseBind data to new executor")
+			panic("Error while sending caseBind data to validators: " + err.Error())
 		}
+	}
+
+	_, err := lr.MessageBus.Send(&message.ValidateExecutorResult{CaseBind: caseBind, CaseBindReplays: caseBindReplays})
+	if err != nil {
+		return errors.New("error while sending caseBind data to new executor")
 	}
 
 	return nil
