@@ -361,29 +361,35 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	// start of new Pulse, lock CaseBind data, send it for validation, clean it, unlock it
+	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original, send copy for validation
 	lr.caseBindMutex.Lock()
-	defer lr.caseBindMutex.Unlock()
+	lr.caseBindReplaysMutex.Lock()
 
-	// TODO why the fuck tests locked if i use caseBindReplaysMutex ? is there some connection with caseBindMutex?
-	//lr.caseBindReplaysMutex.Lock()
-	//defer lr.caseBindReplaysMutex.Unlock()
+	records := lr.caseBind.Records
+	caseBind := lr.caseBind
+	caseBindReplays := lr.caseBindReplays
 
-	if len(lr.caseBind.Records) > 0 {
-		for ref, record := range lr.caseBind.Records {
-			_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecord:record})
+	lr.caseBind = core.CaseBind{
+		Pulse:   pulse,
+		Records: make(map[core.RecordRef][]core.CaseRecord),
+	}
+	lr.caseBindReplays = make(map[core.RecordRef]core.CaseBindReplay)
+
+	lr.caseBindReplaysMutex.Unlock()
+	lr.caseBindMutex.Unlock()
+
+	if len(records) > 0 {
+		for ref, record := range records {
+			_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecord: record})
 			if err != nil {
 				panic("Error while sending caseBind data to validators: " + err.Error())
 			}
 		}
 
-		lr.MessageBus.Send(&message.ValidateExecutorResult{CaseBind: lr.caseBind, CaseBindReplays: lr.caseBindReplays})
-
-		lr.caseBind = core.CaseBind{
-			Pulse:   pulse,
-			Records: make(map[core.RecordRef][]core.CaseRecord),
+		_, err := lr.MessageBus.Send(&message.ValidateExecutorResult{CaseBind: caseBind, CaseBindReplays: caseBindReplays})
+		if err != nil {
+			return errors.New("error while sending caseBind data to new executor")
 		}
-		lr.caseBindReplays = make(map[core.RecordRef]core.CaseBindReplay)
 	}
 
 	return nil
