@@ -613,8 +613,8 @@ func New(n int) *Child {
 	return &Child{Num: n};
 }
 `
-	lr, am, cb, _ := PrepareLrAmCb(t)
-	//defer cleaner()
+	lr, am, cb, cleaner := PrepareLrAmCb(t)
+	defer cleaner()
 
 	err := cb.Build(map[string]string{"child": goChild})
 	assert.NoError(t, err)
