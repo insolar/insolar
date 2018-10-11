@@ -51,9 +51,8 @@ func calculateNodeHash(node *core.ActiveNode) []byte {
 	return hash.Sum(nil)
 }
 
-// CalculateHash calculates hash of active node
-func CalculateHash(nodeID core.RecordRef, list []*core.ActiveNode) (result *NodeUnsyncHash, err error) {
-
+// CalculateHash calculates hash of active node list
+func CalculateHash(list []*core.ActiveNode) (result []byte, err error) {
 	sort.Slice(list[:], func(i, j int) bool {
 		return bytes.Compare(list[i].NodeID[:], list[j].NodeID[:]) < 0
 	})
@@ -70,5 +69,14 @@ func CalculateHash(nodeID core.RecordRef, list []*core.ActiveNode) (result *Node
 		nodeHash := calculateNodeHash(node)
 		hashWriteChecked(hash, nodeHash)
 	}
-	return &NodeUnsyncHash{nodeID, hash.Sum(nil)}, nil
+	return hash.Sum(nil), nil
+}
+
+// CalculateNodeUnsyncHash calculates hash for a NodeUnsyncHash
+func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []*core.ActiveNode) (*NodeUnsyncHash, error) {
+	hash, err := CalculateHash(list)
+	if err != nil {
+		return nil, err
+	}
+	return &NodeUnsyncHash{nodeID, hash}, nil
 }

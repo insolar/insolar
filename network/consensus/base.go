@@ -84,7 +84,7 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 
 	hashes := make([]*NodeUnsyncHash, len(c.results))
 	for id, x := range c.results {
-		r, _ := CalculateHash(id, x)
+		r, _ := CalculateNodeUnsyncHash(id, x)
 		hashes = append(hashes, r)
 	}
 
