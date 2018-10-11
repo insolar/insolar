@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
@@ -126,11 +127,14 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	// Act
 	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
+	count := 30
 	time.Sleep(10 * time.Millisecond)
-	for newPulsar.stateSwitcher.getState() != waitingForStart {
+	for newPulsar.stateSwitcher.getState() != waitingForStart && count > 0 {
 		time.Sleep(10 * time.Millisecond)
+		count--
+		log.Info("ololololololo")
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 	usualNodeNetwork.Stop()
 	bootstrapNodeNetwork.Stop()
 
@@ -203,11 +207,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	// Act
 	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	time.Sleep(10 * time.Millisecond)
-	for firstPulsar.stateSwitcher.getState() != waitingForStart && secondPulsar.stateSwitcher.getState() != waitingForStart {
-		time.Sleep(10 * time.Millisecond)
-	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	usualNodeNetwork.Stop()
 	bootstrapNodeNetwork.Stop()
