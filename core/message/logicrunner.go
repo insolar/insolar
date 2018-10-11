@@ -35,7 +35,7 @@ const (
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
 	Caller core.RecordRef
-	Nonce  uint64 // TODO whats that?
+	Nonce  uint64
 }
 
 type IBaseLogicMessage interface {
