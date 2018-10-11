@@ -14,23 +14,27 @@
  *    limitations under the License.
  */
 
-package core
+package api
 
 import (
-	"testing"
+	"net/http"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
-func TestJetRoleMask_Set(t *testing.T) {
-	var mask JetRoleMask
-	assert.Equal(t, uint64(0), uint64(mask))
-	mask.Set(RoleVirtualValidator)
-	assert.True(t, mask.IsSet(RoleVirtualValidator))
-	assert.False(t, mask.IsSet(RoleVirtualExecutor))
-	mask.Set(RoleVirtualExecutor)
-	assert.True(t, mask.IsSet(RoleVirtualExecutor))
-	mask.Unset(RoleVirtualValidator)
-	assert.False(t, mask.IsSet(RoleVirtualValidator))
-	assert.True(t, mask.IsSet(RoleVirtualExecutor))
+func (ar *Runner) infoHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
+	return func(response http.ResponseWriter, req *http.Request) {
+		data, err := c.Bootstrapper.Info()
+		if err != nil {
+			log.Error(errors.Wrap(err, "[ INFO ] Can't get bootstraper info"))
+		}
+
+		response.Header().Add("Content-Type", "application/json")
+		_, err = response.Write(data)
+		if err != nil {
+			log.Error(errors.Wrap(err, "[ INFO ] Can't write response"))
+		}
+	}
 }
