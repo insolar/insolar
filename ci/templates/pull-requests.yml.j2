@@ -62,6 +62,13 @@ jobs:
              export GOPATH=$(pwd)/go
              mkdir $GOPATH/bin
              export PATH=$PATH:$GOPATH/bin
+             export CGO_ENABLED=0
+             export GORACE="halt_on_error=1"
+             # «For parallel processes running at the same time, try to reduce the number. More than two to four processes should be fine, beyond that, resources are likely to be exhausted.»
+             # https://docs.travis-ci.com/user/common-build-problems/#my-build-script-is-killed-without-any-error
+             export GOMAXPROCS=2
+             # debug logging by default
+             export INSOLAR_LOG_LEVEL=debug
              ls -alh
              env
              cd $GOPATH/src/github.com/insolar/insolar
