@@ -126,7 +126,11 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	// Act
 	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
+	for newPulsar.stateSwitcher.getState() != waitingForStart {
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(50 * time.Millisecond)
 	usualNodeNetwork.Stop()
 	bootstrapNodeNetwork.Stop()
 
@@ -199,7 +203,12 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	// Act
 	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
+	for firstPulsar.stateSwitcher.getState() != waitingForStart && secondPulsar.stateSwitcher.getState() != waitingForStart {
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(100 * time.Millisecond)
+
 	usualNodeNetwork.Stop()
 	bootstrapNodeNetwork.Stop()
 
