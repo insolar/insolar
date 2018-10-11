@@ -35,7 +35,7 @@ const (
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
 	Caller core.RecordRef
-	Nonce  uint64
+	Nonce  uint64 // TODO whats that?
 }
 
 type IBaseLogicMessage interface {
@@ -108,4 +108,60 @@ func (e *CallConstructor) Target() *core.RecordRef {
 		return &e.ParentRef
 	}
 	return core.GenRequest(e.PulseNum, MustSerializeBytes(e))
+}
+
+type ValidateExecutorResult struct {
+	CaseBind        core.CaseBind
+	CaseBindReplays map[core.RecordRef]core.CaseBindReplay
+}
+
+func (e *ValidateExecutorResult) Type() core.MessageType {
+	return core.TypeValidateExecutorResult
+}
+
+func (e *ValidateExecutorResult) TargetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
+// TODO change after changing pulsar
+func (e *ValidateExecutorResult) Target() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
+// TODO change after changing pulsar
+func (e *ValidateExecutorResult) GetCaller() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
+// TODO change after changing pulsar
+func (e *ValidateExecutorResult) GetReference() core.RecordRef {
+	return core.RecordRef{}
+}
+
+type ValidateCaseBind struct {
+	RecordRef  core.RecordRef
+	CaseRecord []core.CaseRecord
+}
+
+func (e *ValidateCaseBind) Type() core.MessageType {
+	return core.TypeValidateCaseBind
+}
+
+func (e *ValidateCaseBind) TargetRole() core.JetRole {
+	return core.RoleVirtualValidator
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) Target() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) GetReference() core.RecordRef {
+	return e.RecordRef
 }

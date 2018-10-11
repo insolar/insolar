@@ -36,6 +36,11 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &CallMethod{}, nil
 	case core.TypeCallConstructor:
 		return &CallConstructor{}, nil
+	case core.TypeValidateExecutorResult:
+		return &ValidateExecutorResult{}, nil
+	case core.TypeValidateCaseBind:
+		return &ValidateCaseBind{}, nil
+
 	// Ledger
 	case core.TypeRequestCall:
 		return &RequestCall{}, nil
@@ -123,6 +128,9 @@ func init() {
 	// Logicrunner
 	gob.Register(&CallConstructor{})
 	gob.Register(&CallMethod{})
+	gob.Register(&ValidateExecutorResult{})
+	gob.Register(&ValidateCaseBind{})
+
 	// Ledger
 	gob.Register(&RequestCall{})
 	gob.Register(&GetCode{})

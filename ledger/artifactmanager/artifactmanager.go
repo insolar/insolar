@@ -252,7 +252,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 }
 
 // ActivateObject creates activate object record in storage. Provided class reference will be used as objects class
-// memory as memory of crated object. If memory is not provided, the class default memory will be used.
+// memory as memory of created object. If memory is not provided, the class default memory will be used.
 //
 // Request reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObject(

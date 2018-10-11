@@ -613,8 +613,8 @@ func New(n int) *Child {
 	return &Child{Num: n};
 }
 `
-	lr, am, cb, cleaner := PrepareLrAmCb(t)
-	defer cleaner()
+	lr, am, cb, _ := PrepareLrAmCb(t)
+	//defer cleaner()
 
 	err := cb.Build(map[string]string{"child": goChild})
 	assert.NoError(t, err)
@@ -648,6 +648,7 @@ func New(n int) *Child {
 	r = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
+	SendDataToValidate(lr)
 }
 
 func TestErrorInterface(t *testing.T) {
@@ -722,6 +723,8 @@ func (r *Two) AnError() error {
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
+
+	SendDataToValidate(lr)
 }
 
 type Caller struct {
@@ -900,6 +903,8 @@ func (c *Child) GetNum() int {
 		r := testutil.CBORUnMarshal(b, resp.(*reply.CallMethod).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
+
+	SendDataToValidate(lr)
 }
 
 func TestProxyGeneration(t *testing.T) {
@@ -933,4 +938,9 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err, string(out))
 		})
 	}
+}
+
+func SendDataToValidate(lr core.LogicRunner)  {
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	//TODO validate data on another node
 }
