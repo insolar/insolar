@@ -18,9 +18,6 @@ package nodekeeper
 
 import (
 	"bytes"
-	"encoding/binary"
-	"fmt"
-	"hash"
 	"sort"
 	"sync"
 	"time"
@@ -28,7 +25,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/sha3"
 )
 
 // NodeKeeper manages unsync, sync and active lists
@@ -255,48 +251,4 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
 	}
 	nk.unsyncWaiters = make([]chan *UnsyncList, 0)
 	return nk.unsyncList
-}
-
-func hashWriteChecked(hash hash.Hash, data []byte) {
-	n, err := hash.Write(data)
-	if n != len(data) {
-		panic(fmt.Sprintf("Error writing hash. Bytes expected: %d; bytes actual: %d", len(data), n))
-	}
-	if err != nil {
-		panic(err.Error())
-	}
-}
-
-func calculateNodeHash(node *core.ActiveNode) []byte {
-	hash := sha3.New224()
-	hashWriteChecked(hash, node.NodeID[:])
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(node.JetRoles))
-	hashWriteChecked(hash, b[:])
-	binary.LittleEndian.PutUint32(b, uint32(node.PulseNum))
-	hashWriteChecked(hash, b[:4])
-	b[0] = byte(node.State)
-	hashWriteChecked(hash, b[:1])
-	hashWriteChecked(hash, node.PublicKey)
-	return hash.Sum(nil)
-}
-
-func CalculateHash(list []*core.ActiveNode) (result []byte, err error) {
-	sort.Slice(list[:], func(i, j int) bool {
-		return bytes.Compare(list[i].NodeID[:], list[j].NodeID[:]) < 0
-	})
-
-	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
-	defer func() {
-		if r := recover(); r != nil {
-			result, err = nil, fmt.Errorf("error calculating hash: %s", r)
-		}
-	}()
-
-	hash := sha3.New224()
-	for _, node := range list {
-		nodeHash := calculateNodeHash(node)
-		hashWriteChecked(hash, nodeHash)
-	}
-	return hash.Sum(nil), nil
 }

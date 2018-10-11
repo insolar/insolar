@@ -17,17 +17,12 @@
 package nodekeeper
 
 import (
-	"encoding/hex"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
-)
-
-const (
-	nullHash = "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7"
 )
 
 func newActiveNode(ref byte) *core.ActiveNode {
@@ -61,34 +56,6 @@ func newNodeKeeper() NodeKeeper {
 	keeper := NewNodeKeeper(id)
 	keeper.AddActiveNodes([]*core.ActiveNode{newSelfNode(id)})
 	return keeper
-}
-
-func TestNodekeeper_calculateNodeHash(t *testing.T) {
-	hash1, _ := CalculateHash(nil)
-	hash2, _ := CalculateHash([]*core.ActiveNode{})
-
-	assert.Equal(t, nullHash, hex.EncodeToString(hash1))
-	assert.Equal(t, hash1, hash2)
-
-	activeNode1 := newActiveNode(0)
-	activeNode2 := newActiveNode(0)
-
-	activeNode1Slice := []*core.ActiveNode{activeNode1}
-	activeNode2Slice := []*core.ActiveNode{activeNode2}
-
-	hash1, _ = CalculateHash(activeNode1Slice)
-	hash2, _ = CalculateHash(activeNode2Slice)
-	assert.Equal(t, hash1, hash2)
-	activeNode2.NodeID = core.RecordRef{1}
-	hash2, _ = CalculateHash(activeNode2Slice)
-	assert.NotEqual(t, hash1, hash2)
-
-	// nodes order in slice should not affect hash calculating
-	slice1 := []*core.ActiveNode{activeNode1, activeNode2}
-	slice2 := []*core.ActiveNode{activeNode2, activeNode1}
-	hash1, _ = CalculateHash(slice1)
-	hash2, _ = CalculateHash(slice2)
-	assert.Equal(t, hash1, hash2)
 }
 
 func TestNodekeeper_AddUnsync(t *testing.T) {
