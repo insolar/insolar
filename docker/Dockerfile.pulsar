@@ -1,0 +1,5 @@
+FROM scratch
+#COPY --from=insolar_builder /go/src/github.com/insolar/insolar /go/src/github.com/insolar/insolar
+#COPY --from=insolar_builder /go/bin/insolard /insolard
+COPY --from=insolar_builder /go/bin/pulsard /pulsard
+ENTRYPOINT ["/bin/pulsard"]
