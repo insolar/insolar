@@ -37,10 +37,8 @@ func (a *Allowance) IsExpired() bool {
 func (a *Allowance) TakeAmount() uint {
 	caller := a.GetContext().Caller
 	if *caller == a.To && !a.IsExpired() {
-		a.SelfDestructRequest()
-		r := a.Amount
-		a.Amount = 0
-		return r
+		a.SelfDestruct()
+		return a.Amount
 	}
 	return 0
 }
@@ -54,7 +52,7 @@ func (a *Allowance) GetBalanceForOwner() uint {
 
 func (a *Allowance) DeleteExpiredAllowance() uint {
 	if a.GetContext().Caller == a.GetContext().Parent && !a.IsExpired() {
-		a.SelfDestructRequest()
+		a.SelfDestruct()
 		return a.Amount
 	}
 	return 0

@@ -549,6 +549,46 @@ func (r *One) Hello() string {
 	assert.Equal(t, cb.Classes["one"].String(), resParsed[0])
 }
 
+func TestDeactivation(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var code = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Kill() {
+	r.SelfDestruct()
+}
+`
+	lr, am, cb, cleaner := PrepareLrAmCb(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{"one": code})
+	assert.NoError(t, err)
+
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *obj,
+		*cb.Classes["one"],
+		*am.GenesisRef(),
+		testutil.CBORMarshal(t, &struct{}{}),
+	)
+	assert.NoError(t, err)
+
+	_, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Kill",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+}
+
 func TestGetChildren(t *testing.T) {
 	if parallel {
 		t.Parallel()
