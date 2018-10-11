@@ -33,6 +33,8 @@ import (
 
 // NodeKeeper manages unsync, sync and active lists
 type NodeKeeper interface {
+	// GetID get current node ID
+	GetID() core.RecordRef
 	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetSelf() *core.ActiveNode
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
@@ -92,6 +94,10 @@ type nodekeeper struct {
 	unsync        []*core.ActiveNode
 	unsyncList    *UnsyncList
 	unsyncWaiters []chan *UnsyncList
+}
+
+func (nk *nodekeeper) GetID() core.RecordRef {
+	return nk.nodeID
 }
 
 func (nk *nodekeeper) GetSelf() *core.ActiveNode {
@@ -211,7 +217,7 @@ func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Dura
 		nk.unsyncLock.Unlock()
 		return result, nil
 	}
-	if currentPulse > pulse {
+	if currentPulse > pulse || duration < 0 {
 		nk.unsyncLock.Unlock()
 		return nil, errors.Errorf("GetUnsyncHolder called with pulse %d, but current NodeKeeper pulse is %d",
 			pulse, currentPulse)

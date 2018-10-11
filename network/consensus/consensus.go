@@ -61,7 +61,7 @@ type Communicator interface {
 	ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error)
 
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
-	ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*NodeUnsyncHash) ([]byte, error)
+	ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*NodeUnsyncHash) ([]*NodeUnsyncHash, error)
 }
 
 // NewConsensus creates consensus

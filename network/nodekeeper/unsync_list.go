@@ -31,6 +31,11 @@ type UnsyncList struct {
 
 	waiters     []chan []*consensus.NodeUnsyncHash
 	waitersLock sync.Mutex
+
+	unsyncListCache map[core.RecordRef][]*core.ActiveNode
+	unsyncListLock  sync.Mutex
+	unsyncHashCache map[core.RecordRef][]*consensus.NodeUnsyncHash
+	unsyncHashLock  sync.Mutex
 }
 
 // NewUnsyncHolder create new object to hold data for consensus
@@ -79,4 +84,38 @@ func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*consensus.NodeUnsyn
 	// TODO: timeout
 	result := <-ch
 	return result, nil
+}
+
+// AddUnsyncList add unsync list for remote ref
+func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []*core.ActiveNode) {
+	u.unsyncListLock.Lock()
+	defer u.unsyncListLock.Unlock()
+
+	u.unsyncListCache[ref] = unsync
+}
+
+// AddUnsyncHash add unsync hash for remote ref
+func (u *UnsyncList) AddUnsyncHash(ref core.RecordRef, hash []*consensus.NodeUnsyncHash) {
+	u.unsyncHashLock.Lock()
+	defer u.unsyncHashLock.Unlock()
+
+	u.unsyncHashCache[ref] = hash
+}
+
+// GetUnsyncList get unsync list for remote ref
+func (u *UnsyncList) GetUnsyncList(ref core.RecordRef) ([]*core.ActiveNode, bool) {
+	u.unsyncListLock.Lock()
+	defer u.unsyncListLock.Unlock()
+
+	result, ok := u.unsyncListCache[ref]
+	return result, ok
+}
+
+// GetUnsyncHash get unsync hash for remote ref
+func (u *UnsyncList) GetUnsyncHash(ref core.RecordRef) ([]*consensus.NodeUnsyncHash, bool) {
+	u.unsyncHashLock.Lock()
+	defer u.unsyncHashLock.Unlock()
+
+	result, ok := u.unsyncHashCache[ref]
+	return result, ok
 }

@@ -36,6 +36,7 @@ type communicatorReceiver struct {
 
 type communicatorSender struct {
 	handler hosthandler.HostHandler
+	keeper  nodekeeper.NodeKeeper
 }
 
 func (c *communicatorReceiver) ExchangeData(ctx context.Context, pulse core.PulseNumber,
@@ -73,17 +74,27 @@ func (c *communicatorReceiver) ExchangeHash(ctx context.Context, pulse core.Puls
 func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseNumber,
 	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 
-	log.Infof("Sending consensus unsync list exchange request to %s", p.GetActiveNode().NodeID)
+	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, -1)
+	if err != nil {
+		log.Debugf("ExchangeData: error getting cache in consensus: " + err.Error())
+	} else if result, ok := unsyncHolder.GetUnsyncList(p.GetActiveNode().NodeID); ok {
+		log.Debugf("ExchangeData: got unsync list of remote party %s from cache", p.GetActiveNode().NodeID)
+		return result, nil
+	}
+	log.Debugf("Sending consensus unsync list exchange request to %s", p.GetActiveNode().NodeID)
 	sender, receiver, err := c.getSenderAndReceiver(ctx, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
 	}
 	request := packet.NewBuilder().Type(packet.TypeExchangeUnsyncLists).Sender(sender).Receiver(receiver).
-		Request(&packet.RequestExchangeUnsyncLists{Pulse: pulse, UnsyncList: data}).Build()
+		Request(&packet.RequestExchangeUnsyncLists{SenderID: c.keeper.GetID(), Pulse: pulse, UnsyncList: data}).Build()
 	f, err := c.handler.SendRequest(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
 	}
+	// TODO: fail fast if we don't have enough time to execute network request
+	// TODO: count delay between two pulses and measure appropriate timeout. Maybe we also should pass time label
+	// to instruct the receiving side how much time it has to process the operation
 	response, err := f.GetResult(c.handler.GetPacketTimeout())
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
@@ -92,23 +103,34 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseN
 	if responseData.Error != "" {
 		return nil, errors.New("ExchangeData: got error from remote party: " + responseData.Error)
 	}
+	log.Debugf("ExchangeData: got unsync list of remote party %s from network", p.GetActiveNode().NodeID)
 	return responseData.UnsyncList, nil
 }
 
 func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseNumber,
-	p consensus.Participant, data []*consensus.NodeUnsyncHash) ([]byte, error) {
+	p consensus.Participant, data []*consensus.NodeUnsyncHash) ([]*consensus.NodeUnsyncHash, error) {
 
-	log.Infof("Sending consensus unsync hash exchange request to %s", p.GetActiveNode().NodeID)
+	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, -1)
+	if err != nil {
+		log.Debugf("ExchangeHash: error getting cache in consensus: " + err.Error())
+	} else if result, ok := unsyncHolder.GetUnsyncHash(p.GetActiveNode().NodeID); ok {
+		log.Debugf("ExchangeHash: got unsync hash of remote party %s from cache", p.GetActiveNode().NodeID)
+		return result, nil
+	}
+	log.Debugf("Sending consensus unsync hash exchange request to %s", p.GetActiveNode().NodeID)
 	sender, receiver, err := c.getSenderAndReceiver(ctx, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
 	}
 	request := packet.NewBuilder().Type(packet.TypeExchangeUnsyncHash).Sender(sender).Receiver(receiver).
-		Request(&packet.RequestExchangeUnsyncHash{Pulse: pulse, UnsyncHash: data}).Build()
+		Request(&packet.RequestExchangeUnsyncHash{SenderID: c.keeper.GetID(), Pulse: pulse, UnsyncHash: data}).Build()
 	f, err := c.handler.SendRequest(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
 	}
+	// TODO: fail fast if we don't have enough time to execute network request
+	// TODO: count delay between two pulses and measure appropriate timeout. Maybe we also should pass time label
+	// to instruct the receiving side how much time it has to process the operation
 	response, err := f.GetResult(c.handler.GetPacketTimeout())
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
@@ -117,6 +139,7 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseN
 	if responseData.Error != "" {
 		return nil, errors.New("ExchangeHash: got error from remote party: " + responseData.Error)
 	}
+	log.Debugf("ExchangeHash: got unsync hash of remote party %s from network", p.GetActiveNode().NodeID)
 	return responseData.UnsyncHash, nil
 }
 

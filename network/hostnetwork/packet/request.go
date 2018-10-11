@@ -127,12 +127,14 @@ type RequestActiveNodes struct {
 
 // RequestExchangeUnsyncLists is request to exchange unsync lists during consensus
 type RequestExchangeUnsyncLists struct {
+	SenderID   core.RecordRef
 	Pulse      core.PulseNumber
 	UnsyncList []*core.ActiveNode
 }
 
 // RequestExchangeUnsyncHash is request to exchange hash of merged unsync lists during consensus
 type RequestExchangeUnsyncHash struct {
+	SenderID   core.RecordRef
 	Pulse      core.PulseNumber
 	UnsyncHash []*consensus.NodeUnsyncHash
 }

@@ -18,7 +18,6 @@ package consensus
 
 import (
 	"context"
-	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -53,11 +52,6 @@ type NetworkConsensus struct {
 	communicatorRcv consensus.Communicator
 	keeper          nodekeeper.NodeKeeper
 	self            *selfWrapper
-
-	unsyncListCache map[core.RecordRef][]*core.ActiveNode
-	unsyncListLock  sync.Mutex
-	unsyncHashCache map[core.RecordRef][]*consensus.NodeUnsyncHash
-	unsyncHashLock  sync.Mutex
 }
 
 // ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
@@ -101,8 +95,8 @@ func (ic *NetworkConsensus) ReceiverHandler() consensus.Communicator {
 
 // NewInsolarConsensus creates new object to handle all consensus events
 func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.InsolarConsensus, error) {
-	communicatorSnd := &communicatorSender{handler}
-	communicatorRcv := &communicatorReceiver{keeper}
+	communicatorSnd := &communicatorSender{handler, keeper}
+	// communicatorRcv := &communicatorReceiver{keeper}
 	consensus, err := consensus.NewConsensus(communicatorSnd)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating insolar consensus")
@@ -110,7 +104,7 @@ func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostH
 	return &NetworkConsensus{
 		consensus:       consensus,
 		communicatorSnd: communicatorSnd,
-		communicatorRcv: communicatorRcv,
+		communicatorRcv: nil,
 		keeper:          keeper,
 		self:            &selfWrapper{keeper},
 	}, nil
