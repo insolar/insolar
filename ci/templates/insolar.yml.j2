@@ -22,6 +22,7 @@ jobs:
   - get: insolar-{{ branch }}
     trigger: true
   - task: unit
+    timeout: 10m
     config:
       platform: linux
       image_resource:
