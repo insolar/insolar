@@ -68,7 +68,7 @@ test:
 	go test -v $(ALL_PACKAGES)
 
 test_with_coverage:
-	CGO_ENABLED=1 go test --race --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
 
 CONTRACTS = $(wildcard genesis/experiment/*)
