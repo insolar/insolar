@@ -19,15 +19,12 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/api/requesters"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetSeed(t *testing.T) {
-	seed1, err := requesters.GetSeed(TestURL)
-	assert.NoError(t, err)
-	seed2, err := requesters.GetSeed(TestURL)
-	assert.NoError(t, err)
+	seed1 := getSeed(t)
+	seed2 := getSeed(t)
 
 	assert.NotEqual(t, seed1, seed2)
 

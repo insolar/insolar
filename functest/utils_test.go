@@ -130,6 +130,17 @@ func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	return body
 }
 
+func getSeed(t *testing.T) string {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_seed",
+	})
+
+	getSeedResponse := &getSeedResponse{}
+	unmarshalResponse(t, body, getSeedResponse)
+
+	return getSeedResponse.Seed
+}
+
 func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
 	err := json.Unmarshal(body, &response)
 	assert.NoError(t, err)
