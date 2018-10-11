@@ -36,5 +36,5 @@ type ConsensusProcessor interface {
 	// IsPartOfConsensus returns whether we should perform all consensus interactions or not
 	IsPartOfConsensus() bool
 	// ReceiverHandler return handler that is responsible to handle consensus network requests
-	ReceiverHandler() Communicator
+	ReceiverHandler() CommunicatorReceiver
 }

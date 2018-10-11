@@ -46,8 +46,6 @@ type NodeKeeper interface {
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
 	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list
 	SetPulse(number core.PulseNumber) (bool, *UnsyncList)
-	// GetPulse returns internal NodeKeeper pulse.
-	GetPulse() core.PulseNumber
 	// Sync initiates transferring syncCandidates -> sync, sync -> active.
 	// If number is less than internal PulseNumber then ignore Sync.
 	Sync(syncCandidates []*core.ActiveNode, number core.PulseNumber)
@@ -141,13 +139,6 @@ func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
 	defer nk.activeLock.RUnlock()
 
 	return nk.active[ref]
-}
-
-func (nk *nodekeeper) GetPulse() core.PulseNumber {
-	nk.unsyncLock.Lock()
-	defer nk.unsyncLock.Unlock()
-
-	return nk.pulse
 }
 
 func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, *UnsyncList) {

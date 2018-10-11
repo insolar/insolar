@@ -49,7 +49,7 @@ func (s *selfWrapper) GetActiveNode() *core.ActiveNode {
 type NetworkConsensus struct {
 	consensus       consensus.Consensus
 	communicatorSnd consensus.Communicator
-	communicatorRcv consensus.Communicator
+	communicatorRcv consensus.CommunicatorReceiver
 	keeper          nodekeeper.NodeKeeper
 	self            *selfWrapper
 }
@@ -89,14 +89,14 @@ func (ic *NetworkConsensus) IsPartOfConsensus() bool {
 }
 
 // ReceiverHandler return handler that is responsible to handle consensus network requests
-func (ic *NetworkConsensus) ReceiverHandler() consensus.Communicator {
+func (ic *NetworkConsensus) ReceiverHandler() consensus.CommunicatorReceiver {
 	return ic.communicatorRcv
 }
 
 // NewInsolarConsensus creates new object to handle all consensus events
 func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.ConsensusProcessor, error) {
 	communicatorSnd := &communicatorSender{handler, keeper}
-	// communicatorRcv := &communicatorReceiver{keeper}
+	communicatorRcv := &communicatorReceiver{handler, keeper}
 	consensus, err := consensus.NewConsensus(communicatorSnd)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating insolar consensus")
@@ -104,7 +104,7 @@ func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostH
 	return &NetworkConsensus{
 		consensus:       consensus,
 		communicatorSnd: communicatorSnd,
-		communicatorRcv: nil,
+		communicatorRcv: communicatorRcv,
 		keeper:          keeper,
 		self:            &selfWrapper{keeper},
 	}, nil

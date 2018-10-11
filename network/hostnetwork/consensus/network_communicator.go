@@ -31,7 +31,8 @@ import (
 )
 
 type communicatorReceiver struct {
-	keeper nodekeeper.NodeKeeper
+	handler hosthandler.HostHandler
+	keeper  nodekeeper.NodeKeeper
 }
 
 type communicatorSender struct {
@@ -40,35 +41,37 @@ type communicatorSender struct {
 }
 
 func (c *communicatorReceiver) ExchangeData(ctx context.Context, pulse core.PulseNumber,
-	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
+	from core.RecordRef, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 
-	currentPulse := c.keeper.GetPulse()
-	if currentPulse > pulse {
-		return nil, errors.Errorf("Received consensus unsync list exchange request with pulse %d but current is %d",
-			pulse, currentPulse)
+	// TODO: pass appropriate timeout
+	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, c.handler.GetPacketTimeout())
+	if err != nil {
+		return nil, errors.Wrap(err, "Error getting unsync holder on receiving side")
 	}
-	// TODO: block on getting unsync if currentPulse < number
-	// TODO: write to communicatorSender map to decrease network requests
-	// return c.keeper.GetUnsync(), nil
-	return nil, errors.New("not implemented")
+	if unsyncHolder.GetPulse() > pulse {
+		return nil, errors.Errorf("Received consensus unsync list exchange request with pulse %d but current is %d",
+			pulse, unsyncHolder.GetPulse())
+	}
+	result := unsyncHolder.GetUnsync()
+	unsyncHolder.AddUnsyncList(from, data)
+	return result, nil
 }
 
 func (c *communicatorReceiver) ExchangeHash(ctx context.Context, pulse core.PulseNumber,
-	p consensus.Participant, data []*consensus.NodeUnsyncHash) ([]byte, error) {
+	from core.RecordRef, data []*consensus.NodeUnsyncHash) ([]*consensus.NodeUnsyncHash, error) {
 
-	currentPulse := c.keeper.GetPulse()
-	if currentPulse > pulse {
-		return nil, errors.Errorf("Received consensus unsync hash exchange request with pulse %d but current is %d",
-			pulse, currentPulse)
+	// TODO: pass appropriate timeout
+	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, c.handler.GetPacketTimeout())
+	if err != nil {
+		return nil, errors.Wrap(err, "Error getting unsync holder on receiving side")
 	}
-	// TODO: block on getting unsync hash if currentPulse < number
-	// hash, _, err := c.keeper.GetUnsyncHash()
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "Failed to calculate unsync hash")
-	// }
-	// TODO: write to communicatorSender map to decrease network requests
-	// return hash, nil
-	return nil, errors.New("not implemented")
+	if unsyncHolder.GetPulse() > pulse {
+		return nil, errors.Errorf("Received consensus unsync hash exchange request with pulse %d but current is %d",
+			pulse, unsyncHolder.GetPulse())
+	}
+	unsyncHolder.AddUnsyncHash(from, data)
+	// TODO: pass appropriate timeout
+	return unsyncHolder.GetHash(c.handler.GetPacketTimeout())
 }
 
 func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseNumber,

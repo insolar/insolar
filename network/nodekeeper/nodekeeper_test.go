@@ -130,11 +130,12 @@ func TestNodekeeper_pipeline(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		err := keeper.AddUnsync(newActiveNode(byte(2 * i)))
 		assert.NoError(t, err)
-		success, list := keeper.SetPulse(core.PulseNumber(i))
+		pulse := core.PulseNumber(i)
+		success, list := keeper.SetPulse(pulse)
 		assert.True(t, success)
 		err = keeper.AddUnsync(newActiveNode(byte(2*i + 1)))
 		assert.NoError(t, err)
-		keeper.Sync(list.GetUnsync(), keeper.GetPulse())
+		keeper.Sync(list.GetUnsync(), pulse)
 	}
 	// 3 nodes should not advance to join active list
 	// 5 nodes should advance + 1 self node
