@@ -94,7 +94,7 @@ func (ic *NetworkConsensus) ReceiverHandler() consensus.CommunicatorReceiver {
 }
 
 // NewInsolarConsensus creates new object to handle all consensus events
-func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.ConsensusProcessor, error) {
+func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.Processor, error) {
 	communicatorSnd := &communicatorSender{handler, keeper}
 	communicatorRcv := &communicatorReceiver{handler, keeper}
 	consensus, err := consensus.NewConsensus(communicatorSnd)

@@ -188,7 +188,7 @@ func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
 	defer nk.unsyncLock.Unlock()
 
 	if nk.self == nil {
-		return errors.New("Cannot add node to unsync list: current node is not active!")
+		return errors.New("cannot add node to unsync list: current node is not active")
 	}
 
 	nk.unsync = append(nk.unsync, node)

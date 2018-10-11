@@ -29,8 +29,8 @@ type CommunicatorReceiver interface {
 	ExchangeHash(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*NodeUnsyncHash) ([]*NodeUnsyncHash, error)
 }
 
-// ConsensusProcessor is an interface to bind all functionality related to consensus with the network layer
-type ConsensusProcessor interface {
+// Processor is an interface to bind all functionality related to consensus with the network layer
+type Processor interface {
 	// ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
 	ProcessPulse(ctx context.Context, pulse core.Pulse)
 	// IsPartOfConsensus returns whether we should perform all consensus interactions or not
