@@ -249,6 +249,9 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) consensus.UnsyncHol
 	tmp := nk.unsync
 	nk.unsync = make([]*core.ActiveNode, 0)
 	nk.unsyncHolder = NewUnsyncHolder(nk.pulse, tmp)
+	if len(nk.unsyncWaiters) == 0 {
+		return nk.unsyncHolder
+	}
 	// notify waiters that new unsync holder is available for read
 	for _, ch := range nk.unsyncWaiters {
 		ch <- nk.unsyncHolder

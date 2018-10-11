@@ -17,16 +17,19 @@
 package nodekeeper
 
 import (
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/pkg/errors"
 )
 
 type unsyncList struct {
-	unsync []*core.ActiveNode
-	pulse  core.PulseNumber
+	unsync  []*core.ActiveNode
+	pulse   core.PulseNumber
+	hash    []*consensus.NodeUnsyncHash
+	waiters []chan []*consensus.NodeUnsyncHash
+	lock    sync.Mutex
 }
 
 // NewUnsyncHolder create new object to hold data for consensus
@@ -45,12 +48,34 @@ func (u *unsyncList) GetPulse() core.PulseNumber {
 }
 
 // SetHash sets hash of unsync lists for each node of consensus.
-func (u *unsyncList) SetHash([]*consensus.NodeUnsyncHash) {
+func (u *unsyncList) SetHash(hash []*consensus.NodeUnsyncHash) {
+	u.lock.Lock()
+	defer u.lock.Unlock()
 
+	u.hash = hash
+	if len(u.waiters) == 0 {
+		return
+	}
+	for _, ch := range u.waiters {
+		ch <- u.hash
+		close(ch)
+	}
+	u.waiters = make([]chan []*consensus.NodeUnsyncHash, 0)
 }
 
 // GetHash get hash of unsync lists for each node of consensus. If hash is not calculated yet, then this call blocks
 // until the hash is calculated with SetHash() call
 func (u *unsyncList) GetHash(blockTimeout time.Duration) ([]*consensus.NodeUnsyncHash, error) {
-	return nil, errors.New("not implemented")
+	u.lock.Lock()
+	if u.hash != nil {
+		result := u.hash
+		u.lock.Unlock()
+		return result, nil
+	}
+	ch := make(chan []*consensus.NodeUnsyncHash)
+	u.waiters = append(u.waiters, ch)
+	u.lock.Unlock()
+	// TODO: timeout
+	result := <-ch
+	return result, nil
 }
