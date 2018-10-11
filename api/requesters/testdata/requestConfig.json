@@ -1,5 +1,6 @@
 {
   "params":[  200,  "Test"],
   "method": "CreateMember",
-  "callee": "5APzToQsvhLJjJFk4tptkAavULrDAj1rAJidEcCizvJYJpdJN3CXZpCGzSdKg35PcvdZX2FFiNsu2tmLW4zjRSPh"
+  "callee": "5APzToQsvhLJjJFk4tptkAavULrDAj1rAJidEcCizvJYJpdJN3CXZpCGzSdKg35PcvdZX2FFiNsu2tmLW4zjRSPh",
+  "delegate": "VGVzdDI="
 }
