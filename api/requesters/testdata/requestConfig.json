@@ -1,0 +1,6 @@
+{
+  "params":[  200,  "Test"],
+  "method": "CreateMember",
+  "requester": "refRequester",
+  "target": "refTarget"
+}
