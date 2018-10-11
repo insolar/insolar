@@ -69,7 +69,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
-	unsyncCandidates, err := ic.consensus.DoConsensus(unsyncHolder, ctx, ic.self, participants)
+	unsyncCandidates, err := ic.consensus.DoConsensus(ctx, unsyncHolder, ic.self, participants)
 	if err != nil {
 		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
 	}

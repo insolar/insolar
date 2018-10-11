@@ -52,16 +52,16 @@ type UnsyncHolder interface {
 type Consensus interface {
 	// DoConsensus is sync method, it performs all consensus steps and returns list of synced nodes
 	// method should be executed in goroutine
-	DoConsensus(holder UnsyncHolder, ctx context.Context, self Participant, allParticipants []Participant) ([]*core.ActiveNode, error)
+	DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]*core.ActiveNode, error)
 }
 
 // Communicator interface is used to exchange messages between participants
 type Communicator interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(pulse core.PulseNumber, ctx context.Context, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error)
+	ExchangeData(ctx context.Context, pulse core.PulseNumber, p Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error)
 
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
-	ExchangeHash(pulse core.PulseNumber, ctx context.Context, p Participant, data []*NodeUnsyncHash) ([]byte, error)
+	ExchangeHash(ctx context.Context, pulse core.PulseNumber, p Participant, data []*NodeUnsyncHash) ([]byte, error)
 }
 
 // NewConsensus creates consensus

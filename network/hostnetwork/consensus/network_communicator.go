@@ -38,7 +38,7 @@ type communicatorSender struct {
 	handler hosthandler.HostHandler
 }
 
-func (c *communicatorReceiver) ExchangeData(pulse core.PulseNumber, ctx context.Context,
+func (c *communicatorReceiver) ExchangeData(ctx context.Context, pulse core.PulseNumber,
 	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 
 	currentPulse := c.keeper.GetPulse()
@@ -52,7 +52,7 @@ func (c *communicatorReceiver) ExchangeData(pulse core.PulseNumber, ctx context.
 	return nil, errors.New("not implemented")
 }
 
-func (c *communicatorReceiver) ExchangeHash(pulse core.PulseNumber, ctx context.Context,
+func (c *communicatorReceiver) ExchangeHash(ctx context.Context, pulse core.PulseNumber,
 	p consensus.Participant, data []*consensus.NodeUnsyncHash) ([]byte, error) {
 
 	currentPulse := c.keeper.GetPulse()
@@ -70,7 +70,7 @@ func (c *communicatorReceiver) ExchangeHash(pulse core.PulseNumber, ctx context.
 	return nil, errors.New("not implemented")
 }
 
-func (c *communicatorSender) ExchangeData(pulse core.PulseNumber, ctx context.Context,
+func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseNumber,
 	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
 
 	log.Infof("Sending consensus unsync list exchange request to %s", p.GetActiveNode().NodeID)
@@ -95,7 +95,7 @@ func (c *communicatorSender) ExchangeData(pulse core.PulseNumber, ctx context.Co
 	return responseData.UnsyncList, nil
 }
 
-func (c *communicatorSender) ExchangeHash(pulse core.PulseNumber, ctx context.Context,
+func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseNumber,
 	p consensus.Participant, data []*consensus.NodeUnsyncHash) ([]byte, error) {
 
 	log.Infof("Sending consensus unsync hash exchange request to %s", p.GetActiveNode().NodeID)
