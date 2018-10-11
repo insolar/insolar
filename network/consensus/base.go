@@ -44,8 +44,7 @@ func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, se
 
 	c.exchangeDataWithOtherParticipants(ctx)
 	c.exchangeHashWithOtherParticipants(ctx)
-
-	return c.holder.GetUnsync(), nil
+	return c.analyzeResults()
 }
 
 func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
@@ -59,7 +58,6 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
 				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
 
-				// goroutine
 				data, err := c.communicator.ExchangeData(ctx, c.holder.GetPulse(), participant, c.holder.GetUnsync())
 				if err != nil {
 					log.Errorln(err.Error())
@@ -96,7 +94,6 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 			if participant.GetActiveNode().NodeID != c.self.GetActiveNode().NodeID {
 				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
 
-				// goroutine
 				_, err := c.communicator.ExchangeHash(ctx, c.holder.GetPulse(), participant, c.resultsHash)
 				if err != nil {
 					log.Errorln(err.Error())
@@ -105,4 +102,9 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 		}(wg, p)
 	}
 	wg.Wait()
+}
+
+func (c *baseConsensus) analyzeResults() ([]*core.ActiveNode, error) {
+
+	return c.holder.GetUnsync(), nil
 }
