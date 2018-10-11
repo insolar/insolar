@@ -4,4 +4,5 @@ FROM alpine:latest
 RUN mkdir -p /go/bin
 COPY --from=builder /go/bin/insgorund /go/bin/insgorund
 EXPOSE 7777
+EXPOSE 7778
 ENTRYPOINT ["/go/bin/insgorund"]

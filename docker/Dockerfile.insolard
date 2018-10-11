@@ -10,5 +10,5 @@ ENV GOOS=linux
 
 RUN make install-deps pre-build build
 EXPOSE 8080
-EXPOSE 8090
+EXPOSE 19191
 ENTRYPOINT ["/go/bin/insolard"]
