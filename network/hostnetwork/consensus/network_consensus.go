@@ -66,12 +66,12 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	}
 	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
 	if !success {
-		log.Error("InsolarConsensus: could not set new pulse to NodeKeeper, aborting")
+		log.Error("ConsensusProcessor: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
 	unsyncCandidates, err := ic.consensus.DoConsensus(ctx, unsyncList, ic.self, participants)
 	if err != nil {
-		log.Errorf("InsolarConsensus: error performing consensus steps: %s", err.Error())
+		log.Errorf("ConsensusProcessor: error performing consensus steps: %s", err.Error())
 	}
 	// We have to keep in mind a scenario when DoConsensus takes too long time and a new ProcessPulse is called
 	// simultaneously with the current call. It will happen if DoConsensus takes more time than the delay between two
@@ -94,7 +94,7 @@ func (ic *NetworkConsensus) ReceiverHandler() consensus.Communicator {
 }
 
 // NewInsolarConsensus creates new object to handle all consensus events
-func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.InsolarConsensus, error) {
+func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.ConsensusProcessor, error) {
 	communicatorSnd := &communicatorSender{handler, keeper}
 	// communicatorRcv := &communicatorReceiver{keeper}
 	consensus, err := consensus.NewConsensus(communicatorSnd)

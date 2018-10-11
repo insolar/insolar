@@ -22,8 +22,15 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// InsolarConsensus is an interface to bind all functionality related to consensus with the network layer
-type InsolarConsensus interface {
+type CommunicatorReceiver interface {
+	// ExchangeData used in first consensus step to exchange data between participants
+	ExchangeData(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*core.ActiveNode) ([]*core.ActiveNode, error)
+	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
+	ExchangeHash(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*NodeUnsyncHash) ([]*NodeUnsyncHash, error)
+}
+
+// ConsensusProcessor is an interface to bind all functionality related to consensus with the network layer
+type ConsensusProcessor interface {
 	// ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
 	ProcessPulse(ctx context.Context, pulse core.Pulse)
 	// IsPartOfConsensus returns whether we should perform all consensus interactions or not

@@ -68,11 +68,11 @@ func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
 func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
 }
 
-func (fac *mockNetworkCommonFacade) GetConsensus() consensus.InsolarConsensus {
+func (fac *mockNetworkCommonFacade) GetConsensus() consensus.ConsensusProcessor {
 	return nil
 }
 
-func (fac *mockNetworkCommonFacade) SetConsensus(consensus.InsolarConsensus) {
+func (fac *mockNetworkCommonFacade) SetConsensus(consensus.ConsensusProcessor) {
 }
 
 type mockHostHandler struct {
