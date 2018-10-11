@@ -39,14 +39,21 @@ func verboseInfo(msg string) {
 	}
 }
 
+// SetVerbose switchs on verbose mode
 func SetVerbose(verb bool) {
 	verbose = verb
 }
 
+// PostParams represents params struct
 type PostParams = map[string]string
 
+// GetResponseBody makes request and extracts body
 func GetResponseBody(url string, postP map[string]string) ([]byte, error) {
-	jsonValue, _ := json.Marshal(postP)
+	jsonValue, err := json.Marshal(postP)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
+	}
+
 	postResp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with sending request")
@@ -64,6 +71,7 @@ func GetResponseBody(url string, postP map[string]string) ([]byte, error) {
 	return body, nil
 }
 
+// GetSeed makes get_seed request and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBody(url, PostParams{
 		"query_type": "get_seed",
@@ -91,6 +99,7 @@ func constructParams(params []interface{}) ([]byte, error) {
 	return args, nil
 }
 
+// SendWithSeed sends request with known seed
 func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed string) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
@@ -124,6 +133,7 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 	return body, nil
 }
 
+// Send: first gets seed and after that makes target request
 func Send(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
 	verboseInfo("Sending GETSEED request ...")
 	seed, err := GetSeed(url)
