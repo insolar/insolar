@@ -23,10 +23,12 @@ import (
 	"io"
 	"os"
 
+	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/application/bootstrapcertificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -60,12 +62,14 @@ var (
 	cmd                string
 	numberCertificates uint
 	configPath         string
+	verbose            bool
 )
 
 func parseInputParams() {
 	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
 		"available commands: default_config | random_ref | version | gen_keys | gen_certificates| send_request")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
 	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
@@ -78,6 +82,12 @@ func parseInputParams() {
 		os.Exit(0)
 	}
 
+}
+
+func verboseInfo(msg string) {
+	if verbose {
+		log.Infoln(msg)
+	}
 }
 
 func writeToOutput(out io.Writer, data string) {
@@ -165,9 +175,21 @@ func generateCertificates(out io.Writer) {
 }
 
 func sendRequest(out io.Writer) {
-	r := apiRequester{}
-	err := r.Send(out, configPath)
+	requesters.SetVerbose(verbose)
+	userCfg, err := requesters.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
+
+	reqCfg, err := requesters.ReadRequestConfigFromFile(configPath)
+	check("[ sendRequest ]", err)
+
+	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
+	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
+
+	const defaultUrl = "http://localhost:19191/api/v1?"
+	response, err := requesters.Send(defaultUrl, userCfg, reqCfg)
+	check("[ sendRequest ]", err)
+
+	writeToOutput(out, string(response))
 }
 
 func main() {
