@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
+	"path/filepath"
 
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 
@@ -41,7 +42,7 @@ type RequestConfigJSON struct {
 }
 
 func readFile(path string, configType interface{}) error {
-	rawConf, err := ioutil.ReadFile(path)
+	rawConf, err := ioutil.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return errors.Wrap(err, "[ readFile ] Problem with reading config")
 	}

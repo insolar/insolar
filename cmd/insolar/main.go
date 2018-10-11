@@ -36,7 +36,7 @@ import (
 )
 
 const defaultStdoutPath = "-"
-const defaultUrl = "http://localhost:19191/api/v1?"
+const defaultURL = "http://localhost:19191/api/v1?"
 
 func genDefaultConfig(r interface{}) ([]byte, error) {
 	t := reflect.TypeOf(r)
@@ -96,7 +96,7 @@ func parseInputParams() {
 		"available commands: default_config | random_ref | version | gen_keys | gen_certificates | send_request | gen_send_configs")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
-	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultUrl, "api url")
+	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
 	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
 	err := rootCmd.Execute()
