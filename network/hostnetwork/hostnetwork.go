@@ -78,7 +78,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		cfg.InfinityBootstrap,
 		nn.GetID(),
 		keeper,
-		0,
+		cfg.MajorityRule,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")
