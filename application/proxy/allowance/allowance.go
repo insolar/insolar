@@ -97,16 +97,16 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 bool
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 bool
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(bool)
+	return ret0
 }
 
 func (r *Allowance) IsExpiredNoWait(  ) {
@@ -140,16 +140,16 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 uint
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 uint
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(uint)
+	return ret0
 }
 
 func (r *Allowance) TakeAmountNoWait(  ) {
@@ -183,16 +183,16 @@ func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 uint
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 uint
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(uint)
+	return ret0
 }
 
 func (r *Allowance) GetBalanceForOwnerNoWait(  ) {
@@ -226,16 +226,16 @@ func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 uint
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 uint
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(uint)
+	return ret0
 }
 
 func (r *Allowance) DeleteExpiredAllowanceNoWait(  ) {

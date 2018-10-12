@@ -96,16 +96,16 @@ func (r *NodeRecord) GetPublicKey(  ) ( string ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 string
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(string)
+	return ret0
 }
 
 func (r *NodeRecord) GetPublicKeyNoWait(  ) {
@@ -139,16 +139,16 @@ func (r *NodeRecord) GetRole(  ) ( core.NodeRole ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 core.NodeRole
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 core.NodeRole
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(core.NodeRole)
+	return ret0
 }
 
 func (r *NodeRecord) GetRoleNoWait(  ) {
@@ -182,18 +182,18 @@ func (r *NodeRecord) GetRoleAndPublicKey(  ) ( core.NodeRole, string ) {
    		panic(err)
 	}
 
-	resList := [2]interface{}{}
-	var a0 core.NodeRole
-	resList[0] = a0
-	var a1 string
-	resList[1] = a1
+	ret := [2]interface{}{}
+	var ret0 core.NodeRole
+	ret[0] = &ret0
+	var ret1 string
+	ret[1] = &ret1
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(core.NodeRole), resList[1].(string)
+	return ret0, ret1
 }
 
 func (r *NodeRecord) GetRoleAndPublicKeyNoWait(  ) {
@@ -227,9 +227,9 @@ func (r *NodeRecord) Destroy(  ) (  ) {
    		panic(err)
 	}
 
-	resList := [0]interface{}{}
+	ret := []interface{}{}
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}

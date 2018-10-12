@@ -96,16 +96,16 @@ func (r *NodeDomain) RegisterNode( pk string, role string ) ( core.RecordRef ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 core.RecordRef
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 core.RecordRef
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(core.RecordRef)
+	return ret0
 }
 
 func (r *NodeDomain) RegisterNodeNoWait( pk string, role string ) {
@@ -142,9 +142,9 @@ func (r *NodeDomain) RemoveNode( nodeRef core.RecordRef ) (  ) {
    		panic(err)
 	}
 
-	resList := [0]interface{}{}
+	ret := []interface{}{}
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
@@ -187,16 +187,16 @@ func (r *NodeDomain) IsAuthorized( nodeRef core.RecordRef, seed []byte, signatur
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 bool
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 bool
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(bool)
+	return ret0
 }
 
 func (r *NodeDomain) IsAuthorizedNoWait( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) {
@@ -236,20 +236,20 @@ func (r *NodeDomain) Authorize( nodeRef core.RecordRef, seed []byte, signatureRa
    		panic(err)
 	}
 
-	resList := [3]interface{}{}
-	var a0 string
-	resList[0] = a0
-	var a1 core.NodeRole
-	resList[1] = a1
-	var a2 string
-	resList[2] = a2
+	ret := [3]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 core.NodeRole
+	ret[1] = &ret1
+	var ret2 string
+	ret[2] = &ret2
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(string)
+	return ret0, ret1, ret2
 }
 
 func (r *NodeDomain) AuthorizeNoWait( nodeRef core.RecordRef, seed []byte, signatureRaw []byte ) {
