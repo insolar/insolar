@@ -27,10 +27,14 @@ import (
 )
 
 const (
+	// Generic
+
+	TypeError = core.ReplyType(iota)
+
 	// Logicrunner
 
 	// TypeCallMethod - two binary fields: data and results.
-	TypeCallMethod = core.ReplyType(iota)
+	TypeCallMethod
 	// TypeCallConstructor - reference on created object
 	TypeCallConstructor
 
@@ -50,6 +54,14 @@ const (
 	TypeID
 	// TypeChildren is a reply for fetching objects children in chunks.
 	TypeChildren
+)
+
+// ErrType is used to determine and compare reply errors.
+type ErrType int
+
+const (
+	// ErrDeactivated returned when requested object is deactivated.
+	ErrDeactivated = iota
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
@@ -72,6 +84,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &ID{}, nil
 	case TypeChildren:
 		return &Children{}, nil
+	case TypeError:
+		return &Error{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
