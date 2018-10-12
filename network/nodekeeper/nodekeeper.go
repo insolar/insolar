@@ -118,6 +118,7 @@ func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
 	return result
 }
 
+// todo: pass self node if no bootstraps
 func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()

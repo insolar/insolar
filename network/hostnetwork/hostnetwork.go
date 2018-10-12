@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/consensus"
@@ -77,7 +78,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		cfg.InfinityBootstrap,
 		nn.GetID(),
 		keeper,
-		5,
+		0,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")
@@ -88,6 +89,20 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		log.Warn("Consensus is not implemented!")
 	}
 	network.GetNetworkCommonFacade().SetConsensus(networkConsensus)
+
+	// hack for zeronet
+	if len(options.BootstrapHosts) == 0 {
+		log.Info("Bootstrap nodes is not set. Init zeronet.")
+		err := network.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
+			NodeID:    nn.GetID(),
+			PulseNum:  0,
+			State:     core.NodeActive,
+			PublicKey: []byte{}, // TODO
+		}})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to init zeronet.")
+		}
+	}
 
 	return network, nil
 }
