@@ -78,12 +78,6 @@ func (currentPulsar *Pulsar) setBftGridItem(key string, value map[string]*bftCel
 	defer currentPulsar.BftGridLock.Unlock()
 }
 
-func (currentPulsar *Pulsar) getBftGridRow(key string) map[string]*bftCell {
-	currentPulsar.BftGridLock.RLock()
-	defer currentPulsar.BftGridLock.RUnlock()
-	return currentPulsar.bftGrid[key]
-}
-
 func (currentPulsar *Pulsar) getBftGridItem(row string, column string) *bftCell {
 	currentPulsar.BftGridLock.RLock()
 	defer currentPulsar.BftGridLock.RUnlock()
