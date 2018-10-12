@@ -140,12 +140,6 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
-	log.Infoln("Searching for an active nodes...")
-	err := network.hostNetwork.GetActiveNodes()
-	if err != nil {
-		return errors.Wrap(err, "failed to get active nodes")
-	}
-
 	pm, err := getPulseManager(components)
 	if err != nil {
 		log.Error(err)

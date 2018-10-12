@@ -63,7 +63,9 @@ type DHT struct {
 	nodeID            core.RecordRef
 	activeNodeKeeper  nodekeeper.NodeKeeper
 	majorityRule      int
+	uncheckedNodes    map[string][]byte
 	signChecker       func(msg core.Message) bool
+	signer            func(nonce []byte) []byte
 }
 
 // AuthInfo collects some information about authentication.
@@ -191,6 +193,8 @@ func NewDHT(
 	dht.auth.ReceivedKeys = make(map[string][]byte)
 
 	dht.subnet.SubnetIDs = make(map[string][]string)
+
+	dht.uncheckedNodes = make(map[string][]byte)
 
 	return dht, nil
 }
@@ -961,16 +965,6 @@ func (dht *DHT) GetActiveNodesList() []*core.ActiveNode {
 	return dht.activeNodeKeeper.GetActiveNodes()
 }
 
-// GetActiveNodes starts getting active nodes from other nodes.
-func (dht *DHT) GetActiveNodes() error {
-	var err error
-	// TODO: fix it.
-	for _, target := range dht.options.BootstrapHosts {
-		err = SendActiveNodesRequest(dht, target)
-	}
-	return err
-}
-
 // AddActiveNodes adds an active nodes slice.
 func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	err := dht.checkMajorityRule(activeNodes)
@@ -1364,4 +1358,33 @@ func (dht *DHT) AddPossibleRelayID(id string) {
 // GetOriginHost returns the local host.
 func (dht *DHT) GetOriginHost() *host.Origin {
 	return dht.origin
+}
+
+// RemoveUncheckedNode removes host from unchecked nodes.
+func (dht *DHT) RemoveUncheckedNode(hostID id.ID) {
+	delete(dht.uncheckedNodes, hostID.String())
+}
+
+// AddUncheckedNode add host to unchecked node.
+func (dht *DHT) AddUncheckedNode(hostID id.ID, nonce []byte) {
+	dht.uncheckedNodes[hostID.String()] = nonce
+}
+
+// UncheckedNodeExist checks host existing in unchecked nodes map.
+func (dht *DHT) UncheckedNodeExist(hostID id.ID, nonce []byte) bool {
+	return bytes.Equal(dht.uncheckedNodes[hostID.String()], nonce)
+}
+
+// SetSigner sets a func which will sign a nonce.
+func (dht *DHT) SetSigner(signer func(nonce []byte) []byte) {
+	dht.signer = signer
+}
+
+// Sign sign a nonce.
+func (dht *DHT) Sign(nonce []byte) []byte {
+	if dht.signer == nil {
+		log.Error("signer is nil")
+		return nil
+	}
+	return dht.signer(nonce)
 }

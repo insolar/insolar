@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
@@ -93,14 +94,14 @@ type HostHandler interface {
 	Listen() error
 	ObtainIP() error
 	Bootstrap() error
-	GetActiveNodes() error
-	GetHostsFromBootstrap()
 	NumHosts(ctx Context) int
+	Sign(nonce []byte) []byte
 	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
-	StoreRetrieve(key store.Key) ([]byte, bool)
 	HtFromCtx(ctx Context) *routing.HashTable
+	StoreRetrieve(key store.Key) ([]byte, bool)
 	EqualAuthSentKey(targetID string, key []byte) bool
+	UncheckedNodeExist(hostID id.ID, nonce []byte) bool
 	SendRequest(packet *packet.Packet) (transport.Future, error)
 	FindHost(ctx Context, targetID string) (*host.Host, bool, error)
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
@@ -116,20 +117,24 @@ type HostHandler interface {
 	AddAuthSentKey(id string, key []byte)
 	AddRelayClient(host *host.Host) error
 	AddReceivedKey(target string, key []byte)
+	AddUncheckedNode(hostID id.ID, nonce []byte)
 	AddHost(ctx Context, host *routing.RouteHost)
 	AddActiveNodes(activeNode []*core.ActiveNode) error
 
 	RemoveAuthHost(key string)
 	RemoveProxyHost(targetID string)
 	RemovePossibleProxyID(id string)
+	RemoveUncheckedNode(hostID id.ID)
 	RemoveAuthSentKeys(targetID string)
 	RemoveRelayClient(host *host.Host) error
 
 	SetHighKnownHostID(id string)
 	SetOuterHostsCount(hosts int)
+	SetSigner(func(nonce []byte) []byte)
 	SetSignChecker(func(msg core.Message) bool)
 	SetAuthStatus(targetID string, status bool)
 
+	GetHostsFromBootstrap()
 	GetProxyHostsCount() int
 	GetOuterHostsCount() int
 	GetNodeID() core.RecordRef
