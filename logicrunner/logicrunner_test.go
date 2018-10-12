@@ -88,7 +88,7 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 		Ledger:     l,
 		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
-	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 100, &pulsar.StandardEntropyGenerator{}))
+	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
 	}
@@ -103,17 +103,26 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	}
 }
 
-func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
+func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.RecordRef) {
+	failmap := make(map[core.RecordRef]struct{})
+	for _, r := range mustfail {
+		failmap[r] = struct{}{}
+	}
 	rlr := lr.(*LogicRunner)
 	rlr.caseBindMutex.Lock()
 	rlrcbr := rlr.caseBind.Records
 	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
-		//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
+		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
 		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
-		assert.NoError(t, err, "validation")
-		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+		if _, ok := failmap[ref]; ok {
+			assert.Error(t, err, "validation")
+			assert.True(t, len(cr) > vstep, "Validation failed before end")
+		} else {
+			assert.NoError(t, err, "validation")
+			assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+		}
 	}
 }
 
@@ -783,7 +792,7 @@ func (c *Contract) Rand() int {
 		})
 		assert.NoError(t, err, "contract call")
 	}
-	// ValidateAllResults(t, lr) # must fail
+	ValidateAllResults(t, lr, *contract)
 }
 
 func TestErrorInterface(t *testing.T) {
