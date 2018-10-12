@@ -1,4 +1,4 @@
-BIN_DIR = bin
+BIN_DIR ?= bin
 INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = $(BIN_DIR)/insgocc
@@ -20,9 +20,9 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps install build test test_with_coverage regen_proxyes
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen_proxies
 
-all: clean install-deps install build test
+all: clean install-deps pre-build build test
 
 lint: ci-lint
 
@@ -74,3 +74,16 @@ test_with_coverage:
 CONTRACTS = $(wildcard genesis/experiment/*)
 regen_proxyes: $(INSGOCC)
 	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy genesis/experiment/$(notdir $(c))/$(notdir $(c)).go; )
+
+docker-insolard:
+	docker build --tag insolar/insolard -f ./docker/Dockerfile.insolard .
+
+docker-pulsar:
+	docker build --tag insolar/pulsar -f ./docker/Dockerfile.pulsar .
+
+docker-insgorund:
+	docker build --tag insolar/insgorund -f ./docker/Dockerfile.insgorund .
+
+
+docker: docker-insolard docker-pulsar docker-insgorund
+
