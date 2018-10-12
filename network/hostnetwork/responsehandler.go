@@ -120,11 +120,9 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 	return nil
 }
 
-func handleCheckPublicKeyResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckPublicKey) error {
+func handleCheckPublicKeyResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseGetNonce) error {
+	if len(response.Nonce) == 0 {
+		return errors.New("received empty nonce")
+	}
 	return nil
-}
-
-func handleActiveNodesResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseActiveNodes) error {
-	err := hostHandler.AddActiveNodes(response.ActiveNodes)
-	return err
 }

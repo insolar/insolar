@@ -71,10 +71,8 @@ func DispatchPacketType(
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeCheckSignedNonce:
 		return processCheckSignedNonce(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeCheckPublicKey:
-		return processCheckPublicKey(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeActiveNodes:
-		return processActiveNodes(hostHandler, packetBuilder)
+	case packet.TypeGetNonce:
+		return processCheckPublicKey(hostHandler, msg, packetBuilder)
 	case packet.TypeDisconnect:
 		return processDisconnect(hostHandler, packetBuilder)
 	case packet.TypeExchangeUnsyncLists:
@@ -119,14 +117,14 @@ func processDisconnect(hostHandler hosthandler.HostHandler, packetBuilder packet
 
 func processCheckPublicKey(
 	hostHandler hosthandler.HostHandler,
-	ctx hosthandler.Context,
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 	nonce, err := time.Now().MarshalBinary()
+	hostHandler.AddUncheckedNode(msg.Sender.ID, nonce)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal nonce")
 	}
-	return packetBuilder.Response(&packet.ResponseCheckPublicKey{Nonce: nonce}).Build(), nil
+	return packetBuilder.Response(&packet.ResponseGetNonce{Nonce: nonce}).Build(), nil
 }
 
 func processCheckSignedNonce(
@@ -136,6 +134,8 @@ func processCheckSignedNonce(
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 	// TODO: do real check sign.
 	// TODO: add to unsync and wait to advance to sync list
+	// data := msg.Data.(*packet.RequestCheckSignedNonce)
+	// data.Signed
 	return nil, nil
 }
 
@@ -423,9 +423,4 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	}
 
 	return packetBuilder.Response(response).Build(), err
-}
-
-func processActiveNodes(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {
-	response := &packet.ResponseActiveNodes{ActiveNodes: hostHandler.GetActiveNodesList()}
-	return packetBuilder.Response(response).Build(), nil
 }

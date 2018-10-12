@@ -248,8 +248,8 @@ func CheckPublicKeyRequest(hostHandler hosthandler.HostHandler, targetID string)
 	}
 
 	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(targetHost).Type(packet.TypeCheckPublicKey).
-		Request(&packet.RequestCheckPublicKey{NodeID: hostHandler.GetNodeID()}).
+		Receiver(targetHost).Type(packet.TypeGetNonce).
+		Request(&packet.RequestGetNonce{NodeID: hostHandler.GetNodeID()}).
 		Build()
 
 	future, err := hostHandler.SendRequest(request)
@@ -342,27 +342,6 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-func SendActiveNodesRequest(hostHandler hosthandler.HostHandler, target *host.Host) error {
-	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
-	if err != nil {
-		return err
-	}
-
-	builder := packet.NewBuilder()
-	request := builder.Type(packet.TypeActiveNodes).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(target).
-		Request(&packet.RequestActiveNodes{}).
-		Build()
-	future, err := hostHandler.SendRequest(request)
-
-	if err != nil {
-		return errors.Wrap(err, "Failed to SendRequest")
-	}
-
-	return checkResponse(hostHandler, future, target.ID.String(), request)
-}
-
 // SendRelayOwnership send a relay ownership request.
 func SendRelayOwnership(hostHandler hosthandler.HostHandler, subnetIDs []string) {
 	for _, id1 := range subnetIDs {
@@ -388,7 +367,7 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *ho
 	request := builder.Type(packet.TypeCheckSignedNonce).
 		Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(target).
-		Request(&packet.RequestCheckSignedNonce{}).
+		Request(&packet.RequestCheckSignedNonce{Signed: hostHandler.Sign(nonce)}).
 		Build()
 
 	future, err := hostHandler.SendRequest(request)
@@ -460,18 +439,18 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		if !response.Success {
 			err = errors.New(response.Error)
 		}
-	case packet.TypeCheckPublicKey:
-		response := rsp.Data.(*packet.ResponseCheckPublicKey)
+	case packet.TypeGetNonce:
+		response := rsp.Data.(*packet.ResponseGetNonce)
 		err = handleCheckPublicKeyResponse(hostHandler, response)
 		if err == nil {
 			err = sendCheckSignedNonceRequest(hostHandler, rsp.Sender, response.Nonce)
 		}
-	case packet.TypeActiveNodes:
-		response := rsp.Data.(*packet.ResponseActiveNodes)
-		err = handleActiveNodesResponse(hostHandler, response)
-		if err != nil {
-			err = sendDisconnectRequest(hostHandler, rsp.Sender)
+	case packet.TypeCheckSignedNonce:
+		response := rsp.Data.(*packet.ResponseCheckSignedNonce)
+		if !response.Success {
+			return errors.New("failed to check signed nonce")
 		}
+		// TODO: else
 	case packet.TypeDisconnect:
 		response := rsp.Data.(*packet.ResponseDisconnect)
 		if (response.Error == nil) && response.Disconnected {

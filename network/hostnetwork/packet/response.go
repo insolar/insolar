@@ -114,13 +114,13 @@ type ResponseKnownOuterHosts struct {
 	OuterHosts int    // number of known outer hosts
 }
 
-// ResponseCheckPublicKey is data to answer to authorization request.
-type ResponseCheckPublicKey struct {
+// ResponseGetNonce is data to answer to authorization request.
+type ResponseGetNonce struct {
 	Nonce []byte
 }
 
-// ResponseActiveNodes is data to answer to active nodes request.
-type ResponseActiveNodes struct {
+type ResponseCheckSignedNonce struct {
+	Success     bool
 	ActiveNodes []*core.ActiveNode
 }
 

@@ -109,18 +109,14 @@ type RequestKnownOuterHosts struct {
 	OuterHosts int    // number of known outer hosts
 }
 
-// RequestCheckPublicKey is data to check a public key.
-type RequestCheckPublicKey struct {
+// RequestGetNonce is data to check a public key.
+type RequestGetNonce struct {
 	NodeID core.RecordRef
 }
 
 // RequestCheckSignedNonce is data to check a signed nonce.
 type RequestCheckSignedNonce struct {
 	Signed []byte
-}
-
-// RequestActiveNodes is request to get active nodes.
-type RequestActiveNodes struct {
 }
 
 // RequestExchangeUnsyncLists is request to exchange unsync lists during consensus
