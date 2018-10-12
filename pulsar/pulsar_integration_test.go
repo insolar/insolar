@@ -33,6 +33,7 @@ import (
 )
 
 func TestTwoPulsars_Handshake(t *testing.T) {
+
 	_, firstPrivateExported, firstPublicExported := generatePrivateAndConvertPublic(t)
 	_, secondPrivateExported, secondPublicExported := generatePrivateAndConvertPublic(t)
 
@@ -41,6 +42,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1639",
+		PrivateKey:          firstPrivateExported,
 		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublicExported},
 		}},
@@ -49,13 +51,13 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
-		firstPrivateExported,
 	)
 	assert.NoError(t, err)
 
 	secondPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1640",
+		PrivateKey:          secondPrivateExported,
 		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublicExported},
 		}},
@@ -64,7 +66,6 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
 		net.Listen,
-		secondPrivateExported,
 	)
 	assert.NoError(t, err)
 
@@ -82,16 +83,17 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	}()
 }
 
-func initNetwork(t *testing.T, bootstrapHosts []string, key string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
+func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
 	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
+
 	tempLedger, cleaner := ledgertestutil.TmpLedger(t, lr, "")
 	nodeConfig := configuration.NewConfiguration()
-	nodeConfig.PrivateKey = key
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
-	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig)
+	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig.Host, nodeConfig.Node)
+
 	assert.NoError(t, err)
 	err = nodeNetwork.Start(core.Components{Ledger: tempLedger})
 	assert.NoError(t, err)
@@ -101,11 +103,10 @@ func initNetwork(t *testing.T, bootstrapHosts []string, key string) (*ledger.Led
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
 	// Arrange
-	_, exportedPrivateKey, _ := generatePrivateAndConvertPublic(t)
-	_, key2, _ := generatePrivateAndConvertPublic(t)
-	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil, exportedPrivateKey)
-	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress}, key2)
+	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
+	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
+	_, exportedPrivateKey, _ := generatePrivateAndConvertPublic(t)
 	storage := &pulsartestutil.MockPulsarStorage{}
 	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
 	stateSwitcher := &StateSwitcherImpl{}
@@ -113,6 +114,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	newPulsar, err := NewPulsar(configuration.Pulsar{
 		ConnectionType:      "tcp",
 		MainListenerAddress: ":1640",
+		PrivateKey:          exportedPrivateKey,
 		BootstrapNodes:      []string{bootstrapAddress},
 		BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
 		Neighbours:          []configuration.PulsarNodeAddress{}},
@@ -121,7 +123,6 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		pulsartestutil.MockEntropyGenerator{},
 		stateSwitcher,
 		net.Listen,
-		exportedPrivateKey,
 	)
 	stateSwitcher.SetPulsar(newPulsar)
 
@@ -151,14 +152,14 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	// Arrange
-	_, parsedPrivKeyFirst, firstPubKey := generatePrivateAndConvertPublic(t)
-	_, parsedPrivKeySecond, secondPubKey := generatePrivateAndConvertPublic(t)
-
-	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil, parsedPrivKeyFirst)
-	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress}, parsedPrivKeySecond)
+	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
+	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
 	storage := &pulsartestutil.MockPulsarStorage{}
 	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
+
+	_, parsedPrivKeyFirst, firstPubKey := generatePrivateAndConvertPublic(t)
+	_, parsedPrivKeySecond, secondPubKey := generatePrivateAndConvertPublic(t)
 
 	firstStateSwitcher := &StateSwitcherImpl{}
 	firstPulsar, err := NewPulsar(configuration.Pulsar{
@@ -205,7 +206,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	// Act
 	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
-
 	time.Sleep(500 * time.Millisecond)
 
 	usualNodeNetwork.Stop()

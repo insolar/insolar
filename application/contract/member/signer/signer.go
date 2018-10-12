@@ -20,7 +20,8 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-func Serialize(ref string, delegate string, method string, params []byte, seed []byte) ([]byte, error) {
+// Serialize serializes request params
+func Serialize(ref []byte, delegate []byte, method string, params []byte, seed []byte) ([]byte, error) {
 	var serialized []byte
 	ch := new(codec.CborHandle)
 	err := codec.NewEncoderBytes(&serialized, ch).Encode([]interface{}{

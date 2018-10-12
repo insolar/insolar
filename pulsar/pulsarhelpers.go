@@ -24,7 +24,7 @@ import (
 	"math/big"
 	"sort"
 
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -54,11 +54,12 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 	if err != nil {
 		return false, errors.Wrap(err, "[ checkSignature ]")
 	}
+
 	if len(rest) != 0 {
 		return false, errors.New("[ checkSignature ] len of  rest must be 0")
 	}
 
-	publicKey, err := ecdsa_helper.ImportPublicKey(pub)
+	publicKey, err := ecdsahelper.ImportPublicKey(pub)
 	if err != nil {
 		return false, err
 	}
