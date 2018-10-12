@@ -85,7 +85,7 @@ func (gp *GoPlugin) Downstream() (*rpc.Client, error) {
 	return gp.client, nil
 }
 
-const timeout = time.Second * 60
+const timeout = time.Minute * 10
 
 // CallMethod runs a method on an object in controlled environment
 func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
@@ -109,7 +109,7 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 			return nil, nil, errors.Wrap(call.Error, "problem with API call")
 		}
 	case <-time.After(timeout):
-		return nil, nil, errors.New("timeout")
+		return nil, nil, errors.New("logicrunner execution timeout")
 	}
 	return res.Data, res.Ret, nil
 }
@@ -130,7 +130,7 @@ func (gp *GoPlugin) CallConstructor(ctx *core.LogicCallContext, code core.Record
 			return nil, errors.Wrap(call.Error, "problem with API call")
 		}
 	case <-time.After(timeout):
-		return nil, errors.New("timeout")
+		return nil, errors.New("logicrunner execution timeout")
 	}
 	return res.Ret, nil
 }

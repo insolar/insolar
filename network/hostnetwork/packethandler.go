@@ -91,7 +91,7 @@ func processExchangeUnsyncLists(hostHandler hosthandler.HostHandler, ctx hosthan
 
 	data := msg.Data.(*packet.RequestExchangeUnsyncLists)
 	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
-	list, err := consensusHandler.ExchangeData(ctx, data.Pulse, nil, data.UnsyncList)
+	list, err := consensusHandler.ExchangeData(ctx, data.Pulse, data.SenderID, data.UnsyncList)
 	if err != nil {
 		log.Warn(err.Error())
 		return packetBuilder.Response(&packet.ResponseExchangeUnsyncLists{Error: err.Error()}).Build(), nil
@@ -104,7 +104,7 @@ func processExchangeUnsyncHash(hostHandler hosthandler.HostHandler, ctx hosthand
 
 	data := msg.Data.(*packet.RequestExchangeUnsyncHash)
 	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
-	hash, err := consensusHandler.ExchangeHash(ctx, data.Pulse, nil, data.UnsyncHash)
+	hash, err := consensusHandler.ExchangeHash(ctx, data.Pulse, data.SenderID, data.UnsyncHash)
 	if err != nil {
 		log.Warn(err.Error())
 		return packetBuilder.Response(&packet.ResponseExchangeUnsyncHash{Error: err.Error()}).Build(), nil
@@ -137,6 +137,7 @@ func processCheckSignedNonce(
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 	// TODO: do real check sign.
+	// TODO: add to unsync and wait to advance to sync list
 	parsed := true
 	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Success: parsed}).Build(), nil
 }
@@ -168,14 +169,14 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not get current pulse")
 	}
-	log.Debugf("Got new pulse number: %d", data.Pulse.PulseNumber)
+	log.Infof("Got new pulse number: %d", data.Pulse.PulseNumber)
 	if (data.Pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(data.Pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 		err = pm.Set(data.Pulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
-		log.Debugf("Set new current pulse number: %d", data.Pulse.PulseNumber)
+		log.Infof("Set new current pulse number: %d", data.Pulse.PulseNumber)
 
 		doConsensus(hostHandler, ctx, data.Pulse)
 

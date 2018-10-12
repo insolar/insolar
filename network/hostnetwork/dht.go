@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -142,7 +143,7 @@ func NewDHT(
 	rel := relay.NewRelay()
 
 	if keeper == nil {
-		keeper = nodekeeper.NewNodeKeeper(nodeID, time.Minute)
+		keeper = nodekeeper.NewNodeKeeper(nodeID)
 	}
 
 	dht = &DHT{
@@ -977,11 +978,11 @@ func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 		return err
 	}
 	if len(dht.activeNodeKeeper.GetActiveNodes()) > 0 {
-		currentHash, err := nodekeeper.CalculateHash(dht.activeNodeKeeper.GetActiveNodes())
+		currentHash, err := consensus.CalculateHash(dht.activeNodeKeeper.GetActiveNodes())
 		if err != nil {
 			return err
 		}
-		newHash, err := nodekeeper.CalculateHash(activeNodes)
+		newHash, err := consensus.CalculateHash(activeNodes)
 		if err != nil {
 			return err
 		}

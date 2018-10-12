@@ -237,7 +237,8 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 			return nil, errors.Wrap(err, "executor error")
 		}
 
-		if vb.NeedSave() {
+		// TODO: deactivation should be handled way better here
+		if vb.NeedSave() && lr.lastObjectCaseRecord(e.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
 				core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
 			)
