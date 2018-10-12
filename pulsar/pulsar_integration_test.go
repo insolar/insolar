@@ -141,22 +141,30 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	// Act
 	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
-	count := 30
-	time.Sleep(10 * time.Millisecond)
-	for newPulsar.stateSwitcher.getState() != waitingForStart && count > 0 {
+	currentPulse, err := usualLedger.GetPulseManager().Current()
+	assert.NoError(t, err)
+	count := 20
+	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(10 * time.Millisecond)
+		currentPulse, err = usualLedger.GetPulseManager().Current()
+		assert.NoError(t, err)
 		count--
 	}
-	usualNodeNetwork.Stop()
-	bootstrapNodeNetwork.Stop()
+	time.Sleep(50 * time.Millisecond)
 
 	// Assert
-	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
 	assert.Equal(t, currentPulse.PulseNumber, core.GenesisPulse.PulseNumber+1)
 
 	defer func() {
+		err := usualNodeNetwork.Stop()
+		assert.NoError(t, err)
+
+		err = bootstrapNodeNetwork.Stop()
+		assert.NoError(t, err)
+
 		newPulsar.StopServer()
+
 		bootstrapLedgerCleaner()
 		usualLedgerCleaner()
 	}()
@@ -224,13 +232,19 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	// Act
 	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
-	time.Sleep(500 * time.Millisecond)
 
-	usualNodeNetwork.Stop()
-	bootstrapNodeNetwork.Stop()
+	currentPulse, err := usualLedger.GetPulseManager().Current()
+	assert.NoError(t, err)
+	count := 20
+	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
+		time.Sleep(10 * time.Millisecond)
+		currentPulse, err = usualLedger.GetPulseManager().Current()
+		assert.NoError(t, err)
+		count--
+	}
+	time.Sleep(50 * time.Millisecond)
 
 	// Assert
-	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
 	assert.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
 	assert.Equal(t, waitingForStart, firstPulsar.stateSwitcher.getState())
@@ -241,6 +255,9 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	assert.Equal(t, 2, len(secondPulsar.LastPulse.Signs))
 
 	defer func() {
+		usualNodeNetwork.Stop()
+		bootstrapNodeNetwork.Stop()
+
 		firstPulsar.StopServer()
 		secondPulsar.StopServer()
 
