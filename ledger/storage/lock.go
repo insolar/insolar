@@ -68,7 +68,7 @@ func (l *IDLocker) getmu(cid *core.RecordID) *mucount {
 }
 
 // Lock locks mutex belonged to record ID.
-// If mutex not exists it has created in concurrent safe fashion.
+// If mutex does not exist, it will be created in concurrent safe fashion.
 func (l *IDLocker) Lock(id *record.ID) {
 	cid := id.CoreID()
 	mc := l.getmu(cid)
