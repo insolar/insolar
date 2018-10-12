@@ -24,7 +24,7 @@ type ActiveNodeComponent interface {
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []*ActiveNode
 	// GetActiveNodesByRole get active nodes by role
-	GetActiveNodesByRole(role JetRole) []*ActiveNode
+	GetActiveNodesByRole(role JetRole) []RecordRef
 }
 
 // Cascade contains routing data for cascade sending

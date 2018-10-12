@@ -38,7 +38,7 @@ type NodeKeeper interface {
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []*core.ActiveNode
 	// GetActiveNodesByRole get active nodes by role
-	GetActiveNodesByRole(role core.JetRole) []*core.ActiveNode
+	GetActiveNodesByRole(role core.JetRole) []core.RecordRef
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]*core.ActiveNode)
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
@@ -65,7 +65,7 @@ func NewNodeKeeper(nodeID core.RecordRef) NodeKeeper {
 		sync:          make([]*core.ActiveNode, 0),
 		unsync:        make([]*core.ActiveNode, 0),
 		unsyncWaiters: make([]chan *UnsyncList, 0),
-		index:         make(map[core.NodeRole][]*core.ActiveNode),
+		index:         make(map[core.NodeRole][]core.RecordRef),
 	}
 }
 
@@ -85,7 +85,7 @@ type nodekeeper struct {
 
 	activeLock sync.RWMutex
 	active     map[core.RecordRef]*core.ActiveNode
-	index      map[core.NodeRole][]*core.ActiveNode
+	index      map[core.NodeRole][]core.RecordRef
 	sync       []*core.ActiveNode
 
 	unsyncLock    sync.Mutex
@@ -122,7 +122,7 @@ func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
 	return result
 }
 
-func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []*core.ActiveNode {
+func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
@@ -130,7 +130,7 @@ func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []*core.ActiveNode
 	if !exists {
 		return nil
 	}
-	result := make([]*core.ActiveNode, len(list))
+	result := make([]core.RecordRef, len(list))
 	copy(result, list)
 	return result
 }
@@ -147,10 +147,10 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 
 		list, ok := nk.index[node.Role]
 		if !ok {
-			list := make([]*core.ActiveNode, 1)
+			list := make([]core.RecordRef, 0)
 			nk.index[node.Role] = list
 		}
-		list = append(list, node)
+		list = append(list, node.NodeID)
 	}
 }
 
