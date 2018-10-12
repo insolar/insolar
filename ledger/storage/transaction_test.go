@@ -17,181 +17,128 @@
 package storage_test
 
 import (
-	"fmt"
-	"sync/atomic"
+	"sync"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
-
+	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/log"
+	"github.com/stretchr/testify/assert"
 )
 
-type tTxStat struct {
-	attempts int
-	err      error
-}
-
-type tConflictResult struct {
-	tx1   tTxStat
-	tx2   tTxStat
-	value string
-}
-
 /*
- emulates transaction conflict in two parallel transactions tx1 and tx2
- which reads and writes the same key simultaneously
+check lock on select for update in 2 parallel transactions tx1 and tx2
+which try reads and writes the same key simultaneously
 
- [tx1]         [tx2]
-   |             |
-<start>          |
- get(k)          |
- set(k)          |
-   |          <start> (if conflicts<attempts)
-   |            get(k)
-   |            set(k)
-   |            commit()
-   |          <end>
- commit()
-<end>
-
-tx1 returns storage.ErrConflict error after commit in this scenario.
+  tx1                    tx2
+   |                      |
+<start>                 <start>
+ get(k), for_update=T      |
+ set(k)
+   |----- proceed -------->|
+ ..sleep..               get(k), for_update=T/F
+ commit()                set(k)
+  <end>                  commit()
+                        <end>
 */
-func testconflict(t *testing.T, db *storage.DB, key []byte, conflicts int) *tConflictResult {
-	log.Debugln("use key", key)
-	newvalue := newvalueGenerator()
-	seterr := db.Set(key, newvalue())
-	assert.NoError(t, seterr)
 
-	var tx1stat tTxStat
+func TestStore_Transaction_LockOnUpdate(t *testing.T) {
+	t.Parallel()
+	db, cleaner := storagetest.TmpDB(t, "")
+	defer cleaner()
 
-	inflightTx1 := make(chan bool)
-	endTx1 := make(chan bool)
-	doneTx1 := make(chan bool)
-	go func() {
-		v1 := newvalue()
-		tx1stat.err = db.Update(func(tx *storage.TransactionManager) error {
-			tx1stat.attempts++
-			log.Debugf("tx1 [%v]: start", tx1stat.attempts)
-			vgot, geterr := tx.Get(key)
-			if geterr != nil {
-				return geterr
-			}
-			log.Debugf("tx1 [%v]: got '%v'\n", tx1stat.attempts, string(vgot))
+	classid := &record.ID{Pulse: 100500}
+	idxid := &record.ID{}
+	classvalue0 := &index.ClassLifeline{
+		LatestState: *classid,
+	}
+	db.SetClassIndex(idxid, classvalue0)
 
-			seterr := tx.Set(key, v1)
-			if seterr != nil {
+	rec1 := record.ID{Pulse: 1}
+	rec2 := record.ID{Pulse: 2}
+	lockfn := func(t *testing.T, withlock bool) *index.ClassLifeline {
+		started2 := make(chan bool)
+		proceed2 := make(chan bool)
+		var wg sync.WaitGroup
+		var tx1err error
+		var tx2err error
+		wg.Add(1)
+		go func() {
+			tx1err = db.Update(func(tx *storage.TransactionManager) error {
+				// log.Debugf("tx1: start")
+				<-started2
+				// log.Debug("tx1: GetClassIndex before")
+				idxlife, geterr := tx.GetClassIndex(idxid, true)
+				// log.Debug("tx1: GetClassIndex after")
+				if geterr != nil {
+					return geterr
+				}
+				// log.Debugf("tx1: got %+v\n", idxlife)
+				idxlife.AmendRefs = append(idxlife.AmendRefs, rec1)
+
+				seterr := tx.SetClassIndex(idxid, idxlife)
+				if seterr != nil {
+					return seterr
+				}
+				// log.Debugf("tx1: set %+v\n", idxlife)
+				close(proceed2)
+				time.Sleep(100 * time.Millisecond)
 				return seterr
-			}
-			log.Debugf("tx1 [%v]: set '%v'\n", tx1stat.attempts, string(v1))
-			inflightTx1 <- true
-			<-endTx1
-			return seterr
-		})
-		log.Debugf("tx1 [%v]: done", tx1stat.attempts)
-		close(doneTx1)
-	}()
+			})
+			// log.Debugf("tx1: finished")
+			wg.Done()
+		}()
+		wg.Add(1)
+		go func() {
+			tx2err = db.Update(func(tx *storage.TransactionManager) error {
+				close(started2)
+				// log.Debug("tx2: start")
+				<-proceed2
+				// log.Debug("tx2: GetClassIndex before")
+				idxlife, geterr := tx.GetClassIndex(idxid, withlock)
+				// log.Debug("tx2: GetClassIndex after")
+				if geterr != nil {
+					return geterr
+				}
+				// log.Debugf("tx2: got %+v\n", idxlife)
+				idxlife.AmendRefs = append(idxlife.AmendRefs, rec2)
 
-	var tx2stat tTxStat
-	tx2fn := func() {
-		v2 := newvalue()
-		tx2stat.err = db.Update(func(tx *storage.TransactionManager) error {
-			tx2stat.attempts++
-			log.Debugf("tx2 [%v]: start", tx2stat.attempts)
+				seterr := tx.SetClassIndex(idxid, idxlife)
+				if seterr != nil {
+					return seterr
+				}
+				// log.Debugf("tx2: set %+v\n", idxlife)
+				return seterr
+			})
+			// log.Debugf("tx2: finished")
+			wg.Done()
+		}()
+		wg.Wait()
 
-			vgot, geterr := tx.Get(key)
-			if geterr != nil {
-				return geterr
-			}
-			log.Debugf("tx2 [%v]: got '%v'", tx2stat.attempts, string(vgot))
+		assert.NoError(t, tx1err)
+		assert.NoError(t, tx2err)
+		idxlife, geterr := db.GetClassIndex(idxid, false)
+		assert.NoError(t, geterr)
+		// log.Debugf("withlock=%v) result: got %+v", withlock, idxlife)
 
-			seterr := tx.Set(key, v2)
-			if seterr == nil {
-				log.Debugf("tx2 [%v]: set '%v'\n", tx2stat.attempts, string(v2))
-			}
-			return seterr
-		})
-		log.Debugf("tx2 [%v]: done (error=%v)\n", tx2stat.attempts, tx2stat.err)
+		// cleanup AmendRefs
+		assert.NoError(t, db.SetClassIndex(idxid, classvalue0))
+		return idxlife
 	}
-
-TRY_LOOP:
-	for {
-		select {
-		case <-inflightTx1:
-			// tx2 makes conflict for tx1 here util specified conflicts counter is reached
-			if tx2stat.attempts < conflicts {
-				tx2fn()
-			}
-			endTx1 <- true
-		case <-doneTx1:
-			log.Debugln("goroutine with cycle done")
-			break TRY_LOOP
-		}
-	}
-	<-doneTx1
-
-	vGot, err := db.Get(key)
-	assert.NoError(t, err)
-	return &tConflictResult{
-		tx1:   tx1stat,
-		tx2:   tx2stat,
-		value: string(vGot),
-	}
-}
-
-func TestStore_TransactionConflict(t *testing.T) {
-	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
-	defer cleaner()
-
-	t.Run("no_retry", func(t *testing.T) {
-		db.SetTxRetiries(0)
-		res := testconflict(t, db, genuniqkey(), 1)
-
-		assert.Error(t, res.tx1.err)
-		assert.NoError(t, res.tx2.err)
-		assert.Equal(t, res.tx1.err, storage.ErrConflict)
-		assert.Equal(t, 1, res.tx1.attempts)
-		assert.Equal(t, "v2", res.value)
+	t.Run("with lock", func(t *testing.T) {
+		idxlife := lockfn(t, true)
+		assert.Equal(t, &index.ClassLifeline{
+			LatestState: *classid,
+			AmendRefs:   []record.ID{rec1, rec2},
+		}, idxlife)
 	})
-	t.Run("with_retry", func(t *testing.T) {
-		db.SetTxRetiries(2)
-		res := testconflict(t, db, genuniqkey(), 1)
-
-		assert.NoError(t, res.tx1.err)
-		assert.NoError(t, res.tx2.err)
-		assert.Equal(t, 2, res.tx1.attempts)
-		assert.Equal(t, "v1", res.value)
+	t.Run("no lock", func(t *testing.T) {
+		idxlife := lockfn(t, false)
+		assert.Equal(t, &index.ClassLifeline{
+			LatestState: *classid,
+			AmendRefs:   []record.ID{rec1},
+		}, idxlife)
 	})
-}
-
-func TestStore_TransactionRetryOver(t *testing.T) {
-	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
-	defer cleaner()
-
-	tx1attemptsExpect := 3
-	db.SetTxRetiries(tx1attemptsExpect - 1)
-	res := testconflict(t, db, genuniqkey(), tx1attemptsExpect*2)
-
-	assert.Error(t, res.tx1.err)
-	assert.Equal(t, res.tx1.err, storage.ErrConflictRetriesOver)
-	assert.Equal(t, tx1attemptsExpect, res.tx1.attempts)
-	assert.Equal(t, fmt.Sprintf("v%v", tx1attemptsExpect+1), res.value)
-}
-
-var keycounter int32
-
-func genuniqkey() []byte {
-	return []byte(fmt.Sprintf("k%v", atomic.AddInt32(&keycounter, 1)))
-}
-
-type valueGen func() []byte
-
-func newvalueGenerator() valueGen {
-	var valcounter int32
-	return func() []byte {
-		return []byte(fmt.Sprintf("v%v", atomic.AddInt32(&valcounter, 1)-1))
-	}
 }
