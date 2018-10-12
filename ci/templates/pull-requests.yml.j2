@@ -6,17 +6,26 @@ groups:
 {% endfor %}
 
 resource_types:
-  - name: pull-request
-    type: docker-image
-    source:
-      repository: chemist/pull-request
-      tag: latest
+- name: pull-request
+  type: docker-image
+  source:
+    repository: chemist/pull-request
+    tag: latest
+- name: slack
+  type: docker-image
+  source:
+    repository: cfcommunity/slack-notification-resource
+    tag: latest
 
 resources:
 - name: master
   type: git
   source:
     uri: https://github.com/insolar/insolar.git
+- name: slack
+  type: slack
+  source:
+    url: ((meta.slack.url))
 
 {% for pull in pulls %}
 - name: pull-request-{{ pull.number }}
@@ -75,11 +84,23 @@ jobs:
              make build
              make test_with_coverage
     on_success:
-      put: pull-request-{{ pull.number }}
-      params:
-        state: success
+      aggregate:
+      - put: pull-request-{{ pull.number }}
+        params:
+          state: success
+      - put: slack
+        params:
+          icon_emoji: ':new_moon_with_face:'
+          silent: true
+          text: pull request {{ pull.number }} {{ pull.title }} success
     on_failure:
-      put: pull-request-{{ pull.number }}
-      params:
-        state: failure
+      aggregate:
+      - put: pull-request-{{ pull.number }}
+        params:
+          state: failure
+      - put: slack
+        params:
+          icon_emoji: ':new_moon_with_face:'
+          silent: true
+          text: pull request {{ pull.number }} {{ pull.title }} failure
 {% endfor %}
