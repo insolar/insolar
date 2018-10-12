@@ -88,7 +88,7 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 		Ledger:     l,
 		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
-	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 100, &pulsar.StandardEntropyGenerator{}))
+	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
 	}
@@ -103,17 +103,26 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 	}
 }
 
-func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
+func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.RecordRef) {
+	failmap := make(map[core.RecordRef]struct{})
+	for _, r := range mustfail {
+		failmap[r] = struct{}{}
+	}
 	rlr := lr.(*LogicRunner)
 	rlr.caseBindMutex.Lock()
 	rlrcbr := rlr.caseBind.Records
 	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
-		//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
+		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
 		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
-		assert.NoError(t, err, "validation")
-		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+		if _, ok := failmap[ref]; ok {
+			assert.Error(t, err, "validation")
+			assert.True(t, len(cr) > vstep, "Validation failed before end")
+		} else {
+			assert.NoError(t, err, "validation")
+			assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+		}
 	}
 }
 
@@ -282,18 +291,28 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "github.com/insolar/insolar/application/proxy/two"
+import "github.com/insolar/insolar/core"
 
 type One struct {
 	foundation.BaseContract
+	Friend core.RecordRef
 }
 
 func (r *One) Hello(s string) string {
 	holder := two.New()
 	friend := holder.AsChild(r.GetReference())
-
 	res := friend.Hello(s)
-
+	r.Friend = friend.GetReference()
 	return "Hi, " + s + "! Two said: " + res
+}
+
+func (r *One) Again(s string) string {
+	res := two.GetObject(r.Friend).Hello(s)
+	return "Hi, " + s + "! Two said: " + res
+}
+
+func (r *One)GetFriend() core.RecordRef {
+	return r.Friend
 }
 `
 
@@ -312,21 +331,17 @@ type Two struct {
 }
 
 func New() *Two {
-	return &Two{X:322};
+	return &Two{X:0};
 }
 
 func (r *Two) Hello(s string) string {
-	r.X *= 2
+	r.X ++
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
 }
 `
 
 	lr, am, cb, cleaner := PrepareLrAmCb(t)
-	gp := lr.(*LogicRunner).Executors[core.MachineTypeGoPlugin]
 	defer cleaner()
-
-	data := testutil.CBORMarshal(t, &struct{}{})
-	argsSerialized := testutil.CBORMarshal(t, []interface{}{"ins"})
 
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
@@ -336,18 +351,58 @@ func (r *Two) Hello(s string) string {
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
-		data,
+		testutil.CBORMarshal(t, &struct{}{}),
 	)
 	assert.NoError(t, err)
 
-	_, res, err := gp.CallMethod(
-		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
-		data, "Hello", argsSerialized,
-	)
-	assert.NoError(t, err)
+	resp, err := lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Hello",
+		Arguments: testutil.CBORMarshal(t, []interface{}{"ins"}),
+	})
+	assert.NoError(t, err, "contract call")
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	f := r.([]interface{})[0]
+	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 1 times!", f)
 
-	resParsed := testutil.CBORUnMarshalToSlice(t, res)
-	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+	for i := 2; i <= 5; i++ {
+		resp, err := lr.Execute(&message.CallMethod{
+			ObjectRef: *obj,
+			Method:    "Again",
+			Arguments: testutil.CBORMarshal(t, []interface{}{"ins"}),
+		})
+		assert.NoError(t, err, "contract call")
+		r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+		f := r.([]interface{})[0]
+		assert.Equal(t, fmt.Sprintf("Hi, ins! Two said: Hello you too, ins. %d times!", i), f)
+	}
+
+	resp, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "GetFriend",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+	r = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	r0 := r.([]interface{})[0].([]uint8)
+	var two core.RecordRef
+	for i := 0; i < 64; i++ {
+		two[i] = r0[i]
+	}
+
+	for i := 6; i <= 9; i++ {
+		resp, err := lr.Execute(&message.CallMethod{
+			ObjectRef: two,
+			Method:    "Hello",
+			Arguments: testutil.CBORMarshal(t, []interface{}{"Insolar"}),
+		})
+		assert.NoError(t, err, "contract call")
+		r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+		f := r.([]interface{})[0]
+		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), f)
+	}
+	ValidateAllResults(t, lr)
+
 }
 
 func TestInjectingDelegate(t *testing.T) {
@@ -693,6 +748,51 @@ func New(n int) *Child {
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
 	SendDataToValidate(lr)
+}
+
+func TestFailValidate(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	goContract := `
+package main
+
+import (
+	"math/rand"
+	"time"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Contract struct {
+	foundation.BaseContract
+}
+
+func (c *Contract) Rand() int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(77)
+}
+`
+	lr, am, cb, cleaner := PrepareLrAmCb(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{"contract": goContract})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	for i := 0; i < 5; i++ {
+		_, err = lr.Execute(&message.CallMethod{
+			ObjectRef: *contract,
+			Method:    "Rand",
+			Arguments: testutil.CBORMarshal(t, []interface{}{}),
+		})
+		assert.NoError(t, err, "contract call")
+	}
+	ValidateAllResults(t, lr, *contract)
 }
 
 func TestErrorInterface(t *testing.T) {

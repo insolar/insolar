@@ -24,6 +24,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"bytes"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -35,11 +37,11 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors            [core.MachineTypesLastID]core.MachineLogicExecutor
-	ArtifactManager      core.ArtifactManager
-	MessageBus           core.MessageBus
-	machinePrefs         []core.MachineType
-	Cfg                  *configuration.LogicRunner
+	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
+	ArtifactManager core.ArtifactManager
+	MessageBus      core.MessageBus
+	machinePrefs    []core.MachineType
+	Cfg             *configuration.LogicRunner
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
@@ -209,6 +211,18 @@ type objectBody struct {
 }
 
 func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, error) {
+	cr, step := lr.getNextValidationStep(objref)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeGetObject != cr.Type {
+			return nil, errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(objref)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return nil, errors.New("Wrong validation sig on RouteCall")
+		}
+		return cr.Resp.(*objectBody), nil
+	}
+
 	objDesc, err := lr.ArtifactManager.GetObject(objref, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
@@ -224,12 +238,18 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
 	}
 
-	return &objectBody{
+	ob := &objectBody{
 		Body:        objDesc.Memory(),
 		Code:        *codeDesc.Ref(),
 		Class:       *classDesc.HeadRef(),
 		MachineType: codeDesc.MachineType(),
-	}, nil
+	}
+	lr.addObjectCaseRecord(objref, core.CaseRecord{
+		Type:   core.CaseRecordTypeGetObject,
+		ReqSig: HashInterface(objref),
+		Resp:   ob,
+	})
+	return ob, nil
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
@@ -388,7 +408,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 }
 
 // refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
-func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord  {
+func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
 
