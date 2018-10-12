@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 
 	"github.com/pkg/errors"
 )
@@ -64,7 +64,7 @@ func ReadUserConfigFromFile(path string) (*UserConfigJSON, error) {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
 	}
 
-	cfgJSON.privateKeyObject, err = ecdsa_helper.ImportPrivateKey(cfgJSON.PrivateKey)
+	cfgJSON.privateKeyObject, err = ecdsahelper.ImportPrivateKey(cfgJSON.PrivateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] Problem with reading private key")
 	}

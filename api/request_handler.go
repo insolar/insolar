@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 const (
@@ -332,7 +332,7 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 	result["role"] = role
 
 	// Check calling via networkcoordinator
-	privKey, err := ecdsa_helper.GeneratePrivateKey()
+	privKey, err := ecdsahelper.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with key generating")
 	}
@@ -341,11 +341,11 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with generating seed")
 	}
-	signature, err := ecdsa_helper.Sign(seed, privKey)
+	signature, err := ecdsahelper.Sign(seed, privKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with signing")
 	}
-	pubKey, err = ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+	pubKey, err = ecdsahelper.ExportPublicKey(&privKey.PublicKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
 	}

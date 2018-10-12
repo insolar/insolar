@@ -19,15 +19,15 @@ package pulsar
 import (
 	"testing"
 
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSingAndVerify(t *testing.T) {
 	assertObj := assert.New(t)
-	privateKey, err := ecdsa_helper.GeneratePrivateKey()
+	privateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
-	publicKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
+	publicKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
 	assert.NoError(t, err)
 	testString := "message"
 

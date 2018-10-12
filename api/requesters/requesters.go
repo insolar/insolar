@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 // verbose switches on verbose mode
@@ -117,7 +117,7 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 	}
 
 	verboseInfo("Signing request ...")
-	signature, err := ecdsa_helper.Sign(serRequest, userCfg.privateKeyObject)
+	signature, err := ecdsahelper.Sign(serRequest, userCfg.privateKeyObject)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}

@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/pkg/errors"
@@ -52,8 +52,8 @@ func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RPCClientWrapper {
 
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	assertObj := assert.New(t)
-	privateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	expectedPrivateKey, _ := ecdsa_helper.ExportPrivateKey(privateKey)
+	privateKey, _ := ecdsahelper.GeneratePrivateKey()
+	expectedPrivateKey, _ := ecdsahelper.ExportPrivateKey(privateKey)
 	config := configuration.Pulsar{
 		ConnectionType:      "testType",
 		MainListenerAddress: "listedAddress",
@@ -80,7 +80,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		mockListener)
 
 	assertObj.NoError(err)
-	parsedKey, _ := ecdsa_helper.ImportPrivateKey(expectedPrivateKey)
+	parsedKey, _ := ecdsahelper.ImportPrivateKey(expectedPrivateKey)
 	assertObj.Equal(parsedKey, result.PrivateKey)
 	assertObj.Equal("testType", actualConnectionType)
 	assertObj.Equal("listedAddress", actualAddress)
@@ -92,14 +92,14 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 func TestNewPulsar_WithNeighbours(t *testing.T) {
 	assertObj := assert.New(t)
 
-	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	firstExpectedKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
+	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	firstExpectedKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
 
-	secondPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	secondExpectedKey, _ := ecdsa_helper.ExportPublicKey(&secondPrivateKey.PublicKey)
+	secondPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	secondExpectedKey, _ := ecdsahelper.ExportPublicKey(&secondPrivateKey.PublicKey)
 
-	expectedPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	parsedExpectedPrivateKey, _ := ecdsa_helper.ExportPrivateKey(expectedPrivateKey)
+	expectedPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	parsedExpectedPrivateKey, _ := ecdsahelper.ExportPrivateKey(expectedPrivateKey)
 	config := configuration.Pulsar{
 		ConnectionType:      "testType",
 		MainListenerAddress: "listedAddress",
@@ -132,8 +132,8 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(true)
 
-	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
+	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	expectedNeighbourKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
 
@@ -152,8 +152,8 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 	mockClientWrapper.On("Lock")
 	mockClientWrapper.On("Unlock")
 
-	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
+	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	expectedNeighbourKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
 
@@ -165,7 +165,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *testing.T) {
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
@@ -180,8 +180,8 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 	replyChan := &rpc.Call{Done: done}
 	mockClientWrapper.Done = replyChan
 
-	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
+	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	expectedNeighbourKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
 
@@ -191,7 +191,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.T) {
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
@@ -206,8 +206,8 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 	replyChan := &rpc.Call{Done: done}
 	mockClientWrapper.Done = replyChan
 
-	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
+	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	expectedNeighbourKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
 
@@ -217,15 +217,15 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
 		PrivateKey:       mainPrivateKey,
 		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
 	}
-	firstPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	expectedNeighbourKey, _ := ecdsa_helper.ExportPublicKey(&firstPrivateKey.PublicKey)
+	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	expectedNeighbourKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	payload := Payload{Body: HandshakePayload{Entropy: pulsartestutil.MockEntropy}}
 	sign, err := singData(firstPrivateKey, payload.Body)
 	payload.Signature = sign
@@ -256,8 +256,8 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 	mockClientWrapper.On("Go", HealthCheck.String(), nil, nil, mock.Anything).Return(replyChan)
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
-	firstNeighbourPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	firstNeighbourExpectedKey, _ := ecdsa_helper.ExportPublicKey(&firstNeighbourPrivateKey.PublicKey)
+	firstNeighbourPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	firstNeighbourExpectedKey, _ := ecdsahelper.ExportPublicKey(&firstNeighbourPrivateKey.PublicKey)
 	pulsar.Neighbours[firstNeighbourExpectedKey] = &Neighbour{
 		PublicKeyRaw:   firstNeighbourExpectedKey,
 		PublicKey:      &firstNeighbourPrivateKey.PublicKey,
@@ -275,8 +275,8 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *tes
 	mockClientWrapper.On("IsInitialised").Return(false)
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
-	firstNeighbourPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	firstNeighbourExpectedKey, _ := ecdsa_helper.ExportPublicKey(&firstNeighbourPrivateKey.PublicKey)
+	firstNeighbourPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	firstNeighbourExpectedKey, _ := ecdsahelper.ExportPublicKey(&firstNeighbourPrivateKey.PublicKey)
 	pulsar.Neighbours["thisShouldFailEstablishConnection"] = &Neighbour{
 		PublicKeyRaw:   firstNeighbourExpectedKey,
 		PublicKey:      &firstNeighbourPrivateKey.PublicKey,
@@ -298,8 +298,8 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 	mockClientWrapper.On("ResetClient")
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
-	firstNeighbourPrivateKey, _ := ecdsa_helper.GeneratePrivateKey()
-	firstNeighbourExpectedKey, _ := ecdsa_helper.ExportPublicKey(&firstNeighbourPrivateKey.PublicKey)
+	firstNeighbourPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
+	firstNeighbourExpectedKey, _ := ecdsahelper.ExportPublicKey(&firstNeighbourPrivateKey.PublicKey)
 	pulsar.Neighbours["this should fail second connection"] = &Neighbour{
 		PublicKeyRaw:      firstNeighbourExpectedKey,
 		PublicKey:         &firstNeighbourPrivateKey.PublicKey,
@@ -346,7 +346,7 @@ func (impl *MockStateSwitcher) switchToState(state State, args interface{}) {
 }
 
 func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	mockSwitcher := MockStateSwitcher{}
 	mockSwitcher.On("switchToState", waitingForEntropySigns, nil)
@@ -384,7 +384,7 @@ func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
 	done <- &rpc.Call{Error: errors.New("failed")}
 	replyChan := &rpc.Call{Done: done}
 
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
@@ -425,7 +425,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 	done <- &rpc.Call{Error: errors.New("failed")}
 	replyChan := &rpc.Call{Done: done}
 
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
@@ -469,7 +469,7 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 	done <- &rpc.Call{Error: errors.New("failed")}
 	replyChan := &rpc.Call{Done: done}
 
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
@@ -520,7 +520,7 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 	done <- &rpc.Call{}
 	replyChan := &rpc.Call{Done: done}
 
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
@@ -563,7 +563,7 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	done <- &rpc.Call{}
 	replyChan := &rpc.Call{Done: done}
 
-	mainPrivateKey, err := ecdsa_helper.GeneratePrivateKey()
+	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
 	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}

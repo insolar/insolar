@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 
 	"github.com/pkg/errors"
 )
@@ -80,12 +80,12 @@ func NewCertificateFromFields(cRecords CertRecords, keys []*ecdsa.PrivateKey) (*
 
 	var signList []string
 	for _, k := range keys {
-		sign, err := ecdsa_helper.Sign(certData, k)
+		sign, err := ecdsahelper.Sign(certData, k)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NewCertificateFromFields ]")
 		}
 
-		signList = append(signList, ecdsa_helper.ExportSignature(sign))
+		signList = append(signList, ecdsahelper.ExportSignature(sign))
 	}
 
 	return &Certificate{
@@ -114,11 +114,11 @@ func (cr *Certificate) Validate() error {
 		return errors.Wrap(err, "[ Validate ]")
 	}
 	for i := 0; i < size; i++ {
-		sign, err := ecdsa_helper.ImportSignature(cr.Signs[i])
+		sign, err := ecdsahelper.ImportSignature(cr.Signs[i])
 		if err != nil {
 			return errors.Wrap(err, "[ Validate ]")
 		}
-		ok, err := ecdsa_helper.Verify(certData, sign, cr.CertRecords[i].PublicKey)
+		ok, err := ecdsahelper.Verify(certData, sign, cr.CertRecords[i].PublicKey)
 		if err != nil {
 			return errors.Wrap(err, "[ Validate ]")
 		}
