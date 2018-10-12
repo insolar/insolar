@@ -37,12 +37,6 @@ func (r *exchangeResults) writeResultData(id core.RecordRef, data []*core.Active
 	r.data[id] = data
 }
 
-func (r *exchangeResults) getData(id core.RecordRef) []*core.ActiveNode {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-	return r.data[id]
-}
-
 func (r *exchangeResults) calculateResultHash() []*NodeUnsyncHash {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
