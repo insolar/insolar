@@ -40,6 +40,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &ExecutorResults{}, nil
 	case core.TypeValidateCaseBind:
 		return &ValidateCaseBind{}, nil
+	case core.TypeValidationResults:
+		return  &ValidationResults{}, nil
 
 	// Ledger
 	case core.TypeRequestCall:
@@ -130,6 +132,7 @@ func init() {
 	gob.Register(&CallMethod{})
 	gob.Register(&ExecutorResults{})
 	gob.Register(&ValidateCaseBind{})
+	gob.Register(&ValidationResults{})
 
 	// Ledger
 	gob.Register(&RequestCall{})

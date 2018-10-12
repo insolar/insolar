@@ -35,11 +35,11 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors            [core.MachineTypesLastID]core.MachineLogicExecutor
-	ArtifactManager      core.ArtifactManager
-	MessageBus           core.MessageBus
-	machinePrefs         []core.MachineType
-	Cfg                  *configuration.LogicRunner
+	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
+	ArtifactManager core.ArtifactManager
+	MessageBus      core.MessageBus
+	machinePrefs    []core.MachineType
+	Cfg             *configuration.LogicRunner
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
@@ -151,6 +151,7 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
+	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
@@ -194,6 +195,19 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 }
 
 func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
+
+	msg, ok := inmsg.(message.IValidateCaseBind)
+	if !ok {
+		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
+	}
+
+	passedStepsCount, err := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	lr.MessageBus.Send(&message.ValidationResults{
+		RecordRef:        msg.GetReference(),
+		PassedStepsCount: passedStepsCount,
+		Error:            err,
+	})
+
 	return nil, nil
 }
 
@@ -372,7 +386,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, records := range objectsRecords {
-		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records})
+		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse})
 		if err != nil {
 			panic("Error while sending caseBind data to validators: " + err.Error())
 		}

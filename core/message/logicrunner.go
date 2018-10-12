@@ -32,15 +32,15 @@ const (
 	// ReturnValidated
 )
 
+type IBaseLogicMessage interface {
+	core.Message
+	GetReference() core.RecordRef
+}
+
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
 	Caller core.RecordRef
 	Nonce  uint64
-}
-
-type IBaseLogicMessage interface {
-	core.Message
-	GetReference() core.RecordRef
 }
 
 func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
@@ -136,9 +136,16 @@ func (e *ExecutorResults) GetReference() core.RecordRef {
 	return e.RecordRef
 }
 
+type IValidateCaseBind interface {
+	GetReference() core.RecordRef
+	GetCaseRecords() []core.CaseRecord
+	GetPulse() core.Pulse
+}
+
 type ValidateCaseBind struct {
-	RecordRef  core.RecordRef
+	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
+	Pulse       core.Pulse
 }
 
 func (e *ValidateCaseBind) Type() core.MessageType {
@@ -155,11 +162,48 @@ func (e *ValidateCaseBind) Target() *core.RecordRef {
 }
 
 // TODO change after changing pulsar
+// need to implement core.Message interface
 func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
-	return &e.RecordRef
+	return &e.RecordRef // TODO actually it's not right. There is no caller.
 }
 
 // TODO change after changing pulsar
 func (e *ValidateCaseBind) GetReference() core.RecordRef {
+	return e.RecordRef
+}
+
+func (e *ValidateCaseBind) GetCaseRecords() []core.CaseRecord {
+	return e.CaseRecords
+}
+
+func (e *ValidateCaseBind) GetPulse() core.Pulse {
+	return e.Pulse
+}
+
+type ValidationResults struct {
+	RecordRef        core.RecordRef
+	PassedStepsCount int
+	Error            error
+}
+
+func (e *ValidationResults) Type() core.MessageType {
+	return core.TypeValidationResults
+}
+
+func (e ValidationResults) TargetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
+func (e *ValidationResults) Target() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+// need to implement core.Message interface
+func (e *ValidationResults) GetCaller() *core.RecordRef {
+	return &e.RecordRef // TODO actually it's not right. There is no caller.
+}
+
+func (e *ValidationResults) GetReference() core.RecordRef {
 	return e.RecordRef
 }
