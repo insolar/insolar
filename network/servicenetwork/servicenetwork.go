@@ -73,6 +73,11 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
 }
 
+func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
+	// TODO: implement
+	return nil
+}
+
 // SendMessage sends a message from MessageBus.
 func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	if msg == nil {

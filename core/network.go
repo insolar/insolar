@@ -16,6 +16,17 @@
 
 package core
 
+type ActiveNodeComponent interface {
+	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
+	GetSelf() *ActiveNode
+	// GetActiveNode get active node by its reference. Returns nil if node is not found.
+	GetActiveNode(ref RecordRef) *ActiveNode
+	// GetActiveNodes get active nodes.
+	GetActiveNodes() []*ActiveNode
+	// GetActiveNodesByRole get active nodes by role
+	GetActiveNodesByRole(role JetRole) []*ActiveNode
+}
+
 // Cascade contains routing data for cascade sending
 type Cascade struct {
 	// NodeIds contains the slice of node identifiers that will receive the message
@@ -41,4 +52,6 @@ type Network interface {
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 	// GetNodeID returns current node id.
 	GetNodeID() RecordRef
+	// GetActiveNodeComponent get component that contains all info about active nodes in network
+	GetActiveNodeComponent() ActiveNodeComponent
 }

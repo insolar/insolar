@@ -37,6 +37,8 @@ type NodeKeeper interface {
 	GetActiveNode(ref core.RecordRef) *core.ActiveNode
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []*core.ActiveNode
+	// GetActiveNodesByRole get active nodes by role
+	GetActiveNodesByRole(role core.JetRole) []*core.ActiveNode
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]*core.ActiveNode)
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
@@ -63,6 +65,7 @@ func NewNodeKeeper(nodeID core.RecordRef) NodeKeeper {
 		sync:          make([]*core.ActiveNode, 0),
 		unsync:        make([]*core.ActiveNode, 0),
 		unsyncWaiters: make([]chan *UnsyncList, 0),
+		index:         make(map[core.NodeRole][]*core.ActiveNode),
 	}
 }
 
@@ -82,6 +85,7 @@ type nodekeeper struct {
 
 	activeLock sync.RWMutex
 	active     map[core.RecordRef]*core.ActiveNode
+	index      map[core.NodeRole][]*core.ActiveNode
 	sync       []*core.ActiveNode
 
 	unsyncLock    sync.Mutex
@@ -118,6 +122,19 @@ func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
 	return result
 }
 
+func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []*core.ActiveNode {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	list, exists := nk.index[calculateJetRole(role)]
+	if !exists {
+		return nil
+	}
+	result := make([]*core.ActiveNode, len(list))
+	copy(result, list)
+	return result
+}
+
 func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
@@ -127,6 +144,13 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 			nk.self = node
 		}
 		nk.active[node.NodeID] = node
+
+		list, ok := nk.index[node.Role]
+		if !ok {
+			list := make([]*core.ActiveNode, 1)
+			nk.index[node.Role] = list
+		}
+		list = append(list, node)
 	}
 }
 
@@ -251,4 +275,21 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
 	}
 	nk.unsyncWaiters = make([]chan *UnsyncList, 0)
 	return nk.unsyncList
+}
+
+func calculateJetRole(role core.JetRole) core.NodeRole {
+	switch role {
+	case core.RoleVirtualExecutor:
+		return core.RoleVirtual
+	case core.RoleVirtualValidator:
+		return core.RoleVirtual
+	case core.RoleLightExecutor:
+		return core.RoleLightMaterial
+	case core.RoleLightValidator:
+		return core.RoleLightMaterial
+	case core.RoleHeavyExecutor:
+		return core.RoleHeavyMaterial
+	default:
+		return core.RoleUnknown
+	}
 }
