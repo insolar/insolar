@@ -1,8 +1,7 @@
-package networking
+package pulsar
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/pulsar"
 )
 
 type Payload struct {
@@ -31,7 +30,7 @@ type EntropyPayload struct {
 
 type VectorPayload struct {
 	PulseNumber core.PulseNumber
-	Vector      map[string]*pulsar.BftCell
+	Vector      map[string]*BftCell
 }
 
 type SenderConfirmationPayload struct {

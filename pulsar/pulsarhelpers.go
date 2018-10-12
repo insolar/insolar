@@ -26,7 +26,6 @@ import (
 
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/cryptohelpers/hash"
-	"github.com/insolar/insolar/pulsar/networking"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -37,7 +36,7 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func CheckPayloadSignature(request *networking.Payload) (bool, error) {
+func CheckPayloadSignature(request *Payload) (bool, error) {
 	return CheckSignature(request.Body, request.PublicKey, request.Signature)
 }
 

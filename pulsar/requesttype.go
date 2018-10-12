@@ -1,4 +1,4 @@
-package networking
+package pulsar
 
 // RequestType is a enum-like strings
 // It identifies the type of the rpc-call
