@@ -22,4 +22,6 @@ type NetworkCoordinator interface {
 	Authorize(nodeRef RecordRef, seed []byte, signatureRaw []byte) (string, NodeRole, error)
 	// RegisterNode registers node in nodedomain
 	RegisterNode(publicKey string, role string) (*RecordRef, error)
+	// WriteActiveNodes write active nodes to ledger
+	WriteActiveNodes(number PulseNumber, activeNodes []*ActiveNode) error
 }
