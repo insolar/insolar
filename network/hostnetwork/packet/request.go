@@ -19,7 +19,6 @@ package packet
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/hostnetwork/id"
 )
 
 // CommandType - type for commands.
@@ -113,7 +112,6 @@ type RequestKnownOuterHosts struct {
 // RequestCheckPublicKey is data to check a public key.
 type RequestCheckPublicKey struct {
 	NodeID core.RecordRef
-	HostID id.ID
 }
 
 // RequestCheckSignedNonce is data to check a signed nonce.

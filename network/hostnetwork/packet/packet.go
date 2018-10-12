@@ -250,7 +250,6 @@ func init() {
 	gob.Register(&ResponsePulse{})
 	gob.Register(&ResponseGetRandomHosts{})
 	gob.Register(&ResponseCheckPublicKey{})
-	gob.Register(&ResponseCheckSignedNonce{})
 	gob.Register(&ResponseActiveNodes{})
 	gob.Register(&ResponseExchangeUnsyncLists{})
 	gob.Register(&ResponseExchangeUnsyncHash{})

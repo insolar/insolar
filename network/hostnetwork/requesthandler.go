@@ -249,7 +249,7 @@ func CheckPublicKeyRequest(hostHandler hosthandler.HostHandler, targetID string)
 
 	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(targetHost).Type(packet.TypeCheckPublicKey).
-		Request(&packet.RequestCheckPublicKey{NodeID: hostHandler.GetNodeID(), HostID: hostHandler.GetOriginHost().IDs[0]}).
+		Request(&packet.RequestCheckPublicKey{NodeID: hostHandler.GetNodeID()}).
 		Build()
 
 	future, err := hostHandler.SendRequest(request)
@@ -466,8 +466,6 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		if err == nil {
 			err = sendCheckSignedNonceRequest(hostHandler, rsp.Sender, response.Nonce)
 		}
-	case packet.TypeCheckSignedNonce:
-		err = handleCheckSignedNonceResponse(hostHandler, rsp.Data.(*packet.ResponseCheckSignedNonce))
 	case packet.TypeActiveNodes:
 		response := rsp.Data.(*packet.ResponseActiveNodes)
 		err = handleActiveNodesResponse(hostHandler, response)

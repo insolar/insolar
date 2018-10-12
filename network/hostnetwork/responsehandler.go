@@ -121,16 +121,6 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 }
 
 func handleCheckPublicKeyResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckPublicKey) error {
-	if !response.Exist {
-		return errors.New("failed to find a public key")
-	}
-	return nil
-}
-
-func handleCheckSignedNonceResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckSignedNonce) error {
-	if !response.Success {
-		return errors.New("failed to parse a signed nonce")
-	}
 	return nil
 }
 
