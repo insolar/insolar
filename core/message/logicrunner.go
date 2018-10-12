@@ -122,8 +122,9 @@ func (e *CallConstructor) Target() *core.RecordRef {
 }
 
 type ExecutorResults struct {
-	RecordRef core.RecordRef
-	CaseRecords  []core.CaseRecord
+	RecordRef   core.RecordRef
+	CaseRecords []core.CaseRecord
+	sign        []byte
 }
 
 func (e *ExecutorResults) Type() core.MessageType {
@@ -147,9 +148,18 @@ func (e *ExecutorResults) GetReference() core.RecordRef {
 	return e.RecordRef
 }
 
+func (e *ExecutorResults) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ExecutorResults) SetSign(sign []byte) {
+	e.sign = sign
+}
+
 type ValidateCaseBind struct {
-	RecordRef  core.RecordRef
+	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
+	sign        []byte
 }
 
 func (e *ValidateCaseBind) Type() core.MessageType {
@@ -173,4 +183,12 @@ func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
 // TODO change after changing pulsar
 func (e *ValidateCaseBind) GetReference() core.RecordRef {
 	return e.RecordRef
+}
+
+func (e *ValidateCaseBind) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ValidateCaseBind) SetSign(sign []byte) {
+	e.sign = sign
 }
