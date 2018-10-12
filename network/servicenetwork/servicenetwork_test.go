@@ -41,11 +41,15 @@ func TestNewServiceNetwork(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestServiceNetwork_GetAddress(t *testing.T) {
-	cfg := configuration.NewConfiguration()
+func getPrivateKeyString() string {
 	key, _ := ecdsa.GeneratePrivateKey()
 	keyStr, _ := ecdsa.ExportPrivateKey(key)
-	cfg.PrivateKey = keyStr
+	return keyStr
+}
+
+func TestServiceNetwork_GetAddress(t *testing.T) {
+	cfg := configuration.NewConfiguration()
+	cfg.PrivateKey = getPrivateKeyString()
 	network, err := NewServiceNetwork(cfg)
 	assert.NoError(t, err)
 	assert.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
@@ -53,9 +57,7 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 
 func TestServiceNetwork_GetHostNetwork(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	key, _ := ecdsa.GeneratePrivateKey()
-	keyStr, _ := ecdsa.ExportPrivateKey(key)
-	cfg.PrivateKey = keyStr
+	cfg.PrivateKey = getPrivateKeyString()
 	network, err := NewServiceNetwork(cfg)
 	assert.NoError(t, err)
 	host, _ := network.GetHostNetwork()
@@ -64,9 +66,7 @@ func TestServiceNetwork_GetHostNetwork(t *testing.T) {
 
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	key, _ := ecdsa.GeneratePrivateKey()
-	keyStr, _ := ecdsa.ExportPrivateKey(key)
-	cfg.PrivateKey = keyStr
+	cfg.PrivateKey = getPrivateKeyString()
 	network, err := NewServiceNetwork(cfg)
 	assert.NoError(t, err)
 
@@ -81,9 +81,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 
 func TestServiceNetwork_Start(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	key, _ := ecdsa.GeneratePrivateKey()
-	keyStr, _ := ecdsa.ExportPrivateKey(key)
-	cfg.PrivateKey = keyStr
+	cfg.PrivateKey = getPrivateKeyString()
 	network, err := NewServiceNetwork(cfg)
 	assert.NoError(t, err)
 	err = network.Start(core.Components{})
@@ -95,9 +93,7 @@ func TestServiceNetwork_Start(t *testing.T) {
 
 func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) configuration.Configuration {
 	cfg := configuration.NewConfiguration()
-	key, _ := ecdsa.GeneratePrivateKey()
-	keyStr, _ := ecdsa.ExportPrivateKey(key)
-	cfg.PrivateKey = keyStr
+	cfg.PrivateKey = getPrivateKeyString()
 	transport := configuration.Transport{Protocol: "UTP", Address: host, BehindNAT: false}
 	h := configuration.HostNetwork{
 		Transport:      transport,
