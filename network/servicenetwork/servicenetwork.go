@@ -153,6 +153,12 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 		return errors.Wrap(err, "Failed to AnalyzeNetwork")
 	}
 
+	if components.NetworkCoordinator != nil {
+		network.hostNetwork.GetNetworkCommonFacade().SetNetworkCoordinator(components.NetworkCoordinator)
+	} else {
+		log.Error("no core.NetworkCoordinator in components")
+	}
+
 	pm, err := getPulseManager(components)
 	if err != nil {
 		log.Error(err)
