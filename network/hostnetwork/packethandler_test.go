@@ -301,6 +301,18 @@ func (hh *mockHostHandler) GetExpirationTime(ctx hosthandler.Context, key []byte
 	return time.Now()
 }
 
+func (hh *mockHostHandler) AddUncheckedNode(hostID id.ID, nonce []byte) {
+
+}
+
+func (hh *mockHostHandler) RemoveUncheckedNode(hostID id.ID) {
+
+}
+
+func (hh *mockHostHandler) UncheckedNodeExist(hostID id.ID, nonce []byte) bool {
+	return true
+}
+
 func (hh *mockHostHandler) KeyIsReceived(targetID string) ([]byte, bool) {
 	if hh.ReceivedKey == targetID {
 		return []byte(targetID), true
@@ -327,6 +339,14 @@ func (hh *mockHostHandler) GetOriginHost() *host.Origin {
 // SetSignChecker sets a func which checks a sign.
 func (hh *mockHostHandler) SetSignChecker(func(msg core.Message) bool) {
 
+}
+
+func (hh *mockHostHandler) SetSigner(func(nonce []byte) []byte) {
+
+}
+
+func (hh *mockHostHandler) Sign(nonce []byte) []byte {
+	return nil
 }
 
 func mockSenderReceiver() (sender, receiver *host.Host) {
