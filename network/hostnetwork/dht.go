@@ -972,7 +972,7 @@ func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	} else {
 		dht.activeNodeKeeper.AddActiveNodes(activeNodes)
 	}
-	return errors.New("failed to add active node. unknown error")
+	return nil
 }
 
 // HtFromCtx returns a routing hashtable known by ctx.
