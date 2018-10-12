@@ -67,7 +67,7 @@ type Pulsar struct {
 
 	OwnedBftRow map[string]*bftCell
 	bftGrid     map[string]map[string]*bftCell
-	BftGridLock sync.Mutex
+	BftGridLock sync.RWMutex
 
 	stateSwitcher StateSwitcher
 }
@@ -78,10 +78,16 @@ func (currentPulsar *Pulsar) setBftGridItem(key string, value map[string]*bftCel
 	defer currentPulsar.BftGridLock.Unlock()
 }
 
-func (currentPulsar *Pulsar) getBftGridItem(key string) map[string]*bftCell {
-	currentPulsar.BftGridLock.Lock()
-	defer currentPulsar.BftGridLock.Unlock()
+func (currentPulsar *Pulsar) getBftGridRow(key string) map[string]*bftCell {
+	currentPulsar.BftGridLock.RLock()
+	defer currentPulsar.BftGridLock.RUnlock()
 	return currentPulsar.bftGrid[key]
+}
+
+func (currentPulsar *Pulsar) getBftGridItem(row string, column string) *bftCell {
+	currentPulsar.BftGridLock.RLock()
+	defer currentPulsar.BftGridLock.RUnlock()
+	return currentPulsar.bftGrid[row][column]
 }
 
 // bftCell is a cell in NxN btf-grid
@@ -540,7 +546,7 @@ func (currentPulsar *Pulsar) verify() {
 	for _, column := range activePulsars {
 		currentColumnStat := map[string]int{}
 		for _, row := range activePulsars {
-			bftCell := currentPulsar.getBftGridItem(row.PubPem)[column.PubPem]
+			bftCell := currentPulsar.getBftGridItem(row.PubPem, column.PubPem)
 
 			if bftCell == nil {
 				currentColumnStat["nil"]++
