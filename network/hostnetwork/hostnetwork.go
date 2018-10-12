@@ -85,8 +85,8 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 	}
 	networkConsensus, err := consensus.NewInsolarConsensus(keeper, network)
 	if err != nil {
-		// TODO: return error when consensus is implemented
-		log.Warn("Consensus is not implemented!")
+		// TODO: return error after consensus merge
+		// return nil, errors.New("Consensus is not implemented!")
 	}
 	network.GetNetworkCommonFacade().SetConsensus(networkConsensus)
 

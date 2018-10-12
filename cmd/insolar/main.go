@@ -22,17 +22,43 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 
+	"github.com/insolar/insolar/api/requesters"
 	"github.com/insolar/insolar/application/bootstrapcertificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 const defaultStdoutPath = "-"
+const defaultURL = "http://localhost:19191/api/v1?"
+
+func genDefaultConfig(r interface{}) ([]byte, error) {
+	t := reflect.TypeOf(r)
+	res := map[string]interface{}{}
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("json")
+		switch field.Type.Kind() {
+		case reflect.String:
+			res[tag] = ""
+		case reflect.Slice:
+			res[tag] = []int{}
+		}
+	}
+
+	rawJSON, err := json.MarshalIndent(res, "", "    ")
+	if err != nil {
+		return nil, errors.Wrap(err, "[ genDefaultConfig ]")
+	}
+
+	return rawJSON, nil
+}
 
 func chooseOutput(path string) (io.Writer, error) {
 	var res io.Writer
@@ -59,14 +85,22 @@ var (
 	output             string
 	cmd                string
 	numberCertificates uint
+	configPath         string
+	paramsPath         string
+	verbose            bool
+	sendUrls           string
 )
 
 func parseInputParams() {
-	var rootCmd = &cobra.Command{Use: "insolar"}
+	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificates")
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificates | send_request | gen_send_configs")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
+	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
+	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
+	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
@@ -78,6 +112,12 @@ func parseInputParams() {
 
 }
 
+func verboseInfo(msg string) {
+	if verbose {
+		log.Infoln(msg)
+	}
+}
+
 func writeToOutput(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	check("Can't write data to output", err)
@@ -85,7 +125,17 @@ func writeToOutput(out io.Writer, data string) {
 
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
-
+	key, err := ecdsa_helper.GeneratePrivateKey()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	keyStr, err := ecdsa_helper.ExportPrivateKey(key)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	cfgHolder.Configuration.PrivateKey = keyStr
 	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
 }
 
@@ -162,6 +212,42 @@ func generateCertificates(out io.Writer) {
 	writeToOutput(out, string(keysList)+"\n")
 }
 
+func sendRequest(out io.Writer) {
+	requesters.SetVerbose(verbose)
+	userCfg, err := requesters.ReadUserConfigFromFile(configPath)
+	check("[ sendRequest ]", err)
+
+	pPath := paramsPath
+	if len(pPath) == 0 {
+		pPath = configPath
+	}
+	reqCfg, err := requesters.ReadRequestConfigFromFile(pPath)
+	check("[ sendRequest ]", err)
+
+	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
+	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
+
+	response, err := requesters.Send(defaultURL, userCfg, reqCfg)
+	check("[ sendRequest ]", err)
+
+	writeToOutput(out, string(response))
+}
+
+func genSendConfigs(out io.Writer) {
+	reqConf, err := genDefaultConfig(requesters.RequestConfigJSON{})
+	check("[ genSendConfigs ]", err)
+
+	userConf, err := genDefaultConfig(requesters.UserConfigJSON{})
+	check("[ genSendConfigs ]", err)
+
+	writeToOutput(out, "Request config:\n")
+	writeToOutput(out, string(reqConf))
+	writeToOutput(out, "\n\n")
+
+	writeToOutput(out, "User config:\n")
+	writeToOutput(out, string(userConf)+"\n")
+}
+
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
@@ -178,5 +264,9 @@ func main() {
 		generateKeysPair(out)
 	case "gen_certificates":
 		generateCertificates(out)
+	case "send_request":
+		sendRequest(out)
+	case "gen_send_configs":
+		genSendConfigs(out)
 	}
 }
