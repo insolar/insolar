@@ -70,6 +70,7 @@ type baseConsensus struct {
 
 // DoConsensus implements consensus interface
 func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]*core.ActiveNode, error) {
+	log.Infof("Start consensus between %d participants about %d unsyncs", len(allParticipants), len(holder.GetUnsync()))
 	c.self = self
 	c.allParticipants = allParticipants
 	c.holder = holder
@@ -81,7 +82,7 @@ func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, se
 }
 
 func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
-
+	log.Debugln("Start exchange data between consensus participants")
 	wg := &sync.WaitGroup{}
 	for _, p := range c.allParticipants {
 		wg.Add(1)
@@ -102,9 +103,11 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 		}(wg, p)
 	}
 	wg.Wait()
+	log.Debugln("End exchange data between consensus participants")
 }
 
 func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
+	log.Debugln("Start exchange hashes between consensus participants")
 
 	hash := c.results.calculateResultHash()
 	c.holder.SetHash(hash)
@@ -126,6 +129,7 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 		}(wg, p)
 	}
 	wg.Wait()
+	log.Debugln("End exchange hashes between consensus participants")
 }
 
 func (c *baseConsensus) analyzeResults() ([]*core.ActiveNode, error) {
