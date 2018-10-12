@@ -42,8 +42,6 @@ func TestReadRequestConfigFromFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, decodedCallee, conf.Callee)
 
-	assert.Equal(t, "CreateMember", conf.Method)
-
 	decodedDelegate, err := base64.StdEncoding.DecodeString("VGVzdDI=")
 	assert.NoError(t, err)
 	assert.Equal(t, decodedDelegate, conf.Delegate)
