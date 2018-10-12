@@ -90,9 +90,9 @@ jobs:
           state: success
       - put: slack
         params:
-          icon_emoji: ':new_moon_with_face:'
+          icon_emoji: ":new_moon_with_face:"
           silent: true
-          text: pull request {{ pull.number }} {{ pull.title }} success
+          text: "pull request {{ pull.number }} {{ pull.title }} success"
     on_failure:
       aggregate:
       - put: pull-request-{{ pull.number }}
@@ -100,7 +100,7 @@ jobs:
           state: failure
       - put: slack
         params:
-          icon_emoji: ':new_moon_with_face:'
+          icon_emoji: ":new_moon_with_face:"
           silent: true
-          text: pull request {{ pull.number }} {{ pull.title }} failure
+          text: "pull request {{ pull.number }} {{ pull.title }} failure"
 {% endfor %}
