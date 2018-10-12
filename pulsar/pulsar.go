@@ -249,7 +249,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
 		return err
 	}
 	if !result {
-		return errors.New("signature check failed")
+		return errors.New("signature check Failed")
 	}
 
 	log.Infof("pulsar - %v connected to - %v", currentPulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
@@ -275,7 +275,7 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars() {
 			neighbour.OutgoingClient.ResetClient()
 			err := currentPulsar.EstablishConnectionToPulsar(pubKey)
 			if err != nil {
-				log.Errorf("Attempt of connection to %v failed with error - %v", neighbour.ConnectionAddress, err)
+				log.Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
 				neighbour.OutgoingClient.ResetClient()
 				continue
 			}
@@ -292,17 +292,17 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 		return nil
 	}
 
-	if currentPulsar.StateSwitcher.GetState() > waitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
+	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
 		currentPulsar.StartProcessLock.Unlock()
 		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.StateSwitcher.GetState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
 		return fmt.Errorf("wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.StateSwitcher.GetState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
 	}
-	currentPulsar.StateSwitcher.setState(generateEntropy)
+	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 
 	err := currentPulsar.generateNewEntropyAndSign()
 	if err != nil {
 		currentPulsar.StartProcessLock.Unlock()
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 		return err
 	}
 
@@ -316,7 +316,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 	currentPulsar.StartProcessLock.Unlock()
 
 	currentPulsar.broadcastSignatureOfEntropy()
-	currentPulsar.StateSwitcher.switchToState(waitingForEntropySigns, nil)
+	currentPulsar.StateSwitcher.switchToState(WaitingForEntropySigns, nil)
 	return nil
 }
 
@@ -328,7 +328,7 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
 
 	payload, err := currentPulsar.preparePayload(networking.EntropySignaturePayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Signature: currentPulsar.GeneratedEntropySign})
 	if err != nil {
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 		return
 	}
 
@@ -356,7 +356,7 @@ func (currentPulsar *Pulsar) broadcastVector() {
 		Vector:      currentPulsar.OwnedBftRow})
 
 	if err != nil {
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 		return
 	}
 
@@ -384,7 +384,7 @@ func (currentPulsar *Pulsar) broadcastEntropy() {
 
 	payload, err := currentPulsar.preparePayload(networking.EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: currentPulsar.GeneratedEntropy})
 	if err != nil {
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 		return
 	}
 
@@ -407,14 +407,14 @@ func (currentPulsar *Pulsar) sendVector() {
 	}
 
 	if currentPulsar.isStandalone() {
-		currentPulsar.StateSwitcher.switchToState(verifying, nil)
+		currentPulsar.StateSwitcher.switchToState(Verifying, nil)
 		return
 	}
 
 	currentPulsar.broadcastVector()
 
 	currentPulsar.setBftGridItem(currentPulsar.PublicKeyRaw, currentPulsar.OwnedBftRow)
-	currentPulsar.StateSwitcher.switchToState(waitingForVectors, nil)
+	currentPulsar.StateSwitcher.switchToState(WaitingForVectors, nil)
 }
 
 func (currentPulsar *Pulsar) isStandalone() bool {
@@ -428,13 +428,13 @@ func (currentPulsar *Pulsar) sendEntropy() {
 	}
 
 	if currentPulsar.isStandalone() {
-		currentPulsar.StateSwitcher.switchToState(verifying, nil)
+		currentPulsar.StateSwitcher.switchToState(Verifying, nil)
 		return
 	}
 
 	currentPulsar.broadcastEntropy()
 
-	currentPulsar.StateSwitcher.switchToState(waitingForEntropy, nil)
+	currentPulsar.StateSwitcher.switchToState(WaitingForEntropy, nil)
 }
 
 func (currentPulsar *Pulsar) waitForEntropy() {
@@ -443,14 +443,14 @@ func (currentPulsar *Pulsar) waitForEntropy() {
 	timeout := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == sendingVector {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingVector {
 				ticker.Stop()
 				return
 			}
 
 			if time.Now().After(timeout) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.switchToState(sendingVector, nil)
+				currentPulsar.StateSwitcher.switchToState(SendingVector, nil)
 			}
 		}
 	}()
@@ -462,14 +462,14 @@ func (currentPulsar *Pulsar) waitForEntropySigns() {
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == sendingEntropy {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingEntropy {
 				ticker.Stop()
 				return
 			}
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.switchToState(sendingEntropy, nil)
+				currentPulsar.StateSwitcher.switchToState(SendingEntropy, nil)
 			}
 		}
 	}()
@@ -481,14 +481,14 @@ func (currentPulsar *Pulsar) receiveVectors() {
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingVectorTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == verifying {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == Verifying {
 				ticker.Stop()
 				return
 			}
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.switchToState(verifying, nil)
+				currentPulsar.StateSwitcher.switchToState(Verifying, nil)
 			}
 		}
 	}()
@@ -502,7 +502,7 @@ func (currentPulsar *Pulsar) isVerifycationNeeded() bool {
 	if currentPulsar.isStandalone() {
 		currentPulsar.CurrentSlotEntropy = currentPulsar.GeneratedEntropy
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
-		currentPulsar.StateSwitcher.switchToState(sendingPulse, nil)
+		currentPulsar.StateSwitcher.switchToState(SendingPulse, nil)
 		return false
 
 	}
@@ -577,7 +577,7 @@ func (currentPulsar *Pulsar) verify() {
 	}
 
 	if len(finalEntropySet) == 0 || wrongVectors > currentPulsar.getMaxTraitorsCount() {
-		currentPulsar.StateSwitcher.switchToState(failed, errors.New("bft is broken"))
+		currentPulsar.StateSwitcher.switchToState(Failed, errors.New("bft is broken"))
 		return
 	}
 
@@ -595,7 +595,7 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 	currentPulsar.CurrentSlotEntropy = finalEntropy
 	chosenPulsar, err := selectByEntropy(finalEntropy, activePulsars, len(activePulsars))
 	if err != nil {
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 	}
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
 	log.Warn(currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw)
@@ -603,7 +603,7 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 		//here confirmation myself
 		signature, err := SignData(currentPulsar.PrivateKey, currentPulsar.CurrentSlotPulseSender)
 		if err != nil {
-			currentPulsar.StateSwitcher.switchToState(failed, err)
+			currentPulsar.StateSwitcher.switchToState(Failed, err)
 			return
 		}
 		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
@@ -611,9 +611,9 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 			Signature:       signature,
 		}
 
-		currentPulsar.StateSwitcher.switchToState(waitingForPulseSigns, nil)
+		currentPulsar.StateSwitcher.switchToState(WaitingForPulseSigns, nil)
 	} else {
-		currentPulsar.StateSwitcher.switchToState(sendingPulseSign, nil)
+		currentPulsar.StateSwitcher.switchToState(SendingPulseSign, nil)
 	}
 }
 
@@ -623,14 +623,14 @@ func (currentPulsar *Pulsar) waitForPulseSigns() {
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == sendingPulse {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingPulse {
 				ticker.Stop()
 				return
 			}
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.switchToState(sendingPulse, nil)
+				currentPulsar.StateSwitcher.switchToState(SendingPulse, nil)
 			}
 		}
 	}()
@@ -644,7 +644,7 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 
 	signature, err := SignData(currentPulsar.PrivateKey, currentPulsar.CurrentSlotPulseSender)
 	if err != nil {
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 		return
 	}
 	confirmation := networking.SenderConfirmationPayload{
@@ -655,7 +655,7 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 
 	payload, err := currentPulsar.preparePayload(confirmation)
 	if err != nil {
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 		return
 	}
 
@@ -664,10 +664,10 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 	if reply.Error != nil {
 		//Here should be retry
 		log.Error(reply.Error)
-		currentPulsar.StateSwitcher.switchToState(failed, log.Error)
+		currentPulsar.StateSwitcher.switchToState(Failed, log.Error)
 	}
 
-	currentPulsar.StateSwitcher.switchToState(waitingForStart, nil)
+	currentPulsar.StateSwitcher.switchToState(WaitingForStart, nil)
 }
 
 func (currentPulsar *Pulsar) sendPulse() {
@@ -686,7 +686,7 @@ func (currentPulsar *Pulsar) sendPulse() {
 
 	pulsarHost, t, err := currentPulsar.prepareForSendingPulse()
 	if err != nil {
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 		return
 	}
 
@@ -703,7 +703,7 @@ func (currentPulsar *Pulsar) sendPulse() {
 	}
 	currentPulsar.LastPulse = &pulseForSending
 
-	currentPulsar.StateSwitcher.switchToState(waitingForStart, nil)
+	currentPulsar.StateSwitcher.switchToState(WaitingForStart, nil)
 	defer func() {
 		go t.Stop()
 		<-t.Stopped()
@@ -805,7 +805,7 @@ func (currentPulsar *Pulsar) broadcastPulse() {
 		Signs:       currentPulsar.CurrentSlotSenderConfirmations,
 	}})
 	if err != nil {
-		currentPulsar.StateSwitcher.switchToState(failed, err)
+		currentPulsar.StateSwitcher.switchToState(Failed, err)
 		return
 	}
 
@@ -896,5 +896,5 @@ func (currentPulsar *Pulsar) FetchNeighbour(pubKey string) (*Neighbour, error) {
 }
 
 func (currentPulsar *Pulsar) IsStateFailed() bool {
-	return currentPulsar.StateSwitcher.GetState() == failed
+	return currentPulsar.StateSwitcher.GetState() == Failed
 }

@@ -83,7 +83,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
-	message.Signature, err = signData(handler.Pulsar.PrivateKey, message.Body)
+	message.Signature, err = pulsar.SignData(handler.Pulsar.PrivateKey, message.Body)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -122,7 +122,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 
-	if handler.Pulsar.StateSwitcher.getState() < generateEntropy {
+	if handler.Pulsar.StateSwitcher.GetState() < pulsar.GenerateEntropy {
 		err = handler.Pulsar.StartConsensusProcess(requestBody.PulseNumber)
 		if err != nil {
 			handler.Pulsar.StateSwitcher.switchToState(failed, err)
@@ -151,7 +151,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
-		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
+		isVerified, err := pulsar.CheckSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
 		if err != nil || !isVerified {
 			handler.Pulsar.OwnedBftRow[request.PublicKey] = nil
 			log.Errorf("signature and entropy aren't matched. error - %v isVerified - %v", err, isVerified)
