@@ -92,13 +92,12 @@ func initPulsar(cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.
 		panic(err)
 	}
 	switcher := &pulsar.StateSwitcherImpl{}
-	server, err := pulsar.NewPulsar(cfg.Pulsar,
+	server, err := pulsar.NewPulsar(cfg,
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},
 		&pulsar.StandardEntropyGenerator{},
 		switcher,
 		net.Listen,
-		cfg.PrivateKey,
 	)
 
 	if err != nil {

@@ -98,6 +98,8 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 
 	tempLedger, cleaner := ledgertestutil.TmpLedger(t, lr, "")
 	nodeConfig := configuration.NewConfiguration()
+	_, key, _ := generatePrivateAndConvertPublic(t)
+	nodeConfig.PrivateKey = key
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig)
 
