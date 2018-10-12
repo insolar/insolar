@@ -66,6 +66,7 @@ type Pulsar struct {
 	LastPulse             *core.Pulse
 
 	OwnedBftRow map[string]*bftCell
+
 	bftGrid     map[string]map[string]*bftCell
 	BftGridLock sync.RWMutex
 
@@ -86,6 +87,7 @@ func (currentPulsar *Pulsar) getBftGridItem(row string, column string) *bftCell 
 
 // bftCell is a cell in NxN btf-grid
 type bftCell struct {
+	sync.Mutex
 	Sign              []byte
 	Entropy           core.Entropy
 	IsEntropyReceived bool
