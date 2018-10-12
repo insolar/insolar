@@ -67,28 +67,28 @@ type Pulsar struct {
 	ProcessingPulseNumber core.PulseNumber
 	LastPulse             *core.Pulse
 
-	OwnedBftRow map[string]*bftCell
+	OwnedBftRow map[string]*BftCell
 
-	bftGrid     map[string]map[string]*bftCell
+	bftGrid     map[string]map[string]*BftCell
 	BftGridLock sync.RWMutex
 
 	stateSwitcher StateSwitcher
 }
 
-func (currentPulsar *Pulsar) setBftGridItem(key string, value map[string]*bftCell) {
+func (currentPulsar *Pulsar) setBftGridItem(key string, value map[string]*BftCell) {
 	currentPulsar.BftGridLock.Lock()
 	currentPulsar.bftGrid[key] = value
 	defer currentPulsar.BftGridLock.Unlock()
 }
 
-func (currentPulsar *Pulsar) getBftGridItem(row string, column string) *bftCell {
+func (currentPulsar *Pulsar) getBftGridItem(row string, column string) *BftCell {
 	currentPulsar.BftGridLock.RLock()
 	defer currentPulsar.BftGridLock.RUnlock()
 	return currentPulsar.bftGrid[row][column]
 }
 
-// bftCell is a cell in NxN btf-grid
-type bftCell struct {
+// BftCell is a cell in NxN btf-grid
+type BftCell struct {
 	lock              sync.Mutex
 	Sign              []byte
 	Entropy           core.Entropy
@@ -145,7 +145,7 @@ func NewPulsar(
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.Pulsar.Neighbours {
-		currentMap := map[string]*bftCell{}
+		currentMap := map[string]*BftCell{}
 		for _, gridColumn := range configuration.Pulsar.Neighbours {
 			currentMap[gridColumn.PublicKey] = nil
 		}
@@ -305,7 +305,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 		return err
 	}
 
-	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &bftCell{
+	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &BftCell{
 		Entropy:           currentPulsar.GeneratedEntropy,
 		IsEntropyReceived: true,
 		Sign:              currentPulsar.GeneratedEntropySign,
@@ -860,9 +860,9 @@ func (currentPulsar *Pulsar) clearState() {
 
 	currentPulsar.ProcessingPulseNumber = 0
 
-	currentPulsar.OwnedBftRow = map[string]*bftCell{}
+	currentPulsar.OwnedBftRow = map[string]*BftCell{}
 	currentPulsar.BftGridLock.Lock()
-	currentPulsar.bftGrid = map[string]map[string]*bftCell{}
+	currentPulsar.bftGrid = map[string]map[string]*BftCell{}
 	currentPulsar.BftGridLock.Unlock()
 }
 
