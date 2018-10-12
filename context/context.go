@@ -26,28 +26,28 @@ import (
 
 // Ctx is extension of common Context with added Logger.
 type Ctx struct {
-	goCtx context.Context
-	log   core.Logger
+	ctx context.Context
+	log core.Logger
 }
 
 // Deadline implements Deadline() from Context interface.
 func (ctx *Ctx) Deadline() (deadline time.Time, ok bool) {
-	return ctx.goCtx.Deadline()
+	return ctx.ctx.Deadline()
 }
 
 // Done implements Done() from Context interface.
 func (ctx *Ctx) Done() <-chan struct{} {
-	return ctx.goCtx.Done()
+	return ctx.ctx.Done()
 }
 
 // Err implements Err() from Context interface.
 func (ctx *Ctx) Err() error {
-	return ctx.goCtx.Err()
+	return ctx.ctx.Err()
 }
 
 // Value implements Value() from Context interface.
 func (ctx *Ctx) Value(key interface{}) interface{} {
-	return ctx.goCtx.Value(key)
+	return ctx.ctx.Value(key)
 }
 
 // NewCtxFromContext creates new Ctx from context.Context
@@ -55,8 +55,8 @@ func NewCtxFromContext(parent context.Context) *Ctx {
 	ctx, ok := parent.(*Ctx)
 	if !ok {
 		ctx = &Ctx{
-			goCtx: parent,
-			log:   log.GlobalLogger,
+			ctx: parent,
+			log: log.GlobalLogger,
 		}
 	}
 	return ctx
@@ -65,13 +65,43 @@ func NewCtxFromContext(parent context.Context) *Ctx {
 // WithCancel is the same as context.WithCancel() but always returns Ctx
 func WithCancel(parent context.Context) (ctx *Ctx, cancel context.CancelFunc) {
 	ctx = NewCtxFromContext(parent)
-	ctx.goCtx, cancel = context.WithCancel(ctx.goCtx)
+	ctx.ctx, cancel = context.WithCancel(ctx.ctx)
 	return ctx, cancel
 }
 
 // WithDeadline is the same as context.WithDeadline() but always returns Ctx
 func WithDeadline(parent context.Context, d time.Time) (ctx *Ctx, cancel context.CancelFunc) {
 	ctx = NewCtxFromContext(parent)
-	ctx.goCtx, cancel = context.WithCancel(ctx.goCtx)
+	ctx.ctx, cancel = context.WithCancel(ctx.ctx)
 	return ctx, cancel
+}
+
+// WithTimeout is the same as context.WithTimeout() but always returns Ctx
+func WithTimeout(parent context.Context, timeout time.Duration) (ctx *Ctx, cancel context.CancelFunc) {
+	ctx = NewCtxFromContext(parent)
+	ctx.ctx, cancel = context.WithTimeout(ctx.ctx, timeout)
+	return ctx, cancel
+}
+
+// Background is the same as context.Background() but always returns Ctx
+func Background() *Ctx {
+	return &Ctx{
+		ctx: context.Background(),
+		log: log.GlobalLogger,
+	}
+}
+
+// TODO is the same as context.TODO() but always returns Ctx
+func TODO() *Ctx {
+	return &Ctx{
+		ctx: context.TODO(),
+		log: log.GlobalLogger,
+	}
+}
+
+// WithValue is the same as context.WithValue() but always returns Ctx
+func WithValue(parent context.Context, key, val interface{}) *Ctx {
+	ctx := NewCtxFromContext(parent)
+	ctx.ctx = context.WithValue(ctx.ctx, key, val)
+	return ctx
 }
