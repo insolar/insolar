@@ -28,6 +28,7 @@ type State int
 const (
 	failed State = iota
 	waitingForStart
+	generateEntropy
 	waitingForEntropySigns
 	sendingEntropy
 	waitingForEntropy
@@ -66,13 +67,15 @@ func (switcher *StateSwitcherImpl) setState(state State) {
 	switcher.state = state
 }
 
+// SetPulsar sets pulsar of the current instance
 func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
+	switcher.setState(waitingForStart)
 	switcher.pulsar = pulsar
 }
 
 func (switcher *StateSwitcherImpl) switchToState(state State, args interface{}) {
 	log.Debugf("Switch state from %v to %v", switcher.getState().String(), state.String())
-	if state < switcher.getState() && state != waitingForStart {
+	if state < switcher.getState() && (state != waitingForStart && state != failed) {
 		panic("Attempt to set a backward step")
 	}
 
@@ -101,5 +104,6 @@ func (switcher *StateSwitcherImpl) switchToState(state State, args interface{}) 
 		switcher.pulsar.sendPulse()
 	case failed:
 		switcher.pulsar.handleErrorState(args.(error))
+		switcher.setState(waitingForStart)
 	}
 }

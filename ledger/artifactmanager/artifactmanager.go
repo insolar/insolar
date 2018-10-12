@@ -139,18 +139,21 @@ func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.Recor
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.Object)
-	if !ok {
-		return nil, ErrUnexpectedReply
+	switch r := genericReact.(type) {
+	case *reply.Object:
+		desc := ObjectDescriptor{
+			am:     m,
+			head:   r.Head,
+			state:  r.State,
+			class:  r.Class,
+			memory: r.Memory,
+		}
+		return &desc, nil
+	case *reply.Error:
+		return nil, r.Error()
 	}
-	desc := ObjectDescriptor{
-		am:     m,
-		head:   react.Head,
-		state:  react.State,
-		class:  react.Class,
-		memory: react.Memory,
-	}
-	return &desc, nil
+
+	return nil, ErrUnexpectedReply
 }
 
 // GetDelegate returns provided object's delegate reference for provided class.

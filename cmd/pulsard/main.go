@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -52,12 +53,15 @@ func main() {
 	pulseTicker, refreshTicker := runPulsar(server, cfgHolder.Configuration.Pulsar)
 
 	fmt.Println("Press any button to exit")
-	time.Sleep(2 * time.Hour)
-	//rl, err := readline.New("> ")
-	//_, err = rl.Readline()
-	//if err != nil {
-	//	log.Warn(err)
-	//}
+	rl, err := readline.New("")
+	if err != nil {
+		log.Error(err)
+		panic(err)
+	}
+	_, err = rl.Readline()
+	if err != nil {
+		log.Warn(err)
+	}
 
 	defer func() {
 		pulseTicker.Stop()
