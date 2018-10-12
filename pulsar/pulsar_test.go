@@ -54,11 +54,6 @@ func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RPCClientWrapper {
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 
 	privateKey, privateKeyExported, _ := generatePrivateAndConvertPublic(t)
-	config := configuration.Pulsar{
-		ConnectionType:      "testType",
-		MainListenerAddress: "listedAddress",
-		PrivateKey:          privateKeyExported,
-	}
 	actualConnectionType := ""
 	actualAddress := ""
 
@@ -72,12 +67,19 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	clientFactory := &MockRpcClientFactoryWrapper{}
 	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})
 
-	result, err := NewPulsar(config,
+	result, err := NewPulsar(configuration.Configuration{
+		Pulsar: configuration.Pulsar{
+			ConnectionType:      "testType",
+			MainListenerAddress: "listedAddress",
+		},
+		PrivateKey: privateKeyExported,
+	},
 		storage,
 		clientFactory,
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
-		mockListener)
+		mockListener,
+	)
 
 	assert.NoError(t, err)
 	assert.Equal(t, privateKey, result.PrivateKey)
@@ -100,21 +102,25 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 
 	expectedPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	parsedExpectedPrivateKey, _ := ecdsahelper.ExportPrivateKey(expectedPrivateKey)
-	config := configuration.Pulsar{
-		ConnectionType:      "testType",
-		MainListenerAddress: "listedAddress",
-		PrivateKey:          parsedExpectedPrivateKey,
-		Neighbours: []configuration.PulsarNodeAddress{
-			{ConnectionType: "tcp", Address: "first", PublicKey: firstExpectedKey},
-			{ConnectionType: "pct", Address: "second", PublicKey: secondExpectedKey},
-		},
-	}
 	storage := &pulsartestutil.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	clientFactory := &MockRpcClientFactoryWrapper{}
 	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})
 
-	result, err := NewPulsar(config, storage, clientFactory,
+	result, err := NewPulsar(
+		configuration.Configuration{
+			Pulsar: configuration.Pulsar{
+				ConnectionType:      "testType",
+				MainListenerAddress: "listedAddress",
+				Neighbours: []configuration.PulsarNodeAddress{
+					{ConnectionType: "tcp", Address: "first", PublicKey: firstExpectedKey},
+					{ConnectionType: "pct", Address: "second", PublicKey: secondExpectedKey},
+				},
+			},
+			PrivateKey: parsedExpectedPrivateKey,
+		},
+		storage,
+		clientFactory,
 		pulsartestutil.MockEntropyGenerator{}, nil, func(connectionType string, address string) (net.Listener, error) {
 			return &pulsartestutil.MockListener{}, nil
 		})
