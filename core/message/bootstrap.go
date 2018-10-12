@@ -48,10 +48,12 @@ func (*BootstrapRequest) GetCaller() *core.RecordRef {
 	return nil
 }
 
+// GetSign returns a sign.
 func (m *BootstrapRequest) GetSign() []byte {
 	return m.sign
 }
 
+// SetSign sets a signature to message.
 func (m *BootstrapRequest) SetSign(sign []byte) {
 	m.sign = sign
 }

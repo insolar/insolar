@@ -1270,6 +1270,7 @@ func (dht *DHT) RemoveProxyHost(targetID string) {
 	dht.proxy.RemoveProxyHost(targetID)
 }
 
+// SetSignChecker sets a func which checks a sign.
 func (dht *DHT) SetSignChecker(f func(msg core.Message) bool) {
 	dht.signChecker = f
 }
