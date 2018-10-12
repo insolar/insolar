@@ -40,6 +40,8 @@ type LogicRunner struct {
 	MessageBus           core.MessageBus
 	machinePrefs         []core.MachineType
 	Cfg                  *configuration.LogicRunner
+
+	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
 	caseBindMutex        sync.Mutex
 	caseBindReplays      map[core.RecordRef]core.CaseBindReplay
@@ -55,6 +57,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
+		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[core.RecordRef][]core.CaseRecord)},
 		caseBindReplays: make(map[core.RecordRef]core.CaseBindReplay),
 	}
 	return &res, nil
@@ -95,6 +98,13 @@ func (lr *LogicRunner) Start(c core.Components) error {
 		return err
 	}
 	if err := messageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
+		return err
+	}
+
+	if err := messageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
+		return err
+	}
+	if err := messageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
 		return err
 	}
 
@@ -172,10 +182,23 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	case *message.CallConstructor:
 		re, err := lr.executeConstructorCall(ctx, m, vb)
 		return re, err
-
+	case *message.ValidateCaseBind:
+		// TODO testBus goes here, send test bus to ValidateCaseBind
+		return nil, nil
+	case *message.ExecutorResults:
+		// TODO testBus goes here, send test bus to ExecutorResults
+		return nil, nil
 	default:
 		panic("Unknown e type")
 	}
+}
+
+func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
+	return nil, nil
+}
+
+func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
+	return nil, nil
 }
 
 type objectBody struct {
@@ -340,11 +363,41 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
+	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
+	objectsRecords := lr.refreshCaseBind(pulse)
+
+	if len(objectsRecords) == 0 {
+		return nil
+	}
+
+	// send copy for validation
+	for ref, records := range objectsRecords {
+		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records})
+		if err != nil {
+			panic("Error while sending caseBind data to validators: " + err.Error())
+		}
+
+		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
+		_, err = lr.MessageBus.Send(&temp)
+		if err != nil {
+			return errors.New("error while sending caseBind data to new executor")
+		}
+	}
+
+	return nil
+}
+
+// refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
+func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord  {
 	lr.caseBindMutex.Lock()
+	defer lr.caseBindMutex.Unlock()
+
+	oldObjectsRecords := lr.caseBind.Records
+
 	lr.caseBind = core.CaseBind{
 		Pulse:   pulse,
 		Records: make(map[core.RecordRef][]core.CaseRecord),
 	}
-	lr.caseBindMutex.Unlock()
-	return nil
+
+	return oldObjectsRecords
 }

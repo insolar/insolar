@@ -120,3 +120,57 @@ func (e *CallConstructor) Target() *core.RecordRef {
 	}
 	return core.GenRequest(e.PulseNum, MustSerializeBytes(e))
 }
+
+type ExecutorResults struct {
+	RecordRef core.RecordRef
+	CaseRecords  []core.CaseRecord
+}
+
+func (e *ExecutorResults) Type() core.MessageType {
+	return core.TypeExecutorResults
+}
+
+func (e *ExecutorResults) TargetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
+func (e *ExecutorResults) Target() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ExecutorResults) GetCaller() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
+func (e *ExecutorResults) GetReference() core.RecordRef {
+	return e.RecordRef
+}
+
+type ValidateCaseBind struct {
+	RecordRef  core.RecordRef
+	CaseRecords []core.CaseRecord
+}
+
+func (e *ValidateCaseBind) Type() core.MessageType {
+	return core.TypeValidateCaseBind
+}
+
+func (e *ValidateCaseBind) TargetRole() core.JetRole {
+	return core.RoleVirtualValidator
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) Target() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) GetReference() core.RecordRef {
+	return e.RecordRef
+}
