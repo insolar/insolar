@@ -146,7 +146,7 @@ func (t *baseTransport) handlePacket(msg *packet.Packet) {
 }
 
 func (t *baseTransport) processResponse(msg *packet.Packet) {
-	log.Debugf("Process response %s with RequestID = %s", msg.RemoteAddress, msg.RequestID)
+	log.Debugf("Process response %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
 
 	future := t.getFuture(msg)
 	if future != nil && !shouldProcessPacket(future, msg) {
@@ -157,7 +157,7 @@ func (t *baseTransport) processResponse(msg *packet.Packet) {
 
 func (t *baseTransport) processRequest(msg *packet.Packet) {
 	if msg.IsValid() {
-		log.Debugf("Process request %s with RequestID = %s", msg.RemoteAddress, msg.RequestID)
+		log.Debugf("Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
 		t.received <- msg
 	}
 }
@@ -181,7 +181,7 @@ func (t *baseTransport) sendPacket(msg *packet.Packet) error {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	log.Debugf("Send packet to %s with RequestID = %s", recvAddress, msg.RequestID)
+	log.Debugf("Send packet to %s with RequestID = %d", recvAddress, msg.RequestID)
 	return t.sendFunc(recvAddress, data)
 }
 
