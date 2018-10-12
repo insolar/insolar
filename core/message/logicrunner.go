@@ -36,11 +36,22 @@ const (
 type BaseLogicMessage struct {
 	Caller core.RecordRef
 	Nonce  uint64
+	sign   []byte
 }
 
 type IBaseLogicMessage interface {
 	core.Message
 	GetReference() core.RecordRef
+}
+
+// SetSign sets a signature to message.
+func (b *BaseLogicMessage) SetSign(sign []byte) {
+	b.sign = sign
+}
+
+// GetSign returns a sign.
+func (b *BaseLogicMessage) GetSign() []byte {
+	return b.sign
 }
 
 func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
@@ -111,8 +122,9 @@ func (e *CallConstructor) Target() *core.RecordRef {
 }
 
 type ExecutorResults struct {
-	RecordRef core.RecordRef
-	CaseRecords  []core.CaseRecord
+	RecordRef   core.RecordRef
+	CaseRecords []core.CaseRecord
+	sign        []byte
 }
 
 func (e *ExecutorResults) Type() core.MessageType {
@@ -136,9 +148,18 @@ func (e *ExecutorResults) GetReference() core.RecordRef {
 	return e.RecordRef
 }
 
+func (e *ExecutorResults) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ExecutorResults) SetSign(sign []byte) {
+	e.sign = sign
+}
+
 type ValidateCaseBind struct {
-	RecordRef  core.RecordRef
+	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
+	sign        []byte
 }
 
 func (e *ValidateCaseBind) Type() core.MessageType {
@@ -162,4 +183,12 @@ func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
 // TODO change after changing pulsar
 func (e *ValidateCaseBind) GetReference() core.RecordRef {
 	return e.RecordRef
+}
+
+func (e *ValidateCaseBind) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ValidateCaseBind) SetSign(sign []byte) {
+	e.sign = sign
 }

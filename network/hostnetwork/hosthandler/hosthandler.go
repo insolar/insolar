@@ -127,6 +127,7 @@ type HostHandler interface {
 
 	SetHighKnownHostID(id string)
 	SetOuterHostsCount(hosts int)
+	SetSignChecker(func(msg core.Message) bool)
 	SetAuthStatus(targetID string, status bool)
 
 	GetProxyHostsCount() int

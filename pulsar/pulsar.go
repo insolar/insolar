@@ -97,7 +97,7 @@ type bftCell struct {
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
-	configuration configuration.Pulsar,
+	configuration configuration.Configuration,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator EntropyGenerator,
@@ -107,7 +107,7 @@ func NewPulsar(
 	log.Debug("[NewPulsar]")
 
 	// Listen for incoming connections.
-	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
+	listenerImpl, err := listener(configuration.Pulsar.ConnectionType.String(), configuration.Pulsar.MainListenerAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -119,10 +119,10 @@ func NewPulsar(
 	}
 	pulsar := &Pulsar{
 		Sock:               listenerImpl,
-		SockConnectionType: configuration.ConnectionType,
+		SockConnectionType: configuration.Pulsar.ConnectionType,
 		Neighbours:         map[string]*Neighbour{},
 		PrivateKey:         privateKey,
-		Config:             configuration,
+		Config:             configuration.Pulsar,
 		Storage:            storage,
 		EntropyGenerator:   entropyGenerator,
 		stateSwitcher:      stateSwitcher,
@@ -144,9 +144,9 @@ func NewPulsar(
 	pulsar.LastPulse = lastPulse
 
 	// Adding other pulsars
-	for _, neighbour := range configuration.Neighbours {
+	for _, neighbour := range configuration.Pulsar.Neighbours {
 		currentMap := map[string]*bftCell{}
-		for _, gridColumn := range configuration.Neighbours {
+		for _, gridColumn := range configuration.Pulsar.Neighbours {
 			currentMap[gridColumn.PublicKey] = nil
 		}
 		pulsar.setBftGridItem(neighbour.PublicKey, currentMap)
