@@ -37,11 +37,11 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors            [core.MachineTypesLastID]core.MachineLogicExecutor
-	ArtifactManager      core.ArtifactManager
-	MessageBus           core.MessageBus
-	machinePrefs         []core.MachineType
-	Cfg                  *configuration.LogicRunner
+	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
+	ArtifactManager core.ArtifactManager
+	MessageBus      core.MessageBus
+	machinePrefs    []core.MachineType
+	Cfg             *configuration.LogicRunner
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
@@ -213,7 +213,7 @@ type objectBody struct {
 func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, error) {
 	cr, step := lr.getNextValidationStep(objref)
 	if step >= 0 { // validate
-		if core.CaseRecordTypeGetobject != cr.Type {
+		if core.CaseRecordTypeGetObject != cr.Type {
 			return nil, errors.New("Wrong validation type on RouteCall")
 		}
 		sig := HashInterface(objref)
@@ -245,7 +245,7 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 		MachineType: codeDesc.MachineType(),
 	}
 	lr.addObjectCaseRecord(objref, core.CaseRecord{
-		Type:   core.CaseRecordTypeGetobject,
+		Type:   core.CaseRecordTypeGetObject,
 		ReqSig: HashInterface(objref),
 		Resp:   ob,
 	})
@@ -408,7 +408,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 }
 
 // refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
-func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord  {
+func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
 
