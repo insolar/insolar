@@ -364,7 +364,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
-	objectsRecords, caseBindReplays := lr.refreshCaseBind(pulse)
+	objectsRecords := lr.refreshCaseBind(pulse)
 
 	if len(objectsRecords) == 0 {
 		return nil
@@ -377,7 +377,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 			panic("Error while sending caseBind data to validators: " + err.Error())
 		}
 
-		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records, CaseBindReplays: caseBindReplays[ref]}
+		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
 		_, err = lr.MessageBus.Send(&temp)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
@@ -387,21 +387,17 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	return nil
 }
 
-// refreshCaseBind lock CaseBind data, copy it, clean original, unlock original
-func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) (oldObjectsRecords map[core.RecordRef][]core.CaseRecord, oldCaseBinfReplays map[core.RecordRef]core.CaseBindReplay)  {
+// refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
+func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord  {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
-	lr.caseBindReplaysMutex.Lock()
-	defer lr.caseBindReplaysMutex.Unlock()
 
-	objectsRecords := lr.caseBind.Records
-	caseBindReplays := lr.caseBindReplays
+	oldObjectsRecords := lr.caseBind.Records
 
 	lr.caseBind = core.CaseBind{
 		Pulse:   pulse,
 		Records: make(map[core.RecordRef][]core.CaseRecord),
 	}
-	lr.caseBindReplays = make(map[core.RecordRef]core.CaseBindReplay)
 
-	return objectsRecords, caseBindReplays
+	return oldObjectsRecords
 }

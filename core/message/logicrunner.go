@@ -111,10 +111,8 @@ func (e *CallConstructor) Target() *core.RecordRef {
 }
 
 type ExecutorResults struct {
-	// TODO make normal map with necessary data
 	RecordRef core.RecordRef
 	CaseRecords  []core.CaseRecord
-	CaseBindReplays core.CaseBindReplay
 }
 
 func (e *ExecutorResults) Type() core.MessageType {
@@ -126,7 +124,7 @@ func (e *ExecutorResults) TargetRole() core.JetRole {
 }
 
 func (e *ExecutorResults) Target() *core.RecordRef {
-	return &core.RecordRef{}
+	return &e.RecordRef
 }
 
 // TODO change after changing pulsar
@@ -134,9 +132,8 @@ func (e *ExecutorResults) GetCaller() *core.RecordRef {
 	return &core.RecordRef{}
 }
 
-// TODO change after changing pulsar
 func (e *ExecutorResults) GetReference() core.RecordRef {
-	return core.RecordRef{}
+	return e.RecordRef
 }
 
 type ValidateCaseBind struct {
