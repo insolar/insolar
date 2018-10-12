@@ -26,9 +26,11 @@ import (
 	"sync"
 	"time"
 
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -111,7 +113,7 @@ func NewPulsar(
 	}
 
 	// Parse private key from config
-	privateKey, err := ecdsa_helper.ImportPrivateKey(configuration.PrivateKey)
+	privateKey, err := ecdsahelper.ImportPrivateKey(configuration.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +129,7 @@ func NewPulsar(
 	}
 	pulsar.clearState()
 
-	pubKey, err := ecdsa_helper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	pubKey, err := ecdsahelper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
@@ -152,7 +154,7 @@ func NewPulsar(
 		if len(neighbour.PublicKey) == 0 {
 			continue
 		}
-		publicKey, err := ecdsa_helper.ImportPublicKey(neighbour.PublicKey)
+		publicKey, err := ecdsahelper.ImportPublicKey(neighbour.PublicKey)
 		if err != nil {
 			continue
 		}
@@ -496,7 +498,6 @@ func (currentPulsar *Pulsar) isVerifycationNeeded() bool {
 		return false
 
 	}
-
 	if currentPulsar.isStandalone() {
 		currentPulsar.CurrentSlotEntropy = currentPulsar.GeneratedEntropy
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw

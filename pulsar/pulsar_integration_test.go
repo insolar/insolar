@@ -33,6 +33,7 @@ import (
 )
 
 func TestTwoPulsars_Handshake(t *testing.T) {
+
 	_, firstPrivateExported, firstPublicExported := generatePrivateAndConvertPublic(t)
 	_, secondPrivateExported, secondPublicExported := generatePrivateAndConvertPublic(t)
 
@@ -87,10 +88,12 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
+
 	tempLedger, cleaner := ledgertestutil.TmpLedger(t, lr, "")
 	nodeConfig := configuration.NewConfiguration()
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig.Host, nodeConfig.Node)
+
 	assert.NoError(t, err)
 	err = nodeNetwork.Start(core.Components{Ledger: tempLedger})
 	assert.NoError(t, err)
@@ -203,7 +206,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	// Act
 	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
-
 	time.Sleep(500 * time.Millisecond)
 
 	usualNodeNetwork.Stop()

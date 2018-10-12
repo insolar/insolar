@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,11 +55,11 @@ func TestNewCertificateFromFields(t *testing.T) {
 	privKeys := []*ecdsa.PrivateKey{}
 	records := CertRecords{}
 	for i := 0; i < 10; i++ {
-		key, err := ecdsa_helper.GeneratePrivateKey()
+		key, err := ecdsahelper.GeneratePrivateKey()
 		assert.NoError(t, err)
 		privKeys = append(privKeys, key)
 
-		pubKey, err := ecdsa_helper.ExportPublicKey(&key.PublicKey)
+		pubKey, err := ecdsahelper.ExportPublicKey(&key.PublicKey)
 		assert.NoError(t, err)
 		records = append(records, Record{NodeRef: core.RandomRef().String(), PublicKey: pubKey})
 	}
@@ -105,7 +105,7 @@ func readPrivateKeys() ([]*ecdsa.PrivateKey, error) {
 	privateKeys := []*ecdsa.PrivateKey{}
 
 	for i := 0; i < len(keysData); i++ {
-		privKey, err := ecdsa_helper.ImportPrivateKey(keysData[i].Private_key)
+		privKey, err := ecdsahelper.ImportPrivateKey(keysData[i].Private_key)
 		if err != nil {
 			return nil, err
 		}

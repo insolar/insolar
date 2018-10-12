@@ -44,8 +44,8 @@ func New(name string, key string) *Member {
 	}
 }
 
-func (m *Member) AuthorizedCall(ref string, delegate string, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
-	serialized, err := signer.Serialize(ref, delegate, method, params, seed)
+func (m *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
+	serialized, err := signer.Serialize(ref[:], delegate[:], method, params, seed)
 	if err != nil {
 		return nil, &foundation.Error{S: err.Error()}
 	}
@@ -58,13 +58,13 @@ func (m *Member) AuthorizedCall(ref string, delegate string, method string, para
 	}
 
 	var contract core.RecordRef
-	if delegate != "" {
-		contract, err = foundation.GetImplementationFor(core.NewRefFromBase58(ref), core.NewRefFromBase58(delegate))
+	if !delegate.Equal(core.RecordRef{}) {
+		contract, err = foundation.GetImplementationFor(ref, delegate)
 		if err != nil {
 			return nil, &foundation.Error{S: err.Error()}
 		}
 	} else {
-		contract = core.NewRefFromBase58(ref)
+		contract = ref
 	}
 	ret, err := proxyctx.Current.RouteCall(contract, true, method, params)
 	if err != nil {
