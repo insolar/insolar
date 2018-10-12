@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -85,8 +86,16 @@ func writeToOutput(out io.Writer, data string) {
 
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
-	key, _ := ecdsa_helper.GeneratePrivateKey()
-	keyStr, _ := ecdsa_helper.ExportPrivateKey(key)
+	key, err := ecdsa_helper.GeneratePrivateKey()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	keyStr, err := ecdsa_helper.ExportPrivateKey(key)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	cfgHolder.Configuration.PrivateKey = keyStr
 	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
 }
