@@ -27,6 +27,7 @@ type ProxyHelper interface {
 	GetObjChildren(head core.RecordRef, class core.RecordRef) ([]core.RecordRef, error)
 	SaveAsDelegate(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
 	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)
+	DeactivateObject(object core.RecordRef) error
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 	MakeErrorSerializable(error) error

@@ -24,17 +24,23 @@ import (
 )
 
 func TestSingAndVerify(t *testing.T) {
-	assertObj := assert.New(t)
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	publicKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
-	testString := "message"
+	for i := 0; i < 20; i++ {
+		// Arrange
+		privateKey, err := ecdsahelper.GeneratePrivateKey()
+		assert.NoError(t, err)
+		publicKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
+		assert.NoError(t, err)
+		testData := (&StandardEntropyGenerator{}).GenerateEntropy()
 
-	signature, err := singData(privateKey, testString)
-	assertObj.NoError(err)
+		signature, err := signData(privateKey, testData)
+		assert.NoError(t, err)
 
-	checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: testString})
+		// Act
+		checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: testData})
 
-	assertObj.Equal(true, checkSignature)
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, true, checkSignature)
+	}
+
 }

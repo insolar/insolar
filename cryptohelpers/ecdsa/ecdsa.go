@@ -24,6 +24,7 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 
 	"github.com/insolar/insolar/cryptohelpers/hash"
@@ -32,7 +33,7 @@ import (
 
 var P256Curve = elliptic.P256()
 
-// Helper-function for exporting ecdsa.PrivateKey to PEM string
+// ExportPrivateKey is a helper-function for exporting ecdsa.PrivateKey to PEM string
 func ExportPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
 	x509Encoded, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
@@ -42,7 +43,7 @@ func ExportPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
 	return string(pemEncoded), nil
 }
 
-// Helper-function for exporting ecdsa.PublicKey from PEM string
+// ExportPublicKey is a helper-function for exporting ecdsa.PublicKey from PEM string
 func ExportPublicKey(publicKey *ecdsa.PublicKey) (string, error) {
 	x509EncodedPub, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
@@ -53,34 +54,34 @@ func ExportPublicKey(publicKey *ecdsa.PublicKey) (string, error) {
 	return string(pemEncodedPub), nil
 }
 
-// Helper-function for importing ecdsa.PrivateKey from PEM string
+// ImportPrivateKey is for importing ecdsa.PrivateKey from PEM string
 func ImportPrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
 	block, _ := pem.Decode([]byte(pemEncoded))
 	if block == nil {
-		return nil, errors.New("[ ImportPrivateKey ] Problems with decoding")
+		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding. Key - %v", pemEncoded)
 	}
 	x509Encoded := block.Bytes
 	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
 	if err != nil {
-		return nil, errors.New("[ ImportPrivateKey ] Problems with parsing")
+		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with parsing. Key - %v", pemEncoded)
 	}
 	return privateKey, nil
 }
 
-// Helper-function for importing ecdsa.PublicKey from PEM string
+// ImportPublicKey is for importing ecdsa.PublicKey from PEM string
 func ImportPublicKey(pemPubEncoded string) (*ecdsa.PublicKey, error) {
 	blockPub, _ := pem.Decode([]byte(pemPubEncoded))
 	if blockPub == nil {
-		return nil, errors.New("[ ImportPublicKey ] Problems with decoding")
+		return nil, fmt.Errorf("[ ImportPublicKey ] Problems with decoding. Key - %v", pemPubEncoded)
 	}
 	x509EncodedPub := blockPub.Bytes
 	genericPublicKey, err := x509.ParsePKIXPublicKey(x509EncodedPub)
 	if err != nil {
-		return nil, errors.New("[ ImportPublicKey ] Problems with parsing")
+		return nil, fmt.Errorf("[ ImportPublicKey ] Problems with parsing. Key - %v", pemPubEncoded)
 	}
 	publicKey, ok := genericPublicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, errors.New("[ ImportPublicKey ] Problems with casting")
+		return nil, fmt.Errorf("[ ImportPublicKey ] Problems with casting. Key - %v", pemPubEncoded)
 	}
 	return publicKey, nil
 }
@@ -107,7 +108,7 @@ func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 	return signature, nil
 }
 
-// Verifies signature
+// Verify verifies signature
 func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	var ecdsaP ecdsaPair
 	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaP)

@@ -264,7 +264,7 @@ func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []*routi
 	for _, host1 := range hosts {
 		err := sendPulse(hostHandler, host1.Host, pulse)
 		if err != nil {
-			log.Debug("error resending pulse to host %s: %s", host1.ID, err.Error())
+			log.Debugf("error resending pulse to host %s: %s", host1.ID, err.Error())
 		}
 	}
 }

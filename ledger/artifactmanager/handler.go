@@ -130,6 +130,9 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 
 	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State)
 	if err != nil {
+		if err == ErrObjectDeactivated {
+			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+		}
 		return nil, err
 	}
 
