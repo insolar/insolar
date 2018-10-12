@@ -26,6 +26,7 @@ import (
 
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/pulsar/networking"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -36,11 +37,11 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func checkPayloadSignature(request *Payload) (bool, error) {
-	return checkSignature(request.Body, request.PublicKey, request.Signature)
+func CheckPayloadSignature(request *networking.Payload) (bool, error) {
+	return CheckSignature(request.Body, request.PublicKey, request.Signature)
 }
 
-func checkSignature(data interface{}, pub string, signature []byte) (bool, error) {
+func CheckSignature(data interface{}, pub string, signature []byte) (bool, error) {
 	cborH := &codec.CborHandle{}
 	var b bytes.Buffer
 	enc := codec.NewEncoder(&b, cborH)
@@ -52,11 +53,11 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 	var ecdsaP ecdsaSignature
 	rest, err := asn1.Unmarshal(signature, &ecdsaP)
 	if err != nil {
-		return false, errors.Wrap(err, "[ checkSignature ]")
+		return false, errors.Wrap(err, "[ CheckSignature ]")
 	}
 
 	if len(rest) != 0 {
-		return false, errors.New("[ checkSignature ] len of  rest must be 0")
+		return false, errors.New("[ CheckSignature ] len of  rest must be 0")
 	}
 
 	publicKey, err := ecdsahelper.ImportPublicKey(pub)
@@ -67,7 +68,7 @@ func checkSignature(data interface{}, pub string, signature []byte) (bool, error
 	return ecdsa.Verify(publicKey, b.Bytes(), ecdsaP.R, ecdsaP.S), nil
 }
 
-func signData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
+func SignData(privateKey *ecdsa.PrivateKey, data interface{}) ([]byte, error) {
 	cborH := &codec.CborHandle{}
 	var b bytes.Buffer
 	enc := codec.NewEncoder(&b, cborH)

@@ -43,7 +43,7 @@ const (
 // StateSwitcher is a base for pulsar's state machine
 type StateSwitcher interface {
 	switchToState(state State, args interface{})
-	getState() State
+	GetState() State
 	setState(state State)
 	SetPulsar(pulsar *Pulsar)
 }
@@ -55,7 +55,7 @@ type StateSwitcherImpl struct {
 	lock   sync.RWMutex
 }
 
-func (switcher *StateSwitcherImpl) getState() State {
+func (switcher *StateSwitcherImpl) GetState() State {
 	switcher.lock.RLock()
 	defer switcher.lock.RUnlock()
 	return switcher.state
@@ -74,8 +74,8 @@ func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
 }
 
 func (switcher *StateSwitcherImpl) switchToState(state State, args interface{}) {
-	log.Debugf("Switch state from %v to %v", switcher.getState().String(), state.String())
-	if state < switcher.getState() && (state != waitingForStart && state != failed) {
+	log.Debugf("Switch state from %v to %v", switcher.GetState().String(), state.String())
+	if state < switcher.GetState() && (state != waitingForStart && state != failed) {
 		panic("Attempt to set a backward step")
 	}
 

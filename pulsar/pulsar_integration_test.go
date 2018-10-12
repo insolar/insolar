@@ -247,8 +247,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	assert.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
-	assert.Equal(t, waitingForStart, firstPulsar.stateSwitcher.getState())
-	assert.Equal(t, waitingForStart, secondPulsar.stateSwitcher.getState())
+	assert.Equal(t, waitingForStart, firstPulsar.StateSwitcher.GetState())
+	assert.Equal(t, waitingForStart, secondPulsar.StateSwitcher.GetState())
 	assert.Equal(t, core.GenesisPulse.PulseNumber+1, firstPulsar.LastPulse.PulseNumber)
 	assert.Equal(t, core.GenesisPulse.PulseNumber+1, secondPulsar.LastPulse.PulseNumber)
 	assert.Equal(t, 2, len(firstPulsar.LastPulse.Signs))

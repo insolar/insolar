@@ -30,7 +30,7 @@ type Handler struct {
 }
 
 func (handler *Handler) isRequestValid(request *Payload) (success bool, neighbour *pulsar.Neighbour, err error) {
-	if handler.Pulsar.IStateFailed() {
+	if handler.Pulsar.IsStateFailed() {
 		return false, nil, nil
 	}
 
@@ -40,7 +40,7 @@ func (handler *Handler) isRequestValid(request *Payload) (success bool, neighbou
 		return false, neighbour, err
 	}
 
-	result, err := checkPayloadSignature(request)
+	result, err := pulsar.CheckPayloadSignature(request)
 	if err != nil {
 		log.Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
 		return false, neighbour, err
@@ -66,7 +66,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 
-	result, err := checkPayloadSignature(request)
+	result, err := pulsar.CheckPayloadSignature(request)
 	if err != nil {
 		log.Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
 		return err
@@ -76,7 +76,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 
-	generator := StandardEntropyGenerator{}
+	generator := pulsar.StandardEntropyGenerator{}
 	convertedKey, err := ecdsa.ExportPublicKey(&handler.Pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		log.Warn(err)
@@ -122,10 +122,10 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 
-	if handler.Pulsar.stateSwitcher.getState() < generateEntropy {
+	if handler.Pulsar.StateSwitcher.getState() < generateEntropy {
 		err = handler.Pulsar.StartConsensusProcess(requestBody.PulseNumber)
 		if err != nil {
-			handler.Pulsar.stateSwitcher.switchToState(failed, err)
+			handler.Pulsar.StateSwitcher.switchToState(failed, err)
 			return nil
 		}
 	}
