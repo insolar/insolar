@@ -92,7 +92,13 @@ func initPulsar(cfg configuration.Pulsar) (*pulsar.Pulsar, pulsarstorage.PulsarS
 		panic(err)
 	}
 	switcher := &pulsar.StateSwitcherImpl{}
-	server, err := pulsar.NewPulsar(cfg, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, switcher, net.Listen)
+	server, err := pulsar.NewPulsar(cfg,
+		storage,
+		&pulsar.RPCClientWrapperFactoryImpl{},
+		&pulsar.StandardEntropyGenerator{},
+		switcher,
+		net.Listen)
+
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
@@ -105,7 +111,13 @@ func initPulsar(cfg configuration.Pulsar) (*pulsar.Pulsar, pulsarstorage.PulsarS
 func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
 	server.CheckConnectionsToPulsars()
 
-	nextPulseNumber := core.CalculatePulseNumber(time.Now())
+	var nextPulseNumber core.PulseNumber
+	if server.LastPulse.PulseNumber == core.GenesisPulse.PulseNumber {
+		nextPulseNumber = core.CalculatePulseNumber(time.Now())
+	} else {
+		nextPulseNumber = server.LastPulse.PulseNumber + core.PulseNumber(cfg.NumberDelta)
+	}
+
 	err := server.StartConsensusProcess(nextPulseNumber)
 	if err != nil {
 		log.Fatal(err)
