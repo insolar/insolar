@@ -20,7 +20,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen_proxies
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen-proxies
 
 all: clean install-deps pre-build build test
 
@@ -71,9 +71,9 @@ test_with_coverage:
 	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
 
-CONTRACTS = $(wildcard genesis/experiment/*)
-regen_proxyes: $(INSGOCC)
-	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy genesis/experiment/$(notdir $(c))/$(notdir $(c)).go; )
+CONTRACTS = $(wildcard application/contract/*)
+regen-proxies: $(INSGOCC)
+	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
 docker-insolard:
 	docker build --tag insolar/insolard -f ./docker/Dockerfile.insolard .
