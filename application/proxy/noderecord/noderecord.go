@@ -1,9 +1,11 @@
 package noderecord
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+		"github.com/insolar/insolar/core"
+		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
+
+
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -15,13 +17,13 @@ type NodeRecord struct {
 
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized  []byte
+	argsSerialized []byte
 }
 
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeRecord {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-		panic(err)
+	panic(err)
 	}
 	return &NodeRecord{Reference: ref}
 }
@@ -51,10 +53,12 @@ func GetImplementationFrom(object core.RecordRef) *NodeRecord {
 	return GetObject(ref)
 }
 
-func NewNodeRecord(pk string, roleS string) *ContractConstructorHolder {
+
+func NewNodeRecord( pk string, roleS string ) *ContractConstructorHolder {
 	var args [2]interface{}
 	args[0] = pk
 	args[1] = roleS
+
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -64,6 +68,7 @@ func NewNodeRecord(pk string, roleS string) *ContractConstructorHolder {
 
 	return &ContractConstructorHolder{constructorName: "NewNodeRecord", argsSerialized: argsSerialized}
 }
+
 
 // GetReference
 func (r *NodeRecord) GetReference() core.RecordRef {
@@ -75,7 +80,8 @@ func (r *NodeRecord) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-func (r *NodeRecord) GetPublicKey() string {
+
+func (r *NodeRecord) GetPublicKey(  ) ( string ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -87,7 +93,7 @@ func (r *NodeRecord) GetPublicKey() string {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -102,7 +108,7 @@ func (r *NodeRecord) GetPublicKey() string {
 	return resList[0].(string)
 }
 
-func (r *NodeRecord) GetPublicKeyNoWait() {
+func (r *NodeRecord) GetPublicKeyNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -118,7 +124,7 @@ func (r *NodeRecord) GetPublicKeyNoWait() {
 	}
 }
 
-func (r *NodeRecord) GetRole() core.NodeRole {
+func (r *NodeRecord) GetRole(  ) ( core.NodeRole ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -130,7 +136,7 @@ func (r *NodeRecord) GetRole() core.NodeRole {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRole", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -145,7 +151,7 @@ func (r *NodeRecord) GetRole() core.NodeRole {
 	return resList[0].(core.NodeRole)
 }
 
-func (r *NodeRecord) GetRoleNoWait() {
+func (r *NodeRecord) GetRoleNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -161,7 +167,7 @@ func (r *NodeRecord) GetRoleNoWait() {
 	}
 }
 
-func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
+func (r *NodeRecord) GetRoleAndPublicKey(  ) ( core.NodeRole, string ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -173,7 +179,7 @@ func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRoleAndPublicKey", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [2]interface{}{}
@@ -190,7 +196,7 @@ func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
 	return resList[0].(core.NodeRole), resList[1].(string)
 }
 
-func (r *NodeRecord) GetRoleAndPublicKeyNoWait() {
+func (r *NodeRecord) GetRoleAndPublicKeyNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -206,7 +212,7 @@ func (r *NodeRecord) GetRoleAndPublicKeyNoWait() {
 	}
 }
 
-func (r *NodeRecord) Destroy() {
+func (r *NodeRecord) Destroy(  ) (  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -218,7 +224,7 @@ func (r *NodeRecord) Destroy() {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [0]interface{}{}
@@ -228,10 +234,10 @@ func (r *NodeRecord) Destroy() {
 		panic(err)
 	}
 
-	return
+	return 
 }
 
-func (r *NodeRecord) DestroyNoWait() {
+func (r *NodeRecord) DestroyNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -246,3 +252,4 @@ func (r *NodeRecord) DestroyNoWait() {
 		panic(err)
 	}
 }
+

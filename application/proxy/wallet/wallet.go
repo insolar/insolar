@@ -1,9 +1,11 @@
 package wallet
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+		"github.com/insolar/insolar/core"
+		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
+
+
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -15,13 +17,13 @@ type Wallet struct {
 
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized  []byte
+	argsSerialized []byte
 }
 
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Wallet {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-		panic(err)
+	panic(err)
 	}
 	return &Wallet{Reference: ref}
 }
@@ -51,9 +53,11 @@ func GetImplementationFrom(object core.RecordRef) *Wallet {
 	return GetObject(ref)
 }
 
-func New(balance uint) *ContractConstructorHolder {
+
+func New( balance uint ) *ContractConstructorHolder {
 	var args [1]interface{}
 	args[0] = balance
+
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -63,6 +67,7 @@ func New(balance uint) *ContractConstructorHolder {
 
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
+
 
 // GetReference
 func (r *Wallet) GetReference() core.RecordRef {
@@ -74,7 +79,8 @@ func (r *Wallet) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
+
+func (r *Wallet) Allocate( amount uint, to *core.RecordRef ) ( core.RecordRef ) {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -88,7 +94,7 @@ func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Allocate", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -103,7 +109,7 @@ func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 	return resList[0].(core.RecordRef)
 }
 
-func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
+func (r *Wallet) AllocateNoWait( amount uint, to *core.RecordRef ) {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -121,7 +127,7 @@ func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
 	}
 }
 
-func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
+func (r *Wallet) Receive( amount uint, from *core.RecordRef ) (  ) {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = from
@@ -135,7 +141,7 @@ func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Receive", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [0]interface{}{}
@@ -145,10 +151,10 @@ func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
 		panic(err)
 	}
 
-	return
+	return 
 }
 
-func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
+func (r *Wallet) ReceiveNoWait( amount uint, from *core.RecordRef ) {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = from
@@ -166,7 +172,7 @@ func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
 	}
 }
 
-func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
+func (r *Wallet) Transfer( amount uint, to *core.RecordRef ) (  ) {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -180,7 +186,7 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Transfer", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [0]interface{}{}
@@ -190,10 +196,10 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
 		panic(err)
 	}
 
-	return
+	return 
 }
 
-func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
+func (r *Wallet) TransferNoWait( amount uint, to *core.RecordRef ) {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -211,7 +217,7 @@ func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
 	}
 }
 
-func (r *Wallet) Accept(aRef *core.RecordRef) {
+func (r *Wallet) Accept( aRef *core.RecordRef ) (  ) {
 	var args [1]interface{}
 	args[0] = aRef
 
@@ -224,7 +230,7 @@ func (r *Wallet) Accept(aRef *core.RecordRef) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Accept", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [0]interface{}{}
@@ -234,10 +240,10 @@ func (r *Wallet) Accept(aRef *core.RecordRef) {
 		panic(err)
 	}
 
-	return
+	return 
 }
 
-func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
+func (r *Wallet) AcceptNoWait( aRef *core.RecordRef ) {
 	var args [1]interface{}
 	args[0] = aRef
 
@@ -254,7 +260,7 @@ func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
 	}
 }
 
-func (r *Wallet) GetTotalBalance() uint {
+func (r *Wallet) GetTotalBalance(  ) ( uint ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -266,7 +272,7 @@ func (r *Wallet) GetTotalBalance() uint {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetTotalBalance", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [1]interface{}{}
@@ -281,7 +287,7 @@ func (r *Wallet) GetTotalBalance() uint {
 	return resList[0].(uint)
 }
 
-func (r *Wallet) GetTotalBalanceNoWait() {
+func (r *Wallet) GetTotalBalanceNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -297,7 +303,7 @@ func (r *Wallet) GetTotalBalanceNoWait() {
 	}
 }
 
-func (r *Wallet) ReturnAndDeleteExpiriedAllowances() {
+func (r *Wallet) ReturnAndDeleteExpiriedAllowances(  ) (  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -309,7 +315,7 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowances() {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ReturnAndDeleteExpiriedAllowances", argsSerialized)
 	if err != nil {
-		panic(err)
+   		panic(err)
 	}
 
 	resList := [0]interface{}{}
@@ -319,10 +325,10 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowances() {
 		panic(err)
 	}
 
-	return
+	return 
 }
 
-func (r *Wallet) ReturnAndDeleteExpiriedAllowancesNoWait() {
+func (r *Wallet) ReturnAndDeleteExpiriedAllowancesNoWait(  ) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -337,3 +343,4 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowancesNoWait() {
 		panic(err)
 	}
 }
+
