@@ -26,7 +26,7 @@ import (
 
 // exchangeResults is thread safe results struct
 type exchangeResults struct {
-	mutex *sync.RWMutex
+	mutex *sync.Mutex
 	data  map[core.RecordRef][]*core.ActiveNode
 	hash  []*NodeUnsyncHash
 }
@@ -54,7 +54,7 @@ func (r *exchangeResults) calculateResultHash() []*NodeUnsyncHash {
 
 func newExchangeResults(participantsCount int) *exchangeResults {
 	return &exchangeResults{
-		mutex: &sync.RWMutex{},
+		mutex: &sync.Mutex{},
 		data:  make(map[core.RecordRef][]*core.ActiveNode, participantsCount),
 		hash:  make([]*NodeUnsyncHash, participantsCount),
 	}
