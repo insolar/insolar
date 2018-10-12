@@ -29,7 +29,8 @@ import (
 const (
 	// Generic
 
-	TypeError = core.ReplyType(iota)
+	// TypeError is reply with error.
+	TypeError = core.ReplyType(iota + 1)
 
 	// Logicrunner
 
@@ -61,7 +62,7 @@ type ErrType int
 
 const (
 	// ErrDeactivated returned when requested object is deactivated.
-	ErrDeactivated = iota
+	ErrDeactivated = iota + 1
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
