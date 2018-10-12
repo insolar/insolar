@@ -96,7 +96,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
 	}
 
 	{{ $method.ResultZeroList }}
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}

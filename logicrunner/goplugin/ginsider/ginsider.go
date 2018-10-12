@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"plugin"
+	"reflect"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -352,7 +353,7 @@ func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 
 // MakeErrorSerializable converts errors satisfying error interface to foundation.Error
 func (gi *GoInsider) MakeErrorSerializable(e error) error {
-	if e == nil {
+	if e == nil || e == (*foundation.Error)(nil) || reflect.ValueOf(e).IsNil() {
 		return nil
 	}
 	return &foundation.Error{S: e.Error()}

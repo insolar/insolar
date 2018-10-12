@@ -143,7 +143,7 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 	wg.Add(num)
 	for i := 0; i < num; i++ {
 		time.Sleep(100 * time.Millisecond)
-		go func(k NodeKeeper) {
+		go func(k NodeKeeper, i int) {
 			_ = k.AddUnsync(newActiveNode(byte(2 * i)))
 			_ = k.AddUnsync(newActiveNode(byte(2*i + 1)))
 			pulse := core.PulseNumber(i)
@@ -153,7 +153,7 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 			time.Sleep(200 * time.Millisecond)
 			k.Sync(list.GetUnsync(), pulse)
 			wg.Done()
-		}(keeper)
+		}(keeper, i)
 	}
 	wg.Wait()
 	// All Syncs calls are executed out of date

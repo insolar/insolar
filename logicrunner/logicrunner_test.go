@@ -717,6 +717,13 @@ func (r *One) AnError() error {
 
 	return friend.AnError()
 }
+
+func (r *One) NoError() error {
+	holder := two.New()
+	friend := holder.AsChild(r.GetReference())
+
+	return friend.NoError()
+}
 `
 
 	var contractTwoCode = `
@@ -736,6 +743,9 @@ func New() *Two {
 }
 func (r *Two) AnError() error {
 	return errors.New("an error")
+}
+func (r *Two) NoError() error {
+	return nil
 }
 `
 	lr, am, cb, cleaner := PrepareLrAmCb(t)
@@ -768,7 +778,88 @@ func (r *Two) AnError() error {
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 
+	resp, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "NoError",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+
+	ValidateAllResults(t, lr)
+
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}([]interface{}{nil}), r)
+	
 	SendDataToValidate(lr)
+}
+
+func TestNilResult(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/application/proxy/two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() *string {
+	holder := two.New()
+	friend := holder.AsChild(r.GetReference())
+
+	return friend.Hello()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() *Two {
+	return &Two{}
+}
+func (r *Two) Hello() *string {
+	return nil
+}
+`
+	lr, am, cb, cleaner := PrepareLrAmCb(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{
+		"one": contractOneCode,
+		"two": contractTwoCode,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contract, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	resp, err := lr.Execute(&message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "Hello",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+
+	ValidateAllResults(t, lr)
+
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}([]interface{}{nil}), r)
 }
 
 type Caller struct {
@@ -778,14 +869,14 @@ type Caller struct {
 	t      *testing.T
 }
 
-func (s *Caller) SignedCall(ref string, delegate string, method string, params []interface{}, resp []interface{}) {
+func (s *Caller) SignedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []interface{}, resp []interface{}) {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	assert.NoError(s.t, err)
 
 	buf := testutil.CBORMarshal(s.t, params)
 
-	serialized, err := signer.Serialize(ref, delegate, method, buf, seed)
+	serialized, err := signer.Serialize(ref[:], delegate[:], method, buf, seed)
 	assert.NoError(s.t, err)
 
 	sign, err := cryptoHelper.Sign(serialized, s.key)
@@ -861,7 +952,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	res1 := []interface{}{""}
-	root.SignedCall(rootDomainRef.String(), "", "CreateMember", []interface{}{"Member1", member1PubKey}, res1)
+	root.SignedCall(*rootDomainRef, core.RecordRef{}, "CreateMember", []interface{}{"Member1", member1PubKey}, res1)
 	member1Ref := res1[0].(string)
 	assert.NotEqual(t, "", member1Ref)
 
@@ -872,23 +963,23 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	res2 := []interface{}{""}
-	root.SignedCall(rootDomainRef.String(), "", "CreateMember", []interface{}{"Member2", member2PubKey}, res2)
+	root.SignedCall(*rootDomainRef, core.RecordRef{}, "CreateMember", []interface{}{"Member2", member2PubKey}, res2)
 	member2Ref := res2[0].(string)
 	assert.NotEqual(t, "", member2Ref)
 
 	// Transfer 1 coin from Member1 to Member2
 	member1 := Caller{member1Ref, member1Key, lr, t}
 	z := core.NewRefFromBase58(member2Ref)
-	member1.SignedCall(member1Ref, cb.Classes["wallet"].String(), "Transfer", []interface{}{1, &z}, nil)
+	member1.SignedCall(core.NewRefFromBase58(member1Ref), *cb.Classes["wallet"], "Transfer", []interface{}{1, &z}, nil)
 
 	// Verify Member1 balance
 	res3 := []interface{}{0}
-	root.SignedCall(member1Ref, cb.Classes["wallet"].String(), "GetTotalBalance", []interface{}{}, res3)
+	root.SignedCall(core.NewRefFromBase58(member1Ref), *cb.Classes["wallet"], "GetTotalBalance", []interface{}{}, res3)
 	assert.Equal(t, 999, res3[0])
 
 	// Verify Member2 balance
 	res4 := []interface{}{0}
-	root.SignedCall(member2Ref, cb.Classes["wallet"].String(), "GetTotalBalance", []interface{}{}, res4)
+	root.SignedCall(core.NewRefFromBase58(member2Ref), *cb.Classes["wallet"], "GetTotalBalance", []interface{}{}, res4)
 	assert.Equal(t, 1001, res4[0])
 }
 

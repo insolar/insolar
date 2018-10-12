@@ -36,6 +36,10 @@ type Message interface {
 	TargetRole() JetRole
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
+	// SetSign sets a signature to message.
+	SetSign([]byte)
+	// GetSign returns a sign.
+	GetSign() []byte
 }
 
 // Reply for an `Message`

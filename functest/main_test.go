@@ -129,13 +129,17 @@ func waitForLaunch() error {
 		}
 	}()
 
+	cmdCompleted := make(chan error)
+	go func() { cmdCompleted <- cmd.Wait() }()
+
 	select {
+	case err := <-cmdCompleted:
+		return errors.New("[ waitForLaunch ] insolard finished unexpectedly: " + err.Error())
 	case <-done:
 		return nil
 	case <-time.After(timeout):
 		return errors.Errorf("[ waitForLaunch ] could't wait for launch: timeout of %s was exceeded", timeout)
 	}
-
 }
 
 func startInsolard() error {

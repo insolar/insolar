@@ -25,8 +25,8 @@ import (
 type Store interface {
 	GetRecord(ref *record.ID) (record.Record, error)
 	SetRecord(rec record.Record) (*record.ID, error)
-	GetClassIndex(ref *record.ID) (*index.ClassLifeline, error)
+	GetClassIndex(ref *record.ID, forupdate bool) (*index.ClassLifeline, error)
 	SetClassIndex(ref *record.ID, idx *index.ClassLifeline) error
-	GetObjectIndex(ref *record.ID) (*index.ObjectLifeline, error)
+	GetObjectIndex(ref *record.ID, forupdate bool) (*index.ObjectLifeline, error)
 	SetObjectIndex(ref *record.ID, idx *index.ObjectLifeline) error
 }

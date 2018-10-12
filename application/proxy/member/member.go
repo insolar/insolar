@@ -97,16 +97,16 @@ func (r *Member) GetName(  ) ( string ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 string
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(string)
+	return ret0
 }
 
 func (r *Member) GetNameNoWait(  ) {
@@ -140,16 +140,16 @@ func (r *Member) GetPublicKey(  ) ( string ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 string
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(string)
+	return ret0
 }
 
 func (r *Member) GetPublicKeyNoWait(  ) {
@@ -168,7 +168,7 @@ func (r *Member) GetPublicKeyNoWait(  ) {
 	}
 }
 
-func (r *Member) AuthorizedCall( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
+func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
@@ -189,21 +189,21 @@ func (r *Member) AuthorizedCall( ref string, delegate string, method string, par
    		panic(err)
 	}
 
-	resList := [2]interface{}{}
-	var a0 []byte
-	resList[0] = a0
-	var a1 *foundation.Error
-	resList[1] = a1
+	ret := [2]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].([]byte), resList[1].(*foundation.Error)
+	return ret0, ret1
 }
 
-func (r *Member) AuthorizedCallNoWait( ref string, delegate string, method string, params []byte, seed []byte, sign []byte ) {
+func (r *Member) AuthorizedCallNoWait( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate

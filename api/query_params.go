@@ -63,6 +63,9 @@ type Params struct {
 	Reference string `json:"reference"`
 	From      string `json:"from"`
 	To        string `json:"to"`
+	Method    string `json:"method"`
+	Requester string `json:"requester"`
+	Target    string `json:"target"`
 	QID       string `json:"qid"`
 	Amount    uint   `json:"amount"`
 	PublicKey string `json:"public_key"`

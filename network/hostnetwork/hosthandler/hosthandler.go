@@ -44,14 +44,17 @@ type NetworkCommonFacade interface {
 	SetPulseManager(manager core.PulseManager)
 	SetConsensus(insolarConsensus consensus.Processor)
 	GetConsensus() consensus.Processor
+	SetNetworkCoordinator(coordinator core.NetworkCoordinator)
+	GetNetworkCoordinator() core.NetworkCoordinator
 }
 
 // commonFacade implements a NetworkCommonFacade.
 type commonFacade struct {
-	rpcPtr  rpc.RPC
-	cascade *cascade.Cascade
-	pm      core.PulseManager
-	ic      consensus.Processor
+	rpcPtr      rpc.RPC
+	cascade     *cascade.Cascade
+	pm          core.PulseManager
+	ic          consensus.Processor
+	coordinator core.NetworkCoordinator
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
@@ -85,6 +88,14 @@ func (fac *commonFacade) SetConsensus(insolarConsensus consensus.Processor) {
 
 func (fac *commonFacade) GetConsensus() consensus.Processor {
 	return fac.ic
+}
+
+func (fac *commonFacade) SetNetworkCoordinator(coordinator core.NetworkCoordinator) {
+	fac.coordinator = coordinator
+}
+
+func (fac *commonFacade) GetNetworkCoordinator() core.NetworkCoordinator {
+	return fac.coordinator
 }
 
 // HostHandler is an interface which uses for host network implementation.
@@ -127,6 +138,7 @@ type HostHandler interface {
 
 	SetHighKnownHostID(id string)
 	SetOuterHostsCount(hosts int)
+	SetSignChecker(func(msg core.Message) bool)
 	SetAuthStatus(targetID string, status bool)
 
 	GetProxyHostsCount() int

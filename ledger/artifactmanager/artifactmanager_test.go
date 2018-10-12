@@ -264,7 +264,7 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 		},
 		Code: *codeRef,
 	})
-	idx, err := td.db.GetClassIndex(&classRef.Record)
+	idx, err := td.db.GetClassIndex(&classRef.Record, false)
 	assert.NoError(t, err)
 	assert.Equal(t, activateID, idx.LatestState)
 }
@@ -502,13 +502,13 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		Delegate: false,
 	})
 
-	idx, err := td.db.GetObjectIndex(parentID)
+	idx, err := td.db.GetObjectIndex(parentID, false)
 	assert.NoError(t, err)
 	childRec, err := td.db.GetRecord(idx.LatestChild)
 	assert.NoError(t, err)
 	assert.Equal(t, objRef, childRec.(*record.ChildRecord).Ref)
 
-	idx, err = td.db.GetObjectIndex(&objRef.Record)
+	idx, err = td.db.GetObjectIndex(&objRef.Record, false)
 	assert.NoError(t, err)
 	assert.Equal(t, activateID, idx.LatestState)
 }

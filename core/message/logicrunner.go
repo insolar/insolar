@@ -41,6 +41,17 @@ type IBaseLogicMessage interface {
 type BaseLogicMessage struct {
 	Caller core.RecordRef
 	Nonce  uint64
+	sign   []byte
+}
+
+// SetSign sets a signature to message.
+func (b *BaseLogicMessage) SetSign(sign []byte) {
+	b.sign = sign
+}
+
+// GetSign returns a sign.
+func (b *BaseLogicMessage) GetSign() []byte {
+	return b.sign
 }
 
 func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
@@ -111,8 +122,9 @@ func (e *CallConstructor) Target() *core.RecordRef {
 }
 
 type ExecutorResults struct {
-	RecordRef core.RecordRef
-	CaseRecords  []core.CaseRecord
+	RecordRef   core.RecordRef
+	CaseRecords []core.CaseRecord
+	sign        []byte
 }
 
 func (e *ExecutorResults) Type() core.MessageType {
@@ -136,16 +148,27 @@ func (e *ExecutorResults) GetReference() core.RecordRef {
 	return e.RecordRef
 }
 
+func (e *ExecutorResults) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ExecutorResults) SetSign(sign []byte) {
+	e.sign = sign
+}
+
 type IValidateCaseBind interface {
 	GetReference() core.RecordRef
 	GetCaseRecords() []core.CaseRecord
 	GetPulse() core.Pulse
+	GetSign() []byte
+	SetSign() []byte
 }
 
 type ValidateCaseBind struct {
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
 	Pulse       core.Pulse
+	sign        []byte
 }
 
 func (e *ValidateCaseBind) Type() core.MessageType {
@@ -180,10 +203,19 @@ func (e *ValidateCaseBind) GetPulse() core.Pulse {
 	return e.Pulse
 }
 
+func (e *ValidateCaseBind) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ValidateCaseBind) SetSign(sign []byte) {
+	e.sign = sign
+}
+
 type ValidationResults struct {
 	RecordRef        core.RecordRef
 	PassedStepsCount int
 	Error            error
+	sign             []byte
 }
 
 func (e *ValidationResults) Type() core.MessageType {
@@ -206,4 +238,12 @@ func (e *ValidationResults) GetCaller() *core.RecordRef {
 
 func (e *ValidationResults) GetReference() core.RecordRef {
 	return e.RecordRef
+}
+
+func (e *ValidationResults) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ValidationResults) SetSign(sign []byte) {
+	e.sign = sign
 }

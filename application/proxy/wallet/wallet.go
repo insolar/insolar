@@ -97,16 +97,16 @@ func (r *Wallet) Allocate( amount uint, to *core.RecordRef ) ( core.RecordRef ) 
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 core.RecordRef
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 core.RecordRef
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(core.RecordRef)
+	return ret0
 }
 
 func (r *Wallet) AllocateNoWait( amount uint, to *core.RecordRef ) {
@@ -144,9 +144,9 @@ func (r *Wallet) Receive( amount uint, from *core.RecordRef ) (  ) {
    		panic(err)
 	}
 
-	resList := [0]interface{}{}
+	ret := []interface{}{}
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
@@ -189,9 +189,9 @@ func (r *Wallet) Transfer( amount uint, to *core.RecordRef ) (  ) {
    		panic(err)
 	}
 
-	resList := [0]interface{}{}
+	ret := []interface{}{}
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
@@ -233,9 +233,9 @@ func (r *Wallet) Accept( aRef *core.RecordRef ) (  ) {
    		panic(err)
 	}
 
-	resList := [0]interface{}{}
+	ret := []interface{}{}
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
@@ -275,16 +275,16 @@ func (r *Wallet) GetTotalBalance(  ) ( uint ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 uint
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 uint
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(uint)
+	return ret0
 }
 
 func (r *Wallet) GetTotalBalanceNoWait(  ) {
@@ -318,9 +318,9 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowances(  ) (  ) {
    		panic(err)
 	}
 
-	resList := [0]interface{}{}
+	ret := []interface{}{}
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
