@@ -75,6 +75,13 @@ func (fac *mockNetworkCommonFacade) GetConsensus() consensus.Processor {
 func (fac *mockNetworkCommonFacade) SetConsensus(consensus.Processor) {
 }
 
+func (fac *mockNetworkCommonFacade) GetNetworkCoordinator() core.NetworkCoordinator {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) SetNetworkCoordinator(core.NetworkCoordinator) {
+}
+
 type mockHostHandler struct {
 	AuthenticatedHost string
 	ReceivedKey       string

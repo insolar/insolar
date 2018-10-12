@@ -180,6 +180,16 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		ht := hostHandler.HtFromCtx(ctx)
 		hosts := ht.GetMulticastHosts()
 		go ResendPulseToKnownHosts(hostHandler, hosts, data)
+		go func(h hosthandler.HostHandler) {
+			coordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
+			if coordinator == nil {
+				return
+			}
+			err := coordinator.WriteActiveNodes(data.Pulse.PulseNumber, h.GetActiveNodesList())
+			if err != nil {
+				log.Warn("Writing active nodes to ledger: " + err.Error())
+			}
+		}(hostHandler)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
 }
