@@ -50,7 +50,7 @@ func (ctx *Ctx) Value(key interface{}) interface{} {
 	return ctx.ctx.Value(key)
 }
 
-// NewCtxFromContext creates new Ctx from context.Context
+// NewCtxFromContext creates new Ctx from context.Context.
 func NewCtxFromContext(parent context.Context) *Ctx {
 	ctx, ok := parent.(*Ctx)
 	if !ok {
@@ -62,28 +62,28 @@ func NewCtxFromContext(parent context.Context) *Ctx {
 	return ctx
 }
 
-// WithCancel is the same as context.WithCancel() but always returns Ctx
+// WithCancel is the same as context.WithCancel() but always returns Ctx.
 func WithCancel(parent context.Context) (ctx *Ctx, cancel context.CancelFunc) {
 	ctx = NewCtxFromContext(parent)
 	ctx.ctx, cancel = context.WithCancel(ctx.ctx)
 	return ctx, cancel
 }
 
-// WithDeadline is the same as context.WithDeadline() but always returns Ctx
+// WithDeadline is the same as context.WithDeadline() but always returns Ctx.
 func WithDeadline(parent context.Context, d time.Time) (ctx *Ctx, cancel context.CancelFunc) {
 	ctx = NewCtxFromContext(parent)
 	ctx.ctx, cancel = context.WithCancel(ctx.ctx)
 	return ctx, cancel
 }
 
-// WithTimeout is the same as context.WithTimeout() but always returns Ctx
+// WithTimeout is the same as context.WithTimeout() but always returns Ctx.
 func WithTimeout(parent context.Context, timeout time.Duration) (ctx *Ctx, cancel context.CancelFunc) {
 	ctx = NewCtxFromContext(parent)
 	ctx.ctx, cancel = context.WithTimeout(ctx.ctx, timeout)
 	return ctx, cancel
 }
 
-// Background is the same as context.Background() but always returns Ctx
+// Background is the same as context.Background() but always returns Ctx.
 func Background() *Ctx {
 	return &Ctx{
 		ctx: context.Background(),
@@ -91,7 +91,7 @@ func Background() *Ctx {
 	}
 }
 
-// TODO is the same as context.TODO() but always returns Ctx
+// TODO is the same as context.TODO() but always returns Ctx.
 func TODO() *Ctx {
 	return &Ctx{
 		ctx: context.TODO(),
@@ -99,9 +99,19 @@ func TODO() *Ctx {
 	}
 }
 
-// WithValue is the same as context.WithValue() but always returns Ctx
+// WithValue is the same as context.WithValue() but always returns Ctx.
 func WithValue(parent context.Context, key, val interface{}) *Ctx {
 	ctx := NewCtxFromContext(parent)
 	ctx.ctx = context.WithValue(ctx.ctx, key, val)
 	return ctx
+}
+
+type tTraceKey byte
+
+const traceKey = tTraceKey(0)
+
+// WithTrace returns a copy of parent with added trace mark.
+func WithTrace(parent context.Context, trace string) *Ctx {
+	ctx := NewCtxFromContext(parent)
+	return WithValue(ctx, traceKey, trace)
 }
