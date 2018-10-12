@@ -108,7 +108,7 @@ func buildGinsiderCLI() (err error) {
 
 func waitForLaunch() error {
 	done := make(chan bool, 1)
-	timeout := 40 * time.Second
+	timeout := 120 * time.Second
 
 	go func() {
 		scanner := bufio.NewScanner(stdout)

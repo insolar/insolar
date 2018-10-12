@@ -783,8 +783,19 @@ func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
-	_, err := td.manager.GetObject(*genRandomRef(0).CoreRef(), nil)
+	objID := genRandomID(0)
+	_, err := td.manager.GetObject(*genRefWithID(objID), nil)
 	assert.NotNil(t, err)
+
+	deactivateID, _ := td.db.SetRecord(&record.DeactivationRecord{})
+	objectIndex := index.ObjectLifeline{
+		LatestState: *deactivateID,
+		ClassRef:    *genRandomRef(0),
+	}
+	td.db.SetObjectIndex(objID, &objectIndex)
+
+	_, err = td.manager.GetObject(*genRefWithID(objID), nil)
+	assert.Equal(t, core.ErrDeactivated, err)
 }
 
 func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing.T) {

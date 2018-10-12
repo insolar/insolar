@@ -42,6 +42,13 @@ func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecor
 	lr.caseBindMutex.Unlock()
 }
 
+func (lr *LogicRunner) lastObjectCaseRecord(ref core.RecordRef) core.CaseRecord {
+	lr.caseBindMutex.Lock()
+	defer lr.caseBindMutex.Unlock()
+	list := lr.caseBind.Records[ref]
+	return list[len(list)-1]
+}
+
 func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseRecord, int) {
 	lr.caseBindReplaysMutex.Lock()
 	defer lr.caseBindReplaysMutex.Unlock()

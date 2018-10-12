@@ -14,11 +14,25 @@
  *    limitations under the License.
  */
 
-package core
+package reply
 
-// Bootstrapper is the global bootstrapper handler. Other system parts communicate with bootstrapper through it.
-type Bootstrapper interface {
-	GetRootDomainRef() *RecordRef
-	Info() ([]byte, error)
-	GetNodeDomainRef() *RecordRef
+import "github.com/insolar/insolar/core"
+
+// Error is common reaction for methods returning id to lifeline states.
+type Error struct {
+	ErrType ErrType
+}
+
+// Type implementation of Reply interface.
+func (e *Error) Type() core.ReplyType {
+	return TypeError
+}
+
+// Error returns concrete error for stored type.
+func (e *Error) Error() error {
+	switch e.ErrType {
+	case ErrDeactivated:
+		return core.ErrDeactivated
+	}
+	return core.ErrUnknown
 }
