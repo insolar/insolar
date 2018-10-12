@@ -36,7 +36,8 @@ import (
 )
 
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
+func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork,
+	cascade *cascade.Cascade, keeper nodekeeper.NodeKeeper) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		return nil, errors.New("couldn't start at 0.0.0.0")
@@ -63,8 +64,6 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade)
-
-	keeper := nodekeeper.NewNodeKeeper(nn.GetID())
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),

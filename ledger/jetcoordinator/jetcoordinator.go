@@ -30,6 +30,7 @@ type JetCoordinator struct {
 	rootJetNode    *JetNode
 	roleCandidates map[core.JetRole][]core.RecordRef
 	roleCounts     map[core.JetRole]int
+	activeNodes    core.ActiveNodeComponent
 }
 
 // NewJetCoordinator creates new coordinator instance.
@@ -124,6 +125,17 @@ func (jc *JetCoordinator) CreateDrop(pulse core.PulseNumber) (*jetdrop.JetDrop, 
 		return nil, err
 	}
 	return newDrop, nil
+}
+
+func (jc *JetCoordinator) Link(components core.Components) error {
+	if components.Network == nil {
+		return errors.New("no core.Network in components")
+	}
+	if components.Network.GetActiveNodeComponent() == nil {
+		return errors.New("core.Network.ActiveNodeComponent is nil!")
+	}
+	jc.activeNodes = components.Network.GetActiveNodeComponent()
+	return nil
 }
 
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck
