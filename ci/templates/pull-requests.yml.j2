@@ -91,7 +91,7 @@ jobs:
       - put: slack
         params:
           silent: true
-          text: "success {{ pull.number }}, {{ pull.title }} $ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
+          text: ":sun_with_face: {{ pull.number }}, {{ pull.title }}, $ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
     on_failure:
       aggregate:
       - put: pull-request-{{ pull.number }}
@@ -100,5 +100,5 @@ jobs:
       - put: slack
         params:
           silent: true
-          text: "failure {{ pull.number }}, {{ pull.title }} $ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
+          text: ":new_moon_with_face: {{ pull.number }}, {{ pull.title }} $ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
 {% endfor %}
