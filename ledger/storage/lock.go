@@ -19,7 +19,6 @@ package storage
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/record"
@@ -35,7 +34,7 @@ type mucount struct {
 // TODO: for further optimization we could use sync.Pool for mutexes.
 type IDLocker struct {
 	m    map[core.RecordID]*mucount
-	rwmu sync.RWMutex
+	rwmu sync.Mutex
 }
 
 // NewIDLocker creates new initialized IDLocker.
@@ -45,34 +44,20 @@ func NewIDLocker() *IDLocker {
 	}
 }
 
-func (l *IDLocker) getmu(cid *core.RecordID) *mucount {
-	var (
-		mc *mucount
-		ok bool
-	)
-	l.rwmu.RLock()
-	mc, ok = l.m[*cid]
-	l.rwmu.RUnlock()
-	if ok {
-		return mc
-	}
-	// initialize mutex for recordID
-	l.rwmu.Lock()
-	// check if not already initialized before Lock has been acquired
-	if mc, ok = l.m[*cid]; !ok {
-		mc = &mucount{Mutex: &sync.Mutex{}}
-		l.m[*cid] = mc
-	}
-	l.rwmu.Unlock()
-	return mc
-}
-
 // Lock locks mutex belonged to record ID.
 // If mutex does not exist, it will be created in concurrent safe fashion.
 func (l *IDLocker) Lock(id *record.ID) {
 	cid := id.CoreID()
-	mc := l.getmu(cid)
-	atomic.AddInt32(&mc.count, 1)
+
+	l.rwmu.Lock()
+	mc, ok := l.m[*cid]
+	if !ok {
+		mc = &mucount{Mutex: &sync.Mutex{}}
+		l.m[*cid] = mc
+	}
+	mc.count++
+	l.rwmu.Unlock()
+
 	mc.Lock()
 }
 
@@ -82,14 +67,14 @@ func (l *IDLocker) Unlock(id *record.ID) {
 
 	l.rwmu.Lock()
 	defer l.rwmu.Unlock()
+
 	mc, ok := l.m[*cid]
 	if !ok {
 		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", cid))
 	}
-
-	cnt := atomic.AddInt32(&mc.count, -1)
+	mc.count--
 	mc.Unlock()
-	if cnt == 0 {
+	if mc.count == 0 {
 		delete(l.m, *cid)
 	}
 }
