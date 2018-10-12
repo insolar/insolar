@@ -60,11 +60,14 @@ jobs:
       inputs:
       - name: pull-request-{{ pull.number }}
         path: /go/src/github.com/insolar/insolar
+      outputs:
+      - name: message
       run:
         path: sh
         args:
           - -exc
           - |
+             echo "faulure <${ATC_EXTERNAL_URL}/teams/${BUILD_TEAM_NAME}/pipelines/${BUILD_PIPELINE_NAME}/jobs/${BUILD_JOB_NAME}/builds/${BUILD_NAME}|{{ pull.title }}>" > message/text
              echo tests
              pwd
              ls -alh go
@@ -83,6 +86,7 @@ jobs:
              make pre-build
              make build
              make test_with_coverage
+             echo "success <${ATC_EXTERNAL_URL}/teams/${BUILD_TEAM_NAME}/pipelines/${BUILD_PIPELINE_NAME}/jobs/${BUILD_JOB_NAME}/builds/${BUILD_NAME}|{{ pull.title }}>" > message/text
     on_success:
       aggregate:
       - put: pull-request-{{ pull.number }}
@@ -90,9 +94,8 @@ jobs:
           state: success
       - put: slack
         params:
-          icon_emoji: ":new_moon_with_face:"
           silent: true
-          text: "pull request {{ pull.number }} {{ pull.title }} success"
+          text_file: message/text
     on_failure:
       aggregate:
       - put: pull-request-{{ pull.number }}
@@ -100,7 +103,6 @@ jobs:
           state: failure
       - put: slack
         params:
-          icon_emoji: ":new_moon_with_face:"
           silent: true
-          text: "pull request {{ pull.number }} {{ pull.title }} failure"
+          text_file: message/text
 {% endfor %}
