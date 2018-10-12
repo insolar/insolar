@@ -137,3 +137,13 @@ type UpGetDelegateReq struct {
 type UpGetDelegateResp struct {
 	Object core.RecordRef
 }
+
+// UpDeactivateObjectReq is a set of arguments for DeactivateObject RPC in goplugin
+type UpDeactivateObjectReq struct {
+	UpBaseReq
+	Object core.RecordRef
+}
+
+// UpDeactivateObjectResp is response from DeactivateObject RPC in goplugin
+type UpDeactivateObjectResp struct {
+}

@@ -61,5 +61,5 @@ func (nr *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
 
 // SelfDestroy makes request to destroy current node record
 func (nr *NodeRecord) Destroy() {
-	nr.SelfDestructRequest()
+	nr.SelfDestruct()
 }
