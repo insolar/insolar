@@ -56,7 +56,6 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	config := configuration.Pulsar{
 		ConnectionType:      "testType",
 		MainListenerAddress: "listedAddress",
-		PrivateKey:          privateKeyExported,
 	}
 	actualConnectionType := ""
 	actualAddress := ""
@@ -76,7 +75,9 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		clientFactory,
 		pulsartestutil.MockEntropyGenerator{},
 		nil,
-		mockListener)
+		mockListener,
+		privateKeyExported,
+	)
 
 	assert.NoError(t, err)
 	assert.Equal(t, privateKey, result.PrivateKey)
@@ -101,7 +102,6 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	config := configuration.Pulsar{
 		ConnectionType:      "testType",
 		MainListenerAddress: "listedAddress",
-		PrivateKey:          parsedExpectedPrivateKey,
 		Neighbours: []configuration.PulsarNodeAddress{
 			{ConnectionType: "tcp", Address: "first", PublicKey: firstExpectedKey},
 			{ConnectionType: "pct", Address: "second", PublicKey: secondExpectedKey},
@@ -115,7 +115,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	result, err := NewPulsar(config, storage, clientFactory,
 		pulsartestutil.MockEntropyGenerator{}, nil, func(connectionType string, address string) (net.Listener, error) {
 			return &pulsartestutil.MockListener{}, nil
-		})
+		}, parsedExpectedPrivateKey)
 
 	assertObj.NoError(err)
 	assertObj.Equal(2, len(result.Neighbours))
@@ -661,6 +661,12 @@ func generatePrivateAndConvertPublic(t *testing.T) (privateKey *ecdsa.PrivateKey
 	assert.NoError(t, err)
 
 	return
+}
+
+func generatePrivateKey() string {
+	key, _ := ecdsa_helper.GeneratePrivateKey()
+	str, _ := ecdsa_helper.ExportPrivateKey(key)
+	return str
 }
 
 func prepareEntropy(t *testing.T, key *ecdsa.PrivateKey) (entropy core.Entropy, sign []byte) {

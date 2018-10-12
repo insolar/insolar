@@ -43,7 +43,6 @@ type ServiceNetwork struct {
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
-
 	node, err := nodenetwork.NewNodeNetwork(conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create node network")
