@@ -133,18 +133,6 @@ jobs:
       - name: insolar
       outputs:
       - name: pipelines
-    on_failure:
-      put: slack
-      params:
-        icon_emoji: ':new_moon_with_face:'
-        silent: true
-        text: brake pull-requests
-    on_success:
-      put: slack
-      params:
-        icon_emoji: ':sun_with_face:'
-        silent: true
-        text: rebuild pull-requests
   - put: deploy
     params:
       pipelines:
