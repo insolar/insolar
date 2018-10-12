@@ -204,7 +204,8 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 		}
 		o, err := am.GetObject(*r, nil)
 		if err != nil {
-			return errors.Wrap(err, "Have ref, have no object")
+			// TODO: we should detect deactivated objects
+			continue
 		}
 		cd, err := o.ClassDescriptor(nil)
 		if err != nil {
