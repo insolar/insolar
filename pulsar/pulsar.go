@@ -674,9 +674,10 @@ func (currentPulsar *Pulsar) sendPulse() {
 	}
 
 	pulseForSending := core.Pulse{
-		PulseNumber: currentPulsar.ProcessingPulseNumber,
-		Entropy:     currentPulsar.CurrentSlotEntropy,
-		Signs:       currentPulsar.CurrentSlotSenderConfirmations,
+		PulseNumber:     currentPulsar.ProcessingPulseNumber,
+		Entropy:         currentPulsar.CurrentSlotEntropy,
+		Signs:           currentPulsar.CurrentSlotSenderConfirmations,
+		NextPulseNumber: currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
 	}
 
 	pulsarHost, t, err := currentPulsar.prepareForSendingPulse()
