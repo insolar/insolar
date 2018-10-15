@@ -105,19 +105,6 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
 	// TODO еще неплохо бы результат получить и проверить
 	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 1, &pulsar.StandardEntropyGenerator{}))
-	//rlr := lr.(*LogicRunner)
-	//rlr.caseBindMutex.Lock()
-	//rlrcbr := rlr.caseBind.Records
-	//rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
-	//rlr.caseBindMutex.Unlock()
-
-	//for ref, cr := range rlrcbr {
-	//	//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
-	//	vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
-	//	assert.NoError(t, err, "validation")
-	//	assert.Equal(t, len(cr), vstep, "Validation passed to the end")
-	//}
-
 }
 
 func TestTypeCompatibility(t *testing.T) {
