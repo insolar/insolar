@@ -362,3 +362,17 @@ func TestUnsyncList_GetHash3(t *testing.T) {
 	unsyncList.SetHash(h)
 	wg.Wait()
 }
+
+func TestUnsyncList_AddUnsyncList(t *testing.T) {
+	unsyncList := NewUnsyncHolder(core.PulseNumber(10), nil)
+	unsyncList.AddUnsyncList(core.RecordRef{1}, []*core.ActiveNode{})
+	_, exists := unsyncList.GetUnsyncList(core.RecordRef{1})
+	assert.True(t, exists)
+}
+
+func TestUnsyncList_AddUnsyncHash(t *testing.T) {
+	unsyncList := NewUnsyncHolder(core.PulseNumber(10), nil)
+	unsyncList.AddUnsyncHash(core.RecordRef{1}, []*consensus.NodeUnsyncHash{})
+	_, exists := unsyncList.GetUnsyncHash(core.RecordRef{1})
+	assert.True(t, exists)
+}
