@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"crypto/ecdsa"
 	"strings"
 	"testing"
 	"time"
@@ -161,6 +162,22 @@ func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
 
 func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	return nil
+}
+
+func (hh *mockHostHandler) SetNodeID(nodeID core.RecordRef) {
+
+}
+
+func (hh *mockHostHandler) SignMessage(msg core.Message, key *ecdsa.PrivateKey) error {
+	return nil
+}
+
+func (hh *mockHostHandler) SignNonce(nonce []byte) ([]byte, error) {
+	return nil, nil
+}
+
+func (hh *mockHostHandler) SignedNonceIsCorrect(hostID id.ID, signedNonce []byte) bool {
+	return true
 }
 
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
@@ -308,7 +325,7 @@ func (hh *mockHostHandler) GetExpirationTime(ctx hosthandler.Context, key []byte
 	return time.Now()
 }
 
-func (hh *mockHostHandler) AddUncheckedNode(hostID id.ID, nonce []byte) {
+func (hh *mockHostHandler) AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef) {
 
 }
 
