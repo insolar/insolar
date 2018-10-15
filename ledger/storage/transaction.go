@@ -40,7 +40,7 @@ type TransactionManager struct {
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
-	k := make([]byte, core.RecordRefSize+1)
+	k := make([]byte, core.RecordIDSize+1)
 	k[0] = prefix
 	_ = copy(k[1:], key)
 	return k
