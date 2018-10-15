@@ -289,7 +289,9 @@ func (dht *DHT) Bootstrap() error {
 
 func (dht *DHT) GetHostsFromBootstrap() {
 	cb := NewContextBuilder(dht)
-
+	if len(dht.options.BootstrapHosts) == 0 {
+		return
+	}
 	for _, ht := range dht.tables {
 		dht.iterateHtGetNearestHosts(ht, cb)
 	}
@@ -303,10 +305,9 @@ func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilde
 	}
 
 	futures := make([]transport.Future, 0)
-	bootstrapHosts := ht.GetMulticastHosts()
 
-	for _, host := range bootstrapHosts {
-		p := packet.NewBuilder().Type(packet.TypeFindHost).Sender(ht.Origin).Receiver(host.Host).
+	for _, host := range dht.options.BootstrapHosts {
+		p := packet.NewBuilder().Type(packet.TypeFindHost).Sender(ht.Origin).Receiver(host).
 			Request(&packet.RequestDataFindHost{Target: ht.Origin.ID}).Build()
 		f, err := dht.transport.SendRequest(p)
 		if err != nil {
