@@ -18,7 +18,6 @@ package hosthandler
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -113,7 +112,6 @@ type HostHandler interface {
 	HtFromCtx(ctx Context) *routing.HashTable
 	StoreRetrieve(key store.Key) ([]byte, bool)
 	EqualAuthSentKey(targetID string, key []byte) bool
-	SignMessage(msg core.Message, key *ecdsa.PrivateKey) error
 	SignedNonceIsCorrect(hostID id.ID, signedNonce []byte) bool
 	SendRequest(packet *packet.Packet) (transport.Future, error)
 	FindHost(ctx Context, targetID string) (*host.Host, bool, error)

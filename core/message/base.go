@@ -19,10 +19,13 @@ package message
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/gob"
 	"io"
 	"io/ioutil"
 
+	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -120,6 +123,47 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 	enc := gob.NewDecoder(buff)
 	err = enc.Decode(msg)
 	return msg, err
+}
+
+// MessageToBytes deserialize a core.Message to bytes.
+func MessageToBytes(msg core.Message) ([]byte, error) {
+	reqBuff, err := Serialize(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to serialize event")
+	}
+	return ioutil.ReadAll(reqBuff)
+}
+
+// SignMessage tries to sign a core.Message.
+func SignMessage(msg core.Message, key *ecdsa.PrivateKey) error {
+	serialized, err := MessageToBytes(msg)
+	if err != nil {
+		return errors.Wrap(err, "filed to serialize message")
+	}
+	sign, err := ecdsa2.Sign(serialized, key)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a message")
+	}
+	msg.SetSign(sign)
+	return nil
+}
+
+// SignIsCorrect checks if a sign is correct.
+func SignIsCorrect(msg core.Message, key *ecdsa.PrivateKey) bool {
+	sign := msg.GetSign()
+	msg.SetSign(make([]byte, 0))
+
+	serialized, err := MessageToBytes(msg)
+	if err != nil {
+		log.Error(err, "filed to serialize message")
+		return false
+	}
+	newSign, err := ecdsa2.Sign(serialized, key)
+	if err != nil {
+		log.Error(err, "failed to sign a message")
+		return false
+	}
+	return bytes.Equal(sign, newSign)
 }
 
 func init() {

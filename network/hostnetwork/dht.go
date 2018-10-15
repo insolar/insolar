@@ -19,7 +19,6 @@ package hostnetwork
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math"
 	"sort"
 	"strings"
@@ -842,7 +841,7 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 			log.Error(err, "failed to parse incoming RPC")
 			return
 		}
-		if !dht.signIsCorrect(signedMsg) {
+		if !message.SignIsCorrect(signedMsg, dht.privateKey) {
 			log.Warn("RPC message not signed")
 			return
 		}
@@ -1366,46 +1365,6 @@ func (dht *DHT) GetOriginHost() *host.Origin {
 func (dht *DHT) AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef) {
 	unchecked := UncheckedNode{Ref: ref, Nonce: nonce}
 	dht.uncheckedNodes[hostID.String()] = unchecked
-}
-
-func (dht *DHT) signIsCorrect(msg core.Message) bool {
-	sign := msg.GetSign()
-	msg.SetSign(make([]byte, 0))
-
-	serialized, err := messageToBytes(msg)
-	if err != nil {
-		log.Error(err, "filed to serialize message")
-		return false
-	}
-	newSign, err := ecdsa2.Sign(serialized, dht.privateKey)
-	if err != nil {
-		log.Error(err, "failed to sign a message")
-		return false
-	}
-	return bytes.Equal(sign, newSign)
-}
-
-// MessageToBytes deserialize a core.Message to bytes.
-func messageToBytes(msg core.Message) ([]byte, error) {
-	reqBuff, err := message.Serialize(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
-	}
-	return ioutil.ReadAll(reqBuff)
-}
-
-// SignMessage tries to sign a core.Message.
-func (dht *DHT) SignMessage(msg core.Message, key *ecdsa.PrivateKey) error {
-	serialized, err := messageToBytes(msg)
-	if err != nil {
-		return errors.Wrap(err, "filed to serialize message")
-	}
-	sign, err := ecdsa2.Sign(serialized, key)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a message")
-	}
-	msg.SetSign(sign)
-	return nil
 }
 
 func (dht *DHT) SignedNonceIsCorrect(hostID id.ID, signedNonce []byte) bool {

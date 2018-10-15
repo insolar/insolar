@@ -78,7 +78,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, errors.New("message is nil")
 	}
 	hostID := nodenetwork.ResolveHostID(nodeID)
-	err := network.hostNetwork.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
+	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
 	}
@@ -100,7 +100,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	err := network.hostNetwork.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
+	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a message")
 	}
