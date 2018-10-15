@@ -178,43 +178,41 @@ func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply,
 	}
 
 	var (
-		refs      []core.RecordRef
-		fromChild *record.ID
+		refs         []core.RecordRef
+		currentChild *record.ID
 	)
 
 	// Counting from specified child or the latest.
 	if msg.FromChild != nil {
 		id := record.Bytes2ID(msg.FromChild[:])
-		fromChild = &id
+		currentChild = &id
 	} else {
-		fromChild = idx.LatestChild
+		currentChild = idx.LatestChild
 	}
 
-	i := storage.NewChainIterator(h.db, fromChild)
 	counter := 0
-	for i.HasNext() {
-		id, rec, err := i.Next()
-		if err != nil {
-			return nil, errors.New("failed to retrieve children")
-		}
-
+	for currentChild != nil {
 		// We have enough results.
 		if counter >= msg.Amount {
-			return &reply.Children{Refs: refs, NextFrom: id.CoreID()}, nil
+			return &reply.Children{Refs: refs, NextFrom: currentChild.CoreID()}, nil
 		}
 		counter++
 
-		child, ok := rec.(*record.ChildRecord)
+		rec, err := h.db.GetRecord(currentChild)
+		if err != nil {
+			return nil, errors.New("failed to retrieve children")
+		}
+		childRec, ok := rec.(*record.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
+		currentChild = childRec.PrevChild
 
 		// Skip records later than specified pulse.
-		if msg.FromPulse != nil && child.Ref.Record.Pulse > *msg.FromPulse {
+		if msg.FromPulse != nil && childRec.Ref.Record.Pulse > *msg.FromPulse {
 			continue
 		}
-
-		refs = append(refs, *child.Ref.CoreRef())
+		refs = append(refs, *childRec.Ref.CoreRef())
 	}
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
