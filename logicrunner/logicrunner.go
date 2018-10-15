@@ -198,14 +198,14 @@ func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) 
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 
-	passedStepsCount, err := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
-	lr.MessageBus.Send(&message.ValidationResults{
+	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	_, err := lr.MessageBus.Send(&message.ValidationResults{
 		RecordRef:        msg.GetReference(),
 		PassedStepsCount: passedStepsCount,
-		Error:            err,
+		Error:            validationError,
 	})
 
-	return nil, nil
+	return nil, err
 }
 
 func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply, error) {
