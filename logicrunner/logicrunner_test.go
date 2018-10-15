@@ -577,14 +577,14 @@ func (r *One) Kill() {
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
-		testutil.CBORMarshal(t, &struct{}{}),
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
 	assert.NoError(t, err)
 
 	_, err = lr.Execute(&message.CallMethod{
 		ObjectRef: *obj,
 		Method:    "Kill",
-		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
 }
@@ -781,15 +781,15 @@ func (r *Two) NoError() error {
 	resp, err = lr.Execute(&message.CallMethod{
 		ObjectRef: *contract,
 		Method:    "NoError",
-		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
 
 	ValidateAllResults(t, lr)
 
-	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{nil}), r)
-	
+
 	SendDataToValidate(lr)
 }
 
@@ -845,20 +845,20 @@ func (r *Two) Hello() *string {
 
 	domain := core.NewRefFromBase58("c1")
 	contract, err := am.RegisterRequest(&message.CallConstructor{})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
+	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(&message.CallMethod{
 		ObjectRef: *contract,
 		Method:    "Hello",
-		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	})
 	assert.NoError(t, err, "contract call")
 
 	ValidateAllResults(t, lr)
 
-	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{nil}), r)
 }
 
@@ -1077,5 +1077,5 @@ func TestProxyGeneration(t *testing.T) {
 
 func SendDataToValidate(lr core.LogicRunner) {
 	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
-	//TODO validate data on another node
+	// TODO: validate data on another node
 }
