@@ -1,9 +1,9 @@
+BIN_DIR ?= bin
 INSOLAR = insolar
 INSOLARD = insolard
-INSGOCC = insgocc
+INSGOCC = $(BIN_DIR)/insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
-BIN_DIR = bin
 
 ALL_PACKAGES = ./...
 COVERPROFILE = coverage.txt
@@ -20,9 +20,9 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps install build test test_with_coverage
+.PHONY: all lint ci-lint metalint clean install-deps pre-build build test test_with_coverage regen-proxies
 
-all: clean install-deps install build test
+all: clean install-deps pre-build build test
 
 lint: ci-lint
 
@@ -56,7 +56,7 @@ $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 $(INSGOCC):
-	go build -o $(BIN_DIR)/$(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(PULSARD):
 	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
@@ -68,4 +68,22 @@ test:
 	go test -v $(ALL_PACKAGES)
 
 test_with_coverage:
-	CGO_ENABLED=1 go test --race --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+
+
+CONTRACTS = $(wildcard application/contract/*)
+regen-proxies: $(INSGOCC)
+	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
+
+docker-insolard:
+	docker build --tag insolar/insolard -f ./docker/Dockerfile.insolard .
+
+docker-pulsar:
+	docker build --tag insolar/pulsar -f ./docker/Dockerfile.pulsar .
+
+docker-insgorund:
+	docker build --tag insolar/insgorund -f ./docker/Dockerfile.insgorund .
+
+
+docker: docker-insolard docker-pulsar docker-insgorund
+

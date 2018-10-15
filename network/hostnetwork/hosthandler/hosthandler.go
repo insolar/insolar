@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
@@ -35,44 +36,66 @@ import (
 // Context is used in all actions to select specific ID to work with.
 type Context context.Context
 
-// NetworkCommonFacade is used for implementation of rpc and cascade.
+// NetworkCommonFacade is used to implement additional features in network to evade showing them in the main HostHandler interface
 type NetworkCommonFacade interface {
 	GetRPC() rpc.RPC
 	GetCascade() *cascade.Cascade
 	GetPulseManager() core.PulseManager
 	SetPulseManager(manager core.PulseManager)
+	SetConsensus(insolarConsensus consensus.Processor)
+	GetConsensus() consensus.Processor
+	SetNetworkCoordinator(coordinator core.NetworkCoordinator)
+	GetNetworkCoordinator() core.NetworkCoordinator
 }
 
-// CommonFacade implements a NetworkCommonFacade.
-type CommonFacade struct {
-	rpcPtr  rpc.RPC
-	cascade *cascade.Cascade
-	pm      core.PulseManager
+// commonFacade implements a NetworkCommonFacade.
+type commonFacade struct {
+	rpcPtr      rpc.RPC
+	cascade     *cascade.Cascade
+	pm          core.PulseManager
+	ic          consensus.Processor
+	coordinator core.NetworkCoordinator
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
-func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) *CommonFacade {
-	return &CommonFacade{rpcPtr: r, cascade: casc, pm: nil}
+func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) NetworkCommonFacade {
+	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil}
 }
 
 // GetRPC return an RPC pointer.
-func (fac *CommonFacade) GetRPC() rpc.RPC {
+func (fac *commonFacade) GetRPC() rpc.RPC {
 	return fac.rpcPtr
 }
 
 // GetCascade returns a cascade pointer.
-func (fac *CommonFacade) GetCascade() *cascade.Cascade {
+func (fac *commonFacade) GetCascade() *cascade.Cascade {
 	return fac.cascade
 }
 
 // GetPulseManager returns a pulse manager pointer.
-func (fac *CommonFacade) GetPulseManager() core.PulseManager {
+func (fac *commonFacade) GetPulseManager() core.PulseManager {
 	return fac.pm
 }
 
 // SetPulseManager sets a pulse manager to common facade.
-func (fac *CommonFacade) SetPulseManager(manager core.PulseManager) {
+func (fac *commonFacade) SetPulseManager(manager core.PulseManager) {
 	fac.pm = manager
+}
+
+func (fac *commonFacade) SetConsensus(insolarConsensus consensus.Processor) {
+	fac.ic = insolarConsensus
+}
+
+func (fac *commonFacade) GetConsensus() consensus.Processor {
+	return fac.ic
+}
+
+func (fac *commonFacade) SetNetworkCoordinator(coordinator core.NetworkCoordinator) {
+	fac.coordinator = coordinator
+}
+
+func (fac *commonFacade) GetNetworkCoordinator() core.NetworkCoordinator {
+	return fac.coordinator
 }
 
 // HostHandler is an interface which uses for host network implementation.
@@ -81,6 +104,7 @@ type HostHandler interface {
 	Listen() error
 	ObtainIP() error
 	Bootstrap() error
+	GetActiveNodes() error
 	GetHostsFromBootstrap()
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
@@ -104,6 +128,7 @@ type HostHandler interface {
 	AddRelayClient(host *host.Host) error
 	AddReceivedKey(target string, key []byte)
 	AddHost(ctx Context, host *routing.RouteHost)
+	AddActiveNodes(activeNode []*core.ActiveNode) error
 
 	RemoveAuthHost(key string)
 	RemoveProxyHost(targetID string)
@@ -113,10 +138,12 @@ type HostHandler interface {
 
 	SetHighKnownHostID(id string)
 	SetOuterHostsCount(hosts int)
+	SetSignChecker(func(msg core.Message) bool)
 	SetAuthStatus(targetID string, status bool)
 
 	GetProxyHostsCount() int
 	GetOuterHostsCount() int
+	GetNodeID() core.RecordRef
 	GetHighKnownHostID() string
 	GetSelfKnownOuterHosts() int
 	GetOriginHost() *host.Origin
@@ -126,4 +153,5 @@ type HostHandler interface {
 	KeyIsReceived(targetID string) ([]byte, bool)
 	GetNetworkCommonFacade() NetworkCommonFacade
 	GetExpirationTime(ctx Context, key []byte) time.Time
+	GetActiveNodesList() []*core.ActiveNode
 }

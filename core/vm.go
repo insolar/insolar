@@ -64,11 +64,13 @@ const (
 	caseRecordTypeUnexistent CaseRecordType = iota
 	CaseRecordTypeStart
 	CaseRecordTypeResult
+	CaseRecordTypeGetObject
 	CaseRecordTypeRouteCall
 	CaseRecordTypeSaveAsChild
 	CaseRecordTypeGetObjChildren
 	CaseRecordTypeSaveAsDelegate
 	CaseRecordTypeGetDelegate
+	CaseRecordTypeDeactivateObject
 )
 
 // CaseRecord is one record of validateable object calling history

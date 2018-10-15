@@ -20,6 +20,7 @@ import (
 	"crypto/rand"
 	"time"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
@@ -52,7 +53,7 @@ func DispatchPacketType(
 		return processRelay(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeCheckOrigin:
 		return processCheckOriginRequest(hostHandler, msg, packetBuilder)
-	case packet.TypeAuth:
+	case packet.TypeAuthentication:
 		return processAuthentication(hostHandler, msg, packetBuilder)
 	case packet.TypeObtainIP:
 		return processObtainIPRequest(msg, packetBuilder)
@@ -68,9 +69,77 @@ func DispatchPacketType(
 		return processPulse(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeGetRandomHosts:
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeCheckSignedNonce:
+		return processCheckSignedNonce(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeCheckPublicKey:
+		return processCheckPublicKey(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeActiveNodes:
+		return processActiveNodes(hostHandler, packetBuilder)
+	case packet.TypeDisconnect:
+		return processDisconnect(hostHandler, packetBuilder)
+	case packet.TypeExchangeUnsyncLists:
+		return processExchangeUnsyncLists(hostHandler, ctx, msg, packetBuilder)
+	case packet.TypeExchangeUnsyncHash:
+		return processExchangeUnsyncHash(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")
 	}
+}
+
+func processExchangeUnsyncLists(hostHandler hosthandler.HostHandler, ctx hosthandler.Context,
+	msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+
+	data := msg.Data.(*packet.RequestExchangeUnsyncLists)
+	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
+	list, err := consensusHandler.ExchangeData(ctx, data.Pulse, data.SenderID, data.UnsyncList)
+	if err != nil {
+		log.Warn(err.Error())
+		return packetBuilder.Response(&packet.ResponseExchangeUnsyncLists{Error: err.Error()}).Build(), nil
+	}
+	return packetBuilder.Response(&packet.ResponseExchangeUnsyncLists{UnsyncList: list}).Build(), nil
+}
+
+func processExchangeUnsyncHash(hostHandler hosthandler.HostHandler, ctx hosthandler.Context,
+	msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
+
+	data := msg.Data.(*packet.RequestExchangeUnsyncHash)
+	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
+	hash, err := consensusHandler.ExchangeHash(ctx, data.Pulse, data.SenderID, data.UnsyncHash)
+	if err != nil {
+		log.Warn(err.Error())
+		return packetBuilder.Response(&packet.ResponseExchangeUnsyncHash{Error: err.Error()}).Build(), nil
+	}
+	return packetBuilder.Response(&packet.ResponseExchangeUnsyncHash{UnsyncHash: hash}).Build(), nil
+}
+
+func processDisconnect(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {
+	// TODO: disconnect from active list
+	return packetBuilder.Response(&packet.ResponseDisconnect{Disconnected: true, Error: nil}).Build(), nil
+}
+
+func processCheckPublicKey(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder) (*packet.Packet, error) {
+	// TODO: do real check key.
+	exist := true
+	nonce, err := time.Now().MarshalBinary()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal nonce")
+	}
+	return packetBuilder.Response(&packet.ResponseCheckPublicKey{Nonce: nonce, Exist: exist}).Build(), nil
+}
+
+func processCheckSignedNonce(
+	hostHandler hosthandler.HostHandler,
+	ctx hosthandler.Context,
+	msg *packet.Packet,
+	packetBuilder packet.Builder) (*packet.Packet, error) {
+	// TODO: do real check sign.
+	// TODO: add to unsync and wait to advance to sync list
+	parsed := true
+	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Success: parsed}).Build(), nil
 }
 
 func processGetRandomHosts(
@@ -98,21 +167,48 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	}
 	currentPulse, err := pm.Current()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get current pulse")
+		return nil, errors.Wrap(err, "Could not get current pulse")
 	}
-	log.Debugf("got new pulse number: %d", currentPulse.PulseNumber)
+	log.Infof("Got new pulse number: %d", data.Pulse.PulseNumber)
 	if (data.Pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(data.Pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 		err = pm.Set(data.Pulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to set pulse")
 		}
-		log.Debugf("set new current pulse number: %d", currentPulse.PulseNumber)
+		log.Infof("Set new current pulse number: %d", data.Pulse.PulseNumber)
+
+		doConsensus(hostHandler, ctx, data.Pulse)
+
 		ht := hostHandler.HtFromCtx(ctx)
 		hosts := ht.GetMulticastHosts()
 		go ResendPulseToKnownHosts(hostHandler, hosts, data)
+		go func(h hosthandler.HostHandler) {
+			coordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
+			if coordinator == nil {
+				return
+			}
+			err := coordinator.WriteActiveNodes(data.Pulse.PulseNumber, h.GetActiveNodesList())
+			if err != nil {
+				log.Warn("Writing active nodes to ledger: " + err.Error())
+			}
+		}(hostHandler)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
+}
+
+func doConsensus(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, pulse core.Pulse) {
+	consensus := hostHandler.GetNetworkCommonFacade().GetConsensus()
+	if consensus == nil {
+		log.Warn("Consensus module is not initialized")
+		return
+	}
+	if !consensus.IsPartOfConsensus() {
+		log.Debug("Node is not active and does not participate in consensus")
+		return
+	}
+	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
+	go consensus.ProcessPulse(ctx, pulse)
 }
 
 func processKnownOuterHosts(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
@@ -265,12 +361,12 @@ func processRelay(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 }
 
 func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
-	data := msg.Data.(*packet.RequestAuth)
+	data := msg.Data.(*packet.RequestAuthentication)
 	switch data.Command {
-	case packet.BeginAuth:
+	case packet.BeginAuthentication:
 		if hostHandler.HostIsAuthenticated(msg.Sender.ID.String()) {
 			// TODO: whats next?
-			response := &packet.ResponseAuth{
+			response := &packet.ResponseAuthentication{
 				Success:       false,
 				AuthUniqueKey: nil,
 			}
@@ -283,7 +379,7 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 			return nil, errors.Wrap(err, "Failed to generate random key")
 		}
 		hostHandler.AddAuthSentKey(msg.Sender.ID.String(), key)
-		response := &packet.ResponseAuth{
+		response := &packet.ResponseAuthentication{
 			Success:       true,
 			AuthUniqueKey: key,
 		}
@@ -296,9 +392,9 @@ func processAuthentication(hostHandler hosthandler.HostHandler, msg *packet.Pack
 		}
 
 		return packetBuilder.Response(response).Build(), nil
-	case packet.RevokeAuth:
+	case packet.RevokeAuthentication:
 		hostHandler.RemoveAuthHost(msg.Sender.ID.String())
-		response := &packet.ResponseAuth{
+		response := &packet.ResponseAuthentication{
 			Success:       true,
 			AuthUniqueKey: nil,
 		}
@@ -340,4 +436,9 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	}
 
 	return packetBuilder.Response(response).Build(), err
+}
+
+func processActiveNodes(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {
+	response := &packet.ResponseActiveNodes{ActiveNodes: hostHandler.GetActiveNodesList()}
+	return packetBuilder.Response(response).Build(), nil
 }

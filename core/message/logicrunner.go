@@ -17,9 +17,6 @@
 package message
 
 import (
-	"encoding/binary"
-	"io"
-
 	"github.com/insolar/insolar/core"
 )
 
@@ -38,6 +35,8 @@ const (
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
 	Caller core.RecordRef
+	Nonce  uint64
+	sign   []byte
 }
 
 type IBaseLogicMessage interface {
@@ -45,10 +44,21 @@ type IBaseLogicMessage interface {
 	GetReference() core.RecordRef
 }
 
+// SetSign sets a signature to message.
+func (b *BaseLogicMessage) SetSign(sign []byte) {
+	b.sign = sign
+}
+
+// GetSign returns a sign.
+func (b *BaseLogicMessage) GetSign() []byte {
+	return b.sign
+}
+
 func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
 	return &e.Caller
 }
 
+// TargetRole returns RoleVirtualExecutor as routing target role.
 func (e *BaseLogicMessage) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
@@ -66,53 +76,119 @@ func (e *CallMethod) GetReference() core.RecordRef {
 	return e.ObjectRef
 }
 
+// Type returns TypeCallMethod.
 func (e *CallMethod) Type() core.MessageType {
-	return TypeCallMethod
+	return core.TypeCallMethod
 }
 
+// Target returns ObjectRef as routing target.
 func (e *CallMethod) Target() *core.RecordRef {
 	return &e.ObjectRef
 }
 
-// WriteHash implements ledger.hash.Hasher interface.
-func (e *CallMethod) WriteHash(w io.Writer) {
-	mustWrite(w, binary.BigEndian, e.Caller)
-	mustWrite(w, binary.BigEndian, uint32(e.ReturnMode))
-	mustWrite(w, binary.BigEndian, e.ObjectRef)
-	mustWrite(w, binary.BigEndian, []byte(e.Method))
-	mustWrite(w, binary.BigEndian, e.Arguments)
-}
+type SaveAs int
+
+const (
+	Child SaveAs = iota
+	Delegate
+)
 
 // CallConstructor is a message for calling constructor and obtain its reply
 type CallConstructor struct {
 	BaseLogicMessage
+	ParentRef core.RecordRef
+	SaveAs    SaveAs
 	ClassRef  core.RecordRef
 	Name      string
 	Arguments core.Arguments
+	PulseNum  core.PulseNumber
 }
 
 func (e *CallConstructor) GetReference() core.RecordRef {
 	return e.ClassRef
 }
 
+// Type returns TypeCallConstructor.
 func (e *CallConstructor) Type() core.MessageType {
-	return TypeCallConstructor
+	return core.TypeCallConstructor
 }
 
+// Target returns request ref as routing target.
 func (e *CallConstructor) Target() *core.RecordRef {
-	return &e.ClassRef
-}
-
-// WriteHash implements ledger.hash.Hasher interface.
-func (e *CallConstructor) WriteHash(w io.Writer) {
-	mustWrite(w, binary.BigEndian, e.Caller)
-	mustWrite(w, binary.BigEndian, e.ClassRef)
-	mustWrite(w, binary.BigEndian, []byte(e.Name))
-	mustWrite(w, binary.BigEndian, e.Arguments)
-}
-
-func mustWrite(w io.Writer, order binary.ByteOrder, data interface{}) {
-	if err := binary.Write(w, order, data); err != nil {
-		panic(err)
+	if e.SaveAs == Delegate {
+		return &e.ParentRef
 	}
+	return core.GenRequest(e.PulseNum, MustSerializeBytes(e))
+}
+
+type ExecutorResults struct {
+	RecordRef   core.RecordRef
+	CaseRecords []core.CaseRecord
+	sign        []byte
+}
+
+func (e *ExecutorResults) Type() core.MessageType {
+	return core.TypeExecutorResults
+}
+
+func (e *ExecutorResults) TargetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
+func (e *ExecutorResults) Target() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ExecutorResults) GetCaller() *core.RecordRef {
+	return &core.RecordRef{}
+}
+
+func (e *ExecutorResults) GetReference() core.RecordRef {
+	return e.RecordRef
+}
+
+func (e *ExecutorResults) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ExecutorResults) SetSign(sign []byte) {
+	e.sign = sign
+}
+
+type ValidateCaseBind struct {
+	RecordRef   core.RecordRef
+	CaseRecords []core.CaseRecord
+	sign        []byte
+}
+
+func (e *ValidateCaseBind) Type() core.MessageType {
+	return core.TypeValidateCaseBind
+}
+
+func (e *ValidateCaseBind) TargetRole() core.JetRole {
+	return core.RoleVirtualValidator
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) Target() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ValidateCaseBind) GetReference() core.RecordRef {
+	return e.RecordRef
+}
+
+func (e *ValidateCaseBind) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ValidateCaseBind) SetSign(sign []byte) {
+	e.sign = sign
 }

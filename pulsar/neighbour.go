@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/log"
 )
 
 // RPCClientWrapperFactory describes interface for the wrappers factory
@@ -104,7 +103,9 @@ func (impl *RPCClientWrapperImpl) Go(serviceMethod string, args interface{}, rep
 
 // ResetClient clears rpc-client
 func (impl *RPCClientWrapperImpl) ResetClient() {
+	impl.Lock()
 	impl.Client = nil
+	impl.Unlock()
 }
 
 // Neighbour is a helper struct, which contains info about pulsar-neighbour
@@ -113,20 +114,4 @@ type Neighbour struct {
 	ConnectionAddress string
 	OutgoingClient    RPCClientWrapper
 	PublicKey         *ecdsa.PublicKey
-}
-
-// CheckAndRefreshConnection checks connection error, writes it to the log and tries to refresh connection
-func (neighbour *Neighbour) CheckAndRefreshConnection(rpcErr error) error {
-	log.Infof("Restarting RPC Connection to %v due to error %v", neighbour.ConnectionAddress, rpcErr)
-
-	neighbour.OutgoingClient.Lock()
-
-	err := neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
-	if err != nil {
-		log.Errorf("Refreshing connection to %v failed due to error %v", neighbour.ConnectionAddress, err)
-	}
-
-	neighbour.OutgoingClient.Unlock()
-
-	return err
 }

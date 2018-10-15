@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
@@ -36,12 +36,15 @@ import (
 const HOST = "http://localhost:19191"
 const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
+const insolarRootKeys = "bootstrap_keys.json"
 
 var cmd *exec.Cmd
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
+var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
+var insolarRootKeysPath = filepath.Join(testdataPath(), insolarRootKeys)
 
 func testdataPath() string {
 	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
@@ -57,6 +60,15 @@ func functestPath() string {
 		panic(err)
 	}
 	return filepath.Join(p.Dir, "functest")
+}
+
+func buildInsolar() error {
+	out, err := exec.Command(
+		"go", "build",
+		"-o", insolarPath,
+		insolarImportPath+"/cmd/insolar/",
+	).CombinedOutput()
+	return errors.Wrapf(err, "[ buildInsolar ] could't build insolar: %s", out)
 }
 
 func buildInsolard() error {
@@ -80,16 +92,23 @@ func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
+func generateRootKeys() error {
+	out, err := exec.Command(
+		insolarPath, "-c", "gen_keys",
+		"-o", insolarRootKeysPath).CombinedOutput()
+	return errors.Wrapf(err, "[ generateRootKeys ] could't generate root keys: %s", out)
+}
+
 var insgorundPath string
 
 func buildGinsiderCLI() (err error) {
-	insgorundPath, _, err = testutil.Build()
+	insgorundPath, _, err = goplugintestutils.Build()
 	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
 }
 
 func waitForLaunch() error {
 	done := make(chan bool, 1)
-	timeout := 40 * time.Second
+	timeout := 120 * time.Second
 
 	go func() {
 		scanner := bufio.NewScanner(stdout)
@@ -110,13 +129,17 @@ func waitForLaunch() error {
 		}
 	}()
 
+	cmdCompleted := make(chan error)
+	go func() { cmdCompleted <- cmd.Wait() }()
+
 	select {
+	case err := <-cmdCompleted:
+		return errors.New("[ waitForLaunch ] insolard finished unexpectedly: " + err.Error())
 	case <-done:
 		return nil
 	case <-time.After(timeout):
 		return errors.Errorf("[ waitForLaunch ] could't wait for launch: timeout of %s was exceeded", timeout)
 	}
-
 }
 
 func startInsolard() error {
@@ -203,6 +226,18 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't build ginsider CLI: ")
 	}
 	fmt.Println("[ setup ] ginsider CLI was successfully builded")
+
+	err = buildInsolar()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't build insolar: ")
+	}
+	fmt.Println("[ setup ] insolar was successfully builded")
+
+	err = generateRootKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't generate root keys: ")
+	}
+	fmt.Println("[ setup ] root keys successfully generated")
 
 	err = buildInsolard()
 	if err != nil {

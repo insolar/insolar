@@ -16,7 +16,9 @@
 
 package rpctypes
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+)
 
 // Types for RPC requests and responses between goplugin and goinsider.
 // Calls from goplugin to goinsider go "downwards" and names are
@@ -84,30 +86,18 @@ type UpRouteResp struct {
 	Result core.Arguments
 }
 
-// UpRouteConstructorReq is a set of arguments for RouteConstructor RPC in goplugin
-type UpRouteConstructorReq struct {
-	UpBaseReq
-	Reference   core.RecordRef
-	Constructor string
-	Arguments   core.Arguments
-}
-
-// UpRouteConstructorResp is response from RouteConstructor RPC in goplugin
-type UpRouteConstructorResp struct {
-	Data []byte
-}
-
 // UpSaveAsChildReq is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildReq struct {
 	UpBaseReq
-	Parent core.RecordRef
-	Class  core.RecordRef
-	Data   []byte
+	Parent          core.RecordRef
+	Class           core.RecordRef
+	ConstructorName string
+	ArgsSerialized  []byte
 }
 
 // UpSaveAsChildResp is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildResp struct {
-	Reference core.RecordRef
+	Reference *core.RecordRef
 }
 
 // UpGetObjChildrenReq is a set of arguments for GetObjChildren RPC in goplugin
@@ -125,14 +115,15 @@ type UpGetObjChildrenResp struct {
 // UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateReq struct {
 	UpBaseReq
-	Into  core.RecordRef
-	Class core.RecordRef
-	Data  []byte
+	Into            core.RecordRef
+	Class           core.RecordRef
+	ConstructorName string
+	ArgsSerialized  []byte
 }
 
 // UpSaveAsDelegateResp is response from SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateResp struct {
-	Reference core.RecordRef
+	Reference *core.RecordRef
 }
 
 // UpGetDelegateReq is a set of arguments for GetDelegate RPC in goplugin
@@ -145,4 +136,14 @@ type UpGetDelegateReq struct {
 // UpGetDelegateResp is response from GetDelegate RPC in goplugin
 type UpGetDelegateResp struct {
 	Object core.RecordRef
+}
+
+// UpDeactivateObjectReq is a set of arguments for DeactivateObject RPC in goplugin
+type UpDeactivateObjectReq struct {
+	UpBaseReq
+	Object core.RecordRef
+}
+
+// UpDeactivateObjectResp is response from DeactivateObject RPC in goplugin
+type UpDeactivateObjectResp struct {
 }

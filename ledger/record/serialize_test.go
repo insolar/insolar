@@ -54,12 +54,8 @@ var type2idTests = []struct {
 	rec Record
 	id  TypeID
 }{
-	{"RequestRecord", &RequestRecord{}, requestRecordID},
-	{"CallRequest", &CallRequest{}, callRequestID},
-	{"LockUnlockRequest", &LockUnlockRequest{}, lockUnlockRequestID},
-	{"ReadRecordRequest", &ReadRecordRequest{}, readRecordRequestID},
-	{"ReadObject", &ReadObject{}, readObjectID},
-	{"ReadObjectComposite", &ReadObjectComposite{}, readObjectCompositeID},
+	// request record(s)
+	{"CallRequest", &CallRequest{}, callRequestRecordID},
 
 	// result records
 	// case resultRecordID:
@@ -102,22 +98,11 @@ var serializeTests = []struct {
 	expectTypeID TypeID
 }{
 	{
-		"RequestRecord_WithRequester",
-		&RequestRecord{
-			Requester: Reference{
-				Domain: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
-			},
+		"CallRequest",
+		&CallRequest{
+			Payload: str2Bytes("21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
 		},
-		requestRecordID,
-	},
-	{
-		"RequestRecord_WithTarget",
-		&RequestRecord{
-			Target: Reference{
-				Domain: str2ID("0000000a" + "21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
-			},
-		},
-		requestRecordID,
+		callRequestRecordID,
 	},
 }
 

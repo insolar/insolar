@@ -36,6 +36,10 @@ type Message interface {
 	TargetRole() JetRole
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
+	// SetSign sets a signature to message.
+	SetSign([]byte)
+	// GetSign returns a sign.
+	GetSign() []byte
 }
 
 // Reply for an `Message`
@@ -58,3 +62,57 @@ type MessageBus interface {
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
 type MessageHandler func(Message) (Reply, error)
+
+//go:generate stringer -type=MessageType
+const (
+	// Logicrunner
+
+	// TypeCallMethod calls method and returns result
+	TypeCallMethod MessageType = iota
+	// TypeCallConstructor is a message for calling constructor and obtain its reply
+	TypeCallConstructor
+	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
+	TypeExecutorResults
+	// TypeValidateCaseBind message that goes to Validators to redo all registered in CaseBind actions
+	TypeValidateCaseBind
+
+	// Ledger
+
+	// TypeRequestCall registers call on storage.
+	TypeRequestCall
+	// TypeGetCode retrieves code from storage.
+	TypeGetCode
+	// TypeGetClass retrieves class from storage.
+	TypeGetClass
+	// TypeGetObject retrieves object from storage.
+	TypeGetObject
+	// TypeGetDelegate retrieves object represented as provided class.
+	TypeGetDelegate
+	// TypeGetChildren retrieves object represented as provided class.
+	TypeGetChildren
+	// TypeDeclareType creates new type.
+	TypeDeclareType
+	// TypeDeployCode creates new code.
+	TypeDeployCode
+	// TypeActivateClass activates class.
+	TypeActivateClass
+	// TypeDeactivateClass deactivates class.
+	TypeDeactivateClass
+	// TypeUpdateClass amends class.
+	TypeUpdateClass
+	// TypeActivateObject activates object.
+	TypeActivateObject
+	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
+	TypeActivateObjectDelegate
+	// TypeDeactivateObject deactivates object.
+	TypeDeactivateObject
+	// TypeUpdateObject amends object.
+	TypeUpdateObject
+	// TypeRegisterChild registers child on the parent object.
+	TypeRegisterChild
+
+	// Bootstrap
+
+	// TypeBootstrapRequest used for bootstrap object generation.
+	TypeBootstrapRequest
+)

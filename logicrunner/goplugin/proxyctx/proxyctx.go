@@ -23,11 +23,11 @@ import (
 // ProxyHelper interface with methods that are needed by contract proxies
 type ProxyHelper interface {
 	RouteCall(ref core.RecordRef, wait bool, method string, args []byte) ([]byte, error)
-	RouteConstructorCall(classRef core.RecordRef, name string, args []byte) ([]byte, error)
-	SaveAsChild(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error)
+	SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
 	GetObjChildren(head core.RecordRef, class core.RecordRef) ([]core.RecordRef, error)
-	SaveAsDelegate(parentRef, classRef core.RecordRef, data []byte) (core.RecordRef, error)
+	SaveAsDelegate(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
 	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)
+	DeactivateObject(object core.RecordRef) error
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 	MakeErrorSerializable(error) error

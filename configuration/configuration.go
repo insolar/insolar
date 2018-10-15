@@ -37,6 +37,8 @@ type Configuration struct {
 	LogicRunner LogicRunner
 	APIRunner   APIRunner
 	Pulsar      Pulsar
+	Bootstrap   Bootstrap
+	PrivateKey  string
 }
 
 // Holder provides methods to manage configuration
@@ -57,6 +59,8 @@ func NewConfiguration() Configuration {
 		LogicRunner: NewLogicRunner(),
 		APIRunner:   NewAPIRunner(),
 		Pulsar:      NewPulsar(),
+		Bootstrap:   NewBootstrap(),
+		PrivateKey:  "",
 	}
 
 	return cfg

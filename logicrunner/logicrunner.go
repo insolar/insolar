@@ -24,6 +24,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"bytes"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -35,11 +37,13 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	Executors            [core.MachineTypesLastID]core.MachineLogicExecutor
-	ArtifactManager      core.ArtifactManager
-	MessageBus           core.MessageBus
-	machinePrefs         []core.MachineType
-	Cfg                  *configuration.LogicRunner
+	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
+	ArtifactManager core.ArtifactManager
+	MessageBus      core.MessageBus
+	machinePrefs    []core.MachineType
+	Cfg             *configuration.LogicRunner
+
+	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
 	caseBindMutex        sync.Mutex
 	caseBindReplays      map[core.RecordRef]core.CaseBindReplay
@@ -55,6 +59,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
+		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[core.RecordRef][]core.CaseRecord)},
 		caseBindReplays: make(map[core.RecordRef]core.CaseBindReplay),
 	}
 	return &res, nil
@@ -91,10 +96,17 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	}
 
 	// TODO: use separate handlers
-	if err := messageBus.Register(message.TypeCallMethod, lr.Execute); err != nil {
+	if err := messageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
 		return err
 	}
-	if err := messageBus.Register(message.TypeCallConstructor, lr.Execute); err != nil {
+	if err := messageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
+		return err
+	}
+
+	if err := messageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
+		return err
+	}
+	if err := messageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
 		return err
 	}
 
@@ -172,10 +184,23 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	case *message.CallConstructor:
 		re, err := lr.executeConstructorCall(ctx, m, vb)
 		return re, err
-
+	case *message.ValidateCaseBind:
+		// TODO testBus goes here, send test bus to ValidateCaseBind
+		return nil, nil
+	case *message.ExecutorResults:
+		// TODO testBus goes here, send test bus to ExecutorResults
+		return nil, nil
 	default:
 		panic("Unknown e type")
 	}
+}
+
+func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
+	return nil, nil
+}
+
+func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
+	return nil, nil
 }
 
 type objectBody struct {
@@ -186,6 +211,18 @@ type objectBody struct {
 }
 
 func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, error) {
+	cr, step := lr.getNextValidationStep(objref)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeGetObject != cr.Type {
+			return nil, errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(objref)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return nil, errors.New("Wrong validation sig on RouteCall")
+		}
+		return cr.Resp.(*objectBody), nil
+	}
+
 	objDesc, err := lr.ArtifactManager.GetObject(objref, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
@@ -201,12 +238,18 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
 	}
 
-	return &objectBody{
+	ob := &objectBody{
 		Body:        objDesc.Memory(),
 		Code:        *codeDesc.Ref(),
 		Class:       *classDesc.HeadRef(),
 		MachineType: codeDesc.MachineType(),
-	}, nil
+	}
+	lr.addObjectCaseRecord(objref, core.CaseRecord{
+		Type:   core.CaseRecordTypeGetObject,
+		ReqSig: HashInterface(objref),
+		Resp:   ob,
+	})
+	return ob, nil
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
@@ -217,7 +260,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 
 	objbody, err := lr.getObjectMessage(e.ObjectRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object")
+		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
 	ctx.Callee = &e.ObjectRef
@@ -229,7 +272,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 		return nil, errors.Wrap(err, "no executor registered")
 	}
 
-	executer := func() (*reply.Common, error) {
+	executer := func() (*reply.CallMethod, error) {
 		newData, result, err := executor.CallMethod(
 			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
 		)
@@ -237,7 +280,8 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 			return nil, errors.Wrap(err, "executor error")
 		}
 
-		if vb.NeedSave() {
+		// TODO: deactivation should be handled way better here
+		if vb.NeedSave() && lr.lastObjectCaseRecord(e.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
 				core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
 			)
@@ -246,7 +290,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 			}
 		}
 
-		re := &reply.Common{Data: newData, Result: result}
+		re := &reply.CallMethod{Data: newData, Result: result}
 
 		vb.End(e.ObjectRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
@@ -266,7 +310,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 				log.Error(err)
 			}
 		}()
-		return &reply.Common{}, nil
+		return &reply.CallMethod{}, nil
 	}
 	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
 }
@@ -298,22 +342,82 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		return nil, errors.Wrap(err, "executer error")
 	}
 
-	re := &reply.Common{Data: newData}
+	switch m.SaveAs {
+	case message.Child:
+		log.Warn()
+		log.Warnf("M = %+v", m)
+		ref, err := lr.ArtifactManager.RegisterRequest(m)
+		if err != nil {
+			return nil, err
+		}
+		if vb.NeedSave() {
+			_, err = lr.ArtifactManager.ActivateObject(
+				core.RecordRef{}, *ref, m.ClassRef, m.ParentRef, newData,
+			)
+		}
+		vb.End(m.ClassRef, core.CaseRecord{
+			Type: core.CaseRecordTypeResult,
+			Resp: &reply.CallConstructor{Object: ref},
+		})
 
-	vb.End(m.ClassRef, core.CaseRecord{
-		Type: core.CaseRecordTypeResult,
-		Resp: re,
-	})
+		return &reply.CallConstructor{Object: ref}, err
+	case message.Delegate:
+		ref, err := lr.ArtifactManager.RegisterRequest(m)
+		if err != nil {
+			return nil, err
+		}
+		if vb.NeedSave() {
+			_, err = lr.ArtifactManager.ActivateObjectDelegate(
+				core.RecordRef{}, *ref, m.ClassRef, m.ParentRef, newData,
+			)
+		}
+		vb.End(m.ClassRef, core.CaseRecord{
+			Type: core.CaseRecordTypeResult,
+			Resp: &reply.CallConstructor{Object: ref},
+		})
 
-	return re, nil
+		return &reply.CallConstructor{Object: ref}, err
+	default:
+		return nil, errors.New("unsupported type of save object")
+	}
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
+	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
+	objectsRecords := lr.refreshCaseBind(pulse)
+
+	if len(objectsRecords) == 0 {
+		return nil
+	}
+
+	// send copy for validation
+	for ref, records := range objectsRecords {
+		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records})
+		if err != nil {
+			panic("Error while sending caseBind data to validators: " + err.Error())
+		}
+
+		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
+		_, err = lr.MessageBus.Send(&temp)
+		if err != nil {
+			return errors.New("error while sending caseBind data to new executor")
+		}
+	}
+
+	return nil
+}
+
+// refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
+func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord {
 	lr.caseBindMutex.Lock()
+	defer lr.caseBindMutex.Unlock()
+
+	oldObjectsRecords := lr.caseBind.Records
+
 	lr.caseBind = core.CaseBind{
 		Pulse:   pulse,
 		Records: make(map[core.RecordRef][]core.CaseRecord),
 	}
-	lr.caseBindMutex.Unlock()
-	return nil
+
+	return oldObjectsRecords
 }

@@ -22,17 +22,44 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 
+	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/application/bootstrapcertificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/genesis/bootstrapcertificate"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 const defaultStdoutPath = "-"
+const defaultURL = "http://localhost:19191/api/v1?"
+
+func genDefaultConfig(r interface{}) ([]byte, error) {
+	t := reflect.TypeOf(r)
+	res := map[string]interface{}{}
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("json")
+		switch field.Type.Kind() {
+		case reflect.String:
+			res[tag] = ""
+		case reflect.Slice:
+			res[tag] = []int{}
+		}
+	}
+
+	rawJSON, err := json.MarshalIndent(res, "", "    ")
+	if err != nil {
+		return nil, errors.Wrap(err, "[ genDefaultConfig ]")
+	}
+
+	return rawJSON, nil
+}
 
 func chooseOutput(path string) (io.Writer, error) {
 	var res io.Writer
@@ -59,14 +86,22 @@ var (
 	output             string
 	cmd                string
 	numberCertificates uint
+	configPath         string
+	paramsPath         string
+	verbose            bool
+	sendUrls           string
 )
 
 func parseInputParams() {
-	var rootCmd = &cobra.Command{Use: "insolar"}
+	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificates")
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificates | send_request | gen_send_configs")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
+	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
 	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
+	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
+	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
@@ -78,6 +113,12 @@ func parseInputParams() {
 
 }
 
+func verboseInfo(msg string) {
+	if verbose {
+		log.Infoln(msg)
+	}
+}
+
 func writeToOutput(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	check("Can't write data to output", err)
@@ -85,39 +126,52 @@ func writeToOutput(out io.Writer, data string) {
 
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
-
+	key, err := ecdsahelper.GeneratePrivateKey()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	keyStr, err := ecdsahelper.ExportPrivateKey(key)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	cfgHolder.Configuration.PrivateKey = keyStr
 	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
 }
 
 func randomRef(out io.Writer) {
-	ref := core.RandomRef()
+	ref := testutils.RandomRef()
 
 	writeToOutput(out, ref.String()+"\n")
 }
 
 func generateKeysPair(out io.Writer) {
-	privKey, err := ecdsa_helper.GeneratePrivateKey()
+	privKey, err := ecdsahelper.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
 
-	privKeyStr, err := ecdsa_helper.ExportPrivateKey(privKey)
+	privKeyStr, err := ecdsahelper.ExportPrivateKey(privKey)
 	check("Problems with serialization of private key:", err)
 
-	pubKeyStr, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+	pubKeyStr, err := ecdsahelper.ExportPublicKey(&privKey.PublicKey)
 	check("Problems with serialization of public key:", err)
 
-	result := fmt.Sprintf("Public key:\n %s\n", pubKeyStr)
-	result += fmt.Sprintf("Private key:\n %s", privKeyStr)
+	result, err := json.MarshalIndent(map[string]interface{}{
+		"private_key": privKeyStr,
+		"public_key":  pubKeyStr,
+	}, "", "    ")
+	check("Problems with marshaling keys:", err)
 
-	writeToOutput(out, result)
+	writeToOutput(out, string(result))
 }
 
 func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 	kk := []map[string]string{}
 	for _, key := range keys {
-		pubKey, err := ecdsa_helper.ExportPublicKey(&key.PublicKey)
+		pubKey, err := ecdsahelper.ExportPublicKey(&key.PublicKey)
 		check("[ makeKeysJSON ]", err)
 
-		privKey, err := ecdsa_helper.ExportPrivateKey(key)
+		privKey, err := ecdsahelper.ExportPrivateKey(key)
 		check("[ makeKeysJSON ]", err)
 
 		kk = append(kk, map[string]string{"public_key": pubKey, "private_key": privKey})
@@ -132,14 +186,15 @@ func generateCertificates(out io.Writer) {
 
 	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
 	cRecords := certRecords{}
-	keys := []*ecdsa.PrivateKey{}
+
+	var keys []*ecdsa.PrivateKey
 	for i := uint(0); i < numberCertificates; i++ {
-		ref := core.RandomRef()
-		privKey, err := ecdsa_helper.GeneratePrivateKey()
+		ref := testutils.RandomRef()
+		privKey, err := ecdsahelper.GeneratePrivateKey()
 		check("[ generateCertificates ]:", err)
 
 		records[ref] = privKey
-		pubKey, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+		pubKey, err := ecdsahelper.ExportPublicKey(&privKey.PublicKey)
 		check("[ generateCertificates ]:", err)
 
 		cRecords = append(cRecords, bootstrapcertificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
@@ -159,6 +214,42 @@ func generateCertificates(out io.Writer) {
 	writeToOutput(out, string(keysList)+"\n")
 }
 
+func sendRequest(out io.Writer) {
+	requesters.SetVerbose(verbose)
+	userCfg, err := requesters.ReadUserConfigFromFile(configPath)
+	check("[ sendRequest ]", err)
+
+	pPath := paramsPath
+	if len(pPath) == 0 {
+		pPath = configPath
+	}
+	reqCfg, err := requesters.ReadRequestConfigFromFile(pPath)
+	check("[ sendRequest ]", err)
+
+	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
+	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
+
+	response, err := requesters.Send(defaultURL, userCfg, reqCfg)
+	check("[ sendRequest ]", err)
+
+	writeToOutput(out, string(response))
+}
+
+func genSendConfigs(out io.Writer) {
+	reqConf, err := genDefaultConfig(requesters.RequestConfigJSON{})
+	check("[ genSendConfigs ]", err)
+
+	userConf, err := genDefaultConfig(requesters.UserConfigJSON{})
+	check("[ genSendConfigs ]", err)
+
+	writeToOutput(out, "Request config:\n")
+	writeToOutput(out, string(reqConf))
+	writeToOutput(out, "\n\n")
+
+	writeToOutput(out, "User config:\n")
+	writeToOutput(out, string(userConf)+"\n")
+}
+
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
@@ -175,5 +266,9 @@ func main() {
 		generateKeysPair(out)
 	case "gen_certificates":
 		generateCertificates(out)
+	case "send_request":
+		sendRequest(out)
+	case "gen_send_configs":
+		genSendConfigs(out)
 	}
 }

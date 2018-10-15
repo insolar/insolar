@@ -18,18 +18,25 @@ package storage
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
+	"github.com/insolar/insolar/log"
 )
+
+type keyval struct {
+	k []byte
+	v []byte
+}
 
 // TransactionManager is used to ensure persistent writes to disk.
 type TransactionManager struct {
-	db     *DB
-	txn    *badger.Txn
-	update bool
+	db        *DB
+	update    bool
+	locks     []*record.ID
+	txupdates map[string]keyval
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
@@ -39,17 +46,73 @@ func prefixkey(prefix byte, key []byte) []byte {
 	return k
 }
 
+func (m *TransactionManager) lockOnID(id *record.ID) {
+	m.db.idlocker.Lock(id)
+	m.locks = append(m.locks, id)
+}
+
+func (m *TransactionManager) releaseLocks() {
+	for _, id := range m.locks {
+		m.db.idlocker.Unlock(id)
+	}
+}
+
 // Commit tries to write transaction on disk. Returns error on fail.
 func (m *TransactionManager) Commit() error {
-	return m.txn.Commit(nil)
+	if len(m.txupdates) == 0 {
+		return nil
+	}
+	var err error
+	tx := m.db.db.NewTransaction(m.update)
+	defer tx.Discard()
+	for _, rec := range m.txupdates {
+		err = tx.Set(rec.k, rec.v)
+		if err != nil {
+			break
+		}
+	}
+	m.txupdates = nil
+	if err != nil {
+		return err
+	}
+	return tx.Commit(nil)
 }
 
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
+	m.releaseLocks()
 	if m.update {
 		m.db.dropWG.Done()
 	}
-	m.txn.Discard()
+}
+
+// GetRequest returns request record from BadgerDB by *record.Reference.
+//
+// It returns ErrNotFound if the DB does not contain the key.
+func (m *TransactionManager) GetRequest(id *record.ID) (record.Request, error) {
+	rec, err := m.GetRecord(id)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: return error if record is not a request.
+	req := rec.(record.Request)
+	return req, nil
+}
+
+// SetRequest stores request record in BadgerDB and returns *record.ID of new record.
+//
+// If record exists SetRequest just returns *record.ID without error.
+func (m *TransactionManager) SetRequest(req record.Request) (*record.ID, error) {
+	log.Debugf("SetRequest call")
+	id, err := m.SetRecord(req)
+	if err != nil && err != ErrOverride {
+		return nil, err
+	}
+	return id, nil
+}
+
+func (m *TransactionManager) set(key, val []byte) {
+	m.txupdates[string(key)] = keyval{k: key, v: val}
 }
 
 // GetRecord returns record from BadgerDB by *record.Reference.
@@ -57,15 +120,8 @@ func (m *TransactionManager) Discard() {
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(*id))
-	log.Debugf("Getting record %s", id)
-	item, err := m.txn.Get(k)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	buf, err := item.Value()
+	log.Debugf("GetRecord by id %+v (key=%x)", id, k)
+	buf, err := m.Get(k)
 	if err != nil {
 		return nil, err
 	}
@@ -76,45 +132,50 @@ func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 	return raw.ToRecord(), nil
 }
 
-// SetRecord stores record in BadgerDB and returns *record.Reference of new record.
+// SetRecord stores record in BadgerDB and returns *record.ID of new record.
 //
-// If record exists returns ErrOverride error.
+// If record exists returns both *record.ID and ErrOverride error.
+// If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	raw, err := record.EncodeToRaw(rec)
 	if err != nil {
 		return nil, err
 	}
+
+	var h []byte
+	if req, ok := rec.(record.Request); ok {
+		// we should calculate request hashes consistently with logicrunner.
+		h = hash.IDHashBytes(req.GetPayload())
+	} else {
+		h = raw.Hash()
+	}
 	id := record.ID{
 		Pulse: m.db.GetCurrentPulse(),
-		Hash:  raw.Hash(),
+		Hash:  h,
 	}
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
-	_, geterr := m.txn.Get(k)
+	geterr := m.db.db.View(func(tx *badger.Txn) error {
+		_, err := tx.Get(k)
+		return err
+	})
 	if geterr == nil {
-		return nil, ErrOverride
+		return &id, ErrOverride
 	}
 	if geterr != badger.ErrKeyNotFound {
-		return nil, geterr
+		return nil, ErrNotFound
 	}
 
-	err = m.txn.Set(k, record.MustEncodeRaw(raw))
-	if err != nil {
-		return nil, err
-	}
+	m.set(k, record.MustEncodeRaw(raw))
 	return &id, nil
 }
 
 // GetClassIndex fetches class lifeline's index.
-func (m *TransactionManager) GetClassIndex(id *record.ID) (*index.ClassLifeline, error) {
-	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
-	item, err := m.txn.Get(k)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
-		}
-		return nil, err
+func (m *TransactionManager) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline, error) {
+	if forupdate {
+		m.lockOnID(id)
 	}
-	buf, err := item.Value()
+	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
+	buf, err := m.Get(k)
 	if err != nil {
 		return nil, err
 	}
@@ -128,20 +189,17 @@ func (m *TransactionManager) SetClassIndex(id *record.ID, idx *index.ClassLifeli
 	if err != nil {
 		return err
 	}
-	return m.txn.Set(k, encoded)
+	m.set(k, encoded)
+	return nil
 }
 
 // GetObjectIndex fetches object lifeline index.
-func (m *TransactionManager) GetObjectIndex(id *record.ID) (*index.ObjectLifeline, error) {
-	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
-	item, err := m.txn.Get(k)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
-		}
-		return nil, err
+func (m *TransactionManager) GetObjectIndex(id *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
+	if forupdate {
+		m.lockOnID(id)
 	}
-	buf, err := item.Value()
+	k := prefixkey(scopeIDLifeline, record.ID2Bytes(*id))
+	buf, err := m.Get(k)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +216,8 @@ func (m *TransactionManager) SetObjectIndex(id *record.ID, idx *index.ObjectLife
 	if err != nil {
 		return err
 	}
-	return m.txn.Set(k, encoded)
+	m.set(k, encoded)
+	return nil
 }
 
 // GetEntropy returns entropy from storage for given pulse.
@@ -180,13 +239,19 @@ func (m *TransactionManager) GetEntropy(pulse core.PulseNumber) (*core.Entropy, 
 // GeneratedEntropy is used for calculating node roles.
 func (m *TransactionManager) SetEntropy(pulse core.PulseNumber, entropy core.Entropy) error {
 	k := prefixkey(scopeIDEntropy, pulse.Bytes())
-	return m.txn.Set(k, entropy[:])
+	m.set(k, entropy[:])
+	return nil
 }
 
 // Get returns value by key.
 func (m *TransactionManager) Get(key []byte) ([]byte, error) {
-	// var buf []byte
-	item, err := m.txn.Get(key)
+	if kv, ok := m.txupdates[string(key)]; ok {
+		return kv.v, nil
+	}
+
+	txn := m.db.db.NewTransaction(false)
+	defer txn.Discard()
+	item, err := txn.Get(key)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
 			return nil, ErrNotFound
@@ -198,5 +263,6 @@ func (m *TransactionManager) Get(key []byte) ([]byte, error) {
 
 // Set stores value by key.
 func (m *TransactionManager) Set(key, value []byte) error {
-	return m.txn.Set(key, value)
+	m.set(key, value)
+	return nil
 }

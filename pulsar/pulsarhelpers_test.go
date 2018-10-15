@@ -19,21 +19,28 @@ package pulsar
 import (
 	"testing"
 
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSingAndVerify(t *testing.T) {
-	assertObj := assert.New(t)
-	privateKey, err := ecdsa_helper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	publicKey, err := ecdsa_helper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
+	for i := 0; i < 20; i++ {
+		// Arrange
+		privateKey, err := ecdsahelper.GeneratePrivateKey()
+		assert.NoError(t, err)
+		publicKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
+		assert.NoError(t, err)
+		testData := (&StandardEntropyGenerator{}).GenerateEntropy()
 
-	signature, err := singData(privateKey, "This is the message to be signed and verified!")
-	assertObj.NoError(err)
+		signature, err := signData(privateKey, testData)
+		assert.NoError(t, err)
 
-	checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: "This is the message to be signed and verified!"})
+		// Act
+		checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: testData})
 
-	assertObj.Equal(true, checkSignature)
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, true, checkSignature)
+	}
+
 }

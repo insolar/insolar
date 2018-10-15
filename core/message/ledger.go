@@ -20,7 +20,19 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-type ledgerMessage struct{}
+type ledgerMessage struct {
+	sign []byte
+}
+
+// SetSign sets a signature to message.
+func (l *ledgerMessage) SetSign(sign []byte) {
+	l.sign = sign
+}
+
+// GetSign returns a sign.
+func (l *ledgerMessage) GetSign() []byte {
+	return l.sign
+}
 
 // GetCaller implementation of Message interface.
 func (ledgerMessage) GetCaller() *core.RecordRef {
@@ -41,7 +53,7 @@ type GetCode struct {
 
 // Type implementation of Message interface.
 func (e *GetCode) Type() core.MessageType {
-	return TypeGetCode
+	return core.TypeGetCode
 }
 
 // Target implementation of Message interface.
@@ -58,7 +70,7 @@ type GetClass struct {
 
 // Type implementation of Message interface.
 func (e *GetClass) Type() core.MessageType {
-	return TypeGetClass
+	return core.TypeGetClass
 }
 
 // Target implementation of Message interface.
@@ -75,7 +87,7 @@ type GetObject struct {
 
 // Type implementation of Message interface.
 func (e *GetObject) Type() core.MessageType {
-	return TypeGetObject
+	return core.TypeGetObject
 }
 
 // Target implementation of Message interface.
@@ -92,7 +104,7 @@ type GetDelegate struct {
 
 // Type implementation of Message interface.
 func (e *GetDelegate) Type() core.MessageType {
-	return TypeGetDelegate
+	return core.TypeGetDelegate
 }
 
 // Target implementation of Message interface.
@@ -110,7 +122,7 @@ type DeclareType struct {
 
 // Type implementation of Message interface.
 func (e *DeclareType) Type() core.MessageType {
-	return TypeDeclareType
+	return core.TypeDeclareType
 }
 
 // Target implementation of Message interface.
@@ -128,7 +140,7 @@ type DeployCode struct {
 
 // Type implementation of Message interface.
 func (e *DeployCode) Type() core.MessageType {
-	return TypeDeployCode
+	return core.TypeDeployCode
 }
 
 // Target implementation of Message interface.
@@ -141,11 +153,12 @@ type ActivateClass struct {
 	ledgerMessage
 	Domain  core.RecordRef
 	Request core.RecordRef
+	Code    core.RecordRef
 }
 
 // Type implementation of Message interface.
 func (e *ActivateClass) Type() core.MessageType {
-	return TypeActivateClass
+	return core.TypeActivateClass
 }
 
 // Target implementation of Message interface.
@@ -163,7 +176,7 @@ type DeactivateClass struct {
 
 // Type implementation of Message interface.
 func (e *DeactivateClass) Type() core.MessageType {
-	return TypeDeactivateClass
+	return core.TypeDeactivateClass
 }
 
 // Target implementation of Message interface.
@@ -183,7 +196,7 @@ type UpdateClass struct {
 
 // Type implementation of Message interface.
 func (e *UpdateClass) Type() core.MessageType {
-	return TypeUpdateClass
+	return core.TypeUpdateClass
 }
 
 // Target implementation of Message interface.
@@ -203,7 +216,7 @@ type ActivateObject struct {
 
 // Type implementation of Message interface.
 func (e *ActivateObject) Type() core.MessageType {
-	return TypeActivateObject
+	return core.TypeActivateObject
 }
 
 // Target implementation of Message interface.
@@ -223,7 +236,7 @@ type ActivateObjectDelegate struct {
 
 // Type implementation of Message interface.
 func (e *ActivateObjectDelegate) Type() core.MessageType {
-	return TypeActivateObjectDelegate
+	return core.TypeActivateObjectDelegate
 }
 
 // Target implementation of Message interface.
@@ -241,7 +254,7 @@ type DeactivateObject struct {
 
 // Type implementation of Message interface.
 func (e *DeactivateObject) Type() core.MessageType {
-	return TypeDeactivateObject
+	return core.TypeDeactivateObject
 }
 
 // Target implementation of Message interface.
@@ -260,7 +273,7 @@ type UpdateObject struct {
 
 // Type implementation of Message interface.
 func (e *UpdateObject) Type() core.MessageType {
-	return TypeUpdateObject
+	return core.TypeUpdateObject
 }
 
 // Target implementation of Message interface.
@@ -277,10 +290,44 @@ type RegisterChild struct {
 
 // Type implementation of Message interface.
 func (e *RegisterChild) Type() core.MessageType {
-	return TypeRegisterChild
+	return core.TypeRegisterChild
 }
 
 // Target implementation of Message interface.
 func (e *RegisterChild) Target() *core.RecordRef {
+	return &e.Parent
+}
+
+// RequestCall is a Ledger's message wrapping logicrunner's Call messages.
+type RequestCall struct {
+	core.Message
+}
+
+// TargetRole implementation of Message interface.
+func (*RequestCall) TargetRole() core.JetRole {
+	return core.RoleLightExecutor
+}
+
+// Type implementation of Message interface.
+func (*RequestCall) Type() core.MessageType {
+	return core.TypeRequestCall
+}
+
+// GetChildren retrieves a chunk of children references.
+type GetChildren struct {
+	ledgerMessage
+	Parent    core.RecordRef
+	FromChild *core.RecordID
+	FromPulse *core.PulseNumber
+	Amount    int
+}
+
+// Type implementation of Message interface.
+func (e *GetChildren) Type() core.MessageType {
+	return core.TypeGetChildren
+}
+
+// Target implementation of Message interface.
+func (e *GetChildren) Target() *core.RecordRef {
 	return &e.Parent
 }

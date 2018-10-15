@@ -70,7 +70,9 @@ type getSeedResponse struct {
 
 type isAuthorized struct {
 	baseResponse
-	IsAuthorized bool `json:"is_authorized"`
+	PublicKey     string `json:"public_key"`
+	Role          int    `json:"role"`
+	NetCoordCheck bool   `json:"netcoord_auth_success"`
 }
 
 type userInfo struct {
@@ -128,6 +130,17 @@ func getResponseBody(t *testing.T, postParams map[string]interface{}) []byte {
 	return body
 }
 
+func getSeed(t *testing.T) string {
+	body := getResponseBody(t, postParams{
+		"query_type": "get_seed",
+	})
+
+	getSeedResponse := &getSeedResponse{}
+	unmarshalResponse(t, body, getSeedResponse)
+
+	return getSeedResponse.Seed
+}
+
 func unmarshalResponse(t *testing.T, body []byte, response responseInterface) {
 	err := json.Unmarshal(body, &response)
 	assert.NoError(t, err)
@@ -138,15 +151,4 @@ func unmarshalResponseWithError(t *testing.T, body []byte, response responseInte
 	err := json.Unmarshal(body, &response)
 	assert.NoError(t, err)
 	assert.NotNil(t, response.getError())
-}
-
-func getSeed(t *testing.T) string {
-	body := getResponseBody(t, postParams{
-		"query_type": "get_seed",
-	})
-
-	getSeedResponse := &getSeedResponse{}
-	unmarshalResponse(t, body, getSeedResponse)
-
-	return getSeedResponse.Seed
 }

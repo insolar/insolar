@@ -45,7 +45,7 @@ func TestStore_SetRecord(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	rec := &record.LockUnlockRequest{}
+	rec := &record.CallRequest{}
 	gotRef, err := db.SetRecord(rec)
 	assert.Nil(t, err)
 
@@ -62,7 +62,7 @@ func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	idx, err := db.GetClassIndex(&record.ID{Pulse: 1})
+	idx, err := db.GetClassIndex(&record.ID{Pulse: 1}, false)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, idx)
 }
@@ -86,7 +86,7 @@ func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	err := db.SetClassIndex(&zeroID, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, err := db.GetClassIndex(&zeroID)
+	storedIndex, err := db.GetClassIndex(&zeroID, false)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }
@@ -96,7 +96,7 @@ func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	idx, err := db.GetObjectIndex(&record.ID{Hash: hexhash("5000")})
+	idx, err := db.GetObjectIndex(&record.ID{Hash: hexhash("5000")}, false)
 	assert.Equal(t, storage.ErrNotFound, err)
 	assert.Nil(t, idx)
 }
@@ -109,17 +109,12 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	idx := index.ObjectLifeline{
 		ClassRef:    referenceWithHashes("50", "60"),
 		LatestState: record.ID{Hash: hexhash("20")},
-		Children: []record.Reference{
-			referenceWithHashes("", "1"),
-			referenceWithHashes("", "2"),
-			referenceWithHashes("", "3"),
-		},
 	}
 	zeroid := record.ID{Hash: hexhash("")}
 	err := db.SetObjectIndex(&zeroid, &idx)
 	assert.Nil(t, err)
 
-	storedIndex, err := db.GetObjectIndex(&zeroid)
+	storedIndex, err := db.GetObjectIndex(&zeroid, false)
 	assert.NoError(t, err)
 	assert.Equal(t, *storedIndex, idx)
 }

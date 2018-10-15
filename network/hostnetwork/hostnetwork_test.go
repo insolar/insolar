@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
@@ -63,7 +64,12 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 	}
 
 	cascade1 := &cascade.Cascade{}
-	nodenet := nodenetwork.NewNodeNetwork(configuration.NewNodeNetwork())
+	cfg := configuration.NewConfiguration()
+	key, _ := ecdsa.GeneratePrivateKey()
+	keyStr, _ := ecdsa.ExportPrivateKey(key)
+	cfg.PrivateKey = keyStr
+	nodenet, err := nodenetwork.NewNodeNetwork(cfg)
+	assert.NoError(t, err)
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			network, err := NewHostNetwork(test.cfg, nodenet, cascade1)

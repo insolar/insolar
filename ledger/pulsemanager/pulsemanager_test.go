@@ -19,16 +19,20 @@ package pulsemanager_test
 import (
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/ledger/ledgertestutils"
+	"github.com/insolar/insolar/logicrunner"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPulseManager_Current(t *testing.T) {
-	ledger, cleaner := ledgertestutil.TmpLedger(t, "")
+	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
+		BuiltIn: &configuration.BuiltIn{},
+	})
+	assert.NoError(t, err)
+	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
 	defer cleaner()
-
-	var err error
 
 	pm := ledger.GetPulseManager()
 
