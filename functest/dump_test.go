@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,7 +57,7 @@ func TestDumpUser(t *testing.T) {
 func TestDumpUserWrongRef(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "dump_user_info",
-		"reference":  core.RandomRef(),
+		"reference":  testutils.RandomRef(),
 	})
 
 	response := &dumpUserInfoResponse{}

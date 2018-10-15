@@ -27,8 +27,8 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 
-	"github.com/insolar/insolar/ledger/ledgertestutil"
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/ledger/ledgertestutils"
+	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/pulsar"
 )
 
@@ -43,7 +43,7 @@ func TestBareHelloworld(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 
-	l, cleaner := ledgertestutil.TmpLedger(t, lr, "")
+	l, cleaner := ledgertestutils.TmpLedger(t, lr, "")
 	defer cleaner()
 	am := l.GetArtifactManager()
 	assert.NoError(t, err, "Initialize runner")
@@ -60,13 +60,13 @@ func TestBareHelloworld(t *testing.T) {
 
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
-	_, _, classRef, err := testutil.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
+	_, _, classRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
 	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: byteRecorRef(4)})
 	assert.NoError(t, err)
 
-	_, err = am.ActivateObject(domain, *contract, *classRef, *am.GenesisRef(), testutil.CBORMarshal(t, hw))
+	_, err = am.ActivateObject(domain, *contract, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 
@@ -74,12 +74,12 @@ func TestBareHelloworld(t *testing.T) {
 	resp, err := lr.Execute(&message.CallMethod{
 		ObjectRef: *contract,
 		Method:    "Greet",
-		Arguments: testutil.CBORMarshal(t, []interface{}{"Vany"}),
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	})
 	assert.NoError(t, err, "contract call")
 
-	d := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
-	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	d := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
@@ -87,12 +87,12 @@ func TestBareHelloworld(t *testing.T) {
 	resp, err = lr.Execute(&message.CallMethod{
 		ObjectRef: *contract,
 		Method:    "Greet",
-		Arguments: testutil.CBORMarshal(t, []interface{}{"Ruz"}),
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	})
 	assert.NoError(t, err, "contract call")
 
-	d = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
-	r = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	d = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
+	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{"Hello Ruz's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(2)}), d)
 }

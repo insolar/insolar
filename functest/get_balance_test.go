@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,7 +42,7 @@ func TestGetBalance(t *testing.T) {
 func TestGetBalanceWrongRef(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "get_balance",
-		"reference":  core.RandomRef(),
+		"reference":  testutils.RandomRef(),
 	})
 
 	response := &getBalanceResponse{}

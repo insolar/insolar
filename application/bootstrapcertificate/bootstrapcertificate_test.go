@@ -23,14 +23,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 type key struct {
-	Private_key string `json:"private_key"`
-	Public_key  string `json:"public_key"`
+	PrivateKey string `json:"private_key"`
+	PublicKey  string `json:"public_key"`
 }
 
 func TestNewCertificateFromFile(t *testing.T) {
@@ -41,7 +41,7 @@ func TestNewCertificateFromFile(t *testing.T) {
 }
 
 func TestNewCertificateFromFields_DifferentFieldsLength(t *testing.T) {
-	privKeys := []*ecdsa.PrivateKey{}
+	var privKeys []*ecdsa.PrivateKey
 	privKeys = append(privKeys, nil)
 	privKeys = append(privKeys, nil)
 
@@ -52,7 +52,7 @@ func TestNewCertificateFromFields_DifferentFieldsLength(t *testing.T) {
 }
 
 func TestNewCertificateFromFields(t *testing.T) {
-	privKeys := []*ecdsa.PrivateKey{}
+	var privKeys []*ecdsa.PrivateKey
 	records := CertRecords{}
 	for i := 0; i < 10; i++ {
 		key, err := ecdsahelper.GeneratePrivateKey()
@@ -61,7 +61,7 @@ func TestNewCertificateFromFields(t *testing.T) {
 
 		pubKey, err := ecdsahelper.ExportPublicKey(&key.PublicKey)
 		assert.NoError(t, err)
-		records = append(records, Record{NodeRef: core.RandomRef().String(), PublicKey: pubKey})
+		records = append(records, Record{NodeRef: testutils.RandomRef().String(), PublicKey: pubKey})
 	}
 
 	cert, err := NewCertificateFromFields(records, privKeys)
@@ -105,7 +105,7 @@ func readPrivateKeys() ([]*ecdsa.PrivateKey, error) {
 	privateKeys := []*ecdsa.PrivateKey{}
 
 	for i := 0; i < len(keysData); i++ {
-		privKey, err := ecdsahelper.ImportPrivateKey(keysData[i].Private_key)
+		privKey, err := ecdsahelper.ImportPrivateKey(keysData[i].PrivateKey)
 		if err != nil {
 			return nil, err
 		}
