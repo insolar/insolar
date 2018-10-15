@@ -157,11 +157,10 @@ func (e *ExecutorResults) SetSign(sign []byte) {
 }
 
 type IValidateCaseBind interface {
+	core.Message
 	GetReference() core.RecordRef
 	GetCaseRecords() []core.CaseRecord
 	GetPulse() core.Pulse
-	GetSign() []byte
-	SetSign(sign []byte)
 }
 
 type ValidateCaseBind struct {
@@ -179,18 +178,15 @@ func (e *ValidateCaseBind) TargetRole() core.JetRole {
 	return core.RoleVirtualValidator
 }
 
-// TODO change after changing pulsar
 func (e *ValidateCaseBind) Target() *core.RecordRef {
 	return &e.RecordRef
 }
 
 // TODO change after changing pulsar
-// need to implement core.Message interface
 func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
 	return &e.RecordRef // TODO actually it's not right. There is no caller.
 }
 
-// TODO change after changing pulsar
 func (e *ValidateCaseBind) GetReference() core.RecordRef {
 	return e.RecordRef
 }
@@ -231,7 +227,6 @@ func (e *ValidationResults) Target() *core.RecordRef {
 }
 
 // TODO change after changing pulsar
-// need to implement core.Message interface
 func (e *ValidationResults) GetCaller() *core.RecordRef {
 	return &e.RecordRef // TODO actually it's not right. There is no caller.
 }
