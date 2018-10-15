@@ -45,18 +45,9 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 	return logger, nil
 }
 
-// SetLevel lets log level for global logger
-func SetLevel(level string) error {
-	return globalLogger.SetLevel(level)
-}
-
-// GetLevel lets log level for global logger
-func GetLevel() string {
-	return globalLogger.GetLevel()
-}
-
-// globalLogger creates global logger with correct skipCallNumber
-var globalLogger = func() core.Logger {
+// GlobalLogger creates global logger with correct skipCallNumber
+// TODO: make it private again
+var GlobalLogger = func() core.Logger {
 	logger := newLogrusAdapter()
 	logger.skipCallNumber = defaultSkipCallNumber + 1
 	holder := configuration.NewHolder().MustInit(false)
@@ -66,97 +57,107 @@ var globalLogger = func() core.Logger {
 	return logger
 }()
 
+// SetLevel lets log level for global logger
+func SetLevel(level string) error {
+	return GlobalLogger.SetLevel(level)
+}
+
+// GetLevel lets log level for global logger
+func GetLevel() string {
+	return GlobalLogger.GetLevel()
+}
+
 // Debug logs a message at level Debug to the global logger.
 func Debug(args ...interface{}) {
-	globalLogger.Debug(args...)
+	GlobalLogger.Debug(args...)
 }
 
 // Debugln logs a message at level Debug to the global logger.
 func Debugln(args ...interface{}) {
-	globalLogger.Debugln(args...)
+	GlobalLogger.Debugln(args...)
 }
 
 // Debugf logs a message at level Debug to the global logger.
 func Debugf(format string, args ...interface{}) {
-	globalLogger.Debugf(format, args...)
+	GlobalLogger.Debugf(format, args...)
 }
 
 // Info logs a message at level Info to the global logger.
 func Info(args ...interface{}) {
-	globalLogger.Info(args...)
+	GlobalLogger.Info(args...)
 }
 
 // Infoln logs a message at level Info to the global logger.
 func Infoln(args ...interface{}) {
-	globalLogger.Infoln(args...)
+	GlobalLogger.Infoln(args...)
 }
 
 // Infof logs a message at level Info to the global logger.
 func Infof(format string, args ...interface{}) {
-	globalLogger.Infof(format, args...)
+	GlobalLogger.Infof(format, args...)
 }
 
 // Warn logs a message at level Warn to the global logger.
 func Warn(args ...interface{}) {
-	globalLogger.Warn(args...)
+	GlobalLogger.Warn(args...)
 }
 
 // Warnln logs a message at level Warn to the global logger.
 func Warnln(args ...interface{}) {
-	globalLogger.Warnln(args...)
+	GlobalLogger.Warnln(args...)
 }
 
 // Warnf logs a message at level Warn to the global logger.
 func Warnf(format string, args ...interface{}) {
-	globalLogger.Warnf(format, args...)
+	GlobalLogger.Warnf(format, args...)
 }
 
 // Error logs a message at level Error to the global logger.
 func Error(args ...interface{}) {
-	globalLogger.Error(args...)
+	GlobalLogger.Error(args...)
 }
 
 // Errorln logs a message at level Error to the global logger.
 func Errorln(args ...interface{}) {
-	globalLogger.Errorln(args...)
+	GlobalLogger.Errorln(args...)
 }
 
 // Errorf logs a message at level Error to the global logger.
 func Errorf(format string, args ...interface{}) {
-	globalLogger.Errorf(format, args...)
+	GlobalLogger.Errorf(format, args...)
 }
 
 // Fatal logs a message at level Fatal to the global logger.
 func Fatal(args ...interface{}) {
-	globalLogger.Fatal(args...)
+	GlobalLogger.Fatal(args...)
 }
 
 // Fatalln logs a message at level Fatal to the global logger.
 func Fatalln(args ...interface{}) {
-	globalLogger.Fatalln(args...)
+	GlobalLogger.Fatalln(args...)
 }
 
 // Fatalf logs a message at level Fatal to the global logger.
 func Fatalf(format string, args ...interface{}) {
-	globalLogger.Fatalf(format, args...)
+	GlobalLogger.Fatalf(format, args...)
 }
 
 // Panic logs a message at level Panic to the global logger.
 func Panic(args ...interface{}) {
-	globalLogger.Panic(args...)
+	GlobalLogger.Panic(args...)
 }
 
 // Panicln logs a message at level Panic to the global logger.
 func Panicln(args ...interface{}) {
-	globalLogger.Panicln(args...)
+	GlobalLogger.Panicln(args...)
 }
 
 // Panicf logs a message at level Panic to the global logger.
 func Panicf(format string, args ...interface{}) {
-	globalLogger.Panicf(format, args...)
+	GlobalLogger.Panicf(format, args...)
 }
 
 // SetOutput sets the output destination for the logger.
 func SetOutput(w io.Writer) {
-	globalLogger.SetOutput(w)
+	GlobalLogger.SetOutput(w)
 }
