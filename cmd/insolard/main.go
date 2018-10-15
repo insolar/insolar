@@ -49,10 +49,14 @@ type componentManager struct {
 func (cm *componentManager) linkAll() {
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
+		componentName := v.Field(i).String()
+		log.Infof("Starting component `%s` ...", componentName)
 		err := v.Field(i).Interface().(core.Component).Start(cm.components)
 		if err != nil {
-			log.Fatalf("failed to start component %s : %s", v.Field(i).String(), err.Error())
+			log.Fatalf("failed to start component %s : %s", componentName, err.Error())
 		}
+
+		log.Infof("Component `%s` successfully started", componentName)
 	}
 }
 
@@ -106,7 +110,7 @@ func main() {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	cm := componentManager{}
-	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration.Host, cfgHolder.Configuration.Node)
+	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("failed to start Network: ", err.Error())
 	}

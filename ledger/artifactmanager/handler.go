@@ -130,6 +130,9 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 
 	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State)
 	if err != nil {
+		if err == ErrObjectDeactivated {
+			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+		}
 		return nil, err
 	}
 
@@ -469,7 +472,7 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 		}
 
 		// append new record parent's children
-		parentIdx, err := tx.GetObjectIndex(&parentRef.Record)
+		parentIdx, err := tx.GetObjectIndex(&parentRef.Record, true)
 		if err != nil {
 			if err == ErrNotFound {
 				parentIdx = &index.ObjectLifeline{}
@@ -541,7 +544,7 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 		}
 
 		// append new record parent's delegates
-		parentIdx, err := tx.GetObjectIndex(&parentRef.Record)
+		parentIdx, err := tx.GetObjectIndex(&parentRef.Record, true)
 		if err != nil {
 			return errors.Wrap(err, "inconsistent index")
 		}
@@ -708,7 +711,7 @@ func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
 func getClass(
 	s storage.Store, head *record.ID, state *core.RecordRef,
 ) (*index.ClassLifeline, *core.RecordID, record.ClassState, error) {
-	idx, err := s.GetClassIndex(head)
+	idx, err := s.GetClassIndex(head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
@@ -738,7 +741,7 @@ func getClass(
 func getObject(
 	s storage.Store, head *record.ID, state *core.RecordRef,
 ) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
-	idx, err := s.GetObjectIndex(head)
+	idx, err := s.GetObjectIndex(head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}

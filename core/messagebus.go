@@ -36,6 +36,10 @@ type Message interface {
 	TargetRole() JetRole
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
+	// SetSign sets a signature to message.
+	SetSign([]byte)
+	// GetSign returns a sign.
+	GetSign() []byte
 }
 
 // Reply for an `Message`
@@ -67,6 +71,10 @@ const (
 	TypeCallMethod MessageType = iota
 	// TypeCallConstructor is a message for calling constructor and obtain its reply
 	TypeCallConstructor
+	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
+	TypeExecutorResults
+	// TypeValidateCaseBind message that goes to Validators to redo all registered in CaseBind actions
+	TypeValidateCaseBind
 
 	// Ledger
 

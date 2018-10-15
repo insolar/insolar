@@ -39,16 +39,16 @@ func TestBaseConsensus_exchangeDataWithOtherParticipants(t *testing.T) {
 		allParticipants: []Participant{participant2, self, participant3, participant5, participant4},
 		communicator:    &testCommunicator{self: self},
 		holder:          &mockUnsyncHolder{},
-		results:         make(exchangeResults, 0),
+		results:         newExchangeResults(5),
 	}
 
 	ctx := context.Background()
 	c.exchangeDataWithOtherParticipants(ctx)
 
-	assert.Equal(t, 1, len(c.results[participant2.GetID()]))
-	assert.Equal(t, newActiveNode(12, 0), c.results[participant2.GetID()][0])
+	assert.Equal(t, 1, len(c.results.data[participant2.GetID()]))
+	assert.Equal(t, newActiveNode(12, 0), c.results.data[participant2.GetID()][0])
 
-	assert.Equal(t, 2, len(c.results[participant5.GetID()]))
-	assert.Equal(t, newActiveNode(15, 0), c.results[participant5.GetID()][0])
-	assert.Equal(t, newActiveNode(25, 0), c.results[participant5.GetID()][1])
+	assert.Equal(t, 2, len(c.results.data[participant5.GetID()]))
+	assert.Equal(t, newActiveNode(15, 0), c.results.data[participant5.GetID()][0])
+	assert.Equal(t, newActiveNode(25, 0), c.results.data[participant5.GetID()][1])
 }

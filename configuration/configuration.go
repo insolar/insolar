@@ -38,6 +38,7 @@ type Configuration struct {
 	APIRunner   APIRunner
 	Pulsar      Pulsar
 	Bootstrap   Bootstrap
+	PrivateKey  string
 	Updater     Updater
 }
 
@@ -61,6 +62,7 @@ func NewConfiguration() Configuration {
 		Pulsar:      NewPulsar(),
 		Bootstrap:   NewBootstrap(),
 		Updater:     NewUpdater(),
+		PrivateKey:  "",
 	}
 
 	return cfg

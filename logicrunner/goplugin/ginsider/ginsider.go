@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"plugin"
+	"reflect"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -315,6 +316,27 @@ func (gi *GoInsider) GetDelegate(object, ofType core.RecordRef) (core.RecordRef,
 	return res.Object, nil
 }
 
+// DeactivateObject ...
+func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
+	client, err := gi.Upstream()
+	if err != nil {
+		return err
+	}
+
+	req := rpctypes.UpDeactivateObjectReq{
+		UpBaseReq: MakeUpBaseReq(),
+		Object:    object,
+	}
+
+	res := rpctypes.UpDeactivateObjectResp{}
+	err = client.Call("RPC.DeactivateObject", req, &res)
+	if err != nil {
+		return errors.Wrap(err, "on calling main API")
+	}
+
+	return nil
+}
+
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
@@ -331,7 +353,7 @@ func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 
 // MakeErrorSerializable converts errors satisfying error interface to foundation.Error
 func (gi *GoInsider) MakeErrorSerializable(e error) error {
-	if e == nil {
+	if e == nil || e == (*foundation.Error)(nil) || reflect.ValueOf(e).IsNil() {
 		return nil
 	}
 	return &foundation.Error{S: e.Error()}

@@ -218,12 +218,10 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
 	var res []map[string]interface{}
 	for _, fun := range list {
-		argsInit, argsList := generateZeroListOfTypes(pf, "args", fun.Type.Params)
-
 		info := map[string]interface{}{
 			"Name":                fun.Name.Name,
-			"ArgumentsZeroList":   argsInit,
-			"Arguments":           argsList,
+			"ArgumentsZeroList":   generateZeroListOfTypes(pf, "args", fun.Type.Params),
+			"Arguments":           numberedVars(fun.Type.Params, "args"),
 			"Results":             numberedVars(fun.Type.Results, "ret"),
 			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, "error"),
 		}
@@ -265,14 +263,12 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]st
 	var res []map[string]string
 
 	for _, fun := range list {
-		resInit, resList := generateZeroListOfTypes(pf, "resList", fun.Type.Results)
-
 		info := map[string]string{
 			"Name":           fun.Name.Name,
 			"Arguments":      genFieldList(pf, fun.Type.Params, true),
 			"InitArgs":       generateInitArguments(fun.Type.Params),
-			"ResultZeroList": resInit,
-			"Results":        resList,
+			"ResultZeroList": generateZeroListOfTypes(pf, "ret", fun.Type.Results),
+			"Results":        numberedVars(fun.Type.Results, "ret"),
 			"ResultsTypes":   genFieldList(pf, fun.Type.Results, false),
 		}
 		res = append(res, info)
@@ -439,12 +435,12 @@ func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[str
 	}
 }
 
-func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldList) (string, string) {
-	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
-
-	if list == nil {
-		return text, ""
+func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldList) string {
+	if list == nil || list.NumFields() == 0 {
+		return fmt.Sprintf("%s := []interface{}{}\n", name)
 	}
+
+	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
 
 	for i, arg := range list.List {
 		tname := parsed.codeOfNode(arg.Type)
@@ -452,19 +448,11 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 			tname = "*foundation.Error"
 		}
 
-		text += fmt.Sprintf("\tvar a%d %s\n", i, tname)
-		text += fmt.Sprintf("\t%s[%d] = a%d\n", name, i, i)
+		text += fmt.Sprintf("\tvar %s%d %s\n", name, i, tname)
+		text += fmt.Sprintf("\t%s[%d] = &%s%d\n", name, i, name, i)
 	}
 
-	listCode := ""
-	for i, arg := range list.List {
-		if i > 0 {
-			listCode += ", "
-		}
-		listCode += fmt.Sprintf("%s[%d].(%s)", name, i, parsed.codeOfNode(arg.Type))
-	}
-
-	return text, listCode
+	return text
 }
 
 func genFieldList(parsed *ParsedFile, params *ast.FieldList, withNames bool) string {
