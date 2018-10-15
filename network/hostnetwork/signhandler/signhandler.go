@@ -14,29 +14,18 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+package signhandler
 
 import (
-	"testing"
+	"crypto/ecdsa"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 )
 
-func TestPulseManager_Current(t *testing.T) {
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
-	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
-	defer cleaner()
-
-	pm := ledger.GetPulseManager()
-
-	pulse, err := pm.Current()
-	assert.NoError(t, err)
-	assert.Equal(t, *core.GenesisPulse, *pulse)
+type SignHandler interface {
+	AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef)
+	SignedNonceIsCorrect(coordinator core.NetworkCoordinator, hostID id.ID, signedNonce []byte) bool
+	SignNonce(nonce []byte) ([]byte, error)
+	GetPrivateKey() *ecdsa.PrivateKey
 }

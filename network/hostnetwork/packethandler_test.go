@@ -31,8 +31,10 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
+	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -73,6 +75,17 @@ func (fac *mockNetworkCommonFacade) GetConsensus() consensus.Processor {
 }
 
 func (fac *mockNetworkCommonFacade) SetConsensus(consensus.Processor) {
+}
+
+func (fac *mockNetworkCommonFacade) GetNetworkCoordinator() core.NetworkCoordinator {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) SetNetworkCoordinator(core.NetworkCoordinator) {
+}
+
+func (fac *mockNetworkCommonFacade) GetSignHandler() signhandler.SignHandler {
+	return nil
 }
 
 type mockHostHandler struct {
@@ -133,7 +146,7 @@ func (hh *mockHostHandler) GetOuterHostsCount() int {
 }
 
 func (hh *mockHostHandler) GetNodeID() core.RecordRef {
-	return core.RandomRef()
+	return testutils.RandomRef()
 }
 
 func (hh *mockHostHandler) ConfirmNodeRole(role string) bool {
@@ -154,6 +167,10 @@ func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
 
 func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	return nil
+}
+
+func (hh *mockHostHandler) SetNodeID(nodeID core.RecordRef) {
+
 }
 
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
@@ -301,6 +318,18 @@ func (hh *mockHostHandler) GetExpirationTime(ctx hosthandler.Context, key []byte
 	return time.Now()
 }
 
+func (hh *mockHostHandler) AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef) {
+
+}
+
+func (hh *mockHostHandler) RemoveUncheckedNode(hostID id.ID) {
+
+}
+
+func (hh *mockHostHandler) UncheckedNodeExist(hostID id.ID, nonce []byte) bool {
+	return true
+}
+
 func (hh *mockHostHandler) KeyIsReceived(targetID string) ([]byte, bool) {
 	if hh.ReceivedKey == targetID {
 		return []byte(targetID), true
@@ -324,9 +353,8 @@ func (hh *mockHostHandler) GetOriginHost() *host.Origin {
 	return origin
 }
 
-// SetSignChecker sets a func which checks a sign.
-func (hh *mockHostHandler) SetSignChecker(func(msg core.Message) bool) {
-
+func (hh *mockHostHandler) Sign(nonce []byte) []byte {
+	return nil
 }
 
 func mockSenderReceiver() (sender, receiver *host.Host) {

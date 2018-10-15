@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +38,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Errorln(err.Error())
 	}
-	if runnerbin, icc, err = testutil.Build(); err != nil {
+	if runnerbin, icc, err = goplugintestutils.Build(); err != nil {
 		fmt.Println("Logic runner build failed, skip tests:", err.Error())
 		os.Exit(1)
 	}
@@ -114,8 +114,8 @@ func TestCompilingRealSmartContracts(t *testing.T) {
 		contracts[name] = string(code)
 	}
 
-	am := testutil.NewTestArtifactManager()
-	cb := testutil.NewContractBuilder(am, icc)
+	am := goplugintestutils.NewTestArtifactManager()
+	cb := goplugintestutils.NewContractBuilder(am, icc)
 	defer cb.Clean()
 	err = cb.Build(contracts)
 	assert.NoError(t, err)

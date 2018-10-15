@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
+	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 )
@@ -44,19 +45,24 @@ type NetworkCommonFacade interface {
 	SetPulseManager(manager core.PulseManager)
 	SetConsensus(insolarConsensus consensus.Processor)
 	GetConsensus() consensus.Processor
+	SetNetworkCoordinator(coordinator core.NetworkCoordinator)
+	GetNetworkCoordinator() core.NetworkCoordinator
+	GetSignHandler() signhandler.SignHandler
 }
 
 // commonFacade implements a NetworkCommonFacade.
 type commonFacade struct {
-	rpcPtr  rpc.RPC
-	cascade *cascade.Cascade
-	pm      core.PulseManager
-	ic      consensus.Processor
+	rpcPtr      rpc.RPC
+	cascade     *cascade.Cascade
+	pm          core.PulseManager
+	ic          consensus.Processor
+	coordinator core.NetworkCoordinator
+	signHandler signhandler.SignHandler
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
-func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) NetworkCommonFacade {
-	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil}
+func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade, signH signhandler.SignHandler) NetworkCommonFacade {
+	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil, signHandler: signH}
 }
 
 // GetRPC return an RPC pointer.
@@ -87,19 +93,29 @@ func (fac *commonFacade) GetConsensus() consensus.Processor {
 	return fac.ic
 }
 
+func (fac *commonFacade) SetNetworkCoordinator(coordinator core.NetworkCoordinator) {
+	fac.coordinator = coordinator
+}
+
+func (fac *commonFacade) GetNetworkCoordinator() core.NetworkCoordinator {
+	return fac.coordinator
+}
+
+func (fac *commonFacade) GetSignHandler() signhandler.SignHandler {
+	return fac.signHandler
+}
+
 // HostHandler is an interface which uses for host network implementation.
 type HostHandler interface {
 	Disconnect()
 	Listen() error
 	ObtainIP() error
 	Bootstrap() error
-	GetActiveNodes() error
-	GetHostsFromBootstrap()
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
-	StoreRetrieve(key store.Key) ([]byte, bool)
 	HtFromCtx(ctx Context) *routing.HashTable
+	StoreRetrieve(key store.Key) ([]byte, bool)
 	EqualAuthSentKey(targetID string, key []byte) bool
 	SendRequest(packet *packet.Packet) (transport.Future, error)
 	FindHost(ctx Context, targetID string) (*host.Host, bool, error)
@@ -127,9 +143,10 @@ type HostHandler interface {
 
 	SetHighKnownHostID(id string)
 	SetOuterHostsCount(hosts int)
-	SetSignChecker(func(msg core.Message) bool)
+	SetNodeID(nodeID core.RecordRef)
 	SetAuthStatus(targetID string, status bool)
 
+	GetHostsFromBootstrap()
 	GetProxyHostsCount() int
 	GetOuterHostsCount() int
 	GetNodeID() core.RecordRef

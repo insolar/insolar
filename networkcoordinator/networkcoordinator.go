@@ -111,3 +111,8 @@ func (nc *NetworkCoordinator) RegisterNode(publicKey string, role string) (*core
 
 	return nodeRef, nil
 }
+
+// WriteActiveNodes write active nodes to ledger
+func (nc *NetworkCoordinator) WriteActiveNodes(number core.PulseNumber, activeNodes []*core.ActiveNode) error {
+	return errors.New("not implemented")
+}
