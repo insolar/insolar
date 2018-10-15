@@ -121,6 +121,9 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	if err := messageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
 		return err
 	}
+	if err := messageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -182,6 +185,7 @@ func (lr *LogicRunner) SetContext(ref Ref, ec ExecutionContext) bool {
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
+	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
@@ -220,22 +224,37 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	case *message.CallConstructor:
 		re, err := lr.executeConstructorCall(ctx, m, vb)
 		return re, err
-	case *message.ValidateCaseBind:
-		// TODO testBus goes here, send test bus to ValidateCaseBind
-		return nil, nil
-	case *message.ExecutorResults:
-		// TODO testBus goes here, send test bus to ExecutorResults
-		return nil, nil
+
 	default:
 		panic("Unknown e type")
 	}
 }
 
 func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
+	msg, ok := inmsg.(*message.ValidateCaseBind)
+	if !ok {
+		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
+	}
+
+	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	_, err := lr.MessageBus.Send(&message.ValidationResults{
+		RecordRef:        msg.GetReference(),
+		PassedStepsCount: passedStepsCount,
+		Error:            validationError,
+	})
+
+	return nil, err
+}
+
+func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply, error) {
+	// Handle all validators Request
+	// Do some staff if request don't come for a long time
+	// Compare results of different validators and previous Executor
 	return nil, nil
 }
 
 func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
+	// Coordinate this with ProcessValidationResults
 	return nil, nil
 }
 
@@ -428,7 +447,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, records := range objectsRecords {
-		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records})
+		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse})
 		if err != nil {
 			panic("Error while sending caseBind data to validators: " + err.Error())
 		}
