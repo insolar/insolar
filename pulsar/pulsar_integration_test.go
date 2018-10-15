@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger"
-	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -97,7 +97,7 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 	})
 	assert.NoError(t, err)
 
-	tempLedger, cleaner := ledgertestutil.TmpLedger(t, lr, "")
+	tempLedger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
 	nodeConfig := configuration.NewConfiguration()
 	_, key, _ := generatePrivateAndConvertPublic(t)
 	nodeConfig.PrivateKey = key
