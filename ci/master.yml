@@ -30,6 +30,9 @@ jobs:
   plan:
   - get: master
     trigger: true
+  - get: builder
+    params: 
+      save: true
   - task: unit
     timeout: 10m
     config:
