@@ -101,7 +101,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 // Bootstrap creates initial records in storage.
 func (db *DB) Bootstrap() error {
 	getGenesisRef := func() (*record.Reference, error) {
-		rootRefBuff, err := db.Get([]byte(rootKey))
+		rootRefBuff, err := db.Get(prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
 			return nil, err
 		}
@@ -112,6 +112,19 @@ func (db *DB) Bootstrap() error {
 	}
 
 	createGenesisRecord := func() (*record.Reference, error) {
+		var err error
+		err = db.AddPulse(core.Pulse{
+			PulseNumber: core.GenesisPulse.PulseNumber,
+			Entropy:     core.GenesisPulse.Entropy,
+		})
+		if err != nil {
+			return nil, err
+		}
+		err = db.SetDrop(&jetdrop.JetDrop{})
+		if err != nil {
+			return nil, err
+		}
+
 		genesisID, err := db.SetRecord(&record.GenesisRecord{})
 		if err != nil {
 			return nil, err
@@ -121,18 +134,8 @@ func (db *DB) Bootstrap() error {
 			return nil, err
 		}
 
-		db.SetCurrentPulse(core.GenesisPulse.PulseNumber)
-		err = db.SetEntropy(core.GenesisPulse.PulseNumber, core.GenesisPulse.Entropy)
-		if err != nil {
-			return nil, err
-		}
-		_, err = db.SetDrop(core.GenesisPulse.PulseNumber, &jetdrop.JetDrop{})
-		if err != nil {
-			return nil, err
-		}
-
 		genesisRef := record.Reference{Domain: *genesisID, Record: *genesisID}
-		return &genesisRef, db.Set([]byte(rootKey), genesisRef.CoreRef()[:])
+		return &genesisRef, db.Set(prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef.CoreRef()[:])
 	}
 
 	var err error
