@@ -35,6 +35,15 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
+type Ref = core.RecordRef
+
+// Context of one contract execution
+type ExecutionContext struct {
+	Pending bool           // execution moved from previous pulse
+	TraceID []byte         // TraceID
+	Queue   []core.Message // queued requests
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
@@ -42,11 +51,13 @@ type LogicRunner struct {
 	MessageBus      core.MessageBus
 	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
+	context         map[Ref]ExecutionContext // if object exists, we are validating or executing it right now
+	contextMutex    sync.Mutex
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
 	caseBindMutex        sync.Mutex
-	caseBindReplays      map[core.RecordRef]core.CaseBindReplay
+	caseBindReplays      map[Ref]core.CaseBindReplay
 	caseBindReplaysMutex sync.Mutex
 	sock                 net.Listener
 }
@@ -59,8 +70,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
-		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[core.RecordRef][]core.CaseRecord)},
-		caseBindReplays: make(map[core.RecordRef]core.CaseBindReplay),
+		context:         make(map[Ref]ExecutionContext),
+		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[Ref][]core.CaseRecord)},
+		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
 	return &res, nil
 }
@@ -154,6 +166,23 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
+func (lr *LogicRunner) GetContext(ref Ref) (ExecutionContext, bool) {
+	lr.contextMutex.Lock()
+	defer lr.contextMutex.Unlock()
+	ret, ok := lr.context[ref]
+	return ret, ok
+}
+
+func (lr *LogicRunner) SetContext(ref Ref, ec ExecutionContext) bool {
+	lr.contextMutex.Lock()
+	defer lr.contextMutex.Unlock()
+	if _, ok := lr.context[ref]; ok {
+		return false
+	}
+	lr.context[ref] = ec
+	return true
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
@@ -182,7 +211,14 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
+		ec := ExecutionContext{}
+		if !lr.SetContext(ref, ec) {
+			return nil, errors.New("Object already exeuting")
+		}
 		re, err := lr.executeMethodCall(ctx, m, vb)
+		lr.contextMutex.Lock()
+		defer lr.contextMutex.Unlock()
+		delete(lr.context, ref)
 		return re, err
 
 	case *message.CallConstructor:

@@ -66,7 +66,9 @@ func (p *Pulse) PulseDuration() time.Duration {
 // All pulsar send to the chosen pulsar their confirmations
 // Every node in the network can verify the signatures
 type PulseSenderConfirmation struct {
+	PulseNumber     PulseNumber
 	ChosenPublicKey string
+	Entropy         Entropy
 	Signature       []byte
 }
 
