@@ -17,7 +17,10 @@
 package artifactmanager
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -64,6 +67,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 func (h *MessageHandler) handleRegisterRequest(
 	genericMsg core.Message,
 ) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.RequestCall)
 	requestRec := &record.CallRequest{
 		Payload: message.MustSerializeBytes(msg.Message),
@@ -72,13 +76,19 @@ func (h *MessageHandler) handleRegisterRequest(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set request record")
 	}
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleRegisterRequest: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
+	startGetRecord := time.Now()
 	rec, err := h.db.GetRecord(&codeRef.Record)
+	sinceGetRecord := time.Since(startGetRecord)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve code record")
 	}
@@ -95,11 +105,14 @@ func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, err
 		Code:        code,
 		MachineType: mt,
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleGetCode: time inside - %s (time inside GetRecord func - %s)", time.Since(start), sinceGetRecord)
+	}
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetClass)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -120,11 +133,14 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 		State: *stateID,
 		Code:  code,
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long (more than second): handleGetClass: time inside - %s", time.Since(start))
+	}
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -142,11 +158,14 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 		Class:  *idx.ClassRef.CoreRef(),
 		Memory: state.GetMemory(),
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleGetObject: time inside - %s", time.Since(start))
+	}
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -163,11 +182,14 @@ func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply,
 	rep := reply.Delegate{
 		Head: *delegateRef.CoreRef(),
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleGetDelegate: time inside - %s", time.Since(start))
+	}
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
 
@@ -215,11 +237,14 @@ func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply,
 
 		refs = append(refs, *child.Ref.CoreRef())
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleGetChildren: time inside - %s", time.Since(start))
+	}
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
 func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeclareType)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -240,11 +265,14 @@ func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply,
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleDeclareType: time inside - %s", time.Since(start))
+	}
 	return &reply.Reference{Ref: *getReference(&msg.Request, typeID)}, nil
 }
 
 func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeployCode)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -265,10 +293,14 @@ func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleDeployCode: time inside - %s", time.Since(start))
+	}
 	return &reply.Reference{Ref: *getReference(&msg.Request, codeID)}, nil
 }
 
 func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -307,11 +339,14 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 	if err != nil {
 		return nil, err
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleActivateClass: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeactivateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -355,11 +390,14 @@ func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Re
 	if err != nil {
 		return nil, err
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleDeactivateClass: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.UpdateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -419,11 +457,14 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 	if err != nil {
 		return nil, err
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleUpdateClass: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -491,11 +532,14 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 	if err != nil {
 		return nil, err
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleActivateObject: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateObjectDelegate)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -563,11 +607,14 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 	if err != nil {
 		return nil, err
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleActivateObjectDelegate: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *activationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeactivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -611,11 +658,14 @@ func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.R
 	if err != nil {
 		return nil, err
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleDeactivateObject: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.UpdateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -661,11 +711,14 @@ func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply
 	if err != nil {
 		return nil, err
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleUpdateObject: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
 
@@ -696,7 +749,9 @@ func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Repl
 	if err != nil {
 		return nil, err
 	}
-
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: handleRegisterChild: time inside - %s", time.Since(start))
+	}
 	return &reply.ID{ID: *child.CoreID()}, nil
 }
 
