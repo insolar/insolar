@@ -14,29 +14,31 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+package entropygenerator
 
 import (
-	"testing"
+	"crypto/rand"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestPulseManager_Current(t *testing.T) {
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
-	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
-	defer cleaner()
+// EntropyGenerator is the base interface for generation of entropy for pulses
+type EntropyGenerator interface {
+	GenerateEntropy() core.Entropy
+}
 
-	pm := ledger.GetPulseManager()
+// StandardEntropyGenerator is the base impl of EntropyGenerator with using of crypto/rand
+type StandardEntropyGenerator struct {
+}
 
-	pulse, err := pm.Current()
-	assert.NoError(t, err)
-	assert.Equal(t, *core.GenesisPulse, *pulse)
+// GenerateEntropy generate entropy with using of EntropyGenerator
+func (generator *StandardEntropyGenerator) GenerateEntropy() core.Entropy {
+	entropy := make([]byte, core.EntropySize)
+	_, err := rand.Read(entropy)
+	if err != nil {
+		panic(err)
+	}
+	var result core.Entropy
+	copy(result[:], entropy[:core.EntropySize])
+	return result
 }

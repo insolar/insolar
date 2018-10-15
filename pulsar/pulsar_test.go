@@ -28,7 +28,8 @@ import (
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/pulsar/pulsartestutil"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -60,12 +61,12 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	mockListener := func(connectionType string, address string) (net.Listener, error) {
 		actualConnectionType = connectionType
 		actualAddress = address
-		return &pulsartestutil.MockListener{}, nil
+		return &pulsartestutils.MockListener{}, nil
 	}
-	storage := &pulsartestutil.MockPulsarStorage{}
+	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	clientFactory := &MockRpcClientFactoryWrapper{}
-	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})
+	clientFactory.On("CreateWrapper").Return(&pulsartestutils.MockRPCClientWrapper{})
 
 	result, err := NewPulsar(configuration.Configuration{
 		Pulsar: configuration.Pulsar{
@@ -76,7 +77,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	},
 		storage,
 		clientFactory,
-		pulsartestutil.MockEntropyGenerator{},
+		pulsartestutils.MockEntropyGenerator{},
 		nil,
 		mockListener,
 	)
@@ -85,7 +86,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	assert.Equal(t, privateKey, result.PrivateKey)
 	assert.Equal(t, "testType", actualConnectionType)
 	assert.Equal(t, "listedAddress", actualAddress)
-	assert.IsType(t, result.Sock, &pulsartestutil.MockListener{})
+	assert.IsType(t, result.Sock, &pulsartestutils.MockListener{})
 	assert.NotNil(t, result.PrivateKey)
 
 	clientFactory.AssertNumberOfCalls(t, "CreateWrapper", 0)
@@ -102,10 +103,10 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 
 	expectedPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	parsedExpectedPrivateKey, _ := ecdsahelper.ExportPrivateKey(expectedPrivateKey)
-	storage := &pulsartestutil.MockPulsarStorage{}
+	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	clientFactory := &MockRpcClientFactoryWrapper{}
-	clientFactory.On("CreateWrapper").Return(&pulsartestutil.MockRPCClientWrapper{})
+	clientFactory.On("CreateWrapper").Return(&pulsartestutils.MockRPCClientWrapper{})
 
 	result, err := NewPulsar(
 		configuration.Configuration{
@@ -121,8 +122,8 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 		},
 		storage,
 		clientFactory,
-		pulsartestutil.MockEntropyGenerator{}, nil, func(connectionType string, address string) (net.Listener, error) {
-			return &pulsartestutil.MockListener{}, nil
+		pulsartestutils.MockEntropyGenerator{}, nil, func(connectionType string, address string) (net.Listener, error) {
+			return &pulsartestutils.MockListener{}, nil
 		})
 
 	assertObj.NoError(err)
@@ -135,7 +136,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 	pulsar := &Pulsar{Neighbours: map[string]*Neighbour{}}
 
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(true)
 	mockClientWrapper.On("Lock")
 	mockClientWrapper.On("Unlock")
@@ -157,7 +158,7 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t *testing.T) {
 	pulsar := &Pulsar{Neighbours: map[string]*Neighbour{}}
 
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(false)
 	mockClientWrapper.On("CreateConnection", mock.Anything, mock.Anything).Return(errors.New("test reasons"))
 	mockClientWrapper.On("Lock")
@@ -181,10 +182,10 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
 		PrivateKey:       mainPrivateKey,
-		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
+		EntropyGenerator: pulsartestutils.MockEntropyGenerator{},
 	}
 
-	mockClientWrapper := &pulsartestutil.CustomRPCWrapperMock{}
+	mockClientWrapper := &pulsartestutils.CustomRPCWrapperMock{}
 
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Error: errors.New("oops, request is broken")}
@@ -207,10 +208,10 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
 		PrivateKey:       mainPrivateKey,
-		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
+		EntropyGenerator: pulsartestutils.MockEntropyGenerator{},
 	}
 
-	mockClientWrapper := &pulsartestutil.CustomRPCWrapperMock{}
+	mockClientWrapper := &pulsartestutils.CustomRPCWrapperMock{}
 
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Reply: &Payload{Body: HandshakePayload{}}}
@@ -224,7 +225,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 
 	err = pulsar.EstablishConnectionToPulsar(expectedNeighbourKey)
 
-	assert.Error(t, err, "Signature check failed")
+	assert.Error(t, err, "Signature check Failed")
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
@@ -233,16 +234,16 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 	pulsar := &Pulsar{
 		Neighbours:       map[string]*Neighbour{},
 		PrivateKey:       mainPrivateKey,
-		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
+		EntropyGenerator: pulsartestutils.MockEntropyGenerator{},
 	}
 	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
-	payload := Payload{Body: HandshakePayload{Entropy: pulsartestutil.MockEntropy}}
+	payload := Payload{Body: HandshakePayload{Entropy: pulsartestutils.MockEntropy}}
 	sign, err := signData(firstPrivateKey, payload.Body)
 	payload.Signature = sign
 	payload.PublicKey = expectedNeighbourKey
 
-	mockClientWrapper := &pulsartestutil.CustomRPCWrapperMock{}
+	mockClientWrapper := &pulsartestutils.CustomRPCWrapperMock{}
 
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Reply: &payload}
@@ -262,7 +263,7 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 	done <- &rpc.Call{}
 	replyChan := &rpc.Call{Done: done}
 
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(true)
 	mockClientWrapper.On("Go", HealthCheck.String(), nil, nil, mock.Anything).Return(replyChan)
 
@@ -281,7 +282,7 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *testing.T) {
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("IsInitialised").Return(false)
 	mockClientWrapper.On("Lock")
 	mockClientWrapper.On("Unlock")
@@ -304,7 +305,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 	done := make(chan *rpc.Call, 1)
 	done <- &rpc.Call{Error: errors.New("test error")}
 	replyChan := &rpc.Call{Done: done}
-	mockClientWrapper := &pulsartestutil.CustomRPCWrapperMock{}
+	mockClientWrapper := &pulsartestutils.CustomRPCWrapperMock{}
 	mockClientWrapper.Done = replyChan
 	isInitTimeCalled := 0
 	mockClientWrapper.IsInitFunc = func() bool {
@@ -317,7 +318,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 		}
 	}
 	mockClientWrapper.CreateConnectionFunc = func() error {
-		return errors.New("this should failed")
+		return errors.New("this should Failed")
 	}
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
@@ -332,18 +333,18 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 	resultLog := capture(pulsar.CheckConnectionsToPulsars)
 
 	assert.Contains(t, resultLog, "Problems with connection to TestConnectionAddress, with error - test error")
-	assert.Contains(t, resultLog, "Attempt of connection to TestConnectionAddress failed with error - this should failed")
+	assert.Contains(t, resultLog, "Attempt of connection to TestConnectionAddress Failed with error - this should Failed")
 	assert.Equal(t, 2, isInitTimeCalled)
 }
 
 func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {
-	pulsar := &Pulsar{stateSwitcher: &MockStateSwitcher{}}
+	pulsar := &Pulsar{StateSwitcher: &MockStateSwitcher{}}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(123)
 	pulsar.LastPulse = &core.Pulse{PulseNumber: core.PulseNumber(122)}
 
 	err := pulsar.StartConsensusProcess(core.PulseNumber(121))
 
-	assert.Error(t, err, "wrong state status or pulse number, state - waitingForStart, received pulse - 121, last pulse - 122, processing pulse - 123")
+	assert.Error(t, err, "wrong state status or pulse number, state - WaitingForStart, received pulse - 121, last pulse - 122, processing pulse - 123")
 }
 
 type MockStateSwitcher struct {
@@ -351,7 +352,7 @@ type MockStateSwitcher struct {
 	state State
 }
 
-func (impl *MockStateSwitcher) getState() State {
+func (impl *MockStateSwitcher) GetState() State {
 	return impl.state
 }
 
@@ -363,7 +364,7 @@ func (impl *MockStateSwitcher) SetPulsar(pulsar *Pulsar) {
 	impl.Called(pulsar)
 }
 
-func (impl *MockStateSwitcher) switchToState(state State, args interface{}) {
+func (impl *MockStateSwitcher) SwitchToState(state State, args interface{}) {
 	impl.Called(state, args)
 }
 
@@ -371,33 +372,33 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 	mockSwitcher := MockStateSwitcher{}
-	mockSwitcher.On("switchToState", waitingForEntropySigns, nil)
+	mockSwitcher.On("SwitchToState", WaitingForEntropySigns, nil)
 	pulsar := &Pulsar{
-		EntropyGenerator: pulsartestutil.MockEntropyGenerator{},
+		EntropyGenerator: pulsartestutils.MockEntropyGenerator{},
 		PrivateKey:       mainPrivateKey,
-		OwnedBftRow:      map[string]*bftCell{},
+		OwnedBftRow:      map[string]*BftCell{},
 	}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(120)
 	pulsar.LastPulse = &core.Pulse{PulseNumber: core.PulseNumber(2)}
-	pulsar.stateSwitcher = &mockSwitcher
+	pulsar.StateSwitcher = &mockSwitcher
 	expectedPulse := core.PulseNumber(123)
 
 	err = pulsar.StartConsensusProcess(expectedPulse)
 
 	assert.NoError(t, err)
 	assert.Equal(t, pulsar.ProcessingPulseNumber, expectedPulse)
-	mockSwitcher.AssertNumberOfCalls(t, "switchToState", 1)
-	mockSwitcher.AssertCalled(t, "switchToState", waitingForEntropySigns, nil)
+	mockSwitcher.AssertNumberOfCalls(t, "SwitchToState", 1)
+	mockSwitcher.AssertCalled(t, "SwitchToState", WaitingForEntropySigns, nil)
 }
 
 func TestPulsar_broadcastSignatureOfEntropy_StateFailed(t *testing.T) {
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("Go", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
-	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, stateSwitcher: &MockStateSwitcher{}}
+	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, StateSwitcher: &MockStateSwitcher{}}
 	pulsar.Neighbours["1"] = &Neighbour{}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(123)
-	pulsar.stateSwitcher.setState(failed)
+	pulsar.StateSwitcher.setState(Failed)
 
 	pulsar.broadcastSignatureOfEntropy()
 
@@ -407,17 +408,17 @@ func TestPulsar_broadcastSignatureOfEntropy_StateFailed(t *testing.T) {
 func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}
-	done <- &rpc.Call{Error: errors.New("failed")}
+	done <- &rpc.Call{Error: errors.New("Failed")}
 	replyChan := &rpc.Call{Done: done}
 
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
-	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, stateSwitcher: &MockStateSwitcher{}}
-	pulsar.stateSwitcher.setState(waitingForStart)
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
+	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, StateSwitcher: &MockStateSwitcher{}}
+	pulsar.StateSwitcher.setState(WaitingForStart)
 	pulsar.ProcessingPulseNumber = 123
-	pulsar.GeneratedEntropySign = pulsartestutil.MockEntropy[:]
+	pulsar.GeneratedEntropySign = pulsartestutils.MockEntropy[:]
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	pulsar.Neighbours["2"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "second"}
 
@@ -428,17 +429,17 @@ func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
 	mockClientWrapper.AssertCalled(t, "Go", ReceiveSignatureForEntropy.String(), mock.Anything, mock.Anything, mock.Anything)
 	mockClientWrapper.AssertNumberOfCalls(t, "Go", 2)
 	assert.Equal(t, 0, len(done))
-	assert.Contains(t, resultLog, "finished with error - failed")
+	assert.Contains(t, resultLog, "finished with error - Failed")
 }
 
 func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("Go", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
-	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, OwnedBftRow: map[string]*bftCell{}, stateSwitcher: &MockStateSwitcher{}}
+	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, OwnedBftRow: map[string]*BftCell{}, StateSwitcher: &MockStateSwitcher{}}
 	pulsar.Neighbours["1"] = &Neighbour{}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(123)
-	pulsar.stateSwitcher.setState(failed)
+	pulsar.StateSwitcher.setState(Failed)
 
 	pulsar.broadcastVector()
 
@@ -448,17 +449,17 @@ func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
 func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}
-	done <- &rpc.Call{Error: errors.New("failed")}
+	done <- &rpc.Call{Error: errors.New("Failed")}
 	replyChan := &rpc.Call{Done: done}
 
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
-	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, OwnedBftRow: map[string]*bftCell{}, stateSwitcher: &MockStateSwitcher{}}
-	pulsar.stateSwitcher.setState(waitingForStart)
-	pulsar.GeneratedEntropySign = pulsartestutil.MockEntropy[:]
-	pulsar.GeneratedEntropy = pulsartestutil.MockEntropy
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
+	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, OwnedBftRow: map[string]*BftCell{}, StateSwitcher: &MockStateSwitcher{}}
+	pulsar.StateSwitcher.setState(WaitingForStart)
+	pulsar.GeneratedEntropySign = pulsartestutils.MockEntropy[:]
+	pulsar.GeneratedEntropy = pulsartestutils.MockEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	pulsar.Neighbours["2"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "second"}
 
@@ -469,17 +470,17 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 	mockClientWrapper.AssertCalled(t, "Go", ReceiveVector.String(), mock.Anything, mock.Anything, mock.Anything)
 	mockClientWrapper.AssertNumberOfCalls(t, "Go", 2)
 	assert.Equal(t, 0, len(done))
-	assert.Contains(t, resultLog, "finished with error - failed")
+	assert.Contains(t, resultLog, "finished with error - Failed")
 }
 
 func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	mockClientWrapper.On("Go", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
-	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, OwnedBftRow: map[string]*bftCell{}, stateSwitcher: &MockStateSwitcher{}}
+	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, OwnedBftRow: map[string]*BftCell{}, StateSwitcher: &MockStateSwitcher{}}
 	pulsar.Neighbours["1"] = &Neighbour{}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(123)
-	pulsar.stateSwitcher.setState(failed)
+	pulsar.StateSwitcher.setState(Failed)
 
 	pulsar.broadcastEntropy()
 
@@ -489,17 +490,17 @@ func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
 func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}
-	done <- &rpc.Call{Error: errors.New("failed")}
+	done <- &rpc.Call{Error: errors.New("Failed")}
 	replyChan := &rpc.Call{Done: done}
 
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
-	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, stateSwitcher: &MockStateSwitcher{}}
-	pulsar.stateSwitcher.setState(waitingForStart)
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
+	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, StateSwitcher: &MockStateSwitcher{}}
+	pulsar.StateSwitcher.setState(WaitingForStart)
 	pulsar.ProcessingPulseNumber = 123
-	pulsar.GeneratedEntropy = pulsartestutil.MockEntropy
+	pulsar.GeneratedEntropy = pulsartestutils.MockEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	pulsar.Neighbours["2"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "second"}
 
@@ -510,31 +511,31 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 	mockClientWrapper.AssertCalled(t, "Go", ReceiveEntropy.String(), mock.Anything, mock.Anything, mock.Anything)
 	mockClientWrapper.AssertNumberOfCalls(t, "Go", 2)
 	assert.Equal(t, 0, len(done))
-	assert.Contains(t, resultLog, "finished with error - failed")
+	assert.Contains(t, resultLog, "finished with error - Failed")
 }
 
 func TestPulsar_sendVector_StateFailed(t *testing.T) {
 	pulsar := Pulsar{}
 	switcher := MockStateSwitcher{}
-	switcher.setState(failed)
-	pulsar.stateSwitcher = &switcher
+	switcher.setState(Failed)
+	pulsar.StateSwitcher = &switcher
 
 	pulsar.sendVector()
 
-	switcher.AssertNotCalled(t, "switchToState")
+	switcher.AssertNotCalled(t, "SwitchToState")
 }
 
 func TestPulsar_sendVector_OnePulsar(t *testing.T) {
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 	switcher := MockStateSwitcher{}
-	switcher.setState(waitingForStart)
-	switcher.On("switchToState", verifying, nil)
-	pulsar.stateSwitcher = &switcher
+	switcher.setState(WaitingForStart)
+	switcher.On("SwitchToState", Verifying, nil)
+	pulsar.StateSwitcher = &switcher
 
 	pulsar.sendVector()
 
-	switcher.AssertCalled(t, "switchToState", verifying, nil)
-	switcher.AssertNumberOfCalls(t, "switchToState", 1)
+	switcher.AssertCalled(t, "SwitchToState", Verifying, nil)
+	switcher.AssertNumberOfCalls(t, "SwitchToState", 1)
 }
 
 func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
@@ -546,43 +547,43 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
 	pulsar := Pulsar{
 		Neighbours:  map[string]*Neighbour{},
 		PrivateKey:  mainPrivateKey,
-		OwnedBftRow: map[string]*bftCell{},
-		bftGrid:     map[string]map[string]*bftCell{},
+		OwnedBftRow: map[string]*BftCell{},
+		bftGrid:     map[string]map[string]*BftCell{},
 	}
 
-	pulsar.GeneratedEntropy = pulsartestutil.MockEntropy
+	pulsar.GeneratedEntropy = pulsartestutils.MockEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	mockClientWrapper.On("Go", ReceiveVector.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
 
 	switcher := MockStateSwitcher{}
-	switcher.On("switchToState", verifying, nil)
-	switcher.On("switchToState", waitingForVectors, nil)
-	switcher.setState(waitingForStart)
-	pulsar.stateSwitcher = &switcher
+	switcher.On("SwitchToState", Verifying, nil)
+	switcher.On("SwitchToState", WaitingForVectors, nil)
+	switcher.setState(WaitingForStart)
+	pulsar.StateSwitcher = &switcher
 
 	// Act
 	pulsar.sendVector()
 
 	// Assert
-	switcher.AssertCalled(t, "switchToState", waitingForVectors, nil)
-	switcher.AssertNumberOfCalls(t, "switchToState", 1)
+	switcher.AssertCalled(t, "SwitchToState", WaitingForVectors, nil)
+	switcher.AssertNumberOfCalls(t, "SwitchToState", 1)
 }
 
 func TestPulsar_sendEntropy_OnePulsar(t *testing.T) {
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 	switcher := MockStateSwitcher{}
-	switcher.setState(waitingForStart)
-	switcher.On("switchToState", verifying, nil)
-	pulsar.stateSwitcher = &switcher
+	switcher.setState(WaitingForStart)
+	switcher.On("SwitchToState", Verifying, nil)
+	pulsar.StateSwitcher = &switcher
 
 	pulsar.sendEntropy()
 
-	switcher.AssertCalled(t, "switchToState", verifying, nil)
-	switcher.AssertNumberOfCalls(t, "switchToState", 1)
+	switcher.AssertCalled(t, "SwitchToState", Verifying, nil)
+	switcher.AssertNumberOfCalls(t, "SwitchToState", 1)
 }
 
 func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
@@ -594,51 +595,51 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
 	assert.NoError(t, err)
 
-	mockClientWrapper := &pulsartestutil.MockRPCClientWrapper{}
-	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, OwnedBftRow: map[string]*bftCell{}}
-	pulsar.GeneratedEntropy = pulsartestutil.MockEntropy
+	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
+	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}, PrivateKey: mainPrivateKey, OwnedBftRow: map[string]*BftCell{}}
+	pulsar.GeneratedEntropy = pulsartestutils.MockEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	mockClientWrapper.On("Go", ReceiveEntropy.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
 
 	switcher := MockStateSwitcher{}
-	switcher.setState(waitingForStart)
-	switcher.On("switchToState", verifying, nil)
-	switcher.On("switchToState", waitingForEntropy, nil)
-	pulsar.stateSwitcher = &switcher
+	switcher.setState(WaitingForStart)
+	switcher.On("SwitchToState", Verifying, nil)
+	switcher.On("SwitchToState", WaitingForEntropy, nil)
+	pulsar.StateSwitcher = &switcher
 
 	// Act
 	pulsar.sendEntropy()
 
 	// Assert
-	switcher.AssertCalled(t, "switchToState", waitingForEntropy, nil)
-	switcher.AssertNumberOfCalls(t, "switchToState", 1)
+	switcher.AssertCalled(t, "SwitchToState", WaitingForEntropy, nil)
+	switcher.AssertNumberOfCalls(t, "SwitchToState", 1)
 }
 
 func TestPulsar_verify_failedState(t *testing.T) {
-	pulsar := &Pulsar{stateSwitcher: &MockStateSwitcher{}}
-	pulsar.stateSwitcher.setState(failed)
+	pulsar := &Pulsar{StateSwitcher: &MockStateSwitcher{}}
+	pulsar.StateSwitcher.setState(Failed)
 	pulsar.PublicKeyRaw = "testKey"
-	pulsar.OwnedBftRow = map[string]*bftCell{}
-	pulsar.bftGrid = map[string]map[string]*bftCell{}
+	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.bftGrid = map[string]map[string]*BftCell{}
 
 	pulsar.verify()
 }
 
 func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	mockSwitcher := &MockStateSwitcher{}
-	mockSwitcher.On("switchToState", sendingPulse, nil)
-	pulsar := &Pulsar{stateSwitcher: mockSwitcher}
-	pulsar.stateSwitcher.setState(verifying)
+	mockSwitcher.On("SwitchToState", SendingPulse, nil)
+	pulsar := &Pulsar{StateSwitcher: mockSwitcher}
+	pulsar.StateSwitcher.setState(Verifying)
 	pulsar.PublicKeyRaw = "testKey"
-	pulsar.GeneratedEntropy = pulsartestutil.MockEntropy
-	pulsar.OwnedBftRow = map[string]*bftCell{}
-	pulsar.bftGrid = map[string]map[string]*bftCell{}
+	pulsar.GeneratedEntropy = pulsartestutils.MockEntropy
+	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.bftGrid = map[string]map[string]*BftCell{}
 
 	pulsar.verify()
 
-	mockSwitcher.AssertCalled(t, "switchToState", sendingPulse, nil)
+	mockSwitcher.AssertCalled(t, "SwitchToState", SendingPulse, nil)
 	assert.Equal(t, "testKey", pulsar.PublicKeyRaw)
-	assert.Equal(t, core.Entropy(pulsartestutil.MockEntropy), pulsar.GeneratedEntropy)
+	assert.Equal(t, core.Entropy(pulsartestutils.MockEntropy), pulsar.GeneratedEntropy)
 }
 
 func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
@@ -646,20 +647,20 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 	assert.NoError(t, err)
 
 	mockSwitcher := &MockStateSwitcher{}
-	mockSwitcher.On("switchToState", failed, mock.Anything)
-	pulsar := &Pulsar{stateSwitcher: mockSwitcher}
-	pulsar.stateSwitcher.setState(verifying)
+	mockSwitcher.On("SwitchToState", Failed, mock.Anything)
+	pulsar := &Pulsar{StateSwitcher: mockSwitcher}
+	pulsar.StateSwitcher.setState(Verifying)
 	pulsar.PublicKeyRaw = "testKey"
 	pulsar.PrivateKey = mainPrivateKey
-	pulsar.OwnedBftRow = map[string]*bftCell{}
-	pulsar.bftGrid = map[string]map[string]*bftCell{}
+	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.bftGrid = map[string]map[string]*BftCell{}
 	pulsar.Neighbours = map[string]*Neighbour{}
 	pulsar.Neighbours["1"] = &Neighbour{}
 	pulsar.Neighbours["2"] = &Neighbour{}
 
 	pulsar.verify()
 
-	mockSwitcher.AssertCalled(t, "switchToState", failed, mock.Anything)
+	mockSwitcher.AssertCalled(t, "SwitchToState", Failed, mock.Anything)
 }
 
 func generatePrivateAndConvertPublic(t *testing.T) (privateKey *ecdsa.PrivateKey, privateKeyPem string, pubKey string) {
@@ -674,7 +675,7 @@ func generatePrivateAndConvertPublic(t *testing.T) (privateKey *ecdsa.PrivateKey
 }
 
 func prepareEntropy(t *testing.T, key *ecdsa.PrivateKey) (entropy core.Entropy, sign []byte) {
-	entropy = (&StandardEntropyGenerator{}).GenerateEntropy()
+	entropy = (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
 	sign, err := signData(key, entropy)
 	assert.NoError(t, err)
 	return
@@ -682,45 +683,45 @@ func prepareEntropy(t *testing.T, key *ecdsa.PrivateKey) (entropy core.Entropy, 
 
 func TestPulsar_verify_Success(t *testing.T) {
 	mockSwitcher := &MockStateSwitcher{}
-	mockSwitcher.On("switchToState", waitingForPulseSigns, nil)
-	mockSwitcher.On("switchToState", sendingPulseSign, nil)
+	mockSwitcher.On("SwitchToState", WaitingForPulseSigns, nil)
+	mockSwitcher.On("SwitchToState", SendingPulseSign, nil)
 
 	privateKey, _, currentPulsarPublicKey := generatePrivateAndConvertPublic(t)
 	privateKeySecond, _, publicKeySecond := generatePrivateAndConvertPublic(t)
 	privateKeyThird, _, publicKeyThird := generatePrivateAndConvertPublic(t)
 
-	clientMock := pulsartestutil.MockRPCClientWrapper{}
+	clientMock := pulsartestutils.MockRPCClientWrapper{}
 	clientMock.On("IsInitialised").Return(true)
 	pulsar := &Pulsar{
-		stateSwitcher:                  mockSwitcher,
+		StateSwitcher:                  mockSwitcher,
 		PrivateKey:                     privateKey,
 		PublicKeyRaw:                   currentPulsarPublicKey,
-		OwnedBftRow:                    map[string]*bftCell{},
-		bftGrid:                        map[string]map[string]*bftCell{},
+		OwnedBftRow:                    map[string]*BftCell{},
+		bftGrid:                        map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: &privateKeySecond.PublicKey, OutgoingClient: &clientMock},
 			publicKeyThird:  {PublicKey: &privateKeyThird.PublicKey, OutgoingClient: &clientMock},
 		},
 	}
-	pulsar.stateSwitcher.setState(verifying)
+	pulsar.StateSwitcher.setState(Verifying)
 
 	firstEntropy, firstSign := prepareEntropy(t, privateKey)
 	secondEntropy, secondSign := prepareEntropy(t, privateKeySecond)
 	thirdEntropy, thirdSign := prepareEntropy(t, privateKeyThird)
 
-	pulsar.bftGrid[currentPulsarPublicKey] = map[string]*bftCell{
+	pulsar.bftGrid[currentPulsarPublicKey] = map[string]*BftCell{
 		currentPulsarPublicKey: {Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true},
 		publicKeySecond:        {Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true},
 		publicKeyThird:         {Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true},
 	}
 
-	pulsar.bftGrid[publicKeySecond] = map[string]*bftCell{
+	pulsar.bftGrid[publicKeySecond] = map[string]*BftCell{
 		currentPulsarPublicKey: {Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true},
 		publicKeySecond:        {Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true},
 		publicKeyThird:         {Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true},
 	}
-	pulsar.bftGrid[publicKeyThird] = map[string]*bftCell{
+	pulsar.bftGrid[publicKeyThird] = map[string]*BftCell{
 		currentPulsarPublicKey: {Entropy: firstEntropy, Sign: firstSign, IsEntropyReceived: true},
 		publicKeySecond:        {Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true},
 		publicKeyThird:         {Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true},
@@ -736,9 +737,9 @@ func TestPulsar_verify_Success(t *testing.T) {
 
 	assert.NotNil(t, pulsar.CurrentSlotPulseSender)
 	if pulsar.CurrentSlotPulseSender == currentPulsarPublicKey {
-		mockSwitcher.AssertCalled(t, "switchToState", waitingForPulseSigns, nil)
+		mockSwitcher.AssertCalled(t, "SwitchToState", WaitingForPulseSigns, nil)
 	} else {
-		mockSwitcher.AssertCalled(t, "switchToState", sendingPulseSign, nil)
+		mockSwitcher.AssertCalled(t, "SwitchToState", SendingPulseSign, nil)
 	}
 	assert.Equal(t, expectedEntropy, pulsar.CurrentSlotEntropy)
 }

@@ -14,29 +14,28 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+// Package pulsartestutil - test utils for pulsar package
+package pulsartestutils
 
 import (
-	"testing"
+	"net"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func TestPulseManager_Current(t *testing.T) {
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
-	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
-	defer cleaner()
+// MockListener mocks net.Listener interface
+type MockListener struct {
+	mock.Mock
+}
 
-	pm := ledger.GetPulseManager()
+func (mock *MockListener) Accept() (net.Conn, error) {
+	panic("implement me")
+}
 
-	pulse, err := pm.Current()
-	assert.NoError(t, err)
-	assert.Equal(t, *core.GenesisPulse, *pulse)
+func (mock *MockListener) Close() error {
+	panic("implement me")
+}
+
+func (mock *MockListener) Addr() net.Addr {
+	panic("implement me")
 }

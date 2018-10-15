@@ -19,17 +19,17 @@ package nodenetwork
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNode(t *testing.T) {
-	node := Node{id: core.RandomRef()}
+	node := Node{id: testutils.RandomRef()}
 	assert.NotNil(t, node)
 }
 
 func TestNode_GetNodeID(t *testing.T) {
-	ref := core.RandomRef()
+	ref := testutils.RandomRef()
 	node := Node{id: ref}
 	assert.Equal(t, ref, node.GetID())
 }

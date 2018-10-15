@@ -14,29 +14,21 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+// Package pulsartestutil - test utils for pulsar package
+package pulsartestutils
 
 import (
-	"testing"
-
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestPulseManager_Current(t *testing.T) {
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
-	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
-	defer cleaner()
+// MockEntropy for pulsar's tests
+var MockEntropy = [64]byte{1, 2, 3, 4, 5, 6, 7, 8}
 
-	pm := ledger.GetPulseManager()
+// MockEntropyGenerator implements EntropyGenerator and is being used for tests
+type MockEntropyGenerator struct {
+}
 
-	pulse, err := pm.Current()
-	assert.NoError(t, err)
-	assert.Equal(t, *core.GenesisPulse, *pulse)
+// GenerateEntropy returns mocked entropy
+func (MockEntropyGenerator) GenerateEntropy() core.Entropy {
+	return MockEntropy
 }

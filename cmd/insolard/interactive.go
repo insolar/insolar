@@ -32,6 +32,7 @@ import (
 func repl(service *servicenetwork.ServiceNetwork) {
 	displayInteractiveHelp()
 	dhtNetwork, ctx := service.GetHostNetwork()
+
 	doInfo(service, dhtNetwork, ctx)
 
 	rl, err := readline.New("> ")
@@ -67,9 +68,31 @@ func repl(service *servicenetwork.ServiceNetwork) {
 		case "rpc":
 			input = input[1:]
 			doRPC(input, dhtNetwork, ctx)
+		case "activenodes":
+			doActiveNodes(dhtNetwork)
+		case "pulse":
+			doPulse(dhtNetwork.GetNetworkCommonFacade().GetPulseManager())
 		default:
 			displayInteractiveHelp()
 		}
+	}
+}
+
+func doPulse(pm core.PulseManager) {
+	pulse, err := pm.Current()
+	if err != nil {
+		fmt.Println("Failed to get pulse")
+	} else {
+		fmt.Printf("Current pulse number: %d \n", pulse.PulseNumber)
+	}
+
+}
+
+func doActiveNodes(dhtNetwork hosthandler.HostHandler) {
+	nodes := dhtNetwork.GetActiveNodesList()
+	fmt.Println("Active nodes:")
+	for _, n := range nodes {
+		fmt.Println(n.NodeID.String())
 	}
 }
 
@@ -135,6 +158,8 @@ func displayInteractiveHelp() {
 help - This message
 findhost <key> - Find node's real network address
 info - Display information about this node
+activenodes - Shows active node list for current pulse
+pulse - Shows current pulse number
 exit - Exit programm
 
 rpc <method> <target> <args...> - Remote procedure call`)

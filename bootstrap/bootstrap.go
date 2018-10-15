@@ -31,9 +31,9 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/updater/request"
 	"github.com/insolar/insolar/version"
+	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -173,7 +173,7 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	return nil, nil
 }
 
-func buildSmartContracts(cb *testutil.ContractsBuilder) error {
+func buildSmartContracts(cb *goplugintestutils.ContractsBuilder) error {
 	log.Info("[ buildSmartContracts ] building contracts:", contractNames)
 	contracts, err := getContractsMap()
 	if err != nil {
@@ -204,7 +204,7 @@ func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	return instanceData, nil
 }
 
-func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
 	instanceData, err := serializeInstance(rootdomain.NewRootDomain())
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootDomain ]")
@@ -228,7 +228,7 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
-func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
 	instanceData, err := serializeInstance(nodedomain.NewNodeDomain())
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
@@ -253,7 +253,7 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
-func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
 
 	instanceData, err := serializeInstance(member.New("RootMember", b.rootPubKey))
 	if err != nil {
@@ -278,7 +278,7 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
-func (b *Bootstrapper) activateRootUpdater(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootUpdater(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
 
 	instanceData, err := serializeInstance(updater.New(request.NewVersion(version.Version)))
 	if err != nil {
@@ -303,7 +303,7 @@ func (b *Bootstrapper) activateRootUpdater(am core.ArtifactManager, cb *testutil
 	return nil
 }
 
-func (b *Bootstrapper) setRootMemberToRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) setRootMemberToRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef})
 	if err != nil {
 		return errors.Wrap(err, "[ SetRootInRootDomain ]")
@@ -319,7 +319,7 @@ func (b *Bootstrapper) setRootMemberToRootDomain(am core.ArtifactManager, cb *te
 	return nil
 }
 
-func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
 	instanceData, err := serializeInstance(wallet.New(b.rootBalance))
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
@@ -342,7 +342,7 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *tes
 	return nil
 }
 
-func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
 	err := b.activateRootDomain(am, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
@@ -420,13 +420,13 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		return nil
 	}
 
-	_, insgocc, err := testutil.Build()
+	_, insgocc, err := goplugintestutils.Build()
 	if err != nil {
 		return errors.Wrap(err, "[ Bootstrapper ] couldn't build insgocc")
 	}
 
 	am := c.Ledger.GetArtifactManager()
-	cb := testutil.NewContractBuilder(am, insgocc)
+	cb := goplugintestutils.NewContractBuilder(am, insgocc)
 	b.classRefs = cb.Classes
 	defer cb.Clean()
 

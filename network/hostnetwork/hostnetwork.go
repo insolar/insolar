@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"crypto/ecdsa"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
@@ -28,6 +29,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
+	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/insolar/insolar/network/nodekeeper"
@@ -36,7 +38,12 @@ import (
 )
 
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
+func NewHostNetwork(
+	cfg configuration.HostNetwork,
+	nn *nodenetwork.NodeNetwork,
+	cascade *cascade.Cascade,
+	key *ecdsa.PrivateKey,
+) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		return nil, errors.New("couldn't start at 0.0.0.0")
@@ -62,7 +69,8 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 	}
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
-	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade)
+	sign := signhandler.NewSignHandler(key)
+	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade, sign)
 
 	keeper := nodekeeper.NewNodeKeeper(nn.GetID())
 
@@ -78,6 +86,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		nn.GetID(),
 		keeper,
 		5,
+		key,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")

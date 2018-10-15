@@ -14,29 +14,41 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+package pulsar
 
 import (
-	"testing"
-
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestPulseManager_Current(t *testing.T) {
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
-	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
-	defer cleaner()
+type Payload struct {
+	PublicKey string
+	Signature []byte
+	Body      interface{}
+}
 
-	pm := ledger.GetPulseManager()
+type HandshakePayload struct {
+	Entropy core.Entropy
+}
 
-	pulse, err := pm.Current()
-	assert.NoError(t, err)
-	assert.Equal(t, *core.GenesisPulse, *pulse)
+type GetLastPulsePayload struct {
+	core.Pulse
+}
+
+type EntropySignaturePayload struct {
+	PulseNumber core.PulseNumber
+	Signature   []byte
+}
+
+type EntropyPayload struct {
+	PulseNumber core.PulseNumber
+	Entropy     core.Entropy
+}
+
+type VectorPayload struct {
+	PulseNumber core.PulseNumber
+	Vector      map[string]*BftCell
+}
+
+type PulsePayload struct {
+	Pulse core.Pulse
 }

@@ -18,6 +18,7 @@ package hostnetwork
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"math"
 	"sort"
 	"strings"
@@ -63,7 +64,6 @@ type DHT struct {
 	nodeID            core.RecordRef
 	activeNodeKeeper  nodekeeper.NodeKeeper
 	majorityRule      int
-	signChecker       func(msg core.Message) bool
 }
 
 // AuthInfo collects some information about authentication.
@@ -134,6 +134,7 @@ func NewDHT(
 	nodeID core.RecordRef,
 	keeper nodekeeper.NodeKeeper,
 	majorityRule int,
+	key *ecdsa.PrivateKey,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -823,18 +824,13 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 
 	if msg.Type == packet.TypeRPC {
-		if dht.signChecker == nil {
-			log.Error("sign checker for RPC message not registered!")
-			return
-		}
-
 		data := msg.Data.(*packet.RequestDataRPC)
 		signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
 		if err != nil {
 			log.Error(err, "failed to parse incoming RPC")
 			return
 		}
-		if !dht.signChecker(signedMsg) {
+		if !message.SignIsCorrect(signedMsg, dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey()) {
 			log.Warn("RPC message not signed")
 			return
 		}
@@ -959,16 +955,6 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 // GetActiveNodesList returns an active nodes list.
 func (dht *DHT) GetActiveNodesList() []*core.ActiveNode {
 	return dht.activeNodeKeeper.GetActiveNodes()
-}
-
-// GetActiveNodes starts getting active nodes from other nodes.
-func (dht *DHT) GetActiveNodes() error {
-	var err error
-	// TODO: fix it.
-	for _, target := range dht.options.BootstrapHosts {
-		err = SendActiveNodesRequest(dht, target)
-	}
-	return err
 }
 
 // AddActiveNodes adds an active nodes slice.
@@ -1270,11 +1256,6 @@ func (dht *DHT) RemoveProxyHost(targetID string) {
 	dht.proxy.RemoveProxyHost(targetID)
 }
 
-// SetSignChecker sets a func which checks a sign.
-func (dht *DHT) SetSignChecker(f func(msg core.Message) bool) {
-	dht.signChecker = f
-}
-
 // RemovePossibleProxyID removes if from possible proxy ids list.
 func (dht *DHT) RemovePossibleProxyID(id string) {
 	for i, proxy := range dht.subnet.PossibleProxyIDs {
@@ -1293,6 +1274,10 @@ func (dht *DHT) RemoveAuthSentKeys(targetID string) {
 // RemoveRelayClient removes a client from relay list.
 func (dht *DHT) RemoveRelayClient(host *host.Host) error {
 	return dht.relay.RemoveClient(host)
+}
+
+func (dht *DHT) SetNodeID(nodeID core.RecordRef) {
+	dht.nodeID = nodeID
 }
 
 // SetHighKnownHostID sets a new high known host ID.
