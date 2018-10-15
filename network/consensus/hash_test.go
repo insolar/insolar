@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +30,7 @@ const (
 )
 
 func TestNodeConsensus_calculateNodeHash(t *testing.T) {
-	nodeID := core.RandomRef()
+	nodeID := testutils.RandomRef()
 	hash1, _ := CalculateNodeUnsyncHash(nodeID, nil)
 	hash2, _ := CalculateNodeUnsyncHash(nodeID, []*core.ActiveNode{})
 

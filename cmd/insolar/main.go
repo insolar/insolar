@@ -28,8 +28,9 @@ import (
 	"github.com/insolar/insolar/application/bootstrapcertificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -125,12 +126,12 @@ func writeToOutput(out io.Writer, data string) {
 
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
-	key, err := ecdsa_helper.GeneratePrivateKey()
+	key, err := ecdsahelper.GeneratePrivateKey()
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	keyStr, err := ecdsa_helper.ExportPrivateKey(key)
+	keyStr, err := ecdsahelper.ExportPrivateKey(key)
 	if err != nil {
 		log.Error(err)
 		return
@@ -140,19 +141,19 @@ func printDefaultConfig(out io.Writer) {
 }
 
 func randomRef(out io.Writer) {
-	ref := core.RandomRef()
+	ref := testutils.RandomRef()
 
 	writeToOutput(out, ref.String()+"\n")
 }
 
 func generateKeysPair(out io.Writer) {
-	privKey, err := ecdsa_helper.GeneratePrivateKey()
+	privKey, err := ecdsahelper.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
 
-	privKeyStr, err := ecdsa_helper.ExportPrivateKey(privKey)
+	privKeyStr, err := ecdsahelper.ExportPrivateKey(privKey)
 	check("Problems with serialization of private key:", err)
 
-	pubKeyStr, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+	pubKeyStr, err := ecdsahelper.ExportPublicKey(&privKey.PublicKey)
 	check("Problems with serialization of public key:", err)
 
 	result, err := json.MarshalIndent(map[string]interface{}{
@@ -167,10 +168,10 @@ func generateKeysPair(out io.Writer) {
 func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 	kk := []map[string]string{}
 	for _, key := range keys {
-		pubKey, err := ecdsa_helper.ExportPublicKey(&key.PublicKey)
+		pubKey, err := ecdsahelper.ExportPublicKey(&key.PublicKey)
 		check("[ makeKeysJSON ]", err)
 
-		privKey, err := ecdsa_helper.ExportPrivateKey(key)
+		privKey, err := ecdsahelper.ExportPrivateKey(key)
 		check("[ makeKeysJSON ]", err)
 
 		kk = append(kk, map[string]string{"public_key": pubKey, "private_key": privKey})
@@ -185,14 +186,15 @@ func generateCertificates(out io.Writer) {
 
 	records := make(map[core.RecordRef]*ecdsa.PrivateKey)
 	cRecords := certRecords{}
-	keys := []*ecdsa.PrivateKey{}
+
+	var keys []*ecdsa.PrivateKey
 	for i := uint(0); i < numberCertificates; i++ {
-		ref := core.RandomRef()
-		privKey, err := ecdsa_helper.GeneratePrivateKey()
+		ref := testutils.RandomRef()
+		privKey, err := ecdsahelper.GeneratePrivateKey()
 		check("[ generateCertificates ]:", err)
 
 		records[ref] = privKey
-		pubKey, err := ecdsa_helper.ExportPublicKey(&privKey.PublicKey)
+		pubKey, err := ecdsahelper.ExportPublicKey(&privKey.PublicKey)
 		check("[ generateCertificates ]:", err)
 
 		cRecords = append(cRecords, bootstrapcertificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
