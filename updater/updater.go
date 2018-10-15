@@ -16,12 +16,13 @@
 package updater
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type Updater struct {

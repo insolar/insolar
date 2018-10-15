@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/updater"
 	"os"
 	"os/signal"
 	"reflect"
@@ -37,6 +36,7 @@ import (
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/updater"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"

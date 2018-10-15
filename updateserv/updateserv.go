@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/updater/request"
+	"github.com/pkg/errors"
 )
 
 type UpdateServer struct {
