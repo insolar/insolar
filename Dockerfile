@@ -1,4 +1,4 @@
-FROM registry.ins.world/golang:1.11 as builder
+FROM golang:1.11 as builder
 RUN mkdir -p /go/src/github.com/insolar/insolar
 WORKDIR /go/src/github.com/insolar/insolar
 ENV BIN_DIR="/go/bin"
