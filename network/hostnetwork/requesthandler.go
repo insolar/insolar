@@ -363,11 +363,16 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *ho
 		return err
 	}
 
+	signedNonce, err := hostHandler.SignNonce(nonce)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a nonce")
+	}
+
 	builder := packet.NewBuilder()
 	request := builder.Type(packet.TypeCheckSignedNonce).
 		Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(target).
-		Request(&packet.RequestCheckSignedNonce{Signed: hostHandler.Sign(nonce)}).
+		Request(&packet.RequestCheckSignedNonce{Signed: signedNonce}).
 		Build()
 
 	future, err := hostHandler.SendRequest(request)

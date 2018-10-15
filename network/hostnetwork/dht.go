@@ -18,6 +18,8 @@ package hostnetwork
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"io/ioutil"
 	"math"
 	"sort"
 	"strings"
@@ -27,6 +29,7 @@ import (
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/consensus"
@@ -63,9 +66,13 @@ type DHT struct {
 	nodeID            core.RecordRef
 	activeNodeKeeper  nodekeeper.NodeKeeper
 	majorityRule      int
-	uncheckedNodes    map[string][]byte
-	signChecker       func(msg core.Message) bool
-	signer            func(nonce []byte) []byte
+	privateKey        *ecdsa.PrivateKey
+	uncheckedNodes    map[string]UncheckedNode
+}
+
+type UncheckedNode struct {
+	Ref   core.RecordRef
+	Nonce []byte
 }
 
 // AuthInfo collects some information about authentication.
@@ -136,6 +143,7 @@ func NewDHT(
 	nodeID core.RecordRef,
 	keeper nodekeeper.NodeKeeper,
 	majorityRule int,
+	key *ecdsa.PrivateKey,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -162,6 +170,7 @@ func NewDHT(
 		nodeID:            nodeID,
 		activeNodeKeeper:  keeper,
 		majorityRule:      majorityRule,
+		privateKey:        key,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -194,7 +203,7 @@ func NewDHT(
 
 	dht.subnet.SubnetIDs = make(map[string][]string)
 
-	dht.uncheckedNodes = make(map[string][]byte)
+	dht.uncheckedNodes = make(map[string]UncheckedNode)
 
 	return dht, nil
 }
@@ -827,18 +836,13 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 
 	if msg.Type == packet.TypeRPC {
-		if dht.signChecker == nil {
-			log.Error("sign checker for RPC message not registered!")
-			return
-		}
-
 		data := msg.Data.(*packet.RequestDataRPC)
 		signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
 		if err != nil {
 			log.Error(err, "failed to parse incoming RPC")
 			return
 		}
-		if !dht.signChecker(signedMsg) {
+		if !dht.signIsCorrect(signedMsg) {
 			log.Warn("RPC message not signed")
 			return
 		}
@@ -1264,11 +1268,6 @@ func (dht *DHT) RemoveProxyHost(targetID string) {
 	dht.proxy.RemoveProxyHost(targetID)
 }
 
-// SetSignChecker sets a func which checks a sign.
-func (dht *DHT) SetSignChecker(f func(msg core.Message) bool) {
-	dht.signChecker = f
-}
-
 // RemovePossibleProxyID removes if from possible proxy ids list.
 func (dht *DHT) RemovePossibleProxyID(id string) {
 	for i, proxy := range dht.subnet.PossibleProxyIDs {
@@ -1287,6 +1286,10 @@ func (dht *DHT) RemoveAuthSentKeys(targetID string) {
 // RemoveRelayClient removes a client from relay list.
 func (dht *DHT) RemoveRelayClient(host *host.Host) error {
 	return dht.relay.RemoveClient(host)
+}
+
+func (dht *DHT) SetNodeID(nodeID core.RecordRef) {
+	dht.nodeID = nodeID
 }
 
 // SetHighKnownHostID sets a new high known host ID.
@@ -1360,31 +1363,69 @@ func (dht *DHT) GetOriginHost() *host.Origin {
 	return dht.origin
 }
 
-// RemoveUncheckedNode removes host from unchecked nodes.
-func (dht *DHT) RemoveUncheckedNode(hostID id.ID) {
-	delete(dht.uncheckedNodes, hostID.String())
+func (dht *DHT) AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef) {
+	unchecked := UncheckedNode{Ref: ref, Nonce: nonce}
+	dht.uncheckedNodes[hostID.String()] = unchecked
 }
 
-// AddUncheckedNode add host to unchecked node.
-func (dht *DHT) AddUncheckedNode(hostID id.ID, nonce []byte) {
-	dht.uncheckedNodes[hostID.String()] = nonce
-}
+func (dht *DHT) signIsCorrect(msg core.Message) bool {
+	sign := msg.GetSign()
+	msg.SetSign(make([]byte, 0))
 
-// UncheckedNodeExist checks host existing in unchecked nodes map.
-func (dht *DHT) UncheckedNodeExist(hostID id.ID, nonce []byte) bool {
-	return bytes.Equal(dht.uncheckedNodes[hostID.String()], nonce)
-}
-
-// SetSigner sets a func which will sign a nonce.
-func (dht *DHT) SetSigner(signer func(nonce []byte) []byte) {
-	dht.signer = signer
-}
-
-// Sign sign a nonce.
-func (dht *DHT) Sign(nonce []byte) []byte {
-	if dht.signer == nil {
-		log.Error("signer is nil")
-		return nil
+	serialized, err := messageToBytes(msg)
+	if err != nil {
+		log.Error(err, "filed to serialize message")
+		return false
 	}
-	return dht.signer(nonce)
+	newSign, err := ecdsa2.Sign(serialized, dht.privateKey)
+	if err != nil {
+		log.Error(err, "failed to sign a message")
+		return false
+	}
+	return bytes.Equal(sign, newSign)
+}
+
+// MessageToBytes deserialize a core.Message to bytes.
+func messageToBytes(msg core.Message) ([]byte, error) {
+	reqBuff, err := message.Serialize(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to serialize event")
+	}
+	return ioutil.ReadAll(reqBuff)
+}
+
+// SignMessage tries to sign a core.Message.
+func (dht *DHT) SignMessage(msg core.Message, key *ecdsa.PrivateKey) error {
+	serialized, err := messageToBytes(msg)
+	if err != nil {
+		return errors.Wrap(err, "filed to serialize message")
+	}
+	sign, err := ecdsa2.Sign(serialized, key)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a message")
+	}
+	msg.SetSign(sign)
+	return nil
+}
+
+func (dht *DHT) SignedNonceIsCorrect(hostID id.ID, signedNonce []byte) bool {
+	if unchecked, ok := dht.uncheckedNodes[hostID.String()]; ok {
+		key, _, err := dht.GetNetworkCommonFacade().GetNetworkCoordinator().Authorize(unchecked.Ref, unchecked.Nonce, signedNonce)
+		if err != nil {
+			log.Error(err)
+			log.Debug(hostID.String() + " failed to authorize")
+			return false
+		}
+		log.Debug("authorized node ID: " + key)
+		return true
+	}
+	return false
+}
+
+func (dht *DHT) SignNonce(nonce []byte) ([]byte, error) {
+	sign, err := ecdsa2.Sign(nonce, dht.privateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign a message")
+	}
+	return sign, nil
 }

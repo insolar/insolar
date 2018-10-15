@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"crypto/ecdsa"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
@@ -36,7 +37,12 @@ import (
 )
 
 // NewHostNetwork creates and returns DHT network.
-func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, cascade *cascade.Cascade) (*DHT, error) {
+func NewHostNetwork(
+	cfg configuration.HostNetwork,
+	nn *nodenetwork.NodeNetwork,
+	cascade *cascade.Cascade,
+	key *ecdsa.PrivateKey,
+) (*DHT, error) {
 
 	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
 		return nil, errors.New("couldn't start at 0.0.0.0")
@@ -78,6 +84,7 @@ func NewHostNetwork(cfg configuration.HostNetwork, nn *nodenetwork.NodeNetwork, 
 		nn.GetID(),
 		keeper,
 		5,
+		key,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")

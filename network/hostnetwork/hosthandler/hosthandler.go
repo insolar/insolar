@@ -18,6 +18,7 @@ package hosthandler
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -106,13 +107,14 @@ type HostHandler interface {
 	ObtainIP() error
 	Bootstrap() error
 	NumHosts(ctx Context) int
-	Sign(nonce []byte) []byte
 	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
+	SignNonce(nonce []byte) ([]byte, error)
 	HtFromCtx(ctx Context) *routing.HashTable
 	StoreRetrieve(key store.Key) ([]byte, bool)
 	EqualAuthSentKey(targetID string, key []byte) bool
-	UncheckedNodeExist(hostID id.ID, nonce []byte) bool
+	SignMessage(msg core.Message, key *ecdsa.PrivateKey) error
+	SignedNonceIsCorrect(hostID id.ID, signedNonce []byte) bool
 	SendRequest(packet *packet.Packet) (transport.Future, error)
 	FindHost(ctx Context, targetID string) (*host.Host, bool, error)
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
@@ -128,21 +130,19 @@ type HostHandler interface {
 	AddAuthSentKey(id string, key []byte)
 	AddRelayClient(host *host.Host) error
 	AddReceivedKey(target string, key []byte)
-	AddUncheckedNode(hostID id.ID, nonce []byte)
+	AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef)
 	AddHost(ctx Context, host *routing.RouteHost)
 	AddActiveNodes(activeNode []*core.ActiveNode) error
 
 	RemoveAuthHost(key string)
 	RemoveProxyHost(targetID string)
 	RemovePossibleProxyID(id string)
-	RemoveUncheckedNode(hostID id.ID)
 	RemoveAuthSentKeys(targetID string)
 	RemoveRelayClient(host *host.Host) error
 
 	SetHighKnownHostID(id string)
 	SetOuterHostsCount(hosts int)
-	SetSigner(func(nonce []byte) []byte)
-	SetSignChecker(func(msg core.Message) bool)
+	SetNodeID(nodeID core.RecordRef)
 	SetAuthStatus(targetID string, status bool)
 
 	GetHostsFromBootstrap()
