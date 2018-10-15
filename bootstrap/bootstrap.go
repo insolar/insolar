@@ -25,12 +25,15 @@ import (
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/rootdomain"
+	"github.com/insolar/insolar/application/contract/updater"
 	"github.com/insolar/insolar/application/contract/wallet"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
+	"github.com/insolar/insolar/updater/request"
+	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -42,19 +45,21 @@ const (
 	walletContract    = "wallet"
 	memberContract    = "member"
 	allowanceContract = "allowance"
+	updaterContract   = "updater"
 )
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
 // Bootstrapper is a component for precreation core contracts types and RootDomain instance
 type Bootstrapper struct {
-	rootDomainRef *core.RecordRef
-	nodeDomainRef *core.RecordRef
-	rootMemberRef *core.RecordRef
-	rootKeysFile  string
-	rootPubKey    string
-	rootBalance   uint
-	classRefs     map[string]*core.RecordRef
+	rootDomainRef  *core.RecordRef
+	nodeDomainRef  *core.RecordRef
+	rootMemberRef  *core.RecordRef
+	rootUpdaterRef *core.RecordRef
+	rootKeysFile   string
+	rootPubKey     string
+	rootBalance    uint
+	classRefs      map[string]*core.RecordRef
 }
 
 // Info returns json with references for info api endpoint
@@ -273,6 +278,31 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *testutil.
 	return nil
 }
 
+func (b *Bootstrapper) activateRootUpdater(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
+
+	instanceData, err := serializeInstance(updater.New(request.NewVersion(version.Version)))
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootUpdater ]")
+	}
+
+	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootUpdater"})
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootUpdater ] couldn't create root updater instance")
+	}
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *contract,
+		*cb.Classes[updaterContract],
+		*b.rootDomainRef,
+		instanceData,
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootUpdater ] couldn't create root updater instance")
+	}
+	b.rootUpdaterRef = contract
+	return nil
+}
+
 func (b *Bootstrapper) setRootMemberToRootDomain(am core.ArtifactManager, cb *testutil.ContractsBuilder) error {
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef})
 	if err != nil {
@@ -331,6 +361,10 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *testu
 		return errors.Wrap(err, errMsg)
 	}
 	err = b.activateRootMemberWallet(am, cb)
+	if err != nil {
+		return errors.Wrap(err, errMsg)
+	}
+	err = b.activateRootUpdater(am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
