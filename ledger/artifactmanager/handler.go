@@ -702,10 +702,15 @@ func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Repl
 func (h *MessageHandler) handleJetDrop(genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.JetDrop)
 
-	// TODO: validate !!!!!!!!!!
-	_ = msg
+	// TODO: validate
+	for _, rec := range msg.Records {
+		err := h.db.SetRecordBinary(rec[0], rec[1])
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return &reply.ID{}, nil
+	return &reply.Ok{}, nil
 }
 
 func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
