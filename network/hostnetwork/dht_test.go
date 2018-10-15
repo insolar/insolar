@@ -1053,7 +1053,7 @@ func TestDHT_Getters(t *testing.T) {
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:0")
 	assert.NoError(t, err)
 	key, _ := ecdsa.GeneratePrivateKey()
-	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false, core.RandomRef(), nil, 5, key)
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false, testutils.RandomRef(), nil, 5, key)
 	outerHostCount := 3
 
 	relay1 := "127.0.0.1:123123"
