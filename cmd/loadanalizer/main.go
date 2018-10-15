@@ -97,10 +97,6 @@ type baseResponse struct {
 	Err *errorResponse `json:"error"`
 }
 
-func (r *baseResponse) getError() *errorResponse {
-	return r.Err
-}
-
 func getResponseBody(postParams map[string]interface{}) []byte {
 	jsonValue, err := json.Marshal(postParams)
 	check("Problems with marshal request:", err)
@@ -120,7 +116,8 @@ func transfer(amount int, from string, to string) string {
 	})
 
 	response := &baseResponse{}
-	json.Unmarshal(body, &response)
+	err := json.Unmarshal(body, &response)
+	check("Problems with unmarshal response:", err)
 	if response.Err != nil {
 		return response.Err.Message
 	}
@@ -173,7 +170,8 @@ func createMembers(concurrent int, repetitions int) ([]string, error) {
 		})
 
 		memberResponse := &createMemberResponse{}
-		json.Unmarshal(body, &memberResponse)
+		err := json.Unmarshal(body, &memberResponse)
+		check("Problems with unmarshal response:", err)
 
 		if memberResponse.Err != nil {
 			return nil, errors.New(memberResponse.Err.Message)
@@ -197,7 +195,7 @@ func main() {
 
 	var members []string
 
-	if *withInit == true {
+	if *withInit {
 		members, err = createMembers(*concurrent, *repetitions)
 		check("Problems with create members. One of creating request ended with error: ", err)
 	}
