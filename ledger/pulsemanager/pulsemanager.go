@@ -41,8 +41,9 @@ func (m *PulseManager) Current() (*core.Pulse, error) {
 		return nil, err
 	}
 	data := core.Pulse{
-		PulseNumber: latestPulse,
-		Entropy:     pulse.Entropy,
+		PulseNumber:     latestPulse,
+		Entropy:         pulse.Entropy,
+		NextPulseNumber: pulse.PredictedNextPulse,
 	}
 	return &data, nil
 }

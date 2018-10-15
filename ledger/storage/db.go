@@ -379,8 +379,9 @@ func (db *DB) AddPulse(pulse core.Pulse) error {
 			return err
 		}
 		pulseRec := record.PulseRecord{
-			PrevPulse: latest,
-			Entropy:   pulse.Entropy,
+			PrevPulse:          latest,
+			Entropy:            pulse.Entropy,
+			PredictedNextPulse: pulse.NextPulseNumber,
 		}
 		var buf bytes.Buffer
 		enc := codec.NewEncoder(&buf, &codec.CborHandle{})

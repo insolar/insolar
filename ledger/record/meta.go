@@ -53,6 +53,7 @@ type ChildRecord struct {
 
 // PulseRecord is a record containing pulse info.
 type PulseRecord struct {
-	PrevPulse core.PulseNumber
-	Entropy   core.Entropy
+	PrevPulse          core.PulseNumber
+	Entropy            core.Entropy
+	PredictedNextPulse core.PulseNumber
 }
