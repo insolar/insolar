@@ -161,7 +161,7 @@ type IValidateCaseBind interface {
 	GetCaseRecords() []core.CaseRecord
 	GetPulse() core.Pulse
 	GetSign() []byte
-	SetSign() []byte
+	SetSign(sign []byte)
 }
 
 type ValidateCaseBind struct {

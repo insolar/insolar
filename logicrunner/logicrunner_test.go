@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"bytes"
-
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
@@ -104,17 +103,21 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 }
 
 func ValidateAllResults(t testing.TB, lr core.LogicRunner) {
-	rlr := lr.(*LogicRunner)
-	rlr.caseBindMutex.Lock()
-	rlrcbr := rlr.caseBind.Records
-	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
-	rlr.caseBindMutex.Unlock()
-	for ref, cr := range rlrcbr {
-		//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
-		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
-		assert.NoError(t, err, "validation")
-		assert.Equal(t, len(cr), vstep, "Validation passed to the end")
-	}
+	// TODO еще неплохо бы результат получить и проверить
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 1, &pulsar.StandardEntropyGenerator{}))
+	//rlr := lr.(*LogicRunner)
+	//rlr.caseBindMutex.Lock()
+	//rlrcbr := rlr.caseBind.Records
+	//rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
+	//rlr.caseBindMutex.Unlock()
+
+	//for ref, cr := range rlrcbr {
+	//	//assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
+	//	vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
+	//	assert.NoError(t, err, "validation")
+	//	assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+	//}
+
 }
 
 func TestTypeCompatibility(t *testing.T) {
@@ -224,7 +227,20 @@ func (eb *testMessageBus) MustRegister(p core.MessageType, handler core.MessageH
 
 func (*testMessageBus) Start(components core.Components) error { return nil }
 func (*testMessageBus) Stop() error                            { return nil }
+
 func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) {
+	switch event.Type() {
+	case core.TypeCallMethod:
+	case core.TypeCallConstructor:
+		return eb.LogicRunner.Execute(event)
+	case core.TypeValidateCaseBind:
+		return eb.LogicRunner.ValidateCaseBind(event)
+	case core.TypeValidationResults:
+		return eb.LogicRunner.ProcessValidationResults(event)
+	case core.TypeExecutorResults:
+		return eb.LogicRunner.ExecutorResults(event)
+	}
+
 	return eb.LogicRunner.Execute(event)
 }
 func (*testMessageBus) SendAsync(msg core.Message) {}
@@ -691,8 +707,6 @@ func New(n int) *Child {
 	assert.NoError(t, err, "contract call")
 	r = testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
-
-	SendDataToValidate(lr)
 }
 
 func TestErrorInterface(t *testing.T) {
@@ -789,8 +803,6 @@ func (r *Two) NoError() error {
 
 	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{nil}), r)
-	
-	SendDataToValidate(lr)
 }
 
 func TestNilResult(t *testing.T) {
@@ -1038,8 +1050,6 @@ func (c *Child) GetNum() int {
 		r := testutil.CBORUnMarshal(b, resp.(*reply.CallMethod).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
-
-	SendDataToValidate(lr)
 }
 
 func TestProxyGeneration(t *testing.T) {
@@ -1073,9 +1083,4 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err, string(out))
 		})
 	}
-}
-
-func SendDataToValidate(lr core.LogicRunner) {
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
-	//TODO validate data on another node
 }

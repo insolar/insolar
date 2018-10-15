@@ -107,6 +107,9 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	if err := messageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
 		return err
 	}
+	if err := messageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -183,19 +186,13 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	case *message.CallConstructor:
 		re, err := lr.executeConstructorCall(ctx, m, vb)
 		return re, err
-	case *message.ValidateCaseBind:
-		// TODO testBus goes here, send test bus to ValidateCaseBind
-		return nil, nil
-	case *message.ExecutorResults:
-		// TODO testBus goes here, send test bus to ExecutorResults
-		return nil, nil
+
 	default:
 		panic("Unknown e type")
 	}
 }
 
 func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
-
 	msg, ok := inmsg.(message.IValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
@@ -211,7 +208,15 @@ func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) 
 	return nil, nil
 }
 
+func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply, error) {
+	// Handle all validators Request
+	// Do some staff if request don't come for a long time
+	// Compare results of different validators and previous Executor
+	return nil, nil
+}
+
 func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
+	// Coordinate this with ProcessValidationResults
 	return nil, nil
 }
 
@@ -402,7 +407,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 }
 
 // refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
-func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord  {
+func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
 
