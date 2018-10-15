@@ -17,10 +17,13 @@
 package artifactmanager
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/log"
 )
 
 const (
@@ -261,6 +264,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 func (m *LedgerArtifactManager) ActivateObject(
 	domain, object, class, parent core.RecordRef, memory []byte,
 ) (*core.RecordID, error) {
+	start := time.Now()
 	objID, err := m.fetchID(&message.ActivateObject{
 		Domain:  domain,
 		Request: object,
@@ -280,7 +284,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 	if err != nil {
 		return nil, err
 	}
-
+	log.Debugf("Inside ActivateObject: class - '%s', parent - %s, time - %s", class, parent, time.Since(start))
 	return objID, nil
 }
 
