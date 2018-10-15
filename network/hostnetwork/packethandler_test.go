@@ -361,15 +361,6 @@ func (hh *mockHostHandler) GetOriginHost() *host.Origin {
 	return origin
 }
 
-// SetSignChecker sets a func which checks a sign.
-func (hh *mockHostHandler) SetSignChecker(func(msg core.Message) bool) {
-
-}
-
-func (hh *mockHostHandler) SetSigner(func(nonce []byte) []byte) {
-
-}
-
 func (hh *mockHostHandler) Sign(nonce []byte) []byte {
 	return nil
 }

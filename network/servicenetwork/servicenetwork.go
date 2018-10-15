@@ -231,7 +231,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 	return nil
 }
 
-// MessageToBytes deserialize a core.Message to bytes.
+// ToBytes deserialize a core.Message to bytes.
 func messageToBytes(msg core.Message) ([]byte, error) {
 	reqBuff, err := message.Serialize(msg)
 	if err != nil {

@@ -125,8 +125,8 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 	return msg, err
 }
 
-// MessageToBytes deserialize a core.Message to bytes.
-func MessageToBytes(msg core.Message) ([]byte, error) {
+// ToBytes deserialize a core.Message to bytes.
+func ToBytes(msg core.Message) ([]byte, error) {
 	reqBuff, err := Serialize(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
@@ -136,7 +136,7 @@ func MessageToBytes(msg core.Message) ([]byte, error) {
 
 // SignMessage tries to sign a core.Message.
 func SignMessage(msg core.Message, key *ecdsa.PrivateKey) error {
-	serialized, err := MessageToBytes(msg)
+	serialized, err := ToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "filed to serialize message")
 	}
@@ -153,7 +153,7 @@ func SignIsCorrect(msg core.Message, key *ecdsa.PrivateKey) bool {
 	sign := msg.GetSign()
 	msg.SetSign(make([]byte, 0))
 
-	serialized, err := MessageToBytes(msg)
+	serialized, err := ToBytes(msg)
 	if err != nil {
 		log.Error(err, "filed to serialize message")
 		return false
