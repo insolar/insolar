@@ -1,3 +1,18 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package updateserv
 
 import (
@@ -31,7 +46,7 @@ func NewUpdateServer(port string, upPath string) *UpdateServer {
 	}
 }
 
-func (updServer *UpdateServer) versionHandler(ver *request.Version) http.HandlerFunc {
+func (ups *UpdateServer) versionHandler(ver *request.Version) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response, err := json.Marshal(ver)
 		if err != nil {
@@ -42,12 +57,12 @@ func (updServer *UpdateServer) versionHandler(ver *request.Version) http.Handler
 	})
 }
 
-func (updServer *UpdateServer) LoadVersions() *request.Version {
+func (ups *UpdateServer) LoadVersions() *request.Version {
 
-	if updServer.LatestVersion != "" {
-		return request.NewVersion(updServer.LatestVersion)
+	if ups.LatestVersion != "" {
+		return request.NewVersion(ups.LatestVersion)
 	}
-	files, err := ioutil.ReadDir(updServer.UploadPath)
+	files, err := ioutil.ReadDir(ups.UploadPath)
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -125,28 +140,28 @@ func returnError(w http.ResponseWriter, message string) {
 	log.Error(err)
 }
 
-func (us *UpdateServer) Start() (err error) {
-	ver := us.LoadVersions()
+func (ups *UpdateServer) Start() (err error) {
+	ver := ups.LoadVersions()
 	if ver != nil {
-		http.HandleFunc("/latest", us.versionHandler(ver))
-		handler := http.FileServer(http.Dir(path.Join(us.UploadPath, ver.Value)))
+		http.HandleFunc("/latest", ups.versionHandler(ver))
+		handler := http.FileServer(http.Dir(path.Join(ups.UploadPath, ver.Value)))
 		http.Handle("/"+ver.Value+"/", http.StripPrefix("/"+ver.Value, handler))
 	}
-	log.Info("Server started on localhost:" + us.Port + ", use /upload for uploading files and /{version}/{fileName} for downloading files.")
+	log.Info("Server started on localhost:" + ups.Port + ", use /upload for uploading files and /{version}/{fileName} for downloading files.")
 	go func() {
-		if err = us.server.ListenAndServe(); err != nil {
+		if err = ups.server.ListenAndServe(); err != nil {
 			log.Warn("Update server - ", err)
 		}
 	}()
 	return nil
 }
 
-func (us *UpdateServer) Stop() error {
+func (ups *UpdateServer) Stop() error {
 	const timeOut = 5
 	log.Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeOut)*time.Second)
 	defer cancel()
-	err := us.server.Shutdown(ctx)
+	err := ups.server.Shutdown(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Can't gracefully stop UPDATE server")
 	}

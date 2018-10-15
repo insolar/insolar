@@ -44,7 +44,12 @@ func main() {
 		log.Warn("Can't start server: ", err)
 		os.Exit(1)
 	}
-	defer server.Stop()
+	defer func() {
+		err := server.Stop()
+		if err != nil {
+			log.Warn(err)
+		}
+	}()
 	repl()
 }
 

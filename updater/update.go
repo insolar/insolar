@@ -1,3 +1,18 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package updater
 
 import (
@@ -20,7 +35,10 @@ func (up *Updater) verifyAndUpdate() error {
 		if up.DownloadFiles(newVersion) {
 			// ToDo: send stop signal, then copy files from folder=./${VERSION} to current folder
 
-			os.Setenv("INS_LATEST_VER", newVersion)
+			err := os.Setenv("INS_LATEST_VER", newVersion)
+			if err != nil {
+				log.Warn("Can not set OS envelop value INS_LATEST_VER: ", err)
+			}
 		}
 	}
 	// Run peer
@@ -30,26 +48,26 @@ func (up *Updater) verifyAndUpdate() error {
 	return nil
 }
 
-func (updater *Updater) IsSameVersion(currentVersion string) (bool, string, error) {
+func (up *Updater) IsSameVersion(currentVersion string) (bool, string, error) {
 	log.Debug("Verify latest peer version from remote server")
-	updater.CurrentVer = currentVersion
+	up.CurrentVer = currentVersion
 	currentVer := request.NewVersion(currentVersion)
-	if updater.LastSuccessServer != "" {
-		log.Debug("Latest update server was: ", updater.LastSuccessServer)
-		vers, err := request.ReqCurrentVerFromAddress(request.GetProtocol(updater.LastSuccessServer), updater.LastSuccessServer)
+	if up.LastSuccessServer != "" {
+		log.Debug("Latest update server was: ", up.LastSuccessServer)
+		vers, err := request.ReqCurrentVerFromAddress(request.GetProtocol(up.LastSuccessServer), up.LastSuccessServer)
 		if err == nil && vers != "" {
 			versionFromUS := request.ExtractVersion(vers)
 			return request.CompareVersion(versionFromUS, currentVer) < 0, versionFromUS.Value, nil
 		}
 	}
-	lastSuccessServer, versionFromUS, err := request.ReqCurrentVer(updater.ServersList)
+	lastSuccessServer, versionFromUS, err := request.ReqCurrentVer(up.ServersList)
 	if err != nil {
 		return true, "", err
 	}
 	log.Debug("Get version=", versionFromUS.Value, " from remote server: ", lastSuccessServer)
-	updater.LastSuccessServer = lastSuccessServer
+	up.LastSuccessServer = lastSuccessServer
 
-	if versionFromUS == nil || updater.CurrentVer == "" {
+	if versionFromUS == nil || up.CurrentVer == "" {
 		return true, "unset", nil
 	} else
 	//if(updater.currentVer != versionFromUS){
