@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
@@ -979,4 +980,38 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 		_, err = i.Next()
 		assert.Error(t, err)
 	})
+}
+
+func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
+	t.Parallel()
+	td, cleaner := prepareAMTestData(t)
+	defer cleaner()
+
+	records := []record.ObjectActivateRecord{
+		{Memory: []byte{1}},
+		{Memory: []byte{2}},
+		{Memory: []byte{3}},
+	}
+	ids := []record.ID{
+		{Hash: []byte{4}},
+		{Hash: []byte{5}},
+		{Hash: []byte{6}},
+	}
+	recordData := [][2][]byte{
+		{record.ID2Bytes(ids[0]), record.MustEncodeRaw(record.MustEncodeToRaw(&records[0]))},
+		{record.ID2Bytes(ids[1]), record.MustEncodeRaw(record.MustEncodeToRaw(&records[1]))},
+		{record.ID2Bytes(ids[2]), record.MustEncodeRaw(record.MustEncodeToRaw(&records[2]))},
+	}
+
+	rep, err := td.manager.messageBus.Send(&message.JetDrop{
+		Records: recordData,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, reply.Ok{}, *rep.(*reply.Ok))
+
+	for i := 0; i < len(records); i++ {
+		rec, err := td.db.GetRecord(&ids[i])
+		assert.NoError(t, err)
+		assert.Equal(t, records[i], *rec.(*record.ObjectActivateRecord))
+	}
 }
