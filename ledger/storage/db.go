@@ -347,10 +347,12 @@ func (db *DB) SetEntropy(pulse core.PulseNumber, entropy core.Entropy) error {
 func (db *DB) SetCurrentPulse(pulse core.PulseNumber) {
 	db.currentPulse = pulse
 }
+// GetLatestPulseNumber returns current pulse number.
+func (db *DB) GetLatestPulseNumber() (core.PulseNumber, error) {
+	tx := db.BeginTransaction(false)
+	defer tx.Discard()
 
-// GetCurrentPulse returns current pulse number.
-func (db *DB) GetCurrentPulse() core.PulseNumber {
-	return db.currentPulse
+	return tx.GetLatestPulseNumber()
 }
 
 // BeginTransaction opens a new transaction.
