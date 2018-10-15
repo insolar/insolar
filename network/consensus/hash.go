@@ -47,7 +47,7 @@ func calculateNodeHash(node *core.ActiveNode) []byte {
 	hashWriteChecked(hash, b[:4])
 	b[0] = byte(node.State)
 	hashWriteChecked(hash, b[:1])
-	hashWriteChecked(hash, node.PublicKey)
+	// hashWriteChecked(hash, node.PublicKey)
 	return hash.Sum(nil)
 }
 

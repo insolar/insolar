@@ -136,6 +136,11 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
+	err := network.hostNetwork.StartAuthorize()
+	if err != nil {
+		return errors.Wrap(err, "error authorizing node")
+	}
+
 	pm, err := getPulseManager(components)
 	if err != nil {
 		log.Error(err)

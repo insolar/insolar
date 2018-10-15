@@ -123,7 +123,7 @@ func processGetNonce(
 	nonce, err := time.Now().MarshalBinary()
 	hostHandler.GetNetworkCommonFacade().GetSignHandler().AddUncheckedNode(msg.Sender.ID, nonce, data.NodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal nonce")
+		return packetBuilder.Response(&packet.ResponseGetNonce{Error: err.Error()}).Build(), nil
 	}
 	return packetBuilder.Response(&packet.ResponseGetNonce{Nonce: nonce}).Build(), nil
 }
@@ -133,17 +133,31 @@ func processCheckSignedNonce(
 	ctx hosthandler.Context,
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
+
 	data := msg.Data.(*packet.RequestCheckSignedNonce)
-	if hostHandler.GetNetworkCommonFacade().GetSignHandler().SignedNonceIsCorrect(
-		hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator(),
-		msg.Sender.ID,
-		data.Signed,
-	) {
-		// TODO: add to async and wait to advance to sync list
-	} else {
-		return nil, errors.New("failed to check signed nonce")
+	signer := hostHandler.GetNetworkCommonFacade().GetSignHandler()
+	networkCoordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
+	if networkCoordinator == nil {
+		err := "networkCoordinator is nil"
+		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
 	}
-	return nil, nil
+	if !signer.SignedNonceIsCorrect(networkCoordinator, msg.Sender.ID, data.Signed) {
+		err := "signed nonce is not correct"
+		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
+	}
+	ch, err := hostHandler.AddUnsync(data.NodeID, data.NodeRole /*, data.PublicKey*/)
+	if err != nil {
+		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err.Error()}).Build(), nil
+	}
+	// TODO: timeout
+	self := <-ch
+	returnedList := hostHandler.GetActiveNodesList()
+	returnedList = append(returnedList, self)
+
+	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{
+		Error:       "",
+		ActiveNodes: returnedList,
+	}).Build(), nil
 }
 
 func processGetRandomHosts(

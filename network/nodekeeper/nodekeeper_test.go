@@ -26,17 +26,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newActiveNode(ref byte) (core.RecordRef, core.NodeRole, []byte) {
-	return core.RecordRef{ref}, core.RoleUnknown, []byte{0, 0, 0}
+func newActiveNode(ref byte) (core.RecordRef, core.NodeRole) {
+	return core.RecordRef{ref}, core.RoleUnknown
 }
 
 func newSelfNode(ref core.RecordRef) *core.ActiveNode {
+	// key, _ := ecdsa.GeneratePrivateKey()
 	return &core.ActiveNode{
-		NodeID:    ref,
-		PulseNum:  core.PulseNumber(0),
-		State:     core.NodeActive,
-		Role:      core.RoleUnknown,
-		PublicKey: []byte{0, 0, 0},
+		NodeID:   ref,
+		PulseNum: core.PulseNumber(0),
+		State:    core.NodeActive,
+		Role:     core.RoleUnknown,
+		// PublicKey: &key.PublicKey,
 	}
 }
 

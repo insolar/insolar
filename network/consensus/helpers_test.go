@@ -25,12 +25,13 @@ import (
 )
 
 func newActiveNode(ref byte, pulse int) *core.ActiveNode {
+	// key, _ := ecdsa.GeneratePrivateKey()
 	return &core.ActiveNode{
-		NodeID:    core.RecordRef{ref},
-		PulseNum:  core.PulseNumber(pulse),
-		State:     core.NodeActive,
-		Role:      core.RoleUnknown,
-		PublicKey: []byte{0, 0, 0},
+		NodeID:   core.RecordRef{ref},
+		PulseNum: core.PulseNumber(pulse),
+		State:    core.NodeActive,
+		Role:     core.RoleUnknown,
+		// PublicKey: &key.PublicKey,
 	}
 }
 

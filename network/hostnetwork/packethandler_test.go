@@ -322,6 +322,15 @@ func (hh *mockHostHandler) AddUncheckedNode(hostID id.ID, nonce []byte, ref core
 
 }
 
+func (hh *mockHostHandler) StartAuthorize() error {
+	return nil
+}
+
+func (hh *mockHostHandler) AddUnsync(nodeID core.RecordRef,
+	role core.NodeRole /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+	return nil, nil
+}
+
 func (hh *mockHostHandler) RemoveUncheckedNode(hostID id.ID) {
 
 }

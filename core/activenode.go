@@ -43,5 +43,6 @@ type ActiveNode struct {
 	// JetRoles is the set of candidate JetRoles for the node
 	Role NodeRole
 	// PublicKey is the public key of the node
-	PublicKey []byte
+	// PublicKey *ecdsa.PublicKey
+	// TODO: big problems with serialization of this PublicKey, skipping for now
 }

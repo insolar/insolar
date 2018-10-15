@@ -429,6 +429,73 @@ func (dht *DHT) updateBootstrapHost(bootstrapAddress string, bootstrapID id.ID) 
 	}
 }
 
+// StartAuthorize start authorize to discovery nodes.
+func (dht *DHT) StartAuthorize() error {
+	// hack for zeronet
+	if len(dht.options.BootstrapHosts) == 0 {
+		log.Info("Bootstrap nodes is not set. Init zeronet.")
+		dht.activeNodeKeeper.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
+			NodeID:   dht.nodeID,
+			PulseNum: 0,
+			State:    core.NodeActive,
+			// PublicKey: &dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey().PublicKey,
+		}})
+		return nil
+	}
+
+	discoveryNodesCount := len(dht.options.BootstrapHosts)
+	ch := make(chan []*core.ActiveNode, discoveryNodesCount)
+	for _, h := range dht.options.BootstrapHosts {
+		go func(ch chan []*core.ActiveNode, h *host.Host) {
+			activeNodes, err := GetNonceRequest(dht, h.ID.String())
+			if err != nil {
+				log.Warnf("error authorizing on %s host: %s", h, err.Error())
+			}
+			ch <- activeNodes
+		}(ch, h)
+	}
+
+	receivedResults := make([][]*core.ActiveNode, 0)
+	i := 0
+LOOP:
+	for {
+		select {
+		case activeNodeList := <-ch:
+			receivedResults = append(receivedResults, activeNodeList)
+			i++
+			if i == discoveryNodesCount {
+				break LOOP
+			}
+		case <-time.After(10 * time.Second):
+			log.Warn("StartAuthorize: timeout exceeded")
+			break LOOP
+		}
+	}
+
+	if len(receivedResults) == 0 {
+		return errors.New("StartAuthorize: No answers received from discovery nodes")
+	}
+
+	atLeastOneResultIsFine := false
+	for _, result := range receivedResults {
+		err := dht.AddActiveNodes(result)
+		if err != nil {
+			log.Error(err.Error())
+		} else {
+			atLeastOneResultIsFine = true
+		}
+	}
+	if !atLeastOneResultIsFine {
+		return errors.New("StartAuthorize: received active nodes do not pass majority rule")
+	}
+	return nil
+}
+
+func (dht *DHT) AddUnsync(nodeID core.RecordRef, role core.NodeRole /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+	// TODO: return nodekeeper from helper method in HostHandler and remove this func and GetActiveNodes
+	return dht.activeNodeKeeper.AddUnsync(nodeID, role /*, publicKey*/)
+}
+
 // Disconnect will trigger a Stop from the network.
 func (dht *DHT) Disconnect() {
 	dht.transport.Stop()
@@ -974,7 +1041,7 @@ func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 		}
 		if !bytes.Equal(currentHash, newHash) {
 			// TODO: disconnect from all or what?
-			return errors.New("two or more active node lists are different but majority check was passed")
+			return errors.New("two or more active node lists are different but majority check has passed")
 		}
 	} else {
 		dht.activeNodeKeeper.AddActiveNodes(activeNodes)

@@ -111,6 +111,7 @@ type HostHandler interface {
 	Listen() error
 	ObtainIP() error
 	Bootstrap() error
+	StartAuthorize() error
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
@@ -160,4 +161,5 @@ type HostHandler interface {
 	GetNetworkCommonFacade() NetworkCommonFacade
 	GetExpirationTime(ctx Context, key []byte) time.Time
 	GetActiveNodesList() []*core.ActiveNode
+	AddUnsync(nodeID core.RecordRef, role core.NodeRole /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error)
 }
