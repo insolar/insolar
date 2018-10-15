@@ -19,41 +19,58 @@ package pulsemanager
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	db          *storage.DB
-	lr          core.LogicRunner
-	coordinator *jetcoordinator.JetCoordinator
-	bus         core.MessageBus
+	db  *storage.DB
+	lr  core.LogicRunner
+	bus core.MessageBus
 }
 
 // Current returns current pulse structure.
 func (m *PulseManager) Current() (*core.Pulse, error) {
-	pulseNum := m.db.GetCurrentPulse()
-	entropy, err := m.db.GetEntropy(pulseNum)
+	latestPulse, err := m.db.GetLatestPulseNumber()
 	if err != nil {
 		return nil, err
 	}
-	pulse := core.Pulse{
-		PulseNumber: pulseNum,
-		Entropy:     *entropy,
+	pulse, err := m.db.GetPulse(latestPulse)
+	if err != nil {
+		return nil, err
 	}
-	return &pulse, nil
+	data := core.Pulse{
+		PulseNumber: latestPulse,
+		Entropy:     pulse.Entropy,
+	}
+	return &data, nil
 }
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(pulse core.Pulse) error {
-	err := m.db.SetEntropy(pulse.PulseNumber, pulse.Entropy)
+	latestPulseNumber, err := m.db.GetLatestPulseNumber()
+	if err != nil {
+		return err
+	}
+	latestPulse, err := m.db.GetPulse(latestPulseNumber)
+	if err != nil {
+		return err
+	}
+	prevDrop, err := m.db.GetDrop(latestPulse.PrevPulse)
+	if err != nil {
+		return err
+	}
+	drop, records, err := m.db.CreateDrop(latestPulseNumber, prevDrop.Hash)
+	if err != nil {
+		return err
+	}
+	err = m.db.SetDrop(drop)
 	if err != nil {
 		return err
 	}
 
-	drop, err := m.coordinator.CreateDrop(pulse.PulseNumber)
+	err = m.db.AddPulse(pulse)
 	if err != nil {
 		return err
 	}
@@ -62,33 +79,17 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
-
-	var records [][]byte
-	m.db.ProcessSlot(pulse.PulseNumber, func(it storage.Iterator) error {
-		for i := 1; it.Next(); i++ {
-			rec, err := it.Value()
-			if err != nil {
-				return err
-			}
-			records = append(records, rec)
-		}
-		return nil
-	})
-
 	_, err = m.bus.Send(&message.JetDrop{Drop: dropSerialized, Records: records})
 	if err != nil {
 		return err
 	}
-	m.db.SetCurrentPulse(pulse.PulseNumber)
+
 	return m.lr.OnPulse(pulse)
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB, coordinator *jetcoordinator.JetCoordinator) (*PulseManager, error) {
-	pm := PulseManager{
-		db:          db,
-		coordinator: coordinator,
-	}
+func NewPulseManager(db *storage.DB) (*PulseManager, error) {
+	pm := PulseManager{db: db}
 	return &pm, nil
 }
 
