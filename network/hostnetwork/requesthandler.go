@@ -363,7 +363,7 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *ho
 		return err
 	}
 
-	signedNonce, err := hostHandler.SignNonce(nonce)
+	signedNonce, err := hostHandler.GetNetworkCommonFacade().GetSignHandler().SignNonce(nonce)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a nonce")
 	}

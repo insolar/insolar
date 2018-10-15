@@ -121,7 +121,7 @@ func processGetNonce(
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestGetNonce)
 	nonce, err := time.Now().MarshalBinary()
-	hostHandler.AddUncheckedNode(msg.Sender.ID, nonce, data.NodeID)
+	hostHandler.GetNetworkCommonFacade().GetSignHandler().AddUncheckedNode(msg.Sender.ID, nonce, data.NodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal nonce")
 	}
@@ -134,7 +134,11 @@ func processCheckSignedNonce(
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestCheckSignedNonce)
-	if hostHandler.SignedNonceIsCorrect(msg.Sender.ID, data.Signed) {
+	if hostHandler.GetNetworkCommonFacade().GetSignHandler().SignedNonceIsCorrect(
+		hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator(),
+		msg.Sender.ID,
+		data.Signed,
+	) {
 		// TODO: add to async and wait to advance to sync list
 	} else {
 		return nil, errors.New("failed to check signed nonce")

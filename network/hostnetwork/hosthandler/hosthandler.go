@@ -24,10 +24,10 @@ import (
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
+	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 )
@@ -47,6 +47,7 @@ type NetworkCommonFacade interface {
 	GetConsensus() consensus.Processor
 	SetNetworkCoordinator(coordinator core.NetworkCoordinator)
 	GetNetworkCoordinator() core.NetworkCoordinator
+	GetSignHandler() signhandler.SignHandler
 }
 
 // commonFacade implements a NetworkCommonFacade.
@@ -56,11 +57,12 @@ type commonFacade struct {
 	pm          core.PulseManager
 	ic          consensus.Processor
 	coordinator core.NetworkCoordinator
+	signHandler signhandler.SignHandler
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
-func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade) NetworkCommonFacade {
-	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil}
+func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade, signH signhandler.SignHandler) NetworkCommonFacade {
+	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil, signHandler: signH}
 }
 
 // GetRPC return an RPC pointer.
@@ -99,6 +101,10 @@ func (fac *commonFacade) GetNetworkCoordinator() core.NetworkCoordinator {
 	return fac.coordinator
 }
 
+func (fac *commonFacade) GetSignHandler() signhandler.SignHandler {
+	return fac.signHandler
+}
+
 // HostHandler is an interface which uses for host network implementation.
 type HostHandler interface {
 	Disconnect()
@@ -108,11 +114,9 @@ type HostHandler interface {
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
-	SignNonce(nonce []byte) ([]byte, error)
 	HtFromCtx(ctx Context) *routing.HashTable
 	StoreRetrieve(key store.Key) ([]byte, bool)
 	EqualAuthSentKey(targetID string, key []byte) bool
-	SignedNonceIsCorrect(hostID id.ID, signedNonce []byte) bool
 	SendRequest(packet *packet.Packet) (transport.Future, error)
 	FindHost(ctx Context, targetID string) (*host.Host, bool, error)
 	RemoteProcedureRegister(name string, method core.RemoteProcedure)
@@ -128,7 +132,6 @@ type HostHandler interface {
 	AddAuthSentKey(id string, key []byte)
 	AddRelayClient(host *host.Host) error
 	AddReceivedKey(target string, key []byte)
-	AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef)
 	AddHost(ctx Context, host *routing.RouteHost)
 	AddActiveNodes(activeNode []*core.ActiveNode) error
 

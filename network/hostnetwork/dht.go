@@ -64,7 +64,6 @@ type DHT struct {
 	nodeID            core.RecordRef
 	activeNodeKeeper  nodekeeper.NodeKeeper
 	majorityRule      int
-	signHandler       SignHandler
 }
 
 // AuthInfo collects some information about authentication.
@@ -148,8 +147,6 @@ func NewDHT(
 		keeper = nodekeeper.NewNodeKeeper(nodeID)
 	}
 
-	signHandler := NewSignHandler(key)
-
 	dht = &DHT{
 		options:           options,
 		origin:            origin,
@@ -164,7 +161,6 @@ func NewDHT(
 		nodeID:            nodeID,
 		activeNodeKeeper:  keeper,
 		majorityRule:      majorityRule,
-		signHandler:       signHandler,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -834,7 +830,7 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 			log.Error(err, "failed to parse incoming RPC")
 			return
 		}
-		if !message.SignIsCorrect(signedMsg, dht.signHandler.GetPrivateKey()) {
+		if !message.SignIsCorrect(signedMsg, dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey()) {
 			log.Warn("RPC message not signed")
 			return
 		}
@@ -1353,16 +1349,4 @@ func (dht *DHT) AddPossibleRelayID(id string) {
 // GetOriginHost returns the local host.
 func (dht *DHT) GetOriginHost() *host.Origin {
 	return dht.origin
-}
-
-func (dht *DHT) AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef) {
-	dht.signHandler.AddUncheckedNode(hostID, nonce, ref)
-}
-
-func (dht *DHT) SignedNonceIsCorrect(hostID id.ID, signedNonce []byte) bool {
-	return dht.signHandler.SignedNonceIsCorrect(dht.GetNetworkCommonFacade().GetNetworkCoordinator(), hostID, signedNonce)
-}
-
-func (dht *DHT) SignNonce(nonce []byte) ([]byte, error) {
-	return dht.signHandler.SignNonce(nonce)
 }

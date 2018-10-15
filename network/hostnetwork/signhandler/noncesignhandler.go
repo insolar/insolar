@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package hostnetwork
+package signhandler
 
 import (
 	"crypto/ecdsa"
@@ -32,23 +32,26 @@ type UncheckedNode struct {
 	Nonce []byte
 }
 
-// SignHandler is a component which signs and check authorization nonce.
-type SignHandler struct {
+// NonceSignHandler is a component which signs and check authorization nonce.
+type NonceSignHandler struct {
+	// TODO: add old unchecked nodes cleaner.
 	uncheckedNodes map[string]UncheckedNode
 	privateKey     *ecdsa.PrivateKey
 }
 
 // NewSignHandler creates a new sign handler.
-func NewSignHandler(key *ecdsa.PrivateKey) SignHandler {
-	return SignHandler{privateKey: key, uncheckedNodes: make(map[string]UncheckedNode)}
+func NewSignHandler(key *ecdsa.PrivateKey) *NonceSignHandler {
+	return &NonceSignHandler{privateKey: key, uncheckedNodes: make(map[string]UncheckedNode)}
 }
 
-func (handler *SignHandler) AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef) {
+// AddUncheckedNode adds a new node to authorization.
+func (handler *NonceSignHandler) AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef) {
 	unchecked := UncheckedNode{Ref: ref, Nonce: nonce}
 	handler.uncheckedNodes[hostID.String()] = unchecked
 }
 
-func (handler *SignHandler) SignedNonceIsCorrect(coordinator core.NetworkCoordinator, hostID id.ID, signedNonce []byte) bool {
+// SignedNonceIsCorrect checks a nonce sign.
+func (handler *NonceSignHandler) SignedNonceIsCorrect(coordinator core.NetworkCoordinator, hostID id.ID, signedNonce []byte) bool {
 	if unchecked, ok := handler.uncheckedNodes[hostID.String()]; ok {
 		key, _, err := coordinator.Authorize(unchecked.Ref, unchecked.Nonce, signedNonce)
 		if err != nil {
@@ -62,7 +65,8 @@ func (handler *SignHandler) SignedNonceIsCorrect(coordinator core.NetworkCoordin
 	return false
 }
 
-func (handler *SignHandler) SignNonce(nonce []byte) ([]byte, error) {
+// SignNonce sign a nonce.
+func (handler *NonceSignHandler) SignNonce(nonce []byte) ([]byte, error) {
 	sign, err := ecdsa2.Sign(nonce, handler.privateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
@@ -70,6 +74,7 @@ func (handler *SignHandler) SignNonce(nonce []byte) ([]byte, error) {
 	return sign, nil
 }
 
-func (handler *SignHandler) GetPrivateKey() *ecdsa.PrivateKey {
+// GetPrivateKey returns a private key.
+func (handler *NonceSignHandler) GetPrivateKey() *ecdsa.PrivateKey {
 	return handler.privateKey
 }
