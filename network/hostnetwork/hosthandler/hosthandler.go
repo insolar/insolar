@@ -42,8 +42,8 @@ type NetworkCommonFacade interface {
 	GetCascade() *cascade.Cascade
 	GetPulseManager() core.PulseManager
 	SetPulseManager(manager core.PulseManager)
-	SetConsensus(insolarConsensus consensus.InsolarConsensus)
-	GetConsensus() consensus.InsolarConsensus
+	SetConsensus(insolarConsensus consensus.Processor)
+	GetConsensus() consensus.Processor
 }
 
 // commonFacade implements a NetworkCommonFacade.
@@ -51,7 +51,7 @@ type commonFacade struct {
 	rpcPtr  rpc.RPC
 	cascade *cascade.Cascade
 	pm      core.PulseManager
-	ic      consensus.InsolarConsensus
+	ic      consensus.Processor
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
@@ -79,11 +79,11 @@ func (fac *commonFacade) SetPulseManager(manager core.PulseManager) {
 	fac.pm = manager
 }
 
-func (fac *commonFacade) SetConsensus(insolarConsensus consensus.InsolarConsensus) {
+func (fac *commonFacade) SetConsensus(insolarConsensus consensus.Processor) {
 	fac.ic = insolarConsensus
 }
 
-func (fac *commonFacade) GetConsensus() consensus.InsolarConsensus {
+func (fac *commonFacade) GetConsensus() consensus.Processor {
 	return fac.ic
 }
 

@@ -114,5 +114,4 @@ type Neighbour struct {
 	ConnectionAddress string
 	OutgoingClient    RPCClientWrapper
 	PublicKey         *ecdsa.PublicKey
-	PublicKeyRaw      string
 }

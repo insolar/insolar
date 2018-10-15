@@ -204,7 +204,8 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 		}
 		o, err := am.GetObject(*r, nil)
 		if err != nil {
-			return errors.Wrap(err, "Have ref, have no object")
+			// TODO: we should detect deactivated objects
+			continue
 		}
 		cd, err := o.ClassDescriptor(nil)
 		if err != nil {
@@ -289,6 +290,31 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 		Type:   core.CaseRecordTypeGetDelegate,
 		ReqSig: HashInterface(req),
 		Resp:   rep.Object,
+	})
+	return nil
+}
+
+// DeactivateObject is an RPC saving data as memory of a contract as child a parent
+func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
+	cr, step := gpr.lr.getNextValidationStep(req.Me)
+	if step >= 0 { // validate
+		if core.CaseRecordTypeDeactivateObject != cr.Type {
+			return errors.New("Wrong validation type on RouteCall")
+		}
+		sig := HashInterface(req)
+		if !bytes.Equal(cr.ReqSig, sig) {
+			return errors.New("Wrong validation sig on RouteCall")
+		}
+		return nil
+	}
+	am := gpr.lr.ArtifactManager
+	_, err := am.DeactivateObject(core.RecordRef{}, core.RecordRef{}, req.Object)
+	if err != nil {
+		return err
+	}
+	gpr.lr.addObjectCaseRecord(req.Me, core.CaseRecord{
+		Type:   core.CaseRecordTypeDeactivateObject,
+		ReqSig: HashInterface(req),
 	})
 	return nil
 }

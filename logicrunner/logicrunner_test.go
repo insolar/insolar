@@ -549,6 +549,46 @@ func (r *One) Hello() string {
 	assert.Equal(t, cb.Classes["one"].String(), resParsed[0])
 }
 
+func TestDeactivation(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var code = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Kill() {
+	r.SelfDestruct()
+}
+`
+	lr, am, cb, cleaner := PrepareLrAmCb(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{"one": code})
+	assert.NoError(t, err)
+
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *obj,
+		*cb.Classes["one"],
+		*am.GenesisRef(),
+		testutil.CBORMarshal(t, &struct{}{}),
+	)
+	assert.NoError(t, err)
+
+	_, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Kill",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+}
+
 func TestGetChildren(t *testing.T) {
 	if parallel {
 		t.Parallel()
@@ -652,6 +692,7 @@ func New(n int) *Child {
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
 
+	SendDataToValidate(lr)
 }
 
 func TestErrorInterface(t *testing.T) {
@@ -676,6 +717,13 @@ func (r *One) AnError() error {
 
 	return friend.AnError()
 }
+
+func (r *One) NoError() error {
+	holder := two.New()
+	friend := holder.AsChild(r.GetReference())
+
+	return friend.NoError()
+}
 `
 
 	var contractTwoCode = `
@@ -695,6 +743,9 @@ func New() *Two {
 }
 func (r *Two) AnError() error {
 	return errors.New("an error")
+}
+func (r *Two) NoError() error {
+	return nil
 }
 `
 	lr, am, cb, cleaner := PrepareLrAmCb(t)
@@ -726,6 +777,89 @@ func (r *Two) AnError() error {
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
 	assert.NoError(t, err, "contract call")
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
+
+	resp, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "NoError",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+
+	ValidateAllResults(t, lr)
+
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}([]interface{}{nil}), r)
+	
+	SendDataToValidate(lr)
+}
+
+func TestNilResult(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var contractOneCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/application/proxy/two"
+)
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Hello() *string {
+	holder := two.New()
+	friend := holder.AsChild(r.GetReference())
+
+	return friend.Hello()
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
+
+type Two struct {
+	foundation.BaseContract
+}
+func New() *Two {
+	return &Two{}
+}
+func (r *Two) Hello() *string {
+	return nil
+}
+`
+	lr, am, cb, cleaner := PrepareLrAmCb(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{
+		"one": contractOneCode,
+		"two": contractTwoCode,
+	})
+	assert.NoError(t, err)
+
+	domain := core.NewRefFromBase58("c1")
+	contract, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), testutil.CBORMarshal(t, nil))
+	assert.NoError(t, err, "create contract")
+	assert.NotEqual(t, contract, nil, "contract created")
+
+	resp, err := lr.Execute(&message.CallMethod{
+		ObjectRef: *contract,
+		Method:    "Hello",
+		Arguments: testutil.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+
+	ValidateAllResults(t, lr)
+
+	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}([]interface{}{nil}), r)
 }
 
 type Caller struct {
@@ -904,6 +1038,8 @@ func (c *Child) GetNum() int {
 		r := goplugintestutils.CBORUnMarshal(b, resp.(*reply.CallMethod).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
+
+	SendDataToValidate(lr)
 }
 
 func TestProxyGeneration(t *testing.T) {
@@ -937,4 +1073,9 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err, string(out))
 		})
 	}
+}
+
+func SendDataToValidate(lr core.LogicRunner) {
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	//TODO validate data on another node
 }

@@ -96,16 +96,16 @@ func (r *RootDomain) RegisterNode( publicKey string, role string ) ( string ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 string
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(string)
+	return ret0
 }
 
 func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
@@ -141,20 +141,20 @@ func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, string ) {
    		panic(err)
 	}
 
-	resList := [3]interface{}{}
-	var a0 string
-	resList[0] = a0
-	var a1 core.NodeRole
-	resList[1] = a1
-	var a2 string
-	resList[2] = a2
+	ret := [3]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 core.NodeRole
+	ret[1] = &ret1
+	var ret2 string
+	ret[2] = &ret2
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(string), resList[1].(core.NodeRole), resList[2].(string)
+	return ret0, ret1, ret2
 }
 
 func (r *RootDomain) AuthorizeNoWait(  ) {
@@ -190,16 +190,16 @@ func (r *RootDomain) CreateMember( name string, key string ) ( string ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 string
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(string)
+	return ret0
 }
 
 func (r *RootDomain) CreateMemberNoWait( name string, key string ) {
@@ -236,16 +236,16 @@ func (r *RootDomain) GetBalance( reference string ) ( uint ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 uint
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 uint
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(uint)
+	return ret0
 }
 
 func (r *RootDomain) GetBalanceNoWait( reference string ) {
@@ -283,16 +283,16 @@ func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 bool
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 bool
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].(bool)
+	return ret0
 }
 
 func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
@@ -330,16 +330,16 @@ func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 []byte
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].([]byte)
+	return ret0
 }
 
 func (r *RootDomain) DumpUserInfoNoWait( reference string ) {
@@ -374,16 +374,16 @@ func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
    		panic(err)
 	}
 
-	resList := [1]interface{}{}
-	var a0 []byte
-	resList[0] = a0
+	ret := [1]interface{}{}
+	var ret0 []byte
+	ret[0] = &ret0
 
-	err = proxyctx.Current.Deserialize(res, &resList)
+	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return resList[0].([]byte)
+	return ret0
 }
 
 func (r *RootDomain) DumpAllUsersNoWait(  ) {

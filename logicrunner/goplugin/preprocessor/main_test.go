@@ -318,17 +318,17 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy("testRef", &bufProxy)
 	assert.NoError(t, err)
-	assert.Contains(t, bufProxy.String(), "var a0 int")
-	assert.Contains(t, bufProxy.String(), "resList[0] = a0")
+	assert.Contains(t, bufProxy.String(), "var ret0 int")
+	assert.Contains(t, bufProxy.String(), "ret[0] = &ret0")
 
-	assert.Contains(t, bufProxy.String(), "var a1 bool")
-	assert.Contains(t, bufProxy.String(), "resList[1] = a1")
+	assert.Contains(t, bufProxy.String(), "var ret1 bool")
+	assert.Contains(t, bufProxy.String(), "ret[1] = &ret1")
 
-	assert.Contains(t, bufProxy.String(), "var a2 string")
-	assert.Contains(t, bufProxy.String(), "resList[2] = a2")
+	assert.Contains(t, bufProxy.String(), "var ret2 string")
+	assert.Contains(t, bufProxy.String(), "ret[2] = &ret2")
 
-	assert.Contains(t, bufProxy.String(), "var a3 foundation.Reference")
-	assert.Contains(t, bufProxy.String(), "resList[3] = a3")
+	assert.Contains(t, bufProxy.String(), "var ret3 foundation.Reference")
+	assert.Contains(t, bufProxy.String(), "ret[3] = &ret3")
 }
 
 func TestInitializationFunctionParamsWrapper(t *testing.T) {
@@ -358,17 +358,17 @@ func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool,
 	var bufWrapper bytes.Buffer
 	err = parsed.WriteWrapper(&bufWrapper)
 	assert.NoError(t, err)
-	assert.Contains(t, bufWrapper.String(), "var a0 int")
-	assert.Contains(t, bufWrapper.String(), "args[0] = a0")
+	assert.Contains(t, bufWrapper.String(), "var args0 int")
+	assert.Contains(t, bufWrapper.String(), "args[0] = &args0")
 
-	assert.Contains(t, bufWrapper.String(), "var a1 bool")
-	assert.Contains(t, bufWrapper.String(), "args[1] = a1")
+	assert.Contains(t, bufWrapper.String(), "var args1 bool")
+	assert.Contains(t, bufWrapper.String(), "args[1] = &args1")
 
-	assert.Contains(t, bufWrapper.String(), "var a2 string")
-	assert.Contains(t, bufWrapper.String(), "args[2] = a2")
+	assert.Contains(t, bufWrapper.String(), "var args2 string")
+	assert.Contains(t, bufWrapper.String(), "args[2] = &args2")
 
-	assert.Contains(t, bufWrapper.String(), "var a3 foundation.Reference")
-	assert.Contains(t, bufWrapper.String(), "args[3] = a3")
+	assert.Contains(t, bufWrapper.String(), "var args3 foundation.Reference")
+	assert.Contains(t, bufWrapper.String(), "args[3] = &args3")
 }
 
 func TestContractOnlyIfEmbedBaseContract(t *testing.T) {

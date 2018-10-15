@@ -16,21 +16,11 @@
 
 package core
 
-import (
-	"testing"
+import "github.com/pkg/errors"
 
-	"github.com/stretchr/testify/assert"
+var (
+	// ErrUnknown returned when error type cannot be defined.
+	ErrUnknown = errors.New("unknown error")
+	// ErrDeactivated returned when requested object is deactivated.
+	ErrDeactivated = errors.New("object is deactivated")
 )
-
-func TestJetRoleMask_Set(t *testing.T) {
-	var mask JetRoleMask
-	assert.Equal(t, uint64(0), uint64(mask))
-	mask.Set(RoleVirtualValidator)
-	assert.True(t, mask.IsSet(RoleVirtualValidator))
-	assert.False(t, mask.IsSet(RoleVirtualExecutor))
-	mask.Set(RoleVirtualExecutor)
-	assert.True(t, mask.IsSet(RoleVirtualExecutor))
-	mask.Unset(RoleVirtualValidator)
-	assert.False(t, mask.IsSet(RoleVirtualValidator))
-	assert.True(t, mask.IsSet(RoleVirtualExecutor))
-}
