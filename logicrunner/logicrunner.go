@@ -173,8 +173,7 @@ func (lr *LogicRunner) GetContext(ref Ref) (ExecutionContext, bool) {
 func (lr *LogicRunner) SetContext(ref Ref, ec ExecutionContext) bool {
 	lr.contextMutex.Lock()
 	defer lr.contextMutex.Unlock()
-	_, ok := lr.context[ref]
-	if ok {
+	if _, ok := lr.context[ref]; ok {
 		return false
 	}
 	lr.context[ref] = ec
