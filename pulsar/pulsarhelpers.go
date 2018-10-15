@@ -47,6 +47,10 @@ func (currentPulsar *Pulsar) IsStateFailed() bool {
 	return currentPulsar.StateSwitcher.GetState() == Failed
 }
 
+func (currentPulsar *Pulsar) isStandalone() bool {
+	return len(currentPulsar.Neighbours) == 0
+}
+
 func (currentPulsar *Pulsar) getMaxTraitorsCount() int {
 	nodes := len(currentPulsar.Neighbours) + 1
 	return (nodes - 1) / 3

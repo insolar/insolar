@@ -101,7 +101,7 @@ func (switcher *StateSwitcherImpl) SwitchToState(state State, args interface{}) 
 	case SendingPulseSign:
 		switcher.pulsar.sendPulseSign()
 	case SendingPulse:
-		switcher.pulsar.sendPulse()
+		switcher.pulsar.sendPulseToNodesAndPulsars()
 	case Failed:
 		switcher.pulsar.handleErrorState(args.(error))
 		switcher.setState(WaitingForStart)
