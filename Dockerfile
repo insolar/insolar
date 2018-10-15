@@ -10,7 +10,7 @@ RUN make install-deps
 
 
 # insolard
-FROM builder as insolard
+FROM registry.ins.world/builder as insolard
 ADD . /go/src/github.com/insolar/insolar
 RUN make pre-build build
 

@@ -17,6 +17,13 @@ resources:
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
+- name: builder
+  type: docker-image
+  source:
+    repository: registry.ins.world/builder
+    username: ((meta.registry.username))
+    password: ((meta.registry.password))
+
 jobs:
 - name: unit
   public: true
@@ -59,4 +66,4 @@ jobs:
     params:
       build: master
       target: insolard
-      load_base: golang
+      load_base: builder
