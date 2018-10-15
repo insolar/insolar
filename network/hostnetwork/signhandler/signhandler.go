@@ -14,14 +14,18 @@
  *    limitations under the License.
  */
 
-package configuration
+package signhandler
 
-// Metrics holds configuration for metrics publishing.
-type Metrics struct {
-	ListenAddress string
-}
+import (
+	"crypto/ecdsa"
 
-// NewMetrics creates new default configuration for metrics publishing.
-func NewMetrics() Metrics {
-	return Metrics{ListenAddress: "0.0.0.0:9090"}
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/hostnetwork/id"
+)
+
+type SignHandler interface {
+	AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef)
+	SignedNonceIsCorrect(coordinator core.NetworkCoordinator, hostID id.ID, signedNonce []byte) bool
+	SignNonce(nonce []byte) ([]byte, error)
+	GetPrivateKey() *ecdsa.PrivateKey
 }

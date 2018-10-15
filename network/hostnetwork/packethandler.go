@@ -71,10 +71,8 @@ func DispatchPacketType(
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
 	case packet.TypeCheckSignedNonce:
 		return processCheckSignedNonce(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeCheckPublicKey:
-		return processCheckPublicKey(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeActiveNodes:
-		return processActiveNodes(hostHandler, packetBuilder)
+	case packet.TypeGetNonce:
+		return processGetNonce(hostHandler, msg, packetBuilder)
 	case packet.TypeDisconnect:
 		return processDisconnect(hostHandler, packetBuilder)
 	case packet.TypeExchangeUnsyncLists:
@@ -117,18 +115,17 @@ func processDisconnect(hostHandler hosthandler.HostHandler, packetBuilder packet
 	return packetBuilder.Response(&packet.ResponseDisconnect{Disconnected: true, Error: nil}).Build(), nil
 }
 
-func processCheckPublicKey(
+func processGetNonce(
 	hostHandler hosthandler.HostHandler,
-	ctx hosthandler.Context,
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
-	// TODO: do real check key.
-	exist := true
+	data := msg.Data.(*packet.RequestGetNonce)
 	nonce, err := time.Now().MarshalBinary()
+	hostHandler.GetNetworkCommonFacade().GetSignHandler().AddUncheckedNode(msg.Sender.ID, nonce, data.NodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal nonce")
 	}
-	return packetBuilder.Response(&packet.ResponseCheckPublicKey{Nonce: nonce, Exist: exist}).Build(), nil
+	return packetBuilder.Response(&packet.ResponseGetNonce{Nonce: nonce}).Build(), nil
 }
 
 func processCheckSignedNonce(
@@ -136,10 +133,17 @@ func processCheckSignedNonce(
 	ctx hosthandler.Context,
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
-	// TODO: do real check sign.
-	// TODO: add to unsync and wait to advance to sync list
-	parsed := true
-	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Success: parsed}).Build(), nil
+	data := msg.Data.(*packet.RequestCheckSignedNonce)
+	if hostHandler.GetNetworkCommonFacade().GetSignHandler().SignedNonceIsCorrect(
+		hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator(),
+		msg.Sender.ID,
+		data.Signed,
+	) {
+		// TODO: add to async and wait to advance to sync list
+	} else {
+		return nil, errors.New("failed to check signed nonce")
+	}
+	return nil, nil
 }
 
 func processGetRandomHosts(
@@ -436,9 +440,4 @@ func processCascadeSend(hostHandler hosthandler.HostHandler, ctx hosthandler.Con
 	}
 
 	return packetBuilder.Response(response).Build(), err
-}
-
-func processActiveNodes(hostHandler hosthandler.HostHandler, packetBuilder packet.Builder) (*packet.Packet, error) {
-	response := &packet.ResponseActiveNodes{ActiveNodes: hostHandler.GetActiveNodesList()}
-	return packetBuilder.Response(response).Build(), nil
 }
