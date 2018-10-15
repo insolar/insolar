@@ -166,7 +166,7 @@ func createMembers(concurrent int, repetitions int) ([]string, error) {
 	var members []string
 	for i := 0; i < concurrent*repetitions*2; i++ {
 		body := getResponseBody(postParams{
-			"query_type": "create_membera",
+			"query_type": "create_member",
 			"name":       testutils.RandomString(),
 			"public_key": "000",
 		})
