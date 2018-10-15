@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/stretchr/testify/assert"
 )
 
 // TmpDB returns BadgerDB's storage implementation and cleanup function.
@@ -41,6 +42,10 @@ func TmpDB(t testing.TB, dir string) (*storage.DB, func()) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Bootstrap
+	err = db.Bootstrap()
+	assert.NoError(t, err)
+
 	return db, func() {
 		closeErr := db.Close()
 		rmErr := os.RemoveAll(tmpdir)
