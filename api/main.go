@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/api/seedmanager"
@@ -171,6 +172,8 @@ type Runner struct {
 	server         *http.Server
 	cfg            *configuration.APIRunner
 	netCoordinator core.NetworkCoordinator
+	keyCache       map[string]string
+	cacheLock      *sync.RWMutex
 }
 
 // NewRunner is C-tor for API Runner
@@ -187,8 +190,10 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 
 	portStr := fmt.Sprint(cfg.Port)
 	ar := Runner{
-		server: &http.Server{Addr: ":" + portStr},
-		cfg:    cfg,
+		server:    &http.Server{Addr: ":" + portStr},
+		cfg:       cfg,
+		keyCache:  make(map[string]string),
+		cacheLock: &sync.RWMutex{},
 	}
 
 	return &ar, nil
