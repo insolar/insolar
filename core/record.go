@@ -17,8 +17,6 @@
 package core
 
 import (
-	"crypto/rand"
-
 	"github.com/jbenet/go-base58"
 
 	"github.com/insolar/insolar/cryptohelpers/hash"
@@ -112,14 +110,5 @@ func NewRefFromBase58(str string) RecordRef {
 	decoded := base58.Decode(str)
 	var ref RecordRef
 	copy(ref[:], decoded)
-	return ref
-}
-
-// RandomRef generates random RecordRef
-// TODO: DO NOT USE THIS IN PRODUCTION.
-// For tests copy this code or move it to test utils.
-func RandomRef() RecordRef {
-	ref := [64]byte{}
-	rand.Read(ref[:]) // nolint
 	return ref
 }

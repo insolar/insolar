@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -140,7 +141,7 @@ func (hh *mockHostHandler) GetOuterHostsCount() int {
 }
 
 func (hh *mockHostHandler) GetNodeID() core.RecordRef {
-	return core.RandomRef()
+	return testutils.RandomRef()
 }
 
 func (hh *mockHostHandler) ConfirmNodeRole(role string) bool {
