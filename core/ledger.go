@@ -44,6 +44,15 @@ type Ledger interface {
 	GetPulseManager() PulseManager
 }
 
+// PulseManager provides Ledger's methods related to Pulse.
+type PulseManager interface {
+	// Current returns current pulse structure.
+	Current() (*Pulse, error)
+
+	// Set set's new pulse and closes current jet drop.
+	Set(Pulse) error
+}
+
 // JetCoordinator provides methods for calculating Jet affinity
 // (e.g. to which Jet a message should be sent).
 type JetCoordinator interface {

@@ -84,12 +84,3 @@ var GenesisPulse = &Pulse{PulseNumber: FirstPulseNumber, Entropy: [EntropySize]b
 func CalculatePulseNumber(now time.Time) PulseNumber {
 	return PulseNumber(now.Unix() - firstPulseDate + FirstPulseNumber)
 }
-
-// PulseManager provides Ledger's methods related to Pulse.
-type PulseManager interface {
-	// Current returns current pulse structure.
-	Current() (*Pulse, error)
-
-	// Set set's new pulse and closes current jet drop.
-	Set(pulse Pulse) error
-}
