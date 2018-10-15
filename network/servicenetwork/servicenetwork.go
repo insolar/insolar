@@ -21,6 +21,7 @@ import (
 	ecdsa2 "crypto/ecdsa"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -78,6 +79,7 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 
 // SendMessage sends a message from MessageBus.
 func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+	start := time.Now()
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
@@ -96,6 +98,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 
 	metrics.NetworkMessageSentTotal.Inc()
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
+	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s", msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
 	return res, err
 }
 
