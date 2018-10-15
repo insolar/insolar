@@ -73,7 +73,10 @@ func (currentPulsar *Pulsar) clearState() {
 
 	currentPulsar.CurrentSlotEntropy = core.Entropy{}
 	currentPulsar.CurrentSlotPulseSender = ""
+
+	currentPulsar.currentSlotSenderConfirmationsLock.Lock()
 	currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}
+	currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 
 	currentPulsar.ProcessingPulseNumber = 0
 

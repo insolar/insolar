@@ -94,11 +94,14 @@ func (currentPulsar *Pulsar) sendPulseToPulsars() {
 		return
 	}
 
+	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
 	payload, err := currentPulsar.preparePayload(PulsePayload{Pulse: core.Pulse{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
 		Entropy:     currentPulsar.CurrentSlotEntropy,
 		Signs:       currentPulsar.CurrentSlotSenderConfirmations,
 	}})
+	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
+
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
 		return
@@ -155,14 +158,19 @@ func (currentPulsar *Pulsar) sendPulseSign() {
 		return
 	}
 
-	signature, err := signData(currentPulsar.PrivateKey, currentPulsar.CurrentSlotPulseSender)
+	signature, err := signData(currentPulsar.PrivateKey, core.PulseSenderConfirmation{
+		Entropy:         currentPulsar.CurrentSlotEntropy,
+		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+		PulseNumber:     currentPulsar.ProcessingPulseNumber,
+	})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
 		return
 	}
-	confirmation := SenderConfirmationPayload{
+	confirmation := core.PulseSenderConfirmation{
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+		Entropy:         currentPulsar.CurrentSlotEntropy,
 		Signature:       signature,
 	}
 
@@ -190,12 +198,14 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
 		return
 	}
 
+	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
 	pulseForSending := core.Pulse{
 		PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		Entropy:         currentPulsar.CurrentSlotEntropy,
 		Signs:           currentPulsar.CurrentSlotSenderConfirmations,
 		NextPulseNumber: currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
 	}
+	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
 	pulsarHost, t, err := currentPulsar.prepareForSendingPulse()
 	if err != nil {

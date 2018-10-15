@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/ledgertestutil"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/servicenetwork"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -192,11 +193,15 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
 				Neighbours: []configuration.PulsarNodeAddress{
 					{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: secondPubKey},
-				}},
-		},
+				},
+				ReceivingSignTimeout:           50,
+				ReceivingNumberTimeout:         50,
+				ReceivingSignsForChosenTimeout: 50,
+				ReceivingVectorTimeout:         50,
+			}},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
-		&StandardEntropyGenerator{},
+		&entropygenerator.StandardEntropyGenerator{},
 		firstStateSwitcher,
 		net.Listen,
 	)
@@ -206,6 +211,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	secondStateSwitcher := &StateSwitcherImpl{}
 	secondPulsar, err := NewPulsar(
 		configuration.Configuration{
+			PrivateKey: parsedPrivKeySecond,
 			Pulsar: configuration.Pulsar{
 				ConnectionType:      "tcp",
 				MainListenerAddress: ":1641",
@@ -213,12 +219,15 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
 				Neighbours: []configuration.PulsarNodeAddress{
 					{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: firstPubKey},
-				}},
-			PrivateKey: parsedPrivKeySecond,
-		},
+				},
+				ReceivingSignTimeout:           50,
+				ReceivingNumberTimeout:         50,
+				ReceivingSignsForChosenTimeout: 50,
+				ReceivingVectorTimeout:         50,
+			}},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
-		&StandardEntropyGenerator{},
+		&entropygenerator.StandardEntropyGenerator{},
 		secondStateSwitcher,
 		net.Listen,
 	)
@@ -235,14 +244,14 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
-	count := 20
+	count := 30
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
 		time.Sleep(10 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)

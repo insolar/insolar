@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
 
 type Handler struct {
@@ -75,7 +76,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 
-	generator := StandardEntropyGenerator{}
+	generator := entropygenerator.StandardEntropyGenerator{}
 	convertedKey, err := ecdsa.ExportPublicKey(&handler.Pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		log.Warn(err)
@@ -197,23 +198,30 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		return err
 	}
 
-	requestBody := request.Body.(SenderConfirmationPayload)
+	requestBody := request.Body.(core.PulseSenderConfirmation)
 	// this if should pe replaced with another realisation.INS-528
 	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 
-	isVerified, err := checkSignature(requestBody.ChosenPublicKey, request.PublicKey, requestBody.Signature)
+	isVerified, err := checkSignature(core.PulseSenderConfirmation{
+		ChosenPublicKey: requestBody.ChosenPublicKey,
+		Entropy:         requestBody.Entropy,
+		PulseNumber:     requestBody.PulseNumber,
+	}, request.PublicKey, requestBody.Signature)
 	if !isVerified || err != nil {
 		log.Errorf("signature and chosen publicKey aren't matched. error - %v isVerified - %v", err, isVerified)
 		return errors.New("signature check failed")
 	}
 
+	handler.Pulsar.currentSlotSenderConfirmationsLock.Lock()
 	handler.Pulsar.CurrentSlotSenderConfirmations[request.PublicKey] = core.PulseSenderConfirmation{
 		ChosenPublicKey: requestBody.ChosenPublicKey,
 		Signature:       requestBody.Signature,
+		PulseNumber:     requestBody.PulseNumber,
+		Entropy:         requestBody.Entropy,
 	}
-
+	handler.Pulsar.currentSlotSenderConfirmationsLock.Unlock()
 	return nil
 }
 

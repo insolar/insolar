@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -674,7 +675,7 @@ func generatePrivateAndConvertPublic(t *testing.T) (privateKey *ecdsa.PrivateKey
 }
 
 func prepareEntropy(t *testing.T, key *ecdsa.PrivateKey) (entropy core.Entropy, sign []byte) {
-	entropy = (&StandardEntropyGenerator{}).GenerateEntropy()
+	entropy = (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
 	sign, err := signData(key, entropy)
 	assert.NoError(t, err)
 	return

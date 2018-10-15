@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -48,15 +49,17 @@ type Pulsar struct {
 	Config configuration.Pulsar
 
 	Storage          pulsarstorage.PulsarStorage
-	EntropyGenerator EntropyGenerator
+	EntropyGenerator entropygenerator.EntropyGenerator
 
 	StartProcessLock     sync.Mutex
 	GeneratedEntropy     core.Entropy
 	GeneratedEntropySign []byte
 
-	CurrentSlotEntropy             core.Entropy
-	CurrentSlotPulseSender         string
-	CurrentSlotSenderConfirmations map[string]core.PulseSenderConfirmation
+	CurrentSlotEntropy     core.Entropy
+	CurrentSlotPulseSender string
+
+	currentSlotSenderConfirmationsLock sync.RWMutex
+	CurrentSlotSenderConfirmations     map[string]core.PulseSenderConfirmation
 
 	ProcessingPulseNumber core.PulseNumber
 	LastPulse             *core.Pulse
@@ -74,7 +77,7 @@ func NewPulsar(
 	configuration configuration.Configuration,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
-	entropyGenerator EntropyGenerator,
+	entropyGenerator entropygenerator.EntropyGenerator,
 	stateSwitcher StateSwitcher,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 
@@ -148,7 +151,7 @@ func NewPulsar(
 	gob.Register(EntropySignaturePayload{})
 	gob.Register(EntropyPayload{})
 	gob.Register(VectorPayload{})
-	gob.Register(SenderConfirmationPayload{})
+	gob.Register(core.PulseSenderConfirmation{})
 	gob.Register(PulsePayload{})
 
 	return pulsar, nil

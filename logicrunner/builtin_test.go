@@ -19,6 +19,7 @@ package logicrunner
 import (
 	"testing"
 
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
@@ -54,7 +55,7 @@ func TestBareHelloworld(t *testing.T) {
 		Ledger:     l,
 		MessageBus: eb,
 	}), "starting logicrunner")
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 
 	hw := helloworld.NewHelloWorld()
 

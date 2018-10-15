@@ -33,12 +33,6 @@ type VectorPayload struct {
 	Vector      map[string]*BftCell
 }
 
-type SenderConfirmationPayload struct {
-	PulseNumber     core.PulseNumber
-	Signature       []byte
-	ChosenPublicKey string
-}
-
 type PulsePayload struct {
 	Pulse core.Pulse
 }

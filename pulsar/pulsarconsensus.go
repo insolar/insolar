@@ -143,10 +143,12 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 			currentPulsar.StateSwitcher.SwitchToState(Failed, err)
 			return
 		}
+		currentPulsar.currentSlotSenderConfirmationsLock.Lock()
 		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Signature:       signature,
 		}
+		currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 
 		currentPulsar.StateSwitcher.SwitchToState(WaitingForPulseSigns, nil)
 	} else {

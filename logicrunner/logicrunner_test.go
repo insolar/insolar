@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"bytes"
-
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
@@ -42,6 +41,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/logicrunner/goplugin/testutil"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -88,7 +88,7 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *testu
 		Ledger:     l,
 		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
-	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 100, &pulsar.StandardEntropyGenerator{}))
+	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 100, &entropygenerator.StandardEntropyGenerator{}))
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
 	}
@@ -169,7 +169,7 @@ func TestBasics(t *testing.T) {
 	}
 	lr, err := NewLogicRunner(&configuration.LogicRunner{})
 	assert.NoError(t, err)
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 
 	comps := core.Components{
 		Ledger:     &testLedger{am: testutil.NewTestArtifactManager()},
@@ -242,7 +242,7 @@ func TestExecution(t *testing.T) {
 		Ledger:     ld,
 		MessageBus: eb,
 	})
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	eb.LogicRunner = lr
 
 	codeRef := core.NewRefFromBase58("someCode")
@@ -789,7 +789,7 @@ func (r *Two) NoError() error {
 
 	r := testutil.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{nil}), r)
-	
+
 	SendDataToValidate(lr)
 }
 
@@ -1076,6 +1076,6 @@ func TestProxyGeneration(t *testing.T) {
 }
 
 func SendDataToValidate(lr core.LogicRunner) {
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	//TODO validate data on another node
 }
