@@ -14,10 +14,9 @@
  *    limitations under the License.
  */
 
-package testutil
+package goplugintestutils
 
 import (
-	"crypto/rand"
 	"go/build"
 	"io/ioutil"
 	"os"
@@ -28,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -197,11 +197,8 @@ func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.Record
 
 // RegisterRequest implementation for tests
 func (t *TestArtifactManager) RegisterRequest(message core.Message) (*core.RecordRef, error) {
-	nonce, err := randomRef()
-	if err != nil {
-		return nil, err
-	}
-	return nonce, nil
+	nonce := testutils.RandomRef()
+	return &nonce, nil
 }
 
 // GetClass implementation for tests
@@ -244,16 +241,14 @@ func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.Re
 
 // DeployCode implementation for tests
 func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, codeMap map[core.MachineType][]byte) (*core.RecordRef, error) {
-	ref, err := randomRef()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
-	}
-	t.Codes[*ref] = &TestCodeDescriptor{
-		ARef:         *ref,
+	ref := testutils.RandomRef()
+
+	t.Codes[ref] = &TestCodeDescriptor{
+		ARef:         ref,
 		ACode:        codeMap[core.MachineTypeGoPlugin],
 		AMachineType: core.MachineTypeGoPlugin,
 	}
-	return ref, nil
+	return &ref, nil
 }
 
 // GetCode implementation for tests
@@ -272,12 +267,8 @@ func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.
 		ARef: &request,
 	}
 
-	id, err := randomID()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
-	}
-
-	return id, nil
+	id := testutils.RandomID()
+	return &id, nil
 }
 
 // DeactivateClass implementation for tests
@@ -292,31 +283,7 @@ func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.Re
 		return nil, errors.New("wrong class")
 	}
 	classDesc.ACode = &code
-
-	return randomID()
-}
-
-func randomRef() (*core.RecordRef, error) {
-	b := make([]byte, 64)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	ref := core.RecordRef{}
-	copy(ref[:], b[0:64])
-	return &ref, nil
-}
-
-func randomID() (*core.RecordID, error) {
-	b := make([]byte, core.RecordIDSize)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	id := core.RecordID{}
-	copy(id[:], b[:])
+	id := testutils.RandomID()
 	return &id, nil
 }
 
@@ -332,12 +299,8 @@ func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core
 		Delegates: make(map[core.RecordRef]core.RecordRef),
 	}
 
-	id, err := randomID()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
-	}
-
-	return id, nil
+	id := testutils.RandomID()
+	return &id, nil
 }
 
 // ActivateObjectDelegate implementation for tests
@@ -419,9 +382,8 @@ func AMPublishCode(
 	)
 	assert.NoError(t, err, "create code on ledger")
 
-	nonce, err := randomRef()
-	assert.NoError(t, err, "create class on ledger")
-	classRef, err = am.RegisterRequest(&message.CallConstructor{ClassRef: *nonce})
+	nonce := testutils.RandomRef()
+	classRef, err = am.RegisterRequest(&message.CallConstructor{ClassRef: nonce})
 	assert.NoError(t, err)
 	_, err = am.ActivateClass(domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
@@ -469,11 +431,8 @@ func (cb *ContractsBuilder) Clean() {
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 	for name := range contracts {
-		nonce, err := randomRef()
-		if err != nil {
-			return err
-		}
-		class, err := cb.ArtifactManager.RegisterRequest(&message.CallConstructor{ClassRef: *nonce})
+		nonce := testutils.RandomRef()
+		class, err := cb.ArtifactManager.RegisterRequest(&message.CallConstructor{ClassRef: nonce})
 		if err != nil {
 			return err
 		}
