@@ -46,6 +46,12 @@ func newNodeKeeper() NodeKeeper {
 	return keeper
 }
 
+func TestNodekeeper_GetID(t *testing.T) {
+	id := core.RecordRef{255}
+	keeper := NewNodeKeeper(id)
+	assert.Equal(t, id, keeper.GetID())
+}
+
 func TestNodekeeper_AddUnsync(t *testing.T) {
 	id := core.RecordRef{}
 	keeper := NewNodeKeeper(id)
@@ -164,8 +170,107 @@ func TestNodekeeper_SetPulse(t *testing.T) {
 	assert.False(t, success)
 }
 
-func TestNodekeeper_notifyWaiters(t *testing.T) {
+func TestNodekeeper_GetUnsyncHolder(t *testing.T) {
 	keeper := newNodeKeeper()
-	success, _ := keeper.SetPulse(core.PulseNumber(10))
+	pulse := core.PulseNumber(10)
+	requestedPulseLess := core.PulseNumber(11)
+	nextPulse := core.PulseNumber(12)
+	requestedPulseGreater := core.PulseNumber(13)
+	success, _ := keeper.SetPulse(pulse)
 	assert.True(t, success)
+
+	wg := sync.WaitGroup{}
+	waitersNext := 10
+	waitersRequestedLess := 5
+	waitersRequestedGreater := 5
+	wg.Add(waitersNext + waitersRequestedLess + waitersRequestedGreater)
+
+	f := func(t *testing.T, requestedPulse core.PulseNumber, nextPulse core.PulseNumber, wg *sync.WaitGroup) {
+		holder, err := keeper.GetUnsyncHolder(requestedPulse, 10*time.Millisecond)
+		if requestedPulse == nextPulse {
+			assert.NoError(t, err)
+			assert.NotNil(t, holder)
+			assert.Equal(t, nextPulse, holder.GetPulse())
+		} else {
+			assert.Error(t, err)
+			assert.Nil(t, holder)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < waitersNext; i++ {
+		go f(t, nextPulse, nextPulse, &wg)
+	}
+
+	for i := 0; i < waitersRequestedLess; i++ {
+		go f(t, requestedPulseLess, nextPulse, &wg)
+	}
+
+	for i := 0; i < waitersRequestedGreater; i++ {
+		go f(t, requestedPulseGreater, nextPulse, &wg)
+	}
+
+	time.Sleep(time.Millisecond)
+	success, _ = keeper.SetPulse(nextPulse)
+	assert.True(t, success)
+	wg.Wait()
+}
+
+func TestNodekeeper_GetUnsyncHolder2(t *testing.T) {
+	keeper := newNodeKeeper()
+	prevPulse := core.PulseNumber(9)
+	pulse := core.PulseNumber(10)
+	success, _ := keeper.SetPulse(pulse)
+	assert.True(t, success)
+	holder, err := keeper.GetUnsyncHolder(pulse, 0)
+	assert.NoError(t, err)
+	assert.NotNil(t, holder)
+	assert.Equal(t, pulse, holder.GetPulse())
+
+	holder, err = keeper.GetUnsyncHolder(prevPulse, 0)
+	assert.Error(t, err)
+	assert.Nil(t, holder)
+}
+
+func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
+	keeper := newNodeKeeper()
+
+	nodePassesConsensus := func(ref core.RecordRef) bool {
+		return ref[0] >= 5
+	}
+
+	refsCount := 10
+	wg := sync.WaitGroup{}
+	wg.Add(10)
+
+	for i := 0; i < refsCount; i++ {
+		ref := core.RecordRef{byte(i)}
+		ch, err := keeper.AddUnsync(newActiveNode(byte(i)))
+		assert.NoError(t, err)
+
+		go func(t *testing.T, ch chan *core.ActiveNode, ref core.RecordRef, wg *sync.WaitGroup) {
+			node := <-ch
+			if nodePassesConsensus(ref) {
+				assert.NotNil(t, node)
+				assert.Equal(t, ref, node.NodeID)
+			} else {
+				assert.Nil(t, node)
+			}
+			wg.Done()
+		}(t, ch, ref, &wg)
+	}
+
+	success, list := keeper.SetPulse(core.PulseNumber(133))
+	assert.True(t, success)
+	assert.NotNil(t, list)
+	assert.Equal(t, refsCount, len(list.GetUnsync()))
+
+	syncCandidates := make([]*core.ActiveNode, 0)
+	for _, node := range list.GetUnsync() {
+		if nodePassesConsensus(node.NodeID) {
+			syncCandidates = append(syncCandidates, node)
+		}
+	}
+	keeper.Sync(syncCandidates, core.PulseNumber(133))
+	wg.Wait()
 }

@@ -244,26 +244,22 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.ActiveNode) {
 	// unsync -> sync
 	nk.sync = syncCandidates
 
-	removeNodeWaiter := func(nodeID core.RecordRef, node *core.ActiveNode) {
-		ch, exists := nk.nodeWaiters[nodeID]
+	// first notify all synced nodes that they have passed the consensus
+	for _, node := range nk.sync {
+		ch, exists := nk.nodeWaiters[node.NodeID]
 		if !exists {
 			return
 		}
-		if node != nil {
-			ch <- node
-		}
+		ch <- node
 		close(ch)
-		delete(nk.nodeWaiters, nodeID)
-	}
-
-	// first notify all synced nodes that they have passed the consensus
-	for _, node := range nk.sync {
-		removeNodeWaiter(node.NodeID, node)
+		delete(nk.nodeWaiters, node.NodeID)
 	}
 	// then notify all the others that they have not passed the consensus
-	for nodeID, _ := range nk.nodeWaiters {
-		removeNodeWaiter(nodeID, nil)
+	for _, ch := range nk.nodeWaiters {
+		close(ch)
 	}
+	// drop old waiters map and create new
+	nk.nodeWaiters = make(map[core.RecordRef]chan *core.ActiveNode)
 	nk.state = synced
 }
 
