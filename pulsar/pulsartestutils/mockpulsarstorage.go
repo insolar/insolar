@@ -15,27 +15,31 @@
  */
 
 // Package pulsartestutil - test utils for pulsar package
-package pulsartestutil
+package pulsartestutils
 
 import (
-	"net"
-
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/mock"
 )
 
-// MockListener mocks net.Listener interface
-type MockListener struct {
+// MockPulsarStorage mocks PulsarStorage interface
+type MockPulsarStorage struct {
 	mock.Mock
 }
 
-func (mock *MockListener) Accept() (net.Conn, error) {
-	panic("implement me")
+func (mock *MockPulsarStorage) GetLastPulse() (*core.Pulse, error) {
+	args := mock.Called()
+	return args.Get(0).(*core.Pulse), args.Error(1)
 }
 
-func (mock *MockListener) Close() error {
-	panic("implement me")
+func (*MockPulsarStorage) SetLastPulse(pulse *core.Pulse) error {
+	return nil
 }
 
-func (mock *MockListener) Addr() net.Addr {
+func (*MockPulsarStorage) SavePulse(pulse *core.Pulse) error {
+	return nil
+}
+
+func (*MockPulsarStorage) Close() error {
 	panic("implement me")
 }

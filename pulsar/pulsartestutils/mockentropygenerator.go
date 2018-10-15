@@ -15,7 +15,7 @@
  */
 
 // Package pulsartestutil - test utils for pulsar package
-package pulsartestutil
+package pulsartestutils
 
 import (
 	"github.com/insolar/insolar/core"

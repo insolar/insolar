@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/insolar/insolar/pulsar/pulsartestutil"
+	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -38,7 +38,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	_, firstPrivateExported, firstPublicExported := generatePrivateAndConvertPublic(t)
 	_, secondPrivateExported, secondPublicExported := generatePrivateAndConvertPublic(t)
 
-	storage := &pulsartestutil.MockPulsarStorage{}
+	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 
 	firstPulsar, err := NewPulsar(
@@ -53,7 +53,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
-		pulsartestutil.MockEntropyGenerator{},
+		pulsartestutils.MockEntropyGenerator{},
 		nil,
 		net.Listen,
 	)
@@ -71,7 +71,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 		},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
-		pulsartestutil.MockEntropyGenerator{},
+		pulsartestutils.MockEntropyGenerator{},
 		nil,
 		net.Listen,
 	)
@@ -117,7 +117,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
 	_, exportedPrivateKey, _ := generatePrivateAndConvertPublic(t)
-	storage := &pulsartestutil.MockPulsarStorage{}
+	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
 	stateSwitcher := &StateSwitcherImpl{}
 
@@ -133,7 +133,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
-		pulsartestutil.MockEntropyGenerator{},
+		pulsartestutils.MockEntropyGenerator{},
 		stateSwitcher,
 		net.Listen,
 	)
@@ -176,7 +176,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
 	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
-	storage := &pulsartestutil.MockPulsarStorage{}
+	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
 
 	_, parsedPrivKeyFirst, firstPubKey := generatePrivateAndConvertPublic(t)
