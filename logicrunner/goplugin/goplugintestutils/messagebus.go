@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package testutil
+package goplugintestutils
 
 import (
 	"github.com/insolar/insolar/core"

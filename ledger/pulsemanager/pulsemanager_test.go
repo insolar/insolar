@@ -21,7 +21,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/ledgertestutil"
+	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +31,7 @@ func TestPulseManager_Current(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutil.TmpLedger(t, lr, "")
+	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
 	defer cleaner()
 
 	pm := ledger.GetPulseManager()
