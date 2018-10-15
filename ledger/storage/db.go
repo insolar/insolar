@@ -17,11 +17,13 @@
 package storage
 
 import (
+	"bytes"
 	"path/filepath"
 	"sync"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -36,16 +38,17 @@ const (
 	scopeIDLifeline byte = 1
 	scopeIDRecord   byte = 2
 	scopeIDJetDrop  byte = 3
-	scopeIDEntropy  byte = 4
+	scopeIDPulse    byte = 4
+	scopeIDSystem   byte = 5
 
-	rootKey = "0"
+	sysGenesis     byte = 1
+	sysLatestPulse byte = 2
 )
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
-	db           *badger.DB
-	currentPulse core.PulseNumber
-	genesisRef   *record.Reference
+	db         *badger.DB
+	genesisRef *record.Reference
 
 	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
@@ -231,6 +234,13 @@ func (db *DB) SetRecord(rec record.Record) (*record.ID, error) {
 	return id, nil
 }
 
+// SetRecordBinary saves binary record for specified key.
+//
+// This method is used for data replication.
+func (db *DB) SetRecordBinary(key, rec []byte) error {
+	return db.Set(prefixkey(scopeIDRecord, key), rec)
+}
+
 // GetClassIndex wraps matching transaction manager method.
 func (db *DB) GetClassIndex(id *record.ID, forupdate bool) (*index.ClassLifeline, error) {
 	tx := db.BeginTransaction(forupdate)
@@ -287,69 +297,121 @@ func (db *DB) waitinflight() {
 	db.dropWG.Wait()
 }
 
-// SetDrop stores jet drop for given pulse number.
+// CreateDrop creates and stores jet drop for given pulse number.
 //
-// Previous JetDrop should be provided. On success returns saved drop hash.
-func (db *DB) SetDrop(pulse core.PulseNumber, prevdrop *jetdrop.JetDrop) (*jetdrop.JetDrop, error) {
+// Previous JetDrop hash should be provided. On success returns saved drop and slot records.
+func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (*jetdrop.JetDrop, [][2][]byte, error) {
 	db.waitinflight()
 
+	prefix := make([]byte, core.PulseNumberSize+1)
+	prefix[0] = scopeIDRecord
+	copy(prefix[1:], pulse.Bytes())
+
+	// We need to look for the closest key that is bigger because we need to reverse iterate from the last record.
+	seekFor := make([]byte, len(prefix))
+	copy(seekFor, prefix)
+	seekFor[len(prefix)-1] += 1
+
 	hw := hash.NewIDHash()
-	err := db.ProcessSlotHashes(pulse, func(it HashIterator) error {
-		for i := 1; it.Next(); i++ {
-			b := it.ShallowHash()
-			_, err := hw.Write(b)
+	hw.Write(prevHash)
+	var records [][2][]byte
+	db.db.View(func(txn *badger.Txn) error {
+		ops := badger.DefaultIteratorOptions
+		ops.Reverse = true
+		it := txn.NewIterator(ops)
+		defer it.Close()
+		it.Seek(seekFor)
+
+		for {
+			if !it.Valid() {
+				break
+			}
+
+			item := it.Item()
+			key := item.Key()
+			if !bytes.Equal(key[:core.PulseNumberSize+1], prefix) {
+				break
+			}
+
+			hw.Write(key[1:])
+			value, err := item.ValueCopy(nil)
 			if err != nil {
 				return err
 			}
+			records = append(records, [2][]byte{key[1:], value})
+
+			it.Next()
 		}
+
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	drophash := hw.Sum(nil)
 
-	drop := &jetdrop.JetDrop{
+	drop := jetdrop.JetDrop{
 		Pulse:    pulse,
-		PrevHash: prevdrop.Hash,
-		Hash:     drophash,
+		PrevHash: prevHash,
+		Hash:     hw.Sum(nil),
 	}
+	return &drop, records, nil
+}
+
+// SetDrop saves provided JetDrop in db.
+func (db *DB) SetDrop(drop *jetdrop.JetDrop) error {
+	k := prefixkey(scopeIDJetDrop, drop.Pulse.Bytes())
+	_, err := db.Get(k)
+	if err == nil {
+		return ErrOverride
+	}
+
 	encoded, err := jetdrop.Encode(drop)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	k := prefixkey(scopeIDJetDrop, pulse.Bytes())
-	err = db.Set(k, encoded)
-	if err != nil {
-		drop = nil
-	}
-	return drop, err
+	return db.Set(k, encoded)
 }
 
-// GetEntropy wraps matching transaction manager method.
-func (db *DB) GetEntropy(pulse core.PulseNumber) (*core.Entropy, error) {
-	tx := db.BeginTransaction(false)
-	defer tx.Discard()
-
-	idx, err := tx.GetEntropy(pulse)
-	if err != nil {
-		return nil, err
-	}
-	return idx, nil
-}
-
-// SetEntropy wraps matching transaction manager method.
-func (db *DB) SetEntropy(pulse core.PulseNumber, entropy core.Entropy) error {
+// AddPulse saves new pulse data and updates index.
+func (db *DB) AddPulse(pulse core.Pulse) error {
 	return db.Update(func(tx *TransactionManager) error {
-		return tx.SetEntropy(pulse, entropy)
+		var latest core.PulseNumber
+		latest, err := tx.GetLatestPulseNumber()
+		if err != nil && err != ErrNotFound {
+			return err
+		}
+		pulseRec := record.PulseRecord{
+			PrevPulse: latest,
+			Entropy:   pulse.Entropy,
+		}
+		var buf bytes.Buffer
+		enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+		err = enc.Encode(pulseRec)
+		if err != nil {
+			return err
+		}
+		err = tx.Set(prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), buf.Bytes())
+		if err != nil {
+			return err
+		}
+		return tx.Set(prefixkey(scopeIDSystem, []byte{sysLatestPulse}), pulse.PulseNumber.Bytes())
 	})
 }
 
-// SetCurrentPulse sets current pulse number.
-func (db *DB) SetCurrentPulse(pulse core.PulseNumber) {
-	db.currentPulse = pulse
+// GetPulse returns pulse for provided pulse number.
+func (db *DB) GetPulse(num core.PulseNumber) (*record.PulseRecord, error) {
+	buf, err := db.Get(prefixkey(scopeIDPulse, num.Bytes()))
+	if err != nil {
+		return nil, err
+	}
+
+	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
+	var rec record.PulseRecord
+	err = dec.Decode(&rec)
+	if err != nil {
+		return nil, err
+	}
+	return &rec, nil
 }
+
 // GetLatestPulseNumber returns current pulse number.
 func (db *DB) GetLatestPulseNumber() (core.PulseNumber, error) {
 	tx := db.BeginTransaction(false)
