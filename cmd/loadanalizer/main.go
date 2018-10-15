@@ -152,7 +152,8 @@ func transferMoneyWithDifferentMember(members []string, concurrent int, repetiti
 	wg.Wait()
 	elapsed := time.Since(start)
 	fmt.Printf("Transfering took %s \n", elapsed)
-	fmt.Printf("Speed - %f tr/s \n", float64(concurrent*repetitions)*1000000000/float64(elapsed))
+	elapsedInSeconds := float64(elapsed) / float64(time.Second)
+	fmt.Printf("Speed - %f tr/s \n", float64(concurrent*repetitions)/float64(elapsedInSeconds))
 
 	return result
 }
