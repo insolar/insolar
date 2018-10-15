@@ -32,16 +32,16 @@ const (
 	// ReturnValidated
 )
 
+type IBaseLogicMessage interface {
+	core.Message
+	GetReference() core.RecordRef
+}
+
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
 	Caller core.RecordRef
 	Nonce  uint64
 	sign   []byte
-}
-
-type IBaseLogicMessage interface {
-	core.Message
-	GetReference() core.RecordRef
 }
 
 // SetSign sets a signature to message.
@@ -159,6 +159,7 @@ func (e *ExecutorResults) SetSign(sign []byte) {
 type ValidateCaseBind struct {
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
+	Pulse       core.Pulse
 	sign        []byte
 }
 
@@ -170,19 +171,25 @@ func (e *ValidateCaseBind) TargetRole() core.JetRole {
 	return core.RoleVirtualValidator
 }
 
-// TODO change after changing pulsar
 func (e *ValidateCaseBind) Target() *core.RecordRef {
 	return &e.RecordRef
 }
 
 // TODO change after changing pulsar
 func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
-	return &e.RecordRef
+	return &e.RecordRef // TODO actually it's not right. There is no caller.
 }
 
-// TODO change after changing pulsar
 func (e *ValidateCaseBind) GetReference() core.RecordRef {
 	return e.RecordRef
+}
+
+func (e *ValidateCaseBind) GetCaseRecords() []core.CaseRecord {
+	return e.CaseRecords
+}
+
+func (e *ValidateCaseBind) GetPulse() core.Pulse {
+	return e.Pulse
 }
 
 func (e *ValidateCaseBind) GetSign() []byte {
@@ -190,5 +197,41 @@ func (e *ValidateCaseBind) GetSign() []byte {
 }
 
 func (e *ValidateCaseBind) SetSign(sign []byte) {
+	e.sign = sign
+}
+
+type ValidationResults struct {
+	RecordRef        core.RecordRef
+	PassedStepsCount int
+	Error            error
+	sign             []byte
+}
+
+func (e *ValidationResults) Type() core.MessageType {
+	return core.TypeValidationResults
+}
+
+func (e ValidationResults) TargetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
+func (e *ValidationResults) Target() *core.RecordRef {
+	return &e.RecordRef
+}
+
+// TODO change after changing pulsar
+func (e *ValidationResults) GetCaller() *core.RecordRef {
+	return &e.RecordRef // TODO actually it's not right. There is no caller.
+}
+
+func (e *ValidationResults) GetReference() core.RecordRef {
+	return e.RecordRef
+}
+
+func (e *ValidationResults) GetSign() []byte {
+	return e.sign
+}
+
+func (e *ValidationResults) SetSign(sign []byte) {
 	e.sign = sign
 }
