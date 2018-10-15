@@ -18,6 +18,15 @@ package reply
 
 import "github.com/insolar/insolar/core"
 
+// Ok is a generic reply for success calls without returned value.
+type Ok struct {
+}
+
+// Type implementation of Reply interface.
+func (e *Ok) Type() core.ReplyType {
+	return TypeError
+}
+
 // Error is common reaction for methods returning id to lifeline states.
 type Error struct {
 	ErrType ErrType
