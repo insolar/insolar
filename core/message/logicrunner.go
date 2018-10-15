@@ -156,13 +156,6 @@ func (e *ExecutorResults) SetSign(sign []byte) {
 	e.sign = sign
 }
 
-type IValidateCaseBind interface {
-	core.Message
-	GetReference() core.RecordRef
-	GetCaseRecords() []core.CaseRecord
-	GetPulse() core.Pulse
-}
-
 type ValidateCaseBind struct {
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord

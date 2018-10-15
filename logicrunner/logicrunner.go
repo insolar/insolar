@@ -195,7 +195,7 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 }
 
 func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(message.IValidateCaseBind)
+	msg, ok := inmsg.(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
