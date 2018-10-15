@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
-	transport2 "github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/hostnetwork/transport"
 )
 
 func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
@@ -250,9 +250,9 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
 	}()
 }
 
-func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t transport2.Transport, err error) {
+func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t transport.Transport, err error) {
 
-	t, err = transport2.NewTransport(currentPulsar.Config.BootstrapListener, relay.NewProxy())
+	t, err = transport.NewTransport(currentPulsar.Config.BootstrapListener, relay.NewProxy())
 	if err != nil {
 		return
 	}
@@ -282,7 +282,7 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 	return
 }
 
-func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transport2.Transport, pulse core.Pulse) {
+func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)
 		if err != nil {
@@ -332,7 +332,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 	}
 }
 
-func sendPulseToHost(sender *host.Host, t transport2.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
+func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
 	pb := packet.NewBuilder()
 	pulseRequest := pb.Sender(sender).Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(packet.TypePulse).Build()
 	call, err := t.SendRequest(pulseRequest)
@@ -347,7 +347,7 @@ func sendPulseToHost(sender *host.Host, t transport2.Transport, pulseReceiver *h
 	return nil
 }
 
-func sendPulseToHosts(sender *host.Host, t transport2.Transport, hosts []host.Host, pulse *core.Pulse) {
+func sendPulseToHosts(sender *host.Host, t transport.Transport, hosts []host.Host, pulse *core.Pulse) {
 	for _, pulseReceiver := range hosts {
 		err := sendPulseToHost(sender, t, &pulseReceiver, pulse)
 		if err != nil {
