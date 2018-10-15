@@ -32,11 +32,11 @@ func TestSingAndVerify(t *testing.T) {
 		assert.NoError(t, err)
 		testData := (&StandardEntropyGenerator{}).GenerateEntropy()
 
-		signature, err := SignData(privateKey, testData)
+		signature, err := signData(privateKey, testData)
 		assert.NoError(t, err)
 
 		// Act
-		checkSignature, err := CheckPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: testData})
+		checkSignature, err := checkPayloadSignature(&Payload{PublicKey: publicKey, Signature: signature, Body: testData})
 
 		// Assert
 		assert.NoError(t, err)

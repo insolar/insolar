@@ -75,34 +75,6 @@ type Pulsar struct {
 	StateSwitcher StateSwitcher
 }
 
-func (currentPulsar *Pulsar) SetBftGridItem(key string, value map[string]*BftCell) {
-	currentPulsar.BftGridLock.Lock()
-	currentPulsar.bftGrid[key] = value
-	defer currentPulsar.BftGridLock.Unlock()
-}
-
-func (currentPulsar *Pulsar) GetBftGridItem(row string, column string) *BftCell {
-	currentPulsar.BftGridLock.RLock()
-	defer currentPulsar.BftGridLock.RUnlock()
-	return currentPulsar.bftGrid[row][column]
-}
-
-// BftCell is a cell in NxN btf-grid
-type BftCell struct {
-	lock              sync.Mutex
-	Sign              []byte
-	Entropy           core.Entropy
-	IsEntropyReceived bool
-}
-
-func (cell *BftCell) Lock() {
-	cell.lock.Lock()
-}
-
-func (cell *BftCell) Unlock() {
-	cell.lock.Unlock()
-}
-
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
 	configuration configuration.Configuration,
@@ -251,7 +223,7 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
 	}
 	casted := reply.Reply.(*Payload)
 
-	result, err := CheckPayloadSignature(casted)
+	result, err := checkPayloadSignature(casted)
 	if err != nil {
 		return err
 	}
@@ -374,7 +346,7 @@ func (currentPulsar *Pulsar) broadcastVector() {
 			nil)
 		reply := <-broadcastCall.Done
 		if reply.Error != nil {
-			result, err := CheckPayloadSignature(payload)
+			result, err := checkPayloadSignature(payload)
 			log.Warn(result)
 			log.Warn(err)
 			log.Warn(payload.PublicKey == currentPulsar.PublicKeyRaw)
@@ -444,212 +416,13 @@ func (currentPulsar *Pulsar) sendEntropy() {
 	currentPulsar.StateSwitcher.SwitchToState(WaitingForEntropy, nil)
 }
 
-func (currentPulsar *Pulsar) waitForEntropy() {
-	log.Debug("[waitForEntropy]")
-	ticker := time.NewTicker(10 * time.Millisecond)
-	timeout := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
-	go func() {
-		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingVector {
-				ticker.Stop()
-				return
-			}
-
-			if time.Now().After(timeout) {
-				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingVector, nil)
-			}
-		}
-	}()
-}
-
-func (currentPulsar *Pulsar) waitForEntropySigns() {
-	log.Debug("[waitForEntropySigns]")
-	ticker := time.NewTicker(10 * time.Millisecond)
-	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignTimeout) * time.Millisecond)
-	go func() {
-		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingEntropy {
-				ticker.Stop()
-				return
-			}
-
-			if time.Now().After(currentTimeOut) {
-				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingEntropy, nil)
-			}
-		}
-	}()
-}
-
-func (currentPulsar *Pulsar) receiveVectors() {
-	log.Debug("[receiveVectors]")
-	ticker := time.NewTicker(10 * time.Millisecond)
-	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingVectorTimeout) * time.Millisecond)
-	go func() {
-		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == Verifying {
-				ticker.Stop()
-				return
-			}
-
-			if time.Now().After(currentTimeOut) {
-				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(Verifying, nil)
-			}
-		}
-	}()
-}
-
-func (currentPulsar *Pulsar) isVerifycationNeeded() bool {
-	if currentPulsar.IsStateFailed() {
-		return false
-
-	}
-	if currentPulsar.isStandalone() {
-		currentPulsar.CurrentSlotEntropy = currentPulsar.GeneratedEntropy
-		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
-		currentPulsar.StateSwitcher.SwitchToState(SendingPulse, nil)
-		return false
-
-	}
-
-	return true
-}
-
-func (currentPulsar *Pulsar) getMaxTraitorsCount() int {
-	nodes := len(currentPulsar.Neighbours) + 1
-	return (nodes - 1) / 3
-}
-
-func (currentPulsar *Pulsar) getMinimumNonTraitorsCount() int {
-	nodes := len(currentPulsar.Neighbours) + 1
-	return nodes - currentPulsar.getMaxTraitorsCount()
-}
-
-func (currentPulsar *Pulsar) verify() {
-	log.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
-	if !currentPulsar.isVerifycationNeeded() {
-		return
-	}
-	type bftMember struct {
-		PubPem string
-		PubKey *ecdsa.PublicKey
-	}
-
-	var finalEntropySet []core.Entropy
-
-	keys := []string{currentPulsar.PublicKeyRaw}
-	activePulsars := []*bftMember{{currentPulsar.PublicKeyRaw, &currentPulsar.PrivateKey.PublicKey}}
-	for key, neighbour := range currentPulsar.Neighbours {
-		activePulsars = append(activePulsars, &bftMember{key, neighbour.PublicKey})
-		keys = append(keys, key)
-	}
-
-	// Check NxN consensus-matrix
-	wrongVectors := 0
-	for _, column := range activePulsars {
-		currentColumnStat := map[string]int{}
-		for _, row := range activePulsars {
-			bftCell := currentPulsar.GetBftGridItem(row.PubPem, column.PubPem)
-
-			if bftCell == nil {
-				currentColumnStat["nil"]++
-				continue
-			}
-
-			ok, err := CheckSignature(bftCell.Entropy, column.PubPem, bftCell.Sign)
-			if !ok || err != nil {
-				currentColumnStat["nil"]++
-				continue
-			}
-
-			currentColumnStat[string(bftCell.Entropy[:])]++
-		}
-
-		maxConfirmationsForEntropy := int(0)
-		var chosenEntropy core.Entropy
-		for key, value := range currentColumnStat {
-			if value > maxConfirmationsForEntropy && key != "nil" {
-				maxConfirmationsForEntropy = value
-				copy(chosenEntropy[:], []byte(key)[:core.EntropySize])
-			}
-		}
-
-		if maxConfirmationsForEntropy >= currentPulsar.getMinimumNonTraitorsCount() {
-			finalEntropySet = append(finalEntropySet, chosenEntropy)
-		} else {
-			wrongVectors++
-		}
-	}
-
-	if len(finalEntropySet) == 0 || wrongVectors > currentPulsar.getMaxTraitorsCount() {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, errors.New("bft is broken"))
-		return
-	}
-
-	var finalEntropy core.Entropy
-
-	for _, tempEntropy := range finalEntropySet {
-		for byteIndex := 0; byteIndex < core.EntropySize; byteIndex++ {
-			finalEntropy[byteIndex] ^= tempEntropy[byteIndex]
-		}
-	}
-	currentPulsar.finalizeBft(finalEntropy, keys)
-}
-
-func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsars []string) {
-	currentPulsar.CurrentSlotEntropy = finalEntropy
-	chosenPulsar, err := selectByEntropy(finalEntropy, activePulsars, len(activePulsars))
-	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
-	}
-	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
-	log.Warn(currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw)
-	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
-		//here confirmation myself
-		signature, err := SignData(currentPulsar.PrivateKey, currentPulsar.CurrentSlotPulseSender)
-		if err != nil {
-			currentPulsar.StateSwitcher.SwitchToState(Failed, err)
-			return
-		}
-		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
-			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-			Signature:       signature,
-		}
-
-		currentPulsar.StateSwitcher.SwitchToState(WaitingForPulseSigns, nil)
-	} else {
-		currentPulsar.StateSwitcher.SwitchToState(SendingPulseSign, nil)
-	}
-}
-
-func (currentPulsar *Pulsar) waitForPulseSigns() {
-	log.Debug("[waitForPulseSigns]")
-	ticker := time.NewTicker(10 * time.Millisecond)
-	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
-	go func() {
-		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingPulse {
-				ticker.Stop()
-				return
-			}
-
-			if time.Now().After(currentTimeOut) {
-				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(SendingPulse, nil)
-			}
-		}
-	}()
-}
-
 func (currentPulsar *Pulsar) sendPulseSign() {
 	log.Debug("[sendPulseSign]")
 	if currentPulsar.IsStateFailed() {
 		return
 	}
 
-	signature, err := SignData(currentPulsar.PrivateKey, currentPulsar.CurrentSlotPulseSender)
+	signature, err := signData(currentPulsar.PrivateKey, currentPulsar.CurrentSlotPulseSender)
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
 		return
@@ -850,58 +623,4 @@ func sendPulseToHosts(sender *host.Host, t transport2.Transport, hosts []host.Ho
 			log.Error(err)
 		}
 	}
-}
-
-func (currentPulsar *Pulsar) handleErrorState(err error) {
-	log.Error(err)
-
-	currentPulsar.clearState()
-}
-
-func (currentPulsar *Pulsar) clearState() {
-	currentPulsar.GeneratedEntropy = [core.EntropySize]byte{}
-	currentPulsar.GeneratedEntropySign = []byte{}
-
-	currentPulsar.CurrentSlotEntropy = core.Entropy{}
-	currentPulsar.CurrentSlotPulseSender = ""
-	currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}
-
-	currentPulsar.ProcessingPulseNumber = 0
-
-	currentPulsar.OwnedBftRow = map[string]*BftCell{}
-	currentPulsar.BftGridLock.Lock()
-	currentPulsar.bftGrid = map[string]map[string]*BftCell{}
-	currentPulsar.BftGridLock.Unlock()
-}
-
-func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
-	currentPulsar.GeneratedEntropy = currentPulsar.EntropyGenerator.GenerateEntropy()
-	signature, err := SignData(currentPulsar.PrivateKey, currentPulsar.GeneratedEntropy)
-	if err != nil {
-		return err
-	}
-	currentPulsar.GeneratedEntropySign = signature
-
-	return nil
-}
-
-func (currentPulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
-	sign, err := SignData(currentPulsar.PrivateKey, body)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Payload{Body: body, PublicKey: currentPulsar.PublicKeyRaw, Signature: sign}, nil
-}
-
-func (currentPulsar *Pulsar) FetchNeighbour(pubKey string) (*Neighbour, error) {
-	neighbour, ok := currentPulsar.Neighbours[pubKey]
-	if !ok {
-		return nil, errors.New("forbidden connection")
-	}
-	return neighbour, nil
-}
-
-func (currentPulsar *Pulsar) IsStateFailed() bool {
-	return currentPulsar.StateSwitcher.GetState() == Failed
 }

@@ -39,7 +39,7 @@ func (handler *Handler) isRequestValid(request *Payload) (success bool, neighbou
 		return false, neighbour, err
 	}
 
-	result, err := CheckPayloadSignature(request)
+	result, err := checkPayloadSignature(request)
 	if err != nil {
 		log.Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
 		return false, neighbour, err
@@ -65,7 +65,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 
-	result, err := CheckPayloadSignature(request)
+	result, err := checkPayloadSignature(request)
 	if err != nil {
 		log.Warnf("Message %v, from host %v failed with error %v", request.Body, request.PublicKey, err)
 		return err
@@ -82,7 +82,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
-	message.Signature, err = SignData(handler.Pulsar.PrivateKey, message.Body)
+	message.Signature, err = signData(handler.Pulsar.PrivateKey, message.Body)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -150,7 +150,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
-		isVerified, err := CheckSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
+		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
 		if err != nil || !isVerified {
 			handler.Pulsar.OwnedBftRow[request.PublicKey] = nil
 			log.Errorf("signature and entropy aren't matched. error - %v isVerified - %v", err, isVerified)
@@ -203,7 +203,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 
-	isVerified, err := CheckSignature(requestBody.ChosenPublicKey, request.PublicKey, requestBody.Signature)
+	isVerified, err := checkSignature(requestBody.ChosenPublicKey, request.PublicKey, requestBody.Signature)
 	if !isVerified || err != nil {
 		log.Errorf("signature and chosen publicKey aren't matched. error - %v isVerified - %v", err, isVerified)
 		return errors.New("signature check failed")

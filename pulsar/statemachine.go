@@ -93,7 +93,7 @@ func (switcher *StateSwitcherImpl) SwitchToState(state State, args interface{}) 
 	case SendingVector:
 		switcher.pulsar.sendVector()
 	case WaitingForVectors:
-		switcher.pulsar.receiveVectors()
+		switcher.pulsar.waitForVectors()
 	case Verifying:
 		switcher.pulsar.verify()
 	case WaitingForPulseSigns:

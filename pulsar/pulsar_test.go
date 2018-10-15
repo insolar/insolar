@@ -238,7 +238,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
 	payload := Payload{Body: HandshakePayload{Entropy: pulsartestutil.MockEntropy}}
-	sign, err := SignData(firstPrivateKey, payload.Body)
+	sign, err := signData(firstPrivateKey, payload.Body)
 	payload.Signature = sign
 	payload.PublicKey = expectedNeighbourKey
 
@@ -675,7 +675,7 @@ func generatePrivateAndConvertPublic(t *testing.T) (privateKey *ecdsa.PrivateKey
 
 func prepareEntropy(t *testing.T, key *ecdsa.PrivateKey) (entropy core.Entropy, sign []byte) {
 	entropy = (&StandardEntropyGenerator{}).GenerateEntropy()
-	sign, err := SignData(key, entropy)
+	sign, err := signData(key, entropy)
 	assert.NoError(t, err)
 	return
 }
