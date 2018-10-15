@@ -227,8 +227,10 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 			return errors.New("signature and entropy aren't matched")
 		}
 
+		btfCell.lock.Lock()
 		btfCell.Entropy = requestBody.Entropy
 		btfCell.IsEntropyReceived = true
+		btfCell.lock.Unlock()
 	}
 
 	return nil

@@ -47,7 +47,7 @@ func main() {
 		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 	initLogger(cfgHolder.Configuration.Log)
-	server, storage := initPulsar(cfgHolder.Configuration.Pulsar)
+	server, storage := initPulsar(cfgHolder.Configuration)
 
 	go server.StartServer()
 	pulseTicker, refreshTicker := runPulsar(server, cfgHolder.Configuration.Pulsar)
@@ -82,17 +82,24 @@ func initLogger(cfg configuration.Log) {
 	}
 }
 
-func initPulsar(cfg configuration.Pulsar) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
+func initPulsar(cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
-	storage, err := pulsarstorage.NewStorageBadger(cfg, nil)
+	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
 	}
 	switcher := &pulsar.StateSwitcherImpl{}
-	server, err := pulsar.NewPulsar(cfg, storage, &pulsar.RPCClientWrapperFactoryImpl{}, &pulsar.StandardEntropyGenerator{}, switcher, net.Listen)
+	server, err := pulsar.NewPulsar(cfg,
+		storage,
+		&pulsar.RPCClientWrapperFactoryImpl{},
+		&pulsar.StandardEntropyGenerator{},
+		switcher,
+		net.Listen,
+	)
+
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
@@ -105,7 +112,13 @@ func initPulsar(cfg configuration.Pulsar) (*pulsar.Pulsar, pulsarstorage.PulsarS
 func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
 	server.CheckConnectionsToPulsars()
 
-	nextPulseNumber := core.CalculatePulseNumber(time.Now())
+	var nextPulseNumber core.PulseNumber
+	if server.LastPulse.PulseNumber == core.GenesisPulse.PulseNumber {
+		nextPulseNumber = core.CalculatePulseNumber(time.Now())
+	} else {
+		nextPulseNumber = server.LastPulse.PulseNumber + core.PulseNumber(cfg.NumberDelta)
+	}
+
 	err := server.StartConsensusProcess(nextPulseNumber)
 	if err != nil {
 		log.Fatal(err)

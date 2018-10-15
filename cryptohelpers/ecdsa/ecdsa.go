@@ -31,9 +31,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+// P256Curve is a base curve for ecdsa.
 var P256Curve = elliptic.P256()
 
-// ExportPrivateKey is a helper-function for exporting ecdsa.PrivateKey to PEM string
+// ExportPrivateKey is a helper-function for exporting ecdsa.PrivateKey to PEM string.
 func ExportPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
 	x509Encoded, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
@@ -43,7 +44,7 @@ func ExportPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
 	return string(pemEncoded), nil
 }
 
-// ExportPublicKey is a helper-function for exporting ecdsa.PublicKey from PEM string
+// ExportPublicKey is a helper-function for exporting ecdsa.PublicKey from PEM string.
 func ExportPublicKey(publicKey *ecdsa.PublicKey) (string, error) {
 	x509EncodedPub, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
@@ -54,7 +55,7 @@ func ExportPublicKey(publicKey *ecdsa.PublicKey) (string, error) {
 	return string(pemEncodedPub), nil
 }
 
-// ImportPrivateKey is for importing ecdsa.PrivateKey from PEM string
+// ImportPrivateKey is for importing ecdsa.PrivateKey from PEM string.
 func ImportPrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
 	block, _ := pem.Decode([]byte(pemEncoded))
 	if block == nil {
@@ -68,7 +69,7 @@ func ImportPrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
-// ImportPublicKey is for importing ecdsa.PublicKey from PEM string
+// ImportPublicKey is for importing ecdsa.PublicKey from PEM string.
 func ImportPublicKey(pemPubEncoded string) (*ecdsa.PublicKey, error) {
 	blockPub, _ := pem.Decode([]byte(pemPubEncoded))
 	if blockPub == nil {
@@ -91,7 +92,7 @@ type ecdsaPair struct {
 	Second *big.Int
 }
 
-// Sign signs given seed
+// Sign signs given seed.
 func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 
 	r, s, err := ecdsa.Sign(rand.Reader, key, hash.SHA3Bytes256(data))
@@ -108,7 +109,7 @@ func Sign(data []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 	return signature, nil
 }
 
-// Verify verifies signature
+// Verify verifies signature.
 func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	var ecdsaP ecdsaPair
 	rest, err := asn1.Unmarshal(signatureRaw, &ecdsaP)
@@ -128,12 +129,12 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 	return ecdsa.Verify(savedKey, h, ecdsaP.First, ecdsaP.Second), nil
 }
 
-// ExportSignature serializes signature to string
+// ExportSignature serializes signature to string.
 func ExportSignature(signature []byte) string {
 	return base64.StdEncoding.EncodeToString(signature)
 }
 
-// ImportSignature deserialize signature from string
+// ImportSignature deserialize signature from string.
 func ImportSignature(data string) ([]byte, error) {
 	result, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
@@ -142,6 +143,7 @@ func ImportSignature(data string) ([]byte, error) {
 	return result, nil
 }
 
+// GeneratePrivateKey uses for generating ecdsa-key with defaul settings.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(P256Curve, rand.Reader)
 }

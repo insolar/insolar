@@ -30,7 +30,6 @@ func (ct ConnectionType) String() string {
 type Pulsar struct {
 	ConnectionType      ConnectionType
 	MainListenerAddress string
-	PrivateKey          string
 	Storage             Storage
 
 	PulseTime                      int32 // ms
@@ -59,11 +58,6 @@ func NewPulsar() Pulsar {
 		MainListenerAddress: "0.0.0.0:18090",
 
 		ConnectionType: TCP,
-		PrivateKey: `-----BEGIN PRIVATE KEY-----
-MHcCAQEEID6XJHMb2aiaK1bp2GHHw0r4LrzZZ4exlcmx8GrjGsMFoAoGCCqGSM49
-AwEHoUQDQgAE7DE4ArqxIYbY/UAyLLFBGuFu2gROPaqp4vxbEeie7mnZeqsYexmN
-BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
------END PRIVATE KEY-----`,
 
 		PulseTime:              10000,
 		ReceivingSignTimeout:   1000,

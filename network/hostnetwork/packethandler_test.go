@@ -76,6 +76,13 @@ func (fac *mockNetworkCommonFacade) GetConsensus() consensus.Processor {
 func (fac *mockNetworkCommonFacade) SetConsensus(consensus.Processor) {
 }
 
+func (fac *mockNetworkCommonFacade) GetNetworkCoordinator() core.NetworkCoordinator {
+	return nil
+}
+
+func (fac *mockNetworkCommonFacade) SetNetworkCoordinator(core.NetworkCoordinator) {
+}
+
 type mockHostHandler struct {
 	AuthenticatedHost string
 	ReceivedKey       string
@@ -323,6 +330,11 @@ func (hh *mockHostHandler) GetOriginHost() *host.Origin {
 	ids = append(ids, id1)
 	origin, _ := host.NewOrigin(ids, address)
 	return origin
+}
+
+// SetSignChecker sets a func which checks a sign.
+func (hh *mockHostHandler) SetSignChecker(func(msg core.Message) bool) {
+
 }
 
 func mockSenderReceiver() (sender, receiver *host.Host) {

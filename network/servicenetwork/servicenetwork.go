@@ -17,12 +17,15 @@
 package servicenetwork
 
 import (
+	"bytes"
+	ecdsa2 "crypto/ecdsa"
 	"io/ioutil"
 	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
@@ -39,18 +42,17 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(
-	hostConf configuration.HostNetwork,
-	nodeConf configuration.NodeNetwork,
-) (*ServiceNetwork, error) {
-
-	node := nodenetwork.NewNodeNetwork(nodeConf)
+func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
+	node, err := nodenetwork.NewNodeNetwork(conf)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create node network")
+	}
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
 	}
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(hostConf, node, cascade1)
+	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1)
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +62,7 @@ func NewServiceNetwork(
 		return service.initCascadeSendMessage(data, true, method, args)
 	}
 	cascade1.SendMessage = f
+	dht.SetSignChecker(service.signIsCorrect)
 	return service, nil
 }
 
@@ -79,6 +82,10 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, errors.New("message is nil")
 	}
 	hostID := nodenetwork.ResolveHostID(nodeID)
+	err := signMessage(msg, network.nodeNetwork.GetPrivateKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign a message")
+	}
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
@@ -97,20 +104,16 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	if msg == nil {
 		return errors.New("message is nil")
 	}
+	err := signMessage(msg, network.nodeNetwork.GetPrivateKey())
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a message")
+	}
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize event")
 	}
 
 	return network.initCascadeSendMessage(data, false, method, [][]byte{buff})
-}
-
-func messageToBytes(msg core.Message) ([]byte, error) {
-	reqBuff, err := message.Serialize(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
-	}
-	return ioutil.ReadAll(reqBuff)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
@@ -143,16 +146,11 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 		return errors.Wrap(err, "failed to get active nodes")
 	}
 
-	err = network.hostNetwork.ObtainIP()
-	if err != nil {
-		return errors.Wrap(err, "Failed to ObtainIP")
+	if components.NetworkCoordinator != nil {
+		network.hostNetwork.GetNetworkCommonFacade().SetNetworkCoordinator(components.NetworkCoordinator)
+	} else {
+		log.Error("no core.NetworkCoordinator in components")
 	}
-
-	err = network.hostNetwork.AnalyzeNetwork(createContext(network.hostNetwork))
-	if err != nil {
-		return errors.Wrap(err, "Failed to AnalyzeNetwork")
-	}
-
 	pm, err := getPulseManager(components)
 	if err != nil {
 		log.Error(err)
@@ -160,7 +158,6 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 		network.hostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
 	}
 
-	// TODO: may be merge bug, check copy-paste
 	ctx := createContext(network.hostNetwork)
 	err = network.hostNetwork.ObtainIP()
 	if err != nil {
@@ -171,7 +168,6 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to AnalyzeNetwork")
 	}
-	// todo: end
 
 	return nil
 }
@@ -247,5 +243,45 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
 	}
 
+	return nil
+}
+
+func (network *ServiceNetwork) signIsCorrect(msg core.Message) bool {
+	sign := msg.GetSign()
+	msg.SetSign(make([]byte, 0))
+
+	serialized, err := messageToBytes(msg)
+	if err != nil {
+		log.Error(err, "filed to serialize message")
+		return false
+	}
+	newSign, err := ecdsa.Sign(serialized, network.nodeNetwork.GetPrivateKey())
+	if err != nil {
+		log.Error(err, "failed to sign a message")
+		return false
+	}
+	return bytes.Equal(sign, newSign)
+}
+
+// MessageToBytes deserialize a core.Message to bytes.
+func messageToBytes(msg core.Message) ([]byte, error) {
+	reqBuff, err := message.Serialize(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to serialize event")
+	}
+	return ioutil.ReadAll(reqBuff)
+}
+
+// SignMessage tries to sign a core.Message.
+func signMessage(msg core.Message, key *ecdsa2.PrivateKey) error {
+	serialized, err := messageToBytes(msg)
+	if err != nil {
+		return errors.Wrap(err, "filed to serialize message")
+	}
+	sign, err := ecdsa.Sign(serialized, key)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign a message")
+	}
+	msg.SetSign(sign)
 	return nil
 }

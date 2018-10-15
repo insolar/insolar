@@ -71,6 +71,7 @@ func (m *TransactionManager) Commit() error {
 			break
 		}
 	}
+	m.txupdates = nil
 	if err != nil {
 		return err
 	}

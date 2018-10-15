@@ -26,9 +26,11 @@ import (
 	"sync"
 	"time"
 
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	ecdsa_helper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
@@ -66,6 +68,7 @@ type Pulsar struct {
 	LastPulse             *core.Pulse
 
 	OwnedBftRow map[string]*bftCell
+
 	bftGrid     map[string]map[string]*bftCell
 	BftGridLock sync.RWMutex
 
@@ -86,6 +89,7 @@ func (currentPulsar *Pulsar) getBftGridItem(row string, column string) *bftCell 
 
 // bftCell is a cell in NxN btf-grid
 type bftCell struct {
+	lock              sync.Mutex
 	Sign              []byte
 	Entropy           core.Entropy
 	IsEntropyReceived bool
@@ -93,7 +97,7 @@ type bftCell struct {
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
-	configuration configuration.Pulsar,
+	configuration configuration.Configuration,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator EntropyGenerator,
@@ -103,29 +107,29 @@ func NewPulsar(
 	log.Debug("[NewPulsar]")
 
 	// Listen for incoming connections.
-	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
+	listenerImpl, err := listener(configuration.Pulsar.ConnectionType.String(), configuration.Pulsar.MainListenerAddress)
 	if err != nil {
 		return nil, err
 	}
 
 	// Parse private key from config
-	privateKey, err := ecdsa_helper.ImportPrivateKey(configuration.PrivateKey)
+	privateKey, err := ecdsahelper.ImportPrivateKey(configuration.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 	pulsar := &Pulsar{
 		Sock:               listenerImpl,
-		SockConnectionType: configuration.ConnectionType,
+		SockConnectionType: configuration.Pulsar.ConnectionType,
 		Neighbours:         map[string]*Neighbour{},
 		PrivateKey:         privateKey,
-		Config:             configuration,
+		Config:             configuration.Pulsar,
 		Storage:            storage,
 		EntropyGenerator:   entropyGenerator,
 		stateSwitcher:      stateSwitcher,
 	}
 	pulsar.clearState()
 
-	pubKey, err := ecdsa_helper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
+	pubKey, err := ecdsahelper.ExportPublicKey(&pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
@@ -140,9 +144,9 @@ func NewPulsar(
 	pulsar.LastPulse = lastPulse
 
 	// Adding other pulsars
-	for _, neighbour := range configuration.Neighbours {
+	for _, neighbour := range configuration.Pulsar.Neighbours {
 		currentMap := map[string]*bftCell{}
-		for _, gridColumn := range configuration.Neighbours {
+		for _, gridColumn := range configuration.Pulsar.Neighbours {
 			currentMap[gridColumn.PublicKey] = nil
 		}
 		pulsar.setBftGridItem(neighbour.PublicKey, currentMap)
@@ -150,7 +154,7 @@ func NewPulsar(
 		if len(neighbour.PublicKey) == 0 {
 			continue
 		}
-		publicKey, err := ecdsa_helper.ImportPublicKey(neighbour.PublicKey)
+		publicKey, err := ecdsahelper.ImportPublicKey(neighbour.PublicKey)
 		if err != nil {
 			continue
 		}
@@ -494,7 +498,6 @@ func (currentPulsar *Pulsar) isVerifycationNeeded() bool {
 		return false
 
 	}
-
 	if currentPulsar.isStandalone() {
 		currentPulsar.CurrentSlotEntropy = currentPulsar.GeneratedEntropy
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
@@ -674,9 +677,10 @@ func (currentPulsar *Pulsar) sendPulse() {
 	}
 
 	pulseForSending := core.Pulse{
-		PulseNumber: currentPulsar.ProcessingPulseNumber,
-		Entropy:     currentPulsar.CurrentSlotEntropy,
-		Signs:       currentPulsar.CurrentSlotSenderConfirmations,
+		PulseNumber:     currentPulsar.ProcessingPulseNumber,
+		Entropy:         currentPulsar.CurrentSlotEntropy,
+		Signs:           currentPulsar.CurrentSlotSenderConfirmations,
+		NextPulseNumber: currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
 	}
 
 	pulsarHost, t, err := currentPulsar.prepareForSendingPulse()
