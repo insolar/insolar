@@ -17,28 +17,38 @@
 package pulsar
 
 import (
-	"crypto/rand"
-
 	"github.com/insolar/insolar/core"
 )
 
-// EntropyGenerator is the base interface for generation of entropy for pulses
-type EntropyGenerator interface {
-	GenerateEntropy() core.Entropy
+type Payload struct {
+	PublicKey string
+	Signature []byte
+	Body      interface{}
 }
 
-// StandardEntropyGenerator is the base impl of EntropyGenerator with using of crypto/rand
-type StandardEntropyGenerator struct {
+type HandshakePayload struct {
+	Entropy core.Entropy
 }
 
-// GenerateEntropy generate entropy with using of EntropyGenerator
-func (generator *StandardEntropyGenerator) GenerateEntropy() core.Entropy {
-	entropy := make([]byte, core.EntropySize)
-	_, err := rand.Read(entropy)
-	if err != nil {
-		panic(err)
-	}
-	var result core.Entropy
-	copy(result[:], entropy[:core.EntropySize])
-	return result
+type GetLastPulsePayload struct {
+	core.Pulse
+}
+
+type EntropySignaturePayload struct {
+	PulseNumber core.PulseNumber
+	Signature   []byte
+}
+
+type EntropyPayload struct {
+	PulseNumber core.PulseNumber
+	Entropy     core.Entropy
+}
+
+type VectorPayload struct {
+	PulseNumber core.PulseNumber
+	Vector      map[string]*BftCell
+}
+
+type PulsePayload struct {
+	Pulse core.Pulse
 }

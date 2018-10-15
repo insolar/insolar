@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +31,7 @@ func TestSingAndVerify(t *testing.T) {
 		assert.NoError(t, err)
 		publicKey, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
 		assert.NoError(t, err)
-		testData := (&StandardEntropyGenerator{}).GenerateEntropy()
+		testData := (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
 
 		signature, err := signData(privateKey, testData)
 		assert.NoError(t, err)
