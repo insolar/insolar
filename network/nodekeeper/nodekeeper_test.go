@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -273,4 +274,23 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 	}
 	keeper.Sync(syncCandidates, core.PulseNumber(133))
 	wg.Wait()
+}
+
+func TestUnsyncList_GetUnsync(t *testing.T) {
+	unsyncNodes := []*core.ActiveNode{}
+	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
+	assert.Empty(t, unsyncList.GetUnsync())
+	assert.Equal(t, core.PulseNumber(10), unsyncList.GetPulse())
+}
+
+func TestUnsyncList_GetHash(t *testing.T) {
+	unsyncNodes := []*core.ActiveNode{}
+	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
+	hash := []byte{'a', 'b', 'c'}
+	h := make([]*consensus.NodeUnsyncHash, 0)
+	h = append(h, &consensus.NodeUnsyncHash{core.RecordRef{1}, hash})
+	unsyncList.SetHash(h)
+	h2, err := unsyncList.GetHash(0)
+	assert.NoError(t, err)
+	assert.Equal(t, hash, h2[0].Hash)
 }

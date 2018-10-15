@@ -40,7 +40,13 @@ type UnsyncList struct {
 
 // NewUnsyncHolder create new object to hold data for consensus
 func NewUnsyncHolder(pulse core.PulseNumber, unsync []*core.ActiveNode) *UnsyncList {
-	return &UnsyncList{pulse: pulse, unsync: unsync}
+	return &UnsyncList{
+		pulse:           pulse,
+		unsync:          unsync,
+		waiters:         make([]chan []*consensus.NodeUnsyncHash, 0),
+		unsyncListCache: make(map[core.RecordRef][]*core.ActiveNode),
+		unsyncHashCache: make(map[core.RecordRef][]*consensus.NodeUnsyncHash),
+	}
 }
 
 // GetUnsync returns list of local unsync nodes. This list is created
