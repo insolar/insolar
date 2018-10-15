@@ -47,6 +47,6 @@ func NewHostNetwork() HostNetwork {
 		BootstrapHosts:    bootstrapHosts,
 		Timeout:           4,
 		InfinityBootstrap: false,
-		MajorityRule:      5,
+		MajorityRule:      0,
 	}
 }

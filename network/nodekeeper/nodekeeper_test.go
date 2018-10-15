@@ -25,14 +25,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newActiveNode(ref byte) *core.ActiveNode {
-	return &core.ActiveNode{
-		NodeID:    core.RecordRef{ref},
-		PulseNum:  core.PulseNumber(0),
-		State:     core.NodeActive,
-		Role:      core.RoleUnknown,
-		PublicKey: []byte{0, 0, 0},
-	}
+func newActiveNode(ref byte) (core.RecordRef, core.NodeRole, []byte) {
+	return core.RecordRef{ref}, core.RoleUnknown, []byte{0, 0, 0}
 }
 
 func newSelfNode(ref core.RecordRef) *core.ActiveNode {
@@ -56,11 +50,11 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 	id := core.RecordRef{}
 	keeper := NewNodeKeeper(id)
 	// AddUnsync should return error if we are not an active node
-	err := keeper.AddUnsync(newActiveNode(0))
+	_, err := keeper.AddUnsync(newActiveNode(0))
 	assert.Error(t, err)
 	// Add active node with NodeKeeper id, so we are now active and can add unsyncs
 	keeper.AddActiveNodes([]*core.ActiveNode{newSelfNode(id)})
-	err = keeper.AddUnsync(newActiveNode(0))
+	_, err = keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	success, list := keeper.SetPulse(core.PulseNumber(0))
 	assert.True(t, success)
@@ -70,7 +64,7 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 func TestNodekeeper_AddUnsync2(t *testing.T) {
 	keeper := newNodeKeeper()
 	success, list := keeper.SetPulse(core.PulseNumber(0))
-	err := keeper.AddUnsync(newActiveNode(0))
+	_, err := keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	assert.True(t, success)
 	assert.Equal(t, 0, len(list.GetUnsync()))
@@ -78,9 +72,9 @@ func TestNodekeeper_AddUnsync2(t *testing.T) {
 
 func TestNodekeeper_AddUnsync3(t *testing.T) {
 	keeper := newNodeKeeper()
-	err := keeper.AddUnsync(newActiveNode(0))
+	_, err := keeper.AddUnsync(newActiveNode(0))
 	success, list := keeper.SetPulse(core.PulseNumber(0))
-	err = keeper.AddUnsync(newActiveNode(1))
+	_, err = keeper.AddUnsync(newActiveNode(1))
 	assert.NoError(t, err)
 	assert.True(t, success)
 	assert.Equal(t, 1, len(list.GetUnsync()))
@@ -89,12 +83,12 @@ func TestNodekeeper_AddUnsync3(t *testing.T) {
 func TestNodekeeper_pipeline(t *testing.T) {
 	keeper := newNodeKeeper()
 	for i := 0; i < 4; i++ {
-		err := keeper.AddUnsync(newActiveNode(byte(2 * i)))
+		_, err := keeper.AddUnsync(newActiveNode(byte(2 * i)))
 		assert.NoError(t, err)
 		pulse := core.PulseNumber(i)
 		success, list := keeper.SetPulse(pulse)
 		assert.True(t, success)
-		err = keeper.AddUnsync(newActiveNode(byte(2*i + 1)))
+		_, err = keeper.AddUnsync(newActiveNode(byte(2*i + 1)))
 		assert.NoError(t, err)
 		keeper.Sync(list.GetUnsync(), pulse)
 	}
@@ -108,7 +102,7 @@ func TestNodekeeper_pipeline(t *testing.T) {
 
 func TestNodekeeper_doubleSync(t *testing.T) {
 	keeper := newNodeKeeper()
-	err := keeper.AddUnsync(newActiveNode(0))
+	_, err := keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	pulse := core.PulseNumber(0)
 	success, list := keeper.SetPulse(pulse)
@@ -124,7 +118,7 @@ func TestNodekeeper_doubleSync(t *testing.T) {
 
 func TestNodekeeper_doubleSetPulse(t *testing.T) {
 	keeper := newNodeKeeper()
-	err := keeper.AddUnsync(newActiveNode(0))
+	_, err := keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	pulse := core.PulseNumber(0)
 	_, list := keeper.SetPulse(pulse)
@@ -144,8 +138,8 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 	for i := 0; i < num; i++ {
 		time.Sleep(100 * time.Millisecond)
 		go func(k NodeKeeper, i int) {
-			_ = k.AddUnsync(newActiveNode(byte(2 * i)))
-			_ = k.AddUnsync(newActiveNode(byte(2*i + 1)))
+			_, _ = k.AddUnsync(newActiveNode(byte(2 * i)))
+			_, _ = k.AddUnsync(newActiveNode(byte(2*i + 1)))
 			pulse := core.PulseNumber(i)
 			success, list := k.SetPulse(pulse)
 			assert.True(t, success)

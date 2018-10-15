@@ -45,8 +45,10 @@ type NodeKeeper interface {
 	// Sync initiates transferring syncCandidates -> sync, sync -> active.
 	// If number is less than internal PulseNumber then ignore Sync.
 	Sync(syncCandidates []*core.ActiveNode, number core.PulseNumber)
-	// AddUnsync add unsync node to the unsync list. Returns error if current node is not active and cannot participate in consensus
-	AddUnsync(*core.ActiveNode) error
+	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
+	// Channel will return nil node if added node has not passed the consensus.
+	// Returns error if current node is not active and cannot participate in consensus.
+	AddUnsync(nodeID core.RecordRef, role core.NodeRole, publicKey []byte) (chan *core.ActiveNode, error)
 	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
 	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
 	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
@@ -57,12 +59,13 @@ type NodeKeeper interface {
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(nodeID core.RecordRef) NodeKeeper {
 	return &nodekeeper{
-		nodeID:        nodeID,
-		state:         undefined,
-		active:        make(map[core.RecordRef]*core.ActiveNode),
-		sync:          make([]*core.ActiveNode, 0),
-		unsync:        make([]*core.ActiveNode, 0),
-		unsyncWaiters: make([]chan *UnsyncList, 0),
+		nodeID:      nodeID,
+		state:       undefined,
+		active:      make(map[core.RecordRef]*core.ActiveNode),
+		sync:        make([]*core.ActiveNode, 0),
+		unsync:      make([]*core.ActiveNode, 0),
+		listWaiters: make([]chan *UnsyncList, 0),
+		nodeWaiters: make(map[core.RecordRef]chan *core.ActiveNode),
 	}
 }
 
@@ -84,10 +87,11 @@ type nodekeeper struct {
 	active     map[core.RecordRef]*core.ActiveNode
 	sync       []*core.ActiveNode
 
-	unsyncLock    sync.Mutex
-	unsync        []*core.ActiveNode
-	unsyncList    *UnsyncList
-	unsyncWaiters []chan *UnsyncList
+	unsyncLock  sync.Mutex
+	unsync      []*core.ActiveNode
+	unsyncList  *UnsyncList
+	listWaiters []chan *UnsyncList
+	nodeWaiters map[core.RecordRef]chan *core.ActiveNode
 }
 
 func (nk *nodekeeper) GetID() core.RecordRef {
@@ -184,16 +188,26 @@ func (nk *nodekeeper) Sync(syncCandidates []*core.ActiveNode, number core.PulseN
 	nk.syncUnsafe(syncCandidates)
 }
 
-func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
+func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, role core.NodeRole, publicKey []byte) (chan *core.ActiveNode, error) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
 	if nk.self == nil {
-		return errors.New("cannot add node to unsync list: current node is not active")
+		return nil, errors.New("cannot add node to unsync list: current node is not active")
+	}
+
+	node := &core.ActiveNode{
+		NodeID:    nodeID,
+		PulseNum:  nk.pulse,
+		State:     core.NodeJoined,
+		Role:      role,
+		PublicKey: publicKey,
 	}
 
 	nk.unsync = append(nk.unsync, node)
-	return nil
+	ch := make(chan *core.ActiveNode, 1)
+	nk.nodeWaiters[node.NodeID] = ch
+	return ch, nil
 }
 
 func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (*UnsyncList, error) {
@@ -211,7 +225,7 @@ func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Dura
 			pulse, currentPulse)
 	}
 	ch := make(chan *UnsyncList, 1)
-	nk.unsyncWaiters = append(nk.unsyncWaiters, ch)
+	nk.listWaiters = append(nk.listWaiters, ch)
 	nk.unsyncLock.Unlock()
 	// TODO: timeout
 	result := <-ch
@@ -229,6 +243,27 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.ActiveNode) {
 	}
 	// unsync -> sync
 	nk.sync = syncCandidates
+
+	removeNodeWaiter := func(nodeID core.RecordRef, node *core.ActiveNode) {
+		ch, exists := nk.nodeWaiters[nodeID]
+		if !exists {
+			return
+		}
+		if node != nil {
+			ch <- node
+		}
+		close(ch)
+		delete(nk.nodeWaiters, nodeID)
+	}
+
+	// first notify all synced nodes that they have passed the consensus
+	for _, node := range nk.sync {
+		removeNodeWaiter(node.NodeID, node)
+	}
+	// then notify all the others that they have not passed the consensus
+	for nodeID, _ := range nk.nodeWaiters {
+		removeNodeWaiter(nodeID, nil)
+	}
 	nk.state = synced
 }
 
@@ -242,14 +277,14 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
 	tmp := nk.unsync
 	nk.unsync = make([]*core.ActiveNode, 0)
 	nk.unsyncList = NewUnsyncHolder(nk.pulse, tmp)
-	if len(nk.unsyncWaiters) == 0 {
+	if len(nk.listWaiters) == 0 {
 		return nk.unsyncList
 	}
 	// notify waiters that new unsync holder is available for read
-	for _, ch := range nk.unsyncWaiters {
+	for _, ch := range nk.listWaiters {
 		ch <- nk.unsyncList
 		close(ch)
 	}
-	nk.unsyncWaiters = make([]chan *UnsyncList, 0)
+	nk.listWaiters = make([]chan *UnsyncList, 0)
 	return nk.unsyncList
 }
