@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api/seedmanager"
+	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -240,4 +241,18 @@ func (ar *Runner) Stop() error {
 	}
 
 	return nil
+}
+
+func (ar *Runner) getMemberPubKey(ref string) string { //nolint
+	ar.cacheLock.RLock()
+	key, ok := ar.keyCache[ref]
+	ar.cacheLock.RUnlock()
+	if ok {
+		return key
+	}
+	key = member.GetObject(core.NewRefFromBase58(ref)).GetPublicKey()
+	ar.cacheLock.Lock()
+	ar.keyCache[ref] = key
+	ar.cacheLock.Unlock()
+	return key
 }
