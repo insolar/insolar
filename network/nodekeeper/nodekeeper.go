@@ -227,8 +227,16 @@ func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Dura
 	ch := make(chan *UnsyncList, 1)
 	nk.listWaiters = append(nk.listWaiters, ch)
 	nk.unsyncLock.Unlock()
-	// TODO: timeout
-	result := <-ch
+	var result *UnsyncList
+	select {
+	case data := <-ch:
+		if data == nil {
+			return nil, errors.New("GetUnsyncHolder: channel closed")
+		}
+		result = data
+	case <-time.After(duration):
+		return nil, errors.New("GetUnsyncHolder: timeout")
+	}
 	if result.GetPulse() != pulse {
 		return nil, errors.Errorf("GetUnsyncHolder called with pulse %d, but current UnsyncHolder pulse is %d",
 			pulse, result.GetPulse())

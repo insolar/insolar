@@ -233,6 +233,24 @@ func TestNodekeeper_GetUnsyncHolder2(t *testing.T) {
 	assert.Nil(t, holder)
 }
 
+func TestNodekeeper_GetUnsyncHolder3(t *testing.T) {
+	keeper := newNodeKeeper()
+	pulse := core.PulseNumber(10)
+	nextPulse := core.PulseNumber(11)
+	success, _ := keeper.SetPulse(pulse)
+	assert.True(t, success)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func(keeper NodeKeeper, wg *sync.WaitGroup) {
+		_, err := keeper.GetUnsyncHolder(nextPulse, time.Millisecond)
+		assert.Error(t, err)
+		wg.Done()
+	}(keeper, &wg)
+	time.Sleep(10 * time.Millisecond)
+	wg.Wait()
+}
+
 func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 	keeper := newNodeKeeper()
 
@@ -293,4 +311,53 @@ func TestUnsyncList_GetHash(t *testing.T) {
 	h2, err := unsyncList.GetHash(0)
 	assert.NoError(t, err)
 	assert.Equal(t, hash, h2[0].Hash)
+}
+
+func TestUnsyncList_GetHash2(t *testing.T) {
+	unsyncNodes := []*core.ActiveNode{}
+	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
+	hash := []byte{'a', 'b', 'c'}
+	h := make([]*consensus.NodeUnsyncHash, 0)
+	h = append(h, &consensus.NodeUnsyncHash{core.RecordRef{1}, hash})
+
+	wg := sync.WaitGroup{}
+	waiters := 10
+	wg.Add(waiters)
+
+	for i := 0; i < waiters; i++ {
+		go func(list consensus.UnsyncHolder) {
+			h, err := list.GetHash(time.Millisecond * 10)
+			assert.NoError(t, err)
+			assert.NotNil(t, h)
+			assert.Equal(t, hash, h[0].Hash)
+			wg.Done()
+		}(unsyncList)
+	}
+	time.Sleep(time.Millisecond)
+	unsyncList.SetHash(h)
+	wg.Wait()
+}
+
+func TestUnsyncList_GetHash3(t *testing.T) {
+	unsyncNodes := []*core.ActiveNode{}
+	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
+	hash := []byte{'a', 'b', 'c'}
+	h := make([]*consensus.NodeUnsyncHash, 0)
+	h = append(h, &consensus.NodeUnsyncHash{core.RecordRef{1}, hash})
+
+	wg := sync.WaitGroup{}
+	waiters := 10
+	wg.Add(waiters)
+
+	for i := 0; i < waiters; i++ {
+		go func(list consensus.UnsyncHolder) {
+			h, err := list.GetHash(time.Millisecond * 1)
+			assert.Error(t, err)
+			assert.Nil(t, h)
+			wg.Done()
+		}(unsyncList)
+	}
+	time.Sleep(time.Millisecond * 10)
+	unsyncList.SetHash(h)
+	wg.Wait()
 }

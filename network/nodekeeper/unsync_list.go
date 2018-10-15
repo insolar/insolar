@@ -17,6 +17,7 @@
 package nodekeeper
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -84,11 +85,19 @@ func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*consensus.NodeUnsyn
 		u.waitersLock.Unlock()
 		return result, nil
 	}
-	ch := make(chan []*consensus.NodeUnsyncHash)
+	ch := make(chan []*consensus.NodeUnsyncHash, 1)
 	u.waiters = append(u.waiters, ch)
 	u.waitersLock.Unlock()
-	// TODO: timeout
-	result := <-ch
+	var result []*consensus.NodeUnsyncHash
+	select {
+	case data := <-ch:
+		if data == nil {
+			return nil, errors.New("GetHash: channel closed")
+		}
+		result = data
+	case <-time.After(blockTimeout):
+		return nil, errors.New("GetHash: timeout")
+	}
 	return result, nil
 }
 
