@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
 
@@ -195,7 +196,9 @@ func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transpor
 	origin, err := host.NewOrigin(ids, addr)
 	tp := newMockTransport()
 	cascade1 := &cascade.Cascade{}
-	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
+	key, err := ecdsa.GeneratePrivateKey()
+	sign := signhandler.NewSignHandler(key)
+	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1, sign)
 	return st, origin, tp, ncf, err
 }
 
@@ -208,7 +211,9 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	cfg.BehindNAT = false
 	tp, err := transport.NewTransport(cfg, relay.NewProxy())
 	cascade1 := &cascade.Cascade{}
-	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1)
+	key, err := ecdsa.GeneratePrivateKey()
+	sign := signhandler.NewSignHandler(key)
+	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1, sign)
 	return st, origin, tp, ncf, err
 }
 

@@ -17,7 +17,6 @@
 package hostnetwork
 
 import (
-	"crypto/ecdsa"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +31,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
+	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/insolar/insolar/testutils"
@@ -82,6 +82,10 @@ func (fac *mockNetworkCommonFacade) GetNetworkCoordinator() core.NetworkCoordina
 }
 
 func (fac *mockNetworkCommonFacade) SetNetworkCoordinator(core.NetworkCoordinator) {
+}
+
+func (fac *mockNetworkCommonFacade) GetSignHandler() signhandler.SignHandler {
+	return nil
 }
 
 type mockHostHandler struct {
@@ -167,18 +171,6 @@ func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error 
 
 func (hh *mockHostHandler) SetNodeID(nodeID core.RecordRef) {
 
-}
-
-func (hh *mockHostHandler) SignMessage(msg core.Message, key *ecdsa.PrivateKey) error {
-	return nil
-}
-
-func (hh *mockHostHandler) SignNonce(nonce []byte) ([]byte, error) {
-	return nil, nil
-}
-
-func (hh *mockHostHandler) SignedNonceIsCorrect(hostID id.ID, signedNonce []byte) bool {
-	return true
 }
 
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
