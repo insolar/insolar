@@ -25,20 +25,29 @@ import (
 
 // RandomString generates random uuid and return it as a string
 func RandomString() string {
-	newUUID, _ := uuid.NewV4() // nolint
+	newUUID, err := uuid.NewV4()
+	if err != nil {
+		panic(err)
+	}
 	return newUUID.String()
 }
 
 // RandomRef generates random object reference
 func RandomRef() core.RecordRef {
 	ref := [core.RecordRefSize]byte{}
-	rand.Read(ref[:]) // nolint
+	_, err := rand.Read(ref[:])
+	if err != nil {
+		panic(err)
+	}
 	return ref
 }
 
 // RandomID generates random object ID
 func RandomID() core.RecordID {
 	id := [core.RecordIDSize]byte{}
-	rand.Read(id[:]) // nolint
+	_, err := rand.Read(id[:])
+	if err != nil {
+		panic(err)
+	}
 	return id
 }

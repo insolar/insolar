@@ -1,4 +1,4 @@
-package pulsartestutil
+package pulsartestutils
 
 import (
 	"net/rpc"
