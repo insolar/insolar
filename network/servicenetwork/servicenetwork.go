@@ -133,12 +133,19 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
 
+	if components.NetworkCoordinator == nil {
+		log.Error("network coordinator is nil")
+	} else {
+		network.hostNetwork.GetNetworkCommonFacade().SetNetworkCoordinator(components.NetworkCoordinator)
+	}
+
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
 	err := network.hostNetwork.StartAuthorize()
 	if err != nil {
-		return errors.Wrap(err, "error authorizing node")
+		//return errors.Wrap(err, "error authorizing node")
+		log.Errorln(err.Error())
 	}
 
 	pm, err := getPulseManager(components)
