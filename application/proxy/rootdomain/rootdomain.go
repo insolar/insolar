@@ -10,16 +10,18 @@ import (
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
-// Contract proxy type
+// RootDomain holds proxy type
 type RootDomain struct {
 	Reference core.RecordRef
 }
 
+// ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
 	argsSerialized []byte
 }
 
+// AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *RootDomain {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -28,6 +30,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *RootDomain {
 	return &RootDomain{Reference: ref}
 }
 
+// AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *RootDomain {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -36,15 +39,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *RootDomai
 	return &RootDomain{Reference: ref}
 }
 
-// GetObject
+// GetObject returns proxy object
 func GetObject(ref core.RecordRef) (r *RootDomain) {
 	return &RootDomain{Reference: ref}
 }
 
+// GetClass returns reference to the class
 func GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) *RootDomain {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
@@ -54,6 +59,7 @@ func GetImplementationFrom(object core.RecordRef) *RootDomain {
 }
 
 
+// NewRootDomain is constructor
 func NewRootDomain(  ) *ContractConstructorHolder {
 	var args [0]interface{}
 
@@ -68,17 +74,18 @@ func NewRootDomain(  ) *ContractConstructorHolder {
 }
 
 
-// GetReference
+// GetReference returns reference of the object
 func (r *RootDomain) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass
+// GetClass returns reference to the class
 func (r *RootDomain) GetClass() core.RecordRef {
 	return ClassReference
 }
 
 
+// RegisterNode does ...
 func (r *RootDomain) RegisterNode( publicKey string, role string ) ( string ) {
 	var args [2]interface{}
 	args[0] = publicKey
@@ -108,6 +115,7 @@ func (r *RootDomain) RegisterNode( publicKey string, role string ) ( string ) {
 	return ret0
 }
 
+// RegisterNodeNoWait does ... with no wait
 func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
 	var args [2]interface{}
 	args[0] = publicKey
@@ -126,6 +134,7 @@ func (r *RootDomain) RegisterNodeNoWait( publicKey string, role string ) {
 	}
 }
 
+// Authorize does ...
 func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, string ) {
 	var args [0]interface{}
 
@@ -157,6 +166,7 @@ func (r *RootDomain) Authorize(  ) ( string, core.NodeRole, string ) {
 	return ret0, ret1, ret2
 }
 
+// AuthorizeNoWait does ... with no wait
 func (r *RootDomain) AuthorizeNoWait(  ) {
 	var args [0]interface{}
 
@@ -173,6 +183,7 @@ func (r *RootDomain) AuthorizeNoWait(  ) {
 	}
 }
 
+// CreateMember does ...
 func (r *RootDomain) CreateMember( name string, key string ) ( string ) {
 	var args [2]interface{}
 	args[0] = name
@@ -202,6 +213,7 @@ func (r *RootDomain) CreateMember( name string, key string ) ( string ) {
 	return ret0
 }
 
+// CreateMemberNoWait does ... with no wait
 func (r *RootDomain) CreateMemberNoWait( name string, key string ) {
 	var args [2]interface{}
 	args[0] = name
@@ -220,6 +232,7 @@ func (r *RootDomain) CreateMemberNoWait( name string, key string ) {
 	}
 }
 
+// GetBalance does ...
 func (r *RootDomain) GetBalance( reference string ) ( uint ) {
 	var args [1]interface{}
 	args[0] = reference
@@ -248,6 +261,7 @@ func (r *RootDomain) GetBalance( reference string ) ( uint ) {
 	return ret0
 }
 
+// GetBalanceNoWait does ... with no wait
 func (r *RootDomain) GetBalanceNoWait( reference string ) {
 	var args [1]interface{}
 	args[0] = reference
@@ -265,6 +279,7 @@ func (r *RootDomain) GetBalanceNoWait( reference string ) {
 	}
 }
 
+// SendMoney does ...
 func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
 	var args [3]interface{}
 	args[0] = from
@@ -295,6 +310,7 @@ func (r *RootDomain) SendMoney( from string, to string, amount uint ) ( bool ) {
 	return ret0
 }
 
+// SendMoneyNoWait does ... with no wait
 func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
 	var args [3]interface{}
 	args[0] = from
@@ -314,6 +330,7 @@ func (r *RootDomain) SendMoneyNoWait( from string, to string, amount uint ) {
 	}
 }
 
+// DumpUserInfo does ...
 func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
 	var args [1]interface{}
 	args[0] = reference
@@ -342,6 +359,7 @@ func (r *RootDomain) DumpUserInfo( reference string ) ( []byte ) {
 	return ret0
 }
 
+// DumpUserInfoNoWait does ... with no wait
 func (r *RootDomain) DumpUserInfoNoWait( reference string ) {
 	var args [1]interface{}
 	args[0] = reference
@@ -359,6 +377,7 @@ func (r *RootDomain) DumpUserInfoNoWait( reference string ) {
 	}
 }
 
+// DumpAllUsers does ...
 func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
 	var args [0]interface{}
 
@@ -386,6 +405,7 @@ func (r *RootDomain) DumpAllUsers(  ) ( []byte ) {
 	return ret0
 }
 
+// DumpAllUsersNoWait does ... with no wait
 func (r *RootDomain) DumpAllUsersNoWait(  ) {
 	var args [0]interface{}
 

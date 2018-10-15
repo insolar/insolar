@@ -10,16 +10,18 @@ import (
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
-// Contract proxy type
+// NodeRecord holds proxy type
 type NodeRecord struct {
 	Reference core.RecordRef
 }
 
+// ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
 	argsSerialized []byte
 }
 
+// AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeRecord {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -28,6 +30,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeRecord {
 	return &NodeRecord{Reference: ref}
 }
 
+// AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *NodeRecord {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -36,15 +39,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *NodeRecor
 	return &NodeRecord{Reference: ref}
 }
 
-// GetObject
+// GetObject returns proxy object
 func GetObject(ref core.RecordRef) (r *NodeRecord) {
 	return &NodeRecord{Reference: ref}
 }
 
+// GetClass returns reference to the class
 func GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) *NodeRecord {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
@@ -54,6 +59,7 @@ func GetImplementationFrom(object core.RecordRef) *NodeRecord {
 }
 
 
+// NewNodeRecord is constructor
 func NewNodeRecord( pk string, roleS string ) *ContractConstructorHolder {
 	var args [2]interface{}
 	args[0] = pk
@@ -70,17 +76,18 @@ func NewNodeRecord( pk string, roleS string ) *ContractConstructorHolder {
 }
 
 
-// GetReference
+// GetReference returns reference of the object
 func (r *NodeRecord) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass
+// GetClass returns reference to the class
 func (r *NodeRecord) GetClass() core.RecordRef {
 	return ClassReference
 }
 
 
+// GetPublicKey does ...
 func (r *NodeRecord) GetPublicKey(  ) ( string ) {
 	var args [0]interface{}
 
@@ -108,6 +115,7 @@ func (r *NodeRecord) GetPublicKey(  ) ( string ) {
 	return ret0
 }
 
+// GetPublicKeyNoWait does ... with no wait
 func (r *NodeRecord) GetPublicKeyNoWait(  ) {
 	var args [0]interface{}
 
@@ -124,6 +132,7 @@ func (r *NodeRecord) GetPublicKeyNoWait(  ) {
 	}
 }
 
+// GetRole does ...
 func (r *NodeRecord) GetRole(  ) ( core.NodeRole ) {
 	var args [0]interface{}
 
@@ -151,6 +160,7 @@ func (r *NodeRecord) GetRole(  ) ( core.NodeRole ) {
 	return ret0
 }
 
+// GetRoleNoWait does ... with no wait
 func (r *NodeRecord) GetRoleNoWait(  ) {
 	var args [0]interface{}
 
@@ -167,6 +177,7 @@ func (r *NodeRecord) GetRoleNoWait(  ) {
 	}
 }
 
+// GetRoleAndPublicKey does ...
 func (r *NodeRecord) GetRoleAndPublicKey(  ) ( core.NodeRole, string ) {
 	var args [0]interface{}
 
@@ -196,6 +207,7 @@ func (r *NodeRecord) GetRoleAndPublicKey(  ) ( core.NodeRole, string ) {
 	return ret0, ret1
 }
 
+// GetRoleAndPublicKeyNoWait does ... with no wait
 func (r *NodeRecord) GetRoleAndPublicKeyNoWait(  ) {
 	var args [0]interface{}
 
@@ -212,6 +224,7 @@ func (r *NodeRecord) GetRoleAndPublicKeyNoWait(  ) {
 	}
 }
 
+// Destroy does ...
 func (r *NodeRecord) Destroy(  ) (  ) {
 	var args [0]interface{}
 
@@ -237,6 +250,7 @@ func (r *NodeRecord) Destroy(  ) (  ) {
 	return 
 }
 
+// DestroyNoWait does ... with no wait
 func (r *NodeRecord) DestroyNoWait(  ) {
 	var args [0]interface{}
 

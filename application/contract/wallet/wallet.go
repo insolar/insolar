@@ -78,7 +78,7 @@ func (w *Wallet) GetTotalBalance() uint {
 	return w.Balance + totalAllowanced
 }
 
-func (w *Wallet) ReturnAndDeleteExpiriedAllowances() {
+func (w *Wallet) ReturnAndDeleteExpiredAllowances() {
 	crefs, err := w.GetChildrenTyped(allowance.GetClass())
 	if err != nil {
 		panic(err)
