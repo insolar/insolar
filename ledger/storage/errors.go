@@ -34,6 +34,4 @@ var (
 
 	// ErrOverride is returned if SetRecord tries update existing record
 	ErrOverride = errors.New("records override is forbidden")
-
-	ErrNotIterable = errors.New("record is not iterable")
 )

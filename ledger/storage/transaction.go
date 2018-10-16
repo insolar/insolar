@@ -17,6 +17,8 @@
 package storage
 
 import (
+	"encoding/binary"
+
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/core"
@@ -40,7 +42,7 @@ type TransactionManager struct {
 }
 
 func prefixkey(prefix byte, key []byte) []byte {
-	k := make([]byte, core.RecordRefSize+1)
+	k := make([]byte, core.RecordIDSize+1)
 	k[0] = prefix
 	_ = copy(k[1:], key)
 	return k
@@ -149,8 +151,12 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	} else {
 		h = raw.Hash()
 	}
+	latestPulse, err := m.db.GetLatestPulseNumber()
+	if err != nil {
+		return nil, err
+	}
 	id := record.ID{
-		Pulse: m.db.GetCurrentPulse(),
+		Pulse: latestPulse,
 		Hash:  h,
 	}
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
@@ -220,29 +226,6 @@ func (m *TransactionManager) SetObjectIndex(id *record.ID, idx *index.ObjectLife
 	return nil
 }
 
-// GetEntropy returns entropy from storage for given pulse.
-//
-// GeneratedEntropy is used for calculating node roles.
-func (m *TransactionManager) GetEntropy(pulse core.PulseNumber) (*core.Entropy, error) {
-	k := prefixkey(scopeIDEntropy, pulse.Bytes())
-	buf, err := m.Get(k)
-	if err != nil {
-		return nil, err
-	}
-	var entropy core.Entropy
-	copy(entropy[:], buf)
-	return &entropy, nil
-}
-
-// SetEntropy stores given entropy for given pulse in storage.
-//
-// GeneratedEntropy is used for calculating node roles.
-func (m *TransactionManager) SetEntropy(pulse core.PulseNumber, entropy core.Entropy) error {
-	k := prefixkey(scopeIDEntropy, pulse.Bytes())
-	m.set(k, entropy[:])
-	return nil
-}
-
 // Get returns value by key.
 func (m *TransactionManager) Get(key []byte) ([]byte, error) {
 	if kv, ok := m.txupdates[string(key)]; ok {
@@ -259,6 +242,15 @@ func (m *TransactionManager) Get(key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return item.ValueCopy(nil)
+}
+
+// GetLatestPulseNumber returns current pulse number.
+func (m *TransactionManager) GetLatestPulseNumber() (core.PulseNumber, error) {
+	buf, err := m.Get(prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
+	if err != nil {
+		return 0, err
+	}
+	return core.PulseNumber(binary.BigEndian.Uint32(buf)), nil
 }
 
 // Set stores value by key.

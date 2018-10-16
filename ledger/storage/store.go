@@ -17,6 +17,7 @@
 package storage
 
 import (
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 )
@@ -29,4 +30,5 @@ type Store interface {
 	SetClassIndex(ref *record.ID, idx *index.ClassLifeline) error
 	GetObjectIndex(ref *record.ID, forupdate bool) (*index.ObjectLifeline, error)
 	SetObjectIndex(ref *record.ID, idx *index.ObjectLifeline) error
+	GetLatestPulseNumber() (core.PulseNumber, error)
 }
