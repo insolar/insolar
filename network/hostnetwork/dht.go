@@ -467,7 +467,7 @@ LOOP:
 			if i == discoveryNodesCount {
 				break LOOP
 			}
-		case <-time.After(10 * time.Second):
+		case <-time.After(time.Minute):
 			log.Warn("StartAuthorize: timeout exceeded")
 			break LOOP
 		}

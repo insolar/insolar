@@ -294,7 +294,7 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 		return nil, errors.Wrap(err, "failed to send an authorization request (step 2)")
 	}
 	err = sendCheckSignedNonceRequest(hostHandler, rsp.Sender, response.Nonce)
-	rsp, err = future.GetResult( /*hostHandler.GetPacketTimeout()*/ time.Second * 10)
+	rsp, err = future.GetResult( /*hostHandler.GetPacketTimeout()*/ time.Second * 40)
 	if err != nil {
 		return nil, errors.Wrap(err, "checkResponse error (step 2)")
 	}

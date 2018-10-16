@@ -159,7 +159,7 @@ func processCheckSignedNonce(
 		}
 		self = d
 		// TODO: move timeout to configurable settings
-	case <-time.After(time.Second * 10):
+	case <-time.After(time.Second * 30):
 		errorStr := "Add to unsync timed out"
 		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: errorStr}).Build(), nil
 	}
