@@ -710,7 +710,7 @@ func (h *MessageHandler) handleJetDrop(genericMsg core.Message) (core.Reply, err
 		}
 	}
 
-	return &reply.Ok{}, nil
+	return &reply.OK{}, nil
 }
 
 func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {

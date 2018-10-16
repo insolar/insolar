@@ -1007,7 +1007,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 		Records: recordData,
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, reply.Ok{}, *rep.(*reply.Ok))
+	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 
 	for i := 0; i < len(records); i++ {
 		rec, err := td.db.GetRecord(&ids[i])

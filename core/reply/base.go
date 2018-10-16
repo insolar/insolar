@@ -90,7 +90,7 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 	case TypeError:
 		return &Error{}, nil
 	case TypeOK:
-		return &Ok{}, nil
+		return &OK{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -137,5 +137,5 @@ func init() {
 	gob.Register(&ID{})
 	gob.Register(&Children{})
 	gob.Register(&Error{})
-	gob.Register(&Ok{})
+	gob.Register(&OK{})
 }
