@@ -22,9 +22,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/api/seedmanager"
+	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -171,6 +173,8 @@ type Runner struct {
 	server         *http.Server
 	cfg            *configuration.APIRunner
 	netCoordinator core.NetworkCoordinator
+	keyCache       map[string]string
+	cacheLock      *sync.RWMutex
 }
 
 // NewRunner is C-tor for API Runner
@@ -187,8 +191,10 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 
 	portStr := fmt.Sprint(cfg.Port)
 	ar := Runner{
-		server: &http.Server{Addr: ":" + portStr},
-		cfg:    cfg,
+		server:    &http.Server{Addr: ":" + portStr},
+		cfg:       cfg,
+		keyCache:  make(map[string]string),
+		cacheLock: &sync.RWMutex{},
 	}
 
 	return &ar, nil
@@ -235,4 +241,18 @@ func (ar *Runner) Stop() error {
 	}
 
 	return nil
+}
+
+func (ar *Runner) getMemberPubKey(ref string) string { //nolint
+	ar.cacheLock.RLock()
+	key, ok := ar.keyCache[ref]
+	ar.cacheLock.RUnlock()
+	if ok {
+		return key
+	}
+	key = member.GetObject(core.NewRefFromBase58(ref)).GetPublicKey()
+	ar.cacheLock.Lock()
+	ar.keyCache[ref] = key
+	ar.cacheLock.Unlock()
+	return key
 }
