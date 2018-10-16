@@ -296,3 +296,12 @@ func EncodeToRaw(rec Record) (*Raw, error) {
 		Data: b,
 	}, nil
 }
+
+// MustEncodeToRaw wraps EncodeToRaw, panics on encoding errors.
+func MustEncodeToRaw(rec Record) *Raw {
+	raw, err := EncodeToRaw(rec)
+	if err != nil {
+		panic(err)
+	}
+	return raw
+}

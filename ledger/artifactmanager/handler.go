@@ -56,6 +56,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeDeactivateObject, h.handleDeactivateObject)
 	bus.MustRegister(core.TypeUpdateObject, h.handleUpdateObject)
 	bus.MustRegister(core.TypeRegisterChild, h.handleRegisterChild)
+	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
 	bus.MustRegister(core.TypeRequestCall, h.handleRegisterRequest)
 
 	return nil
@@ -177,43 +178,41 @@ func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply,
 	}
 
 	var (
-		refs      []core.RecordRef
-		fromChild *record.ID
+		refs         []core.RecordRef
+		currentChild *record.ID
 	)
 
 	// Counting from specified child or the latest.
 	if msg.FromChild != nil {
 		id := record.Bytes2ID(msg.FromChild[:])
-		fromChild = &id
+		currentChild = &id
 	} else {
-		fromChild = idx.LatestChild
+		currentChild = idx.LatestChild
 	}
 
-	i := storage.NewChainIterator(h.db, fromChild)
 	counter := 0
-	for i.HasNext() {
-		id, rec, err := i.Next()
-		if err != nil {
-			return nil, errors.New("failed to retrieve children")
-		}
-
+	for currentChild != nil {
 		// We have enough results.
 		if counter >= msg.Amount {
-			return &reply.Children{Refs: refs, NextFrom: id.CoreID()}, nil
+			return &reply.Children{Refs: refs, NextFrom: currentChild.CoreID()}, nil
 		}
 		counter++
 
-		child, ok := rec.(*record.ChildRecord)
+		rec, err := h.db.GetRecord(currentChild)
+		if err != nil {
+			return nil, errors.New("failed to retrieve children")
+		}
+		childRec, ok := rec.(*record.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
+		currentChild = childRec.PrevChild
 
 		// Skip records later than specified pulse.
-		if msg.FromPulse != nil && child.Ref.Record.Pulse > *msg.FromPulse {
+		if msg.FromPulse != nil && childRec.Ref.Record.Pulse > *msg.FromPulse {
 			continue
 		}
-
-		refs = append(refs, *child.Ref.CoreRef())
+		refs = append(refs, *childRec.Ref.CoreRef())
 	}
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
@@ -698,6 +697,20 @@ func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Repl
 	}
 
 	return &reply.ID{ID: *child.CoreID()}, nil
+}
+
+func (h *MessageHandler) handleJetDrop(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.JetDrop)
+
+	// TODO: validate
+	for _, rec := range msg.Records {
+		err := h.db.SetRecordBinary(rec[0], rec[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &reply.OK{}, nil
 }
 
 func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
