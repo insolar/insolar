@@ -17,14 +17,11 @@
 package logicrunner
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path"
 	"testing"
 
 	"github.com/insolar/insolar/application/contract/member"
@@ -39,7 +36,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
@@ -1121,94 +1117,4 @@ func TestRootDomainContract(t *testing.T) {
 	res4 := []interface{}{0}
 	root.SignedCall(core.NewRefFromBase58(member2Ref), *cb.Classes["wallet"], "GetTotalBalance", []interface{}{}, res4)
 	assert.Equal(t, 1001, res4[0])
-}
-
-func BenchmarkContractCall(b *testing.B) {
-	goParent := `
-package main
-
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-import "github.com/insolar/insolar/application/proxy/child"
-import "github.com/insolar/insolar/core"
-
-type Parent struct {
-	foundation.BaseContract
-}
-
-func (c *Parent) CCC(ref *core.RecordRef) int {	
-	o := child.GetObject(*ref)	
-	return o.GetNum()
-}
-`
-	goChild := `
-package main
-import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-
-type Child struct {
-	foundation.BaseContract
-}
-
-func (c *Child) GetNum() int {
-	return 5
-}
-`
-	lr, am, cb, cleaner := PrepareLrAmCb(b)
-	defer cleaner()
-	err := cb.Build(map[string]string{"child": goChild, "parent": goParent})
-	assert.NoError(b, err)
-
-	domain := core.NewRefFromBase58("c1")
-	parent, err := am.RegisterRequest(&message.CallConstructor{})
-	_, err = am.ActivateObject(domain, *parent, *cb.Classes["parent"], *am.GenesisRef(), goplugintestutils.CBORMarshal(b, nil))
-	assert.NoError(b, err, "create parent")
-	assert.NotEqual(b, parent, nil, "parent created")
-	child, err := am.RegisterRequest(&message.CallConstructor{ParentRef: *parent})
-	_, err = am.ActivateObject(domain, *child, *cb.Classes["child"], *am.GenesisRef(), goplugintestutils.CBORMarshal(b, nil))
-	assert.NoError(b, err, "create child")
-	assert.NotEqual(b, child, nil, "child created")
-
-	b.N = 1000
-	for i := 0; i < b.N; i++ {
-		resp, err := lr.Execute(&message.CallMethod{
-			ObjectRef: *parent,
-			Method:    "CCC",
-			Arguments: goplugintestutils.CBORMarshal(b, []interface{}{child}),
-		})
-		assert.NoError(b, err, "parent call")
-		r := goplugintestutils.CBORUnMarshal(b, resp.(*reply.CallMethod).Result)
-		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
-	}
-}
-
-func TestProxyGeneration(t *testing.T) {
-	if parallel {
-		t.Parallel()
-	}
-	contracts, err := preprocessor.GetRealContractsNames()
-	assert.NoError(t, err)
-
-	for _, contract := range contracts {
-		t.Run(contract, func(t *testing.T) {
-			parsed, err := preprocessor.ParseFile("../application/contract/" + contract + "/" + contract + ".go")
-			assert.NoError(t, err)
-
-			proxyPath, err := preprocessor.GetRealApplicationDir("proxy")
-			assert.NoError(t, err)
-
-			name, err := parsed.ProxyPackageName()
-			assert.NoError(t, err)
-
-			proxy := path.Join(proxyPath, name, name+".go")
-			_, err = os.Stat(proxy)
-			assert.NoError(t, err)
-
-			buff := bytes.NewBufferString("")
-			parsed.WriteProxy("", buff)
-
-			cmd := exec.Command("diff", proxy, "-")
-			cmd.Stdin = buff
-			out, err := cmd.CombinedOutput()
-			assert.NoError(t, err, string(out))
-		})
-	}
 }
