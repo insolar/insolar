@@ -383,7 +383,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		count--
 	}
 	// Final sleep for 100% receiving of pulse by all nodes (pulsars and nodes)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
