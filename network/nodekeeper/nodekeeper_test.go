@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newActiveNode(ref byte) (core.RecordRef, core.NodeRole) {
-	return core.RecordRef{ref}, core.RoleUnknown
+func newActiveNode(ref byte) (core.RecordRef, core.NodeRole, string) {
+	return core.RecordRef{ref}, core.RoleUnknown, "127.0.0.1:12345"
 }
 
 func newSelfNode(ref core.RecordRef) *core.ActiveNode {

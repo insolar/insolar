@@ -48,7 +48,7 @@ type NodeKeeper interface {
 	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
 	// Channel will return nil node if added node has not passed the consensus.
 	// Returns error if current node is not active and cannot participate in consensus.
-	AddUnsync(nodeID core.RecordRef, role core.NodeRole /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error)
+	AddUnsync(nodeID core.RecordRef, role core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error)
 	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
 	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
 	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
@@ -198,7 +198,7 @@ func (nk *nodekeeper) Sync(syncCandidates []*core.ActiveNode, number core.PulseN
 	nk.syncUnsafe(syncCandidates)
 }
 
-func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, role core.NodeRole /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, role core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
@@ -211,6 +211,7 @@ func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, role core.NodeRole /*, pu
 		PulseNum: nk.pulse,
 		State:    core.NodeJoined,
 		Role:     role,
+		Address:  address,
 		// PublicKey: publicKey,
 	}
 

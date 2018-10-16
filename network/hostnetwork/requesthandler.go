@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/pkg/errors"
 )
@@ -306,9 +305,9 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 }
 
 // ResendPulseToKnownHosts resends received pulse to all known hosts
-func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []*routing.RouteHost, pulse *packet.RequestPulse) {
+func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []host.Host, pulse *packet.RequestPulse) {
 	for _, host1 := range hosts {
-		err := sendPulse(hostHandler, host1.Host, pulse)
+		err := sendPulse(hostHandler, &host1, pulse)
 		if err != nil {
 			log.Debugf("error resending pulse to host %s: %s", host1.ID, err.Error())
 		}
