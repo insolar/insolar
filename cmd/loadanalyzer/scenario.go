@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -53,7 +52,7 @@ func (s *transferDifferentMembersScenario) getOut() io.Writer {
 
 func (s *transferDifferentMembersScenario) canBeStarted() error {
 	if len(s.members) < s.concurrent*s.repetitions*2 {
-		return errors.New(fmt.Sprintf("Not enough members for scenario %s", s.getName()))
+		return fmt.Errorf("not enough members for scenario %s", s.getName())
 	}
 	return nil
 }
