@@ -115,8 +115,7 @@ func (db *DB) Bootstrap() error {
 	}
 
 	createGenesisRecord := func() (*record.Reference, error) {
-		var err error
-		err = db.AddPulse(core.Pulse{
+		err := db.AddPulse(core.Pulse{
 			PulseNumber: core.GenesisPulse.PulseNumber,
 			Entropy:     core.GenesisPulse.Entropy,
 		})
@@ -310,12 +309,16 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (*jetdrop.JetD
 	// We need to look for the closest key that is bigger because we need to reverse iterate from the last record.
 	seekFor := make([]byte, len(prefix))
 	copy(seekFor, prefix)
-	seekFor[len(prefix)-1] += 1
+	seekFor[len(prefix)-1]++
 
 	hw := hash.NewIDHash()
-	hw.Write(prevHash)
+	_, err := hw.Write(prevHash)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var records [][2][]byte
-	db.db.View(func(txn *badger.Txn) error {
+	err = db.db.View(func(txn *badger.Txn) error {
 		ops := badger.DefaultIteratorOptions
 		ops.Reverse = true
 		it := txn.NewIterator(ops)
@@ -333,7 +336,10 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (*jetdrop.JetD
 				break
 			}
 
-			hw.Write(key[1:])
+			_, err := hw.Write(key[1:])
+			if err != nil {
+				return err
+			}
 			value, err := item.ValueCopy(nil)
 			if err != nil {
 				return err
@@ -345,6 +351,9 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (*jetdrop.JetD
 
 		return nil
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	drop := jetdrop.JetDrop{
 		Pulse:    pulse,
