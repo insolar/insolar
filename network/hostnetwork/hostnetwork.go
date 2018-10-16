@@ -18,6 +18,7 @@ package hostnetwork
 
 import (
 	"crypto/ecdsa"
+	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
@@ -45,9 +46,9 @@ func NewHostNetwork(
 	keeper nodekeeper.NodeKeeper,
 ) (*DHT, error) {
 
-	// if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
-	// 	return nil, errors.New("couldn't start at 0.0.0.0")
-	// }
+	if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
+		return nil, errors.New("couldn't start at 0.0.0.0")
+	}
 
 	proxy := relay.NewProxy()
 
