@@ -81,7 +81,7 @@ func (r *NodeRecord) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-// GetPublicKey does ...
+// GetPublicKey is proxy generated method
 func (r *NodeRecord) GetPublicKey() string {
 	var args [0]interface{}
 
@@ -109,7 +109,7 @@ func (r *NodeRecord) GetPublicKey() string {
 	return ret0
 }
 
-// GetPublicKeyNoWait does ... with no wait
+// GetPublicKeyNoWait is proxy generated method
 func (r *NodeRecord) GetPublicKeyNoWait() {
 	var args [0]interface{}
 
@@ -126,7 +126,7 @@ func (r *NodeRecord) GetPublicKeyNoWait() {
 	}
 }
 
-// GetRole does ...
+// GetRole is proxy generated method
 func (r *NodeRecord) GetRole() core.NodeRole {
 	var args [0]interface{}
 
@@ -154,7 +154,7 @@ func (r *NodeRecord) GetRole() core.NodeRole {
 	return ret0
 }
 
-// GetRoleNoWait does ... with no wait
+// GetRoleNoWait is proxy generated method
 func (r *NodeRecord) GetRoleNoWait() {
 	var args [0]interface{}
 
@@ -171,7 +171,7 @@ func (r *NodeRecord) GetRoleNoWait() {
 	}
 }
 
-// GetRoleAndPublicKey does ...
+// GetRoleAndPublicKey is proxy generated method
 func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
 	var args [0]interface{}
 
@@ -201,7 +201,7 @@ func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
 	return ret0, ret1
 }
 
-// GetRoleAndPublicKeyNoWait does ... with no wait
+// GetRoleAndPublicKeyNoWait is proxy generated method
 func (r *NodeRecord) GetRoleAndPublicKeyNoWait() {
 	var args [0]interface{}
 
@@ -218,7 +218,7 @@ func (r *NodeRecord) GetRoleAndPublicKeyNoWait() {
 	}
 }
 
-// Destroy does ...
+// Destroy is proxy generated method
 func (r *NodeRecord) Destroy() {
 	var args [0]interface{}
 
@@ -244,7 +244,7 @@ func (r *NodeRecord) Destroy() {
 	return
 }
 
-// DestroyNoWait does ... with no wait
+// DestroyNoWait is proxy generated method
 func (r *NodeRecord) DestroyNoWait() {
 	var args [0]interface{}
 

@@ -82,7 +82,7 @@ func (r *Allowance) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-// IsExpired does ...
+// IsExpired is proxy generated method
 func (r *Allowance) IsExpired() bool {
 	var args [0]interface{}
 
@@ -110,7 +110,7 @@ func (r *Allowance) IsExpired() bool {
 	return ret0
 }
 
-// IsExpiredNoWait does ... with no wait
+// IsExpiredNoWait is proxy generated method
 func (r *Allowance) IsExpiredNoWait() {
 	var args [0]interface{}
 
@@ -127,7 +127,7 @@ func (r *Allowance) IsExpiredNoWait() {
 	}
 }
 
-// TakeAmount does ...
+// TakeAmount is proxy generated method
 func (r *Allowance) TakeAmount() uint {
 	var args [0]interface{}
 
@@ -155,7 +155,7 @@ func (r *Allowance) TakeAmount() uint {
 	return ret0
 }
 
-// TakeAmountNoWait does ... with no wait
+// TakeAmountNoWait is proxy generated method
 func (r *Allowance) TakeAmountNoWait() {
 	var args [0]interface{}
 
@@ -172,7 +172,7 @@ func (r *Allowance) TakeAmountNoWait() {
 	}
 }
 
-// GetBalanceForOwner does ...
+// GetBalanceForOwner is proxy generated method
 func (r *Allowance) GetBalanceForOwner() uint {
 	var args [0]interface{}
 
@@ -200,7 +200,7 @@ func (r *Allowance) GetBalanceForOwner() uint {
 	return ret0
 }
 
-// GetBalanceForOwnerNoWait does ... with no wait
+// GetBalanceForOwnerNoWait is proxy generated method
 func (r *Allowance) GetBalanceForOwnerNoWait() {
 	var args [0]interface{}
 
@@ -217,7 +217,7 @@ func (r *Allowance) GetBalanceForOwnerNoWait() {
 	}
 }
 
-// DeleteExpiredAllowance does ...
+// DeleteExpiredAllowance is proxy generated method
 func (r *Allowance) DeleteExpiredAllowance() uint {
 	var args [0]interface{}
 
@@ -245,7 +245,7 @@ func (r *Allowance) DeleteExpiredAllowance() uint {
 	return ret0
 }
 
-// DeleteExpiredAllowanceNoWait does ... with no wait
+// DeleteExpiredAllowanceNoWait is proxy generated method
 func (r *Allowance) DeleteExpiredAllowanceNoWait() {
 	var args [0]interface{}
 

@@ -79,7 +79,7 @@ func (r *NodeDomain) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-// RegisterNode does ...
+// RegisterNode is proxy generated method
 func (r *NodeDomain) RegisterNode(pk string, role string) core.RecordRef {
 	var args [2]interface{}
 	args[0] = pk
@@ -109,7 +109,7 @@ func (r *NodeDomain) RegisterNode(pk string, role string) core.RecordRef {
 	return ret0
 }
 
-// RegisterNodeNoWait does ... with no wait
+// RegisterNodeNoWait is proxy generated method
 func (r *NodeDomain) RegisterNodeNoWait(pk string, role string) {
 	var args [2]interface{}
 	args[0] = pk
@@ -128,7 +128,7 @@ func (r *NodeDomain) RegisterNodeNoWait(pk string, role string) {
 	}
 }
 
-// RemoveNode does ...
+// RemoveNode is proxy generated method
 func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 	var args [1]interface{}
 	args[0] = nodeRef
@@ -155,7 +155,7 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 	return
 }
 
-// RemoveNodeNoWait does ... with no wait
+// RemoveNodeNoWait is proxy generated method
 func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) {
 	var args [1]interface{}
 	args[0] = nodeRef
@@ -173,7 +173,7 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) {
 	}
 }
 
-// IsAuthorized does ...
+// IsAuthorized is proxy generated method
 func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
 	var args [3]interface{}
 	args[0] = nodeRef
@@ -204,7 +204,7 @@ func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signature
 	return ret0
 }
 
-// IsAuthorizedNoWait does ... with no wait
+// IsAuthorizedNoWait is proxy generated method
 func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) {
 	var args [3]interface{}
 	args[0] = nodeRef
@@ -224,7 +224,7 @@ func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, sig
 	}
 }
 
-// Authorize does ...
+// Authorize is proxy generated method
 func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, string) {
 	var args [3]interface{}
 	args[0] = nodeRef
@@ -259,7 +259,7 @@ func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw
 	return ret0, ret1, ret2
 }
 
-// AuthorizeNoWait does ... with no wait
+// AuthorizeNoWait is proxy generated method
 func (r *NodeDomain) AuthorizeNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) {
 	var args [3]interface{}
 	args[0] = nodeRef

@@ -82,7 +82,7 @@ func (r *Member) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-// GetName does ...
+// GetName is proxy generated method
 func (r *Member) GetName() string {
 	var args [0]interface{}
 
@@ -110,7 +110,7 @@ func (r *Member) GetName() string {
 	return ret0
 }
 
-// GetNameNoWait does ... with no wait
+// GetNameNoWait is proxy generated method
 func (r *Member) GetNameNoWait() {
 	var args [0]interface{}
 
@@ -127,7 +127,7 @@ func (r *Member) GetNameNoWait() {
 	}
 }
 
-// GetPublicKey does ...
+// GetPublicKey is proxy generated method
 func (r *Member) GetPublicKey() string {
 	var args [0]interface{}
 
@@ -155,7 +155,7 @@ func (r *Member) GetPublicKey() string {
 	return ret0
 }
 
-// GetPublicKeyNoWait does ... with no wait
+// GetPublicKeyNoWait is proxy generated method
 func (r *Member) GetPublicKeyNoWait() {
 	var args [0]interface{}
 
@@ -172,7 +172,7 @@ func (r *Member) GetPublicKeyNoWait() {
 	}
 }
 
-// AuthorizedCall does ...
+// AuthorizedCall is proxy generated method
 func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
 	var args [6]interface{}
 	args[0] = ref
@@ -208,7 +208,7 @@ func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, met
 	return ret0, ret1
 }
 
-// AuthorizedCallNoWait does ... with no wait
+// AuthorizedCallNoWait is proxy generated method
 func (r *Member) AuthorizedCallNoWait(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) {
 	var args [6]interface{}
 	args[0] = ref

@@ -80,7 +80,7 @@ func (r *Wallet) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-// Allocate does ...
+// Allocate is proxy generated method
 func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 	var args [2]interface{}
 	args[0] = amount
@@ -110,7 +110,7 @@ func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 	return ret0
 }
 
-// AllocateNoWait does ... with no wait
+// AllocateNoWait is proxy generated method
 func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -129,7 +129,7 @@ func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
 	}
 }
 
-// Receive does ...
+// Receive is proxy generated method
 func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -157,7 +157,7 @@ func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
 	return
 }
 
-// ReceiveNoWait does ... with no wait
+// ReceiveNoWait is proxy generated method
 func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -176,7 +176,7 @@ func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
 	}
 }
 
-// Transfer does ...
+// Transfer is proxy generated method
 func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -204,7 +204,7 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
 	return
 }
 
-// TransferNoWait does ... with no wait
+// TransferNoWait is proxy generated method
 func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -223,7 +223,7 @@ func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
 	}
 }
 
-// Accept does ...
+// Accept is proxy generated method
 func (r *Wallet) Accept(aRef *core.RecordRef) {
 	var args [1]interface{}
 	args[0] = aRef
@@ -250,7 +250,7 @@ func (r *Wallet) Accept(aRef *core.RecordRef) {
 	return
 }
 
-// AcceptNoWait does ... with no wait
+// AcceptNoWait is proxy generated method
 func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
 	var args [1]interface{}
 	args[0] = aRef
@@ -268,7 +268,7 @@ func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
 	}
 }
 
-// GetTotalBalance does ...
+// GetTotalBalance is proxy generated method
 func (r *Wallet) GetTotalBalance() uint {
 	var args [0]interface{}
 
@@ -296,7 +296,7 @@ func (r *Wallet) GetTotalBalance() uint {
 	return ret0
 }
 
-// GetTotalBalanceNoWait does ... with no wait
+// GetTotalBalanceNoWait is proxy generated method
 func (r *Wallet) GetTotalBalanceNoWait() {
 	var args [0]interface{}
 
@@ -313,7 +313,7 @@ func (r *Wallet) GetTotalBalanceNoWait() {
 	}
 }
 
-// ReturnAndDeleteExpiredAllowances does ...
+// ReturnAndDeleteExpiredAllowances is proxy generated method
 func (r *Wallet) ReturnAndDeleteExpiredAllowances() {
 	var args [0]interface{}
 
@@ -339,7 +339,7 @@ func (r *Wallet) ReturnAndDeleteExpiredAllowances() {
 	return
 }
 
-// ReturnAndDeleteExpiredAllowancesNoWait does ... with no wait
+// ReturnAndDeleteExpiredAllowancesNoWait is proxy generated method
 func (r *Wallet) ReturnAndDeleteExpiredAllowancesNoWait() {
 	var args [0]interface{}
 

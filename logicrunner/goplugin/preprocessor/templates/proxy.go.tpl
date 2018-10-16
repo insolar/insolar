@@ -87,7 +87,7 @@ func (r *{{ $.ContractType }}) GetClass() core.RecordRef {
 }
 
 {{ range $method := .MethodsProxies }}
-// {{ $method.Name }} does ...
+// {{ $method.Name }} is proxy generated method
 func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
@@ -111,7 +111,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
 	return {{ $method.Results }}
 }
 
-// {{ $method.Name }}NoWait does ... with no wait
+// {{ $method.Name }}NoWait is proxy generated method
 func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }} ) {
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
