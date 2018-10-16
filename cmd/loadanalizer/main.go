@@ -35,6 +35,59 @@ import (
 
 const defaultStdoutPath = "-"
 
+type scenario interface {
+	canBeStarted()
+	start(wg *sync.WaitGroup)
+	getOperationsNumber() int
+	getName() string
+	getOut() io.Writer
+}
+
+type transferDifferentMembersScenario struct {
+	name        string
+	concurrent  int
+	repetitions int
+	members     []string
+	out         io.Writer
+}
+
+func (s *transferDifferentMembersScenario) getOperationsNumber() int {
+	return s.concurrent * s.repetitions
+}
+
+func (s *transferDifferentMembersScenario) getName() string {
+	return s.name
+}
+
+func (s *transferDifferentMembersScenario) getOut() io.Writer {
+	return s.out
+}
+
+func (s *transferDifferentMembersScenario) canBeStarted() {
+	if len(s.members) < s.concurrent*s.repetitions*2 {
+		fmt.Printf("Not enough members for scenario %s\n", s.getName())
+		os.Exit(1)
+	}
+}
+
+func (s *transferDifferentMembersScenario) start(wg *sync.WaitGroup) {
+	for i := 0; i < s.concurrent*s.repetitions*2; i = i + s.repetitions*2 {
+		wg.Add(1)
+		go s.startMember(i, wg)
+	}
+	wg.Wait()
+}
+
+func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for j := 0; j < s.repetitions*2; j = j + 2 {
+		from := s.members[index+j]
+		to := s.members[index+j+1]
+		response := transfer(1, from, to)
+		writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from, to, response))
+	}
+}
+
 func chooseOutput(path string) (io.Writer, error) {
 	var res io.Writer
 	if path == defaultStdoutPath {
@@ -79,8 +132,14 @@ func getMembersRef(fileName string) ([]string, error) {
 }
 
 func runScenarios(out io.Writer, members []string, concurrent int, repetitions int) {
-	result := transferMoneyWithDifferentMember(members, concurrent, repetitions)
-	writeToOutput(out, result)
+	firstScenario := &transferDifferentMembersScenario{
+		concurrent:  concurrent,
+		repetitions: repetitions,
+		members:     members,
+		name:        "TransferDifferentMembers",
+		out:         out,
+	}
+	startScenario(firstScenario)
 }
 
 const TestURL = "http://localhost:19191/api/v1"
@@ -124,35 +183,22 @@ func transfer(amount int, from string, to string) string {
 	return "success"
 }
 
-func transferMoneyWithDifferentMember(members []string, concurrent int, repetitions int) string {
-	var result string
+func startScenario(s scenario) {
 	var wg sync.WaitGroup
 
-	if len(members) < concurrent*repetitions*2 {
-		return "Not enough members"
-	}
-	fmt.Println("Start to transfer")
+	s.canBeStarted()
+
+	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
 
 	start := time.Now()
-	for i := 0; i < concurrent*repetitions*2; i = i + repetitions*2 {
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			for j := 0; j < repetitions*2; j = j + 2 {
-				from := members[index+j]
-				to := members[index+j+1]
-				response := transfer(1, from, to)
-				fmt.Printf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from, to, response)
-			}
-		}(i)
-	}
+	s.start(&wg)
 	wg.Wait()
 	elapsed := time.Since(start)
-	fmt.Printf("Transfering took %s \n", elapsed)
-	elapsedInSeconds := float64(elapsed) / float64(time.Second)
-	fmt.Printf("Speed - %f tr/s \n", float64(concurrent*repetitions)/float64(elapsedInSeconds))
 
-	return result
+	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transfering took %s \n", s.getName(), elapsed))
+	elapsedInSeconds := float64(elapsed) / float64(time.Second)
+	speed := float64(s.getOperationsNumber()) / float64(elapsedInSeconds)
+	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f tr/s \n", s.getName(), speed))
 }
 
 type createMemberResponse struct {
