@@ -127,12 +127,16 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
+	var activeNodeStr string
 	for _, node := range nodes {
 		if node.NodeID.Equal(nk.nodeID) {
 			nk.self = node
+			log.Info("Added self node to active list")
 		}
 		nk.active[node.NodeID] = node
+		activeNodeStr += node.NodeID.String() + ", "
 	}
+	log.Debug("added active nodes: %s", activeNodeStr)
 }
 
 func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
@@ -184,6 +188,12 @@ func (nk *nodekeeper) Sync(syncCandidates []*core.ActiveNode, number core.PulseN
 			number, nk.pulse)
 		return
 	}
+
+	var candidates string
+	for _, node := range syncCandidates {
+		candidates += node.NodeID.String() + ", "
+	}
+	log.Debug("Moving unsync to sync: %s", candidates)
 
 	nk.syncUnsafe(syncCandidates)
 }
