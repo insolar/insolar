@@ -39,11 +39,11 @@ var (
 )
 
 func parseInputParams() {
-	input = *pflag.StringP("input", "i", "", "path to file with initial data for loads")
-	output = *pflag.StringP("output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
-	concurrent = *pflag.IntP("concurrent", "c", 1, "concurrent users")
-	repetitions = *pflag.IntP("repetitions", "r", 1, "repetitions for one user")
-	withInit = *pflag.Bool("with_init", false, "do initialization before run load")
+	pflag.StringVarP(&input, "input", "i", "", "path to file with initial data for loads")
+	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
+	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
+	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
+	pflag.BoolVar(&withInit, "with_init", false, "do initialization before run load")
 	pflag.Parse()
 }
 
