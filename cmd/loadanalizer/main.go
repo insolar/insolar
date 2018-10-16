@@ -18,17 +18,12 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
@@ -49,16 +44,16 @@ func chooseOutput(path string) (io.Writer, error) {
 	return res, nil
 }
 
+func writeToOutput(out io.Writer, data string) {
+	_, err := out.Write([]byte(data))
+	check("Can't write data to output", err)
+}
+
 func check(msg string, err error) {
 	if err != nil {
 		fmt.Println(msg, err)
 		os.Exit(1)
 	}
-}
-
-func writeToOutput(out io.Writer, data string) {
-	_, err := out.Write([]byte(data))
-	check("Can't write data to output", err)
 }
 
 func getMembersRef(fileName string) ([]string, error) {
@@ -89,47 +84,6 @@ func runScenarios(out io.Writer, members []string, concurrent int, repetitions i
 	startScenario(firstScenario)
 }
 
-const TestURL = "http://localhost:19191/api/v1"
-
-type postParams map[string]interface{}
-
-type errorResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-type baseResponse struct {
-	Qid string         `json:"qid"`
-	Err *errorResponse `json:"error"`
-}
-
-func getResponseBody(postParams map[string]interface{}) []byte {
-	jsonValue, err := json.Marshal(postParams)
-	check("Problems with marshal request:", err)
-	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
-	check("Problems with post:", err)
-	body, err := ioutil.ReadAll(postResp.Body)
-	check("Problems with reading from response body:", err)
-	return body
-}
-
-func transfer(amount int, from string, to string) string {
-	body := getResponseBody(postParams{
-		"query_type": "send_money",
-		"from":       from,
-		"to":         to,
-		"amount":     amount,
-	})
-
-	response := &baseResponse{}
-	err := json.Unmarshal(body, &response)
-	check("Problems with unmarshal response:", err)
-	if response.Err != nil {
-		return response.Err.Message
-	}
-	return "success"
-}
-
 func startScenario(s scenario) {
 	var wg sync.WaitGroup
 
@@ -146,33 +100,6 @@ func startScenario(s scenario) {
 	elapsedInSeconds := float64(elapsed) / float64(time.Second)
 	speed := float64(s.getOperationsNumber()) / float64(elapsedInSeconds)
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f tr/s \n", s.getName(), speed))
-}
-
-type createMemberResponse struct {
-	baseResponse
-	Reference string `json:"reference"`
-}
-
-func createMembers(concurrent int, repetitions int) ([]string, error) {
-	var members []string
-	for i := 0; i < concurrent*repetitions*2; i++ {
-		body := getResponseBody(postParams{
-			"query_type": "create_member",
-			"name":       testutils.RandomString(),
-			"public_key": "000",
-		})
-
-		memberResponse := &createMemberResponse{}
-		err := json.Unmarshal(body, &memberResponse)
-		check("Problems with unmarshal response:", err)
-
-		if memberResponse.Err != nil {
-			return nil, errors.New(memberResponse.Err.Message)
-		}
-		firstMemberRef := memberResponse.Reference
-		members = append(members, firstMemberRef)
-	}
-	return members, nil
 }
 
 func main() {
