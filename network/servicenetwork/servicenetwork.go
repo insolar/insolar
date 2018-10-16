@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
@@ -36,6 +37,7 @@ import (
 type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
+	nodeKeeper  nodekeeper.NodeKeeper
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -47,14 +49,15 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
 	}
+	nodeKeeper := nodekeeper.NewNodeKeeper(node.GetID())
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, node.GetPrivateKey())
+	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, node.GetPrivateKey(), nodeKeeper)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
+	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht, nodeKeeper: nodeKeeper}
 	f := func(data core.Cascade, method string, args [][]byte) error {
 		return service.initCascadeSendMessage(data, true, method, args)
 	}
@@ -70,6 +73,10 @@ func (network *ServiceNetwork) GetAddress() string {
 // GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
+}
+
+func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
+	return network.nodeKeeper
 }
 
 // SendMessage sends a message from MessageBus.

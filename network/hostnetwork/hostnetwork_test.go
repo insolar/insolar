@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
@@ -72,7 +73,7 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 	assert.NoError(t, err)
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			network, err := NewHostNetwork(test.cfg, nodenet, cascade1, key)
+			network, err := NewHostNetwork(test.cfg, nodenet, cascade1, key, nodekeeper.NewNodeKeeper(nodenet.GetID()))
 			if test.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, network)
