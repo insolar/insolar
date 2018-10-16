@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"math"
+	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/dns"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
@@ -278,6 +280,7 @@ func (dht *DHT) Bootstrap() error {
 		log.Info("empty bootstrap hosts")
 		return nil
 	}
+	dht.checkBootstrapHostsDomains(dht.options.BootstrapHosts)
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
@@ -285,6 +288,16 @@ func (dht *DHT) Bootstrap() error {
 	}
 
 	return dht.iterateHt(cb)
+}
+
+func (dht *DHT) checkBootstrapHostsDomains(hosts []*host.Host) {
+	for _, hst := range hosts {
+		ip, err := dns.GetIpFromDomain(hst.Address.String())
+		if err != nil {
+			log.Warn(err)
+		}
+		hst.Address.IP = net.ParseIP(ip)
+	}
 }
 
 func (dht *DHT) GetHostsFromBootstrap() {
