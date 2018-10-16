@@ -657,6 +657,55 @@ func (r *One) Kill() {
 	assert.NoError(t, err, "contract call")
 }
 
+func TestPanic(t *testing.T) {
+	if parallel {
+		t.Parallel()
+	}
+	var code = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) Panic() {
+	panic("haha")
+}
+func (r *One) NotPanic() {
+}
+`
+	lr, am, cb, cleaner := PrepareLrAmCb(t)
+	defer cleaner()
+
+	err := cb.Build(map[string]string{"one": code})
+	assert.NoError(t, err)
+
+	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	_, err = am.ActivateObject(
+		core.RecordRef{}, *obj,
+		*cb.Classes["one"],
+		*am.GenesisRef(),
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
+	)
+	assert.NoError(t, err)
+
+	_, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Panic",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	})
+	assert.Error(t, err)
+
+	_, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "NotPanic",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err)
+}
+
 func TestGetChildren(t *testing.T) {
 	if parallel {
 		t.Parallel()
