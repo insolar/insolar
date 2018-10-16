@@ -70,13 +70,14 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 
 	future := t.createFuture(msg)
 
-	go func(f Future) {
+	go func(msg *packet.Packet, f Future) {
+		log.Debugf("message is nil: %s", msg == nil)
 		err := t.sendPacket(msg)
 		if err != nil {
 			f.Cancel()
 			log.Error(err)
 		}
-	}(future)
+	}(msg, future)
 
 	return future, nil
 }
@@ -171,21 +172,23 @@ func (t *baseTransport) PublicAddress() string {
 	return t.publicAddress
 }
 
-func (t *baseTransport) sendPacket(msg *packet.Packet) error {
+func (t *baseTransport) sendPacket(p *packet.Packet) error {
 	var recvAddress string
 	if t.proxy.ProxyHostsCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()
 	}
 	if len(recvAddress) == 0 {
-		recvAddress = msg.Receiver.Address.String()
+		log.Warnf("p.Receiver == nil: %s", p.Receiver == nil)
+		log.Warnf("p.Receiver.Address == nil: %s", p.Receiver.Address == nil)
+		recvAddress = p.Receiver.Address.String()
 	}
 
-	data, err := packet.SerializePacket(msg)
+	data, err := packet.SerializePacket(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	log.Debugf("Send packet to %s with RequestID = %d", recvAddress, msg.RequestID)
+	log.Debugf("Send packet to %s with RequestID = %d", recvAddress, p.RequestID)
 	return t.sendFunc(recvAddress, data)
 }
 

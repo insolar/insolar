@@ -110,21 +110,22 @@ func main() {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	cm := componentManager{}
-	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration)
+
+	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
 	if err != nil {
-		log.Fatalln("failed to start Network: ", err.Error())
+		log.Fatalln("failed to start LogicRunner: ", err.Error())
 	}
-	cm.components.Network = nw
 
 	cm.components.Ledger, err = ledger.NewLedger(cfgHolder.Configuration.Ledger)
 	if err != nil {
 		log.Fatalln("failed to start Ledger: ", err.Error())
 	}
 
-	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
+	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("failed to start LogicRunner: ", err.Error())
+		log.Fatalln("failed to start Network: ", err.Error())
 	}
+	cm.components.Network = nw
 
 	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
 	if err != nil {

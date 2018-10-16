@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/log"
 )
 
 // PulseManager implements core.PulseManager.
@@ -66,6 +67,7 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 
 	_ = drop // TODO: send drop to the validators
 	m.db.SetCurrentPulse(pulse.PulseNumber)
+	log.Warnf("======== logic runner %v is nil? %s", m.lr, m.lr == nil)
 	return m.lr.OnPulse(pulse)
 }
 
