@@ -17,6 +17,8 @@
 package hostnetwork
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -247,6 +249,8 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 		return nil, errors.Wrap(err, "couldn't find a target host")
 	}
 
+	log.Debug("GetNonceRequest: step 1")
+
 	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(targetHost).Type(packet.TypeGetNonce).
 		Request(&packet.RequestGetNonce{NodeID: hostHandler.GetNodeID()}).
@@ -271,6 +275,8 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 		return nil, errors.Wrap(err, "failed to send an authorization request")
 	}
 
+	log.Debug("GetNonceRequest: step 2")
+
 	// TODO: get role from certificate
 	request = packet.NewBuilder().Type(packet.TypeCheckSignedNonce).
 		Sender(hostHandler.HtFromCtx(ctx).Origin).
@@ -287,9 +293,8 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send an authorization request (step 2)")
 	}
-
 	err = sendCheckSignedNonceRequest(hostHandler, rsp.Sender, response.Nonce)
-	rsp, err = future.GetResult(hostHandler.GetPacketTimeout())
+	rsp, err = future.GetResult( /*hostHandler.GetPacketTimeout()*/ time.Second * 10)
 	if err != nil {
 		return nil, errors.Wrap(err, "checkResponse error (step 2)")
 	}

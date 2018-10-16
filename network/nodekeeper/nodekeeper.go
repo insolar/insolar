@@ -269,6 +269,7 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.ActiveNode) {
 	// drop old waiters map and create new
 	nk.nodeWaiters = make(map[core.RecordRef]chan *core.ActiveNode)
 	nk.state = synced
+	log.Infof("Sync success for pulse %d", nk.pulse)
 }
 
 func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
