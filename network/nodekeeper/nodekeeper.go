@@ -37,6 +37,8 @@ type NodeKeeper interface {
 	GetActiveNode(ref core.RecordRef) *core.ActiveNode
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []*core.ActiveNode
+	// GetActiveNodesByRole get active nodes by role
+	GetActiveNodesByRole(role core.JetRole) []core.RecordRef
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]*core.ActiveNode)
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
@@ -66,6 +68,7 @@ func NewNodeKeeper(nodeID core.RecordRef) NodeKeeper {
 		unsync:      make([]*core.ActiveNode, 0),
 		listWaiters: make([]chan *UnsyncList, 0),
 		nodeWaiters: make(map[core.RecordRef]chan *core.ActiveNode),
+		index:       make(map[core.NodeRole][]core.RecordRef),
 	}
 }
 
@@ -85,6 +88,7 @@ type nodekeeper struct {
 
 	activeLock sync.RWMutex
 	active     map[core.RecordRef]*core.ActiveNode
+	index      map[core.NodeRole][]core.RecordRef
 	sync       []*core.ActiveNode
 
 	unsyncLock  sync.Mutex
@@ -122,7 +126,19 @@ func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
 	return result
 }
 
-// todo: pass self node if no bootstraps
+func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	list, exists := nk.index[calculateJetRole(role)]
+	if !exists {
+		return nil
+	}
+	result := make([]core.RecordRef, len(list))
+	copy(result, list)
+	return result
+}
+
 func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
@@ -135,6 +151,13 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 		}
 		nk.active[node.NodeID] = node
 		activeNodeStr += node.NodeID.String() + ", "
+
+		list, ok := nk.index[node.Role]
+		if !ok {
+			list := make([]core.RecordRef, 0)
+			nk.index[node.Role] = list
+		}
+		list = append(list, node.NodeID)
 	}
 	log.Debug("added active nodes: %s", activeNodeStr)
 }
@@ -303,4 +326,21 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
 	}
 	nk.listWaiters = make([]chan *UnsyncList, 0)
 	return nk.unsyncList
+}
+
+func calculateJetRole(role core.JetRole) core.NodeRole {
+	switch role {
+	case core.RoleVirtualExecutor:
+		return core.RoleVirtual
+	case core.RoleVirtualValidator:
+		return core.RoleVirtual
+	case core.RoleLightExecutor:
+		return core.RoleLightMaterial
+	case core.RoleLightValidator:
+		return core.RoleLightMaterial
+	case core.RoleHeavyExecutor:
+		return core.RoleHeavyMaterial
+	default:
+		return core.RoleUnknown
+	}
 }
