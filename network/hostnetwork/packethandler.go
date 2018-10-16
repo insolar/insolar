@@ -135,16 +135,16 @@ func processCheckSignedNonce(
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 
 	data := msg.Data.(*packet.RequestCheckSignedNonce)
-	signer := hostHandler.GetNetworkCommonFacade().GetSignHandler()
-	networkCoordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
-	if networkCoordinator == nil {
-		err := "networkCoordinator is nil"
-		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
-	}
-	if !signer.SignedNonceIsCorrect(networkCoordinator, msg.Sender.ID, data.Signed) {
-		err := "signed nonce is not correct"
-		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
-	}
+	// signer := hostHandler.GetNetworkCommonFacade().GetSignHandler()
+	// networkCoordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
+	// if networkCoordinator == nil {
+	// 	err := "networkCoordinator is nil"
+	// 	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
+	// }
+	// if !signer.SignedNonceIsCorrect(networkCoordinator, msg.Sender.ID, data.Signed) {
+	// 	err := "signed nonce is not correct"
+	// 	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
+	// }
 	ch, err := hostHandler.AddUnsync(data.NodeID, data.NodeRole /*, data.PublicKey*/)
 	if err != nil {
 		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err.Error()}).Build(), nil
