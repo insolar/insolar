@@ -1,11 +1,9 @@
 package noderecord
 
 import (
-		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
-
-
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -18,14 +16,14 @@ type NodeRecord struct {
 // ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized []byte
+	argsSerialized  []byte
 }
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeRecord {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	return &NodeRecord{Reference: ref}
 }
@@ -58,13 +56,11 @@ func GetImplementationFrom(object core.RecordRef) *NodeRecord {
 	return GetObject(ref)
 }
 
-
 // NewNodeRecord is constructor
-func NewNodeRecord( pk string, roleS string ) *ContractConstructorHolder {
+func NewNodeRecord(pk string, roleS string) *ContractConstructorHolder {
 	var args [2]interface{}
 	args[0] = pk
 	args[1] = roleS
-
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -74,7 +70,6 @@ func NewNodeRecord( pk string, roleS string ) *ContractConstructorHolder {
 
 	return &ContractConstructorHolder{constructorName: "NewNodeRecord", argsSerialized: argsSerialized}
 }
-
 
 // GetReference returns reference of the object
 func (r *NodeRecord) GetReference() core.RecordRef {
@@ -86,9 +81,8 @@ func (r *NodeRecord) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-
 // GetPublicKey does ...
-func (r *NodeRecord) GetPublicKey(  ) ( string ) {
+func (r *NodeRecord) GetPublicKey() string {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -100,7 +94,7 @@ func (r *NodeRecord) GetPublicKey(  ) ( string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -116,7 +110,7 @@ func (r *NodeRecord) GetPublicKey(  ) ( string ) {
 }
 
 // GetPublicKeyNoWait does ... with no wait
-func (r *NodeRecord) GetPublicKeyNoWait(  ) {
+func (r *NodeRecord) GetPublicKeyNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -133,7 +127,7 @@ func (r *NodeRecord) GetPublicKeyNoWait(  ) {
 }
 
 // GetRole does ...
-func (r *NodeRecord) GetRole(  ) ( core.NodeRole ) {
+func (r *NodeRecord) GetRole() core.NodeRole {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -145,7 +139,7 @@ func (r *NodeRecord) GetRole(  ) ( core.NodeRole ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRole", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -161,7 +155,7 @@ func (r *NodeRecord) GetRole(  ) ( core.NodeRole ) {
 }
 
 // GetRoleNoWait does ... with no wait
-func (r *NodeRecord) GetRoleNoWait(  ) {
+func (r *NodeRecord) GetRoleNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -178,7 +172,7 @@ func (r *NodeRecord) GetRoleNoWait(  ) {
 }
 
 // GetRoleAndPublicKey does ...
-func (r *NodeRecord) GetRoleAndPublicKey(  ) ( core.NodeRole, string ) {
+func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -190,7 +184,7 @@ func (r *NodeRecord) GetRoleAndPublicKey(  ) ( core.NodeRole, string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRoleAndPublicKey", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [2]interface{}{}
@@ -208,7 +202,7 @@ func (r *NodeRecord) GetRoleAndPublicKey(  ) ( core.NodeRole, string ) {
 }
 
 // GetRoleAndPublicKeyNoWait does ... with no wait
-func (r *NodeRecord) GetRoleAndPublicKeyNoWait(  ) {
+func (r *NodeRecord) GetRoleAndPublicKeyNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -225,7 +219,7 @@ func (r *NodeRecord) GetRoleAndPublicKeyNoWait(  ) {
 }
 
 // Destroy does ...
-func (r *NodeRecord) Destroy(  ) (  ) {
+func (r *NodeRecord) Destroy() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -237,7 +231,7 @@ func (r *NodeRecord) Destroy(  ) (  ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := []interface{}{}
@@ -247,11 +241,11 @@ func (r *NodeRecord) Destroy(  ) (  ) {
 		panic(err)
 	}
 
-	return 
+	return
 }
 
 // DestroyNoWait does ... with no wait
-func (r *NodeRecord) DestroyNoWait(  ) {
+func (r *NodeRecord) DestroyNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -266,4 +260,3 @@ func (r *NodeRecord) DestroyNoWait(  ) {
 		panic(err)
 	}
 }
-
