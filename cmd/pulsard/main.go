@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
 	jww "github.com/spf13/jwalterweatherman"
@@ -95,7 +96,7 @@ func initPulsar(cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.
 	server, err := pulsar.NewPulsar(cfg,
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},
-		&pulsar.StandardEntropyGenerator{},
+		&entropygenerator.StandardEntropyGenerator{},
 		switcher,
 		net.Listen,
 	)

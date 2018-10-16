@@ -120,21 +120,9 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 	return nil
 }
 
-func handleCheckPublicKeyResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckPublicKey) error {
-	if !response.Exist {
-		return errors.New("failed to find a public key")
+func handleCheckPublicKeyResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseGetNonce) error {
+	if len(response.Nonce) == 0 {
+		return errors.New("received empty nonce")
 	}
 	return nil
-}
-
-func handleCheckSignedNonceResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseCheckSignedNonce) error {
-	if !response.Success {
-		return errors.New("failed to parse a signed nonce")
-	}
-	return nil
-}
-
-func handleActiveNodesResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseActiveNodes) error {
-	err := hostHandler.AddActiveNodes(response.ActiveNodes)
-	return err
 }

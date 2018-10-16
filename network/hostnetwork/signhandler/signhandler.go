@@ -14,32 +14,18 @@
  *    limitations under the License.
  */
 
-// Package pulsartestutil - test utils for pulsar package
-package pulsartestutils
+package signhandler
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/mock"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 )
 
-// MockPulsarStorage mocks PulsarStorage interface
-type MockPulsarStorage struct {
-	mock.Mock
-}
-
-func (mock *MockPulsarStorage) GetLastPulse() (*core.Pulse, error) {
-	args := mock.Called()
-	return args.Get(0).(*core.Pulse), args.Error(1)
-}
-
-func (*MockPulsarStorage) SetLastPulse(pulse *core.Pulse) error {
-	return nil
-}
-
-func (*MockPulsarStorage) SavePulse(pulse *core.Pulse) error {
-	return nil
-}
-
-func (*MockPulsarStorage) Close() error {
-	panic("implement me")
+type SignHandler interface {
+	AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef)
+	SignedNonceIsCorrect(coordinator core.NetworkCoordinator, hostID id.ID, signedNonce []byte) bool
+	SignNonce(nonce []byte) ([]byte, error)
+	GetPrivateKey() *ecdsa.PrivateKey
 }

@@ -18,7 +18,6 @@ package logicrunner
 
 import (
 	"bytes"
-
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
@@ -42,6 +41,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -88,7 +88,7 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplu
 		Ledger:     l,
 		MessageBus: &testMessageBus{LogicRunner: lr},
 	}), "starting logicrunner")
-	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
 	}
@@ -178,7 +178,7 @@ func TestBasics(t *testing.T) {
 	}
 	lr, err := NewLogicRunner(&configuration.LogicRunner{})
 	assert.NoError(t, err)
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 
 	comps := core.Components{
 		Ledger:     &testLedger{am: goplugintestutils.NewTestArtifactManager()},
@@ -233,7 +233,20 @@ func (eb *testMessageBus) MustRegister(p core.MessageType, handler core.MessageH
 
 func (*testMessageBus) Start(components core.Components) error { return nil }
 func (*testMessageBus) Stop() error                            { return nil }
+
 func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) {
+	switch event.Type() {
+	case core.TypeCallMethod:
+	case core.TypeCallConstructor:
+		return eb.LogicRunner.Execute(event)
+	case core.TypeValidateCaseBind:
+		return eb.LogicRunner.ValidateCaseBind(event)
+	case core.TypeValidationResults:
+		return eb.LogicRunner.ProcessValidationResults(event)
+	case core.TypeExecutorResults:
+		return eb.LogicRunner.ExecutorResults(event)
+	}
+
 	return eb.LogicRunner.Execute(event)
 }
 func (*testMessageBus) SendAsync(msg core.Message) {}
@@ -251,7 +264,7 @@ func TestExecution(t *testing.T) {
 		Ledger:     ld,
 		MessageBus: eb,
 	})
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	eb.LogicRunner = lr
 
 	codeRef := core.NewRefFromBase58("someCode")
@@ -746,8 +759,6 @@ func New(n int) *Child {
 	assert.NoError(t, err, "contract call")
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
-
-	SendDataToValidate(lr)
 }
 
 func TestFailValidate(t *testing.T) {
@@ -889,8 +900,6 @@ func (r *Two) NoError() error {
 
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	assert.Equal(t, []interface{}([]interface{}{nil}), r)
-
-	SendDataToValidate(lr)
 }
 
 func TestNilResult(t *testing.T) {
@@ -1138,8 +1147,6 @@ func (c *Child) GetNum() int {
 		r := goplugintestutils.CBORUnMarshal(b, resp.(*reply.CallMethod).Result)
 		assert.Equal(b, []interface{}([]interface{}{uint64(5)}), r)
 	}
-
-	SendDataToValidate(lr)
 }
 
 func TestProxyGeneration(t *testing.T) {
@@ -1173,9 +1180,4 @@ func TestProxyGeneration(t *testing.T) {
 			assert.NoError(t, err, string(out))
 		})
 	}
-}
-
-func SendDataToValidate(lr core.LogicRunner) {
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
-	// TODO: validate data on another node
 }

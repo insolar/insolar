@@ -14,32 +14,31 @@
  *    limitations under the License.
  */
 
-// Package pulsartestutil - test utils for pulsar package
-package pulsartestutils
+package entropygenerator
 
 import (
+	"crypto/rand"
+
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/mock"
 )
 
-// MockPulsarStorage mocks PulsarStorage interface
-type MockPulsarStorage struct {
-	mock.Mock
+// EntropyGenerator is the base interface for generation of entropy for pulses
+type EntropyGenerator interface {
+	GenerateEntropy() core.Entropy
 }
 
-func (mock *MockPulsarStorage) GetLastPulse() (*core.Pulse, error) {
-	args := mock.Called()
-	return args.Get(0).(*core.Pulse), args.Error(1)
+// StandardEntropyGenerator is the base impl of EntropyGenerator with using of crypto/rand
+type StandardEntropyGenerator struct {
 }
 
-func (*MockPulsarStorage) SetLastPulse(pulse *core.Pulse) error {
-	return nil
-}
-
-func (*MockPulsarStorage) SavePulse(pulse *core.Pulse) error {
-	return nil
-}
-
-func (*MockPulsarStorage) Close() error {
-	panic("implement me")
+// GenerateEntropy generate entropy with using of EntropyGenerator
+func (generator *StandardEntropyGenerator) GenerateEntropy() core.Entropy {
+	entropy := make([]byte, core.EntropySize)
+	_, err := rand.Read(entropy)
+	if err != nil {
+		panic(err)
+	}
+	var result core.Entropy
+	copy(result[:], entropy[:core.EntropySize])
+	return result
 }
