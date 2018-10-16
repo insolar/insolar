@@ -43,6 +43,7 @@ import (
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
@@ -65,6 +66,15 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicRunner) {
+	mb.ReRegister(core.TypeCallMethod, lr.Execute)
+	mb.ReRegister(core.TypeCallConstructor, lr.Execute)
+	mb.ReRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
+	mb.ReRegister(core.TypeValidationResults, lr.ProcessValidationResults)
+	mb.ReRegister(core.TypeExecutorResults, lr.ExecutorResults)
+
+}
+
 func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, func()) {
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
@@ -83,11 +93,12 @@ func PrepareLrAmCb(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplu
 	assert.NoError(t, err, "Initialize runner")
 
 	l, cleaner := ledgertestutils.TmpLedger(t, lr, "")
-
+	mb := testmessagebus.NewTestMessageBus()
 	assert.NoError(t, lr.Start(core.Components{
 		Ledger:     l,
-		MessageBus: &testMessageBus{LogicRunner: lr},
+		MessageBus: mb,
 	}), "starting logicrunner")
+	MessageBusTrivialBehavior(mb, lr)
 	err = l.GetPulseManager().Set(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
@@ -180,12 +191,14 @@ func TestBasics(t *testing.T) {
 	assert.NoError(t, err)
 	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 
+	mb := testmessagebus.NewTestMessageBus()
 	comps := core.Components{
 		Ledger:     &testLedger{am: goplugintestutils.NewTestArtifactManager()},
-		MessageBus: &testMessageBus{},
+		MessageBus: mb,
 	}
 	assert.NoError(t, lr.Start(comps))
 	assert.IsType(t, &LogicRunner{}, lr)
+	MessageBusTrivialBehavior(mb, lr)
 
 	_, err = lr.GetExecutor(core.MachineTypeGoPlugin)
 	assert.Error(t, err)
@@ -220,52 +233,21 @@ func (r *testLedger) HandleMessage(core.Message) (core.Reply, error) {
 	panic("implement me")
 }
 
-type testMessageBus struct {
-	LogicRunner core.LogicRunner
-}
-
-func (eb *testMessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
-	return nil
-}
-
-func (eb *testMessageBus) MustRegister(p core.MessageType, handler core.MessageHandler) {
-}
-
-func (*testMessageBus) Start(components core.Components) error { return nil }
-func (*testMessageBus) Stop() error                            { return nil }
-
-func (eb *testMessageBus) Send(event core.Message) (resp core.Reply, err error) {
-	switch event.Type() {
-	case core.TypeCallMethod:
-	case core.TypeCallConstructor:
-		return eb.LogicRunner.Execute(event)
-	case core.TypeValidateCaseBind:
-		return eb.LogicRunner.ValidateCaseBind(event)
-	case core.TypeValidationResults:
-		return eb.LogicRunner.ProcessValidationResults(event)
-	case core.TypeExecutorResults:
-		return eb.LogicRunner.ExecutorResults(event)
-	}
-
-	return eb.LogicRunner.Execute(event)
-}
-func (*testMessageBus) SendAsync(msg core.Message) {}
-
 func TestExecution(t *testing.T) {
 	if parallel {
 		t.Parallel()
 	}
 	am := goplugintestutils.NewTestArtifactManager()
 	ld := &testLedger{am: am}
-	eb := &testMessageBus{}
 	lr, err := NewLogicRunner(&configuration.LogicRunner{})
 	assert.NoError(t, err)
+	mb := testmessagebus.NewTestMessageBus()
+	MessageBusTrivialBehavior(mb, lr)
 	lr.Start(core.Components{
 		Ledger:     ld,
-		MessageBus: eb,
+		MessageBus: mb,
 	})
 	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	eb.LogicRunner = lr
 
 	codeRef := core.NewRefFromBase58("someCode")
 	dataRef := core.NewRefFromBase58("someObject")
