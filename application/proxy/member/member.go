@@ -1,12 +1,10 @@
 package member
 
 import (
-		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
-
-
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -19,14 +17,14 @@ type Member struct {
 // ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized []byte
+	argsSerialized  []byte
 }
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Member {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	return &Member{Reference: ref}
 }
@@ -59,13 +57,11 @@ func GetImplementationFrom(object core.RecordRef) *Member {
 	return GetObject(ref)
 }
 
-
 // New is constructor
-func New( name string, key string ) *ContractConstructorHolder {
+func New(name string, key string) *ContractConstructorHolder {
 	var args [2]interface{}
 	args[0] = name
 	args[1] = key
-
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -75,7 +71,6 @@ func New( name string, key string ) *ContractConstructorHolder {
 
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
-
 
 // GetReference returns reference of the object
 func (r *Member) GetReference() core.RecordRef {
@@ -87,9 +82,8 @@ func (r *Member) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-
 // GetName does ...
-func (r *Member) GetName(  ) ( string ) {
+func (r *Member) GetName() string {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -101,7 +95,7 @@ func (r *Member) GetName(  ) ( string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetName", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -117,7 +111,7 @@ func (r *Member) GetName(  ) ( string ) {
 }
 
 // GetNameNoWait does ... with no wait
-func (r *Member) GetNameNoWait(  ) {
+func (r *Member) GetNameNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -134,7 +128,7 @@ func (r *Member) GetNameNoWait(  ) {
 }
 
 // GetPublicKey does ...
-func (r *Member) GetPublicKey(  ) ( string ) {
+func (r *Member) GetPublicKey() string {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -146,7 +140,7 @@ func (r *Member) GetPublicKey(  ) ( string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -162,7 +156,7 @@ func (r *Member) GetPublicKey(  ) ( string ) {
 }
 
 // GetPublicKeyNoWait does ... with no wait
-func (r *Member) GetPublicKeyNoWait(  ) {
+func (r *Member) GetPublicKeyNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -179,7 +173,7 @@ func (r *Member) GetPublicKeyNoWait(  ) {
 }
 
 // AuthorizedCall does ...
-func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
+func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
@@ -197,7 +191,7 @@ func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, me
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "AuthorizedCall", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [2]interface{}{}
@@ -215,7 +209,7 @@ func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, me
 }
 
 // AuthorizedCallNoWait does ... with no wait
-func (r *Member) AuthorizedCallNoWait( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) {
+func (r *Member) AuthorizedCallNoWait(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
@@ -236,4 +230,3 @@ func (r *Member) AuthorizedCallNoWait( ref core.RecordRef, delegate core.RecordR
 		panic(err)
 	}
 }
-
