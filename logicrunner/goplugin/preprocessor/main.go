@@ -17,9 +17,11 @@
 package preprocessor
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/build"
+	"go/format"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -251,9 +253,22 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		"ClassReference":      classReference,
 		"Imports":             pf.generateImports(false),
 	}
-	err = tmpl.Execute(out, data)
+
+	var buff bytes.Buffer
+
+	err = tmpl.Execute(&buff, data)
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
+	fmtOut, err := format.Source(buff.Bytes())
+	if err != nil {
+		return errors.Wrap(err, "couldn't format code")
+	}
+
+	_, err = out.Write(fmtOut)
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code to output")
 	}
 
 	return nil

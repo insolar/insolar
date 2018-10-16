@@ -55,7 +55,7 @@ $(INSOLARD):
 $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
-$(INSGOCC):
+$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
 	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(PULSARD):
