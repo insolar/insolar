@@ -82,7 +82,7 @@ func waitForStart() error {
 	numAttempts := 5
 
 	for ; numAttempts > 0; numAttempts-- {
-		conn, _ := net.DialTimeout("tcp", net.JoinHostPort(HOST, "34343"), time.Millisecond*50)
+		conn, _ := net.DialTimeout("tcp", net.JoinHostPort(HOST, PORT), time.Millisecond*50)
 		if conn != nil {
 			conn.Close()
 			break
