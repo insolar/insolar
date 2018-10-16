@@ -265,7 +265,11 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't format code")
 	}
-	out.Write(fmtOut)
+
+	_, err = out.Write(fmtOut)
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code to output")
+	}
 
 	return nil
 }
