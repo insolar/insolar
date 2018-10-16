@@ -91,14 +91,14 @@ func getMembersRef(fileName string) ([]string, error) {
 }
 
 func runScenarios(out io.Writer, members []string, concurrent int, repetitions int) {
-	firstScenario := &transferDifferentMembersScenario{
+	transferDifferentMembers := &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
 		members:     members,
 		name:        "TransferDifferentMembers",
 		out:         out,
 	}
-	startScenario(firstScenario)
+	startScenario(transferDifferentMembers)
 }
 
 func startScenario(s scenario) {
