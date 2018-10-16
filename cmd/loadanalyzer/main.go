@@ -30,6 +30,23 @@ import (
 
 const defaultStdoutPath = "-"
 
+var (
+	input       string
+	output      string
+	concurrent  int
+	repetitions int
+	withInit    bool
+)
+
+func parseInputParams() {
+	input = *pflag.StringP("input", "i", "", "path to file with initial data for loads")
+	output = *pflag.StringP("output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
+	concurrent = *pflag.IntP("concurrent", "c", 1, "concurrent users")
+	repetitions = *pflag.IntP("repetitions", "r", 1, "repetitions for one user")
+	withInit = *pflag.Bool("with_init", false, "do initialization before run load")
+	pflag.Parse()
+}
+
 func chooseOutput(path string) (io.Writer, error) {
 	var res io.Writer
 	if path == defaultStdoutPath {
@@ -104,27 +121,22 @@ func startScenario(s scenario) {
 }
 
 func main() {
-	input := pflag.StringP("input", "i", "", "path to file with initial data for loads")
-	output := pflag.StringP("output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
-	concurrent := pflag.IntP("concurrent", "c", 1, "concurrent users")
-	repetitions := pflag.IntP("repetitions", "r", 1, "repetitions for one user")
-	withInit := pflag.Bool("with_init", false, "do initialization before run load")
-	pflag.Parse()
+	parseInputParams()
 
-	out, err := chooseOutput(*output)
+	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
 	var members []string
 
-	if *withInit {
-		members, err = createMembers(*concurrent, *repetitions)
+	if withInit {
+		members, err = createMembers(concurrent, repetitions)
 		check("Problems with create members. One of creating request ended with error: ", err)
 	}
 
-	if *input != "" {
-		members, err = getMembersRef(*input)
+	if input != "" {
+		members, err = getMembersRef(input)
 		check("Problems with parsing input:", err)
 	}
 
-	runScenarios(out, members, *concurrent, *repetitions)
+	runScenarios(out, members, concurrent, repetitions)
 }
