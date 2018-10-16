@@ -19,7 +19,6 @@ package hostnetwork
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -788,7 +787,6 @@ func (dht *DHT) handleDisconnect(start, stop chan bool) {
 	multiplexCount := 0
 
 	for {
-		fmt.Println(dht.transport == nil)
 		select {
 		case <-start:
 			multiplexCount++

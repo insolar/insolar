@@ -70,11 +70,13 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 
 	future := t.createFuture(msg)
 
-	err := t.sendPacket(msg)
-	if err != nil {
-		future.Cancel()
-		return nil, errors.Wrap(err, "Failed to send packet")
-	}
+	go func(f Future) {
+		err := t.sendPacket(msg)
+		if err != nil {
+			f.Cancel()
+			log.Error(err)
+		}
+	}(future)
 
 	return future, nil
 }
