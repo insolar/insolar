@@ -281,9 +281,9 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 		Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(targetHost).
 		Request(&packet.RequestCheckSignedNonce{
-			Signed:   signedNonce,
-			NodeID:   hostHandler.GetNodeID(),
-			NodeRole: core.RoleUnknown,
+			Signed:    signedNonce,
+			NodeID:    hostHandler.GetNodeID(),
+			NodeRoles: []core.NodeRole{core.RoleUnknown},
 			// PublicKey: &hostHandler.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey().PublicKey,
 		}).
 		Build()

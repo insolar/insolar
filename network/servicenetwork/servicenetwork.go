@@ -51,6 +51,18 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	}
 	nodeKeeper := nodekeeper.NewNodeKeeper(node.GetID())
 
+	// TODO: get roles from certificate
+	if len(conf.Host.BootstrapHosts) == 0 {
+		log.Info("Bootstrap nodes is not set. Init zeronet.")
+		nodeKeeper.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
+			NodeID:   node.GetID(),
+			PulseNum: 0,
+			State:    core.NodeActive,
+			Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+			// PublicKey: &dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey().PublicKey,
+		}})
+	}
+
 	cascade1 := &cascade.Cascade{}
 	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, node.GetPrivateKey(), nodeKeeper)
 	if err != nil {

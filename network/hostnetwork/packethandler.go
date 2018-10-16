@@ -149,7 +149,7 @@ func processCheckSignedNonce(
 	// 	err := "signed nonce is not correct"
 	// 	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
 	// }
-	ch, err := hostHandler.AddUnsync(data.NodeID, data.NodeRole, msg.Sender.Address.String() /*, data.PublicKey*/)
+	ch, err := hostHandler.AddUnsync(data.NodeID, data.NodeRoles, msg.Sender.Address.String() /*, data.PublicKey*/)
 	if err != nil {
 		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err.Error()}).Build(), nil
 	}
