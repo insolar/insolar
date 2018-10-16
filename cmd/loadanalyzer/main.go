@@ -87,7 +87,8 @@ func runScenarios(out io.Writer, members []string, concurrent int, repetitions i
 func startScenario(s scenario) {
 	var wg sync.WaitGroup
 
-	s.canBeStarted()
+	err := s.canBeStarted()
+	check(fmt.Sprintf("Scenario %s can not be started:", s.getName()), err)
 
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
 

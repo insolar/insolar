@@ -17,14 +17,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 )
 
 type scenario interface {
-	canBeStarted()
+	canBeStarted() error
 	start(wg *sync.WaitGroup)
 	getOperationsNumber() int
 	getName() string
@@ -51,11 +51,11 @@ func (s *transferDifferentMembersScenario) getOut() io.Writer {
 	return s.out
 }
 
-func (s *transferDifferentMembersScenario) canBeStarted() {
+func (s *transferDifferentMembersScenario) canBeStarted() error {
 	if len(s.members) < s.concurrent*s.repetitions*2 {
-		fmt.Printf("Not enough members for scenario %s\n", s.getName())
-		os.Exit(1)
+		return errors.New(fmt.Sprintf("Not enough members for scenario %s", s.getName()))
 	}
+	return nil
 }
 
 func (s *transferDifferentMembersScenario) start(wg *sync.WaitGroup) {
