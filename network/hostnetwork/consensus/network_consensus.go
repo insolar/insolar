@@ -60,13 +60,13 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	if len(activeNodes) == 0 {
 		return
 	}
-	participants := make([]consensus.Participant, len(activeNodes))
+	participants := make([]consensus.Participant, 0)
 	var parts string
-	for i, activeNode := range activeNodes {
+	for _, activeNode := range activeNodes {
 		if activeNode.NodeID == ic.keeper.GetID() {
 			continue
 		}
-		participants[i] = &participantWrapper{activeNode}
+		participants = append(participants, &participantWrapper{activeNode})
 		parts += activeNode.NodeID.String() + ", "
 	}
 	log.Warn("consensus participants: %s", parts)
