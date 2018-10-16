@@ -1,34 +1,35 @@
 package member
 
 import (
-		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
-
-
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
-// Contract proxy type
+// Member holds proxy type
 type Member struct {
 	Reference core.RecordRef
 }
 
+// ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized []byte
+	argsSerialized  []byte
 }
 
+// AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Member {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	return &Member{Reference: ref}
 }
 
+// AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Member {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -37,15 +38,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Member {
 	return &Member{Reference: ref}
 }
 
-// GetObject
+// GetObject returns proxy object
 func GetObject(ref core.RecordRef) (r *Member) {
 	return &Member{Reference: ref}
 }
 
+// GetClass returns reference to the class
 func GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) *Member {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
@@ -54,12 +57,11 @@ func GetImplementationFrom(object core.RecordRef) *Member {
 	return GetObject(ref)
 }
 
-
-func New( name string, key string ) *ContractConstructorHolder {
+// New is constructor
+func New(name string, key string) *ContractConstructorHolder {
 	var args [2]interface{}
 	args[0] = name
 	args[1] = key
-
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -70,19 +72,18 @@ func New( name string, key string ) *ContractConstructorHolder {
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
 
-
-// GetReference
+// GetReference returns reference of the object
 func (r *Member) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass
+// GetClass returns reference to the class
 func (r *Member) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-
-func (r *Member) GetName(  ) ( string ) {
+// GetName is proxy generated method
+func (r *Member) GetName() string {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -94,7 +95,7 @@ func (r *Member) GetName(  ) ( string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetName", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -109,7 +110,8 @@ func (r *Member) GetName(  ) ( string ) {
 	return ret0
 }
 
-func (r *Member) GetNameNoWait(  ) {
+// GetNameNoWait is proxy generated method
+func (r *Member) GetNameNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -125,7 +127,8 @@ func (r *Member) GetNameNoWait(  ) {
 	}
 }
 
-func (r *Member) GetPublicKey(  ) ( string ) {
+// GetPublicKey is proxy generated method
+func (r *Member) GetPublicKey() string {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -137,7 +140,7 @@ func (r *Member) GetPublicKey(  ) ( string ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -152,7 +155,8 @@ func (r *Member) GetPublicKey(  ) ( string ) {
 	return ret0
 }
 
-func (r *Member) GetPublicKeyNoWait(  ) {
+// GetPublicKeyNoWait is proxy generated method
+func (r *Member) GetPublicKeyNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -168,7 +172,8 @@ func (r *Member) GetPublicKeyNoWait(  ) {
 	}
 }
 
-func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
+// AuthorizedCall is proxy generated method
+func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
@@ -186,7 +191,7 @@ func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, me
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "AuthorizedCall", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [2]interface{}{}
@@ -203,7 +208,8 @@ func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, me
 	return ret0, ret1
 }
 
-func (r *Member) AuthorizedCallNoWait( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) {
+// AuthorizedCallNoWait is proxy generated method
+func (r *Member) AuthorizedCallNoWait(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate
@@ -224,4 +230,3 @@ func (r *Member) AuthorizedCallNoWait( ref core.RecordRef, delegate core.RecordR
 		panic(err)
 	}
 }
-
