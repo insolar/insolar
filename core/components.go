@@ -29,8 +29,8 @@ type Components struct {
 	Ledger             Ledger
 	Network            Network
 	MessageBus         MessageBus
-	Bootstrapper       Bootstrapper
 	APIRunner          Component
 	Metrics            Component
 	NetworkCoordinator NetworkCoordinator
+	Bootstrapper       Bootstrapper
 }

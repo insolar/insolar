@@ -30,7 +30,7 @@ func newActiveNode(ref byte, pulse int) *core.ActiveNode {
 		NodeID:   core.RecordRef{ref},
 		PulseNum: core.PulseNumber(pulse),
 		State:    core.NodeActive,
-		Role:     core.RoleUnknown,
+		Roles:    []core.NodeRole{core.RoleUnknown},
 		// PublicKey: &key.PublicKey,
 	}
 }

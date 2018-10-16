@@ -327,7 +327,7 @@ func (hh *mockHostHandler) StartAuthorize() error {
 }
 
 func (hh *mockHostHandler) AddUnsync(nodeID core.RecordRef,
-	role core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+	roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
 	return nil, nil
 }
 

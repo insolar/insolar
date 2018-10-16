@@ -434,13 +434,6 @@ func (dht *DHT) updateBootstrapHost(bootstrapAddress string, bootstrapID id.ID) 
 func (dht *DHT) StartAuthorize() error {
 	// hack for zeronet
 	if len(dht.options.BootstrapHosts) == 0 {
-		log.Info("Bootstrap nodes is not set. Init zeronet.")
-		dht.activeNodeKeeper.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
-			NodeID:   dht.nodeID,
-			PulseNum: 0,
-			State:    core.NodeActive,
-			// PublicKey: &dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey().PublicKey,
-		}})
 		return nil
 	}
 
@@ -492,9 +485,9 @@ LOOP:
 	return nil
 }
 
-func (dht *DHT) AddUnsync(nodeID core.RecordRef, role core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
 	// TODO: return nodekeeper from helper method in HostHandler and remove this func and GetActiveNodes
-	return dht.activeNodeKeeper.AddUnsync(nodeID, role, address /*, publicKey*/)
+	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address /*, publicKey*/)
 }
 
 // Disconnect will trigger a Stop from the network.
