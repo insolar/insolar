@@ -293,7 +293,6 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send an authorization request (step 2)")
 	}
-	err = sendCheckSignedNonceRequest(hostHandler, rsp.Sender, response.Nonce)
 	rsp, err = future.GetResult( /*hostHandler.GetPacketTimeout()*/ time.Second * 40)
 	if err != nil {
 		return nil, errors.Wrap(err, "checkResponse error (step 2)")
@@ -402,33 +401,6 @@ func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Pac
 	if err != nil {
 		log.Debugln(err)
 	}
-}
-
-func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *host.Host, nonce []byte) error {
-	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
-	if err != nil {
-		return err
-	}
-
-	signedNonce, err := hostHandler.GetNetworkCommonFacade().GetSignHandler().SignNonce(nonce)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a nonce")
-	}
-
-	builder := packet.NewBuilder()
-	request := builder.Type(packet.TypeCheckSignedNonce).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(target).
-		Request(&packet.RequestCheckSignedNonce{Signed: signedNonce}).
-		Build()
-
-	future, err := hostHandler.SendRequest(request)
-
-	if err != nil {
-		return errors.Wrap(err, "Failed to SendRequest")
-	}
-
-	return checkResponse(hostHandler, future, target.ID.String(), request)
 }
 
 func sendDisconnectRequest(hostHandler hosthandler.HostHandler, target *host.Host) error {
