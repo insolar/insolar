@@ -142,12 +142,6 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
-	err := network.hostNetwork.StartAuthorize()
-	if err != nil {
-		//return errors.Wrap(err, "error authorizing node")
-		log.Errorln(err.Error())
-	}
-
 	pm, err := getPulseManager(components)
 	if err != nil {
 		log.Error(err)
@@ -164,6 +158,12 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	err = network.hostNetwork.AnalyzeNetwork(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to AnalyzeNetwork")
+	}
+
+	err = network.hostNetwork.StartAuthorize()
+	if err != nil {
+		return errors.Wrap(err, "error authorizing node")
+		// log.Errorln(err.Error())
 	}
 
 	return nil
