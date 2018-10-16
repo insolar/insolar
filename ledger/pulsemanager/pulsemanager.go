@@ -17,6 +17,8 @@
 package pulsemanager
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/storage"
@@ -24,6 +26,7 @@ import (
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
+	lock        sync.RWMutex
 	db          *storage.DB
 	lr          core.LogicRunner
 	coordinator *jetcoordinator.JetCoordinator
@@ -31,6 +34,9 @@ type PulseManager struct {
 
 // Current returns current pulse structure.
 func (m *PulseManager) Current() (*core.Pulse, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	pulseNum := m.db.GetCurrentPulse()
 	entropy, err := m.db.GetEntropy(pulseNum)
 	if err != nil {
@@ -45,6 +51,9 @@ func (m *PulseManager) Current() (*core.Pulse, error) {
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(pulse core.Pulse) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	err := m.db.SetEntropy(pulse.PulseNumber, pulse.Entropy)
 	if err != nil {
 		return err
@@ -52,6 +61,7 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	drop, err := m.coordinator.CreateDrop(pulse.PulseNumber)
 	if err != nil {
 		return err
+
 	}
 
 	_ = drop // TODO: send drop to the validators
