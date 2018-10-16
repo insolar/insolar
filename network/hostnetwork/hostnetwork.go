@@ -42,6 +42,7 @@ func NewHostNetwork(
 	nn *nodenetwork.NodeNetwork,
 	cascade *cascade.Cascade,
 	key *ecdsa.PrivateKey,
+	keeper nodekeeper.NodeKeeper,
 ) (*DHT, error) {
 
 	// if strings.Contains(cfg.Transport.Address, "0.0.0.0") && !cfg.Transport.BehindNAT {
@@ -70,8 +71,6 @@ func NewHostNetwork(
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
 	sign := signhandler.NewSignHandler(key)
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade, sign)
-
-	keeper := nodekeeper.NewNodeKeeper(nn.GetID())
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),

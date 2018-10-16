@@ -24,10 +24,12 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
 
@@ -147,7 +149,7 @@ func processCheckSignedNonce(
 	// 	err := "signed nonce is not correct"
 	// 	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
 	// }
-	ch, err := hostHandler.AddUnsync(data.NodeID, data.NodeRole /*, data.PublicKey*/)
+	ch, err := hostHandler.AddUnsync(data.NodeID, data.NodeRole, msg.Sender.Address.String() /*, data.PublicKey*/)
 	if err != nil {
 		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err.Error()}).Build(), nil
 	}
@@ -172,6 +174,21 @@ func processCheckSignedNonce(
 	}).Build(), nil
 }
 
+func getActiveHostsList(hostHandler hosthandler.HostHandler) []host.Host {
+	nodes := hostHandler.GetActiveNodesList()
+	hosts := make([]host.Host, 0)
+	for _, node := range nodes {
+		address, err := host.NewAddress(node.Address)
+		if err != nil {
+			log.Warnf("Error resolving address %s for node %s", node.Address, node.NodeID)
+			continue
+		}
+		idd := nodenetwork.ResolveHostID(node.NodeID)
+		hosts = append(hosts, host.Host{ID: id.FromBase58(idd), Address: address})
+	}
+	return hosts
+}
+
 func processGetRandomHosts(
 	hostHandler hosthandler.HostHandler,
 	ctx hosthandler.Context,
@@ -179,13 +196,11 @@ func processGetRandomHosts(
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 
 	data := msg.Data.(*packet.RequestGetRandomHosts)
-	ht := hostHandler.HtFromCtx(ctx)
 	if data.HostsNumber <= 0 {
 		return packetBuilder.Response(&packet.ResponseGetRandomHosts{
 			Hosts: nil, Error: "hosts number should be more than zero"}).Build(), nil
 	}
-	hosts := ht.GetHosts(data.HostsNumber)
-	// TODO: handle scenario when we get less hosts than requested
+	hosts := getActiveHostsList(hostHandler)
 	return packetBuilder.Response(&packet.ResponseGetRandomHosts{Hosts: hosts, Error: ""}).Build(), nil
 }
 
@@ -210,8 +225,7 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 
 		doConsensus(hostHandler, ctx, data.Pulse)
 
-		ht := hostHandler.HtFromCtx(ctx)
-		hosts := ht.GetMulticastHosts()
+		hosts := getActiveHostsList(hostHandler)
 		go ResendPulseToKnownHosts(hostHandler, hosts, data)
 		go func(h hosthandler.HostHandler) {
 			coordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()

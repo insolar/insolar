@@ -45,4 +45,5 @@ type ActiveNode struct {
 	// PublicKey is the public key of the node
 	// PublicKey *ecdsa.PublicKey
 	// TODO: big problems with serialization of this PublicKey, skipping for now
+	Address string
 }
