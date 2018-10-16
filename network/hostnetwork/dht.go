@@ -19,6 +19,7 @@ package hostnetwork
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -787,6 +788,7 @@ func (dht *DHT) handleDisconnect(start, stop chan bool) {
 	multiplexCount := 0
 
 	for {
+		fmt.Println(dht.transport == nil)
 		select {
 		case <-start:
 			multiplexCount++
@@ -856,32 +858,35 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 	for {
 		select {
 		case msg := <-dht.transport.Packets():
-			if msg == nil || !msg.IsForMe(*dht.origin) {
-				continue
-			}
 
-			var ctx hosthandler.Context
-			ctx = BuildContext(cb, msg)
-			ht := dht.HtFromCtx(ctx)
-
-			if ht.Origin.ID.Equal(msg.Receiver.ID.Bytes()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
-				dht.dispatchPacketType(ctx, msg, ht)
-			} else {
-				targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.String())
-				if err != nil {
-					log.Errorln(err)
-				} else if !exist {
-					log.Warnln("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
-				} else {
-					// need to relay incoming packet
-					request := &packet.Packet{Sender: &host.Host{Address: dht.origin.Address, ID: msg.Sender.ID},
-						Receiver:  &host.Host{ID: msg.Receiver.ID, Address: targetHost.Address},
-						Type:      msg.Type,
-						RequestID: msg.RequestID,
-						Data:      msg.Data}
-					sendRelayedRequest(dht, request)
+			go func(msg *packet.Packet) {
+				if msg == nil || !msg.IsForMe(*dht.origin) {
+					return
 				}
-			}
+
+				var ctx hosthandler.Context
+				ctx = BuildContext(cb, msg)
+				ht := dht.HtFromCtx(ctx)
+
+				if ht.Origin.ID.Equal(msg.Receiver.ID.Bytes()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
+					dht.dispatchPacketType(ctx, msg, ht)
+				} else {
+					targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.String())
+					if err != nil {
+						log.Errorln(err)
+					} else if !exist {
+						log.Warnln("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
+					} else {
+						// need to relay incoming packet
+						request := &packet.Packet{Sender: &host.Host{Address: dht.origin.Address, ID: msg.Sender.ID},
+							Receiver:  &host.Host{ID: msg.Receiver.ID, Address: targetHost.Address},
+							Type:      msg.Type,
+							RequestID: msg.RequestID,
+							Data:      msg.Data}
+						sendRelayedRequest(dht, request)
+					}
+				}
+			}(msg)
 		case <-stop:
 			return
 		}

@@ -1105,7 +1105,7 @@ func TestDHT_Getters(t *testing.T) {
 
 func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 	prefix := "127.0.0.1:"
-	port := 10000
+	port := 31337
 	bootstrapAdresses := make([]string, 0)
 	dhts := make([]*DHT, 0)
 
@@ -1148,8 +1148,8 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 }
 
 func TestDHT_BootstrapInfinity(t *testing.T) {
-	bootstrapAddress := "127.0.0.1:10000"
-	address := "127.0.0.1:10001"
+	bootstrapAddress := "127.0.0.1:10005"
+	address := "127.0.0.1:10006"
 
 	key, _ := ecdsa.GeneratePrivateKey()
 	st, s, tp, r, _ := realDhtParamsWithId(bootstrapAddress)
