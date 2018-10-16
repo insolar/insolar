@@ -82,17 +82,14 @@ func waitForStart() error {
 	numAttempts := 5
 
 	for ; numAttempts > 0; numAttempts-- {
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(HOST, PORT), time.Millisecond*20)
-		if err != nil {
-			return errors.Wrap(err, "[ setup ]")
-		}
+		conn, _ := net.DialTimeout("tcp", net.JoinHostPort(HOST, "34343"), time.Millisecond*50)
 		if conn != nil {
 			conn.Close()
 			break
 		}
 	}
 	if numAttempts == 0 {
-		return errors.New("Problem with launching test api")
+		return errors.New("Problem with launching test api: couldn't wait more")
 	}
 
 	return nil
