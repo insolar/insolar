@@ -18,16 +18,14 @@ Usage
 ### Options
 
         -c concurrency
-                Number of concurrent users. Default is one.
+                Number of concurrent users. Default is one. 
 
         -r repetitions
                 Number of repetitions for one user. Default is one.
 
         -i input
                 Path to file with initial data - references of members.
+                If you don't provide input file, new members will be generated automatically.
 
         -o output
                 Path to output file (use - for STDOUT).
-
-        --with_init
-                Do initialization before run. In that case you don't have to provide input file, new members will be generated automatically. Default is false.

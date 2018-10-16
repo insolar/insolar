@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -35,7 +34,6 @@ var (
 	output      string
 	concurrent  int
 	repetitions int
-	withInit    bool
 )
 
 func parseInputParams() {
@@ -43,7 +41,6 @@ func parseInputParams() {
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
-	pflag.BoolVar(&withInit, "with_init", false, "do initialization before run load")
 	pflag.Parse()
 }
 
@@ -102,16 +99,13 @@ func runScenarios(out io.Writer, members []string, concurrent int, repetitions i
 }
 
 func startScenario(s scenario) {
-	var wg sync.WaitGroup
-
 	err := s.canBeStarted()
 	check(fmt.Sprintf("Scenario %s can not be started:", s.getName()), err)
 
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
 
 	start := time.Now()
-	s.start(&wg)
-	wg.Wait()
+	s.start()
 	elapsed := time.Since(start)
 
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transfering took %s \n", s.getName(), elapsed))
@@ -128,14 +122,12 @@ func main() {
 
 	var members []string
 
-	if withInit {
-		members, err = createMembers(concurrent, repetitions)
-		check("Problems with create members. One of creating request ended with error: ", err)
-	}
-
 	if input != "" {
 		members, err = getMembersRef(input)
 		check("Problems with parsing input:", err)
+	} else {
+		members, err = createMembers(concurrent, repetitions)
+		check("Problems with create members. One of creating request ended with error: ", err)
 	}
 
 	runScenarios(out, members, concurrent, repetitions)

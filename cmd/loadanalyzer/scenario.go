@@ -24,7 +24,7 @@ import (
 
 type scenario interface {
 	canBeStarted() error
-	start(wg *sync.WaitGroup)
+	start()
 	getOperationsNumber() int
 	getName() string
 	getOut() io.Writer
@@ -57,10 +57,11 @@ func (s *transferDifferentMembersScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *transferDifferentMembersScenario) start(wg *sync.WaitGroup) {
+func (s *transferDifferentMembersScenario) start() {
+	var wg sync.WaitGroup
 	for i := 0; i < s.concurrent*s.repetitions*2; i = i + s.repetitions*2 {
 		wg.Add(1)
-		go s.startMember(i, wg)
+		go s.startMember(i, &wg)
 	}
 	wg.Wait()
 }
