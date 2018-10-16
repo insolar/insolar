@@ -89,6 +89,7 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseN
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
 	}
+	log.Warn("recId: %s receiver != nil: %s", p.GetActiveNode().NodeID.String(), receiver != nil)
 	request := packet.NewBuilder().Type(packet.TypeExchangeUnsyncLists).Sender(sender).Receiver(receiver).
 		Request(&packet.RequestExchangeUnsyncLists{SenderID: c.keeper.GetID(), Pulse: pulse, UnsyncList: data}).Build()
 	f, err := c.handler.SendRequest(request)
@@ -125,6 +126,7 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseN
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
 	}
+	log.Warn("recId: %s, receiver != nil: %s", p.GetActiveNode().NodeID.String(), receiver != nil)
 	request := packet.NewBuilder().Type(packet.TypeExchangeUnsyncHash).Sender(sender).Receiver(receiver).
 		Request(&packet.RequestExchangeUnsyncHash{SenderID: c.keeper.GetID(), Pulse: pulse, UnsyncHash: data}).Build()
 	f, err := c.handler.SendRequest(request)

@@ -61,9 +61,15 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 		return
 	}
 	participants := make([]consensus.Participant, len(activeNodes))
+	var parts string
 	for i, activeNode := range activeNodes {
+		if activeNode.NodeID == ic.keeper.GetID() {
+			continue
+		}
 		participants[i] = &participantWrapper{activeNode}
+		parts += activeNode.NodeID.String() + ", "
 	}
+	log.Warn("consensus participants: %s", parts)
 	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
 	if !success {
 		log.Error("ConsensusProcessor: could not set new pulse to NodeKeeper, aborting")
