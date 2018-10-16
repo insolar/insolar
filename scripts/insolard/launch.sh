@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
 set -e
-INS_LATEST_VER=
-VER=$([ "$INS_LATEST_VER" ] && echo "$INS_LATEST_VER" || echo $(git describe --abbrev=0 --tags))
-BIN_DIR=bin/$VER
-TEST_DATA=testdata
-INSOLARD=$BIN_DIR/insolard
-INSGORUND=$BIN_DIR/insgorund
-CONTRACT_STORAGE=contractstorage
-LEDGER_DIR=data
-INSGORUND_LISTEN_PORT=18181
-INSGORUND_RPS_PORT=18182
-
+source ./scripts/insolard/.env
 
 stop_listening()
 {

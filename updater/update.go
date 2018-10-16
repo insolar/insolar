@@ -16,8 +16,6 @@
 package updater
 
 import (
-	"os"
-
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/updater/request"
 	"github.com/insolar/insolar/version"
@@ -33,18 +31,10 @@ func (up *Updater) verifyAndUpdate() error {
 		log.Debug("Current version: ", version.Version, ", found version: ", newVersion)
 		// Run Update
 		if up.DownloadFiles(newVersion) {
-			// ToDo: send stop signal, then copy files from folder=./${VERSION} to current folder
-
-			err := os.Setenv("INS_LATEST_VER", newVersion)
-			if err != nil {
-				log.Warn("Can not set OS envelop value INS_LATEST_VER: ", err)
-			}
+			up.CurrentVer = newVersion
+			up.ReadyToUpdate = true
 		}
 	}
-	// Run peer
-	//executePeer()
-	// ToDo: Run update service with timer
-	// exit
 	return nil
 }
 
@@ -78,15 +68,15 @@ func (up *Updater) IsSameVersion(currentVersion string) (bool, string, error) {
 }
 
 func (up *Updater) DownloadFiles(version string) (success bool) {
-	if up.started {
+	if up.downloadInProgress {
 		return false
 	}
 	log.Info("Start download files from remote server")
 	if up.LastSuccessServer == "" {
 		return false
 	}
-	up.started = true
+	up.downloadInProgress = true
 	success = request.DownloadFiles(version, up.BinariesList, up.LastSuccessServer)
-	up.started = false
+	up.downloadInProgress = false
 	return
 }

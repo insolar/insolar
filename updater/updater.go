@@ -25,12 +25,13 @@ import (
 )
 
 type Updater struct {
-	ServersList       []string
-	BinariesList      []string
-	LastSuccessServer string
-	CurrentVer        string
-	Delay             int64
-	started           bool
+	ServersList        []string
+	BinariesList       []string
+	LastSuccessServer  string
+	CurrentVer         string
+	Delay              int64
+	downloadInProgress bool
+	ReadyToUpdate      bool
 }
 
 func NewUpdater(cfg *configuration.Updater) (*Updater, error) {
@@ -57,6 +58,7 @@ func NewUpdater(cfg *configuration.Updater) (*Updater, error) {
 		"",
 		version.Version,
 		delay,
+		false,
 		false,
 	}
 	return &updater, nil
@@ -92,7 +94,7 @@ func (up *Updater) Stop() error {
 	log.Infoln("Shutting down update service")
 	count := 0
 	for {
-		if !up.started || count > 36 {
+		if !up.downloadInProgress || count > 36 {
 			break
 		}
 		count++

@@ -32,6 +32,7 @@ import (
 )
 
 func TestStubSameVersion(t *testing.T) {
+
 	cfg := configuration.NewUpdater()
 	updater, err := NewUpdater(&cfg)
 	assert.NoError(t, err)
