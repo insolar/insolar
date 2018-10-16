@@ -151,7 +151,7 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 
 // IsForMe checks if packet is addressed to our host.
 func (m *Packet) IsForMe(origin host.Origin) bool {
-	return origin.Contains(m.Receiver) || m.Type == TypePing && origin.Address.Equal(*m.Receiver.Address)
+	return origin.Contains(m.Receiver) || m.Type == TypePing && origin.IDs[0].Equal(m.Receiver.ID.Bytes()) //origin.Address.Equal(*m.Receiver.Address)
 }
 
 // SerializePacket converts packet to byte slice.
