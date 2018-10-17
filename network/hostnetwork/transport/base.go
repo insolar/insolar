@@ -71,7 +71,6 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	future := t.createFuture(msg)
 
 	go func(msg *packet.Packet, f Future) {
-		log.Debugf("message is nil: %s", msg == nil)
 		err := t.sendPacket(msg)
 		if err != nil {
 			f.Cancel()

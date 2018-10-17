@@ -208,18 +208,18 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	data := msg.Data.(*packet.RequestPulse)
 	pm := hostHandler.GetNetworkCommonFacade().GetPulseManager()
 	if pm == nil {
-		return nil, errors.New("PulseManager is not initialized")
+		return pulseError(packetBuilder, errors.New("PulseManager is not initialized")), nil
 	}
 	currentPulse, err := pm.Current()
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not get current pulse")
+		return pulseError(packetBuilder, errors.Wrap(err, "Could not get current pulse")), nil
 	}
 	log.Infof("Got new pulse number: %d", data.Pulse.PulseNumber)
 	if (data.Pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(data.Pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 		err = pm.Set(data.Pulse)
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed to set pulse")
+			return pulseError(packetBuilder, errors.Wrap(err, "Failed to set pulse")), nil
 		}
 		log.Infof("Set new current pulse number: %d", data.Pulse.PulseNumber)
 
@@ -239,6 +239,11 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		}(hostHandler)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
+}
+
+func pulseError(packetBuilder packet.Builder, err error) *packet.Packet {
+	log.Warn(err)
+	return packetBuilder.Response(&packet.ResponsePulse{Success: false, Error: err.Error()}).Build()
 }
 
 func doConsensus(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, pulse core.Pulse) {

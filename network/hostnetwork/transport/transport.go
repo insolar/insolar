@@ -17,6 +17,8 @@
 package transport
 
 import (
+	"net"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -54,14 +56,9 @@ type Transport interface {
 
 // NewTransport creates new Transport with particular configuration
 func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
-	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
+	conn, publicAddress, err := NewConnection(cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create connection")
-	}
-
-	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create resolver")
+		return nil, err
 	}
 
 	switch cfg.Protocol {
@@ -72,6 +69,20 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 	default:
 		return nil, errors.New("invalid transport configuration")
 	}
+}
+
+// NewConnection creates new Connection from configuration and returns connection and public address
+func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) {
+	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "Failed to create connection")
+	}
+	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
+	if err != nil {
+		conn.Close()
+		return nil, "", errors.Wrap(err, "Failed to create resolver")
+	}
+	return conn, publicAddress, nil
 }
 
 func createResolver(stun bool) resolver.PublicAddressResolver {

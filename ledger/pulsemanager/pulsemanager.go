@@ -17,8 +17,6 @@
 package pulsemanager
 
 import (
-	"sync"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/jetdrop"
@@ -27,17 +25,13 @@ import (
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	lock sync.RWMutex
-	db   *storage.DB
-	lr   core.LogicRunner
-	bus  core.MessageBus
+	db  *storage.DB
+	lr  core.LogicRunner
+	bus core.MessageBus
 }
 
 // Current returns current pulse structure.
 func (m *PulseManager) Current() (*core.Pulse, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
 	latestPulse, err := m.db.GetLatestPulseNumber()
 	if err != nil {
 		return nil, err
@@ -56,9 +50,6 @@ func (m *PulseManager) Current() (*core.Pulse, error) {
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(pulse core.Pulse) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
 	latestPulseNumber, err := m.db.GetLatestPulseNumber()
 	if err != nil {
 		return err

@@ -112,7 +112,10 @@ func main() {
 
 	cm := componentManager{}
 
-	cm.components.ActiveNodeComponent = nodekeeper.NewActiveNodeComponent(cfgHolder.Configuration)
+	cm.components.ActiveNodeComponent, err = nodekeeper.NewActiveNodeComponent(cfgHolder.Configuration)
+	if err != nil {
+		log.Fatalln("failed to start ActiveNodeComponent: ", err.Error())
+	}
 
 	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
 	if err != nil {

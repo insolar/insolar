@@ -27,26 +27,42 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/pkg/errors"
 )
 
 // NewActiveNodeComponent create active node component
-func NewActiveNodeComponent(configuration configuration.Configuration) core.ActiveNodeComponent {
+func NewActiveNodeComponent(configuration configuration.Configuration) (core.ActiveNodeComponent, error) {
 	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
 	nodeKeeper := NewNodeKeeper(nodeID)
 	// TODO: get roles from certificate
 	// TODO: pass public key
 	if len(configuration.Host.BootstrapHosts) == 0 {
+		publicAddress, err := resolveAddress(configuration)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to create active node component")
+		}
+
 		log.Info("Bootstrap nodes is not set. Init zeronet.")
 		nodeKeeper.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
 			NodeID:   nodeID,
 			PulseNum: 0,
 			State:    core.NodeActive,
 			Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+			Address:  publicAddress,
 			// PublicKey: ???
 		}})
 	}
-	return nodeKeeper
+	return nodeKeeper, nil
+}
+
+func resolveAddress(configuration configuration.Configuration) (string, error) {
+	conn, address, err := transport.NewConnection(configuration.Host.Transport)
+	defer conn.Close()
+	if err != nil {
+		return "", err
+	}
+	return address, nil
 }
 
 // NewNodeKeeper create new NodeKeeper
