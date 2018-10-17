@@ -139,6 +139,7 @@ func processCheckSignedNonce(
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 
 	data := msg.Data.(*packet.RequestCheckSignedNonce)
+	// TODO: uncomment this and fix all tests
 	// signer := hostHandler.GetNetworkCommonFacade().GetSignHandler()
 	// networkCoordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
 	// if networkCoordinator == nil {
@@ -157,7 +158,7 @@ func processCheckSignedNonce(
 	select {
 	case d := <-ch:
 		if d == nil {
-			return nil, errors.New("GetHash: channel closed")
+			return nil, errors.New("Add to unsync: channel closed")
 		}
 		self = d
 		// TODO: move timeout to configurable settings
