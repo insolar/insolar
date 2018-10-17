@@ -230,7 +230,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	}
 
 	state := handler.Pulsar.StateSwitcher.GetState()
-	if state != WaitingForPulseSigns && state != Verifying {
+	if state != WaitingForPulseSigns && state != Verifying && state != SendingPulseSign {
 		return fmt.Errorf("not possible to recieve the sign, becasuse of the state - %v", state)
 	}
 
@@ -272,7 +272,7 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 	}
 
 	state := handler.Pulsar.StateSwitcher.GetState()
-	if state != WaitingForStart && state != SendingPulseSign {
+	if state != WaitingForStart && state != SendingPulseSign && state != Verifying {
 		return fmt.Errorf("not possible to recieve the pulse, becasuse of the state - %v", state)
 	}
 
