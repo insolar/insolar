@@ -93,22 +93,15 @@ func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, err
 	start := time.Now()
 	msg := genericMsg.(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
-	rec, err := h.db.GetRecord(&codeRef.Record)
+
+	codeRec, err := getCode(h.db, codeRef.Record)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code record")
-	}
-	codeRec, ok := rec.(*record.CodeRecord)
-	if !ok {
-		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
-	}
-	code, mt, err := codeRec.GetCode(msg.MachinePref)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code from record")
+		return nil, err
 	}
 
 	rep := reply.Code{
-		Code:        code,
-		MachineType: mt,
+		Code:        codeRec.Code,
+		MachineType: codeRec.MachineType,
 	}
 
 	logTimeInside(start, "handleGetCode")
@@ -134,9 +127,10 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 	}
 
 	rep := reply.Class{
-		Head:  msg.Head,
-		State: *stateID,
-		Code:  code,
+		Head:        msg.Head,
+		State:       *stateID,
+		Code:        code,
+		MachineType: state.GetMachineType(),
 	}
 
 	logTimeInside(start, "handleGetClass")
@@ -290,7 +284,8 @@ func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, 
 				},
 			},
 		},
-		TargetedCode: msg.CodeMap,
+		Code:        msg.Code,
+		MachineType: msg.MachineType,
 	}
 	codeID, err := h.db.SetRecord(&rec)
 	if err != nil {
@@ -310,6 +305,11 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 	requestRef := record.Core2Reference(msg.Request)
 	codeRef := record.Core2Reference(msg.Code)
 
+	codeRec, err := getCode(h.db, codeRef.Record)
+	if err != nil {
+		return nil, err
+	}
+
 	rec := record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
@@ -319,10 +319,10 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 				},
 			},
 		},
-		Code: codeRef,
+		Code:        codeRef,
+		MachineType: codeRec.MachineType,
 	}
 
-	var err error
 	var activateID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		activateID, err = tx.SetRecord(&rec)
@@ -407,17 +407,18 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 	requestRef := record.Core2Reference(msg.Request)
 	classRef := record.Core2Reference(msg.Class)
 	migrationRefs := make([]record.Reference, 0, len(msg.Class))
+	codeRef := record.Core2Reference(msg.Code)
 	for _, migration := range msg.Migrations {
 		migrationRefs = append(migrationRefs, record.Core2Reference(migration))
 	}
 
-	var err error
-	err = validateCode(h.db, &msg.Code)
+	codeRec, err := getCode(h.db, codeRef.Record)
 	if err != nil {
 		return nil, err
 	}
-	for _, migration := range msg.Migrations {
-		err = validateCode(h.db, &migration)
+
+	for _, migration := range migrationRefs {
+		_, err = getCode(h.db, migration.Record)
 		if err != nil {
 			return nil, err
 		}
@@ -440,8 +441,9 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 				},
 				AmendedRecord: idx.LatestState,
 			},
-			NewCode:    record.Core2Reference(msg.Code),
-			Migrations: migrationRefs,
+			NewCode:     record.Core2Reference(msg.Code),
+			MachineType: codeRec.MachineType,
+			Migrations:  migrationRefs,
 		}
 
 		amendID, err = tx.SetRecord(&rec)
@@ -780,6 +782,19 @@ func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
 	return ref.CoreRef()
 }
 
+func getCode(s storage.Store, id record.ID) (*record.CodeRecord, error) {
+	rec, err := s.GetRecord(&id)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve code record")
+	}
+	codeRec, ok := rec.(*record.CodeRecord)
+	if !ok {
+		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
+	}
+
+	return codeRec, nil
+}
+
 func getClass(
 	s storage.Store, head *record.ID, state *core.RecordRef,
 ) (*index.ClassLifeline, *core.RecordID, record.ClassState, error) {
@@ -838,18 +853,4 @@ func getObject(
 	}
 
 	return idx, stateID.CoreID(), stateRec, nil
-}
-
-func validateCode(s storage.Store, ref *core.RecordRef) error {
-	codeRef := record.Core2Reference(*ref)
-	rec, err := s.GetRecord(&codeRef.Record)
-	if err != nil {
-		return err
-	}
-
-	if _, ok := rec.(*record.CodeRecord); !ok {
-		return errors.New("invalid code reference")
-	}
-
-	return nil
 }

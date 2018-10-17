@@ -288,11 +288,7 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
 
-	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
-	}
-
+	codeDesc := classDesc.CodeDescriptor()
 	ob := &objectBody{
 		Body:        objDesc.Memory(),
 		Code:        *codeDesc.Ref(),
@@ -382,11 +378,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	}
 	ctx.Class = classDesc.HeadRef()
 
-	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get class's code descriptor")
-	}
-
+	codeDesc := classDesc.CodeDescriptor()
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "no executer registered")

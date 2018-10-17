@@ -25,10 +25,13 @@ import (
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor struct {
+	cache struct {
+		code []byte
+	}
 	machineType core.MachineType
-	code        []byte
 	ref         core.RecordRef
-	machinePref []core.MachineType
+
+	am core.ArtifactManager
 }
 
 // Ref returns reference to represented code record.
@@ -36,14 +39,26 @@ func (d *CodeDescriptor) Ref() *core.RecordRef {
 	return &d.ref
 }
 
-// MachineType returns first available machine type for provided machine preference.
+// MachineType returns code machine type for represented code.
 func (d *CodeDescriptor) MachineType() core.MachineType {
 	return d.machineType
 }
 
-// Code returns code for first available machine type for provided machine preference.
-func (d *CodeDescriptor) Code() []byte {
-	return d.code
+// Code returns code data.
+func (d *CodeDescriptor) Code() ([]byte, error) {
+	if d.cache.code == nil {
+		desc, err := d.am.GetCode(d.ref)
+		if err != nil {
+			return nil, err
+		}
+		code, err := desc.Code()
+		if err != nil {
+			return nil, err
+		}
+		d.cache.code = code
+	}
+
+	return d.cache.code, nil
 }
 
 // ClassDescriptor represents meta info required to fetch all class data.
@@ -54,9 +69,10 @@ type ClassDescriptor struct {
 
 	am core.ArtifactManager
 
-	head  core.RecordRef
-	state core.RecordID
-	code  *core.RecordRef // Can be nil.
+	head        core.RecordRef
+	state       core.RecordID
+	code        *core.RecordRef // Can be nil.
+	machineType core.MachineType
 }
 
 // HeadRef returns head reference to represented class record.
@@ -70,16 +86,15 @@ func (d *ClassDescriptor) StateID() *core.RecordID {
 }
 
 // CodeDescriptor returns descriptor for fetching object's code data.
-func (d *ClassDescriptor) CodeDescriptor(machinePref []core.MachineType) (core.CodeDescriptor, error) {
-	if d.cache.codeDescriptor != nil {
-		return d.cache.codeDescriptor, nil
+func (d *ClassDescriptor) CodeDescriptor() core.CodeDescriptor {
+	if d.cache.codeDescriptor == nil {
+		d.cache.codeDescriptor = &CodeDescriptor{
+			ref:         *d.code,
+			machineType: d.machineType,
+		}
 	}
 
-	if d.code == nil {
-		return nil, errors.New("class has no code")
-	}
-
-	return d.am.GetCode(*d.code, machinePref)
+	return d.cache.codeDescriptor
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
