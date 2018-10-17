@@ -18,7 +18,6 @@ package hostnetwork
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"math"
 	"sort"
 	"strings"
@@ -134,7 +133,7 @@ func NewDHT(
 	nodeID core.RecordRef,
 	keeper nodekeeper.NodeKeeper,
 	majorityRule int,
-	key *ecdsa.PrivateKey,
+	certificate core.Certificate,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
