@@ -29,6 +29,6 @@ type JetDrop struct {
 	// PrevHash is a hash of all record hashes belongs to previous pulse.
 	PrevHash []byte
 
-	// Hash is a hash of all record hashes belongs to one pulse.
+	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
 	Hash []byte
 }

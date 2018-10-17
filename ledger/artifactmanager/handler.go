@@ -17,7 +17,10 @@
 package artifactmanager
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -56,14 +59,22 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeDeactivateObject, h.handleDeactivateObject)
 	bus.MustRegister(core.TypeUpdateObject, h.handleUpdateObject)
 	bus.MustRegister(core.TypeRegisterChild, h.handleRegisterChild)
+	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
 	bus.MustRegister(core.TypeRequestCall, h.handleRegisterRequest)
 
 	return nil
 }
 
+func logTimeInside(start time.Time, funcName string) {
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: %s: time inside - %s", funcName, time.Since(start))
+	}
+}
+
 func (h *MessageHandler) handleRegisterRequest(
 	genericMsg core.Message,
 ) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.RequestCall)
 	requestRec := &record.CallRequest{
 		Payload: message.MustSerializeBytes(msg.Message),
@@ -72,10 +83,14 @@ func (h *MessageHandler) handleRegisterRequest(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set request record")
 	}
+
+	logTimeInside(start, "handleRegisterRequest")
+
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
 	rec, err := h.db.GetRecord(&codeRef.Record)
@@ -96,10 +111,13 @@ func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, err
 		MachineType: mt,
 	}
 
+	logTimeInside(start, "handleGetCode")
+
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetClass)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -121,10 +139,13 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 		Code:  code,
 	}
 
+	logTimeInside(start, "handleGetClass")
+
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -143,10 +164,13 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 		Memory: state.GetMemory(),
 	}
 
+	logTimeInside(start, "handleGetObject")
+
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -164,10 +188,13 @@ func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply,
 		Head: *delegateRef.CoreRef(),
 	}
 
+	logTimeInside(start, "handleGetDelegate")
+
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
 
@@ -177,49 +204,50 @@ func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply,
 	}
 
 	var (
-		refs      []core.RecordRef
-		fromChild *record.ID
+		refs         []core.RecordRef
+		currentChild *record.ID
 	)
 
 	// Counting from specified child or the latest.
 	if msg.FromChild != nil {
 		id := record.Bytes2ID(msg.FromChild[:])
-		fromChild = &id
+		currentChild = &id
 	} else {
-		fromChild = idx.LatestChild
+		currentChild = idx.LatestChild
 	}
 
-	i := storage.NewChainIterator(h.db, fromChild)
 	counter := 0
-	for i.HasNext() {
-		id, rec, err := i.Next()
-		if err != nil {
-			return nil, errors.New("failed to retrieve children")
-		}
-
+	for currentChild != nil {
 		// We have enough results.
 		if counter >= msg.Amount {
-			return &reply.Children{Refs: refs, NextFrom: id.CoreID()}, nil
+			return &reply.Children{Refs: refs, NextFrom: currentChild.CoreID()}, nil
 		}
 		counter++
 
-		child, ok := rec.(*record.ChildRecord)
+		rec, err := h.db.GetRecord(currentChild)
+		if err != nil {
+			return nil, errors.New("failed to retrieve children")
+		}
+		childRec, ok := rec.(*record.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
+		currentChild = childRec.PrevChild
 
 		// Skip records later than specified pulse.
-		if msg.FromPulse != nil && child.Ref.Record.Pulse > *msg.FromPulse {
+		if msg.FromPulse != nil && childRec.Ref.Record.Pulse > *msg.FromPulse {
 			continue
 		}
-
-		refs = append(refs, *child.Ref.CoreRef())
+		refs = append(refs, *childRec.Ref.CoreRef())
 	}
+
+	logTimeInside(start, "handleGetChildren")
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
 func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeclareType)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -241,10 +269,13 @@ func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply,
 		return nil, errors.Wrap(err, "failed to store record")
 	}
 
+	logTimeInside(start, "handleDeclareType")
+
 	return &reply.Reference{Ref: *getReference(&msg.Request, typeID)}, nil
 }
 
 func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeployCode)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -265,10 +296,14 @@ func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
+
+	logTimeInside(start, "handleDeployCode")
+
 	return &reply.Reference{Ref: *getReference(&msg.Request, codeID)}, nil
 }
 
 func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -308,10 +343,13 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 		return nil, err
 	}
 
+	logTimeInside(start, "handleActivateClass")
+
 	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeactivateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -356,10 +394,13 @@ func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Re
 		return nil, err
 	}
 
+	logTimeInside(start, "handleDeactivateClass")
+
 	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.UpdateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -420,10 +461,13 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 		return nil, err
 	}
 
+	logTimeInside(start, "handleUpdateClass")
+
 	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -492,10 +536,13 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 		return nil, err
 	}
 
+	logTimeInside(start, "handleActivateObject")
+
 	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateObjectDelegate)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -564,10 +611,13 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 		return nil, err
 	}
 
+	logTimeInside(start, "handleActivateObjectDelegate")
+
 	return &reply.ID{ID: *activationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeactivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -612,10 +662,13 @@ func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.R
 		return nil, err
 	}
 
+	logTimeInside(start, "handleDeactivateObject")
+
 	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.UpdateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -662,10 +715,13 @@ func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply
 		return nil, err
 	}
 
+	logTimeInside(start, "handleUpdateObject")
+
 	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
 
@@ -697,7 +753,23 @@ func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Repl
 		return nil, err
 	}
 
+	logTimeInside(start, "handleRegisterChild")
+
 	return &reply.ID{ID: *child.CoreID()}, nil
+}
+
+func (h *MessageHandler) handleJetDrop(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.JetDrop)
+
+	// TODO: validate
+	for _, rec := range msg.Records {
+		err := h.db.SetRecordBinary(rec[0], rec[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &reply.OK{}, nil
 }
 
 func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {

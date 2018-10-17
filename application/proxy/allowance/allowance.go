@@ -1,33 +1,34 @@
 package allowance
 
 import (
-		"github.com/insolar/insolar/core"
-		"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
-
-
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
-// Contract proxy type
+// Allowance holds proxy type
 type Allowance struct {
 	Reference core.RecordRef
 }
 
+// ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized []byte
+	argsSerialized  []byte
 }
 
+// AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Allowance {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	return &Allowance{Reference: ref}
 }
 
+// AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Allowance {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -36,15 +37,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Allowance
 	return &Allowance{Reference: ref}
 }
 
-// GetObject
+// GetObject returns proxy object
 func GetObject(ref core.RecordRef) (r *Allowance) {
 	return &Allowance{Reference: ref}
 }
 
+// GetClass returns reference to the class
 func GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) *Allowance {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
@@ -53,13 +56,12 @@ func GetImplementationFrom(object core.RecordRef) *Allowance {
 	return GetObject(ref)
 }
 
-
-func New( to *core.RecordRef, amount uint, expire int64 ) *ContractConstructorHolder {
+// New is constructor
+func New(to *core.RecordRef, amount uint, expire int64) *ContractConstructorHolder {
 	var args [3]interface{}
 	args[0] = to
 	args[1] = amount
 	args[2] = expire
-
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -70,19 +72,18 @@ func New( to *core.RecordRef, amount uint, expire int64 ) *ContractConstructorHo
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
 
-
-// GetReference
+// GetReference returns reference of the object
 func (r *Allowance) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass
+// GetClass returns reference to the class
 func (r *Allowance) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-
-func (r *Allowance) IsExpired(  ) ( bool ) {
+// IsExpired is proxy generated method
+func (r *Allowance) IsExpired() bool {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -94,7 +95,7 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsExpired", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -109,7 +110,8 @@ func (r *Allowance) IsExpired(  ) ( bool ) {
 	return ret0
 }
 
-func (r *Allowance) IsExpiredNoWait(  ) {
+// IsExpiredNoWait is proxy generated method
+func (r *Allowance) IsExpiredNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -125,7 +127,8 @@ func (r *Allowance) IsExpiredNoWait(  ) {
 	}
 }
 
-func (r *Allowance) TakeAmount(  ) ( uint ) {
+// TakeAmount is proxy generated method
+func (r *Allowance) TakeAmount() uint {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -137,7 +140,7 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "TakeAmount", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -152,7 +155,8 @@ func (r *Allowance) TakeAmount(  ) ( uint ) {
 	return ret0
 }
 
-func (r *Allowance) TakeAmountNoWait(  ) {
+// TakeAmountNoWait is proxy generated method
+func (r *Allowance) TakeAmountNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -168,7 +172,8 @@ func (r *Allowance) TakeAmountNoWait(  ) {
 	}
 }
 
-func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
+// GetBalanceForOwner is proxy generated method
+func (r *Allowance) GetBalanceForOwner() uint {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -180,7 +185,7 @@ func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalanceForOwner", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -195,7 +200,8 @@ func (r *Allowance) GetBalanceForOwner(  ) ( uint ) {
 	return ret0
 }
 
-func (r *Allowance) GetBalanceForOwnerNoWait(  ) {
+// GetBalanceForOwnerNoWait is proxy generated method
+func (r *Allowance) GetBalanceForOwnerNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -211,7 +217,8 @@ func (r *Allowance) GetBalanceForOwnerNoWait(  ) {
 	}
 }
 
-func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
+// DeleteExpiredAllowance is proxy generated method
+func (r *Allowance) DeleteExpiredAllowance() uint {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -223,7 +230,7 @@ func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DeleteExpiredAllowance", argsSerialized)
 	if err != nil {
-   		panic(err)
+		panic(err)
 	}
 
 	ret := [1]interface{}{}
@@ -238,7 +245,8 @@ func (r *Allowance) DeleteExpiredAllowance(  ) ( uint ) {
 	return ret0
 }
 
-func (r *Allowance) DeleteExpiredAllowanceNoWait(  ) {
+// DeleteExpiredAllowanceNoWait is proxy generated method
+func (r *Allowance) DeleteExpiredAllowanceNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -253,4 +261,3 @@ func (r *Allowance) DeleteExpiredAllowanceNoWait(  ) {
 		panic(err)
 	}
 }
-

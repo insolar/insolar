@@ -20,11 +20,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/log"
 )
 
 // Raw struct contains raw serialized record.
@@ -82,12 +84,17 @@ func (raw *Raw) Hash() []byte {
 
 // ToRecord decodes Raw to Record.
 func (raw *Raw) ToRecord() Record {
+	start := time.Now()
 	cborH := &codec.CborHandle{}
 	rec := getRecordByTypeID(raw.Type)
 	dec := codec.NewDecoder(bytes.NewReader(raw.Data), cborH)
 	err := dec.Decode(rec)
+	since := time.Since(start)
 	if err != nil {
 		panic(err)
+	}
+	if raw.Type == codeRecordID {
+		log.Debugf("ToRecord func in record/serialize: for TypeID %s, time inside - %s", raw.Type, since)
 	}
 	return rec
 }
@@ -295,4 +302,13 @@ func EncodeToRaw(rec Record) (*Raw, error) {
 		Type: getTypeIDbyRecord(rec),
 		Data: b,
 	}, nil
+}
+
+// MustEncodeToRaw wraps EncodeToRaw, panics on encoding errors.
+func MustEncodeToRaw(rec Record) *Raw {
+	raw, err := EncodeToRaw(rec)
+	if err != nil {
+		panic(err)
+	}
+	return raw
 }
