@@ -28,7 +28,7 @@ func (currentPulsar *Pulsar) waitForPulseSigns() {
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForEntropySigns {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForPulseSigns {
 				ticker.Stop()
 				return
 			}
