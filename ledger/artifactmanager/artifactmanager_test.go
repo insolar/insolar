@@ -219,9 +219,8 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
-	codeMap := map[core.MachineType][]byte{1: {1}}
 	coreRef, err := td.manager.DeployCode(
-		*domainRef.CoreRef(), *td.requestRef.CoreRef(), codeMap,
+		*domainRef.CoreRef(), *td.requestRef.CoreRef(), []byte{1, 2, 3}, core.MachineTypeBuiltin,
 	)
 	assert.NoError(t, err)
 	ref := record.Core2Reference(*coreRef)
@@ -236,7 +235,8 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 				},
 			},
 		},
-		TargetedCode: codeMap,
+		Code:        []byte{1, 2, 3},
+		MachineType: core.MachineTypeBuiltin,
 	})
 }
 
@@ -245,8 +245,9 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
+	codeID, err := td.db.SetRecord(&record.CodeRecord{})
+	codeRef := record.Reference{Record: *codeID, Domain: domainID}
 	classRef := genRandomRef(0)
-	codeRef := genRandomRef(0)
 	activateCoreID, err := td.manager.ActivateClass(
 		*domainRef.CoreRef(), *classRef.CoreRef(), *codeRef.CoreRef(),
 	)
@@ -263,7 +264,7 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 				},
 			},
 		},
-		Code: *codeRef,
+		Code: codeRef,
 	})
 	idx, err := td.db.GetClassIndex(&classRef.Record, false)
 	assert.NoError(t, err)
@@ -394,7 +395,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 				},
 			},
 		},
-		TargetedCode: map[core.MachineType][]byte{core.MachineTypeBuiltin: {1}},
+		Code: []byte{1},
 	})
 	migrationID, err := td.db.SetRecord(&record.CodeRecord{
 		StorageRecord: record.StorageRecord{
@@ -404,7 +405,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 				},
 			},
 		},
-		TargetedCode: map[core.MachineType][]byte{core.MachineTypeBuiltin: {2}},
+		Code: []byte{2},
 	})
 	migrationRefs := []record.Reference{{Domain: domainID, Record: *migrationID}}
 	migrationCoreRefs := []core.RecordRef{*migrationRefs[0].CoreRef()}
