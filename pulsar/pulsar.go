@@ -90,10 +90,13 @@ func NewPulsar(
 	}
 
 	// Parse private key from config
-	privateKey, err := ecdsahelper.ImportPrivateKey(configuration.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
+	/*
+		privateKey, err := ecdsahelper.ImportPrivateKey(configuration.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+	*/
+	var privateKey *ecdsa.PrivateKey //FIXME:
 	pulsar := &Pulsar{
 		Sock:               listenerImpl,
 		SockConnectionType: configuration.Pulsar.ConnectionType,
