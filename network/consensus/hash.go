@@ -41,14 +41,26 @@ func calculateNodeHash(node *core.ActiveNode) []byte {
 	hash := sha3.New224()
 	hashWriteChecked(hash, node.NodeID[:])
 	b := make([]byte, 8)
-	// TODO: add roles to hash
-	// binary.LittleEndian.PutUint64(b, uint64(node.Role))
+	nodeRoles := make([]core.NodeRole, len(node.Roles))
+	copy(nodeRoles, node.Roles)
+	sort.Slice(nodeRoles[:], func(i, j int) bool {
+		return nodeRoles[i] < nodeRoles[j]
+	})
+	for _, nodeRole := range nodeRoles {
+		binary.LittleEndian.PutUint32(b, uint32(nodeRole))
+		hashWriteChecked(hash, b[:4])
+	}
 	hashWriteChecked(hash, b[:])
 	binary.LittleEndian.PutUint32(b, uint32(node.PulseNum))
 	hashWriteChecked(hash, b[:4])
 	b[0] = byte(node.State)
 	hashWriteChecked(hash, b[:1])
-	// hashWriteChecked(hash, node.PublicKey)
+	// TODO: pass correctly public key to active node
+	// publicKey, err := ecdsa.ExportPublicKey(node.PublicKey)
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+	// hashWriteChecked(hash, []byte(publicKey))
 	hashWriteChecked(hash, []byte(node.Address))
 	return hash.Sum(nil)
 }

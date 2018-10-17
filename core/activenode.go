@@ -16,6 +16,10 @@
 
 package core
 
+import (
+	"crypto/ecdsa"
+)
+
 // NodeState is the state of the node
 type NodeState uint8
 
@@ -43,8 +47,8 @@ type ActiveNode struct {
 	// JetRoles is the set of candidate JetRoles for the node
 	Roles []NodeRole
 	// PublicKey is the public key of the node
-	// PublicKey *ecdsa.PublicKey
-	// TODO: big problems with serialization of this PublicKey, skipping for now
+	PublicKey *ecdsa.PublicKey
+	// Addess is the network adress of the node
 	Address string
 }
 

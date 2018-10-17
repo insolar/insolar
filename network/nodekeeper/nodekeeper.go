@@ -35,6 +35,7 @@ func NewActiveNodeComponent(configuration configuration.Configuration) core.Acti
 	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
 	nodeKeeper := NewNodeKeeper(nodeID)
 	// TODO: get roles from certificate
+	// TODO: pass public key
 	if len(configuration.Host.BootstrapHosts) == 0 {
 		log.Info("Bootstrap nodes is not set. Init zeronet.")
 		nodeKeeper.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
@@ -42,7 +43,7 @@ func NewActiveNodeComponent(configuration configuration.Configuration) core.Acti
 			PulseNum: 0,
 			State:    core.NodeActive,
 			Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
-			// PublicKey: &dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey().PublicKey,
+			// PublicKey: ???
 		}})
 	}
 	return nodeKeeper
