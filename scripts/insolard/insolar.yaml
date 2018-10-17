@@ -17,24 +17,6 @@ ledger:
     datadirectory: ./data
     txretriesonconflict: 3
   jetcoordinator:
-    rolecandidates:
-      1:
-      - "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
-      2:
-      - vv1
-      - vv2
-      - vv3
-      - vv4
-      3:
-      - "3vwhxni49TBGpj4CHLY5BRnmqeLfeDeCyeo1oW1ahMCXXc5eetzLwKFQqL8ycdp724W93QxV8aY9FbuSY5aky1QA"
-      4:
-      - lv1
-      - lv2
-      - lv3
-      - lv4
-      5:
-      - he1
-      - he2
     rolecounts:
       1: 1
       2: 3
@@ -59,12 +41,6 @@ pulsar:
 bootstrap:
   rootkeys: "scripts/insolard/bootstrap_keys.json"
   rootbalance: 10000
-privatekey: |-
-  -----BEGIN PRIVATE KEY-----
-  MHcCAQEEID6XJHMb2aiaK1bp2GHHw0r4LrzZZ4exlcmx8GrjGsMFoAoGCCqGSM49
-  AwEHoUQDQgAE7DE4ArqxIYbY/UAyLLFBGuFu2gROPaqp4vxbEeie7mnZeqsYexmN
-  BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
-  -----END PRIVATE KEY-----
 
 privatekey: |-
   -----BEGIN PRIVATE KEY-----

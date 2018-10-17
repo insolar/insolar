@@ -178,8 +178,6 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 		recvAddress = t.proxy.GetNextProxyAddress()
 	}
 	if len(recvAddress) == 0 {
-		log.Warnf("p.Receiver == nil: %s", p.Receiver == nil)
-		log.Warnf("p.Receiver.Address == nil: %s", p.Receiver.Address == nil)
 		recvAddress = p.Receiver.Address.String()
 	}
 

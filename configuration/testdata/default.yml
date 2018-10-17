@@ -18,26 +18,6 @@ ledger:
     datadirectory: ./data
     txretriesonconflict: 3
   jetcoordinator:
-    rolecandidates:
-      1:
-      - ve1
-      - ve2
-      2:
-      - vv1
-      - vv2
-      - vv3
-      - vv4
-      3:
-      - le1
-      - le2
-      4:
-      - lv1
-      - lv2
-      - lv3
-      - lv4
-      5:
-      - he1
-      - he2
     rolecounts:
       1: 1
       2: 3

@@ -19,6 +19,7 @@ package nodekeeper
 import (
 	"bytes"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -140,14 +141,14 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
-	var activeNodeStr string
-	for _, node := range nodes {
+	activeNodes := make([]string, len(nodes))
+	for i, node := range nodes {
 		if node.NodeID.Equal(nk.nodeID) {
 			nk.self = node
-			log.Info("Added self node to active list")
+			log.Infof("Added self node %s to active list", nk.nodeID)
 		}
 		nk.active[node.NodeID] = node
-		activeNodeStr += node.NodeID.String() + ", "
+		activeNodes[i] = node.NodeID.String()
 
 		for _, role := range node.Roles {
 			list, ok := nk.index[role]
@@ -155,10 +156,10 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 				list := make([]core.RecordRef, 0)
 				nk.index[role] = list
 			}
-			list = append(list, node.NodeID)
+			nk.index[role] = append(list, node.NodeID)
 		}
 	}
-	log.Debug("added active nodes: %s", activeNodeStr)
+	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
 }
 
 func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
