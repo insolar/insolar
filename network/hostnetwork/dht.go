@@ -277,8 +277,7 @@ func (dht *DHT) Bootstrap() error {
 		log.Info("empty bootstrap hosts")
 		return nil
 	}
-	// TODO: uncomment this for DNS and fix tests
-	// dht.checkBootstrapHostsDomains(dht.options.BootstrapHosts)
+	dht.checkBootstrapHostsDomains(dht.options.BootstrapHosts)
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
