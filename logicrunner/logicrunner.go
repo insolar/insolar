@@ -216,14 +216,7 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		ec := ExecutionContext{}
-		if !lr.SetContext(ref, ec) {
-			return nil, errors.New("Object already exeuting")
-		}
 		re, err := lr.executeMethodCall(ctx, m, vb)
-		lr.contextMutex.Lock()
-		defer lr.contextMutex.Unlock()
-		delete(lr.context, ref)
 		return re, err
 
 	case *message.CallConstructor:
@@ -308,18 +301,22 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 	return ob, nil
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	vb.Begin(e.ObjectRef, core.CaseRecord{
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
+	ec := ExecutionContext{}
+	if !lr.SetContext(m.ObjectRef, ec) {
+		return nil, errors.New("Method already executing")
+	}
+	vb.Begin(m.ObjectRef, core.CaseRecord{
 		Type: core.CaseRecordTypeStart,
-		Resp: e,
+		Resp: m,
 	})
 
-	objbody, err := lr.getObjectMessage(e.ObjectRef)
+	objbody, err := lr.getObjectMessage(m.ObjectRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	ctx.Callee = &e.ObjectRef
+	ctx.Callee = &m.ObjectRef
 	ctx.Class = &objbody.Class
 	vb.ModifyContext(&ctx)
 
@@ -329,17 +326,22 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 	}
 
 	executer := func() (*reply.CallMethod, error) {
+		defer func() {
+			lr.contextMutex.Lock()
+			defer lr.contextMutex.Unlock()
+			delete(lr.context, m.ObjectRef)
+		}()
 		newData, result, err := executor.CallMethod(
-			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
+			&ctx, objbody.Code, objbody.Body, m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executor error")
 		}
 
 		// TODO: deactivation should be handled way better here
-		if vb.NeedSave() && lr.lastObjectCaseRecord(e.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
+		if vb.NeedSave() && lr.lastObjectCaseRecord(m.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
-				core.RecordRef{}, *ctx.Request, e.ObjectRef, newData,
+				core.RecordRef{}, *ctx.Request, m.ObjectRef, newData,
 			)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
@@ -348,15 +350,14 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 
 		re := &reply.CallMethod{Data: newData, Result: result}
 
-		vb.End(e.ObjectRef, core.CaseRecord{
+		vb.End(m.ObjectRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
 			Resp: re,
 		})
-
 		return re, nil
 	}
 
-	switch e.ReturnMode {
+	switch m.ReturnMode {
 	case message.ReturnResult:
 		return executer()
 	case message.ReturnNoWait:
@@ -368,10 +369,14 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 		}()
 		return &reply.CallMethod{}, nil
 	}
-	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
+	return nil, errors.Errorf("Invalid ReturnMode #%d", m.ReturnMode)
 }
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
+	ec := ExecutionContext{}
+	if !lr.SetContext(m.GetRequest(), ec) {
+		return nil, errors.New("Constructor already executing by you")
+	}
 	vb.Begin(m.ClassRef, core.CaseRecord{
 		Type: core.CaseRecordTypeStart,
 		Resp: m,
@@ -393,6 +398,12 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	if err != nil {
 		return nil, errors.Wrap(err, "executer error")
 	}
+
+	defer func() {
+		lr.contextMutex.Lock()
+		defer lr.contextMutex.Unlock()
+		delete(lr.context, m.GetRequest())
+	}()
 
 	switch m.SaveAs {
 	case message.Child:
