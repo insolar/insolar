@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"context"
+	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -59,20 +60,25 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 		return
 	}
 	participants := make([]consensus.Participant, 0)
-	var parts string
+	parts := make([]string, 0)
 	for _, activeNode := range activeNodes {
 		if activeNode.NodeID == ic.keeper.GetID() {
 			continue
 		}
 		participants = append(participants, &participantWrapper{activeNode})
-		parts += activeNode.NodeID.String() + ", "
+		parts = append(parts, activeNode.NodeID.String())
 	}
-	log.Warn("consensus participants: %s", parts)
+	log.Debugf("Consensus participants: %s", strings.Join(parts, ", "))
 	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
 	if !success {
 		log.Error("ConsensusProcessor: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
+	candidates := make([]string, 0)
+	for _, candidate := range unsyncList.GetUnsync() {
+		candidates = append(candidates, candidate.NodeID.String())
+	}
+	log.Infof("Consensus unsync candidates: %s", strings.Join(candidates, ", "))
 	unsyncCandidates, err := ic.consensus.DoConsensus(ctx, unsyncList, ic.self, participants)
 	if err != nil {
 		log.Errorf("ConsensusProcessor: error performing consensus steps: %s", err.Error())

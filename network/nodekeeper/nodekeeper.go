@@ -233,7 +233,7 @@ func (nk *nodekeeper) Sync(syncCandidates []*core.ActiveNode, number core.PulseN
 	for _, node := range syncCandidates {
 		candidates += node.NodeID.String() + ", "
 	}
-	log.Debug("Moving unsync to sync: %s", candidates)
+	log.Debugf("Moving unsync to sync: %s", candidates)
 
 	nk.syncUnsafe(syncCandidates)
 }
