@@ -24,6 +24,9 @@ import (
 type GenesisRecord struct {
 }
 
+// Type implementation of Record interface.
+func (r *GenesisRecord) Type() TypeID { return genesisRecordID }
+
 // IsDeactivation determines if current state is deactivation.
 func (*GenesisRecord) IsDeactivation() bool {
 	return false
@@ -50,6 +53,9 @@ type ChildRecord struct {
 
 	Ref Reference // Reference to the child's head.
 }
+
+// Type implementation of Record interface.
+func (r *ChildRecord) Type() TypeID { return childRecordID }
 
 // PulseRecord is a record containing pulse info.
 type PulseRecord struct {

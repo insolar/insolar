@@ -44,6 +44,16 @@ type ResultRecord struct {
 	Request Reference
 }
 
+// TypeRecord is a code interface declaration.
+type TypeRecord struct {
+	ResultRecord
+
+	TypeDeclaration []byte
+}
+
+// Type implementation of Record interface.
+func (r *TypeRecord) Type() TypeID { return typeRecordID }
+
 // CodeRecord is a code storage record.
 type CodeRecord struct {
 	ResultRecord
@@ -52,12 +62,8 @@ type CodeRecord struct {
 	MachineType core.MachineType
 }
 
-// TypeRecord is a code interface declaration.
-type TypeRecord struct {
-	ResultRecord
-
-	TypeDeclaration []byte
-}
+// Type implementation of Record interface.
+func (r *CodeRecord) Type() TypeID { return codeRecordID }
 
 // ClassStateRecord is a record containing data for a class state.
 type ClassStateRecord struct {
@@ -86,6 +92,9 @@ type ClassActivateRecord struct {
 	ClassStateRecord
 }
 
+// Type implementation of Record interface.
+func (r *ClassActivateRecord) Type() TypeID { return classActivateRecordID }
+
 // ClassAmendRecord is an amendment record for classes.
 type ClassAmendRecord struct {
 	ResultRecord
@@ -94,6 +103,9 @@ type ClassAmendRecord struct {
 	PrevState  ID
 	Migrations []Reference
 }
+
+// Type implementation of Record interface.
+func (r *ClassAmendRecord) Type() TypeID { return classAmendRecordID }
 
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
@@ -120,6 +132,9 @@ type ObjectActivateRecord struct {
 	Delegate bool
 }
 
+// Type implementation of Record interface.
+func (r *ObjectActivateRecord) Type() TypeID { return objectActivateRecordID }
+
 // ObjectAmendRecord is an amendment record for objects.
 type ObjectAmendRecord struct {
 	ResultRecord
@@ -128,11 +143,17 @@ type ObjectAmendRecord struct {
 	PrevState ID
 }
 
+// Type implementation of Record interface.
+func (r *ObjectAmendRecord) Type() TypeID { return objectActivateRecordID }
+
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
 	ResultRecord
 	PrevState ID
 }
+
+// Type implementation of Record interface.
+func (r *DeactivationRecord) Type() TypeID { return deactivationRecordID }
 
 // GetMachineType returns state code machine type.
 func (*DeactivationRecord) GetMachineType() core.MachineType {

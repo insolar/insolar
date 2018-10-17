@@ -27,7 +27,10 @@ type CallRequest struct {
 	Payload []byte
 }
 
+// Type implementation of Record interface.
+func (r *CallRequest) Type() TypeID { return callRequestRecordID }
+
 // GetPayload returns payload. Required for Record interface implementation.
-func (req *CallRequest) GetPayload() []byte {
-	return req.Payload
+func (r *CallRequest) GetPayload() []byte {
+	return r.Payload
 }

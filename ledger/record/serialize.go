@@ -134,14 +134,13 @@ const (
 	callRequestRecordID TypeID = 20
 
 	// result
-	resultRecordID         TypeID = 30
-	classActivateRecordID  TypeID = 31
-	objectActivateRecordID TypeID = 32
-	codeRecordID           TypeID = 33
-	classAmendRecordID     TypeID = 34
-	deactivationRecordID   TypeID = 35
-	objectAmendRecordID    TypeID = 36
-	typeRecordID           TypeID = 37
+	classActivateRecordID  TypeID = 30
+	objectActivateRecordID TypeID = 31
+	codeRecordID           TypeID = 32
+	classAmendRecordID     TypeID = 33
+	deactivationRecordID   TypeID = 34
+	objectAmendRecordID    TypeID = 35
+	typeRecordID           TypeID = 36
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -181,8 +180,6 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 	case *CallRequest:
 		return callRequestRecordID
 	// result records
-	case *ResultRecord:
-		return resultRecordID
 	case *ClassActivateRecord:
 		return classActivateRecordID
 	case *ObjectActivateRecord:

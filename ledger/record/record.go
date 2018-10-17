@@ -47,7 +47,9 @@ type ID struct {
 }
 
 // Record is base interface for all records.
-type Record interface{}
+type Record interface {
+	Type() TypeID
+}
 
 // SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
 func SHA3Hash224(rec Record) []byte {
