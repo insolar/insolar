@@ -161,8 +161,8 @@ func TestDB_CreateDrop(t *testing.T) {
 	drop, recData, err := db.CreateDrop(pulse, []byte{4, 5, 6})
 	assert.NoError(t, err)
 	assert.Equal(t, pulse, drop.Pulse)
-	assert.Equal(t, "2rfH6sgiW5GygXXmFTfh9J6162hFUXRrB1Nz7P9", base58.Encode(drop.Hash))
-	assert.Equal(t, expectedRecData, recData)
+	assert.Equal(t, "23qdSCk6Q1L8m1neGWRFYcZnyRdrWfhhopP3pEu", base58.Encode(drop.Hash))
+	assert.ElementsMatch(t, expectedRecData, recData)
 }
 
 func TestDB_SetDrop(t *testing.T) {
