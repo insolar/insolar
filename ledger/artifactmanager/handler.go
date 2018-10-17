@@ -771,6 +771,15 @@ func (h *MessageHandler) handleJetDrop(genericMsg core.Message) (core.Reply, err
 		}
 	}
 
+	// temporary hack for Index passing
+	// FIXME: should be removed after proper validation has been implemented
+	for _, rec := range msg.Indexes {
+		err := h.db.Set(rec[0], rec[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &reply.OK{}, nil
 }
 

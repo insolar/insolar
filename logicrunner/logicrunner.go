@@ -203,10 +203,15 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 		vb = ValidationSaver{lr: lr}
 	}
 
+	reqref, err := lr.ArtifactManager.RegisterRequest(msg)
+	if err != nil {
+		return nil, err
+	}
 	ctx := core.LogicCallContext{
-		Caller: msg.GetCaller(),
-		Time:   time.Now(), // TODO: probably we should take it from e
-		Pulse:  lr.caseBind.Pulse,
+		Caller:  msg.GetCaller(),
+		Request: reqref,
+		Time:    time.Now(), // TODO: probably we should take it from e
+		Pulse:   lr.caseBind.Pulse,
 	}
 
 	switch m := msg.(type) {
@@ -334,7 +339,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 		// TODO: deactivation should be handled way better here
 		if vb.NeedSave() && lr.lastObjectCaseRecord(e.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
-				core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
+				core.RecordRef{}, *ctx.Request, e.ObjectRef, newData,
 			)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
@@ -393,37 +398,29 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	case message.Child:
 		log.Warn()
 		log.Warnf("M = %+v", m)
-		ref, err := lr.ArtifactManager.RegisterRequest(m)
-		if err != nil {
-			return nil, err
-		}
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
-				core.RecordRef{}, *ref, m.ClassRef, m.ParentRef, newData,
+				core.RecordRef{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
-			Resp: &reply.CallConstructor{Object: ref},
+			Resp: &reply.CallConstructor{Object: ctx.Request},
 		})
 
-		return &reply.CallConstructor{Object: ref}, err
+		return &reply.CallConstructor{Object: ctx.Request}, err
 	case message.Delegate:
-		ref, err := lr.ArtifactManager.RegisterRequest(m)
-		if err != nil {
-			return nil, err
-		}
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObjectDelegate(
-				core.RecordRef{}, *ref, m.ClassRef, m.ParentRef, newData,
+				core.RecordRef{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
-			Resp: &reply.CallConstructor{Object: ref},
+			Resp: &reply.CallConstructor{Object: ctx.Request},
 		})
 
-		return &reply.CallConstructor{Object: ref}, err
+		return &reply.CallConstructor{Object: ctx.Request}, err
 	default:
 		return nil, errors.New("unsupported type of save object")
 	}
