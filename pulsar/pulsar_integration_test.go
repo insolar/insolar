@@ -146,7 +146,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
@@ -246,7 +246,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
@@ -377,7 +377,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
