@@ -79,8 +79,8 @@ func TestHttp(t *testing.T) {
 	body, err := ioutil.ReadAll(response.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(body[:]), `"latest":"v0.3.1"`)
-	ver := request.NewVersion("v0.3.1")
-
+	ver, err := request.NewVersion("v0.3.1")
+	assert.NoError(t, err)
 	us.LatestVersion = "v0.3.1"
 	assert.Equal(t, us.LatestVersion, "v0.3.1")
 
@@ -99,12 +99,20 @@ func TestHttp(t *testing.T) {
 	assert.Equal(t, updater.BinariesList, []string{"insgocc", "insgorund", "insolar", "insolard", "pulsard", "insupdater"})
 	assert.NotEqual(t, updater.ServersList, []string{""})
 	assert.Equal(t, updater.LastSuccessServer, "")
-	err = updater.verifyAndUpdate()
-	assert.NoError(t, err)
-	updater.CurrentVer = "v0.3.1"
-	err = updater.verifyAndUpdate()
-	assert.NoError(t, err)
 
+	if version.Version == "unset" {
+		err = updater.verifyAndUpdate()
+		assert.Error(t, err)
+		updater.CurrentVer = "v0.3.1"
+		err = updater.verifyAndUpdate()
+		assert.Error(t, err)
+	} else {
+		err = updater.verifyAndUpdate()
+		assert.NoError(t, err)
+		updater.CurrentVer = "v0.3.1"
+		err = updater.verifyAndUpdate()
+		assert.NoError(t, err)
+	}
 	updater.ServersList = []string{}
 	updater.LastSuccessServer = ""
 	err = updater.verifyAndUpdate()

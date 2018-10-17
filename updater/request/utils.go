@@ -17,19 +17,24 @@
 package request
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 
-	"encoding/json"
 	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
 // Verify current protocol version from URL, if http://... -> HTTPUpdateNode
 func GetProtocol(address string) UpdateNode {
-	protocol := getProtocolFromAddress(address)
+	protocol, err := getProtocolFromAddress(address)
+	if err != nil {
+		return nil
+	}
 	if protocol != "" {
 		switch protocol {
 		case "http":
@@ -46,12 +51,15 @@ func GetProtocol(address string) UpdateNode {
 	return nil
 }
 
-func getProtocolFromAddress(address string) string {
-	protocol := strings.Split(address, "://")
-	if len(protocol) < 2 {
-		return ""
+func getProtocolFromAddress(urlString string) (string, error) {
+	if !strings.Contains(urlString, "://") {
+		return "", errors.New("Protocol is not set, use 'http://' before address")
 	}
-	return protocol[0]
+	u, err := url.Parse(urlString)
+	if err != nil {
+		return "", err
+	}
+	return u.Scheme, nil
 }
 
 func createCurrentPath(version string) string {
@@ -93,6 +101,12 @@ func CompareVersion(ver1 *Version, ver2 *Version) (result int) {
 
 // Compare two Version objects and return MAX
 func GetMaxVersion(ver1 *Version, ver2 *Version) *Version {
+	if ver1 == nil {
+		return ver2
+	}
+	if ver2 == nil {
+		return ver1
+	}
 	resultCompare := CompareVersion(ver1, ver2)
 	if resultCompare == 1 {
 		return ver1

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/updateserv"
 	jww "github.com/spf13/jwalterweatherman"
+	"github.com/spf13/pflag"
 )
 
 func main() {
@@ -34,10 +35,10 @@ func main() {
 	if err != nil {
 		log.Warn("Can't initialize logger: ", err)
 	}
-	//port = pflag.StringP("port", "p", port, "port to listen")
+	port := pflag.StringP("port", "p", "2345", "port to listen")
 
-	server := updateserv.NewUpdateServer(getPort(), getUploadPath())
-	latestVersion := os.Getenv("BUILD_VERSION")
+	server := updateserv.NewUpdateServer(getPort(*port), getUploadPath())
+	latestVersion := os.Getenv("INS_BUILD_VERSION")
 	server.LatestVersion = latestVersion
 	err = server.Start()
 	if err != nil {
@@ -57,8 +58,8 @@ func initLogger(cfg configuration.Log) (err error) {
 	return log.SetLevel(cfg.Level)
 }
 
-func getPort() (port string) {
-	port = "2345"
+func getPort(def string) (port string) {
+	port = def
 	if portValue := os.Getenv("updateserver_port"); portValue != "" {
 		port = portValue
 	}

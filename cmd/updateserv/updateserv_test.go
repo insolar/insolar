@@ -41,10 +41,10 @@ func TestStub(t *testing.T) {
 
 	response, err := http.Get("http://localhost:2345/latest")
 	assert.NoError(t, err)
-	assert.Equal(t, getPort(), "2345")
+	assert.Equal(t, getPort("2345"), "2345")
 
 	os.Setenv("updateserver_port", "2346")
-	assert.Equal(t, getPort(), "2346")
+	assert.Equal(t, getPort("2345"), "2346")
 
 	assert.Equal(t, getUploadPath(), "./data")
 	os.Setenv("upload_path", "./datafiles")

@@ -31,15 +31,19 @@ type Version struct {
 }
 
 // Create new Version object
-func NewVersion(ver string) *Version {
+func NewVersion(ver string) (*Version, error) {
 	v := Version{}
 	v.Value = ver
 	re := regexp.MustCompile("[0-9]+")
 	arr := re.FindAllString(ver, -1)
+	if len(arr) != 3 {
+		return nil, errors.New("Invalid version format")
+	}
+
 	v.Major = extractIntValue(arr, 0)
 	v.Minor = extractIntValue(arr, 1)
 	v.Revision = extractIntValue(arr, 2)
-	return &v
+	return &v, nil
 }
 
 // Get active update server from address list and get latest Version

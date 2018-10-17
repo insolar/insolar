@@ -53,7 +53,10 @@ func (up *Updater) verifyAndUpdate() error {
 func (up *Updater) IsSameVersion(currentVersion string) (bool, string, error) {
 	log.Debug("Verify latest peer version from remote server")
 	up.CurrentVer = currentVersion
-	currentVer := request.NewVersion(currentVersion)
+	currentVer, err := request.NewVersion(currentVersion)
+	if err != nil {
+		return true, "", err
+	}
 	if up.LastSuccessServer != "" {
 		log.Debug("Latest update server was: ", up.LastSuccessServer)
 		vers, err := request.ReqCurrentVerFromAddress(request.GetProtocol(up.LastSuccessServer), up.LastSuccessServer)
@@ -70,7 +73,7 @@ func (up *Updater) IsSameVersion(currentVersion string) (bool, string, error) {
 	up.LastSuccessServer = lastSuccessServer
 
 	if versionFromUS == nil || up.CurrentVer == "" {
-		return true, "unset", nil
+		return true, "", nil
 	} else
 	//if(updater.currentVer != versionFromUS){
 	if request.CompareVersion(versionFromUS, currentVer) > 0 {

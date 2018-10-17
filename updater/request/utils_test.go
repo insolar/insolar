@@ -20,13 +20,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 // Just to make Goland happy
 func TestGetProtocol(t *testing.T) {
-	assert.Equal(t, getProtocolFromAddress("http://localhost:7087/"), "http", "Get protocol utility success")
-	assert.Equal(t, getProtocolFromAddress("localhost:7087"), "", "Get protocol utility success")
+	scheme, err := getProtocolFromAddress("http://localhost:7087/")
+	assert.Nil(t, err)
+	assert.Equal(t, scheme, "http")
+	scheme, err = getProtocolFromAddress("localhost:7087/")
+	assert.NotNil(t, err)
+	assert.Equal(t, scheme, "")
 }
 
 func TestCompare(t *testing.T) {
@@ -43,14 +47,16 @@ func TestExtractValue(t *testing.T) {
 }
 
 func TestNewVersion(t *testing.T) {
-	v1 := NewVersion("v1.2.3")
+	v1, err := NewVersion("v1.2.3")
+	assert.NoError(t, err)
 	assert.Equal(t, v1.Revision, 3)
 	assert.Equal(t, v1.Major, 1)
 	assert.Equal(t, v1.Minor, 2)
 }
 
 func TestExtractVersion(t *testing.T) {
-	v1 := NewVersion("v1.2.3")
+	v1, err := NewVersion("v1.2.3")
+	assert.NoError(t, err)
 	v2 := ExtractVersion("{\"latest\":\"v1.2.3\",\"major\":1,\"minor\":2,\"revision\":3}")
 	assert.Equal(t, v2, v1)
 	assert.Equal(t, v2.Revision, 3)
@@ -59,28 +65,39 @@ func TestExtractVersion(t *testing.T) {
 }
 
 func TestCompareVersion(t *testing.T) {
-	v1 := NewVersion("v1.2.3")
-	v2 := NewVersion("v1.2.4")
+	v1, err := NewVersion("v1.2.3")
+	assert.NoError(t, err)
+	v2, err := NewVersion("v1.2.4")
+	assert.NoError(t, err)
 	assert.Equal(t, CompareVersion(v1, v2), -1)
 	assert.Equal(t, CompareVersion(v1, v1), 0)
 	assert.Equal(t, CompareVersion(v2, v1), 1)
 }
 
 func TestGetMaxVersion(t *testing.T) {
-	v1 := NewVersion("v1.2.3")
-	v2 := NewVersion("v1.2.4")
+	v1, err := NewVersion("v1.2.3")
+	assert.NoError(t, err)
+	v2, err := NewVersion("v1.2.4")
+	assert.NoError(t, err)
 	assert.Equal(t, GetMaxVersion(v1, v2), v2)
 	assert.Equal(t, GetMaxVersion(v2, v1), v2)
 	assert.Equal(t, GetMaxVersion(v1, v1), v1)
 }
 
 func TestFailGetMaxVersion(t *testing.T) {
-	v1 := NewVersion("")
-	v2 := NewVersion("v1.2.4")
-	v3 := NewVersion("unset")
+	v1, err := NewVersion("")
+	assert.Error(t, err)
+	v2, err := NewVersion("v1.2.4")
+	assert.NoError(t, err)
+	v3, err := NewVersion("unset")
+	assert.Error(t, err)
+	v1, err = NewVersion("v1.2.1")
+	assert.NoError(t, err)
+	v3, err = NewVersion("v2.1.1")
+	assert.NoError(t, err)
 	assert.Equal(t, GetMaxVersion(v1, v2), v2)
 	assert.Equal(t, GetMaxVersion(v2, v1), v2)
-	assert.Equal(t, GetMaxVersion(v2, v3), v2)
-	assert.Equal(t, GetMaxVersion(v3, v2), v2)
+	assert.Equal(t, GetMaxVersion(v2, v3), v3)
+	assert.Equal(t, GetMaxVersion(v3, v2), v3)
 	assert.Equal(t, GetMaxVersion(v1, v3), v3)
 }

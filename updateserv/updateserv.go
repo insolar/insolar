@@ -57,26 +57,30 @@ func (ups *UpdateServer) versionHandler(ver *request.Version) http.HandlerFunc {
 	})
 }
 
-func (ups *UpdateServer) LoadVersions() *request.Version {
+// Load list of Version and return max
+func (ups *UpdateServer) LoadVersions() (*request.Version, error) {
 
 	if ups.LatestVersion != "" {
 		return request.NewVersion(ups.LatestVersion)
 	}
 	files, err := ioutil.ReadDir(ups.UploadPath)
 	if err != nil {
-		log.Error(err)
-		return nil
+		return nil, err
 	}
-	newVer := request.NewVersion("v0.0.0")
+	newVer, err := request.NewVersion("v0.0.0")
+	if err != nil {
+		return nil, err
+	}
 	for _, f := range files {
 		if f.IsDir() {
-			newVer = request.GetMaxVersion(newVer, request.NewVersion(f.Name()))
+			tmpVer, _ := request.NewVersion(f.Name())
+			newVer = request.GetMaxVersion(newVer, tmpVer)
 		}
 	}
 	if newVer.Value != "v0.0.0" {
-		return newVer
+		return newVer, nil
 	}
-	return nil
+	return nil, errors.New("Cannot find correct Version")
 }
 
 // ToDo: create uploader
@@ -141,7 +145,10 @@ func returnError(w http.ResponseWriter, message string) {
 }
 
 func (ups *UpdateServer) Start() (err error) {
-	ver := ups.LoadVersions()
+	ver, err := ups.LoadVersions()
+	if err != nil {
+		return err
+	}
 	if ver != nil {
 		http.HandleFunc("/latest", ups.versionHandler(ver))
 		handler := http.FileServer(http.Dir(path.Join(ups.UploadPath, ver.Value)))
