@@ -168,6 +168,61 @@ func (r *Member) GetPublicKeyNoWait(  ) {
 	}
 }
 
+func (r *Member) Call( ref core.RecordRef, method string, params []byte, seed []byte, sign []byte ) ( interface{}, *foundation.Error ) {
+	var args [5]interface{}
+	args[0] = ref
+	args[1] = method
+	args[2] = params
+	args[3] = seed
+	args[4] = sign
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Call", argsSerialized)
+	if err != nil {
+   		panic(err)
+	}
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		panic(err)
+	}
+
+	return ret0, ret1
+}
+
+func (r *Member) CallNoWait( ref core.RecordRef, method string, params []byte, seed []byte, sign []byte ) {
+	var args [5]interface{}
+	args[0] = ref
+	args[1] = method
+	args[2] = params
+	args[3] = seed
+	args[4] = sign
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Call", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (r *Member) AuthorizedCall( ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte ) ( []byte, *foundation.Error ) {
 	var args [6]interface{}
 	args[0] = ref
