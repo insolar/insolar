@@ -20,6 +20,11 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
+func UnmarshalParams(data []byte, to ...interface{}) error {
+	ch := new(codec.CborHandle)
+	return codec.NewDecoderBytes(data, ch).Decode(&to)
+}
+
 // Serialize serializes request params
 func Serialize(ref []byte, delegate []byte, method string, params []byte, seed []byte) ([]byte, error) {
 	var serialized []byte

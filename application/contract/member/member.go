@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
-	"github.com/ugorji/go/codec"
 )
 
 type Member struct {
@@ -47,11 +46,6 @@ func New(name string, key string) *Member {
 		Name:      name,
 		PublicKey: key,
 	}
-}
-
-func UnmarshalParams(data []byte, to ...interface{}) error {
-	ch := new(codec.CborHandle)
-	return codec.NewDecoderBytes(data, ch).Decode(&to)
 }
 
 func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, *foundation.Error) {
@@ -78,7 +72,7 @@ func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []b
 	case "CreateMember":
 		var name string
 		var key string
-		err := UnmarshalParams(params, &name, &key)
+		err := signer.UnmarshalParams(params, &name, &key)
 		if err != nil {
 			return nil, &foundation.Error{S: err.Error()}
 		}
@@ -90,7 +84,7 @@ func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []b
 		return balance, nil
 	case "GetBalance":
 		var member string
-		err := UnmarshalParams(params, &member)
+		err := signer.UnmarshalParams(params, &member)
 		if err != nil {
 			return nil, &foundation.Error{S: err.Error()}
 		}
@@ -99,7 +93,7 @@ func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []b
 	case "Transfer":
 		var amount float64
 		var toStr string
-		err := UnmarshalParams(params, &amount, &toStr)
+		err := signer.UnmarshalParams(params, &amount, &toStr)
 		if err != nil {
 			return nil, &foundation.Error{S: err.Error()}
 		}
