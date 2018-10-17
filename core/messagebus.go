@@ -73,8 +73,10 @@ const (
 	TypeCallConstructor
 	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
 	TypeExecutorResults
-	// TypeValidateCaseBind message that goes to Validators to redo all registered in CaseBind actions
+	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions
 	TypeValidateCaseBind
+	// TypeValidationResult sends from Validator to new Executor with results of validation actions of previous Executor
+	TypeValidationResults
 
 	// Ledger
 
@@ -110,6 +112,8 @@ const (
 	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
 	TypeRegisterChild
+	// TypeJetDrop carries jet drop to validators
+	TypeJetDrop
 
 	// Bootstrap
 

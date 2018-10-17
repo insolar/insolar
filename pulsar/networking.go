@@ -22,88 +22,19 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
-
-// RequestType is a enum-like strings
-// It identifies the type of the rpc-call
-type RequestType string
-
-const (
-	// HealthCheck is a method for checking connection between pulsars
-	HealthCheck RequestType = "Pulsar.HealthCheck"
-
-	// Handshake is a method for creating connection between pulsars
-	Handshake RequestType = "Pulsar.MakeHandshake"
-
-	// ReceiveSignatureForEntropy is a method for receiving signs from peers
-	ReceiveSignatureForEntropy RequestType = "Pulsar.ReceiveSignatureForEntropy"
-
-	// ReceiveEntropy is a method for receiving entropy from peers
-	ReceiveEntropy RequestType = "Pulsar.ReceiveEntropy"
-
-	// ReceiveVector is a method for receiving vectors from peers
-	ReceiveVector RequestType = "Pulsar.ReceiveVector"
-
-	// ReceiveChosenSignature is a method for receiving signature for sending from peers
-	ReceiveChosenSignature RequestType = "Pulsar.ReceiveChosenSignature"
-
-	// ReceivePulse is a method for receiving pulse from the sender
-	ReceivePulse RequestType = "Pulsar.ReceivePulse"
-)
-
-func (state RequestType) String() string {
-	return string(state)
-}
-
-type Payload struct {
-	PublicKey string
-	Signature []byte
-	Body      interface{}
-}
-
-type HandshakePayload struct {
-	Entropy core.Entropy
-}
-
-type GetLastPulsePayload struct {
-	core.Pulse
-}
-
-type EntropySignaturePayload struct {
-	PulseNumber core.PulseNumber
-	Signature   []byte
-}
-
-type EntropyPayload struct {
-	PulseNumber core.PulseNumber
-	Entropy     core.Entropy
-}
-
-type VectorPayload struct {
-	PulseNumber core.PulseNumber
-	Vector      map[string]*bftCell
-}
-
-type SenderConfirmationPayload struct {
-	PulseNumber     core.PulseNumber
-	Signature       []byte
-	ChosenPublicKey string
-}
-
-type PulsePayload struct {
-	Pulse core.Pulse
-}
 
 type Handler struct {
-	pulsar *Pulsar
+	Pulsar *Pulsar
 }
 
 func (handler *Handler) isRequestValid(request *Payload) (success bool, neighbour *Neighbour, err error) {
-	if handler.pulsar.isStateFailed() {
+	if handler.Pulsar.IsStateFailed() {
 		return false, nil, nil
 	}
 
-	neighbour, err = handler.pulsar.fetchNeighbour(request.PublicKey)
+	neighbour, err = handler.Pulsar.FetchNeighbour(request.PublicKey)
 	if err != nil {
 		log.Warn("Message from unknown host %v", request.PublicKey)
 		return false, neighbour, err
@@ -129,7 +60,7 @@ func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
 
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
 	log.Infof("[MakeHandshake] from %v", request.PublicKey)
-	neighbour, err := handler.pulsar.fetchNeighbour(request.PublicKey)
+	neighbour, err := handler.Pulsar.FetchNeighbour(request.PublicKey)
 	if err != nil {
 		log.Warn("Message from unknown host %v", request.PublicKey)
 		return err
@@ -145,14 +76,14 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		return err
 	}
 
-	generator := StandardEntropyGenerator{}
-	convertedKey, err := ecdsa.ExportPublicKey(&handler.pulsar.PrivateKey.PublicKey)
+	generator := entropygenerator.StandardEntropyGenerator{}
+	convertedKey, err := ecdsa.ExportPublicKey(&handler.Pulsar.PrivateKey.PublicKey)
 	if err != nil {
 		log.Warn(err)
 		return err
 	}
 	message := Payload{PublicKey: convertedKey, Body: HandshakePayload{Entropy: generator.GenerateEntropy()}}
-	message.Signature, err = signData(handler.pulsar.PrivateKey, message.Body)
+	message.Signature, err = signData(handler.Pulsar.PrivateKey, message.Body)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -171,7 +102,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 		log.Error(err)
 		return err
 	}
-	log.Infof("pulsar - %v connected to - %v", handler.pulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
+	log.Infof("Pulsar - %v connected to - %v", handler.Pulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
 	return nil
 }
 
@@ -187,19 +118,19 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 
 	requestBody := request.Body.(EntropySignaturePayload)
 	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 
-	if handler.pulsar.stateSwitcher.getState() < generateEntropy {
-		err = handler.pulsar.StartConsensusProcess(requestBody.PulseNumber)
+	if handler.Pulsar.StateSwitcher.GetState() < GenerateEntropy {
+		err = handler.Pulsar.StartConsensusProcess(requestBody.PulseNumber)
 		if err != nil {
-			handler.pulsar.stateSwitcher.switchToState(failed, err)
+			handler.Pulsar.StateSwitcher.SwitchToState(Failed, err)
 			return nil
 		}
 	}
 
-	handler.pulsar.OwnedBftRow[request.PublicKey] = &bftCell{Sign: requestBody.Signature}
+	handler.Pulsar.OwnedBftRow[request.PublicKey] = &BftCell{Sign: requestBody.Signature}
 
 	return nil
 }
@@ -216,21 +147,21 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 
 	requestBody := request.Body.(EntropyPayload)
 	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
-	if btfCell, ok := handler.pulsar.OwnedBftRow[request.PublicKey]; ok {
+	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
 		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
 		if err != nil || !isVerified {
-			handler.pulsar.OwnedBftRow[request.PublicKey] = nil
+			handler.Pulsar.OwnedBftRow[request.PublicKey] = nil
 			log.Errorf("signature and entropy aren't matched. error - %v isVerified - %v", err, isVerified)
 			return errors.New("signature and entropy aren't matched")
 		}
 
-		btfCell.lock.Lock()
+		btfCell.Lock()
 		btfCell.Entropy = requestBody.Entropy
 		btfCell.IsEntropyReceived = true
-		btfCell.lock.Unlock()
+		btfCell.Unlock()
 	}
 
 	return nil
@@ -241,18 +172,18 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 	ok, _, err := handler.isRequestValid(request)
 	if !ok {
 		if err != nil {
-			log.Errorf("%v - %v", handler.pulsar.Config.MainListenerAddress, err)
+			log.Errorf("%v - %v", handler.Pulsar.Config.MainListenerAddress, err)
 		}
 		return err
 	}
 
 	requestBody := request.Body.(VectorPayload)
 	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 
-	handler.pulsar.setBftGridItem(request.PublicKey, requestBody.Vector)
+	handler.Pulsar.SetBftGridItem(request.PublicKey, requestBody.Vector)
 
 	return nil
 }
@@ -267,23 +198,30 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		return err
 	}
 
-	requestBody := request.Body.(SenderConfirmationPayload)
+	requestBody := request.Body.(core.PulseSenderConfirmation)
 	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 
-	isVerified, err := checkSignature(requestBody.ChosenPublicKey, request.PublicKey, requestBody.Signature)
+	isVerified, err := checkSignature(core.PulseSenderConfirmation{
+		ChosenPublicKey: requestBody.ChosenPublicKey,
+		Entropy:         requestBody.Entropy,
+		PulseNumber:     requestBody.PulseNumber,
+	}, request.PublicKey, requestBody.Signature)
 	if !isVerified || err != nil {
 		log.Errorf("signature and chosen publicKey aren't matched. error - %v isVerified - %v", err, isVerified)
 		return errors.New("signature check failed")
 	}
 
-	handler.pulsar.CurrentSlotSenderConfirmations[request.PublicKey] = core.PulseSenderConfirmation{
+	handler.Pulsar.currentSlotSenderConfirmationsLock.Lock()
+	handler.Pulsar.CurrentSlotSenderConfirmations[request.PublicKey] = core.PulseSenderConfirmation{
 		ChosenPublicKey: requestBody.ChosenPublicKey,
 		Signature:       requestBody.Signature,
+		PulseNumber:     requestBody.PulseNumber,
+		Entropy:         requestBody.Entropy,
 	}
-
+	handler.Pulsar.currentSlotSenderConfirmationsLock.Unlock()
 	return nil
 }
 
@@ -300,21 +238,21 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 
 	requestBody := request.Body.(PulsePayload)
 	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.Pulse.PulseNumber != handler.pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.pulsar.ProcessingPulseNumber)
+	//if requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
 	//}
 
-	err = handler.pulsar.Storage.SetLastPulse(&requestBody.Pulse)
+	err = handler.Pulsar.Storage.SetLastPulse(&requestBody.Pulse)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	err = handler.pulsar.Storage.SavePulse(&requestBody.Pulse)
+	err = handler.Pulsar.Storage.SavePulse(&requestBody.Pulse)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	handler.pulsar.LastPulse = &requestBody.Pulse
+	handler.Pulsar.LastPulse = &requestBody.Pulse
 
 	return nil
 }

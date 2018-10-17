@@ -35,6 +35,15 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
+type Ref = core.RecordRef
+
+// Context of one contract execution
+type ExecutionContext struct {
+	Pending bool           // execution moved from previous pulse
+	TraceID []byte         // TraceID
+	Queue   []core.Message // queued requests
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
@@ -42,11 +51,13 @@ type LogicRunner struct {
 	MessageBus      core.MessageBus
 	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
+	context         map[Ref]ExecutionContext // if object exists, we are validating or executing it right now
+	contextMutex    sync.Mutex
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
 	caseBindMutex        sync.Mutex
-	caseBindReplays      map[core.RecordRef]core.CaseBindReplay
+	caseBindReplays      map[Ref]core.CaseBindReplay
 	caseBindReplaysMutex sync.Mutex
 	sock                 net.Listener
 }
@@ -59,8 +70,9 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
-		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[core.RecordRef][]core.CaseRecord)},
-		caseBindReplays: make(map[core.RecordRef]core.CaseBindReplay),
+		context:         make(map[Ref]ExecutionContext),
+		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[Ref][]core.CaseRecord)},
+		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
 	return &res, nil
 }
@@ -109,6 +121,9 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	if err := messageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
 		return err
 	}
+	if err := messageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -151,8 +166,26 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
+func (lr *LogicRunner) GetContext(ref Ref) (ExecutionContext, bool) {
+	lr.contextMutex.Lock()
+	defer lr.contextMutex.Unlock()
+	ret, ok := lr.context[ref]
+	return ret, ok
+}
+
+func (lr *LogicRunner) SetContext(ref Ref, ec ExecutionContext) bool {
+	lr.contextMutex.Lock()
+	defer lr.contextMutex.Unlock()
+	if _, ok := lr.context[ref]; ok {
+		return false
+	}
+	lr.context[ref] = ec
+	return true
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
+	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
@@ -178,28 +211,50 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
+		ec := ExecutionContext{}
+		if !lr.SetContext(ref, ec) {
+			return nil, errors.New("Object already exeuting")
+		}
 		re, err := lr.executeMethodCall(ctx, m, vb)
+		lr.contextMutex.Lock()
+		defer lr.contextMutex.Unlock()
+		delete(lr.context, ref)
 		return re, err
 
 	case *message.CallConstructor:
 		re, err := lr.executeConstructorCall(ctx, m, vb)
 		return re, err
-	case *message.ValidateCaseBind:
-		// TODO testBus goes here, send test bus to ValidateCaseBind
-		return nil, nil
-	case *message.ExecutorResults:
-		// TODO testBus goes here, send test bus to ExecutorResults
-		return nil, nil
+
 	default:
 		panic("Unknown e type")
 	}
 }
 
 func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
+	msg, ok := inmsg.(*message.ValidateCaseBind)
+	if !ok {
+		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
+	}
+
+	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	_, err := lr.MessageBus.Send(&message.ValidationResults{
+		RecordRef:        msg.GetReference(),
+		PassedStepsCount: passedStepsCount,
+		Error:            validationError,
+	})
+
+	return nil, err
+}
+
+func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply, error) {
+	// Handle all validators Request
+	// Do some staff if request don't come for a long time
+	// Compare results of different validators and previous Executor
 	return nil, nil
 }
 
 func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
+	// Coordinate this with ProcessValidationResults
 	return nil, nil
 }
 
@@ -233,11 +288,7 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
 
-	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
-	}
-
+	codeDesc := classDesc.CodeDescriptor()
 	ob := &objectBody{
 		Body:        objDesc.Memory(),
 		Code:        *codeDesc.Ref(),
@@ -327,11 +378,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	}
 	ctx.Class = classDesc.HeadRef()
 
-	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get class's code descriptor")
-	}
-
+	codeDesc := classDesc.CodeDescriptor()
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "no executer registered")
@@ -392,7 +439,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, records := range objectsRecords {
-		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records})
+		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse})
 		if err != nil {
 			panic("Error while sending caseBind data to validators: " + err.Error())
 		}

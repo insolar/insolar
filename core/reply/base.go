@@ -31,6 +31,8 @@ const (
 
 	// TypeError is reply with error.
 	TypeError = core.ReplyType(iota + 1)
+	// TypeOK is a generic reply for success calls without returned value.
+	TypeOK
 
 	// Logicrunner
 
@@ -87,6 +89,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &Children{}, nil
 	case TypeError:
 		return &Error{}, nil
+	case TypeOK:
+		return &OK{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
@@ -132,4 +136,6 @@ func init() {
 	gob.Register(&Reference{})
 	gob.Register(&ID{})
 	gob.Register(&Children{})
+	gob.Register(&Error{})
+	gob.Register(&OK{})
 }

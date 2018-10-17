@@ -109,7 +109,7 @@ func JustExportedStaticFunction(int, int) {}
 
 func TestBasicGeneration(t *testing.T) {
 	t.Parallel()
-	tmpDir, err := ioutil.TempDir("", "test-")
+	tmpDir, err := ioutil.TempDir("", "test_")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 

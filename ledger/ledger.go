@@ -65,7 +65,7 @@ func NewLedger(conf configuration.Ledger) (*Ledger, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "jet coordinator creation failed")
 	}
-	pm, err := pulsemanager.NewPulseManager(db, jc)
+	pm, err := pulsemanager.NewPulseManager(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "pulse manager creation failed")
 	}
