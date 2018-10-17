@@ -112,10 +112,11 @@ func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.Record
 		return nil, ErrUnexpectedReply
 	}
 	desc := ClassDescriptor{
-		am:    m,
-		head:  react.Head,
-		state: react.State,
-		code:  react.Code,
+		am:          m,
+		head:        react.Head,
+		state:       react.State,
+		code:        react.Code,
+		machineType: react.MachineType,
 	}
 	return &desc, nil
 }

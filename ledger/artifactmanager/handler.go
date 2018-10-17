@@ -110,9 +110,10 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 	}
 
 	rep := reply.Class{
-		Head:  msg.Head,
-		State: *stateID,
-		Code:  code,
+		Head:        msg.Head,
+		State:       *stateID,
+		Code:        code,
+		MachineType: state.GetMachineType(),
 	}
 
 	return &rep, nil
@@ -268,6 +269,11 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 	requestRef := record.Core2Reference(msg.Request)
 	codeRef := record.Core2Reference(msg.Code)
 
+	codeRec, err := getCode(h.db, codeRef.Record)
+	if err != nil {
+		return nil, err
+	}
+
 	rec := record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
 			StatefulResult: record.StatefulResult{
@@ -277,10 +283,10 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 				},
 			},
 		},
-		Code: codeRef,
+		Code:        codeRef,
+		MachineType: codeRec.MachineType,
 	}
 
-	var err error
 	var activateID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		activateID, err = tx.SetRecord(&rec)
@@ -359,17 +365,18 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 	requestRef := record.Core2Reference(msg.Request)
 	classRef := record.Core2Reference(msg.Class)
 	migrationRefs := make([]record.Reference, 0, len(msg.Class))
+	codeRef := record.Core2Reference(msg.Code)
 	for _, migration := range msg.Migrations {
 		migrationRefs = append(migrationRefs, record.Core2Reference(migration))
 	}
 
-	var err error
-	err = validateCode(h.db, &msg.Code)
+	codeRec, err := getCode(h.db, codeRef.Record)
 	if err != nil {
 		return nil, err
 	}
-	for _, migration := range msg.Migrations {
-		err = validateCode(h.db, &migration)
+
+	for _, migration := range migrationRefs {
+		_, err = getCode(h.db, migration.Record)
 		if err != nil {
 			return nil, err
 		}
@@ -392,8 +399,9 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 				},
 				AmendedRecord: idx.LatestState,
 			},
-			NewCode:    record.Core2Reference(msg.Code),
-			Migrations: migrationRefs,
+			NewCode:     record.Core2Reference(msg.Code),
+			MachineType: codeRec.MachineType,
+			Migrations:  migrationRefs,
 		}
 
 		amendID, err = tx.SetRecord(&rec)
@@ -786,18 +794,4 @@ func getObject(
 	}
 
 	return idx, stateID.CoreID(), stateRec, nil
-}
-
-func validateCode(s storage.Store, ref *core.RecordRef) error {
-	codeRef := record.Core2Reference(*ref)
-	rec, err := s.GetRecord(&codeRef.Record)
-	if err != nil {
-		return err
-	}
-
-	if _, ok := rec.(*record.CodeRecord); !ok {
-		return errors.New("invalid code reference")
-	}
-
-	return nil
 }
