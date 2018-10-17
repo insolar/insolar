@@ -302,6 +302,7 @@ func (db *DB) waitinflight() {
 func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 	*jetdrop.JetDrop,
 	[][2][]byte, // records
+	[][2][]byte, // indexes
 	error,
 ) {
 	var err error
@@ -314,14 +315,14 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 	hw := hash.NewIDHash()
 	_, err = hw.Write(prevHash)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var records [][2][]byte
 	err = db.db.View(func(txn *badger.Txn) error {
-		ops := badger.DefaultIteratorOptions
-		it := txn.NewIterator(ops)
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
+
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			key := item.Key()
@@ -338,7 +339,28 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+
+	var indexes [][2][]byte
+	err = db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		seekIndex := []byte{scopeIDLifeline}
+		for it.Seek(seekIndex); it.ValidForPrefix(seekIndex); it.Next() {
+			item := it.Item()
+			key := item.Key()
+			value, err := item.ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+			indexes = append(indexes, [2][]byte{key, value})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	drop := jetdrop.JetDrop{
@@ -346,7 +368,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		PrevHash: prevHash,
 		Hash:     hw.Sum(nil),
 	}
-	return &drop, records, nil
+	return &drop, records, indexes, nil
 }
 
 // SetDrop saves provided JetDrop in db.
@@ -470,4 +492,9 @@ func (db *DB) Update(fn func(*TransactionManager) error) error {
 	}
 	tx.Discard()
 	return err
+}
+
+// GetBadgerDB return badger.DB instance (for internal usage, like tests)
+func (db *DB) GetBadgerDB() *badger.DB {
+	return db.db
 }

@@ -338,6 +338,7 @@ type JetDrop struct {
 	Jet     core.RecordRef
 	Drop    []byte
 	Records [][2][]byte
+	Indexes [][2][]byte
 }
 
 // Type implementation of Message interface.
