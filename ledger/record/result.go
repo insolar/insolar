@@ -18,7 +18,6 @@ package record
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 // ClassState is common class state record.
@@ -29,6 +28,8 @@ type ClassState interface {
 	IsAmend() bool
 	// GetCode returns state code.
 	GetCode() *Reference
+	// GetMachineType returns state code machine type.
+	GetMachineType() core.MachineType
 }
 
 // ObjectState is common object state record.
@@ -139,7 +140,12 @@ type ClassActivateRecord struct {
 	ActivationRecord
 
 	Code          Reference
+	MachineType   core.MachineType
 	DefaultMemory Memory
+}
+
+func (r *ClassActivateRecord) GetMachineType() core.MachineType {
+	return r.MachineType
 }
 
 // IsDeactivation determines if current state is deactivation.
@@ -225,8 +231,13 @@ type AmendRecord struct {
 type ClassAmendRecord struct {
 	AmendRecord
 
-	NewCode    Reference   // CodeRecord
-	Migrations []Reference // CodeRecord
+	NewCode     Reference // CodeRecord
+	MachineType core.MachineType
+	Migrations  []Reference // CodeRecord
+}
+
+func (r *ClassAmendRecord) GetMachineType() core.MachineType {
+	return r.MachineType
 }
 
 // IsDeactivation determines if current state is deactivation.
@@ -247,6 +258,10 @@ func (r *ClassAmendRecord) GetCode() *Reference {
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
 	AmendRecord
+}
+
+func (*DeactivationRecord) GetMachineType() core.MachineType {
+	return core.MachineTypeNotExist
 }
 
 // IsDeactivation determines if current state is deactivation.
