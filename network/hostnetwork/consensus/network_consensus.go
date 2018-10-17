@@ -23,8 +23,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/nodekeeper"
-	"github.com/pkg/errors"
 )
 
 type participantWrapper struct {
@@ -37,7 +35,7 @@ func (an *participantWrapper) GetActiveNode() *core.ActiveNode {
 }
 
 type selfWrapper struct {
-	keeper nodekeeper.NodeKeeper
+	keeper consensus.NodeKeeper
 }
 
 // GetActiveNode implements Participant interface for NodeKeeper wrapper.
@@ -48,9 +46,9 @@ func (s *selfWrapper) GetActiveNode() *core.ActiveNode {
 // NetworkConsensus binds all functionality related to consensus with the network layer
 type NetworkConsensus struct {
 	consensus       consensus.Consensus
-	communicatorSnd consensus.Communicator
-	communicatorRcv consensus.CommunicatorReceiver
-	keeper          nodekeeper.NodeKeeper
+	communicatorSnd *communicatorSender
+	communicatorRcv *communicatorReceiver
+	keeper          consensus.NodeKeeper
 	self            *selfWrapper
 }
 
@@ -99,19 +97,21 @@ func (ic *NetworkConsensus) ReceiverHandler() consensus.CommunicatorReceiver {
 	return ic.communicatorRcv
 }
 
+// SetNodeKeeper set NodeKeeper for the processor to integrate Processor with unsync -> sync -> active pipeline
+func (ic *NetworkConsensus) SetNodeKeeper(keeper consensus.NodeKeeper) {
+	ic.keeper = keeper
+	ic.self = &selfWrapper{keeper}
+	ic.communicatorSnd.keeper = keeper
+	ic.communicatorRcv.keeper = keeper
+}
+
 // NewInsolarConsensus creates new object to handle all consensus events
-func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.Processor, error) {
-	communicatorSnd := &communicatorSender{handler, keeper}
-	communicatorRcv := &communicatorReceiver{handler, keeper}
-	consensus, err := consensus.NewConsensus(communicatorSnd)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating insolar consensus")
-	}
+func NewInsolarConsensus(handler hosthandler.HostHandler) consensus.Processor {
+	communicatorSnd := &communicatorSender{handler: handler}
+	communicatorRcv := &communicatorReceiver{handler: handler}
 	return &NetworkConsensus{
-		consensus:       consensus,
+		consensus:       consensus.NewConsensus(communicatorSnd),
 		communicatorSnd: communicatorSnd,
 		communicatorRcv: communicatorRcv,
-		keeper:          keeper,
-		self:            &selfWrapper{keeper},
-	}, nil
+	}
 }

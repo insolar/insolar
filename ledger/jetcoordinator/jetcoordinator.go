@@ -103,13 +103,10 @@ func (jc *JetCoordinator) QueryRole(
 }
 
 func (jc *JetCoordinator) Link(components core.Components) error {
-	if components.Network == nil {
-		return errors.New("no core.Network in components")
+	if components.ActiveNodeComponent == nil {
+		return errors.New("core.ActiveNodeComponent is nil!")
 	}
-	if components.Network.GetActiveNodeComponent() == nil {
-		return errors.New("core.Network.ActiveNodeComponent is nil!")
-	}
-	jc.activeNodes = components.Network.GetActiveNodeComponent()
+	jc.activeNodes = components.ActiveNodeComponent
 	return nil
 }
 

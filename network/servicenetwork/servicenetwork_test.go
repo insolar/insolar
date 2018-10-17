@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -194,8 +195,8 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		nil,
 		secondNodeId))
 
-	secondNode.Start(core.Components{})
-	firstNode.Start(core.Components{})
+	secondNode.Start(core.Components{ActiveNodeComponent: nodekeeper.NewNodeKeeper(core.NewRefFromBase58(secondNodeId))})
+	firstNode.Start(core.Components{ActiveNodeComponent: nodekeeper.NewNodeKeeper(core.NewRefFromBase58(firstNodeId))})
 
 	defer func() {
 		firstNode.Stop()
@@ -223,19 +224,19 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	}
 
 	firstNode.SendCascadeMessage(c, "test", e)
-	success := waitTimeout(&wg, 20*time.Millisecond)
+	success := waitTimeout(&wg, 100*time.Millisecond)
 
 	assert.True(t, success)
 
 	err := firstNode.SendCascadeMessage(c, "test", nil)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	c.ReplicationFactor = 0
 	err = firstNode.SendCascadeMessage(c, "test", e)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	c.ReplicationFactor = 2
 	c.NodeIds = nil
 	err = firstNode.SendCascadeMessage(c, "test", e)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }
 
 func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {

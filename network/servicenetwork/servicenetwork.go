@@ -27,9 +27,9 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
@@ -38,7 +38,7 @@ import (
 type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
-	nodeKeeper  nodekeeper.NodeKeeper
+	nodeKeeper  consensus.NodeKeeper
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -50,27 +50,14 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	if node == nil {
 		return nil, errors.New("failed to create a node network")
 	}
-	nodeKeeper := nodekeeper.NewNodeKeeper(node.GetID())
-
-	// TODO: get roles from certificate
-	if len(conf.Host.BootstrapHosts) == 0 {
-		log.Info("Bootstrap nodes is not set. Init zeronet.")
-		nodeKeeper.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
-			NodeID:   node.GetID(),
-			PulseNum: 0,
-			State:    core.NodeActive,
-			Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
-			// PublicKey: &dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey().PublicKey,
-		}})
-	}
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, node.GetPrivateKey(), nodeKeeper)
+	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, node.GetPrivateKey())
 	if err != nil {
 		return nil, err
 	}
 
-	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht, nodeKeeper: nodeKeeper}
+	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
 	f := func(data core.Cascade, method string, args [][]byte) error {
 		return service.initCascadeSendMessage(data, true, method, args)
 	}
@@ -154,6 +141,14 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
+
+	if components.ActiveNodeComponent == nil {
+		log.Error("active node component is nil")
+	} else {
+		nodeKeeper := components.ActiveNodeComponent.(consensus.NodeKeeper)
+		network.nodeKeeper = nodeKeeper
+		network.hostNetwork.SetNodeKeeper(nodeKeeper)
+	}
 
 	if components.NetworkCoordinator == nil {
 		log.Error("network coordinator is nil")

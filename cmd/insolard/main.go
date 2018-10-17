@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
@@ -110,6 +111,8 @@ func main() {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	cm := componentManager{}
+
+	cm.components.ActiveNodeComponent = nodekeeper.NewActiveNodeComponent(cfgHolder.Configuration)
 
 	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
 	if err != nil {

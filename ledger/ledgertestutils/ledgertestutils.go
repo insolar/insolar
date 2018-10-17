@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger"
@@ -97,7 +98,8 @@ func TmpLedger(t testing.TB, lr core.LogicRunner, dir string) (*ledger.Ledger, f
 
 	// Init components.
 	mb := newMessageBusMock()
-	components := core.Components{MessageBus: mb, LogicRunner: lr}
+	components := core.Components{MessageBus: mb, LogicRunner: lr,
+		ActiveNodeComponent: nodekeeper.NewNodeKeeper(core.RecordRef{})}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)

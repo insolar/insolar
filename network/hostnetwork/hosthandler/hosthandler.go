@@ -146,6 +146,7 @@ type HostHandler interface {
 	SetOuterHostsCount(hosts int)
 	SetNodeID(nodeID core.RecordRef)
 	SetAuthStatus(targetID string, status bool)
+	SetNodeKeeper(keeper consensus.NodeKeeper)
 
 	GetHostsFromBootstrap()
 	GetProxyHostsCount() int

@@ -41,7 +41,7 @@ func newSelfNode(ref core.RecordRef) *core.ActiveNode {
 	}
 }
 
-func newNodeKeeper() NodeKeeper {
+func newNodeKeeper() consensus.NodeKeeper {
 	id := core.RecordRef{255}
 	keeper := NewNodeKeeper(id)
 	keeper.AddActiveNodes([]*core.ActiveNode{newSelfNode(id)})
@@ -145,7 +145,7 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 	wg.Add(num)
 	for i := 0; i < num; i++ {
 		time.Sleep(100 * time.Millisecond)
-		go func(k NodeKeeper, i int) {
+		go func(k consensus.NodeKeeper, i int) {
 			_, _ = k.AddUnsync(newActiveNode(byte(2 * i)))
 			_, _ = k.AddUnsync(newActiveNode(byte(2*i + 1)))
 			pulse := core.PulseNumber(i)
@@ -243,7 +243,7 @@ func TestNodekeeper_GetUnsyncHolder3(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func(keeper NodeKeeper, wg *sync.WaitGroup) {
+	go func(keeper consensus.NodeKeeper, wg *sync.WaitGroup) {
 		_, err := keeper.GetUnsyncHolder(nextPulse, time.Millisecond)
 		assert.Error(t, err)
 		wg.Done()

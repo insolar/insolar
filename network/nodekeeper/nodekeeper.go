@@ -22,44 +22,33 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/pkg/errors"
 )
 
-// NodeKeeper manages unsync, sync and active lists
-type NodeKeeper interface {
-	// GetID get current node ID
-	GetID() core.RecordRef
-	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
-	GetSelf() *core.ActiveNode
-	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref core.RecordRef) *core.ActiveNode
-	// GetActiveNodes get active nodes.
-	GetActiveNodes() []*core.ActiveNode
-	// GetActiveNodesByRole get active nodes by role
-	GetActiveNodesByRole(role core.JetRole) []core.RecordRef
-	// AddActiveNodes add active nodes.
-	AddActiveNodes([]*core.ActiveNode)
-	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
-	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list
-	SetPulse(number core.PulseNumber) (bool, *UnsyncList)
-	// Sync initiates transferring syncCandidates -> sync, sync -> active.
-	// If number is less than internal PulseNumber then ignore Sync.
-	Sync(syncCandidates []*core.ActiveNode, number core.PulseNumber)
-	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
-	// Channel will return nil node if added node has not passed the consensus.
-	// Returns error if current node is not active and cannot participate in consensus.
-	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error)
-	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
-	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
-	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
-	// 3. If pulse is more than internal NodeKeeper pulse, blocks till next SetPulse or duration timeout and then acts like in par. 2
-	GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (*UnsyncList, error)
+// NewActiveNodeComponent create active node component
+func NewActiveNodeComponent(configuration configuration.Configuration) core.ActiveNodeComponent {
+	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
+	nodeKeeper := NewNodeKeeper(nodeID)
+	// TODO: get roles from certificate
+	if len(configuration.Host.BootstrapHosts) == 0 {
+		log.Info("Bootstrap nodes is not set. Init zeronet.")
+		nodeKeeper.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
+			NodeID:   nodeID,
+			PulseNum: 0,
+			State:    core.NodeActive,
+			Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+			// PublicKey: &dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey().PublicKey,
+		}})
+	}
+	return nodeKeeper
 }
 
 // NewNodeKeeper create new NodeKeeper
-func NewNodeKeeper(nodeID core.RecordRef) NodeKeeper {
+func NewNodeKeeper(nodeID core.RecordRef) consensus.NodeKeeper {
 	return &nodekeeper{
 		nodeID:      nodeID,
 		state:       undefined,
@@ -96,6 +85,14 @@ type nodekeeper struct {
 	unsyncList  *UnsyncList
 	listWaiters []chan *UnsyncList
 	nodeWaiters map[core.RecordRef]chan *core.ActiveNode
+}
+
+func (nk *nodekeeper) Start(components core.Components) error {
+	return nil
+}
+
+func (nk *nodekeeper) Stop() error {
+	return nil
 }
 
 func (nk *nodekeeper) GetID() core.RecordRef {
@@ -171,7 +168,7 @@ func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
 	return nk.active[ref]
 }
 
-func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, *UnsyncList) {
+func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, consensus.UnsyncList) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
@@ -246,7 +243,7 @@ func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, ad
 	return ch, nil
 }
 
-func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (*UnsyncList, error) {
+func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (consensus.UnsyncList, error) {
 	nk.unsyncLock.Lock()
 	currentPulse := nk.pulse
 
@@ -308,7 +305,7 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.ActiveNode) {
 	log.Infof("Sync success for pulse %d", nk.pulse)
 }
 
-func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
+func (nk *nodekeeper) collectUnsync(number core.PulseNumber) consensus.UnsyncList {
 	nk.pulse = number
 	nk.state = pulseSet
 

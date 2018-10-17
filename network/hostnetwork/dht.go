@@ -41,7 +41,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
@@ -64,7 +63,7 @@ type DHT struct {
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
 	nodeID            core.RecordRef
-	activeNodeKeeper  nodekeeper.NodeKeeper
+	activeNodeKeeper  consensus.NodeKeeper
 	majorityRule      int
 }
 
@@ -134,7 +133,6 @@ func NewDHT(
 	timeout int,
 	infbootstrap bool,
 	nodeID core.RecordRef,
-	keeper nodekeeper.NodeKeeper,
 	majorityRule int,
 	key *ecdsa.PrivateKey,
 ) (dht *DHT, err error) {
@@ -144,10 +142,6 @@ func NewDHT(
 	}
 
 	rel := relay.NewRelay()
-
-	if keeper == nil {
-		keeper = nodekeeper.NewNodeKeeper(nodeID)
-	}
 
 	dht = &DHT{
 		options:           options,
@@ -161,7 +155,6 @@ func NewDHT(
 		timeout:           timeout,
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
-		activeNodeKeeper:  keeper,
 		majorityRule:      majorityRule,
 	}
 
@@ -196,6 +189,11 @@ func NewDHT(
 	dht.subnet.SubnetIDs = make(map[string][]string)
 
 	return dht, nil
+}
+
+func (dht *DHT) SetNodeKeeper(keeper consensus.NodeKeeper) {
+	dht.activeNodeKeeper = keeper
+	dht.GetNetworkCommonFacade().GetConsensus().SetNodeKeeper(keeper)
 }
 
 func newTables(origin *host.Origin) ([]*routing.HashTable, error) {
@@ -280,7 +278,8 @@ func (dht *DHT) Bootstrap() error {
 		log.Info("empty bootstrap hosts")
 		return nil
 	}
-	dht.checkBootstrapHostsDomains(dht.options.BootstrapHosts)
+	// TODO: uncomment this for DNS and fix tests
+	// dht.checkBootstrapHostsDomains(dht.options.BootstrapHosts)
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {

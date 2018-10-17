@@ -73,7 +73,8 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 	assert.NoError(t, err)
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			network, err := NewHostNetwork(test.cfg, nodenet, cascade1, key, nodekeeper.NewNodeKeeper(nodenet.GetID()))
+			network, err := NewHostNetwork(test.cfg, nodenet, cascade1, key)
+			network.SetNodeKeeper(nodekeeper.NewNodeKeeper(nodenet.GetID()))
 			if test.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, network)

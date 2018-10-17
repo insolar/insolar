@@ -47,3 +47,14 @@ type ActiveNode struct {
 	// TODO: big problems with serialization of this PublicKey, skipping for now
 	Address string
 }
+
+type ActiveNodeComponent interface {
+	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
+	GetSelf() *ActiveNode
+	// GetActiveNode get active node by its reference. Returns nil if node is not found.
+	GetActiveNode(ref RecordRef) *ActiveNode
+	// GetActiveNodes get active nodes.
+	GetActiveNodes() []*ActiveNode
+	// GetActiveNodesByRole get active nodes by role
+	GetActiveNodesByRole(role JetRole) []RecordRef
+}

@@ -25,19 +25,18 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
 
 type communicatorReceiver struct {
 	handler hosthandler.HostHandler
-	keeper  nodekeeper.NodeKeeper
+	keeper  consensus.NodeKeeper
 }
 
 type communicatorSender struct {
 	handler hosthandler.HostHandler
-	keeper  nodekeeper.NodeKeeper
+	keeper  consensus.NodeKeeper
 }
 
 func (c *communicatorReceiver) ExchangeData(ctx context.Context, pulse core.PulseNumber,
