@@ -155,7 +155,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 
 	requestBody := request.Body.(EntropyPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("last pulse number is bigger than received one")
+		return fmt.Errorf("processing pulse number is bigger than received one")
 	}
 
 	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
@@ -188,12 +188,12 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 
 	state := handler.Pulsar.StateSwitcher.GetState()
 	if state >= Verifying {
-		return fmt.Errorf("Pulsar in the bft state")
+		return fmt.Errorf("pulsar is in the bft state")
 	}
 
 	requestBody := request.Body.(VectorPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("last pulse number is bigger than received one")
+		return fmt.Errorf("processing pulse number is bigger than received one")
 	}
 
 	handler.Pulsar.SetBftGridItem(request.PublicKey, requestBody.Vector)
@@ -214,7 +214,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 
 	requestBody := request.Body.(core.PulseSenderConfirmation)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("last pulse number is bigger than received one")
+		return fmt.Errorf("processing pulse number is bigger than received one")
 	}
 
 	isVerified, err := checkSignature(core.PulseSenderConfirmation{
@@ -251,7 +251,7 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 
 	requestBody := request.Body.(PulsePayload)
 	if handler.Pulsar.ProcessingPulseNumber != 0 && requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("last pulse number is bigger than received one")
+		return fmt.Errorf("processing pulse number is not zero and received number is not the same")
 	}
 	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.LastPulse.PulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
