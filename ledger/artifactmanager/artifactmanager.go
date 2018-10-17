@@ -17,10 +17,13 @@
 package artifactmanager
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/log"
 )
 
 const (
@@ -71,12 +74,9 @@ func (m *LedgerArtifactManager) RegisterRequest(
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
-func (m *LedgerArtifactManager) GetCode(
-	code core.RecordRef, machinePref []core.MachineType,
-) (core.CodeDescriptor, error) {
+func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
 	genericReact, err := m.messageBus.Send(&message.GetCode{
-		Code:        code,
-		MachinePref: machinePref,
+		Code: code,
 	})
 
 	if err != nil {
@@ -88,12 +88,10 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, ErrUnexpectedReply
 	}
 	desc := CodeDescriptor{
-		machinePref: machinePref,
 		ref:         code,
-
 		machineType: react.MachineType,
-		code:        react.Code,
 	}
+	desc.cache.code = react.Code
 
 	return &desc, nil
 }
@@ -117,10 +115,11 @@ func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.Record
 		return nil, ErrUnexpectedReply
 	}
 	desc := ClassDescriptor{
-		am:    m,
-		head:  react.Head,
-		state: react.State,
-		code:  react.Code,
+		am:          m,
+		head:        react.Head,
+		state:       react.State,
+		code:        react.Code,
+		machineType: react.MachineType,
 	}
 	return &desc, nil
 }
@@ -201,12 +200,13 @@ func (m *LedgerArtifactManager) DeclareType(
 //
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
-	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
+	domain, request core.RecordRef, code []byte, machineType core.MachineType,
 ) (*core.RecordRef, error) {
 	return m.fetchReference(&message.DeployCode{
-		Domain:  domain,
-		Request: request,
-		CodeMap: codeMap,
+		Domain:      domain,
+		Request:     request,
+		Code:        code,
+		MachineType: machineType,
 	})
 }
 
@@ -261,6 +261,7 @@ func (m *LedgerArtifactManager) UpdateClass(
 func (m *LedgerArtifactManager) ActivateObject(
 	domain, object, class, parent core.RecordRef, memory []byte,
 ) (*core.RecordID, error) {
+	start := time.Now()
 	objID, err := m.fetchID(&message.ActivateObject{
 		Domain:  domain,
 		Request: object,
@@ -280,7 +281,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 	if err != nil {
 		return nil, err
 	}
-
+	log.Debugf("Inside ActivateObject: class - '%s', parent - %s, time - %s", class, parent, time.Since(start))
 	return objID, nil
 }
 

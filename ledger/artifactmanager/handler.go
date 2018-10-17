@@ -17,7 +17,10 @@
 package artifactmanager
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/ledger/index"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -62,9 +65,16 @@ func (h *MessageHandler) Link(components core.Components) error {
 	return nil
 }
 
+func logTimeInside(start time.Time, funcName string) {
+	if time.Since(start) > time.Second {
+		log.Debugf("Handle takes too long: %s: time inside - %s", funcName, time.Since(start))
+	}
+}
+
 func (h *MessageHandler) handleRegisterRequest(
 	genericMsg core.Message,
 ) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.RequestCall)
 	requestRec := &record.CallRequest{
 		Payload: message.MustSerializeBytes(msg.Message),
@@ -73,34 +83,34 @@ func (h *MessageHandler) handleRegisterRequest(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set request record")
 	}
+
+	logTimeInside(start, "handleRegisterRequest")
+
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
-	rec, err := h.db.GetRecord(&codeRef.Record)
+
+	codeRec, err := getCode(h.db, codeRef.Record)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code record")
-	}
-	codeRec, ok := rec.(*record.CodeRecord)
-	if !ok {
-		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
-	}
-	code, mt, err := codeRec.GetCode(msg.MachinePref)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code from record")
+		return nil, err
 	}
 
 	rep := reply.Code{
-		Code:        code,
-		MachineType: mt,
+		Code:        codeRec.Code,
+		MachineType: codeRec.MachineType,
 	}
+
+	logTimeInside(start, "handleGetCode")
 
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetClass)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -117,15 +127,19 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 	}
 
 	rep := reply.Class{
-		Head:  msg.Head,
-		State: *stateID,
-		Code:  code,
+		Head:        msg.Head,
+		State:       *stateID,
+		Code:        code,
+		MachineType: state.GetMachineType(),
 	}
+
+	logTimeInside(start, "handleGetClass")
 
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -144,10 +158,13 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 		Memory: state.GetMemory(),
 	}
 
+	logTimeInside(start, "handleGetObject")
+
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -165,10 +182,13 @@ func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply,
 		Head: *delegateRef.CoreRef(),
 	}
 
+	logTimeInside(start, "handleGetDelegate")
+
 	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
 
@@ -215,10 +235,13 @@ func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply,
 		refs = append(refs, *childRec.Ref.CoreRef())
 	}
 
+	logTimeInside(start, "handleGetChildren")
+
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
 func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeclareType)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -240,10 +263,13 @@ func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply,
 		return nil, errors.Wrap(err, "failed to store record")
 	}
 
+	logTimeInside(start, "handleDeclareType")
+
 	return &reply.Reference{Ref: *getReference(&msg.Request, typeID)}, nil
 }
 
 func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeployCode)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -258,21 +284,31 @@ func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, 
 				},
 			},
 		},
-		TargetedCode: msg.CodeMap,
+		Code:        msg.Code,
+		MachineType: msg.MachineType,
 	}
 	codeID, err := h.db.SetRecord(&rec)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to store record")
 	}
+
+	logTimeInside(start, "handleDeployCode")
+
 	return &reply.Reference{Ref: *getReference(&msg.Request, codeID)}, nil
 }
 
 func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
 	requestRef := record.Core2Reference(msg.Request)
 	codeRef := record.Core2Reference(msg.Code)
+
+	codeRec, err := getCode(h.db, codeRef.Record)
+	if err != nil {
+		return nil, err
+	}
 
 	rec := record.ClassActivateRecord{
 		ActivationRecord: record.ActivationRecord{
@@ -283,10 +319,10 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 				},
 			},
 		},
-		Code: codeRef,
+		Code:        codeRef,
+		MachineType: codeRec.MachineType,
 	}
 
-	var err error
 	var activateID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		activateID, err = tx.SetRecord(&rec)
@@ -307,10 +343,13 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 		return nil, err
 	}
 
+	logTimeInside(start, "handleActivateClass")
+
 	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeactivateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -355,27 +394,31 @@ func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Re
 		return nil, err
 	}
 
+	logTimeInside(start, "handleDeactivateClass")
+
 	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.UpdateClass)
 
 	domainRef := record.Core2Reference(msg.Domain)
 	requestRef := record.Core2Reference(msg.Request)
 	classRef := record.Core2Reference(msg.Class)
 	migrationRefs := make([]record.Reference, 0, len(msg.Class))
+	codeRef := record.Core2Reference(msg.Code)
 	for _, migration := range msg.Migrations {
 		migrationRefs = append(migrationRefs, record.Core2Reference(migration))
 	}
 
-	var err error
-	err = validateCode(h.db, &msg.Code)
+	codeRec, err := getCode(h.db, codeRef.Record)
 	if err != nil {
 		return nil, err
 	}
-	for _, migration := range msg.Migrations {
-		err = validateCode(h.db, &migration)
+
+	for _, migration := range migrationRefs {
+		_, err = getCode(h.db, migration.Record)
 		if err != nil {
 			return nil, err
 		}
@@ -398,8 +441,9 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 				},
 				AmendedRecord: idx.LatestState,
 			},
-			NewCode:    record.Core2Reference(msg.Code),
-			Migrations: migrationRefs,
+			NewCode:     record.Core2Reference(msg.Code),
+			MachineType: codeRec.MachineType,
+			Migrations:  migrationRefs,
 		}
 
 		amendID, err = tx.SetRecord(&rec)
@@ -419,10 +463,13 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 		return nil, err
 	}
 
+	logTimeInside(start, "handleUpdateClass")
+
 	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -491,10 +538,13 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 		return nil, err
 	}
 
+	logTimeInside(start, "handleActivateObject")
+
 	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.ActivateObjectDelegate)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -563,10 +613,13 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 		return nil, err
 	}
 
+	logTimeInside(start, "handleActivateObjectDelegate")
+
 	return &reply.ID{ID: *activationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.DeactivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -611,10 +664,13 @@ func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.R
 		return nil, err
 	}
 
+	logTimeInside(start, "handleDeactivateObject")
+
 	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.UpdateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -661,10 +717,13 @@ func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply
 		return nil, err
 	}
 
+	logTimeInside(start, "handleUpdateObject")
+
 	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Reply, error) {
+	start := time.Now()
 	msg := genericMsg.(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
 
@@ -696,6 +755,8 @@ func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Repl
 		return nil, err
 	}
 
+	logTimeInside(start, "handleRegisterChild")
+
 	return &reply.ID{ID: *child.CoreID()}, nil
 }
 
@@ -719,6 +780,19 @@ func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
 		Domain: record.Core2Reference(*request).Domain,
 	}
 	return ref.CoreRef()
+}
+
+func getCode(s storage.Store, id record.ID) (*record.CodeRecord, error) {
+	rec, err := s.GetRecord(&id)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve code record")
+	}
+	codeRec, ok := rec.(*record.CodeRecord)
+	if !ok {
+		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
+	}
+
+	return codeRec, nil
 }
 
 func getClass(
@@ -779,18 +853,4 @@ func getObject(
 	}
 
 	return idx, stateID.CoreID(), stateRec, nil
-}
-
-func validateCode(s storage.Store, ref *core.RecordRef) error {
-	codeRef := record.Core2Reference(*ref)
-	rec, err := s.GetRecord(&codeRef.Record)
-	if err != nil {
-		return err
-	}
-
-	if _, ok := rec.(*record.CodeRecord); !ok {
-		return errors.New("invalid code reference")
-	}
-
-	return nil
 }
