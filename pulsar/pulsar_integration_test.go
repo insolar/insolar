@@ -146,12 +146,12 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
 	}
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
@@ -246,12 +246,12 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
 	}
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
@@ -377,13 +377,13 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
 	}
 	// Final sleep for 100% receiving of pulse by all nodes (pulsars and nodes)
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)

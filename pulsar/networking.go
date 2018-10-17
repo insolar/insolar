@@ -186,6 +186,11 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 		return err
 	}
 
+	state := handler.Pulsar.StateSwitcher.GetState()
+	if state >= Verifying {
+		return fmt.Errorf("Pulsar in the bft state")
+	}
+
 	requestBody := request.Body.(VectorPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
