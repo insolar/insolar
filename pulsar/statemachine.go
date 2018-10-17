@@ -17,6 +17,7 @@
 package pulsar
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/log"
@@ -76,7 +77,7 @@ func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
 func (switcher *StateSwitcherImpl) SwitchToState(state State, args interface{}) {
 	log.Debugf("Switch state from %v to %v", switcher.GetState().String(), state.String())
 	if state < switcher.GetState() && (state != WaitingForStart && state != Failed) {
-		panic("Attempt to set a backward step")
+		panic(fmt.Sprintf("Attempt to set a backward step. %v", switcher.pulsar.Config.MainListenerAddress))
 	}
 
 	switcher.setState(state)

@@ -28,7 +28,7 @@ func (currentPulsar *Pulsar) waitForPulseSigns() {
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingPulse {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForEntropySigns {
 				ticker.Stop()
 				return
 			}
@@ -47,7 +47,7 @@ func (currentPulsar *Pulsar) waitForEntropy() {
 	timeout := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingVector {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForEntropy {
 				ticker.Stop()
 				return
 			}
@@ -66,7 +66,7 @@ func (currentPulsar *Pulsar) waitForEntropySigns() {
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == SendingEntropy {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForEntropySigns {
 				ticker.Stop()
 				return
 			}
@@ -85,7 +85,7 @@ func (currentPulsar *Pulsar) waitForVectors() {
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingVectorTimeout) * time.Millisecond)
 	go func() {
 		for range ticker.C {
-			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() == Verifying {
+			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForVectors {
 				ticker.Stop()
 				return
 			}
