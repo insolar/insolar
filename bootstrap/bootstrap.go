@@ -76,9 +76,9 @@ func (b *Bootstrapper) GetNodeDomainRef() *core.RecordRef {
 }
 
 // NewBootstrapper creates new Bootstrapper
-func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
+func NewBootstrapper(cfg configuration.Bootstrap) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
-	bootstrapper.rootBalance = cfg.Bootstrap.RootBalance
+	bootstrapper.rootBalance = cfg.RootBalance
 	bootstrapper.rootDomainRef = &core.RecordRef{}
 	return bootstrapper, nil
 }
