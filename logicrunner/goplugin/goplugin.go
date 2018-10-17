@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
 )
@@ -89,6 +90,7 @@ const timeout = time.Minute * 10
 
 // CallMethod runs a method on an object in controlled environment
 func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
+	start := time.Now()
 	client, err := gp.Downstream()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with rpc connection")
@@ -105,6 +107,7 @@ func (gp *GoPlugin) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, 
 
 	select {
 	case call := <-client.Go("RPC.CallMethod", req, &res, nil).Done:
+		log.Debugf("CallMethod done work, time spend in here - %s", time.Since(start))
 		if call.Error != nil {
 			return nil, nil, errors.Wrap(call.Error, "problem with API call")
 		}
