@@ -20,35 +20,37 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// Payload is a base struct for pulsar's rpc-message
 type Payload struct {
 	PublicKey string
 	Signature []byte
 	Body      interface{}
 }
 
+// HandshakePayload is a struct for handshake step
 type HandshakePayload struct {
 	Entropy core.Entropy
 }
 
-type GetLastPulsePayload struct {
-	core.Pulse
-}
-
+// EntropySignaturePayload is a struct for sending sign of entropy step
 type EntropySignaturePayload struct {
 	PulseNumber core.PulseNumber
 	Signature   []byte
 }
 
+// EntropyPayload is a struct for sending entropy step
 type EntropyPayload struct {
 	PulseNumber core.PulseNumber
 	Entropy     core.Entropy
 }
 
+// VectorPayload is a struct for sending vector of entropy step
 type VectorPayload struct {
 	PulseNumber core.PulseNumber
 	Vector      map[string]*BftCell
 }
 
+// PulsePayload is a struct for sending finished pulse to all pulsars
 type PulsePayload struct {
 	Pulse core.Pulse
 }
