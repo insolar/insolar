@@ -248,53 +248,70 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 		return nil, errors.Wrap(err, "couldn't find a target host")
 	}
 
-	log.Debug("GetNonceRequest: step 1")
+	sender := hostHandler.HtFromCtx(ctx).Origin
+	signedNonce, err := sendNonceRequest(hostHandler, sender, targetHost)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed step 1")
+	}
+	result, err := sendCheckSignedNonceRequest(hostHandler, sender, targetHost, signedNonce)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed step 2")
+	}
+	return result, nil
+}
 
-	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(targetHost).Type(packet.TypeGetNonce).
+func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, receiver *host.Host) ([]byte, error) {
+	log.Debug("step 1 started")
+
+	request := packet.NewBuilder().Sender(sender).
+		Receiver(receiver).Type(packet.TypeGetNonce).
 		Request(&packet.RequestGetNonce{NodeID: hostHandler.GetNodeID()}).
 		Build()
 
 	future, err := hostHandler.SendRequest(request)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send an authorization request (step 1)")
+		return nil, errors.Wrap(err, "failed to send an authorization request")
 	}
 	rsp, err := future.GetResult(hostHandler.GetPacketTimeout())
 	if err != nil {
-		return nil, errors.Wrap(err, "checkResponse error (step 1)")
+		return nil, errors.Wrap(err, "checkResponse error")
 	}
 	response := rsp.Data.(*packet.ResponseGetNonce)
 	err = handleCheckPublicKeyResponse(hostHandler, response)
 	if err != nil {
 		return nil, errors.Wrap(err, "public key check failed on discovery node")
 	}
-
 	signedNonce, err := hostHandler.GetNetworkCommonFacade().GetSignHandler().SignNonce(response.Nonce)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send an authorization request")
 	}
+	return signedNonce, nil
+}
 
-	log.Debug("GetNonceRequest: step 2")
+func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host,
+	receiver *host.Host, nonce []byte) ([]*core.ActiveNode, error) {
+
+	log.Debug("step 2 started")
 
 	// TODO: get role from certificate
-	request = packet.NewBuilder().Type(packet.TypeCheckSignedNonce).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(targetHost).
+	// TODO: get public key from certificate
+	request := packet.NewBuilder().Type(packet.TypeCheckSignedNonce).
+		Sender(sender).Receiver(receiver).
 		Request(&packet.RequestCheckSignedNonce{
-			Signed:    signedNonce,
+			Signed:    nonce,
 			NodeID:    hostHandler.GetNodeID(),
 			NodeRoles: []core.NodeRole{core.RoleUnknown},
-			// PublicKey: &hostHandler.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey().PublicKey,
+			// PublicKey: ???
 		}).
 		Build()
 
-	future, err = hostHandler.SendRequest(request)
+	future, err := hostHandler.SendRequest(request)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send an authorization request (step 2)")
+		return nil, errors.Wrap(err, "failed to send an authorization request")
 	}
-	rsp, err = future.GetResult( /*hostHandler.GetPacketTimeout()*/ time.Second * 40)
+	rsp, err := future.GetResult( /*hostHandler.GetPacketTimeout()*/ time.Second * 40)
 	if err != nil {
-		return nil, errors.Wrap(err, "checkResponse error (step 2)")
+		return nil, errors.Wrap(err, "checkResponse error")
 	}
 
 	responseSignedNonce := rsp.Data.(*packet.ResponseCheckSignedNonce)
