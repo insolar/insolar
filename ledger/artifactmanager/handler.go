@@ -248,13 +248,9 @@ func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply,
 	requestRef := record.Core2Reference(msg.Request)
 
 	rec := record.TypeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: requestRef,
 		},
 		TypeDeclaration: msg.TypeDec,
 	}
@@ -276,13 +272,9 @@ func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, 
 	requestRef := record.Core2Reference(msg.Request)
 
 	rec := record.CodeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: requestRef,
 		},
 		Code:        msg.Code,
 		MachineType: msg.MachineType,
@@ -311,16 +303,14 @@ func (h *MessageHandler) handleActivateClass(genericMsg core.Message) (core.Repl
 	}
 
 	rec := record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: requestRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: requestRef,
 		},
-		Code:        codeRef,
-		MachineType: codeRec.MachineType,
+		ClassStateRecord: record.ClassStateRecord{
+			MachineType: codeRec.MachineType,
+			Code:        codeRef,
+		},
 	}
 
 	var activateID *record.ID
@@ -366,15 +356,11 @@ func (h *MessageHandler) handleDeactivateClass(genericMsg core.Message) (core.Re
 			return err
 		}
 		rec := record.DeactivationRecord{
-			AmendRecord: record.AmendRecord{
-				StatefulResult: record.StatefulResult{
-					ResultRecord: record.ResultRecord{
-						DomainRecord:  domainRef,
-						RequestRecord: requestRef,
-					},
-				},
-				AmendedRecord: idx.LatestState,
+			ResultRecord: record.ResultRecord{
+				Domain:  domainRef,
+				Request: requestRef,
 			},
+			PrevState: idx.LatestState,
 		}
 
 		deactivationID, err = tx.SetRecord(&rec)
@@ -432,18 +418,16 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 		}
 
 		rec := record.ClassAmendRecord{
-			AmendRecord: record.AmendRecord{
-				StatefulResult: record.StatefulResult{
-					ResultRecord: record.ResultRecord{
-						DomainRecord:  domainRef,
-						RequestRecord: requestRef,
-					},
-				},
-				AmendedRecord: idx.LatestState,
+			ResultRecord: record.ResultRecord{
+				Domain:  domainRef,
+				Request: requestRef,
 			},
-			NewCode:     record.Core2Reference(msg.Code),
-			MachineType: codeRec.MachineType,
-			Migrations:  migrationRefs,
+			ClassStateRecord: record.ClassStateRecord{
+				Code:        record.Core2Reference(msg.Code),
+				MachineType: codeRec.MachineType,
+			},
+			PrevState:  idx.LatestState,
+			Migrations: migrationRefs,
 		}
 
 		amendID, err = tx.SetRecord(&rec)
@@ -490,16 +474,14 @@ func (h *MessageHandler) handleActivateObject(genericMsg core.Message) (core.Rep
 	var activateID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		rec := record.ObjectActivateRecord{
-			ActivationRecord: record.ActivationRecord{
-				StatefulResult: record.StatefulResult{
-					ResultRecord: record.ResultRecord{
-						DomainRecord:  domainRef,
-						RequestRecord: requestRef,
-					},
-				},
+			ResultRecord: record.ResultRecord{
+				Domain:  domainRef,
+				Request: requestRef,
+			},
+			ObjectStateRecord: record.ObjectStateRecord{
+				Memory: msg.Memory,
 			},
 			Class:    classRef,
-			Memory:   msg.Memory,
 			Parent:   parentRef,
 			Delegate: false,
 		}
@@ -565,16 +547,14 @@ func (h *MessageHandler) handleActivateObjectDelegate(genericMsg core.Message) (
 	var activationID *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		rec := record.ObjectActivateRecord{
-			ActivationRecord: record.ActivationRecord{
-				StatefulResult: record.StatefulResult{
-					ResultRecord: record.ResultRecord{
-						DomainRecord:  domainRef,
-						RequestRecord: requestRef,
-					},
-				},
+			ResultRecord: record.ResultRecord{
+				Domain:  domainRef,
+				Request: requestRef,
+			},
+			ObjectStateRecord: record.ObjectStateRecord{
+				Memory: msg.Memory,
 			},
 			Class:    classRef,
-			Memory:   msg.Memory,
 			Parent:   parentRef,
 			Delegate: true,
 		}
@@ -637,15 +617,11 @@ func (h *MessageHandler) handleDeactivateObject(genericMsg core.Message) (core.R
 		}
 
 		rec := record.DeactivationRecord{
-			AmendRecord: record.AmendRecord{
-				StatefulResult: record.StatefulResult{
-					ResultRecord: record.ResultRecord{
-						DomainRecord:  domainRef,
-						RequestRecord: requestRef,
-					},
-				},
-				AmendedRecord: idx.LatestState,
+			ResultRecord: record.ResultRecord{
+				Domain:  domainRef,
+				Request: requestRef,
 			},
+			PrevState: idx.LatestState,
 		}
 		deactivationID, err = tx.SetRecord(&rec)
 		if err != nil {
@@ -688,16 +664,14 @@ func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply
 		}
 
 		rec := record.ObjectAmendRecord{
-			AmendRecord: record.AmendRecord{
-				StatefulResult: record.StatefulResult{
-					ResultRecord: record.ResultRecord{
-						DomainRecord:  domainRef,
-						RequestRecord: requestRef,
-					},
-				},
-				AmendedRecord: idx.LatestState,
+			ResultRecord: record.ResultRecord{
+				Domain:  domainRef,
+				Request: requestRef,
 			},
-			NewMemory: msg.Memory,
+			ObjectStateRecord: record.ObjectStateRecord{
+				Memory: msg.Memory,
+			},
+			PrevState: idx.LatestState,
 		}
 
 		amendID, err = tx.SetRecord(&rec)

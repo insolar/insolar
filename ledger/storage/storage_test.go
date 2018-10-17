@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -143,9 +143,9 @@ func TestDB_CreateDrop(t *testing.T) {
 		Entropy:     core.Entropy{1, 2, 3},
 	})
 	records := []record.ObjectActivateRecord{
-		{Memory: []byte{1}},
-		{Memory: []byte{2}},
-		{Memory: []byte{3}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{1}}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{2}}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{3}}},
 	}
 
 	var (

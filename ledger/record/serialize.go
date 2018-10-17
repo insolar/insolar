@@ -126,34 +126,22 @@ func ID2Bytes(id ID) []byte {
 // (we don't use iota for clarity and predictable ids,
 // not depended on definition order)
 const (
-	// request record ids
-	callRequestRecordID TypeID = 1
-	// result record ids
-	resultRecordID              TypeID = 7
-	wipeOutRecordID             TypeID = 8
-	readRecordResultID          TypeID = 9
-	statelessCallResultID       TypeID = 10
-	statelessExceptionResultID  TypeID = 11
-	readObjectResultID          TypeID = 12
-	specialResultID             TypeID = 13
-	lockUnlockResultID          TypeID = 14
-	rejectionResultID           TypeID = 15
-	activationRecordID          TypeID = 16
-	classActivateRecordID       TypeID = 17
-	objectActivateRecordID      TypeID = 18
-	codeRecordID                TypeID = 19
-	amendRecordID               TypeID = 20
-	classAmendRecordID          TypeID = 21
-	deactivationRecordID        TypeID = 22
-	objectAmendRecordID         TypeID = 23
-	statefulCallResultID        TypeID = 24
-	statefulExceptionResultID   TypeID = 25
-	enforcedObjectAmendRecordID TypeID = 26
-	objectAppendRecordID        TypeID = 27
-	typeRecordID                TypeID = 28
 	// meta
-	childRecordID   TypeID = 29
-	genesisRecordID TypeID = 30
+	childRecordID   TypeID = 10
+	genesisRecordID TypeID = 11
+
+	// request
+	callRequestRecordID TypeID = 20
+
+	// result
+	resultRecordID         TypeID = 30
+	classActivateRecordID  TypeID = 31
+	objectActivateRecordID TypeID = 32
+	codeRecordID           TypeID = 33
+	classAmendRecordID     TypeID = 34
+	deactivationRecordID   TypeID = 35
+	objectAmendRecordID    TypeID = 36
+	typeRecordID           TypeID = 37
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -163,46 +151,18 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	// request records
 	case callRequestRecordID:
 		return &CallRequest{}
-	case wipeOutRecordID:
-		return &WipeOutRecord{}
-	case readRecordResultID:
-		return &ReadRecordResult{}
-	case statelessCallResultID:
-		return &StatelessCallResult{}
-	case statelessExceptionResultID:
-		return &StatelessExceptionResult{}
-	case readObjectResultID:
-		return &ReadObjectResult{}
-	case specialResultID:
-		return &SpecialResult{}
-	case lockUnlockResultID:
-		return &LockUnlockResult{}
-	case rejectionResultID:
-		return &RejectionResult{}
-	case activationRecordID:
-		return &ActivationRecord{}
 	case classActivateRecordID:
 		return &ClassActivateRecord{}
 	case objectActivateRecordID:
 		return &ObjectActivateRecord{}
 	case codeRecordID:
 		return &CodeRecord{}
-	case amendRecordID:
-		return &AmendRecord{}
 	case classAmendRecordID:
 		return &ClassAmendRecord{}
 	case deactivationRecordID:
 		return &DeactivationRecord{}
 	case objectAmendRecordID:
 		return &ObjectAmendRecord{}
-	case statefulCallResultID:
-		return &StatefulCallResult{}
-	case statefulExceptionResultID:
-		return &StatefulExceptionResult{}
-	case enforcedObjectAmendRecordID:
-		return &EnforcedObjectAmendRecord{}
-	case objectAppendRecordID:
-		return &ObjectAppendRecord{}
 	case typeRecordID:
 		return &TypeRecord{}
 	case childRecordID:
@@ -223,46 +183,18 @@ func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
 	// result records
 	case *ResultRecord:
 		return resultRecordID
-	case *WipeOutRecord:
-		return wipeOutRecordID
-	case *ReadRecordResult:
-		return readRecordResultID
-	case *StatelessCallResult:
-		return statelessCallResultID
-	case *StatelessExceptionResult:
-		return statelessExceptionResultID
-	case *ReadObjectResult:
-		return readObjectResultID
-	case *SpecialResult:
-		return specialResultID
-	case *LockUnlockResult:
-		return lockUnlockResultID
-	case *RejectionResult:
-		return rejectionResultID
-	case *ActivationRecord:
-		return activationRecordID
 	case *ClassActivateRecord:
 		return classActivateRecordID
 	case *ObjectActivateRecord:
 		return objectActivateRecordID
 	case *CodeRecord:
 		return codeRecordID
-	case *AmendRecord:
-		return amendRecordID
 	case *ClassAmendRecord:
 		return classAmendRecordID
 	case *DeactivationRecord:
 		return deactivationRecordID
 	case *ObjectAmendRecord:
 		return objectAmendRecordID
-	case *StatefulCallResult:
-		return statefulCallResultID
-	case *StatefulExceptionResult:
-		return statefulExceptionResultID
-	case *EnforcedObjectAmendRecord:
-		return enforcedObjectAmendRecordID
-	case *ObjectAppendRecord:
-		return objectAppendRecordID
 	case *TypeRecord:
 		return typeRecordID
 	case *ChildRecord:

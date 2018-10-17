@@ -202,13 +202,9 @@ func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 	typeRec, err := td.db.GetRecord(&ref.Record)
 	assert.NoError(t, err)
 	assert.Equal(t, &record.TypeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *td.requestRef,
 		},
 		TypeDeclaration: typeDec,
 	}, typeRec)
@@ -227,13 +223,9 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 	codeRec, err := td.db.GetRecord(&ref.Record)
 	assert.NoError(t, err)
 	assert.Equal(t, codeRec, &record.CodeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *td.requestRef,
 		},
 		Code:        []byte{1, 2, 3},
 		MachineType: core.MachineTypeBuiltin,
@@ -256,15 +248,13 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 	activateRec, getErr := td.db.GetRecord(&activateID)
 	assert.Nil(t, getErr)
 	assert.Equal(t, activateRec, &record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *classRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *classRef,
 		},
-		Code: codeRef,
+		ClassStateRecord: record.ClassStateRecord{
+			Code: codeRef,
+		},
 	})
 	idx, err := td.db.GetClassIndex(&classRef.Record, false)
 	assert.NoError(t, err)
@@ -306,12 +296,8 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 	defer cleaner()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(0),
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: *genRandomRef(0),
 		},
 	})
 	td.db.SetClassIndex(classID, &index.ClassLifeline{
@@ -326,15 +312,11 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 	deactivateRec, err := td.db.GetRecord(&deactivateID)
 	assert.NoError(t, err)
 	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
-			AmendedRecord: *classID,
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *td.requestRef,
 		},
+		PrevState: *classID,
 	})
 }
 
@@ -376,34 +358,22 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 	defer cleaner()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: domainRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: domainRef,
 		},
 	})
 	td.db.SetClassIndex(classID, &index.ClassLifeline{
 		LatestState: *classID,
 	})
 	codeID, _ := td.db.SetRecord(&record.CodeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: domainRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: domainRef,
 		},
 		Code: []byte{1},
 	})
 	migrationID, err := td.db.SetRecord(&record.CodeRecord{
-		StorageRecord: record.StorageRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: domainRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: domainRef,
 		},
 		Code: []byte{2},
 	})
@@ -418,16 +388,14 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 	updateRec, getErr := td.db.GetRecord(&updateID)
 	assert.Nil(t, getErr)
 	assert.Equal(t, updateRec, &record.ClassAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
-			AmendedRecord: *classID,
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *td.requestRef,
 		},
-		NewCode:    record.Reference{Domain: td.requestRef.Domain, Record: *codeID},
+		ClassStateRecord: record.ClassStateRecord{
+			Code: record.Reference{Domain: td.requestRef.Domain, Record: *codeID},
+		},
+		PrevState:  *classID,
 		Migrations: migrationRefs,
 	})
 }
@@ -456,24 +424,16 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 
 	memory := []byte{1, 2, 3}
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(0),
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: *genRandomRef(0),
 		},
 	})
 	td.db.SetClassIndex(classID, &index.ClassLifeline{
 		LatestState: *classID,
 	})
 	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(0),
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: *genRandomRef(0),
 		},
 	})
 	td.db.SetObjectIndex(parentID, &index.ObjectLifeline{
@@ -490,16 +450,14 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 	activateRec, err := td.db.GetRecord(&activateID)
 	assert.Nil(t, err)
 	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: objRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: objRef,
+		},
+		ObjectStateRecord: record.ObjectStateRecord{
+			Memory: memory,
 		},
 		Class:    record.Reference{Domain: td.requestRef.Domain, Record: *classID},
-		Memory:   memory,
 		Parent:   record.Reference{Domain: td.requestRef.Domain, Record: *parentID},
 		Delegate: false,
 	})
@@ -526,12 +484,8 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_VerifiesRecord(t *testing.
 	)
 	assert.NotNil(t, err)
 	notClassID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(0),
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: *genRandomRef(0),
 		},
 	})
 	_, err = td.manager.ActivateObjectDelegate(
@@ -549,12 +503,8 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 	memory := []byte{1, 2, 3}
 	classRef := genRandomRef(0)
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(0),
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: *genRandomRef(0),
 		},
 	})
 	td.db.SetClassIndex(&classRef.Record, &index.ClassLifeline{
@@ -562,12 +512,8 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 	})
 	parentRef := genRandomRef(0)
 	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(0),
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: *genRandomRef(0),
 		},
 	})
 	td.db.SetObjectIndex(&parentRef.Record, &index.ObjectLifeline{
@@ -584,16 +530,14 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 	activateRec, err := td.db.GetRecord(&activateID)
 	assert.Nil(t, err)
 	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *delegateRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *delegateRef,
+		},
+		ObjectStateRecord: record.ObjectStateRecord{
+			Memory: memory,
 		},
 		Class:    *classRef,
-		Memory:   memory,
 		Parent:   *parentRef,
 		Delegate: true,
 	})
@@ -636,12 +580,8 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 	defer cleaner()
 
 	objID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(0),
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: *genRandomRef(0),
 		},
 	})
 	td.db.SetObjectIndex(objID, &index.ObjectLifeline{
@@ -655,15 +595,11 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 	deactivateRec, err := td.db.GetRecord(&deactivateID)
 	assert.Nil(t, err)
 	assert.Equal(t, deactivateRec, &record.DeactivationRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
-			AmendedRecord: *objID,
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *td.requestRef,
 		},
+		PrevState: *objID,
 	})
 }
 
@@ -704,12 +640,8 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 	defer cleaner()
 
 	objID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: *genRandomRef(0),
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: *genRandomRef(0),
 		},
 	})
 	td.db.SetObjectIndex(objID, &index.ObjectLifeline{
@@ -723,16 +655,14 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 	updateRec, err := td.db.GetRecord(&updateID)
 	assert.Nil(t, err)
 	assert.Equal(t, updateRec, &record.ObjectAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
-			AmendedRecord: *objID,
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *td.requestRef,
 		},
-		NewMemory: memory,
+		ObjectStateRecord: record.ObjectStateRecord{
+			Memory: memory,
+		},
+		PrevState: *objID,
 	})
 }
 
@@ -743,24 +673,18 @@ func TestLedgerArtifactManager_GetClass_ReturnsCorrectDescriptors(t *testing.T) 
 
 	codeRef := *genRandomRef(0)
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: domainRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: domainRef,
 		},
 	})
 	classAmendID, _ := td.db.SetRecord(&record.ClassAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *td.requestRef,
 		},
-		NewCode: codeRef,
+		ClassStateRecord: record.ClassStateRecord{
+			Code: codeRef,
+		},
 	})
 	classIndex := index.ClassLifeline{
 		LatestState: *classAmendID,
@@ -806,22 +730,14 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 	defer cleaner()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: domainRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: domainRef,
 		},
 	})
 	classAmendRef, _ := td.db.SetRecord(&record.ClassAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord:  domainRef,
-					RequestRecord: *td.requestRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain:  domainRef,
+			Request: *td.requestRef,
 		},
 	})
 	classIndex := index.ClassLifeline{
@@ -830,24 +746,20 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 	td.db.SetClassIndex(classID, &classIndex)
 
 	objectID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: domainRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: domainRef,
 		},
-		Memory: []byte{3},
+		ObjectStateRecord: record.ObjectStateRecord{
+			Memory: []byte{3},
+		},
 	})
 	objectAmendID, _ := td.db.SetRecord(&record.ObjectAmendRecord{
-		AmendRecord: record.AmendRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: domainRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: domainRef,
 		},
-		NewMemory: []byte{4},
+		ObjectStateRecord: record.ObjectStateRecord{
+			Memory: []byte{4},
+		},
 	})
 	objectIndex := index.ObjectLifeline{
 		LatestState: *objectAmendID,
@@ -875,14 +787,12 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	defer cleaner()
 
 	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
-		ActivationRecord: record.ActivationRecord{
-			StatefulResult: record.StatefulResult{
-				ResultRecord: record.ResultRecord{
-					DomainRecord: domainRef,
-				},
-			},
+		ResultRecord: record.ResultRecord{
+			Domain: domainRef,
 		},
-		Memory: []byte{0},
+		ObjectStateRecord: record.ObjectStateRecord{
+			Memory: []byte{0},
+		},
 	})
 	child1Ref := genRandomRef(1)
 	child2Ref := genRandomRef(1)
@@ -989,9 +899,9 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	defer cleaner()
 
 	records := []record.ObjectActivateRecord{
-		{Memory: []byte{1}},
-		{Memory: []byte{2}},
-		{Memory: []byte{3}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{1}}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{2}}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{3}}},
 	}
 	ids := []record.ID{
 		{Hash: []byte{4}},

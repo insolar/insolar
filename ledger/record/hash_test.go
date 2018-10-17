@@ -29,27 +29,12 @@ var emptyRecordsGens = []recordgen{
 	// request records
 	func() Record { return &CallRequest{} },
 	// result records
-	func() Record { return &ResultRecord{} },
-	func() Record { return &WipeOutRecord{} },
-	func() Record { return &ReadRecordResult{} },
-	func() Record { return &StatelessCallResult{} },
-	func() Record { return &StatelessExceptionResult{} },
-	func() Record { return &ReadObjectResult{} },
-	func() Record { return &SpecialResult{} },
-	func() Record { return &LockUnlockResult{} },
-	func() Record { return &RejectionResult{} },
-	func() Record { return &ActivationRecord{} },
 	func() Record { return &ClassActivateRecord{} },
 	func() Record { return &ObjectActivateRecord{} },
 	func() Record { return &CodeRecord{} },
-	func() Record { return &AmendRecord{} },
 	func() Record { return &ClassAmendRecord{} },
 	func() Record { return &DeactivationRecord{} },
 	func() Record { return &ObjectAmendRecord{} },
-	func() Record { return &StatefulCallResult{} },
-	func() Record { return &StatefulExceptionResult{} },
-	func() Record { return &EnforcedObjectAmendRecord{} },
-	func() Record { return &ObjectAppendRecord{} },
 }
 
 func Test_HashesNotTheSameOnDifferentTypes(t *testing.T) {
@@ -104,13 +89,9 @@ var hashtestsRecordsMutate = []struct {
 			&CodeRecord{Code: []byte{1, 2, 3}},
 			&CodeRecord{
 				Code: []byte{1, 2, 3},
-				StorageRecord: StorageRecord{
-					StatefulResult: StatefulResult{
-						ResultRecord: ResultRecord{
-							DomainRecord: Reference{
-								Record: str2ID("0A"),
-							},
-						},
+				ResultRecord: ResultRecord{
+					Domain: Reference{
+						Record: str2ID("0A"),
 					},
 				},
 			},

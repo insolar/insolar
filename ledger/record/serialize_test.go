@@ -59,26 +59,12 @@ var type2idTests = []struct {
 
 	// result records
 	// case resultRecordID:
-	{"WipeOutRecord", &WipeOutRecord{}, wipeOutRecordID},
-	{"ReadRecordResult", &ReadRecordResult{}, readRecordResultID},
-	{"StatelessCallResult", &StatelessCallResult{}, statelessCallResultID},
-	{"StatelessExceptionResult", &StatelessExceptionResult{}, statelessExceptionResultID},
-	{"ReadObjectResult", &ReadObjectResult{}, readObjectResultID},
-	{"SpecialResult", &SpecialResult{}, specialResultID},
-	{"LockUnlockResult", &LockUnlockResult{}, lockUnlockResultID},
-	{"RejectionResult", &RejectionResult{}, rejectionResultID},
-	{"ActivationRecord", &ActivationRecord{}, activationRecordID},
 	{"ClassActivateRecord", &ClassActivateRecord{}, classActivateRecordID},
 	{"ObjectActivateRecord", &ObjectActivateRecord{}, objectActivateRecordID},
 	{"CodeRecord", &CodeRecord{}, codeRecordID},
-	{"AmendRecord", &AmendRecord{}, amendRecordID},
 	{"ClassAmendRecord", &ClassAmendRecord{}, classAmendRecordID},
 	{"DeactivationRecord", &DeactivationRecord{}, deactivationRecordID},
 	{"ObjectAmendRecord", &ObjectAmendRecord{}, objectAmendRecordID},
-	{"StatefulCallResult", &StatefulCallResult{}, statefulCallResultID},
-	{"StatefulExceptionResult", &StatefulExceptionResult{}, statefulExceptionResultID},
-	{"EnforcedObjectAmendRecord", &EnforcedObjectAmendRecord{}, enforcedObjectAmendRecordID},
-	{"ObjectAppendRecord", &ObjectAppendRecord{}, objectAppendRecordID},
 }
 
 func Test_TypeIDConversion(t *testing.T) {
