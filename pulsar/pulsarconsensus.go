@@ -151,7 +151,6 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 		currentPulsar.StateSwitcher.SwitchToState(Failed, err)
 	}
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
-	log.Warn(currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw)
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
 		//here confirmation myself
 		signature, err := signData(currentPulsar.PrivateKey, core.PulseSenderConfirmation{

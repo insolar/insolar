@@ -78,8 +78,6 @@ func (currentPulsar *Pulsar) clearState() {
 	currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}
 	currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 
-	currentPulsar.ProcessingPulseNumber = 0
-
 	currentPulsar.OwnedBftRow = map[string]*BftCell{}
 	currentPulsar.BftGridLock.Lock()
 	currentPulsar.bftGrid = map[string]map[string]*BftCell{}
