@@ -157,10 +157,10 @@ type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *RecordRef
 
-	// MachineType returns first available machine type for provided machine preference.
+	// MachineType returns code machine type for represented code.
 	MachineType() MachineType
 
-	// Code returns code for first available machine type for provided machine preference.
+	// Code returns code data.
 	Code() ([]byte, error)
 }
 

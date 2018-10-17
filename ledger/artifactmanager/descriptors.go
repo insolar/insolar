@@ -39,12 +39,12 @@ func (d *CodeDescriptor) Ref() *core.RecordRef {
 	return &d.ref
 }
 
-// MachineType returns first available machine type for provided machine preference.
+// MachineType returns code machine type for represented code.
 func (d *CodeDescriptor) MachineType() core.MachineType {
 	return d.machineType
 }
 
-// Code returns code for first available machine type for provided machine preference.
+// Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
 	if d.cache.code == nil {
 		desc, err := d.am.GetCode(d.ref)
