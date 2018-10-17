@@ -25,10 +25,13 @@ import (
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor struct {
+	cache struct {
+		code []byte
+	}
 	machineType core.MachineType
-	code        []byte
 	ref         core.RecordRef
-	machinePref []core.MachineType
+
+	am core.ArtifactManager
 }
 
 // Ref returns reference to represented code record.
@@ -42,8 +45,20 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 }
 
 // Code returns code for first available machine type for provided machine preference.
-func (d *CodeDescriptor) Code() []byte {
-	return d.code
+func (d *CodeDescriptor) Code() ([]byte, error) {
+	if d.cache.code == nil {
+		desc, err := d.am.GetCode(d.ref)
+		if err != nil {
+			return nil, err
+		}
+		code, err := desc.Code()
+		if err != nil {
+			return nil, err
+		}
+		d.cache.code = code
+	}
+
+	return d.cache.code, nil
 }
 
 // ClassDescriptor represents meta info required to fetch all class data.

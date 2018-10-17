@@ -71,12 +71,9 @@ func (m *LedgerArtifactManager) RegisterRequest(
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
-func (m *LedgerArtifactManager) GetCode(
-	code core.RecordRef, machinePref []core.MachineType,
-) (core.CodeDescriptor, error) {
+func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
 	genericReact, err := m.messageBus.Send(&message.GetCode{
-		Code:        code,
-		MachinePref: machinePref,
+		Code: code,
 	})
 
 	if err != nil {
@@ -88,12 +85,10 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, ErrUnexpectedReply
 	}
 	desc := CodeDescriptor{
-		machinePref: machinePref,
 		ref:         code,
-
 		machineType: react.MachineType,
-		code:        react.Code,
 	}
+	desc.cache.code = react.Code
 
 	return &desc, nil
 }
@@ -201,12 +196,13 @@ func (m *LedgerArtifactManager) DeclareType(
 //
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
-	domain, request core.RecordRef, codeMap map[core.MachineType][]byte,
+	domain, request core.RecordRef, code []byte, machineType core.MachineType,
 ) (*core.RecordRef, error) {
 	return m.fetchReference(&message.DeployCode{
-		Domain:  domain,
-		Request: request,
-		CodeMap: codeMap,
+		Domain:      domain,
+		Request:     request,
+		Code:        code,
+		MachineType: machineType,
 	})
 }
 

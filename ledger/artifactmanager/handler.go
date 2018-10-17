@@ -79,22 +79,15 @@ func (h *MessageHandler) handleRegisterRequest(
 func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
-	rec, err := h.db.GetRecord(&codeRef.Record)
+
+	codeRec, err := getCode(h.db, codeRef.Record)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code record")
-	}
-	codeRec, ok := rec.(*record.CodeRecord)
-	if !ok {
-		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
-	}
-	code, mt, err := codeRec.GetCode(msg.MachinePref)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve code from record")
+		return nil, err
 	}
 
 	rep := reply.Code{
-		Code:        code,
-		MachineType: mt,
+		Code:        codeRec.Code,
+		MachineType: codeRec.MachineType,
 	}
 
 	return &rep, nil
@@ -258,7 +251,8 @@ func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, 
 				},
 			},
 		},
-		TargetedCode: msg.CodeMap,
+		Code:        msg.Code,
+		MachineType: msg.MachineType,
 	}
 	codeID, err := h.db.SetRecord(&rec)
 	if err != nil {
@@ -719,6 +713,19 @@ func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
 		Domain: record.Core2Reference(*request).Domain,
 	}
 	return ref.CoreRef()
+}
+
+func getCode(s storage.Store, id record.ID) (*record.CodeRecord, error) {
+	rec, err := s.GetRecord(&id)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve code record")
+	}
+	codeRec, ok := rec.(*record.CodeRecord)
+	if !ok {
+		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
+	}
+
+	return codeRec, nil
 }
 
 func getClass(

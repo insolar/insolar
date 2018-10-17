@@ -47,8 +47,7 @@ func (ledgerMessage) TargetRole() core.JetRole {
 // GetCode retrieves code from storage.
 type GetCode struct {
 	ledgerMessage
-	Code        core.RecordRef
-	MachinePref []core.MachineType
+	Code core.RecordRef
 }
 
 // Type implementation of Message interface.
@@ -133,9 +132,10 @@ func (e *DeclareType) Target() *core.RecordRef {
 // DeployCode creates new code.
 type DeployCode struct {
 	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	CodeMap map[core.MachineType][]byte
+	Domain      core.RecordRef
+	Request     core.RecordRef
+	Code        []byte
+	MachineType core.MachineType
 }
 
 // Type implementation of Message interface.
