@@ -75,7 +75,7 @@ func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
 }
 
 func (switcher *StateSwitcherImpl) SwitchToState(state State, args interface{}) {
-	log.Debugf("Switch state from %v to %v", switcher.GetState().String(), state.String())
+	log.Debugf("Switch state from %v to %v, node - %v", switcher.GetState().String(), state.String(), switcher.pulsar.Config.MainListenerAddress)
 	if state < switcher.GetState() && (state != WaitingForStart && state != Failed) {
 		panic(fmt.Sprintf("Attempt to set a backward step. %v", switcher.pulsar.Config.MainListenerAddress))
 	}
