@@ -163,7 +163,7 @@ func (e *ActivateClass) Type() core.MessageType {
 
 // Target implementation of Message interface.
 func (e *ActivateClass) Target() *core.RecordRef {
-	return &e.Request
+	return &e.Code
 }
 
 // DeactivateClass deactivates class.
