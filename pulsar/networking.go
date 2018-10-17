@@ -125,15 +125,8 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	}
 
 	state := handler.Pulsar.StateSwitcher.GetState()
-
-	switch state {
-	case GenerateEntropy, WaitingForEntropySigns, WaitingForStart, Failed:
-		{
-		}
-	default:
-		{
-			return fmt.Errorf("not possible to recieve a sign of entropy, becasuse of the state - %v", state)
-		}
+	if state > WaitingForEntropySigns {
+		return fmt.Errorf("not possible to recieve a sign of entropy, becasuse of the state - %v", state)
 	}
 
 	requestBody := request.Body.(EntropySignaturePayload)
@@ -166,7 +159,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	}
 
 	state := handler.Pulsar.StateSwitcher.GetState()
-	if state != SendingEntropy && state != WaitingForEntropy && state != WaitingForEntropySigns {
+	if state > WaitingForEntropy {
 		return fmt.Errorf("not possible to recieve a entropy, becasuse of the state - %v", state)
 	}
 
@@ -204,7 +197,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 	}
 
 	state := handler.Pulsar.StateSwitcher.GetState()
-	if state != WaitingForEntropy && state != WaitingForVectors && state != SendingVector {
+	if state > WaitingForVectors {
 		return fmt.Errorf("not possible to recieve a vector, becasuse of the state - %v", state)
 	}
 
@@ -230,7 +223,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	}
 
 	state := handler.Pulsar.StateSwitcher.GetState()
-	if state != WaitingForPulseSigns && state != Verifying && state != SendingPulseSign {
+	if state > WaitingForPulseSigns {
 		return fmt.Errorf("not possible to recieve the sign, becasuse of the state - %v", state)
 	}
 
@@ -271,13 +264,11 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 		return err
 	}
 
-	state := handler.Pulsar.StateSwitcher.GetState()
-	if state != WaitingForStart && state != SendingPulseSign && state != Verifying {
-		return fmt.Errorf("not possible to recieve the pulse, becasuse of the state - %v", state)
-	}
-
 	requestBody := request.Body.(PulsePayload)
-	if requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+	if handler.Pulsar.ProcessingPulseNumber != 0 && requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+		return fmt.Errorf("last pulse number is bigger than received one")
+	}
+	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.LastPulse.PulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
