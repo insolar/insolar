@@ -47,27 +47,27 @@ type BaseLogicMessage struct {
 }
 
 // SetSign sets a signature to message.
-func (b *BaseLogicMessage) SetSign(sign []byte) {
-	b.sign = sign
+func (m *BaseLogicMessage) SetSign(sign []byte) {
+	m.sign = sign
 }
 
 // GetSign returns a sign.
-func (b *BaseLogicMessage) GetSign() []byte {
-	return b.sign
+func (m *BaseLogicMessage) GetSign() []byte {
+	return m.sign
 }
 
-func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
-	return &e.Caller
+func (m *BaseLogicMessage) GetCaller() *core.RecordRef {
+	return &m.Caller
 }
 
 // TargetRole returns RoleVirtualExecutor as routing target role.
-func (e *BaseLogicMessage) TargetRole() core.JetRole {
+func (m *BaseLogicMessage) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
 // GetRequest returns RoleVirtualExecutor as routing target role.
-func (e *BaseLogicMessage) GetRequest() core.RecordRef {
-	return e.Request
+func (m *BaseLogicMessage) GetRequest() core.RecordRef {
+	return m.Request
 }
 
 // CallMethod - Simply call method and return result
@@ -79,18 +79,18 @@ type CallMethod struct {
 	Arguments  core.Arguments
 }
 
-func (e *CallMethod) GetReference() core.RecordRef {
-	return e.ObjectRef
+func (m *CallMethod) GetReference() core.RecordRef {
+	return m.ObjectRef
 }
 
 // Type returns TypeCallMethod.
-func (e *CallMethod) Type() core.MessageType {
+func (m *CallMethod) Type() core.MessageType {
 	return core.TypeCallMethod
 }
 
 // Target returns ObjectRef as routing target.
-func (e *CallMethod) Target() *core.RecordRef {
-	return &e.ObjectRef
+func (m *CallMethod) Target() *core.RecordRef {
+	return &m.ObjectRef
 }
 
 type SaveAs int
@@ -111,21 +111,21 @@ type CallConstructor struct {
 	PulseNum  core.PulseNumber
 }
 
-func (e *CallConstructor) GetReference() core.RecordRef {
-	return e.ClassRef
+func (m *CallConstructor) GetReference() core.RecordRef {
+	return m.ClassRef
 }
 
 // Type returns TypeCallConstructor.
-func (e *CallConstructor) Type() core.MessageType {
+func (m *CallConstructor) Type() core.MessageType {
 	return core.TypeCallConstructor
 }
 
 // Target returns request ref as routing target.
-func (e *CallConstructor) Target() *core.RecordRef {
-	if e.SaveAs == Delegate {
-		return &e.ParentRef
+func (m *CallConstructor) Target() *core.RecordRef {
+	if m.SaveAs == Delegate {
+		return &m.ParentRef
 	}
-	return core.GenRequest(e.PulseNum, MustSerializeBytes(e))
+	return core.GenRequest(m.PulseNum, MustSerializeBytes(m))
 }
 
 type ExecutorResults struct {
@@ -134,33 +134,33 @@ type ExecutorResults struct {
 	sign        []byte
 }
 
-func (e *ExecutorResults) Type() core.MessageType {
+func (m *ExecutorResults) Type() core.MessageType {
 	return core.TypeExecutorResults
 }
 
-func (e *ExecutorResults) TargetRole() core.JetRole {
+func (m *ExecutorResults) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
-func (e *ExecutorResults) Target() *core.RecordRef {
-	return &e.RecordRef
+func (m *ExecutorResults) Target() *core.RecordRef {
+	return &m.RecordRef
 }
 
 // TODO change after changing pulsar
-func (e *ExecutorResults) GetCaller() *core.RecordRef {
+func (m *ExecutorResults) GetCaller() *core.RecordRef {
 	return &core.RecordRef{}
 }
 
-func (e *ExecutorResults) GetReference() core.RecordRef {
-	return e.RecordRef
+func (m *ExecutorResults) GetReference() core.RecordRef {
+	return m.RecordRef
 }
 
-func (e *ExecutorResults) GetSign() []byte {
-	return e.sign
+func (m *ExecutorResults) GetSign() []byte {
+	return m.sign
 }
 
-func (e *ExecutorResults) SetSign(sign []byte) {
-	e.sign = sign
+func (m *ExecutorResults) SetSign(sign []byte) {
+	m.sign = sign
 }
 
 type ValidateCaseBind struct {
@@ -170,41 +170,41 @@ type ValidateCaseBind struct {
 	sign        []byte
 }
 
-func (e *ValidateCaseBind) Type() core.MessageType {
+func (m *ValidateCaseBind) Type() core.MessageType {
 	return core.TypeValidateCaseBind
 }
 
-func (e *ValidateCaseBind) TargetRole() core.JetRole {
+func (m *ValidateCaseBind) TargetRole() core.JetRole {
 	return core.RoleVirtualValidator
 }
 
-func (e *ValidateCaseBind) Target() *core.RecordRef {
-	return &e.RecordRef
+func (m *ValidateCaseBind) Target() *core.RecordRef {
+	return &m.RecordRef
 }
 
 // TODO change after changing pulsar
-func (e *ValidateCaseBind) GetCaller() *core.RecordRef {
-	return &e.RecordRef // TODO actually it's not right. There is no caller.
+func (m *ValidateCaseBind) GetCaller() *core.RecordRef {
+	return &m.RecordRef // TODO actually it's not right. There is no caller.
 }
 
-func (e *ValidateCaseBind) GetReference() core.RecordRef {
-	return e.RecordRef
+func (m *ValidateCaseBind) GetReference() core.RecordRef {
+	return m.RecordRef
 }
 
-func (e *ValidateCaseBind) GetCaseRecords() []core.CaseRecord {
-	return e.CaseRecords
+func (m *ValidateCaseBind) GetCaseRecords() []core.CaseRecord {
+	return m.CaseRecords
 }
 
-func (e *ValidateCaseBind) GetPulse() core.Pulse {
-	return e.Pulse
+func (m *ValidateCaseBind) GetPulse() core.Pulse {
+	return m.Pulse
 }
 
-func (e *ValidateCaseBind) GetSign() []byte {
-	return e.sign
+func (m *ValidateCaseBind) GetSign() []byte {
+	return m.sign
 }
 
-func (e *ValidateCaseBind) SetSign(sign []byte) {
-	e.sign = sign
+func (m *ValidateCaseBind) SetSign(sign []byte) {
+	m.sign = sign
 }
 
 type ValidationResults struct {
@@ -214,31 +214,31 @@ type ValidationResults struct {
 	sign             []byte
 }
 
-func (e *ValidationResults) Type() core.MessageType {
+func (m *ValidationResults) Type() core.MessageType {
 	return core.TypeValidationResults
 }
 
-func (e ValidationResults) TargetRole() core.JetRole {
+func (m ValidationResults) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
 }
 
-func (e *ValidationResults) Target() *core.RecordRef {
-	return &e.RecordRef
+func (m *ValidationResults) Target() *core.RecordRef {
+	return &m.RecordRef
 }
 
 // TODO change after changing pulsar
-func (e *ValidationResults) GetCaller() *core.RecordRef {
-	return &e.RecordRef // TODO actually it's not right. There is no caller.
+func (m *ValidationResults) GetCaller() *core.RecordRef {
+	return &m.RecordRef // TODO actually it's not right. There is no caller.
 }
 
-func (e *ValidationResults) GetReference() core.RecordRef {
-	return e.RecordRef
+func (m *ValidationResults) GetReference() core.RecordRef {
+	return m.RecordRef
 }
 
-func (e *ValidationResults) GetSign() []byte {
-	return e.sign
+func (m *ValidationResults) GetSign() []byte {
+	return m.sign
 }
 
-func (e *ValidationResults) SetSign(sign []byte) {
-	e.sign = sign
+func (m *ValidationResults) SetSign(sign []byte) {
+	m.sign = sign
 }
