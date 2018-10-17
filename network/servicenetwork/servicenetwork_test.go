@@ -23,33 +23,38 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewServiceNetwork(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	key, _ := ecdsa.GeneratePrivateKey()
-	keyStr, _ := ecdsa.ExportPrivateKey(key)
-	cfg.PrivateKey = keyStr
-	_, err := NewServiceNetwork(cfg)
+func initComponents(t *testing.T) core.Components {
+	cert, err := certificate.NewCertificate("")
 	assert.NoError(t, err)
+	return core.Components{Certificate: cert}
 }
 
+/*
 func getPrivateKeyString() string {
 	key, _ := ecdsa.GeneratePrivateKey()
 	keyStr, _ := ecdsa.ExportPrivateKey(key)
 	return keyStr
 }
+*/
+
+func TestNewServiceNetwork(t *testing.T) {
+	cfg := configuration.NewConfiguration()
+	sn, err := NewServiceNetwork(cfg)
+	assert.NoError(t, err)
+	assert.NotNil(t, sn)
+}
 
 func TestServiceNetwork_GetAddress(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.PrivateKey = getPrivateKeyString()
 	network, err := NewServiceNetwork(cfg)
 	assert.NoError(t, err)
 	assert.True(t, strings.Contains(network.GetAddress(), strings.Split(cfg.Host.Transport.Address, ":")[0]))
@@ -57,7 +62,6 @@ func TestServiceNetwork_GetAddress(t *testing.T) {
 
 func TestServiceNetwork_GetHostNetwork(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.PrivateKey = getPrivateKeyString()
 	network, err := NewServiceNetwork(cfg)
 	assert.NoError(t, err)
 	host, _ := network.GetHostNetwork()
@@ -66,8 +70,10 @@ func TestServiceNetwork_GetHostNetwork(t *testing.T) {
 
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
-	cfg.PrivateKey = getPrivateKeyString()
 	network, err := NewServiceNetwork(cfg)
+	assert.NoError(t, err)
+
+	err = network.Start(initComponents(t))
 	assert.NoError(t, err)
 
 	e := &message.CallMethod{
@@ -76,15 +82,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	network.SendMessage(core.NewRefFromBase58("test"), "test", e)
-}
-
-func TestServiceNetwork_Start(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	cfg.PrivateKey = getPrivateKeyString()
-	network, err := NewServiceNetwork(cfg)
-	assert.NoError(t, err)
-	err = network.Start(core.Components{})
+	_, err = network.SendMessage(core.NewRefFromBase58("test"), "test", e)
 	assert.NoError(t, err)
 
 	err = network.Stop()
@@ -93,7 +91,6 @@ func TestServiceNetwork_Start(t *testing.T) {
 
 func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) configuration.Configuration {
 	cfg := configuration.NewConfiguration()
-	cfg.PrivateKey = getPrivateKeyString()
 	transport := configuration.Transport{Protocol: "UTP", Address: host, BehindNAT: false}
 	h := configuration.HostNetwork{
 		Transport:      transport,

@@ -37,6 +37,7 @@ import (
 type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
+	certificate core.Certificate
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -50,7 +51,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	}
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, node.GetPrivateKey())
+	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +81,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, errors.New("message is nil")
 	}
 	hostID := nodenetwork.ResolveHostID(nodeID)
-	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
+	err := message.SignMessage(msg, network.certificate.GetEcdsaPrivateKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
 	}
@@ -103,7 +104,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
+	err := message.SignMessage(msg, network.certificate.GetEcdsaPrivateKey())
 	if err != nil {
 		return errors.Wrap(err, "failed to sign a message")
 	}
@@ -134,6 +135,7 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
+	network.certificate = components.Certificate
 	go network.listen()
 
 	log.Infoln("Bootstrapping network...")
