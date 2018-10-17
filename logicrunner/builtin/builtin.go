@@ -61,11 +61,11 @@ func (bi *BuiltIn) Stop() error {
 // CallMethod runs a method on contract
 func (bi *BuiltIn) CallMethod(ctx *core.LogicCallContext, codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
 	am := bi.AM
-	codeDescriptor, err := am.GetCode(codeRef, []core.MachineType{core.MachineTypeBuiltin})
+	codeDescriptor, err := am.GetCode(codeRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Can't find code")
 	}
-	code := codeDescriptor.Code()
+	code, err := codeDescriptor.Code()
 	c, ok := bi.Registry[string(code)]
 	if !ok {
 		return nil, nil, errors.New("Wrong reference for builtin contract")

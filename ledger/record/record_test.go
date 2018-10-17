@@ -20,34 +20,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
-}
-
-func TestCodeRecord_GetCode(t *testing.T) {
-	rec := CodeRecord{
-		TargetedCode: map[core.MachineType][]byte{
-			1: {1},
-			2: {2},
-		},
-	}
-
-	_, _, err := rec.GetCode([]core.MachineType{15})
-	assert.Error(t, err)
-
-	code, mt, err := rec.GetCode([]core.MachineType{3, 2, 1})
-	assert.NoError(t, err)
-	assert.Equal(t, []byte{2}, code)
-	assert.Equal(t, core.MachineType(2), mt)
-
-	code, mt, err = rec.GetCode([]core.MachineType{1})
-	assert.NoError(t, err)
-	assert.Equal(t, []byte{1}, code)
-	assert.Equal(t, core.MachineType(1), mt)
 }
 
 // This ensures serialized reference has Record prefix and Domain suffix.

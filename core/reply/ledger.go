@@ -33,9 +33,10 @@ func (e *Code) Type() core.ReplyType {
 
 // Class is class from storage.
 type Class struct {
-	Head  core.RecordRef
-	State core.RecordID
-	Code  *core.RecordRef // Can be nil.
+	Head        core.RecordRef
+	State       core.RecordID
+	Code        *core.RecordRef // Can be nil.
+	MachineType core.MachineType
 }
 
 // Type implementation of Reply interface.
