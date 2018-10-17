@@ -18,6 +18,8 @@ package certificate
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
+	"io/ioutil"
 
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -26,12 +28,24 @@ import (
 
 // NewCertificate constructor creates new Certificate component
 func NewCertificate(keysPath string) (*Certificate, error) {
-	private, err := ecdsahelper.ImportPrivateKey("")
+
+	path := keysPath + ""
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, errors.New("couldn't read keys from: " + path)
+	}
+	var keys map[string]string
+	err = json.Unmarshal(data, &keys)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse json.")
+	}
+
+	private, err := ecdsahelper.ImportPrivateKey(keys["private_key"])
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to import private key.")
 	}
 
-	public, err := ecdsahelper.ImportPublicKey("")
+	public, err := ecdsahelper.ImportPublicKey(keys["public_key"])
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to import public key.")
 	}

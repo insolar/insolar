@@ -25,7 +25,7 @@ import (
 
 func TestNewPKI(t *testing.T) {
 	var certificate core.Certificate
-	certificate, err := NewCertificate("")
+	certificate, err := NewCertificate("./testdata/bootstrap_keys.json")
 	assert.NoError(t, err)
 
 	key := certificate.GetEcdsaPrivateKey()
