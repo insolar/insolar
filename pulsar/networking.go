@@ -171,7 +171,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	}
 
 	requestBody := request.Body.(EntropyPayload)
-	if requestBody.PulseNumber <= handler.Pulsar.LastPulse.PulseNumber {
+	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
@@ -209,7 +209,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 	}
 
 	requestBody := request.Body.(VectorPayload)
-	if requestBody.PulseNumber <= handler.Pulsar.LastPulse.PulseNumber {
+	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
@@ -235,7 +235,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	}
 
 	requestBody := request.Body.(core.PulseSenderConfirmation)
-	if requestBody.PulseNumber <= handler.Pulsar.LastPulse.PulseNumber {
+	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
@@ -277,7 +277,7 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 	}
 
 	requestBody := request.Body.(PulsePayload)
-	if requestBody.Pulse.PulseNumber <= handler.Pulsar.LastPulse.PulseNumber {
+	if requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
@@ -292,6 +292,7 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 		return err
 	}
 	handler.Pulsar.LastPulse = &requestBody.Pulse
+	handler.Pulsar.ProcessingPulseNumber = 0
 
 	return nil
 }
