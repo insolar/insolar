@@ -13,6 +13,7 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
 package updater
 
 import (
@@ -48,6 +49,7 @@ func (up *Updater) verifyAndUpdate() error {
 	return nil
 }
 
+// Verify, latest peer version == current version ?
 func (up *Updater) IsSameVersion(currentVersion string) (bool, string, error) {
 	log.Debug("Verify latest peer version from remote server")
 	up.CurrentVer = currentVersion
@@ -77,6 +79,7 @@ func (up *Updater) IsSameVersion(currentVersion string) (bool, string, error) {
 	return true, versionFromUS.Value, nil
 }
 
+// Start download binary files with version="version"
 func (up *Updater) DownloadFiles(version string) (success bool) {
 	if up.started {
 		return false
