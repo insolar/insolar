@@ -68,7 +68,6 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicR
 	mb.ReRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
 	mb.ReRegister(core.TypeValidationResults, lr.ProcessValidationResults)
 	mb.ReRegister(core.TypeExecutorResults, lr.ExecutorResults)
-
 }
 
 func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
@@ -1211,9 +1210,35 @@ func New(n int) *Child {
 	assert.Equal(t, []interface{}([]interface{}{uint64(0)}), r)
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
-	mb.ReRegister()
-
+	var toValidate []core.Message
+	mb.ReRegister(core.TypeValidateCaseBind, func(m core.Message) (core.Reply, error) {
+		toValidate = append(toValidate, m)
+		return nil, nil
+	})
+	var toExecute []core.Message
+	mb.ReRegister(core.TypeExecutorResults, func(m core.Message) (core.Reply, error) {
+		toExecute = append(toExecute, m)
+		return nil, nil
+	})
+	var toCheckValidate []core.Message
+	mb.ReRegister(core.TypeValidationResults, func(m core.Message) (core.Reply, error) {
+		toCheckValidate = append(toCheckValidate, m)
+		return nil, nil
+	})
+	// end of pulse, now send everything to right places
 	err = pm.Set(*pulsar.NewPulse(10, 10, &entropygenerator.StandardEntropyGenerator{}))
 	assert.NoError(t, err)
+
+	for _, m := range toValidate {
+		lr.ValidateCaseBind(m)
+	}
+
+	for _, m := range toExecute {
+		lr.ExecutorResults(m)
+	}
+
+	for _, m := range toCheckValidate {
+		lr.ProcessValidationResults(m)
+	}
 
 }
