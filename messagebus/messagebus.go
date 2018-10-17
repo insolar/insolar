@@ -33,10 +33,9 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	logicRunner core.LogicRunner
-	service     core.Network
-	ledger      core.Ledger
-	handlers    map[core.MessageType]core.MessageHandler
+	service  core.Network
+	ledger   core.Ledger
+	handlers map[core.MessageType]core.MessageHandler
 }
 
 // NewMessageBus is a `MessageBus` constructor
@@ -46,7 +45,6 @@ func NewMessageBus(configuration.Configuration) (*MessageBus, error) {
 
 // Start initializes message bus
 func (mb *MessageBus) Start(c core.Components) error {
-	mb.logicRunner = c.LogicRunner
 	mb.service = c.Network
 	mb.service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 	mb.ledger = c.Ledger

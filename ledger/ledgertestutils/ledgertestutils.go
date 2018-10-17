@@ -92,11 +92,7 @@ func TmpLedger(t testing.TB, lr core.LogicRunner, dir string) (*ledger.Ledger, f
 	assert.NoError(t, err)
 	jc, err := jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator)
 	assert.NoError(t, err)
-	pm, err := pulsemanager.NewPulseManager(db, jc)
-	assert.NoError(t, err)
-
-	// Bootstrap
-	err = db.Bootstrap()
+	pm, err := pulsemanager.NewPulseManager(db)
 	assert.NoError(t, err)
 
 	// Init components.

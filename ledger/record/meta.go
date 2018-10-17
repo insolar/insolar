@@ -16,6 +16,10 @@
 
 package record
 
+import (
+	"github.com/insolar/insolar/core"
+)
+
 // GenesisRecord is the first record created on storage. It's used to link root objects to it.
 type GenesisRecord struct {
 }
@@ -47,11 +51,9 @@ type ChildRecord struct {
 	Ref Reference // Reference to the child's head.
 }
 
-// Next returns next record.
-func (r *ChildRecord) Next() *ID {
-	if r == nil {
-		return nil
-	}
-
-	return r.PrevChild
+// PulseRecord is a record containing pulse info.
+type PulseRecord struct {
+	PrevPulse          core.PulseNumber
+	Entropy            core.Entropy
+	PredictedNextPulse core.PulseNumber
 }

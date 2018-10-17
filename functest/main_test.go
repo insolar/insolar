@@ -39,6 +39,7 @@ const insolarImportPath = "github.com/insolar/insolar"
 const insolarRootKeys = "bootstrap_keys.json"
 
 var cmd *exec.Cmd
+var cmdCompleted = make(chan error, 1)
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
@@ -129,11 +130,10 @@ func waitForLaunch() error {
 		}
 	}()
 
-	cmdCompleted := make(chan error)
 	go func() { cmdCompleted <- cmd.Wait() }()
-
 	select {
 	case err := <-cmdCompleted:
+		cmdCompleted <- nil
 		return errors.New("[ waitForLaunch ] insolard finished unexpectedly: " + err.Error())
 	case <-done:
 		return nil
@@ -186,7 +186,7 @@ func stopInsolard() error {
 		return nil
 	}
 	io.WriteString(stdin, "exit\n")
-	err := cmd.Wait()
+	err := <-cmdCompleted
 	if err != nil {
 		fmt.Println("[ stopInsolard ] try to kill, wait done with error: ", err)
 		err := cmd.Process.Kill()
@@ -215,7 +215,13 @@ func stopInsgorund() error {
 }
 
 func setup() error {
-	err := createDirForContracts()
+
+	err := deleteDirForData()
+	if err != nil {
+		fmt.Println("[ setup ] failed to remove data directory for func tests: ", err)
+	}
+
+	err = createDirForContracts()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't create dirs for test: ")
 	}

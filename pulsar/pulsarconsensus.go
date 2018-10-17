@@ -154,7 +154,11 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 	log.Warn(currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw)
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
 		//here confirmation myself
-		signature, err := signData(currentPulsar.PrivateKey, currentPulsar.CurrentSlotPulseSender)
+		signature, err := signData(currentPulsar.PrivateKey, core.PulseSenderConfirmation{
+			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+			Entropy:         currentPulsar.CurrentSlotEntropy,
+			PulseNumber:     currentPulsar.ProcessingPulseNumber,
+		})
 		if err != nil {
 			currentPulsar.StateSwitcher.SwitchToState(Failed, err)
 			return
@@ -163,6 +167,8 @@ func (currentPulsar *Pulsar) finalizeBft(finalEntropy core.Entropy, activePulsar
 		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Signature:       signature,
+			Entropy:         currentPulsar.CurrentSlotEntropy,
+			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		}
 		currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 

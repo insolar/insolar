@@ -59,6 +59,12 @@ pulsar:
 bootstrap:
   rootkeys: "scripts/insolard/bootstrap_keys.json"
   rootbalance: 10000
+privatekey: |-
+  -----BEGIN PRIVATE KEY-----
+  MHcCAQEEID6XJHMb2aiaK1bp2GHHw0r4LrzZZ4exlcmx8GrjGsMFoAoGCCqGSM49
+  AwEHoUQDQgAE7DE4ArqxIYbY/UAyLLFBGuFu2gROPaqp4vxbEeie7mnZeqsYexmN
+  BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
+  -----END PRIVATE KEY-----
 
 privatekey: |-
   -----BEGIN PRIVATE KEY-----

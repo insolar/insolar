@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"testing"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -71,9 +73,27 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 
 const LOCATION = "/api/v1"
 const PORT = "12221"
-const URL = "http://127.0.0.1:" + PORT + LOCATION
+const HOST = "127.0.0.1"
+const URL = "http://" + HOST + ":" + PORT + LOCATION
 
 var server = &http.Server{Addr: ":" + PORT}
+
+func waitForStart() error {
+	numAttempts := 5
+
+	for ; numAttempts > 0; numAttempts-- {
+		conn, _ := net.DialTimeout("tcp", net.JoinHostPort(HOST, PORT), time.Millisecond*50)
+		if conn != nil {
+			conn.Close()
+			break
+		}
+	}
+	if numAttempts == 0 {
+		return errors.New("Problem with launching test api: couldn't wait more")
+	}
+
+	return nil
+}
 
 func setup() error {
 	fh := FakeHandler
@@ -84,6 +104,12 @@ func setup() error {
 			log.Error("Test Httpserver: ListenAndServe() error: ", err)
 		}
 	}()
+
+	err := waitForStart()
+	if err != nil {
+		log.Error("Can't start api: ", err)
+		return errors.Wrap(err, "[ setup ]")
+	}
 
 	return nil
 }
