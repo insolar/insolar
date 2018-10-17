@@ -140,7 +140,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	stateSwitcher.SetPulsar(newPulsar)
 
 	// Act
-	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+	go newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
@@ -240,7 +240,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Act
-	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+	go firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
@@ -251,7 +251,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		assert.NoError(t, err)
 		count--
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
@@ -370,7 +370,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	}
 
 	// Main act
-	pulsars[0].StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+	go pulsars[0].StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
 	// Need to wait for the moment of brodcasting pulse in the network
 	currentPulse, err := usualLedger.GetPulseManager().Current()
@@ -383,7 +383,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		count--
 	}
 	// Final sleep for 100% receiving of pulse by all nodes (pulsars and nodes)
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(400 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
