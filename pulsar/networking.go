@@ -124,11 +124,6 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 		return err
 	}
 
-	state := handler.Pulsar.StateSwitcher.GetState()
-	if state > WaitingForEntropySigns {
-		return fmt.Errorf("not possible to recieve a sign of entropy, becasuse of the state - %v", state)
-	}
-
 	requestBody := request.Body.(EntropySignaturePayload)
 	if requestBody.PulseNumber <= handler.Pulsar.LastPulse.PulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
@@ -156,11 +151,6 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 			log.Error(err)
 		}
 		return err
-	}
-
-	state := handler.Pulsar.StateSwitcher.GetState()
-	if state > WaitingForEntropy {
-		return fmt.Errorf("not possible to recieve a entropy, becasuse of the state - %v", state)
 	}
 
 	requestBody := request.Body.(EntropyPayload)
@@ -196,11 +186,6 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 		return err
 	}
 
-	state := handler.Pulsar.StateSwitcher.GetState()
-	if state > WaitingForVectors {
-		return fmt.Errorf("not possible to recieve a vector, becasuse of the state - %v", state)
-	}
-
 	requestBody := request.Body.(VectorPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
@@ -220,11 +205,6 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 			log.Error(err)
 		}
 		return err
-	}
-
-	state := handler.Pulsar.StateSwitcher.GetState()
-	if state > WaitingForPulseSigns {
-		return fmt.Errorf("not possible to recieve the sign, becasuse of the state - %v", state)
 	}
 
 	requestBody := request.Body.(core.PulseSenderConfirmation)
