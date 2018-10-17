@@ -192,7 +192,7 @@ func TestDB_CreateDrop(t *testing.T) {
 		return out
 	}()
 
-	assert.ElementsMatch(t, expectedIdxData, idxData)
+	assert.Equal(t, expectedIdxData, idxData)
 }
 
 func sortrecords(ascendant bool, in [][2][]byte) [][2][]byte {
