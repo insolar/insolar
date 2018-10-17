@@ -38,7 +38,7 @@ type Configuration struct {
 	APIRunner   APIRunner
 	Pulsar      Pulsar
 	Bootstrap   Bootstrap
-	PrivateKey  string
+	KeysPath    string
 }
 
 // Holder provides methods to manage configuration
@@ -60,7 +60,7 @@ func NewConfiguration() Configuration {
 		APIRunner:   NewAPIRunner(),
 		Pulsar:      NewPulsar(),
 		Bootstrap:   NewBootstrap(),
-		PrivateKey:  "",
+		KeysPath:    "./",
 	}
 
 	return cfg
