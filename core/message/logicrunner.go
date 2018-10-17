@@ -35,13 +35,15 @@ const (
 type IBaseLogicMessage interface {
 	core.Message
 	GetReference() core.RecordRef
+	GetRequest() core.RecordRef
 }
 
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
-	Caller core.RecordRef
-	Nonce  uint64
-	sign   []byte
+	Caller  core.RecordRef
+	Request core.RecordRef
+	Nonce   uint64
+	sign    []byte
 }
 
 // SetSign sets a signature to message.
@@ -61,6 +63,11 @@ func (e *BaseLogicMessage) GetCaller() *core.RecordRef {
 // TargetRole returns RoleVirtualExecutor as routing target role.
 func (e *BaseLogicMessage) TargetRole() core.JetRole {
 	return core.RoleVirtualExecutor
+}
+
+// GetRequest returns RoleVirtualExecutor as routing target role.
+func (e *BaseLogicMessage) GetRequest() core.RecordRef {
+	return e.Request
 }
 
 // CallMethod - Simply call method and return result
