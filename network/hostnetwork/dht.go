@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"math"
-	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -296,7 +295,10 @@ func (dht *DHT) checkBootstrapHostsDomains(hosts []*host.Host) {
 		if err != nil {
 			log.Warn(err)
 		}
-		hst.Address.IP = net.ParseIP(ip)
+		hst.Address, err = host.NewAddress(ip)
+		if err != nil {
+			log.Warn(err)
+		}
 	}
 }
 

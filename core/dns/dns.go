@@ -26,14 +26,19 @@ import (
 func GetIpFromDomain(domain string) (string, error) {
 	woPort := strings.Split(domain, ":")
 	address := woPort[0]
-	port := woPort[1]
-
-	ips, err := net.LookupIP(address)
-	if err != nil {
-		return "", err
+	var port string
+	if len(woPort) > 1 {
+		port = ":" + woPort[1]
 	}
 
-	return ips[0].String() + ":" + port, nil
+	if IsDomain(address) {
+		ips, err := net.LookupIP(address)
+		if err != nil {
+			return "", err
+		}
+		return ips[0].String() + port, nil
+	}
+	return address + port, nil
 }
 
 // IsDomain return true if input arg is domain address.
