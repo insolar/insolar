@@ -127,7 +127,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 				ConnectionType:      "tcp",
 				MainListenerAddress: ":1640",
 				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
+				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
 				Neighbours:          []configuration.PulsarNodeAddress{}},
 			PrivateKey: exportedPrivateKey,
 		},
@@ -190,7 +190,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 				ConnectionType:      "tcp",
 				MainListenerAddress: ":1140",
 				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
+				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
 				Neighbours: []configuration.PulsarNodeAddress{
 					{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: secondPubKey},
 				},
@@ -216,7 +216,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 				ConnectionType:      "tcp",
 				MainListenerAddress: ":1641",
 				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
+				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
 				Neighbours: []configuration.PulsarNodeAddress{
 					{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: firstPubKey},
 				},
