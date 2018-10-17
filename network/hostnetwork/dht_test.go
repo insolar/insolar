@@ -905,10 +905,6 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 
 	done := make(chan bool)
 
-	// bootstrapAddr, _ := host.NewAddress("127.0.0.1:16000")
-	// dht1 := newRealDHT(t, nil, "16000")
-	// dht2 := newRealDHT(t, []*host.Host{{ID: dht1.origin.IDs[0], Address: bootstrapAddr}}, "16001")
-
 	ids1 := make([]id.ID, 0)
 	id1, _ := id.NewID()
 	key, _ := ecdsa.GeneratePrivateKey()
