@@ -101,9 +101,9 @@ var hashtestsRecordsMutate = []struct {
 		"CodeRecord",
 		[]Record{
 			&CodeRecord{},
-			&CodeRecord{SourceCode: "ABC"},
+			&CodeRecord{Code: []byte{1, 2, 3}},
 			&CodeRecord{
-				SourceCode: "ABC",
+				Code: []byte{1, 2, 3},
 				StorageRecord: StorageRecord{
 					StatefulResult: StatefulResult{
 						ResultRecord: ResultRecord{

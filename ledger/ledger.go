@@ -120,9 +120,6 @@ func (l *Ledger) Start(c core.Components) error {
 	if err = l.handler.Link(c); err != nil {
 		return err
 	}
-	if err = l.pm.Link(c); err != nil {
-		return err
-	}
 
 	return nil
 }
