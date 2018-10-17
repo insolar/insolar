@@ -151,7 +151,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		assert.NoError(t, err)
 		count--
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
@@ -251,7 +251,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		assert.NoError(t, err)
 		count--
 	}
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
@@ -383,7 +383,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		count--
 	}
 	// Final sleep for 100% receiving of pulse by all nodes (pulsars and nodes)
-	time.Sleep(400 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
