@@ -65,11 +65,14 @@ type RPC struct {
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.lr.ArtifactManager
-	codeDescriptor, err := am.GetCode(req.Code, []core.MachineType{req.MType})
+	codeDescriptor, err := am.GetCode(req.Code)
 	if err != nil {
 		return err
 	}
-	reply.Code = codeDescriptor.Code()
+	reply.Code, err = codeDescriptor.Code()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
