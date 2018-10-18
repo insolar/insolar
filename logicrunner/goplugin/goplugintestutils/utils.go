@@ -158,7 +158,7 @@ type TestArtifactManager struct {
 }
 
 // GetChildren implementation for tests
-func (t *TestArtifactManager) GetChildren(parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+func (t *TestArtifactManager) GetChildren(ctx core.Context, parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
 	panic("implement me")
 }
 

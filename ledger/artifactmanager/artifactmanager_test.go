@@ -792,6 +792,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
 		ResultRecord: record.ResultRecord{
@@ -824,7 +825,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	td.db.SetObjectIndex(parentID, &parentIndex)
 
 	t.Run("returns correct children without pulse", func(t *testing.T) {
-		i, err := td.manager.GetChildren(*genRefWithID(parentID), nil)
+		i, err := td.manager.GetChildren(ctx, *genRefWithID(parentID), nil)
 		assert.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
@@ -843,7 +844,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 
 	t.Run("returns correct children with pulse", func(t *testing.T) {
 		pn := core.PulseNumber(1)
-		i, err := td.manager.GetChildren(*genRefWithID(parentID), &pn)
+		i, err := td.manager.GetChildren(ctx, *genRefWithID(parentID), &pn)
 		assert.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
@@ -860,7 +861,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 
 	t.Run("returns correct children in many chunks", func(t *testing.T) {
 		td.manager.getChildrenChunkSize = 1
-		i, err := td.manager.GetChildren(*genRefWithID(parentID), nil)
+		i, err := td.manager.GetChildren(ctx, *genRefWithID(parentID), nil)
 		assert.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
@@ -881,7 +882,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Run("doesn't fail when has no children to return", func(t *testing.T) {
 		td.manager.getChildrenChunkSize = 1
 		pn := core.PulseNumber(3)
-		i, err := td.manager.GetChildren(*genRefWithID(parentID), &pn)
+		i, err := td.manager.GetChildren(ctx, *genRefWithID(parentID), &pn)
 		assert.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)

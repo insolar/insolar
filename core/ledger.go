@@ -100,7 +100,7 @@ type ArtifactManager interface {
 	// GetChildren returns children iterator.
 	//
 	// During iteration children refs will be fetched from remote source (parent object).
-	GetChildren(parent RecordRef, pulse *PulseNumber) (RefIterator, error)
+	GetChildren(ctx Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
 
 	// DeclareType creates new type record in storage.
 	//

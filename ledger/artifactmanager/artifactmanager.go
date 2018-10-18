@@ -187,7 +187,9 @@ func (m *LedgerArtifactManager) GetDelegate(
 // GetChildren returns children iterator.
 //
 // During iteration children refs will be fetched from remote source (parent object).
-func (m *LedgerArtifactManager) GetChildren(parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+func (m *LedgerArtifactManager) GetChildren(
+	ctx core.Context, parent core.RecordRef, pulse *core.PulseNumber,
+) (core.RefIterator, error) {
 	return NewChildIterator(m.messageBus, parent, pulse, m.getChildrenChunkSize)
 }
 

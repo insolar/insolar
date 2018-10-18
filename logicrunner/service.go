@@ -200,7 +200,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	}
 
 	am := gpr.lr.ArtifactManager
-	i, err := am.GetChildren(req.Obj, nil)
+	i, err := am.GetChildren(ctx, req.Obj, nil)
 	if err != nil {
 		return err
 	}

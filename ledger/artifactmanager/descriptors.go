@@ -130,7 +130,8 @@ func (d *ObjectDescriptor) Memory() []byte {
 
 // Children returns object's children references.
 func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
-	return d.am.GetChildren(d.head, pulse)
+	ctx := inscontext.TODO()
+	return d.am.GetChildren(ctx, d.head, pulse)
 }
 
 // ClassDescriptor returns descriptor for fetching object's class data.
