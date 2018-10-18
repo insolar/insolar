@@ -43,21 +43,32 @@ type ExecutionState struct {
 	mutex sync.Mutex
 }
 
+type Consensus struct {
+	MustHave int
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	MessageBus      core.MessageBus
+	Ledger          core.Ledger
 	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
 	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
 	executionMutex  sync.Mutex
 
-	// TODO refactor caseBind and caseBindReplays to one clear structure
-	caseBind             core.CaseBind
-	caseBindMutex        sync.Mutex
+	Pulse core.Pulse // pulse info for this bind
+
+
+	// TODO move caseBind to context
+	caseBind      core.CaseBind
+	caseBindMutex sync.Mutex
+
 	caseBindReplays      map[Ref]core.CaseBindReplay
 	caseBindReplaysMutex sync.Mutex
+	consensus            map[Ref]*Consensus
+	consensusMutex       sync.Mutex
 	sock                 net.Listener
 }
 
@@ -70,7 +81,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		ArtifactManager: nil,
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
-		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[Ref][]core.CaseRecord)},
+		Pulse:           core.Pulse{},
+		caseBind:        core.CaseBind{Records: make(map[Ref][]core.CaseRecord)},
 		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
 	return &res, nil
@@ -82,6 +94,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	lr.ArtifactManager = am
 	messageBus := c.MessageBus
 	lr.MessageBus = messageBus
+	lr.Ledger = c.Ledger
 
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(messageBus, am)
@@ -208,7 +221,7 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 		Caller:  msg.GetCaller(),
 		Request: reqref,
 		Time:    time.Now(), // TODO: probably we should take it from e
-		Pulse:   lr.caseBind.Pulse,
+		Pulse:   lr.Pulse,
 	}
 
 	switch m := msg.(type) {
@@ -384,6 +397,8 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
+	lr.Pulse = pulse
+	lr.consensus = make(map[Ref]*Consensus)
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind(pulse)
 
@@ -412,16 +427,13 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 }
 
 // refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
-func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[Ref][]core.CaseRecord {
+func (lr *LogicRunner) refreshCaseBind() map[Ref][]core.CaseRecord {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
 
 	oldObjectsRecords := lr.caseBind.Records
 
-	lr.caseBind = core.CaseBind{
-		Pulse:   pulse,
-		Records: make(map[Ref][]core.CaseRecord),
-	}
+	lr.caseBind = core.CaseBind{Records: make(map[Ref][]core.CaseRecord)}
 
 	return oldObjectsRecords
 }

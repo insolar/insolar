@@ -123,8 +123,8 @@ func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.Reco
 	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
-		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.caseBind.Pulse.PulseNumber), "right pulsenumber")
-		vstep, err := lr.Validate(ref, rlr.caseBind.Pulse, cr)
+		assert.Equal(t, configuration.NewPulsar().NumberDelta, uint32(rlr.Pulse.PulseNumber), "right pulsenumber")
+		vstep, err := lr.Validate(ref, rlr.Pulse, cr)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation")
 			assert.True(t, len(cr) > vstep, "Validation failed before end")

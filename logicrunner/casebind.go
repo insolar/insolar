@@ -157,15 +157,40 @@ func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) 
 	return nil, err
 }
 
+func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
+	lr.consensusMutex.Lock()
+	defer lr.consensusMutex.Unlock()
+	c, ok := lr.consensus[r]
+	if !ok {
+		c = &Consensus{}
+		lr.consensus[r] = c
+	}
+	return c, ok
+}
+
 func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply, error) {
-	// Handle all validators Request
-	// Do some staff if request don't come for a long time
-	// Compare results of different validators and previous Executor
+	msg, ok := inmsg.(*message.ValidationResults)
+	if !ok {
+		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+	}
+	c, _ := lr.GetConsensus(msg.RecordRef)
+	c.MustHave = 0
 	return nil, nil
 }
 
 func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
-	// Coordinate this with ProcessValidationResults
+	msg, ok := inmsg.(*message.ValidationResults)
+	if !ok {
+		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+	}
+	c, _ := lr.GetConsensus(msg.RecordRef)
+
+	arr, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, msg.RecordRef, lr.Pulse.PulseNumber)
+	if err != nil {
+		panic("cannot QueryRole")
+	}
+	c.MustHave = len(arr)
+
 	return nil, nil
 }
 
