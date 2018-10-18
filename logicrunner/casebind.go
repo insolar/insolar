@@ -39,20 +39,20 @@ func HashInterface(in interface{}) []byte {
 	return sh.Sum(s)
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecord) {
+func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
 	lr.caseBindMutex.Lock()
 	lr.caseBind.Records[ref] = append(lr.caseBind.Records[ref], cr)
 	lr.caseBindMutex.Unlock()
 }
 
-func (lr *LogicRunner) lastObjectCaseRecord(ref core.RecordRef) core.CaseRecord {
+func (lr *LogicRunner) lastObjectCaseRecord(ref Ref) core.CaseRecord {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
 	list := lr.caseBind.Records[ref]
 	return list[len(list)-1]
 }
 
-func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseRecord, int) {
+func (lr *LogicRunner) getNextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	lr.caseBindReplaysMutex.Lock()
 	defer lr.caseBindReplaysMutex.Unlock()
 	r, ok := lr.caseBindReplays[ref]
@@ -67,7 +67,7 @@ func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseReco
 	return &ret, r.Step
 }
 
-func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.CaseRecord) (int, error) {
+func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
@@ -141,8 +141,8 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
 type ValidationBehaviour interface {
-	Begin(refs core.RecordRef, record core.CaseRecord)
-	End(refs core.RecordRef, record core.CaseRecord)
+	Begin(refs Ref, record core.CaseRecord)
+	End(refs Ref, record core.CaseRecord)
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
 }
@@ -159,11 +159,11 @@ func (vb ValidationSaver) ModifyContext(ctx *core.LogicCallContext) {
 	// nothing need
 }
 
-func (vb ValidationSaver) Begin(refs core.RecordRef, record core.CaseRecord) {
+func (vb ValidationSaver) Begin(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
-func (vb ValidationSaver) End(refs core.RecordRef, record core.CaseRecord) {
+func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
@@ -180,10 +180,10 @@ func (vb ValidationChecker) ModifyContext(ctx *core.LogicCallContext) {
 	ctx.Pulse = vb.cb.Pulse
 }
 
-func (vb ValidationChecker) Begin(refs core.RecordRef, record core.CaseRecord) {
+func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
 }
 
-func (vb ValidationChecker) End(refs core.RecordRef, record core.CaseRecord) {
+func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
 }

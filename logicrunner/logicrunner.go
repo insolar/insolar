@@ -258,12 +258,12 @@ func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
 
 type objectBody struct {
 	Body        []byte
-	Code        core.RecordRef
-	Class       core.RecordRef
+	Code        Ref
+	Class       Ref
 	MachineType core.MachineType
 }
 
-func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, error) {
+func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 	cr, step := lr.getNextValidationStep(objref)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObject != cr.Type {
@@ -341,7 +341,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 		// TODO: deactivation should be handled way better here
 		if vb.NeedSave() && lr.lastObjectCaseRecord(m.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
-				core.RecordRef{}, *ctx.Request, m.ObjectRef, newData,
+				Ref{}, *ctx.Request, m.ObjectRef, newData,
 			)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
@@ -411,7 +411,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		log.Warnf("M = %+v", m)
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
-				core.RecordRef{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
+				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{
@@ -423,7 +423,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	case message.Delegate:
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObjectDelegate(
-				core.RecordRef{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
+				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{
@@ -463,7 +463,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 }
 
 // refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
-func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]core.CaseRecord {
+func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[Ref][]core.CaseRecord {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
 
@@ -471,7 +471,7 @@ func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[core.RecordRef][]co
 
 	lr.caseBind = core.CaseBind{
 		Pulse:   pulse,
-		Records: make(map[core.RecordRef][]core.CaseRecord),
+		Records: make(map[Ref][]core.CaseRecord),
 	}
 
 	return oldObjectsRecords
