@@ -73,3 +73,12 @@ func ExtractNodeRef(rawJSON []byte) (string, error) {
 
 	return nRef.Ref, nil
 }
+
+func extractReferenceResponse(data []byte) (*core.RecordRef, error) {
+	var ref core.RecordRef
+	_, err := core.UnMarshalResponse(data, []interface{}{&ref})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ extractReferenceResponse ]")
+	}
+	return &ref, nil
+}

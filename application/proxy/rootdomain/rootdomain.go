@@ -424,3 +424,48 @@ func (r *RootDomain) DumpAllUsersNoWait() {
 		panic(err)
 	}
 }
+
+// GetNodeDomainRef is proxy generated method
+func (r *RootDomain) GetNodeDomainRef() core.RecordRef {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeDomainRef", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	ret := [1]interface{}{}
+	var ret0 core.RecordRef
+	ret[0] = &ret0
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		panic(err)
+	}
+
+	return ret0
+}
+
+// GetNodeDomainRefNoWait is proxy generated method
+func (r *RootDomain) GetNodeDomainRefNoWait() {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeDomainRef", argsSerialized)
+	if err != nil {
+		panic(err)
+	}
+}

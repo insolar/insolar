@@ -299,44 +299,34 @@ func (db *DB) waitinflight() {
 // CreateDrop creates and stores jet drop for given pulse number.
 //
 // Previous JetDrop hash should be provided. On success returns saved drop and slot records.
-func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (*jetdrop.JetDrop, [][2][]byte, error) {
+func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
+	*jetdrop.JetDrop,
+	[][2][]byte, // records
+	[][2][]byte, // indexes
+	error,
+) {
+	var err error
 	db.waitinflight()
 
 	prefix := make([]byte, core.PulseNumberSize+1)
 	prefix[0] = scopeIDRecord
 	copy(prefix[1:], pulse.Bytes())
 
-	// We need to look for the closest key that is bigger because we need to reverse iterate from the last record.
-	seekFor := make([]byte, len(prefix))
-	copy(seekFor, prefix)
-	seekFor[len(prefix)-1]++
-
 	hw := hash.NewIDHash()
-	_, err := hw.Write(prevHash)
+	_, err = hw.Write(prevHash)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var records [][2][]byte
 	err = db.db.View(func(txn *badger.Txn) error {
-		ops := badger.DefaultIteratorOptions
-		ops.Reverse = true
-		it := txn.NewIterator(ops)
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-		it.Seek(seekFor)
 
-		for {
-			if !it.Valid() {
-				break
-			}
-
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			key := item.Key()
-			if !bytes.Equal(key[:core.PulseNumberSize+1], prefix) {
-				break
-			}
-
-			_, err := hw.Write(key[1:])
+			_, err = hw.Write(key[1:])
 			if err != nil {
 				return err
 			}
@@ -345,14 +335,32 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (*jetdrop.JetD
 				return err
 			}
 			records = append(records, [2][]byte{key[1:], value})
-
-			it.Next()
 		}
-
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+
+	var indexes [][2][]byte
+	err = db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		seekIndex := []byte{scopeIDLifeline}
+		for it.Seek(seekIndex); it.ValidForPrefix(seekIndex); it.Next() {
+			item := it.Item()
+			key := item.Key()
+			value, err := item.ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+			indexes = append(indexes, [2][]byte{key, value})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	drop := jetdrop.JetDrop{
@@ -360,7 +368,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (*jetdrop.JetD
 		PrevHash: prevHash,
 		Hash:     hw.Sum(nil),
 	}
-	return &drop, records, nil
+	return &drop, records, indexes, nil
 }
 
 // SetDrop saves provided JetDrop in db.
@@ -484,4 +492,9 @@ func (db *DB) Update(fn func(*TransactionManager) error) error {
 	}
 	tx.Discard()
 	return err
+}
+
+// GetBadgerDB return badger.DB instance (for internal usage, like tests)
+func (db *DB) GetBadgerDB() *badger.DB {
+	return db.db
 }

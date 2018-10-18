@@ -33,7 +33,8 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	RootMember core.RecordRef
+	RootMember    core.RecordRef
+	NodeDomainRef core.RecordRef
 }
 
 // RegisterNode processes register node request
@@ -163,6 +164,11 @@ func (rd *RootDomain) DumpAllUsers() []byte {
 	}
 	resJSON, _ := json.Marshal(res)
 	return resJSON
+}
+
+// GetNodeDomainRef returns reference of NodeDomain instance
+func (rd *RootDomain) GetNodeDomainRef() core.RecordRef {
+	return rd.NodeDomainRef
 }
 
 // NewRootDomain creates new RootDomain
