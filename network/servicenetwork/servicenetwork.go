@@ -71,7 +71,7 @@ func (network *ServiceNetwork) GetAddress() string {
 }
 
 // GetNodeID returns current node id.
-func (network *ServiceNetwork) GetNodeID() core.RecordRef {
+func (network *ServiceNetwork) GetNodeID() *core.RecordRef {
 	return network.nodeNetwork.GetID()
 }
 
@@ -99,7 +99,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		method, msg.Target().String())
 
 	metrics.NetworkMessageSentTotal.Inc()
-	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
+	res, err := network.hostNetwork.RemoteProcedureCall(network.nodeNetwork.GetID(), createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s", msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
 	return res, err
 }
@@ -232,7 +232,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 
 	if findCurrentNode {
 		nodeID := network.nodeNetwork.GetID()
-		nextNodes, err = cascade.CalculateNextNodes(data, &nodeID)
+		nextNodes, err = cascade.CalculateNextNodes(data, nodeID)
 	} else {
 		nextNodes, err = cascade.CalculateNextNodes(data, nil)
 	}

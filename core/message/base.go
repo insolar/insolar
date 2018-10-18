@@ -153,7 +153,7 @@ func SignMessage(msg core.Message, key *ecdsa.PrivateKey) error {
 }
 
 // SignIsCorrect checks if a sign is correct.
-func SignIsCorrect(msg core.Message, key *ecdsa.PrivateKey) bool {
+func SignIsCorrect(msg core.Message, key *ecdsa.PublicKey) bool {
 	sign := msg.GetSign()
 	msg.SetSign(make([]byte, 0))
 
@@ -162,12 +162,17 @@ func SignIsCorrect(msg core.Message, key *ecdsa.PrivateKey) bool {
 		log.Error(err, "filed to serialize message")
 		return false
 	}
-	newSign, err := ecdsa2.Sign(serialized, key)
+	exportedKey, err := ecdsa2.ExportPublicKey(key)
 	if err != nil {
-		log.Error(err, "failed to sign a message")
+		log.Error("failed to export a public key")
 		return false
 	}
-	return bytes.Equal(sign, newSign)
+	verified, err := ecdsa2.Verify(serialized, sign, exportedKey)
+	if err != nil {
+		log.Error(err, "failed to verify a message")
+		return false
+	}
+	return verified
 }
 
 func init() {

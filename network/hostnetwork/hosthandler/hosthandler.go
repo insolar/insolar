@@ -124,7 +124,7 @@ type HostHandler interface {
 	InvokeRPC(sender *host.Host, method string, args [][]byte) ([]byte, error)
 	CascadeSendMessage(data core.Cascade, targetID string, method string, args [][]byte) error
 	Store(key store.Key, data []byte, replication time.Time, expiration time.Time, publisher bool) error
-	RemoteProcedureCall(ctx Context, targetID string, method string, args [][]byte) (result []byte, err error)
+	RemoteProcedureCall(nodeID *core.RecordRef, ctx Context, targetID string, method string, args [][]byte) (result []byte, err error)
 
 	AddPossibleProxyID(id string)
 	AddPossibleRelayID(id string)

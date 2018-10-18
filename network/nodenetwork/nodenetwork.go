@@ -53,7 +53,7 @@ func ResolveHostID(ref core.RecordRef) string {
 }
 
 // GetID returns current node id
-func (network *NodeNetwork) GetID() core.RecordRef {
+func (network *NodeNetwork) GetID() *core.RecordRef {
 	return network.node.GetID()
 }
 

@@ -28,6 +28,7 @@ import (
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/dns"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/consensus"
@@ -900,18 +901,18 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 
 	// TODO: fix sign and check sign logic
-	// if msg.Type == packet.TypeRPC {
-	// 	data := msg.Data.(*packet.RequestDataRPC)
-	// 	signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
-	// 	if err != nil {
-	// 		log.Error(err, "failed to parse incoming RPC")
-	// 		return
-	// 	}
-	// 	if !message.SignIsCorrect(signedMsg, dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey()) {
-	// 		log.Warn("RPC message not signed")
-	// 		return
-	// 	}
-	// }
+	if msg.Type == packet.TypeRPC {
+		data := msg.Data.(*packet.RequestDataRPC)
+		signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
+		if err != nil {
+			log.Error(err, "failed to parse incoming RPC")
+			return
+		}
+		if !message.SignIsCorrect(signedMsg, dht.activeNodeKeeper.GetActiveNode(*data.NodeID).PublicKey) {
+			log.Warn("RPC message not signed")
+			return
+		}
+	}
 
 	response, err := ParseIncomingPacket(dht, ctx, msg, packetBuilder)
 	if err != nil {
@@ -1273,7 +1274,7 @@ func (dht *DHT) AddRelayClient(host *host.Host) error {
 }
 
 // RemoteProcedureCall calls remote procedure on target host.
-func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+func (dht *DHT) RemoteProcedureCall(nodeID *core.RecordRef, ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
 	targetHost, exists, err := dht.FindHost(ctx, targetID)
 	ht := dht.HtFromCtx(ctx)
 
@@ -1290,6 +1291,7 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 		Receiver: targetHost,
 		Type:     packet.TypeRPC,
 		Data: &packet.RequestDataRPC{
+			NodeID: nodeID,
 			Method: method,
 			Args:   args,
 		},
