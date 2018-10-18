@@ -13,7 +13,7 @@ INSGORUND_RPS_PORT=18182
 stop_listening()
 {
     ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 8090 8080"
-    if [ $1 != "" ]
+    if [ "$1" != "" ]
     then
         ports=$@
     fi
