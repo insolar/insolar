@@ -33,7 +33,7 @@ import (
 )
 
 func initComponents(t *testing.T) core.Components {
-	cert, err := certificate.NewCertificate("")
+	cert, err := certificate.NewCertificate("../../testdata/functional/bootstrap_keys.json")
 	assert.NoError(t, err)
 	return core.Components{Certificate: cert}
 }
