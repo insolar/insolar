@@ -102,7 +102,7 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 
 // SerializeType returns binary representation of provided type.
 func SerializeType(id TypeID) []byte {
-	buf := make([]byte, 4) // uint32
+	buf := make([]byte, TypeIDSize)
 	binary.BigEndian.PutUint32(buf, uint32(id))
 	return buf
 }
@@ -123,8 +123,8 @@ func SerializeRecord(rec Record) []byte {
 
 // DeserializeRecord returns record decoded from bytes.
 func DeserializeRecord(buf []byte) Record {
-	t := DeserializeType(buf[:4]) // uint32
-	dec := codec.NewDecoderBytes(buf[4:], &codec.CborHandle{})
+	t := DeserializeType(buf[:TypeIDSize])
+	dec := codec.NewDecoderBytes(buf[TypeIDSize:], &codec.CborHandle{})
 	rec := getRecordByTypeID(t)
 	dec.MustDecode(&rec)
 	return rec

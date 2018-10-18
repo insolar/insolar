@@ -26,6 +26,9 @@ import (
 // TypeID encodes a record object type.
 type TypeID uint32
 
+// TypeIDSize is a size of TypeID type.
+const TypeIDSize = 4
+
 // ID is a composite identifier for records.
 //
 // Hash is a bytes slice here to avoid copy of Hash array.
