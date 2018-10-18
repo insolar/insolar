@@ -50,7 +50,7 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
 			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 			continue
 		}
-		log.Infof("Sign of entropy sent to %v", neighbour.ConnectionAddress)
+		log.Infof("Sign of Entropy sent to %v", neighbour.ConnectionAddress)
 	}
 }
 
@@ -240,7 +240,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
 	if err != nil {
 		log.Error(err)
 	}
-	currentPulsar.LastPulse = &pulseForSending
+	currentPulsar.SetLastPulse(&pulseForSending)
 
 	currentPulsar.StateSwitcher.SwitchToState(WaitingForStart, nil)
 	defer func() {

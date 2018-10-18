@@ -62,7 +62,9 @@ type Pulsar struct {
 	CurrentSlotSenderConfirmations     map[string]core.PulseSenderConfirmation
 
 	ProcessingPulseNumber core.PulseNumber
-	LastPulse             *core.Pulse
+
+	lastPulseLock sync.RWMutex
+	lastPulse     *core.Pulse
 
 	OwnedBftRow map[string]*BftCell
 
@@ -118,7 +120,7 @@ func NewPulsar(
 		log.Fatal(err)
 		panic(err)
 	}
-	pulsar.LastPulse = lastPulse
+	pulsar.SetLastPulse(lastPulse)
 
 	// Adding other pulsars
 	for _, neighbour := range configuration.Pulsar.Neighbours {
@@ -269,8 +271,17 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
 		currentPulsar.StartProcessLock.Unlock()
-		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.StateSwitcher.GetState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
-		return fmt.Errorf("wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.StateSwitcher.GetState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
+		log.Warnf(
+			"Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
+			currentPulsar.StateSwitcher.GetState().String(),
+			pulseNumber,
+			currentPulsar.GetLastPulse().PulseNumber,
+			currentPulsar.ProcessingPulseNumber)
+		return fmt.Errorf(
+			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
+			currentPulsar.StateSwitcher.GetState().String(),
+			pulseNumber, currentPulsar.GetLastPulse().PulseNumber,
+			currentPulsar.ProcessingPulseNumber)
 	}
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 

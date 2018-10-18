@@ -258,10 +258,10 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	assert.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
 	assert.Equal(t, WaitingForStart, firstPulsar.StateSwitcher.GetState())
 	assert.Equal(t, WaitingForStart, secondPulsar.StateSwitcher.GetState())
-	assert.Equal(t, core.GenesisPulse.PulseNumber+1, firstPulsar.LastPulse.PulseNumber)
-	assert.Equal(t, core.GenesisPulse.PulseNumber+1, secondPulsar.LastPulse.PulseNumber)
-	assert.Equal(t, 2, len(firstPulsar.LastPulse.Signs))
-	assert.Equal(t, 2, len(secondPulsar.LastPulse.Signs))
+	assert.Equal(t, core.GenesisPulse.PulseNumber+1, firstPulsar.GetLastPulse().PulseNumber)
+	assert.Equal(t, core.GenesisPulse.PulseNumber+1, secondPulsar.GetLastPulse().PulseNumber)
+	assert.Equal(t, 2, len(firstPulsar.GetLastPulse().Signs))
+	assert.Equal(t, 2, len(secondPulsar.GetLastPulse().Signs))
 
 	defer func() {
 		usualNodeNetwork.Stop()
@@ -391,10 +391,11 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	for _, pulsar := range pulsars {
 		assert.Equal(t, WaitingForStart, pulsar.StateSwitcher.GetState())
-		assert.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.LastPulse.PulseNumber)
-		assert.Equal(t, 7, len(pulsar.LastPulse.Signs))
+		pulsar.lastPulseLock.RLock()
+		assert.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
+		assert.Equal(t, 7, len(pulsar.GetLastPulse().Signs))
 		for _, keysItem := range keys {
-			sign := pulsar.LastPulse.Signs[keysItem.pubKey]
+			sign := pulsar.GetLastPulse().Signs[keysItem.pubKey]
 			isOk, err := checkSignature(core.PulseSenderConfirmation{
 				PulseNumber:     sign.PulseNumber,
 				ChosenPublicKey: sign.ChosenPublicKey,
@@ -403,6 +404,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			assert.Equal(t, true, isOk)
 			assert.NoError(t, err)
 		}
+		pulsar.lastPulseLock.RUnlock()
 	}
 
 	defer func() {

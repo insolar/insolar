@@ -41,20 +41,55 @@ func (currentPulsar *Pulsar) GetBftGridItem(row string, column string) *BftCell 
 
 // BftCell is a cell in NxN btf-grid
 type BftCell struct {
-	lock              sync.Mutex
+	signLock              sync.RWMutex
+	entropyLock           sync.RWMutex
+	isEntropyReceivedLock sync.RWMutex
+
 	Sign              []byte
 	Entropy           core.Entropy
 	IsEntropyReceived bool
 }
 
-// Lock locks the current cell
-func (cell *BftCell) Lock() {
-	cell.lock.Lock()
+// SetSign sets Sign in the thread-safe way
+func (bftCell *BftCell) SetSign(sign []byte) {
+	bftCell.signLock.Lock()
+	defer bftCell.signLock.Unlock()
+	bftCell.Sign = sign
 }
 
-// Unlock calls unlock on the current cell's lock
-func (cell *BftCell) Unlock() {
-	cell.lock.Unlock()
+// GetSign gets Sign in the thread-safe way
+func (bftCell *BftCell) GetSign() []byte {
+	bftCell.signLock.RLock()
+	defer bftCell.signLock.RUnlock()
+	return bftCell.Sign
+}
+
+// SetEntropy sets Entropy in the thread-safe way
+func (bftCell *BftCell) SetEntropy(entropy core.Entropy) {
+	bftCell.entropyLock.Lock()
+	defer bftCell.entropyLock.Unlock()
+	bftCell.Entropy = entropy
+}
+
+// GetEntropy gets Entropy in the thread-safe way
+func (bftCell *BftCell) GetEntropy() core.Entropy {
+	bftCell.entropyLock.RLock()
+	defer bftCell.entropyLock.RUnlock()
+	return bftCell.Entropy
+}
+
+// SetIsEntropyReceived sets IsEntropyReceived in the thread-safe way
+func (bftCell *BftCell) SetIsEntropyReceived(isEntropyReceived bool) {
+	bftCell.isEntropyReceivedLock.Lock()
+	defer bftCell.isEntropyReceivedLock.Unlock()
+	bftCell.IsEntropyReceived = isEntropyReceived
+}
+
+// GetIsEntropyReceived gets IsEntropyReceived in the thread-safe way
+func (bftCell *BftCell) GetIsEntropyReceived() bool {
+	bftCell.isEntropyReceivedLock.RLock()
+	defer bftCell.isEntropyReceivedLock.RUnlock()
+	return bftCell.IsEntropyReceived
 }
 
 func (currentPulsar *Pulsar) isVerificationNeeded() bool {
@@ -104,13 +139,14 @@ func (currentPulsar *Pulsar) verify() {
 				continue
 			}
 
-			ok, err := checkSignature(bftCell.Entropy, column.PubPem, bftCell.Sign)
+			ok, err := checkSignature(bftCell.GetEntropy(), column.PubPem, bftCell.GetSign())
 			if !ok || err != nil {
 				currentColumnStat["nil"]++
 				continue
 			}
 
-			currentColumnStat[string(bftCell.Entropy[:])]++
+			entropy := bftCell.GetEntropy()
+			currentColumnStat[string(entropy[:])]++
 		}
 
 		maxConfirmationsForEntropy := int(0)

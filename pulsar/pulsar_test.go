@@ -340,7 +340,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {
 	pulsar := &Pulsar{StateSwitcher: &MockStateSwitcher{}}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(123)
-	pulsar.LastPulse = &core.Pulse{PulseNumber: core.PulseNumber(122)}
+	pulsar.SetLastPulse(&core.Pulse{PulseNumber: core.PulseNumber(122)})
 
 	err := pulsar.StartConsensusProcess(core.PulseNumber(121))
 
@@ -379,7 +379,7 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 		OwnedBftRow:      map[string]*BftCell{},
 	}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(120)
-	pulsar.LastPulse = &core.Pulse{PulseNumber: core.PulseNumber(2)}
+	pulsar.SetLastPulse(&core.Pulse{PulseNumber: core.PulseNumber(2)})
 	pulsar.StateSwitcher = &mockSwitcher
 	expectedPulse := core.PulseNumber(123)
 
