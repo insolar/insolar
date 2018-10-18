@@ -141,7 +141,10 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 	}
 
 	recHash := hash.NewIDHash()
-	rec.WriteHashData(recHash)
+	_, err = rec.WriteHashData(recHash)
+	if err != nil {
+		return nil, err
+	}
 	id := record.ID{
 		Pulse: latestPulse,
 		Hash:  recHash.Sum(nil),
