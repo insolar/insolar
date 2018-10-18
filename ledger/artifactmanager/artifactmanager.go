@@ -102,7 +102,9 @@ func (m *LedgerArtifactManager) GetCode(
 //
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
-func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
+func (m *LedgerArtifactManager) GetClass(
+	ctx core.Context, head core.RecordRef, state *core.RecordRef,
+) (core.ClassDescriptor, error) {
 	genericReact, err := m.messageBus.Send(&message.GetClass{
 		Head:  head,
 		State: state,

@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -375,12 +376,13 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 }
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
+	insctx := inscontext.TODO()
 	ec := ExecutionContext{}
 	if !lr.SetContext(m.GetRequest(), ec) {
 		return nil, errors.New("Constructor already executing by you")
 	}
 
-	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
+	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class")
 	}

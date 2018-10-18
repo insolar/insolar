@@ -83,7 +83,7 @@ type ArtifactManager interface {
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetClass(head RecordRef, state *RecordRef) (ClassDescriptor, error)
+	GetClass(ctx Context, head RecordRef, state *RecordRef) (ClassDescriptor, error)
 
 	// GetObject returns descriptor for provided state.
 	//

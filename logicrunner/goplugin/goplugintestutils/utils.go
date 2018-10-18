@@ -187,7 +187,7 @@ func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Mes
 }
 
 // GetClass implementation for tests
-func (t *TestArtifactManager) GetClass(object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
+func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
 	res, ok := t.Classes[object]
 	if !ok {
 		return nil, errors.New("No object")

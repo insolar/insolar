@@ -673,6 +673,7 @@ func TestLedgerArtifactManager_GetClass_ReturnsCorrectDescriptors(t *testing.T) 
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	codeRef := *genRandomRef(0)
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
@@ -695,7 +696,7 @@ func TestLedgerArtifactManager_GetClass_ReturnsCorrectDescriptors(t *testing.T) 
 	td.db.SetClassIndex(classID, &classIndex)
 
 	classRef := genRefWithID(classID)
-	classDesc, err := td.manager.GetClass(*classRef, nil)
+	classDesc, err := td.manager.GetClass(ctx, *classRef, nil)
 	assert.NoError(t, err)
 	expectedClassDesc := &ClassDescriptor{
 		am:    td.manager,
