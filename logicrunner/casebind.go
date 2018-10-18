@@ -198,9 +198,9 @@ func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, 
 	}
 	if req, ok := cr.Resp.(*Ref); ok {
 		return req, nil
-	} else {
-		return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
 	}
+	return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
+
 }
 
 func (vb ValidationChecker) NeedSave() bool {
