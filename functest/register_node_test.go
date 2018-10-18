@@ -23,53 +23,69 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const TESTHOST = "127.0.0.1"
+const TESTPUBLICKEY = "some_fancy_public_key"
+
 func TestRegisterNodeVirtual(t *testing.T) {
+	const testRole = "virtual"
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-		"role":       "virtual",
+		"public_key": TESTPUBLICKEY,
+		"host":       TESTHOST,
+		"roles":      []string{testRole},
 	})
 
 	response := &registerNodeResponse{}
 	unmarshalResponse(t, body, response)
 
-	nodeRef := response.Reference
-	assert.NotEqual(t, "", nodeRef)
+	cert := response.Certificate
+	assert.Len(t, cert.Roles, 1)
+	assert.Equal(t, testRole, cert.Roles[0])
+	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
 }
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
+	const testRole = "heavy_material"
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-		"role":       "heavy_material",
+		"public_key": TESTPUBLICKEY,
+		"host":       TESTHOST,
+		"roles":      []string{testRole},
 	})
 
 	response := &registerNodeResponse{}
 	unmarshalResponse(t, body, response)
 
-	nodeRef := response.Reference
-	assert.NotEqual(t, "", nodeRef)
+	cert := response.Certificate
+	assert.Len(t, cert.Roles, 1)
+	assert.Equal(t, testRole, cert.Roles[0])
+	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
 }
 
 func TestRegisterNodeLightMaterial(t *testing.T) {
+	const testRole = "light_material"
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-		"role":       "light_material",
+		"public_key": TESTPUBLICKEY,
+		"host":       TESTHOST,
+		"roles":      []string{testRole},
 	})
 
 	response := &registerNodeResponse{}
 	unmarshalResponse(t, body, response)
 
-	nodeRef := response.Reference
-	assert.NotEqual(t, "", nodeRef)
+	cert := response.Certificate
+	assert.Len(t, cert.Roles, 1)
+	assert.Equal(t, testRole, cert.Roles[0])
+	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
 }
 
 func _TestRegisterNodeNotExistRole(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
-		"role":       "some_not_fancy_role",
+		"public_key": TESTPUBLICKEY,
+		"host":       TESTHOST,
+		"roles":      []string{"some_not_fancy_role"},
 	})
 
 	response := &registerNodeResponse{}
@@ -82,20 +98,22 @@ func _TestRegisterNodeNotExistRole(t *testing.T) {
 func TestRegisterNodeWithoutRole(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
-		"public_key": "some_fancy_public_key",
+		"host":       TESTHOST,
+		"public_key": TESTPUBLICKEY,
 	})
 
 	response := &registerNodeResponse{}
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.HandlerError, response.Err.Code)
-	assert.Equal(t, "Handler error: field 'role' is required", response.Err.Message)
+	assert.Equal(t, "Handler error: field 'roles' is required", response.Err.Message)
 }
 
 func TestRegisterNodeWithoutPK(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
-		"role":       "virtual",
+		"host":       TESTHOST,
+		"roles":      []string{"virtual"},
 	})
 
 	response := &registerNodeResponse{}
@@ -103,4 +121,18 @@ func TestRegisterNodeWithoutPK(t *testing.T) {
 
 	assert.Equal(t, api.HandlerError, response.Err.Code)
 	assert.Equal(t, "Handler error: field 'public_key' is required", response.Err.Message)
+}
+
+func TestRegisterNodeWithoutPHost(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type": "register_node",
+		"roles":      []string{"virtual"},
+		"public_key": TESTPUBLICKEY,
+	})
+
+	response := &registerNodeResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.HandlerError, response.Err.Code)
+	assert.Equal(t, "Handler error: field 'host' is required", response.Err.Message)
 }

@@ -71,7 +71,7 @@ type getSeedResponse struct {
 type isAuthorized struct {
 	baseResponse
 	PublicKey     string `json:"public_key"`
-	Role          int    `json:"role"`
+	Role          []int  `json:"role"`
 	NetCoordCheck bool   `json:"netcoord_auth_success"`
 }
 
@@ -90,9 +90,16 @@ type dumpAllUsersResponse struct {
 	DumpInfo []userInfo `json:"dump_info"`
 }
 
+type certificate struct {
+	MajorityRule int      `json:"majority_rule"`
+	PublicKey    string   `json:"public_key"`
+	Reference    string   `json:"reference"`
+	Roles        []string `json:"roles"`
+}
+
 type registerNodeResponse struct {
 	baseResponse
-	Reference string `json:"reference"`
+	Certificate certificate `json:"certificate"`
 }
 
 func createMember(t *testing.T) string {
