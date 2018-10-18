@@ -2,6 +2,7 @@ package rootdomain
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -80,10 +81,13 @@ func (r *RootDomain) GetClass() core.RecordRef {
 }
 
 // RegisterNode is proxy generated method
-func (r *RootDomain) RegisterNode(publicKey string, role string) string {
-	var args [2]interface{}
-	args[0] = publicKey
-	args[1] = role
+func (r *RootDomain) RegisterNode(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+	var args [5]interface{}
+	args[0] = pk
+	args[1] = numberOfBootstrapNodes
+	args[2] = majorityRule
+	args[3] = roles
+	args[4] = ip
 
 	var argsSerialized []byte
 
@@ -97,23 +101,28 @@ func (r *RootDomain) RegisterNode(publicKey string, role string) string {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
-	var ret0 string
+	ret := [2]interface{}{}
+	var ret0 []byte
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // RegisterNodeNoWait is proxy generated method
-func (r *RootDomain) RegisterNodeNoWait(publicKey string, role string) {
-	var args [2]interface{}
-	args[0] = publicKey
-	args[1] = role
+func (r *RootDomain) RegisterNodeNoWait(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) {
+	var args [5]interface{}
+	args[0] = pk
+	args[1] = numberOfBootstrapNodes
+	args[2] = majorityRule
+	args[3] = roles
+	args[4] = ip
 
 	var argsSerialized []byte
 
@@ -129,7 +138,7 @@ func (r *RootDomain) RegisterNodeNoWait(publicKey string, role string) {
 }
 
 // Authorize is proxy generated method
-func (r *RootDomain) Authorize() (string, core.NodeRole, string) {
+func (r *RootDomain) Authorize() (string, []core.NodeRole, string) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -147,7 +156,7 @@ func (r *RootDomain) Authorize() (string, core.NodeRole, string) {
 	ret := [3]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
-	var ret1 core.NodeRole
+	var ret1 []core.NodeRole
 	ret[1] = &ret1
 	var ret2 string
 	ret[2] = &ret2
