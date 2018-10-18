@@ -310,13 +310,13 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	rawJson, err := networkcoordinator.ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
+	rawJSON, err := networkcoordinator.ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
 	var dumpInfo interface{}
-	err = json.Unmarshal(rawJson, &dumpInfo)
+	err = json.Unmarshal(rawJSON, &dumpInfo)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
