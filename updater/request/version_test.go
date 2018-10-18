@@ -17,12 +17,13 @@
 package request
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Just to make Goland happy
-func TestStubCurrentVer(t *testing.T) {
+func TestCurrentVer(t *testing.T) {
 	newVer, err := NewVersion("v1.2.3")
 	assert.NoError(t, err)
 	assert.Equal(t, newVer.Major, 1, "Major verify passed")

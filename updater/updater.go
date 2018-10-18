@@ -42,7 +42,8 @@ func NewUpdater(cfg *configuration.Updater) (*Updater, error) {
 	delay := cfg.Delay
 	if delay < 0 {
 		return nil, errors.New("[ NewUpdater ] Delay value is out of bounds")
-	} else if delay == 0 {
+	}
+	if delay == 0 {
 		log.Warn("[ NewUpdater ] The update service is DISABLED, to ENABLE the update service, set the DELAY value not equal to zero")
 	}
 	if len(cfg.BinariesList) == 0 {

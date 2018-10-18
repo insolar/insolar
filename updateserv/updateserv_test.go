@@ -25,7 +25,7 @@ import (
 )
 
 // Just to make Goland happy
-func TestStub(t *testing.T) {
+func TestUpdateServ(t *testing.T) {
 	us := NewUpdateServer("2345", "../")
 	us.LatestVersion = "v0.3.1"
 	assert.Equal(t, us.LatestVersion, "v0.3.1")

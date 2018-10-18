@@ -31,6 +31,15 @@ func TestGetProtocol(t *testing.T) {
 	scheme, err = getProtocolFromAddress("localhost:7087/")
 	assert.NotNil(t, err)
 	assert.Equal(t, scheme, "")
+
+	un := GetProtocol("localhost:7087/")
+	assert.Nil(t, un)
+	un = GetProtocol("://localhost:7087/")
+	assert.Nil(t, un)
+	un = GetProtocol("http://localhost:7087/")
+	assert.NotNil(t, un)
+	un = GetProtocol("ftp://localhost:7087/")
+	assert.Nil(t, un)
 }
 
 func TestCompare(t *testing.T) {
@@ -100,4 +109,16 @@ func TestFailGetMaxVersion(t *testing.T) {
 	assert.Equal(t, GetMaxVersion(v2, v3), v3)
 	assert.Equal(t, GetMaxVersion(v3, v2), v3)
 	assert.Equal(t, GetMaxVersion(v1, v3), v3)
+
+	assert.Equal(t, GetMaxVersion(v1, nil), v1)
+	assert.Equal(t, GetMaxVersion(nil, v1), v1)
+	assert.Nil(t, GetMaxVersion(nil, nil))
+}
+
+func TestCreateCurrentPath(t *testing.T) {
+	path, err := createCurrentPath("v0.0.0")
+	assert.NoError(t, err)
+	assert.NotNil(t, path)
+	err = RemoveFolderRecursive("v0.0.0")
+	assert.NoError(t, err)
 }

@@ -17,11 +17,8 @@
 package updater
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"path"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -32,7 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStubSameVersion(t *testing.T) {
+func TestSameVersion(t *testing.T) {
 	cfg := configuration.NewUpdater()
 	updater, err := NewUpdater(&cfg)
 	assert.NoError(t, err)
@@ -48,18 +45,7 @@ func TestStubSameVersion(t *testing.T) {
 	assert.Equal(t, updater.DownloadFiles("v0.0.0"), false)
 	err = updater.Stop()
 	assert.NoError(t, err)
-	RemoveBinariesFolder("v0.0.0")
-}
-
-func RemoveBinariesFolder(version string) {
-	pwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println(err)
-	}
-	pathToSave := path.Join(pwd, version)
-	if err := os.RemoveAll(pathToSave); err != nil {
-		fmt.Println(err)
-	}
+	request.RemoveFolderRecursive("v0.0.0")
 }
 
 func TestHttp(t *testing.T) {
@@ -133,5 +119,6 @@ func TestHttp(t *testing.T) {
 	assert.NoError(t, err)
 	err = us.Stop()
 	assert.NoError(t, err)
-	RemoveBinariesFolder("v0.3.1")
+	err = request.RemoveFolderRecursive("v0.3.1")
+	assert.NoError(t, err)
 }

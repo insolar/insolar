@@ -32,14 +32,16 @@ type HTTPUpdateNode struct {
 
 func (request HTTPUpdateNode) getCurrentVer(address string) (string, error) {
 	response, err := http.Get(address + "/latest")
-	if err != nil {
-		return "Error during http request", err
+	if response != nil {
+		defer response.Body.Close()
 	}
-	defer response.Body.Close()
+	if err != nil {
+		return "", err
+	}
 
 	content, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return "Error, cannot get response body", err
+		return "", err
 	}
 	return string(content), nil
 }

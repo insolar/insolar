@@ -66,10 +66,10 @@ func ReqCurrentVer(addresses []string) (string, *Version, error) {
 }
 
 // Get latest Version from remote server
-func ReqCurrentVerFromAddress(request UpdateNode, address string) (string, error) {
+func ReqCurrentVerFromAddress(remote UpdateNode, address string) (string, error) {
 	log.Debug("Check latest version info from remote server: ", address)
-	if request == nil {
+	if remote == nil {
 		return "", errors.New("Unknown protocol")
 	}
-	return request.getCurrentVer(address)
+	return remote.getCurrentVer(address)
 }

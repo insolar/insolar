@@ -29,7 +29,11 @@ func DownloadFiles(version string, binariesList []string, url string) (success b
 	errs := 0
 	total := 0
 
-	pathToSave := createCurrentPath(version)
+	pathToSave, err := createCurrentPath(version)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	request := GetProtocol(url)
 	log.Info("Download updates from remote server: ", url)
 	for _, binary := range binariesList {

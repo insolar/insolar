@@ -18,7 +18,6 @@ package request
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"os"
 	"path"
@@ -35,18 +34,8 @@ func GetProtocol(address string) UpdateNode {
 	if err != nil {
 		return nil
 	}
-	if protocol != "" {
-		switch protocol {
-		case "http":
-			{
-				return HTTPUpdateNode{}
-			}
-		default:
-			{
-				log.Warn("Unknown protocol ", protocol[0])
-				return nil
-			}
-		}
+	if protocol == "http" {
+		return HTTPUpdateNode{}
 	}
 	return nil
 }
@@ -62,16 +51,16 @@ func getProtocolFromAddress(urlString string) (string, error) {
 	return u.Scheme, nil
 }
 
-func createCurrentPath(version string) string {
+func createCurrentPath(version string) (string, error) {
 	pwd, err := os.Getwd()
 	if err != nil {
-		fmt.Println(err)
+		return "", err
 	}
 	pathToSave := path.Join(pwd, version)
 	if err := os.Mkdir(pathToSave, 0750); err != nil {
-		log.Warn("Error while create folder: ", err)
+		return "", err
 	}
-	return pathToSave
+	return pathToSave, nil
 }
 
 // Unmarshal JSON Version
@@ -132,4 +121,16 @@ func extractIntValue(arr []string, index int) int {
 		}
 	}
 	return 0
+}
+
+func RemoveFolderRecursive(innerPath string) error {
+	pwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	pathToSave := path.Join(pwd, innerPath)
+	if err = os.RemoveAll(pathToSave); err != nil {
+		return err
+	}
+	return nil
 }
