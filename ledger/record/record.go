@@ -45,15 +45,6 @@ type Record interface {
 	WriteHashData(w io.Writer) (int, error)
 }
 
-// WriteHashData implements hash.Writer interface.
-func (id ID) WriteHash(w io.Writer) {
-	b := ID2Bytes(id)
-	err := binary.Write(w, binary.BigEndian, b)
-	if err != nil {
-		panic("binary.Write failed:" + err.Error())
-	}
-}
-
 // IsEqual checks equality of IDs.
 func (id ID) IsEqual(id2 ID) bool {
 	if (id.Hash == nil) != (id2.Hash == nil) {
