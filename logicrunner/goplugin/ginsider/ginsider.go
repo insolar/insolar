@@ -215,7 +215,8 @@ func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 func MakeUpBaseReq() rpctypes.UpBaseReq {
 	if ctx, ok := gls.Get("ctx").(*core.LogicCallContext); ok {
 		return rpctypes.UpBaseReq{
-			Me: *ctx.Callee,
+			Callee:  *ctx.Callee,
+			Request: *ctx.Request,
 		}
 	}
 	panic("Wrong or unexistent context")
