@@ -29,10 +29,9 @@ import (
 
 // NewCertificate constructor creates new Certificate component
 func NewCertificate(keysPath string) (*Certificate, error) {
-	path := filepath.Clean(keysPath)
-	data, err := ioutil.ReadFile(path)
+	data, err := ioutil.ReadFile(filepath.Clean(keysPath))
 	if err != nil {
-		return nil, errors.New("couldn't read keys from: " + path)
+		return nil, errors.New("couldn't read keys from: " + keysPath)
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)
