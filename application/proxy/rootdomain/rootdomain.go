@@ -132,7 +132,7 @@ func (r *RootDomain) RegisterNodeNoWait(publicKey string, role string) {
 }
 
 // Authorize is proxy generated method
-func (r *RootDomain) Authorize() (string, core.NodeRole, string, error) {
+func (r *RootDomain) Authorize() (string, core.NodeRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -147,22 +147,20 @@ func (r *RootDomain) Authorize() (string, core.NodeRole, string, error) {
 		panic(err)
 	}
 
-	ret := [4]interface{}{}
+	ret := [3]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 core.NodeRole
 	ret[1] = &ret1
-	var ret2 string
+	var ret2 *foundation.Error
 	ret[2] = &ret2
-	var ret3 *foundation.Error
-	ret[3] = &ret3
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0, ret1, ret2, ret3
+	return ret0, ret1, ret2
 }
 
 // AuthorizeNoWait is proxy generated method
