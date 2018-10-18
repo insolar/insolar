@@ -17,8 +17,6 @@
 package networkcoordinator
 
 import (
-	"fmt"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -88,27 +86,20 @@ func (nc *NetworkCoordinator) sendRequest(ref core.RecordRef, method string, arg
 func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
 	routResult, err := nc.sendRequest(nc.nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
 
-	fmt.Println("GHGHGHGHGHGHG: nodeRef: " + nodeRef.String())
-
 	if err != nil {
 		return "", nil, errors.Wrap(err, "[ Authorize ] Can't send request")
 	}
-
-	fmt.Println("KLKLKLKLKLKLKLK")
 
 	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "[ Authorize ] Can't extract response")
 	}
 
-	fmt.Println("Y&Y&Y&Y&Y&Y&Y: PUBKEY: " + pubKey)
-
 	return pubKey, role, nil
 }
 
 // RegisterNode registers node in nodedomain
 func (nc *NetworkCoordinator) RegisterNode(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
-	fmt.Println("HYHYHYHYHYHY: PUBKEY: " + nc.nodeDomainRef.String())
 
 	routResult, err := nc.sendRequest(nc.nodeDomainRef, "RegisterNode", []interface{}{pk, numberOfBootstrapNodes, majorityRule, roles, ip})
 	if err != nil {
@@ -119,8 +110,6 @@ func (nc *NetworkCoordinator) RegisterNode(pk string, numberOfBootstrapNodes int
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't extract response")
 	}
-
-	fmt.Println("BNBNBNBNBNB: PUBLIC: " + string(rawCertificate))
 
 	return rawCertificate, nil
 }

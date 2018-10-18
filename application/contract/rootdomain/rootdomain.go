@@ -19,7 +19,6 @@ package rootdomain
 import (
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
@@ -87,8 +86,6 @@ func (rd *RootDomain) Authorize() (string, []core.NodeRole, string) {
 		panic(err)
 	}
 
-	fmt.Println("HUHUHUHUHUHUH")
-
 	rawJSON, err := rd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
 	if err != nil {
 		panic(err)
@@ -98,8 +95,6 @@ func (rd *RootDomain) Authorize() (string, []core.NodeRole, string) {
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println("KLDKDLDKDLDKDLDKDLDKD: NODEREF: ", nodeRef)
 
 	// Validate
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
