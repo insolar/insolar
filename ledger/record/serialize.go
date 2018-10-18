@@ -65,20 +65,20 @@ func ID2Bytes(id ID) []byte {
 // not depended on definition order)
 const (
 	// meta
-	childRecordID   TypeID = 10
-	genesisRecordID TypeID = 11
+	typeGenesis TypeID = 10
+	typeChild   TypeID = 11
 
 	// request
-	callRequestRecordID TypeID = 20
+	typeCallRequest TypeID = 20
 
 	// result
-	classActivateRecordID  TypeID = 30
-	objectActivateRecordID TypeID = 31
-	codeRecordID           TypeID = 32
-	classAmendRecordID     TypeID = 33
-	deactivationRecordID   TypeID = 34
-	objectAmendRecordID    TypeID = 35
-	typeRecordID           TypeID = 36
+	typeType           TypeID = 30
+	typeCode           TypeID = 31
+	typeClassActivate  TypeID = 32
+	typeClassAmend     TypeID = 33
+	typeObjectActivate TypeID = 34
+	typeObjectAmend    TypeID = 35
+	typeDeactivate     TypeID = 36
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -86,25 +86,25 @@ const (
 func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	switch id {
 	// request records
-	case callRequestRecordID:
+	case typeCallRequest:
 		return &CallRequest{}
-	case classActivateRecordID:
+	case typeClassActivate:
 		return &ClassActivateRecord{}
-	case objectActivateRecordID:
+	case typeObjectActivate:
 		return &ObjectActivateRecord{}
-	case codeRecordID:
+	case typeCode:
 		return &CodeRecord{}
-	case classAmendRecordID:
+	case typeClassAmend:
 		return &ClassAmendRecord{}
-	case deactivationRecordID:
+	case typeDeactivate:
 		return &DeactivationRecord{}
-	case objectAmendRecordID:
+	case typeObjectAmend:
 		return &ObjectAmendRecord{}
-	case typeRecordID:
+	case typeType:
 		return &TypeRecord{}
-	case childRecordID:
+	case typeChild:
 		return &ChildRecord{}
-	case genesisRecordID:
+	case typeGenesis:
 		return &GenesisRecord{}
 	default:
 		panic(fmt.Errorf("unknown record type id %v", id))

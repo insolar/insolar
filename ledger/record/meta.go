@@ -27,7 +27,7 @@ type GenesisRecord struct {
 }
 
 // Type implementation of Record interface.
-func (r *GenesisRecord) Type() TypeID { return genesisRecordID }
+func (r *GenesisRecord) Type() TypeID { return typeGenesis }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
@@ -62,7 +62,7 @@ type ChildRecord struct {
 }
 
 // Type implementation of Record interface.
-func (r *ChildRecord) Type() TypeID { return childRecordID }
+func (r *ChildRecord) Type() TypeID { return typeChild }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {

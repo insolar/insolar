@@ -55,18 +55,18 @@ var type2idTests = []struct {
 	id  TypeID
 }{
 	// request records
-	{"CallRequest", &CallRequest{}, callRequestRecordID},
+	{"CallRequest", &CallRequest{}, typeCallRequest},
 
 	// result records
-	{"ClassActivateRecord", &ClassActivateRecord{}, classActivateRecordID},
-	{"ObjectActivateRecord", &ObjectActivateRecord{}, objectActivateRecordID},
-	{"CodeRecord", &CodeRecord{}, codeRecordID},
-	{"ClassAmendRecord", &ClassAmendRecord{}, classAmendRecordID},
-	{"DeactivationRecord", &DeactivationRecord{}, deactivationRecordID},
-	{"ObjectAmendRecord", &ObjectAmendRecord{}, objectAmendRecordID},
-	{"TypeRecord", &TypeRecord{}, typeRecordID},
-	{"ChildRecord", &ChildRecord{}, childRecordID},
-	{"GenesisRecord", &GenesisRecord{}, genesisRecordID},
+	{"ClassActivateRecord", &ClassActivateRecord{}, typeClassActivate},
+	{"ObjectActivateRecord", &ObjectActivateRecord{}, typeObjectActivate},
+	{"CodeRecord", &CodeRecord{}, typeCode},
+	{"ClassAmendRecord", &ClassAmendRecord{}, typeClassAmend},
+	{"DeactivationRecord", &DeactivationRecord{}, typeDeactivate},
+	{"ObjectAmendRecord", &ObjectAmendRecord{}, typeObjectAmend},
+	{"TypeRecord", &TypeRecord{}, typeType},
+	{"ChildRecord", &ChildRecord{}, typeChild},
+	{"GenesisRecord", &GenesisRecord{}, typeGenesis},
 }
 
 func Test_TypeIDConversion(t *testing.T) {

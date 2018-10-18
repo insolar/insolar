@@ -37,7 +37,7 @@ func (r *CallRequest) WriteHashData(w io.Writer) (int, error) {
 }
 
 // Type implementation of Record interface.
-func (r *CallRequest) Type() TypeID { return callRequestRecordID }
+func (r *CallRequest) Type() TypeID { return typeCallRequest }
 
 // GetPayload returns payload. Required for Record interface implementation.
 func (r *CallRequest) GetPayload() []byte {
