@@ -48,6 +48,7 @@ func New(name string, key string) *Member {
 	}
 }
 
+// Call method
 func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, *foundation.Error) {
 
 	args, err := core.MarshalArgs(
