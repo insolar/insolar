@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -28,8 +29,7 @@ import (
 
 // NewCertificate constructor creates new Certificate component
 func NewCertificate(keysPath string) (*Certificate, error) {
-
-	path := keysPath + ""
+	path := filepath.Clean(keysPath)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, errors.New("couldn't read keys from: " + path)

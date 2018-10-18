@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewPKI(t *testing.T) {
+func TestNewCertificate(t *testing.T) {
 	var certificate core.Certificate
 	certificate, err := NewCertificate("./testdata/bootstrap_keys.json")
 	assert.NoError(t, err)
