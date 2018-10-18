@@ -58,7 +58,7 @@ func QTypeFromString(strQType string) QueryType {
 
 // Params contains supported query params
 type Params struct {
-	QType                  string   `json:"query_type"`
+	QueryType              string   `json:"query_type"`
 	Name                   string   `json:"name"`
 	Reference              string   `json:"reference"`
 	From                   string   `json:"from"`

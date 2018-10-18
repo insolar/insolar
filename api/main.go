@@ -163,7 +163,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 		}
 		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, sm)
 
-		answer = processQueryType(rh, params.QType)
+		answer = processQueryType(rh, params.QueryType)
 	}
 }
 

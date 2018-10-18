@@ -135,12 +135,12 @@ func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, sig
 }
 
 // RegisterNode registers node in nodedomain
-func (nc *NetworkCoordinator) RegisterNode(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+func (nc *NetworkCoordinator) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")
 	}
-	routResult, err := nc.sendRequest(nodeDomainRef, "RegisterNode", []interface{}{pk, numberOfBootstrapNodes, majorityRule, roles, ip})
+	routResult, err := nc.sendRequest(nodeDomainRef, "RegisterNode", []interface{}{publicKey, numberOfBootstrapNodes, majorityRule, roles, ip})
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")

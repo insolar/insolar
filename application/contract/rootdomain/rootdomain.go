@@ -38,7 +38,7 @@ type RootDomain struct {
 }
 
 // RegisterNode processes register node request
-func (rd *RootDomain) RegisterNode(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+func (rd *RootDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
 		panic(err)
@@ -49,7 +49,7 @@ func (rd *RootDomain) RegisterNode(pk string, numberOfBootstrapNodes int, majori
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	cert, errS := nd.RegisterNode(pk, numberOfBootstrapNodes, majorityRule, roles, ip)
+	cert, errS := nd.RegisterNode(publicKey, numberOfBootstrapNodes, majorityRule, roles, ip)
 	if len(errS) != 0 {
 		panic(errS)
 	}

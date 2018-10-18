@@ -63,9 +63,9 @@ func GetImplementationFrom(object core.RecordRef) *NodeRecord {
 }
 
 // NewNodeRecord is constructor
-func NewNodeRecord(pk string, roles []string, ip string) *ContractConstructorHolder {
+func NewNodeRecord(publicKey string, roles []string, ip string) *ContractConstructorHolder {
 	var args [3]interface{}
-	args[0] = pk
+	args[0] = publicKey
 	args[1] = roles
 	args[2] = ip
 

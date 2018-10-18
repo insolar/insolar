@@ -172,9 +172,9 @@ func TestRegisterNodeBadMajorityRule(t *testing.T) {
 	assert.Contains(t, response.Err.Message, "majorityRule must be more than 0.51 * numberOfBootstrapNodes")
 }
 
-func findPublicKey(pk string, bNodes []bootstrapNode) bool {
+func findPublicKey(publicKey string, bNodes []bootstrapNode) bool {
 	for _, node := range bNodes {
-		if node.PublicKey == pk {
+		if node.PublicKey == publicKey {
 			return true
 		}
 	}

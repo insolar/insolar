@@ -80,9 +80,9 @@ func (r *NodeDomain) GetClass() core.RecordRef {
 }
 
 // RegisterNode is proxy generated method
-func (r *NodeDomain) RegisterNode(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, string) {
+func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, string) {
 	var args [5]interface{}
-	args[0] = pk
+	args[0] = publicKey
 	args[1] = numberOfBootstrapNodes
 	args[2] = majorityRule
 	args[3] = roles
@@ -115,9 +115,9 @@ func (r *NodeDomain) RegisterNode(pk string, numberOfBootstrapNodes int, majorit
 }
 
 // RegisterNodeNoWait is proxy generated method
-func (r *NodeDomain) RegisterNodeNoWait(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) {
+func (r *NodeDomain) RegisterNodeNoWait(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) {
 	var args [5]interface{}
-	args[0] = pk
+	args[0] = publicKey
 	args[1] = numberOfBootstrapNodes
 	args[2] = majorityRule
 	args[3] = roles

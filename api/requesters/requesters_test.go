@@ -58,7 +58,7 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	qtype := api.QTypeFromString(params.QType)
+	qtype := api.QTypeFromString(params.QueryType)
 	answer := map[string]interface{}{}
 	if qtype == api.GetSeed {
 		answer[api.SEED] = TESTSEED

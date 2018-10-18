@@ -35,7 +35,7 @@ type NodeRecord struct {
 }
 
 // New creates new NodeRecord
-func NewNodeRecord(pk string, roles []string, ip string) *NodeRecord {
+func NewNodeRecord(publicKey string, roles []string, ip string) *NodeRecord {
 	resultRoles := []core.NodeRole{}
 	for _, roleStr := range roles {
 		role := core.GetRoleFromString(roleStr)
@@ -48,7 +48,7 @@ func NewNodeRecord(pk string, roles []string, ip string) *NodeRecord {
 
 	return &NodeRecord{
 		Record: RecordInfo{
-			PublicKey: pk,
+			PublicKey: publicKey,
 			Roles:     resultRoles,
 			IP:        ip,
 		},
