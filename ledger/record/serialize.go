@@ -18,54 +18,14 @@ package record
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
-	"github.com/insolar/insolar/log"
 )
-
-// Raw struct contains raw serialized record.
-// We need raw blob to not have dependency on record structure changes in future,
-// and have ability of consistent hash checking on old records.
-type Raw struct {
-	Type TypeID
-	Data []byte
-}
-
-// DecodeToRaw decodes bytes to Raw struct from CBOR.
-func DecodeToRaw(b []byte) (*Raw, error) {
-	cborH := &codec.CborHandle{}
-	var rec Raw
-	dec := codec.NewDecoderBytes(b, cborH)
-	err := dec.Decode(&rec)
-	if err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
-// MustEncodeRaw wraps EncodeRaw, panics on encode errors.
-func MustEncodeRaw(raw *Raw) []byte {
-	b, err := EncodeRaw(raw)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
-// EncodeRaw encodes Raw to CBOR.
-func EncodeRaw(raw *Raw) ([]byte, error) {
-	cborH := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cborH)
-	err := enc.Encode(raw)
-	return b.Bytes(), err
-}
 
 // hashableBytes exists just to allow []byte implements hash.Writer
 type hashableBytes []byte
@@ -75,28 +35,6 @@ func (b hashableBytes) WriteHash(w io.Writer) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-// Hash generates hash for Raw record.
-func (raw *Raw) Hash() []byte {
-	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
-}
-
-// ToRecord decodes Raw to Record.
-func (raw *Raw) ToRecord() Record {
-	start := time.Now()
-	cborH := &codec.CborHandle{}
-	rec := getRecordByTypeID(raw.Type)
-	dec := codec.NewDecoder(bytes.NewReader(raw.Data), cborH)
-	err := dec.Decode(rec)
-	since := time.Since(start)
-	if err != nil {
-		panic(err)
-	}
-	if raw.Type == codeRecordID {
-		log.Debugf("ToRecord func in record/serialize: for TypeID %s, time inside - %s", raw.Type, since)
-	}
-	return rec
 }
 
 // Bytes2ID converts ID from byte representation to struct.
@@ -173,71 +111,32 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	}
 }
 
-// getRecordByTypeID returns record's TypeID based on concrete record type of Record interface.
-func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
-	switch v := rec.(type) {
-	// request records
-	case *CallRequest:
-		return callRequestRecordID
-	// result records
-	case *ClassActivateRecord:
-		return classActivateRecordID
-	case *ObjectActivateRecord:
-		return objectActivateRecordID
-	case *CodeRecord:
-		return codeRecordID
-	case *ClassAmendRecord:
-		return classAmendRecordID
-	case *DeactivationRecord:
-		return deactivationRecordID
-	case *ObjectAmendRecord:
-		return objectAmendRecordID
-	case *TypeRecord:
-		return typeRecordID
-	case *ChildRecord:
-		return childRecordID
-	case *GenesisRecord:
-		return genesisRecordID
-	default:
-		panic(fmt.Errorf("can't find record id by type %T", v))
-	}
+// SerializeType returns binary representation of provided type.
+func SerializeType(id TypeID) []byte {
+	buf := make([]byte, 4) // uint32
+	binary.BigEndian.PutUint32(buf, uint32(id))
+	return buf
 }
 
-// Encode serializes record to CBOR.
-func Encode(rec Record) ([]byte, error) {
-	cborH := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cborH)
-	err := enc.Encode(rec)
-	return b.Bytes(), err
+// DeserializeType returns type from provided binary representation.
+func DeserializeType(buf []byte) TypeID {
+	return TypeID(binary.BigEndian.Uint32(buf))
 }
 
-// MustEncode wraps Encode, panics on encoding errors.
-func MustEncode(rec Record) []byte {
-	b, err := Encode(rec)
-	if err != nil {
-		panic(err)
-	}
-	return b
+// SerializeRecord returns binary representation of provided record.
+func SerializeRecord(rec Record) []byte {
+	typeBytes := SerializeType(rec.Type())
+	buff := bytes.NewBuffer(typeBytes)
+	enc := codec.NewEncoder(buff, &codec.CborHandle{})
+	enc.MustEncode(rec)
+	return buff.Bytes()
 }
 
-// EncodeToRaw converts record to Raw record.
-func EncodeToRaw(rec Record) (*Raw, error) {
-	b, err := Encode(rec)
-	if err != nil {
-		panic(err)
-	}
-	return &Raw{
-		Type: getTypeIDbyRecord(rec),
-		Data: b,
-	}, nil
-}
-
-// MustEncodeToRaw wraps EncodeToRaw, panics on encoding errors.
-func MustEncodeToRaw(rec Record) *Raw {
-	raw, err := EncodeToRaw(rec)
-	if err != nil {
-		panic(err)
-	}
-	return raw
+// DeserializeRecord returns record decoded from bytes.
+func DeserializeRecord(buf []byte) Record {
+	t := DeserializeType(buf[:4]) // uint32
+	dec := codec.NewDecoderBytes(buf[4:], &codec.CborHandle{})
+	rec := getRecordByTypeID(t)
+	dec.MustDecode(&rec)
+	return rec
 }
