@@ -17,6 +17,7 @@
 package record
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -37,14 +38,18 @@ var emptyRecordsGens = []recordgen{
 	func() Record { return &ObjectAmendRecord{} },
 }
 
+func getRecordHash(rec Record) []byte {
+	buff := bytes.NewBuffer(nil)
+	rec.WriteHashData(buff)
+	return buff.Bytes()
+}
+
 func Test_HashesNotTheSameOnDifferentTypes(t *testing.T) {
 	found := make(map[string]string)
 	for _, recFn := range emptyRecordsGens {
 		rec := recFn()
 		recType := fmt.Sprintf("%T", rec)
-		hashBytes := SHA3Hash224(rec)
-
-		hashHex := fmt.Sprintf("%x", hashBytes)
+		hashHex := fmt.Sprintf("%x", getRecordHash(rec))
 		// fmt.Println(recType, "=>", hashHex)
 		typename, ok := found[hashHex]
 		if !ok {
@@ -59,22 +64,15 @@ func Test_HashesTheSame(t *testing.T) {
 	hashes := make([]string, len(emptyRecordsGens))
 	for i, recFn := range emptyRecordsGens {
 		rec := recFn()
-		hashHex := fmt.Sprintf("%x", SHA3Hash224(rec))
+		hashHex := fmt.Sprintf("%x", getRecordHash(rec))
 		hashes[i] = hashHex
 	}
 
 	// same struct with different should produce the same hashes
 	for i, recFn := range emptyRecordsGens {
 		rec := recFn()
-		hashHex := fmt.Sprintf("%x", SHA3Hash224(rec))
+		hashHex := fmt.Sprintf("%x", getRecordHash(rec))
 		assert.Equal(t, hashes[i], hashHex)
-	}
-}
-
-func newMockID() ID {
-	return ID{
-		Pulse: 0x0a,
-		Hash:  str2Bytes("21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
 	}
 }
 
@@ -103,7 +101,7 @@ func Test_CBORhashesMutation(t *testing.T) {
 	for _, tt := range hashtestsRecordsMutate {
 		found := make(map[string]string)
 		for _, rec := range tt.records {
-			h := SHA3Hash224(rec)
+			h := getRecordHash(rec)
 			hHex := fmt.Sprintf("%x", h)
 
 			typ, ok := found[hHex]

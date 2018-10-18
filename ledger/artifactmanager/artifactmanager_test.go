@@ -909,9 +909,9 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 		{Hash: []byte{6}},
 	}
 	recordData := [][2][]byte{
-		{record.ID2Bytes(ids[0]), record.MustEncodeRaw(record.MustEncodeToRaw(&records[0]))},
-		{record.ID2Bytes(ids[1]), record.MustEncodeRaw(record.MustEncodeToRaw(&records[1]))},
-		{record.ID2Bytes(ids[2]), record.MustEncodeRaw(record.MustEncodeToRaw(&records[2]))},
+		{record.ID2Bytes(ids[0]), record.SerializeRecord(&records[0])},
+		{record.ID2Bytes(ids[1]), record.SerializeRecord(&records[1])},
+		{record.ID2Bytes(ids[2]), record.SerializeRecord(&records[2])},
 	}
 
 	rep, err := td.manager.messageBus.Send(&message.JetDrop{

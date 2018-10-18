@@ -54,23 +54,25 @@ var type2idTests = []struct {
 	rec Record
 	id  TypeID
 }{
-	// request record(s)
+	// request records
 	{"CallRequest", &CallRequest{}, callRequestRecordID},
 
 	// result records
-	// case resultRecordID:
 	{"ClassActivateRecord", &ClassActivateRecord{}, classActivateRecordID},
 	{"ObjectActivateRecord", &ObjectActivateRecord{}, objectActivateRecordID},
 	{"CodeRecord", &CodeRecord{}, codeRecordID},
 	{"ClassAmendRecord", &ClassAmendRecord{}, classAmendRecordID},
 	{"DeactivationRecord", &DeactivationRecord{}, deactivationRecordID},
 	{"ObjectAmendRecord", &ObjectAmendRecord{}, objectAmendRecordID},
+	{"TypeRecord", &TypeRecord{}, typeRecordID},
+	{"ChildRecord", &ChildRecord{}, childRecordID},
+	{"GenesisRecord", &GenesisRecord{}, genesisRecordID},
 }
 
 func Test_TypeIDConversion(t *testing.T) {
 	for _, tt := range type2idTests {
 		t.Run(tt.typ, func(t *testing.T) {
-			gotRecTypeID := getTypeIDbyRecord(tt.rec)
+			gotRecTypeID := tt.rec.Type()
 			gotRecord := getRecordByTypeID(tt.id)
 			assert.Equal(t, "*record."+tt.typ, fmt.Sprintf("%T", gotRecord))
 			assert.Equal(t, tt.id, gotRecTypeID)
@@ -78,29 +80,11 @@ func Test_TypeIDConversion(t *testing.T) {
 	}
 }
 
-var serializeTests = []struct {
-	name         string
-	rec          Record
-	expectTypeID TypeID
-}{
-	{
-		"CallRequest",
-		&CallRequest{
-			Payload: str2Bytes("21853428b06925493bf23d2c5ba76ee86e3e3c1a13fe164307250193"),
-		},
-		callRequestRecordID,
-	},
-}
-
-func Test_EncodeToRaw(t *testing.T) {
-	for _, tt := range serializeTests {
-		t.Run(tt.name, func(t *testing.T) {
-			raw, err := EncodeToRaw(tt.rec)
-			if err != nil {
-				panic(err)
-			}
-			// fmt.Println(tt.name, "got", spew.Sdump(raw))
-			assert.Equal(t, tt.expectTypeID, raw.Type)
-		})
+func TestSerializeDeserializeRecord(t *testing.T) {
+	rec := ObjectActivateRecord{
+		ObjectStateRecord: ObjectStateRecord{Memory: []byte{1, 2, 3}},
 	}
+	serialized := SerializeRecord(&rec)
+	deserialized := DeserializeRecord(serialized)
+	assert.Equal(t, rec, *deserialized.(*ObjectActivateRecord))
 }
