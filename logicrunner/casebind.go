@@ -141,6 +141,7 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
 type ValidationBehaviour interface {
+	GetRole() core.JetRole
 	Begin(refs core.RecordRef, record core.CaseRecord)
 	End(refs core.RecordRef, record core.CaseRecord)
 	ModifyContext(ctx *core.LogicCallContext)
@@ -167,6 +168,10 @@ func (vb ValidationSaver) End(refs core.RecordRef, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
+func (vb ValidationSaver) GetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
 type ValidationChecker struct {
 	lr *LogicRunner
 	cb core.CaseBindReplay
@@ -186,4 +191,8 @@ func (vb ValidationChecker) Begin(refs core.RecordRef, record core.CaseRecord) {
 
 func (vb ValidationChecker) End(refs core.RecordRef, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
+}
+
+func (vb ValidationChecker) GetRole() core.JetRole {
+	return core.RoleVirtualValidator
 }

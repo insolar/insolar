@@ -54,6 +54,9 @@ type LogicRunner struct {
 	context         map[Ref]ExecutionContext // if object exists, we are validating or executing it right now
 	contextMutex    sync.Mutex
 
+	JetCoordinator core.JetCoordinator
+	NodeId         core.RecordRef
+
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
 	caseBindMutex        sync.Mutex
@@ -79,13 +82,11 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(c core.Components) error {
-	am := c.Ledger.GetArtifactManager()
-	lr.ArtifactManager = am
-	messageBus := c.MessageBus
-	lr.MessageBus = messageBus
+	lr.ArtifactManager = c.Ledger.GetArtifactManager()
+	lr.MessageBus = c.MessageBus
 
 	if lr.Cfg.BuiltIn != nil {
-		bi := builtin.NewBuiltIn(messageBus, am)
+		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
 			return err
 		}
@@ -97,7 +98,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 			StartRPC(lr)
 		}
 
-		gp, err := goplugin.NewGoPlugin(lr.Cfg, messageBus, am)
+		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
 		if err != nil {
 			return err
 		}
@@ -108,22 +109,26 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	}
 
 	// TODO: use separate handlers
-	if err := messageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
+	if err := lr.MessageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
+	if err := lr.MessageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
 		return err
 	}
 
-	if err := messageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
+	if err := lr.MessageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
+	if err := lr.MessageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
+	if err := lr.MessageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
 		return err
 	}
+
+	// TODO - network rewors this
+	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
+	lr.NodeId = c.Network.GetNodeID()
 
 	return nil
 }
@@ -185,7 +190,6 @@ func (lr *LogicRunner) SetContext(ref Ref, ec ExecutionContext) bool {
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
-	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
@@ -202,11 +206,20 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	} else {
 		vb = ValidationSaver{lr: lr}
 	}
-
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(vb.GetRole(), ref, lr.caseBind.Pulse.PulseNumber, *msg.GetCaller())
 	reqref, err := lr.ArtifactManager.RegisterRequest(msg)
 	if err != nil {
 		return nil, err
 	}
+
+	if err != nil {
+		return nil, errors.New("Authorization failed with error: " + err.Error())
+	}
+
+	if !isAuthorized {
+		return nil, errors.New("Can't execute this object")
+	}
+
 	ctx := core.LogicCallContext{
 		Caller:  msg.GetCaller(),
 		Request: reqref,
