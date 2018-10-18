@@ -450,7 +450,6 @@ func (r *Two) Hello(s string) string {
 }
 `
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
-	gp := lr.(*LogicRunner).Executors[core.MachineTypeGoPlugin]
 	defer cleaner()
 
 	data := goplugintestutils.CBORMarshal(t, &struct{}{})
