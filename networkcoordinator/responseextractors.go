@@ -51,12 +51,12 @@ func ExtractRegisterNodeResponse(data []byte) ([]byte, error) {
 		return nil, errors.New("[ networkcoordinator::extractRegisterNodeResponse ] Empty data")
 	}
 
-	rawJson, ok := raw[0].([]byte)
+	rawJSON, ok := raw[0].([]byte)
 	if !ok {
 		return nil, errors.New("[ networkcoordinator::extractRegisterNodeResponse ] Bad data type")
 	}
 
-	return rawJson, nil
+	return rawJSON, nil
 }
 
 // ExtractNodeRef extract reference from json response
