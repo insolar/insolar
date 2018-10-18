@@ -27,8 +27,8 @@ import (
 type NetworkCoordinator struct {
 	logicRunner   core.LogicRunner
 	messageBus    core.MessageBus
-	nodeDomainRef core.RecordRef
-	rootDomainRef core.RecordRef
+	nodeDomainRef *core.RecordRef
+	rootDomainRef *core.RecordRef
 }
 
 // New creates new NetworkCoordinator
@@ -40,7 +40,7 @@ func New() (*NetworkCoordinator, error) {
 func (nc *NetworkCoordinator) Start(c core.Components) error {
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
-	nc.rootDomainRef = *c.Bootstrapper.GetRootDomainRef()
+	nc.rootDomainRef = c.Bootstrapper.GetRootDomainRef()
 
 	return nil
 }
@@ -69,13 +69,13 @@ func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args 
 	return res, nil
 }
 
-func (nc *NetworkCoordinator) sendRequest(ref core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
+func (nc *NetworkCoordinator) sendRequest(ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::sendRequest ]")
 	}
 
-	routResult, err := nc.routeCall(ref, method, args)
+	routResult, err := nc.routeCall(*ref, method, args)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::sendRequest ]")
 	}
@@ -142,14 +142,13 @@ func (nc *NetworkCoordinator) fetchNodeDomainRef() (*core.RecordRef, error) {
 	return nodeDomainRef, nil
 }
 
-func (nc *NetworkCoordinator) getNodeDomainRef() (core.RecordRef, error) {
-	empty := core.RecordRef{}
-	if nc.nodeDomainRef == empty {
+func (nc *NetworkCoordinator) getNodeDomainRef() (*core.RecordRef, error) {
+	if nc.nodeDomainRef == nil {
 		nodeDomainRef, err := nc.fetchNodeDomainRef()
 		if err != nil {
-			return empty, errors.Wrap(err, "[ getNodeDomainRef ] can't fetch nodeDomainRef")
+			return nil, errors.Wrap(err, "[ getNodeDomainRef ] can't fetch nodeDomainRef")
 		}
-		nc.nodeDomainRef = *nodeDomainRef
+		nc.nodeDomainRef = nodeDomainRef
 	}
 	return nc.nodeDomainRef, nil
 }
