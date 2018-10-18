@@ -158,7 +158,7 @@ type TestArtifactManager struct {
 }
 
 // GetChildren implementation for tests
-func (t *TestArtifactManager) GetChildren(parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+func (t *TestArtifactManager) GetChildren(ctx core.Context, parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
 	panic("implement me")
 }
 
@@ -187,7 +187,7 @@ func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Mes
 }
 
 // GetClass implementation for tests
-func (t *TestArtifactManager) GetClass(object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
+func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
 	res, ok := t.Classes[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -196,7 +196,7 @@ func (t *TestArtifactManager) GetClass(object core.RecordRef, state *core.Record
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -205,7 +205,7 @@ func (t *TestArtifactManager) GetObject(object core.RecordRef, state *core.Recor
 }
 
 // GetDelegate implementation for tests
-func (t *TestArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+func (t *TestArtifactManager) GetDelegate(ctx core.Context, head, asClass core.RecordRef) (*core.RecordRef, error) {
 	obj, ok := t.Objects[head]
 	if !ok {
 		return nil, errors.New("No object")
@@ -237,7 +237,7 @@ func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.Rec
 }
 
 // GetCode implementation for tests
-func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
+func (t *TestArtifactManager) GetCode(ctx core.Context, code core.RecordRef) (core.CodeDescriptor, error) {
 	res, ok := t.Codes[code]
 	if !ok {
 		return nil, errors.New("No code")

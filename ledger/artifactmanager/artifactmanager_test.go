@@ -502,6 +502,7 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	memory := []byte{1, 2, 3}
 	classRef := genRandomRef(0)
@@ -545,7 +546,7 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 		Delegate: true,
 	})
 
-	delegate, err := td.manager.GetDelegate(*parentRef.CoreRef(), *classRef.CoreRef())
+	delegate, err := td.manager.GetDelegate(ctx, *parentRef.CoreRef(), *classRef.CoreRef())
 	assert.NoError(t, err)
 	assert.Equal(t, *delegateRef.CoreRef(), *delegate)
 }
@@ -673,6 +674,7 @@ func TestLedgerArtifactManager_GetClass_ReturnsCorrectDescriptors(t *testing.T) 
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	codeRef := *genRandomRef(0)
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
@@ -695,7 +697,7 @@ func TestLedgerArtifactManager_GetClass_ReturnsCorrectDescriptors(t *testing.T) 
 	td.db.SetClassIndex(classID, &classIndex)
 
 	classRef := genRefWithID(classID)
-	classDesc, err := td.manager.GetClass(*classRef, nil)
+	classDesc, err := td.manager.GetClass(ctx, *classRef, nil)
 	assert.NoError(t, err)
 	expectedClassDesc := &ClassDescriptor{
 		am:    td.manager,
@@ -711,9 +713,10 @@ func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	objID := genRandomID(0)
-	_, err := td.manager.GetObject(*genRefWithID(objID), nil)
+	_, err := td.manager.GetObject(ctx, *genRefWithID(objID), nil)
 	assert.NotNil(t, err)
 
 	deactivateID, _ := td.db.SetRecord(&record.DeactivationRecord{})
@@ -723,7 +726,7 @@ func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 	}
 	td.db.SetObjectIndex(objID, &objectIndex)
 
-	_, err = td.manager.GetObject(*genRefWithID(objID), nil)
+	_, err = td.manager.GetObject(ctx, *genRefWithID(objID), nil)
 	assert.Equal(t, core.ErrDeactivated, err)
 }
 
@@ -731,6 +734,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
 		ResultRecord: record.ResultRecord{
@@ -770,7 +774,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 	}
 	td.db.SetObjectIndex(objectID, &objectIndex)
 
-	objDesc, err := td.manager.GetObject(*genRefWithID(objectID), nil)
+	objDesc, err := td.manager.GetObject(ctx, *genRefWithID(objectID), nil)
 	assert.NoError(t, err)
 	expectedObjDesc := &ObjectDescriptor{
 		am: td.manager,
@@ -788,6 +792,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	parentID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
 		ResultRecord: record.ResultRecord{
@@ -820,7 +825,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	td.db.SetObjectIndex(parentID, &parentIndex)
 
 	t.Run("returns correct children without pulse", func(t *testing.T) {
-		i, err := td.manager.GetChildren(*genRefWithID(parentID), nil)
+		i, err := td.manager.GetChildren(ctx, *genRefWithID(parentID), nil)
 		assert.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
@@ -839,7 +844,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 
 	t.Run("returns correct children with pulse", func(t *testing.T) {
 		pn := core.PulseNumber(1)
-		i, err := td.manager.GetChildren(*genRefWithID(parentID), &pn)
+		i, err := td.manager.GetChildren(ctx, *genRefWithID(parentID), &pn)
 		assert.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
@@ -856,7 +861,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 
 	t.Run("returns correct children in many chunks", func(t *testing.T) {
 		td.manager.getChildrenChunkSize = 1
-		i, err := td.manager.GetChildren(*genRefWithID(parentID), nil)
+		i, err := td.manager.GetChildren(ctx, *genRefWithID(parentID), nil)
 		assert.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
@@ -877,7 +882,7 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	t.Run("doesn't fail when has no children to return", func(t *testing.T) {
 		td.manager.getChildrenChunkSize = 1
 		pn := core.PulseNumber(3)
-		i, err := td.manager.GetChildren(*genRefWithID(parentID), &pn)
+		i, err := td.manager.GetChildren(ctx, *genRefWithID(parentID), &pn)
 		assert.NoError(t, err)
 		child, err := i.Next()
 		assert.NoError(t, err)
