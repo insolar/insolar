@@ -75,11 +75,6 @@ func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 	return b.rootDomainRef
 }
 
-// GetNodeDomainRef returns reference to RootDomain instance
-func (b *Bootstrapper) GetNodeDomainRef() *core.RecordRef {
-	return b.nodeDomainRef
-}
-
 // NewBootstrapper creates new Bootstrapper
 func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
@@ -273,17 +268,17 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 	return nil
 }
 
-func (b *Bootstrapper) setRootMemberToRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
-	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef})
+func (b *Bootstrapper) updateRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef, NodeDomainRef: *b.nodeDomainRef})
 	if err != nil {
-		return errors.Wrap(err, "[ SetRootInRootDomain ]")
+		return errors.Wrap(err, "[ updateRootDomain ]")
 	}
 	_, err = am.UpdateObject(
 		core.RecordRef{}, core.RecordRef{},
 		*b.rootDomainRef, updateData,
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ SetRootInRootDomain ]")
+		return errors.Wrap(err, "[ updateRootDomain ]")
 	}
 
 	return nil
@@ -326,7 +321,7 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *goplu
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.setRootMemberToRootDomain(am, cb)
+	err = b.updateRootDomain(am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
