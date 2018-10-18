@@ -8,16 +8,18 @@ import (
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
-// Contract proxy type
+// Wallet holds proxy type
 type Wallet struct {
 	Reference core.RecordRef
 }
 
+// ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
 	argsSerialized  []byte
 }
 
+// AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Wallet {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -26,6 +28,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Wallet {
 	return &Wallet{Reference: ref}
 }
 
+// AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Wallet {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -34,15 +37,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Wallet {
 	return &Wallet{Reference: ref}
 }
 
-// GetObject
+// GetObject returns proxy object
 func GetObject(ref core.RecordRef) (r *Wallet) {
 	return &Wallet{Reference: ref}
 }
 
+// GetClass returns reference to the class
 func GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) *Wallet {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
@@ -51,6 +56,7 @@ func GetImplementationFrom(object core.RecordRef) *Wallet {
 	return GetObject(ref)
 }
 
+// New is constructor
 func New(balance uint) *ContractConstructorHolder {
 	var args [1]interface{}
 	args[0] = balance
@@ -64,16 +70,17 @@ func New(balance uint) *ContractConstructorHolder {
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
 
-// GetReference
+// GetReference returns reference of the object
 func (r *Wallet) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass
+// GetClass returns reference to the class
 func (r *Wallet) GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// Allocate is proxy generated method
 func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 	var args [2]interface{}
 	args[0] = amount
@@ -103,6 +110,7 @@ func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 	return ret0
 }
 
+// AllocateNoWait is proxy generated method
 func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -121,6 +129,7 @@ func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
 	}
 }
 
+// Receive is proxy generated method
 func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -148,6 +157,7 @@ func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
 	return
 }
 
+// ReceiveNoWait is proxy generated method
 func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -166,6 +176,7 @@ func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
 	}
 }
 
+// Transfer is proxy generated method
 func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -193,6 +204,7 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
 	return
 }
 
+// TransferNoWait is proxy generated method
 func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
 	var args [2]interface{}
 	args[0] = amount
@@ -211,6 +223,7 @@ func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
 	}
 }
 
+// Accept is proxy generated method
 func (r *Wallet) Accept(aRef *core.RecordRef) {
 	var args [1]interface{}
 	args[0] = aRef
@@ -237,6 +250,7 @@ func (r *Wallet) Accept(aRef *core.RecordRef) {
 	return
 }
 
+// AcceptNoWait is proxy generated method
 func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
 	var args [1]interface{}
 	args[0] = aRef
@@ -254,6 +268,7 @@ func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
 	}
 }
 
+// GetTotalBalance is proxy generated method
 func (r *Wallet) GetTotalBalance() uint {
 	var args [0]interface{}
 
@@ -281,6 +296,7 @@ func (r *Wallet) GetTotalBalance() uint {
 	return ret0
 }
 
+// GetTotalBalanceNoWait is proxy generated method
 func (r *Wallet) GetTotalBalanceNoWait() {
 	var args [0]interface{}
 
@@ -297,7 +313,8 @@ func (r *Wallet) GetTotalBalanceNoWait() {
 	}
 }
 
-func (r *Wallet) ReturnAndDeleteExpiriedAllowances() {
+// ReturnAndDeleteExpiredAllowances is proxy generated method
+func (r *Wallet) ReturnAndDeleteExpiredAllowances() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -307,7 +324,7 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowances() {
 		panic(err)
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ReturnAndDeleteExpiriedAllowances", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "ReturnAndDeleteExpiredAllowances", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
@@ -322,7 +339,8 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowances() {
 	return
 }
 
-func (r *Wallet) ReturnAndDeleteExpiriedAllowancesNoWait() {
+// ReturnAndDeleteExpiredAllowancesNoWait is proxy generated method
+func (r *Wallet) ReturnAndDeleteExpiredAllowancesNoWait() {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -332,7 +350,7 @@ func (r *Wallet) ReturnAndDeleteExpiriedAllowancesNoWait() {
 		panic(err)
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ReturnAndDeleteExpiriedAllowances", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ReturnAndDeleteExpiredAllowances", argsSerialized)
 	if err != nil {
 		panic(err)
 	}

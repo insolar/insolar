@@ -112,6 +112,8 @@ const (
 	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
 	TypeRegisterChild
+	// TypeJetDrop carries jet drop to validators
+	TypeJetDrop
 
 	// Bootstrap
 

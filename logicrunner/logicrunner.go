@@ -203,22 +203,20 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 		vb = ValidationSaver{lr: lr}
 	}
 
+	reqref, err := lr.ArtifactManager.RegisterRequest(msg)
+	if err != nil {
+		return nil, err
+	}
 	ctx := core.LogicCallContext{
-		Caller: msg.GetCaller(),
-		Time:   time.Now(), // TODO: probably we should take it from e
-		Pulse:  lr.caseBind.Pulse,
+		Caller:  msg.GetCaller(),
+		Request: reqref,
+		Time:    time.Now(), // TODO: probably we should take it from e
+		Pulse:   lr.caseBind.Pulse,
 	}
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		ec := ExecutionContext{}
-		if !lr.SetContext(ref, ec) {
-			return nil, errors.New("Object already exeuting")
-		}
 		re, err := lr.executeMethodCall(ctx, m, vb)
-		lr.contextMutex.Lock()
-		defer lr.contextMutex.Unlock()
-		delete(lr.context, ref)
 		return re, err
 
 	case *message.CallConstructor:
@@ -288,11 +286,7 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
 
-	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object's code descriptor")
-	}
-
+	codeDesc := classDesc.CodeDescriptor()
 	ob := &objectBody{
 		Body:        objDesc.Memory(),
 		Code:        *codeDesc.Ref(),
@@ -307,18 +301,22 @@ func (lr *LogicRunner) getObjectMessage(objref core.RecordRef) (*objectBody, err
 	return ob, nil
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	vb.Begin(e.ObjectRef, core.CaseRecord{
+func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
+	ec := ExecutionContext{}
+	if !lr.SetContext(m.ObjectRef, ec) {
+		return nil, errors.New("Method already executing")
+	}
+	vb.Begin(m.ObjectRef, core.CaseRecord{
 		Type: core.CaseRecordTypeStart,
-		Resp: e,
+		Resp: m,
 	})
 
-	objbody, err := lr.getObjectMessage(e.ObjectRef)
+	objbody, err := lr.getObjectMessage(m.ObjectRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	ctx.Callee = &e.ObjectRef
+	ctx.Callee = &m.ObjectRef
 	ctx.Class = &objbody.Class
 	vb.ModifyContext(&ctx)
 
@@ -328,17 +326,22 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 	}
 
 	executer := func() (*reply.CallMethod, error) {
+		defer func() {
+			lr.contextMutex.Lock()
+			defer lr.contextMutex.Unlock()
+			delete(lr.context, m.ObjectRef)
+		}()
 		newData, result, err := executor.CallMethod(
-			&ctx, objbody.Code, objbody.Body, e.Method, e.Arguments,
+			&ctx, objbody.Code, objbody.Body, m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executor error")
 		}
 
 		// TODO: deactivation should be handled way better here
-		if vb.NeedSave() && lr.lastObjectCaseRecord(e.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
+		if vb.NeedSave() && lr.lastObjectCaseRecord(m.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
-				core.RecordRef{}, core.RecordRef{}, e.ObjectRef, newData,
+				core.RecordRef{}, *ctx.Request, m.ObjectRef, newData,
 			)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
@@ -347,15 +350,14 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 
 		re := &reply.CallMethod{Data: newData, Result: result}
 
-		vb.End(e.ObjectRef, core.CaseRecord{
+		vb.End(m.ObjectRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
 			Resp: re,
 		})
-
 		return re, nil
 	}
 
-	switch e.ReturnMode {
+	switch m.ReturnMode {
 	case message.ReturnResult:
 		return executer()
 	case message.ReturnNoWait:
@@ -367,10 +369,14 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, e *message.C
 		}()
 		return &reply.CallMethod{}, nil
 	}
-	return nil, errors.Errorf("Invalid ReturnMode #%d", e.ReturnMode)
+	return nil, errors.Errorf("Invalid ReturnMode #%d", m.ReturnMode)
 }
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
+	ec := ExecutionContext{}
+	if !lr.SetContext(m.GetRequest(), ec) {
+		return nil, errors.New("Constructor already executing by you")
+	}
 	vb.Begin(m.ClassRef, core.CaseRecord{
 		Type: core.CaseRecordTypeStart,
 		Resp: m,
@@ -382,11 +388,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	}
 	ctx.Class = classDesc.HeadRef()
 
-	codeDesc, err := classDesc.CodeDescriptor(lr.machinePrefs)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get class's code descriptor")
-	}
-
+	codeDesc := classDesc.CodeDescriptor()
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "no executer registered")
@@ -397,41 +399,39 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		return nil, errors.Wrap(err, "executer error")
 	}
 
+	defer func() {
+		lr.contextMutex.Lock()
+		defer lr.contextMutex.Unlock()
+		delete(lr.context, m.GetRequest())
+	}()
+
 	switch m.SaveAs {
 	case message.Child:
 		log.Warn()
 		log.Warnf("M = %+v", m)
-		ref, err := lr.ArtifactManager.RegisterRequest(m)
-		if err != nil {
-			return nil, err
-		}
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
-				core.RecordRef{}, *ref, m.ClassRef, m.ParentRef, newData,
+				core.RecordRef{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
-			Resp: &reply.CallConstructor{Object: ref},
+			Resp: &reply.CallConstructor{Object: ctx.Request},
 		})
 
-		return &reply.CallConstructor{Object: ref}, err
+		return &reply.CallConstructor{Object: ctx.Request}, err
 	case message.Delegate:
-		ref, err := lr.ArtifactManager.RegisterRequest(m)
-		if err != nil {
-			return nil, err
-		}
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObjectDelegate(
-				core.RecordRef{}, *ref, m.ClassRef, m.ParentRef, newData,
+				core.RecordRef{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
-			Resp: &reply.CallConstructor{Object: ref},
+			Resp: &reply.CallConstructor{Object: ctx.Request},
 		})
 
-		return &reply.CallConstructor{Object: ref}, err
+		return &reply.CallConstructor{Object: ctx.Request}, err
 	default:
 		return nil, errors.New("unsupported type of save object")
 	}

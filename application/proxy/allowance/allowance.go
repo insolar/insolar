@@ -8,16 +8,18 @@ import (
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
-// Contract proxy type
+// Allowance holds proxy type
 type Allowance struct {
 	Reference core.RecordRef
 }
 
+// ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
 	argsSerialized  []byte
 }
 
+// AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Allowance {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -26,6 +28,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *Allowance {
 	return &Allowance{Reference: ref}
 }
 
+// AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Allowance {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -34,15 +37,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *Allowance
 	return &Allowance{Reference: ref}
 }
 
-// GetObject
+// GetObject returns proxy object
 func GetObject(ref core.RecordRef) (r *Allowance) {
 	return &Allowance{Reference: ref}
 }
 
+// GetClass returns reference to the class
 func GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) *Allowance {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
@@ -51,6 +56,7 @@ func GetImplementationFrom(object core.RecordRef) *Allowance {
 	return GetObject(ref)
 }
 
+// New is constructor
 func New(to *core.RecordRef, amount uint, expire int64) *ContractConstructorHolder {
 	var args [3]interface{}
 	args[0] = to
@@ -66,16 +72,17 @@ func New(to *core.RecordRef, amount uint, expire int64) *ContractConstructorHold
 	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
 
-// GetReference
+// GetReference returns reference of the object
 func (r *Allowance) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass
+// GetClass returns reference to the class
 func (r *Allowance) GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// IsExpired is proxy generated method
 func (r *Allowance) IsExpired() bool {
 	var args [0]interface{}
 
@@ -103,6 +110,7 @@ func (r *Allowance) IsExpired() bool {
 	return ret0
 }
 
+// IsExpiredNoWait is proxy generated method
 func (r *Allowance) IsExpiredNoWait() {
 	var args [0]interface{}
 
@@ -119,6 +127,7 @@ func (r *Allowance) IsExpiredNoWait() {
 	}
 }
 
+// TakeAmount is proxy generated method
 func (r *Allowance) TakeAmount() uint {
 	var args [0]interface{}
 
@@ -146,6 +155,7 @@ func (r *Allowance) TakeAmount() uint {
 	return ret0
 }
 
+// TakeAmountNoWait is proxy generated method
 func (r *Allowance) TakeAmountNoWait() {
 	var args [0]interface{}
 
@@ -162,6 +172,7 @@ func (r *Allowance) TakeAmountNoWait() {
 	}
 }
 
+// GetBalanceForOwner is proxy generated method
 func (r *Allowance) GetBalanceForOwner() uint {
 	var args [0]interface{}
 
@@ -189,6 +200,7 @@ func (r *Allowance) GetBalanceForOwner() uint {
 	return ret0
 }
 
+// GetBalanceForOwnerNoWait is proxy generated method
 func (r *Allowance) GetBalanceForOwnerNoWait() {
 	var args [0]interface{}
 
@@ -205,6 +217,7 @@ func (r *Allowance) GetBalanceForOwnerNoWait() {
 	}
 }
 
+// DeleteExpiredAllowance is proxy generated method
 func (r *Allowance) DeleteExpiredAllowance() uint {
 	var args [0]interface{}
 
@@ -232,6 +245,7 @@ func (r *Allowance) DeleteExpiredAllowance() uint {
 	return ret0
 }
 
+// DeleteExpiredAllowanceNoWait is proxy generated method
 func (r *Allowance) DeleteExpiredAllowanceNoWait() {
 	var args [0]interface{}
 

@@ -8,16 +8,18 @@ import (
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
-// Contract proxy type
+// RootDomain holds proxy type
 type RootDomain struct {
 	Reference core.RecordRef
 }
 
+// ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
 	argsSerialized  []byte
 }
 
+// AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *RootDomain {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -26,6 +28,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *RootDomain {
 	return &RootDomain{Reference: ref}
 }
 
+// AsDelegate saves object as delegate
 func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *RootDomain {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
@@ -34,15 +37,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *RootDomai
 	return &RootDomain{Reference: ref}
 }
 
-// GetObject
+// GetObject returns proxy object
 func GetObject(ref core.RecordRef) (r *RootDomain) {
 	return &RootDomain{Reference: ref}
 }
 
+// GetClass returns reference to the class
 func GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// GetImplementationFrom returns proxy to delegate of given type
 func GetImplementationFrom(object core.RecordRef) *RootDomain {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
@@ -51,6 +56,7 @@ func GetImplementationFrom(object core.RecordRef) *RootDomain {
 	return GetObject(ref)
 }
 
+// NewRootDomain is constructor
 func NewRootDomain() *ContractConstructorHolder {
 	var args [0]interface{}
 
@@ -63,16 +69,17 @@ func NewRootDomain() *ContractConstructorHolder {
 	return &ContractConstructorHolder{constructorName: "NewRootDomain", argsSerialized: argsSerialized}
 }
 
-// GetReference
+// GetReference returns reference of the object
 func (r *RootDomain) GetReference() core.RecordRef {
 	return r.Reference
 }
 
-// GetClass
+// GetClass returns reference to the class
 func (r *RootDomain) GetClass() core.RecordRef {
 	return ClassReference
 }
 
+// RegisterNode is proxy generated method
 func (r *RootDomain) RegisterNode(publicKey string, role string) string {
 	var args [2]interface{}
 	args[0] = publicKey
@@ -102,6 +109,7 @@ func (r *RootDomain) RegisterNode(publicKey string, role string) string {
 	return ret0
 }
 
+// RegisterNodeNoWait is proxy generated method
 func (r *RootDomain) RegisterNodeNoWait(publicKey string, role string) {
 	var args [2]interface{}
 	args[0] = publicKey
@@ -120,6 +128,7 @@ func (r *RootDomain) RegisterNodeNoWait(publicKey string, role string) {
 	}
 }
 
+// Authorize is proxy generated method
 func (r *RootDomain) Authorize() (string, core.NodeRole, string) {
 	var args [0]interface{}
 
@@ -151,6 +160,7 @@ func (r *RootDomain) Authorize() (string, core.NodeRole, string) {
 	return ret0, ret1, ret2
 }
 
+// AuthorizeNoWait is proxy generated method
 func (r *RootDomain) AuthorizeNoWait() {
 	var args [0]interface{}
 
@@ -167,6 +177,7 @@ func (r *RootDomain) AuthorizeNoWait() {
 	}
 }
 
+// CreateMember is proxy generated method
 func (r *RootDomain) CreateMember(name string, key string) string {
 	var args [2]interface{}
 	args[0] = name
@@ -196,6 +207,7 @@ func (r *RootDomain) CreateMember(name string, key string) string {
 	return ret0
 }
 
+// CreateMemberNoWait is proxy generated method
 func (r *RootDomain) CreateMemberNoWait(name string, key string) {
 	var args [2]interface{}
 	args[0] = name
@@ -214,6 +226,7 @@ func (r *RootDomain) CreateMemberNoWait(name string, key string) {
 	}
 }
 
+// GetBalance is proxy generated method
 func (r *RootDomain) GetBalance(reference string) uint {
 	var args [1]interface{}
 	args[0] = reference
@@ -242,6 +255,7 @@ func (r *RootDomain) GetBalance(reference string) uint {
 	return ret0
 }
 
+// GetBalanceNoWait is proxy generated method
 func (r *RootDomain) GetBalanceNoWait(reference string) {
 	var args [1]interface{}
 	args[0] = reference
@@ -259,6 +273,7 @@ func (r *RootDomain) GetBalanceNoWait(reference string) {
 	}
 }
 
+// SendMoney is proxy generated method
 func (r *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	var args [3]interface{}
 	args[0] = from
@@ -289,6 +304,7 @@ func (r *RootDomain) SendMoney(from string, to string, amount uint) bool {
 	return ret0
 }
 
+// SendMoneyNoWait is proxy generated method
 func (r *RootDomain) SendMoneyNoWait(from string, to string, amount uint) {
 	var args [3]interface{}
 	args[0] = from
@@ -308,6 +324,7 @@ func (r *RootDomain) SendMoneyNoWait(from string, to string, amount uint) {
 	}
 }
 
+// DumpUserInfo is proxy generated method
 func (r *RootDomain) DumpUserInfo(reference string) []byte {
 	var args [1]interface{}
 	args[0] = reference
@@ -336,6 +353,7 @@ func (r *RootDomain) DumpUserInfo(reference string) []byte {
 	return ret0
 }
 
+// DumpUserInfoNoWait is proxy generated method
 func (r *RootDomain) DumpUserInfoNoWait(reference string) {
 	var args [1]interface{}
 	args[0] = reference
@@ -353,6 +371,7 @@ func (r *RootDomain) DumpUserInfoNoWait(reference string) {
 	}
 }
 
+// DumpAllUsers is proxy generated method
 func (r *RootDomain) DumpAllUsers() []byte {
 	var args [0]interface{}
 
@@ -380,6 +399,7 @@ func (r *RootDomain) DumpAllUsers() []byte {
 	return ret0
 }
 
+// DumpAllUsersNoWait is proxy generated method
 func (r *RootDomain) DumpAllUsersNoWait() {
 	var args [0]interface{}
 

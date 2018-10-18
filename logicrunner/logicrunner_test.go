@@ -471,11 +471,9 @@ func (r *Two) Hello(s string) string {
 }
 `
 	lr, am, cb, cleaner := PrepareLrAmCb(t)
-	gp := lr.(*LogicRunner).Executors[core.MachineTypeGoPlugin]
 	defer cleaner()
 
 	data := goplugintestutils.CBORMarshal(t, &struct{}{})
-	argsSerialized := goplugintestutils.CBORMarshal(t, []interface{}{"ins"})
 
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
@@ -489,24 +487,26 @@ func (r *Two) Hello(s string) string {
 	)
 	assert.NoError(t, err)
 
-	_, res, err := gp.CallMethod(
-		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
-		data, "Hello", argsSerialized,
-	)
+	resp, err := lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Hello",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
+	})
+
 	assert.NoError(t, err)
+	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}([]interface{}{string("Hi, ins! Two said: Hello you too, ins. 644 times!")}), r)
 
-	resParsed := goplugintestutils.CBORUnMarshalToSlice(t, res)
-	assert.Equal(t, "Hi, ins! Two said: Hello you too, ins. 644 times!", resParsed[0])
+	resp, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "HelloFromDelegate",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
+	})
 
-	_, res, err = gp.CallMethod(
-		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
-		data, "HelloFromDelegate", argsSerialized,
-	)
 	assert.NoError(t, err)
+	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
+	assert.Equal(t, []interface{}([]interface{}{string("Hello you too, ins. 1288 times!")}), r)
 
-	resParsed = goplugintestutils.CBORUnMarshalToSlice(t, res)
-
-	assert.Equal(t, "Hello you too, ins. 1288 times!", resParsed[0])
 }
 
 func TestBasicNotificationCall(t *testing.T) {
@@ -555,11 +555,8 @@ func (r *Two) Hello() string {
 `
 	// TODO: use am := testutil.NewTestArtifactManager() here
 	lr, am, cb, cleaner := PrepareLrAmCb(t)
-	gp := lr.(*LogicRunner).Executors[core.MachineTypeGoPlugin]
 	defer cleaner()
 
-	data := goplugintestutils.CBORMarshal(t, &struct{}{})
-	argsSerialized := goplugintestutils.CBORMarshal(t, []interface{}{})
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
@@ -569,15 +566,17 @@ func (r *Two) Hello() string {
 		*obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
-		data,
+		goplugintestutils.CBORMarshal(t, &struct{}{}),
 	)
 	assert.NoError(t, err)
 
-	_, _, err = gp.CallMethod(
-		&core.LogicCallContext{Class: cb.Classes["one"], Callee: obj}, *cb.Codes["one"],
-		data, "Hello", argsSerialized,
-	)
-	assert.NoError(t, err)
+	_, err = lr.Execute(&message.CallMethod{
+		ObjectRef: *obj,
+		Method:    "Hello",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
+	})
+	assert.NoError(t, err, "contract call")
+
 }
 
 func TestContextPassing(t *testing.T) {
@@ -802,6 +801,7 @@ func New(n int) *Child {
 		Method:    "SumChilds",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	})
+	assert.NoError(t, err, "contract call")
 
 	ValidateAllResults(t, lr)
 

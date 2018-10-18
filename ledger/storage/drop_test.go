@@ -23,7 +23,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
@@ -65,10 +64,12 @@ func TestStore_DropWaitWrites(t *testing.T) {
 
 	go func() {
 		<-txstarted
-		prevdrop := &jetdrop.JetDrop{}
 		log.Debugln("start SetDrop")
 		close(dropwaits)
-		_, _ = db.SetDrop(0, prevdrop)
+		_, _, _, droperr := db.CreateDrop(0, []byte{})
+		if droperr != nil {
+			panic(droperr)
+		}
 		dropFin = time.Now()
 		log.Debugln("end SetDrop")
 		wg.Done()

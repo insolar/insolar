@@ -4,7 +4,7 @@ package pulsar
 
 import "strconv"
 
-const _State_name = "failedwaitingForStartgenerateEntropywaitingForEntropySignssendingEntropywaitingForEntropysendingVectorwaitingForVectorsverifyingsendingPulseSignwaitingForPulseSignssendingPulse"
+const _State_name = "FailedWaitingForStartGenerateEntropyWaitingForEntropySignsSendingEntropyWaitingForEntropySendingVectorWaitingForVectorsVerifyingSendingPulseSignWaitingForPulseSignsSendingPulse"
 
 var _State_index = [...]uint8{0, 6, 21, 36, 58, 72, 89, 102, 119, 128, 144, 164, 176}
 

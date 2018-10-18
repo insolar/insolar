@@ -127,7 +127,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 				ConnectionType:      "tcp",
 				MainListenerAddress: ":1640",
 				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
+				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
 				Neighbours:          []configuration.PulsarNodeAddress{}},
 			PrivateKey: exportedPrivateKey,
 		},
@@ -140,18 +140,18 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	stateSwitcher.SetPulsar(newPulsar)
 
 	// Act
-	newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+	go newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
-	count := 20
+	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
@@ -190,7 +190,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 				ConnectionType:      "tcp",
 				MainListenerAddress: ":1140",
 				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
+				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
 				Neighbours: []configuration.PulsarNodeAddress{
 					{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: secondPubKey},
 				},
@@ -216,7 +216,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 				ConnectionType:      "tcp",
 				MainListenerAddress: ":1641",
 				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:18091", BehindNAT: false},
+				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
 				Neighbours: []configuration.PulsarNodeAddress{
 					{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: firstPubKey},
 				},
@@ -240,18 +240,18 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Act
-	firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+	go firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
 
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
-	count := 30
+	count := 50
 	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		currentPulse, err = usualLedger.GetPulseManager().Current()
 		assert.NoError(t, err)
 		count--
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Assert
 	assert.NoError(t, err)
@@ -269,6 +269,149 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 		firstPulsar.StopServer()
 		secondPulsar.StopServer()
+
+		bootstrapLedgerCleaner()
+		usualLedgerCleaner()
+	}()
+}
+
+type pulsarKeys struct {
+	privKey string
+	pubKey  string
+}
+
+func TestSevenPulsars_Full_Consensus(t *testing.T) {
+	// Arrange
+	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
+	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
+
+	storage := &pulsartestutils.MockPulsarStorage{}
+	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
+
+	keys := [7]pulsarKeys{}
+	pulsars := [7]*Pulsar{}
+	mainAddresses := []string{
+		"127.0.0.1:1641",
+		"127.0.0.1:1642",
+		"127.0.0.1:1643",
+		"127.0.0.1:1644",
+		"127.0.0.1:1645",
+		"127.0.0.1:1646",
+		"127.0.0.1:1647",
+	}
+	transportAddress := "127.0.0.1:1648"
+
+	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+		_, parsedPrivKey, pubKey := generatePrivateAndConvertPublic(t)
+		keys[pulsarIndex] = pulsarKeys{
+			pubKey:  pubKey,
+			privKey: parsedPrivKey,
+		}
+	}
+
+	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+		conf := configuration.Configuration{
+			PrivateKey: keys[pulsarIndex].privKey,
+			Pulsar: configuration.Pulsar{
+				ConnectionType:                 "tcp",
+				MainListenerAddress:            mainAddresses[pulsarIndex],
+				BootstrapNodes:                 []string{bootstrapAddress},
+				BootstrapListener:              configuration.Transport{Protocol: "UTP", Address: transportAddress, BehindNAT: false},
+				Neighbours:                     []configuration.PulsarNodeAddress{},
+				ReceivingSignTimeout:           50,
+				ReceivingNumberTimeout:         50,
+				ReceivingSignsForChosenTimeout: 50,
+				ReceivingVectorTimeout:         50,
+			}}
+
+		for configIndex := 0; configIndex < 7; configIndex++ {
+			if configIndex == pulsarIndex {
+				continue
+			}
+			conf.Pulsar.Neighbours = append(conf.Pulsar.Neighbours, configuration.PulsarNodeAddress{
+				ConnectionType: "tcp",
+				Address:        mainAddresses[configIndex],
+				PublicKey:      keys[configIndex].pubKey,
+			})
+		}
+
+		switcher := &StateSwitcherImpl{}
+		pulsar, err := NewPulsar(
+			conf,
+			storage,
+			&RPCClientWrapperFactoryImpl{},
+			&entropygenerator.StandardEntropyGenerator{},
+			switcher,
+			net.Listen,
+		)
+		switcher.setState(WaitingForStart)
+		switcher.SetPulsar(pulsar)
+		assert.NoError(t, err)
+		pulsars[pulsarIndex] = pulsar
+		go pulsar.StartServer()
+	}
+
+	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+		for neighbourIndex := pulsarIndex + 1; neighbourIndex < 7; neighbourIndex++ {
+			err := pulsars[pulsarIndex].EstablishConnectionToPulsar(keys[neighbourIndex].pubKey)
+			assert.NoError(t, err)
+		}
+	}
+
+	// Assert connected nodes
+	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
+		connectedNeighbours := 0
+		for _, neighbour := range pulsars[pulsarIndex].Neighbours {
+			if neighbour.OutgoingClient.IsInitialised() {
+				connectedNeighbours++
+			}
+		}
+		assert.Equal(t, 6, connectedNeighbours)
+	}
+
+	// Main act
+	go pulsars[0].StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+
+	// Need to wait for the moment of brodcasting pulse in the network
+	currentPulse, err := usualLedger.GetPulseManager().Current()
+	assert.NoError(t, err)
+	count := 50
+	for (currentPulse == nil || currentPulse.PulseNumber == core.GenesisPulse.PulseNumber) && count > 0 {
+		time.Sleep(50 * time.Millisecond)
+		currentPulse, err = usualLedger.GetPulseManager().Current()
+		assert.NoError(t, err)
+		count--
+	}
+	// Final sleep for 100% receiving of pulse by all nodes (pulsars and nodes)
+	time.Sleep(200 * time.Millisecond)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, core.GenesisPulse.PulseNumber+1, currentPulse.PulseNumber)
+
+	for _, pulsar := range pulsars {
+		assert.Equal(t, WaitingForStart, pulsar.StateSwitcher.GetState())
+		assert.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.LastPulse.PulseNumber)
+		assert.Equal(t, 7, len(pulsar.LastPulse.Signs))
+		for _, keysItem := range keys {
+			sign := pulsar.LastPulse.Signs[keysItem.pubKey]
+			isOk, err := checkSignature(core.PulseSenderConfirmation{
+				PulseNumber:     sign.PulseNumber,
+				ChosenPublicKey: sign.ChosenPublicKey,
+				Entropy:         sign.Entropy,
+			}, keysItem.pubKey, sign.Signature)
+			assert.Equal(t, true, isOk)
+			assert.NoError(t, err)
+		}
+	}
+
+	defer func() {
+		usualNodeNetwork.Stop()
+		bootstrapNodeNetwork.Stop()
+
+		for _, pulsar := range pulsars {
+			pulsar.StopServer()
+		}
 
 		bootstrapLedgerCleaner()
 		usualLedgerCleaner()

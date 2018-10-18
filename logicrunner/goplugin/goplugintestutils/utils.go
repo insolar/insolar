@@ -91,8 +91,8 @@ func (t *TestCodeDescriptor) MachineType() core.MachineType {
 }
 
 // Code implementation for tests
-func (t *TestCodeDescriptor) Code() []byte {
-	return t.ACode
+func (t *TestCodeDescriptor) Code() ([]byte, error) {
+	return t.ACode, nil
 }
 
 // TestClassDescriptor ...
@@ -112,13 +112,13 @@ func (t *TestClassDescriptor) StateID() *core.RecordID {
 	panic("not implemented")
 }
 
-// CodeDescriptor ...
-func (t *TestClassDescriptor) CodeDescriptor(machinePref []core.MachineType) (core.CodeDescriptor, error) {
+// CodeDescriptor ...≈
+func (t *TestClassDescriptor) CodeDescriptor() core.CodeDescriptor {
 	res, ok := t.AM.Codes[*t.ACode]
 	if !ok {
-		return nil, errors.New("No code")
+		return nil
 	}
-	return res, nil
+	return res
 }
 
 // TestObjectDescriptor implementation for tests
@@ -240,19 +240,19 @@ func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.Re
 }
 
 // DeployCode implementation for tests
-func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, codeMap map[core.MachineType][]byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordRef, error) {
 	ref := testutils.RandomRef()
 
 	t.Codes[ref] = &TestCodeDescriptor{
 		ARef:         ref,
-		ACode:        codeMap[core.MachineTypeGoPlugin],
+		ACode:        code,
 		AMachineType: core.MachineTypeGoPlugin,
 	}
 	return &ref, nil
 }
 
 // GetCode implementation for tests
-func (t *TestArtifactManager) GetCode(code core.RecordRef, machinePref []core.MachineType) (core.CodeDescriptor, error) {
+func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
 	res, ok := t.Codes[code]
 	if !ok {
 		return nil, errors.New("No code")
@@ -378,7 +378,7 @@ func AMPublishCode(
 	err error,
 ) {
 	codeRef, err = am.DeployCode(
-		domain, request, map[core.MachineType][]byte{mtype: code},
+		domain, request, code, mtype,
 	)
 	assert.NoError(t, err, "create code on ledger")
 
@@ -473,7 +473,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 		code, err := cb.ArtifactManager.DeployCode(
 			core.RecordRef{}, core.RecordRef{},
-			map[core.MachineType][]byte{core.MachineTypeGoPlugin: pluginBinary},
+			pluginBinary, core.MachineTypeGoPlugin,
 		)
 		if err != nil {
 			return err

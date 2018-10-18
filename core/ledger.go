@@ -44,6 +44,15 @@ type Ledger interface {
 	GetPulseManager() PulseManager
 }
 
+// PulseManager provides Ledger's methods related to Pulse.
+type PulseManager interface {
+	// Current returns current pulse structure.
+	Current() (*Pulse, error)
+
+	// Set set's new pulse and closes current jet drop.
+	Set(Pulse) error
+}
+
 // JetCoordinator provides methods for calculating Jet affinity
 // (e.g. to which Jet a message should be sent).
 type JetCoordinator interface {
@@ -68,7 +77,7 @@ type ArtifactManager interface {
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
-	GetCode(ref RecordRef, machinePref []MachineType) (CodeDescriptor, error)
+	GetCode(ref RecordRef) (CodeDescriptor, error)
 
 	// GetClass returns descriptor for provided state.
 	//
@@ -101,7 +110,7 @@ type ArtifactManager interface {
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate class or as migration code for an object.
-	DeployCode(domain, request RecordRef, codeMap map[MachineType][]byte) (*RecordRef, error)
+	DeployCode(domain, request RecordRef, code []byte, machineType MachineType) (*RecordRef, error)
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 	//
@@ -148,11 +157,11 @@ type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *RecordRef
 
-	// MachineType returns first available machine type for provided machine preference.
+	// MachineType returns code machine type for represented code.
 	MachineType() MachineType
 
-	// Code returns code for first available machine type for provided machine preference.
-	Code() []byte
+	// Code returns code data.
+	Code() ([]byte, error)
 }
 
 // ClassDescriptor represents meta info required to fetch all object data.
@@ -164,7 +173,7 @@ type ClassDescriptor interface {
 	StateID() *RecordID
 
 	// CodeDescriptor returns descriptor for fetching class's code data.
-	CodeDescriptor(machinePref []MachineType) (CodeDescriptor, error)
+	CodeDescriptor() CodeDescriptor
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.

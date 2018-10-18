@@ -147,7 +147,6 @@ func NewPulsar(
 
 	gob.Register(Payload{})
 	gob.Register(HandshakePayload{})
-	gob.Register(GetLastPulsePayload{})
 	gob.Register(EntropySignaturePayload{})
 	gob.Register(EntropyPayload{})
 	gob.Register(VectorPayload{})
