@@ -44,6 +44,23 @@ func (ledgerMessage) TargetRole() core.JetRole {
 	return core.RoleLightExecutor
 }
 
+// SetRecord saves record in storage.
+type SetRecord struct {
+	ledgerMessage
+
+	Record []byte
+}
+
+// Type implementation of Message interface.
+func (e *SetRecord) Type() core.MessageType {
+	return core.TypeSetRecord
+}
+
+// Target implementation of Message interface.
+func (e *SetRecord) Target() *core.RecordRef {
+	return nil
+}
+
 // GetCode retrieves code from storage.
 type GetCode struct {
 	ledgerMessage
