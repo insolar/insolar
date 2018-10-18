@@ -66,7 +66,10 @@ func TestStore_DropWaitWrites(t *testing.T) {
 		<-txstarted
 		log.Debugln("start SetDrop")
 		close(dropwaits)
-		_, _, _ = db.CreateDrop(0, []byte{})
+		_, _, _, droperr := db.CreateDrop(0, []byte{})
+		if droperr != nil {
+			panic(droperr)
+		}
 		dropFin = time.Now()
 		log.Debugln("end SetDrop")
 		wg.Done()
