@@ -134,7 +134,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 
 	// TODO - network reworks this
 	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
-	lr.NodeId = c.Network.GetNodeID()
+	lr.NodeID = c.Network.GetNodeID()
 
 	return nil
 }
