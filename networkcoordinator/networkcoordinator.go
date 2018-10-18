@@ -39,7 +39,10 @@ func New() (*NetworkCoordinator, error) {
 func (nc *NetworkCoordinator) Start(c core.Components) error {
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
-	nc.nodeDomainRef = *c.Bootstrapper.GetNodeDomainRef()
+	// TODO: FIXME! workaround for network
+	if c.Bootstrapper.GetNodeDomainRef() != nil {
+		nc.nodeDomainRef = *c.Bootstrapper.GetNodeDomainRef()
+	}
 
 	return nil
 }

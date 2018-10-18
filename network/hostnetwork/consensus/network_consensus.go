@@ -59,13 +59,10 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 	if len(activeNodes) == 0 {
 		return
 	}
-	participants := make([]consensus.Participant, 0)
+	participants := make([]consensus.Participant, len(activeNodes))
 	parts := make([]string, 0)
-	for _, activeNode := range activeNodes {
-		if activeNode.NodeID == ic.keeper.GetID() {
-			continue
-		}
-		participants = append(participants, &participantWrapper{activeNode})
+	for i, activeNode := range activeNodes {
+		participants[i] = &participantWrapper{activeNode}
 		parts = append(parts, activeNode.NodeID.String())
 	}
 	log.Debugf("Consensus participants: %s", strings.Join(parts, ", "))
