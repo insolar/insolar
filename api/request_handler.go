@@ -322,7 +322,6 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 	}
 
 	result["certificate"] = dumpInfo
-	fmt.Println("HUHUHUHHUUHUHUHUHUHUHUH: ", dumpInfo)
 
 	return result, nil
 
@@ -345,15 +344,12 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 	result["public_key"] = pubKey
 	result["role"] = role
 
-	fmt.Println("GHGHGHGHGHG")
-
 	// Check calling via networkcoordinator
 	privKey, err := ecdsahelper.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with key generating")
 	}
 
-	fmt.Println("Y&Y&Y&Y&Y&Y&Y")
 	seed := make([]byte, 4)
 	_, err = rand.Read(seed)
 	if err != nil {
@@ -368,7 +364,6 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
 	}
 
-	fmt.Println("*W*W*W*W**W*W*W: PUBKEY")
 	rawCertificate, err := rh.netCoordinator.RegisterNode(pubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
@@ -379,18 +374,14 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
 
-	fmt.Println("3838383838838383838833: cert: " + string(rawCertificate))
 	regPubKey, _, err := rh.netCoordinator.Authorize(core.NewRefFromBase58(nodeRef), seed, signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
 	}
-	fmt.Println("POIUYTRDFGHUIOIJUHGFDW")
+
 	if regPubKey != pubKey {
-		fmt.Println("LLLLLLLKLLLLLLLLL")
 		return nil, errors.New("[ ProcessIsAuthorized ] PubKeys are not the same. " + regPubKey + ". Orig: " + pubKey)
 	}
-
-	fmt.Println("FUHFH&*H&H&&Y&H&")
 
 	result["netcoord_auth_success"] = true
 
