@@ -17,6 +17,8 @@
 package jetcoordinator_test
 
 import (
+	"bytes"
+	"sort"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -31,7 +33,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
+	ledger, cleaner, keeper := ledgertestutils.TmpLedger(t, lr, "")
 	defer cleaner()
 
 	am := ledger.GetArtifactManager()
@@ -40,44 +42,36 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 
 	pulse, err := pm.Current()
 	assert.NoError(t, err)
+
+	ref := func(r string) core.RecordRef { return core.NewRefFromBase58(r) }
+
+	keeper.AddActiveNodes([]*core.ActiveNode{
+		{NodeID: ref("v1"), Roles: []core.NodeRole{core.RoleVirtual}},
+		{NodeID: ref("v2"), Roles: []core.NodeRole{core.RoleVirtual}},
+		{NodeID: ref("l1"), Roles: []core.NodeRole{core.RoleLightMaterial}},
+		{NodeID: ref("l2"), Roles: []core.NodeRole{core.RoleLightMaterial}},
+		{NodeID: ref("l3"), Roles: []core.NodeRole{core.RoleLightMaterial}},
+	})
+
+	sorted := func(list []core.RecordRef) []core.RecordRef {
+		sort.Slice(list, func(i, j int) bool {
+			return bytes.Compare(list[i][:], list[j][:]) < 0
+		})
+		return list
+	}
 
 	selected, err := jc.QueryRole(core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
-	assert.Equal(t, []core.RecordRef{core.NewRefFromBase58("ve2")}, selected)
+	assert.Equal(t, []core.RecordRef{ref("v2")}, selected)
 
 	selected, err = jc.QueryRole(core.RoleVirtualValidator, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
-	assert.Equal(t, []core.RecordRef{
-		core.NewRefFromBase58("vv3"),
-		core.NewRefFromBase58("vv1"),
-		core.NewRefFromBase58("vv4"),
-	}, selected)
-}
+	assert.Equal(t, sorted([]core.RecordRef{ref("v1"), ref("v2")}), sorted(selected))
 
-func TestJetCoordinator_IsAuthorized(t *testing.T) {
-	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: &configuration.BuiltIn{},
-	})
+	selected, err = jc.QueryRole(core.RoleLightValidator, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
-	defer cleaner()
+	assert.Equal(t, sorted([]core.RecordRef{ref("l1"), ref("l2"), ref("l3")}), sorted(selected))
 
-	am := ledger.GetArtifactManager()
-	pm := ledger.GetPulseManager()
-	jc := ledger.GetJetCoordinator()
-
-	pulse, err := pm.Current()
-	assert.NoError(t, err)
-
-	authorized, err := jc.IsAuthorized(
-		core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber, core.NewRefFromBase58("ve1"),
-	)
-	assert.NoError(t, err)
-	assert.Equal(t, false, authorized)
-
-	authorized, err = jc.IsAuthorized(
-		core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber, core.NewRefFromBase58("ve2"),
-	)
-	assert.NoError(t, err)
-	assert.Equal(t, true, authorized)
+	selected, err = jc.QueryRole(core.RoleHeavyExecutor, *am.GenesisRef(), pulse.PulseNumber)
+	assert.Error(t, err)
 }

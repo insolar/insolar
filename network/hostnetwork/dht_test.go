@@ -676,6 +676,7 @@ func TestStoreReplication(t *testing.T) {
 // the store.
 func TestStoreExpiration(t *testing.T) {
 	done := make(chan bool)
+
 	dht, _ := newDHT(t, nil, "25000")
 
 	go func() {
@@ -752,6 +753,7 @@ func TestFindHostAllBuckets(t *testing.T) {
 
 func TestGetRandomIDFromBucket(t *testing.T) {
 	done := make(chan bool)
+
 	dht := newRealDHT(t, nil, "28000")
 
 	go func() {
@@ -1014,7 +1016,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 		return nil, nil
 	})
 
-	dht2.RemoteProcedureCall(dht2.nodeID, GetDefaultCtx(dht1), dht1.GetOriginHost().IDs[0].String(), "test", [][]byte{msg1})
+	dht2.RemoteProcedureCall(GetDefaultCtx(dht1), dht1.GetOriginHost().IDs[0].String(), "test", [][]byte{msg1})
 }
 
 func TestDHT_Getters(t *testing.T) {

@@ -30,8 +30,8 @@ type Components struct {
 	Ledger              Ledger
 	Network             Network
 	MessageBus          MessageBus
-	APIRunner           Component
 	Metrics             Component
 	Bootstrapper        Bootstrapper
+	APIRunner           Component
 	NetworkCoordinator  NetworkCoordinator
 }
