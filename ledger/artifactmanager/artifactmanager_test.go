@@ -17,7 +17,6 @@
 package artifactmanager
 
 import (
-	"bytes"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -142,67 +141,13 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	defer cleaner()
 	ctx := inscontext.TODO()
 
-<<<<<<< HEAD
-	msg := &message.CallConstructor{}
-	reqCoreRef1, err := td.manager.RegisterRequest(ctx, msg)
-=======
 	msg := message.BootstrapRequest{Name: "my little message"}
-	id, err := td.manager.RegisterRequest(&msg)
->>>>>>> INS-649: Fix tests.
+	coreID, err := td.manager.RegisterRequest(ctx, &msg)
 	assert.NoError(t, err)
-
-	internalID := record.Bytes2ID(id[:])
-	rec, err := td.db.GetRecord(&internalID)
+	id := record.Bytes2ID(coreID[:])
+	rec, err := td.db.GetRecord(&id)
 	assert.NoError(t, err)
-<<<<<<< HEAD
-
-	req, err := td.db.GetRequest(&reqID1)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rec, req)
-
-	// RegisterRequest should be idempotent.
-	reqCoreRef2, err := td.manager.RegisterRequest(ctx, msg)
-	assert.NoError(t, err)
-
-	reqCoreID2 := reqCoreRef2.GetRecordID()
-	assert.NotNil(t, reqCoreID2)
-	assert.Equal(t, reqCoreID, reqCoreID2)
-}
-
-func TestLedgerArtifactManager_RegisterRequest_MethodCall(t *testing.T) {
-	t.Parallel()
-	td, cleaner := prepareAMTestData(t)
-	defer cleaner()
-	ctx := inscontext.TODO()
-
-	msg := &message.CallMethod{}
-	reqCoreRef1, err := td.manager.RegisterRequest(ctx, msg)
-	assert.NoError(t, err)
-	reqCoreID := reqCoreRef1.GetRecordID()
-
-	reqID1 := record.Bytes2ID(reqCoreID.Bytes())
-	rec, err := td.db.GetRecord(&reqID1)
-	assert.NoError(t, err)
-
-	req, err := td.db.GetRequest(&reqID1)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rec, req)
-
-	// RegisterRequest should be idempotent.
-	reqCoreRef2, err := td.manager.RegisterRequest(ctx, msg)
-	assert.NoError(t, err)
-
-	reqCoreID2 := reqCoreRef2.GetRecordID()
-	assert.NotNil(t, reqCoreID2)
-	assert.Equal(t, reqCoreID, reqCoreID2)
-=======
-	reqRec := rec.(*record.CallRequest)
-	storedMsg, err := message.Deserialize(bytes.NewBuffer(reqRec.Payload))
-	assert.NoError(t, err)
-	assert.Equal(t, msg, *storedMsg.(*message.BootstrapRequest))
->>>>>>> INS-649: Fix tests.
+	assert.Equal(t, message.MustSerializeBytes(&msg), rec.(*record.CallRequest).Payload)
 }
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {
@@ -212,10 +157,10 @@ func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 	ctx := inscontext.TODO()
 
 	typeDec := []byte{1, 2, 3}
-	coreRef, err := td.manager.DeclareType(ctx, *domainRef.CoreRef(), *td.requestRef.CoreRef(), typeDec)
+	coreID, err := td.manager.DeclareType(ctx, *domainRef.CoreRef(), *td.requestRef.CoreRef(), typeDec)
 	assert.NoError(t, err)
-	ref := record.Core2Reference(*coreRef)
-	typeRec, err := td.db.GetRecord(&ref.Record)
+	id := record.Bytes2ID(coreID[:])
+	typeRec, err := td.db.GetRecord(&id)
 	assert.NoError(t, err)
 	assert.Equal(t, &record.TypeRecord{
 		ResultRecord: record.ResultRecord{

@@ -63,16 +63,9 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 func (m *LedgerArtifactManager) RegisterRequest(
 	ctx core.Context, msg core.Message,
 ) (*core.RecordID, error) {
-	rec := record.CallRequest{
+	return m.setRecord(&record.CallRequest{
 		Payload: message.MustSerializeBytes(msg),
-	}
-	id, err := m.fetchID(&message.SetRecord{
-		Record: record.SerializeRecord(&rec),
 	})
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -202,11 +195,13 @@ func (m *LedgerArtifactManager) GetChildren(
 // Type is a contract interface. It contains one method signature.
 func (m *LedgerArtifactManager) DeclareType(
 	ctx core.Context, domain, request core.RecordRef, typeDec []byte,
-) (*core.RecordRef, error) {
-	return m.fetchReference(&message.DeclareType{
-		Domain:  domain,
-		Request: request,
-		TypeDec: typeDec,
+) (*core.RecordID, error) {
+	return m.setRecord(&record.TypeRecord{
+		ResultRecord: record.ResultRecord{
+			Domain:  record.Core2Reference(domain),
+			Request: record.Core2Reference(request),
+		},
+		TypeDeclaration: typeDec,
 	})
 }
 
@@ -387,5 +382,22 @@ func (m *LedgerArtifactManager) fetchID(msg core.Message) (*core.RecordID, error
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}
+	return &react.ID, nil
+}
+
+func (m *LedgerArtifactManager) setRecord(rec record.Record) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(&message.SetRecord{
+		Record: record.SerializeRecord(rec),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
 	return &react.ID, nil
 }

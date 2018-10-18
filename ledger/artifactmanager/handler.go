@@ -49,7 +49,6 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeGetObject, h.handleGetObject)
 	bus.MustRegister(core.TypeGetDelegate, h.handleGetDelegate)
 	bus.MustRegister(core.TypeGetChildren, h.handleGetChildren)
-	bus.MustRegister(core.TypeDeclareType, h.handleDeclareType)
 	bus.MustRegister(core.TypeDeployCode, h.handleDeployCode)
 	bus.MustRegister(core.TypeActivateClass, h.handleActivateClass)
 	bus.MustRegister(core.TypeDeactivateClass, h.handleDeactivateClass)
@@ -231,30 +230,6 @@ func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply,
 	logTimeInside(start, "handleGetChildren")
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
-}
-
-func (h *MessageHandler) handleDeclareType(genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-	msg := genericMsg.(*message.DeclareType)
-
-	domainRef := record.Core2Reference(msg.Domain)
-	requestRef := record.Core2Reference(msg.Request)
-
-	rec := record.TypeRecord{
-		ResultRecord: record.ResultRecord{
-			Domain:  domainRef,
-			Request: requestRef,
-		},
-		TypeDeclaration: msg.TypeDec,
-	}
-	typeID, err := h.db.SetRecord(&rec)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to store record")
-	}
-
-	logTimeInside(start, "handleDeclareType")
-
-	return &reply.Reference{Ref: *getReference(&msg.Request, typeID)}, nil
 }
 
 func (h *MessageHandler) handleDeployCode(genericMsg core.Message) (core.Reply, error) {
