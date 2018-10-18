@@ -16,6 +16,10 @@
 
 package record
 
+import (
+	"io"
+)
+
 // Request extends Record interface with GetPayload method.
 type Request interface {
 	Record
@@ -25,6 +29,11 @@ type Request interface {
 // CallRequest is a contract execution request.
 type CallRequest struct {
 	Payload []byte
+}
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *CallRequest) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(r.Payload)
 }
 
 // Type implementation of Record interface.

@@ -21,7 +21,6 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 )
 
 // ProjectionType is a "view filter" for record.
@@ -48,16 +47,13 @@ type ID struct {
 
 // Record is base interface for all records.
 type Record interface {
+	// Type returns record type.
 	Type() TypeID
+	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+	WriteHashData(w io.Writer) (int, error)
 }
 
-// SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
-func SHA3Hash224(rec Record) []byte {
-	cborBlob := MustEncode(rec)
-	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
-}
-
-// WriteHash implements hash.Writer interface.
+// WriteHashData implements hash.Writer interface.
 func (id ID) WriteHash(w io.Writer) {
 	b := ID2Bytes(id)
 	err := binary.Write(w, binary.BigEndian, b)
@@ -82,7 +78,7 @@ func (id ID) IsEqual(id2 ID) bool {
 	return true
 }
 
-// WriteHash implements hash.Writer interface.
+// WriteHashData implements hash.Writer interface.
 func (id TypeID) WriteHash(w io.Writer) {
 	err := binary.Write(w, binary.BigEndian, id)
 	if err != nil {

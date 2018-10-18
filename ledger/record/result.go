@@ -17,6 +17,8 @@
 package record
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -54,6 +56,11 @@ type TypeRecord struct {
 // Type implementation of Record interface.
 func (r *TypeRecord) Type() TypeID { return typeRecordID }
 
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
+
 // CodeRecord is a code storage record.
 type CodeRecord struct {
 	ResultRecord
@@ -64,6 +71,11 @@ type CodeRecord struct {
 
 // Type implementation of Record interface.
 func (r *CodeRecord) Type() TypeID { return codeRecordID }
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
 
 // ClassStateRecord is a record containing data for a class state.
 type ClassStateRecord struct {
@@ -95,6 +107,11 @@ type ClassActivateRecord struct {
 // Type implementation of Record interface.
 func (r *ClassActivateRecord) Type() TypeID { return classActivateRecordID }
 
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ClassActivateRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
+
 // ClassAmendRecord is an amendment record for classes.
 type ClassAmendRecord struct {
 	ResultRecord
@@ -107,9 +124,14 @@ type ClassAmendRecord struct {
 // Type implementation of Record interface.
 func (r *ClassAmendRecord) Type() TypeID { return classAmendRecordID }
 
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ClassAmendRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
+
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
-	Memory Memory
+	Memory []byte
 }
 
 // IsDeactivation determines if current state is deactivation.
@@ -135,6 +157,11 @@ type ObjectActivateRecord struct {
 // Type implementation of Record interface.
 func (r *ObjectActivateRecord) Type() TypeID { return objectActivateRecordID }
 
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
+
 // ObjectAmendRecord is an amendment record for objects.
 type ObjectAmendRecord struct {
 	ResultRecord
@@ -144,7 +171,12 @@ type ObjectAmendRecord struct {
 }
 
 // Type implementation of Record interface.
-func (r *ObjectAmendRecord) Type() TypeID { return objectActivateRecordID }
+func (r *ObjectAmendRecord) Type() TypeID { return objectAmendRecordID }
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
 
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
@@ -154,6 +186,11 @@ type DeactivationRecord struct {
 
 // Type implementation of Record interface.
 func (r *DeactivationRecord) Type() TypeID { return deactivationRecordID }
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *DeactivationRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
 
 // GetMachineType returns state code machine type.
 func (*DeactivationRecord) GetMachineType() core.MachineType {

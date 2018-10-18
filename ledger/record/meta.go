@@ -17,6 +17,8 @@
 package record
 
 import (
+	"io"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -26,6 +28,11 @@ type GenesisRecord struct {
 
 // Type implementation of Record interface.
 func (r *GenesisRecord) Type() TypeID { return genesisRecordID }
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
 
 // IsDeactivation determines if current state is deactivation.
 func (*GenesisRecord) IsDeactivation() bool {
@@ -56,6 +63,11 @@ type ChildRecord struct {
 
 // Type implementation of Record interface.
 func (r *ChildRecord) Type() TypeID { return childRecordID }
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
 
 // PulseRecord is a record containing pulse info.
 type PulseRecord struct {
