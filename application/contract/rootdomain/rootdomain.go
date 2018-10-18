@@ -178,8 +178,8 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 }
 
 // GetNodeDomainRef returns reference of NodeDomain instance
-func (rd *RootDomain) GetNodeDomainRef() core.RecordRef {
-	return rd.NodeDomainRef
+func (rd *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
+	return rd.NodeDomainRef, nil
 }
 
 // NewRootDomain creates new RootDomain

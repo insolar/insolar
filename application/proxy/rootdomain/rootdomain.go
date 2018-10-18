@@ -430,7 +430,7 @@ func (r *RootDomain) DumpAllUsersNoWait() {
 }
 
 // GetNodeDomainRef is proxy generated method
-func (r *RootDomain) GetNodeDomainRef() core.RecordRef {
+func (r *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -445,16 +445,21 @@ func (r *RootDomain) GetNodeDomainRef() core.RecordRef {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 core.RecordRef
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetNodeDomainRefNoWait is proxy generated method
