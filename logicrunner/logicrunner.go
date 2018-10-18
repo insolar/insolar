@@ -50,7 +50,7 @@ type LogicRunner struct {
 	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
 	execution       map[Ref]*ExecutionContext // if object exists, we are validating or executing it right now
-	contextMutex    sync.Mutex
+	executionMutex  sync.Mutex
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
@@ -165,8 +165,8 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 }
 
 func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionContext {
-	lr.contextMutex.Lock()
-	defer lr.contextMutex.Unlock()
+	lr.executionMutex.Lock()
+	defer lr.executionMutex.Unlock()
 	if _, ok := lr.execution[ref]; !ok {
 		lr.execution[ref] = &ExecutionContext{}
 	}
