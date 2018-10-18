@@ -126,7 +126,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 		return err
 	}
 
-	// TODO - network rewors this
+	// TODO - network reworks this
 	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
 	lr.NodeId = c.Network.GetNodeID()
 
@@ -206,12 +206,14 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	} else {
 		vb = ValidationSaver{lr: lr}
 	}
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(vb.GetRole(), ref, lr.caseBind.Pulse.PulseNumber, *msg.GetCaller())
 	reqref, err := lr.ArtifactManager.RegisterRequest(msg)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO reqref needed if we don't execute?
+	// TODO do map for objects for pulse?
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(vb.GetRole(), ref, lr.caseBind.Pulse.PulseNumber, lr.NodeId)
 	if err != nil {
 		return nil, errors.New("Authorization failed with error: " + err.Error())
 	}
