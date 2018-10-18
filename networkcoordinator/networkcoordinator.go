@@ -17,6 +17,8 @@
 package networkcoordinator
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -83,33 +85,44 @@ func (nc *NetworkCoordinator) sendRequest(ref core.RecordRef, method string, arg
 }
 
 // Authorize authorizes node by verifying it's signature
-func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
+func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
 	routResult, err := nc.sendRequest(nc.nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
+
+	fmt.Println("GHGHGHGHGHGHG: nodeRef: " + nodeRef.String())
+
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't send request")
+		return "", nil, errors.Wrap(err, "[ Authorize ] Can't send request")
 	}
+
+	fmt.Println("KLKLKLKLKLKLKLK")
 
 	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't extract response")
+		return "", nil, errors.Wrap(err, "[ Authorize ] Can't extract response")
 	}
+
+	fmt.Println("Y&Y&Y&Y&Y&Y&Y: PUBKEY: " + pubKey)
 
 	return pubKey, role, nil
 }
 
 // RegisterNode registers node in nodedomain
-func (nc *NetworkCoordinator) RegisterNode(publicKey string, role string) (*core.RecordRef, error) {
-	routResult, err := nc.sendRequest(nc.nodeDomainRef, "RegisterNode", []interface{}{publicKey, role})
+func (nc *NetworkCoordinator) RegisterNode(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+	fmt.Println("HYHYHYHYHYHY: PUBKEY: " + nc.nodeDomainRef.String())
+
+	routResult, err := nc.sendRequest(nc.nodeDomainRef, "RegisterNode", []interface{}{pk, numberOfBootstrapNodes, majorityRule, roles, ip})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't send request")
 	}
 
-	nodeRef, err := extractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
+	rawCertificate, err := ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't extract response")
 	}
 
-	return nodeRef, nil
+	fmt.Println("BNBNBNBNBNB: PUBLIC: " + string(rawCertificate))
+
+	return rawCertificate, nil
 }
 
 // WriteActiveNodes write active nodes to ledger
