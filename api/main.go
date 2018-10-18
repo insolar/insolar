@@ -131,7 +131,6 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 }
 
 func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
-	//sm := seedmanager.New()
 	return func(response http.ResponseWriter, req *http.Request) {
 		startTime := time.Now()
 		answer := make(map[string]interface{})
