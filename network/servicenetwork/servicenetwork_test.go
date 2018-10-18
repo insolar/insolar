@@ -186,14 +186,16 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
 
-	firstNode, _ := NewServiceNetwork(mockServiceConfiguration(
-		"127.0.0.1:10000",
-		[]string{"127.0.0.1:10001"},
+	firstNode, err := NewServiceNetwork(mockServiceConfiguration(
+		"127.0.0.1:10100",
+		[]string{"127.0.0.1:10101"},
 		firstNodeId))
-	secondNode, _ := NewServiceNetwork(mockServiceConfiguration(
-		"127.0.0.1:10001",
+	assert.NoError(t, err)
+	secondNode, err := NewServiceNetwork(mockServiceConfiguration(
+		"127.0.0.1:10101",
 		nil,
 		secondNodeId))
+	assert.NoError(t, err)
 
 	secondNode.Start(core.Components{ActiveNodeComponent: nodekeeper.NewNodeKeeper(core.NewRefFromBase58(secondNodeId))})
 	firstNode.Start(core.Components{ActiveNodeComponent: nodekeeper.NewNodeKeeper(core.NewRefFromBase58(firstNodeId))})
@@ -228,7 +230,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 
 	assert.True(t, success)
 
-	err := firstNode.SendCascadeMessage(c, "test", nil)
+	err = firstNode.SendCascadeMessage(c, "test", nil)
 	assert.Error(t, err)
 	c.ReplicationFactor = 0
 	err = firstNode.SendCascadeMessage(c, "test", e)
