@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -138,18 +139,18 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			Arguments: args,
 		})
 
-		var typeHolder1 interface{}
-		var typeHolder2 *foundation.Error
-		refOrig, err := core.UnMarshalResponse(res.(*reply.CallMethod).Result, []interface{}{typeHolder1, typeHolder2})
+		var result interface{}
+		var contractErr *foundation.Error
+		err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
 		if err != nil {
 			resp.Error = err.Error()
 			log.Error(err)
 			return
 		}
 
-		resp.Result = refOrig[0]
-		if refOrig[1] != nil {
-			resp.Error = refOrig[1].(*foundation.Error).S
+		resp.Result = result
+		if contractErr != nil {
+			resp.Error = contractErr.S
 		}
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api/seedmanager"
+	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -268,15 +269,9 @@ func (ar *Runner) getMemberPubKey(ref string) (string, error) { //nolint
 		return "", err
 	}
 
-	var typeHolder string
-	refOrig, err := core.UnMarshalResponse(res.(*reply.CallMethod).Result, []interface{}{typeHolder})
+	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &key)
 	if err != nil {
 		return "", err
-	}
-
-	key, ok = refOrig[0].(string)
-	if !ok {
-		return "", fmt.Errorf("cant cast response to key string")
 	}
 
 	ar.cacheLock.Lock()
