@@ -144,14 +144,14 @@ type HostHandler interface {
 
 	SetHighKnownHostID(id string)
 	SetOuterHostsCount(hosts int)
-	SetNodeID(nodeID core.RecordRef)
+	SetNodeID(nodeID *core.RecordRef)
 	SetAuthStatus(targetID string, status bool)
 	SetNodeKeeper(keeper consensus.NodeKeeper)
 
 	GetHostsFromBootstrap()
 	GetProxyHostsCount() int
 	GetOuterHostsCount() int
-	GetNodeID() core.RecordRef
+	GetNodeID() *core.RecordRef
 	GetHighKnownHostID() string
 	GetSelfKnownOuterHosts() int
 	GetOriginHost() *host.Origin

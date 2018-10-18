@@ -240,6 +240,7 @@ func TestBootstrapManyHosts(t *testing.T) {
 		assert.NoError(t, err)
 		bootstrapHost := host.NewHost(address)
 		key, _ := ecdsa.GeneratePrivateKey()
+		ref := testutils.RandomRef()
 		dht, err := NewDHT(st, s, tp, r, &Options{
 			BootstrapHosts: []*host.Host{
 				bootstrapHost,
@@ -248,7 +249,7 @@ func TestBootstrapManyHosts(t *testing.T) {
 			relay.NewProxy(),
 			4,
 			false,
-			testutils.RandomRef(),
+			&ref,
 			5,
 			key,
 		)

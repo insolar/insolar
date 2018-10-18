@@ -46,7 +46,7 @@ func NewNodeNetwork(nodeCfg configuration.Configuration) (*NodeNetwork, error) {
 }
 
 // ResolveHostID returns a host found by reference.
-func ResolveHostID(ref core.RecordRef) string {
+func ResolveHostID(ref *core.RecordRef) string {
 	hash := make([]byte, 20)
 	sha3.ShakeSum128(hash, ref[:])
 	return base58.Encode(hash)

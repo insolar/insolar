@@ -184,7 +184,7 @@ func getActiveHostsList(hostHandler hosthandler.HostHandler) []host.Host {
 			log.Warnf("Error resolving address %s for node %s", node.Address, node.NodeID)
 			continue
 		}
-		idd := nodenetwork.ResolveHostID(node.NodeID)
+		idd := nodenetwork.ResolveHostID(&node.NodeID)
 		hosts = append(hosts, host.Host{ID: id.FromBase58(idd), Address: address})
 	}
 	return hosts

@@ -60,6 +60,6 @@ func TestNodeNetwork_ResolveHostID(t *testing.T) {
 	ref1Clone := core.NewRefFromBase58(str1)
 	ref2 := core.NewRefFromBase58(str2)
 
-	assert.Equal(t, ResolveHostID(ref1), ResolveHostID(ref1Clone))
-	assert.NotEqual(t, ResolveHostID(ref1), ResolveHostID(ref2))
+	assert.Equal(t, ResolveHostID(&ref1), ResolveHostID(&ref1Clone))
+	assert.NotEqual(t, ResolveHostID(&ref1), ResolveHostID(&ref2))
 }

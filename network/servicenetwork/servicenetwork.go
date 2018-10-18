@@ -80,7 +80,7 @@ func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent
 }
 
 // SendMessage sends a message from MessageBus.
-func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+func (network *ServiceNetwork) SendMessage(nodeID *core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	start := time.Now()
 	if msg == nil {
 		return nil, errors.New("message is nil")
@@ -245,7 +245,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 
 	var failedNodes []string
 	for _, nextNode := range nextNodes {
-		hostID := nodenetwork.ResolveHostID(nextNode)
+		hostID := nodenetwork.ResolveHostID(&nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
 			log.Debugln("failed to send cascade message: ", err)

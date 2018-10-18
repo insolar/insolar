@@ -61,7 +61,7 @@ type DHT struct {
 	subnet            Subnet
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
-	nodeID            core.RecordRef
+	nodeID            *core.RecordRef
 	activeNodeKeeper  consensus.NodeKeeper
 	majorityRule      int
 }
@@ -131,7 +131,7 @@ func NewDHT(
 	proxy relay.Proxy,
 	timeout int,
 	infbootstrap bool,
-	nodeID core.RecordRef,
+	nodeID *core.RecordRef,
 	majorityRule int,
 	key *ecdsa.PrivateKey,
 ) (dht *DHT, err error) {
@@ -1213,7 +1213,7 @@ func (dht *DHT) checkMajorityRule(nodes []*core.ActiveNode) error {
 	count := 0
 	for _, activeNode := range nodes {
 		for _, bootstrapNode := range dht.options.BootstrapHosts {
-			if strings.EqualFold(bootstrapNode.ID.String(), nodenetwork.ResolveHostID(activeNode.NodeID)) {
+			if strings.EqualFold(bootstrapNode.ID.String(), nodenetwork.ResolveHostID(&activeNode.NodeID)) {
 				count++
 			}
 		}
@@ -1355,7 +1355,7 @@ func (dht *DHT) RemoveRelayClient(host *host.Host) error {
 	return dht.relay.RemoveClient(host)
 }
 
-func (dht *DHT) SetNodeID(nodeID core.RecordRef) {
+func (dht *DHT) SetNodeID(nodeID *core.RecordRef) {
 	dht.nodeID = nodeID
 }
 
@@ -1400,7 +1400,7 @@ func (dht *DHT) GetPacketTimeout() time.Duration {
 }
 
 // GetNodeID returns a node ID.
-func (dht *DHT) GetNodeID() core.RecordRef {
+func (dht *DHT) GetNodeID() *core.RecordRef {
 	return dht.nodeID
 }
 
