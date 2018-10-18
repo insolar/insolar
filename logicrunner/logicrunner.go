@@ -298,9 +298,9 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	data := lr.UpsertExecution(m.ObjectRef)
-	data.mutex.Lock()
-	defer data.mutex.Unlock()
+	executionState := lr.UpsertExecution(m.ObjectRef)
+	executionState.mutex.Lock()
+	defer executionState.mutex.Unlock()
 
 	objbody, err := lr.getObjectMessage(m.ObjectRef)
 	if err != nil {
@@ -359,9 +359,9 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 }
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
-	data := lr.UpsertExecution(m.GetRequest())
-	data.mutex.Lock()
-	defer data.mutex.Unlock()
+	executionState := lr.UpsertExecution(m.GetRequest())
+	executionState.mutex.Lock()
+	defer executionState.mutex.Unlock()
 
 	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 	if err != nil {
