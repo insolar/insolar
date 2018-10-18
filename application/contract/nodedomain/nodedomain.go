@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/pkg/errors"
 )
 
 // NodeDomain holds noderecords
@@ -40,7 +39,7 @@ func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
-func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, pk string, majorityRule int, roles []string) (map[string]interface{}, error) {
+func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, pk string, majorityRule int, roles []string) (map[string]interface{}, string) {
 	result := map[string]interface{}{}
 	result["majority_rule"] = majorityRule
 	result["public_key"] = pk
@@ -48,12 +47,12 @@ func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, pk string, maj
 
 	bNodes, err := nd.makeBootstrapNodesConfig(numberOfBootstrapNodes)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't make bootstrap nodes config")
+		return nil, "Can't make bootstrap nodes config: " + err.Error()
 	}
 
 	result["bootstrap_nodes"] = bNodes
 
-	return result, nil
+	return result, ""
 }
 
 func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]map[string]string, error) {
@@ -95,18 +94,23 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 
 // RegisterNode registers node in system
 func (nd *NodeDomain) RegisterNode(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, string) {
+	const majorityPercentage = 0.51
 
-	if numberOfBootstrapNodes != 0 && majorityRule != 0 {
-		const majorityPercentage = 0.51
+	if majorityRule != 0 {
 		if float32(majorityRule) <= majorityPercentage*float32(numberOfBootstrapNodes) {
 			return nil, "majorityRule must be more than 0.51 * numberOfBootstrapNodes"
 		}
 	}
+
+	result, errS := nd.makeCertificate(numberOfBootstrapNodes, pk, majorityRule, roles)
+	if len(errS) != 0 {
+		return nil, "[ RegisterNode ] " + errS
+	}
+
 	// TODO: what should be done when record already exists?
 	newRecord := noderecord.NewNodeRecord(pk, roles, ip)
 	record := newRecord.AsChild(nd.GetReference())
 
-	result, err := nd.makeCertificate(numberOfBootstrapNodes, pk, majorityRule, roles)
 	result["reference"] = record.GetReference().String()
 
 	rawCert, err := json.Marshal(result)

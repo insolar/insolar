@@ -41,7 +41,7 @@ func NewNodeRecord(pk string, roles []string, ip string) *NodeRecord {
 		role := core.GetRoleFromString(roleStr)
 		if role == core.RoleUnknown {
 			// TODO: return error
-			panic("Can't unsupported role")
+			panic("Role is not supported: " + roleStr)
 		}
 		resultRoles = append(resultRoles, role)
 	}
