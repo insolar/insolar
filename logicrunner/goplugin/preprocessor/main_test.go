@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -615,4 +616,36 @@ type A struct{
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy("testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't match filename without extension and path")
+}
+
+func TestProxyGeneration(t *testing.T) {
+	contracts, err := GetRealContractsNames()
+	assert.NoError(t, err)
+
+	for _, contract := range contracts {
+		t.Run(contract, func(t *testing.T) {
+			t.Parallel()
+			parsed, err := ParseFile("../../../application/contract/" + contract + "/" + contract + ".go")
+			assert.NotNil(t, parsed, "have parsed object")
+			assert.NoError(t, err)
+
+			proxyPath, err := GetRealApplicationDir("proxy")
+			assert.NoError(t, err)
+
+			name, err := parsed.ProxyPackageName()
+			assert.NoError(t, err)
+
+			proxy := path.Join(proxyPath, name, name+".go")
+			_, err = os.Stat(proxy)
+			assert.NoError(t, err)
+
+			buff := bytes.NewBufferString("")
+			parsed.WriteProxy("", buff)
+
+			cmd := exec.Command("diff", proxy, "-")
+			cmd.Stdin = buff
+			out, err := cmd.CombinedOutput()
+			assert.NoError(t, err, string(out))
+		})
+	}
 }

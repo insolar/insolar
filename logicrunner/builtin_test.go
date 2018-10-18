@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
 func byteRecorRef(b byte) core.RecordRef {
@@ -49,12 +50,12 @@ func TestBareHelloworld(t *testing.T) {
 	am := l.GetArtifactManager()
 	assert.NoError(t, err, "Initialize runner")
 
-	eb := &testMessageBus{lr}
-
+	mb := testmessagebus.NewTestMessageBus()
 	assert.NoError(t, lr.Start(core.Components{
 		Ledger:     l,
-		MessageBus: eb,
+		MessageBus: mb,
 	}), "starting logicrunner")
+	MessageBusTrivialBehavior(mb, lr)
 	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 
 	hw := helloworld.NewHelloWorld()
