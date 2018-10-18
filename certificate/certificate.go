@@ -83,7 +83,7 @@ func (c *Certificate) GetPublicKey() (string, error) {
 	return ecdsahelper.ExportPublicKey(&c.privateKey.PublicKey)
 }
 
-// GetPublicKey returns private key as string
+// GetPrivateKey returns private key as string
 func (c *Certificate) GetPrivateKey() (string, error) {
 	return ecdsahelper.ExportPrivateKey(c.privateKey)
 }
@@ -93,13 +93,13 @@ func (c *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
 	return c.privateKey
 }
 
-// GenerateKeyPair generates new key pair
-func (c *Certificate) GenerateKeyPair() (privateKey *ecdsa.PrivateKey, privateKeyPem string, pubKey string) {
-	privateKey, _ = ecdsahelper.GeneratePrivateKey()
+// GenerateKeys generates certificate keys
+func (c *Certificate) GenerateKeys() error {
+	key, err := ecdsahelper.GeneratePrivateKey()
+	if err != nil {
+		return errors.Wrap(err, "Failed to generate certificate keys.")
+	}
 
-	pubKey, _ = ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	privateKeyPem, _ = ecdsahelper.ExportPrivateKey(privateKey)
-
-	c.privateKey = privateKey
-	return
+	c.privateKey = key
+	return nil
 }

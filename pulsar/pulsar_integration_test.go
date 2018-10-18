@@ -37,14 +37,17 @@ import (
 func newCertificate(t *testing.T) *certificate.Certificate {
 	cert, err := certificate.NewCertificate("../testdata/functional/bootstrap_keys.json")
 	assert.NoError(t, err)
+	err = cert.GenerateKeys()
+	assert.NoError(t, err)
 	return cert
 }
 
 func TestTwoPulsars_Handshake(t *testing.T) {
 	cert1 := newCertificate(t)
 	cert2 := newCertificate(t)
-	_, _ /*firstPrivateExported,*/, firstPublicExported := cert1.GenerateKeyPair()
-	_, _ /*secondPrivateExported,*/, secondPublicExported := cert2.GenerateKeyPair()
+
+	firstPublicExported, _ := cert1.GetPublicKey()
+	secondPublicExported, _ := cert2.GetPublicKey()
 
 	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
@@ -186,8 +189,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	cert1 := newCertificate(t)
 	cert2 := newCertificate(t)
-	_, _ /* parsedPrivKeyFirst */, firstPubKey := cert1.GenerateKeyPair()
-	_, _ /* parsedPrivKeySecond */, secondPubKey := cert2.GenerateKeyPair()
+	firstPubKey, _ := cert1.GetPublicKey()
+	secondPubKey, _ := cert2.GetPublicKey()
 
 	firstStateSwitcher := &StateSwitcherImpl{}
 	firstPulsar, err := NewPulsar(
@@ -305,7 +308,8 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	transportAddress := "127.0.0.1:1648"
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
-		keys[pulsarIndex].GenerateKeyPair()
+		err := keys[pulsarIndex].GenerateKeys()
+		assert.NoError(t, err)
 	}
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {

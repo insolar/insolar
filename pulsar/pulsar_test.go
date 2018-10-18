@@ -54,7 +54,6 @@ func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RPCClientWrapper {
 
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 
-	//privateKey, privateKeyExported, _ := generatePrivateAndConvertPublic(t)
 	actualConnectionType := ""
 	actualAddress := ""
 
@@ -81,7 +80,6 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	)
 
 	assert.NoError(t, err)
-	//assert.Equal(t, privateKey, result.PrivateKey)
 	assert.Equal(t, "testType", actualConnectionType)
 	assert.Equal(t, "listedAddress", actualAddress)
 	assert.IsType(t, result.Sock, &pulsartestutils.MockListener{})
@@ -99,8 +97,6 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	secondPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	secondExpectedKey, _ := ecdsahelper.ExportPublicKey(&secondPrivateKey.PublicKey)
 
-	//expectedPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
-	//parsedExpectedPrivateKey, _ := ecdsahelper.ExportPrivateKey(expectedPrivateKey)
 	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
 	clientFactory := &MockRpcClientFactoryWrapper{}
@@ -673,10 +669,17 @@ func TestPulsar_verify_Success(t *testing.T) {
 	mockSwitcher.On("SwitchToState", WaitingForPulseSigns, nil)
 	mockSwitcher.On("SwitchToState", SendingPulseSign, nil)
 
-	cert := newCertificate(t)
-	privateKey, _, currentPulsarPublicKey := cert.GenerateKeyPair()
-	privateKeySecond, _, publicKeySecond := cert.GenerateKeyPair()
-	privateKeyThird, _, publicKeyThird := cert.GenerateKeyPair()
+	keyGenerator := func() (*ecdsa.PrivateKey, *ecdsa.PublicKey, string) {
+		key, _ := ecdsahelper.GeneratePrivateKey()
+		pubKeyString, _ := ecdsahelper.ExportPublicKey(&key.PublicKey)
+
+		return key, &key.PublicKey, pubKeyString
+	}
+
+	privateKey, _, currentPulsarPublicKey := keyGenerator()
+
+	privateKeySecond, _, publicKeySecond := keyGenerator()
+	privateKeyThird, _, publicKeyThird := keyGenerator()
 
 	clientMock := pulsartestutils.MockRPCClientWrapper{}
 	clientMock.On("IsInitialised").Return(true)
