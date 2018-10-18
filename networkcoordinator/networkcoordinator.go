@@ -131,12 +131,12 @@ func (nc *NetworkCoordinator) WriteActiveNodes(number core.PulseNumber, activeNo
 func (nc *NetworkCoordinator) fetchNodeDomainRef() (*core.RecordRef, error) {
 	routResult, err := nc.sendRequest(nc.rootDomainRef, "GetNodeDomainRef", []interface{}{})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeDomainRef ] Can't send request")
+		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't send request")
 	}
 
 	nodeDomainRef, err := extractReferenceResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetNodeDomainRef ] Can't extract response")
+		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't extract response")
 	}
 
 	return nodeDomainRef, nil
