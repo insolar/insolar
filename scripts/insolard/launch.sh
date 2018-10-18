@@ -13,6 +13,10 @@ INSGORUND_RPS_PORT=18182
 stop_listening()
 {
     ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 8090 8080"
+    if [ $1 != "" ]
+    then
+        ports=$@
+    fi
     echo "Stop listening..."
     for port in $ports
     do
@@ -36,8 +40,12 @@ create_required_dirs()
 
 prepare()
 {
-    stop_listening
-    create_required_dirs
+    if [ "$gorund_only" == "1" ]
+    then
+        stop_listening $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT
+    else
+        stop_listening
+    fi
     clear_dirs
 }
 
