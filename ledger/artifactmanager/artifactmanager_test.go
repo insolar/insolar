@@ -218,8 +218,10 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	coreRef, err := td.manager.DeployCode(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), []byte{1, 2, 3}, core.MachineTypeBuiltin,
 	)
 	assert.NoError(t, err)

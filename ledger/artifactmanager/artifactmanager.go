@@ -210,7 +210,11 @@ func (m *LedgerArtifactManager) DeclareType(
 //
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
-	domain, request core.RecordRef, code []byte, machineType core.MachineType,
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	code []byte,
+	machineType core.MachineType,
 ) (*core.RecordRef, error) {
 	return m.fetchReference(&message.DeployCode{
 		Domain:      domain,

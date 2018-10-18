@@ -225,7 +225,7 @@ func (t *TestArtifactManager) DeclareType(ctx core.Context, domain core.RecordRe
 }
 
 // DeployCode implementation for tests
-func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeployCode(ctx core.Context, domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordRef, error) {
 	ref := testutils.RandomRef()
 
 	t.Codes[ref] = &TestCodeDescriptor{
@@ -364,7 +364,7 @@ func AMPublishCode(
 ) {
 	ctx := inscontext.TODO()
 	codeRef, err = am.DeployCode(
-		domain, request, code, mtype,
+		ctx, domain, request, code, mtype,
 	)
 	assert.NoError(t, err, "create code on ledger")
 
@@ -459,6 +459,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 
 		code, err := cb.ArtifactManager.DeployCode(
+			ctx,
 			core.RecordRef{}, core.RecordRef{},
 			pluginBinary, core.MachineTypeGoPlugin,
 		)
