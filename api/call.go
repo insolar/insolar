@@ -84,6 +84,12 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			return
 		}
 
+		if !ar.seedmanager.Exists(ar.seedmanager.FromBytes(params.Seed)) {
+			resp.Error = "Incorrect seed"
+			log.Error("[ CallHandler ] Incorrect seed")
+			return
+		}
+
 		key, err := ar.getMemberPubKey(params.Reference)
 		if err != nil {
 			resp.Error = err.Error()

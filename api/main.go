@@ -130,7 +130,7 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 }
 
 func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
-	sm := seedmanager.New()
+	//sm := seedmanager.New()
 	return func(response http.ResponseWriter, req *http.Request) {
 		startTime := time.Now()
 		answer := make(map[string]interface{})
@@ -162,7 +162,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			log.Errorf("[QID=] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, sm)
+		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, runner.seedmanager)
 
 		answer = processQueryType(rh, params.QType)
 	}
@@ -176,6 +176,7 @@ type Runner struct {
 	netCoordinator core.NetworkCoordinator
 	keyCache       map[string]string
 	cacheLock      *sync.RWMutex
+	seedmanager    *seedmanager.SeedManager
 }
 
 // NewRunner is C-tor for API Runner
@@ -216,6 +217,8 @@ func (ar *Runner) Start(c core.Components) error {
 
 	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
 	ar.netCoordinator = c.NetworkCoordinator
+
+	ar.seedmanager = seedmanager.New()
 
 	fw := wrapAPIV1Handler(ar, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)

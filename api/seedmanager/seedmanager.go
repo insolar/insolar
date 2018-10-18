@@ -77,3 +77,12 @@ func (sm *SeedManager) deleteExpired() {
 		}
 	}
 }
+
+func (sm *SeedManager) FromBytes(slice []byte) Seed {
+	var result Seed
+	len := len(slice)
+	for i := 0; i < 32 && i < len; i++ {
+		result[i] = slice[i]
+	}
+	return result
+}
