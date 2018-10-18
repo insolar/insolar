@@ -45,18 +45,27 @@ func NewCertificate(keysPath string) (*Certificate, error) {
 		return nil, errors.Wrap(err, "Failed to import private key.")
 	}
 
-	public, err := ecdsahelper.ImportPublicKey(keys["public_key"])
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to import public key.")
+	valid, err := isValidPublicKey(keys["public_key"], private)
+	if !valid {
+		return nil, err
 	}
 
-	return &Certificate{privateKey: private, publicKey: public}, nil
+	return &Certificate{privateKey: private}, nil
+}
+
+func isValidPublicKey(publicKey string, privateKey *ecdsa.PrivateKey) (bool, error) {
+	validPublicKeyString, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return false, err
+	} else if validPublicKeyString != publicKey {
+		return false, errors.New("invalid public key in config")
+	}
+	return true, nil
 }
 
 // Certificate component
 type Certificate struct {
 	privateKey *ecdsa.PrivateKey
-	publicKey  *ecdsa.PublicKey
 }
 
 // Start is method from Component interface and it do nothing
@@ -71,7 +80,7 @@ func (c *Certificate) Stop() error {
 
 // GetPublicKey returns public key as string
 func (c *Certificate) GetPublicKey() (string, error) {
-	return ecdsahelper.ExportPublicKey(c.publicKey)
+	return ecdsahelper.ExportPublicKey(&c.privateKey.PublicKey)
 }
 
 // GetPublicKey returns private key as string
@@ -87,11 +96,10 @@ func (c *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
 // GenerateKeyPair generates new key pair
 func (c *Certificate) GenerateKeyPair() (privateKey *ecdsa.PrivateKey, privateKeyPem string, pubKey string) {
 	privateKey, _ = ecdsahelper.GeneratePrivateKey()
+
 	pubKey, _ = ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
 	privateKeyPem, _ = ecdsahelper.ExportPrivateKey(privateKey)
 
 	c.privateKey = privateKey
-	c.publicKey = &privateKey.PublicKey
-
 	return
 }

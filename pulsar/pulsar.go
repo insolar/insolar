@@ -92,16 +92,8 @@ func NewPulsar(
 		return nil, err
 	}
 
-	// Parse private key from config
-	/*
-		privateKey, err := ecdsahelper.ImportPrivateKey(configuration.PrivateKey)
-		if err != nil {
-			return nil, err
-		}
-	*/
 	pulsar := &Pulsar{
-		Sock: listenerImpl,
-		//SockConnectionType: configuration.ConnectionType,
+		Sock:             listenerImpl,
 		Neighbours:       map[string]*Neighbour{},
 		PrivateKey:       certificate.GetEcdsaPrivateKey(),
 		Config:           configuration,

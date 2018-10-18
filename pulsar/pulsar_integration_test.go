@@ -105,8 +105,6 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
 	nodeConfig := configuration.NewConfiguration()
-	//_, key, _ := generatePrivateAndConvertPublic(t)
-	//nodeConfig.PrivateKey = key
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig)
 
@@ -122,7 +120,6 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
 	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
-	//_, exportedPrivateKey, _ := generatePrivateAndConvertPublic(t)
 	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
 	stateSwitcher := &StateSwitcherImpl{}
@@ -286,12 +283,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	}()
 }
 
-/*
-type pulsarKeys struct {
-	privKey string
-	pubKey  string
-}
-*/
 func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	// Arrange
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
