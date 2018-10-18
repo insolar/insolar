@@ -17,31 +17,63 @@
 package networkcoordinator
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
 
-func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
+func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 	var pubKey string
-	var role core.NodeRole
+	var role []core.NodeRole
 	var fErr string
+
+	fmt.Println("FHJHFJHFJHFJFH: DATA: " + string(data))
+
 	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
+		return "", nil, errors.Wrap(err, "[ networkcoordinator::extractAuthorizeResponse ]")
 	}
 
 	if len(fErr) != 0 {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ] "+fErr)
+		return "", nil, errors.Wrap(err, "[ networkcoordinator::extractAuthorizeResponse ] "+fErr)
 	}
 
 	return pubKey, role, nil
 }
 
-func extractRegisterNodeResponse(data []byte) (*core.RecordRef, error) {
-	var nodeRef core.RecordRef
-	_, err := core.UnMarshalResponse(data, []interface{}{&nodeRef})
+// ExtractRegisterNodeResponse extracts response of RegisterNode
+func ExtractRegisterNodeResponse(data []byte) ([]byte, error) {
+	var holder []byte
+	fmt.Println("OOPOPOPOPOP: " + string(data))
+	raw, err := core.UnMarshalResponse(data, []interface{}{holder})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ extractRegisterNodeResponse ]")
+		return nil, errors.Wrap(err, "[ networkcoordinator::extractRegisterNodeResponse ]")
 	}
-	return &nodeRef, nil
+	if len(raw) == 0 {
+		return nil, errors.New("[ networkcoordinator::extractRegisterNodeResponse ] Empty data")
+	}
+
+	rawJson, ok := raw[0].([]byte)
+	if !ok {
+		return nil, errors.New("[ networkcoordinator::extractRegisterNodeResponse ] Bad data type")
+	}
+
+	return rawJson, nil
+}
+
+// ExtractNodeRef extract reference from json response
+func ExtractNodeRef(rawJSON []byte) (string, error) {
+	type NodeRef struct {
+		Ref string `json:"reference"`
+	}
+
+	nRef := NodeRef{}
+	err := json.Unmarshal(rawJSON, &nRef)
+	if err != nil {
+		return "", errors.Wrap(err, "[ networkcoordinator::extractNodeRef ]  Can't extract reference")
+	}
+
+	return nRef.Ref, nil
 }
