@@ -108,7 +108,7 @@ func (hh *mockHostHandler) GetNetworkCommonFacade() hosthandler.NetworkCommonFac
 	return hh.ncf
 }
 
-func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+func (hh *mockHostHandler) RemoteProcedureCall(nodeID *core.RecordRef, ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
 	return nil, nil
 }
 
@@ -147,8 +147,9 @@ func (hh *mockHostHandler) GetOuterHostsCount() int {
 	return 0
 }
 
-func (hh *mockHostHandler) GetNodeID() core.RecordRef {
-	return testutils.RandomRef()
+func (hh *mockHostHandler) GetNodeID() *core.RecordRef {
+	ref := testutils.RandomRef()
+	return &ref
 }
 
 func (hh *mockHostHandler) ConfirmNodeRole(role string) bool {
@@ -171,7 +172,7 @@ func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error 
 	return nil
 }
 
-func (hh *mockHostHandler) SetNodeID(nodeID core.RecordRef) {
+func (hh *mockHostHandler) SetNodeID(nodeID *core.RecordRef) {
 
 }
 

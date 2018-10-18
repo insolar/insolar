@@ -90,6 +90,9 @@ func processExchangeUnsyncLists(hostHandler hosthandler.HostHandler, ctx hosthan
 	msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 
 	data := msg.Data.(*packet.RequestExchangeUnsyncLists)
+	if hostHandler.GetNetworkCommonFacade().GetConsensus() == nil {
+		return nil, errors.New("consensus is nill")
+	}
 	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
 	list, err := consensusHandler.ExchangeData(ctx, data.Pulse, data.SenderID, data.UnsyncList)
 	if err != nil {
@@ -102,6 +105,9 @@ func processExchangeUnsyncLists(hostHandler hosthandler.HostHandler, ctx hosthan
 func processExchangeUnsyncHash(hostHandler hosthandler.HostHandler, ctx hosthandler.Context,
 	msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 
+	if hostHandler.GetNetworkCommonFacade().GetConsensus() == nil {
+		return nil, errors.New("consensus is nil")
+	}
 	data := msg.Data.(*packet.RequestExchangeUnsyncHash)
 	consensusHandler := hostHandler.GetNetworkCommonFacade().GetConsensus().ReceiverHandler()
 	hash, err := consensusHandler.ExchangeHash(ctx, data.Pulse, data.SenderID, data.UnsyncHash)
@@ -248,6 +254,10 @@ func pulseError(packetBuilder packet.Builder, err error) *packet.Packet {
 }
 
 func doConsensus(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, pulse core.Pulse) {
+	if hostHandler.GetNetworkCommonFacade().GetConsensus() == nil {
+		log.Warn("consensus is nil")
+		return
+	}
 	consensus := hostHandler.GetNetworkCommonFacade().GetConsensus()
 	if consensus == nil {
 		log.Warn("Consensus module is not initialized")

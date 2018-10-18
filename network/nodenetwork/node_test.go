@@ -31,5 +31,5 @@ func TestNewNode(t *testing.T) {
 func TestNode_GetNodeID(t *testing.T) {
 	ref := testutils.RandomRef()
 	node := Node{id: ref}
-	assert.Equal(t, ref, node.GetID())
+	assert.Equal(t, &ref, node.GetID())
 }

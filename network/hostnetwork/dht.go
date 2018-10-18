@@ -18,7 +18,6 @@ package hostnetwork
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"math"
 	"sort"
 	"strings"
@@ -133,7 +132,6 @@ func NewDHT(
 	infbootstrap bool,
 	nodeID *core.RecordRef,
 	majorityRule int,
-	key *ecdsa.PrivateKey,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -192,6 +190,10 @@ func NewDHT(
 
 func (dht *DHT) SetNodeKeeper(keeper consensus.NodeKeeper) {
 	dht.activeNodeKeeper = keeper
+	if dht.GetNetworkCommonFacade().GetConsensus() == nil {
+		log.Warn("consensus is nil")
+		return
+	}
 	dht.GetNetworkCommonFacade().GetConsensus().SetNodeKeeper(keeper)
 }
 
@@ -908,7 +910,12 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 			log.Error(err, "failed to parse incoming RPC")
 			return
 		}
-		if !message.SignIsCorrect(signedMsg, dht.activeNodeKeeper.GetActiveNode(*data.NodeID).PublicKey) {
+		activeNode := dht.activeNodeKeeper.GetActiveNode(*data.NodeID)
+		if activeNode == nil {
+			log.Warn("couldn't check a sign from non active node")
+			return
+		}
+		if !message.SignIsCorrect(signedMsg, activeNode.PublicKey) {
 			log.Warn("RPC message not signed")
 			return
 		}

@@ -50,27 +50,11 @@ func PrependGoPath(path string) string {
 // WriteFile dumps `text` into file named `name` into directory `dir`.
 // Creates directory if needed as well as file
 func WriteFile(dir string, name string, text string) error {
-	err := os.MkdirAll(dir, 0777)
+	err := os.MkdirAll(dir, 0775)
 	if err != nil {
 		return err
 	}
-
-	fh, err := os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-
-	_, err = fh.WriteString(text)
-	if err != nil {
-		return err
-	}
-
-	err = fh.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
 }
 
 // TestCodeDescriptor implementation for tests
