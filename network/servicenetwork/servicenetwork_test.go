@@ -82,7 +82,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	_, err = network.SendMessage(core.NewRefFromBase58("test"), "test", e)
+	network.SendMessage(core.NewRefFromBase58("test"), "test", e)
 	assert.NoError(t, err)
 
 	err = network.Stop()
@@ -191,8 +191,8 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 		nil,
 		secondNodeId))
 
-	secondNode.Start(core.Components{})
-	firstNode.Start(core.Components{})
+	secondNode.Start(initComponents(t))
+	firstNode.Start(initComponents(t))
 
 	defer func() {
 		firstNode.Stop()
