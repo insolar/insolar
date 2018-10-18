@@ -128,7 +128,7 @@ type ArtifactManager interface {
 	//
 	// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
 	// migrate objects memory in the order they appear in provided slice.
-	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordID, error)
+	UpdateClass(ctx Context, domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordID, error)
 
 	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's class.
 	// If memory is not provided, the class default memory will be used.

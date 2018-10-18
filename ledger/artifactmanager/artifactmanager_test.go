@@ -343,13 +343,16 @@ func TestLedgerArtifactManager_UpdateClass_VerifiesRecord(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	_, err := td.manager.UpdateClass(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef(0).CoreRef(), *genRandomRef(0).CoreRef(), nil,
 	)
 	assert.NotNil(t, err)
 	notClassID, _ := td.db.SetRecord(&record.CodeRecord{})
 	_, err = td.manager.UpdateClass(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID), *genRandomRef(0).CoreRef(), nil,
 	)
 	assert.NotNil(t, err)
@@ -359,6 +362,7 @@ func TestLedgerArtifactManager_UpdateClass_VerifiesClassIsActive(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{})
 	deactivateID, _ := td.db.SetRecord(&record.DeactivationRecord{})
@@ -367,6 +371,7 @@ func TestLedgerArtifactManager_UpdateClass_VerifiesClassIsActive(t *testing.T) {
 		LatestState: *deactivateID,
 	})
 	_, err := td.manager.UpdateClass(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(codeRef), nil)
 	assert.NotNil(t, err)
 }
@@ -375,6 +380,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
 		ResultRecord: record.ResultRecord{
@@ -399,6 +405,7 @@ func TestLedgerArtifactManager_UpdateClass_CreatesCorrectRecord(t *testing.T) {
 	migrationRefs := []record.Reference{{Domain: domainID, Record: *migrationID}}
 	migrationCoreRefs := []core.RecordRef{*migrationRefs[0].CoreRef()}
 	updateCoreID, err := td.manager.UpdateClass(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID), *genRefWithID(codeID),
 		migrationCoreRefs,
 	)

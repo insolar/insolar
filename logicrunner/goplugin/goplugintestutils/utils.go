@@ -262,7 +262,7 @@ func (t *TestArtifactManager) DeactivateClass(ctx core.Context, domain core.Reco
 }
 
 // UpdateClass implementation for tests
-func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) UpdateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordID, error) {
 	classDesc, ok := t.Classes[class]
 	if !ok {
 		return nil, errors.New("wrong class")

@@ -258,6 +258,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
 // migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
+	ctx core.Context,
 	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.UpdateClass{
