@@ -99,12 +99,16 @@ func setup() error {
 	fh := FakeHandler
 	http.HandleFunc(LOCATION, fh)
 	log.Info("Starting Test api server ...")
+
+	started := make(chan bool)
 	go func() {
+		started <- true
 		if err := server.ListenAndServe(); err != nil {
 			log.Error("Test Httpserver: ListenAndServe() error: ", err)
 		}
 	}()
 
+	<-started
 	err := waitForStart()
 	if err != nil {
 		log.Error("Can't start api: ", err)
