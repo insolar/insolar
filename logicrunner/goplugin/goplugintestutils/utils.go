@@ -220,7 +220,7 @@ func (t *TestArtifactManager) GetDelegate(ctx core.Context, head, asClass core.R
 }
 
 // DeclareType implementation for tests
-func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeclareType(ctx core.Context, domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
 	panic("not implemented")
 }
 

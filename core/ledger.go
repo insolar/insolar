@@ -105,7 +105,7 @@ type ArtifactManager interface {
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
-	DeclareType(domain, request RecordRef, typeDec []byte) (*RecordRef, error)
+	DeclareType(ctx Context, domain, request RecordRef, typeDec []byte) (*RecordRef, error)
 
 	// DeployCode creates new code record in storage.
 	//

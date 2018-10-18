@@ -197,9 +197,10 @@ func TestLedgerArtifactManager_DeclareType(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	typeDec := []byte{1, 2, 3}
-	coreRef, err := td.manager.DeclareType(*domainRef.CoreRef(), *td.requestRef.CoreRef(), typeDec)
+	coreRef, err := td.manager.DeclareType(ctx, *domainRef.CoreRef(), *td.requestRef.CoreRef(), typeDec)
 	assert.NoError(t, err)
 	ref := record.Core2Reference(*coreRef)
 	typeRec, err := td.db.GetRecord(&ref.Record)

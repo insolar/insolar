@@ -197,7 +197,7 @@ func (m *LedgerArtifactManager) GetChildren(
 //
 // Type is a contract interface. It contains one method signature.
 func (m *LedgerArtifactManager) DeclareType(
-	domain, request core.RecordRef, typeDec []byte,
+	ctx core.Context, domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordRef, error) {
 	return m.fetchReference(&message.DeclareType{
 		Domain:  domain,
