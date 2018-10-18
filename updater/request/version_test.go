@@ -14,24 +14,19 @@
  *    limitations under the License.
  */
 
-package core
+package request
 
-// Component controller methods
-type Component interface {
-	Start(components Components) error
-	Stop() error
-}
+import (
+	"testing"
 
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-type Components struct {
-	Network            Network
-	Ledger             Ledger
-	LogicRunner        LogicRunner
-	MessageBus         MessageBus
-	Bootstrapper       Bootstrapper
-	APIRunner          Component
-	Metrics            Component
-	Updater            Component
-	NetworkCoordinator NetworkCoordinator
+	"github.com/stretchr/testify/assert"
+)
+
+// Just to make Goland happy
+func TestCurrentVer(t *testing.T) {
+	newVer, err := NewVersion("v1.2.3")
+	assert.NoError(t, err)
+	assert.Equal(t, newVer.Major, 1, "Major verify passed")
+	assert.Equal(t, newVer.Minor, 2, "Minor verify passed")
+	assert.Equal(t, newVer.Revision, 3, "Revision verify passed")
 }

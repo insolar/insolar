@@ -1,9 +1,11 @@
-BIN_DIR ?= bin
+BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
+BIN_DIR ?= bin/${BUILD_VERSION}
 INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = $(BIN_DIR)/insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
+UPDATESERV = updateserv
 LOADANALYZER = loadanalyzer
 
 ALL_PACKAGES = ./...
@@ -13,7 +15,6 @@ BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 BUILD_DATE = $(shell date "+%Y-%m-%d")
 BUILD_TIME = $(shell date "+%H:%M:%S")
 BUILD_HASH = $(shell git rev-parse --short HEAD)
-BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
 
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildNumber=${BUILD_NUMBER}
@@ -48,7 +49,7 @@ pre-build:
 
 build: 
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(UPDATESERV)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
@@ -61,6 +62,9 @@ $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
 
 $(PULSARD):
 	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
+
+$(UPDATESERV):
+	go build -o $(BIN_DIR)/$(UPDATESERV) -ldflags "${LDFLAGS}" cmd/updateserv/*.go
 
 $(INSGORUND):
 	go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go

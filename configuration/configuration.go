@@ -39,6 +39,7 @@ type Configuration struct {
 	Pulsar      Pulsar
 	Bootstrap   Bootstrap
 	PrivateKey  string
+	Updater     Updater
 }
 
 // Holder provides methods to manage configuration
@@ -60,6 +61,7 @@ func NewConfiguration() Configuration {
 		APIRunner:   NewAPIRunner(),
 		Pulsar:      NewPulsar(),
 		Bootstrap:   NewBootstrap(),
+		Updater:     NewUpdater(),
 		PrivateKey:  "",
 	}
 

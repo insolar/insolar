@@ -14,24 +14,20 @@
  *    limitations under the License.
  */
 
-package core
+package configuration
 
-// Component controller methods
-type Component interface {
-	Start(components Components) error
-	Stop() error
+// Updater holds configuration for updater publishing.
+type Updater struct {
+	BinariesList []string
+	ServersList  []string
+	Delay        int64
 }
 
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-type Components struct {
-	Network            Network
-	Ledger             Ledger
-	LogicRunner        LogicRunner
-	MessageBus         MessageBus
-	Bootstrapper       Bootstrapper
-	APIRunner          Component
-	Metrics            Component
-	Updater            Component
-	NetworkCoordinator NetworkCoordinator
+// NewUpdater creates new default configuration for updater publishing.
+func NewUpdater() Updater {
+	return Updater{
+		BinariesList: []string{"insgocc", "insgorund", "insolar", "insolard", "pulsard", "updateserv"},
+		ServersList:  []string{"http://localhost:2345"},
+		Delay:        60,
+	}
 }

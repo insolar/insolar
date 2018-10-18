@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/updater"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -149,6 +150,11 @@ func main() {
 	cm.components.NetworkCoordinator, err = networkcoordinator.New()
 	if err != nil {
 		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
+	}
+
+	cm.components.Updater, err = updater.NewUpdater(&cfgHolder.Configuration.Updater)
+	if err != nil {
+		log.Fatalln("failed to start Update Service: ", err.Error())
 	}
 
 	cm.linkAll()
