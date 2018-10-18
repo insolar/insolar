@@ -317,11 +317,6 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 	}
 
 	executer := func() (*reply.CallMethod, error) {
-		defer func() {
-			lr.contextMutex.Lock()
-			defer lr.contextMutex.Unlock()
-			delete(lr.execution, m.ObjectRef)
-		}()
 		newData, result, err := executor.CallMethod(
 			&ctx, objbody.Code, objbody.Body, m.Method, m.Arguments,
 		)
@@ -385,12 +380,6 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		return nil, errors.Wrap(err, "executer error")
 	}
 
-	defer func() {
-		lr.contextMutex.Lock()
-		defer lr.contextMutex.Unlock()
-		delete(lr.execution, m.GetRequest())
-	}()
-
 	switch m.SaveAs {
 	case message.Child:
 		log.Warn()
@@ -426,6 +415,9 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind(pulse)
+
+	// TODO INS-666
+	// TODO make refresh lr.Execution - Unlock mutexes n-1 time for each object, send some info for callers, do empty object
 
 	if len(objectsRecords) == 0 {
 		return nil
