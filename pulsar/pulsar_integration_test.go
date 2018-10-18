@@ -97,7 +97,7 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 	})
 	assert.NoError(t, err)
 
-	tempLedger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
+	tempLedger, cleaner, _ := ledgertestutils.TmpLedger(t, lr, "")
 	nodeConfig := configuration.NewConfiguration()
 	_, key, _ := generatePrivateAndConvertPublic(t)
 	nodeConfig.PrivateKey = key

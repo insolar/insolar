@@ -89,13 +89,12 @@ func (jc *JetCoordinator) QueryRole(
 	if len(candidates) == 0 {
 		return nil, errors.New("no candidates for this role")
 	}
-	// TODO: fix this limitation so we can launch initial discovery node
-	// count, ok := jc.roleCounts[role]
-	// if !ok {
-	// 	return nil, errors.New("no candidate count for this role")
-	// }
+	count, ok := jc.roleCounts[role]
+	if !ok {
+		return nil, errors.New("no candidate count for this role")
+	}
 
-	selected, err := selectByEntropy(pulseData.Entropy, candidates, 1)
+	selected, err := selectByEntropy(pulseData.Entropy, candidates, count)
 	if err != nil {
 		return nil, err
 	}

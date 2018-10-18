@@ -45,7 +45,7 @@ func TestBareHelloworld(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 
-	l, cleaner := ledgertestutils.TmpLedger(t, lr, "")
+	l, cleaner, _ := ledgertestutils.TmpLedger(t, lr, "")
 	defer cleaner()
 	am := l.GetArtifactManager()
 	assert.NoError(t, err, "Initialize runner")

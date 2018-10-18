@@ -55,7 +55,16 @@ func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) (
 	sort.SliceStable(hashes, func(i, j int) bool { return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0 })
 
 	selected := make([]core.RecordRef, 0, count)
-	for i := 0; i < count; i++ {
+
+	min := func(a, b int) int {
+		if a > b {
+			return b
+		}
+		return a
+	}
+
+	limit := min(len(hashes), count)
+	for i := 0; i < limit; i++ {
 		selected = append(selected, values[hashes[i].idx])
 	}
 	return selected, nil
