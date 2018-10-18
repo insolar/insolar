@@ -90,11 +90,17 @@ type dumpAllUsersResponse struct {
 	DumpInfo []userInfo `json:"dump_info"`
 }
 
+type bootstrapNode struct {
+	PublicKey string `json:"public_key"`
+	Host      string `json:"host"`
+}
+
 type certificate struct {
-	MajorityRule int      `json:"majority_rule"`
-	PublicKey    string   `json:"public_key"`
-	Reference    string   `json:"reference"`
-	Roles        []string `json:"roles"`
+	MajorityRule   int             `json:"majority_rule"`
+	PublicKey      string          `json:"public_key"`
+	Reference      string          `json:"reference"`
+	Roles          []string        `json:"roles"`
+	BootstrapNodes []bootstrapNode `json:"bootstrap_nodes"`
 }
 
 type registerNodeResponse struct {
