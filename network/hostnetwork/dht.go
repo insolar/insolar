@@ -288,7 +288,7 @@ func (dht *DHT) Bootstrap() error {
 
 func (dht *DHT) checkBootstrapHostsDomains(hosts []*host.Host) {
 	for _, hst := range hosts {
-		ip, err := dns.GetIpFromDomain(hst.Address.String())
+		ip, err := dns.GetIPFromDomain(hst.Address.String())
 		if err != nil {
 			log.Warn(err)
 		}
@@ -867,8 +867,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 					return
 				}
 
-				var ctx hosthandler.Context
-				ctx = BuildContext(cb, msg)
+				ctx := BuildContext(cb, msg)
 				ht := dht.HtFromCtx(ctx)
 
 				if ht.Origin.ID.Equal(msg.Receiver.ID.Bytes()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {

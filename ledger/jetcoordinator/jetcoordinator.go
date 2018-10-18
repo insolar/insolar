@@ -104,7 +104,7 @@ func (jc *JetCoordinator) QueryRole(
 
 func (jc *JetCoordinator) Link(components core.Components) error {
 	if components.ActiveNodeComponent == nil {
-		return errors.New("core.ActiveNodeComponent is nil!")
+		return errors.New("core.ActiveNodeComponent is nil")
 	}
 	jc.activeNodes = components.ActiveNodeComponent
 	return nil
