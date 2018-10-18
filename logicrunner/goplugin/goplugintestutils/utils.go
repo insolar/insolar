@@ -237,7 +237,7 @@ func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.Rec
 }
 
 // GetCode implementation for tests
-func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
+func (t *TestArtifactManager) GetCode(ctx core.Context, code core.RecordRef) (core.CodeDescriptor, error) {
 	res, ok := t.Codes[code]
 	if !ok {
 		return nil, errors.New("No code")

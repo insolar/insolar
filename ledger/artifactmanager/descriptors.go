@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 )
 
@@ -46,8 +47,9 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 
 // Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
+	ctx := inscontext.TODO()
 	if d.cache.code == nil {
-		desc, err := d.am.GetCode(d.ref)
+		desc, err := d.am.GetCode(ctx, d.ref)
 		if err != nil {
 			return nil, err
 		}

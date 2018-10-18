@@ -77,7 +77,7 @@ type ArtifactManager interface {
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
-	GetCode(ref RecordRef) (CodeDescriptor, error)
+	GetCode(ctx Context, ref RecordRef) (CodeDescriptor, error)
 
 	// GetClass returns descriptor for provided state.
 	//

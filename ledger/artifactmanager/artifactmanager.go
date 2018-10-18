@@ -74,7 +74,9 @@ func (m *LedgerArtifactManager) RegisterRequest(
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
-func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
+func (m *LedgerArtifactManager) GetCode(
+	ctx core.Context, code core.RecordRef,
+) (core.CodeDescriptor, error) {
 	genericReact, err := m.messageBus.Send(&message.GetCode{
 		Code: code,
 	})

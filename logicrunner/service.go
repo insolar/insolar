@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
@@ -65,7 +66,8 @@ type RPC struct {
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.lr.ArtifactManager
-	codeDescriptor, err := am.GetCode(req.Code)
+	insctx := inscontext.TODO()
+	codeDescriptor, err := am.GetCode(insctx, req.Code)
 	if err != nil {
 		return err
 	}
