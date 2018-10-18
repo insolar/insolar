@@ -18,6 +18,7 @@ package nodedomain
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/noderecord"
 	"github.com/insolar/insolar/core"
@@ -39,7 +40,7 @@ func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
-func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, publicKey string, majorityRule int, roles []string) (map[string]interface{}, string) {
+func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, publicKey string, majorityRule int, roles []string) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 	result["majority_rule"] = majorityRule
 	result["public_key"] = publicKey
@@ -47,12 +48,12 @@ func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, publicKey stri
 
 	bNodes, err := nd.makeBootstrapNodesConfig(numberOfBootstrapNodes)
 	if err != nil {
-		return nil, "Can't make bootstrap nodes config: " + err.Error()
+		return nil, fmt.Errorf("Can't make bootstrap nodes config: %s", err.Error())
 	}
 
 	result["bootstrap_nodes"] = bNodes
 
-	return result, ""
+	return result, nil
 }
 
 func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]map[string]string, error) {
@@ -102,9 +103,9 @@ func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int,
 		}
 	}
 
-	result, errS := nd.makeCertificate(numberOfBootstrapNodes, publicKey, majorityRule, roles)
-	if len(errS) != 0 {
-		return nil, "[ RegisterNode ] " + errS
+	result, err := nd.makeCertificate(numberOfBootstrapNodes, publicKey, majorityRule, roles)
+	if err != nil {
+		return nil, "[ RegisterNode ] " + err.Error()
 	}
 
 	// TODO: what should be done when record already exists?

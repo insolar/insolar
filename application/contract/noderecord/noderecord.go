@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
+// RecordInfo holds record info
 type RecordInfo struct {
 	PublicKey string
 	Roles     []core.NodeRole
@@ -34,7 +35,7 @@ type NodeRecord struct {
 	Record RecordInfo
 }
 
-// New creates new NodeRecord
+// NewNodeRecord creates new NodeRecord
 func NewNodeRecord(publicKey string, roles []string, ip string) *NodeRecord {
 	resultRoles := []core.NodeRole{}
 	for _, roleStr := range roles {
