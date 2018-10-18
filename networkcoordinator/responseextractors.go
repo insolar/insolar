@@ -18,7 +18,6 @@ package networkcoordinator
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -28,8 +27,6 @@ func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 	var pubKey string
 	var role []core.NodeRole
 	var fErr string
-
-	fmt.Println("FHJHFJHFJHFJFH: DATA: " + string(data))
 
 	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
 	if err != nil {
@@ -46,7 +43,6 @@ func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 // ExtractRegisterNodeResponse extracts response of RegisterNode
 func ExtractRegisterNodeResponse(data []byte) ([]byte, error) {
 	var holder []byte
-	fmt.Println("OOPOPOPOPOP: " + string(data))
 	raw, err := core.UnMarshalResponse(data, []interface{}{holder})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ networkcoordinator::extractRegisterNodeResponse ]")

@@ -18,7 +18,6 @@ package nodedomain
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/noderecord"
 	"github.com/insolar/insolar/core"
@@ -159,8 +158,6 @@ func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRa
 	if !ok {
 		return "", nil, "[ Authorize ] Can't verify signature: " + err.Error()
 	}
-
-	fmt.Println("DJDJDKDKDJDKDJDK", pubKey, roles)
 
 	return pubKey, roles, ""
 }
