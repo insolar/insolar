@@ -62,7 +62,7 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
-	drop, records, err := m.db.CreateDrop(latestPulseNumber, prevDrop.Hash)
+	drop, records, indexes, err := m.db.CreateDrop(latestPulseNumber, prevDrop.Hash)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,11 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 	if err != nil {
 		return err
 	}
-	_, err = m.bus.Send(&message.JetDrop{Drop: dropSerialized, Records: records})
+	_, err = m.bus.Send(&message.JetDrop{
+		Drop:    dropSerialized,
+		Records: records,
+		Indexes: indexes,
+	})
 	if err != nil {
 		return err
 	}

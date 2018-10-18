@@ -18,6 +18,7 @@ package pulsar
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -25,6 +26,9 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
 
+// Handler is a wrapper for rpc-calls
+// It contains rpc-methods logic and pulsar's methods
+//
 type Handler struct {
 	Pulsar *Pulsar
 }
@@ -53,11 +57,14 @@ func (handler *Handler) isRequestValid(request *Payload) (success bool, neighbou
 	return true, neighbour, nil
 }
 
+// HealthCheck is a handler of call with nil-payload
+// It uses for checking connection status between pulsars
 func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
 	log.Debug("[HealthCheck]")
 	return nil
 }
 
+// MakeHandshake is a handler of call with handshake purpose
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
 	log.Infof("[MakeHandshake] from %v", request.PublicKey)
 	neighbour, err := handler.Pulsar.FetchNeighbour(request.PublicKey)
@@ -106,6 +113,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	return nil
 }
 
+// ReceiveSignatureForEntropy is a handler of call for receiving sign of entropy from one of the pulsars
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
 	log.Infof("[ReceiveSignatureForEntropy] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -117,10 +125,9 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	}
 
 	requestBody := request.Body.(EntropySignaturePayload)
-	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
-	//}
+	if requestBody.PulseNumber <= handler.Pulsar.LastPulse.PulseNumber {
+		return fmt.Errorf("last pulse number is bigger than received one")
+	}
 
 	if handler.Pulsar.StateSwitcher.GetState() < GenerateEntropy {
 		err = handler.Pulsar.StartConsensusProcess(requestBody.PulseNumber)
@@ -135,6 +142,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	return nil
 }
 
+// ReceiveEntropy is a handler of call for receiving entropy from one of the pulsars
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
 	log.Infof("[ReceiveEntropy] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -146,10 +154,10 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	}
 
 	requestBody := request.Body.(EntropyPayload)
-	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
-	//}
+	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+		return fmt.Errorf("processing pulse number is bigger than received one")
+	}
+
 	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
 		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
 		if err != nil || !isVerified {
@@ -167,6 +175,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	return nil
 }
 
+// ReceiveVector is a handler of call for receiving vector of entropy
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
 	log.Infof("[ReceiveVector] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -177,17 +186,22 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 		return err
 	}
 
+	state := handler.Pulsar.StateSwitcher.GetState()
+	if state >= Verifying {
+		return fmt.Errorf("pulsar is in the bft state")
+	}
+
 	requestBody := request.Body.(VectorPayload)
-	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
-	//}
+	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+		return fmt.Errorf("processing pulse number is bigger than received one")
+	}
 
 	handler.Pulsar.SetBftGridItem(request.PublicKey, requestBody.Vector)
 
 	return nil
 }
 
+// ReceiveChosenSignature is a handler of call with the confirmation signature
 func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
 	log.Infof("[ReceiveChosenSignature] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -199,10 +213,9 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	}
 
 	requestBody := request.Body.(core.PulseSenderConfirmation)
-	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
-	//}
+	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+		return fmt.Errorf("processing pulse number is bigger than received one")
+	}
 
 	isVerified, err := checkSignature(core.PulseSenderConfirmation{
 		ChosenPublicKey: requestBody.ChosenPublicKey,
@@ -225,7 +238,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	return nil
 }
 
-// here I need to check signs and last pulses and so on....
+// ReceivePulse is a handler of call with the freshest pulse
 func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error {
 	log.Infof("[ReceivePulse] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -237,10 +250,12 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 	}
 
 	requestBody := request.Body.(PulsePayload)
-	// this if should pe replaced with another realisation.INS-528
-	//if requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-	//	return fmt.Errorf("current pulse number - %v", handler.Pulsar.ProcessingPulseNumber)
-	//}
+	if handler.Pulsar.ProcessingPulseNumber != 0 && requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
+		return fmt.Errorf("processing pulse number is not zero and received number is not the same")
+	}
+	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.LastPulse.PulseNumber {
+		return fmt.Errorf("last pulse number is bigger than received one")
+	}
 
 	err = handler.Pulsar.Storage.SetLastPulse(&requestBody.Pulse)
 	if err != nil {
@@ -253,6 +268,7 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 		return err
 	}
 	handler.Pulsar.LastPulse = &requestBody.Pulse
+	handler.Pulsar.ProcessingPulseNumber = 0
 
 	return nil
 }
