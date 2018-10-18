@@ -273,14 +273,19 @@ func TestLedgerArtifactManager_DeactivateClass_VerifiesRecord(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	_, err := td.manager.DeactivateClass(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef(0).CoreRef(),
 	)
 	assert.NotNil(t, err)
 
 	notClassID, _ := td.db.SetRecord(&record.CodeRecord{})
-	_, err = td.manager.DeactivateClass(*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID))
+	_, err = td.manager.DeactivateClass(
+		ctx,
+		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID),
+	)
 	assert.NotNil(t, err)
 }
 
@@ -288,13 +293,17 @@ func TestLedgerArtifactManager_DeactivateClass_VerifiesClassIsActive(t *testing.
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{})
 	deactivateRef, _ := td.db.SetRecord(&record.DeactivationRecord{})
 	td.db.SetClassIndex(classID, &index.ClassLifeline{
 		LatestState: *deactivateRef,
 	})
-	_, err := td.manager.DeactivateClass(*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID))
+	_, err := td.manager.DeactivateClass(
+		ctx,
+		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID),
+	)
 	assert.NotNil(t, err)
 }
 
@@ -302,6 +311,7 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
 		ResultRecord: record.ResultRecord{
@@ -313,6 +323,7 @@ func TestLedgerArtifactManager_DeactivateClass_CreatesCorrectRecord(t *testing.T
 	})
 
 	deactivateCoreID, err := td.manager.DeactivateClass(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(classID),
 	)
 	assert.NoError(t, err)
@@ -560,12 +571,17 @@ func TestLedgerArtifactManager_DeactivateObject_VerifiesRecord(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	_, err := td.manager.DeactivateClass(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef(0).CoreRef())
 	assert.NotNil(t, err)
 	notObjID, _ := td.db.SetRecord(&record.ClassActivateRecord{})
-	_, err = td.manager.DeactivateClass(*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notObjID))
+	_, err = td.manager.DeactivateClass(
+		ctx,
+		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notObjID),
+	)
 	assert.NotNil(t, err)
 }
 

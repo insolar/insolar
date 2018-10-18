@@ -242,6 +242,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 //
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
+	ctx core.Context,
 	domain, request, class core.RecordRef,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.DeactivateClass{

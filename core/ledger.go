@@ -121,7 +121,7 @@ type ArtifactManager interface {
 	// the class. If class is already deactivated, an error should be returned.
 	//
 	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(domain, request, class RecordRef) (*RecordID, error)
+	DeactivateClass(ctx Context, domain, request, class RecordRef) (*RecordID, error)
 
 	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 	// the class. Migrations are references to code records.

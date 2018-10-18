@@ -257,7 +257,7 @@ func (t *TestArtifactManager) ActivateClass(ctx core.Context, domain core.Record
 }
 
 // DeactivateClass implementation for tests
-func (t *TestArtifactManager) DeactivateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) DeactivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
