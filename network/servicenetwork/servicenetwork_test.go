@@ -77,8 +77,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	ref := core.NewRefFromBase58("test")
-	network.SendMessage(&ref, "test", e)
+	network.SendMessage("test", e)
 }
 
 func TestServiceNetwork_Start(t *testing.T) {
@@ -177,8 +176,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	ref := core.NewRefFromBase58(secondNodeId)
-	firstNode.SendMessage(&ref, "test", e)
+	firstNode.SendMessage("test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)

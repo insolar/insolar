@@ -32,7 +32,7 @@ type RemoteProcedure func(args [][]byte) ([]byte, error)
 // Network is interface for network modules facade.
 type Network interface {
 	// SendMessage sends a message.
-	SendMessage(nodeID RecordRef, method string, msg Message) ([]byte, error)
+	SendMessage(method string, msg Message) ([]byte, error)
 	// SendCascadeMessage sends a message.
 	SendCascadeMessage(data Cascade, method string, msg Message) error
 	// GetAddress returns an origin address.
@@ -40,5 +40,5 @@ type Network interface {
 	// RemoteProcedureRegister is remote procedure register func.
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 	// GetNodeID returns current node id.
-	GetNodeID() RecordRef
+	GetNodeID() *RecordRef
 }

@@ -101,11 +101,11 @@ func (mb *MessageBus) Send(msg core.Message) (core.Reply, error) {
 	}
 
 	// Short path when sending to self node. Skip serialization
-	if nodes[0].Equal(mb.service.GetNodeID()) {
+	if nodes[0].Equal(*mb.service.GetNodeID()) {
 		return mb.doDeliver(msg)
 	}
 
-	res, err := mb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
+	res, err := mb.service.SendMessage(deliverRPCMethodName, msg)
 	if err != nil {
 		return nil, err
 	}

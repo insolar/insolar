@@ -49,14 +49,9 @@ func TmpLedger(t testing.TB, lr core.LogicRunner, dir string) (*ledger.Ledger, f
 	assert.NoError(t, err)
 
 	// Init components.
-<<<<<<< HEAD
-	mb := newMessageBusMock()
+	mb := testmessagebus.NewTestMessageBus()
 	components := core.Components{MessageBus: mb, LogicRunner: lr,
 		ActiveNodeComponent: nodekeeper.NewNodeKeeper(core.RecordRef{})}
-=======
-	mb := testmessagebus.NewTestMessageBus()
-	components := core.Components{MessageBus: mb, LogicRunner: lr}
->>>>>>> e03389eb69f0eae55688e408e7809d6f5c7f3577
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)

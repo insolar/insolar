@@ -145,7 +145,7 @@ func doRPC(input []string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.C
 
 	fmt.Printf("Running remote method %s on %s with args %v \n", method, target, args)
 
-	result, err := dhtNetwork.RemoteProcedureCall(ctx, target, method, args)
+	result, err := dhtNetwork.RemoteProcedureCall(dhtNetwork.GetNodeID(), ctx, target, method, args)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
