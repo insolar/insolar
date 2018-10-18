@@ -115,7 +115,7 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 
 		if !ar.seedmanager.Exists(ar.seedmanager.SeedFromBytes(params.Seed)) {
 			resp.Error = "Incorrect seed"
-			log.Error("[ CallHandler ] Incorrect seed")
+			log.Error("[ CallHandler ] ", resp.Error)
 			return
 		}
 
@@ -137,6 +137,11 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			Method:    "Call",
 			Arguments: args,
 		})
+		if err != nil {
+			resp.Error = err.Error()
+			log.Error(err)
+			return
+		}
 
 		var result interface{}
 		var contractErr *foundation.Error

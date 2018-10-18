@@ -17,15 +17,12 @@
 package member
 
 import (
-	"fmt"
-
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 type Member struct {
@@ -48,88 +45,74 @@ func New(name string, key string) *Member {
 	}
 }
 
-// Call method
-func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, *foundation.Error) {
-
+func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byte) *foundation.Error {
 	args, err := core.MarshalArgs(
 		m.GetReference(),
 		method,
 		params,
 		seed)
 	if err != nil {
-		return nil, &foundation.Error{S: err.Error()}
+		return &foundation.Error{S: err.Error()}
 	}
 	verified, err := ecdsa.Verify(args, sign, m.GetPublicKey())
 	if err != nil {
-		return nil, &foundation.Error{S: err.Error()}
+		return &foundation.Error{S: err.Error()}
 	}
 	if !verified {
-		return nil, &foundation.Error{S: "Incorrect signature"}
+		return &foundation.Error{S: "Incorrect signature"}
 	}
+	return nil
+}
 
-	rootDomain := rootdomain.GetObject(ref)
+// Call method for authorized calls
+func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, *foundation.Error) {
+
+	if err := m.verifySig(method, params, seed, sign); err != nil {
+		return nil, err
+	}
 
 	switch method {
 	case "CreateMember":
-		var name string
-		var key string
-		err := signer.UnmarshalParams(params, &name, &key)
-		if err != nil {
-			return nil, &foundation.Error{S: err.Error()}
-		}
-		fmt.Println("PARAMS", name, key)
-		member := rootDomain.CreateMember(name, key)
-		return member, nil
+		return m.createMemberCall(ref, params)
 	case "GetMyBalance":
-		balance := wallet.GetImplementationFrom(m.GetReference()).GetTotalBalance()
-		return balance, nil
+		return m.getMyBalance()
 	case "GetBalance":
-		var member string
-		err := signer.UnmarshalParams(params, &member)
-		if err != nil {
-			return nil, &foundation.Error{S: err.Error()}
-		}
-		balance := wallet.GetImplementationFrom(core.NewRefFromBase58(member)).GetTotalBalance()
-		return balance, nil
+		return m.getBalance(params)
 	case "Transfer":
-		var amount float64
-		var toStr string
-		err := signer.UnmarshalParams(params, &amount, &toStr)
-		if err != nil {
-			return nil, &foundation.Error{S: err.Error()}
-		}
-		to := core.NewRefFromBase58(toStr)
-		wallet.GetImplementationFrom(m.GetReference()).Transfer(uint(amount), &to)
-		return nil, nil
+		return m.transferCall(params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
 
-func (m *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
-	serialized, err := signer.Serialize(ref[:], delegate[:], method, params, seed)
-	if err != nil {
+func (m *Member) createMemberCall(ref core.RecordRef, params []byte) (interface{}, *foundation.Error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var name string
+	var key string
+	if err := signer.UnmarshalParams(params, &name, &key); err != nil {
 		return nil, &foundation.Error{S: err.Error()}
 	}
-	verified, err := ecdsa.Verify(serialized, sign, m.PublicKey)
-	if err != nil {
-		return nil, &foundation.Error{S: err.Error()}
-	}
-	if !verified {
-		return nil, &foundation.Error{S: "Incorrect signature"}
-	}
+	return rootDomain.CreateMember(name, key), nil
+}
 
-	var contract core.RecordRef
-	if !delegate.Equal(core.RecordRef{}) {
-		contract, err = foundation.GetImplementationFor(ref, delegate)
-		if err != nil {
-			return nil, &foundation.Error{S: err.Error()}
-		}
-	} else {
-		contract = ref
-	}
-	ret, err := proxyctx.Current.RouteCall(contract, true, method, params)
-	if err != nil {
+func (m *Member) getMyBalance() (interface{}, *foundation.Error) {
+	return wallet.GetImplementationFrom(m.GetReference()).GetTotalBalance(), nil
+}
+
+func (m *Member) getBalance(params []byte) (interface{}, *foundation.Error) {
+	var member string
+	if err := signer.UnmarshalParams(params, &member); err != nil {
 		return nil, &foundation.Error{S: err.Error()}
 	}
-	return ret, nil
+	return wallet.GetImplementationFrom(core.NewRefFromBase58(member)).GetTotalBalance(), nil
+}
+
+func (m *Member) transferCall(params []byte) (interface{}, *foundation.Error) {
+	var amount float64
+	var toStr string
+	if err := signer.UnmarshalParams(params, &amount, &toStr); err != nil {
+		return nil, &foundation.Error{S: err.Error()}
+	}
+	to := core.NewRefFromBase58(toStr)
+	wallet.GetImplementationFrom(m.GetReference()).Transfer(uint(amount), &to)
+	return nil, nil
 }

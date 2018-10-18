@@ -20,7 +20,7 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// Unmarshal params
+// UnmarshalParams unmarshalls params
 func UnmarshalParams(data []byte, to ...interface{}) error {
 	ch := new(codec.CborHandle)
 	return codec.NewDecoderBytes(data, ch).Decode(&to)

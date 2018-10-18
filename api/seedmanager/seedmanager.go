@@ -78,6 +78,7 @@ func (sm *SeedManager) deleteExpired() {
 	}
 }
 
+// SeedFromBytes converts slice of bytes to Seed
 func (sm *SeedManager) SeedFromBytes(slice []byte) Seed {
 	var result Seed
 	copy(result[:], slice[:32])
