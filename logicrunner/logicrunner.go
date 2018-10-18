@@ -38,7 +38,7 @@ import (
 type Ref = core.RecordRef
 
 // Context of one contract execution
-type ExecutionContext struct {
+type ExecutionState struct {
 	mutex sync.Mutex
 }
 
@@ -49,7 +49,7 @@ type LogicRunner struct {
 	MessageBus      core.MessageBus
 	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
-	execution       map[Ref]*ExecutionContext // if object exists, we are validating or executing it right now
+	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
 	executionMutex  sync.Mutex
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
@@ -68,7 +68,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
-		execution:       make(map[Ref]*ExecutionContext),
+		execution:       make(map[Ref]*ExecutionState),
 		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[Ref][]core.CaseRecord)},
 		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
@@ -164,11 +164,11 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
-func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionContext {
+func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 	lr.executionMutex.Lock()
 	defer lr.executionMutex.Unlock()
 	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionContext{}
+		lr.execution[ref] = &ExecutionState{}
 	}
 	return lr.execution[ref]
 }
