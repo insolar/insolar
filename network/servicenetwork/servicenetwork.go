@@ -71,8 +71,8 @@ func (network *ServiceNetwork) GetAddress() string {
 }
 
 // GetNodeID returns current node id.
-func (network *ServiceNetwork) GetNodeID() *core.RecordRef {
-	return network.nodeNetwork.GetID()
+func (network *ServiceNetwork) GetNodeID() core.RecordRef {
+	return *network.nodeNetwork.GetID()
 }
 
 func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
@@ -80,13 +80,12 @@ func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent
 }
 
 // SendMessage sends a message from MessageBus.
-func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]byte, error) {
+func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	start := time.Now()
-	nodeID := network.nodeNetwork.GetID()
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID := nodenetwork.ResolveHostID(nodeID)
+	hostID := nodenetwork.ResolveHostID(&nodeID)
 	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
@@ -100,7 +99,7 @@ func (network *ServiceNetwork) SendMessage(method string, msg core.Message) ([]b
 		method, msg.Target().String())
 
 	metrics.NetworkMessageSentTotal.Inc()
-	res, err := network.hostNetwork.RemoteProcedureCall(nodeID, createContext(network.hostNetwork), hostID, method, [][]byte{buff})
+	res, err := network.hostNetwork.RemoteProcedureCall(&nodeID, createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s", msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
 	return res, err
 }

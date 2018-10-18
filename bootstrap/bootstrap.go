@@ -132,7 +132,7 @@ func isLightExecutor(c core.Components) (bool, error) {
 	network := c.Network
 	nodeID := network.GetNodeID()
 
-	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.GenesisRef(), currentPulse.PulseNumber, *nodeID)
+	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.GenesisRef(), currentPulse.PulseNumber, nodeID)
 	if err != nil {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
 	}
