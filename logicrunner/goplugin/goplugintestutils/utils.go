@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -180,7 +181,7 @@ func (t *TestArtifactManager) Stop() error { return nil }
 func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(message core.Message) (*core.RecordRef, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Message) (*core.RecordRef, error) {
 	nonce := testutils.RandomRef()
 	return &nonce, nil
 }
@@ -361,13 +362,14 @@ func AMPublishCode(
 	classRef *core.RecordRef,
 	err error,
 ) {
+	ctx := inscontext.TODO()
 	codeRef, err = am.DeployCode(
 		domain, request, code, mtype,
 	)
 	assert.NoError(t, err, "create code on ledger")
 
 	nonce := testutils.RandomRef()
-	classRef, err = am.RegisterRequest(&message.CallConstructor{ClassRef: nonce})
+	classRef, err = am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
 	assert.NoError(t, err)
 	_, err = am.ActivateClass(domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
@@ -413,10 +415,11 @@ func (cb *ContractsBuilder) Clean() {
 
 // Build ...
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
+	ctx := inscontext.TODO()
 
 	for name := range contracts {
 		nonce := testutils.RandomRef()
-		class, err := cb.ArtifactManager.RegisterRequest(&message.CallConstructor{ClassRef: nonce})
+		class, err := cb.ArtifactManager.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
 		if err != nil {
 			return err
 		}

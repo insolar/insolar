@@ -16,8 +16,15 @@
 
 package core
 
-// Bootstrapper is the global bootstrapper handler. Other system parts communicate with bootstrapper through it.
-type Bootstrapper interface {
-	GetRootDomainRef() *RecordRef
-	Info() ([]byte, error)
+import (
+	"context"
+)
+
+// A Context wraps context.Context, add provides util helpers.
+type Context interface {
+	context.Context
+	// Log returns provided Logger.
+	Log() Logger
+	// TraceID returns current TraceID.
+	TraceID() string
 }
