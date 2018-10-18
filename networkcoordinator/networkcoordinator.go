@@ -87,7 +87,7 @@ func (nc *NetworkCoordinator) sendRequest(ref core.RecordRef, method string, arg
 func (nc *NetworkCoordinator) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, core.NodeRole, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef()
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")
+		return "", core.RoleUnknown, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
 	}
 
 	routResult, err := nc.sendRequest(nodeDomainRef, "Authorize", []interface{}{nodeRef, seed, signatureRaw})
