@@ -108,7 +108,7 @@ func (hh *mockHostHandler) GetNetworkCommonFacade() hosthandler.NetworkCommonFac
 	return hh.ncf
 }
 
-func (hh *mockHostHandler) RemoteProcedureCall(nodeID *core.RecordRef, ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
 	return nil, nil
 }
 

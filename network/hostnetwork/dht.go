@@ -1281,7 +1281,7 @@ func (dht *DHT) AddRelayClient(host *host.Host) error {
 }
 
 // RemoteProcedureCall calls remote procedure on target host.
-func (dht *DHT) RemoteProcedureCall(nodeID *core.RecordRef, ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
+func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, method string, args [][]byte) (result []byte, err error) {
 	targetHost, exists, err := dht.FindHost(ctx, targetID)
 	ht := dht.HtFromCtx(ctx)
 
@@ -1298,7 +1298,7 @@ func (dht *DHT) RemoteProcedureCall(nodeID *core.RecordRef, ctx hosthandler.Cont
 		Receiver: targetHost,
 		Type:     packet.TypeRPC,
 		Data: &packet.RequestDataRPC{
-			NodeID: nodeID,
+			NodeID: dht.nodeID,
 			Method: method,
 			Args:   args,
 		},
