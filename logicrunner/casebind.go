@@ -151,6 +151,7 @@ func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) 
 		RecordRef:        msg.GetReference(),
 		PassedStepsCount: passedStepsCount,
 		Error:            validationError,
+		// TODO: INS-663 use signatures here
 	})
 
 	return nil, err
