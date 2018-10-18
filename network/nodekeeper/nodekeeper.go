@@ -58,7 +58,10 @@ func NewActiveNodeComponent(configuration configuration.Configuration) (core.Act
 
 func resolveAddress(configuration configuration.Configuration) (string, error) {
 	conn, address, err := transport.NewConnection(configuration.Host.Transport)
-	defer func() { _ = conn.Close() }()
+	err2 := conn.Close()
+	if err2 != nil {
+		log.Warn(err2)
+	}
 	if err != nil {
 		return "", err
 	}
