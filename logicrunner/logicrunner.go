@@ -92,7 +92,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	lr.Ledger = c.Ledger
 	lr.Network = c.Network
 	if lr.Cfg.BuiltIn != nil {
-		bi := builtin.NewBuiltIn(messageBus, am)
+		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 			StartRPC(lr)
 		}
 
-		gp, err := goplugin.NewGoPlugin(lr.Cfg, messageBus, am)
+		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
 		if err != nil {
 			return err
 		}
@@ -115,22 +115,26 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	}
 
 	// TODO: use separate handlers
-	if err := messageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
+	if err := lr.MessageBus.Register(core.TypeCallMethod, lr.Execute); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
+	if err := lr.MessageBus.Register(core.TypeCallConstructor, lr.Execute); err != nil {
 		return err
 	}
 
-	if err := messageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
+	if err := lr.MessageBus.Register(core.TypeExecutorResults, lr.ExecutorResults); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
+	if err := lr.MessageBus.Register(core.TypeValidateCaseBind, lr.ValidateCaseBind); err != nil {
 		return err
 	}
-	if err := messageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
+	if err := lr.MessageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
 		return err
 	}
+
+	// TODO - network rewors this
+	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
+	lr.NodeId = c.Network.GetNodeID()
 
 	return nil
 }

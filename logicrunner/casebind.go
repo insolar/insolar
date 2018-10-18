@@ -242,6 +242,10 @@ func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
+func (vb ValidationSaver) GetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
 type ValidationChecker struct {
 	lr *LogicRunner
 	cb core.CaseBindReplay
@@ -276,4 +280,8 @@ func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
 
 func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
+}
+
+func (vb ValidationChecker) GetRole() core.JetRole {
+	return core.RoleVirtualValidator
 }
