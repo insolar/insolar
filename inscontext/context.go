@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package context
+package inscontext
 
 import (
 	"context"
