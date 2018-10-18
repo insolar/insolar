@@ -106,12 +106,32 @@ func WithValue(parent context.Context, key, val interface{}) *Ctx {
 	return ctx
 }
 
-type tTraceKey byte
+type key int
 
-const traceKey = tTraceKey(0)
+const (
+	traceKey = key(0)
+)
 
 // WithTrace returns a copy of parent with added trace mark.
 func WithTrace(parent context.Context, trace string) *Ctx {
 	ctx := NewCtxFromContext(parent)
 	return WithValue(ctx, traceKey, trace)
+}
+
+func (ctx *Ctx) TraceID() string {
+	return ctx.Value(traceKey).(string)
+}
+
+// WithLog returns *Ctx with provided core.Logger,
+// if parent is not *Ctx instance returns a new Ctx instance
+// overwise just set logger for provided Ctx.
+func WithLog(parent context.Context, clog core.Logger) *Ctx {
+	ctx := NewCtxFromContext(parent)
+	ctx.log = clog
+	return ctx
+}
+
+// Log returns core.Logger provided by *Ctx.
+func (ctx *Ctx) Log() core.Logger {
+	return ctx.log
 }
