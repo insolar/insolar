@@ -68,6 +68,7 @@ const (
 	caseRecordTypeUnexistent CaseRecordType = iota
 	CaseRecordTypeStart
 	CaseRecordTypeResult
+	CaseRecordTypeRequest
 	CaseRecordTypeGetObject
 	CaseRecordTypeRouteCall
 	CaseRecordTypeSaveAsChild

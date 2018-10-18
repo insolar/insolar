@@ -22,6 +22,7 @@ import (
 	"bytes"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -145,10 +146,25 @@ type ValidationBehaviour interface {
 	End(refs Ref, record core.CaseRecord)
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
+	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
 }
 
 type ValidationSaver struct {
 	lr *LogicRunner
+}
+
+func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+	reqref, err := vb.lr.ArtifactManager.RegisterRequest(m)
+	if err != nil {
+		return nil, err
+	}
+
+	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
+		Type:   core.CaseRecordTypeRequest,
+		ReqSig: HashInterface(m),
+		Resp:   reqref,
+	})
+	return reqref, err
 }
 
 func (vb ValidationSaver) NeedSave() bool {
@@ -170,6 +186,21 @@ func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 type ValidationChecker struct {
 	lr *LogicRunner
 	cb core.CaseBindReplay
+}
+
+func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+	cr, _ := vb.lr.getNextValidationStep(m.GetReference())
+	if core.CaseRecordTypeRequest != cr.Type {
+		return nil, errors.New("Wrong validation type on Request")
+	}
+	if !bytes.Equal(cr.ReqSig, HashInterface(m)) {
+		return nil, errors.New("Wrong validation sig on Request")
+	}
+	if req, ok := cr.Resp.(*Ref); ok {
+		return req, nil
+	} else {
+		return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
+	}
 }
 
 func (vb ValidationChecker) NeedSave() bool {

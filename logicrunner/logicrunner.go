@@ -203,10 +203,16 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 		vb = ValidationSaver{lr: lr}
 	}
 
-	reqref, err := lr.ArtifactManager.RegisterRequest(msg)
+	vb.Begin(ref, core.CaseRecord{
+		Type: core.CaseRecordTypeStart,
+		Resp: msg,
+	})
+
+	reqref, err := vb.RegisterRequest(msg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Can't create request")
 	}
+
 	ctx := core.LogicCallContext{
 		Caller:  msg.GetCaller(),
 		Request: reqref,
@@ -306,10 +312,6 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 	if !lr.SetContext(m.ObjectRef, ec) {
 		return nil, errors.New("Method already executing")
 	}
-	vb.Begin(m.ObjectRef, core.CaseRecord{
-		Type: core.CaseRecordTypeStart,
-		Resp: m,
-	})
 
 	objbody, err := lr.getObjectMessage(m.ObjectRef)
 	if err != nil {
@@ -377,10 +379,6 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	if !lr.SetContext(m.GetRequest(), ec) {
 		return nil, errors.New("Constructor already executing by you")
 	}
-	vb.Begin(m.ClassRef, core.CaseRecord{
-		Type: core.CaseRecordTypeStart,
-		Resp: m,
-	})
 
 	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
 	if err != nil {
