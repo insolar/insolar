@@ -72,7 +72,7 @@ type ArtifactManager interface {
 
 	// RegisterRequest creates or check call request record and returns it RecordRef.
 	// (used by VM on executing side)
-	RegisterRequest(message Message) (*RecordRef, error)
+	RegisterRequest(ctx Context, message Message) (*RecordRef, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
