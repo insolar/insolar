@@ -22,6 +22,7 @@ import (
 	"bytes"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -39,20 +40,20 @@ func HashInterface(in interface{}) []byte {
 	return sh.Sum(s)
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref core.RecordRef, cr core.CaseRecord) {
+func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
 	lr.caseBindMutex.Lock()
 	lr.caseBind.Records[ref] = append(lr.caseBind.Records[ref], cr)
 	lr.caseBindMutex.Unlock()
 }
 
-func (lr *LogicRunner) lastObjectCaseRecord(ref core.RecordRef) core.CaseRecord {
+func (lr *LogicRunner) lastObjectCaseRecord(ref Ref) core.CaseRecord {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
 	list := lr.caseBind.Records[ref]
 	return list[len(list)-1]
 }
 
-func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseRecord, int) {
+func (lr *LogicRunner) getNextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	lr.caseBindReplaysMutex.Lock()
 	defer lr.caseBindReplaysMutex.Unlock()
 	r, ok := lr.caseBindReplays[ref]
@@ -67,7 +68,7 @@ func (lr *LogicRunner) getNextValidationStep(ref core.RecordRef) (*core.CaseReco
 	return &ret, r.Step
 }
 
-func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.CaseRecord) (int, error) {
+func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
@@ -141,14 +142,29 @@ func (lr *LogicRunner) Validate(ref core.RecordRef, p core.Pulse, cr []core.Case
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
 type ValidationBehaviour interface {
-	Begin(refs core.RecordRef, record core.CaseRecord)
-	End(refs core.RecordRef, record core.CaseRecord)
+	Begin(refs Ref, record core.CaseRecord)
+	End(refs Ref, record core.CaseRecord)
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
+	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
 }
 
 type ValidationSaver struct {
 	lr *LogicRunner
+}
+
+func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+	reqref, err := vb.lr.ArtifactManager.RegisterRequest(m)
+	if err != nil {
+		return nil, err
+	}
+
+	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
+		Type:   core.CaseRecordTypeRequest,
+		ReqSig: HashInterface(m),
+		Resp:   reqref,
+	})
+	return reqref, err
 }
 
 func (vb ValidationSaver) NeedSave() bool {
@@ -159,17 +175,32 @@ func (vb ValidationSaver) ModifyContext(ctx *core.LogicCallContext) {
 	// nothing need
 }
 
-func (vb ValidationSaver) Begin(refs core.RecordRef, record core.CaseRecord) {
+func (vb ValidationSaver) Begin(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
-func (vb ValidationSaver) End(refs core.RecordRef, record core.CaseRecord) {
+func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
 type ValidationChecker struct {
 	lr *LogicRunner
 	cb core.CaseBindReplay
+}
+
+func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
+	cr, _ := vb.lr.getNextValidationStep(m.GetReference())
+	if core.CaseRecordTypeRequest != cr.Type {
+		return nil, errors.New("Wrong validation type on Request")
+	}
+	if !bytes.Equal(cr.ReqSig, HashInterface(m)) {
+		return nil, errors.New("Wrong validation sig on Request")
+	}
+	if req, ok := cr.Resp.(*Ref); ok {
+		return req, nil
+	}
+	return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
+
 }
 
 func (vb ValidationChecker) NeedSave() bool {
@@ -180,10 +211,10 @@ func (vb ValidationChecker) ModifyContext(ctx *core.LogicCallContext) {
 	ctx.Pulse = vb.cb.Pulse
 }
 
-func (vb ValidationChecker) Begin(refs core.RecordRef, record core.CaseRecord) {
+func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
 }
 
-func (vb ValidationChecker) End(refs core.RecordRef, record core.CaseRecord) {
+func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
 }
