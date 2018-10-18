@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,7 +78,8 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	network.SendMessage("test", e)
+	ref := testutils.RandomRef()
+	network.SendMessage(ref, "test", e)
 }
 
 func TestServiceNetwork_Start(t *testing.T) {
@@ -176,7 +178,8 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	firstNode.SendMessage("test", e)
+	ref := testutils.RandomRef()
+	firstNode.SendMessage(ref, "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
