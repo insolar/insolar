@@ -19,11 +19,13 @@ package rootdomain
 import (
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/networkcoordinator"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -36,7 +38,7 @@ type RootDomain struct {
 }
 
 // RegisterNode processes register node request
-func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
+func (rd *RootDomain) RegisterNode(pk string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
 		panic(err)
@@ -47,7 +49,12 @@ func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	return nd.RegisterNode(publicKey, role).String()
+	cert, errS := nd.RegisterNode(pk, numberOfBootstrapNodes, majorityRule, roles, ip)
+	if len(errS) != 0 {
+		panic(errS)
+	}
+
+	return cert, nil
 }
 
 func makeSeed() []byte {
@@ -61,7 +68,7 @@ func makeSeed() []byte {
 }
 
 // Authorize checks is node authorized
-func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
+func (rd *RootDomain) Authorize() (string, []core.NodeRole, string) {
 	privateKey, err := cryptoHelper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
@@ -79,7 +86,20 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
 	if err != nil {
 		panic(err)
 	}
-	nodeRef := rd.RegisterNode(serPubKey, "virtual")
+
+	fmt.Println("HUHUHUHUHUHUH")
+
+	rawJSON, err := rd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	if err != nil {
+		panic(err)
+	}
+
+	nodeRef, err := networkcoordinator.ExtractNodeRef(rawJSON)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("KLDKDLDKDLDKDLDKDLDKD: NODEREF: ", nodeRef)
 
 	// Validate
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
