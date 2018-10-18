@@ -225,34 +225,6 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	}
 }
 
-func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ValidateCaseBind)
-	if !ok {
-		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
-	}
-
-	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
-	_, err := lr.MessageBus.Send(&message.ValidationResults{
-		RecordRef:        msg.GetReference(),
-		PassedStepsCount: passedStepsCount,
-		Error:            validationError,
-	})
-
-	return nil, err
-}
-
-func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply, error) {
-	// Handle all validators Request
-	// Do some staff if request don't come for a long time
-	// Compare results of different validators and previous Executor
-	return nil, nil
-}
-
-func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
-	// Coordinate this with ProcessValidationResults
-	return nil, nil
-}
-
 type objectBody struct {
 	Body        []byte
 	Code        Ref
