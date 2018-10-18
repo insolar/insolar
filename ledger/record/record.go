@@ -23,17 +23,6 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// ProjectionType is a "view filter" for record.
-// E.g. we can read whole object or just it's hash.
-type ProjectionType uint32
-
-// Memory is actual contracts' state, variables etc.
-type Memory []byte
-
-// RelativePulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
-// It is only allowed for Storage.
-const RelativePulseNumber core.PulseNumber = 65536
-
 // TypeID encodes a record object type.
 type TypeID uint32
 

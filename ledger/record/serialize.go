@@ -20,22 +20,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 )
-
-// hashableBytes exists just to allow []byte implements hash.Writer
-type hashableBytes []byte
-
-func (b hashableBytes) WriteHash(w io.Writer) {
-	_, err := w.Write(b)
-	if err != nil {
-		panic(err)
-	}
-}
 
 // Bytes2ID converts ID from byte representation to struct.
 func Bytes2ID(b []byte) ID {
