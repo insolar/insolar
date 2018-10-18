@@ -109,7 +109,10 @@ func (r *RootDomain) RegisterNode(publicKey string, role string) (string, error)
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // RegisterNodeNoWait is proxy generated method
@@ -160,7 +163,10 @@ func (r *RootDomain) Authorize() (string, core.NodeRole, error) {
 		panic(err)
 	}
 
-	return ret0, ret1, ret2
+	if ret2 != nil {
+		return ret0, ret1, ret2
+	}
+	return ret0, ret1, nil
 }
 
 // AuthorizeNoWait is proxy generated method
@@ -209,7 +215,10 @@ func (r *RootDomain) CreateMember(name string, key string) (string, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // CreateMemberNoWait is proxy generated method
@@ -259,7 +268,10 @@ func (r *RootDomain) GetBalance(reference string) (uint, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetBalanceNoWait is proxy generated method
@@ -310,7 +322,10 @@ func (r *RootDomain) SendMoney(from string, to string, amount uint) (bool, error
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // SendMoneyNoWait is proxy generated method
@@ -361,7 +376,10 @@ func (r *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // DumpUserInfoNoWait is proxy generated method
@@ -409,7 +427,10 @@ func (r *RootDomain) DumpAllUsers() ([]byte, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // DumpAllUsersNoWait is proxy generated method

@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -305,12 +306,14 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]st
 
 	for _, fun := range list {
 		info := map[string]string{
-			"Name":           fun.Name.Name,
-			"Arguments":      genFieldList(pf, fun.Type.Params, true),
-			"InitArgs":       generateInitArguments(fun.Type.Params),
-			"ResultZeroList": generateZeroListOfTypes(pf, "ret", fun.Type.Results),
-			"Results":        numberedVars(fun.Type.Results, "ret"),
-			"ResultsTypes":   genFieldList(pf, fun.Type.Results, false),
+			"Name":            fun.Name.Name,
+			"Arguments":       genFieldList(pf, fun.Type.Params, true),
+			"InitArgs":        generateInitArguments(fun.Type.Params),
+			"ResultZeroList":  generateZeroListOfTypes(pf, "ret", fun.Type.Results),
+			"Results":         numberedVars(fun.Type.Results, "ret"),
+			"ErrorVar":        fmt.Sprintf("ret%d", fun.Type.Results.NumFields()-1),
+			"ResultsNilError": commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
+			"ResultsTypes":    genFieldList(pf, fun.Type.Results, false),
 		}
 		res = append(res, info)
 	}
@@ -377,12 +380,26 @@ func numberedVars(list *ast.FieldList, name string) string {
 	if list == nil || list.NumFields() == 0 {
 		return ""
 	}
+	return numberedVarsI(list.NumFields(), name)
+}
 
-	rets := make([]string, list.NumFields())
-	for i := range list.List {
-		rets[i] = fmt.Sprintf("%s%d", name, i)
+func commaAppend(l string, r string) string {
+	if l == "" {
+		return r
 	}
-	return strings.Join(rets, ", ")
+	return l + ", " + r
+}
+
+func numberedVarsI(n int, name string) string {
+	if n == 0 {
+		return ""
+	}
+
+	res := ""
+	for i := 0; i < n; i++ {
+		res = commaAppend(res, name+strconv.Itoa(i))
+	}
+	return res
 }
 
 func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {

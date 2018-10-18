@@ -109,7 +109,10 @@ func (r *NodeDomain) RegisterNode(pk string, role string) (core.RecordRef, error
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // RegisterNodeNoWait is proxy generated method
@@ -157,7 +160,10 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 		panic(err)
 	}
 
-	return ret0
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }
 
 // RemoveNodeNoWait is proxy generated method
@@ -208,7 +214,10 @@ func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signature
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // IsAuthorizedNoWait is proxy generated method
@@ -263,7 +272,10 @@ func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw
 		panic(err)
 	}
 
-	return ret0, ret1, ret2
+	if ret2 != nil {
+		return ret0, ret1, ret2
+	}
+	return ret0, ret1, nil
 }
 
 // AuthorizeNoWait is proxy generated method

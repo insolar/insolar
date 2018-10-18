@@ -109,7 +109,10 @@ func (r *Member) GetName() (string, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetNameNoWait is proxy generated method
@@ -156,7 +159,10 @@ func (r *Member) GetPublicKey() (string, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetPublicKeyNoWait is proxy generated method
@@ -209,7 +215,10 @@ func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, met
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // AuthorizedCallNoWait is proxy generated method

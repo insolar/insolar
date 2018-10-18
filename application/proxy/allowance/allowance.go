@@ -110,7 +110,10 @@ func (r *Allowance) TakeAmount() (uint, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // TakeAmountNoWait is proxy generated method
@@ -157,7 +160,10 @@ func (r *Allowance) GetBalanceForOwner() (uint, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetBalanceForOwnerNoWait is proxy generated method
@@ -204,7 +210,10 @@ func (r *Allowance) DeleteExpiredAllowance() (uint, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // DeleteExpiredAllowanceNoWait is proxy generated method

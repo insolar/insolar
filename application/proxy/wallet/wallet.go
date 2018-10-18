@@ -110,7 +110,10 @@ func (r *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, erro
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // AllocateNoWait is proxy generated method
@@ -159,7 +162,10 @@ func (r *Wallet) Receive(amount uint, from *core.RecordRef) error {
 		panic(err)
 	}
 
-	return ret0
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }
 
 // ReceiveNoWait is proxy generated method
@@ -208,7 +214,10 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 		panic(err)
 	}
 
-	return ret0
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }
 
 // TransferNoWait is proxy generated method
@@ -256,7 +265,10 @@ func (r *Wallet) Accept(aRef *core.RecordRef) error {
 		panic(err)
 	}
 
-	return ret0
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }
 
 // AcceptNoWait is proxy generated method
@@ -304,7 +316,10 @@ func (r *Wallet) GetTotalBalance() (uint, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetTotalBalanceNoWait is proxy generated method
@@ -349,7 +364,10 @@ func (r *Wallet) ReturnAndDeleteExpiredAllowances() error {
 		panic(err)
 	}
 
-	return ret0
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }
 
 // ReturnAndDeleteExpiredAllowancesNoWait is proxy generated method

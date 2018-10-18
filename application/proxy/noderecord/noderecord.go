@@ -109,7 +109,10 @@ func (r *NodeRecord) GetPublicKey() (string, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetPublicKeyNoWait is proxy generated method
@@ -156,7 +159,10 @@ func (r *NodeRecord) GetRole() (core.NodeRole, error) {
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetRoleNoWait is proxy generated method
@@ -205,7 +211,10 @@ func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string, error) {
 		panic(err)
 	}
 
-	return ret0, ret1, ret2
+	if ret2 != nil {
+		return ret0, ret1, ret2
+	}
+	return ret0, ret1, nil
 }
 
 // GetRoleAndPublicKeyNoWait is proxy generated method
@@ -250,7 +259,10 @@ func (r *NodeRecord) Destroy() error {
 		panic(err)
 	}
 
-	return ret0
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }
 
 // DestroyNoWait is proxy generated method
