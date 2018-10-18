@@ -128,7 +128,7 @@ func main() {
 
 	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("failed to start LogicRunner: ", err.Error())
+		log.Fatalln("failed to start MessageBus: ", err.Error())
 	}
 
 	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(cfgHolder.Configuration)
