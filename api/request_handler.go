@@ -288,6 +288,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	return result, nil
 }
 
+// ProcessRegisterNode process register node response
 func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 

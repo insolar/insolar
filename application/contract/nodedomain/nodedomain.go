@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/pkg/errors"
 )
 
 // NodeDomain holds noderecords
@@ -39,26 +40,20 @@ func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
-func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, pk string, majorityRule int, roles []string, ref core.RecordRef) ([]byte, string) {
+func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, pk string, majorityRule int, roles []string) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 	result["majority_rule"] = majorityRule
 	result["public_key"] = pk
 	result["roles"] = roles
-	result["reference"] = ref.String()
 
 	bNodes, err := nd.makeBootstrapNodesConfig(numberOfBootstrapNodes)
 	if err != nil {
-		return nil, "Can't make bootstrap nodes config: " + err.Error()
+		return nil, errors.Wrap(err, "Can't make bootstrap nodes config")
 	}
 
 	result["bootstrap_nodes"] = bNodes
 
-	rawCert, err := json.Marshal(result)
-	if err != nil {
-		return nil, "Can't marshal certificate: " + err.Error()
-	}
-
-	return rawCert, ""
+	return result, nil
 }
 
 func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]map[string]string, error) {
@@ -75,7 +70,7 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 	requiredNodesNum := numberOfBootstrapNodes
 
 	var result []map[string]string
-	for _, ref := range nodeRefs[:] {
+	for _, ref := range nodeRefs {
 		if requiredNodesNum == 0 {
 			break
 		}
@@ -111,7 +106,15 @@ func (nd *NodeDomain) RegisterNode(pk string, numberOfBootstrapNodes int, majori
 	newRecord := noderecord.NewNodeRecord(pk, roles, ip)
 	record := newRecord.AsChild(nd.GetReference())
 
-	return nd.makeCertificate(numberOfBootstrapNodes, pk, majorityRule, roles, record.GetReference())
+	result, err := nd.makeCertificate(numberOfBootstrapNodes, pk, majorityRule, roles)
+	result["reference"] = record.GetReference().String()
+
+	rawCert, err := json.Marshal(result)
+	if err != nil {
+		return nil, "Can't marshal certificate: " + err.Error()
+	}
+
+	return rawCert, ""
 }
 
 // RemoveNode deletes node from registry
