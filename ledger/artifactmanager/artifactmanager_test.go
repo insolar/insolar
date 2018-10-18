@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -135,20 +136,25 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 	}, cleaner
 }
 
-func TestLedgerArtifactManager_RegisterRequest_ConstructorCall(t *testing.T) {
+func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 	ctx := inscontext.TODO()
 
+<<<<<<< HEAD
 	msg := &message.CallConstructor{}
 	reqCoreRef1, err := td.manager.RegisterRequest(ctx, msg)
+=======
+	msg := message.BootstrapRequest{Name: "my little message"}
+	id, err := td.manager.RegisterRequest(&msg)
+>>>>>>> INS-649: Fix tests.
 	assert.NoError(t, err)
-	reqCoreID := reqCoreRef1.GetRecordID()
 
-	reqID1 := record.Bytes2ID(reqCoreID.Bytes())
-	rec, err := td.db.GetRecord(&reqID1)
+	internalID := record.Bytes2ID(id[:])
+	rec, err := td.db.GetRecord(&internalID)
 	assert.NoError(t, err)
+<<<<<<< HEAD
 
 	req, err := td.db.GetRequest(&reqID1)
 	assert.NoError(t, err)
@@ -191,6 +197,12 @@ func TestLedgerArtifactManager_RegisterRequest_MethodCall(t *testing.T) {
 	reqCoreID2 := reqCoreRef2.GetRecordID()
 	assert.NotNil(t, reqCoreID2)
 	assert.Equal(t, reqCoreID, reqCoreID2)
+=======
+	reqRec := rec.(*record.CallRequest)
+	storedMsg, err := message.Deserialize(bytes.NewBuffer(reqRec.Payload))
+	assert.NoError(t, err)
+	assert.Equal(t, msg, *storedMsg.(*message.BootstrapRequest))
+>>>>>>> INS-649: Fix tests.
 }
 
 func TestLedgerArtifactManager_DeclareType(t *testing.T) {

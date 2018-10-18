@@ -194,19 +194,28 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 		vb = ValidationSaver{lr: lr}
 	}
 
+<<<<<<< HEAD
 	vb.Begin(ref, core.CaseRecord{
 		Type: core.CaseRecordTypeStart,
 		Resp: msg,
 	})
 
 	reqref, err := vb.RegisterRequest(msg)
+=======
+	reqID, err := lr.ArtifactManager.RegisterRequest(msg)
+>>>>>>> INS-649: Fix tests.
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
 	}
+<<<<<<< HEAD
 
+=======
+	reqRef := core.RecordRef{}
+	reqRef.SetRecord(*reqID)
+>>>>>>> INS-649: Fix tests.
 	ctx := core.LogicCallContext{
 		Caller:  msg.GetCaller(),
-		Request: reqref,
+		Request: &reqRef,
 		Time:    time.Now(), // TODO: probably we should take it from e
 		Pulse:   lr.caseBind.Pulse,
 	}
