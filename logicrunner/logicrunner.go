@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -270,6 +271,7 @@ type objectBody struct {
 }
 
 func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
+	ctx := inscontext.TODO()
 	cr, step := lr.getNextValidationStep(objref)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObject != cr.Type {
@@ -282,7 +284,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 		return cr.Resp.(*objectBody), nil
 	}
 
-	objDesc, err := lr.ArtifactManager.GetObject(objref, nil)
+	objDesc, err := lr.ArtifactManager.GetObject(ctx, objref, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
@@ -375,12 +377,13 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 }
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
+	insctx := inscontext.TODO()
 	ec := ExecutionContext{}
 	if !lr.SetContext(m.GetRequest(), ec) {
 		return nil, errors.New("Constructor already executing by you")
 	}
 
-	classDesc, err := lr.ArtifactManager.GetClass(m.ClassRef, nil)
+	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class")
 	}
