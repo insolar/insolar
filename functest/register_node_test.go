@@ -146,7 +146,7 @@ func TestRegisterNodeNoEnoughNodes(t *testing.T) {
 			"roles":               []string{"virtual"},
 			"host":                TESTHOST,
 			"public_key":          TESTPUBLICKEY,
-			"bootstrap_nodes_num": 2,
+			"bootstrap_nodes_num": 10,
 		})
 
 		response := &registerNodeResponse{}
