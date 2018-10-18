@@ -23,18 +23,18 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// Writer is the interface that wraps the WriteHash method.
+// Writer is the interface that wraps the WriteHashData method.
 //
-// WriteHash should write all required for proper hashing data to io.Writer.
+// WriteHashData should write all required for proper hashing data to io.Writer.
 type Writer interface {
-	WriteHash(io.Writer)
+	WriteHashData(io.Writer)
 }
 
 // SHA3hash224 returns SHA3 hash calculated on data received from Writer.
 func SHA3hash224(hw ...Writer) []byte {
 	h := sha3.New224()
 	for _, w := range hw {
-		w.WriteHash(h)
+		w.WriteHashData(h)
 	}
 	return h.Sum(nil)
 }

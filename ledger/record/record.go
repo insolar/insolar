@@ -21,22 +21,13 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 )
-
-// ProjectionType is a "view filter" for record.
-// E.g. we can read whole object or just it's hash.
-type ProjectionType uint32
-
-// Memory is actual contracts' state, variables etc.
-type Memory []byte
-
-// RelativePulseNumber - special value of PulseNum, it means a Drop-relative Pulse Number.
-// It is only allowed for Storage.
-const RelativePulseNumber core.PulseNumber = 65536
 
 // TypeID encodes a record object type.
 type TypeID uint32
+
+// TypeIDSize is a size of TypeID type.
+const TypeIDSize = 4
 
 // ID is a composite identifier for records.
 //
@@ -47,21 +38,11 @@ type ID struct {
 }
 
 // Record is base interface for all records.
-type Record interface{}
-
-// SHA3Hash224 hashes Record by it's CBOR representation and type identifier.
-func SHA3Hash224(rec Record) []byte {
-	cborBlob := MustEncode(rec)
-	return hash.SHA3hash224(getTypeIDbyRecord(rec), hashableBytes(cborBlob))
-}
-
-// WriteHash implements hash.Writer interface.
-func (id ID) WriteHash(w io.Writer) {
-	b := ID2Bytes(id)
-	err := binary.Write(w, binary.BigEndian, b)
-	if err != nil {
-		panic("binary.Write failed:" + err.Error())
-	}
+type Record interface {
+	// Type returns record type.
+	Type() TypeID
+	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+	WriteHashData(w io.Writer) (int, error)
 }
 
 // IsEqual checks equality of IDs.
@@ -80,7 +61,7 @@ func (id ID) IsEqual(id2 ID) bool {
 	return true
 }
 
-// WriteHash implements hash.Writer interface.
+// WriteHashData implements hash.Writer interface.
 func (id TypeID) WriteHash(w io.Writer) {
 	err := binary.Write(w, binary.BigEndian, id)
 	if err != nil {
