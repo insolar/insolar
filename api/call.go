@@ -60,6 +60,34 @@ func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	return body, nil
 }
 
+func (ar *Runner) verifySignature(params request) error {
+	key, err := ar.getMemberPubKey(params.Reference)
+	if err != nil {
+		return err
+	}
+	if key == "" {
+		return errors.New("[ VerifySignature ] Not found public key for this member")
+	}
+
+	args, err := core.MarshalArgs(
+		core.NewRefFromBase58(params.Reference),
+		params.Method,
+		params.Params,
+		params.Seed)
+	if err != nil {
+		return errors.Wrap(err, "[ VerifySignature ] Can't marshal arguments for verify signature")
+	}
+
+	verified, err := ecdsa.Verify(args, params.Signature, key)
+	if err != nil {
+		return errors.Wrap(err, "[ VerifySignature ] Can't verify signature")
+	}
+	if !verified {
+		return errors.New("[ VerifySignature ] Incorrect signature")
+	}
+	return nil
+}
+
 func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
@@ -85,56 +113,27 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			return
 		}
 
-		if !ar.seedmanager.Exists(ar.seedmanager.FromBytes(params.Seed)) {
+		if !ar.seedmanager.Exists(ar.seedmanager.SeedFromBytes(params.Seed)) {
 			resp.Error = "Incorrect seed"
 			log.Error("[ CallHandler ] Incorrect seed")
 			return
 		}
 
-		key, err := ar.getMemberPubKey(params.Reference)
+		err = ar.verifySignature(params)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(err)
-			return
-		}
-		if key == "" {
-			resp.Error = "Not found public key for this member"
-			log.Error("[ CallHandler ] Not found public key for this member")
+			log.Error(errors.Wrap(err, "[ CallHandler ] "))
 			return
 		}
 
-		from := core.NewRefFromBase58(params.Reference)
-		args, err := core.MarshalArgs(
-			from,
-			params.Method,
-			params.Params,
-			params.Seed)
-		if err != nil {
-			resp.Error = err.Error()
-			log.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal arguments for verify signature"))
-			return
-		}
-
-		verified, err := ecdsa.Verify(args, params.Signature, key)
-		if err != nil {
-			resp.Error = err.Error()
-			log.Error(errors.Wrap(err, "[ CallHandler ] Can't verify signature"))
-			return
-		}
-		if !verified {
-			resp.Error = "Incorrect signature"
-			log.Error("[ CallHandler ] Incorrect signature")
-			return
-		}
-
-		args, err = core.MarshalArgs(*c.Bootstrapper.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
+		args, err := core.MarshalArgs(*c.Bootstrapper.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
 		if err != nil {
 			resp.Error = err.Error()
 			log.Error(err)
 			return
 		}
 		res, err := ar.messageBus.Send(&message.CallMethod{
-			ObjectRef: from,
+			ObjectRef: core.NewRefFromBase58(params.Reference),
 			Method:    "Call",
 			Arguments: args,
 		})
