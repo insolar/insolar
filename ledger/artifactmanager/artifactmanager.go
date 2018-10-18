@@ -165,7 +165,9 @@ func (m *LedgerArtifactManager) GetObject(
 //
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
 // be returned.
-func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+func (m *LedgerArtifactManager) GetDelegate(
+	ctx core.Context, head, asClass core.RecordRef,
+) (*core.RecordRef, error) {
 	genericReact, err := m.messageBus.Send(&message.GetDelegate{
 		Head:    head,
 		AsClass: asClass,

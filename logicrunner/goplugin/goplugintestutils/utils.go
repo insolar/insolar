@@ -205,7 +205,7 @@ func (t *TestArtifactManager) GetObject(ctx core.Context, object core.RecordRef,
 }
 
 // GetDelegate implementation for tests
-func (t *TestArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+func (t *TestArtifactManager) GetDelegate(ctx core.Context, head, asClass core.RecordRef) (*core.RecordRef, error) {
 	obj, ok := t.Objects[head]
 	if !ok {
 		return nil, errors.New("No object")

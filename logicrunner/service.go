@@ -274,6 +274,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
+	ctx := inscontext.TODO()
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetDelegate != cr.Type {
@@ -288,7 +289,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 		return nil
 	}
 	am := gpr.lr.ArtifactManager
-	ref, err := am.GetDelegate(req.Object, req.OfType)
+	ref, err := am.GetDelegate(ctx, req.Object, req.OfType)
 	if err != nil {
 		return err
 	}

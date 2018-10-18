@@ -95,7 +95,7 @@ type ArtifactManager interface {
 	//
 	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
 	// be returned.
-	GetDelegate(head, asClass RecordRef) (*RecordRef, error)
+	GetDelegate(ctx Context, head, asClass RecordRef) (*RecordRef, error)
 
 	// GetChildren returns children iterator.
 	//

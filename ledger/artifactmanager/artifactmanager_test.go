@@ -502,6 +502,7 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	memory := []byte{1, 2, 3}
 	classRef := genRandomRef(0)
@@ -545,7 +546,7 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 		Delegate: true,
 	})
 
-	delegate, err := td.manager.GetDelegate(*parentRef.CoreRef(), *classRef.CoreRef())
+	delegate, err := td.manager.GetDelegate(ctx, *parentRef.CoreRef(), *classRef.CoreRef())
 	assert.NoError(t, err)
 	assert.Equal(t, *delegateRef.CoreRef(), *delegate)
 }
