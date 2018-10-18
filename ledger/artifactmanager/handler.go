@@ -60,7 +60,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeUpdateObject, h.handleUpdateObject)
 	bus.MustRegister(core.TypeRegisterChild, h.handleRegisterChild)
 	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
-	bus.MustRegister(core.TypeRequestCall, h.handleRegisterRequest)
+	bus.MustRegister(core.TypeSetRecord, h.handleSetRecord)
 
 	return nil
 }
@@ -71,20 +71,13 @@ func logTimeInside(start time.Time, funcName string) {
 	}
 }
 
-func (h *MessageHandler) handleRegisterRequest(
-	genericMsg core.Message,
-) (core.Reply, error) {
-	start := time.Now()
-	msg := genericMsg.(*message.RequestCall)
-	requestRec := &record.CallRequest{
-		Payload: message.MustSerializeBytes(msg.Message),
-	}
-	id, err := h.db.SetRequest(requestRec)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to set request record")
-	}
+func (h *MessageHandler) handleSetRecord(genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.SetRecord)
 
-	logTimeInside(start, "handleRegisterRequest")
+	id, err := h.db.SetRecord(record.DeserializeRecord(msg.Record))
+	if err != nil {
+		return nil, err
+	}
 
 	return &reply.ID{ID: *id.CoreID()}, nil
 }

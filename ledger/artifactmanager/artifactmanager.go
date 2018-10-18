@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/log"
 )
@@ -58,17 +59,20 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 }
 
 // RegisterRequest sends message for request registration,
-// returns request record Ref if request successfuly created or already exists.
+// returns request record Ref if request successfully created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
 	ctx core.Context, msg core.Message,
-) (*core.RecordRef, error) {
-	id, err := m.fetchID(&message.RequestCall{Message: msg})
+) (*core.RecordID, error) {
+	rec := record.CallRequest{
+		Payload: message.MustSerializeBytes(msg),
+	}
+	id, err := m.fetchID(&message.SetRecord{
+		Record: record.SerializeRecord(&rec),
+	})
 	if err != nil {
 		return nil, err
 	}
-	var tagretRef core.RecordRef
-	(&tagretRef).SetRecord(*id)
-	return &tagretRef, nil
+	return id, nil
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
