@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
@@ -138,9 +139,10 @@ func TestLedgerArtifactManager_RegisterRequest_ConstructorCall(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	msg := &message.CallConstructor{}
-	reqCoreRef1, err := td.manager.RegisterRequest(msg)
+	reqCoreRef1, err := td.manager.RegisterRequest(ctx, msg)
 	assert.NoError(t, err)
 	reqCoreID := reqCoreRef1.GetRecordID()
 
@@ -154,7 +156,7 @@ func TestLedgerArtifactManager_RegisterRequest_ConstructorCall(t *testing.T) {
 	assert.Equal(t, rec, req)
 
 	// RegisterRequest should be idempotent.
-	reqCoreRef2, err := td.manager.RegisterRequest(msg)
+	reqCoreRef2, err := td.manager.RegisterRequest(ctx, msg)
 	assert.NoError(t, err)
 
 	reqCoreID2 := reqCoreRef2.GetRecordID()
@@ -166,9 +168,10 @@ func TestLedgerArtifactManager_RegisterRequest_MethodCall(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	msg := &message.CallMethod{}
-	reqCoreRef1, err := td.manager.RegisterRequest(msg)
+	reqCoreRef1, err := td.manager.RegisterRequest(ctx, msg)
 	assert.NoError(t, err)
 	reqCoreID := reqCoreRef1.GetRecordID()
 
@@ -182,7 +185,7 @@ func TestLedgerArtifactManager_RegisterRequest_MethodCall(t *testing.T) {
 	assert.Equal(t, rec, req)
 
 	// RegisterRequest should be idempotent.
-	reqCoreRef2, err := td.manager.RegisterRequest(msg)
+	reqCoreRef2, err := td.manager.RegisterRequest(ctx, msg)
 	assert.NoError(t, err)
 
 	reqCoreID2 := reqCoreRef2.GetRecordID()

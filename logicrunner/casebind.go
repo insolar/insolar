@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/crypto/sha3"
@@ -154,7 +155,8 @@ type ValidationSaver struct {
 }
 
 func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
-	reqref, err := vb.lr.ArtifactManager.RegisterRequest(m)
+	ctx := inscontext.TODO()
+	reqref, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
 	if err != nil {
 		return nil, err
 	}

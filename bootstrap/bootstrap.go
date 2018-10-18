@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
@@ -200,7 +201,8 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootDomain"})
+	ctx := inscontext.TODO()
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootDomain"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
@@ -224,7 +226,8 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "NodeDomain"})
+	ctx := inscontext.TODO()
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "NodeDomain"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
@@ -250,7 +253,8 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootMember"})
+	ctx := inscontext.TODO()
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
@@ -290,7 +294,8 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *gop
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
-	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootMember"})
+	ctx := inscontext.TODO()
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
