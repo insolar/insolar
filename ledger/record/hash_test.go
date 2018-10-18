@@ -36,6 +36,9 @@ var emptyRecordsGens = []recordgen{
 	func() Record { return &ClassAmendRecord{} },
 	func() Record { return &DeactivationRecord{} },
 	func() Record { return &ObjectAmendRecord{} },
+	func() Record { return &TypeRecord{} },
+	func() Record { return &ChildRecord{} },
+	func() Record { return &GenesisRecord{} },
 }
 
 func getRecordHash(rec Record) []byte {
