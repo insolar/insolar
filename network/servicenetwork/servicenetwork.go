@@ -99,7 +99,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		method, msg.Target().String())
 
 	metrics.NetworkMessageSentTotal.Inc()
-	res, err := network.hostNetwork.RemoteProcedureCall(&nodeID, createContext(network.hostNetwork), hostID, method, [][]byte{buff})
+	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
 	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s", msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
 	return res, err
 }
