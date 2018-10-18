@@ -140,13 +140,13 @@ func TestRegisterNodeWithoutHost(t *testing.T) {
 }
 
 func TestRegisterNodeNoEnoughNodes(t *testing.T) {
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		body := getResponseBody(t, postParams{
 			"query_type":          "register_node",
 			"roles":               []string{"virtual"},
 			"host":                TESTHOST,
 			"public_key":          TESTPUBLICKEY,
-			"bootstrap_nodes_num": 10,
+			"bootstrap_nodes_num": 5,
 		})
 
 		response := &registerNodeResponse{}
