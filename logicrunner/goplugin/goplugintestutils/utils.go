@@ -196,7 +196,7 @@ func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, 
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")

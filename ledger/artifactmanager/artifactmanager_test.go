@@ -712,9 +712,10 @@ func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	objID := genRandomID(0)
-	_, err := td.manager.GetObject(*genRefWithID(objID), nil)
+	_, err := td.manager.GetObject(ctx, *genRefWithID(objID), nil)
 	assert.NotNil(t, err)
 
 	deactivateID, _ := td.db.SetRecord(&record.DeactivationRecord{})
@@ -724,7 +725,7 @@ func TestLedgerArtifactManager_GetObject_VerifiesRecords(t *testing.T) {
 	}
 	td.db.SetObjectIndex(objID, &objectIndex)
 
-	_, err = td.manager.GetObject(*genRefWithID(objID), nil)
+	_, err = td.manager.GetObject(ctx, *genRefWithID(objID), nil)
 	assert.Equal(t, core.ErrDeactivated, err)
 }
 
@@ -732,6 +733,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
 		ResultRecord: record.ResultRecord{
@@ -771,7 +773,7 @@ func TestLedgerArtifactManager_GetLatestObj_ReturnsCorrectDescriptors(t *testing
 	}
 	td.db.SetObjectIndex(objectID, &objectIndex)
 
-	objDesc, err := td.manager.GetObject(*genRefWithID(objectID), nil)
+	objDesc, err := td.manager.GetObject(ctx, *genRefWithID(objectID), nil)
 	assert.NoError(t, err)
 	expectedObjDesc := &ObjectDescriptor{
 		am: td.manager,

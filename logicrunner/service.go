@@ -182,6 +182,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 // GetObjChildren is an RPC returns set of object children
 func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.UpGetObjChildrenResp) error {
+	ctx := inscontext.TODO()
 	// TODO: INS-408
 
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
@@ -208,7 +209,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 		if err != nil {
 			return err
 		}
-		o, err := am.GetObject(*r, nil)
+		o, err := am.GetObject(ctx, *r, nil)
 		if err != nil {
 			// TODO: we should detect deactivated objects
 			continue

@@ -271,6 +271,7 @@ type objectBody struct {
 }
 
 func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
+	ctx := inscontext.TODO()
 	cr, step := lr.getNextValidationStep(objref)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObject != cr.Type {
@@ -283,7 +284,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 		return cr.Resp.(*objectBody), nil
 	}
 
-	objDesc, err := lr.ArtifactManager.GetObject(objref, nil)
+	objDesc, err := lr.ArtifactManager.GetObject(ctx, objref, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
