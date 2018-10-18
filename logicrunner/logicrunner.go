@@ -55,7 +55,7 @@ type LogicRunner struct {
 	contextMutex    sync.Mutex
 
 	JetCoordinator core.JetCoordinator
-	NodeId         core.RecordRef
+	NodeID         core.RecordRef
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
@@ -128,7 +128,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 
 	// TODO - network reworks this
 	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
-	lr.NodeId = c.Network.GetNodeID()
+	lr.NodeID = c.Network.GetNodeID()
 
 	return nil
 }
@@ -213,7 +213,7 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 
 	// TODO reqref needed if we don't execute?
 	// TODO do map for objects for pulse?
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(vb.GetRole(), ref, lr.caseBind.Pulse.PulseNumber, lr.NodeId)
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(vb.GetRole(), ref, lr.caseBind.Pulse.PulseNumber, lr.NodeID)
 	if err != nil {
 		return nil, errors.New("Authorization failed with error: " + err.Error())
 	}
