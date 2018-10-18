@@ -17,6 +17,7 @@
 package functest
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/api"
@@ -42,6 +43,7 @@ func TestRegisterNodeVirtual(t *testing.T) {
 	assert.Len(t, cert.Roles, 1)
 	assert.Equal(t, testRole, cert.Roles[0])
 	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
+	assert.Empty(t, cert.BootstrapNodes)
 }
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
@@ -80,7 +82,7 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 	assert.Equal(t, TESTPUBLICKEY, cert.PublicKey)
 }
 
-func _TestRegisterNodeNotExistRole(t *testing.T) {
+func TestRegisterNodeNotExistRole(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
 		"public_key": TESTPUBLICKEY,
@@ -92,7 +94,7 @@ func _TestRegisterNodeNotExistRole(t *testing.T) {
 	unmarshalResponseWithError(t, body, response)
 
 	assert.Equal(t, api.HandlerError, response.Err.Code)
-	assert.Equal(t, "Error: role 'some_not_fancy_role' doesn't exist", response.Err.Message)
+	assert.Contains(t, response.Err.Message, "Role is not supported: some_not_fancy_role")
 }
 
 func TestRegisterNodeWithoutRole(t *testing.T) {
@@ -123,7 +125,7 @@ func TestRegisterNodeWithoutPK(t *testing.T) {
 	assert.Equal(t, "Handler error: field 'public_key' is required", response.Err.Message)
 }
 
-func TestRegisterNodeWithoutPHost(t *testing.T) {
+func TestRegisterNodeWithoutHost(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
 		"roles":      []string{"virtual"},
@@ -135,4 +137,99 @@ func TestRegisterNodeWithoutPHost(t *testing.T) {
 
 	assert.Equal(t, api.HandlerError, response.Err.Code)
 	assert.Equal(t, "Handler error: field 'host' is required", response.Err.Message)
+}
+
+func TestRegisterNodeNoEnoughNodes(t *testing.T) {
+	for i := 0; i < 5; i++ {
+		body := getResponseBody(t, postParams{
+			"query_type":          "register_node",
+			"roles":               []string{"virtual"},
+			"host":                TESTHOST,
+			"public_key":          TESTPUBLICKEY,
+			"bootstrap_nodes_num": 2,
+		})
+
+		response := &registerNodeResponse{}
+		unmarshalResponseWithError(t, body, response)
+
+		assert.Equal(t, api.HandlerError, response.Err.Code)
+		assert.Contains(t, response.Err.Message, "There no enough nodes")
+	}
+}
+
+func TestRegisterNodeBadMajorityRule(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type":          "register_node",
+		"roles":               []string{"virtual"},
+		"host":                TESTHOST,
+		"public_key":          TESTPUBLICKEY,
+		"majority_rule":       3,
+		"bootstrap_nodes_num": 10,
+	})
+
+	response := &registerNodeResponse{}
+	unmarshalResponseWithError(t, body, response)
+	assert.Contains(t, response.Err.Message, "majorityRule must be more than 0.51 * numberOfBootstrapNodes")
+}
+
+func findPublicKey(pk string, bNodes []bootstrapNode) bool {
+	for _, node := range bNodes {
+		if node.PublicKey == pk {
+			return true
+		}
+	}
+
+	return false
+}
+
+func findHost(host string, bNodes []bootstrapNode) bool {
+	for _, node := range bNodes {
+		if node.Host == host {
+			return true
+		}
+	}
+
+	return false
+}
+
+func TestRegisterNodeWithBootstrapNodes(t *testing.T) {
+	const testRole = "virtual"
+	const numNodes = 5
+	// Adding nodes
+	for i := 0; i < numNodes; i++ {
+		body := getResponseBody(t, postParams{
+			"query_type": "register_node",
+			"public_key": TESTPUBLICKEY + strconv.Itoa(i),
+			"host":       TESTHOST + strconv.Itoa(i),
+			"roles":      []string{testRole},
+		})
+
+		response := &registerNodeResponse{}
+		unmarshalResponse(t, body, response)
+	}
+
+	body := getResponseBody(t, postParams{
+		"query_type":          "register_node",
+		"public_key":          "FFFF",
+		"host":                TESTHOST + "new",
+		"roles":               []string{"heavy_material"},
+		"majority_rule":       numNodes,
+		"bootstrap_nodes_num": numNodes,
+	})
+
+	response := &registerNodeResponse{}
+	unmarshalResponse(t, body, response)
+
+	cert := response.Certificate
+	assert.Len(t, cert.Roles, 1)
+	assert.Equal(t, "heavy_material", cert.Roles[0])
+	assert.Equal(t, "FFFF", cert.PublicKey)
+	assert.Len(t, cert.BootstrapNodes, numNodes)
+
+	for i := 0; i < numNodes; i++ {
+		tPK := TESTPUBLICKEY + strconv.Itoa(i)
+		assert.True(t, findPublicKey(tPK, cert.BootstrapNodes), "Couldn't find PublicKey: %s", tPK)
+		tHost := TESTHOST + strconv.Itoa(i)
+		assert.True(t, findHost(tHost, cert.BootstrapNodes), "Couldn't find Host: %s", tPK)
+	}
 }
