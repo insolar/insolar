@@ -19,6 +19,7 @@ package rootdomain
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
@@ -37,18 +38,23 @@ type RootDomain struct {
 }
 
 // RegisterNode processes register node request
-func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
+func (rd *RootDomain) RegisterNode(publicKey string, role string) (string, error) {
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	if len(domainRefs) == 0 {
-		panic("No NodeDomain references")
+		return "", errors.New("No NodeDomain references")
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	return nd.RegisterNode(publicKey, role).String()
+	node, err := nd.RegisterNode(publicKey, role)
+	if err != nil {
+		return "", err
+	}
+
+	return node.String(), nil
 }
 
 func makeSeed() []byte {
@@ -62,7 +68,7 @@ func makeSeed() []byte {
 }
 
 // Authorize checks is node authorized
-func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
+func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
 	privateKey, err := cryptoHelper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
@@ -80,7 +86,11 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
 	if err != nil {
 		panic(err)
 	}
-	nodeRef := rd.RegisterNode(serPubKey, "virtual")
+
+	nodeRef, err := rd.RegisterNode(serPubKey, "virtual")
+	if err != nil {
+		panic(err)
+	}
 
 	// Validate
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
@@ -93,62 +103,78 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
 }
 
 // CreateMember processes create member request
-func (rd *RootDomain) CreateMember(name string, key string) string {
+func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.RootMember {
 	memberHolder := member.New(name, key)
 	m := memberHolder.AsChild(rd.GetReference())
 	wHolder := wallet.New(1000)
 	wHolder.AsDelegate(m.GetReference())
-	return m.GetReference().String()
+	return m.GetReference().String(), nil
 	//}
 	//return ""
 }
 
 // GetBalance processes get balance request
-func (rd *RootDomain) GetBalance(reference string) uint {
+func (rd *RootDomain) GetBalance(reference string) (uint, error) {
 	w := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
 	return w.GetTotalBalance()
 }
 
 // SendMoney processes send money request
-func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
+func (rd *RootDomain) SendMoney(from string, to string, amount uint) (bool, error) {
 	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
 	v := core.NewRefFromBase58(to)
 	walletFrom.Transfer(amount, &v)
-	return true
+	return true, nil
 }
 
-func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
+func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, error) {
 	w := wallet.GetImplementationFrom(m.GetReference())
-	res := map[string]interface{}{
-		"member": m.GetName(),
-		"wallet": w.GetTotalBalance(),
+
+	name, err := m.GetName()
+	if err != nil {
+		return nil, err
 	}
-	return res
+
+	balance, err := w.GetTotalBalance()
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"member": name,
+		"wallet": balance,
+	}, nil
 }
 
 // DumpUserInfo processes dump user info request
-func (rd *RootDomain) DumpUserInfo(reference string) []byte {
+func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	m := member.GetObject(core.NewRefFromBase58(reference))
-	res := rd.getUserInfoMap(m)
-	resJSON, _ := json.Marshal(res)
-	return resJSON
+
+	res, err := rd.getUserInfoMap(m)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(res)
 }
 
 // DumpAllUsers processes dump all users request
-func (rd *RootDomain) DumpAllUsers() []byte {
+func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 	res := []map[string]interface{}{}
 	crefs, err := rd.GetChildrenTyped(member.ClassReference)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	for _, cref := range crefs {
 		m := member.GetObject(cref)
-		userInfo := rd.getUserInfoMap(m)
+		userInfo, err := rd.getUserInfoMap(m)
+		if err != nil {
+			return nil, err
+		}
 		res = append(res, userInfo)
 	}
 	resJSON, _ := json.Marshal(res)
-	return resJSON
+	return resJSON, nil
 }
 
 // GetNodeDomainRef returns reference of NodeDomain instance
@@ -157,6 +183,6 @@ func (rd *RootDomain) GetNodeDomainRef() core.RecordRef {
 }
 
 // NewRootDomain creates new RootDomain
-func NewRootDomain() *RootDomain {
-	return &RootDomain{}
+func NewRootDomain() (*RootDomain, error) {
+	return &RootDomain{}, nil
 }

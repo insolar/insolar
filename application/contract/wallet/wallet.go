@@ -31,23 +31,34 @@ type Wallet struct {
 }
 
 // Allocate - returns reference to a new allowance
-func (w *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
+func (w *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, error) {
 	// TODO check balance is enough
 	w.Balance -= amount
 	ah := allowance.New(to, amount, w.GetContext().Time.Unix()+10)
 	a := ah.AsChild(w.GetReference())
-	return a.GetReference()
+	return a.GetReference(), nil
 }
 
-func (w *Wallet) Receive(amount uint, from *core.RecordRef) {
+func (w *Wallet) Receive(amount uint, from *core.RecordRef) error {
 	fromWallet := wallet.GetImplementationFrom(*from)
 
 	v := w.GetReference()
-	aRef := fromWallet.Allocate(amount, &v)
-	w.Balance += allowance.GetObject(aRef).TakeAmount()
+	aRef, err := fromWallet.Allocate(amount, &v)
+	if err != nil {
+		return err
+	}
+
+	b, err := allowance.GetObject(aRef).TakeAmount()
+	if err != nil {
+		return err
+	}
+
+	w.Balance += b
+
+	return nil
 }
 
-func (w *Wallet) Transfer(amount uint, to *core.RecordRef) {
+func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	w.Balance -= amount
 
 	toWallet := wallet.GetImplementationFrom(*to)
@@ -58,39 +69,54 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) {
 
 	r := a.GetReference()
 	toWallet.Accept(&r)
+	return nil
 }
 
-func (w *Wallet) Accept(aRef *core.RecordRef) {
-	w.Balance += allowance.GetObject(*aRef).TakeAmount()
+func (w *Wallet) Accept(aRef *core.RecordRef) error {
+	b, err := allowance.GetObject(*aRef).TakeAmount()
+	if err != nil {
+		return err
+	}
+	w.Balance += b
+	return nil
 }
 
-func (w *Wallet) GetTotalBalance() uint {
+func (w *Wallet) GetTotalBalance() (uint, error) {
 	var totalAllowanced uint
 	crefs, err := w.GetChildrenTyped(allowance.GetClass())
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	for _, cref := range crefs {
 		a := allowance.GetObject(cref)
+		balance, err := a.GetBalanceForOwner()
+		if err != nil {
+			return 0, err
+		}
 
-		totalAllowanced += a.GetBalanceForOwner()
+		totalAllowanced += balance
 	}
-	return w.Balance + totalAllowanced
+	return w.Balance + totalAllowanced, nil
 }
 
-func (w *Wallet) ReturnAndDeleteExpiredAllowances() {
+func (w *Wallet) ReturnAndDeleteExpiredAllowances() error {
 	crefs, err := w.GetChildrenTyped(allowance.GetClass())
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for _, cref := range crefs {
 		Allowance := allowance.GetObject(cref)
-		w.Balance += Allowance.DeleteExpiredAllowance()
+		balance, err := Allowance.DeleteExpiredAllowance()
+		if err != nil {
+			return err
+		}
+		w.Balance += balance
 	}
+	return err
 }
 
-func New(balance uint) *Wallet {
+func New(balance uint) (*Wallet, error) {
 	return &Wallet{
 		Balance: balance,
-	}
+	}, nil
 }

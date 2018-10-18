@@ -59,7 +59,7 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
     {{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
 
     ret := []byte{}
-    err = ph.Serialize({{ $f.Results }}, &ret)
+    err = ph.Serialize([]interface{}{ {{ $f.Results }} }, &ret)
     return ret, err
 }
 {{ end }}

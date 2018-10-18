@@ -2,6 +2,7 @@ package noderecord
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -82,7 +83,7 @@ func (r *NodeRecord) GetClass() core.RecordRef {
 }
 
 // GetPublicKey is proxy generated method
-func (r *NodeRecord) GetPublicKey() string {
+func (r *NodeRecord) GetPublicKey() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -97,16 +98,18 @@ func (r *NodeRecord) GetPublicKey() string {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // GetPublicKeyNoWait is proxy generated method
@@ -127,7 +130,7 @@ func (r *NodeRecord) GetPublicKeyNoWait() {
 }
 
 // GetRole is proxy generated method
-func (r *NodeRecord) GetRole() core.NodeRole {
+func (r *NodeRecord) GetRole() (core.NodeRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -142,16 +145,18 @@ func (r *NodeRecord) GetRole() core.NodeRole {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 core.NodeRole
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // GetRoleNoWait is proxy generated method
@@ -172,7 +177,7 @@ func (r *NodeRecord) GetRoleNoWait() {
 }
 
 // GetRoleAndPublicKey is proxy generated method
-func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
+func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -187,18 +192,20 @@ func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
 		panic(err)
 	}
 
-	ret := [2]interface{}{}
+	ret := [3]interface{}{}
 	var ret0 core.NodeRole
 	ret[0] = &ret0
 	var ret1 string
 	ret[1] = &ret1
+	var ret2 *foundation.Error
+	ret[2] = &ret2
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0, ret1
+	return ret0, ret1, ret2
 }
 
 // GetRoleAndPublicKeyNoWait is proxy generated method
@@ -219,7 +226,7 @@ func (r *NodeRecord) GetRoleAndPublicKeyNoWait() {
 }
 
 // Destroy is proxy generated method
-func (r *NodeRecord) Destroy() {
+func (r *NodeRecord) Destroy() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -234,14 +241,16 @@ func (r *NodeRecord) Destroy() {
 		panic(err)
 	}
 
-	ret := []interface{}{}
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return
+	return ret0
 }
 
 // DestroyNoWait is proxy generated method

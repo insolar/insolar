@@ -83,7 +83,7 @@ func (r *Member) GetClass() core.RecordRef {
 }
 
 // GetName is proxy generated method
-func (r *Member) GetName() string {
+func (r *Member) GetName() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -98,16 +98,18 @@ func (r *Member) GetName() string {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // GetNameNoWait is proxy generated method
@@ -128,7 +130,7 @@ func (r *Member) GetNameNoWait() {
 }
 
 // GetPublicKey is proxy generated method
-func (r *Member) GetPublicKey() string {
+func (r *Member) GetPublicKey() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -143,16 +145,18 @@ func (r *Member) GetPublicKey() string {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // GetPublicKeyNoWait is proxy generated method
@@ -173,7 +177,7 @@ func (r *Member) GetPublicKeyNoWait() {
 }
 
 // AuthorizedCall is proxy generated method
-func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
+func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, error) {
 	var args [6]interface{}
 	args[0] = ref
 	args[1] = delegate

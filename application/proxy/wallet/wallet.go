@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -81,7 +82,7 @@ func (r *Wallet) GetClass() core.RecordRef {
 }
 
 // Allocate is proxy generated method
-func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
+func (r *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, error) {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -98,16 +99,18 @@ func (r *Wallet) Allocate(amount uint, to *core.RecordRef) core.RecordRef {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 core.RecordRef
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // AllocateNoWait is proxy generated method
@@ -130,7 +133,7 @@ func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
 }
 
 // Receive is proxy generated method
-func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
+func (r *Wallet) Receive(amount uint, from *core.RecordRef) error {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = from
@@ -147,14 +150,16 @@ func (r *Wallet) Receive(amount uint, from *core.RecordRef) {
 		panic(err)
 	}
 
-	ret := []interface{}{}
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return
+	return ret0
 }
 
 // ReceiveNoWait is proxy generated method
@@ -177,7 +182,7 @@ func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
+func (r *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -194,14 +199,16 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) {
 		panic(err)
 	}
 
-	ret := []interface{}{}
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return
+	return ret0
 }
 
 // TransferNoWait is proxy generated method
@@ -224,7 +231,7 @@ func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
 }
 
 // Accept is proxy generated method
-func (r *Wallet) Accept(aRef *core.RecordRef) {
+func (r *Wallet) Accept(aRef *core.RecordRef) error {
 	var args [1]interface{}
 	args[0] = aRef
 
@@ -240,14 +247,16 @@ func (r *Wallet) Accept(aRef *core.RecordRef) {
 		panic(err)
 	}
 
-	ret := []interface{}{}
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return
+	return ret0
 }
 
 // AcceptNoWait is proxy generated method
@@ -269,7 +278,7 @@ func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
 }
 
 // GetTotalBalance is proxy generated method
-func (r *Wallet) GetTotalBalance() uint {
+func (r *Wallet) GetTotalBalance() (uint, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -284,16 +293,18 @@ func (r *Wallet) GetTotalBalance() uint {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 uint
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // GetTotalBalanceNoWait is proxy generated method
@@ -314,7 +325,7 @@ func (r *Wallet) GetTotalBalanceNoWait() {
 }
 
 // ReturnAndDeleteExpiredAllowances is proxy generated method
-func (r *Wallet) ReturnAndDeleteExpiredAllowances() {
+func (r *Wallet) ReturnAndDeleteExpiredAllowances() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -329,14 +340,16 @@ func (r *Wallet) ReturnAndDeleteExpiredAllowances() {
 		panic(err)
 	}
 
-	ret := []interface{}{}
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return
+	return ret0
 }
 
 // ReturnAndDeleteExpiredAllowancesNoWait is proxy generated method

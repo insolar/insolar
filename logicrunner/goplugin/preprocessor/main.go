@@ -36,8 +36,6 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/log"
 )
 
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -135,34 +133,62 @@ func (pf *ParsedFile) parseFunctionsAndMethods() error {
 			continue
 		}
 
+		var err error
 		if fd.Recv == nil || fd.Recv.NumFields() == 0 {
-			pf.parseConstructor(fd)
+			err = pf.parseConstructor(fd)
 		} else {
-			typename := typeName(fd.Recv.List[0].Type)
-			pf.methods[typename] = append(pf.methods[typename], fd)
+			err = pf.parseMethod(fd)
+		}
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (pf *ParsedFile) parseConstructor(fd *ast.FuncDecl) {
-	if !strings.HasPrefix(fd.Name.Name, "New") {
-		return // doesn't look like a constructor
+func (pf *ParsedFile) parseConstructor(fd *ast.FuncDecl) error {
+	name := fd.Name.Name
+	if !strings.HasPrefix(name, "New") {
+		return nil // doesn't look like a constructor
 	}
 
-	if fd.Type.Results.NumFields() < 1 {
-		log.Infof("Ignored %q as constructor, not enought returned values", fd.Name.Name)
-		return
+	res := fd.Type.Results
+
+	if res.NumFields() != 2 {
+		return errors.Errorf("Constructor %q should return exactly two values", name)
 	}
 
-	if fd.Type.Results.NumFields() > 1 {
-		log.Errorf("Constructor %q returns more than one argument, not supported at the moment", fd.Name.Name)
-		return
+	if pf.typeName(res.List[1].Type) != "error" {
+		return errors.Errorf("Constructor %q should return 'error'", name)
 	}
 
-	typename := typeName(fd.Type.Results.List[0].Type)
+	typename := pf.typeName(res.List[0].Type)
 	pf.constructors[typename] = append(pf.constructors[typename], fd)
+
+	return nil
+}
+
+func (pf *ParsedFile) parseMethod(fd *ast.FuncDecl) error {
+	name := fd.Name.Name
+
+	res := fd.Type.Results
+	if res.NumFields() < 1 {
+		return errors.Errorf("Method %q should return at least one result (error)", name)
+	}
+
+	lastResType := pf.typeName(res.List[res.NumFields()-1].Type)
+	if lastResType != "error" {
+		return errors.Errorf(
+			"Method %q should return 'error' as last value, but it's %q",
+			name, lastResType,
+		)
+	}
+
+	typename := pf.typeName(fd.Recv.List[0].Type)
+	pf.methods[typename] = append(pf.methods[typename], fd)
+
+	return nil
 }
 
 // ProxyPackageName guesses user friendly contract "name" from file name
@@ -306,6 +332,13 @@ func (pf *ParsedFile) codeOfNode(n ast.Node) string {
 	return string(pf.code[n.Pos()-1 : n.End()-1])
 }
 
+func (pf *ParsedFile) typeName(t ast.Expr) string {
+	if tmp, ok := t.(*ast.StarExpr); ok { // *type
+		t = tmp.X
+	}
+	return pf.codeOfNode(t)
+}
+
 func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
@@ -364,13 +397,6 @@ func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {
 		}
 	}
 	return rets
-}
-
-func typeName(t ast.Expr) string {
-	if tmp, ok := t.(*ast.StarExpr); ok { // *type
-		t = tmp.X
-	}
-	return t.(*ast.Ident).Name
 }
 
 func isContractTypeSpec(typeNode *ast.TypeSpec) bool {

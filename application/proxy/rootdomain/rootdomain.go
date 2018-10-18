@@ -2,6 +2,7 @@ package rootdomain
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -80,7 +81,7 @@ func (r *RootDomain) GetClass() core.RecordRef {
 }
 
 // RegisterNode is proxy generated method
-func (r *RootDomain) RegisterNode(publicKey string, role string) string {
+func (r *RootDomain) RegisterNode(publicKey string, role string) (string, error) {
 	var args [2]interface{}
 	args[0] = publicKey
 	args[1] = role
@@ -97,16 +98,18 @@ func (r *RootDomain) RegisterNode(publicKey string, role string) string {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // RegisterNodeNoWait is proxy generated method
@@ -129,7 +132,7 @@ func (r *RootDomain) RegisterNodeNoWait(publicKey string, role string) {
 }
 
 // Authorize is proxy generated method
-func (r *RootDomain) Authorize() (string, core.NodeRole, string) {
+func (r *RootDomain) Authorize() (string, core.NodeRole, string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -144,20 +147,22 @@ func (r *RootDomain) Authorize() (string, core.NodeRole, string) {
 		panic(err)
 	}
 
-	ret := [3]interface{}{}
+	ret := [4]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 core.NodeRole
 	ret[1] = &ret1
 	var ret2 string
 	ret[2] = &ret2
+	var ret3 *foundation.Error
+	ret[3] = &ret3
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0, ret1, ret2
+	return ret0, ret1, ret2, ret3
 }
 
 // AuthorizeNoWait is proxy generated method
@@ -178,7 +183,7 @@ func (r *RootDomain) AuthorizeNoWait() {
 }
 
 // CreateMember is proxy generated method
-func (r *RootDomain) CreateMember(name string, key string) string {
+func (r *RootDomain) CreateMember(name string, key string) (string, error) {
 	var args [2]interface{}
 	args[0] = name
 	args[1] = key
@@ -195,16 +200,18 @@ func (r *RootDomain) CreateMember(name string, key string) string {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // CreateMemberNoWait is proxy generated method
@@ -227,7 +234,7 @@ func (r *RootDomain) CreateMemberNoWait(name string, key string) {
 }
 
 // GetBalance is proxy generated method
-func (r *RootDomain) GetBalance(reference string) uint {
+func (r *RootDomain) GetBalance(reference string) (uint, error) {
 	var args [1]interface{}
 	args[0] = reference
 
@@ -243,16 +250,18 @@ func (r *RootDomain) GetBalance(reference string) uint {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 uint
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // GetBalanceNoWait is proxy generated method
@@ -274,7 +283,7 @@ func (r *RootDomain) GetBalanceNoWait(reference string) {
 }
 
 // SendMoney is proxy generated method
-func (r *RootDomain) SendMoney(from string, to string, amount uint) bool {
+func (r *RootDomain) SendMoney(from string, to string, amount uint) (bool, error) {
 	var args [3]interface{}
 	args[0] = from
 	args[1] = to
@@ -292,16 +301,18 @@ func (r *RootDomain) SendMoney(from string, to string, amount uint) bool {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 bool
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // SendMoneyNoWait is proxy generated method
@@ -325,7 +336,7 @@ func (r *RootDomain) SendMoneyNoWait(from string, to string, amount uint) {
 }
 
 // DumpUserInfo is proxy generated method
-func (r *RootDomain) DumpUserInfo(reference string) []byte {
+func (r *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	var args [1]interface{}
 	args[0] = reference
 
@@ -341,16 +352,18 @@ func (r *RootDomain) DumpUserInfo(reference string) []byte {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 []byte
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // DumpUserInfoNoWait is proxy generated method
@@ -372,7 +385,7 @@ func (r *RootDomain) DumpUserInfoNoWait(reference string) {
 }
 
 // DumpAllUsers is proxy generated method
-func (r *RootDomain) DumpAllUsers() []byte {
+func (r *RootDomain) DumpAllUsers() ([]byte, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -387,16 +400,18 @@ func (r *RootDomain) DumpAllUsers() []byte {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 []byte
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // DumpAllUsersNoWait is proxy generated method

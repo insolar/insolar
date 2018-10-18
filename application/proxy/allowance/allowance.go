@@ -2,6 +2,7 @@ package allowance
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -82,53 +83,8 @@ func (r *Allowance) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-// IsExpired is proxy generated method
-func (r *Allowance) IsExpired() bool {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsExpired", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	ret := [1]interface{}{}
-	var ret0 bool
-	ret[0] = &ret0
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		panic(err)
-	}
-
-	return ret0
-}
-
-// IsExpiredNoWait is proxy generated method
-func (r *Allowance) IsExpiredNoWait() {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "IsExpired", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-}
-
 // TakeAmount is proxy generated method
-func (r *Allowance) TakeAmount() uint {
+func (r *Allowance) TakeAmount() (uint, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -143,16 +99,18 @@ func (r *Allowance) TakeAmount() uint {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 uint
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // TakeAmountNoWait is proxy generated method
@@ -173,7 +131,7 @@ func (r *Allowance) TakeAmountNoWait() {
 }
 
 // GetBalanceForOwner is proxy generated method
-func (r *Allowance) GetBalanceForOwner() uint {
+func (r *Allowance) GetBalanceForOwner() (uint, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -188,16 +146,18 @@ func (r *Allowance) GetBalanceForOwner() uint {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 uint
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // GetBalanceForOwnerNoWait is proxy generated method
@@ -218,7 +178,7 @@ func (r *Allowance) GetBalanceForOwnerNoWait() {
 }
 
 // DeleteExpiredAllowance is proxy generated method
-func (r *Allowance) DeleteExpiredAllowance() uint {
+func (r *Allowance) DeleteExpiredAllowance() (uint, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -233,16 +193,18 @@ func (r *Allowance) DeleteExpiredAllowance() uint {
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 uint
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	return ret0, ret1
 }
 
 // DeleteExpiredAllowanceNoWait is proxy generated method
