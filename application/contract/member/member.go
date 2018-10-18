@@ -65,7 +65,7 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 }
 
 // Call method for authorized calls
-func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, *foundation.Error) {
+func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, *foundation.Error) {
 
 	if err := m.verifySig(method, params, seed, sign); err != nil {
 		return nil, err
@@ -73,13 +73,17 @@ func (m *Member) Call(ref core.RecordRef, method string, params []byte, seed []b
 
 	switch method {
 	case "CreateMember":
-		return m.createMemberCall(ref, params)
+		return m.createMemberCall(rootDomain, params)
 	case "GetMyBalance":
 		return m.getMyBalance()
 	case "GetBalance":
 		return m.getBalance(params)
 	case "Transfer":
 		return m.transferCall(params)
+	case "DumpUserInfo":
+		return m.dumpUserInfoCall(rootDomain, params)
+	case "DumpAllUsers":
+		return m.dumpAllUsersCall(rootDomain)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -115,4 +119,18 @@ func (m *Member) transferCall(params []byte) (interface{}, *foundation.Error) {
 	to := core.NewRefFromBase58(toStr)
 	wallet.GetImplementationFrom(m.GetReference()).Transfer(uint(amount), &to)
 	return nil, nil
+}
+
+func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{}, *foundation.Error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var user string
+	if err := signer.UnmarshalParams(params, &user); err != nil {
+		return nil, &foundation.Error{S: err.Error()}
+	}
+	return rootDomain.DumpUserInfo(user), nil
+}
+
+func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, *foundation.Error) {
+	rootDomain := rootdomain.GetObject(ref)
+	return rootDomain.DumpAllUsers(), nil
 }
