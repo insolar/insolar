@@ -24,15 +24,27 @@ import (
 )
 
 const TestPubKey = "test"
-const TestRole = "virtual"
+const TestIP = "127.0.0.1"
+
+var TestRoles = []string{"virtual"}
+
+func rolesToStrings(roles []string) []core.NodeRole {
+	var result []core.NodeRole
+	for _, role := range roles {
+		result = append(result, core.GetRoleFromString(role))
+	}
+
+	return result
+}
 
 func TestNewNodeRecord(t *testing.T) {
 
-	r := core.GetRoleFromString(TestRole)
+	r := rolesToStrings(TestRoles)
 	assert.NotEqual(t, core.RoleUnknown, r)
-	record := NewNodeRecord(TestPubKey, TestRole)
-	assert.Equal(t, r, record.Role)
-	assert.Equal(t, TestPubKey, record.PublicKey)
+	record := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	assert.Len(t, record.Record.Roles, 1)
+	assert.Equal(t, r, record.Record.Roles)
+	assert.Equal(t, TestPubKey, record.Record.PublicKey)
 }
 
 func TestFromString(t *testing.T) {
@@ -41,11 +53,14 @@ func TestFromString(t *testing.T) {
 }
 
 func TestNodeRecord_GetPublicKey(t *testing.T) {
-	record := NewNodeRecord(TestPubKey, TestRole)
+	record := NewNodeRecord(TestPubKey, TestRoles, TestIP)
 	assert.Equal(t, TestPubKey, record.GetPublicKey())
 }
 
-func TestNodeRecord_GetRole(t *testing.T) {
-	record := NewNodeRecord(TestPubKey, TestRole)
-	assert.Equal(t, core.RoleVirtual, record.GetRole())
+func TestNodeRecord_GetNodeInfo(t *testing.T) {
+	record := NewNodeRecord(TestPubKey, TestRoles, TestIP)
+	assert.Equal(t, TestIP, record.Record.IP)
+	r := rolesToStrings(TestRoles)
+	assert.Equal(t, r, record.Record.Roles)
+	assert.Equal(t, TestPubKey, record.Record.PublicKey)
 }
