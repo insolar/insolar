@@ -242,11 +242,13 @@ func TestLedgerArtifactManager_ActivateClass_CreatesCorrectRecord(t *testing.T) 
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
+	ctx := inscontext.TODO()
 
 	codeID, err := td.db.SetRecord(&record.CodeRecord{})
 	codeRef := record.Reference{Record: *codeID, Domain: domainID}
 	classRef := genRandomRef(0)
 	activateCoreID, err := td.manager.ActivateClass(
+		ctx,
 		*domainRef.CoreRef(), *classRef.CoreRef(), *codeRef.CoreRef(),
 	)
 	assert.Nil(t, err)

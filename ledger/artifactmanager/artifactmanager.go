@@ -228,7 +228,7 @@ func (m *LedgerArtifactManager) DeployCode(
 //
 // Request reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	domain, request, code core.RecordRef,
+	ctx core.Context, domain, request, code core.RecordRef,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.ActivateClass{
 		Domain:  domain,

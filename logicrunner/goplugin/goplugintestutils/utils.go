@@ -246,7 +246,7 @@ func (t *TestArtifactManager) GetCode(ctx core.Context, code core.RecordRef) (co
 }
 
 // ActivateClass implementation for tests
-func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) ActivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordID, error) {
 	t.Classes[request] = &TestClassDescriptor{
 		AM:   t,
 		ARef: &request,
@@ -371,7 +371,7 @@ func AMPublishCode(
 	nonce := testutils.RandomRef()
 	classRef, err = am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
 	assert.NoError(t, err)
-	_, err = am.ActivateClass(domain, *classRef, *codeRef)
+	_, err = am.ActivateClass(ctx, domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, classRef, err
@@ -470,6 +470,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		cb.Codes[name] = code
 
 		_, err = cb.ArtifactManager.ActivateClass(
+			ctx,
 			core.RecordRef{}, *cb.Classes[name],
 			*code,
 		)
