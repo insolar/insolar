@@ -36,8 +36,10 @@ func ProcessVersionConsensus(nodes []*core.ActiveNode) error {
 
 func getMapOfVersion(nodes []*core.ActiveNode) *map[string]int {
 	mapOfVersions := make(map[string]int)
+
+	// ToDo: I Need a version from the ActiveNodeList
 	for _ = range nodes { // node
-		ver := "v0.5.0" //node.Version
+		ver := "v0.5.0" // node.Version
 		if _, ok := mapOfVersions[ver]; ok {
 			mapOfVersions[ver]++
 		} else {

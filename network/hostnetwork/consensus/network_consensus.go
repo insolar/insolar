@@ -57,8 +57,12 @@ type NetworkConsensus struct {
 // ProcessPulse is called when we get new pulse from pulsar. Should be called in goroutine
 func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) {
 	activeNodes := ic.keeper.GetActiveNodes()
-	go manager.ProcessVersionConsensus(activeNodes)
-
+	go func() {
+		err := manager.ProcessVersionConsensus(activeNodes)
+		if err != nil {
+			log.Warn(err)
+		}
+	}()
 	if len(activeNodes) == 0 {
 		return
 	}
