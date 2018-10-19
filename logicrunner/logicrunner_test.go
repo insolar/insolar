@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -331,6 +332,7 @@ func (r *Two) Hello(s string) string {
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
 }
 `
+	ctx := inscontext.TODO()
 
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
@@ -338,8 +340,9 @@ func (r *Two) Hello(s string) string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
@@ -449,6 +452,7 @@ func (r *Two) Hello(s string) string {
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
 }
 `
+	ctx := inscontext.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -457,8 +461,9 @@ func (r *Two) Hello(s string) string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
@@ -532,6 +537,7 @@ func (r *Two) Hello() string {
 	return fmt.Sprintf("Hello %d times!", r.X)
 }
 `
+	ctx := inscontext.TODO()
 	// TODO: use am := testutil.NewTestArtifactManager() here
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
@@ -539,8 +545,9 @@ func (r *Two) Hello() string {
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
-	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{},
 		*obj,
 		*cb.Classes["one"],
@@ -612,14 +619,16 @@ func (r *One) Kill() {
 	r.SelfDestruct()
 }
 `
+	ctx := inscontext.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
@@ -654,14 +663,16 @@ func (r *One) Panic() {
 func (r *One) NotPanic() {
 }
 `
+	ctx := inscontext.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
 	err := cb.Build(map[string]string{"one": code})
 	assert.NoError(t, err)
 
-	obj, err := am.RegisterRequest(&message.CallConstructor{})
+	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
@@ -752,6 +763,7 @@ func New(n int) *Child {
 	return &Child{Num: n};
 }
 `
+	ctx := inscontext.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -761,8 +773,8 @@ func New(n int) *Child {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -811,6 +823,7 @@ func (c *Contract) Rand() int {
 	return rand.Intn(77)
 }
 `
+	ctx := inscontext.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -818,8 +831,8 @@ func (c *Contract) Rand() int {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -887,6 +900,7 @@ func (r *Two) NoError() error {
 	return nil
 }
 `
+	ctx := inscontext.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -897,8 +911,8 @@ func (r *Two) NoError() error {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.RegisterRequest(&message.CallConstructor{})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -971,6 +985,7 @@ func (r *Two) Hello() *string {
 	return nil
 }
 `
+	ctx := inscontext.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -981,8 +996,8 @@ func (r *Two) Hello() *string {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.RegisterRequest(&message.CallConstructor{})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{})
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -1061,14 +1076,15 @@ func TestRootDomainContract(t *testing.T) {
 		fmt.Print(err)
 	}
 
+	ctx := inscontext.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
 	assert.NoError(t, err)
 
 	// Initializing Root Domain
-	rootDomainRef, err := am.RegisterRequest(&message.BootstrapRequest{Name: "c1"})
-	_, err = am.ActivateObject(core.RecordRef{}, *rootDomainRef, *cb.Classes["rootdomain"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	rootDomainRef, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c1"})
+	_, err = am.ActivateObject(ctx, core.RecordRef{}, *rootDomainRef, *cb.Classes["rootdomain"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, rootDomainRef, nil, "contract created")
 
@@ -1078,13 +1094,13 @@ func TestRootDomainContract(t *testing.T) {
 	rootPubKey, err := cryptoHelper.ExportPublicKey(&rootKey.PublicKey)
 	assert.NoError(t, err)
 
-	rootMemberRef, err := am.RegisterRequest(&message.BootstrapRequest{Name: "c2"})
+	rootMemberRef, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c2"})
 	assert.NoError(t, err)
-	_, err = am.ActivateObject(core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef, goplugintestutils.CBORMarshal(t, member.New("root", rootPubKey)))
+	_, err = am.ActivateObject(ctx, core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef, goplugintestutils.CBORMarshal(t, member.New("root", rootPubKey)))
 	assert.NoError(t, err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(core.RecordRef{}, core.RecordRef{}, *rootDomainRef, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, *rootDomainRef, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
 	root := Caller{rootMemberRef.String(), rootKey, lr, t}
@@ -1190,6 +1206,7 @@ func New(n int) *Child {
 	return &Child{Num: n};
 }
 `
+	ctx := inscontext.TODO()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -1197,8 +1214,8 @@ func New(n int) *Child {
 	assert.NoError(t, err)
 
 	domain := core.NewRefFromBase58("c1")
-	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 

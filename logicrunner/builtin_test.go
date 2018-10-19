@@ -19,6 +19,7 @@ package logicrunner
 import (
 	"testing"
 
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/assert"
 
@@ -41,6 +42,7 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
+	ctx := inscontext.TODO()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -65,10 +67,10 @@ func TestBareHelloworld(t *testing.T) {
 	_, _, classRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
-	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: byteRecorRef(4)})
+	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: byteRecorRef(4)})
 	assert.NoError(t, err)
 
-	_, err = am.ActivateObject(domain, *contract, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
+	_, err = am.ActivateObject(ctx, domain, *contract, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 
