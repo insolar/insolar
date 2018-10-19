@@ -38,8 +38,6 @@ type UserConfigJSON struct {
 type RequestConfigJSON struct {
 	Params []interface{} `json:"params"`
 	Method string        `json:"method"`
-	//Callee   []byte        `json:"callee"`
-	//Delegate []byte        `json:"delegate"`
 }
 
 func readFile(path string, configType interface{}) error {
