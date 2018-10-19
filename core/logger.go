@@ -69,4 +69,6 @@ type Logger interface {
 
 	// SetOutput sets the output destination for the logger.
 	SetOutput(w io.Writer)
+	// WithFields return copy of Logger with predefined fields.
+	WithFields(map[string]interface{}) Logger
 }

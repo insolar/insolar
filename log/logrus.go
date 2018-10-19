@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/insolar/insolar/core"
 	"github.com/sirupsen/logrus"
 )
 
@@ -43,9 +44,8 @@ func (l logrusAdapter) sourced() *logrus.Entry {
 	})
 }
 
-// sourced adds a source info fields that contains
-// the package, func, file name and line where the logging happened.
-func (l logrusAdapter) WithFields(fields map[string]interface{}) logrusAdapter {
+// WithFields return copy of adapter with predefined fields.
+func (l logrusAdapter) WithFields(fields map[string]interface{}) core.Logger {
 	lcopy := l
 	lcopy.entry = l.entry.WithFields(logrus.Fields(fields))
 	return lcopy
