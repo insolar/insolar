@@ -63,9 +63,12 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 func (m *LedgerArtifactManager) RegisterRequest(
 	ctx core.Context, msg core.Message,
 ) (*core.RecordID, error) {
-	return m.setRecord(&record.CallRequest{
-		Payload: message.MustSerializeBytes(msg),
-	})
+	return m.setRecord(
+		&record.CallRequest{
+			Payload: message.MustSerializeBytes(msg),
+		},
+		*msg.Target(),
+	)
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -196,13 +199,16 @@ func (m *LedgerArtifactManager) GetChildren(
 func (m *LedgerArtifactManager) DeclareType(
 	ctx core.Context, domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordID, error) {
-	return m.setRecord(&record.TypeRecord{
-		ResultRecord: record.ResultRecord{
-			Domain:  record.Core2Reference(domain),
-			Request: record.Core2Reference(request),
+	return m.setRecord(
+		&record.TypeRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			TypeDeclaration: typeDec,
 		},
-		TypeDeclaration: typeDec,
-	})
+		request,
+	)
 }
 
 // DeployCode creates new code record in storage.
@@ -215,14 +221,17 @@ func (m *LedgerArtifactManager) DeployCode(
 	code []byte,
 	machineType core.MachineType,
 ) (*core.RecordID, error) {
-	return m.setRecord(&record.CodeRecord{
-		ResultRecord: record.ResultRecord{
-			Domain:  record.Core2Reference(domain),
-			Request: record.Core2Reference(request),
+	return m.setRecord(
+		&record.CodeRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			Code:        code,
+			MachineType: machineType,
 		},
-		Code:        code,
-		MachineType: machineType,
-	})
+		request,
+	)
 }
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
@@ -387,9 +396,10 @@ func (m *LedgerArtifactManager) fetchID(msg core.Message) (*core.RecordID, error
 	return &react.ID, nil
 }
 
-func (m *LedgerArtifactManager) setRecord(rec record.Record) (*core.RecordID, error) {
+func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordRef) (*core.RecordID, error) {
 	genericReact, err := m.messageBus.Send(&message.SetRecord{
-		Record: record.SerializeRecord(rec),
+		Record:    record.SerializeRecord(rec),
+		TargetRef: target,
 	})
 
 	if err != nil {

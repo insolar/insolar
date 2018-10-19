@@ -48,7 +48,8 @@ func (ledgerMessage) TargetRole() core.JetRole {
 type SetRecord struct {
 	ledgerMessage
 
-	Record []byte
+	Record    []byte
+	TargetRef core.RecordRef
 }
 
 // Type implementation of Message interface.
@@ -58,7 +59,7 @@ func (e *SetRecord) Type() core.MessageType {
 
 // Target implementation of Message interface.
 func (e *SetRecord) Target() *core.RecordRef {
-	return nil
+	return &e.TargetRef
 }
 
 // GetCode retrieves code from storage.
