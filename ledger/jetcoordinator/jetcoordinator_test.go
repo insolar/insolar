@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,7 +34,9 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	ledger, cleaner, keeper := ledgertestutils.TmpLedger(t, lr, "")
+	keeper := nodekeeper.NewNodeKeeper(core.RecordRef{})
+	c := core.Components{LogicRunner: lr, ActiveNodeComponent: keeper}
+	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
 	am := ledger.GetArtifactManager()
