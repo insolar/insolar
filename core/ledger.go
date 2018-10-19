@@ -134,7 +134,7 @@ type ArtifactManager interface {
 	// If memory is not provided, the class default memory will be used.
 	//
 	// Request reference will be this object's identifier and referred as "object head".
-	ActivateObject(domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
+	ActivateObject(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
 
 	// ActivateObjectDelegate is similar to ActivateObject but it created object will be parent's delegate of provided class.
 	ActivateObjectDelegate(domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)

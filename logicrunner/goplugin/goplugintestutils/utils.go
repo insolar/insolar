@@ -273,7 +273,14 @@ func (t *TestArtifactManager) UpdateClass(ctx core.Context, domain core.RecordRe
 }
 
 // ActivateObject implementation for tests
-func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordID, error) {
+func (t *TestArtifactManager) ActivateObject(
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	class core.RecordRef,
+	parent core.RecordRef,
+	memory []byte,
+) (*core.RecordID, error) {
 	codeRef := t.Classes[class].ACode
 
 	t.Objects[request] = &TestObjectDescriptor{
@@ -290,7 +297,8 @@ func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core
 
 // ActivateObjectDelegate implementation for tests
 func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordID, error) {
-	id, err := t.ActivateObject(domain, request, class, parent, memory)
+	ctx := inscontext.TODO()
+	id, err := t.ActivateObject(ctx, domain, request, class, parent, memory)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to generate ref")
 	}

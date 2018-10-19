@@ -342,6 +342,7 @@ func (r *Two) Hello(s string) string {
 
 	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
@@ -462,6 +463,7 @@ func (r *Two) Hello(s string) string {
 
 	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
@@ -545,6 +547,7 @@ func (r *Two) Hello() string {
 
 	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{},
 		*obj,
 		*cb.Classes["one"],
@@ -625,6 +628,7 @@ func (r *One) Kill() {
 
 	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
@@ -668,6 +672,7 @@ func (r *One) NotPanic() {
 
 	obj, err := am.RegisterRequest(ctx, &message.CallConstructor{})
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *obj,
 		*cb.Classes["one"],
 		*am.GenesisRef(),
@@ -769,7 +774,7 @@ func New(n int) *Child {
 
 	domain := core.NewRefFromBase58("c1")
 	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -827,7 +832,7 @@ func (c *Contract) Rand() int {
 
 	domain := core.NewRefFromBase58("c1")
 	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -907,7 +912,7 @@ func (r *Two) NoError() error {
 
 	domain := core.NewRefFromBase58("c1")
 	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -992,7 +997,7 @@ func (r *Two) Hello() *string {
 
 	domain := core.NewRefFromBase58("c1")
 	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["one"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 
@@ -1072,7 +1077,7 @@ func TestRootDomainContract(t *testing.T) {
 
 	// Initializing Root Domain
 	rootDomainRef, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c1"})
-	_, err = am.ActivateObject(core.RecordRef{}, *rootDomainRef, *cb.Classes["rootdomain"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	_, err = am.ActivateObject(ctx, core.RecordRef{}, *rootDomainRef, *cb.Classes["rootdomain"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, rootDomainRef, nil, "contract created")
 
@@ -1084,7 +1089,7 @@ func TestRootDomainContract(t *testing.T) {
 
 	rootMemberRef, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c2"})
 	assert.NoError(t, err)
-	_, err = am.ActivateObject(core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef, goplugintestutils.CBORMarshal(t, member.New("root", rootPubKey)))
+	_, err = am.ActivateObject(ctx, core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef, goplugintestutils.CBORMarshal(t, member.New("root", rootPubKey)))
 	assert.NoError(t, err)
 
 	// Updating root domain with root member
@@ -1208,7 +1213,7 @@ func New(n int) *Child {
 
 	domain := core.NewRefFromBase58("c1")
 	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: core.NewRefFromBase58("dassads")})
-	_, err = am.ActivateObject(domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
+	_, err = am.ActivateObject(ctx, domain, *contract, *cb.Classes["contract"], *am.GenesisRef(), goplugintestutils.CBORMarshal(t, nil))
 	assert.NoError(t, err, "create contract")
 	assert.NotEqual(t, contract, nil, "contract created")
 

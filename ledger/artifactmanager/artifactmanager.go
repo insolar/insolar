@@ -275,7 +275,12 @@ func (m *LedgerArtifactManager) UpdateClass(
 //
 // Request reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObject(
-	domain, object, class, parent core.RecordRef, memory []byte,
+	ctx core.Context,
+	domain core.RecordRef,
+	object core.RecordRef,
+	class core.RecordRef,
+	parent core.RecordRef,
+	memory []byte,
 ) (*core.RecordID, error) {
 	start := time.Now()
 	objID, err := m.fetchID(&message.ActivateObject{

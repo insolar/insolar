@@ -385,6 +385,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		log.Warnf("M = %+v", m)
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
+				insctx,
 				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}

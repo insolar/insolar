@@ -431,13 +431,16 @@ func TestLedgerArtifactManager_ActivateObject_VerifiesRecord(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
+	ctx := inscontext.TODO()
 	_, err := td.manager.ActivateObject(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef(0).CoreRef(), *genRandomRef(0).CoreRef(),
 		[]byte{},
 	)
 	assert.NotNil(t, err)
 	notClassID, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
 	_, err = td.manager.ActivateObject(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID), *genRandomRef(0).CoreRef(), []byte{},
 	)
 	assert.NotNil(t, err)
@@ -448,6 +451,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
+	ctx := inscontext.TODO()
 	memory := []byte{1, 2, 3}
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
 		ResultRecord: record.ResultRecord{
@@ -469,6 +473,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 
 	objRef := *genRandomRef(0)
 	activateCoreID, err := td.manager.ActivateObject(
+		ctx,
 		*domainRef.CoreRef(), *objRef.CoreRef(), *genRefWithID(classID), *genRefWithID(parentID), memory,
 	)
 	assert.Nil(t, err)

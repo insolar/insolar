@@ -70,7 +70,7 @@ func TestBareHelloworld(t *testing.T) {
 	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: byteRecorRef(4)})
 	assert.NoError(t, err)
 
-	_, err = am.ActivateObject(domain, *contract, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
+	_, err = am.ActivateObject(ctx, domain, *contract, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 

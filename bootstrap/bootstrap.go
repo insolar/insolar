@@ -208,6 +208,7 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *contract,
 		*cb.Classes[rootDomain],
 		*am.GenesisRef(),
@@ -233,6 +234,7 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *contract,
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
@@ -260,6 +262,7 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *contract,
 		*cb.Classes[memberContract],
 		*b.rootDomainRef,
