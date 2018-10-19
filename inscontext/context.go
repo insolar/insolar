@@ -123,12 +123,11 @@ func (ctx *Ctx) TraceID() string {
 }
 
 // WithLog returns *Ctx with provided core.Logger,
-// if parent is not *Ctx instance returns a new Ctx instance
-// overwise just set logger for provided Ctx.
 func WithLog(parent context.Context, clog core.Logger) *Ctx {
-	ctx := NewCtxFromContext(parent)
-	ctx.log = clog
-	return ctx
+	return &Ctx{
+		ctx: parent,
+		log: clog,
+	}
 }
 
 // Log returns core.Logger provided by *Ctx.
