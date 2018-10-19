@@ -71,4 +71,6 @@ type Logger interface {
 	SetOutput(w io.Writer)
 	// WithFields return copy of Logger with predefined fields.
 	WithFields(map[string]interface{}) Logger
+	// WithField return copy of Logger with predefined single field.
+	WithField(string, interface{}) Logger
 }

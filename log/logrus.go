@@ -51,6 +51,13 @@ func (l logrusAdapter) WithFields(fields map[string]interface{}) core.Logger {
 	return lcopy
 }
 
+// WithField return copy of adapter with predefined single field.
+func (l logrusAdapter) WithField(key string, value interface{}) core.Logger {
+	lcopy := l
+	lcopy.entry = l.entry.WithField(key, value)
+	return lcopy
+}
+
 // Debug logs a message at level Debug on the stdout.
 func (l logrusAdapter) Debug(args ...interface{}) {
 	l.sourced().Debug(args...)
