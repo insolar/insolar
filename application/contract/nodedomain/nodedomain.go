@@ -39,7 +39,10 @@ func NewNodeDomain() (*NodeDomain, error) {
 func (nd *NodeDomain) RegisterNode(pk string, role string) (core.RecordRef, error) {
 	// TODO: what should be done when record already exists?
 	newRecord := noderecord.NewNodeRecord(pk, role)
-	record := newRecord.AsChild(nd.GetReference())
+	record, err := newRecord.AsChild(nd.GetReference())
+	if err != nil {
+		return core.RecordRef{}, err
+	}
 	return record.GetReference(), nil
 }
 
