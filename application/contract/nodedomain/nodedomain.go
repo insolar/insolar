@@ -18,6 +18,7 @@ package nodedomain
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/noderecord"
@@ -32,8 +33,8 @@ type NodeDomain struct {
 }
 
 // NewNodeDomain create new NodeDomain
-func NewNodeDomain() *NodeDomain {
-	return &NodeDomain{}
+func NewNodeDomain() (*NodeDomain, error) {
+	return &NodeDomain{}, nil
 }
 
 func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
@@ -77,7 +78,10 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 		requiredNodesNum -= 1
 
 		nodeRecord := noderecord.GetObject(ref)
-		recordInfo := nodeRecord.GetNodeInfo()
+		recordInfo, err := nodeRecord.GetNodeInfo()
+		if err != nil {
+			return nil, &foundation.Error{S: "[ makeBootstrapNodesConfig ] Can't get NodeInfo"}
+		}
 
 		bConf := map[string]string{}
 		bConf["public_key"] = recordInfo.PublicKey
@@ -94,18 +98,18 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 }
 
 // RegisterNode registers node in system
-func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, string) {
+func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	const majorityPercentage = 0.51
 
 	if majorityRule != 0 {
 		if float32(majorityRule) <= majorityPercentage*float32(numberOfBootstrapNodes) {
-			return nil, "majorityRule must be more than 0.51 * numberOfBootstrapNodes"
+			return nil, errors.New("majorityRule must be more than 0.51 * numberOfBootstrapNodes")
 		}
 	}
 
 	result, err := nd.makeCertificate(numberOfBootstrapNodes, publicKey, majorityRule, roles)
 	if err != nil {
-		return nil, "[ RegisterNode ] " + err.Error()
+		return nil, errors.New("[ RegisterNode ] " + err.Error())
 	}
 
 	// TODO: what should be done when record already exists?
@@ -116,30 +120,33 @@ func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int,
 
 	rawCert, err := json.Marshal(result)
 	if err != nil {
-		return nil, "Can't marshal certificate: " + err.Error()
+		return nil, errors.New("Can't marshal certificate: " + err.Error())
 	}
 
-	return rawCert, ""
+	return rawCert, nil
 }
 
 // RemoveNode deletes node from registry
-func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
+func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 	node := nd.getNodeRecord(nodeRef)
-	node.Destroy()
+	return node.Destroy()
 }
 
 // IsAuthorized checks is signature correct
-func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
-	nodeR := nd.getNodeRecord(nodeRef)
-	ok, err := ecdsa.Verify(seed, signatureRaw, nodeR.GetPublicKey())
+func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (bool, error) {
+	pubKey, err := nd.getNodeRecord(nodeRef).GetPublicKey()
 	if err != nil {
-		panic(err)
+		return false, err
 	}
-	return ok
+	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
 }
 
 // Authorize checks node and returns node info
-func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (pubKey string, roles []core.NodeRole, errS string) {
+func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (pubKey string, roles []core.NodeRole, errS error) {
 	// TODO: this should be removed when proxies stop panic
 	defer func() {
 		if r := recover(); r != nil {
@@ -150,22 +157,25 @@ func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRa
 			if ok {
 				errTxt = err.Error()
 			}
-			errS = "[ Authorize ] Recover after panic: " + errTxt
+			err = errors.New("[ Authorize ] Recover after panic: " + errTxt)
 		}
 	}()
 	nodeR := nd.getNodeRecord(nodeRef)
-	nodeInfo := nodeR.GetNodeInfo()
+	nodeInfo, err := nodeR.GetNodeInfo()
+	if err != nil {
+		return "", nil, fmt.Errorf("[ Authorize ] Problem with Getting info: " + err.Error())
+	}
 
 	pubKey = nodeInfo.PublicKey
 	roles = nodeInfo.Roles
 
 	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
 	if err != nil {
-		return "", nil, "[ Authorize ] Problem with verifying of signature: " + err.Error()
+		return "", nil, fmt.Errorf("[ Authorize ] Problem with verifying of signature: " + err.Error())
 	}
 	if !ok {
-		return "", nil, "[ Authorize ] Can't verify signature: " + err.Error()
+		return "", nil, errors.New("[ Authorize ] Can't verify signature")
 	}
 
-	return pubKey, roles, ""
+	return pubKey, roles, nil
 }

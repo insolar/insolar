@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
@@ -42,12 +43,21 @@ func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 
 // ExtractRegisterNodeResponse extracts response of RegisterNode
 func ExtractRegisterNodeResponse(data []byte) ([]byte, error) {
-	var holder []byte
-	raw, err := core.UnMarshalResponse(data, []interface{}{holder})
+	var holderData []byte
+	holderError := &foundation.Error{}
+	raw, err := core.UnMarshalResponse(data, []interface{}{holderData, holderError})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ networkcoordinator::extractRegisterNodeResponse ]")
+		return nil, errors.Wrap(err, "[ networkcoordinator::extractRegisterNodeResponse ] Can't unmarshal")
 	}
-	if len(raw) == 0 {
+	if len(raw) != 2 {
+		return nil, errors.New("[ networkcoordinator::extractRegisterNodeResponse ] No enough values")
+	}
+
+	if raw[1] != nil {
+		return nil, errors.Wrap(raw[1].(error), "[ networkcoordinator::extractRegisterNodeResponse ] Has error")
+	}
+
+	if raw[0] == nil {
 		return nil, errors.New("[ networkcoordinator::extractRegisterNodeResponse ] Empty data")
 	}
 
@@ -75,10 +85,14 @@ func ExtractNodeRef(rawJSON []byte) (string, error) {
 }
 
 func extractReferenceResponse(data []byte) (*core.RecordRef, error) {
-	var ref core.RecordRef
-	_, err := core.UnMarshalResponse(data, []interface{}{&ref})
+	var ref *core.RecordRef
+	var ferr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&ref, &ferr})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractReferenceResponse ]")
 	}
-	return &ref, nil
+	if ferr != nil {
+		return nil, errors.Wrap(ferr, "[ extractReferenceResponse ]")
+	}
+	return ref, nil
 }

@@ -147,7 +147,6 @@ func (nc *NetworkCoordinator) RegisterNode(publicKey string, numberOfBootstrapNo
 	}
 
 	rawCertificate, err := ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't extract response")
 	}

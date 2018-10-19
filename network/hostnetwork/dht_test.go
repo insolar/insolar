@@ -205,7 +205,6 @@ func newRealDHT(t *testing.T, bootstrap []*host.Host, port string) *DHT {
 			4,
 			false,
 			testutils.RandomRef(),
-			nil,
 			5,
 			key)
 	} else {
@@ -218,7 +217,6 @@ func newRealDHT(t *testing.T, bootstrap []*host.Host, port string) *DHT {
 			4,
 			false,
 			testutils.RandomRef(),
-			nil,
 			5,
 			key)
 	}
@@ -246,7 +244,6 @@ func newDHT(t *testing.T, bootstrap []*host.Host, port string) (*DHT, transport.
 			4,
 			false,
 			testutils.RandomRef(),
-			nil,
 			5,
 			key)
 	} else {
@@ -262,7 +259,6 @@ func newDHT(t *testing.T, bootstrap []*host.Host, port string) (*DHT, transport.
 			4,
 			false,
 			testutils.RandomRef(),
-			nil,
 			5,
 			key)
 	}
@@ -503,7 +499,7 @@ func TestHostResponseSendError(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy(), 4, false, testutils.RandomRef(), nil, 5, key)
+		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
 
 	mockTp := tp.(*mockTransport)
 
@@ -620,7 +616,7 @@ func TestStoreReplication(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy(), 4, false, testutils.RandomRef(), nil, 5, key)
+		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
 
 	mockTp := tp.(*mockTransport)
 
@@ -910,7 +906,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	key, _ := ecdsa.GeneratePrivateKey()
 	ids1 = append(ids1, id1)
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
-	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false, testutils.RandomRef(), nil, 5, key)
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
 	assert.NoError(t, err)
 
 	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
@@ -923,7 +919,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 			},
 		},
 	},
-		relay.NewProxy(), 4, false, testutils.RandomRef(), nil, 5, key)
+		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
 
 	dhts = append(dhts, dht1)
 	dhts = append(dhts, dht2)
@@ -1055,7 +1051,7 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 		host1 := prefix + strconv.Itoa(port)
 		st, s, tp, r, _ := realDhtParamsWithId(host1)
 		key, _ := ecdsa.GeneratePrivateKey()
-		dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 4, false, testutils.RandomRef(), nil, 5, key)
+		dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
 		dhts = append(dhts, dht)
 		go dht.Listen()
 		dht.Bootstrap()

@@ -158,13 +158,15 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 		return 0, errors.Wrap(err, "[ extractGetBalanceResponse ]")
 	}
 
-	balance, ok := dataUnmarsh[0].(uint)
-	if !ok {
-		msg := fmt.Sprintf("Can't cast response to uint. orig: %s", reflect.TypeOf(dataUnmarsh[0]).String())
-		return 0, errors.New(msg)
+	if _, ok := dataUnmarsh[0].(uint64); ok {
+		return (uint)(dataUnmarsh[0].(uint64)), nil
+	}
+	if balance, ok := dataUnmarsh[0].(uint); ok {
+		return balance, nil
 	}
 
-	return balance, nil
+	msg := fmt.Sprintf("Can't cast response to uint. orig: %s", reflect.TypeOf(dataUnmarsh[0]).String())
+	return 0, errors.New(msg)
 }
 
 // ProcessGetBalance processes get_balance query type
@@ -338,12 +340,12 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
+	pubKey, roles, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 	result["public_key"] = pubKey
-	result["role"] = role
+	result["roles"] = roles
 
 	// Check calling via networkcoordinator
 	privKey, err := ecdsahelper.GeneratePrivateKey()

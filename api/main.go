@@ -250,7 +250,10 @@ func (ar *Runner) getMemberPubKey(ref string) string { //nolint
 	if ok {
 		return key
 	}
-	key = member.GetObject(core.NewRefFromBase58(ref)).GetPublicKey()
+	key, err := member.GetObject(core.NewRefFromBase58(ref)).GetPublicKey()
+	if err != nil {
+		panic(err)
+	}
 	ar.cacheLock.Lock()
 	ar.keyCache[ref] = key
 	ar.cacheLock.Unlock()

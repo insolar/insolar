@@ -18,6 +18,7 @@ package transport
 
 import (
 	"errors"
+	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -65,6 +66,7 @@ type future struct {
 	request        *packet.Packet
 	requestID      packet.RequestID
 	cancelCallback CancelCallback
+	canceled       uint32
 }
 
 // NewFuture creates new Future.
@@ -119,6 +121,8 @@ func (future *future) GetResult(duration time.Duration) (*packet.Packet, error) 
 
 // Cancel allows to cancel Future processing.
 func (future *future) Cancel() {
-	close(future.result)
-	future.cancelCallback(future)
+	if atomic.CompareAndSwapUint32(&future.canceled, 0, 1) {
+		close(future.result)
+		future.cancelCallback(future)
+	}
 }

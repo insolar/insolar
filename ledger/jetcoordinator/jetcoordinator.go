@@ -25,10 +25,10 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db             *storage.DB
-	rootJetNode    *JetNode
-	roleCandidates map[core.JetRole][]core.RecordRef
-	roleCounts     map[core.JetRole]int
+	db          *storage.DB
+	rootJetNode *JetNode
+	roleCounts  map[core.JetRole]int
+	activeNodes core.ActiveNodeComponent
 }
 
 // NewJetCoordinator creates new coordinator instance.
@@ -53,16 +53,7 @@ func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) (*JetC
 }
 
 func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
-	jc.roleCandidates = map[core.JetRole][]core.RecordRef{}
 	jc.roleCounts = map[core.JetRole]int{}
-
-	for intRole, candidates := range conf.RoleCandidates {
-		role := core.JetRole(intRole)
-		jc.roleCandidates[role] = []core.RecordRef{}
-		for _, cand := range candidates {
-			jc.roleCandidates[role] = append(jc.roleCandidates[role], core.NewRefFromBase58(cand))
-		}
-	}
 
 	for intRole, count := range conf.RoleCounts {
 		role := core.JetRole(intRole)
@@ -94,9 +85,8 @@ func (jc *JetCoordinator) QueryRole(
 	if err != nil {
 		return nil, err
 	}
-
-	candidates, ok := jc.roleCandidates[role]
-	if !ok {
+	candidates := jc.activeNodes.GetActiveNodesByRole(role)
+	if len(candidates) == 0 {
 		return nil, errors.New("no candidates for this role")
 	}
 	count, ok := jc.roleCounts[role]
@@ -110,6 +100,14 @@ func (jc *JetCoordinator) QueryRole(
 	}
 
 	return selected, nil
+}
+
+func (jc *JetCoordinator) Link(components core.Components) error {
+	if components.ActiveNodeComponent == nil {
+		return errors.New("core.ActiveNodeComponent is nil")
+	}
+	jc.activeNodes = components.ActiveNodeComponent
+	return nil
 }
 
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck

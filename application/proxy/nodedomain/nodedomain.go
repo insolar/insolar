@@ -2,6 +2,7 @@ package nodedomain
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
@@ -80,7 +81,7 @@ func (r *NodeDomain) GetClass() core.RecordRef {
 }
 
 // RegisterNode is proxy generated method
-func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, string) {
+func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	var args [5]interface{}
 	args[0] = publicKey
 	args[1] = numberOfBootstrapNodes
@@ -103,7 +104,7 @@ func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, 
 	ret := [2]interface{}{}
 	var ret0 []byte
 	ret[0] = &ret0
-	var ret1 string
+	var ret1 *foundation.Error
 	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
@@ -111,7 +112,10 @@ func (r *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, 
 		panic(err)
 	}
 
-	return ret0, ret1
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // RegisterNodeNoWait is proxy generated method
@@ -137,7 +141,7 @@ func (r *NodeDomain) RegisterNodeNoWait(publicKey string, numberOfBootstrapNodes
 }
 
 // RemoveNode is proxy generated method
-func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
+func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 	var args [1]interface{}
 	args[0] = nodeRef
 
@@ -153,14 +157,19 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
 		panic(err)
 	}
 
-	ret := []interface{}{}
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }
 
 // RemoveNodeNoWait is proxy generated method
@@ -182,7 +191,7 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) {
 }
 
 // IsAuthorized is proxy generated method
-func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
+func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (bool, error) {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -200,16 +209,21 @@ func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signature
 		panic(err)
 	}
 
-	ret := [1]interface{}{}
+	ret := [2]interface{}{}
 	var ret0 bool
 	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
 		panic(err)
 	}
 
-	return ret0
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // IsAuthorizedNoWait is proxy generated method
@@ -233,7 +247,7 @@ func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, sig
 }
 
 // Authorize is proxy generated method
-func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, string) {
+func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -256,7 +270,7 @@ func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw
 	ret[0] = &ret0
 	var ret1 []core.NodeRole
 	ret[1] = &ret1
-	var ret2 string
+	var ret2 *foundation.Error
 	ret[2] = &ret2
 
 	err = proxyctx.Current.Deserialize(res, &ret)
@@ -264,7 +278,10 @@ func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw
 		panic(err)
 	}
 
-	return ret0, ret1, ret2
+	if ret2 != nil {
+		return ret0, ret1, ret2
+	}
+	return ret0, ret1, nil
 }
 
 // AuthorizeNoWait is proxy generated method
