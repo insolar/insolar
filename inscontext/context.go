@@ -118,6 +118,7 @@ func WithTrace(parent context.Context, trace string) *Ctx {
 	return WithValue(ctx, traceKey, trace)
 }
 
+// TraceID returns TraceID if it stored in context or empty string overwise.
 func (ctx *Ctx) TraceID() string {
 	return ctx.Value(traceKey).(string)
 }
