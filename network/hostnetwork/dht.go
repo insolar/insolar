@@ -27,7 +27,6 @@ import (
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/dns"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/consensus"
@@ -902,25 +901,6 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 
 func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, ht *routing.HashTable) {
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
-
-	if msg.Type == packet.TypeRPC {
-		data := msg.Data.(*packet.RequestDataRPC)
-		signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
-		if err != nil {
-			log.Error(err, "failed to parse incoming RPC")
-			return
-		}
-		activeNode := dht.activeNodeKeeper.GetActiveNode(data.NodeID)
-		if activeNode == nil {
-			log.Warn("couldn't check a sign from non active node")
-			return
-		}
-		if !message.SignIsCorrect(signedMsg, activeNode.PublicKey) {
-			log.Warn("RPC message not signed")
-			return
-		}
-	}
-
 	response, err := ParseIncomingPacket(dht, ctx, msg, packetBuilder)
 	if err != nil {
 		log.Errorln(err)

@@ -43,17 +43,6 @@ type BaseLogicMessage struct {
 	Caller  core.RecordRef
 	Request core.RecordRef
 	Nonce   uint64
-	sign    []byte
-}
-
-// SetSign sets a signature to message.
-func (m *BaseLogicMessage) SetSign(sign []byte) {
-	m.sign = sign
-}
-
-// GetSign returns a sign.
-func (m *BaseLogicMessage) GetSign() []byte {
-	return m.sign
 }
 
 func (m *BaseLogicMessage) GetCaller() *core.RecordRef {
@@ -131,7 +120,6 @@ func (m *CallConstructor) Target() *core.RecordRef {
 type ExecutorResults struct {
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
-	sign        []byte
 }
 
 func (m *ExecutorResults) Type() core.MessageType {
@@ -155,19 +143,10 @@ func (m *ExecutorResults) GetReference() core.RecordRef {
 	return m.RecordRef
 }
 
-func (m *ExecutorResults) GetSign() []byte {
-	return m.sign
-}
-
-func (m *ExecutorResults) SetSign(sign []byte) {
-	m.sign = sign
-}
-
 type ValidateCaseBind struct {
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
 	Pulse       core.Pulse
-	sign        []byte
 }
 
 func (m *ValidateCaseBind) Type() core.MessageType {
@@ -199,19 +178,10 @@ func (m *ValidateCaseBind) GetPulse() core.Pulse {
 	return m.Pulse
 }
 
-func (m *ValidateCaseBind) GetSign() []byte {
-	return m.sign
-}
-
-func (m *ValidateCaseBind) SetSign(sign []byte) {
-	m.sign = sign
-}
-
 type ValidationResults struct {
 	RecordRef        core.RecordRef
 	PassedStepsCount int
 	Error            error
-	sign             []byte
 }
 
 func (m *ValidationResults) Type() core.MessageType {
@@ -233,12 +203,4 @@ func (m *ValidationResults) GetCaller() *core.RecordRef {
 
 func (m *ValidationResults) GetReference() core.RecordRef {
 	return m.RecordRef
-}
-
-func (m *ValidationResults) GetSign() []byte {
-	return m.sign
-}
-
-func (m *ValidationResults) SetSign(sign []byte) {
-	m.sign = sign
 }

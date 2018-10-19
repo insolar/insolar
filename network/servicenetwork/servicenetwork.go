@@ -17,6 +17,7 @@
 package servicenetwork
 
 import (
+	"crypto/ecdsa"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -86,10 +87,6 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, errors.New("message is nil")
 	}
 	hostID := nodenetwork.ResolveHostID(nodeID)
-	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign a message")
-	}
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
@@ -109,10 +106,6 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a message")
-	}
 	buff, err := messageToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize event")
@@ -129,6 +122,11 @@ func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.
 // GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
 func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
 	return network.hostNetwork, createContext(network.hostNetwork)
+}
+
+// GetPrivateKey returns a private key.
+func (network *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
+	return network.nodeNetwork.GetPrivateKey()
 }
 
 func getPulseManager(components core.Components) (core.PulseManager, error) {
