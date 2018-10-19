@@ -21,21 +21,21 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *RootDomain {
+func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*RootDomain, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &RootDomain{Reference: ref}
+	return &RootDomain{Reference: ref}, nil
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *RootDomain {
+func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*RootDomain, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &RootDomain{Reference: ref}
+	return &RootDomain{Reference: ref}, nil
 }
 
 // GetObject returns proxy object

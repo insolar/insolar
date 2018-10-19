@@ -35,7 +35,10 @@ func (w *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, erro
 	// TODO check balance is enough
 	w.Balance -= amount
 	ah := allowance.New(to, amount, w.GetContext().Time.Unix()+10)
-	a := ah.AsChild(w.GetReference())
+	a, err := ah.AsChild(w.GetReference())
+	if err != nil {
+		return core.RecordRef{}, err
+	}
 	return a.GetReference(), nil
 }
 
@@ -65,7 +68,10 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	toWalletRef := toWallet.GetReference()
 
 	ah := allowance.New(&toWalletRef, amount, w.GetContext().Time.Unix()+10)
-	a := ah.AsChild(w.GetReference())
+	a, err := ah.AsChild(w.GetReference())
+	if err != nil {
+		return err
+	}
 
 	r := a.GetReference()
 	toWallet.Accept(&r)

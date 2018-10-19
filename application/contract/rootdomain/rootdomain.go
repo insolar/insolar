@@ -106,9 +106,17 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
 func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.RootMember {
 	memberHolder := member.New(name, key)
-	m := memberHolder.AsChild(rd.GetReference())
+	m, err := memberHolder.AsChild(rd.GetReference())
+	if err != nil {
+		return "", err
+	}
+
 	wHolder := wallet.New(1000)
-	wHolder.AsDelegate(m.GetReference())
+	_, err = wHolder.AsDelegate(m.GetReference())
+	if err != nil {
+		return "", err
+	}
+
 	return m.GetReference().String(), nil
 	//}
 	//return ""
