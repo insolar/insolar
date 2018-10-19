@@ -116,20 +116,22 @@ func (r *NodeRecord) GetPublicKey() (string, error) {
 }
 
 // GetPublicKeyNoWait is proxy generated method
-func (r *NodeRecord) GetPublicKeyNoWait() {
+func (r *NodeRecord) GetPublicKeyNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // GetRole is proxy generated method
@@ -166,20 +168,22 @@ func (r *NodeRecord) GetRole() (core.NodeRole, error) {
 }
 
 // GetRoleNoWait is proxy generated method
-func (r *NodeRecord) GetRoleNoWait() {
+func (r *NodeRecord) GetRoleNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // GetRoleAndPublicKey is proxy generated method
@@ -218,20 +222,22 @@ func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string, error) {
 }
 
 // GetRoleAndPublicKeyNoWait is proxy generated method
-func (r *NodeRecord) GetRoleAndPublicKeyNoWait() {
+func (r *NodeRecord) GetRoleAndPublicKeyNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRoleAndPublicKey", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // Destroy is proxy generated method
@@ -266,18 +272,20 @@ func (r *NodeRecord) Destroy() error {
 }
 
 // DestroyNoWait is proxy generated method
-func (r *NodeRecord) DestroyNoWait() {
+func (r *NodeRecord) DestroyNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Destroy", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }

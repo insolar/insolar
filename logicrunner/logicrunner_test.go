@@ -522,7 +522,10 @@ type One struct {
 func (r *One) Hello() error {
 	holder := two.New()
 	friend := holder.AsDelegate(r.GetReference())
-	friend.HelloNoWait()
+	err := friend.HelloNoWait()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 `

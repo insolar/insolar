@@ -116,7 +116,7 @@ func (r *NodeDomain) RegisterNode(pk string, role string) (core.RecordRef, error
 }
 
 // RegisterNodeNoWait is proxy generated method
-func (r *NodeDomain) RegisterNodeNoWait(pk string, role string) {
+func (r *NodeDomain) RegisterNodeNoWait(pk string, role string) error {
 	var args [2]interface{}
 	args[0] = pk
 	args[1] = role
@@ -125,13 +125,15 @@ func (r *NodeDomain) RegisterNodeNoWait(pk string, role string) {
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // RemoveNode is proxy generated method
@@ -167,7 +169,7 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 }
 
 // RemoveNodeNoWait is proxy generated method
-func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) {
+func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) error {
 	var args [1]interface{}
 	args[0] = nodeRef
 
@@ -175,13 +177,15 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) {
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RemoveNode", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // IsAuthorized is proxy generated method
@@ -221,7 +225,7 @@ func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signature
 }
 
 // IsAuthorizedNoWait is proxy generated method
-func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) {
+func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) error {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -231,13 +235,15 @@ func (r *NodeDomain) IsAuthorizedNoWait(nodeRef core.RecordRef, seed []byte, sig
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "IsAuthorized", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // Authorize is proxy generated method
@@ -279,7 +285,7 @@ func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw
 }
 
 // AuthorizeNoWait is proxy generated method
-func (r *NodeDomain) AuthorizeNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) {
+func (r *NodeDomain) AuthorizeNoWait(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) error {
 	var args [3]interface{}
 	args[0] = nodeRef
 	args[1] = seed
@@ -289,11 +295,13 @@ func (r *NodeDomain) AuthorizeNoWait(nodeRef core.RecordRef, seed []byte, signat
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Authorize", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }

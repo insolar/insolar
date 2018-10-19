@@ -117,7 +117,7 @@ func (r *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, erro
 }
 
 // AllocateNoWait is proxy generated method
-func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
+func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) error {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -126,13 +126,15 @@ func (r *Wallet) AllocateNoWait(amount uint, to *core.RecordRef) {
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Allocate", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // Receive is proxy generated method
@@ -169,7 +171,7 @@ func (r *Wallet) Receive(amount uint, from *core.RecordRef) error {
 }
 
 // ReceiveNoWait is proxy generated method
-func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
+func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) error {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = from
@@ -178,13 +180,15 @@ func (r *Wallet) ReceiveNoWait(amount uint, from *core.RecordRef) {
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Receive", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // Transfer is proxy generated method
@@ -221,7 +225,7 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 }
 
 // TransferNoWait is proxy generated method
-func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
+func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) error {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -230,13 +234,15 @@ func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) {
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Transfer", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // Accept is proxy generated method
@@ -272,7 +278,7 @@ func (r *Wallet) Accept(aRef *core.RecordRef) error {
 }
 
 // AcceptNoWait is proxy generated method
-func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
+func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) error {
 	var args [1]interface{}
 	args[0] = aRef
 
@@ -280,13 +286,15 @@ func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) {
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Accept", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // GetTotalBalance is proxy generated method
@@ -323,20 +331,22 @@ func (r *Wallet) GetTotalBalance() (uint, error) {
 }
 
 // GetTotalBalanceNoWait is proxy generated method
-func (r *Wallet) GetTotalBalanceNoWait() {
+func (r *Wallet) GetTotalBalanceNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetTotalBalance", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // ReturnAndDeleteExpiredAllowances is proxy generated method
@@ -371,18 +381,20 @@ func (r *Wallet) ReturnAndDeleteExpiredAllowances() error {
 }
 
 // ReturnAndDeleteExpiredAllowancesNoWait is proxy generated method
-func (r *Wallet) ReturnAndDeleteExpiredAllowancesNoWait() {
+func (r *Wallet) ReturnAndDeleteExpiredAllowancesNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "ReturnAndDeleteExpiredAllowances", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }

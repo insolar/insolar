@@ -116,20 +116,22 @@ func (r *Member) GetName() (string, error) {
 }
 
 // GetNameNoWait is proxy generated method
-func (r *Member) GetNameNoWait() {
+func (r *Member) GetNameNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetName", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // GetPublicKey is proxy generated method
@@ -166,20 +168,22 @@ func (r *Member) GetPublicKey() (string, error) {
 }
 
 // GetPublicKeyNoWait is proxy generated method
-func (r *Member) GetPublicKeyNoWait() {
+func (r *Member) GetPublicKeyNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // Call is proxy generated method
@@ -221,7 +225,7 @@ func (r *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 }
 
 // CallNoWait is proxy generated method
-func (r *Member) CallNoWait(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) {
+func (r *Member) CallNoWait(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) error {
 	var args [5]interface{}
 	args[0] = rootDomain
 	args[1] = method
@@ -233,11 +237,13 @@ func (r *Member) CallNoWait(rootDomain core.RecordRef, method string, params []b
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Call", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
