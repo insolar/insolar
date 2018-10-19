@@ -359,7 +359,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 }
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
-	executionState := lr.UpsertExecution(m.GetRequest())
+	executionState := lr.UpsertExecution(m.GetReference())
 	executionState.mutex.Lock()
 	defer executionState.mutex.Unlock()
 
