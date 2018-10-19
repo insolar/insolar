@@ -43,15 +43,6 @@ func capture(f func()) string {
 	return buf.String()
 }
 
-type MockRpcClientFactoryWrapper struct {
-	mock.Mock
-}
-
-func (mock *MockRpcClientFactoryWrapper) CreateWrapper() RPCClientWrapper {
-	args := mock.Mock.Called()
-	return args.Get(0).(RPCClientWrapper)
-}
-
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 
 	privateKey, privateKeyExported, _ := generatePrivateAndConvertPublic(t)
@@ -65,8 +56,10 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	}
 	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
-	clientFactory := &MockRpcClientFactoryWrapper{}
-	clientFactory.On("CreateWrapper").Return(&pulsartestutils.MockRPCClientWrapper{})
+
+	factoryMock := NewRPCClientWrapperFactoryMock(t)
+	clientMock := NewRPCClientWrapperMock(t)
+	factoryMock.CreateWrapperMock.Return(clientMock)
 
 	result, err := NewPulsar(configuration.Configuration{
 		Pulsar: configuration.Pulsar{
@@ -76,7 +69,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		PrivateKey: privateKeyExported,
 	},
 		storage,
-		clientFactory,
+		factoryMock,
 		pulsartestutils.MockEntropyGenerator{},
 		nil,
 		mockListener,
@@ -89,7 +82,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	assert.IsType(t, result.Sock, &pulsartestutils.MockListener{})
 	assert.NotNil(t, result.PrivateKey)
 
-	clientFactory.AssertNumberOfCalls(t, "CreateWrapper", 0)
+	assert.Equal(t, uint64(0), factoryMock.CreateWrapperCounter)
 }
 
 func TestNewPulsar_WithNeighbours(t *testing.T) {
@@ -105,8 +98,10 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	parsedExpectedPrivateKey, _ := ecdsahelper.ExportPrivateKey(expectedPrivateKey)
 	storage := &pulsartestutils.MockPulsarStorage{}
 	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
-	clientFactory := &MockRpcClientFactoryWrapper{}
-	clientFactory.On("CreateWrapper").Return(&pulsartestutils.MockRPCClientWrapper{})
+
+	factoryMock := NewRPCClientWrapperFactoryMock(t)
+	clientMock := NewRPCClientWrapperMock(t)
+	factoryMock.CreateWrapperMock.Return(clientMock)
 
 	result, err := NewPulsar(
 		configuration.Configuration{
@@ -121,7 +116,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 			PrivateKey: parsedExpectedPrivateKey,
 		},
 		storage,
-		clientFactory,
+		factoryMock,
 		pulsartestutils.MockEntropyGenerator{}, nil, func(connectionType string, address string) (net.Listener, error) {
 			return &pulsartestutils.MockListener{}, nil
 		})
@@ -130,7 +125,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	assertObj.Equal(2, len(result.Neighbours))
 	assertObj.Equal("tcp", result.Neighbours[firstExpectedKey].ConnectionType.String())
 	assertObj.Equal("pct", result.Neighbours[secondExpectedKey].ConnectionType.String())
-	clientFactory.AssertNumberOfCalls(t, "CreateWrapper", 2)
+	assert.Equal(t, uint64(2), factoryMock.CreateWrapperCounter)
 }
 
 func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
