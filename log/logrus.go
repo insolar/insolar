@@ -36,9 +36,11 @@ func newLogrusAdapter() logrusAdapter {
 // the package, func, file name and line where the logging happened.
 func (l logrusAdapter) sourced() *logrus.Entry {
 	info := getCallInfo(l.skipCallNumber)
-	return l.entry.WithFields(logrus.Fields{"package": info.packageName,
-		"func": info.funcName,
-		"file": fmt.Sprintf("%s:%d", info.fileName, info.line)})
+	return l.entry.WithFields(logrus.Fields{
+		"package": info.packageName,
+		"func":    info.funcName,
+		"file":    fmt.Sprintf("%s:%d", info.fileName, info.line),
+	})
 }
 
 // sourced adds a source info fields that contains
