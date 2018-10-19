@@ -1066,18 +1066,19 @@ func TestDHT_Getters(t *testing.T) {
 }
 
 func TestDHT_GetHostsFromBootstrap(t *testing.T) {
-	t.Skip()
-	port := 31337
+	// prefix := "127.0.0.1:"
+	port := 10000
 	bootstrapAddresses := make([]string, 0)
 	dhts := make([]*DHT, 0)
+	b := 2
+	n := 5
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < b; i++ {
 		dht := newRealDHT(t, nil, strconv.Itoa(port))
 		bootstrapAddresses = append(bootstrapAddresses, "127.0.0.1:"+strconv.Itoa(port))
 		dhts = append(dhts, dht)
 		go dht.Listen()
 		dht.Bootstrap()
-		dht.GetHostsFromBootstrap()
 		port++
 	}
 
@@ -1087,9 +1088,17 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 		bootstrapHosts[i] = host.NewHost(address)
 	}
 
+	for i := 0; i < n; i++ {
+		dht := newRealDHT(t, bootstrapHosts, strconv.Itoa(port))
+		dhts = append(dhts, dht)
+		go dht.Listen()
+		dht.Bootstrap()
+		dht.GetHostsFromBootstrap()
+		port++
+	}
 	lastDht := dhts[len(dhts)-1]
 	hostsCount := lastDht.HtFromCtx(GetDefaultCtx(lastDht)).TotalHosts()
-	assert.Equal(t, 19, hostsCount)
+	assert.Equal(t, b+n-1, hostsCount)
 
 	for _, dht := range dhts {
 		dht.Disconnect()
