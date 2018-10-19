@@ -1031,10 +1031,10 @@ func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []i
 	assert.NoError(s.t, err, "contract call")
 
 	var result interface{}
-	var contractErr *foundation.Error
+	var contractErr error
 	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
 	assert.NoError(s.t, err, "unmarshal answer")
-	assert.Nil(s.t, contractErr)
+	assert.NoError(s.t, contractErr)
 
 	return result
 }

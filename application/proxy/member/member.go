@@ -173,9 +173,9 @@ func (r *Member) GetPublicKeyNoWait() {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(ref core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, *foundation.Error) {
+func (r *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 	var args [5]interface{}
-	args[0] = ref
+	args[0] = rootDomain
 	args[1] = method
 	args[2] = params
 	args[3] = seed
@@ -208,9 +208,9 @@ func (r *Member) Call(ref core.RecordRef, method string, params []byte, seed []b
 }
 
 // CallNoWait is proxy generated method
-func (r *Member) CallNoWait(ref core.RecordRef, method string, params []byte, seed []byte, sign []byte) {
+func (r *Member) CallNoWait(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) {
 	var args [5]interface{}
-	args[0] = ref
+	args[0] = rootDomain
 	args[1] = method
 	args[2] = params
 	args[3] = seed
