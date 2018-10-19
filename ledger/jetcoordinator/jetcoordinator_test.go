@@ -65,8 +65,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	assert.Equal(t, []core.RecordRef{ref("v2")}, selected)
 
 	selected, err = jc.QueryRole(core.RoleVirtualValidator, *am.GenesisRef(), pulse.PulseNumber)
-	assert.NoError(t, err)
-	assert.Equal(t, sorted([]core.RecordRef{ref("v1"), ref("v2")}), sorted(selected))
+	assert.Error(t, err)
 
 	selected, err = jc.QueryRole(core.RoleLightValidator, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
