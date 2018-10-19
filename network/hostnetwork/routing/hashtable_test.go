@@ -98,31 +98,6 @@ func TestHashTable_GetTotalHostsInBucket(t *testing.T) {
 	assert.Equal(t, 0, ht.GetTotalHostsInBucket(0))
 }
 
-func TestHashTable_GetHosts(t *testing.T) {
-	prefix := "127.0.0.1:"
-	port := 3000
-
-	origin, _ := id.NewID()
-	addr, _ := host.NewAddress(prefix + strconv.Itoa(port))
-	ht, _ := NewHashTable(origin, addr)
-	port++
-
-	for i := 0; i < 10; i++ {
-		id1, _ := id.NewID()
-		addr, _ = host.NewAddress(prefix + strconv.Itoa(port))
-		h := NewRouteHost(&host.Host{ID: id1, Address: addr})
-
-		index := GetBucketIndexFromDifferingBit(origin, id1)
-		bucket := ht.RoutingTable[index]
-		bucket = append(bucket, h)
-		ht.RoutingTable[index] = bucket
-	}
-
-	assert.Equal(t, 10, len(ht.GetHosts(100)))
-	assert.Equal(t, 4, len(ht.GetHosts(4)))
-	assert.Equal(t, 10, len(ht.GetMulticastHosts()))
-}
-
 func TestHashTable_MarkHostAsSeen(t *testing.T) {
 	prefix := "127.0.0.1:"
 	port := 3000

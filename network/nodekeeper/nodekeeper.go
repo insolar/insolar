@@ -19,50 +19,66 @@ package nodekeeper
 import (
 	"bytes"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/pkg/errors"
 )
 
-// NodeKeeper manages unsync, sync and active lists
-type NodeKeeper interface {
-	// GetID get current node ID
-	GetID() core.RecordRef
-	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
-	GetSelf() *core.ActiveNode
-	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref core.RecordRef) *core.ActiveNode
-	// GetActiveNodes get active nodes.
-	GetActiveNodes() []*core.ActiveNode
-	// AddActiveNodes add active nodes.
-	AddActiveNodes([]*core.ActiveNode)
-	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
-	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list
-	SetPulse(number core.PulseNumber) (bool, *UnsyncList)
-	// Sync initiates transferring syncCandidates -> sync, sync -> active.
-	// If number is less than internal PulseNumber then ignore Sync.
-	Sync(syncCandidates []*core.ActiveNode, number core.PulseNumber)
-	// AddUnsync add unsync node to the unsync list. Returns error if current node is not active and cannot participate in consensus
-	AddUnsync(*core.ActiveNode) error
-	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
-	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
-	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
-	// 3. If pulse is more than internal NodeKeeper pulse, blocks till next SetPulse or duration timeout and then acts like in par. 2
-	GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (*UnsyncList, error)
+// NewActiveNodeComponent create active node component
+func NewActiveNodeComponent(configuration configuration.Configuration) (core.ActiveNodeComponent, error) {
+	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
+	nodeKeeper := NewNodeKeeper(nodeID)
+	// TODO: get roles from certificate
+	// TODO: pass public key
+	if len(configuration.Host.BootstrapHosts) == 0 {
+		publicAddress, err := resolveAddress(configuration)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to create active node component")
+		}
+
+		log.Info("Bootstrap nodes is not set. Init zeronet.")
+		nodeKeeper.AddActiveNodes([]*core.ActiveNode{&core.ActiveNode{
+			NodeID:   nodeID,
+			PulseNum: 0,
+			State:    core.NodeActive,
+			Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+			Address:  publicAddress,
+			// PublicKey: ???
+		}})
+	}
+	return nodeKeeper, nil
+}
+
+func resolveAddress(configuration configuration.Configuration) (string, error) {
+	conn, address, err := transport.NewConnection(configuration.Host.Transport)
+	err2 := conn.Close()
+	if err2 != nil {
+		log.Warn(err2)
+	}
+	if err != nil {
+		return "", err
+	}
+	return address, nil
 }
 
 // NewNodeKeeper create new NodeKeeper
-func NewNodeKeeper(nodeID core.RecordRef) NodeKeeper {
+func NewNodeKeeper(nodeID core.RecordRef) consensus.NodeKeeper {
 	return &nodekeeper{
-		nodeID:        nodeID,
-		state:         undefined,
-		active:        make(map[core.RecordRef]*core.ActiveNode),
-		sync:          make([]*core.ActiveNode, 0),
-		unsync:        make([]*core.ActiveNode, 0),
-		unsyncWaiters: make([]chan *UnsyncList, 0),
+		nodeID:      nodeID,
+		state:       undefined,
+		active:      make(map[core.RecordRef]*core.ActiveNode),
+		sync:        make([]*core.ActiveNode, 0),
+		unsync:      make([]*core.ActiveNode, 0),
+		listWaiters: make([]chan *UnsyncList, 0),
+		nodeWaiters: make(map[core.RecordRef]chan *core.ActiveNode),
+		index:       make(map[core.NodeRole][]core.RecordRef),
 	}
 }
 
@@ -82,12 +98,22 @@ type nodekeeper struct {
 
 	activeLock sync.RWMutex
 	active     map[core.RecordRef]*core.ActiveNode
+	index      map[core.NodeRole][]core.RecordRef
 	sync       []*core.ActiveNode
 
-	unsyncLock    sync.Mutex
-	unsync        []*core.ActiveNode
-	unsyncList    *UnsyncList
-	unsyncWaiters []chan *UnsyncList
+	unsyncLock  sync.Mutex
+	unsync      []*core.ActiveNode
+	unsyncList  *UnsyncList
+	listWaiters []chan *UnsyncList
+	nodeWaiters map[core.RecordRef]chan *core.ActiveNode
+}
+
+func (nk *nodekeeper) Start(components core.Components) error {
+	return nil
+}
+
+func (nk *nodekeeper) Stop() error {
+	return nil
 }
 
 func (nk *nodekeeper) GetID() core.RecordRef {
@@ -118,16 +144,42 @@ func (nk *nodekeeper) GetActiveNodes() []*core.ActiveNode {
 	return result
 }
 
+func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	list, exists := nk.index[calculateJetRole(role)]
+	if !exists {
+		return nil
+	}
+	result := make([]core.RecordRef, len(list))
+	copy(result, list)
+	return result
+}
+
 func (nk *nodekeeper) AddActiveNodes(nodes []*core.ActiveNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
-	for _, node := range nodes {
+	activeNodes := make([]string, len(nodes))
+	for i, node := range nodes {
 		if node.NodeID.Equal(nk.nodeID) {
 			nk.self = node
+			log.Infof("Added self node %s to active list", nk.nodeID)
 		}
 		nk.active[node.NodeID] = node
+		activeNodes[i] = node.NodeID.String()
+
+		for _, role := range node.Roles {
+			list, ok := nk.index[role]
+			if !ok {
+				list := make([]core.RecordRef, 0)
+				nk.index[role] = list
+			}
+			nk.index[role] = append(list, node.NodeID)
+		}
 	}
+	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
 }
 
 func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
@@ -137,7 +189,7 @@ func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.ActiveNode {
 	return nk.active[ref]
 }
 
-func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, *UnsyncList) {
+func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, consensus.UnsyncList) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
@@ -180,22 +232,39 @@ func (nk *nodekeeper) Sync(syncCandidates []*core.ActiveNode, number core.PulseN
 		return
 	}
 
+	var candidates string
+	for _, node := range syncCandidates {
+		candidates += node.NodeID.String() + ", "
+	}
+	log.Debugf("Moving unsync to sync: %s", candidates)
+
 	nk.syncUnsafe(syncCandidates)
 }
 
-func (nk *nodekeeper) AddUnsync(node *core.ActiveNode) error {
+func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
 	if nk.self == nil {
-		return errors.New("cannot add node to unsync list: current node is not active")
+		return nil, errors.New("cannot add node to unsync list: current node is not active")
+	}
+
+	node := &core.ActiveNode{
+		NodeID:   nodeID,
+		PulseNum: nk.pulse,
+		State:    core.NodeJoined,
+		Roles:    roles,
+		Address:  address,
+		// PublicKey: publicKey,
 	}
 
 	nk.unsync = append(nk.unsync, node)
-	return nil
+	ch := make(chan *core.ActiveNode, 1)
+	nk.nodeWaiters[node.NodeID] = ch
+	return ch, nil
 }
 
-func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (*UnsyncList, error) {
+func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (consensus.UnsyncList, error) {
 	nk.unsyncLock.Lock()
 	currentPulse := nk.pulse
 
@@ -210,10 +279,18 @@ func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Dura
 			pulse, currentPulse)
 	}
 	ch := make(chan *UnsyncList, 1)
-	nk.unsyncWaiters = append(nk.unsyncWaiters, ch)
+	nk.listWaiters = append(nk.listWaiters, ch)
 	nk.unsyncLock.Unlock()
-	// TODO: timeout
-	result := <-ch
+	var result *UnsyncList
+	select {
+	case data := <-ch:
+		if data == nil {
+			return nil, errors.New("GetUnsyncHolder: channel closed")
+		}
+		result = data
+	case <-time.After(duration):
+		return nil, errors.New("GetUnsyncHolder: timeout")
+	}
 	if result.GetPulse() != pulse {
 		return nil, errors.Errorf("GetUnsyncHolder called with pulse %d, but current UnsyncHolder pulse is %d",
 			pulse, result.GetPulse())
@@ -228,10 +305,28 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.ActiveNode) {
 	}
 	// unsync -> sync
 	nk.sync = syncCandidates
+
+	// first notify all synced nodes that they have passed the consensus
+	for _, node := range nk.sync {
+		ch, exists := nk.nodeWaiters[node.NodeID]
+		if !exists {
+			return
+		}
+		ch <- node
+		close(ch)
+		delete(nk.nodeWaiters, node.NodeID)
+	}
+	// then notify all the others that they have not passed the consensus
+	for _, ch := range nk.nodeWaiters {
+		close(ch)
+	}
+	// drop old waiters map and create new
+	nk.nodeWaiters = make(map[core.RecordRef]chan *core.ActiveNode)
 	nk.state = synced
+	log.Infof("Sync success for pulse %d", nk.pulse)
 }
 
-func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
+func (nk *nodekeeper) collectUnsync(number core.PulseNumber) consensus.UnsyncList {
 	nk.pulse = number
 	nk.state = pulseSet
 
@@ -241,14 +336,31 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) *UnsyncList {
 	tmp := nk.unsync
 	nk.unsync = make([]*core.ActiveNode, 0)
 	nk.unsyncList = NewUnsyncHolder(nk.pulse, tmp)
-	if len(nk.unsyncWaiters) == 0 {
+	if len(nk.listWaiters) == 0 {
 		return nk.unsyncList
 	}
 	// notify waiters that new unsync holder is available for read
-	for _, ch := range nk.unsyncWaiters {
+	for _, ch := range nk.listWaiters {
 		ch <- nk.unsyncList
 		close(ch)
 	}
-	nk.unsyncWaiters = make([]chan *UnsyncList, 0)
+	nk.listWaiters = make([]chan *UnsyncList, 0)
 	return nk.unsyncList
+}
+
+func calculateJetRole(role core.JetRole) core.NodeRole {
+	switch role {
+	case core.RoleVirtualExecutor:
+		return core.RoleVirtual
+	case core.RoleVirtualValidator:
+		return core.RoleVirtual
+	case core.RoleLightExecutor:
+		return core.RoleLightMaterial
+	case core.RoleLightValidator:
+		return core.RoleLightMaterial
+	case core.RoleHeavyExecutor:
+		return core.RoleHeavyMaterial
+	default:
+		return core.RoleUnknown
+	}
 }

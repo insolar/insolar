@@ -121,6 +121,9 @@ func handleObtainIPResponse(hostHandler hosthandler.HostHandler, response *packe
 }
 
 func handleCheckPublicKeyResponse(hostHandler hosthandler.HostHandler, response *packet.ResponseGetNonce) error {
+	if response.Error != "" {
+		return errors.New(response.Error)
+	}
 	if len(response.Nonce) == 0 {
 		return errors.New("received empty nonce")
 	}

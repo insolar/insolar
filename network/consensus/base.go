@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/insolar/insolar/core"
@@ -52,11 +53,22 @@ func (r *exchangeResults) calculateResultHash() []*NodeUnsyncHash {
 	return r.hash
 }
 
+func (r *exchangeResults) getAllCollectedNodes() []*core.ActiveNode {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	result := make([]*core.ActiveNode, 0)
+	for _, nodes := range r.data {
+		result = append(result, nodes...)
+	}
+	return result
+}
+
 func newExchangeResults(participantsCount int) *exchangeResults {
 	return &exchangeResults{
 		mutex: &sync.Mutex{},
 		data:  make(map[core.RecordRef][]*core.ActiveNode, participantsCount),
-		hash:  make([]*NodeUnsyncHash, participantsCount),
+		hash:  make([]*NodeUnsyncHash, 0),
 	}
 }
 
@@ -70,6 +82,7 @@ type baseConsensus struct {
 
 // DoConsensus implements consensus interface
 func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, self Participant, allParticipants []Participant) ([]*core.ActiveNode, error) {
+	log.Infof("Start consensus between %d participants about %d unsyncs", len(allParticipants), len(holder.GetUnsync()))
 	c.self = self
 	c.allParticipants = allParticipants
 	c.holder = holder
@@ -81,10 +94,10 @@ func (c *baseConsensus) DoConsensus(ctx context.Context, holder UnsyncHolder, se
 }
 
 func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
-
+	log.Debugln("Start exchange data between consensus participants")
 	wg := &sync.WaitGroup{}
+	wg.Add(len(c.allParticipants))
 	for _, p := range c.allParticipants {
-		wg.Add(1)
 
 		go func(wg *sync.WaitGroup, participant Participant) {
 			defer wg.Done()
@@ -92,6 +105,11 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 				log.Infof("data exchage with %s", participant.GetActiveNode().NodeID.String())
 
 				data, err := c.communicator.ExchangeData(ctx, c.holder.GetPulse(), participant, c.holder.GetUnsync())
+				receivedNodes := make([]string, 0)
+				for _, node := range data {
+					receivedNodes = append(receivedNodes, node.NodeID.String())
+				}
+				log.Debugf("received from %s unsync list: %s", participant.GetActiveNode().NodeID, strings.Join(receivedNodes, ", "))
 				if err != nil {
 					log.Errorln(err.Error())
 				}
@@ -102,9 +120,11 @@ func (c *baseConsensus) exchangeDataWithOtherParticipants(ctx context.Context) {
 		}(wg, p)
 	}
 	wg.Wait()
+	log.Debugln("End exchange data between consensus participants")
 }
 
 func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
+	log.Debugln("Start exchange hashes between consensus participants")
 
 	hash := c.results.calculateResultHash()
 	c.holder.SetHash(hash)
@@ -126,9 +146,9 @@ func (c *baseConsensus) exchangeHashWithOtherParticipants(ctx context.Context) {
 		}(wg, p)
 	}
 	wg.Wait()
+	log.Debugln("End exchange hashes between consensus participants")
 }
 
 func (c *baseConsensus) analyzeResults() ([]*core.ActiveNode, error) {
-
-	return c.holder.GetUnsync(), nil
+	return c.results.getAllCollectedNodes(), nil
 }

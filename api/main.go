@@ -268,9 +268,13 @@ func (ar *Runner) getMemberPubKey(ref string) (string, error) { //nolint
 		return "", err
 	}
 
-	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &key)
+	var contractErr error
+	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &key, &contractErr)
 	if err != nil {
 		return "", err
+	}
+	if contractErr != nil {
+		return "", contractErr
 	}
 
 	ar.cacheLock.Lock()

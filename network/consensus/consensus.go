@@ -64,6 +64,6 @@ type Communicator interface {
 }
 
 // NewConsensus creates consensus
-func NewConsensus(communicator Communicator) (Consensus, error) {
-	return &baseConsensus{communicator: communicator}, nil
+func NewConsensus(communicator Communicator) Consensus {
+	return &baseConsensus{communicator: communicator}
 }
