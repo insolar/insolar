@@ -308,7 +308,12 @@ func (m *LedgerArtifactManager) ActivateObject(
 
 // ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
 func (m *LedgerArtifactManager) ActivateObjectDelegate(
-	domain, request, class, parent core.RecordRef, memory []byte,
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	class core.RecordRef,
+	parent core.RecordRef,
+	memory []byte,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.ActivateObjectDelegate{
 		Domain:  domain,

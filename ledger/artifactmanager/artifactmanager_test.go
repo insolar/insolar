@@ -509,7 +509,9 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_VerifiesRecord(t *testing.
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
+	ctx := inscontext.TODO()
 	_, err := td.manager.ActivateObjectDelegate(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRandomRef(0).CoreRef(), *genRandomRef(0).CoreRef(),
 		[]byte{},
 	)
@@ -520,6 +522,7 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_VerifiesRecord(t *testing.
 		},
 	})
 	_, err = td.manager.ActivateObjectDelegate(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(notClassID), *genRefWithID(notClassID),
 		[]byte{},
 	)
@@ -530,8 +533,8 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
-	ctx := inscontext.TODO()
 
+	ctx := inscontext.TODO()
 	memory := []byte{1, 2, 3}
 	classRef := genRandomRef(0)
 	classID, _ := td.db.SetRecord(&record.ClassActivateRecord{
@@ -555,6 +558,7 @@ func TestLedgerArtifactManager_ActivateObjectDelegate_CreatesCorrectRecord(t *te
 
 	delegateRef := genRandomRef(0)
 	activateCoreID, err := td.manager.ActivateObjectDelegate(
+		ctx,
 		*domainRef.CoreRef(), *delegateRef.CoreRef(), *classRef.CoreRef(), *parentRef.CoreRef(), memory,
 	)
 	activateID := record.Bytes2ID(activateCoreID[:])

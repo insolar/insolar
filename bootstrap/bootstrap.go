@@ -304,6 +304,7 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *gop
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
 	_, err = am.ActivateObjectDelegate(
+		ctx,
 		core.RecordRef{}, *contract,
 		*cb.Classes[walletContract],
 		*b.rootMemberRef,

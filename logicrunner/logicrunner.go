@@ -398,6 +398,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	case message.Delegate:
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObjectDelegate(
+				insctx,
 				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}

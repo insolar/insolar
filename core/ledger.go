@@ -137,7 +137,7 @@ type ArtifactManager interface {
 	ActivateObject(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
 
 	// ActivateObjectDelegate is similar to ActivateObject but it created object will be parent's delegate of provided class.
-	ActivateObjectDelegate(domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
+	ActivateObjectDelegate(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.

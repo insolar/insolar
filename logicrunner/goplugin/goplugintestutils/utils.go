@@ -296,8 +296,14 @@ func (t *TestArtifactManager) ActivateObject(
 }
 
 // ActivateObjectDelegate implementation for tests
-func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordID, error) {
-	ctx := inscontext.TODO()
+func (t *TestArtifactManager) ActivateObjectDelegate(
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	class core.RecordRef,
+	parent core.RecordRef,
+	memory []byte,
+) (*core.RecordID, error) {
 	id, err := t.ActivateObject(ctx, domain, request, class, parent, memory)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to generate ref")
