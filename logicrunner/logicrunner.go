@@ -60,7 +60,6 @@ type LogicRunner struct {
 
 	Pulse core.Pulse // pulse info for this bind
 
-
 	// TODO move caseBind to context
 	caseBind      core.CaseBind
 	caseBindMutex sync.Mutex
@@ -400,7 +399,7 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	lr.Pulse = pulse
 	lr.consensus = make(map[Ref]*Consensus)
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
-	objectsRecords := lr.refreshCaseBind(pulse)
+	objectsRecords := lr.refreshCaseBind()
 
 	// TODO INS-666
 	// TODO make refresh lr.Execution - Unlock mutexes n-1 time for each object, send some info for callers, do empty object
