@@ -114,7 +114,10 @@ func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int,
 
 	// TODO: what should be done when record already exists?
 	newRecord := noderecord.NewNodeRecord(publicKey, roles, ip)
-	record := newRecord.AsChild(nd.GetReference())
+	record, err := newRecord.AsChild(nd.GetReference())
+	if err != nil {
+		return nil, errors.New("[ RegisterNode ] " + err.Error())
+	}
 
 	result["reference"] = record.GetReference().String()
 

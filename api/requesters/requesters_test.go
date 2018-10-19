@@ -109,6 +109,7 @@ func startServer() error {
 func setup() error {
 	fh := FakeHandler
 	http.HandleFunc(LOCATION, fh)
+	http.HandleFunc(LOCATION+"/call", fh)
 	log.Info("Starting Test api server ...")
 
 	err := startServer()

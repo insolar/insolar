@@ -17,11 +17,14 @@
 package member
 
 import (
+	"errors"
+
 	"github.com/insolar/insolar/application/contract/member/signer"
+	"github.com/insolar/insolar/application/proxy/rootdomain"
+	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 type Member struct {
@@ -44,35 +47,110 @@ func New(name string, key string) (*Member, error) {
 	}, nil
 }
 
-func (m *Member) AuthorizedCall(
-	ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte,
-) (
-	[]byte, error,
-) {
-	serialized, err := signer.Serialize(ref[:], delegate[:], method, params, seed)
+func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byte) error {
+	args, err := core.MarshalArgs(
+		m.GetReference(),
+		method,
+		params,
+		seed)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	verified, err := ecdsa.Verify(serialized, sign, m.PublicKey)
+	key, err := m.GetPublicKey()
 	if err != nil {
-		return nil, err
+		return err
+	}
+	verified, err := ecdsa.Verify(args, sign, key)
+	if err != nil {
+		return err
 	}
 	if !verified {
+		return errors.New("Incorrect signature")
+	}
+	return nil
+}
+
+// Call method for authorized calls
+func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
+
+	if err := m.verifySig(method, params, seed, sign); err != nil {
 		return nil, err
 	}
 
-	var contract core.RecordRef
-	if !delegate.Equal(core.RecordRef{}) {
-		contract, err = foundation.GetImplementationFor(ref, delegate)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		contract = ref
+	switch method {
+	case "CreateMember":
+		return m.createMemberCall(rootDomain, params)
+	case "GetMyBalance":
+		return m.getMyBalance()
+	case "GetBalance":
+		return m.getBalance(params)
+	case "Transfer":
+		return m.transferCall(params)
+	case "DumpUserInfo":
+		return m.dumpUserInfoCall(rootDomain, params)
+	case "DumpAllUsers":
+		return m.dumpAllUsersCall(rootDomain)
 	}
-	ret, err := proxyctx.Current.RouteCall(contract, true, method, params)
+	return nil, &foundation.Error{S: "Unknown method"}
+}
+
+func (m *Member) createMemberCall(ref core.RecordRef, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var name string
+	var key string
+	if err := signer.UnmarshalParams(params, &name, &key); err != nil {
+		return nil, err
+	}
+	return rootDomain.CreateMember(name, key)
+}
+
+func (m *Member) getMyBalance() (interface{}, error) {
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	return w.GetTotalBalance()
+}
+
+func (m *Member) getBalance(params []byte) (interface{}, error) {
+	var member string
+	if err := signer.UnmarshalParams(params, &member); err != nil {
+		return nil, err
+	}
+	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
 	if err != nil {
 		return nil, err
 	}
-	return ret, nil
+
+	return w.GetTotalBalance()
+}
+
+func (m *Member) transferCall(params []byte) (interface{}, error) {
+	var amount float64
+	var toStr string
+	if err := signer.UnmarshalParams(params, &amount, &toStr); err != nil {
+		return nil, err
+	}
+	to := core.NewRefFromBase58(toStr)
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, w.Transfer(uint(amount), &to)
+}
+
+func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	var user string
+	if err := signer.UnmarshalParams(params, &user); err != nil {
+		return nil, err
+	}
+	return rootDomain.DumpUserInfo(user)
+}
+
+func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
+	rootDomain := rootdomain.GetObject(ref)
+	return rootDomain.DumpAllUsers()
 }

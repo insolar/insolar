@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/insolar/insolar/core"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,9 +37,25 @@ func newLogrusAdapter() logrusAdapter {
 // the package, func, file name and line where the logging happened.
 func (l logrusAdapter) sourced() *logrus.Entry {
 	info := getCallInfo(l.skipCallNumber)
-	return l.entry.WithFields(logrus.Fields{"package": info.packageName,
-		"func": info.funcName,
-		"file": fmt.Sprintf("%s:%d", info.fileName, info.line)})
+	return l.entry.WithFields(logrus.Fields{
+		"package": info.packageName,
+		"func":    info.funcName,
+		"file":    fmt.Sprintf("%s:%d", info.fileName, info.line),
+	})
+}
+
+// WithFields return copy of adapter with predefined fields.
+func (l logrusAdapter) WithFields(fields map[string]interface{}) core.Logger {
+	lcopy := l
+	lcopy.entry = l.entry.WithFields(logrus.Fields(fields))
+	return lcopy
+}
+
+// WithField return copy of adapter with predefined single field.
+func (l logrusAdapter) WithField(key string, value interface{}) core.Logger {
+	lcopy := l
+	lcopy.entry = l.entry.WithField(key, value)
+	return lcopy
 }
 
 // Debug logs a message at level Debug on the stdout.

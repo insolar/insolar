@@ -117,8 +117,7 @@ type ClassAmendRecord struct {
 	ResultRecord
 	ClassStateRecord
 
-	PrevState  ID
-	Migrations []Reference
+	PrevState ID
 }
 
 // Type implementation of Record interface.

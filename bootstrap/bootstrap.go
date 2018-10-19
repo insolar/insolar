@@ -60,13 +60,13 @@ type Bootstrapper struct {
 
 // Info returns json with references for info api endpoint
 func (b *Bootstrapper) Info() ([]byte, error) {
-	classes := map[string][]byte{}
+	classes := map[string]string{}
 	for class, ref := range b.classRefs {
-		classes[class] = ref[:]
+		classes[class] = ref.String()
 	}
 	return json.MarshalIndent(map[string]interface{}{
-		"root_domain": b.rootDomainRef[:],
-		"root_member": b.rootMemberRef[:],
+		"root_domain": b.rootDomainRef.String(),
+		"root_member": b.rootMemberRef.String(),
 		"classes":     classes,
 	}, "", "   ")
 }
@@ -196,38 +196,43 @@ func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	return instanceData, nil
 }
 
-func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootDomain(
+	am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+) (*core.RecordID, error) {
 	rd, err := rootdomain.NewRootDomain()
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
 	instanceData, err := serializeInstance(rd)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
 	ctx := inscontext.TODO()
-	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootDomain"})
+	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootDomain"})
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
+	contract := core.ComposeRecordRef(*contractID, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{}, *contract,
+		core.RecordRef{}, contract,
 		*cb.Classes[rootDomain],
 		*am.GenesisRef(),
 		instanceData,
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
-	b.rootDomainRef = contract
+	b.rootDomainRef = &contract
 
-	return nil
+	return contractID, nil
 }
 
-func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+func (b *Bootstrapper) activateNodeDomain(
+	domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+) error {
 	nd, err := nodedomain.NewNodeDomain()
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
@@ -239,13 +244,14 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugint
 	}
 
 	ctx := inscontext.TODO()
-	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "NodeDomain"})
+	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "NodeDomain"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
+	contract := core.ComposeRecordRef(*domain, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{}, *contract,
+		core.RecordRef{}, contract,
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
 		instanceData,
@@ -254,12 +260,14 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
-	b.nodeDomainRef = contract
+	b.nodeDomainRef = &contract
 
 	return nil
 }
 
-func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootMember(
+	domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+) error {
 	m, err := member.New("RootMember", b.rootPubKey)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ]")
@@ -271,13 +279,14 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 	}
 
 	ctx := inscontext.TODO()
-	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
+	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
+	contract := core.ComposeRecordRef(*domain, *contractID)
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{}, *contract,
+		core.RecordRef{}, contract,
 		*cb.Classes[memberContract],
 		*b.rootDomainRef,
 		instanceData,
@@ -286,11 +295,13 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
-	b.rootMemberRef = contract
+	b.rootMemberRef = &contract
 	return nil
 }
 
-func (b *Bootstrapper) updateRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+// TODO: this is not required since we refer by request id.
+func (b *Bootstrapper) updateRootDomain(
+	am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
 	ctx := inscontext.TODO()
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef, NodeDomainRef: *b.nodeDomainRef})
 	if err != nil {
@@ -308,7 +319,9 @@ func (b *Bootstrapper) updateRootDomain(am core.ArtifactManager, cb *goplugintes
 	return nil
 }
 
-func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+func (b *Bootstrapper) activateRootMemberWallet(
+	domain *core.RecordID, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
+) error {
 	w, err := wallet.New(b.rootBalance)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
@@ -320,13 +333,14 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *gop
 	}
 
 	ctx := inscontext.TODO()
-	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
+	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootWallet"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
+	contract := core.ComposeRecordRef(*domain, *contractID)
 	_, err = am.ActivateObjectDelegate(
 		ctx,
-		core.RecordRef{}, *contract,
+		core.RecordRef{}, contract,
 		*cb.Classes[walletContract],
 		*b.rootMemberRef,
 		instanceData,
@@ -339,24 +353,25 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *gop
 }
 
 func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
-	err := b.activateRootDomain(am, cb)
+	domain, err := b.activateRootDomain(am, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.activateNodeDomain(am, cb)
+	err = b.activateNodeDomain(domain, am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.activateRootMember(am, cb)
+	err = b.activateRootMember(domain, am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
+	// TODO: this is not required since we refer by request id.
 	err = b.updateRootDomain(am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = b.activateRootMemberWallet(am, cb)
+	err = b.activateRootMemberWallet(domain, am, cb)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}

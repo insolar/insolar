@@ -202,7 +202,6 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
 	}
-
 	ctx := core.LogicCallContext{
 		Caller:  msg.GetCaller(),
 		Request: reqref,
