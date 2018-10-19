@@ -133,5 +133,5 @@ func WithLog(parent context.Context, clog core.Logger) *Ctx {
 
 // Log returns core.Logger provided by *Ctx.
 func (ctx *Ctx) Log() core.Logger {
-	return ctx.log
+	return ctx.log.WithField("traceid", ctx.TraceID())
 }
