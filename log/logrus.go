@@ -41,6 +41,14 @@ func (l logrusAdapter) sourced() *logrus.Entry {
 		"file": fmt.Sprintf("%s:%d", info.fileName, info.line)})
 }
 
+// sourced adds a source info fields that contains
+// the package, func, file name and line where the logging happened.
+func (l logrusAdapter) WithFields(fields map[string]interface{}) logrusAdapter {
+	lcopy := l
+	lcopy.entry = l.entry.WithFields(logrus.Fields(fields))
+	return lcopy
+}
+
 // Debug logs a message at level Debug on the stdout.
 func (l logrusAdapter) Debug(args ...interface{}) {
 	l.sourced().Debug(args...)
