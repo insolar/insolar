@@ -30,45 +30,49 @@ type Member struct {
 	PublicKey string
 }
 
-func (m *Member) GetName() string {
-	return m.Name
+func (m *Member) GetName() (string, error) {
+	return m.Name, nil
 }
-func (m *Member) GetPublicKey() string {
-	return m.PublicKey
+func (m *Member) GetPublicKey() (string, error) {
+	return m.PublicKey, nil
 }
 
-func New(name string, key string) *Member {
+func New(name string, key string) (*Member, error) {
 	return &Member{
 		Name:      name,
 		PublicKey: key,
-	}
+	}, nil
 }
 
-func (m *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, *foundation.Error) {
+func (m *Member) AuthorizedCall(
+	ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte,
+) (
+	[]byte, error,
+) {
 	serialized, err := signer.Serialize(ref[:], delegate[:], method, params, seed)
 	if err != nil {
-		return nil, &foundation.Error{S: err.Error()}
+		return nil, err
 	}
 	verified, err := ecdsa.Verify(serialized, sign, m.PublicKey)
 	if err != nil {
-		return nil, &foundation.Error{S: err.Error()}
+		return nil, err
 	}
 	if !verified {
-		return nil, &foundation.Error{S: "Incorrect signature"}
+		return nil, err
 	}
 
 	var contract core.RecordRef
 	if !delegate.Equal(core.RecordRef{}) {
 		contract, err = foundation.GetImplementationFor(ref, delegate)
 		if err != nil {
-			return nil, &foundation.Error{S: err.Error()}
+			return nil, err
 		}
 	} else {
 		contract = ref
 	}
 	ret, err := proxyctx.Current.RouteCall(contract, true, method, params)
 	if err != nil {
-		return nil, &foundation.Error{S: err.Error()}
+		return nil, err
 	}
 	return ret, nil
 }
