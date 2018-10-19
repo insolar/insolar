@@ -27,6 +27,34 @@ import (
 const TESTHOST = "127.0.0.1"
 const TESTPUBLICKEY = "some_fancy_public_key"
 
+func sendNoEnoughNodesRequest(t *testing.T) {
+	body := getResponseBody(t, postParams{
+		"query_type":          "register_node",
+		"roles":               []string{"virtual"},
+		"host":                TESTHOST,
+		"public_key":          TESTPUBLICKEY,
+		"bootstrap_nodes_num": 5,
+	})
+
+	response := &registerNodeResponse{}
+	unmarshalResponseWithError(t, body, response)
+
+	assert.Equal(t, api.HandlerError, response.Err.Code)
+	assert.Contains(t, response.Err.Message, "There no enough nodes")
+}
+
+// TODO: This test must be first!! Somehow fix it
+// This test tests that in case of error new node isn't added to NodeDomain
+func TestRegisterDontAddIfError(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		sendNoEnoughNodesRequest(t)
+	}
+}
+
+func TestRegisterNodeNoEnoughNodes(t *testing.T) {
+	sendNoEnoughNodesRequest(t)
+}
+
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
 	body := getResponseBody(t, postParams{
@@ -139,24 +167,6 @@ func TestRegisterNodeWithoutHost(t *testing.T) {
 	assert.Equal(t, "Handler error: field 'host' is required", response.Err.Message)
 }
 
-func TestRegisterNodeNoEnoughNodes(t *testing.T) {
-	for i := 0; i < 10; i++ {
-		body := getResponseBody(t, postParams{
-			"query_type":          "register_node",
-			"roles":               []string{"virtual"},
-			"host":                TESTHOST,
-			"public_key":          TESTPUBLICKEY,
-			"bootstrap_nodes_num": 5,
-		})
-
-		response := &registerNodeResponse{}
-		unmarshalResponseWithError(t, body, response)
-
-		assert.Equal(t, api.HandlerError, response.Err.Code)
-		assert.Contains(t, response.Err.Message, "There no enough nodes")
-	}
-}
-
 func TestRegisterNodeBadMajorityRule(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type":          "register_node",
@@ -230,6 +240,6 @@ func TestRegisterNodeWithBootstrapNodes(t *testing.T) {
 		tPK := TESTPUBLICKEY + strconv.Itoa(i)
 		assert.True(t, findPublicKey(tPK, cert.BootstrapNodes), "Couldn't find PublicKey: %s", tPK)
 		tHost := TESTHOST + strconv.Itoa(i)
-		assert.True(t, findHost(tHost, cert.BootstrapNodes), "Couldn't find Host: %s", tPK)
+		assert.True(t, findHost(tHost, cert.BootstrapNodes), "Couldn't find Host: %s", tHost)
 	}
 }
