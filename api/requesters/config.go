@@ -30,16 +30,16 @@ import (
 // UserConfigJSON holds info about user
 type UserConfigJSON struct {
 	PrivateKey       string `json:"private_key"`
-	Caller           []byte `json:"caller"`
+	Caller           string `json:"caller"`
 	privateKeyObject *ecdsa.PrivateKey
 }
 
 // RequestConfigJSON holds info about request
 type RequestConfigJSON struct {
-	Params   []interface{} `json:"params"`
-	Method   string        `json:"method"`
-	Callee   []byte        `json:"callee"`
-	Delegate []byte        `json:"delegate"`
+	Params []interface{} `json:"params"`
+	Method string        `json:"method"`
+	//Callee   []byte        `json:"callee"`
+	//Delegate []byte        `json:"delegate"`
 }
 
 func readFile(path string, configType interface{}) error {

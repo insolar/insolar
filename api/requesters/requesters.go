@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -111,7 +110,11 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
 	}
 
-	serRequest, err := signer.Serialize(userCfg.Caller, reqCfg.Delegate, reqCfg.Method, params, seed)
+	serRequest, err := core.MarshalArgs(
+		core.NewRefFromBase58(userCfg.Caller),
+		reqCfg.Method,
+		params,
+		seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
 	}
@@ -126,9 +129,7 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 	body, err := GetResponseBody(url, PostParams{
 		"params":    params,
 		"method":    reqCfg.Method,
-		"caller":    userCfg.Caller,
-		"callee":    reqCfg.Callee,
-		"delegate":  reqCfg.Delegate,
+		"reference": userCfg.Caller,
 		"seed":      seed,
 		"signature": signature,
 	})
@@ -149,7 +150,7 @@ func Send(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byt
 	}
 	verboseInfo("GETSEED request completed. seed: " + string(seed))
 
-	response, err := SendWithSeed(url, userCfg, reqCfg, seed)
+	response, err := SendWithSeed(url+"/call", userCfg, reqCfg, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
