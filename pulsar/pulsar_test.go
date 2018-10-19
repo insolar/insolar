@@ -154,22 +154,24 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t *testing.T) {
 	pulsar := &Pulsar{Neighbours: map[string]*Neighbour{}}
 
-	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
-	mockClientWrapper.On("IsInitialised").Return(false)
-	mockClientWrapper.On("CreateConnection", mock.Anything, mock.Anything).Return(errors.New("test reasons"))
-	mockClientWrapper.On("Lock")
-	mockClientWrapper.On("Unlock")
+	clientMock := NewRPCClientWrapperMock(t)
+	clientMock.IsInitialisedMock.Return(false)
+	clientMock.LockMock.Return()
+	clientMock.UnlockMock.Return()
+	clientMock.CreateConnectionMock.Set(func(p configuration.ConnectionType, p1 string) (r error) {
+		return errors.New("test reasons")
+	})
 
 	firstPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	expectedNeighbourKey, _ := ecdsahelper.ExportPublicKey(&firstPrivateKey.PublicKey)
-	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
+	expectedNeighbour := &Neighbour{OutgoingClient: clientMock}
 	pulsar.Neighbours[expectedNeighbourKey] = expectedNeighbour
 
 	err := pulsar.EstablishConnectionToPulsar(expectedNeighbourKey)
 
 	assert.Error(t, err, "test reasons")
-	mockClientWrapper.AssertNumberOfCalls(t, "Lock", 1)
-	mockClientWrapper.AssertNumberOfCalls(t, "Unlock", 1)
+	assert.Equal(t, clientMock.LockCounter, uint64(1))
+	assert.Equal(t, clientMock.UnlockCounter, uint64(1))
 }
 
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *testing.T) {
@@ -259,37 +261,41 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 	done <- &rpc.Call{}
 	replyChan := &rpc.Call{Done: done}
 
-	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
-	mockClientWrapper.On("IsInitialised").Return(true)
-	mockClientWrapper.On("Go", HealthCheck.String(), nil, nil, mock.Anything).Return(replyChan)
+	clientMock := NewRPCClientWrapperMock(t)
+	clientMock.IsInitialisedMock.Return(true)
+	clientMock.GoMock.Set(func(p string, p1 interface{}, p2 interface{}, p3 chan *rpc.Call) (r *rpc.Call) {
+		return replyChan
+	})
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 	firstNeighbourPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	firstNeighbourExpectedKey, _ := ecdsahelper.ExportPublicKey(&firstNeighbourPrivateKey.PublicKey)
 	pulsar.Neighbours[firstNeighbourExpectedKey] = &Neighbour{
 		PublicKey:      &firstNeighbourPrivateKey.PublicKey,
-		OutgoingClient: mockClientWrapper,
+		OutgoingClient: clientMock,
 	}
 
 	pulsar.CheckConnectionsToPulsars()
 
-	mockClientWrapper.AssertNumberOfCalls(t, "IsInitialised", 1)
-	mockClientWrapper.AssertNumberOfCalls(t, "Go", 1)
+	assert.Equal(t, uint64(1), clientMock.IsInitialisedCounter)
+	assert.Equal(t, uint64(1), clientMock.GoCounter)
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *testing.T) {
-	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
-	mockClientWrapper.On("IsInitialised").Return(false)
-	mockClientWrapper.On("Lock")
-	mockClientWrapper.On("Unlock")
-	mockClientWrapper.On("CreateConnection", mock.Anything, mock.Anything).Return(errors.New("this will have to fall"))
+	clientMock := NewRPCClientWrapperMock(t)
+	clientMock.IsInitialisedMock.Return(false)
+	clientMock.LockMock.Return()
+	clientMock.UnlockMock.Return()
+	clientMock.CreateConnectionFunc = func(p configuration.ConnectionType, p1 string) (r error) {
+		return errors.New("this will have to fall")
+	}
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 
 	firstNeighbourPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	pulsar.Neighbours["thisShouldFailEstablishConnection"] = &Neighbour{
 		PublicKey:      &firstNeighbourPrivateKey.PublicKey,
-		OutgoingClient: mockClientWrapper,
+		OutgoingClient: clientMock,
 	}
 
 	resultLog := capture(pulsar.CheckConnectionsToPulsars)
