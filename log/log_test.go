@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -103,22 +104,48 @@ func TestLog_GlobalLogger_Level(t *testing.T) {
 	assert.Equal(t, got, GetLevel())
 }
 
-func TestLog_WithFields(t *testing.T) {
-	recorder := testutils.NewRecoder()
-	la := newLogrusAdapter()
-	la.SetOutput(recorder)
-
-	fields := map[string]interface{}{
-		"TraceID": "Trace100500",
-	}
+func TestLog_AddFields(t *testing.T) {
 	errtxt1 := "~CHECK_ERROR_OUTPUT_WITH_FIELDS~"
 	errtxt2 := "~CHECK_ERROR_OUTPUT_WITHOUT_FIELDS~"
-	la.WithFields(fields).Error(errtxt1)
-	la.Error(errtxt2)
 
-	recitems := recorder.Items()
-	assert.Contains(t, recitems[0], errtxt1)
-	assert.Contains(t, recitems[1], errtxt2)
-	assert.Contains(t, recitems[0], "Trace100500")
-	assert.NotContains(t, recitems[1], "Trace100500")
+	var (
+		fieldname  = "TraceID"
+		fieldvalue = "Trace100500"
+	)
+	tt := []struct {
+		name    string
+		fieldfn func(la logrusAdapter) core.Logger
+	}{
+		{
+			name: "WithFields",
+			fieldfn: func(la logrusAdapter) core.Logger {
+				fields := map[string]interface{}{fieldname: fieldvalue}
+				return la.WithFields(fields)
+			},
+		},
+		{
+			name: "WithField",
+			fieldfn: func(la logrusAdapter) core.Logger {
+				return la.WithField(fieldname, fieldvalue)
+			},
+		},
+	}
+
+	for _, tItem := range tt {
+		t.Run(tItem.name, func(t *testing.T) {
+			recorder := testutils.NewRecoder()
+
+			la := newLogrusAdapter()
+			la.SetOutput(recorder)
+
+			tItem.fieldfn(la).Error(errtxt1)
+			la.Error(errtxt2)
+
+			recitems := recorder.Items()
+			assert.Contains(t, recitems[0], errtxt1)
+			assert.Contains(t, recitems[1], errtxt2)
+			assert.Contains(t, recitems[0], fieldvalue)
+			assert.NotContains(t, recitems[1], fieldvalue)
+		})
+	}
 }
