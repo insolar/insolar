@@ -294,7 +294,11 @@ type One struct {
 
 func (r *One) Hello(s string) (string, error) {
 	holder := two.New()
-	friend := holder.AsChild(r.GetReference())
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return "", err
+	}
+
 	res, err := friend.Hello(s)
 	if err != nil {
 		return "", err
@@ -425,7 +429,10 @@ type One struct {
 
 func (r *One) Hello(s string) (string, error) {
 	holder := two.New()
-	friend := holder.AsDelegate(r.GetReference())
+	friend, err := holder.AsDelegate(r.GetReference())
+	if err != nil {
+		return "", err
+	}
 
 	res, err := friend.Hello(s)
 	if err != nil {
@@ -436,7 +443,11 @@ func (r *One) Hello(s string) (string, error) {
 }
 
 func (r *One) HelloFromDelegate(s string) (string, error) {
-	friend := two.GetImplementationFrom(r.GetReference())
+	friend, err := two.GetImplementationFrom(r.GetReference())
+	if err != nil {
+		return "", err
+	}
+
 	return friend.Hello(s)
 }
 `
@@ -521,8 +532,17 @@ type One struct {
 
 func (r *One) Hello() error {
 	holder := two.New()
-	friend := holder.AsDelegate(r.GetReference())
-	friend.HelloNoWait()
+
+	friend, err := holder.AsDelegate(r.GetReference())
+	if err != nil {
+		return err
+	}
+
+	err = friend.HelloNoWait()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 `
@@ -885,14 +905,20 @@ type One struct {
 
 func (r *One) AnError() error {
 	holder := two.New()
-	friend := holder.AsChild(r.GetReference())
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
 
 	return friend.AnError()
 }
 
 func (r *One) NoError() error {
 	holder := two.New()
-	friend := holder.AsChild(r.GetReference())
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
 
 	return friend.NoError()
 }
@@ -982,7 +1008,10 @@ type One struct {
 
 func (r *One) Hello() (*string, error) {
 	holder := two.New()
-	friend := holder.AsChild(r.GetReference())
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return nil, err
+	}
 
 	return friend.Hello()
 }

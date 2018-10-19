@@ -25,21 +25,21 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *{{ .ContractType }} {
+func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*{{ .ContractType }}, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-	panic(err)
+		return nil, err
 	}
-	return &{{ .ContractType }}{Reference: ref}
+	return &{{ .ContractType }}{Reference: ref}, nil
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *{{ .ContractType }} {
+func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*{{ .ContractType }}, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &{{ .ContractType }}{Reference: ref}
+	return &{{ .ContractType }}{Reference: ref}, nil
 }
 
 // GetObject returns proxy object
@@ -53,12 +53,12 @@ func GetClass() core.RecordRef {
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) *{{ .ContractType }} {
+func GetImplementationFrom(object core.RecordRef) (*{{ .ContractType }}, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return GetObject(ref)
+	return GetObject(ref), nil
 }
 
 {{ range $func := .ConstructorsProxies }}
@@ -92,20 +92,21 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
 
+	{{ $method.ResultZeroList }}
+
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return {{ $method.ResultsWithErr }}
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "{{ $method.Name }}", argsSerialized)
 	if err != nil {
-   		panic(err)
+		return {{ $method.ResultsWithErr }}
 	}
 
-	{{ $method.ResultZeroList }}
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return {{ $method.ResultsWithErr }}
 	}
 
 	if {{ $method.ErrorVar }} != nil {
@@ -115,18 +116,20 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
 }
 
 // {{ $method.Name }}NoWait is proxy generated method
-func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }} ) {
+func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }} ) error {
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "{{ $method.Name }}", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 {{ end }}
