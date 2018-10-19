@@ -456,7 +456,9 @@ func (dht *DHT) StartAuthorize() error {
 			activeNodes, err := GetNonceRequest(dht, h.ID.String())
 			if err != nil {
 				log.Warnf("error authorizing on %s host: %s", h, err.Error())
+				return
 			}
+			log.Infof("successful authorization on host: %s", h)
 			ch <- activeNodes
 		}(ch, h)
 	}
