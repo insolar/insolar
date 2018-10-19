@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version"
+	"github.com/insolar/insolar/version/manager"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -149,6 +150,12 @@ func main() {
 	cm.components.NetworkCoordinator, err = networkcoordinator.New()
 	if err != nil {
 		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
+	}
+
+	vm := manager.GetVM()
+	err = vm.Load()
+	if err != nil {
+		log.Fatalln("failed to load VersionManager: ", err.Error())
 	}
 
 	cm.linkAll()
