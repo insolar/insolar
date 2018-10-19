@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 )
 
@@ -46,8 +47,9 @@ func (d *CodeDescriptor) MachineType() core.MachineType {
 
 // Code returns code data.
 func (d *CodeDescriptor) Code() ([]byte, error) {
+	ctx := inscontext.TODO()
 	if d.cache.code == nil {
-		desc, err := d.am.GetCode(d.ref)
+		desc, err := d.am.GetCode(ctx, d.ref)
 		if err != nil {
 			return nil, err
 		}
@@ -128,16 +130,18 @@ func (d *ObjectDescriptor) Memory() []byte {
 
 // Children returns object's children references.
 func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, error) {
-	return d.am.GetChildren(d.head, pulse)
+	ctx := inscontext.TODO()
+	return d.am.GetChildren(ctx, d.head, pulse)
 }
 
 // ClassDescriptor returns descriptor for fetching object's class data.
 func (d *ObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
+	ctx := inscontext.TODO()
 	if d.cache.classDescriptor != nil {
 		return d.cache.classDescriptor, nil
 	}
 
-	return d.am.GetClass(d.class, state)
+	return d.am.GetClass(ctx, d.class, state)
 }
 
 // ChildIterator is used to iterate over objects children.

@@ -17,6 +17,8 @@
 package nodedomain
 
 import (
+	"errors"
+
 	"github.com/insolar/insolar/application/proxy/noderecord"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -29,16 +31,19 @@ type NodeDomain struct {
 }
 
 // NewNodeDomain create new NodeDomain
-func NewNodeDomain() *NodeDomain {
-	return &NodeDomain{}
+func NewNodeDomain() (*NodeDomain, error) {
+	return &NodeDomain{}, nil
 }
 
 // RegisterNode registers node in system
-func (nd *NodeDomain) RegisterNode(pk string, role string) core.RecordRef {
+func (nd *NodeDomain) RegisterNode(pk string, role string) (core.RecordRef, error) {
 	// TODO: what should be done when record already exists?
 	newRecord := noderecord.NewNodeRecord(pk, role)
-	record := newRecord.AsChild(nd.GetReference())
-	return record.GetReference()
+	record, err := newRecord.AsChild(nd.GetReference())
+	if err != nil {
+		return core.RecordRef{}, err
+	}
+	return record.GetReference(), nil
 }
 
 func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
@@ -46,23 +51,26 @@ func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
 }
 
 // RemoveNode deletes node from registry
-func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) {
+func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 	node := nd.getNodeRecord(nodeRef)
-	node.Destroy()
+	return node.Destroy()
 }
 
 // IsAuthorized checks is signature correct
-func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) bool {
-	nodeR := nd.getNodeRecord(nodeRef)
-	ok, err := ecdsa.Verify(seed, signatureRaw, nodeR.GetPublicKey())
+func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (bool, error) {
+	pubKey, err := nd.getNodeRecord(nodeRef).GetPublicKey()
 	if err != nil {
-		panic(err)
+		return false, err
 	}
-	return ok
+	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
 }
 
 // Authorize checks node and returns node info
-func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (pubKey string, role core.NodeRole, errS string) {
+func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (pubKey string, role core.NodeRole, err error) {
 	// TODO: this should be removed when proxies stop panic
 	defer func() {
 		if r := recover(); r != nil {
@@ -73,18 +81,21 @@ func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRa
 			if ok {
 				errTxt = err.Error()
 			}
-			errS = "[ Authorize ] Recover after panic: " + errTxt
+			err = errors.New("[ Authorize ] Recover after panic: " + errTxt)
 		}
 	}()
 	nodeR := nd.getNodeRecord(nodeRef)
-	role, pubKey = nodeR.GetRoleAndPublicKey()
+	role, pubKey, err = nodeR.GetRoleAndPublicKey()
+	if err != nil {
+		return "", core.RoleUnknown, errors.New("[ Authorize ] Problem with getting role and key: " + err.Error())
+	}
 	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
 	if err != nil {
-		return "", core.RoleUnknown, "[ Authorize ] Problem with verifying of signature: " + err.Error()
+		return "", core.RoleUnknown, errors.New("[ Authorize ] Problem with verifying of signature: " + err.Error())
 	}
 	if !ok {
-		return "", core.RoleUnknown, "[ Authorize ] Can't verify signature: " + err.Error()
+		return "", core.RoleUnknown, errors.New("[ Authorize ] Can't verify signature: " + err.Error())
 	}
 
-	return pubKey, role, ""
+	return pubKey, role, nil
 }

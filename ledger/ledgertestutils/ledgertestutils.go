@@ -17,8 +17,6 @@
 package ledgertestutils
 
 import (
-	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -26,62 +24,17 @@ import (
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/testutils/testmessagebus"
 )
-
-type messageBusMock struct {
-	handlers map[core.MessageType]core.MessageHandler
-}
-
-func newMessageBusMock() *messageBusMock {
-	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
-}
-
-func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandler) error {
-	_, ok := mb.handlers[p]
-	if ok {
-		return errors.New("handler for this type already exists")
-	}
-
-	mb.handlers[p] = handler
-	return nil
-}
-
-func (mb *messageBusMock) MustRegister(p core.MessageType, handler core.MessageHandler) {
-	err := mb.Register(p, handler)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (mb *messageBusMock) Start(components core.Components) error {
-	panic("implement me")
-}
-
-func (mb *messageBusMock) Stop() error {
-	panic("implement me")
-}
-
-func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
-	t := m.Type()
-	handler, ok := mb.handlers[t]
-	if !ok {
-		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
-	}
-
-	return handler(m)
-}
-
-func (mb *messageBusMock) SendAsync(m core.Message) {
-	panic("implement me")
-}
 
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger andh cleanup function.
-func TmpLedger(t testing.TB, lr core.LogicRunner, dir string) (*ledger.Ledger, func()) {
+func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, func()) {
 	var err error
 	// Init subcomponents.
 	conf := configuration.NewLedger()
@@ -96,12 +49,14 @@ func TmpLedger(t testing.TB, lr core.LogicRunner, dir string) (*ledger.Ledger, f
 	assert.NoError(t, err)
 
 	// Init components.
-	mb := newMessageBusMock()
-	components := core.Components{MessageBus: mb, LogicRunner: lr}
+	c.MessageBus = testmessagebus.NewTestMessageBus()
+	if c.ActiveNodeComponent == nil {
+		c.ActiveNodeComponent = nodekeeper.NewNodeKeeper(core.RecordRef{})
+	}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)
-	err = l.Start(components)
+	err = l.Start(c)
 	assert.NoError(t, err)
 
 	return l, dbcancel

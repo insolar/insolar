@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -143,9 +143,9 @@ func TestDB_CreateDrop(t *testing.T) {
 		Entropy:     core.Entropy{1, 2, 3},
 	})
 	records := []record.ObjectActivateRecord{
-		{Memory: []byte{1}},
-		{Memory: []byte{2}},
-		{Memory: []byte{3}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{1}}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{2}}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{3}}},
 	}
 
 	var (
@@ -166,7 +166,7 @@ func TestDB_CreateDrop(t *testing.T) {
 		})
 		expectedRecData = append(expectedRecData, [2][]byte{
 			record.ID2Bytes(*recid),
-			record.MustEncodeRaw(record.MustEncodeToRaw(&rec)),
+			record.SerializeRecord(&rec),
 		})
 	}
 	sortrecords(true, expectedRecData)
@@ -175,7 +175,7 @@ func TestDB_CreateDrop(t *testing.T) {
 	drop, recData, idxData, err := db.CreateDrop(pulse, []byte{4, 5, 6})
 	assert.NoError(t, err)
 	assert.Equal(t, pulse, drop.Pulse)
-	assert.Equal(t, "23qdSCk6Q1L8m1neGWRFYcZnyRdrWfhhopP3pEu", base58.Encode(drop.Hash))
+	assert.Equal(t, "qhHkoYwhmhf1oDQscCvZKjq8BQS4ELQicJrFpp", base58.Encode(drop.Hash))
 	assert.Equal(t, expectedRecData, recData)
 
 	genesisPulseBytes := core.PulseNumber(core.FirstPulseNumber).Bytes()

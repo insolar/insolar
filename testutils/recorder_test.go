@@ -14,24 +14,26 @@
  *    limitations under the License.
  */
 
-package core
+package testutils
 
-// Component controller methods
-type Component interface {
-	Start(components Components) error
-	Stop() error
-}
+import (
+	"fmt"
+	"testing"
 
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-type Components struct {
-	ActiveNodeComponent ActiveNodeComponent
-	LogicRunner         LogicRunner
-	Ledger              Ledger
-	Network             Network
-	MessageBus          MessageBus
-	Metrics             Component
-	Bootstrapper        Bootstrapper
-	APIRunner           Component
-	NetworkCoordinator  NetworkCoordinator
+	"github.com/stretchr/testify/assert"
+)
+
+func TestRecorderWriter(t *testing.T) {
+	recorder := NewRecoder()
+	fmt.Fprintln(recorder, "line1")
+	fmt.Fprintf(recorder, "line2\nline3")
+	fmt.Fprintf(recorder, "line4\nabc line5")
+	expect := []string{
+		"line1",
+		"line2",
+		"line3",
+		"line4",
+		"abc line5",
+	}
+	assert.Equal(t, expect, recorder.Items())
 }

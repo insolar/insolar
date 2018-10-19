@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/pulsar"
@@ -111,15 +112,10 @@ func main() {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	cm := componentManager{}
-	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration)
-	if err != nil {
-		log.Fatalln("failed to start Network: ", err.Error())
-	}
-	cm.components.Network = nw
 
-	cm.components.Ledger, err = ledger.NewLedger(cfgHolder.Configuration.Ledger)
+	cm.components.ActiveNodeComponent, err = nodekeeper.NewActiveNodeComponent(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("failed to start Ledger: ", err.Error())
+		log.Fatalln("failed to start ActiveNodeComponent: ", err.Error())
 	}
 
 	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
@@ -127,9 +123,20 @@ func main() {
 		log.Fatalln("failed to start LogicRunner: ", err.Error())
 	}
 
+	cm.components.Ledger, err = ledger.NewLedger(cfgHolder.Configuration.Ledger)
+	if err != nil {
+		log.Fatalln("failed to start Ledger: ", err.Error())
+	}
+
+	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration)
+	if err != nil {
+		log.Fatalln("failed to start Network: ", err.Error())
+	}
+	cm.components.Network = nw
+
 	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("failed to start LogicRunner: ", err.Error())
+		log.Fatalln("failed to start MessageBus: ", err.Error())
 	}
 
 	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(cfgHolder.Configuration)

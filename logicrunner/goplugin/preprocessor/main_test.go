@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -34,6 +35,7 @@ package main
 
 import (
 	"fmt"
+	"errors"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -53,58 +55,50 @@ type PersonalGreeting struct {
 	Message string
 }
 
-type Error struct {
-	S string
-}
-
-func (e *Error) Error() string {
-	return e.S
-}
-
-func (hw *HelloWorlder) Hello() (string, *Error) {
+func (hw *HelloWorlder) Hello() (string, error) {
 	hw.Greeted++
 	return "Hello world 2", nil
 }
 
-func (hw *HelloWorlder) Fail() (string, *Error) {
+func (hw *HelloWorlder) Fail() (string, error) {
 	hw.Greeted++
-	return "", &Error{"We failed 2"}
+	return "", errors.New("We failed 2")
 }
 
-func (hw *HelloWorlder) Echo(s string) (string, *Error) {
+func (hw *HelloWorlder) Echo(s string) (string, error) {
 	hw.Greeted++
 	return s, nil
 }
 
-func (hw *HelloWorlder) HelloHuman(Name FullName) PersonalGreeting {
+func (hw *HelloWorlder) HelloHuman(Name FullName) (PersonalGreeting, error) {
 	hw.Greeted++
 	return PersonalGreeting{
 		Name:    Name,
 		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
-	}
+	}, nil
 }
 
-func (hw *HelloWorlder) HelloHumanPointer(Name FullName) *PersonalGreeting {
+func (hw *HelloWorlder) HelloHumanPointer(Name FullName) (*PersonalGreeting, error) {
 	hw.Greeted++
 	return &PersonalGreeting{
 		Name:    Name,
 		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
-	}
+	}, nil
 }
 
-func (hw *HelloWorlder) MultiArgs(Name FullName, s string, i int) *PersonalGreeting {
+func (hw *HelloWorlder) MultiArgs(Name FullName, s string, i int) (*PersonalGreeting, error) {
 	hw.Greeted++
 	return &PersonalGreeting{
 		Name:    Name,
 		Message: fmt.Sprintf("Dear %s %s, we specially say hello to you", Name.First, Name.Last),
-	}
+	}, nil
 }
 
-func (hw HelloWorlder) ConstEcho(s string) (string, *Error) {
+func (hw HelloWorlder) ConstEcho(s string) (string, error) {
 	return s, nil
 }
 
-func JustExportedStaticFunction(int, int) {}
+func JustExportedStaticFunction(int, int) error { return nil }
 `
 
 func TestBasicGeneration(t *testing.T) {
@@ -155,18 +149,15 @@ func TestConstructorsParsing(t *testing.T) {
 package main
 
 type One struct {
-foundation.BaseContract
+	foundation.BaseContract
 }
 
-func New() *One {
-	return &One{}
+func New() (*One, error) {
+	return &One{}, nil
 }
 
-func NewFromString(s string) *One {
-	return &One{}
-}
-
-func NewWrong() {
+func NewFromString(s string) (*One, error) {
+	return &One{}, nil
 }
 `
 
@@ -180,6 +171,42 @@ func NewWrong() {
 	assert.Equal(t, 2, len(info.constructors["One"]))
 	assert.Equal(t, "New", info.constructors["One"][0].Name.Name)
 	assert.Equal(t, "NewFromString", info.constructors["One"][1].Name.Name)
+
+	code = `
+package main
+
+type One struct {
+	foundation.BaseContract
+}
+
+func New() {
+	return
+}
+`
+
+	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
+	assert.NoError(t, err)
+
+	_, err = ParseFile(filepath.Join(tmpDir, "code1"))
+	assert.Error(t, err)
+
+	code = `
+package main
+
+type One struct {
+	foundation.BaseContract
+}
+
+func New() *One {
+	return &One{}
+}
+`
+
+	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
+	assert.NoError(t, err)
+
+	_, err = ParseFile(filepath.Join(tmpDir, "code1"))
+	assert.Error(t, err)
 }
 
 func TestCompileContractProxy(t *testing.T) {
@@ -234,43 +261,6 @@ func main() {
 	assert.NoError(t, err, string(out))
 }
 
-func TestGenerateProxyAndWrapperWithoutReturnValue(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
-package main
-type A struct{
-	int C
-	foundation.BaseContract
-	int M
-}
-
-func ( A ) Get(){
-	return
-}
-`)
-	assert.NoError(t, err)
-
-	parsed, err := ParseFile(tmpDir + testContract)
-	assert.NoError(t, err)
-
-	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy("testRef", &bufProxy)
-	assert.NoError(t, err)
-	code, err := ioutil.ReadAll(&bufProxy)
-	assert.NoError(t, err)
-	assert.NotEqual(t, len(code), 0)
-
-	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
-	assert.NoError(t, err)
-	assert.Contains(t, bufWrapper.String(), "    self.Get(  )")
-}
-
 func TestFailIfThereAreNoContract(t *testing.T) {
 	t.Parallel()
 	tmpDir, err := ioutil.TempDir("", "test-")
@@ -305,8 +295,12 @@ type A struct{
 	foundation.BaseContract
 }
 
-func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool, string, foundation.Reference ){
-	return
+func ( a *A ) Get(
+	a int, b bool, c string, d foundation.Reference,
+) (
+	int, bool, string, foundation.Reference, error,
+) {
+	return nil
 }
 `)
 
@@ -346,7 +340,11 @@ type A struct{
 	foundation.BaseContract
 }
 
-func ( a *A )Get( a int, b bool, c string, d foundation.Reference ) ( int, bool, string, foundation.Reference ){
+func (a *A) Get(
+	a int, b bool, c string, d foundation.Reference,
+) (
+	int, bool, string, foundation.Reference, error,
+) {
 	return
 }
 `)
@@ -436,12 +434,12 @@ type A struct{
 	foundation.BaseContract
 }
 
-func ( A ) Get(i path.SomeType){
-	return
+func ( A ) Get(i path.SomeType) error {
+	return nil
 }
 
-func ( A ) GetPointer(i *pointerPath.SomeType){
-	return
+func ( A ) GetPointer(i *pointerPath.SomeType) error {
+	return nil
 }
 `)
 	assert.NoError(t, err)
@@ -484,8 +482,8 @@ type A struct{
 	foundation.BaseContract
 }
 
-func ( A ) Get(i someAlias.SomeType){
-	return
+func ( A ) Get(i someAlias.SomeType) error {
+	return nil
 }
 `)
 	assert.NoError(t, err)
@@ -527,9 +525,9 @@ type A struct{
 	foundation.BaseContract
 }
 
-func ( A ) Get() {
+func ( A ) Get() error {
 	path.SomeMethod()
-	return
+	return nil
 }
 `)
 	assert.NoError(t, err)
@@ -569,9 +567,9 @@ type A struct{
 	foundation.BaseContract
 }
 
-func ( A ) Get() path.SomeValue {
+func ( A ) Get() (path.SomeValue, error) {
 	f := path.SomeMethod()
-	return f
+	return f, nil
 }
 `)
 	assert.NoError(t, err)
@@ -615,4 +613,36 @@ type A struct{
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy("testRef", &bufProxy)
 	assert.EqualError(t, err, "couldn't match filename without extension and path")
+}
+
+func TestProxyGeneration(t *testing.T) {
+	contracts, err := GetRealContractsNames()
+	assert.NoError(t, err)
+
+	for _, contract := range contracts {
+		t.Run(contract, func(t *testing.T) {
+			t.Parallel()
+			parsed, err := ParseFile("../../../application/contract/" + contract + "/" + contract + ".go")
+			assert.NotNil(t, parsed, "have parsed object")
+			assert.NoError(t, err)
+
+			proxyPath, err := GetRealApplicationDir("proxy")
+			assert.NoError(t, err)
+
+			name, err := parsed.ProxyPackageName()
+			assert.NoError(t, err)
+
+			proxy := path.Join(proxyPath, name, name+".go")
+			_, err = os.Stat(proxy)
+			assert.NoError(t, err)
+
+			buff := bytes.NewBufferString("")
+			parsed.WriteProxy("", buff)
+
+			cmd := exec.Command("diff", proxy, "-")
+			cmd.Stdin = buff
+			out, err := cmd.CombinedOutput()
+			assert.NoError(t, err, string(out))
+		})
+	}
 }

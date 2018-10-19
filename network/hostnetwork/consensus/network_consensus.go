@@ -18,14 +18,13 @@ package consensus
 
 import (
 	"context"
+	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/version/manager"
-	"github.com/pkg/errors"
 )
 
 type participantWrapper struct {
@@ -38,7 +37,7 @@ func (an *participantWrapper) GetActiveNode() *core.ActiveNode {
 }
 
 type selfWrapper struct {
-	keeper nodekeeper.NodeKeeper
+	keeper consensus.NodeKeeper
 }
 
 // GetActiveNode implements Participant interface for NodeKeeper wrapper.
@@ -49,9 +48,9 @@ func (s *selfWrapper) GetActiveNode() *core.ActiveNode {
 // NetworkConsensus binds all functionality related to consensus with the network layer
 type NetworkConsensus struct {
 	consensus       consensus.Consensus
-	communicatorSnd consensus.Communicator
-	communicatorRcv consensus.CommunicatorReceiver
-	keeper          nodekeeper.NodeKeeper
+	communicatorSnd *communicatorSender
+	communicatorRcv *communicatorReceiver
+	keeper          consensus.NodeKeeper
 	self            *selfWrapper
 }
 
@@ -64,14 +63,22 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 		return
 	}
 	participants := make([]consensus.Participant, len(activeNodes))
+	parts := make([]string, 0)
 	for i, activeNode := range activeNodes {
 		participants[i] = &participantWrapper{activeNode}
+		parts = append(parts, activeNode.NodeID.String())
 	}
+	log.Debugf("Consensus participants: %s", strings.Join(parts, ", "))
 	success, unsyncList := ic.keeper.SetPulse(pulse.PulseNumber)
 	if !success {
 		log.Error("ConsensusProcessor: could not set new pulse to NodeKeeper, aborting")
 		return
 	}
+	candidates := make([]string, 0)
+	for _, candidate := range unsyncList.GetUnsync() {
+		candidates = append(candidates, candidate.NodeID.String())
+	}
+	log.Infof("Consensus unsync candidates: %s", strings.Join(candidates, ", "))
 	unsyncCandidates, err := ic.consensus.DoConsensus(ctx, unsyncList, ic.self, participants)
 	if err != nil {
 		log.Errorf("ConsensusProcessor: error performing consensus steps: %s", err.Error())
@@ -96,19 +103,21 @@ func (ic *NetworkConsensus) ReceiverHandler() consensus.CommunicatorReceiver {
 	return ic.communicatorRcv
 }
 
+// SetNodeKeeper set NodeKeeper for the processor to integrate Processor with unsync -> sync -> active pipeline
+func (ic *NetworkConsensus) SetNodeKeeper(keeper consensus.NodeKeeper) {
+	ic.keeper = keeper
+	ic.self = &selfWrapper{keeper}
+	ic.communicatorSnd.keeper = keeper
+	ic.communicatorRcv.keeper = keeper
+}
+
 // NewInsolarConsensus creates new object to handle all consensus events
-func NewInsolarConsensus(keeper nodekeeper.NodeKeeper, handler hosthandler.HostHandler) (consensus.Processor, error) {
-	communicatorSnd := &communicatorSender{handler, keeper}
-	communicatorRcv := &communicatorReceiver{handler, keeper}
-	consensus, err := consensus.NewConsensus(communicatorSnd)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating insolar consensus")
-	}
+func NewInsolarConsensus(handler hosthandler.HostHandler) consensus.Processor {
+	communicatorSnd := &communicatorSender{handler: handler}
+	communicatorRcv := &communicatorReceiver{handler: handler}
 	return &NetworkConsensus{
-		consensus:       consensus,
+		consensus:       consensus.NewConsensus(communicatorSnd),
 		communicatorSnd: communicatorSnd,
 		communicatorRcv: communicatorRcv,
-		keeper:          keeper,
-		self:            &selfWrapper{keeper},
-	}, nil
+	}
 }

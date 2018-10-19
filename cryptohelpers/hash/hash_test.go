@@ -34,7 +34,7 @@ type aRec struct {
 	A2 string
 }
 
-func (rec *aRec) WriteHash(w io.Writer) {
+func (rec *aRec) WriteHashData(w io.Writer) {
 	var data = []interface{}{
 		int16(aRecTypeID),
 		rec.A1,
@@ -55,8 +55,8 @@ type bRec struct {
 	B1 []byte
 }
 
-func (rec *bRec) WriteHash(w io.Writer) {
-	rec.aRec.WriteHash(w)
+func (rec *bRec) WriteHashData(w io.Writer) {
+	rec.aRec.WriteHashData(w)
 	var data = []interface{}{
 		int16(bRecTypeID),
 		rec.B1,
@@ -76,8 +76,8 @@ type cRec struct {
 	C1 uint64
 }
 
-func (rec *cRec) WriteHash(w io.Writer) {
-	rec.bRec.WriteHash(w)
+func (rec *cRec) WriteHashData(w io.Writer) {
+	rec.bRec.WriteHashData(w)
 	var data = []interface{}{
 		int16(cRecTypeID),
 		rec.C1,
