@@ -62,12 +62,10 @@ const (
 	TypePulse
 	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network.
 	TypeGetRandomHosts
-	// TypeCheckPublicKey is packet to request an authorization in the network.
-	TypeCheckPublicKey
+	// TypeGetNonce is packet to request a nonce to sign it.
+	TypeGetNonce
 	// TypeCheckSignedNonce is packet to check a signed nonce.
 	TypeCheckSignedNonce
-	// TypeActiveNodes is packet type to get active nodes.
-	TypeActiveNodes
 	// TypeExchangeUnsyncLists is packet type to exchange unsync lists during consensus
 	TypeExchangeUnsyncLists
 	// TypeExchangeUnsyncHash is packet type to exchange hash of merged unsync lists during consensus
@@ -134,12 +132,10 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 		_, valid = m.Data.(*RequestPulse)
 	case TypeGetRandomHosts:
 		_, valid = m.Data.(*RequestGetRandomHosts)
-	case TypeCheckPublicKey:
-		_, valid = m.Data.(*RequestCheckPublicKey)
+	case TypeGetNonce:
+		_, valid = m.Data.(*RequestGetNonce)
 	case TypeCheckSignedNonce:
 		_, valid = m.Data.(*RequestCheckSignedNonce)
-	case TypeActiveNodes:
-		_, valid = m.Data.(*RequestActiveNodes)
 	case TypeExchangeUnsyncLists:
 		_, valid = m.Data.(*RequestExchangeUnsyncLists)
 	case TypeExchangeUnsyncHash:
@@ -155,7 +151,7 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 
 // IsForMe checks if packet is addressed to our host.
 func (m *Packet) IsForMe(origin host.Origin) bool {
-	return origin.Contains(m.Receiver) || m.Type == TypePing && origin.Address.Equal(*m.Receiver.Address)
+	return origin.Contains(m.Receiver) || m.Type == TypePing
 }
 
 // SerializePacket converts packet to byte slice.
@@ -228,9 +224,8 @@ func init() {
 	gob.Register(&RequestCascadeSend{})
 	gob.Register(&RequestPulse{})
 	gob.Register(&RequestGetRandomHosts{})
-	gob.Register(&RequestCheckPublicKey{})
+	gob.Register(&RequestGetNonce{})
 	gob.Register(&RequestCheckSignedNonce{})
-	gob.Register(&RequestActiveNodes{})
 	gob.Register(&RequestExchangeUnsyncLists{})
 	gob.Register(&RequestExchangeUnsyncHash{})
 	gob.Register(&RequestDisconnect{})
@@ -249,12 +244,11 @@ func init() {
 	gob.Register(&ResponseCascadeSend{})
 	gob.Register(&ResponsePulse{})
 	gob.Register(&ResponseGetRandomHosts{})
-	gob.Register(&ResponseCheckPublicKey{})
-	gob.Register(&ResponseCheckSignedNonce{})
-	gob.Register(&ResponseActiveNodes{})
+	gob.Register(&ResponseGetNonce{})
 	gob.Register(&ResponseExchangeUnsyncLists{})
 	gob.Register(&ResponseExchangeUnsyncHash{})
 	gob.Register(&ResponseDisconnect{})
+	gob.Register(&ResponseCheckSignedNonce{})
 
 	gob.Register(&id.ID{})
 }

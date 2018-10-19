@@ -37,11 +37,11 @@ func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 	return pubKey, role, nil
 }
 
-func extractRegisterNodeResponse(data []byte) (*core.RecordRef, error) {
-	var nodeRef core.RecordRef
-	_, err := core.UnMarshalResponse(data, []interface{}{&nodeRef})
+func extractReferenceResponse(data []byte) (*core.RecordRef, error) {
+	var ref core.RecordRef
+	_, err := core.UnMarshalResponse(data, []interface{}{&ref})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ extractRegisterNodeResponse ]")
+		return nil, errors.Wrap(err, "[ extractReferenceResponse ]")
 	}
-	return &nodeRef, nil
+	return &ref, nil
 }

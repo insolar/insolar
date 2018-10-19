@@ -66,7 +66,9 @@ func (p *Pulse) PulseDuration() time.Duration {
 // All pulsar send to the chosen pulsar their confirmations
 // Every node in the network can verify the signatures
 type PulseSenderConfirmation struct {
+	PulseNumber     PulseNumber
 	ChosenPublicKey string
+	Entropy         Entropy
 	Signature       []byte
 }
 
@@ -83,13 +85,4 @@ var GenesisPulse = &Pulse{PulseNumber: FirstPulseNumber, Entropy: [EntropySize]b
 // CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
 func CalculatePulseNumber(now time.Time) PulseNumber {
 	return PulseNumber(now.Unix() - firstPulseDate + FirstPulseNumber)
-}
-
-// PulseManager provides Ledger's methods related to Pulse.
-type PulseManager interface {
-	// Current returns current pulse structure.
-	Current() (*Pulse, error)
-
-	// Set set's new pulse and closes current jet drop.
-	Set(pulse Pulse) error
 }

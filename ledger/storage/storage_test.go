@@ -17,9 +17,12 @@
 package storage_test
 
 import (
+	"bytes"
+	"sort"
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -30,7 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
-func TestStore_GetRecordNotFound(t *testing.T) {
+func TestDB_GetRecordNotFound(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
@@ -40,7 +43,7 @@ func TestStore_GetRecordNotFound(t *testing.T) {
 	assert.Nil(t, rec)
 }
 
-func TestStore_SetRecord(t *testing.T) {
+func TestDB_SetRecord(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
@@ -57,7 +60,7 @@ func TestStore_SetRecord(t *testing.T) {
 	assert.Equalf(t, err, storage.ErrOverride, "records override should be forbidden")
 }
 
-func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
+func TestDB_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
@@ -67,7 +70,7 @@ func TestStore_GetClassIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	assert.Nil(t, idx)
 }
 
-func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
+func TestDB_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
@@ -91,7 +94,7 @@ func TestStore_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	assert.Equal(t, *storedIndex, idx)
 }
 
-func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
+func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
@@ -101,7 +104,7 @@ func TestStore_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	assert.Nil(t, idx)
 }
 
-func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
+func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
@@ -119,7 +122,7 @@ func TestStore_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	assert.Equal(t, *storedIndex, idx)
 }
 
-func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
+func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
@@ -129,42 +132,107 @@ func TestStore_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	assert.Nil(t, drop)
 }
 
-func TestStore_SetDrop_StoresCorrectDataInStorage(t *testing.T) {
+func TestDB_CreateDrop(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	// it references on 'fake' zero
-	fakeDrop := jetdrop.JetDrop{
-		Hash: []byte{0xFF},
+	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
+	err := db.AddPulse(core.Pulse{
+		PulseNumber: pulse,
+		Entropy:     core.Entropy{1, 2, 3},
+	})
+	records := []record.ObjectActivateRecord{
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{1}}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{2}}},
+		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{3}}},
 	}
 
-	db.SetCurrentPulse(42)
-	drop42, err := db.SetDrop(42, &fakeDrop)
+	var (
+		expectedRecData [][2][]byte
+		expectedIdxData [][2][]byte
+	)
+	for _, rec := range records {
+		recid, err := db.SetRecord(&rec)
+		assert.NoError(t, err)
+
+		idx := &index.ObjectLifeline{LatestState: *recid}
+		err = db.SetObjectIndex(recid, idx)
+		assert.NoError(t, err)
+
+		idxbytes, _ := index.EncodeObjectLifeline(idx)
+		expectedIdxData = append(expectedIdxData, [2][]byte{
+			record.ID2Bytes(*recid), idxbytes,
+		})
+		expectedRecData = append(expectedRecData, [2][]byte{
+			record.ID2Bytes(*recid),
+			record.SerializeRecord(&rec),
+		})
+	}
+	sortrecords(true, expectedRecData)
+	sortrecords(true, expectedIdxData)
+
+	drop, recData, idxData, err := db.CreateDrop(pulse, []byte{4, 5, 6})
 	assert.NoError(t, err)
+	assert.Equal(t, pulse, drop.Pulse)
+	assert.Equal(t, "qhHkoYwhmhf1oDQscCvZKjq8BQS4ELQicJrFpp", base58.Encode(drop.Hash))
+	assert.Equal(t, expectedRecData, recData)
+
+	genesisPulseBytes := core.PulseNumber(core.FirstPulseNumber).Bytes()
+	// filter idxData: remove prefix and skip genesis indexes
+	idxData = func() [][2][]byte {
+		var out [][2][]byte
+		for _, pair := range idxData {
+			pair[0] = pair[0][1:]
+			if bytes.HasPrefix(pair[0], genesisPulseBytes) {
+				continue
+			}
+			out = append(out, pair)
+		}
+		return out
+	}()
+
+	assert.Equal(t, expectedIdxData, idxData)
+}
+
+func sortrecords(ascendant bool, in [][2][]byte) [][2][]byte {
+	sort.Slice(in, func(i, j int) bool {
+		res := bytes.Compare(in[i][0], in[j][0])
+		if ascendant {
+			return res < 0
+		}
+		return res > 0
+	})
+	return in
+}
+
+func TestDB_SetDrop(t *testing.T) {
+	t.Parallel()
+	db, cleaner := storagetest.TmpDB(t, "")
+	defer cleaner()
+
+	drop42 := jetdrop.JetDrop{
+		Pulse: 42,
+		Hash:  []byte{0xFF},
+	}
+	err := db.SetDrop(&drop42)
+	assert.NoError(t, err)
+
 	got, err := db.GetDrop(42)
 	assert.NoError(t, err)
-	assert.Equal(t, got, drop42)
+	assert.Equal(t, *got, drop42)
 }
 
-func TestStore_SetCurrentPulse(t *testing.T) {
+func TestDB_AddPulse(t *testing.T) {
 	t.Parallel()
 	db, cleaner := storagetest.TmpDB(t, "")
 	defer cleaner()
 
-	db.SetCurrentPulse(42)
-	assert.Equal(t, core.PulseNumber(42), db.GetCurrentPulse())
-}
-
-func TestStore_SetEntropy(t *testing.T) {
-	t.Parallel()
-	db, cleaner := storagetest.TmpDB(t, "")
-	defer cleaner()
-
-	db.SetEntropy(42, core.Entropy{1, 2, 3})
-	entropy, err := db.GetEntropy(42)
+	err := db.AddPulse(core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}})
 	assert.NoError(t, err)
-	assert.Equal(t, core.Entropy{1, 2, 3}, *entropy)
-	_, err = db.GetEntropy(1)
-	assert.Error(t, err)
+	latestPulse, err := db.GetLatestPulseNumber()
+	assert.Equal(t, core.PulseNumber(42), latestPulse)
+	pulse, err := db.GetPulse(latestPulse)
+	assert.NoError(t, err)
+	assert.Equal(t, record.PulseRecord{PrevPulse: core.FirstPulseNumber, Entropy: core.Entropy{1, 2, 3}}, *pulse)
 }

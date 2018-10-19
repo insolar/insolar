@@ -4,6 +4,7 @@ INSOLARD = insolard
 INSGOCC = $(BIN_DIR)/insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
+LOADANALYZER = loadanalyzer
 
 ALL_PACKAGES = ./...
 COVERPROFILE = coverage.txt
@@ -55,7 +56,7 @@ $(INSOLARD):
 $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
-$(INSGOCC):
+$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
 	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(PULSARD):
@@ -63,6 +64,9 @@ $(PULSARD):
 
 $(INSGORUND):
 	go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
+
+$(LOADANALYZER):
+	go build -o $(BIN_DIR)/$(LOADANALYZER) -ldflags "${LDFLAGS}" cmd/loadanalyzer/*.go
 
 test:
 	go test -v $(ALL_PACKAGES)

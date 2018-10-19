@@ -19,11 +19,8 @@ package messagebus
 import (
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/stretchr/testify/assert"
 )
 
 type req struct {
@@ -60,23 +57,23 @@ func (r *runner) Execute(msg core.Message) (core.Reply, error) {
 
 func TestNew(t *testing.T) {
 	t.Skip("need repair")
-	r := new(runner)
-	r.requests = make([]req, 0)
-	r.responses = make([]core.Reply, 0)
-	cfg := configuration.NewConfiguration()
-	network, err := servicenetwork.NewServiceNetwork(cfg)
-	assert.NoError(t, err)
-	eb, err := NewMessageBus(configuration.Configuration{})
-	eb.Start(core.Components{
-		LogicRunner: r,
-		Network:     network,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if eb == nil {
-		t.Fatal("no object created")
-	}
+	//r := new(runner)
+	//r.requests = make([]req, 0)
+	//r.responses = make([]core.Reply, 0)
+	//cfg := configuration.NewConfiguration()
+	//network, err := servicenetwork.NewServiceNetwork(cfg)
+	//assert.NoError(t, err)
+	//eb, err := NewMessageBus(configuration.Configuration{})
+	//eb.Start(core.Components{
+	//	LogicRunner: r,
+	//	Network:     network,
+	//})
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//if eb == nil {
+	//	t.Fatal("no object created")
+	//}
 }
 
 // TODO: fix network interaction

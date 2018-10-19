@@ -26,11 +26,83 @@ import (
 
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/cryptohelpers/hash"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 )
+
+// FetchNeighbour searches neighbour of the pulsar by pubKey of a neighbout
+func (currentPulsar *Pulsar) FetchNeighbour(pubKey string) (*Neighbour, error) {
+	neighbour, ok := currentPulsar.Neighbours[pubKey]
+	if !ok {
+		return nil, errors.New("forbidden connection")
+	}
+	return neighbour, nil
+}
+
+// IsStateFailed checks if state of the pulsar is failed or not
+func (currentPulsar *Pulsar) IsStateFailed() bool {
+	return currentPulsar.StateSwitcher.GetState() == Failed
+}
+
+func (currentPulsar *Pulsar) isStandalone() bool {
+	return len(currentPulsar.Neighbours) == 0
+}
+
+func (currentPulsar *Pulsar) getMaxTraitorsCount() int {
+	nodes := len(currentPulsar.Neighbours) + 1
+	return (nodes - 1) / 3
+}
+
+func (currentPulsar *Pulsar) getMinimumNonTraitorsCount() int {
+	nodes := len(currentPulsar.Neighbours) + 1
+	return nodes - currentPulsar.getMaxTraitorsCount()
+}
+
+func (currentPulsar *Pulsar) handleErrorState(err error) {
+	log.Error(err)
+
+	currentPulsar.clearState()
+}
+
+func (currentPulsar *Pulsar) clearState() {
+	currentPulsar.GeneratedEntropy = [core.EntropySize]byte{}
+	currentPulsar.GeneratedEntropySign = []byte{}
+
+	currentPulsar.CurrentSlotEntropy = core.Entropy{}
+	currentPulsar.CurrentSlotPulseSender = ""
+
+	currentPulsar.currentSlotSenderConfirmationsLock.Lock()
+	currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}
+	currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
+
+	currentPulsar.OwnedBftRow = map[string]*BftCell{}
+	currentPulsar.BftGridLock.Lock()
+	currentPulsar.bftGrid = map[string]map[string]*BftCell{}
+	currentPulsar.BftGridLock.Unlock()
+}
+
+func (currentPulsar *Pulsar) generateNewEntropyAndSign() error {
+	currentPulsar.GeneratedEntropy = currentPulsar.EntropyGenerator.GenerateEntropy()
+	signature, err := signData(currentPulsar.PrivateKey, currentPulsar.GeneratedEntropy)
+	if err != nil {
+		return err
+	}
+	currentPulsar.GeneratedEntropySign = signature
+
+	return nil
+}
+
+func (currentPulsar *Pulsar) preparePayload(body interface{}) (*Payload, error) {
+	sign, err := signData(currentPulsar.PrivateKey, body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Payload{Body: body, PublicKey: currentPulsar.PublicKeyRaw, Signature: sign}, nil
+}
 
 type ecdsaSignature struct {
 	R, S *big.Int

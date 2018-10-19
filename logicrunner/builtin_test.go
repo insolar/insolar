@@ -19,6 +19,8 @@ package logicrunner
 import (
 	"testing"
 
+	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
@@ -30,6 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
 func byteRecorRef(b byte) core.RecordRef {
@@ -39,6 +42,7 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
+	ctx := inscontext.TODO()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -48,13 +52,13 @@ func TestBareHelloworld(t *testing.T) {
 	am := l.GetArtifactManager()
 	assert.NoError(t, err, "Initialize runner")
 
-	eb := &testMessageBus{lr}
-
+	mb := testmessagebus.NewTestMessageBus()
 	assert.NoError(t, lr.Start(core.Components{
 		Ledger:     l,
-		MessageBus: eb,
+		MessageBus: mb,
 	}), "starting logicrunner")
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &pulsar.StandardEntropyGenerator{}))
+	MessageBusTrivialBehavior(mb, lr)
+	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 
 	hw := helloworld.NewHelloWorld()
 
@@ -63,10 +67,10 @@ func TestBareHelloworld(t *testing.T) {
 	_, _, classRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
-	contract, err := am.RegisterRequest(&message.CallConstructor{ClassRef: byteRecorRef(4)})
+	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: byteRecorRef(4)})
 	assert.NoError(t, err)
 
-	_, err = am.ActivateObject(domain, *contract, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
+	_, err = am.ActivateObject(ctx, domain, *contract, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 

@@ -17,6 +17,7 @@
 package ginsider
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -58,10 +59,25 @@ type RPC struct {
 	GI *GoInsider
 }
 
+func recoverRPC(err *error) {
+	if r := recover(); r != nil {
+		if err != nil {
+			if *err == nil {
+				*err = errors.New(fmt.Sprint(r))
+			} else {
+				*err = errors.New(fmt.Sprint(*err, r))
+			}
+		}
+		log.Errorln("panic: ", r)
+	}
+}
+
 // CallMethod is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) error {
+func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCallMethodResp) (err error) {
 	log.Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
+	defer recoverRPC(&err)
+
 	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
 		return errors.Wrapf(err, "Couldn't get plugin by code reference %s", args.Code.String())
@@ -94,7 +110,10 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 
 // CallConstructor is an RPC that runs a method on an object and
 // returns a new state of the object and result of the method
-func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) error {
+func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
+	log.Debugf("Calling constructor %q in code %q", args.Name, args.Code)
+	defer recoverRPC(&err)
+
 	p, err := t.GI.Plugin(args.Code)
 	if err != nil {
 		return err
@@ -196,7 +215,8 @@ func (gi *GoInsider) Plugin(ref core.RecordRef) (*plugin.Plugin, error) {
 func MakeUpBaseReq() rpctypes.UpBaseReq {
 	if ctx, ok := gls.Get("ctx").(*core.LogicCallContext); ok {
 		return rpctypes.UpBaseReq{
-			Me: *ctx.Callee,
+			Callee:  *ctx.Callee,
+			Request: *ctx.Request,
 		}
 	}
 	panic("Wrong or unexistent context")

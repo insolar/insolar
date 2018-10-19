@@ -19,7 +19,6 @@ package jetcoordinator
 import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/jetdrop"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 )
@@ -91,7 +90,7 @@ func (jc *JetCoordinator) IsAuthorized(
 func (jc *JetCoordinator) QueryRole(
 	role core.JetRole, obj core.RecordRef, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	entropy, err := jc.db.GetEntropy(pulse)
+	pulseData, err := jc.db.GetPulse(pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -105,25 +104,12 @@ func (jc *JetCoordinator) QueryRole(
 		return nil, errors.New("no candidate count for this role")
 	}
 
-	selected, err := selectByEntropy(*entropy, candidates, count)
+	selected, err := selectByEntropy(pulseData.Entropy, candidates, count)
 	if err != nil {
 		return nil, err
 	}
 
 	return selected, nil
-}
-
-// CreateDrop creates jet drop for provided pulse number.
-func (jc *JetCoordinator) CreateDrop(pulse core.PulseNumber) (*jetdrop.JetDrop, error) {
-	prevDrop, err := jc.db.GetDrop(jc.db.GetCurrentPulse())
-	if err != nil {
-		return nil, err
-	}
-	newDrop, err := jc.db.SetDrop(pulse, prevDrop)
-	if err != nil {
-		return nil, err
-	}
-	return newDrop, nil
 }
 
 func (jc *JetCoordinator) jetRef(objRef core.RecordRef) *core.RecordRef { // nolint: megacheck

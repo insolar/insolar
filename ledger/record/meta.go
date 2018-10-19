@@ -16,8 +16,22 @@
 
 package record
 
+import (
+	"io"
+
+	"github.com/insolar/insolar/core"
+)
+
 // GenesisRecord is the first record created on storage. It's used to link root objects to it.
 type GenesisRecord struct {
+}
+
+// Type implementation of Record interface.
+func (r *GenesisRecord) Type() TypeID { return typeGenesis }
+
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
 }
 
 // IsDeactivation determines if current state is deactivation.
@@ -47,11 +61,17 @@ type ChildRecord struct {
 	Ref Reference // Reference to the child's head.
 }
 
-// Next returns next record.
-func (r *ChildRecord) Next() *ID {
-	if r == nil {
-		return nil
-	}
+// Type implementation of Record interface.
+func (r *ChildRecord) Type() TypeID { return typeChild }
 
-	return r.PrevChild
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(SerializeRecord(r))
+}
+
+// PulseRecord is a record containing pulse info.
+type PulseRecord struct {
+	PrevPulse          core.PulseNumber
+	Entropy            core.Entropy
+	PredictedNextPulse core.PulseNumber
 }

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package pulsar
+package entropygenerator
 
 import (
 	"crypto/rand"

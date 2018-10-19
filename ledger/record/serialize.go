@@ -18,79 +18,13 @@ package record
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
-	"io"
 
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 )
-
-// Raw struct contains raw serialized record.
-// We need raw blob to not have dependency on record structure changes in future,
-// and have ability of consistent hash checking on old records.
-type Raw struct {
-	Type TypeID
-	Data []byte
-}
-
-// DecodeToRaw decodes bytes to Raw struct from CBOR.
-func DecodeToRaw(b []byte) (*Raw, error) {
-	cborH := &codec.CborHandle{}
-	var rec Raw
-	dec := codec.NewDecoderBytes(b, cborH)
-	err := dec.Decode(&rec)
-	if err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
-// MustEncodeRaw wraps EncodeRaw, panics on encode errors.
-func MustEncodeRaw(raw *Raw) []byte {
-	b, err := EncodeRaw(raw)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
-// EncodeRaw encodes Raw to CBOR.
-func EncodeRaw(raw *Raw) ([]byte, error) {
-	cborH := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cborH)
-	err := enc.Encode(raw)
-	return b.Bytes(), err
-}
-
-// hashableBytes exists just to allow []byte implements hash.Writer
-type hashableBytes []byte
-
-func (b hashableBytes) WriteHash(w io.Writer) {
-	_, err := w.Write(b)
-	if err != nil {
-		panic(err)
-	}
-}
-
-// Hash generates hash for Raw record.
-func (raw *Raw) Hash() []byte {
-	return hash.SHA3hash224(raw.Type, hashableBytes(raw.Data))
-}
-
-// ToRecord decodes Raw to Record.
-func (raw *Raw) ToRecord() Record {
-	cborH := &codec.CborHandle{}
-	rec := getRecordByTypeID(raw.Type)
-	dec := codec.NewDecoder(bytes.NewReader(raw.Data), cborH)
-	err := dec.Decode(rec)
-	if err != nil {
-		panic(err)
-	}
-	return rec
-}
 
 // Bytes2ID converts ID from byte representation to struct.
 func Bytes2ID(b []byte) ID {
@@ -119,34 +53,21 @@ func ID2Bytes(id ID) []byte {
 // (we don't use iota for clarity and predictable ids,
 // not depended on definition order)
 const (
-	// request record ids
-	callRequestRecordID TypeID = 1
-	// result record ids
-	resultRecordID              TypeID = 7
-	wipeOutRecordID             TypeID = 8
-	readRecordResultID          TypeID = 9
-	statelessCallResultID       TypeID = 10
-	statelessExceptionResultID  TypeID = 11
-	readObjectResultID          TypeID = 12
-	specialResultID             TypeID = 13
-	lockUnlockResultID          TypeID = 14
-	rejectionResultID           TypeID = 15
-	activationRecordID          TypeID = 16
-	classActivateRecordID       TypeID = 17
-	objectActivateRecordID      TypeID = 18
-	codeRecordID                TypeID = 19
-	amendRecordID               TypeID = 20
-	classAmendRecordID          TypeID = 21
-	deactivationRecordID        TypeID = 22
-	objectAmendRecordID         TypeID = 23
-	statefulCallResultID        TypeID = 24
-	statefulExceptionResultID   TypeID = 25
-	enforcedObjectAmendRecordID TypeID = 26
-	objectAppendRecordID        TypeID = 27
-	typeRecordID                TypeID = 28
 	// meta
-	childRecordID   TypeID = 29
-	genesisRecordID TypeID = 30
+	typeGenesis TypeID = 10
+	typeChild   TypeID = 11
+
+	// request
+	typeCallRequest TypeID = 20
+
+	// result
+	typeType           TypeID = 30
+	typeCode           TypeID = 31
+	typeClassActivate  TypeID = 32
+	typeClassAmend     TypeID = 33
+	typeObjectActivate TypeID = 34
+	typeObjectAmend    TypeID = 35
+	typeDeactivate     TypeID = 36
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -154,145 +75,57 @@ const (
 func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 	switch id {
 	// request records
-	case callRequestRecordID:
+	case typeCallRequest:
 		return &CallRequest{}
-	case wipeOutRecordID:
-		return &WipeOutRecord{}
-	case readRecordResultID:
-		return &ReadRecordResult{}
-	case statelessCallResultID:
-		return &StatelessCallResult{}
-	case statelessExceptionResultID:
-		return &StatelessExceptionResult{}
-	case readObjectResultID:
-		return &ReadObjectResult{}
-	case specialResultID:
-		return &SpecialResult{}
-	case lockUnlockResultID:
-		return &LockUnlockResult{}
-	case rejectionResultID:
-		return &RejectionResult{}
-	case activationRecordID:
-		return &ActivationRecord{}
-	case classActivateRecordID:
+	case typeClassActivate:
 		return &ClassActivateRecord{}
-	case objectActivateRecordID:
+	case typeObjectActivate:
 		return &ObjectActivateRecord{}
-	case codeRecordID:
+	case typeCode:
 		return &CodeRecord{}
-	case amendRecordID:
-		return &AmendRecord{}
-	case classAmendRecordID:
+	case typeClassAmend:
 		return &ClassAmendRecord{}
-	case deactivationRecordID:
+	case typeDeactivate:
 		return &DeactivationRecord{}
-	case objectAmendRecordID:
+	case typeObjectAmend:
 		return &ObjectAmendRecord{}
-	case statefulCallResultID:
-		return &StatefulCallResult{}
-	case statefulExceptionResultID:
-		return &StatefulExceptionResult{}
-	case enforcedObjectAmendRecordID:
-		return &EnforcedObjectAmendRecord{}
-	case objectAppendRecordID:
-		return &ObjectAppendRecord{}
-	case typeRecordID:
+	case typeType:
 		return &TypeRecord{}
-	case childRecordID:
+	case typeChild:
 		return &ChildRecord{}
-	case genesisRecordID:
+	case typeGenesis:
 		return &GenesisRecord{}
 	default:
 		panic(fmt.Errorf("unknown record type id %v", id))
 	}
 }
 
-// getRecordByTypeID returns record's TypeID based on concrete record type of Record interface.
-func getTypeIDbyRecord(rec Record) TypeID { // nolint: gocyclo, megacheck
-	switch v := rec.(type) {
-	// request records
-	case *CallRequest:
-		return callRequestRecordID
-	// result records
-	case *ResultRecord:
-		return resultRecordID
-	case *WipeOutRecord:
-		return wipeOutRecordID
-	case *ReadRecordResult:
-		return readRecordResultID
-	case *StatelessCallResult:
-		return statelessCallResultID
-	case *StatelessExceptionResult:
-		return statelessExceptionResultID
-	case *ReadObjectResult:
-		return readObjectResultID
-	case *SpecialResult:
-		return specialResultID
-	case *LockUnlockResult:
-		return lockUnlockResultID
-	case *RejectionResult:
-		return rejectionResultID
-	case *ActivationRecord:
-		return activationRecordID
-	case *ClassActivateRecord:
-		return classActivateRecordID
-	case *ObjectActivateRecord:
-		return objectActivateRecordID
-	case *CodeRecord:
-		return codeRecordID
-	case *AmendRecord:
-		return amendRecordID
-	case *ClassAmendRecord:
-		return classAmendRecordID
-	case *DeactivationRecord:
-		return deactivationRecordID
-	case *ObjectAmendRecord:
-		return objectAmendRecordID
-	case *StatefulCallResult:
-		return statefulCallResultID
-	case *StatefulExceptionResult:
-		return statefulExceptionResultID
-	case *EnforcedObjectAmendRecord:
-		return enforcedObjectAmendRecordID
-	case *ObjectAppendRecord:
-		return objectAppendRecordID
-	case *TypeRecord:
-		return typeRecordID
-	case *ChildRecord:
-		return childRecordID
-	case *GenesisRecord:
-		return genesisRecordID
-	default:
-		panic(fmt.Errorf("can't find record id by type %T", v))
-	}
+// SerializeType returns binary representation of provided type.
+func SerializeType(id TypeID) []byte {
+	buf := make([]byte, TypeIDSize)
+	binary.BigEndian.PutUint32(buf, uint32(id))
+	return buf
 }
 
-// Encode serializes record to CBOR.
-func Encode(rec Record) ([]byte, error) {
-	cborH := &codec.CborHandle{}
-	var b bytes.Buffer
-	enc := codec.NewEncoder(&b, cborH)
-	err := enc.Encode(rec)
-	return b.Bytes(), err
+// DeserializeType returns type from provided binary representation.
+func DeserializeType(buf []byte) TypeID {
+	return TypeID(binary.BigEndian.Uint32(buf))
 }
 
-// MustEncode wraps Encode, panics on encoding errors.
-func MustEncode(rec Record) []byte {
-	b, err := Encode(rec)
-	if err != nil {
-		panic(err)
-	}
-	return b
+// SerializeRecord returns binary representation of provided record.
+func SerializeRecord(rec Record) []byte {
+	typeBytes := SerializeType(rec.Type())
+	buff := bytes.NewBuffer(typeBytes)
+	enc := codec.NewEncoder(buff, &codec.CborHandle{})
+	enc.MustEncode(rec)
+	return buff.Bytes()
 }
 
-// EncodeToRaw converts record to Raw record.
-func EncodeToRaw(rec Record) (*Raw, error) {
-	b, err := Encode(rec)
-	if err != nil {
-		panic(err)
-	}
-	return &Raw{
-		Type: getTypeIDbyRecord(rec),
-		Data: b,
-	}, nil
+// DeserializeRecord returns record decoded from bytes.
+func DeserializeRecord(buf []byte) Record {
+	t := DeserializeType(buf[:TypeIDSize])
+	dec := codec.NewDecoderBytes(buf[TypeIDSize:], &codec.CborHandle{})
+	rec := getRecordByTypeID(t)
+	dec.MustDecode(&rec)
+	return rec
 }

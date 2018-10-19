@@ -17,6 +17,7 @@
 package pulsar
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/log"
@@ -26,24 +27,24 @@ import (
 type State int
 
 const (
-	failed State = iota
-	waitingForStart
-	generateEntropy
-	waitingForEntropySigns
-	sendingEntropy
-	waitingForEntropy
-	sendingVector
-	waitingForVectors
-	verifying
-	sendingPulseSign
-	waitingForPulseSigns
-	sendingPulse
+	Failed State = iota
+	WaitingForStart
+	GenerateEntropy
+	WaitingForEntropySigns
+	SendingEntropy
+	WaitingForEntropy
+	SendingVector
+	WaitingForVectors
+	Verifying
+	SendingPulseSign
+	WaitingForPulseSigns
+	SendingPulse
 )
 
 // StateSwitcher is a base for pulsar's state machine
 type StateSwitcher interface {
-	switchToState(state State, args interface{})
-	getState() State
+	SwitchToState(state State, args interface{})
+	GetState() State
 	setState(state State)
 	SetPulsar(pulsar *Pulsar)
 }
@@ -55,7 +56,7 @@ type StateSwitcherImpl struct {
 	lock   sync.RWMutex
 }
 
-func (switcher *StateSwitcherImpl) getState() State {
+func (switcher *StateSwitcherImpl) GetState() State {
 	switcher.lock.RLock()
 	defer switcher.lock.RUnlock()
 	return switcher.state
@@ -69,41 +70,41 @@ func (switcher *StateSwitcherImpl) setState(state State) {
 
 // SetPulsar sets pulsar of the current instance
 func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
-	switcher.setState(waitingForStart)
+	switcher.setState(WaitingForStart)
 	switcher.pulsar = pulsar
 }
 
-func (switcher *StateSwitcherImpl) switchToState(state State, args interface{}) {
-	log.Debugf("Switch state from %v to %v", switcher.getState().String(), state.String())
-	if state < switcher.getState() && (state != waitingForStart && state != failed) {
-		panic("Attempt to set a backward step")
+func (switcher *StateSwitcherImpl) SwitchToState(state State, args interface{}) {
+	log.Debugf("Switch state from %v to %v, node - %v", switcher.GetState().String(), state.String(), switcher.pulsar.Config.MainListenerAddress)
+	if state < switcher.GetState() && (state != WaitingForStart && state != Failed) {
+		panic(fmt.Sprintf("Attempt to set a backward step. %v", switcher.pulsar.Config.MainListenerAddress))
 	}
 
 	switcher.setState(state)
 
 	switch state {
-	case waitingForStart:
+	case WaitingForStart:
 		switcher.pulsar.clearState()
-	case waitingForEntropySigns:
+	case WaitingForEntropySigns:
 		switcher.pulsar.waitForEntropySigns()
-	case sendingEntropy:
+	case SendingEntropy:
 		switcher.pulsar.sendEntropy()
-	case waitingForEntropy:
+	case WaitingForEntropy:
 		switcher.pulsar.waitForEntropy()
-	case sendingVector:
+	case SendingVector:
 		switcher.pulsar.sendVector()
-	case waitingForVectors:
-		switcher.pulsar.receiveVectors()
-	case verifying:
+	case WaitingForVectors:
+		switcher.pulsar.waitForVectors()
+	case Verifying:
 		switcher.pulsar.verify()
-	case waitingForPulseSigns:
+	case WaitingForPulseSigns:
 		switcher.pulsar.waitForPulseSigns()
-	case sendingPulseSign:
+	case SendingPulseSign:
 		switcher.pulsar.sendPulseSign()
-	case sendingPulse:
-		switcher.pulsar.sendPulse()
-	case failed:
+	case SendingPulse:
+		switcher.pulsar.sendPulseToNodesAndPulsars()
+	case Failed:
 		switcher.pulsar.handleErrorState(args.(error))
-		switcher.setState(waitingForStart)
+		switcher.setState(WaitingForStart)
 	}
 }
