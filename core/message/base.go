@@ -78,6 +78,12 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &RegisterChild{}, nil
 	case core.TypeJetDrop:
 		return &JetDrop{}, nil
+	case core.TypeSetRecord:
+		return &SetRecord{}, nil
+
+	// Bootstrap
+	case core.TypeBootstrapRequest:
+		return &BootstrapRequest{}, nil
 	default:
 		return nil, errors.Errorf("unimplemented message type %d", mt)
 	}
@@ -162,4 +168,8 @@ func init() {
 	gob.Register(&UpdateObject{})
 	gob.Register(&RegisterChild{})
 	gob.Register(&JetDrop{})
+	gob.Register(&SetRecord{})
+
+	// Bootstrap
+	gob.Register(&BootstrapRequest{})
 }
