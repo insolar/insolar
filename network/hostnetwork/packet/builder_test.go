@@ -49,13 +49,13 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 	receiver.ID, _ = id.NewID()
 	ref := testutils.RandomRef()
 
-	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{&ref, "test", [][]byte{}}).Build()
+	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
 		Type:       TypeRPC,
-		Data:       &RequestDataRPC{&ref, "test", [][]byte{}},
+		Data:       &RequestDataRPC{ref, "test", [][]byte{}},
 		IsResponse: false,
 		Error:      nil,
 	}

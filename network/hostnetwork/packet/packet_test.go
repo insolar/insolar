@@ -50,10 +50,10 @@ func TestPacket_IsValid(t *testing.T) {
 	builder := NewBuilder()
 	ref := testutils.RandomRef()
 
-	correctPacket := builder.Type(TypeRPC).Request(&RequestDataRPC{&ref, "test", [][]byte{}}).Build()
+	correctPacket := builder.Type(TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
 	assert.True(t, correctPacket.IsValid())
 
-	badtPacket := builder.Type(TypeStore).Request(&RequestDataRPC{&ref, "test", [][]byte{}}).Build()
+	badtPacket := builder.Type(TypeStore).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
 	assert.False(t, badtPacket.IsValid())
 }
 
@@ -70,7 +70,7 @@ func TestPacket_IsValid_Ok(t *testing.T) {
 		{"TypeFindHost", TypeFindHost, &RequestDataFindHost{}},
 		{"TypeFindValue", TypeFindValue, &RequestDataFindValue{}},
 		{"TypeStore", TypeStore, &RequestDataStore{}},
-		{"TypeRPC", TypeRPC, &RequestDataRPC{&ref, "test", [][]byte{}}},
+		{"TypeRPC", TypeRPC, &RequestDataRPC{ref, "test", [][]byte{}}},
 		{"TypeRelay", TypeRelay, &RequestRelay{Unknown}},
 		{"TypeAuthentication", TypeAuthentication, &RequestAuthentication{Unknown}},
 		{"TypeCheckOrigin", TypeCheckOrigin, &RequestCheckOrigin{}},
@@ -98,7 +98,7 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 		packetType packetType
 		data       interface{}
 	}{
-		{"incorrect request", TypeStore, &RequestDataRPC{&ref, "test", [][]byte{}}},
+		{"incorrect request", TypeStore, &RequestDataRPC{ref, "test", [][]byte{}}},
 		{"incorrect type", packetType(1337), &RequestDataFindHost{}},
 	}
 	for _, test := range tests {

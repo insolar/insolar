@@ -205,7 +205,7 @@ func newRealDHT(t *testing.T, bootstrap []*host.Host, port string) *DHT {
 			relay.NewProxy(),
 			4,
 			false,
-			&ref,
+			ref,
 			5,
 		)
 	} else {
@@ -217,7 +217,7 @@ func newRealDHT(t *testing.T, bootstrap []*host.Host, port string) *DHT {
 			relay.NewProxy(),
 			4,
 			false,
-			&ref,
+			ref,
 			5,
 		)
 	}
@@ -244,7 +244,7 @@ func newDHT(t *testing.T, bootstrap []*host.Host, port string) (*DHT, transport.
 			relay.NewProxy(),
 			4,
 			false,
-			&ref,
+			ref,
 			5,
 		)
 	} else {
@@ -259,7 +259,7 @@ func newDHT(t *testing.T, bootstrap []*host.Host, port string) (*DHT, transport.
 			relay.NewProxy(),
 			4,
 			false,
-			&ref,
+			ref,
 			5,
 		)
 	}
@@ -499,7 +499,7 @@ func TestHostResponseSendError(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy(), 4, false, &ref, 5)
+		relay.NewProxy(), 4, false, ref, 5)
 
 	mockTp := tp.(*mockTransport)
 
@@ -550,17 +550,6 @@ func TestBucketRefresh(t *testing.T) {
 		},
 		"23000")
 
-	// <<<<<<< HEAD
-	// 	dht, _ := NewDHT(st, s, tp, r, &Options{
-	// 		RefreshTime: time.Second * 2,
-	// 		BootstrapHosts: []*host.Host{{
-	// 			ID:      getZerodIDWithNthByte(1, byte(255)),
-	// 			Address: bootstrapAddr,
-	// 		}},
-	// 	},
-	// 		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
-	// =======
-	// >>>>>>> e03389eb69f0eae55688e408e7809d6f5c7f3577
 	mockTp := tp.(*mockTransport)
 
 	queries := 0
@@ -627,7 +616,7 @@ func TestStoreReplication(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy(), 4, false, &ref, 5)
+		relay.NewProxy(), 4, false, ref, 5)
 
 	mockTp := tp.(*mockTransport)
 
@@ -916,7 +905,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 	ids1 = append(ids1, id1)
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
 	ref := testutils.RandomRef()
-	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false, &ref, 5)
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false, ref, 5)
 	assert.NoError(t, err)
 
 	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
@@ -929,7 +918,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 			},
 		},
 	},
-		relay.NewProxy(), 4, false, &ref, 5)
+		relay.NewProxy(), 4, false, ref, 5)
 
 	dhts = append(dhts, dht1)
 	dhts = append(dhts, dht2)
@@ -983,12 +972,12 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 
 	key1, _ := ecdsa.GeneratePrivateKey()
 	key2, _ := ecdsa.GeneratePrivateKey()
-	keeper1 := nodekeeper.NewNodeKeeper(*dht1.nodeID)
-	keeper2 := nodekeeper.NewNodeKeeper(*dht2.nodeID)
+	keeper1 := nodekeeper.NewNodeKeeper(dht1.nodeID)
+	keeper2 := nodekeeper.NewNodeKeeper(dht2.nodeID)
 
 	keeper1.AddActiveNodes([]*core.ActiveNode{
 		{
-			*dht2.nodeID,
+			dht2.nodeID,
 			5,
 			2,
 			[]core.NodeRole{core.RoleUnknown},
@@ -999,7 +988,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	)
 	keeper2.AddActiveNodes([]*core.ActiveNode{
 		{
-			*dht1.nodeID,
+			dht1.nodeID,
 			5,
 			2,
 			[]core.NodeRole{core.RoleUnknown},

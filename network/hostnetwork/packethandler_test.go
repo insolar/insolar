@@ -147,9 +147,8 @@ func (hh *mockHostHandler) GetOuterHostsCount() int {
 	return 0
 }
 
-func (hh *mockHostHandler) GetNodeID() *core.RecordRef {
-	ref := testutils.RandomRef()
-	return &ref
+func (hh *mockHostHandler) GetNodeID() core.RecordRef {
+	return testutils.RandomRef()
 }
 
 func (hh *mockHostHandler) ConfirmNodeRole(role string) bool {
@@ -170,10 +169,6 @@ func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
 
 func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	return nil
-}
-
-func (hh *mockHostHandler) SetNodeID(nodeID *core.RecordRef) {
-
 }
 
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {

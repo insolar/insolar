@@ -39,7 +39,7 @@ func TestNodenetwork_GetReferenceHostID(t *testing.T) {
 	ref := core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
 	key, _ := ecdsa.GeneratePrivateKey()
 	node := NewNode(ref, key)
-	assert.Equal(t, node.GetID(), &ref)
+	assert.Equal(t, node.GetID(), ref)
 }
 
 func TestNodeNetwork_GetID(t *testing.T) {
@@ -60,6 +60,6 @@ func TestNodeNetwork_ResolveHostID(t *testing.T) {
 	ref1Clone := core.NewRefFromBase58(str1)
 	ref2 := core.NewRefFromBase58(str2)
 
-	assert.Equal(t, ResolveHostID(&ref1), ResolveHostID(&ref1Clone))
-	assert.NotEqual(t, ResolveHostID(&ref1), ResolveHostID(&ref2))
+	assert.Equal(t, ResolveHostID(ref1), ResolveHostID(ref1Clone))
+	assert.NotEqual(t, ResolveHostID(ref1), ResolveHostID(ref2))
 }
