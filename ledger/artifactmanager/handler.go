@@ -250,6 +250,9 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 			return ErrClassDeactivated
 		}
 		id, err = tx.SetRecord(rec)
+		if err != nil {
+			return err
+		}
 		idx.LatestState = *id
 		idx.Deactivated = state.IsDeactivation()
 		return tx.SetClassIndex(&classID, idx)
