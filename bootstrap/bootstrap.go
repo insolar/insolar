@@ -60,13 +60,13 @@ type Bootstrapper struct {
 
 // Info returns json with references for info api endpoint
 func (b *Bootstrapper) Info() ([]byte, error) {
-	classes := map[string][]byte{}
+	classes := map[string]string{}
 	for class, ref := range b.classRefs {
-		classes[class] = ref[:]
+		classes[class] = ref.String()
 	}
 	return json.MarshalIndent(map[string]interface{}{
-		"root_domain": b.rootDomainRef[:],
-		"root_member": b.rootMemberRef[:],
+		"root_domain": b.rootDomainRef.String(),
+		"root_member": b.rootMemberRef.String(),
 		"classes":     classes,
 	}, "", "   ")
 }
@@ -320,7 +320,7 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *gop
 	}
 
 	ctx := inscontext.TODO()
-	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootWallet"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
