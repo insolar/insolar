@@ -84,6 +84,10 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	lr.ArtifactManager = c.Ledger.GetArtifactManager()
 	lr.MessageBus = c.MessageBus
 
+	// TODO - network reworks this
+	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
+	lr.NodeID = c.Network.GetNodeID()
+
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
@@ -124,10 +128,6 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	if err := lr.MessageBus.Register(core.TypeValidationResults, lr.ProcessValidationResults); err != nil {
 		return err
 	}
-
-	// TODO - network reworks this
-	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
-	lr.NodeID = c.Network.GetNodeID()
 
 	return nil
 }
@@ -209,7 +209,13 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 		return nil, errors.New("Can't execute this object")
 	}
 
-	reqref, err := lr.ArtifactManager.RegisterRequest(msg)
+	vb.Begin(ref, core.CaseRecord{
+		Type: core.CaseRecordTypeStart,
+		Resp: msg,
+	})
+
+	reqref, err := vb.RegisterRequest(msg)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
 	}
