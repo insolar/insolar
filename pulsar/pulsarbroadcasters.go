@@ -283,6 +283,11 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 }
 
 func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Fatalf("run time panic: %v", x)
+		}
+	}()
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)
 		if err != nil {
@@ -333,6 +338,11 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 }
 
 func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Fatalf("run time panic: %v", x)
+		}
+	}()
 	pb := packet.NewBuilder()
 	pulseRequest := pb.Sender(sender).Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(packet.TypePulse).Build()
 	call, err := t.SendRequest(pulseRequest)
