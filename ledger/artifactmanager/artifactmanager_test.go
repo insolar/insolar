@@ -177,13 +177,13 @@ func TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord(t *testing.T) {
 	defer cleaner()
 	ctx := inscontext.TODO()
 
-	coreRef, err := td.manager.DeployCode(
+	coreID, err := td.manager.DeployCode(
 		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), []byte{1, 2, 3}, core.MachineTypeBuiltin,
 	)
 	assert.NoError(t, err)
-	ref := record.Core2Reference(*coreRef)
-	codeRec, err := td.db.GetRecord(&ref.Record)
+	id := record.Bytes2ID(coreID[:])
+	codeRec, err := td.db.GetRecord(&id)
 	assert.NoError(t, err)
 	assert.Equal(t, codeRec, &record.CodeRecord{
 		ResultRecord: record.ResultRecord{

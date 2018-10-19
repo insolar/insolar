@@ -214,10 +214,12 @@ func (m *LedgerArtifactManager) DeployCode(
 	request core.RecordRef,
 	code []byte,
 	machineType core.MachineType,
-) (*core.RecordRef, error) {
-	return m.fetchReference(&message.DeployCode{
-		Domain:      domain,
-		Request:     request,
+) (*core.RecordID, error) {
+	return m.setRecord(&record.CodeRecord{
+		ResultRecord: record.ResultRecord{
+			Domain:  record.Core2Reference(domain),
+			Request: record.Core2Reference(request),
+		},
 		Code:        code,
 		MachineType: machineType,
 	})
