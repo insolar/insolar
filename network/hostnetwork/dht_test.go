@@ -1019,6 +1019,17 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	dht2.RemoteProcedureCall(GetDefaultCtx(dht1), dht1.GetOriginHost().IDs[0].String(), "test", [][]byte{msg1})
 }
 
+func TestDHT_MessageSign(t *testing.T) {
+	key, _ := ecdsa.GeneratePrivateKey()
+	key2, _ := ecdsa.GeneratePrivateKey()
+
+	msg := message.BootstrapRequest{}
+	err := message.SignMessage(&msg, key)
+	assert.NoError(t, err)
+	assert.True(t, message.SignIsCorrect(&msg, &key.PublicKey))
+	assert.False(t, message.SignIsCorrect(&msg, &key2.PublicKey))
+}
+
 func TestDHT_Getters(t *testing.T) {
 	dht1 := newRealDHT(t, nil, "0")
 	outerHostCount := 3
