@@ -54,7 +54,7 @@ func newVersionManager() *VersionManager {
 	versionTable := make(map[string]*Feature)
 	vm := &VersionManager{
 		versionTable,
-		INS_BASE_VERSION,
+		InsBaseVersion,
 		viper.New(),
 	}
 	vm.viper.SetDefault("versiontable", vm.VersionTable)
@@ -78,7 +78,7 @@ func (vm *VersionManager) Load() error {
 }
 
 func (vm *VersionManager) LoadFromVariable() error {
-	err := vm.viper.ReadConfig(strings.NewReader(INS_VERSION_TABLE))
+	err := vm.viper.ReadConfig(strings.NewReader(InsVersionTable))
 	if err != nil {
 		return err
 	}

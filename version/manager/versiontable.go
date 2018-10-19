@@ -16,8 +16,8 @@
 package manager
 
 const (
-	INS_BASE_VERSION  = "v0.3.0"
-	INS_VERSION_TABLE = "#  Structure of the versiontable.yml file" +
+	InsBaseVersion  = "v0.3.0"
+	InsVersionTable = "#  Structure of the versiontable.yml file" +
 		"#" +
 		"#versiontable:" +
 		"#  {FEATURE KEYWORD}:" +

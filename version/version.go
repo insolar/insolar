@@ -34,14 +34,10 @@ var (
 	CITool = "unset"
 	// GitHash is short git commit hash.
 	GitHash = "unset"
-
-	Data = ""
 )
 
 // GetFullVersion returns multi line full version information
 func GetFullVersion() string {
-
-	fmt.Sprintf(`Data: %s`, Data)
 
 	result := fmt.Sprintf(`
  Version      : %s
@@ -54,8 +50,4 @@ func GetFullVersion() string {
 		runtime.Compiler, runtime.GOOS, runtime.GOARCH)
 
 	return result
-}
-
-func GetData() string {
-	return fmt.Sprintf(`%s`, Data)
 }

@@ -23,8 +23,8 @@ echo -e "/*
 echo -e "package manager
 
 const (
-	INS_BASE_VERSION = \"$INS_BASE_VERSION\"
-	INS_VERSION_TABLE = " >> $GO_FILE
+	InsBaseVersion = \"$INS_BASE_VERSION\"
+	InsVersionTable = " >> $GO_FILE
 
 
 while read LINE; do
