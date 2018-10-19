@@ -352,7 +352,7 @@ func getRootMemberPubKey(file string) (string, error) {
 	}
 	data, err := ioutil.ReadFile(filepath.Clean(fileWithPath))
 	if err != nil {
-		return "", errors.New("couldn't read rootkeys file")
+		return "", errors.Wrap(err, "couldn't read rootkeys file "+filepath.Clean(fileWithPath))
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)

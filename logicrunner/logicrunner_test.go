@@ -88,7 +88,8 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	l, cleaner := ledgertestutils.TmpLedger(t, lr, "")
+	c := core.Components{LogicRunner: lr}
+	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	mb := testmessagebus.NewTestMessageBus()
 	assert.NoError(t, lr.Start(core.Components{
 		Ledger:     l,

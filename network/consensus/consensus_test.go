@@ -34,9 +34,7 @@ func initNodes(count int) []TestNode {
 
 	nodes := make([]TestNode, count)
 	for i := range nodes {
-
-		var c Consensus
-		c, _ = NewConsensus(&testCommunicator{})
+		c := NewConsensus(&testCommunicator{})
 
 		nodes[i] = TestNode{self: participants[i],
 			allParticipants: participants,

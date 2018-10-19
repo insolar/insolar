@@ -19,13 +19,13 @@ package messagebus
 import (
 	"bytes"
 	"encoding/gob"
-	"errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -100,6 +100,11 @@ func (mb *MessageBus) Send(msg core.Message) (core.Reply, error) {
 		return nil, err
 	}
 
+	// Short path when sending to self node. Skip serialization
+	if nodes[0].Equal(mb.service.GetNodeID()) {
+		return mb.doDeliver(msg)
+	}
+
 	res, err := mb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
 	if err != nil {
 		return nil, err
@@ -124,17 +129,7 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-// Deliver method calls LogicRunner.Execute on local host
-// this method is registered as RPC stub
-func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
-	if len(args) < 1 {
-		return nil, errors.New("need exactly one argument when mb.deliver()")
-	}
-	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
-	if err != nil {
-		return nil, err
-	}
-
+func (mb *MessageBus) doDeliver(msg core.Message) (core.Reply, error) {
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		return nil, errors.New("no handler for received message type")
@@ -146,6 +141,25 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 			S: err.Error(),
 		}
 	}
+	return resp, nil
+}
+
+// Deliver method calls LogicRunner.Execute on local host
+// this method is registered as RPC stub
+func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
+	if len(args) < 1 {
+		return nil, errors.New("need exactly one argument when mb.deliver()")
+	}
+	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := mb.doDeliver(msg)
+	if err != nil {
+		return nil, err
+	}
+
 	rd, err := reply.Serialize(resp)
 	if err != nil {
 		return nil, err
