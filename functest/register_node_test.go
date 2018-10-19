@@ -139,7 +139,7 @@ func TestRegisterNodeWithoutRole(t *testing.T) {
 	assert.Equal(t, "Handler error: field 'roles' is required", response.Err.Message)
 }
 
-func TestRegisterNodeWithoutPK(t *testing.T) {
+func TestRegisterNodeWithoutPulicKey(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": "register_node",
 		"host":       TESTHOST,
