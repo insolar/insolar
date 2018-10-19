@@ -88,25 +88,25 @@ func (r *NodeDomain) RegisterNode(pk string, role string) (core.RecordRef, error
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [2]interface{}{}
 	var ret0 core.RecordRef
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	if ret1 != nil {
@@ -143,23 +143,23 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RemoveNode", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [1]interface{}{}
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RemoveNode", argsSerialized)
+	if err != nil {
+		return err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if ret0 != nil {
@@ -197,25 +197,25 @@ func (r *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signature
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsAuthorized", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [2]interface{}{}
 	var ret0 bool
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "IsAuthorized", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	if ret1 != nil {
@@ -255,16 +255,6 @@ func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [3]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
@@ -273,9 +263,19 @@ func (r *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRaw
 	var ret2 *foundation.Error
 	ret[2] = &ret2
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, ret1, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Authorize", argsSerialized)
+	if err != nil {
+		return ret0, ret1, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, ret1, err
 	}
 
 	if ret2 != nil {

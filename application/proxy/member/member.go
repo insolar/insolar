@@ -88,25 +88,25 @@ func (r *Member) GetName() (string, error) {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetName", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [2]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetName", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	if ret1 != nil {
@@ -140,25 +140,25 @@ func (r *Member) GetPublicKey() (string, error) {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [2]interface{}{}
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	if ret1 != nil {
@@ -197,25 +197,25 @@ func (r *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Call", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [2]interface{}{}
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Call", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	if ret1 != nil {

@@ -312,6 +312,7 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]st
 			"ResultZeroList":  generateZeroListOfTypes(pf, "ret", fun.Type.Results),
 			"Results":         numberedVars(fun.Type.Results, "ret"),
 			"ErrorVar":        fmt.Sprintf("ret%d", fun.Type.Results.NumFields()-1),
+			"ResultsWithErr":  commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "err"),
 			"ResultsNilError": commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
 			"ResultsTypes":    genFieldList(pf, fun.Type.Results, false),
 		}

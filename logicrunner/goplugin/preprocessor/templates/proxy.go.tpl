@@ -92,20 +92,21 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
 
+	{{ $method.ResultZeroList }}
+
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return {{ $method.ResultsWithErr }}
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "{{ $method.Name }}", argsSerialized)
 	if err != nil {
-   		panic(err)
+		return {{ $method.ResultsWithErr }}
 	}
 
-	{{ $method.ResultZeroList }}
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return {{ $method.ResultsWithErr }}
 	}
 
 	if {{ $method.ErrorVar }} != nil {

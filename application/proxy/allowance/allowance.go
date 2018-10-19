@@ -89,25 +89,25 @@ func (r *Allowance) TakeAmount() (uint, error) {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "TakeAmount", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [2]interface{}{}
 	var ret0 uint
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "TakeAmount", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	if ret1 != nil {
@@ -141,25 +141,25 @@ func (r *Allowance) GetBalanceForOwner() (uint, error) {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalanceForOwner", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [2]interface{}{}
 	var ret0 uint
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetBalanceForOwner", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	if ret1 != nil {
@@ -193,25 +193,25 @@ func (r *Allowance) DeleteExpiredAllowance() (uint, error) {
 
 	var argsSerialized []byte
 
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DeleteExpiredAllowance", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
 	ret := [2]interface{}{}
 	var ret0 uint
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
 
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "DeleteExpiredAllowance", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	if ret1 != nil {
