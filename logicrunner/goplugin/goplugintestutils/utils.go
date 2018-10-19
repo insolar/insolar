@@ -247,7 +247,7 @@ func (t *TestArtifactManager) GetCode(ctx core.Context, code core.RecordRef) (co
 }
 
 // ActivateClass implementation for tests
-func (t *TestArtifactManager) ActivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) ActivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, code core.RecordRef, machineType core.MachineType) (*core.RecordID, error) {
 	t.Classes[request] = &TestClassDescriptor{
 		AM:   t,
 		ARef: &request,
@@ -258,12 +258,12 @@ func (t *TestArtifactManager) ActivateClass(ctx core.Context, domain core.Record
 }
 
 // DeactivateClass implementation for tests
-func (t *TestArtifactManager) DeactivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) DeactivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef, state core.RecordID) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
 // UpdateClass implementation for tests
-func (t *TestArtifactManager) UpdateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) UpdateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, machineType core.MachineType, state core.RecordID) (*core.RecordID, error) {
 	classDesc, ok := t.Classes[class]
 	if !ok {
 		return nil, errors.New("wrong class")
@@ -399,7 +399,7 @@ func AMPublishCode(
 	assert.NoError(t, err)
 	classRef = &core.RecordRef{}
 	classRef.SetRecord(*classID)
-	_, err = am.ActivateClass(ctx, domain, *classRef, *codeRef)
+	_, err = am.ActivateClass(ctx, domain, *classRef, *codeRef, core.MachineTypeBuiltin)
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, classRef, err
@@ -506,6 +506,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			ctx,
 			core.RecordRef{}, *cb.Classes[name],
 			*codeRef,
+			core.MachineTypeGoPlugin,
 		)
 		if err != nil {
 			return err

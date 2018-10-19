@@ -19,6 +19,7 @@ package functest
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -109,6 +110,8 @@ func createMember(t *testing.T) string {
 }
 
 func getBalance(t *testing.T, reference string) int {
+	fmt.Println("here: ", reference)
+
 	body := getResponseBody(t, postParams{
 		"query_type": "get_balance",
 		"reference":  reference,
