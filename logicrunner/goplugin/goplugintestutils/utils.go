@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -157,7 +158,7 @@ type TestArtifactManager struct {
 }
 
 // GetChildren implementation for tests
-func (t *TestArtifactManager) GetChildren(parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+func (t *TestArtifactManager) GetChildren(ctx core.Context, parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
 	panic("implement me")
 }
 
@@ -180,13 +181,13 @@ func (t *TestArtifactManager) Stop() error { return nil }
 func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(message core.Message) (*core.RecordRef, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Message) (*core.RecordRef, error) {
 	nonce := testutils.RandomRef()
 	return &nonce, nil
 }
 
 // GetClass implementation for tests
-func (t *TestArtifactManager) GetClass(object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
+func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
 	res, ok := t.Classes[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -195,7 +196,7 @@ func (t *TestArtifactManager) GetClass(object core.RecordRef, state *core.Record
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx core.Context, object core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -204,7 +205,7 @@ func (t *TestArtifactManager) GetObject(object core.RecordRef, state *core.Recor
 }
 
 // GetDelegate implementation for tests
-func (t *TestArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+func (t *TestArtifactManager) GetDelegate(ctx core.Context, head, asClass core.RecordRef) (*core.RecordRef, error) {
 	obj, ok := t.Objects[head]
 	if !ok {
 		return nil, errors.New("No object")
@@ -236,7 +237,7 @@ func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.Rec
 }
 
 // GetCode implementation for tests
-func (t *TestArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
+func (t *TestArtifactManager) GetCode(ctx core.Context, code core.RecordRef) (core.CodeDescriptor, error) {
 	res, ok := t.Codes[code]
 	if !ok {
 		return nil, errors.New("No code")
@@ -361,13 +362,14 @@ func AMPublishCode(
 	classRef *core.RecordRef,
 	err error,
 ) {
+	ctx := inscontext.TODO()
 	codeRef, err = am.DeployCode(
 		domain, request, code, mtype,
 	)
 	assert.NoError(t, err, "create code on ledger")
 
 	nonce := testutils.RandomRef()
-	classRef, err = am.RegisterRequest(&message.CallConstructor{ClassRef: nonce})
+	classRef, err = am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
 	assert.NoError(t, err)
 	_, err = am.ActivateClass(domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
@@ -413,10 +415,11 @@ func (cb *ContractsBuilder) Clean() {
 
 // Build ...
 func (cb *ContractsBuilder) Build(contracts map[string]string) error {
+	ctx := inscontext.TODO()
 
 	for name := range contracts {
 		nonce := testutils.RandomRef()
-		class, err := cb.ArtifactManager.RegisterRequest(&message.CallConstructor{ClassRef: nonce})
+		class, err := cb.ArtifactManager.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
 		if err != nil {
 			return err
 		}

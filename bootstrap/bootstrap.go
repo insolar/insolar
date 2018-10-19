@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
@@ -145,7 +146,8 @@ func isLightExecutor(c core.Components) (bool, error) {
 
 func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	am := c.Ledger.GetArtifactManager()
-	rootObj, err := am.GetObject(*am.GenesisRef(), nil)
+	ctx := inscontext.TODO()
+	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
 	}
@@ -200,7 +202,8 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootDomain"})
+	ctx := inscontext.TODO()
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootDomain"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
@@ -224,7 +227,8 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "NodeDomain"})
+	ctx := inscontext.TODO()
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "NodeDomain"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
@@ -250,7 +254,8 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootMember"})
+	ctx := inscontext.TODO()
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
@@ -290,7 +295,8 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *gop
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
-	contract, err := am.RegisterRequest(&message.BootstrapRequest{Name: "RootMember"})
+	ctx := inscontext.TODO()
+	contract, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootMember"})
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}

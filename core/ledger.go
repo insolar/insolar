@@ -72,35 +72,35 @@ type ArtifactManager interface {
 
 	// RegisterRequest creates or check call request record and returns it RecordRef.
 	// (used by VM on executing side)
-	RegisterRequest(message Message) (*RecordRef, error)
+	RegisterRequest(ctx Context, message Message) (*RecordRef, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
-	GetCode(ref RecordRef) (CodeDescriptor, error)
+	GetCode(ctx Context, ref RecordRef) (CodeDescriptor, error)
 
 	// GetClass returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetClass(head RecordRef, state *RecordRef) (ClassDescriptor, error)
+	GetClass(ctx Context, head RecordRef, state *RecordRef) (ClassDescriptor, error)
 
 	// GetObject returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(head RecordRef, state *RecordRef) (ObjectDescriptor, error)
+	GetObject(ctx Context, head RecordRef, state *RecordRef) (ObjectDescriptor, error)
 
 	// GetDelegate returns provided object's delegate reference for provided class.
 	//
 	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
 	// be returned.
-	GetDelegate(head, asClass RecordRef) (*RecordRef, error)
+	GetDelegate(ctx Context, head, asClass RecordRef) (*RecordRef, error)
 
 	// GetChildren returns children iterator.
 	//
 	// During iteration children refs will be fetched from remote source (parent object).
-	GetChildren(parent RecordRef, pulse *PulseNumber) (RefIterator, error)
+	GetChildren(ctx Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
 
 	// DeclareType creates new type record in storage.
 	//

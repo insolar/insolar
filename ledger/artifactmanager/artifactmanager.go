@@ -60,7 +60,7 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfuly created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
-	msg core.Message,
+	ctx core.Context, msg core.Message,
 ) (*core.RecordRef, error) {
 	id, err := m.fetchID(&message.RequestCall{Message: msg})
 	if err != nil {
@@ -74,7 +74,9 @@ func (m *LedgerArtifactManager) RegisterRequest(
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
-func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescriptor, error) {
+func (m *LedgerArtifactManager) GetCode(
+	ctx core.Context, code core.RecordRef,
+) (core.CodeDescriptor, error) {
 	genericReact, err := m.messageBus.Send(&message.GetCode{
 		Code: code,
 	})
@@ -100,7 +102,9 @@ func (m *LedgerArtifactManager) GetCode(code core.RecordRef) (core.CodeDescripto
 //
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
-func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.RecordRef) (core.ClassDescriptor, error) {
+func (m *LedgerArtifactManager) GetClass(
+	ctx core.Context, head core.RecordRef, state *core.RecordRef,
+) (core.ClassDescriptor, error) {
 	genericReact, err := m.messageBus.Send(&message.GetClass{
 		Head:  head,
 		State: state,
@@ -128,7 +132,9 @@ func (m *LedgerArtifactManager) GetClass(head core.RecordRef, state *core.Record
 //
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
-func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.RecordRef) (core.ObjectDescriptor, error) {
+func (m *LedgerArtifactManager) GetObject(
+	ctx core.Context, head core.RecordRef, state *core.RecordRef,
+) (core.ObjectDescriptor, error) {
 	genericReact, err := m.messageBus.Send(&message.GetObject{
 		Head:  head,
 		State: state,
@@ -159,7 +165,9 @@ func (m *LedgerArtifactManager) GetObject(head core.RecordRef, state *core.Recor
 //
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
 // be returned.
-func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core.RecordRef, error) {
+func (m *LedgerArtifactManager) GetDelegate(
+	ctx core.Context, head, asClass core.RecordRef,
+) (*core.RecordRef, error) {
 	genericReact, err := m.messageBus.Send(&message.GetDelegate{
 		Head:    head,
 		AsClass: asClass,
@@ -179,7 +187,9 @@ func (m *LedgerArtifactManager) GetDelegate(head, asClass core.RecordRef) (*core
 // GetChildren returns children iterator.
 //
 // During iteration children refs will be fetched from remote source (parent object).
-func (m *LedgerArtifactManager) GetChildren(parent core.RecordRef, pulse *core.PulseNumber) (core.RefIterator, error) {
+func (m *LedgerArtifactManager) GetChildren(
+	ctx core.Context, parent core.RecordRef, pulse *core.PulseNumber,
+) (core.RefIterator, error) {
 	return NewChildIterator(m.messageBus, parent, pulse, m.getChildrenChunkSize)
 }
 
