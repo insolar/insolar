@@ -197,7 +197,7 @@ func (m *LedgerArtifactManager) GetChildren(
 //
 // Type is a contract interface. It contains one method signature.
 func (m *LedgerArtifactManager) DeclareType(
-	domain, request core.RecordRef, typeDec []byte,
+	ctx core.Context, domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordRef, error) {
 	return m.fetchReference(&message.DeclareType{
 		Domain:  domain,
@@ -210,7 +210,11 @@ func (m *LedgerArtifactManager) DeclareType(
 //
 // Code records are used to activate class or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
-	domain, request core.RecordRef, code []byte, machineType core.MachineType,
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	code []byte,
+	machineType core.MachineType,
 ) (*core.RecordRef, error) {
 	return m.fetchReference(&message.DeployCode{
 		Domain:      domain,
@@ -224,7 +228,7 @@ func (m *LedgerArtifactManager) DeployCode(
 //
 // Request reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	domain, request, code core.RecordRef,
+	ctx core.Context, domain, request, code core.RecordRef,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.ActivateClass{
 		Domain:  domain,
@@ -238,6 +242,7 @@ func (m *LedgerArtifactManager) ActivateClass(
 //
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
+	ctx core.Context,
 	domain, request, class core.RecordRef,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.DeactivateClass{
@@ -253,6 +258,7 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
 // migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
+	ctx core.Context,
 	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.UpdateClass{
@@ -269,7 +275,12 @@ func (m *LedgerArtifactManager) UpdateClass(
 //
 // Request reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObject(
-	domain, object, class, parent core.RecordRef, memory []byte,
+	ctx core.Context,
+	domain core.RecordRef,
+	object core.RecordRef,
+	class core.RecordRef,
+	parent core.RecordRef,
+	memory []byte,
 ) (*core.RecordID, error) {
 	start := time.Now()
 	objID, err := m.fetchID(&message.ActivateObject{
@@ -297,7 +308,12 @@ func (m *LedgerArtifactManager) ActivateObject(
 
 // ActivateObjectDelegate is similar to ActivateObj but it created object will be parent's delegate of provided class.
 func (m *LedgerArtifactManager) ActivateObjectDelegate(
-	domain, request, class, parent core.RecordRef, memory []byte,
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	class core.RecordRef,
+	parent core.RecordRef,
+	memory []byte,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.ActivateObjectDelegate{
 		Domain:  domain,
@@ -313,6 +329,7 @@ func (m *LedgerArtifactManager) ActivateObjectDelegate(
 //
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObject(
+	ctx core.Context,
 	domain, request, object core.RecordRef,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.DeactivateObject{
@@ -327,7 +344,11 @@ func (m *LedgerArtifactManager) DeactivateObject(
 //
 // Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdateObject(
-	domain, request, object core.RecordRef, memory []byte,
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	object core.RecordRef,
+	memory []byte,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.UpdateObject{
 		Domain:  domain,

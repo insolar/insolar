@@ -300,6 +300,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
+	insctx := inscontext.TODO()
 	executionState := lr.UpsertExecution(m.ObjectRef)
 	executionState.mutex.Lock()
 	defer executionState.mutex.Unlock()
@@ -329,7 +330,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 		// TODO: deactivation should be handled way better here
 		if vb.NeedSave() && lr.lastObjectCaseRecord(m.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
-				Ref{}, *ctx.Request, m.ObjectRef, newData,
+				insctx, Ref{}, *ctx.Request, m.ObjectRef, newData,
 			)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
@@ -385,6 +386,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		log.Warnf("M = %+v", m)
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
+				insctx,
 				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
@@ -397,6 +399,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	case message.Delegate:
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObjectDelegate(
+				insctx,
 				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}

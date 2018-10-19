@@ -105,51 +105,51 @@ type ArtifactManager interface {
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
-	DeclareType(domain, request RecordRef, typeDec []byte) (*RecordRef, error)
+	DeclareType(ctx Context, domain, request RecordRef, typeDec []byte) (*RecordRef, error)
 
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate class or as migration code for an object.
-	DeployCode(domain, request RecordRef, code []byte, machineType MachineType) (*RecordRef, error)
+	DeployCode(ctx Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordRef, error)
 
 	// ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 	//
 	// Request reference will be this class'es identifier and referred as "class head".
-	ActivateClass(domain, request, code RecordRef) (*RecordID, error)
+	ActivateClass(ctx Context, domain, request, code RecordRef) (*RecordID, error)
 
 	// DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
 	// the class. If class is already deactivated, an error should be returned.
 	//
 	// Deactivated class cannot be changed or instantiate objects.
-	DeactivateClass(domain, request, class RecordRef) (*RecordID, error)
+	DeactivateClass(ctx Context, domain, request, class RecordRef) (*RecordID, error)
 
 	// UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
 	// the class. Migrations are references to code records.
 	//
 	// Returned reference will be the latest class state (exact) reference. Migration code will be executed by VM to
 	// migrate objects memory in the order they appear in provided slice.
-	UpdateClass(domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordID, error)
+	UpdateClass(ctx Context, domain, request, class, code RecordRef, migrationRefs []RecordRef) (*RecordID, error)
 
 	// ActivateObject creates activate object record in storage. Provided class reference will be used as object's class.
 	// If memory is not provided, the class default memory will be used.
 	//
 	// Request reference will be this object's identifier and referred as "object head".
-	ActivateObject(domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
+	ActivateObject(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
 
 	// ActivateObjectDelegate is similar to ActivateObject but it created object will be parent's delegate of provided class.
-	ActivateObjectDelegate(domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
+	ActivateObjectDelegate(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(domain, request, obj RecordRef) (*RecordID, error)
+	DeactivateObject(ctx Context, domain, request, obj RecordRef) (*RecordID, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(domain, request, obj RecordRef, memory []byte) (*RecordID, error)
+	UpdateObject(ctx Context, domain, request, obj RecordRef, memory []byte) (*RecordID, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
