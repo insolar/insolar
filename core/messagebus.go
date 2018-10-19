@@ -114,6 +114,8 @@ const (
 	TypeRegisterChild
 	// TypeJetDrop carries jet drop to validators
 	TypeJetDrop
+	// TypeSetRecord saves record in storage.
+	TypeSetRecord
 
 	// Bootstrap
 

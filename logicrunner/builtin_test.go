@@ -70,13 +70,17 @@ func TestBareHelloworld(t *testing.T) {
 	contract, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: byteRecorRef(4)})
 	assert.NoError(t, err)
 
-	_, err = am.ActivateObject(ctx, domain, *contract, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
+	// TODO: use proper conversion
+	reqref := core.RecordRef{}
+	reqref.SetRecord(*contract)
+
+	_, err = am.ActivateObject(ctx, domain, reqref, *classRef, *am.GenesisRef(), goplugintestutils.CBORMarshal(t, hw))
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
 	resp, err := lr.Execute(&message.CallMethod{
-		ObjectRef: *contract,
+		ObjectRef: reqref,
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	})
@@ -89,7 +93,7 @@ func TestBareHelloworld(t *testing.T) {
 
 	// #2
 	resp, err = lr.Execute(&message.CallMethod{
-		ObjectRef: *contract,
+		ObjectRef: reqref,
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	})
