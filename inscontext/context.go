@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package context
+package inscontext
 
 import (
 	"context"
@@ -106,12 +106,32 @@ func WithValue(parent context.Context, key, val interface{}) *Ctx {
 	return ctx
 }
 
-type tTraceKey byte
+type key int
 
-const traceKey = tTraceKey(0)
+const (
+	traceKey = key(0)
+)
 
 // WithTrace returns a copy of parent with added trace mark.
 func WithTrace(parent context.Context, trace string) *Ctx {
 	ctx := NewCtxFromContext(parent)
 	return WithValue(ctx, traceKey, trace)
+}
+
+// TraceID returns TraceID if it stored in context or empty string overwise.
+func (ctx *Ctx) TraceID() string {
+	return ctx.Value(traceKey).(string)
+}
+
+// WithLog returns *Ctx with provided core.Logger,
+func WithLog(parent context.Context, clog core.Logger) *Ctx {
+	return &Ctx{
+		ctx: parent,
+		log: clog,
+	}
+}
+
+// Log returns core.Logger provided by *Ctx.
+func (ctx *Ctx) Log() core.Logger {
+	return ctx.log.WithField("traceid", ctx.TraceID())
 }

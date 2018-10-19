@@ -349,26 +349,6 @@ func (ht *HashTable) totalHosts() int {
 	return total
 }
 
-// GetHosts returns hostsNumber (or less) hosts from the HashTable, starting from the last bucket
-func (ht *HashTable) GetHosts(hostsNumber int) []host.Host {
-	ht.Lock()
-	defer ht.Unlock()
-
-	result := make([]host.Host, 0)
-
-Loop:
-	for i := len(ht.RoutingTable) - 1; i >= 0; i-- {
-		bucket := ht.RoutingTable[i]
-		for _, routeHost := range bucket {
-			result = append(result, *routeHost.Host)
-			if len(result) == hostsNumber {
-				break Loop
-			}
-		}
-	}
-	return result
-}
-
 // GetMulticastHosts returns snapshot of all hosts from the HashTable
 func (ht *HashTable) GetMulticastHosts() []*RouteHost {
 	ht.Lock()
