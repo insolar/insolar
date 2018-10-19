@@ -225,7 +225,7 @@ func (t *TestArtifactManager) DeclareType(ctx core.Context, domain core.RecordRe
 }
 
 // DeployCode implementation for tests
-func (t *TestArtifactManager) DeployCode(ctx core.Context, domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeployCode(ctx core.Context, domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordID, error) {
 	ref := testutils.RandomRef()
 
 	t.Codes[ref] = &TestCodeDescriptor{
@@ -233,7 +233,8 @@ func (t *TestArtifactManager) DeployCode(ctx core.Context, domain core.RecordRef
 		ACode:        code,
 		AMachineType: core.MachineTypeGoPlugin,
 	}
-	return &ref, nil
+	id := ref.GetRecordID()
+	return &id, nil
 }
 
 // GetCode implementation for tests
@@ -386,16 +387,18 @@ func AMPublishCode(
 	err error,
 ) {
 	ctx := inscontext.TODO()
-	codeRef, err = am.DeployCode(
+	codeID, err := am.DeployCode(
 		ctx, domain, request, code, mtype,
 	)
 	assert.NoError(t, err, "create code on ledger")
+	codeRef = &core.RecordRef{}
+	codeRef.SetRecord(*codeID)
 
 	nonce := testutils.RandomRef()
 	classID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
+	assert.NoError(t, err)
 	classRef = &core.RecordRef{}
 	classRef.SetRecord(*classID)
-	assert.NoError(t, err)
 	_, err = am.ActivateClass(ctx, domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
 
@@ -486,21 +489,23 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 
 		log.Debugf("Deploying code for contract %q", name)
-		code, err := cb.ArtifactManager.DeployCode(
+		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
 			core.RecordRef{}, core.RecordRef{},
 			pluginBinary, core.MachineTypeGoPlugin,
 		)
+		codeRef := &core.RecordRef{}
+		codeRef.SetRecord(*codeID)
 		if err != nil {
 			return err
 		}
-		log.Debugf("Deployed code %q for contract %q in %q", code.String(), name, cb.root)
-		cb.Codes[name] = code
+		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
+		cb.Codes[name] = codeRef
 
 		_, err = cb.ArtifactManager.ActivateClass(
 			ctx,
 			core.RecordRef{}, *cb.Classes[name],
-			*code,
+			*codeRef,
 		)
 		if err != nil {
 			return err
