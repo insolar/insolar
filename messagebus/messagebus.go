@@ -33,15 +33,19 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	service     core.Network
-	ledger      core.Ledger
-	activeNodes core.ActiveNodeComponent
-	handlers    map[core.MessageType]core.MessageHandler
+	service      core.Network
+	ledger       core.Ledger
+	activeNodes  core.ActiveNodeComponent
+	handlers     map[core.MessageType]core.MessageHandler
+	signmessages bool
 }
 
 // NewMessageBus is a `MessageBus` constructor
-func NewMessageBus(configuration.Configuration) (*MessageBus, error) {
-	return &MessageBus{handlers: map[core.MessageType]core.MessageHandler{}}, nil
+func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
+	return &MessageBus{
+		handlers:     map[core.MessageType]core.MessageHandler{},
+		signmessages: config.Host.SignMessages,
+	}, nil
 }
 
 // Start initializes message bus
@@ -164,7 +168,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if !signedMessage.IsValid(mb.activeNodes.GetActiveNode(signedMessage.GetSender()).PublicKey) {
+	if mb.signmessages && !signedMessage.IsValid(mb.activeNodes.GetActiveNode(signedMessage.GetSender()).PublicKey) {
 		return nil, errors.New("failed to check a message sign")
 	}
 
