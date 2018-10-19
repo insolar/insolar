@@ -205,11 +205,9 @@ func (e *DeactivateClass) Target() *core.RecordRef {
 // UpdateClass amends class.
 type UpdateClass struct {
 	ledgerMessage
-	Domain     core.RecordRef
-	Request    core.RecordRef
-	Class      core.RecordRef
-	Code       core.RecordRef
-	Migrations []core.RecordRef
+
+	Record []byte
+	Class  core.RecordRef
 }
 
 // Type implementation of Message interface.

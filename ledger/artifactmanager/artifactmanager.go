@@ -238,13 +238,21 @@ func (m *LedgerArtifactManager) DeployCode(
 //
 // Request reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	ctx core.Context, domain, request, code core.RecordRef,
+	ctx core.Context, domain, request, code core.RecordRef, machineType core.MachineType,
 ) (*core.RecordID, error) {
-	return m.fetchID(&message.ActivateClass{
-		Domain:  domain,
-		Request: request,
-		Code:    code,
-	})
+	return m.updateClass(
+		&record.ClassActivateRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			ClassStateRecord: record.ClassStateRecord{
+				MachineType: machineType,
+				Code:        record.Core2Reference(code),
+			},
+		},
+		request,
+	)
 }
 
 // DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
@@ -253,13 +261,18 @@ func (m *LedgerArtifactManager) ActivateClass(
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
 	ctx core.Context,
-	domain, request, class core.RecordRef,
+	domain, request, class core.RecordRef, state core.RecordID,
 ) (*core.RecordID, error) {
-	return m.fetchID(&message.DeactivateClass{
-		Domain:  domain,
-		Request: request,
-		Class:   class,
-	})
+	return m.updateClass(
+		&record.DeactivationRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			PrevState: record.Bytes2ID(state[:]),
+		},
+		class,
+	)
 }
 
 // UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
@@ -269,15 +282,22 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
 	ctx core.Context,
-	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
+	domain, request, class, code core.RecordRef, machineType core.MachineType, state core.RecordID,
 ) (*core.RecordID, error) {
-	return m.fetchID(&message.UpdateClass{
-		Domain:     domain,
-		Request:    request,
-		Class:      class,
-		Code:       code,
-		Migrations: migrations,
-	})
+	return m.updateClass(
+		&record.ClassAmendRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			ClassStateRecord: record.ClassStateRecord{
+				Code:        record.Core2Reference(code),
+				MachineType: machineType,
+			},
+			PrevState: record.Bytes2ID(state[:]),
+		},
+		class,
+	)
 }
 
 // ActivateObject creates activate object record in storage. Provided class reference will be used as objects class
@@ -400,6 +420,24 @@ func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordR
 	genericReact, err := m.messageBus.Send(&message.SetRecord{
 		Record:    record.SerializeRecord(rec),
 		TargetRef: target,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
+	return &react.ID, nil
+}
+
+func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.RecordRef) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(&message.UpdateClass{
+		Record: record.SerializeRecord(rec),
+		Class:  class,
 	})
 
 	if err != nil {
