@@ -21,8 +21,8 @@ import (
 	"strings"
 )
 
-// GetIpFromDomain returns IP address string from domain.
-func GetIpFromDomain(domain string) (string, error) {
+// GetIPFromDomain returns IP address string from domain.
+func GetIPFromDomain(domain string) (string, error) {
 	woPort := strings.Split(domain, ":")
 	address := woPort[0]
 	var port string

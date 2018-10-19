@@ -20,6 +20,7 @@ import (
 	"net"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/connection"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
@@ -79,7 +80,10 @@ func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) 
 	}
 	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
 	if err != nil {
-		conn.Close()
+		err2 := conn.Close()
+		if err2 != nil {
+			log.Warn(err2)
+		}
 		return nil, "", errors.Wrap(err, "Failed to create resolver")
 	}
 	return conn, publicAddress, nil
