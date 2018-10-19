@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,7 +34,9 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	ledger, cleaner, keeper := ledgertestutils.TmpLedger(t, lr, "")
+	keeper := nodekeeper.NewNodeKeeper(core.RecordRef{})
+	c := core.Components{LogicRunner: lr, ActiveNodeComponent: keeper}
+	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
 	am := ledger.GetArtifactManager()
@@ -65,8 +68,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	assert.Equal(t, []core.RecordRef{ref("v2")}, selected)
 
 	selected, err = jc.QueryRole(core.RoleVirtualValidator, *am.GenesisRef(), pulse.PulseNumber)
-	assert.NoError(t, err)
-	assert.Equal(t, sorted([]core.RecordRef{ref("v1"), ref("v2")}), sorted(selected))
+	assert.Error(t, err)
 
 	selected, err = jc.QueryRole(core.RoleLightValidator, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)

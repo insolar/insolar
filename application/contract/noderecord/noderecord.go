@@ -17,6 +17,8 @@
 package noderecord
 
 import (
+	"errors"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
@@ -30,36 +32,36 @@ type NodeRecord struct {
 }
 
 // New creates new NodeRecord
-func NewNodeRecord(pk string, roleS string) *NodeRecord {
+func NewNodeRecord(pk string, roleS string) (*NodeRecord, error) {
 
 	role := core.GetRoleFromString(roleS)
 	if role == core.RoleUnknown {
-		// TODO: return error
-		panic("Can't unsupported role")
+		return nil, errors.New("Can't unsupported role")
 	}
 
 	return &NodeRecord{
 		PublicKey: pk,
 		Role:      role,
-	}
+	}, nil
 }
 
 // GetPublicKey returns public key
-func (nr *NodeRecord) GetPublicKey() string {
-	return nr.PublicKey
+func (nr *NodeRecord) GetPublicKey() (string, error) {
+	return nr.PublicKey, nil
 }
 
 // GetRole returns role
-func (nr *NodeRecord) GetRole() core.NodeRole {
-	return nr.Role
+func (nr *NodeRecord) GetRole() (core.NodeRole, error) {
+	return nr.Role, nil
 }
 
 // GetRoleAndPublicKey returns role-pubKey pair
-func (nr *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
-	return nr.Role, nr.PublicKey
+func (nr *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string, error) {
+	return nr.Role, nr.PublicKey, nil
 }
 
 // SelfDestroy makes request to destroy current node record
-func (nr *NodeRecord) Destroy() {
+func (nr *NodeRecord) Destroy() error {
 	nr.SelfDestruct()
+	return nil
 }

@@ -18,6 +18,7 @@ package jetcoordinator
 
 import (
 	"bytes"
+	"errors"
 	"sort"
 
 	"github.com/insolar/insolar/core"
@@ -30,10 +31,9 @@ func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) (
 		hash []byte
 	}
 
-	// TODO: fix this limitation so we can launch initial discovery node
-	// if len(values) < count {
-	// 	return nil, errors.New("count value should be less than values size")
-	// }
+	if len(values) < count {
+		return nil, errors.New("count value should be less than values size")
+	}
 
 	hashes := make([]*idxHash, 0, len(values))
 	for i, value := range values {
@@ -55,16 +55,7 @@ func selectByEntropy(entropy core.Entropy, values []core.RecordRef, count int) (
 	sort.SliceStable(hashes, func(i, j int) bool { return bytes.Compare(hashes[i].hash, hashes[j].hash) < 0 })
 
 	selected := make([]core.RecordRef, 0, count)
-
-	min := func(a, b int) int {
-		if a > b {
-			return b
-		}
-		return a
-	}
-
-	limit := min(len(hashes), count)
-	for i := 0; i < limit; i++ {
+	for i := 0; i < count; i++ {
 		selected = append(selected, values[hashes[i].idx])
 	}
 	return selected, nil

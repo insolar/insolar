@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -249,19 +250,25 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 	}
 
 	sender := hostHandler.HtFromCtx(ctx).Origin
-	signedNonce, err := sendNonceRequest(hostHandler, sender, targetHost)
+	nonce, err := sendNonceRequest(hostHandler, sender, targetHost)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed step 1")
+		return nil, errors.Wrap(err, "failed getting nonce from discovery node")
 	}
+	log.Debugf("got nonce from discovery node: %s", base58.Encode(nonce))
+	signedNonce, err := hostHandler.GetNetworkCommonFacade().GetSignHandler().SignNonce(nonce)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign nonce from discovery node")
+	}
+	log.Debugf("signed nonce: %s", base58.Encode(signedNonce))
 	result, err := sendCheckSignedNonceRequest(hostHandler, sender, targetHost, signedNonce)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed step 2")
+		return nil, errors.Wrap(err, "failed checking signed nonce on discovery node")
 	}
 	return result, nil
 }
 
 func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, receiver *host.Host) ([]byte, error) {
-	log.Debug("step 1 started")
+	log.Debug("Started getting nonce request to discovery node")
 
 	request := packet.NewBuilder().Sender(sender).
 		Receiver(receiver).Type(packet.TypeGetNonce).
@@ -281,17 +288,13 @@ func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, re
 	if err != nil {
 		return nil, errors.Wrap(err, "public key check failed on discovery node")
 	}
-	signedNonce, err := hostHandler.GetNetworkCommonFacade().GetSignHandler().SignNonce(response.Nonce)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to send an authorization request")
-	}
-	return signedNonce, nil
+	return response.Nonce, nil
 }
 
 func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host,
 	receiver *host.Host, nonce []byte) ([]*core.ActiveNode, error) {
 
-	log.Debug("step 2 started")
+	log.Debug("Started request to discovery node to check signed nonce and add to unsync list")
 
 	// TODO: get role from certificate
 	// TODO: get public key from certificate

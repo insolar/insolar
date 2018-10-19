@@ -18,6 +18,7 @@ package networkcoordinator
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
@@ -38,10 +39,14 @@ func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
 }
 
 func extractReferenceResponse(data []byte) (*core.RecordRef, error) {
-	var ref core.RecordRef
-	_, err := core.UnMarshalResponse(data, []interface{}{&ref})
+	var ref *core.RecordRef
+	var ferr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&ref, &ferr})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ extractReferenceResponse ]")
 	}
-	return &ref, nil
+	if ferr != nil {
+		return nil, errors.Wrap(ferr, "[ extractReferenceResponse ]")
+	}
+	return ref, nil
 }

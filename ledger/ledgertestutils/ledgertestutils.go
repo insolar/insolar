@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/stretchr/testify/assert"
 
@@ -35,7 +34,7 @@ import (
 
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger andh cleanup function.
-func TmpLedger(t testing.TB, lr core.LogicRunner, dir string) (*ledger.Ledger, func(), consensus.NodeKeeper) {
+func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, func()) {
 	var err error
 	// Init subcomponents.
 	conf := configuration.NewLedger()
@@ -49,17 +48,16 @@ func TmpLedger(t testing.TB, lr core.LogicRunner, dir string) (*ledger.Ledger, f
 	pm, err := pulsemanager.NewPulseManager(db)
 	assert.NoError(t, err)
 
-	keeper := nodekeeper.NewNodeKeeper(core.RecordRef{})
-
 	// Init components.
-	mb := testmessagebus.NewTestMessageBus()
-	components := core.Components{MessageBus: mb, LogicRunner: lr,
-		ActiveNodeComponent: keeper}
+	c.MessageBus = testmessagebus.NewTestMessageBus()
+	if c.ActiveNodeComponent == nil {
+		c.ActiveNodeComponent = nodekeeper.NewNodeKeeper(core.RecordRef{})
+	}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)
-	err = l.Start(components)
+	err = l.Start(c)
 	assert.NoError(t, err)
 
-	return l, dbcancel, keeper
+	return l, dbcancel
 }

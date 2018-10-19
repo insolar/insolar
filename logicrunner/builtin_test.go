@@ -46,8 +46,8 @@ func TestBareHelloworld(t *testing.T) {
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
-
-	l, cleaner, _ := ledgertestutils.TmpLedger(t, lr, "")
+	c := core.Components{LogicRunner: lr}
+	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 	am := l.GetArtifactManager()
 	assert.NoError(t, err, "Initialize runner")

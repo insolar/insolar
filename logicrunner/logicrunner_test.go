@@ -88,7 +88,8 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	})
 	assert.NoError(t, err, "Initialize runner")
 
-	l, cleaner, _ := ledgertestutils.TmpLedger(t, lr, "")
+	c := core.Components{LogicRunner: lr}
+	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	mb := testmessagebus.NewTestMessageBus()
 	assert.NoError(t, lr.Start(core.Components{
 		Ledger:     l,
@@ -291,21 +292,29 @@ type One struct {
 	Friend core.RecordRef
 }
 
-func (r *One) Hello(s string) string {
+func (r *One) Hello(s string) (string, error) {
 	holder := two.New()
 	friend := holder.AsChild(r.GetReference())
-	res := friend.Hello(s)
+	res, err := friend.Hello(s)
+	if err != nil {
+		return "", err
+	}
+	
 	r.Friend = friend.GetReference()
-	return "Hi, " + s + "! Two said: " + res
+	return "Hi, " + s + "! Two said: " + res, nil
 }
 
-func (r *One) Again(s string) string {
-	res := two.GetObject(r.Friend).Hello(s)
-	return "Hi, " + s + "! Two said: " + res
+func (r *One) Again(s string) (string, error) {
+	res, err := two.GetObject(r.Friend).Hello(s)
+	if err != nil {
+		return "", err
+	}
+	
+	return "Hi, " + s + "! Two said: " + res, nil
 }
 
-func (r *One)GetFriend() core.RecordRef {
-	return r.Friend
+func (r *One)GetFriend() (core.RecordRef, error) {
+	return r.Friend, nil
 }
 `
 
@@ -323,13 +332,13 @@ type Two struct {
 	X int
 }
 
-func New() *Two {
-	return &Two{X:0};
+func New() (*Two, error) {
+	return &Two{X:0}, nil;
 }
 
-func (r *Two) Hello(s string) string {
+func (r *Two) Hello(s string) (string, error) {
 	r.X ++
-	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
 }
 `
 	ctx := inscontext.TODO()
@@ -414,16 +423,19 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello(s string) string {
+func (r *One) Hello(s string) (string, error) {
 	holder := two.New()
 	friend := holder.AsDelegate(r.GetReference())
 
-	res := friend.Hello(s)
+	res, err := friend.Hello(s)
+	if err != nil {
+		return "", err
+	}
 
-	return "Hi, " + s + "! Two said: " + res
+	return "Hi, " + s + "! Two said: " + res, nil
 }
 
-func (r *One) HelloFromDelegate(s string) string {
+func (r *One) HelloFromDelegate(s string) (string, error) {
 	friend := two.GetImplementationFrom(r.GetReference())
 	return friend.Hello(s)
 }
@@ -443,13 +455,13 @@ type Two struct {
 	X int
 }
 
-func New() *Two {
-	return &Two{X:322};
+func New() (*Two, error) {
+	return &Two{X:322}, nil
 }
 
-func (r *Two) Hello(s string) string {
+func (r *Two) Hello(s string) (string, error) {
 	r.X *= 2
-	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X)
+	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
 }
 `
 	ctx := inscontext.TODO()
@@ -476,10 +488,10 @@ func (r *Two) Hello(s string) string {
 		Method:    "Hello",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"ins"}),
 	})
-
 	assert.NoError(t, err)
+
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}([]interface{}{string("Hi, ins! Two said: Hello you too, ins. 644 times!")}), r)
+	assert.Equal(t, []interface{}{"Hi, ins! Two said: Hello you too, ins. 644 times!", nil}, r)
 
 	resp, err = lr.Execute(&message.CallMethod{
 		ObjectRef: *obj,
@@ -489,7 +501,7 @@ func (r *Two) Hello(s string) string {
 
 	assert.NoError(t, err)
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}([]interface{}{string("Hello you too, ins. 1288 times!")}), r)
+	assert.Equal(t, []interface{}{"Hello you too, ins. 1288 times!", nil}, r)
 
 }
 
@@ -507,10 +519,11 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello() {
+func (r *One) Hello() error {
 	holder := two.New()
 	friend := holder.AsDelegate(r.GetReference())
 	friend.HelloNoWait()
+	return nil
 }
 `
 
@@ -528,13 +541,13 @@ type Two struct {
 	X int
 }
 
-func New() *Two {
-	return &Two{X:322};
+func New() (*Two, error) {
+	return &Two{X:322}, nil
 }
 
-func (r *Two) Hello() string {
+func (r *Two) Hello() (string, error) {
 	r.X *= 2
-	return fmt.Sprintf("Hello %d times!", r.X)
+	return fmt.Sprintf("Hello %d times!", r.X), nil
 }
 `
 	ctx := inscontext.TODO()
@@ -578,8 +591,8 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello() string {
-	return r.GetClass().String()
+func (r *One) Hello() (string, error) {
+	return r.GetClass().String(), nil
 }
 `
 	lr, _, cb, _, cleaner := PrepareLrAmCbPm(t)
@@ -615,8 +628,9 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Kill() {
+func (r *One) Kill() error {
 	r.SelfDestruct()
+	return nil
 }
 `
 	ctx := inscontext.TODO()
@@ -657,10 +671,12 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Panic() {
+func (r *One) Panic() error {
 	panic("haha")
+	return nil
 }
-func (r *One) NotPanic() {
+func (r *One) NotPanic() error {
+	return nil
 }
 `
 	ctx := inscontext.TODO()
@@ -711,38 +727,42 @@ type Contract struct {
 	foundation.BaseContract
 }
 
-func (c *Contract) NewChilds(cnt int) int {
+func (c *Contract) NewChilds(cnt int) (int, error) {
 	s := 0
 	for i := 1; i < cnt; i++ {
         child.New(i).AsChild(c.GetReference())
 		s += i
 	} 
-	return s
+	return s, nil
 }
 
-func (c *Contract) SumChilds() int {
+func (c *Contract) SumChilds() (int, error) {
 	s := 0
 	childs, err := c.GetChildrenTyped(child.GetClass())
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	for _, chref := range childs {
 		o := child.GetObject(chref)
-		s += o.GetNum()
+		n, err := o.GetNum()
+		if err != nil {
+			return 0, err
+		}
+		s += n
 	}
-	return s
+	return s, nil
 }
 
-func (c *Contract) GetChildRefs() (ret []string) {
+func (c *Contract) GetChildRefs() (ret []string, err error) {
 	childs, err := c.GetChildrenTyped(child.GetClass())
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	for _, chref := range childs {
 		ret = append(ret, chref.String())
 	}
-	return ret
+	return ret, nil
 }
 `
 	goChild := `
@@ -754,13 +774,13 @@ type Child struct {
 	Num int
 }
 
-func (c *Child) GetNum() int {
-	return c.Num
+func (c *Child) GetNum() (int, error) {
+	return c.Num, nil
 }
 
 
-func New(n int) *Child {
-	return &Child{Num: n};
+func New(n int) (*Child, error) {
+	return &Child{Num: n}, nil
 }
 `
 	ctx := inscontext.TODO()
@@ -785,7 +805,7 @@ func New(n int) *Child {
 	})
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
+	assert.Equal(t, []interface{}{uint64(45), nil}, r)
 
 	resp, err = lr.Execute(&message.CallMethod{
 		ObjectRef: *contract,
@@ -798,7 +818,7 @@ func New(n int) *Child {
 
 	assert.NoError(t, err, "contract call")
 	r = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}([]interface{}{uint64(45)}), r)
+	assert.Equal(t, []interface{}{uint64(45), nil}, r)
 }
 
 func TestFailValidate(t *testing.T) {
@@ -818,9 +838,9 @@ type Contract struct {
 	foundation.BaseContract
 }
 
-func (c *Contract) Rand() int {
+func (c *Contract) Rand() (int, error) {
 	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(77)
+	return rand.Intn(77), nil
 }
 `
 	ctx := inscontext.TODO()
@@ -890,8 +910,8 @@ import (
 type Two struct {
 	foundation.BaseContract
 }
-func New() *Two {
-	return &Two{}
+func New() (*Two, error) {
+	return &Two{}, nil
 }
 func (r *Two) AnError() error {
 	return errors.New("an error")
@@ -941,7 +961,7 @@ func (r *Two) NoError() error {
 	ValidateAllResults(t, lr)
 
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}([]interface{}{nil}), r)
+	assert.Equal(t, []interface{}{nil}, r)
 }
 
 func TestNilResult(t *testing.T) {
@@ -960,7 +980,7 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello() *string {
+func (r *One) Hello() (*string, error) {
 	holder := two.New()
 	friend := holder.AsChild(r.GetReference())
 
@@ -978,11 +998,11 @@ import (
 type Two struct {
 	foundation.BaseContract
 }
-func New() *Two {
-	return &Two{}
+func New() (*Two, error) {
+	return &Two{}, nil
 }
-func (r *Two) Hello() *string {
-	return nil
+func (r *Two) Hello() (*string, error) {
+	return nil, nil
 }
 `
 	ctx := inscontext.TODO()
@@ -1011,7 +1031,7 @@ func (r *Two) Hello() *string {
 	ValidateAllResults(t, lr)
 
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}([]interface{}{nil}), r)
+	assert.Equal(t, []interface{}{nil, nil}, r)
 }
 
 type Caller struct {
@@ -1033,17 +1053,25 @@ func (s *Caller) SignedCall(ref core.RecordRef, delegate core.RecordRef, method 
 
 	sign, err := cryptoHelper.Sign(serialized, s.key)
 	assert.NoError(s.t, err)
+
 	res, err := s.lr.Execute(&message.CallMethod{
 		ObjectRef: core.NewRefFromBase58(s.member),
 		Method:    "AuthorizedCall",
 		Arguments: goplugintestutils.CBORMarshal(s.t, []interface{}{ref, delegate, method, buf, seed, sign}),
 	})
 	assert.NoError(s.t, err, "contract call")
+
 	result := goplugintestutils.CBORUnMarshal(s.t, res.(*reply.CallMethod).Result).([]interface{})
+
 	assert.Nil(s.t, result[1])
-	if result[0] != nil {
-		ch := new(codec.CborHandle)
-		err = codec.NewDecoderBytes(result[0].([]byte), ch).Decode(&resp)
+	if result[0] == nil {
+		return
+	}
+
+	ch := new(codec.CborHandle)
+	err = codec.NewDecoderBytes(result[0].([]byte), ch).Decode(&resp)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -1089,7 +1117,14 @@ func TestRootDomainContract(t *testing.T) {
 
 	rootMemberRef, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c2"})
 	assert.NoError(t, err)
-	_, err = am.ActivateObject(ctx, core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef, goplugintestutils.CBORMarshal(t, member.New("root", rootPubKey)))
+
+	m, err := member.New("root", rootPubKey)
+	assert.NoError(t, err)
+
+	_, err = am.ActivateObject(
+		ctx, core.RecordRef{}, *rootMemberRef, *cb.Classes["member"], *rootDomainRef,
+		goplugintestutils.CBORMarshal(t, m),
+	)
 	assert.NoError(t, err)
 
 	// Updating root domain with root member
@@ -1104,9 +1139,14 @@ func TestRootDomainContract(t *testing.T) {
 	member1PubKey, err := cryptoHelper.ExportPublicKey(&member1Key.PublicKey)
 	assert.NoError(t, err)
 
-	res1 := []interface{}{""}
-	root.SignedCall(*rootDomainRef, core.RecordRef{}, "CreateMember", []interface{}{"Member1", member1PubKey}, res1)
-	member1Ref := res1[0].(string)
+	member1Ref := ""
+	err = nil
+	root.SignedCall(
+		*rootDomainRef, core.RecordRef{},
+		"CreateMember", []interface{}{"Member1", member1PubKey},
+		[]interface{}{&member1Ref, &err},
+	)
+	assert.NoError(t, err)
 	assert.NotEqual(t, "", member1Ref)
 
 	// Creating Member2
@@ -1115,9 +1155,14 @@ func TestRootDomainContract(t *testing.T) {
 	member2PubKey, err := cryptoHelper.ExportPublicKey(&member2Key.PublicKey)
 	assert.NoError(t, err)
 
-	res2 := []interface{}{""}
-	root.SignedCall(*rootDomainRef, core.RecordRef{}, "CreateMember", []interface{}{"Member2", member2PubKey}, res2)
-	member2Ref := res2[0].(string)
+	member2Ref := ""
+	err = nil
+	root.SignedCall(
+		*rootDomainRef, core.RecordRef{},
+		"CreateMember", []interface{}{"Member2", member2PubKey},
+		[]interface{}{&member2Ref, &err},
+	)
+	assert.NoError(t, err)
 	assert.NotEqual(t, "", member2Ref)
 
 	// Transfer 1 coin from Member1 to Member2
@@ -1126,14 +1171,26 @@ func TestRootDomainContract(t *testing.T) {
 	member1.SignedCall(core.NewRefFromBase58(member1Ref), *cb.Classes["wallet"], "Transfer", []interface{}{1, &z}, nil)
 
 	// Verify Member1 balance
-	res3 := []interface{}{0}
-	root.SignedCall(core.NewRefFromBase58(member1Ref), *cb.Classes["wallet"], "GetTotalBalance", []interface{}{}, res3)
-	assert.Equal(t, 999, res3[0])
+	balance := 0
+	err = nil
+	root.SignedCall(
+		core.NewRefFromBase58(member1Ref), *cb.Classes["wallet"],
+		"GetTotalBalance", []interface{}{},
+		[]interface{}{&balance, &err},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, 999, balance)
 
 	// Verify Member2 balance
-	res4 := []interface{}{0}
-	root.SignedCall(core.NewRefFromBase58(member2Ref), *cb.Classes["wallet"], "GetTotalBalance", []interface{}{}, res4)
-	assert.Equal(t, 1001, res4[0])
+	balance = 0
+	err = nil
+	root.SignedCall(
+		core.NewRefFromBase58(member2Ref), *cb.Classes["wallet"],
+		"GetTotalBalance", []interface{}{},
+		[]interface{}{&balance, &err},
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, 1001, balance)
 }
 
 func TestFullValidationCycle(t *testing.T) {
@@ -1152,38 +1209,42 @@ type Contract struct {
 	foundation.BaseContract
 }
 
-func (c *Contract) NewChilds(cnt int) int {
+func (c *Contract) NewChilds(cnt int) (int, error) {
 	s := 0
 	for i := 1; i < cnt; i++ {
         child.New(i).AsChild(c.GetReference())
 		s += i
 	} 
-	return s
+	return s, nil
 }
 
-func (c *Contract) SumChilds() int {
+func (c *Contract) SumChilds() (int, error) {
 	s := 0
 	childs, err := c.GetChildrenTyped(child.GetClass())
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	for _, chref := range childs {
 		o := child.GetObject(chref)
-		s += o.GetNum()
+		n, err := o.GetNum()
+		if err != nil {
+			return 0, err
+		}
+		s += n
 	}
-	return s
+	return s, nil
 }
 
-func (c *Contract) GetChildRefs() (ret []string) {
+func (c *Contract) GetChildRefs() (ret []string, err error) {
 	childs, err := c.GetChildrenTyped(child.GetClass())
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	for _, chref := range childs {
 		ret = append(ret, chref.String())
 	}
-	return ret
+	return ret, nil
 }
 `
 	goChild := `
@@ -1195,13 +1256,13 @@ type Child struct {
 	Num int
 }
 
-func (c *Child) GetNum() int {
-	return c.Num
+func (c *Child) GetNum() (int, error) {
+	return c.Num, nil
 }
 
 
-func New(n int) *Child {
-	return &Child{Num: n};
+func New(n int) (*Child, error) {
+	return &Child{Num: n}, nil
 }
 `
 	ctx := inscontext.TODO()
@@ -1224,7 +1285,7 @@ func New(n int) *Child {
 	})
 	assert.NoError(t, err, "contract call")
 	r := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
-	assert.Equal(t, []interface{}([]interface{}{uint64(0)}), r)
+	assert.Equal(t, []interface{}{uint64(0), nil}, r)
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
 	var toValidate []core.Message

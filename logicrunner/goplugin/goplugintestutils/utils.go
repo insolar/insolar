@@ -481,6 +481,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			return err
 		}
 
+		log.Debugf("Deploying code for contract %q", name)
 		code, err := cb.ArtifactManager.DeployCode(
 			ctx,
 			core.RecordRef{}, core.RecordRef{},

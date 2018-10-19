@@ -197,7 +197,12 @@ func serializeInstance(contractInstance interface{}) ([]byte, error) {
 }
 
 func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
-	instanceData, err := serializeInstance(rootdomain.NewRootDomain())
+	rd, err := rootdomain.NewRootDomain()
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootDomain ]")
+	}
+
+	instanceData, err := serializeInstance(rd)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
@@ -223,7 +228,12 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *goplugint
 }
 
 func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
-	instanceData, err := serializeInstance(nodedomain.NewNodeDomain())
+	nd, err := nodedomain.NewNodeDomain()
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateNodeDomain ]")
+	}
+
+	instanceData, err := serializeInstance(nd)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
@@ -250,8 +260,12 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugint
 }
 
 func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+	m, err := member.New("RootMember", b.rootPubKey)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootMember ]")
+	}
 
-	instanceData, err := serializeInstance(member.New("RootMember", b.rootPubKey))
+	instanceData, err := serializeInstance(m)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
@@ -295,7 +309,12 @@ func (b *Bootstrapper) updateRootDomain(am core.ArtifactManager, cb *goplugintes
 }
 
 func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
-	instanceData, err := serializeInstance(wallet.New(b.rootBalance))
+	w, err := wallet.New(b.rootBalance)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateRootWallet ]")
+	}
+
+	instanceData, err := serializeInstance(w)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
