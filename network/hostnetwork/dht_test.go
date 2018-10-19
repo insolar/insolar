@@ -1011,12 +1011,13 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 func TestDHT_MessageSign(t *testing.T) {
 	key, _ := ecdsa.GeneratePrivateKey()
 	key2, _ := ecdsa.GeneratePrivateKey()
+	ref := testutils.RandomRef()
 
-	msg := message.BootstrapRequest{}
-	err := message.SignMessage(&msg, key)
+	tmp := core.Message(&message.BootstrapRequest{})
+	msg, err := message.NewSignedMessage(tmp, ref, key)
 	assert.NoError(t, err)
-	assert.True(t, message.SignIsCorrect(&msg, &key.PublicKey))
-	assert.False(t, message.SignIsCorrect(&msg, &key2.PublicKey))
+	assert.True(t, msg.IsValid(&key.PublicKey))
+	assert.False(t, msg.IsValid(&key2.PublicKey))
 }
 
 func TestDHT_Getters(t *testing.T) {
