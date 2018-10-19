@@ -157,13 +157,15 @@ func extractGetBalanceResponse(data []byte) (uint, error) {
 		return 0, errors.Wrap(err, "[ extractGetBalanceResponse ]")
 	}
 
-	balance, ok := dataUnmarsh[0].(uint)
-	if !ok {
-		msg := fmt.Sprintf("Can't cast response to uint. orig: %s", reflect.TypeOf(dataUnmarsh[0]).String())
-		return 0, errors.New(msg)
+	if _, ok := dataUnmarsh[0].(uint64); ok {
+		return (uint)(dataUnmarsh[0].(uint64)), nil
+	}
+	if balance, ok := dataUnmarsh[0].(uint); ok {
+		return balance, nil
 	}
 
-	return balance, nil
+	msg := fmt.Sprintf("Can't cast response to uint. orig: %s", reflect.TypeOf(dataUnmarsh[0]).String())
+	return 0, errors.New(msg)
 }
 
 // ProcessGetBalance processes get_balance query type

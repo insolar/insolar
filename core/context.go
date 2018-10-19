@@ -16,22 +16,15 @@
 
 package core
 
-// Component controller methods
-type Component interface {
-	Start(components Components) error
-	Stop() error
-}
+import (
+	"context"
+)
 
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-type Components struct {
-	ActiveNodeComponent ActiveNodeComponent
-	LogicRunner         LogicRunner
-	Ledger              Ledger
-	Network             Network
-	MessageBus          MessageBus
-	Metrics             Component
-	Bootstrapper        Bootstrapper
-	APIRunner           Component
-	NetworkCoordinator  NetworkCoordinator
+// A Context wraps context.Context, add provides util helpers.
+type Context interface {
+	context.Context
+	// Log returns provided Logger.
+	Log() Logger
+	// TraceID returns current TraceID.
+	TraceID() string
 }

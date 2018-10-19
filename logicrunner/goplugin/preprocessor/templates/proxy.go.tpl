@@ -108,7 +108,10 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
 		panic(err)
 	}
 
-	return {{ $method.Results }}
+	if {{ $method.ErrorVar }} != nil {
+		return {{ $method.Results }}
+	}
+	return {{ $method.ResultsNilError }}
 }
 
 // {{ $method.Name }}NoWait is proxy generated method
