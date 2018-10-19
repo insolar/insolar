@@ -182,15 +182,14 @@ func (r *Member) GetPublicKeyNoWait() {
 	}
 }
 
-// AuthorizedCall is proxy generated method
-func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) ([]byte, error) {
-	var args [6]interface{}
-	args[0] = ref
-	args[1] = delegate
-	args[2] = method
-	args[3] = params
-	args[4] = seed
-	args[5] = sign
+// Call is proxy generated method
+func (r *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
+	var args [5]interface{}
+	args[0] = rootDomain
+	args[1] = method
+	args[2] = params
+	args[3] = seed
+	args[4] = sign
 
 	var argsSerialized []byte
 
@@ -199,13 +198,13 @@ func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, met
 		panic(err)
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "AuthorizedCall", argsSerialized)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Call", argsSerialized)
 	if err != nil {
 		panic(err)
 	}
 
 	ret := [2]interface{}{}
-	var ret0 []byte
+	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -221,15 +220,14 @@ func (r *Member) AuthorizedCall(ref core.RecordRef, delegate core.RecordRef, met
 	return ret0, nil
 }
 
-// AuthorizedCallNoWait is proxy generated method
-func (r *Member) AuthorizedCallNoWait(ref core.RecordRef, delegate core.RecordRef, method string, params []byte, seed []byte, sign []byte) {
-	var args [6]interface{}
-	args[0] = ref
-	args[1] = delegate
-	args[2] = method
-	args[3] = params
-	args[4] = seed
-	args[5] = sign
+// CallNoWait is proxy generated method
+func (r *Member) CallNoWait(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) {
+	var args [5]interface{}
+	args[0] = rootDomain
+	args[1] = method
+	args[2] = params
+	args[3] = seed
+	args[4] = sign
 
 	var argsSerialized []byte
 
@@ -238,7 +236,7 @@ func (r *Member) AuthorizedCallNoWait(ref core.RecordRef, delegate core.RecordRe
 		panic(err)
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "AuthorizedCall", argsSerialized)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Call", argsSerialized)
 	if err != nil {
 		panic(err)
 	}

@@ -26,9 +26,11 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/application/proxy/member"
+	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
@@ -129,7 +131,6 @@ func PreprocessRequest(req *http.Request) (*Params, error) {
 }
 
 func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
-	sm := seedmanager.New()
 	return func(response http.ResponseWriter, req *http.Request) {
 		startTime := time.Now()
 		answer := make(map[string]interface{})
@@ -161,7 +162,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 			log.Errorf("[QID=] Can't parse input request: %s, error: %s\n", req.RequestURI, err)
 			return
 		}
-		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, sm)
+		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, runner.seedmanager)
 
 		answer = processQueryType(rh, params.QType)
 	}
@@ -175,6 +176,7 @@ type Runner struct {
 	netCoordinator core.NetworkCoordinator
 	keyCache       map[string]string
 	cacheLock      *sync.RWMutex
+	seedmanager    *seedmanager.SeedManager
 }
 
 // NewRunner is C-tor for API Runner
@@ -216,9 +218,12 @@ func (ar *Runner) Start(c core.Components) error {
 	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
 	ar.netCoordinator = c.NetworkCoordinator
 
+	ar.seedmanager = seedmanager.New()
+
 	fw := wrapAPIV1Handler(ar, *rootDomainReference)
 	http.HandleFunc(ar.cfg.Location, fw)
 	http.HandleFunc(ar.cfg.Info, ar.infoHandler(c))
+	http.HandleFunc(ar.cfg.Call, ar.callHandler(c))
 	log.Info("Starting ApiRunner ...")
 	log.Info("Config: ", ar.cfg)
 	go func() {
@@ -243,19 +248,37 @@ func (ar *Runner) Stop() error {
 	return nil
 }
 
-func (ar *Runner) getMemberPubKey(ref string) string { //nolint
+func (ar *Runner) getMemberPubKey(ref string) (string, error) { //nolint
 	ar.cacheLock.RLock()
 	key, ok := ar.keyCache[ref]
 	ar.cacheLock.RUnlock()
 	if ok {
-		return key
+		return key, nil
 	}
-	key, err := member.GetObject(core.NewRefFromBase58(ref)).GetPublicKey()
+	args, err := core.MarshalArgs()
 	if err != nil {
-		panic(err)
+		return "", err
 	}
+	res, err := ar.messageBus.Send(&message.CallMethod{
+		ObjectRef: core.NewRefFromBase58(ref),
+		Method:    "GetPublicKey",
+		Arguments: args,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	var contractErr error
+	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &key, &contractErr)
+	if err != nil {
+		return "", err
+	}
+	if contractErr != nil {
+		return "", contractErr
+	}
+
 	ar.cacheLock.Lock()
 	ar.keyCache[ref] = key
 	ar.cacheLock.Unlock()
-	return key
+	return key, nil
 }

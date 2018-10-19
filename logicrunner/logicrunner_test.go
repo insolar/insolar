@@ -1041,38 +1041,38 @@ type Caller struct {
 	t      *testing.T
 }
 
-func (s *Caller) SignedCall(ref core.RecordRef, delegate core.RecordRef, method string, params []interface{}, resp []interface{}) {
+func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []interface{}) interface{} {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	assert.NoError(s.t, err)
 
 	buf := goplugintestutils.CBORMarshal(s.t, params)
 
-	serialized, err := signer.Serialize(ref[:], delegate[:], method, buf, seed)
+	args, err := core.MarshalArgs(
+		core.NewRefFromBase58(s.member),
+		method,
+		buf,
+		seed)
+
 	assert.NoError(s.t, err)
 
-	sign, err := cryptoHelper.Sign(serialized, s.key)
+	sign, err := cryptoHelper.Sign(args, s.key)
 	assert.NoError(s.t, err)
 
 	res, err := s.lr.Execute(&message.CallMethod{
 		ObjectRef: core.NewRefFromBase58(s.member),
-		Method:    "AuthorizedCall",
-		Arguments: goplugintestutils.CBORMarshal(s.t, []interface{}{ref, delegate, method, buf, seed, sign}),
+		Method:    "Call",
+		Arguments: goplugintestutils.CBORMarshal(s.t, []interface{}{rootDomain, method, buf, seed, sign}),
 	})
 	assert.NoError(s.t, err, "contract call")
 
-	result := goplugintestutils.CBORUnMarshal(s.t, res.(*reply.CallMethod).Result).([]interface{})
+	var result interface{}
+	var contractErr error
+	err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
+	assert.NoError(s.t, err, "unmarshal answer")
+	assert.NoError(s.t, contractErr)
 
-	assert.Nil(s.t, result[1])
-	if result[0] == nil {
-		return
-	}
-
-	ch := new(codec.CborHandle)
-	err = codec.NewDecoderBytes(result[0].([]byte), ch).Decode(&resp)
-	if err != nil {
-		panic(err)
-	}
+	return result
 }
 
 func TestRootDomainContract(t *testing.T) {
@@ -1139,14 +1139,8 @@ func TestRootDomainContract(t *testing.T) {
 	member1PubKey, err := cryptoHelper.ExportPublicKey(&member1Key.PublicKey)
 	assert.NoError(t, err)
 
-	member1Ref := ""
-	err = nil
-	root.SignedCall(
-		*rootDomainRef, core.RecordRef{},
-		"CreateMember", []interface{}{"Member1", member1PubKey},
-		[]interface{}{&member1Ref, &err},
-	)
-	assert.NoError(t, err)
+	res1 := root.SignedCall(*rootDomainRef, "CreateMember", []interface{}{"Member1", member1PubKey})
+	member1Ref := res1.(string)
 	assert.NotEqual(t, "", member1Ref)
 
 	// Creating Member2
@@ -1155,42 +1149,21 @@ func TestRootDomainContract(t *testing.T) {
 	member2PubKey, err := cryptoHelper.ExportPublicKey(&member2Key.PublicKey)
 	assert.NoError(t, err)
 
-	member2Ref := ""
-	err = nil
-	root.SignedCall(
-		*rootDomainRef, core.RecordRef{},
-		"CreateMember", []interface{}{"Member2", member2PubKey},
-		[]interface{}{&member2Ref, &err},
-	)
-	assert.NoError(t, err)
+	res2 := root.SignedCall(*rootDomainRef, "CreateMember", []interface{}{"Member2", member2PubKey})
+	member2Ref := res2.(string)
 	assert.NotEqual(t, "", member2Ref)
 
 	// Transfer 1 coin from Member1 to Member2
 	member1 := Caller{member1Ref, member1Key, lr, t}
-	z := core.NewRefFromBase58(member2Ref)
-	member1.SignedCall(core.NewRefFromBase58(member1Ref), *cb.Classes["wallet"], "Transfer", []interface{}{1, &z}, nil)
+	member1.SignedCall(*rootDomainRef, "Transfer", []interface{}{1, member2Ref})
 
 	// Verify Member1 balance
-	balance := 0
-	err = nil
-	root.SignedCall(
-		core.NewRefFromBase58(member1Ref), *cb.Classes["wallet"],
-		"GetTotalBalance", []interface{}{},
-		[]interface{}{&balance, &err},
-	)
-	assert.NoError(t, err)
-	assert.Equal(t, 999, balance)
+	res3 := root.SignedCall(*rootDomainRef, "GetBalance", []interface{}{member1Ref})
+	assert.Equal(t, 999, int(res3.(uint64)))
 
 	// Verify Member2 balance
-	balance = 0
-	err = nil
-	root.SignedCall(
-		core.NewRefFromBase58(member2Ref), *cb.Classes["wallet"],
-		"GetTotalBalance", []interface{}{},
-		[]interface{}{&balance, &err},
-	)
-	assert.NoError(t, err)
-	assert.Equal(t, 1001, balance)
+	res4 := root.SignedCall(*rootDomainRef, "GetBalance", []interface{}{member2Ref})
+	assert.Equal(t, 1001, int(res4.(uint64)))
 }
 
 func TestFullValidationCycle(t *testing.T) {
