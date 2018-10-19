@@ -18,7 +18,6 @@ package dns
 
 import (
 	"net"
-	"strconv"
 	"strings"
 )
 
@@ -43,11 +42,9 @@ func GetIpFromDomain(domain string) (string, error) {
 
 // IsDomain return true if input arg is domain address.
 func IsDomain(address string) bool {
-	tmp := strings.Split(address, ".")
-	for _, oct := range tmp {
-		if _, err := strconv.Atoi(oct); err != nil {
-			return true
-		}
+	ip := net.ParseIP(address)
+	if ip == nil {
+		return true
 	}
 	return false
 }
