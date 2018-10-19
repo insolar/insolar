@@ -181,8 +181,8 @@ func (t *TestArtifactManager) Stop() error { return nil }
 func (t *TestArtifactManager) GenesisRef() *core.RecordRef { return &core.RecordRef{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Message) (*core.RecordRef, error) {
-	nonce := testutils.RandomRef()
+func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Message) (*core.RecordID, error) {
+	nonce := testutils.RandomID()
 	return &nonce, nil
 }
 
@@ -220,7 +220,7 @@ func (t *TestArtifactManager) GetDelegate(ctx core.Context, head, asClass core.R
 }
 
 // DeclareType implementation for tests
-func (t *TestArtifactManager) DeclareType(ctx core.Context, domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeclareType(ctx core.Context, domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
@@ -392,7 +392,9 @@ func AMPublishCode(
 	assert.NoError(t, err, "create code on ledger")
 
 	nonce := testutils.RandomRef()
-	classRef, err = am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
+	classID, err := am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
+	classRef = &core.RecordRef{}
+	classRef.SetRecord(*classID)
 	assert.NoError(t, err)
 	_, err = am.ActivateClass(ctx, domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
@@ -442,13 +444,15 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 
 	for name := range contracts {
 		nonce := testutils.RandomRef()
-		class, err := cb.ArtifactManager.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
+		classID, err := cb.ArtifactManager.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
 		if err != nil {
 			return err
 		}
 
-		log.Debugf("Registered class %q for contract %q in %q", class.String(), name, cb.root)
-		cb.Classes[name] = class
+		classRef := core.RecordRef{}
+		classRef.SetRecord(*classID)
+		log.Debugf("Registered class %q for contract %q in %q", classRef.String(), name, cb.root)
+		cb.Classes[name] = &classRef
 	}
 
 	re := regexp.MustCompile(`package\s+\S+`)

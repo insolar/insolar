@@ -156,17 +156,20 @@ type ValidationSaver struct {
 
 func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
 	ctx := inscontext.TODO()
-	reqref, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
+	reqid, err := vb.lr.ArtifactManager.RegisterRequest(ctx, m)
 	if err != nil {
 		return nil, err
 	}
+	// TODO: use proper conversion
+	reqref := core.RecordRef{}
+	reqref.SetRecord(*reqid)
 
 	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
 		Type:   core.CaseRecordTypeRequest,
 		ReqSig: HashInterface(m),
 		Resp:   reqref,
 	})
-	return reqref, err
+	return &reqref, err
 }
 
 func (vb ValidationSaver) NeedSave() bool {
