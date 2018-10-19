@@ -606,12 +606,14 @@ func TestLedgerArtifactManager_DeactivateObject_VerifiesObjectIsActive(t *testin
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
+	ctx := inscontext.TODO()
 	objRef, _ := td.db.SetRecord(&record.ObjectActivateRecord{})
 	deactivateID, _ := td.db.SetRecord(&record.DeactivationRecord{})
 	td.db.SetObjectIndex(objRef, &index.ObjectLifeline{
 		LatestState: *deactivateID,
 	})
-	_, err := td.manager.DeactivateObject(*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(deactivateID))
+	_, err := td.manager.DeactivateObject(ctx,
+		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(deactivateID))
 	assert.NotNil(t, err)
 }
 
@@ -620,6 +622,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
+	ctx := inscontext.TODO()
 	objID, _ := td.db.SetRecord(&record.ObjectActivateRecord{
 		ResultRecord: record.ResultRecord{
 			Domain: *genRandomRef(0),
@@ -629,6 +632,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 		LatestState: *objID,
 	})
 	deactivateCoreID, err := td.manager.DeactivateObject(
+		ctx,
 		*domainRef.CoreRef(), *td.requestRef.CoreRef(), *genRefWithID(objID),
 	)
 	assert.Nil(t, err)

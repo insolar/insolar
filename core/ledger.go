@@ -143,7 +143,7 @@ type ArtifactManager interface {
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(domain, request, obj RecordRef) (*RecordID, error)
+	DeactivateObject(ctx Context, domain, request, obj RecordRef) (*RecordID, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.

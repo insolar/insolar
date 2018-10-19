@@ -320,7 +320,10 @@ func (t *TestArtifactManager) ActivateObjectDelegate(
 }
 
 // DeactivateObject implementation for tests
-func (t *TestArtifactManager) DeactivateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) DeactivateObject(
+	ctx core.Context,
+	domain core.RecordRef, request core.RecordRef, obj core.RecordRef,
+) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
