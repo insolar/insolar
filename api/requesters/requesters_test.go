@@ -98,6 +98,7 @@ func waitForStart() error {
 func setup() error {
 	fh := FakeHandler
 	http.HandleFunc(LOCATION, fh)
+	http.HandleFunc(LOCATION+"/call", fh)
 	log.Info("Starting Test api server ...")
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
