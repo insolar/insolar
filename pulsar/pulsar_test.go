@@ -54,8 +54,8 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		actualAddress = address
 		return &pulsartestutils.MockListener{}, nil
 	}
-	storage := &pulsartestutils.MockPulsarStorage{}
-	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
+	storage := pulsartestutils.NewPulsarStorageMock(t)
+	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
 
 	factoryMock := NewRPCClientWrapperFactoryMock(t)
 	clientMock := NewRPCClientWrapperMock(t)
@@ -96,8 +96,9 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 
 	expectedPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	parsedExpectedPrivateKey, _ := ecdsahelper.ExportPrivateKey(expectedPrivateKey)
-	storage := &pulsartestutils.MockPulsarStorage{}
-	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
+
+	storage := pulsartestutils.NewPulsarStorageMock(t)
+	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
 
 	factoryMock := NewRPCClientWrapperFactoryMock(t)
 	clientMock := NewRPCClientWrapperMock(t)

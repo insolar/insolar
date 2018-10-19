@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestTwoPulsars_Handshake(t *testing.T) {
@@ -38,8 +37,8 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	_, firstPrivateExported, firstPublicExported := generatePrivateAndConvertPublic(t)
 	_, secondPrivateExported, secondPublicExported := generatePrivateAndConvertPublic(t)
 
-	storage := &pulsartestutils.MockPulsarStorage{}
-	storage.On("GetLastPulse", mock.Anything).Return(&core.Pulse{PulseNumber: 123}, nil)
+	storage := pulsartestutils.NewPulsarStorageMock(t)
+	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
 
 	firstPulsar, err := NewPulsar(
 		configuration.Configuration{
@@ -119,8 +118,8 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
 	_, exportedPrivateKey, _ := generatePrivateAndConvertPublic(t)
-	storage := &pulsartestutils.MockPulsarStorage{}
-	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
+	storage := pulsartestutils.NewPulsarStorageMock(t)
+	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
 	stateSwitcher := &StateSwitcherImpl{}
 
 	newPulsar, err := NewPulsar(
@@ -179,8 +178,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
 	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
-	storage := &pulsartestutils.MockPulsarStorage{}
-	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
+	storage := pulsartestutils.NewPulsarStorageMock(t)
+	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
 
 	_, parsedPrivKeyFirst, firstPubKey := generatePrivateAndConvertPublic(t)
 	_, parsedPrivKeySecond, secondPubKey := generatePrivateAndConvertPublic(t)
@@ -289,8 +288,8 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
 	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
-	storage := &pulsartestutils.MockPulsarStorage{}
-	storage.On("GetLastPulse").Return(core.GenesisPulse, nil)
+	storage := pulsartestutils.NewPulsarStorageMock(t)
+	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
 
 	keys := [7]pulsarKeys{}
 	pulsars := [7]*Pulsar{}
@@ -317,10 +316,13 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		conf := configuration.Configuration{
 			PrivateKey: keys[pulsarIndex].privKey,
 			Pulsar: configuration.Pulsar{
-				ConnectionType:                 "tcp",
-				MainListenerAddress:            mainAddresses[pulsarIndex],
-				BootstrapNodes:                 []string{bootstrapAddress},
-				BootstrapListener:              configuration.Transport{Protocol: "UTP", Address: transportAddress, BehindNAT: false},
+				ConnectionType:      "tcp",
+				MainListenerAddress: mainAddresses[pulsarIndex],
+				BootstrapNodes:      []string{bootstrapAddress},
+				BootstrapListener: configuration.Transport{
+					Protocol:  "UTP",
+					Address:   transportAddress,
+					BehindNAT: false},
 				Neighbours:                     []configuration.PulsarNodeAddress{},
 				ReceivingSignTimeout:           50,
 				ReceivingNumberTimeout:         50,
