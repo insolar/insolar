@@ -37,8 +37,8 @@ func NewNode(nodeID core.RecordRef, privKey *ecdsa.PrivateKey) *Node {
 }
 
 // GetID returns a Node ID.
-func (node Node) GetID() *core.RecordRef {
-	return &node.id
+func (node Node) GetID() core.RecordRef {
+	return node.id
 }
 
 // GetPrivateKey returns a private key.

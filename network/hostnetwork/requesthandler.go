@@ -272,7 +272,7 @@ func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, re
 
 	request := packet.NewBuilder().Sender(sender).
 		Receiver(receiver).Type(packet.TypeGetNonce).
-		Request(&packet.RequestGetNonce{NodeID: *hostHandler.GetNodeID()}).
+		Request(&packet.RequestGetNonce{NodeID: hostHandler.GetNodeID()}).
 		Build()
 
 	future, err := hostHandler.SendRequest(request)
@@ -302,7 +302,7 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *ho
 		Sender(sender).Receiver(receiver).
 		Request(&packet.RequestCheckSignedNonce{
 			Signed:    nonce,
-			NodeID:    *hostHandler.GetNodeID(),
+			NodeID:    hostHandler.GetNodeID(),
 			NodeRoles: []core.NodeRole{core.RoleUnknown},
 			// PublicKey: ???
 		}).

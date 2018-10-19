@@ -60,7 +60,7 @@ type DHT struct {
 	subnet            Subnet
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
-	nodeID            *core.RecordRef
+	nodeID            core.RecordRef
 	activeNodeKeeper  consensus.NodeKeeper
 	majorityRule      int
 }
@@ -130,7 +130,7 @@ func NewDHT(
 	proxy relay.Proxy,
 	timeout int,
 	infbootstrap bool,
-	nodeID *core.RecordRef,
+	nodeID core.RecordRef,
 	majorityRule int,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
@@ -903,7 +903,6 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, ht *routing.HashTable) {
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 
-	// TODO: fix sign and check sign logic
 	if msg.Type == packet.TypeRPC {
 		data := msg.Data.(*packet.RequestDataRPC)
 		signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
@@ -911,7 +910,7 @@ func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, 
 			log.Error(err, "failed to parse incoming RPC")
 			return
 		}
-		activeNode := dht.activeNodeKeeper.GetActiveNode(*data.NodeID)
+		activeNode := dht.activeNodeKeeper.GetActiveNode(data.NodeID)
 		if activeNode == nil {
 			log.Warn("couldn't check a sign from non active node")
 			return
@@ -1221,7 +1220,7 @@ func (dht *DHT) checkMajorityRule(nodes []*core.ActiveNode) error {
 	count := 0
 	for _, activeNode := range nodes {
 		for _, bootstrapNode := range dht.options.BootstrapHosts {
-			if strings.EqualFold(bootstrapNode.ID.String(), nodenetwork.ResolveHostID(&activeNode.NodeID)) {
+			if strings.EqualFold(bootstrapNode.ID.String(), nodenetwork.ResolveHostID(activeNode.NodeID)) {
 				count++
 			}
 		}
@@ -1363,10 +1362,6 @@ func (dht *DHT) RemoveRelayClient(host *host.Host) error {
 	return dht.relay.RemoveClient(host)
 }
 
-func (dht *DHT) SetNodeID(nodeID *core.RecordRef) {
-	dht.nodeID = nodeID
-}
-
 // SetHighKnownHostID sets a new high known host ID.
 func (dht *DHT) SetHighKnownHostID(id string) {
 	dht.subnet.HighKnownHosts.ID = id
@@ -1408,7 +1403,7 @@ func (dht *DHT) GetPacketTimeout() time.Duration {
 }
 
 // GetNodeID returns a node ID.
-func (dht *DHT) GetNodeID() *core.RecordRef {
+func (dht *DHT) GetNodeID() core.RecordRef {
 	return dht.nodeID
 }
 

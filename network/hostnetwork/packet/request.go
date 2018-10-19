@@ -60,7 +60,7 @@ type RequestDataStore struct {
 
 // RequestDataRPC is data for RPC request.
 type RequestDataRPC struct {
-	NodeID *core.RecordRef
+	NodeID core.RecordRef
 	Method string
 	Args   [][]byte
 }

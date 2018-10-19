@@ -72,7 +72,7 @@ func (network *ServiceNetwork) GetAddress() string {
 
 // GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
-	return *network.nodeNetwork.GetID()
+	return network.nodeNetwork.GetID()
 }
 
 func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
@@ -85,7 +85,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID := nodenetwork.ResolveHostID(&nodeID)
+	hostID := nodenetwork.ResolveHostID(nodeID)
 	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
@@ -232,7 +232,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 
 	if findCurrentNode {
 		nodeID := network.nodeNetwork.GetID()
-		nextNodes, err = cascade.CalculateNextNodes(data, nodeID)
+		nextNodes, err = cascade.CalculateNextNodes(data, &nodeID)
 	} else {
 		nextNodes, err = cascade.CalculateNextNodes(data, nil)
 	}
@@ -245,7 +245,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 
 	var failedNodes []string
 	for _, nextNode := range nextNodes {
-		hostID := nodenetwork.ResolveHostID(&nextNode)
+		hostID := nodenetwork.ResolveHostID(nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
 			log.Debugln("failed to send cascade message: ", err)
