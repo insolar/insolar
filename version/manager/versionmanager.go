@@ -20,7 +20,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/insolar/insolar/log"
 	"github.com/spf13/viper"
 )
 
@@ -55,22 +54,31 @@ func newVersionManager() *VersionManager {
 	versionTable := make(map[string]*Feature)
 	vm := &VersionManager{
 		versionTable,
-		"v0.0.0",
+		INS_BASE_VERSION,
 		viper.New(),
 	}
-	vm.viper.SetConfigName("versiontable")
-	vm.viper.AddConfigPath(".")
-	vm.viper.SetConfigType("yml")
-
-	vm.viper.SetDefault("versiontable", versionTable)
-
+	vm.viper.SetDefault("versiontable", vm.VersionTable)
 	vm.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	vm.viper.SetEnvPrefix("insolar")
+	vm.viper.SetConfigType("yml")
 	return vm
+}
+
+func (vm *VersionManager) setDefault() {
+	vm.viper.SetConfigName("versiontable")
+	vm.viper.AddConfigPath(".")
 }
 
 func (vm *VersionManager) Load() error {
 	err := vm.viper.ReadInConfig()
+	if err != nil {
+		return err
+	}
+	return vm.viper.UnmarshalKey("versiontable", &vm.VersionTable)
+}
+
+func (vm *VersionManager) LoadFromVariable() error {
+	err := vm.viper.ReadConfig(strings.NewReader(INS_VERSION_TABLE))
 	if err != nil {
 		return err
 	}
@@ -90,7 +98,6 @@ func (vm *VersionManager) LoadFromFile(path string) error {
 
 // Save method writes configuration to default file path
 func (vm *VersionManager) Save() error {
-	vm.viper.Set("agreedversion", vm.AgreedVersion)
 	vm.viper.Set("versiontable", vm.VersionTable)
 	return vm.viper.WriteConfig()
 }
@@ -106,10 +113,6 @@ func (vm *VersionManager) Add(key string, startVersion string, description strin
 		return nil, err
 	}
 	vm.VersionTable[key] = feature
-	err = vm.Save()
-	if err != nil {
-		log.Warn("Cannot save feature: ", err)
-	}
 	return feature, nil
 }
 

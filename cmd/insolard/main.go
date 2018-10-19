@@ -160,7 +160,7 @@ func main() {
 	}
 
 	vm := manager.GetVM()
-	err = vm.Load()
+	err = vm.LoadFromVariable()
 	if err != nil {
 		log.Fatalln("failed to load VersionManager: ", err.Error())
 	}

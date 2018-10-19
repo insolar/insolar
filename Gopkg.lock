@@ -153,6 +153,14 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
+  digest = "1:0015060922f1b2e04469224e2ed82f0a67abbfee9a0a91852cf4980b91bf11d6"
+  name = "github.com/jteeuwen/go-bindata"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "bbd0c6e271208dce66d8fda4bc536453cd27fc4a"
+  version = "v3.0.7"
+
+[[projects]]
   digest = "1:4ea0668d490ca32a38366453a486e2e8c60fbdaf1f2607c96b4a093d8a5c8de7"
   name = "github.com/klauspost/cpuid"
   packages = ["."]
@@ -483,6 +491,7 @@
     "github.com/dgraph-io/badger",
     "github.com/huandu/xstrings",
     "github.com/jbenet/go-base58",
+    "github.com/jteeuwen/go-bindata",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
