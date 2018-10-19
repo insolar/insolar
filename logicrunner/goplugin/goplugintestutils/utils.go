@@ -328,7 +328,13 @@ func (t *TestArtifactManager) DeactivateObject(
 }
 
 // UpdateObject implementation for tests
-func (t *TestArtifactManager) UpdateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordID, error) {
+func (t *TestArtifactManager) UpdateObject(
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	object core.RecordRef,
+	memory []byte,
+) (*core.RecordID, error) {
 	objDesc, ok := t.Objects[obj]
 	if !ok {
 		return nil, errors.New("No object to update")

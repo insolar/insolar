@@ -344,7 +344,11 @@ func (m *LedgerArtifactManager) DeactivateObject(
 //
 // Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdateObject(
-	domain, request, object core.RecordRef, memory []byte,
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	object core.RecordRef,
+	memory []byte,
 ) (*core.RecordID, error) {
 	return m.fetchID(&message.UpdateObject{
 		Domain:  domain,

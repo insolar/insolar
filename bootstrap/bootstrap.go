@@ -277,11 +277,13 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 }
 
 func (b *Bootstrapper) updateRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+	ctx := inscontext.TODO()
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef, NodeDomainRef: *b.nodeDomainRef})
 	if err != nil {
 		return errors.Wrap(err, "[ updateRootDomain ]")
 	}
 	_, err = am.UpdateObject(
+		ctx,
 		core.RecordRef{}, core.RecordRef{},
 		*b.rootDomainRef, updateData,
 	)
