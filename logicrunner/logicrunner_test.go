@@ -443,7 +443,11 @@ func (r *One) Hello(s string) (string, error) {
 }
 
 func (r *One) HelloFromDelegate(s string) (string, error) {
-	friend := two.GetImplementationFrom(r.GetReference())
+	friend, err := two.GetImplementationFrom(r.GetReference())
+	if err != nil {
+		return "", err
+	}
+
 	return friend.Hello(s)
 }
 `

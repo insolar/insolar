@@ -124,20 +124,31 @@ func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 
 // GetBalance processes get balance request
 func (rd *RootDomain) GetBalance(reference string) (uint, error) {
-	w := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
+	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
+	if err != nil {
+		return 0, err
+	}
+
 	return w.GetTotalBalance()
 }
 
 // SendMoney processes send money request
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) (bool, error) {
-	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
+	walletFrom, err := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
+	if err != nil {
+		return false, err
+	}
+
 	v := core.NewRefFromBase58(to)
 	walletFrom.Transfer(amount, &v)
 	return true, nil
 }
 
 func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, error) {
-	w := wallet.GetImplementationFrom(m.GetReference())
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return nil, err
+	}
 
 	name, err := m.GetName()
 	if err != nil {

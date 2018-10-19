@@ -49,12 +49,12 @@ func GetClass() core.RecordRef {
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) *Allowance {
+func GetImplementationFrom(object core.RecordRef) (*Allowance, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return GetObject(ref)
+	return GetObject(ref), nil
 }
 
 // New is constructor

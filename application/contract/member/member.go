@@ -105,7 +105,12 @@ func (m *Member) createMemberCall(ref core.RecordRef, params []byte) (interface{
 }
 
 func (m *Member) getMyBalance() (interface{}, error) {
-	return wallet.GetImplementationFrom(m.GetReference()).GetTotalBalance()
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return 0, err
+	}
+
+	return w.GetTotalBalance()
 }
 
 func (m *Member) getBalance(params []byte) (interface{}, error) {
@@ -113,7 +118,12 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 	if err := signer.UnmarshalParams(params, &member); err != nil {
 		return nil, err
 	}
-	return wallet.GetImplementationFrom(core.NewRefFromBase58(member)).GetTotalBalance()
+	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
+	if err != nil {
+		return nil, err
+	}
+
+	return w.GetTotalBalance()
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
@@ -123,7 +133,12 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 		return nil, err
 	}
 	to := core.NewRefFromBase58(toStr)
-	return nil, wallet.GetImplementationFrom(m.GetReference()).Transfer(uint(amount), &to)
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, w.Transfer(uint(amount), &to)
 }
 
 func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{}, error) {
