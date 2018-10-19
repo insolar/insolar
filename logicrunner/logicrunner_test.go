@@ -283,7 +283,6 @@ func TestExecution(t *testing.T) {
 }
 
 func TestContractCallingContract(t *testing.T) {
-	t.Skip()
 	if parallel {
 		t.Parallel()
 	}
@@ -726,7 +725,6 @@ func (r *One) NotPanic() error {
 }
 
 func TestGetChildren(t *testing.T) {
-	t.Skip()
 	if parallel {
 		t.Parallel()
 	}
@@ -886,7 +884,6 @@ func (c *Contract) Rand() (int, error) {
 }
 
 func TestErrorInterface(t *testing.T) {
-	t.Skip()
 	if parallel {
 		t.Parallel()
 	}
@@ -985,7 +982,6 @@ func (r *Two) NoError() error {
 }
 
 func TestNilResult(t *testing.T) {
-	t.Skip()
 	if parallel {
 		t.Parallel()
 	}

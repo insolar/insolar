@@ -161,7 +161,7 @@ func (vb ValidationSaver) RegisterRequest(m message.IBaseLogicMessage) (*Ref, er
 		return nil, err
 	}
 	// TODO: use proper conversion
-	reqref := core.RecordRef{}
+	reqref := Ref{}
 	reqref.SetRecord(*reqid)
 
 	vb.lr.addObjectCaseRecord(m.GetReference(), core.CaseRecord{
@@ -201,8 +201,8 @@ func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, 
 	if !bytes.Equal(cr.ReqSig, HashInterface(m)) {
 		return nil, errors.New("Wrong validation sig on Request")
 	}
-	if req, ok := cr.Resp.(*Ref); ok {
-		return req, nil
+	if req, ok := cr.Resp.(Ref); ok {
+		return &req, nil
 	}
 	return nil, errors.Errorf("wrong validation, request contains %t", cr.Resp)
 
