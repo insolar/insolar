@@ -349,26 +349,26 @@ func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {
 	assert.Error(t, err, "wrong state status or pulse number, state - WaitingForStart, received pulse - 121, last pulse - 122, processing pulse - 123")
 }
 
-type MockStateSwitcher struct {
-	mock.Mock
-	state State
-}
-
-func (impl *MockStateSwitcher) GetState() State {
-	return impl.state
-}
-
-func (impl *MockStateSwitcher) setState(state State) {
-	impl.state = state
-}
-
-func (impl *MockStateSwitcher) SetPulsar(pulsar *Pulsar) {
-	impl.Called(pulsar)
-}
-
-func (impl *MockStateSwitcher) SwitchToState(state State, args interface{}) {
-	impl.Called(state, args)
-}
+//type MockStateSwitcher struct {
+//	mock.Mock
+//	state State
+//}
+//
+//func (impl *MockStateSwitcher) GetState() State {
+//	return impl.state
+//}
+//
+//func (impl *MockStateSwitcher) setState(state State) {
+//	impl.state = state
+//}
+//
+//func (impl *MockStateSwitcher) SetPulsar(pulsar *Pulsar) {
+//	impl.Called(pulsar)
+//}
+//
+//func (impl *MockStateSwitcher) SwitchToState(state State, args interface{}) {
+//	impl.Called(state, args)
+//}
 
 func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 	mainPrivateKey, err := ecdsahelper.GeneratePrivateKey()
