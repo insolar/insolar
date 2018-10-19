@@ -208,6 +208,7 @@ func (b *Bootstrapper) activateRootDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *contract,
 		*cb.Classes[rootDomain],
 		*am.GenesisRef(),
@@ -233,6 +234,7 @@ func (b *Bootstrapper) activateNodeDomain(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *contract,
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
@@ -260,6 +262,7 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
 	_, err = am.ActivateObject(
+		ctx,
 		core.RecordRef{}, *contract,
 		*cb.Classes[memberContract],
 		*b.rootDomainRef,
@@ -274,11 +277,13 @@ func (b *Bootstrapper) activateRootMember(am core.ArtifactManager, cb *goplugint
 }
 
 func (b *Bootstrapper) updateRootDomain(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+	ctx := inscontext.TODO()
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef, NodeDomainRef: *b.nodeDomainRef})
 	if err != nil {
 		return errors.Wrap(err, "[ updateRootDomain ]")
 	}
 	_, err = am.UpdateObject(
+		ctx,
 		core.RecordRef{}, core.RecordRef{},
 		*b.rootDomainRef, updateData,
 	)
@@ -301,6 +306,7 @@ func (b *Bootstrapper) activateRootMemberWallet(am core.ArtifactManager, cb *gop
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
 	_, err = am.ActivateObjectDelegate(
+		ctx,
 		core.RecordRef{}, *contract,
 		*cb.Classes[walletContract],
 		*b.rootMemberRef,

@@ -304,6 +304,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
+	ctx := inscontext.TODO()
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeDeactivateObject != cr.Type {
@@ -316,7 +317,7 @@ func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctyp
 		return nil
 	}
 	am := gpr.lr.ArtifactManager
-	_, err := am.DeactivateObject(core.RecordRef{}, core.RecordRef{}, req.Object)
+	_, err := am.DeactivateObject(ctx, core.RecordRef{}, core.RecordRef{}, req.Object)
 	if err != nil {
 		return err
 	}

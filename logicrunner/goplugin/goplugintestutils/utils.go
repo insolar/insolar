@@ -220,12 +220,12 @@ func (t *TestArtifactManager) GetDelegate(ctx core.Context, head, asClass core.R
 }
 
 // DeclareType implementation for tests
-func (t *TestArtifactManager) DeclareType(domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeclareType(ctx core.Context, domain core.RecordRef, request core.RecordRef, typeDec []byte) (*core.RecordRef, error) {
 	panic("not implemented")
 }
 
 // DeployCode implementation for tests
-func (t *TestArtifactManager) DeployCode(domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordRef, error) {
+func (t *TestArtifactManager) DeployCode(ctx core.Context, domain core.RecordRef, request core.RecordRef, code []byte, mt core.MachineType) (*core.RecordRef, error) {
 	ref := testutils.RandomRef()
 
 	t.Codes[ref] = &TestCodeDescriptor{
@@ -246,7 +246,7 @@ func (t *TestArtifactManager) GetCode(ctx core.Context, code core.RecordRef) (co
 }
 
 // ActivateClass implementation for tests
-func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) ActivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, code core.RecordRef) (*core.RecordID, error) {
 	t.Classes[request] = &TestClassDescriptor{
 		AM:   t,
 		ARef: &request,
@@ -257,12 +257,12 @@ func (t *TestArtifactManager) ActivateClass(domain core.RecordRef, request core.
 }
 
 // DeactivateClass implementation for tests
-func (t *TestArtifactManager) DeactivateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) DeactivateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
 // UpdateClass implementation for tests
-func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) UpdateClass(ctx core.Context, domain core.RecordRef, request core.RecordRef, class core.RecordRef, code core.RecordRef, migrationRefs []core.RecordRef) (*core.RecordID, error) {
 	classDesc, ok := t.Classes[class]
 	if !ok {
 		return nil, errors.New("wrong class")
@@ -273,7 +273,14 @@ func (t *TestArtifactManager) UpdateClass(domain core.RecordRef, request core.Re
 }
 
 // ActivateObject implementation for tests
-func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core.RecordRef, class core.RecordRef, parent core.RecordRef, memory []byte) (*core.RecordID, error) {
+func (t *TestArtifactManager) ActivateObject(
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	class core.RecordRef,
+	parent core.RecordRef,
+	memory []byte,
+) (*core.RecordID, error) {
 	codeRef := t.Classes[class].ACode
 
 	t.Objects[request] = &TestObjectDescriptor{
@@ -289,8 +296,15 @@ func (t *TestArtifactManager) ActivateObject(domain core.RecordRef, request core
 }
 
 // ActivateObjectDelegate implementation for tests
-func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, parent core.RecordRef, memory []byte) (*core.RecordID, error) {
-	id, err := t.ActivateObject(domain, request, class, parent, memory)
+func (t *TestArtifactManager) ActivateObjectDelegate(
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	class core.RecordRef,
+	parent core.RecordRef,
+	memory []byte,
+) (*core.RecordID, error) {
+	id, err := t.ActivateObject(ctx, domain, request, class, parent, memory)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to generate ref")
 	}
@@ -306,13 +320,22 @@ func (t *TestArtifactManager) ActivateObjectDelegate(domain, request, class, par
 }
 
 // DeactivateObject implementation for tests
-func (t *TestArtifactManager) DeactivateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef) (*core.RecordID, error) {
+func (t *TestArtifactManager) DeactivateObject(
+	ctx core.Context,
+	domain core.RecordRef, request core.RecordRef, obj core.RecordRef,
+) (*core.RecordID, error) {
 	panic("not implemented")
 }
 
 // UpdateObject implementation for tests
-func (t *TestArtifactManager) UpdateObject(domain core.RecordRef, request core.RecordRef, obj core.RecordRef, memory []byte) (*core.RecordID, error) {
-	objDesc, ok := t.Objects[obj]
+func (t *TestArtifactManager) UpdateObject(
+	ctx core.Context,
+	domain core.RecordRef,
+	request core.RecordRef,
+	object core.RecordRef,
+	memory []byte,
+) (*core.RecordID, error) {
+	objDesc, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object to update")
 	}
@@ -364,14 +387,14 @@ func AMPublishCode(
 ) {
 	ctx := inscontext.TODO()
 	codeRef, err = am.DeployCode(
-		domain, request, code, mtype,
+		ctx, domain, request, code, mtype,
 	)
 	assert.NoError(t, err, "create code on ledger")
 
 	nonce := testutils.RandomRef()
 	classRef, err = am.RegisterRequest(ctx, &message.CallConstructor{ClassRef: nonce})
 	assert.NoError(t, err)
-	_, err = am.ActivateClass(domain, *classRef, *codeRef)
+	_, err = am.ActivateClass(ctx, domain, *classRef, *codeRef)
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, classRef, err
@@ -459,6 +482,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 
 		code, err := cb.ArtifactManager.DeployCode(
+			ctx,
 			core.RecordRef{}, core.RecordRef{},
 			pluginBinary, core.MachineTypeGoPlugin,
 		)
@@ -469,6 +493,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		cb.Codes[name] = code
 
 		_, err = cb.ArtifactManager.ActivateClass(
+			ctx,
 			core.RecordRef{}, *cb.Classes[name],
 			*code,
 		)

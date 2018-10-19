@@ -39,10 +39,8 @@ import (
 type Ref = core.RecordRef
 
 // Context of one contract execution
-type ExecutionContext struct {
-	Pending bool           // execution moved from previous pulse
-	TraceID []byte         // TraceID
-	Queue   []core.Message // queued requests
+type ExecutionState struct {
+	mutex sync.Mutex
 }
 
 // LogicRunner is a general interface of contract executor
@@ -52,8 +50,8 @@ type LogicRunner struct {
 	MessageBus      core.MessageBus
 	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
-	context         map[Ref]ExecutionContext // if object exists, we are validating or executing it right now
-	contextMutex    sync.Mutex
+	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
+	executionMutex  sync.Mutex
 
 	// TODO refactor caseBind and caseBindReplays to one clear structure
 	caseBind             core.CaseBind
@@ -71,7 +69,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	res := LogicRunner{
 		ArtifactManager: nil,
 		Cfg:             cfg,
-		context:         make(map[Ref]ExecutionContext),
+		execution:       make(map[Ref]*ExecutionState),
 		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[Ref][]core.CaseRecord)},
 		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
@@ -167,21 +165,13 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
 }
 
-func (lr *LogicRunner) GetContext(ref Ref) (ExecutionContext, bool) {
-	lr.contextMutex.Lock()
-	defer lr.contextMutex.Unlock()
-	ret, ok := lr.context[ref]
-	return ret, ok
-}
-
-func (lr *LogicRunner) SetContext(ref Ref, ec ExecutionContext) bool {
-	lr.contextMutex.Lock()
-	defer lr.contextMutex.Unlock()
-	if _, ok := lr.context[ref]; ok {
-		return false
+func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
+	lr.executionMutex.Lock()
+	defer lr.executionMutex.Unlock()
+	if _, ok := lr.execution[ref]; !ok {
+		lr.execution[ref] = &ExecutionState{}
 	}
-	lr.context[ref] = ec
-	return true
+	return lr.execution[ref]
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
@@ -310,10 +300,10 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	ec := ExecutionContext{}
-	if !lr.SetContext(m.ObjectRef, ec) {
-		return nil, errors.New("Method already executing")
-	}
+	insctx := inscontext.TODO()
+	executionState := lr.UpsertExecution(m.ObjectRef)
+	executionState.mutex.Lock()
+	defer executionState.mutex.Unlock()
 
 	objbody, err := lr.getObjectMessage(m.ObjectRef)
 	if err != nil {
@@ -330,11 +320,6 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 	}
 
 	executer := func() (*reply.CallMethod, error) {
-		defer func() {
-			lr.contextMutex.Lock()
-			defer lr.contextMutex.Unlock()
-			delete(lr.context, m.ObjectRef)
-		}()
 		newData, result, err := executor.CallMethod(
 			&ctx, objbody.Code, objbody.Body, m.Method, m.Arguments,
 		)
@@ -345,7 +330,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 		// TODO: deactivation should be handled way better here
 		if vb.NeedSave() && lr.lastObjectCaseRecord(m.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
-				Ref{}, *ctx.Request, m.ObjectRef, newData,
+				insctx, Ref{}, *ctx.Request, m.ObjectRef, newData,
 			)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
@@ -378,11 +363,6 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 
 func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
 	insctx := inscontext.TODO()
-	ec := ExecutionContext{}
-	if !lr.SetContext(m.GetRequest(), ec) {
-		return nil, errors.New("Constructor already executing by you")
-	}
-
 	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class")
@@ -400,18 +380,13 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		return nil, errors.Wrap(err, "executer error")
 	}
 
-	defer func() {
-		lr.contextMutex.Lock()
-		defer lr.contextMutex.Unlock()
-		delete(lr.context, m.GetRequest())
-	}()
-
 	switch m.SaveAs {
 	case message.Child:
 		log.Warn()
 		log.Warnf("M = %+v", m)
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
+				insctx,
 				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
@@ -424,6 +399,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	case message.Delegate:
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObjectDelegate(
+				insctx,
 				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
 			)
 		}
@@ -441,6 +417,9 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind(pulse)
+
+	// TODO INS-666
+	// TODO make refresh lr.Execution - Unlock mutexes n-1 time for each object, send some info for callers, do empty object
 
 	if len(objectsRecords) == 0 {
 		return nil
