@@ -335,7 +335,7 @@ func (t *TestArtifactManager) UpdateObject(
 	object core.RecordRef,
 	memory []byte,
 ) (*core.RecordID, error) {
-	objDesc, ok := t.Objects[obj]
+	objDesc, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object to update")
 	}
