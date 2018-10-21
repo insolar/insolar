@@ -145,9 +145,9 @@ func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) 
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
-
 	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
 	_, err := lr.MessageBus.Send(&message.ValidationResults{
+		//Caller:           lr.Network.GetNodeID(),
 		RecordRef:        msg.GetReference(),
 		PassedStepsCount: passedStepsCount,
 		Error:            validationError,
@@ -162,7 +162,11 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	defer lr.consensusMutex.Unlock()
 	c, ok := lr.consensus[r]
 	if !ok {
-		c = &Consensus{}
+		// arr, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.Pulse.PulseNumber)
+		//if err != nil {
+		//	panic("cannot QueryRole")
+		//}
+		c = newConsensus(nil)
 		lr.consensus[r] = c
 	}
 	return c, ok
@@ -174,23 +178,17 @@ func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply,
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-	c.MustHave = 0
+	c.AddValidated(msg)
 	return nil, nil
 }
 
 func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ValidationResults)
+	msg, ok := inmsg.(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
 	}
 	c, _ := lr.GetConsensus(msg.RecordRef)
-
-	arr, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, msg.RecordRef, lr.Pulse.PulseNumber)
-	if err != nil {
-		panic("cannot QueryRole")
-	}
-	c.MustHave = len(arr)
-
+	c.AddExecutor(msg)
 	return nil, nil
 }
 

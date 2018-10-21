@@ -43,16 +43,13 @@ type ExecutionState struct {
 	mutex sync.Mutex
 }
 
-type Consensus struct {
-	MustHave int
-}
-
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	MessageBus      core.MessageBus
 	Ledger          core.Ledger
+	Network         core.Network
 	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
 	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
@@ -94,7 +91,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	messageBus := c.MessageBus
 	lr.MessageBus = messageBus
 	lr.Ledger = c.Ledger
-
+	lr.Network = c.Network
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(messageBus, am)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
