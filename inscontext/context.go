@@ -118,20 +118,20 @@ func WithTrace(parent context.Context, trace string) *Ctx {
 	return WithValue(ctx, traceKey, trace)
 }
 
+// TraceID returns TraceID if it stored in context or empty string overwise.
 func (ctx *Ctx) TraceID() string {
 	return ctx.Value(traceKey).(string)
 }
 
 // WithLog returns *Ctx with provided core.Logger,
-// if parent is not *Ctx instance returns a new Ctx instance
-// overwise just set logger for provided Ctx.
 func WithLog(parent context.Context, clog core.Logger) *Ctx {
-	ctx := NewCtxFromContext(parent)
-	ctx.log = clog
-	return ctx
+	return &Ctx{
+		ctx: parent,
+		log: clog,
+	}
 }
 
 // Log returns core.Logger provided by *Ctx.
 func (ctx *Ctx) Log() core.Logger {
-	return ctx.log
+	return ctx.log.WithField("traceid", ctx.TraceID())
 }

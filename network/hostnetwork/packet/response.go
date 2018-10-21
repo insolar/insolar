@@ -110,17 +110,18 @@ type ResponseRelayOwnership struct {
 
 // ResponseKnownOuterHosts is data to answer if origin host know more outer hosts.
 type ResponseKnownOuterHosts struct {
-	ID         string //	id of host in which more known outer hosts
+	ID         string // 	id of host in which more known outer hosts
 	OuterHosts int    // number of known outer hosts
 }
 
 // ResponseGetNonce is data to answer to authorization request.
 type ResponseGetNonce struct {
 	Nonce []byte
+	Error string
 }
 
 type ResponseCheckSignedNonce struct {
-	Success     bool
+	Error       string
 	ActiveNodes []*core.ActiveNode
 }
 

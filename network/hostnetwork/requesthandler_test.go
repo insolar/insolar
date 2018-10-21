@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -128,12 +127,11 @@ func TestCascadeSendMessage(t *testing.T) {
 
 func TestResendPulseToKnownHosts(t *testing.T) {
 	hh := newMockHostHandler()
-	hosts := make([]*routing.RouteHost, 0)
+	hosts := make([]host.Host, 0)
 	for i := 0; i < 5; i++ {
 		id, _ := id.NewID()
 		addr, _ := host.NewAddress("0.0.0.0:0")
-		rhost := routing.NewRouteHost(&host.Host{ID: id, Address: addr})
-		hosts = append(hosts, rhost)
+		hosts = append(hosts, host.Host{ID: id, Address: addr})
 	}
 	ResendPulseToKnownHosts(hh, hosts, &packet.RequestPulse{})
 }

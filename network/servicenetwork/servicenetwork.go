@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -37,6 +38,7 @@ import (
 type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
+	nodeKeeper  consensus.NodeKeeper
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -71,6 +73,10 @@ func (network *ServiceNetwork) GetAddress() string {
 // GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
+}
+
+func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
+	return network.nodeKeeper
 }
 
 // SendMessage sends a message from MessageBus.
@@ -136,6 +142,20 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 func (network *ServiceNetwork) Start(components core.Components) error {
 	go network.listen()
 
+	if components.ActiveNodeComponent == nil {
+		log.Error("active node component is nil")
+	} else {
+		nodeKeeper := components.ActiveNodeComponent.(consensus.NodeKeeper)
+		network.nodeKeeper = nodeKeeper
+		network.hostNetwork.SetNodeKeeper(nodeKeeper)
+	}
+
+	if components.NetworkCoordinator == nil {
+		log.Error("network coordinator is nil")
+	} else {
+		network.hostNetwork.GetNetworkCommonFacade().SetNetworkCoordinator(components.NetworkCoordinator)
+	}
+
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
@@ -155,6 +175,12 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	err = network.hostNetwork.AnalyzeNetwork(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to AnalyzeNetwork")
+	}
+
+	err = network.hostNetwork.StartAuthorize()
+	if err != nil {
+		return errors.Wrap(err, "error authorizing node")
+		// log.Errorln(err.Error())
 	}
 
 	return nil
