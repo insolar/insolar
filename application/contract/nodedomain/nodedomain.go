@@ -103,7 +103,7 @@ func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int,
 
 	if majorityRule != 0 {
 		if float32(majorityRule) <= majorityPercentage*float32(numberOfBootstrapNodes) {
-			return nil, errors.New("majorityRule must be more than 0.51 * numberOfBootstrapNodes")
+			return nil, errors.New(fmt.Sprintf("majorityRule must be more than %.2f * numberOfBootstrapNodes", majorityPercentage))
 		}
 	}
 

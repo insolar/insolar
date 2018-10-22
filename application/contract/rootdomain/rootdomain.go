@@ -69,7 +69,7 @@ func makeSeed() []byte {
 	return seed
 }
 
-// Authorize checks is node authorized
+// Authorize checks is node authorized ( It's temporary method. Remove it when we have good tests )
 func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 	privateKey, err := cryptoHelper.GeneratePrivateKey()
 	if err != nil {
