@@ -46,10 +46,11 @@ func (e *Class) Type() core.ReplyType {
 
 // Object is object from storage.
 type Object struct {
-	Head   core.RecordRef
-	State  core.RecordID
-	Class  core.RecordRef
-	Memory []byte
+	Head         core.RecordRef
+	State        core.RecordID
+	Class        core.RecordRef
+	ChildPointer *core.RecordID
+	Memory       []byte
 }
 
 // Type implementation of Reply interface.
