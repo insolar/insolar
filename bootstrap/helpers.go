@@ -22,6 +22,7 @@ import (
 	"runtime"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -77,14 +78,17 @@ func getContractsMap() (map[string]string, error) {
 	return contracts, nil
 }
 
-func isLightExecutor(l core.Ledger, nodeID core.RecordRef) (bool, error) {
-	am := l.GetArtifactManager()
-	jc := l.GetJetCoordinator()
-	pm := l.GetPulseManager()
+func isLightExecutor(c core.Components) (bool, error) {
+	am := c.Ledger.GetArtifactManager()
+	jc := c.Ledger.GetJetCoordinator()
+	pm := c.Ledger.GetPulseManager()
 	currentPulse, err := pm.Current()
 	if err != nil {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
 	}
+
+	network := c.Network
+	nodeID := network.GetNodeID()
 
 	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.GenesisRef(), currentPulse.PulseNumber, nodeID)
 	if err != nil {
@@ -97,8 +101,10 @@ func isLightExecutor(l core.Ledger, nodeID core.RecordRef) (bool, error) {
 	return true, nil
 }
 
-func getRootDomainRef(am core.ArtifactManager) (*core.RecordRef, error) {
-	rootObj, err := am.GetObject(*am.GenesisRef(), nil)
+func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
+	am := c.Ledger.GetArtifactManager()
+	ctx := inscontext.TODO()
+	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
 	}

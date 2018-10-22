@@ -2,8 +2,15 @@ package noderecord
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
+
+type RecordInfo struct {
+	PublicKey string
+	Roles     []core.NodeRole
+	IP        string
+}
 
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
@@ -20,21 +27,21 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) *NodeRecord {
+func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeRecord, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &NodeRecord{Reference: ref}
+	return &NodeRecord{Reference: ref}, nil
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) *NodeRecord {
+func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeRecord, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, ClassReference, r.constructorName, r.argsSerialized)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &NodeRecord{Reference: ref}
+	return &NodeRecord{Reference: ref}, nil
 }
 
 // GetObject returns proxy object
@@ -48,19 +55,20 @@ func GetClass() core.RecordRef {
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) *NodeRecord {
+func GetImplementationFrom(object core.RecordRef) (*NodeRecord, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, ClassReference)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return GetObject(ref)
+	return GetObject(ref), nil
 }
 
 // NewNodeRecord is constructor
-func NewNodeRecord(pk string, roleS string) *ContractConstructorHolder {
-	var args [2]interface{}
-	args[0] = pk
-	args[1] = roleS
+func NewNodeRecord(publicKey string, roles []string, ip string) *ContractConstructorHolder {
+	var args [3]interface{}
+	args[0] = publicKey
+	args[1] = roles
+	args[2] = ip
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -81,182 +89,208 @@ func (r *NodeRecord) GetClass() core.RecordRef {
 	return ClassReference
 }
 
-// GetPublicKey is proxy generated method
-func (r *NodeRecord) GetPublicKey() string {
+// GetNodeInfo is proxy generated method
+func (r *NodeRecord) GetNodeInfo() (RecordInfo, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 RecordInfo
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeInfo", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetNodeInfoNoWait is proxy generated method
+func (r *NodeRecord) GetNodeInfoNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeInfo", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetPublicKey is proxy generated method
+func (r *NodeRecord) GetPublicKey() (string, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPublicKey", argsSerialized)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
-
-	ret := [1]interface{}{}
-	var ret0 string
-	ret[0] = &ret0
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
-	return ret0
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetPublicKeyNoWait is proxy generated method
-func (r *NodeRecord) GetPublicKeyNoWait() {
+func (r *NodeRecord) GetPublicKeyNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetPublicKey", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // GetRole is proxy generated method
-func (r *NodeRecord) GetRole() core.NodeRole {
+func (r *NodeRecord) GetRole() ([]core.NodeRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
+	ret := [2]interface{}{}
+	var ret0 []core.NodeRole
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRole", argsSerialized)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
-
-	ret := [1]interface{}{}
-	var ret0 core.NodeRole
-	ret[0] = &ret0
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return ret0, err
 	}
 
-	return ret0
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetRoleNoWait is proxy generated method
-func (r *NodeRecord) GetRoleNoWait() {
+func (r *NodeRecord) GetRoleNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized)
 	if err != nil {
-		panic(err)
-	}
-}
-
-// GetRoleAndPublicKey is proxy generated method
-func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
+		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRoleAndPublicKey", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	ret := [2]interface{}{}
-	var ret0 core.NodeRole
-	ret[0] = &ret0
-	var ret1 string
-	ret[1] = &ret1
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		panic(err)
-	}
-
-	return ret0, ret1
-}
-
-// GetRoleAndPublicKeyNoWait is proxy generated method
-func (r *NodeRecord) GetRoleAndPublicKeyNoWait() {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRoleAndPublicKey", argsSerialized)
-	if err != nil {
-		panic(err)
-	}
+	return nil
 }
 
 // Destroy is proxy generated method
-func (r *NodeRecord) Destroy() {
+func (r *NodeRecord) Destroy() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, "Destroy", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
-
-	ret := []interface{}{}
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	return
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }
 
 // DestroyNoWait is proxy generated method
-func (r *NodeRecord) DestroyNoWait() {
+func (r *NodeRecord) DestroyNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "Destroy", argsSerialized)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }

@@ -111,6 +111,7 @@ type HostHandler interface {
 	Listen() error
 	ObtainIP() error
 	Bootstrap() error
+	StartAuthorize() error
 	NumHosts(ctx Context) int
 	AnalyzeNetwork(ctx Context) error
 	ConfirmNodeRole(role string) bool
@@ -145,6 +146,7 @@ type HostHandler interface {
 	SetOuterHostsCount(hosts int)
 	SetNodeID(nodeID core.RecordRef)
 	SetAuthStatus(targetID string, status bool)
+	SetNodeKeeper(keeper consensus.NodeKeeper)
 
 	GetHostsFromBootstrap()
 	GetProxyHostsCount() int
@@ -160,4 +162,6 @@ type HostHandler interface {
 	GetNetworkCommonFacade() NetworkCommonFacade
 	GetExpirationTime(ctx Context, key []byte) time.Time
 	GetActiveNodesList() []*core.ActiveNode
+	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+		version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error)
 }

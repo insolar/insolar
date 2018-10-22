@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -93,10 +94,11 @@ type mockHostHandler struct {
 	ReceivedKey       string
 	FoundHost         *host.Host
 	ncf               hosthandler.NetworkCommonFacade
+	keeper            consensus.NodeKeeper
 }
 
 func newMockHostHandler() *mockHostHandler {
-	return &mockHostHandler{ncf: newMockNetworkCommonFacade()}
+	return &mockHostHandler{ncf: newMockNetworkCommonFacade(), keeper: nodekeeper.NewNodeKeeper(core.RecordRef{})}
 }
 
 func (hh *mockHostHandler) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
@@ -319,6 +321,19 @@ func (hh *mockHostHandler) GetExpirationTime(ctx hosthandler.Context, key []byte
 }
 
 func (hh *mockHostHandler) AddUncheckedNode(hostID id.ID, nonce []byte, ref core.RecordRef) {
+
+}
+
+func (hh *mockHostHandler) StartAuthorize() error {
+	return nil
+}
+
+func (hh *mockHostHandler) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+	return nil, nil
+}
+
+func (hh *mockHostHandler) SetNodeKeeper(keeper consensus.NodeKeeper) {
 
 }
 

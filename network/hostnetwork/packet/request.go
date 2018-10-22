@@ -116,7 +116,10 @@ type RequestGetNonce struct {
 
 // RequestCheckSignedNonce is data to check a signed nonce.
 type RequestCheckSignedNonce struct {
-	Signed []byte
+	Signed    []byte
+	NodeID    core.RecordRef
+	NodeRoles []core.NodeRole
+	Version   string
 }
 
 // RequestExchangeUnsyncLists is request to exchange unsync lists during consensus

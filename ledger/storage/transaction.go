@@ -20,9 +20,9 @@ import (
 	"encoding/binary"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/log"
@@ -101,18 +101,6 @@ func (m *TransactionManager) GetRequest(id *record.ID) (record.Request, error) {
 	return req, nil
 }
 
-// SetRequest stores request record in BadgerDB and returns *record.ID of new record.
-//
-// If record exists SetRequest just returns *record.ID without error.
-func (m *TransactionManager) SetRequest(req record.Request) (*record.ID, error) {
-	log.Debugf("SetRequest call")
-	id, err := m.SetRecord(req)
-	if err != nil && err != ErrOverride {
-		return nil, err
-	}
-	return id, nil
-}
-
 func (m *TransactionManager) set(key, val []byte) {
 	m.txupdates[string(key)] = keyval{k: key, v: val}
 }
@@ -127,11 +115,7 @@ func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 	if err != nil {
 		return nil, err
 	}
-	raw, err := record.DecodeToRaw(buf)
-	if err != nil {
-		return nil, err
-	}
-	return raw.ToRecord(), nil
+	return record.DeserializeRecord(buf), nil
 }
 
 // SetRecord stores record in BadgerDB and returns *record.ID of new record.
@@ -139,25 +123,19 @@ func (m *TransactionManager) GetRecord(id *record.ID) (record.Record, error) {
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
-	raw, err := record.EncodeToRaw(rec)
+	latestPulse, err := m.db.GetLatestPulseNumber()
 	if err != nil {
 		return nil, err
 	}
 
-	var h []byte
-	if req, ok := rec.(record.Request); ok {
-		// we should calculate request hashes consistently with logicrunner.
-		h = hash.IDHashBytes(req.GetPayload())
-	} else {
-		h = raw.Hash()
-	}
-	latestPulse, err := m.db.GetLatestPulseNumber()
+	recHash := hash.NewIDHash()
+	_, err = rec.WriteHashData(recHash)
 	if err != nil {
 		return nil, err
 	}
 	id := record.ID{
 		Pulse: latestPulse,
-		Hash:  h,
+		Hash:  recHash.Sum(nil),
 	}
 	k := prefixkey(scopeIDRecord, record.ID2Bytes(id))
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
@@ -171,7 +149,7 @@ func (m *TransactionManager) SetRecord(rec record.Record) (*record.ID, error) {
 		return nil, ErrNotFound
 	}
 
-	m.set(k, record.MustEncodeRaw(raw))
+	m.set(k, record.SerializeRecord(rec))
 	return &id, nil
 }
 

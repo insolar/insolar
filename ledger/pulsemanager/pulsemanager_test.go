@@ -31,7 +31,8 @@ func TestPulseManager_Current(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	ledger, cleaner := ledgertestutils.TmpLedger(t, lr, "")
+	c := core.Components{LogicRunner: lr}
+	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
 	pm := ledger.GetPulseManager()

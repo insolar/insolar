@@ -26,7 +26,7 @@ import (
 
 	"github.com/huandu/xstrings"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/dns"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/consensus"
@@ -38,7 +38,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
@@ -61,7 +60,7 @@ type DHT struct {
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
 	nodeID            core.RecordRef
-	activeNodeKeeper  nodekeeper.NodeKeeper
+	activeNodeKeeper  consensus.NodeKeeper
 	majorityRule      int
 }
 
@@ -131,7 +130,6 @@ func NewDHT(
 	timeout int,
 	infbootstrap bool,
 	nodeID core.RecordRef,
-	keeper nodekeeper.NodeKeeper,
 	majorityRule int,
 	certificate core.Certificate,
 ) (dht *DHT, err error) {
@@ -141,10 +139,6 @@ func NewDHT(
 	}
 
 	rel := relay.NewRelay()
-
-	if keeper == nil {
-		keeper = nodekeeper.NewNodeKeeper(nodeID)
-	}
 
 	dht = &DHT{
 		options:           options,
@@ -158,7 +152,6 @@ func NewDHT(
 		timeout:           timeout,
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
-		activeNodeKeeper:  keeper,
 		majorityRule:      majorityRule,
 	}
 
@@ -193,6 +186,11 @@ func NewDHT(
 	dht.subnet.SubnetIDs = make(map[string][]string)
 
 	return dht, nil
+}
+
+func (dht *DHT) SetNodeKeeper(keeper consensus.NodeKeeper) {
+	dht.activeNodeKeeper = keeper
+	dht.GetNetworkCommonFacade().GetConsensus().SetNodeKeeper(keeper)
 }
 
 func newTables(origin *host.Origin) ([]*routing.HashTable, error) {
@@ -277,6 +275,7 @@ func (dht *DHT) Bootstrap() error {
 		log.Info("empty bootstrap hosts")
 		return nil
 	}
+	dht.checkBootstrapHostsDomains(dht.options.BootstrapHosts)
 	cb := NewContextBuilder(dht)
 
 	for _, ht := range dht.tables {
@@ -286,9 +285,24 @@ func (dht *DHT) Bootstrap() error {
 	return dht.iterateHt(cb)
 }
 
+func (dht *DHT) checkBootstrapHostsDomains(hosts []*host.Host) {
+	for _, hst := range hosts {
+		ip, err := dns.GetIPFromDomain(hst.Address.String())
+		if err != nil {
+			log.Warn(err)
+		}
+		hst.Address, err = host.NewAddress(ip)
+		if err != nil {
+			log.Warn(err)
+		}
+	}
+}
+
 func (dht *DHT) GetHostsFromBootstrap() {
 	cb := NewContextBuilder(dht)
-
+	if len(dht.options.BootstrapHosts) == 0 {
+		return
+	}
 	for _, ht := range dht.tables {
 		dht.iterateHtGetNearestHosts(ht, cb)
 	}
@@ -302,10 +316,9 @@ func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilde
 	}
 
 	futures := make([]transport.Future, 0)
-	bootstrapHosts := ht.GetMulticastHosts()
 
-	for _, host := range bootstrapHosts {
-		p := packet.NewBuilder().Type(packet.TypeFindHost).Sender(ht.Origin).Receiver(host.Host).
+	for _, host := range dht.options.BootstrapHosts {
+		p := packet.NewBuilder().Type(packet.TypeFindHost).Sender(ht.Origin).Receiver(host).
 			Request(&packet.RequestDataFindHost{Target: ht.Origin.ID}).Build()
 		f, err := dht.transport.SendRequest(p)
 		if err != nil {
@@ -426,6 +439,69 @@ func (dht *DHT) updateBootstrapHost(bootstrapAddress string, bootstrapID id.ID) 
 			target.ID = bootstrapID
 		}
 	}
+}
+
+// StartAuthorize start authorize to discovery nodes.
+func (dht *DHT) StartAuthorize() error {
+	// hack for zeronet
+	if len(dht.options.BootstrapHosts) == 0 {
+		return nil
+	}
+
+	discoveryNodesCount := len(dht.options.BootstrapHosts)
+	ch := make(chan []*core.ActiveNode, discoveryNodesCount)
+	for _, h := range dht.options.BootstrapHosts {
+		go func(ch chan []*core.ActiveNode, h *host.Host) {
+			activeNodes, err := GetNonceRequest(dht, h.ID.String())
+			if err != nil {
+				log.Warnf("error authorizing on %s host: %s", h, err.Error())
+				return
+			}
+			log.Infof("successful authorization on host: %s", h)
+			ch <- activeNodes
+		}(ch, h)
+	}
+
+	receivedResults := make([][]*core.ActiveNode, 0)
+	i := 0
+LOOP:
+	for {
+		select {
+		case activeNodeList := <-ch:
+			receivedResults = append(receivedResults, activeNodeList)
+			i++
+			if i == discoveryNodesCount {
+				break LOOP
+			}
+		case <-time.After(time.Minute):
+			log.Warn("StartAuthorize: timeout exceeded")
+			break LOOP
+		}
+	}
+
+	if len(receivedResults) == 0 {
+		return errors.New("StartAuthorize: No answers received from discovery nodes")
+	}
+
+	atLeastOneResultIsFine := false
+	for _, result := range receivedResults {
+		err := dht.AddActiveNodes(result)
+		if err != nil {
+			log.Error(err.Error())
+		} else {
+			atLeastOneResultIsFine = true
+		}
+	}
+	if !atLeastOneResultIsFine {
+		return errors.New("StartAuthorize: received active nodes do not pass majority rule")
+	}
+	return nil
+}
+
+func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+	// TODO: return nodekeeper from helper method in HostHandler and remove this func and GetActiveNodes
+	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address, version /*, publicKey*/)
 }
 
 // Disconnect will trigger a Stop from the network.
@@ -787,32 +863,34 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 	for {
 		select {
 		case msg := <-dht.transport.Packets():
-			if msg == nil || !msg.IsForMe(*dht.origin) {
-				continue
-			}
 
-			var ctx hosthandler.Context
-			ctx = BuildContext(cb, msg)
-			ht := dht.HtFromCtx(ctx)
-
-			if ht.Origin.ID.Equal(msg.Receiver.ID.Bytes()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
-				dht.dispatchPacketType(ctx, msg, ht)
-			} else {
-				targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.String())
-				if err != nil {
-					log.Errorln(err)
-				} else if !exist {
-					log.Warnln("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
-				} else {
-					// need to relay incoming packet
-					request := &packet.Packet{Sender: &host.Host{Address: dht.origin.Address, ID: msg.Sender.ID},
-						Receiver:  &host.Host{ID: msg.Receiver.ID, Address: targetHost.Address},
-						Type:      msg.Type,
-						RequestID: msg.RequestID,
-						Data:      msg.Data}
-					sendRelayedRequest(dht, request)
+			go func(msg *packet.Packet) {
+				if msg == nil || !msg.IsForMe(*dht.origin) {
+					return
 				}
-			}
+
+				ctx := BuildContext(cb, msg)
+				ht := dht.HtFromCtx(ctx)
+
+				if ht.Origin.ID.Equal(msg.Receiver.ID.Bytes()) || !dht.relay.NeedToRelay(msg.Sender.Address.String()) {
+					dht.dispatchPacketType(ctx, msg, ht)
+				} else {
+					targetHost, exist, err := dht.FindHost(ctx, msg.Receiver.ID.String())
+					if err != nil {
+						log.Errorln(err)
+					} else if !exist {
+						log.Warnln("Target host addr: %s, ID: %s not found", msg.Receiver.Address.String(), msg.Receiver.ID.String())
+					} else {
+						// need to relay incoming packet
+						request := &packet.Packet{Sender: &host.Host{Address: dht.origin.Address, ID: msg.Sender.ID},
+							Receiver:  &host.Host{ID: msg.Receiver.ID, Address: targetHost.Address},
+							Type:      msg.Type,
+							RequestID: msg.RequestID,
+							Data:      msg.Data}
+						sendRelayedRequest(dht, request)
+					}
+				}
+			}(msg)
 		case <-stop:
 			return
 		}
@@ -822,18 +900,19 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, ht *routing.HashTable) {
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 
-	if msg.Type == packet.TypeRPC {
-		data := msg.Data.(*packet.RequestDataRPC)
-		signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
-		if err != nil {
-			log.Error(err, "failed to parse incoming RPC")
-			return
-		}
-		if !message.SignIsCorrect(signedMsg, dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey()) {
-			log.Warn("RPC message not signed")
-			return
-		}
-	}
+	// TODO: fix sign and check sign logic
+	// if msg.Type == packet.TypeRPC {
+	// 	data := msg.Data.(*packet.RequestDataRPC)
+	// 	signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
+	// 	if err != nil {
+	// 		log.Error(err, "failed to parse incoming RPC")
+	// 		return
+	// 	}
+	// 	if !message.SignIsCorrect(signedMsg, dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey()) {
+	// 		log.Warn("RPC message not signed")
+	// 		return
+	// 	}
+	// }
 
 	response, err := ParseIncomingPacket(dht, ctx, msg, packetBuilder)
 	if err != nil {
@@ -973,12 +1052,12 @@ func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 		}
 		if !bytes.Equal(currentHash, newHash) {
 			// TODO: disconnect from all or what?
-			return errors.New("two or more active node lists are different but majority check was passed")
+			return errors.New("two or more active node lists are different but majority check has passed")
 		}
 	} else {
 		dht.activeNodeKeeper.AddActiveNodes(activeNodes)
 	}
-	return errors.New("failed to add active node. unknown error")
+	return nil
 }
 
 // HtFromCtx returns a routing hashtable known by ctx.

@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
-	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
@@ -66,7 +66,6 @@ func NewHostNetwork(
 	sign := signhandler.NewSignHandler(certificate)
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade, sign)
 
-	keeper := nodekeeper.NewNodeKeeper(nn.GetID())
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),
@@ -78,20 +77,14 @@ func NewHostNetwork(
 		cfg.Timeout,
 		cfg.InfinityBootstrap,
 		nn.GetID(),
-		keeper,
-		5, //TODO: replace with config value
+		cfg.MajorityRule,
 		certificate,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")
 	}
-	networkConsensus, err := consensus.NewInsolarConsensus(keeper, network)
-	if err != nil {
-		// TODO: return error after consensus merge
-		// return nil, errors.New("Consensus is not implemented!")
-	}
+	networkConsensus := consensus.NewInsolarConsensus(network)
 	network.GetNetworkCommonFacade().SetConsensus(networkConsensus)
-
 	return network, nil
 }
 

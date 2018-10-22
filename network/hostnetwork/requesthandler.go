@@ -17,13 +17,16 @@
 package hostnetwork
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/version"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -234,35 +237,99 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 	return checkResponse(hostHandler, future, targetID, request)
 }
 
-func CheckPublicKeyRequest(hostHandler hosthandler.HostHandler, targetID string) error {
+func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*core.ActiveNode, error) {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
-		return errors.Wrap(err, "failed to build a context")
+		return nil, errors.Wrap(err, "failed to build a context")
 	}
 	targetHost, exist, err := hostHandler.FindHost(ctx, targetID)
 	if err != nil {
-		return errors.Wrap(err, "failed to find a target host")
+		return nil, errors.Wrap(err, "failed to find a target host")
 	}
 	if !exist {
-		return errors.Wrap(err, "couldn't find a target host")
+		return nil, errors.Wrap(err, "couldn't find a target host")
 	}
 
-	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(targetHost).Type(packet.TypeGetNonce).
+	sender := hostHandler.HtFromCtx(ctx).Origin
+	nonce, err := sendNonceRequest(hostHandler, sender, targetHost)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting nonce from discovery node")
+	}
+	log.Debugf("got nonce from discovery node: %s", base58.Encode(nonce))
+	signedNonce, err := hostHandler.GetNetworkCommonFacade().GetSignHandler().SignNonce(nonce)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign nonce from discovery node")
+	}
+	log.Debugf("signed nonce: %s", base58.Encode(signedNonce))
+	result, err := sendCheckSignedNonceRequest(hostHandler, sender, targetHost, signedNonce)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed checking signed nonce on discovery node")
+	}
+	return result, nil
+}
+
+func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, receiver *host.Host) ([]byte, error) {
+	log.Debug("Started getting nonce request to discovery node")
+
+	request := packet.NewBuilder().Sender(sender).
+		Receiver(receiver).Type(packet.TypeGetNonce).
 		Request(&packet.RequestGetNonce{NodeID: hostHandler.GetNodeID()}).
 		Build()
 
 	future, err := hostHandler.SendRequest(request)
 	if err != nil {
-		return errors.Wrap(err, "failed to send an authorization request")
+		return nil, errors.Wrap(err, "failed to send an authorization request")
 	}
-	return checkResponse(hostHandler, future, targetID, request)
+	rsp, err := future.GetResult(hostHandler.GetPacketTimeout())
+	if err != nil {
+		return nil, errors.Wrap(err, "checkResponse error")
+	}
+	response := rsp.Data.(*packet.ResponseGetNonce)
+	err = handleCheckPublicKeyResponse(hostHandler, response)
+	if err != nil {
+		return nil, errors.Wrap(err, "public key check failed on discovery node")
+	}
+	return response.Nonce, nil
+}
+
+func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host,
+	receiver *host.Host, nonce []byte) ([]*core.ActiveNode, error) {
+
+	log.Debug("Started request to discovery node to check signed nonce and add to unsync list")
+
+	// TODO: get role from certificate
+	// TODO: get public key from certificate
+	request := packet.NewBuilder().Type(packet.TypeCheckSignedNonce).
+		Sender(sender).Receiver(receiver).
+		Request(&packet.RequestCheckSignedNonce{
+			Signed:    nonce,
+			NodeID:    hostHandler.GetNodeID(),
+			NodeRoles: []core.NodeRole{core.RoleUnknown},
+			Version:   version.Version,
+			// PublicKey: ???
+		}).
+		Build()
+
+	future, err := hostHandler.SendRequest(request)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to send an authorization request")
+	}
+	rsp, err := future.GetResult( /*hostHandler.GetPacketTimeout()*/ time.Second * 40)
+	if err != nil {
+		return nil, errors.Wrap(err, "checkResponse error")
+	}
+
+	responseSignedNonce := rsp.Data.(*packet.ResponseCheckSignedNonce)
+	if responseSignedNonce.Error != "" {
+		return nil, errors.New(responseSignedNonce.Error)
+	}
+	return responseSignedNonce.ActiveNodes, nil
 }
 
 // ResendPulseToKnownHosts resends received pulse to all known hosts
-func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []*routing.RouteHost, pulse *packet.RequestPulse) {
+func ResendPulseToKnownHosts(hostHandler hosthandler.HostHandler, hosts []host.Host, pulse *packet.RequestPulse) {
 	for _, host1 := range hosts {
-		err := sendPulse(hostHandler, host1.Host, pulse)
+		err := sendPulse(hostHandler, &host1, pulse)
 		if err != nil {
 			log.Debugf("error resending pulse to host %s: %s", host1.ID, err.Error())
 		}
@@ -357,33 +424,6 @@ func sendRelayedRequest(hostHandler hosthandler.HostHandler, request *packet.Pac
 	}
 }
 
-func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, target *host.Host, nonce []byte) error {
-	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
-	if err != nil {
-		return err
-	}
-
-	signedNonce, err := hostHandler.GetNetworkCommonFacade().GetSignHandler().SignNonce(nonce)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a nonce")
-	}
-
-	builder := packet.NewBuilder()
-	request := builder.Type(packet.TypeCheckSignedNonce).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
-		Receiver(target).
-		Request(&packet.RequestCheckSignedNonce{Signed: signedNonce}).
-		Build()
-
-	future, err := hostHandler.SendRequest(request)
-
-	if err != nil {
-		return errors.Wrap(err, "Failed to SendRequest")
-	}
-
-	return checkResponse(hostHandler, future, target.ID.String(), request)
-}
-
 func sendDisconnectRequest(hostHandler hosthandler.HostHandler, target *host.Host) error {
 	ctx, err := NewContextBuilder(hostHandler).SetDefaultHost().Build()
 	if err != nil {
@@ -444,18 +484,6 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		if !response.Success {
 			err = errors.New(response.Error)
 		}
-	case packet.TypeGetNonce:
-		response := rsp.Data.(*packet.ResponseGetNonce)
-		err = handleCheckPublicKeyResponse(hostHandler, response)
-		if err == nil {
-			err = sendCheckSignedNonceRequest(hostHandler, rsp.Sender, response.Nonce)
-		}
-	case packet.TypeCheckSignedNonce:
-		response := rsp.Data.(*packet.ResponseCheckSignedNonce)
-		if !response.Success {
-			return errors.New("failed to check signed nonce")
-		}
-		// TODO: else
 	case packet.TypeDisconnect:
 		response := rsp.Data.(*packet.ResponseDisconnect)
 		if (response.Error == nil) && response.Disconnected {

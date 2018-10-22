@@ -14,23 +14,26 @@
  *    limitations under the License.
  */
 
-package index
+package testutils
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// ClassLifeline represents meta information for record object
-type ClassLifeline struct {
-	LatestState record.ID // Amend or activate record
-	Deactivated bool
-}
-
-// ObjectLifeline represents meta information for record object
-type ObjectLifeline struct {
-	ClassRef    record.Reference
-	LatestState record.ID  // Amend or activate record
-	LatestChild *record.ID // Meta record about child activation
-	Delegates   map[core.RecordRef]record.Reference
+func TestRecorderWriter(t *testing.T) {
+	recorder := NewRecoder()
+	fmt.Fprintln(recorder, "line1")
+	fmt.Fprintf(recorder, "line2\nline3")
+	fmt.Fprintf(recorder, "line4\nabc line5")
+	expect := []string{
+		"line1",
+		"line2",
+		"line3",
+		"line4",
+		"abc line5",
+	}
+	assert.Equal(t, expect, recorder.Items())
 }

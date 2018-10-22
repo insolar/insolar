@@ -21,12 +21,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -37,11 +39,19 @@ import (
 type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
+	nodeKeeper  consensus.NodeKeeper
 	certificate core.Certificate
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
+
+	// workaround before DI
+	cert, err := certificate.NewCertificate(conf.KeysPath)
+	if err != nil {
+		log.Warnf("failed to read certificate: %s", err.Error())
+	}
+
 	node, err := nodenetwork.NewNodeNetwork(conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create node network")
@@ -51,7 +61,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	}
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, nil)
+	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, cert)
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +82,10 @@ func (network *ServiceNetwork) GetAddress() string {
 // GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.nodeNetwork.GetID()
+}
+
+func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
+	return network.nodeKeeper
 }
 
 // SendMessage sends a message from MessageBus.
@@ -138,6 +152,20 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	network.certificate = components.Certificate
 	go network.listen()
 
+	if components.ActiveNodeComponent == nil {
+		log.Error("active node component is nil")
+	} else {
+		nodeKeeper := components.ActiveNodeComponent.(consensus.NodeKeeper)
+		network.nodeKeeper = nodeKeeper
+		network.hostNetwork.SetNodeKeeper(nodeKeeper)
+	}
+
+	if components.NetworkCoordinator == nil {
+		log.Error("network coordinator is nil")
+	} else {
+		network.hostNetwork.GetNetworkCommonFacade().SetNetworkCoordinator(components.NetworkCoordinator)
+	}
+
 	log.Infoln("Bootstrapping network...")
 	network.bootstrap()
 
@@ -157,6 +185,12 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	err = network.hostNetwork.AnalyzeNetwork(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to AnalyzeNetwork")
+	}
+
+	err = network.hostNetwork.StartAuthorize()
+	if err != nil {
+		return errors.Wrap(err, "error authorizing node")
+		// log.Errorln(err.Error())
 	}
 
 	return nil

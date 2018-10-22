@@ -14,23 +14,17 @@
  *    limitations under the License.
  */
 
-package index
+package core
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
+	"context"
 )
 
-// ClassLifeline represents meta information for record object
-type ClassLifeline struct {
-	LatestState record.ID // Amend or activate record
-	Deactivated bool
-}
-
-// ObjectLifeline represents meta information for record object
-type ObjectLifeline struct {
-	ClassRef    record.Reference
-	LatestState record.ID  // Amend or activate record
-	LatestChild *record.ID // Meta record about child activation
-	Delegates   map[core.RecordRef]record.Reference
+// A Context wraps context.Context, add provides util helpers.
+type Context interface {
+	context.Context
+	// Log returns provided Logger.
+	Log() Logger
+	// TraceID returns current TraceID.
+	TraceID() string
 }

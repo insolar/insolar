@@ -19,11 +19,14 @@ package rootdomain
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/networkcoordinator"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -32,22 +35,28 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	RootMember core.RecordRef
+	RootMember    core.RecordRef
+	NodeDomainRef core.RecordRef
 }
 
 // RegisterNode processes register node request
-func (rd *RootDomain) RegisterNode(publicKey string, role string) string {
+func (rd *RootDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if len(domainRefs) == 0 {
-		panic("No NodeDomain references")
+		return nil, errors.New("No NodeDomain references")
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	return nd.RegisterNode(publicKey, role).String()
+	cert, err := nd.RegisterNode(publicKey, numberOfBootstrapNodes, majorityRule, roles, ip)
+	if err != nil {
+		return nil, fmt.Errorf("Problems with RegisterNode: " + err.Error())
+	}
+
+	return cert, nil
 }
 
 func makeSeed() []byte {
@@ -60,8 +69,8 @@ func makeSeed() []byte {
 	return seed
 }
 
-// Authorize checks is node authorized
-func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
+// Authorize checks is node authorized ( It's temporary method. Remove it when we have good tests )
+func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 	privateKey, err := cryptoHelper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
@@ -79,7 +88,16 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
 	if err != nil {
 		panic(err)
 	}
-	nodeRef := rd.RegisterNode(serPubKey, "virtual")
+
+	rawJSON, err := rd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	if err != nil {
+		panic(err)
+	}
+
+	nodeRef, err := networkcoordinator.ExtractNodeRef(rawJSON)
+	if err != nil {
+		panic(err)
+	}
 
 	// Validate
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
@@ -92,65 +110,105 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, string) {
 }
 
 // CreateMember processes create member request
-func (rd *RootDomain) CreateMember(name string, key string) string {
+func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.RootMember {
 	memberHolder := member.New(name, key)
-	m := memberHolder.AsChild(rd.GetReference())
+	m, err := memberHolder.AsChild(rd.GetReference())
+	if err != nil {
+		return "", err
+	}
+
 	wHolder := wallet.New(1000)
-	wHolder.AsDelegate(m.GetReference())
-	return m.GetReference().String()
+	_, err = wHolder.AsDelegate(m.GetReference())
+	if err != nil {
+		return "", err
+	}
+
+	return m.GetReference().String(), nil
 	//}
 	//return ""
 }
 
 // GetBalance processes get balance request
-func (rd *RootDomain) GetBalance(reference string) uint {
-	w := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
+func (rd *RootDomain) GetBalance(reference string) (uint, error) {
+	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
+	if err != nil {
+		return 0, err
+	}
+
 	return w.GetTotalBalance()
 }
 
 // SendMoney processes send money request
-func (rd *RootDomain) SendMoney(from string, to string, amount uint) bool {
-	walletFrom := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
+func (rd *RootDomain) SendMoney(from string, to string, amount uint) (bool, error) {
+	walletFrom, err := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
+	if err != nil {
+		return false, err
+	}
+
 	v := core.NewRefFromBase58(to)
 	walletFrom.Transfer(amount, &v)
-	return true
+	return true, nil
 }
 
-func (rd *RootDomain) getUserInfoMap(m *member.Member) map[string]interface{} {
-	w := wallet.GetImplementationFrom(m.GetReference())
-	res := map[string]interface{}{
-		"member": m.GetName(),
-		"wallet": w.GetTotalBalance(),
+func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, error) {
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return nil, err
 	}
-	return res
+
+	name, err := m.GetName()
+	if err != nil {
+		return nil, err
+	}
+
+	balance, err := w.GetTotalBalance()
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"member": name,
+		"wallet": balance,
+	}, nil
 }
 
 // DumpUserInfo processes dump user info request
-func (rd *RootDomain) DumpUserInfo(reference string) []byte {
+func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	m := member.GetObject(core.NewRefFromBase58(reference))
-	res := rd.getUserInfoMap(m)
-	resJSON, _ := json.Marshal(res)
-	return resJSON
+
+	res, err := rd.getUserInfoMap(m)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(res)
 }
 
 // DumpAllUsers processes dump all users request
-func (rd *RootDomain) DumpAllUsers() []byte {
+func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 	res := []map[string]interface{}{}
 	crefs, err := rd.GetChildrenTyped(member.ClassReference)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	for _, cref := range crefs {
 		m := member.GetObject(cref)
-		userInfo := rd.getUserInfoMap(m)
+		userInfo, err := rd.getUserInfoMap(m)
+		if err != nil {
+			return nil, err
+		}
 		res = append(res, userInfo)
 	}
 	resJSON, _ := json.Marshal(res)
-	return resJSON
+	return resJSON, nil
+}
+
+// GetNodeDomainRef returns reference of NodeDomain instance
+func (rd *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
+	return rd.NodeDomainRef, nil
 }
 
 // NewRootDomain creates new RootDomain
-func NewRootDomain() *RootDomain {
-	return &RootDomain{}
+func NewRootDomain() (*RootDomain, error) {
+	return &RootDomain{}, nil
 }

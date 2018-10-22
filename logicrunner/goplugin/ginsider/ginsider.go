@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"plugin"
 	"reflect"
+	"runtime/debug"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -68,7 +69,7 @@ func recoverRPC(err *error) {
 				*err = errors.New(fmt.Sprint(*err, r))
 			}
 		}
-		log.Errorln("panic: ", r)
+		log.Errorln("panic: ", r, string(debug.Stack()))
 	}
 }
 

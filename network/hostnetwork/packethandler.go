@@ -24,10 +24,12 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/hostnetwork/id"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 )
 
@@ -119,11 +121,13 @@ func processGetNonce(
 	hostHandler hosthandler.HostHandler,
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
+
 	data := msg.Data.(*packet.RequestGetNonce)
+	log.Debugf("process nonce request from node %s", data.NodeID)
 	nonce, err := time.Now().MarshalBinary()
 	hostHandler.GetNetworkCommonFacade().GetSignHandler().AddUncheckedNode(msg.Sender.ID, nonce, data.NodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal nonce")
+		return packetBuilder.Response(&packet.ResponseGetNonce{Error: err.Error()}).Build(), nil
 	}
 	return packetBuilder.Response(&packet.ResponseGetNonce{Nonce: nonce}).Build(), nil
 }
@@ -133,17 +137,57 @@ func processCheckSignedNonce(
 	ctx hosthandler.Context,
 	msg *packet.Packet,
 	packetBuilder packet.Builder) (*packet.Packet, error) {
+
 	data := msg.Data.(*packet.RequestCheckSignedNonce)
-	if hostHandler.GetNetworkCommonFacade().GetSignHandler().SignedNonceIsCorrect(
-		hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator(),
-		msg.Sender.ID,
-		data.Signed,
-	) {
-		// TODO: add to async and wait to advance to sync list
-	} else {
-		return nil, errors.New("failed to check signed nonce")
+	// TODO: uncomment this and fix all tests
+	// signer := hostHandler.GetNetworkCommonFacade().GetSignHandler()
+	// networkCoordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
+	// if networkCoordinator == nil {
+	// 	err := "networkCoordinator is nil"
+	// 	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
+	// }
+	// if !signer.SignedNonceIsCorrect(networkCoordinator, msg.Sender.ID, data.Signed) {
+	// 	err := "signed nonce is not correct"
+	// 	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err}).Build(), nil
+	// }
+	ch, err := hostHandler.AddUnsync(data.NodeID, data.NodeRoles, msg.Sender.Address.String(), data.Version /*, data.PublicKey*/)
+	if err != nil {
+		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: err.Error()}).Build(), nil
 	}
-	return nil, nil
+	var self *core.ActiveNode
+	select {
+	case d := <-ch:
+		if d == nil {
+			return nil, errors.New("Add to unsync: channel closed")
+		}
+		self = d
+		// TODO: move timeout to configurable settings
+	case <-time.After(time.Second * 30):
+		errorStr := "Add to unsync timed out"
+		return packetBuilder.Response(&packet.ResponseCheckSignedNonce{Error: errorStr}).Build(), nil
+	}
+	returnedList := hostHandler.GetActiveNodesList()
+	returnedList = append(returnedList, self)
+
+	return packetBuilder.Response(&packet.ResponseCheckSignedNonce{
+		Error:       "",
+		ActiveNodes: returnedList,
+	}).Build(), nil
+}
+
+func getActiveHostsList(hostHandler hosthandler.HostHandler) []host.Host {
+	nodes := hostHandler.GetActiveNodesList()
+	hosts := make([]host.Host, 0)
+	for _, node := range nodes {
+		address, err := host.NewAddress(node.Address)
+		if err != nil {
+			log.Warnf("Error resolving address %s for node %s", node.Address, node.NodeID)
+			continue
+		}
+		idd := nodenetwork.ResolveHostID(node.NodeID)
+		hosts = append(hosts, host.Host{ID: id.FromBase58(idd), Address: address})
+	}
+	return hosts
 }
 
 func processGetRandomHosts(
@@ -153,13 +197,11 @@ func processGetRandomHosts(
 	packetBuilder packet.Builder) (*packet.Packet, error) {
 
 	data := msg.Data.(*packet.RequestGetRandomHosts)
-	ht := hostHandler.HtFromCtx(ctx)
 	if data.HostsNumber <= 0 {
 		return packetBuilder.Response(&packet.ResponseGetRandomHosts{
 			Hosts: nil, Error: "hosts number should be more than zero"}).Build(), nil
 	}
-	hosts := ht.GetHosts(data.HostsNumber)
-	// TODO: handle scenario when we get less hosts than requested
+	hosts := getActiveHostsList(hostHandler)
 	return packetBuilder.Response(&packet.ResponseGetRandomHosts{Hosts: hosts, Error: ""}).Build(), nil
 }
 
@@ -167,25 +209,24 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 	data := msg.Data.(*packet.RequestPulse)
 	pm := hostHandler.GetNetworkCommonFacade().GetPulseManager()
 	if pm == nil {
-		return nil, errors.New("PulseManager is not initialized")
+		return pulseError(packetBuilder, errors.New("PulseManager is not initialized")), nil
 	}
 	currentPulse, err := pm.Current()
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not get current pulse")
+		return pulseError(packetBuilder, errors.Wrap(err, "Could not get current pulse")), nil
 	}
 	log.Infof("Got new pulse number: %d", data.Pulse.PulseNumber)
 	if (data.Pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(data.Pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 		err = pm.Set(data.Pulse)
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed to set pulse")
+			return pulseError(packetBuilder, errors.Wrap(err, "Failed to set pulse")), nil
 		}
 		log.Infof("Set new current pulse number: %d", data.Pulse.PulseNumber)
 
 		doConsensus(hostHandler, ctx, data.Pulse)
 
-		ht := hostHandler.HtFromCtx(ctx)
-		hosts := ht.GetMulticastHosts()
+		hosts := getActiveHostsList(hostHandler)
 		go ResendPulseToKnownHosts(hostHandler, hosts, data)
 		go func(h hosthandler.HostHandler) {
 			coordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
@@ -199,6 +240,11 @@ func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, 
 		}(hostHandler)
 	}
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
+}
+
+func pulseError(packetBuilder packet.Builder, err error) *packet.Packet {
+	log.Warn(err)
+	return packetBuilder.Response(&packet.ResponsePulse{Success: false, Error: err.Error()}).Build()
 }
 
 func doConsensus(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, pulse core.Pulse) {

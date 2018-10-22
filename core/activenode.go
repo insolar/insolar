@@ -16,6 +16,10 @@
 
 package core
 
+import (
+	"crypto/ecdsa"
+)
+
 // NodeState is the state of the node
 type NodeState uint8
 
@@ -41,7 +45,22 @@ type ActiveNode struct {
 	// State is the node state
 	State NodeState
 	// JetRoles is the set of candidate JetRoles for the node
-	Role NodeRole
+	Roles []NodeRole
 	// PublicKey is the public key of the node
-	PublicKey []byte
+	PublicKey *ecdsa.PublicKey
+	// Addess is the network adress of the node
+	Address string
+	// Version of node software
+	Version string
+}
+
+type ActiveNodeComponent interface {
+	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
+	GetSelf() *ActiveNode
+	// GetActiveNode get active node by its reference. Returns nil if node is not found.
+	GetActiveNode(ref RecordRef) *ActiveNode
+	// GetActiveNodes get active nodes.
+	GetActiveNodes() []*ActiveNode
+	// GetActiveNodesByRole get active nodes by role
+	GetActiveNodesByRole(role JetRole) []RecordRef
 }
