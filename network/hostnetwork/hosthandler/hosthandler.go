@@ -162,5 +162,6 @@ type HostHandler interface {
 	GetNetworkCommonFacade() NetworkCommonFacade
 	GetExpirationTime(ctx Context, key []byte) time.Time
 	GetActiveNodesList() []*core.ActiveNode
-	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error)
+	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+		version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error)
 }

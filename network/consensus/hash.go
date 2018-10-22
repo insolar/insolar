@@ -62,6 +62,7 @@ func calculateNodeHash(node *core.ActiveNode) []byte {
 	// }
 	// hashWriteChecked(hash, []byte(publicKey))
 	hashWriteChecked(hash, []byte(node.Address))
+	hashWriteChecked(hash, []byte(node.Version))
 	return hash.Sum(nil)
 }
 
