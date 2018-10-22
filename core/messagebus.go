@@ -42,13 +42,18 @@ type Message interface {
 	GetCaller() *RecordRef
 }
 
-// SignedMessage by senders private key.
-type SignedMessage interface {
-	Message
-
+type Signature interface {
 	GetSign() []byte
 	GetSender() RecordRef
 	IsValid(key *ecdsa.PublicKey) bool
+}
+
+// SignedMessage by senders private key.
+type SignedMessage interface {
+	Message
+	Signature
+
+	Message() Message
 }
 
 // Reply for an `Message`
@@ -70,7 +75,7 @@ type MessageBus interface {
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(Message) (Reply, error)
+type MessageHandler func(message Message) (Reply, error)
 
 //go:generate stringer -type=MessageType
 const (

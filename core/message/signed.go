@@ -32,6 +32,10 @@ type SignedMessage struct {
 	signature []byte
 }
 
+func (sm *SignedMessage) Message() core.Message {
+	return sm.msg
+}
+
 // NewSignedMessage creates and return a signed message.
 func NewSignedMessage(msg core.Message, sender core.RecordRef, key *ecdsa.PrivateKey) (*SignedMessage, error) {
 	sign, err := signMessage(msg, key)

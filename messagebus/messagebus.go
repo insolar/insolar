@@ -172,7 +172,7 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, errors.New("failed to check a message sign")
 	}
 
-	resp, err := mb.doDeliver(msg)
+	resp, err := mb.doDeliver(signedMessage.Message())
 	if err != nil {
 		return nil, err
 	}
