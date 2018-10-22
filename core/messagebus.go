@@ -59,7 +59,7 @@ type MessageBus interface {
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(Message) (Reply, error)
+type MessageHandler func(Context, Message) (Reply, error)
 
 //go:generate stringer -type=MessageType
 const (
