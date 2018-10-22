@@ -21,6 +21,7 @@ import (
 	"time"
 )
 
+// Expiration represents time of expiration
 type Expiration = int64
 
 // DefaultTTL is default time period for deleting expired seeds
