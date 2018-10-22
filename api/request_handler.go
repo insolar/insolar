@@ -34,8 +34,10 @@ import (
 )
 
 const (
+	// REFERENCE is field for reference
 	REFERENCE = "reference"
-	SEED      = "seed"
+	// SEED is field to reference
+	SEED = "seed"
 )
 
 func extractStringResponse(data []byte) (*string, error) {

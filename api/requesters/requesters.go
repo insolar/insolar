@@ -39,7 +39,7 @@ func verboseInfo(msg string) {
 	}
 }
 
-// SetVerbose switchs on verbose mode
+// SetVerbose switches on verbose mode
 func SetVerbose(verb bool) {
 	verbose = verb
 }
