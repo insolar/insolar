@@ -88,15 +88,15 @@ func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
 }
 
 func TestRace(t *testing.T) {
-	const numRequesters = 15
+	const numConcurrent = 15
 
 	expTime := time.Duration(2 * time.Millisecond)
 	cleanPeriod := time.Duration(1 * time.Millisecond)
 	sm := NewSpecified(expTime, cleanPeriod)
 
 	wg := sync.WaitGroup{}
-	wg.Add(numRequesters)
-	for i := 0; i < numRequesters; i++ {
+	wg.Add(numConcurrent)
+	for i := 0; i < numConcurrent; i++ {
 		go func() {
 			defer wg.Done()
 			var seeds []Seed
