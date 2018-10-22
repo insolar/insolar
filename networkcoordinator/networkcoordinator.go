@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 )
 
@@ -61,7 +62,7 @@ func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args 
 		Arguments: args,
 	}
 
-	res, err := nc.messageBus.Send(e)
+	res, err := nc.messageBus.Send(inscontext.TODO(), e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::routeCall ] couldn't send message: "+ref.String())
 	}

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -87,17 +88,24 @@ func initPulsar(cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
+	cert, err := certificate.NewCertificate(cfg.KeysPath)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
 	}
 	switcher := &pulsar.StateSwitcherImpl{}
-	server, err := pulsar.NewPulsar(cfg,
+	server, err := pulsar.NewPulsar(cfg.Pulsar,
 		storage,
 		&pulsar.RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
 		switcher,
+		cert,
 		net.Listen,
 	)
 

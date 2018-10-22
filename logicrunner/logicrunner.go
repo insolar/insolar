@@ -408,13 +408,16 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 
 	// send copy for validation
 	for ref, records := range objectsRecords {
-		_, err := lr.MessageBus.Send(&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse})
+		_, err := lr.MessageBus.Send(
+			inscontext.TODO(),
+			&message.ValidateCaseBind{RecordRef: ref, CaseRecords: records, Pulse: pulse},
+		)
 		if err != nil {
 			panic("Error while sending caseBind data to validators: " + err.Error())
 		}
 
 		temp := message.ExecutorResults{RecordRef: ref, CaseRecords: records}
-		_, err = lr.MessageBus.Send(&temp)
+		_, err = lr.MessageBus.Send(inscontext.TODO(), &temp)
 		if err != nil {
 			return errors.New("error while sending caseBind data to new executor")
 		}

@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bootstrap"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger"
@@ -112,6 +113,11 @@ func main() {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	cm := componentManager{}
+	cert, err := certificate.NewCertificate(cfgHolder.Configuration.KeysPath)
+	if err != nil {
+		log.Fatalln("failed to start Certificate: ", err.Error())
+	}
+	cm.components.Certificate = cert
 
 	cm.components.ActiveNodeComponent, err = nodekeeper.NewActiveNodeComponent(cfgHolder.Configuration)
 	if err != nil {
@@ -134,12 +140,12 @@ func main() {
 	}
 	cm.components.Network = nw
 
-	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
+	cm.components.MessageBus, err = messagebus.NewMessageBus()
 	if err != nil {
 		log.Fatalln("failed to start MessageBus: ", err.Error())
 	}
 
-	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(cfgHolder.Configuration)
+	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(cfgHolder.Configuration.Bootstrap)
 	if err != nil {
 		log.Fatalln("failed to start Bootstrapper: ", err.Error())
 	}

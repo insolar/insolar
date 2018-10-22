@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package bootstrapcertificate
+package certificate
 
 import (
 	"crypto/ecdsa"
@@ -23,10 +23,20 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNewCertificate(t *testing.T) {
+	var certificate core.Certificate
+	certificate, err := NewCertificate("./testdata/bootstrap_keys.json")
+	assert.NoError(t, err)
+
+	key := certificate.GetEcdsaPrivateKey()
+	assert.NotNil(t, key)
+}
 
 type key struct {
 	PrivateKey string `json:"private_key"`
@@ -77,7 +87,7 @@ func TestNewCertifiacteFromFile_BadFile(t *testing.T) {
 
 func TestNewCertifiacteFromFile_BadFileData(t *testing.T) {
 	_, err := NewCertificateFromFile("testdata/private_keys.json")
-	assert.EqualError(t, err, "[ NewCertificateFromFile ]: json: cannot unmarshal array into Go value of type bootstrapcertificate.Certificate")
+	assert.EqualError(t, err, "[ NewCertificateFromFile ]: json: cannot unmarshal array into Go value of type certificate.Certificate")
 }
 
 func TestNewCertificateFromFile_WrongSignature(t *testing.T) {

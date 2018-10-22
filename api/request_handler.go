@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/pkg/errors"
 
@@ -124,7 +125,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		Arguments:        args,
 	}
 
-	res, err := rh.messageBus.Send(e)
+	res, err := rh.messageBus.Send(inscontext.TODO(), e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't send message")
 	}
