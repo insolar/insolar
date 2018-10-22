@@ -52,8 +52,6 @@ type Reply interface {
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
 	Send(Message) (Reply, error)
-	// SendAsync sends an `Message` to remote host.
-	SendAsync(Message)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.

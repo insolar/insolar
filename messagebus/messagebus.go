@@ -113,14 +113,6 @@ func (mb *MessageBus) Send(msg core.Message) (core.Reply, error) {
 	return reply.Deserialize(bytes.NewBuffer(res))
 }
 
-// SendAsync sends a `Message` to remote host.
-func (mb *MessageBus) SendAsync(msg core.Message) {
-	go func() {
-		_, err := mb.Send(msg)
-		log.Errorln(err)
-	}()
-}
-
 type serializableError struct {
 	S string
 }

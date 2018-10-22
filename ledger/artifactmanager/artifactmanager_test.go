@@ -112,10 +112,6 @@ func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
 	return handler(m)
 }
 
-func (mb *messageBusMock) SendAsync(m core.Message) {
-	panic("implement me")
-}
-
 func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 	db, cleaner := storagetest.TmpDB(t, "")
 
