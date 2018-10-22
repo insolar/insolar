@@ -134,22 +134,22 @@ type ArtifactManager interface {
 	// If memory is not provided, the class default memory will be used.
 	//
 	// Request reference will be this object's identifier and referred as "object head".
-	ActivateObject(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
-
-	// ActivateObjectDelegate is similar to ActivateObject but it created object will be parent's delegate of provided class.
-	ActivateObjectDelegate(ctx Context, domain, request, class, parent RecordRef, memory []byte) (*RecordID, error)
+	ActivateObject(
+		ctx Context, domain, request, class, parent RecordRef, childPointer *RecordID, asClass *RecordRef,
+		memory []byte,
+	) (*RecordID, error)
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(ctx Context, domain, request, obj RecordRef) (*RecordID, error)
+	DeactivateObject(ctx Context, domain, request, obj RecordRef, state RecordID) (*RecordID, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(ctx Context, domain, request, obj RecordRef, memory []byte) (*RecordID, error)
+	UpdateObject(ctx Context, domain, request, obj RecordRef, state RecordID, memory []byte) (*RecordID, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
