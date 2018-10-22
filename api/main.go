@@ -37,9 +37,11 @@ import (
 )
 
 const (
-	_            int = 0
+	_ int = 0
+	// HandlerError is error in handler
 	HandlerError int = -1
-	BadRequest   int = -2
+	// HandlerError is bad formed request
+	BadRequest int = -2
 )
 
 func writeError(message string, code int) map[string]interface{} {
