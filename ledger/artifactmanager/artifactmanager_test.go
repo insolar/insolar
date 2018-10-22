@@ -390,7 +390,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		*genRefWithID(classID),
 		*genRefWithID(parentID),
 		nil,
-		nil,
+		false,
 		memory,
 	)
 	assert.Nil(t, err)

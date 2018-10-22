@@ -135,7 +135,7 @@ type ArtifactManager interface {
 	//
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
-		ctx Context, domain, request, class, parent RecordRef, childPointer *RecordID, asClass *RecordRef,
+		ctx Context, domain, request, class, parent RecordRef, childPointer *RecordID, asDelegate bool,
 		memory []byte,
 	) (*RecordID, error)
 

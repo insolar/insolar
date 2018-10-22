@@ -309,7 +309,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 	class core.RecordRef,
 	parent core.RecordRef,
 	childPointer *core.RecordID,
-	asClass *core.RecordRef,
+	asDelegate bool,
 	memory []byte,
 ) (*core.RecordID, error) {
 	objectRef := record.Core2Reference(object)
@@ -325,7 +325,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 			},
 			Class:    record.Core2Reference(class),
 			Parent:   record.Core2Reference(parent),
-			Delegate: asClass != nil,
+			Delegate: asDelegate,
 		},
 		object,
 		&class,
@@ -334,10 +334,16 @@ func (m *LedgerArtifactManager) ActivateObject(
 		return nil, err
 	}
 
-	var prevChild *record.ID
+	var (
+		prevChild *record.ID
+		asClass   *core.RecordRef
+	)
 	if childPointer != nil {
 		c := record.Bytes2ID(childPointer[:])
 		prevChild = &c
+	}
+	if asDelegate {
+		asClass = &class
 	}
 	_, err = m.registerChild(
 		&record.ChildRecord{
