@@ -89,10 +89,10 @@ func extractReferenceResponse(data []byte) (*core.RecordRef, error) {
 	var ferr *foundation.Error
 	_, err := core.UnMarshalResponse(data, []interface{}{&ref, &ferr})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ extractReferenceResponse ]")
+		return nil, errors.Wrap(err, "[ extractReferenceResponse ] Can't unmarshal response ")
 	}
 	if ferr != nil {
-		return nil, errors.Wrap(ferr, "[ extractReferenceResponse ]")
+		return nil, errors.Wrap(ferr, "[ extractReferenceResponse ] Has error in response")
 	}
 	return ref, nil
 }
