@@ -64,11 +64,6 @@ func newVersionManager() *VersionManager {
 	return vm
 }
 
-func (vm *VersionManager) setDefault() {
-	vm.viper.SetConfigName("versiontable")
-	vm.viper.AddConfigPath(".")
-}
-
 func (vm *VersionManager) Load() error {
 	err := vm.viper.ReadInConfig()
 	if err != nil {
