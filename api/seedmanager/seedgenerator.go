@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// SeedSize is size of seed
 const SeedSize uint = 32
 
 // Seed is a type of seed
