@@ -37,9 +37,11 @@ import (
 )
 
 const (
-	_            int = 0
+	_ int = 0
+	// HandlerError is error in handler
 	HandlerError int = -1
-	BadRequest   int = -2
+	// HandlerError is bad formed request
+	BadRequest int = -2
 )
 
 func writeError(message string, code int) map[string]interface{} {
@@ -164,7 +166,7 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 		}
 		rh := NewRequestHandler(params, runner.messageBus, runner.netCoordinator, rootDomainReference, runner.seedmanager)
 
-		answer = processQueryType(rh, params.QType)
+		answer = processQueryType(rh, params.QueryType)
 	}
 }
 

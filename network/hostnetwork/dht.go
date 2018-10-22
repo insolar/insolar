@@ -499,9 +499,10 @@ LOOP:
 	return nil
 }
 
-func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
 	// TODO: return nodekeeper from helper method in HostHandler and remove this func and GetActiveNodes
-	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address /*, publicKey*/)
+	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address, version /*, publicKey*/)
 }
 
 // Disconnect will trigger a Stop from the network.

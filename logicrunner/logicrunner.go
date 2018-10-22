@@ -18,13 +18,12 @@
 package logicrunner
 
 import (
+	"bytes"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
-
-	"bytes"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -48,16 +47,23 @@ type LogicRunner struct {
 	Executors       [core.MachineTypesLastID]core.MachineLogicExecutor
 	ArtifactManager core.ArtifactManager
 	MessageBus      core.MessageBus
+	Ledger          core.Ledger
+	Network         core.Network
 	machinePrefs    []core.MachineType
 	Cfg             *configuration.LogicRunner
 	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
 	executionMutex  sync.Mutex
 
-	// TODO refactor caseBind and caseBindReplays to one clear structure
-	caseBind             core.CaseBind
-	caseBindMutex        sync.Mutex
+	Pulse core.Pulse // pulse info for this bind
+
+	// TODO move caseBind to context
+	caseBind      core.CaseBind
+	caseBindMutex sync.Mutex
+
 	caseBindReplays      map[Ref]core.CaseBindReplay
 	caseBindReplaysMutex sync.Mutex
+	consensus            map[Ref]*Consensus
+	consensusMutex       sync.Mutex
 	sock                 net.Listener
 }
 
@@ -70,7 +76,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		ArtifactManager: nil,
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
-		caseBind:        core.CaseBind{Pulse: core.Pulse{}, Records: make(map[Ref][]core.CaseRecord)},
+		Pulse:           core.Pulse{},
+		caseBind:        core.CaseBind{Records: make(map[Ref][]core.CaseRecord)},
 		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
 	return &res, nil
@@ -82,7 +89,8 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	lr.ArtifactManager = am
 	messageBus := c.MessageBus
 	lr.MessageBus = messageBus
-
+	lr.Ledger = c.Ledger
+	lr.Network = c.Network
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(messageBus, am)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
@@ -203,12 +211,11 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
 	}
-
 	ctx := core.LogicCallContext{
 		Caller:  msg.GetCaller(),
 		Request: reqref,
 		Time:    time.Now(), // TODO: probably we should take it from e
-		Pulse:   lr.caseBind.Pulse,
+		Pulse:   lr.Pulse,
 	}
 
 	switch m := msg.(type) {
@@ -223,34 +230,6 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	default:
 		panic("Unknown e type")
 	}
-}
-
-func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
-	msg, ok := inmsg.(*message.ValidateCaseBind)
-	if !ok {
-		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
-	}
-
-	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
-	_, err := lr.MessageBus.Send(&message.ValidationResults{
-		RecordRef:        msg.GetReference(),
-		PassedStepsCount: passedStepsCount,
-		Error:            validationError,
-	})
-
-	return nil, err
-}
-
-func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply, error) {
-	// Handle all validators Request
-	// Do some staff if request don't come for a long time
-	// Compare results of different validators and previous Executor
-	return nil, nil
-}
-
-func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
-	// Coordinate this with ProcessValidationResults
-	return nil, nil
 }
 
 type objectBody struct {
@@ -415,8 +394,10 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
+	lr.Pulse = pulse
+	lr.consensus = make(map[Ref]*Consensus)
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
-	objectsRecords := lr.refreshCaseBind(pulse)
+	objectsRecords := lr.refreshCaseBind()
 
 	// TODO INS-666
 	// TODO make refresh lr.Execution - Unlock mutexes n-1 time for each object, send some info for callers, do empty object
@@ -443,16 +424,13 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 }
 
 // refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
-func (lr *LogicRunner) refreshCaseBind(pulse core.Pulse) map[Ref][]core.CaseRecord {
+func (lr *LogicRunner) refreshCaseBind() map[Ref][]core.CaseRecord {
 	lr.caseBindMutex.Lock()
 	defer lr.caseBindMutex.Unlock()
 
 	oldObjectsRecords := lr.caseBind.Records
 
-	lr.caseBind = core.CaseBind{
-		Pulse:   pulse,
-		Records: make(map[Ref][]core.CaseRecord),
-	}
+	lr.caseBind = core.CaseBind{Records: make(map[Ref][]core.CaseRecord)}
 
 	return oldObjectsRecords
 }

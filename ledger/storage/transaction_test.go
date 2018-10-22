@@ -56,8 +56,6 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	}
 	db.SetClassIndex(idxid, classvalue0)
 
-	rec1 := record.ID{Pulse: 1}
-	rec2 := record.ID{Pulse: 2}
 	lockfn := func(t *testing.T, withlock bool) *index.ClassLifeline {
 		started2 := make(chan bool)
 		proceed2 := make(chan bool)
@@ -75,8 +73,6 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 				if geterr != nil {
 					return geterr
 				}
-				// log.Debugf("tx1: got %+v\n", idxlife)
-				idxlife.AmendRefs = append(idxlife.AmendRefs, rec1)
 
 				seterr := tx.SetClassIndex(idxid, idxlife)
 				if seterr != nil {
@@ -102,8 +98,6 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 				if geterr != nil {
 					return geterr
 				}
-				// log.Debugf("tx2: got %+v\n", idxlife)
-				idxlife.AmendRefs = append(idxlife.AmendRefs, rec2)
 
 				seterr := tx.SetClassIndex(idxid, idxlife)
 				if seterr != nil {
@@ -131,14 +125,12 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 		idxlife := lockfn(t, true)
 		assert.Equal(t, &index.ClassLifeline{
 			LatestState: *classid,
-			AmendRefs:   []record.ID{rec1, rec2},
 		}, idxlife)
 	})
 	t.Run("no lock", func(t *testing.T) {
 		idxlife := lockfn(t, false)
 		assert.Equal(t, &index.ClassLifeline{
 			LatestState: *classid,
-			AmendRefs:   []record.ID{rec1},
 		}, idxlife)
 	})
 }

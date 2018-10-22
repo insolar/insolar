@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/version"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
@@ -304,6 +305,7 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *ho
 			Signed:    nonce,
 			NodeID:    hostHandler.GetNodeID(),
 			NodeRoles: []core.NodeRole{core.RoleUnknown},
+			Version:   version.Version,
 			// PublicKey: ???
 		}).
 		Build()

@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
 
@@ -50,6 +51,7 @@ func NewActiveNodeComponent(configuration configuration.Configuration) (core.Act
 			State:    core.NodeActive,
 			Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
 			Address:  publicAddress,
+			Version:  version.Version,
 			// PublicKey: ???
 		}})
 	}
@@ -241,7 +243,9 @@ func (nk *nodekeeper) Sync(syncCandidates []*core.ActiveNode, number core.PulseN
 	nk.syncUnsafe(syncCandidates)
 }
 
-func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
@@ -255,6 +259,7 @@ func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, ad
 		State:    core.NodeJoined,
 		Roles:    roles,
 		Address:  address,
+		Version:  version,
 		// PublicKey: publicKey,
 	}
 
