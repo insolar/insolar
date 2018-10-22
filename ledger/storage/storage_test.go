@@ -81,7 +81,6 @@ func TestDB_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	latestRef := idgen()
 	idx := index.ClassLifeline{
 		LatestState: latestRef,
-		AmendRefs:   []record.ID{idgen(), idgen(), idgen()},
 	}
 	zeroID := record.ID{
 		Hash: hexhash("122444"),

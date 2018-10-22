@@ -23,8 +23,8 @@ import (
 
 // ClassLifeline represents meta information for record object
 type ClassLifeline struct {
-	LatestState record.ID   // Amend or activate record
-	AmendRefs   []record.ID // ClassAmendRecord
+	LatestState record.ID // Amend or activate record
+	Deactivated bool
 }
 
 // ObjectLifeline represents meta information for record object
