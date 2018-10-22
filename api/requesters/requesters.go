@@ -24,10 +24,9 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/core"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
-
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 // verbose switches on verbose mode
@@ -92,7 +91,7 @@ func GetSeed(url string) ([]byte, error) {
 }
 
 func constructParams(params []interface{}) ([]byte, error) {
-	args, err := core.MarshalArgs(params)
+	args, err := core.MarshalArgs(params...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ constructParams ]")
 	}

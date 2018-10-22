@@ -80,3 +80,11 @@ func ReadRequestConfigFromFile(path string) (*RequestConfigJSON, error) {
 
 	return rConfig, nil
 }
+
+// CreateUserConfig creates user config from arguments
+func CreateUserConfig(caller string, privKey string) (*UserConfigJSON, error) {
+	userConfig := UserConfigJSON{PrivateKey: privKey, Caller: caller}
+	var err error
+	userConfig.privateKeyObject, err = ecdsahelper.ImportPrivateKey(privKey)
+	return &userConfig, err
+}
