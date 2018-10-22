@@ -45,7 +45,6 @@ func capture(f func()) string {
 
 func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 
-	privateKey, privateKeyExported, _ := generatePrivateAndConvertPublic(t)
 	actualConnectionType := ""
 	actualAddress := ""
 
@@ -61,22 +60,19 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	clientMock := NewRPCClientWrapperMock(t)
 	factoryMock.CreateWrapperMock.Return(clientMock)
 
-	result, err := NewPulsar(configuration.Configuration{
-		Pulsar: configuration.Pulsar{
-			ConnectionType:      "testType",
-			MainListenerAddress: "listedAddress",
-		},
-		PrivateKey: privateKeyExported,
+	result, err := NewPulsar(configuration.Pulsar{
+		ConnectionType:      "testType",
+		MainListenerAddress: "listedAddress",
 	},
 		storage,
 		factoryMock,
 		pulsartestutils.MockEntropyGenerator{},
 		nil,
+		newCertificate(t),
 		mockListener,
 	)
 
 	assert.NoError(t, err)
-	assert.Equal(t, privateKey, result.PrivateKey)
 	assert.Equal(t, "testType", actualConnectionType)
 	assert.Equal(t, "listedAddress", actualAddress)
 	assert.IsType(t, result.Sock, &pulsartestutils.MockListener{})
@@ -93,10 +89,6 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 
 	secondPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
 	secondExpectedKey, _ := ecdsahelper.ExportPublicKey(&secondPrivateKey.PublicKey)
-
-	expectedPrivateKey, _ := ecdsahelper.GeneratePrivateKey()
-	parsedExpectedPrivateKey, _ := ecdsahelper.ExportPrivateKey(expectedPrivateKey)
-
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
 
@@ -105,20 +97,20 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	factoryMock.CreateWrapperMock.Return(clientMock)
 
 	result, err := NewPulsar(
-		configuration.Configuration{
-			Pulsar: configuration.Pulsar{
-				ConnectionType:      "testType",
-				MainListenerAddress: "listedAddress",
-				Neighbours: []configuration.PulsarNodeAddress{
-					{ConnectionType: "tcp", Address: "first", PublicKey: firstExpectedKey},
-					{ConnectionType: "pct", Address: "second", PublicKey: secondExpectedKey},
-				},
+		configuration.Pulsar{
+			ConnectionType:      "testType",
+			MainListenerAddress: "listedAddress",
+			Neighbours: []configuration.PulsarNodeAddress{
+				{ConnectionType: "tcp", Address: "first", PublicKey: firstExpectedKey},
+				{ConnectionType: "pct", Address: "second", PublicKey: secondExpectedKey},
 			},
-			PrivateKey: parsedExpectedPrivateKey,
 		},
 		storage,
 		factoryMock,
-		pulsartestutils.MockEntropyGenerator{}, nil, func(connectionType string, address string) (net.Listener, error) {
+		pulsartestutils.MockEntropyGenerator{},
+		nil,
+		newCertificate(t),
+		func(connectionType string, address string) (net.Listener, error) {
 			return &pulsartestutils.MockListener{}, nil
 		})
 
@@ -687,17 +679,6 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 	assert.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 }
 
-func generatePrivateAndConvertPublic(t *testing.T) (privateKey *ecdsa.PrivateKey, privateKeyPem string, pubKey string) {
-	privateKey, err := ecdsahelper.GeneratePrivateKey()
-	assert.NoError(t, err)
-	pubKey, err = ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
-	assert.NoError(t, err)
-	privateKeyPem, err = ecdsahelper.ExportPrivateKey(privateKey)
-	assert.NoError(t, err)
-
-	return
-}
-
 func prepareEntropy(t *testing.T, key *ecdsa.PrivateKey) (entropy core.Entropy, sign []byte) {
 	entropy = (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
 	sign, err := signData(key, entropy)
@@ -716,9 +697,17 @@ func TestPulsar_verify_Success(t *testing.T) {
 		return Verifying
 	}
 
-	privateKey, _, currentPulsarPublicKey := generatePrivateAndConvertPublic(t)
-	privateKeySecond, _, publicKeySecond := generatePrivateAndConvertPublic(t)
-	privateKeyThird, _, publicKeyThird := generatePrivateAndConvertPublic(t)
+	keyGenerator := func() (*ecdsa.PrivateKey, *ecdsa.PublicKey, string) {
+		key, _ := ecdsahelper.GeneratePrivateKey()
+		pubKeyString, _ := ecdsahelper.ExportPublicKey(&key.PublicKey)
+
+		return key, &key.PublicKey, pubKeyString
+	}
+
+	privateKey, _, currentPulsarPublicKey := keyGenerator()
+
+	privateKeySecond, _, publicKeySecond := keyGenerator()
+	privateKeyThird, _, publicKeyThird := keyGenerator()
 
 	clientMock := pulsartestutils.MockRPCClientWrapper{}
 	clientMock.On("IsInitialised").Return(true)

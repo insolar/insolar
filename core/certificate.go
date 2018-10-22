@@ -14,23 +14,19 @@
  *    limitations under the License.
  */
 
-package index
+package core
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
+	"crypto/ecdsa"
 )
 
-// ClassLifeline represents meta information for record object
-type ClassLifeline struct {
-	LatestState record.ID // Amend or activate record
-	Deactivated bool
-}
+// Certificate interface provides methods to manage keys
+type Certificate interface {
+	GetPublicKey() (string, error)
 
-// ObjectLifeline represents meta information for record object
-type ObjectLifeline struct {
-	ClassRef    record.Reference
-	LatestState record.ID  // Amend or activate record
-	LatestChild *record.ID // Meta record about child activation
-	Delegates   map[core.RecordRef]record.Reference
+	// TODO should be removed
+	GetPrivateKey() (string, error)
+
+	// TODO should be removed
+	GetEcdsaPrivateKey() *ecdsa.PrivateKey
 }

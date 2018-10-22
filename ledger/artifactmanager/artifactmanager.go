@@ -22,6 +22,8 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/log"
 )
@@ -58,17 +60,16 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 }
 
 // RegisterRequest sends message for request registration,
-// returns request record Ref if request successfuly created or already exists.
+// returns request record Ref if request successfully created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
 	ctx core.Context, msg core.Message,
-) (*core.RecordRef, error) {
-	id, err := m.fetchID(&message.RequestCall{Message: msg})
-	if err != nil {
-		return nil, err
-	}
-	var tagretRef core.RecordRef
-	(&tagretRef).SetRecord(*id)
-	return &tagretRef, nil
+) (*core.RecordID, error) {
+	return m.setRecord(
+		&record.CallRequest{
+			Payload: message.MustSerializeBytes(msg),
+		},
+		*msg.Target(),
+	)
 }
 
 // GetCode returns code from code record by provided reference according to provided machine preference.
@@ -77,9 +78,10 @@ func (m *LedgerArtifactManager) RegisterRequest(
 func (m *LedgerArtifactManager) GetCode(
 	ctx core.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
-	genericReact, err := m.messageBus.Send(&message.GetCode{
-		Code: code,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetCode{Code: code},
+	)
 
 	if err != nil {
 		return nil, err
@@ -105,10 +107,13 @@ func (m *LedgerArtifactManager) GetCode(
 func (m *LedgerArtifactManager) GetClass(
 	ctx core.Context, head core.RecordRef, state *core.RecordRef,
 ) (core.ClassDescriptor, error) {
-	genericReact, err := m.messageBus.Send(&message.GetClass{
-		Head:  head,
-		State: state,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetClass{
+			Head:  head,
+			State: state,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -135,10 +140,13 @@ func (m *LedgerArtifactManager) GetClass(
 func (m *LedgerArtifactManager) GetObject(
 	ctx core.Context, head core.RecordRef, state *core.RecordRef,
 ) (core.ObjectDescriptor, error) {
-	genericReact, err := m.messageBus.Send(&message.GetObject{
-		Head:  head,
-		State: state,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetObject{
+			Head:  head,
+			State: state,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -168,10 +176,13 @@ func (m *LedgerArtifactManager) GetObject(
 func (m *LedgerArtifactManager) GetDelegate(
 	ctx core.Context, head, asClass core.RecordRef,
 ) (*core.RecordRef, error) {
-	genericReact, err := m.messageBus.Send(&message.GetDelegate{
-		Head:    head,
-		AsClass: asClass,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetDelegate{
+			Head:    head,
+			AsClass: asClass,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -198,12 +209,17 @@ func (m *LedgerArtifactManager) GetChildren(
 // Type is a contract interface. It contains one method signature.
 func (m *LedgerArtifactManager) DeclareType(
 	ctx core.Context, domain, request core.RecordRef, typeDec []byte,
-) (*core.RecordRef, error) {
-	return m.fetchReference(&message.DeclareType{
-		Domain:  domain,
-		Request: request,
-		TypeDec: typeDec,
-	})
+) (*core.RecordID, error) {
+	return m.setRecord(
+		&record.TypeRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			TypeDeclaration: typeDec,
+		},
+		request,
+	)
 }
 
 // DeployCode creates new code record in storage.
@@ -215,26 +231,39 @@ func (m *LedgerArtifactManager) DeployCode(
 	request core.RecordRef,
 	code []byte,
 	machineType core.MachineType,
-) (*core.RecordRef, error) {
-	return m.fetchReference(&message.DeployCode{
-		Domain:      domain,
-		Request:     request,
-		Code:        code,
-		MachineType: machineType,
-	})
+) (*core.RecordID, error) {
+	return m.setRecord(
+		&record.CodeRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			Code:        code,
+			MachineType: machineType,
+		},
+		request,
+	)
 }
 
 // ActivateClass creates activate class record in storage. Provided code reference will be used as a class code.
 //
 // Request reference will be this class'es identifier and referred as "class head".
 func (m *LedgerArtifactManager) ActivateClass(
-	ctx core.Context, domain, request, code core.RecordRef,
+	ctx core.Context, domain, request, code core.RecordRef, machineType core.MachineType,
 ) (*core.RecordID, error) {
-	return m.fetchID(&message.ActivateClass{
-		Domain:  domain,
-		Request: request,
-		Code:    code,
-	})
+	return m.updateClass(
+		&record.ClassActivateRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			ClassStateRecord: record.ClassStateRecord{
+				MachineType: machineType,
+				Code:        record.Core2Reference(code),
+			},
+		},
+		request,
+	)
 }
 
 // DeactivateClass creates deactivate record in storage. Provided reference should be a reference to the head of
@@ -243,13 +272,18 @@ func (m *LedgerArtifactManager) ActivateClass(
 // Deactivated class cannot be changed or instantiate objects.
 func (m *LedgerArtifactManager) DeactivateClass(
 	ctx core.Context,
-	domain, request, class core.RecordRef,
+	domain, request, class core.RecordRef, state core.RecordID,
 ) (*core.RecordID, error) {
-	return m.fetchID(&message.DeactivateClass{
-		Domain:  domain,
-		Request: request,
-		Class:   class,
-	})
+	return m.updateClass(
+		&record.DeactivationRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			PrevState: record.Bytes2ID(state[:]),
+		},
+		class,
+	)
 }
 
 // UpdateClass creates amend class record in storage. Provided reference should be a reference to the head of
@@ -259,15 +293,22 @@ func (m *LedgerArtifactManager) DeactivateClass(
 // migrate objects memory in the order they appear in provided slice.
 func (m *LedgerArtifactManager) UpdateClass(
 	ctx core.Context,
-	domain, request, class, code core.RecordRef, migrations []core.RecordRef,
+	domain, request, class, code core.RecordRef, machineType core.MachineType, state core.RecordID,
 ) (*core.RecordID, error) {
-	return m.fetchID(&message.UpdateClass{
-		Domain:     domain,
-		Request:    request,
-		Class:      class,
-		Code:       code,
-		Migrations: migrations,
-	})
+	return m.updateClass(
+		&record.ClassAmendRecord{
+			ResultRecord: record.ResultRecord{
+				Domain:  record.Core2Reference(domain),
+				Request: record.Core2Reference(request),
+			},
+			ClassStateRecord: record.ClassStateRecord{
+				Code:        record.Core2Reference(code),
+				MachineType: machineType,
+			},
+			PrevState: record.Bytes2ID(state[:]),
+		},
+		class,
+	)
 }
 
 // ActivateObject creates activate object record in storage. Provided class reference will be used as objects class
@@ -359,7 +400,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 }
 
 func (m *LedgerArtifactManager) fetchReference(ev core.Message) (*core.RecordRef, error) {
-	genericReact, err := m.messageBus.Send(ev)
+	genericReact, err := m.messageBus.Send(inscontext.TODO(), ev)
 
 	if err != nil {
 		return nil, err
@@ -373,7 +414,7 @@ func (m *LedgerArtifactManager) fetchReference(ev core.Message) (*core.RecordRef
 }
 
 func (m *LedgerArtifactManager) fetchID(msg core.Message) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(msg)
+	genericReact, err := m.messageBus.Send(inscontext.TODO(), msg)
 
 	if err != nil {
 		return nil, err
@@ -383,5 +424,47 @@ func (m *LedgerArtifactManager) fetchID(msg core.Message) (*core.RecordID, error
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}
+	return &react.ID, nil
+}
+
+func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordRef) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.SetRecord{
+			Record:    record.SerializeRecord(rec),
+			TargetRef: target,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
+	return &react.ID, nil
+}
+
+func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.RecordRef) (*core.RecordID, error) {
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.UpdateClass{
+			Record: record.SerializeRecord(rec),
+			Class:  class,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	react, ok := genericReact.(*reply.ID)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
 	return &react.ID, nil
 }

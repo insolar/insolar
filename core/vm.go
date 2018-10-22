@@ -87,7 +87,6 @@ type CaseRecord struct {
 
 // CaseBinder is a whole result of executor efforts on every object it seen on this pulse
 type CaseBind struct {
-	Pulse   Pulse                      // pulse info for this bind
 	Records map[RecordRef][]CaseRecord // ordered cases for each object
 }
 

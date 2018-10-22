@@ -21,19 +21,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/pkg/errors"
 
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 const (
+	// REFERENCE is field for reference
 	REFERENCE = "reference"
-	SEED      = "seed"
+	// SEED is field to reference
+	SEED = "seed"
 )
 
 func extractStringResponse(data []byte) (*string, error) {
@@ -52,17 +57,17 @@ func extractStringResponse(data []byte) (*string, error) {
 	return &reference, nil
 }
 
-func extractAuthorizeResponse(data []byte) (string, core.NodeRole, error) {
+func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 	var pubKey string
-	var role core.NodeRole
+	var role []core.NodeRole
 	var fErr string
 	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
 	if err != nil {
-		return "", core.RoleUnknown, errors.Wrap(err, "[ extractAuthorizeResponse ]")
+		return "", nil, errors.Wrap(err, "[ extractAuthorizeResponse ]")
 	}
 
 	if len(fErr) != 0 {
-		return "", core.RoleUnknown, errors.New("[ extractAuthorizeResponse ] " + fErr)
+		return "", nil, errors.New("[ extractAuthorizeResponse ] -> " + fErr)
 	}
 
 	return pubKey, role, nil
@@ -105,18 +110,22 @@ func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core
 	return routResult, nil
 }
 
+// TODO: make it ok
+var serial uint64 = 1
+
 func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if rh.messageBus == nil {
 		return nil, errors.New("[ RouteCall ] message bus was not set during initialization")
 	}
 
 	e := &message.CallMethod{
-		ObjectRef: ref,
-		Method:    method,
-		Arguments: args,
+		BaseLogicMessage: message.BaseLogicMessage{Nonce: atomicLoadAndIncrementUint64(&serial)},
+		ObjectRef:        ref,
+		Method:           method,
+		Arguments:        args,
 	}
 
-	res, err := rh.messageBus.Send(e)
+	res, err := rh.messageBus.Send(inscontext.TODO(), e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't send message")
 	}
@@ -289,6 +298,7 @@ func (rh *RequestHandler) ProcessDumpUsers(all bool) (map[string]interface{}, er
 	return result, nil
 }
 
+// ProcessRegisterNode process register node response
 func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
@@ -296,21 +306,33 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.New("field 'public_key' is required")
 	}
 
-	if len(rh.params.Role) == 0 {
-		return nil, errors.New("field 'role' is required")
+	if len(rh.params.Roles) == 0 {
+		return nil, errors.New("field 'roles' is required")
 	}
 
-	routResult, err := rh.sendRequest("RegisterNode", []interface{}{rh.params.PublicKey, rh.params.Role})
+	if len(rh.params.Host) == 0 {
+		return nil, errors.New("field 'host' is required")
+	}
+
+	routResult, err := rh.sendRequest("RegisterNode",
+		[]interface{}{rh.params.PublicKey, rh.params.NumberOfBootstrapNodes,
+			rh.params.MajorityRule, rh.params.Roles, rh.params.Host})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	nodeRef, err := extractStringResponse(routResult.(*reply.CallMethod).Result)
+	rawJSON, err := networkcoordinator.ExtractRegisterNodeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
 	}
 
-	result[REFERENCE] = nodeRef
+	var dumpInfo interface{}
+	err = json.Unmarshal(rawJSON, &dumpInfo)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessRegisterNode ]")
+	}
+
+	result["certificate"] = dumpInfo
 
 	return result, nil
 
@@ -326,18 +348,19 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 
-	pubKey, role, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
+	pubKey, roles, err := extractAuthorizeResponse(routResult.(*reply.CallMethod).Result)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
 	result["public_key"] = pubKey
-	result["role"] = role
+	result["roles"] = roles
 
 	// Check calling via networkcoordinator
 	privKey, err := ecdsahelper.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with key generating")
 	}
+
 	seed := make([]byte, 4)
 	_, err = rand.Read(seed)
 	if err != nil {
@@ -351,16 +374,24 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
 	}
-	nodeRef, err := rh.netCoordinator.RegisterNode(pubKey, "virtual")
+
+	rawCertificate, err := rh.netCoordinator.RegisterNode(pubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
-	regPubKey, _, err := rh.netCoordinator.Authorize(*nodeRef, seed, signature)
+
+	nodeRef, err := networkcoordinator.ExtractNodeRef(rawCertificate)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
+	}
+
+	regPubKey, _, err := rh.netCoordinator.Authorize(core.NewRefFromBase58(nodeRef), seed, signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
 	}
+
 	if regPubKey != pubKey {
-		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] PubKeys are not the same. "+regPubKey+" "+pubKey)
+		return nil, errors.New("[ ProcessIsAuthorized ] PubKeys are not the same. " + regPubKey + ". Orig: " + pubKey)
 	}
 
 	result["netcoord_auth_success"] = true
@@ -380,4 +411,14 @@ func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
 	result[SEED] = seed[:]
 
 	return result, nil
+}
+
+// atomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
+func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
+	for {
+		val := atomic.LoadUint64(addr)
+		if atomic.CompareAndSwapUint64(addr, val, val+1) {
+			return val
+		}
+	}
 }

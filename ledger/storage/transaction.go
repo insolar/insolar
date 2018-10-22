@@ -101,18 +101,6 @@ func (m *TransactionManager) GetRequest(id *record.ID) (record.Request, error) {
 	return req, nil
 }
 
-// SetRequest stores request record in BadgerDB and returns *record.ID of new record.
-//
-// If record exists SetRequest just returns *record.ID without error.
-func (m *TransactionManager) SetRequest(req record.Request) (*record.ID, error) {
-	log.Debugf("SetRequest call")
-	id, err := m.SetRecord(req)
-	if err != nil && err != ErrOverride {
-		return nil, err
-	}
-	return id, nil
-}
-
 func (m *TransactionManager) set(key, val []byte) {
 	m.txupdates[string(key)] = keyval{k: key, v: val}
 }

@@ -129,6 +129,7 @@ func (m *CallConstructor) Target() *core.RecordRef {
 }
 
 type ExecutorResults struct {
+	Caller      core.RecordRef
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
 	sign        []byte
@@ -148,7 +149,7 @@ func (m *ExecutorResults) Target() *core.RecordRef {
 
 // TODO change after changing pulsar
 func (m *ExecutorResults) GetCaller() *core.RecordRef {
-	return &core.RecordRef{}
+	return &m.Caller
 }
 
 func (m *ExecutorResults) GetReference() core.RecordRef {
@@ -164,6 +165,7 @@ func (m *ExecutorResults) SetSign(sign []byte) {
 }
 
 type ValidateCaseBind struct {
+	Caller      core.RecordRef
 	RecordRef   core.RecordRef
 	CaseRecords []core.CaseRecord
 	Pulse       core.Pulse
@@ -184,7 +186,7 @@ func (m *ValidateCaseBind) Target() *core.RecordRef {
 
 // TODO change after changing pulsar
 func (m *ValidateCaseBind) GetCaller() *core.RecordRef {
-	return &m.RecordRef // TODO actually it's not right. There is no caller.
+	return &m.Caller // TODO actually it's not right. There is no caller.
 }
 
 func (m *ValidateCaseBind) GetReference() core.RecordRef {
@@ -208,6 +210,7 @@ func (m *ValidateCaseBind) SetSign(sign []byte) {
 }
 
 type ValidationResults struct {
+	Caller           core.RecordRef
 	RecordRef        core.RecordRef
 	PassedStepsCount int
 	Error            error
@@ -228,7 +231,7 @@ func (m *ValidationResults) Target() *core.RecordRef {
 
 // TODO change after changing pulsar
 func (m *ValidationResults) GetCaller() *core.RecordRef {
-	return &m.RecordRef // TODO actually it's not right. There is no caller.
+	return &m.Caller // TODO actually it's not right. There is no caller.
 }
 
 func (m *ValidationResults) GetReference() core.RecordRef {

@@ -212,12 +212,15 @@ func (i *ChildIterator) fetch() error {
 	if !i.canFetch {
 		return errors.New("failed to fetch record")
 	}
-	genericReply, err := i.messageBus.Send(&message.GetChildren{
-		Parent:    i.parent,
-		FromPulse: i.fromPulse,
-		FromChild: i.fromChild,
-		Amount:    i.chunkSize,
-	})
+	genericReply, err := i.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetChildren{
+			Parent:    i.parent,
+			FromPulse: i.fromPulse,
+			FromChild: i.fromChild,
+			Amount:    i.chunkSize,
+		},
+	)
 	if err != nil {
 		return err
 	}

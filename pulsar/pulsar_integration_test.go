@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger"
@@ -32,46 +33,54 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTwoPulsars_Handshake(t *testing.T) {
+func newCertificate(t *testing.T) *certificate.Certificate {
+	cert, err := certificate.NewCertificate("../testdata/functional/bootstrap_keys.json")
+	assert.NoError(t, err)
+	err = cert.GenerateKeys()
+	assert.NoError(t, err)
+	return cert
+}
 
-	_, firstPrivateExported, firstPublicExported := generatePrivateAndConvertPublic(t)
-	_, secondPrivateExported, secondPublicExported := generatePrivateAndConvertPublic(t)
+func TestTwoPulsars_Handshake(t *testing.T) {
+	cert1 := newCertificate(t)
+	cert2 := newCertificate(t)
+
+	firstPublicExported, _ := cert1.GetPublicKey()
+	secondPublicExported, _ := cert2.GetPublicKey()
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
 
 	firstPulsar, err := NewPulsar(
-		configuration.Configuration{
-			Pulsar: configuration.Pulsar{
-				ConnectionType:      "tcp",
-				MainListenerAddress: ":1639",
-				Neighbours: []configuration.PulsarNodeAddress{
-					{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublicExported},
-				}},
-			PrivateKey: firstPrivateExported,
+		configuration.Pulsar{
+			ConnectionType:      "tcp",
+			MainListenerAddress: ":1639",
+			Neighbours: []configuration.PulsarNodeAddress{
+				{ConnectionType: "tcp", Address: "127.0.0.1:1640", PublicKey: secondPublicExported},
+			},
 		},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
 		nil,
+		cert1,
 		net.Listen,
 	)
 	assert.NoError(t, err)
 
 	secondPulsar, err := NewPulsar(
-		configuration.Configuration{
-			Pulsar: configuration.Pulsar{
-				ConnectionType:      "tcp",
-				MainListenerAddress: ":1640",
-				Neighbours: []configuration.PulsarNodeAddress{
-					{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublicExported},
-				}},
-			PrivateKey: secondPrivateExported,
+		configuration.Pulsar{
+			ConnectionType:      "tcp",
+			MainListenerAddress: ":1640",
+			Neighbours: []configuration.PulsarNodeAddress{
+				{ConnectionType: "tcp", Address: "127.0.0.1:1639", PublicKey: firstPublicExported},
+			},
 		},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
 		nil,
+		cert2,
 		net.Listen,
 	)
 	assert.NoError(t, err)
@@ -99,8 +108,6 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 	c := core.Components{LogicRunner: lr}
 	tempLedger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	nodeConfig := configuration.NewConfiguration()
-	_, key, _ := generatePrivateAndConvertPublic(t)
-	nodeConfig.PrivateKey = key
 	nodeConfig.Host.BootstrapHosts = bootstrapHosts
 	nodeNetwork, err := servicenetwork.NewServiceNetwork(nodeConfig)
 
@@ -117,31 +124,32 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
 	usualLedger, usualLedgerCleaner, usualNodeNetwork, _ := initNetwork(t, []string{bootstrapAddress})
 
-	_, exportedPrivateKey, _ := generatePrivateAndConvertPublic(t)
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
 	stateSwitcher := &StateSwitcherImpl{}
 
 	newPulsar, err := NewPulsar(
-		configuration.Configuration{
-			Pulsar: configuration.Pulsar{
-				ConnectionType:      "tcp",
-				MainListenerAddress: ":1640",
-				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
-				Neighbours:          []configuration.PulsarNodeAddress{}},
-			PrivateKey: exportedPrivateKey,
+		configuration.Pulsar{
+			ConnectionType:      "tcp",
+			MainListenerAddress: ":1640",
+			BootstrapNodes:      []string{bootstrapAddress},
+			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1890", BehindNAT: false},
+			Neighbours:          []configuration.PulsarNodeAddress{},
 		},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		pulsartestutils.MockEntropyGenerator{},
 		stateSwitcher,
+		newCertificate(t),
 		net.Listen,
 	)
 	stateSwitcher.SetPulsar(newPulsar)
 
 	// Act
-	go newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+	go func() {
+		err := newPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+		assert.NoError(t, err)
+	}()
 
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
@@ -181,30 +189,31 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
 
-	_, parsedPrivKeyFirst, firstPubKey := generatePrivateAndConvertPublic(t)
-	_, parsedPrivKeySecond, secondPubKey := generatePrivateAndConvertPublic(t)
+	cert1 := newCertificate(t)
+	cert2 := newCertificate(t)
+	firstPubKey, _ := cert1.GetPublicKey()
+	secondPubKey, _ := cert2.GetPublicKey()
 
 	firstStateSwitcher := &StateSwitcherImpl{}
 	firstPulsar, err := NewPulsar(
-		configuration.Configuration{
-			PrivateKey: parsedPrivKeyFirst,
-			Pulsar: configuration.Pulsar{
-				ConnectionType:      "tcp",
-				MainListenerAddress: ":1140",
-				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
-				Neighbours: []configuration.PulsarNodeAddress{
-					{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: secondPubKey},
-				},
-				ReceivingSignTimeout:           50,
-				ReceivingNumberTimeout:         50,
-				ReceivingSignsForChosenTimeout: 50,
-				ReceivingVectorTimeout:         50,
-			}},
+		configuration.Pulsar{
+			ConnectionType:      "tcp",
+			MainListenerAddress: ":1140",
+			BootstrapNodes:      []string{bootstrapAddress},
+			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
+			Neighbours: []configuration.PulsarNodeAddress{
+				{ConnectionType: "tcp", Address: "127.0.0.1:1641", PublicKey: secondPubKey},
+			},
+			ReceivingSignTimeout:           50,
+			ReceivingNumberTimeout:         50,
+			ReceivingSignsForChosenTimeout: 50,
+			ReceivingVectorTimeout:         50,
+		},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
 		firstStateSwitcher,
+		cert1,
 		net.Listen,
 	)
 	firstStateSwitcher.setState(WaitingForStart)
@@ -212,25 +221,24 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	secondStateSwitcher := &StateSwitcherImpl{}
 	secondPulsar, err := NewPulsar(
-		configuration.Configuration{
-			PrivateKey: parsedPrivKeySecond,
-			Pulsar: configuration.Pulsar{
-				ConnectionType:      "tcp",
-				MainListenerAddress: ":1641",
-				BootstrapNodes:      []string{bootstrapAddress},
-				BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
-				Neighbours: []configuration.PulsarNodeAddress{
-					{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: firstPubKey},
-				},
-				ReceivingSignTimeout:           50,
-				ReceivingNumberTimeout:         50,
-				ReceivingSignsForChosenTimeout: 50,
-				ReceivingVectorTimeout:         50,
-			}},
+		configuration.Pulsar{
+			ConnectionType:      "tcp",
+			MainListenerAddress: ":1641",
+			BootstrapNodes:      []string{bootstrapAddress},
+			BootstrapListener:   configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:1891", BehindNAT: false},
+			Neighbours: []configuration.PulsarNodeAddress{
+				{ConnectionType: "tcp", Address: "127.0.0.1:1140", PublicKey: firstPubKey},
+			},
+			ReceivingSignTimeout:           50,
+			ReceivingNumberTimeout:         50,
+			ReceivingSignsForChosenTimeout: 50,
+			ReceivingVectorTimeout:         50,
+		},
 		storage,
 		&RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
 		secondStateSwitcher,
+		cert2,
 		net.Listen,
 	)
 	secondStateSwitcher.setState(WaitingForStart)
@@ -242,7 +250,10 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Act
-	go firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+	go func() {
+		err := firstPulsar.StartConsensusProcess(core.GenesisPulse.PulseNumber + 1)
+		assert.NoError(t, err)
+	}()
 
 	currentPulse, err := usualLedger.GetPulseManager().Current()
 	assert.NoError(t, err)
@@ -277,11 +288,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	}()
 }
 
-type pulsarKeys struct {
-	privKey string
-	pubKey  string
-}
-
 func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
@@ -291,7 +297,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
 
-	keys := [7]pulsarKeys{}
+	keys := [7]certificate.Certificate{}
 	pulsars := [7]*Pulsar{}
 	mainAddresses := []string{
 		"127.0.0.1:1641",
@@ -305,16 +311,12 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	transportAddress := "127.0.0.1:1648"
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
-		_, parsedPrivKey, pubKey := generatePrivateAndConvertPublic(t)
-		keys[pulsarIndex] = pulsarKeys{
-			pubKey:  pubKey,
-			privKey: parsedPrivKey,
-		}
+		err := keys[pulsarIndex].GenerateKeys()
+		assert.NoError(t, err)
 	}
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		conf := configuration.Configuration{
-			PrivateKey: keys[pulsarIndex].privKey,
 			Pulsar: configuration.Pulsar{
 				ConnectionType:      "tcp",
 				MainListenerAddress: mainAddresses[pulsarIndex],
@@ -334,20 +336,22 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			if configIndex == pulsarIndex {
 				continue
 			}
+			pubKey, _ := keys[configIndex].GetPublicKey()
 			conf.Pulsar.Neighbours = append(conf.Pulsar.Neighbours, configuration.PulsarNodeAddress{
 				ConnectionType: "tcp",
 				Address:        mainAddresses[configIndex],
-				PublicKey:      keys[configIndex].pubKey,
+				PublicKey:      pubKey,
 			})
 		}
 
 		switcher := &StateSwitcherImpl{}
 		pulsar, err := NewPulsar(
-			conf,
+			conf.Pulsar,
 			storage,
 			&RPCClientWrapperFactoryImpl{},
 			&entropygenerator.StandardEntropyGenerator{},
 			switcher,
+			&keys[pulsarIndex],
 			net.Listen,
 		)
 		switcher.setState(WaitingForStart)
@@ -359,7 +363,8 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
 		for neighbourIndex := pulsarIndex + 1; neighbourIndex < 7; neighbourIndex++ {
-			err := pulsars[pulsarIndex].EstablishConnectionToPulsar(keys[neighbourIndex].pubKey)
+			pubKey, _ := keys[neighbourIndex].GetPublicKey()
+			err := pulsars[pulsarIndex].EstablishConnectionToPulsar(pubKey)
 			assert.NoError(t, err)
 		}
 	}
@@ -401,12 +406,14 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		assert.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
 		assert.Equal(t, 7, len(pulsar.GetLastPulse().Signs))
 		for _, keysItem := range keys {
-			sign := pulsar.GetLastPulse().Signs[keysItem.pubKey]
+			pubKey, _ := keysItem.GetPublicKey()
+
+			sign := pulsar.GetLastPulse().Signs[pubKey]
 			isOk, err := checkSignature(core.PulseSenderConfirmation{
 				PulseNumber:     sign.PulseNumber,
 				ChosenPublicKey: sign.ChosenPublicKey,
 				Entropy:         sign.Entropy,
-			}, keysItem.pubKey, sign.Signature)
+			}, pubKey, sign.Signature)
 			assert.Equal(t, true, isOk)
 			assert.NoError(t, err)
 		}

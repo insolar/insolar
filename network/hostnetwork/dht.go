@@ -18,7 +18,6 @@ package hostnetwork
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"math"
 	"sort"
 	"strings"
@@ -132,7 +131,7 @@ func NewDHT(
 	infbootstrap bool,
 	nodeID core.RecordRef,
 	majorityRule int,
-	key *ecdsa.PrivateKey,
+	certificate core.Certificate,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -499,9 +498,10 @@ LOOP:
 	return nil
 }
 
-func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
 	// TODO: return nodekeeper from helper method in HostHandler and remove this func and GetActiveNodes
-	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address /*, publicKey*/)
+	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address, version /*, publicKey*/)
 }
 
 // Disconnect will trigger a Stop from the network.

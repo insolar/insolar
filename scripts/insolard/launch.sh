@@ -9,10 +9,15 @@ CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
 INSGORUND_LISTEN_PORT=18181
 INSGORUND_RPS_PORT=18182
+KEYS_FILE=scripts/insolard/bootstrap_keys.json
 
 stop_listening()
 {
     ports="19191 $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT 8090 8080"
+    if [ "$1" != "" ]
+    then
+        ports=$@
+    fi
     echo "Stop listening..."
     for port in $ports
     do
@@ -22,7 +27,7 @@ stop_listening()
 
 clear_dirs()
 {
-    echo "Cleaning directories ..."
+    echo "Cleaning directories ... "
     rm -rfv $CONTRACT_STORAGE/*
     rm -rfv $LEDGER_DIR/*
 }
@@ -36,8 +41,12 @@ create_required_dirs()
 
 prepare()
 {
-    stop_listening
-    create_required_dirs
+    if [ "$gorund_only" == "1" ]
+    then
+        stop_listening $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT
+    else
+        stop_listening
+    fi
     clear_dirs
 }
 
@@ -54,7 +63,7 @@ rebuild_binaries()
 
 generate_bootstrap_keys()
 {
-	bin/insolar -c gen_keys > scripts/insolard/bootstrap_keys.json
+	bin/insolar -c gen_keys > $KEYS_FILE
 }
 
 check_working_dir()

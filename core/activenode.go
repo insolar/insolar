@@ -50,6 +50,8 @@ type ActiveNode struct {
 	PublicKey *ecdsa.PublicKey
 	// Addess is the network adress of the node
 	Address string
+	// Version of node software
+	Version string
 }
 
 type ActiveNodeComponent interface {
