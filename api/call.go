@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
@@ -131,11 +132,14 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			log.Error(err)
 			return
 		}
-		res, err := ar.messageBus.Send(&message.CallMethod{
-			ObjectRef: core.NewRefFromBase58(params.Reference),
-			Method:    "Call",
-			Arguments: args,
-		})
+		res, err := ar.messageBus.Send(
+			inscontext.TODO(),
+			&message.CallMethod{
+				ObjectRef: core.NewRefFromBase58(params.Reference),
+				Method:    "Call",
+				Arguments: args,
+			},
+		)
 		if err != nil {
 			resp.Error = err.Error()
 			log.Error(err)

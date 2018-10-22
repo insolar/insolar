@@ -146,13 +146,16 @@ func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) 
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
-	_, err := lr.MessageBus.Send(&message.ValidationResults{
-		//Caller:           lr.Network.GetNodeID(),
-		RecordRef:        msg.GetReference(),
-		PassedStepsCount: passedStepsCount,
-		Error:            validationError,
-		// TODO: INS-663 use signatures here
-	})
+	_, err := lr.MessageBus.Send(
+		inscontext.TODO(),
+		&message.ValidationResults{
+			//Caller:           lr.Network.GetNodeID(),
+			RecordRef:        msg.GetReference(),
+			PassedStepsCount: passedStepsCount,
+			Error:            validationError,
+			// TODO: INS-663 use signatures here
+		},
+	)
 
 	return nil, err
 }

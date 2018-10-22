@@ -103,17 +103,13 @@ func (mb *messageBusMock) Stop() error {
 	panic("implement me")
 }
 
-func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
+func (mb *messageBusMock) Send(ctx core.Context, m core.Message) (core.Reply, error) {
 	typ := m.Type()
 	handler, ok := mb.handlers[typ]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("no handler for this message type %s", typ))
 	}
 	return handler(m)
-}
-
-func (mb *messageBusMock) SendAsync(m core.Message) {
-	panic("implement me")
 }
 
 func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
@@ -881,9 +877,10 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 		{record.ID2Bytes(ids[2]), record.SerializeRecord(&records[2])},
 	}
 
-	rep, err := td.manager.messageBus.Send(&message.JetDrop{
-		Records: recordData,
-	})
+	rep, err := td.manager.messageBus.Send(
+		inscontext.TODO(),
+		&message.JetDrop{Records: recordData},
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 

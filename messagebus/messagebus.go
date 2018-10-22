@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -75,7 +74,7 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Reply` or error from remote host.
-func (mb *MessageBus) Send(msg core.Message) (core.Reply, error) {
+func (mb *MessageBus) Send(ctx core.Context, msg core.Message) (core.Reply, error) {
 	jc := mb.ledger.GetJetCoordinator()
 	pm := mb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -110,14 +109,6 @@ func (mb *MessageBus) Send(msg core.Message) (core.Reply, error) {
 	}
 
 	return reply.Deserialize(bytes.NewBuffer(res))
-}
-
-// SendAsync sends a `Message` to remote host.
-func (mb *MessageBus) SendAsync(msg core.Message) {
-	go func() {
-		_, err := mb.Send(msg)
-		log.Errorln(err)
-	}()
 }
 
 type serializableError struct {

@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
@@ -261,11 +262,14 @@ func (ar *Runner) getMemberPubKey(ref string) (string, error) { //nolint
 	if err != nil {
 		return "", err
 	}
-	res, err := ar.messageBus.Send(&message.CallMethod{
-		ObjectRef: core.NewRefFromBase58(ref),
-		Method:    "GetPublicKey",
-		Arguments: args,
-	})
+	res, err := ar.messageBus.Send(
+		inscontext.TODO(),
+		&message.CallMethod{
+			ObjectRef: core.NewRefFromBase58(ref),
+			Method:    "GetPublicKey",
+			Arguments: args,
+		},
+	)
 	if err != nil {
 		return "", err
 	}
