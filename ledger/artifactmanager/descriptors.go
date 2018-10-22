@@ -106,11 +106,11 @@ type ObjectDescriptor struct {
 	}
 	am *LedgerArtifactManager
 
-	head     core.RecordRef
-	state    core.RecordID
-	class    core.RecordRef
-	memory   []byte
-	children []core.RecordRef
+	head         core.RecordRef
+	state        core.RecordID
+	class        core.RecordRef
+	childPointer *core.RecordID // can be nil.
+	memory       []byte
 }
 
 // HeadRef returns reference to represented object record.
@@ -121,6 +121,11 @@ func (d *ObjectDescriptor) HeadRef() *core.RecordRef {
 // StateID returns reference to object state record.
 func (d *ObjectDescriptor) StateID() *core.RecordID {
 	return &d.state
+}
+
+// ChildPointer returns the latest child for this object.
+func (d *ObjectDescriptor) ChildPointer() *core.RecordID {
+	return d.childPointer
 }
 
 // Memory fetches latest memory of the object known to storage.
@@ -136,11 +141,11 @@ func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, 
 
 // ClassDescriptor returns descriptor for fetching object's class data.
 func (d *ObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
-	ctx := inscontext.TODO()
 	if d.cache.classDescriptor != nil {
 		return d.cache.classDescriptor, nil
 	}
 
+	ctx := inscontext.TODO()
 	return d.am.GetClass(ctx, d.class, state)
 }
 
