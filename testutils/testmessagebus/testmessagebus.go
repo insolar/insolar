@@ -62,7 +62,7 @@ func (mb *TestMessageBus) Stop() error {
 	panic("implement me")
 }
 
-func (mb *TestMessageBus) Send(m core.Message) (core.Reply, error) {
+func (mb *TestMessageBus) Send(ctx core.Context, m core.Message) (core.Reply, error) {
 	t := m.Type()
 	handler, ok := mb.handlers[t]
 	if !ok {
