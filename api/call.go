@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -112,7 +113,14 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			return
 		}
 
-		if !ar.seedmanager.Exists(ar.seedmanager.SeedFromBytes(params.Seed)) {
+		seed := seedmanager.SeedFromBytes(params.Seed)
+		if seed != nil {
+			resp.Error = "[ CallHandler ] Bad seed param"
+			log.Error(errors.New(resp.Error))
+			return
+		}
+
+		if !ar.seedmanager.Exists(*seed) {
 			resp.Error = "Incorrect seed"
 			log.Error("[ CallHandler ] ", resp.Error)
 			return
