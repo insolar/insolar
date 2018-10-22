@@ -95,7 +95,7 @@ func (sm *SeedManager) deleteExpired() {
 	}
 }
 
-// SeedFromBytes converts slice of bytes to Seed. Returns nil if slice's size it not equal to SeedSize
+// SeedFromBytes converts slice of bytes to Seed. Returns nil if slice's size is not equal to SeedSize
 func SeedFromBytes(slice []byte) *Seed {
 	if len(slice) != int(SeedSize) {
 		return nil
