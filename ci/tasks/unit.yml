@@ -25,8 +25,9 @@ run:
        ls -alh
        env
        cd $GOPATH/src/github.com/insolar/insolar
+       make install-deps
+       make pre-build
        go test crypto/ecdsa -bench .
-       #make install-deps
-       #make pre-build
+       go test ./cryptohelpers/...
        #make build
        #make test_with_coverage

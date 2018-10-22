@@ -11,7 +11,7 @@ resources:
         curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' > ${SMUGGLER_DESTINATION_DIR}/${SMUGGLER_target_file}
         echo "date=$(date)" > ${SMUGGLER_OUTPUT_DIR}/metadata
         curl https://api.github.com/repos/insolar/insolar/branches | jq -c '{ "branches": [.[] | .name]} ' >> ${SMUGGLER_OUTPUT_DIR}/metadata
-    smuggler_debug: true
+    smuggler_debug: false
     target_file: branches.json
 - name: pull-requests
   webhook_token: helloinsolar
@@ -22,7 +22,7 @@ resources:
         curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '.[] | .url ' | md5sum > ${SMUGGLER_OUTPUT_DIR}/versions
       in: |
         curl https://api.github.com/repos/((meta.github.owner))/((meta.github.repo))/pulls?access_token=((meta.github.access_token)) | jq -c '{ "pulls": [.[] | {number: .number, title: .title} ]} '  > ${SMUGGLER_DESTINATION_DIR}/pulls.json
-    smuggler_debug: true
+    smuggler_debug: false
 - name: deploy
   type: concourse-pipeline
   source:

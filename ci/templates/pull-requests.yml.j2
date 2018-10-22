@@ -31,6 +31,7 @@ resources:
 - name: pull-request-{{ pull.number }}
   type: pull-request
   source:
+    smuggler_debug: false
     owner: ((meta.github.owner))
     repo: ((meta.github.repo))
     access_token: ((meta.github.access_token))
