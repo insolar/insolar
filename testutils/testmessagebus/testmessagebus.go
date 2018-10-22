@@ -69,5 +69,5 @@ func (mb *TestMessageBus) Send(ctx core.Context, m core.Message) (core.Reply, er
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
-	return handler(m)
+	return handler(ctx, m)
 }

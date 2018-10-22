@@ -109,7 +109,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return step, errors.New("step between two shores")
 		}
 
-		ret, err := lr.Execute(start.Resp.(core.Message))
+		ret, err := lr.Execute(inscontext.TODO(), start.Resp.(core.Message))
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -140,7 +140,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		}
 	}
 }
-func (lr *LogicRunner) ValidateCaseBind(inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) ValidateCaseBind(ctx core.Context, inmsg core.Message) (core.Reply, error) {
 	msg, ok := inmsg.(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
@@ -175,7 +175,7 @@ func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
 	return c, ok
 }
 
-func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) ProcessValidationResults(ctx core.Context, inmsg core.Message) (core.Reply, error) {
 	msg, ok := inmsg.(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
@@ -185,7 +185,7 @@ func (lr *LogicRunner) ProcessValidationResults(inmsg core.Message) (core.Reply,
 	return nil, nil
 }
 
-func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) ExecutorResults(ctx core.Context, inmsg core.Message) (core.Reply, error) {
 	msg, ok := inmsg.(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)

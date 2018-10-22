@@ -109,7 +109,7 @@ func (mb *messageBusMock) Send(ctx core.Context, m core.Message) (core.Reply, er
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("no handler for this message type %s", typ))
 	}
-	return handler(m)
+	return handler(ctx, m)
 }
 
 func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {

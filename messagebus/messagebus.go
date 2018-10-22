@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
 )
 
@@ -125,7 +126,7 @@ func (mb *MessageBus) doDeliver(msg core.Message) (core.Reply, error) {
 		return nil, errors.New("no handler for received message type")
 	}
 
-	resp, err := handler(msg)
+	resp, err := handler(inscontext.TODO(), msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),

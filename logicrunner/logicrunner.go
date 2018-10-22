@@ -183,7 +183,7 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.(message.IBaseLogicMessage)
 	if !ok {
@@ -211,7 +211,7 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
 	}
-	ctx := core.LogicCallContext{
+	logicContext := core.LogicCallContext{
 		Caller:  msg.GetCaller(),
 		Request: reqref,
 		Time:    time.Now(), // TODO: probably we should take it from e
@@ -220,11 +220,11 @@ func (lr *LogicRunner) Execute(inmsg core.Message) (core.Reply, error) {
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		re, err := lr.executeMethodCall(ctx, m, vb)
+		re, err := lr.executeMethodCall(logicContext, m, vb)
 		return re, err
 
 	case *message.CallConstructor:
-		re, err := lr.executeConstructorCall(ctx, m, vb)
+		re, err := lr.executeConstructorCall(logicContext, m, vb)
 		return re, err
 
 	default:
