@@ -25,6 +25,7 @@ import (
 	"net/rpc"
 	"sync"
 
+	"github.com/insolar/insolar/certificate"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 
@@ -70,39 +71,35 @@ type Pulsar struct {
 	BftGridLock sync.RWMutex
 
 	StateSwitcher StateSwitcher
+	Certificate   certificate.Certificate
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
-	configuration configuration.Configuration,
+	configuration configuration.Pulsar,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator entropygenerator.EntropyGenerator,
 	stateSwitcher StateSwitcher,
+	certificate core.Certificate,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 
 	log.Debug("[NewPulsar]")
 
 	// Listen for incoming connections.
-	listenerImpl, err := listener(configuration.Pulsar.ConnectionType.String(), configuration.Pulsar.MainListenerAddress)
+	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse private key from config
-	privateKey, err := ecdsahelper.ImportPrivateKey(configuration.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
 	pulsar := &Pulsar{
-		Sock:               listenerImpl,
-		SockConnectionType: configuration.Pulsar.ConnectionType,
-		Neighbours:         map[string]*Neighbour{},
-		PrivateKey:         privateKey,
-		Config:             configuration.Pulsar,
-		Storage:            storage,
-		EntropyGenerator:   entropyGenerator,
-		StateSwitcher:      stateSwitcher,
+		Sock:             listenerImpl,
+		Neighbours:       map[string]*Neighbour{},
+		PrivateKey:       certificate.GetEcdsaPrivateKey(),
+		Config:           configuration,
+		Storage:          storage,
+		EntropyGenerator: entropyGenerator,
+		StateSwitcher:    stateSwitcher,
 	}
 	pulsar.clearState()
 
@@ -121,9 +118,9 @@ func NewPulsar(
 	pulsar.LastPulse = lastPulse
 
 	// Adding other pulsars
-	for _, neighbour := range configuration.Pulsar.Neighbours {
+	for _, neighbour := range configuration.Neighbours {
 		currentMap := map[string]*BftCell{}
-		for _, gridColumn := range configuration.Pulsar.Neighbours {
+		for _, gridColumn := range configuration.Neighbours {
 			currentMap[gridColumn.PublicKey] = nil
 		}
 		pulsar.SetBftGridItem(neighbour.PublicKey, currentMap)

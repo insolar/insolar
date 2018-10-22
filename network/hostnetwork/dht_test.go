@@ -26,7 +26,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -195,7 +194,6 @@ func newRealDHT(t *testing.T, bootstrap []*host.Host, port string) *DHT {
 	ids1 = append(ids1, id1)
 	st1, s1, tp1, r1, err := realDhtParams(ids1, "0.0.0.0:"+port)
 	assert.NoError(t, err)
-	key, _ := ecdsa.GeneratePrivateKey()
 	var dht *DHT
 	if bootstrap == nil {
 		dht, _ = NewDHT(
@@ -206,7 +204,7 @@ func newRealDHT(t *testing.T, bootstrap []*host.Host, port string) *DHT {
 			false,
 			testutils.RandomRef(),
 			5,
-			key)
+			nil)
 	} else {
 		dht, _ = NewDHT(
 			st1, s1, tp1, r1,
@@ -218,7 +216,7 @@ func newRealDHT(t *testing.T, bootstrap []*host.Host, port string) *DHT {
 			false,
 			testutils.RandomRef(),
 			5,
-			key)
+			nil)
 	}
 	return dht
 }
@@ -230,7 +228,6 @@ func newDHT(t *testing.T, bootstrap []*host.Host, port string) (*DHT, transport.
 	ids1 = append(ids1, id1)
 	st1, s1, tp1, r1, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:"+port)
 	assert.NoError(t, err)
-	key, _ := ecdsa.GeneratePrivateKey()
 	var dht *DHT
 	if bootstrap == nil {
 		dht, _ = NewDHT(
@@ -245,7 +242,7 @@ func newDHT(t *testing.T, bootstrap []*host.Host, port string) (*DHT, transport.
 			false,
 			testutils.RandomRef(),
 			5,
-			key)
+			nil)
 	} else {
 		dht, _ = NewDHT(
 			st1, s1, tp1, r1,
@@ -260,7 +257,7 @@ func newDHT(t *testing.T, bootstrap []*host.Host, port string) (*DHT, transport.
 			false,
 			testutils.RandomRef(),
 			5,
-			key)
+			nil)
 	}
 	return dht, tp1
 }
@@ -271,8 +268,7 @@ func dhtParams(ids []id.ID, address string) (store.Store, *host.Origin, transpor
 	origin, err := host.NewOrigin(ids, addr)
 	tp := newMockTransport()
 	cascade1 := &cascade.Cascade{}
-	key, err := ecdsa.GeneratePrivateKey()
-	sign := signhandler.NewSignHandler(key)
+	sign := signhandler.NewSignHandler(nil)
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1, sign)
 	return st, origin, tp, ncf, err
 }
@@ -286,8 +282,7 @@ func realDhtParams(ids []id.ID, address string) (store.Store, *host.Origin, tran
 	cfg.BehindNAT = false
 	tp, err := transport.NewTransport(cfg, relay.NewProxy())
 	cascade1 := &cascade.Cascade{}
-	key, err := ecdsa.GeneratePrivateKey()
-	sign := signhandler.NewSignHandler(key)
+	sign := signhandler.NewSignHandler(nil)
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade1, sign)
 	return st, origin, tp, ncf, err
 }
@@ -491,7 +486,6 @@ func TestHostResponseSendError(t *testing.T) {
 	zeroID := getIDWithValues()
 	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:22000")
 	assert.NoError(t, err)
-	key, _ := ecdsa.GeneratePrivateKey()
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
 		BootstrapHosts: []*host.Host{{
@@ -499,7 +493,7 @@ func TestHostResponseSendError(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
+		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, nil)
 
 	mockTp := tp.(*mockTransport)
 
@@ -607,7 +601,6 @@ func TestStoreReplication(t *testing.T) {
 	zeroID := getIDWithValues()
 	st, s, tp, r, err := dhtParams([]id.ID{zeroID}, "0.0.0.0:24000")
 	assert.NoError(t, err)
-	key, _ := ecdsa.GeneratePrivateKey()
 
 	dht, _ := NewDHT(st, s, tp, r, &Options{
 		ReplicateTime: time.Second * 2,
@@ -616,7 +609,7 @@ func TestStoreReplication(t *testing.T) {
 			Address: bootstrapAddr,
 		}},
 	},
-		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
+		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, nil)
 
 	mockTp := tp.(*mockTransport)
 
@@ -903,10 +896,9 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 
 	ids1 := make([]id.ID, 0)
 	id1, _ := id.NewID()
-	key, _ := ecdsa.GeneratePrivateKey()
 	ids1 = append(ids1, id1)
 	st, s, tp, r, err := realDhtParams(ids1, "127.0.0.1:16000")
-	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
+	dht1, _ := NewDHT(st, s, tp, r, &Options{}, relay.NewProxy(), 4, false, testutils.RandomRef(), 5, nil)
 	assert.NoError(t, err)
 
 	bootstrapAddr2, _ := host.NewAddress("127.0.0.1:16000")
@@ -919,7 +911,7 @@ func TestDHT_StartCheckNodesRole(t *testing.T) {
 			},
 		},
 	},
-		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
+		relay.NewProxy(), 4, false, testutils.RandomRef(), 5, nil)
 
 	dhts = append(dhts, dht1)
 	dhts = append(dhts, dht2)
@@ -991,8 +983,8 @@ func TestDHT_Getters(t *testing.T) {
 	ref1 := core.NewRefFromBase58(str1)
 
 	host1 := host.NewHost(hostAddr)
-	newKey, _ := ecdsa.ImportPrivateKey("asd")
-	node := nodenetwork.NewNode(ref1, newKey)
+	//newKey, _ := ecdsa.ImportPrivateKey("asd")
+	node := nodenetwork.NewNode(ref1)
 
 	assert.False(t, dht1.HostIsAuthenticated(node.GetID().String()))
 	_, check := dht1.KeyIsReceived(node.GetID().String())
@@ -1050,8 +1042,7 @@ func TestDHT_GetHostsFromBootstrap(t *testing.T) {
 	for i := 0; i < 17; i++ {
 		host1 := prefix + strconv.Itoa(port)
 		st, s, tp, r, _ := realDhtParamsWithId(host1)
-		key, _ := ecdsa.GeneratePrivateKey()
-		dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 4, false, testutils.RandomRef(), 5, key)
+		dht, _ := NewDHT(st, s, tp, r, &Options{BootstrapHosts: bootstrapHosts}, relay.NewProxy(), 4, false, testutils.RandomRef(), 5, nil)
 		dhts = append(dhts, dht)
 		go dht.Listen()
 		dht.Bootstrap()

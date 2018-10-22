@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -39,7 +38,7 @@ type MessageBus struct {
 }
 
 // NewMessageBus is a `MessageBus` constructor
-func NewMessageBus(configuration.Configuration) (*MessageBus, error) {
+func NewMessageBus() (*MessageBus, error) {
 	return &MessageBus{handlers: map[core.MessageType]core.MessageHandler{}}, nil
 }
 
