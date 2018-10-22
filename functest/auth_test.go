@@ -30,7 +30,7 @@ func TestIsAuthorized(t *testing.T) {
 	isAuthResponse := &isAuthorized{}
 	unmarshalResponse(t, body, isAuthResponse)
 
-	assert.Equal(t, 1, isAuthResponse.Role)
+	assert.Equal(t, []int{1}, isAuthResponse.Roles)
 	assert.NotEmpty(t, isAuthResponse.PublicKey)
 	assert.Equal(t, true, isAuthResponse.NetCoordCheck)
 }

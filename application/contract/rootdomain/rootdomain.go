@@ -20,11 +20,13 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/networkcoordinator"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -38,23 +40,23 @@ type RootDomain struct {
 }
 
 // RegisterNode processes register node request
-func (rd *RootDomain) RegisterNode(publicKey string, role string) (string, error) {
+func (rd *RootDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if len(domainRefs) == 0 {
-		return "", errors.New("No NodeDomain references")
+		return nil, errors.New("No NodeDomain references")
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
-	node, err := nd.RegisterNode(publicKey, role)
+	cert, err := nd.RegisterNode(publicKey, numberOfBootstrapNodes, majorityRule, roles, ip)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("Problems with RegisterNode: " + err.Error())
 	}
 
-	return node.String(), nil
+	return cert, nil
 }
 
 func makeSeed() []byte {
@@ -67,8 +69,8 @@ func makeSeed() []byte {
 	return seed
 }
 
-// Authorize checks is node authorized
-func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
+// Authorize checks is node authorized ( It's temporary method. Remove it when we have good tests )
+func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 	privateKey, err := cryptoHelper.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
@@ -87,7 +89,12 @@ func (rd *RootDomain) Authorize() (string, core.NodeRole, error) {
 		panic(err)
 	}
 
-	nodeRef, err := rd.RegisterNode(serPubKey, "virtual")
+	rawJSON, err := rd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	if err != nil {
+		panic(err)
+	}
+
+	nodeRef, err := networkcoordinator.ExtractNodeRef(rawJSON)
 	if err != nil {
 		panic(err)
 	}
