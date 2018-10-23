@@ -304,27 +304,14 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
-	ctx := inscontext.TODO()
-	cr, step := gpr.lr.getNextValidationStep(req.Callee)
-	if step >= 0 { // validate
-		if core.CaseRecordTypeDeactivateObject != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
-		}
-		sig := HashInterface(req)
-		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
-		}
-		return nil
+	state := gpr.lr.GetExecution(req.Object)
+	if state == nil {
+		return errors.New("No execution state, impossible, shouldn't be")
 	}
-	am := gpr.lr.ArtifactManager
-	_, err := am.DeactivateObject(ctx, core.RecordRef{}, core.RecordRef{}, req.Object)
-	if err != nil {
-		return err
-	}
-	gpr.lr.addObjectCaseRecord(req.Callee, core.CaseRecord{
-		Type:   core.CaseRecordTypeDeactivateObject,
-		ReqSig: HashInterface(req),
-	})
+
+	// TODO: is it race? make sure it's not!
+	state.deactivate = true
+
 	return nil
 }
 

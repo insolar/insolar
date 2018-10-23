@@ -39,7 +39,8 @@ type Ref = core.RecordRef
 
 // Context of one contract execution
 type ExecutionState struct {
-	mutex sync.Mutex
+	mutex      sync.Mutex
+	deactivate bool
 }
 
 // LogicRunner is a general interface of contract executor
@@ -162,6 +163,16 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 	}
 
 	return nil, errors.Errorf("No executor registered for machine %d", int(t))
+}
+
+func (lr *LogicRunner) GetExecution(ref Ref) *ExecutionState {
+	lr.executionMutex.Lock()
+	defer lr.executionMutex.Unlock()
+	res, ok := lr.execution[ref]
+	if !ok {
+		return nil
+	}
+	return res
 }
 
 func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
@@ -323,11 +334,17 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 			return nil, errors.Wrap(err, "executor error")
 		}
 
-		// TODO: deactivation should be handled way better here
-		if vb.NeedSave() && lr.lastObjectCaseRecord(m.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
-			_, err = lr.ArtifactManager.UpdateObject(
-				insctx, Ref{}, *ctx.Request, objbody.Object, newData,
-			)
+		if vb.NeedSave() {
+			am := lr.ArtifactManager
+			if executionState.deactivate {
+				_, err = am.DeactivateObject(
+					insctx, Ref{}, *ctx.Request, objbody.Object,
+				)
+			} else {
+				_, err = am.UpdateObject(
+					insctx, Ref{}, *ctx.Request, objbody.Object, newData,
+				)
+			}
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
 			}
