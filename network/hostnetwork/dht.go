@@ -1137,10 +1137,7 @@ func (dht *DHT) InvokeRPC(sender *host.Host, method string, args [][]byte) ([]by
 	return dht.ncf.GetRPC().Invoke(sender, method, args)
 }
 
-func (dht *DHT) SignMessage() {
-	// dht.certificate.
-}
-
+// GetPrivateKey returns a private key.
 func (dht *DHT) GetPrivateKey() *ecdsa.PrivateKey {
 	return dht.certificate.GetEcdsaPrivateKey()
 }
