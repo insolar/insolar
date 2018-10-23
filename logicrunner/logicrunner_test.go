@@ -191,6 +191,7 @@ func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.Rec
 	return res.data, res.err
 }
 
+//
 //func TestBasics(t *testing.T) {
 //	if parallel {
 //		t.Parallel()
@@ -210,7 +211,7 @@ func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.Rec
 //	assert.IsType(t, &LogicRunner{}, lr)
 //	MessageBusTrivialBehavior(mb, lr)
 //
-//	_, err = lr.GetExecutor(core.MachineTypeGoPlugin)
+//	_, err := lr.GetExecutor(core.MachineTypeGoPlugin)
 //	assert.Error(t, err)
 //
 //	te := newTestExecutor()
@@ -957,7 +958,6 @@ func (c *Contract) Rand() (int, error) {
 		assert.NoError(t, err, "contract call")
 	}
 
-	//
 	ValidateAllResults(t, lr, *contract)
 }
 

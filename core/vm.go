@@ -49,6 +49,8 @@ type LogicRunner interface {
 	OnPulse(Pulse) error
 	GetLedger() Ledger
 	Start(c Components) error
+	GetExecutor(MachineType) (MachineLogicExecutor, error)
+	RegisterExecutor(MachineType, MachineLogicExecutor) error
 }
 
 // LogicCallContext is a context of contract execution
