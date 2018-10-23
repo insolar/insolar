@@ -25,7 +25,8 @@ import (
 )
 
 func TestNewVersionManager(t *testing.T) {
-	vm := GetVM()
+	vm, err := GetVersionManager()
+	assert.NoError(t, err)
 	feature, err := vm.Add("INSOLAR", "v1.1.1", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
 	assert.NotNil(t, feature)
@@ -37,13 +38,18 @@ func TestNewVersionManager(t *testing.T) {
 	feature, err = vm.Add("INSOLAR2", "v1.1.2", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
 	assert.NotNil(t, feature)
-	assert.Equal(t, vm, GetVM())
+	vm2, err := GetVersionManager()
+	assert.NoError(t, err)
+	assert.Equal(t, vm, vm2)
 
-	vm.AgreedVersion = "v1.1.1"
+	vm.AgreedVersion, err = ParseVersion("v1.1.1")
+	assert.NoError(t, err)
 	assert.Equal(t, vm.Verify("InsoLar"), true)
-	vm.AgreedVersion = "v1.1.0"
+	vm.AgreedVersion, err = ParseVersion("v1.1.0")
+	assert.NoError(t, err)
 	assert.Equal(t, vm.Verify("InsoLar"), false)
-	vm.AgreedVersion = "v1.1.1"
+	vm.AgreedVersion, err = ParseVersion("v1.1.1")
+	assert.NoError(t, err)
 	assert.Equal(t, vm.Verify("InsoLar10"), false)
 }
 
@@ -51,7 +57,8 @@ func TestLoadSaveVersionManager(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
-	vm := newVersionManager()
+	vm, err := newVersionManager()
+	assert.NoError(t, err)
 	feature, err := vm.Add("insolar", "v1.1.1", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
 	assert.NotNil(t, feature)
@@ -63,7 +70,8 @@ func TestLoadSaveVersionManager(t *testing.T) {
 	feature, err = vm.Add("insolar3", "v1.1.2", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
 	assert.NotNil(t, feature)
-	vm2 := newVersionManager()
+	vm2, err := newVersionManager()
+	assert.NoError(t, err)
 	err = vm2.LoadFromFile(dir + "versiontable.yml")
 	assert.NoError(t, err)
 	feature = vm2.Get("Insolar2")
@@ -72,7 +80,8 @@ func TestLoadSaveVersionManager(t *testing.T) {
 	vm2.Remove("insolar2")
 	feature = vm2.Get("Insolar2")
 	assert.Nil(t, feature)
-	vm = newVersionManager()
+	vm, err = newVersionManager()
+	assert.NoError(t, err)
 	err = vm.LoadFromVariable()
 	assert.NoError(t, err)
 	assert.NotNil(t, vm)

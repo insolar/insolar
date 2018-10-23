@@ -36,6 +36,12 @@ func TestNewFeature(t *testing.T) {
 	assert.Nil(t, feature)
 
 	feature, err = NewFeature("HELLO2", "1.2", "Version manager for Insolar platform test")
+	assert.NoError(t, err)
+	assert.NotNil(t, feature)
+	assert.Equal(t, feature.StartVersion.String(), "1.2.0")
+
+	feature, err = NewFeature("START", "abc", "Version manager for Insolar platform test")
 	assert.Error(t, err)
 	assert.Nil(t, feature)
+
 }

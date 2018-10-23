@@ -165,8 +165,7 @@ func main() {
 		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
 	}
 
-	vm := manager.GetVM()
-	err = vm.LoadFromVariable()
+	cm.components.VersionManager, err = manager.GetVersionManager()
 	if err != nil {
 		log.Fatalln("failed to load VersionManager: ", err.Error())
 	}

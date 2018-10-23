@@ -17,7 +17,10 @@
 package manager
 
 import (
+	"github.com/blang/semver"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
 
@@ -25,11 +28,24 @@ func ProcessVersionConsensus(nodes []*core.ActiveNode) error {
 	if len(nodes) == 0 {
 		return errors.New("List of nodes is empty")
 	}
-
 	mapOfVersions := getMapOfVersion(nodes)
-	topVersion := getMaxVersion(getRequired(len(nodes)), mapOfVersions)
+	topVersion, err := getMaxVersion(getRequired(len(nodes)), mapOfVersions)
+	if err != nil {
+		return err
+	}
 	if topVersion != nil {
-		GetVM().AgreedVersion = *topVersion
+		vm, err := GetVersionManager()
+		if err != nil {
+			return err
+		}
+		currentVersion, err := ParseVersion(version.Version)
+		if err != nil {
+			return errors.New("current version is invalid: " + err.Error())
+		}
+		if currentVersion.Compare(*topVersion) != 0 {
+			log.Warn("WARNING! Current version: " + StringVersion(currentVersion) + ", must go to version: " + StringVersion(topVersion))
+		}
+		vm.AgreedVersion = topVersion
 	}
 	return nil
 }
@@ -49,20 +65,39 @@ func getMapOfVersion(nodes []*core.ActiveNode) *map[string]int {
 	return &mapOfVersions
 }
 
-func getMaxVersion(required int, mapOfVersions *map[string]int) *string {
+func getMaxVersion(required int, mapOfVersions *map[string]int) (*semver.Version, error) {
+
 	for key, count := range *mapOfVersions {
 		if count >= required {
-			return &key
+			return ParseVersion(key)
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func Verify(key string) bool {
-	vm := GetVM()
+	vm, err := GetVersionManager()
+	if err != nil {
+		return false
+	}
 	return vm.Verify(key)
 }
 
 func getRequired(count int) int {
 	return count/2 + 1
+}
+
+func ParseVersion(ver string) (*semver.Version, error) {
+	if ver == "unset" {
+		return semver.New("0.0.0")
+	}
+	version, err := semver.ParseTolerant(ver)
+	if err != nil {
+		return nil, err
+	}
+	return &version, nil
+}
+
+func StringVersion(ver *semver.Version) string {
+	return "v" + ver.String()
 }

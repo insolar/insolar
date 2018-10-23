@@ -18,11 +18,12 @@ package manager
 
 import (
 	"errors"
-	"regexp"
+
+	"github.com/blang/semver"
 )
 
 type Feature struct {
-	StartVersion string
+	StartVersion *semver.Version
 	Description  string
 }
 
@@ -33,13 +34,12 @@ func NewFeature(key string, startVersion string, description string) (*Feature, 
 	if startVersion == "" {
 		return nil, errors.New("Start version cannot be null")
 	}
-	re := regexp.MustCompile("[0-9]+")
-	arr := re.FindAllString(startVersion, -1)
-	if len(arr) != 3 {
-		return nil, errors.New("Version format mismatch")
+	version, err := ParseVersion(startVersion)
+	if err != nil {
+		return nil, err
 	}
 	return &Feature{
-		StartVersion: startVersion,
+		StartVersion: version,
 		Description:  description,
 	}, nil
 }

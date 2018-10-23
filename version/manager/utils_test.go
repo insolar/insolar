@@ -66,18 +66,21 @@ func TestGetMaxVersion(t *testing.T) {
 	mapOfVersions["v0.3.0"] = 3
 	mapOfVersions["v0.3.1"] = 4
 	mapOfVersions["v0.3.2"] = 1
-	res := getMaxVersion(5, &mapOfVersions)
+	res, err := getMaxVersion(5, &mapOfVersions)
+	assert.NoError(t, err)
 	assert.Nil(t, res)
 	mapOfVersions = make(map[string]int)
 	mapOfVersions["v0.3.0"] = 3
 	mapOfVersions["v0.3.1"] = 4
-	res = getMaxVersion(4, &mapOfVersions)
-	assert.Equal(t, *res, "v0.3.1")
+	res, err = getMaxVersion(4, &mapOfVersions)
+	assert.NoError(t, err)
+	assert.Equal(t, StringVersion(res), "v0.3.1")
 	mapOfVersions = make(map[string]int)
 	mapOfVersions["v0.3.0"] = 5
 	mapOfVersions["v0.3.1"] = 4
-	res = getMaxVersion(5, &mapOfVersions)
-	assert.Equal(t, *res, "v0.3.0")
+	res, err = getMaxVersion(5, &mapOfVersions)
+	assert.NoError(t, err)
+	assert.Equal(t, StringVersion(res), "v0.3.0")
 }
 
 func TestGetRequired(t *testing.T) {
@@ -88,20 +91,28 @@ func TestGetRequired(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
-	vm := GetVM()
+	vm, err := GetVersionManager()
+	assert.NoError(t, err)
 	feature, err := vm.Add("INSOLAR4", "v1.1.1", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
 	assert.NotNil(t, feature)
 	feature, err = vm.Add("INSOLAR5", "v1.1.2", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
 	assert.NotNil(t, feature)
-	assert.Equal(t, vm, GetVM())
-	vm.AgreedVersion = "v1.1.1"
+	vm2, err := GetVersionManager()
+	assert.NoError(t, err)
+	assert.Equal(t, vm, vm2)
+	vm.AgreedVersion, err = ParseVersion("v1.1.1")
+	assert.NoError(t, err)
 	assert.Equal(t, Verify("InsoLar4"), true)
-	vm.AgreedVersion = "v1.1.0"
+	vm.AgreedVersion, err = ParseVersion("v1.1.0")
+	assert.NoError(t, err)
 	assert.Equal(t, Verify("InsoLar4"), false)
 	feature, err = vm.Add("INSOLAR6", "", "Version manager for Insolar platform test")
 	assert.Error(t, err)
 	assert.Nil(t, feature)
 
+	ver, err := ParseVersion("abc")
+	assert.Error(t, err)
+	assert.Nil(t, ver)
 }

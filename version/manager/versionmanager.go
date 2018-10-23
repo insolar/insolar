@@ -20,22 +20,28 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/blang/semver"
+	"github.com/insolar/insolar/core"
 	"github.com/spf13/viper"
 )
 
 type VersionManager struct {
 	VersionTable  map[string]*Feature
-	AgreedVersion string
+	AgreedVersion *semver.Version
 	viper         *viper.Viper
 }
 
 var instance *VersionManager
 
-func GetVM() *VersionManager {
+func GetVersionManager() (*VersionManager, error) {
 	if instance == nil {
-		instance = newVersionManager()
+		vm, err := newVersionManager()
+		if err != nil {
+			return nil, err
+		}
+		instance = vm
 	}
-	return instance
+	return instance, nil
 }
 
 func (vm *VersionManager) Verify(key string) bool {
@@ -44,24 +50,29 @@ func (vm *VersionManager) Verify(key string) bool {
 	if feature == nil {
 		return false
 	}
-	if feature.StartVersion <= vm.AgreedVersion {
+	if feature.StartVersion.Compare(*vm.AgreedVersion) <= 0 {
 		return true
 	}
 	return false
 }
 
-func newVersionManager() *VersionManager {
+func newVersionManager() (*VersionManager, error) {
 	versionTable := make(map[string]*Feature)
+
+	baseVersion, err := ParseVersion(InsBaseVersion)
+	if err != nil {
+		return nil, err
+	}
 	vm := &VersionManager{
 		versionTable,
-		InsBaseVersion,
+		baseVersion,
 		viper.New(),
 	}
 	vm.viper.SetDefault("versiontable", vm.VersionTable)
 	vm.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	vm.viper.SetEnvPrefix("insolar")
 	vm.viper.SetConfigType("yml")
-	return vm
+	return vm, nil
 }
 
 func (vm *VersionManager) Load() error {
@@ -124,4 +135,16 @@ func (vm *VersionManager) Remove(key string) {
 	if _, ok := vm.VersionTable[key]; ok {
 		delete(vm.VersionTable, key)
 	}
+}
+
+func (vm *VersionManager) Start(components core.Components) error {
+	err := vm.LoadFromVariable()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (vm *VersionManager) Stop() error {
+	return nil
 }
