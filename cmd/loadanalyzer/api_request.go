@@ -26,8 +26,8 @@ import (
 )
 
 const TestURL = "http://localhost:19191/api/v1"
-const TestCallURL = "http://localhost:19191/api/v1/call"
-const rootMemberRef = ""
+const TestCallURL = TestURL + "/call"
+const TestInfoURL = TestURL + "/info"
 
 type response struct {
 	Error  string
@@ -98,4 +98,22 @@ func createMembers(concurrent int, repetitions int) ([][]string, error) {
 		members = append(members, []string{memberRef, memberPrivKeyStr})
 	}
 	return members, nil
+}
+
+type infoResponse struct {
+	Classes    map[string]string `json:"classes"`
+	RootDomain string            `json:"root_domain"`
+	RootMember string            `json:"root_member"`
+}
+
+func info() infoResponse {
+	body, err := requesters.GetResponseBody(TestInfoURL, requesters.PostParams{})
+	check("problem with sending request to info:", err)
+
+	infoResp := infoResponse{}
+
+	err = json.Unmarshal(body, &infoResp)
+	check("problems with unmarshal response from info:", err)
+
+	return infoResp
 }

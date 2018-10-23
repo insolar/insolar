@@ -99,6 +99,11 @@ type memberKeys struct {
 	Public  string `json:"public_key"`
 }
 
+func getRootMemberRef() string {
+	infoResp := info()
+	return infoResp.RootMember
+}
+
 func getRootMemberInfo(fileName string) []string {
 
 	rawConf, err := ioutil.ReadFile(fileName)
@@ -107,6 +112,8 @@ func getRootMemberInfo(fileName string) []string {
 	keys := memberKeys{}
 	err = json.Unmarshal(rawConf, &keys)
 	check("problem with unmarshaling root member keys", err)
+
+	rootMemberRef := getRootMemberRef()
 
 	return []string{rootMemberRef, keys.Private}
 }
