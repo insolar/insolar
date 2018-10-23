@@ -136,7 +136,7 @@ type ArtifactManager interface {
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
 		ctx Context, domain, request, class, parent RecordRef, asDelegate bool, memory []byte,
-	) (*RecordID, error)
+	) (ObjectDescriptor, error)
 
 	// DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head
 	// of the object. If object is already deactivated, an error should be returned.

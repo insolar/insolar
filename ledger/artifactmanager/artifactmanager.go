@@ -310,7 +310,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 	parent core.RecordRef,
 	asDelegate bool,
 	memory []byte,
-) (*core.RecordID, error) {
+) (core.ObjectDescriptor, error) {
 	objectRef := record.Core2Reference(object)
 
 	parendDesc, err := m.GetObject(ctx, parent, nil)
@@ -358,11 +358,18 @@ func (m *LedgerArtifactManager) ActivateObject(
 		object,
 		asClass,
 	)
-
 	if err != nil {
 		return nil, err
 	}
-	return objID, nil
+
+	return &ObjectDescriptor{
+		am:           m,
+		head:         object,
+		state:        *objID,
+		class:        class,
+		childPointer: nil,
+		memory:       memory,
+	}, nil
 }
 
 // DeactivateObject creates deactivate object record in storage. Provided reference should be a reference to the head

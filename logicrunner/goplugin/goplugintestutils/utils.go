@@ -110,6 +110,7 @@ func (t *TestClassDescriptor) CodeDescriptor() core.CodeDescriptor {
 type TestObjectDescriptor struct {
 	AM                *TestArtifactManager
 	Data              []byte
+	State             *core.RecordID
 	Code              *core.RecordRef
 	Class             *core.RecordRef
 	Delegates         map[core.RecordRef]core.RecordRef
@@ -123,7 +124,7 @@ func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
 
 // StateID implementation for tests
 func (t *TestObjectDescriptor) StateID() *core.RecordID {
-	panic("not implemented")
+	return t.State
 }
 
 // Memory implementation for tests
@@ -282,12 +283,15 @@ func (t *TestArtifactManager) ActivateObject(
 	parent core.RecordRef,
 	asDelegate bool,
 	memory []byte,
-) (*core.RecordID, error) {
+) (core.ObjectDescriptor, error) {
 	codeRef := t.Classes[class].ACode
+
+	id := testutils.RandomID()
 
 	t.Objects[request] = &TestObjectDescriptor{
 		AM:        t,
 		Data:      memory,
+		State:     &id,
 		Code:      codeRef,
 		Class:     &class,
 		Delegates: make(map[core.RecordRef]core.RecordRef),
@@ -302,8 +306,7 @@ func (t *TestArtifactManager) ActivateObject(
 		pObj.Delegates[class] = request
 	}
 
-	id := testutils.RandomID()
-	return &id, nil
+	return t.Objects[request], nil
 }
 
 // DeactivateObject implementation for tests
