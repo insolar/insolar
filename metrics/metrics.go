@@ -20,7 +20,6 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -48,7 +47,7 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 	m.server = &http.Server{Addr: cfg.ListenAddress}
 
 	// default system collectors
-	m.registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+	m.registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 	m.registry.MustRegister(prometheus.NewGoCollector())
 
 	// insolar collectors

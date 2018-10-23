@@ -18,7 +18,6 @@ package dns
 
 import (
 	"net"
-	"strconv"
 	"strings"
 )
 
@@ -31,23 +30,9 @@ func GetIPFromDomain(domain string) (string, error) {
 		port = ":" + woPort[1]
 	}
 
-	if IsDomain(address) {
-		ips, err := net.LookupIP(address)
-		if err != nil {
-			return "", err
-		}
-		return ips[0].String() + port, nil
+	ips, err := net.LookupIP(address)
+	if err != nil {
+		return "", err
 	}
-	return address + port, nil
-}
-
-// IsDomain return true if input arg is domain address.
-func IsDomain(address string) bool {
-	tmp := strings.Split(address, ".")
-	for _, oct := range tmp {
-		if _, err := strconv.Atoi(oct); err != nil {
-			return true
-		}
-	}
-	return false
+	return ips[0].String() + port, nil
 }

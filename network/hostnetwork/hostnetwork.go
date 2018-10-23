@@ -17,7 +17,6 @@
 package hostnetwork
 
 import (
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -65,7 +64,6 @@ func NewHostNetwork(
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
 	sign := signhandler.NewSignHandler(certificate)
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade, sign)
-
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),
