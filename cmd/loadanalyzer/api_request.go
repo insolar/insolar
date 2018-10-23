@@ -51,6 +51,7 @@ func sendRequest(method string, params []interface{}, member []string) []byte {
 	check("can not create user config:", err)
 
 	seed, err := requesters.GetSeed(URL)
+	check("can not get seed:", err)
 
 	body, err := requesters.SendWithSeed(callURL, userCfg, reqCfg, seed)
 	check("can not send request:", err)
