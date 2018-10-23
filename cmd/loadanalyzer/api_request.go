@@ -25,9 +25,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-const TestURL = "http://localhost:19191/api/v1"
-const TestCallURL = TestURL + "/call"
-const TestInfoURL = TestURL + "/info"
+const URL = "http://localhost:19191/api/v1"
+const callURL = URL + "/call"
+const infoURL = URL + "/info"
 
 type response struct {
 	Error  string
@@ -50,9 +50,9 @@ func sendRequest(method string, params []interface{}, member []string) []byte {
 	userCfg, err := requesters.CreateUserConfig(member[0], member[1])
 	check("can not create user config:", err)
 
-	seed, err := requesters.GetSeed(TestURL)
+	seed, err := requesters.GetSeed(URL)
 
-	body, err := requesters.SendWithSeed(TestCallURL, userCfg, reqCfg, seed)
+	body, err := requesters.SendWithSeed(callURL, userCfg, reqCfg, seed)
 	check("can not send request:", err)
 
 	return body
@@ -107,7 +107,7 @@ type infoResponse struct {
 }
 
 func info() infoResponse {
-	body, err := requesters.GetResponseBody(TestInfoURL, requesters.PostParams{})
+	body, err := requesters.GetResponseBody(infoURL, requesters.PostParams{})
 	check("problem with sending request to info:", err)
 
 	infoResp := infoResponse{}
