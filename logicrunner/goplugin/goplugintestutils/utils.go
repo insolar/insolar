@@ -312,7 +312,7 @@ func (t *TestArtifactManager) ActivateObject(
 // DeactivateObject implementation for tests
 func (t *TestArtifactManager) DeactivateObject(
 	ctx core.Context,
-	domain core.RecordRef, request core.RecordRef, obj core.RecordRef,
+	domain core.RecordRef, request core.RecordRef, obj core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	panic("not implemented")
 }
@@ -322,10 +322,10 @@ func (t *TestArtifactManager) UpdateObject(
 	ctx core.Context,
 	domain core.RecordRef,
 	request core.RecordRef,
-	object core.RecordRef,
+	object core.ObjectDescriptor,
 	memory []byte,
 ) (*core.RecordID, error) {
-	objDesc, ok := t.Objects[object]
+	objDesc, ok := t.Objects[*object.HeadRef()]
 	if !ok {
 		return nil, errors.New("No object to update")
 	}

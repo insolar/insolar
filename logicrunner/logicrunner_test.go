@@ -258,10 +258,10 @@ func TestExecution(t *testing.T) {
 	dataRef := core.NewRefFromBase58("someObject")
 	classRef := core.NewRefFromBase58("someClass")
 	am.Objects[dataRef] = &goplugintestutils.TestObjectDescriptor{
-		AM:    am,
-		Data:  []byte("origData"),
-		Code:  &codeRef,
-		Class: &classRef,
+		AM:     am,
+		Data:   []byte("origData"),
+		Code:   &codeRef,
+		AClass: &classRef,
 	}
 	am.Classes[classRef] = &goplugintestutils.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
 	am.Codes[codeRef] = &goplugintestutils.TestCodeDescriptor{ARef: codeRef, AMachineType: core.MachineTypeGoPlugin}
@@ -1168,7 +1168,7 @@ func TestRootDomainContract(t *testing.T) {
 	rootDomainID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "c1"})
 	assert.NoError(t, err)
 	rootDomainRef := getRefFromID(rootDomainID)
-	_, err = am.ActivateObject(
+	rootDomainDesc, err := am.ActivateObject(
 		ctx, core.RecordRef{}, *rootDomainRef, *cb.Classes["rootdomain"], *am.GenesisRef(), false,
 		goplugintestutils.CBORMarshal(t, nil),
 	)
@@ -1195,7 +1195,7 @@ func TestRootDomainContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, *rootDomainRef, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(t, rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	assert.NoError(t, err)
 
 	root := Caller{rootMemberRef.String(), rootKey, lr, t}
