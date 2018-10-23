@@ -13,7 +13,7 @@ Usage
    
 #### Start loadanalyzer
 
-    ./bin/loadanalyzer -c=3 -r=1 --with_init
+    ./bin/loadanalyzer -c=3 -r=1 -k=scripts/insolard/root_member_keys.json
 
 ### Options
 
@@ -29,3 +29,6 @@ Usage
 
         -o output
                 Path to output file (use - for STDOUT).
+
+        -k rootmemberkeys
+                Path to file with RootMember keys.
