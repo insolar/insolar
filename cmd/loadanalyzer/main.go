@@ -39,7 +39,7 @@ var (
 	repetitions    int
 	rootmemberkeys string
 
-	rootMember []string
+	rootMember memberInfo
 )
 
 func parseInputParams() {
@@ -77,8 +77,13 @@ func check(msg string, err error) {
 	}
 }
 
-func getMembersRef(fileName string) ([][]string, error) {
-	var members [][]string
+type memberInfo struct {
+	ref        string
+	privateKey string
+}
+
+func getMembersInfo(fileName string) ([]memberInfo, error) {
+	var members []memberInfo
 
 	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
 	if err != nil {
@@ -88,7 +93,11 @@ func getMembersRef(fileName string) ([][]string, error) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		members = append(members, strings.Fields(scanner.Text()))
+		info := strings.Fields(scanner.Text())
+		if len(info) != 2 {
+			check("problem with getting member info", errors.New("not enough info for single member"))
+		}
+		members = append(members, memberInfo{info[0], info[1]})
 	}
 
 	return members, nil
@@ -104,7 +113,7 @@ func getRootMemberRef() string {
 	return infoResp.RootMember
 }
 
-func getRootMemberInfo(fileName string) []string {
+func getRootMemberInfo(fileName string) memberInfo {
 
 	rawConf, err := ioutil.ReadFile(fileName)
 	check("problem with reading root member keys file", err)
@@ -113,12 +122,10 @@ func getRootMemberInfo(fileName string) []string {
 	err = json.Unmarshal(rawConf, &keys)
 	check("problem with unmarshaling root member keys", err)
 
-	rootMemberRef := getRootMemberRef()
-
-	return []string{rootMemberRef, keys.Private}
+	return memberInfo{getRootMemberRef(), keys.Private}
 }
 
-func runScenarios(out io.Writer, members [][]string, concurrent int, repetitions int) {
+func runScenarios(out io.Writer, members []memberInfo, concurrent int, repetitions int) {
 	transferDifferentMembers := &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
@@ -151,12 +158,12 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	var members [][]string
+	var members []memberInfo
 
 	rootMember = getRootMemberInfo(rootmemberkeys)
 
 	if input != "" {
-		members, err = getMembersRef(input)
+		members, err = getMembersInfo(input)
 		check("Problems with parsing input:", err)
 	} else {
 		members, err = createMembers(concurrent, repetitions)

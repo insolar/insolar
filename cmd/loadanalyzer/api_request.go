@@ -41,13 +41,13 @@ func getResponse(body []byte) *response {
 	return res
 }
 
-func sendRequest(method string, params []interface{}, member []string) []byte {
+func sendRequest(method string, params []interface{}, member memberInfo) []byte {
 	reqCfg := &requesters.RequestConfigJSON{
 		Params: params,
 		Method: method,
 	}
 
-	userCfg, err := requesters.CreateUserConfig(member[0], member[1])
+	userCfg, err := requesters.CreateUserConfig(member.ref, member.privateKey)
 	check("can not create user config:", err)
 
 	seed, err := requesters.GetSeed(URL)
@@ -59,10 +59,8 @@ func sendRequest(method string, params []interface{}, member []string) []byte {
 	return body
 }
 
-func transfer(amount float64, from []string, to []string) string {
-	toRef := to[0]
-
-	params := []interface{}{amount, toRef}
+func transfer(amount float64, from memberInfo, to memberInfo) string {
+	params := []interface{}{amount, to.ref}
 	body := sendRequest("Transfer", params, from)
 	transferResponse := getResponse(body)
 
@@ -73,8 +71,8 @@ func transfer(amount float64, from []string, to []string) string {
 	return "success"
 }
 
-func createMembers(concurrent int, repetitions int) ([][]string, error) {
-	var members [][]string
+func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
+	var members []memberInfo
 	for i := 0; i < concurrent*repetitions*2; i++ {
 		memberName := testutils.RandomString()
 
@@ -96,7 +94,7 @@ func createMembers(concurrent int, repetitions int) ([][]string, error) {
 		}
 		memberRef := memberResponse.Result.(string)
 
-		members = append(members, []string{memberRef, memberPrivKeyStr})
+		members = append(members, memberInfo{memberRef, memberPrivKeyStr})
 	}
 	return members, nil
 }
