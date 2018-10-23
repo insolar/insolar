@@ -135,7 +135,7 @@ func getRootMemberPubKey(file string) (string, error) {
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "[ getRootMemberPubKey ] couldn't unmarshal data from %s", file)
 	}
 	if keys["public_key"] == "" {
 		return "", errors.New("empty root public key")
