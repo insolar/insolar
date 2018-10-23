@@ -142,17 +142,12 @@ func (t *TestObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterat
 	panic("not implemented")
 }
 
-// ClassDescriptor implementation for tests
-func (t *TestObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
+// Class implementation for tests
+func (t *TestObjectDescriptor) Class() *core.RecordRef {
 	if t.Class == nil {
-		return nil, errors.New("No class")
+		panic("No class")
 	}
-
-	res, ok := t.AM.Classes[*t.Class]
-	if !ok {
-		return nil, errors.New("No class")
-	}
-	return res, nil
+	return t.Class
 }
 
 // TestArtifactManager implementation for tests

@@ -139,14 +139,9 @@ func (d *ObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterator, 
 	return d.am.GetChildren(ctx, d.head, pulse)
 }
 
-// ClassDescriptor returns descriptor for fetching object's class data.
-func (d *ObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
-	if d.cache.classDescriptor != nil {
-		return d.cache.classDescriptor, nil
-	}
-
-	ctx := inscontext.TODO()
-	return d.am.GetClass(ctx, d.class, state)
+// Class returns object's class reference.
+func (d *ObjectDescriptor) Class() *core.RecordRef {
+	return &d.class
 }
 
 // ChildIterator is used to iterate over objects children.

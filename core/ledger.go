@@ -186,8 +186,8 @@ type ObjectDescriptor interface {
 	// Memory fetches object memory from storage.
 	Memory() []byte
 
-	// ClassDescriptor returns descriptor for fetching object's class data.
-	ClassDescriptor(state *RecordRef) (ClassDescriptor, error)
+	// Class
+	Class() *RecordRef
 
 	// Children returns object's children references.
 	Children(pulse *PulseNumber) (RefIterator, error)

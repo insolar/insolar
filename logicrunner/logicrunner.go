@@ -277,7 +277,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
 
-	classDesc, err := objDesc.ClassDescriptor(nil)
+	classDesc, err := lr.ArtifactManager.GetClass(ctx, *objDesc.Class(), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object's class")
 	}
