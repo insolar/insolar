@@ -34,7 +34,7 @@ type transferDifferentMembersScenario struct {
 	name        string
 	concurrent  int
 	repetitions int
-	members     []string
+	members     [][]string
 	out         io.Writer
 }
 
@@ -72,6 +72,6 @@ func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitG
 		from := s.members[index+j]
 		to := s.members[index+j+1]
 		response := transfer(1, from, to)
-		writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from, to, response))
+		writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from[0], to[0], response))
 	}
 }

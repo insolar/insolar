@@ -17,79 +17,86 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
-	"io/ioutil"
-	"net/http"
 
+	"github.com/insolar/insolar/api/requesters"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
 const TestURL = "http://localhost:19191/api/v1"
+const TestCallURL = "http://localhost:19191/api/v1/call"
+const rootMemberRef = ""
+const rootMemberPrivKeyStr = ""
 
-type postParams map[string]interface{}
-
-type errorResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+type response struct {
+	Error  string
+	Result interface{}
 }
 
-type baseResponse struct {
-	Qid string         `json:"qid"`
-	Err *errorResponse `json:"error"`
+func getResponse(body []byte) *response {
+	res := &response{}
+	err := json.Unmarshal(body, &res)
+	check("Problems with unmarshal response:", err)
+	return res
 }
 
-type createMemberResponse struct {
-	baseResponse
-	Reference string `json:"reference"`
-}
+func sendRequest(method string, params []interface{}, member []string) []byte {
+	reqCfg := &requesters.RequestConfigJSON{
+		Params: params,
+		Method: method,
+	}
 
-func getResponseBody(postParams map[string]interface{}) []byte {
-	jsonValue, err := json.Marshal(postParams)
-	check("Problems with marshal request:", err)
-	postResp, err := http.Post(TestURL, "application/json", bytes.NewBuffer(jsonValue))
-	check("Problems with post:", err)
-	body, err := ioutil.ReadAll(postResp.Body)
-	check("Problems with reading from response body:", err)
+	userCfg, err := requesters.CreateUserConfig(member[0], member[1])
+	check("can not read user config from file:", err)
+
+	seed, err := requesters.GetSeed(TestURL)
+
+	body, err := requesters.SendWithSeed(TestCallURL, userCfg, reqCfg, seed)
+	check("can not send request:", err)
+
 	return body
 }
 
-func transfer(amount int, from string, to string) string {
-	body := getResponseBody(postParams{
-		"query_type": "send_money",
-		"from":       from,
-		"to":         to,
-		"amount":     amount,
-	})
+func transfer(amount float64, from []string, to []string) string {
+	toRef := to[0]
 
-	response := &baseResponse{}
-	err := json.Unmarshal(body, &response)
-	check("Problems with unmarshal response:", err)
-	if response.Err != nil {
-		return response.Err.Message
+	params := []interface{}{amount, toRef}
+	body := sendRequest("Transfer", params, from)
+	transferResponse := getResponse(body)
+
+	if transferResponse.Error != "" {
+		return transferResponse.Error
 	}
+
 	return "success"
 }
 
-func createMembers(concurrent int, repetitions int) ([]string, error) {
-	var members []string
+func createMembers(concurrent int, repetitions int) ([][]string, error) {
+	var members [][]string
 	for i := 0; i < concurrent*repetitions*2; i++ {
-		body := getResponseBody(postParams{
-			"query_type": "create_member",
-			"name":       testutils.RandomString(),
-			"public_key": "000",
-		})
+		memberName := testutils.RandomString()
 
-		memberResponse := &createMemberResponse{}
-		err := json.Unmarshal(body, &memberResponse)
-		check("Problems with unmarshal response:", err)
+		memberPrivKey, err := ecdsahelper.GeneratePrivateKey()
+		check("Problems with generating of private key:", err)
 
-		if memberResponse.Err != nil {
-			return nil, errors.New(memberResponse.Err.Message)
+		memberPrivKeyStr, err := ecdsahelper.ExportPrivateKey(memberPrivKey)
+		check("Problems with serialization of private key:", err)
+
+		memberPubKeyStr, err := ecdsahelper.ExportPublicKey(&memberPrivKey.PublicKey)
+		check("Problems with serialization of public key:", err)
+
+		params := []interface{}{memberName, memberPubKeyStr}
+		body := sendRequest("CreateMember", params, []string{rootMemberRef, rootMemberPrivKeyStr})
+
+		memberResponse := getResponse(body)
+		if memberResponse.Error != "" {
+			return nil, errors.New(memberResponse.Error)
 		}
-		firstMemberRef := memberResponse.Reference
-		members = append(members, firstMemberRef)
+		memberRef := memberResponse.Result.(string)
+
+		members = append(members, []string{memberRef, memberPrivKeyStr})
 	}
 	return members, nil
 }

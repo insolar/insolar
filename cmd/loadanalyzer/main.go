@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -70,8 +71,8 @@ func check(msg string, err error) {
 	}
 }
 
-func getMembersRef(fileName string) ([]string, error) {
-	var members []string
+func getMembersRef(fileName string) ([][]string, error) {
+	var members [][]string
 
 	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
 	if err != nil {
@@ -81,13 +82,13 @@ func getMembersRef(fileName string) ([]string, error) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		members = append(members, scanner.Text())
+		members = append(members, strings.Fields(scanner.Text()))
 	}
 
 	return members, nil
 }
 
-func runScenarios(out io.Writer, members []string, concurrent int, repetitions int) {
+func runScenarios(out io.Writer, members [][]string, concurrent int, repetitions int) {
 	transferDifferentMembers := &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
@@ -120,7 +121,7 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	var members []string
+	var members [][]string
 
 	if input != "" {
 		members, err = getMembersRef(input)
