@@ -112,7 +112,7 @@ type TestObjectDescriptor struct {
 	Data              []byte
 	State             *core.RecordID
 	Code              *core.RecordRef
-	Class             *core.RecordRef
+	AClass            *core.RecordRef
 	Delegates         map[core.RecordRef]core.RecordRef
 	ChildrenContainer []core.RecordRef
 }
@@ -144,10 +144,10 @@ func (t *TestObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterat
 
 // Class implementation for tests
 func (t *TestObjectDescriptor) Class() *core.RecordRef {
-	if t.Class == nil {
+	if t.AClass == nil {
 		panic("No class")
 	}
-	return t.Class
+	return t.AClass
 }
 
 // TestArtifactManager implementation for tests
@@ -293,7 +293,7 @@ func (t *TestArtifactManager) ActivateObject(
 		Data:      memory,
 		State:     &id,
 		Code:      codeRef,
-		Class:     &class,
+		AClass:    &class,
 		Delegates: make(map[core.RecordRef]core.RecordRef),
 	}
 
