@@ -192,6 +192,9 @@ type ObjectDescriptor interface {
 
 	// Children returns object's children references.
 	Children(pulse *PulseNumber) (RefIterator, error)
+
+	// ChildPointer returns the latest child for this object.
+	ChildPointer() *RecordID
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.
