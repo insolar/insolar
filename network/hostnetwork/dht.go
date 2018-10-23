@@ -907,20 +907,6 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, ht *routing.HashTable) {
 	packetBuilder := packet.NewBuilder(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 
-	// TODO: fix sign and check sign logic
-	// if msg.Type == packet.TypeRPC {
-	// 	data := msg.Data.(*packet.RequestDataRPC)
-	// 	signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
-	// 	if err != nil {
-	// 		log.Error(err, "failed to parse incoming RPC")
-	// 		return
-	// 	}
-	// 	if !message.SignIsCorrect(signedMsg, dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey()) {
-	// 		log.Warn("RPC message not signed")
-	// 		return
-	// 	}
-	// }
-
 	response, err := ParseIncomingPacket(dht, ctx, msg, packetBuilder)
 	if err != nil {
 		log.Errorln(err)
