@@ -230,6 +230,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 	})
 
 	reqref, err := vb.RegisterRequest(msg)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
 	}
