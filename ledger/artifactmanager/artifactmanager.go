@@ -308,11 +308,15 @@ func (m *LedgerArtifactManager) ActivateObject(
 	object core.RecordRef,
 	class core.RecordRef,
 	parent core.RecordRef,
-	childPointer *core.RecordID,
 	asDelegate bool,
 	memory []byte,
 ) (*core.RecordID, error) {
 	objectRef := record.Core2Reference(object)
+
+	parendDesc, err := m.GetObject(ctx, parent, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	objID, err := m.updateObject(
 		&record.ObjectActivateRecord{
@@ -338,8 +342,8 @@ func (m *LedgerArtifactManager) ActivateObject(
 		prevChild *record.ID
 		asClass   *core.RecordRef
 	)
-	if childPointer != nil {
-		c := record.Bytes2ID(childPointer[:])
+	if parendDesc.ChildPointer() != nil {
+		c := record.Bytes2ID(parendDesc.ChildPointer()[:])
 		prevChild = &c
 	}
 	if asDelegate {
@@ -366,8 +370,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 //
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObject(
-	ctx core.Context,
-	domain, request, object core.RecordRef, state core.RecordID,
+	ctx core.Context, domain, request core.RecordRef, object *core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	return m.updateObject(
 		&record.DeactivationRecord{
@@ -375,7 +378,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 				Domain:  record.Core2Reference(domain),
 				Request: record.Core2Reference(request),
 			},
-			PrevState: record.Bytes2ID(state[:]),
+			PrevState: record.Bytes2ID(object.StateID()[:]),
 		},
 		object,
 		nil,
@@ -388,10 +391,8 @@ func (m *LedgerArtifactManager) DeactivateObject(
 // Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdateObject(
 	ctx core.Context,
-	domain core.RecordRef,
-	request core.RecordRef,
-	object core.RecordRef,
-	state core.RecordID,
+	domain, request core.RecordRef,
+	object *core.ObjectDescriptor,
 	memory []byte,
 ) (*core.RecordID, error) {
 	return m.updateObject(
