@@ -21,7 +21,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/connection"
+	"github.com/insolar/insolar/network/transport/connection"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/transport/resolver"
