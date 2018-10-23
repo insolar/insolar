@@ -113,7 +113,7 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 	return nil
 }
 
-// ReceiveSignatureForEntropy is a handler of call for receiving sign of entropy from one of the pulsars
+// ReceiveSignatureForEntropy is a handler of call for receiving Sign of Entropy from one of the pulsars
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
 	log.Infof("[ReceiveSignatureForEntropy] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -125,7 +125,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 	}
 
 	requestBody := request.Body.(EntropySignaturePayload)
-	if requestBody.PulseNumber <= handler.Pulsar.LastPulse.PulseNumber {
+	if requestBody.PulseNumber <= handler.Pulsar.GetLastPulse().PulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
@@ -137,12 +137,14 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 		}
 	}
 
-	handler.Pulsar.OwnedBftRow[request.PublicKey] = &BftCell{Sign: requestBody.Signature}
+	bftCell := &BftCell{}
+	bftCell.SetSign(requestBody.Signature)
+	handler.Pulsar.OwnedBftRow[request.PublicKey] = bftCell
 
 	return nil
 }
 
-// ReceiveEntropy is a handler of call for receiving entropy from one of the pulsars
+// ReceiveEntropy is a handler of call for receiving Entropy from one of the pulsars
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
 	log.Infof("[ReceiveEntropy] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -159,23 +161,21 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 	}
 
 	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
-		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.Sign)
+		isVerified, err := checkSignature(requestBody.Entropy, request.PublicKey, btfCell.GetSign())
 		if err != nil || !isVerified {
 			handler.Pulsar.OwnedBftRow[request.PublicKey] = nil
-			log.Errorf("signature and entropy aren't matched. error - %v isVerified - %v", err, isVerified)
-			return errors.New("signature and entropy aren't matched")
+			log.Errorf("signature and Entropy aren't matched. error - %v isVerified - %v", err, isVerified)
+			return errors.New("signature and Entropy aren't matched")
 		}
 
-		btfCell.Lock()
-		btfCell.Entropy = requestBody.Entropy
-		btfCell.IsEntropyReceived = true
-		btfCell.Unlock()
+		btfCell.SetEntropy(requestBody.Entropy)
+		btfCell.SetIsEntropyReceived(true)
 	}
 
 	return nil
 }
 
-// ReceiveVector is a handler of call for receiving vector of entropy
+// ReceiveVector is a handler of call for receiving vector of Entropy
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
 	log.Infof("[ReceiveVector] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(request)
@@ -253,7 +253,8 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 	if handler.Pulsar.ProcessingPulseNumber != 0 && requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
 		return fmt.Errorf("processing pulse number is not zero and received number is not the same")
 	}
-	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.LastPulse.PulseNumber {
+
+	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.GetLastPulse().PulseNumber {
 		return fmt.Errorf("last pulse number is bigger than received one")
 	}
 
@@ -267,7 +268,8 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 		log.Error(err)
 		return err
 	}
-	handler.Pulsar.LastPulse = &requestBody.Pulse
+
+	handler.Pulsar.SetLastPulse(&requestBody.Pulse)
 	handler.Pulsar.ProcessingPulseNumber = 0
 
 	return nil

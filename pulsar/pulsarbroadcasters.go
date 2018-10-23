@@ -50,7 +50,7 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy() {
 			log.Warnf("Response to %v finished with error - %v", neighbour.ConnectionAddress, reply.Error)
 			continue
 		}
-		log.Infof("Sign of entropy sent to %v", neighbour.ConnectionAddress)
+		log.Infof("Sign of Entropy sent to %v", neighbour.ConnectionAddress)
 	}
 }
 
@@ -240,7 +240,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars() {
 	if err != nil {
 		log.Error(err)
 	}
-	currentPulsar.LastPulse = &pulseForSending
+	currentPulsar.SetLastPulse(&pulseForSending)
 
 	currentPulsar.StateSwitcher.SwitchToState(WaitingForStart, nil)
 	defer func() {
@@ -283,6 +283,11 @@ func (currentPulsar *Pulsar) prepareForSendingPulse() (pulsarHost *host.Host, t 
 }
 
 func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transport.Transport, pulse core.Pulse) {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Fatalf("run time panic: %v", x)
+		}
+	}()
 	for _, bootstrapNode := range currentPulsar.Config.BootstrapNodes {
 		receiverAddress, err := host.NewAddress(bootstrapNode)
 		if err != nil {
@@ -333,6 +338,11 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 }
 
 func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *host.Host, pulse *core.Pulse) error {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Fatalf("run time panic: %v", x)
+		}
+	}()
 	pb := packet.NewBuilder()
 	pulseRequest := pb.Sender(sender).Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(packet.TypePulse).Build()
 	call, err := t.SendRequest(pulseRequest)
