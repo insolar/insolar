@@ -383,7 +383,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 	})
 
 	objRef := *genRandomRef(0)
-	activateCoreID, err := td.manager.ActivateObject(
+	objDesc, err := td.manager.ActivateObject(
 		ctx,
 		*domainRef.CoreRef(),
 		*objRef.CoreRef(),
@@ -393,7 +393,7 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		memory,
 	)
 	assert.Nil(t, err)
-	activateID := record.Bytes2ID(activateCoreID[:])
+	activateID := record.Bytes2ID(objDesc.StateID()[:])
 	activateRec, err := td.db.GetRecord(&activateID)
 	assert.Nil(t, err)
 	assert.Equal(t, activateRec, &record.ObjectActivateRecord{
