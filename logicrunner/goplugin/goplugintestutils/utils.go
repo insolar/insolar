@@ -109,6 +109,7 @@ func (t *TestClassDescriptor) CodeDescriptor() core.CodeDescriptor {
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
 	AM                *TestArtifactManager
+	ARef              *core.RecordRef
 	Data              []byte
 	State             *core.RecordID
 	Code              *core.RecordRef
@@ -124,7 +125,7 @@ func (t *TestObjectDescriptor) ChildPointer() *core.RecordID {
 
 // HeadRef implementation for tests
 func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
-	panic("not implemented")
+	return t.ARef
 }
 
 // StateID implementation for tests
@@ -290,6 +291,7 @@ func (t *TestArtifactManager) ActivateObject(
 
 	t.Objects[request] = &TestObjectDescriptor{
 		AM:        t,
+		ARef:      &request,
 		Data:      memory,
 		State:     &id,
 		Code:      codeRef,

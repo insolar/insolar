@@ -259,6 +259,7 @@ func TestExecution(t *testing.T) {
 	classRef := core.NewRefFromBase58("someClass")
 	am.Objects[dataRef] = &goplugintestutils.TestObjectDescriptor{
 		AM:     am,
+		ARef:   &dataRef,
 		Data:   []byte("origData"),
 		Code:   &codeRef,
 		AClass: &classRef,
