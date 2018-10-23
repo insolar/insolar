@@ -102,6 +102,14 @@
   version = "v1.4.7"
 
 [[projects]]
+  branch = "master"
+  digest = "1:0b4a23c4c2e8c7522b7503a864fee7a9b2029151c0089b92b4f4d4a8c005ce1b"
+  name = "github.com/gojuno/minimock"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a5502dd2746ee6fc3fd58ad83d701d25e14d68d1"
+
+[[projects]]
   digest = "1:97df918963298c287643883209a2c3f642e6593379f97ab400c2a2e219ab647d"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
@@ -481,6 +489,7 @@
     "github.com/ccding/go-stun/stun",
     "github.com/chzyer/readline",
     "github.com/dgraph-io/badger",
+    "github.com/gojuno/minimock",
     "github.com/huandu/xstrings",
     "github.com/jbenet/go-base58",
     "github.com/pkg/errors",

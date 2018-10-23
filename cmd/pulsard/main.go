@@ -122,10 +122,10 @@ func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *ti
 	server.CheckConnectionsToPulsars()
 
 	var nextPulseNumber core.PulseNumber
-	if server.LastPulse.PulseNumber == core.GenesisPulse.PulseNumber {
+	if server.GetLastPulse().PulseNumber == core.GenesisPulse.PulseNumber {
 		nextPulseNumber = core.CalculatePulseNumber(time.Now())
 	} else {
-		nextPulseNumber = server.LastPulse.PulseNumber + core.PulseNumber(cfg.NumberDelta)
+		nextPulseNumber = server.GetLastPulse().PulseNumber + core.PulseNumber(cfg.NumberDelta)
 	}
 
 	err := server.StartConsensusProcess(nextPulseNumber)
@@ -136,7 +136,7 @@ func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *ti
 	pulseTicker = time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
 	go func() {
 		for range pulseTicker.C {
-			err = server.StartConsensusProcess(core.PulseNumber(server.LastPulse.PulseNumber + 10))
+			err = server.StartConsensusProcess(core.PulseNumber(server.GetLastPulse().PulseNumber + 10))
 			if err != nil {
 				log.Fatal(err)
 				panic(err)
