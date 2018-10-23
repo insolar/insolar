@@ -48,6 +48,7 @@ type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
 	nodeDomainRef *core.RecordRef
 	rootMemberRef *core.RecordRef
+	rootKeysFile  string
 	rootPubKey    string
 	rootBalance   uint
 	classRefs     map[string]*core.RecordRef
@@ -74,6 +75,7 @@ func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 // NewBootstrapper creates new Bootstrapper
 func NewBootstrapper(cfg configuration.Bootstrap) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
+	bootstrapper.rootKeysFile = cfg.RootKeys
 	bootstrapper.rootBalance = cfg.RootBalance
 	bootstrapper.rootDomainRef = &core.RecordRef{}
 	return bootstrapper, nil
@@ -291,6 +293,11 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		b.rootDomainRef = rootDomainRef
 		log.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
+	}
+
+	b.rootPubKey, err = getRootMemberPubKey(b.rootKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
 	}
 
 	isLightExecutor, err := isLightExecutor(c)
