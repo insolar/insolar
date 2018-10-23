@@ -19,7 +19,6 @@ package rootdomain
 import (
 	"crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/insolar/insolar/application/proxy/member"
@@ -43,17 +42,17 @@ type RootDomain struct {
 func (rd *RootDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ RegisterNode ] %s", err.Error())
 	}
 
 	if len(domainRefs) == 0 {
-		return nil, errors.New("No NodeDomain references")
+		return nil, fmt.Errorf("[ RegisterNode ] No NodeDomain references")
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
 	cert, err := nd.RegisterNode(publicKey, numberOfBootstrapNodes, majorityRule, roles, ip)
 	if err != nil {
-		return nil, fmt.Errorf("Problems with RegisterNode: " + err.Error())
+		return nil, fmt.Errorf("[ RegisterNode ] Problems with RegisterNode: %s", err.Error())
 	}
 
 	return cert, nil
@@ -73,36 +72,36 @@ func makeSeed() []byte {
 func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 	privateKey, err := cryptoHelper.GeneratePrivateKey()
 	if err != nil {
-		panic(err)
+		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't generate private key: %s", err.Error())
 	}
 
 	// Make signature
 	seed := makeSeed()
 	signature, err := cryptoHelper.Sign(seed, privateKey)
 	if err != nil {
-		panic(err)
+		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't sign: %s", err.Error())
 	}
 
 	// Register node
 	serPubKey, err := cryptoHelper.ExportPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		panic(err)
+		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't export public key: %s", err.Error())
 	}
 
 	rawJSON, err := rd.RegisterNode(serPubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
 	if err != nil {
-		panic(err)
+		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't register node: %s", err.Error())
 	}
 
 	nodeRef, err := networkcoordinator.ExtractNodeRef(rawJSON)
 	if err != nil {
-		panic(err)
+		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't extract node ref: %s", err.Error())
 	}
 
 	// Validate
 	domainRefs, err := rd.GetChildrenTyped(nodedomain.ClassReference)
 	if err != nil {
-		panic(err)
+		return "", nil, fmt.Errorf("[ RootDomain::Authorize ] Can't get children: %s", err.Error())
 	}
 	nd := nodedomain.GetObject(domainRefs[0])
 
@@ -111,29 +110,26 @@ func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 
 // CreateMember processes create member request
 func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
-	//if rd.GetContext().Caller != nil && *rd.GetContext().Caller == *rd.RootMember {
 	memberHolder := member.New(name, key)
 	m, err := memberHolder.AsChild(rd.GetReference())
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("[ CreateMember ] Can't save as child: %s", err.Error())
 	}
 
 	wHolder := wallet.New(1000)
 	_, err = wHolder.AsDelegate(m.GetReference())
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("[ CreateMember ] Can't save as delegate: %s", err.Error())
 	}
 
 	return m.GetReference().String(), nil
-	//}
-	//return ""
 }
 
 // GetBalance processes get balance request
 func (rd *RootDomain) GetBalance(reference string) (uint, error) {
 	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("[ GetBalance ] Can't get implementation: %s", err.Error())
 	}
 
 	return w.GetTotalBalance()
@@ -143,7 +139,7 @@ func (rd *RootDomain) GetBalance(reference string) (uint, error) {
 func (rd *RootDomain) SendMoney(from string, to string, amount uint) (bool, error) {
 	walletFrom, err := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("[ SendMoney ] Can't get implementation: %s", err.Error())
 	}
 
 	v := core.NewRefFromBase58(to)
@@ -154,17 +150,17 @@ func (rd *RootDomain) SendMoney(from string, to string, amount uint) (bool, erro
 func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, error) {
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get implementation: %s", err.Error())
 	}
 
 	name, err := m.GetName()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get name: %s", err.Error())
 	}
 
 	balance, err := w.GetTotalBalance()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get total balance: %s", err.Error())
 	}
 	return map[string]interface{}{
 		"member": name,
@@ -178,7 +174,7 @@ func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 
 	res, err := rd.getUserInfoMap(m)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ DumpUserInfo ] Problem with making request: %s", err.Error())
 	}
 
 	return json.Marshal(res)
@@ -189,13 +185,13 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 	res := []map[string]interface{}{}
 	crefs, err := rd.GetChildrenTyped(member.ClassReference)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get children: %s", err.Error())
 	}
 	for _, cref := range crefs {
 		m := member.GetObject(cref)
 		userInfo, err := rd.getUserInfoMap(m)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("[ DumpAllUsers ] Problem with making request: %s", err.Error())
 		}
 		res = append(res, userInfo)
 	}
