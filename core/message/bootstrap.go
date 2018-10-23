@@ -23,8 +23,7 @@ import (
 // BootstrapRequest is used for bootstrap records generation.
 type BootstrapRequest struct {
 	// Name should be unique for each bootstrap record.
-	Name   string
-	sender *core.Message
+	Name string
 }
 
 // Type implementation for bootstrap request.
