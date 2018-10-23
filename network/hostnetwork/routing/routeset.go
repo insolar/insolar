@@ -17,7 +17,7 @@
 package routing
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport/host"
 )
 
 // RouteSet is used in order to sort a list of arbitrary hosts against a

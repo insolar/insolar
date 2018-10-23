@@ -17,7 +17,7 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport/host"
 )
 
 // Builder allows lazy building of packets.

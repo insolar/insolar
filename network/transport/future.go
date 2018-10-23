@@ -21,8 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/packet"
 )
 
 var (

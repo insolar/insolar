@@ -19,7 +19,7 @@ package host
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/transport/id"
 	"github.com/stretchr/testify/assert"
 )
 

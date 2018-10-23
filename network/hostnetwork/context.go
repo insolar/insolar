@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/transport/id"
 	"github.com/pkg/errors"
 )
 

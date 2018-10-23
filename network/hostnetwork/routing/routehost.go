@@ -17,7 +17,7 @@
 package routing
 
 import (
-	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport/host"
 )
 
 // RouteHost represents a host in the network locally

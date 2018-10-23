@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport/host"
 )
 
 // RemoteProcedure is remote procedure call function.

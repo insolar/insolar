@@ -18,8 +18,8 @@ package hostnetwork
 
 import (
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 )
 

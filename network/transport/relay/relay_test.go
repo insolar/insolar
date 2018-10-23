@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
 	"github.com/stretchr/testify/assert"
 )
 

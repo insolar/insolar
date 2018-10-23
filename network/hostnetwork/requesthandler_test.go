@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/stretchr/testify/assert"
 )
 

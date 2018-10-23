@@ -19,7 +19,7 @@ package host
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/transport/id"
 )
 
 // Host is the over-the-wire representation of a host.

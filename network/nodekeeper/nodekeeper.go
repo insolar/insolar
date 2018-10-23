@@ -27,7 +27,8 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/hostnetwork/transport"
+	"github.com/insolar/insolar/network/transport"
+
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )

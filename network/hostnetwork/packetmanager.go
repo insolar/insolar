@@ -19,7 +19,7 @@ package hostnetwork
 import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/transport/packet"
 )
 
 // ParseIncomingPacket detects a packet type.

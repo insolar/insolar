@@ -22,15 +22,16 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/consensus"
-	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/hostnetwork/id"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
-	"github.com/insolar/insolar/network/hostnetwork/transport"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
+
+	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 )
 

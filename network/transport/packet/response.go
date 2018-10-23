@@ -19,8 +19,8 @@ package packet
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/relay"
 )
 
 // CheckNodePrivState - state of check node privileges request.

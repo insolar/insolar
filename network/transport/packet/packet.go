@@ -23,8 +23,8 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
 	"github.com/pkg/errors"
 )
 

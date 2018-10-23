@@ -28,8 +28,8 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )

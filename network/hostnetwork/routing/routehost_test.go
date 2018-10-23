@@ -19,7 +19,7 @@ package routing
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport/host"
 
 	"github.com/stretchr/testify/assert"
 )

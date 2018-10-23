@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/transport/id"
 	"github.com/pkg/errors"
 )
 

@@ -20,7 +20,7 @@ import (
 	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/transport/id"
 )
 
 type SignHandler interface {

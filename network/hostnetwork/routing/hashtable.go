@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
 )
 
 // IterateType is type of iteration.
