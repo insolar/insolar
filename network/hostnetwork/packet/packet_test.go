@@ -47,7 +47,7 @@ func TestNewPingPacket(t *testing.T) {
 }
 
 func TestPacket_IsValid(t *testing.T) {
-	builder := NewBuilder()
+	builder := NewBuilder(nil)
 	ref := testutils.RandomRef()
 
 	correctPacket := builder.Type(TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
@@ -84,7 +84,7 @@ func TestPacket_IsValid_Ok(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			builder := NewBuilder()
+			builder := NewBuilder(nil)
 			packet := builder.Type(test.packetType).Request(test.data).Build()
 			assert.True(t, packet.IsValid())
 		})
@@ -103,7 +103,7 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			builder := NewBuilder()
+			builder := NewBuilder(nil)
 			packet := builder.Type(test.packetType).Request(test.data).Build()
 			assert.False(t, packet.IsValid())
 		})
@@ -117,7 +117,7 @@ func TestPacket_IsForMe(t *testing.T) {
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
-	builder := NewBuilder()
+	builder := NewBuilder(nil)
 	origin, _ := host.NewOrigin([]id.ID{receiver.ID}, receiver.Address)
 
 	myPacket := builder.Receiver(receiver).Build()
@@ -134,8 +134,8 @@ func TestSerializePacket(t *testing.T) {
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
-	builder := NewBuilder()
-	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
+	builder := NewBuilder(sender)
+	msg := builder.Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
 
 	_, err := SerializePacket(msg)
 
@@ -149,8 +149,8 @@ func TestDeserializePacket(t *testing.T) {
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
-	builder := NewBuilder()
-	msg := builder.Sender(sender).Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
+	builder := NewBuilder(sender)
+	msg := builder.Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
 
 	serialized, _ := SerializePacket(msg)
 
@@ -171,8 +171,8 @@ func TestDeserializeBigPacket(t *testing.T) {
 	data := make([]byte, 1024*1024*10)
 	rand.Read(data)
 
-	builder := NewBuilder()
-	msg := builder.Sender(hostOne).Receiver(hostOne).Type(TypeStore).Request(&RequestDataStore{data, true}).Build()
+	builder := NewBuilder(hostOne)
+	msg := builder.Receiver(hostOne).Type(TypeStore).Request(&RequestDataStore{data, true}).Build()
 	assert.True(t, msg.IsValid())
 
 	serialized, err := SerializePacket(msg)

@@ -26,30 +26,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewBuilder(t *testing.T) {
-	builder := NewBuilder()
-
-	assert.Equal(t, builder, Builder{})
-	assert.Empty(t, builder.actions)
-}
-
 func TestBuilder_Build_EmptyPacket(t *testing.T) {
-	builder := NewBuilder()
+	builder := NewBuilder(nil)
 
 	assert.Equal(t, builder.Build(), &Packet{})
 }
 
 func TestBuilder_Build_RequestPacket(t *testing.T) {
-	builder := NewBuilder()
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID()
+	builder := NewBuilder(sender)
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 	ref := testutils.RandomRef()
 
-	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
+	m := builder.Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
@@ -63,15 +56,15 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 }
 
 func TestBuilder_Build_ResponsePacket(t *testing.T) {
-	builder := NewBuilder()
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID()
+	builder := NewBuilder(sender)
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 
-	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
+	m := builder.Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
@@ -85,15 +78,15 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 }
 
 func TestBuilder_Build_ErrorPacket(t *testing.T) {
-	builder := NewBuilder()
 	senderAddress, _ := host.NewAddress("127.0.0.1:31337")
 	sender := host.NewHost(senderAddress)
 	sender.ID, _ = id.NewID()
+	builder := NewBuilder(sender)
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 
-	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
+	m := builder.Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,

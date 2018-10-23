@@ -325,7 +325,7 @@ func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilde
 	futures := make([]transport.Future, 0)
 
 	for _, host := range dht.options.BootstrapHosts {
-		p := packet.NewBuilder().Type(packet.TypeFindHost).Sender(ht.Origin).Receiver(host).
+		p := packet.NewBuilder(ht.Origin).Type(packet.TypeFindHost).Receiver(host).
 			Request(&packet.RequestDataFindHost{Target: ht.Origin.ID}).Build()
 		f, err := dht.transport.SendRequest(p)
 		if err != nil {
@@ -606,7 +606,7 @@ func (dht *DHT) iterateIsDone(
 					return nil, nil, nil, nil
 				}
 
-				msg := packet.NewBuilder().Sender(ht.Origin).Receiver(receiver).Type(packet.TypeStore).Request(
+				msg := packet.NewBuilder(ht.Origin).Receiver(receiver).Type(packet.TypeStore).Request(
 					&packet.RequestDataStore{
 						Data: data,
 					}).Build()
@@ -765,7 +765,7 @@ func (dht *DHT) sendPacketToAlphaHosts(
 
 		(contacted)[string(receiver.ID.Bytes())] = true
 
-		packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(receiver)
+		packetBuilder := packet.NewBuilder(ht.Origin).Receiver(receiver)
 		packetBuilder = getPacketBuilder(t, packetBuilder, target)
 		msg := packetBuilder.Build()
 
@@ -905,7 +905,7 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 }
 
 func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, ht *routing.HashTable) {
-	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
+	packetBuilder := packet.NewBuilder(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
 
 	// TODO: fix sign and check sign logic
 	// if msg.Type == packet.TypeRPC {

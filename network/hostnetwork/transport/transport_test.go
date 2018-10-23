@@ -99,7 +99,7 @@ func (t *transportSuite) TestPingPong() {
 	t.Assert().Equal(t.node2.host, future.Actor())
 	t.Assert().False(requestMsg.IsResponse)
 
-	builder := packet.NewBuilder().Sender(t.node2.host).Receiver(requestMsg.Sender).Type(packet.TypePing)
+	builder := packet.NewBuilder(t.node2.host).Receiver(requestMsg.Sender).Type(packet.TypePing)
 	err = t.node2.transport.SendResponse(requestMsg.RequestID, builder.Response(nil).Build())
 	t.Assert().NoError(err)
 
@@ -111,7 +111,7 @@ func (t *transportSuite) TestPingPong() {
 
 func (t *transportSuite) TestSendBigPacket() {
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
-	builder := packet.NewBuilder().Sender(t.node1.host).Receiver(t.node2.host).Type(packet.TypeStore)
+	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TypeStore)
 	requestMsg := builder.Request(&packet.RequestDataStore{data, true}).Build()
 	t.Assert().True(requestMsg.IsValid())
 
@@ -126,7 +126,7 @@ func (t *transportSuite) TestSendBigPacket() {
 }
 
 func (t *transportSuite) TestSendInvalidPacket() {
-	builder := packet.NewBuilder().Sender(t.node1.host).Receiver(t.node2.host).Type(packet.TypeRPC)
+	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TypeRPC)
 	msg := builder.Build()
 	t.Assert().False(msg.IsValid())
 

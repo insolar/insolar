@@ -361,11 +361,12 @@ func Test_processPulse(t *testing.T) {
 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
 
 	hh := firstNode.hostNetwork
-	pckt := packet.NewBuilder().Type(packet.TypePulse).Request(
+	pckt := packet.NewBuilder(nil).Type(packet.TypePulse).Request(
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar
-	hostnetwork.DispatchPacketType(hh, hostnetwork.GetDefaultCtx(hh), pckt, packet.NewBuilder())
+	ctx := hostnetwork.GetDefaultCtx(hh)
+	hostnetwork.DispatchPacketType(hh, ctx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = firstLedger.GetPulseManager().Current()
@@ -449,11 +450,12 @@ func Test_processPulse2(t *testing.T) {
 	// time.Sleep(time.Millisecond * 100)
 
 	hh := services[lastIndex].hostNetwork
-	pckt := packet.NewBuilder().Type(packet.TypePulse).Request(
+	pckt := packet.NewBuilder(nil).Type(packet.TypePulse).Request(
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar on the last started service
-	hostnetwork.DispatchPacketType(hh, hostnetwork.GetDefaultCtx(hh), pckt, packet.NewBuilder())
+	ctx := hostnetwork.GetDefaultCtx(hh)
+	hostnetwork.DispatchPacketType(hh, ctx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = ll.GetPulseManager().Current()

@@ -55,9 +55,8 @@ func RelayRequest(hostHandler hosthandler.HostHandler, command, targetID string)
 		err = errors.New("RelayRequest: unknown command")
 		return err
 	}
-	builder := packet.NewBuilder()
+	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
 	request := builder.Type(packet.TypeRelay).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(targetHost).
 		Request(&packet.RequestRelay{Command: typedCommand}).
 		Build()
@@ -85,9 +84,8 @@ func CheckOriginRequest(hostHandler hosthandler.HostHandler, targetID string) er
 		return err
 	}
 
-	builder := packet.NewBuilder()
+	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
 	request := builder.Type(packet.TypeCheckOrigin).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(targetHost).
 		Request(&packet.RequestCheckOrigin{}).
 		Build()
@@ -127,9 +125,8 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetI
 		err = errors.New("AuthenticationRequest: unknown command")
 		return err
 	}
-	builder := packet.NewBuilder()
+	builder := packet.NewBuilder(origin)
 	request := builder.Type(packet.TypeAuthentication).
-		Sender(origin).
 		Receiver(targetHost).
 		Request(&packet.RequestAuthentication{Command: authCommand}).
 		Build()
@@ -159,9 +156,8 @@ func ObtainIPRequest(hostHandler hosthandler.HostHandler, targetID string) error
 	}
 
 	origin := hostHandler.HtFromCtx(ctx).Origin
-	builder := packet.NewBuilder()
+	builder := packet.NewBuilder(origin)
 	request := builder.Type(packet.TypeObtainIP).
-		Sender(origin).
 		Receiver(targetHost).
 		Request(&packet.RequestObtainIP{}).
 		Build()
@@ -191,9 +187,8 @@ func RelayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 		return err
 	}
 
-	builder := packet.NewBuilder()
+	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
 	request := builder.Type(packet.TypeRelayOwnership).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(targetHost).
 		Request(&packet.RequestRelayOwnership{Ready: true}).
 		Build()
@@ -220,7 +215,7 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 		return errors.New("cascadeSendMessage: couldn't find a target host")
 	}
 
-	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
+	request := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
 		Request(&packet.RequestCascadeSend{
 			Data: data,
 			RPC: packet.RequestDataRPC{
@@ -271,7 +266,7 @@ func GetNonceRequest(hostHandler hosthandler.HostHandler, targetID string) ([]*c
 func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, receiver *host.Host) ([]byte, error) {
 	log.Debug("Started getting nonce request to discovery node")
 
-	request := packet.NewBuilder().Sender(sender).
+	request := packet.NewBuilder(sender).
 		Receiver(receiver).Type(packet.TypeGetNonce).
 		Request(&packet.RequestGetNonce{NodeID: hostHandler.GetNodeID()}).
 		Build()
@@ -299,8 +294,8 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *ho
 
 	// TODO: get role from certificate
 	// TODO: get public key from certificate
-	request := packet.NewBuilder().Type(packet.TypeCheckSignedNonce).
-		Sender(sender).Receiver(receiver).
+	request := packet.NewBuilder(sender).Type(packet.TypeCheckSignedNonce).
+		Receiver(receiver).
 		Request(&packet.RequestCheckSignedNonce{
 			Signed:    nonce,
 			NodeID:    hostHandler.GetNodeID(),
@@ -341,7 +336,7 @@ func sendPulse(hostHandler hosthandler.HostHandler, host *host.Host, pulse *pack
 	if err != nil {
 		return errors.Wrap(err, "failed to send pulse")
 	}
-	request := packet.NewBuilder().Sender(hostHandler.HtFromCtx(ctx).Origin).Receiver(host).
+	request := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin).Receiver(host).
 		Type(packet.TypePulse).Request(pulse).Build()
 
 	future, err := hostHandler.SendRequest(request)
@@ -366,8 +361,8 @@ func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string) 
 	}
 
 	origin := hostHandler.HtFromCtx(ctx).Origin
-	builder := packet.NewBuilder()
-	request := builder.Type(packet.TypeCheckNodePriv).Sender(origin).Receiver(targetHost).Request(&packet.RequestCheckNodePriv{RoleKey: "test string"}).Build()
+	builder := packet.NewBuilder(origin)
+	request := builder.Type(packet.TypeCheckNodePriv).Receiver(targetHost).Request(&packet.RequestCheckNodePriv{RoleKey: "test string"}).Build()
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
@@ -391,9 +386,8 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 		return err
 	}
 
-	builder := packet.NewBuilder()
+	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
 	request := builder.Type(packet.TypeKnownOuterHosts).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(targetHost).
 		Request(&packet.RequestKnownOuterHosts{
 			ID:         hostHandler.HtFromCtx(ctx).Origin.ID.String(),
@@ -430,9 +424,8 @@ func sendDisconnectRequest(hostHandler hosthandler.HostHandler, target *host.Hos
 		return err
 	}
 
-	builder := packet.NewBuilder()
+	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
 	request := builder.Type(packet.TypeDisconnect).
-		Sender(hostHandler.HtFromCtx(ctx).Origin).
 		Receiver(target).
 		Request(&packet.RequestDisconnect{}).
 		Build()

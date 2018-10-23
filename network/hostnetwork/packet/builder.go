@@ -27,8 +27,12 @@ type Builder struct {
 }
 
 // NewBuilder returns empty packet builder.
-func NewBuilder() Builder {
-	return Builder{}
+func NewBuilder(sender *host.Host) Builder {
+	cb := Builder{}
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Sender = sender
+	})
+	return cb
 }
 
 // Build returns configured packet.
@@ -38,14 +42,6 @@ func (cb Builder) Build() (packet *Packet) {
 		action(packet)
 	}
 	return
-}
-
-// Sender sets packet sender.
-func (cb Builder) Sender(host *host.Host) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Sender = host
-	})
-	return cb
 }
 
 // Receiver sets packet receiver.
