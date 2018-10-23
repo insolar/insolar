@@ -43,7 +43,7 @@ func NewNodeRecord(publicKey string, roles []string, ip string) (*NodeRecord, er
 	for _, roleStr := range roles {
 		role := core.GetRoleFromString(roleStr)
 		if role == core.RoleUnknown {
-			return nil, fmt.Errorf("Role is not supported: " + roleStr)
+			return nil, fmt.Errorf("Role is not supported: %s", roleStr)
 		}
 		resultRoles = append(resultRoles, role)
 	}

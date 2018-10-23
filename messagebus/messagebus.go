@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/gob"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -32,14 +33,19 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	service  core.Network
-	ledger   core.Ledger
-	handlers map[core.MessageType]core.MessageHandler
+	service      core.Network
+	ledger       core.Ledger
+	activeNodes  core.ActiveNodeComponent
+	handlers     map[core.MessageType]core.MessageHandler
+	signmessages bool
 }
 
 // NewMessageBus is a `MessageBus` constructor
-func NewMessageBus() (*MessageBus, error) {
-	return &MessageBus{handlers: map[core.MessageType]core.MessageHandler{}}, nil
+func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
+	return &MessageBus{
+		handlers:     map[core.MessageType]core.MessageHandler{},
+		signmessages: config.Host.SignMessages,
+	}, nil
 }
 
 // Start initializes message bus
@@ -47,6 +53,7 @@ func (mb *MessageBus) Start(c core.Components) error {
 	mb.service = c.Network
 	mb.service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 	mb.ledger = c.Ledger
+	mb.activeNodes = c.ActiveNodeComponent
 
 	return nil
 }
@@ -76,6 +83,10 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Reply` or error from remote host.
 func (mb *MessageBus) Send(ctx core.Context, msg core.Message) (core.Reply, error) {
+	signedMsg, err := message.NewSignedMessage(msg, mb.service.GetNodeID(), mb.service.GetPrivateKey())
+	if err != nil {
+		return nil, err
+	}
 	jc := mb.ledger.GetJetCoordinator()
 	pm := mb.ledger.GetPulseManager()
 	pulse, err := pm.Current()
@@ -84,7 +95,7 @@ func (mb *MessageBus) Send(ctx core.Context, msg core.Message) (core.Reply, erro
 	}
 
 	// TODO: send to all actors of the role if nil Target
-	nodes, err := jc.QueryRole(msg.TargetRole(), *msg.Target(), pulse.PulseNumber)
+	nodes, err := jc.QueryRole(signedMsg.TargetRole(), *signedMsg.Target(), pulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -95,16 +106,16 @@ func (mb *MessageBus) Send(ctx core.Context, msg core.Message) (core.Reply, erro
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
+		err := mb.service.SendCascadeMessage(cascade, deliverRPCMethodName, signedMsg)
 		return nil, err
 	}
 
 	// Short path when sending to self node. Skip serialization
 	if nodes[0].Equal(mb.service.GetNodeID()) {
-		return mb.doDeliver(msg)
+		return mb.doDeliver(signedMsg.Message())
 	}
 
-	res, err := mb.service.SendMessage(nodes[0], deliverRPCMethodName, msg)
+	res, err := mb.service.SendMessage(nodes[0], deliverRPCMethodName, signedMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -142,11 +153,18 @@ func (mb *MessageBus) deliver(args [][]byte) (result []byte, err error) {
 		return nil, errors.New("need exactly one argument when mb.deliver()")
 	}
 	msg, err := message.Deserialize(bytes.NewBuffer(args[0]))
+	signedMessage, ok := msg.(core.SignedMessage)
+	if !ok {
+		return nil, errors.New("failed to parse a signed message")
+	}
 	if err != nil {
 		return nil, err
 	}
+	if mb.signmessages && !signedMessage.IsValid(mb.activeNodes.GetActiveNode(signedMessage.GetSender()).PublicKey) {
+		return nil, errors.New("failed to check a message sign")
+	}
 
-	resp, err := mb.doDeliver(msg)
+	resp, err := mb.doDeliver(signedMessage.Message())
 	if err != nil {
 		return nil, err
 	}

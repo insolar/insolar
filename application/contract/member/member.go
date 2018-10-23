@@ -17,7 +17,6 @@
 package member
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
@@ -55,18 +54,18 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 		params,
 		seed)
 	if err != nil {
-		return err
+		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
 	}
 	key, err := m.GetPublicKey()
 	if err != nil {
-		return err
+		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
 	verified, err := ecdsa.Verify(args, sign, key)
 	if err != nil {
-		return err
+		return fmt.Errorf("[ verifySig ] Can't verify: %s", err.Error())
 	}
 	if !verified {
-		return errors.New("Incorrect signature")
+		return fmt.Errorf("[ verifySig ] Incorrect signature")
 	}
 	return nil
 }
@@ -75,7 +74,7 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 
 	if err := m.verifySig(method, params, seed, sign); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
 	}
 
 	switch method {
@@ -100,7 +99,7 @@ func (m *Member) createMemberCall(ref core.RecordRef, params []byte) (interface{
 	var name string
 	var key string
 	if err := signer.UnmarshalParams(params, &name, &key); err != nil {
-		return nil, fmt.Errorf("[ createMemberCall ] couldn't unmarshal params: %s", err.Error())
+		return nil, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
 	}
 	return rootDomain.CreateMember(name, key)
 }
@@ -108,7 +107,7 @@ func (m *Member) createMemberCall(ref core.RecordRef, params []byte) (interface{
 func (m *Member) getMyBalance() (interface{}, error) {
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("[ getMyBalance ]: %s", err.Error())
 	}
 
 	return w.GetTotalBalance()
@@ -117,11 +116,11 @@ func (m *Member) getMyBalance() (interface{}, error) {
 func (m *Member) getBalance(params []byte) (interface{}, error) {
 	var member string
 	if err := signer.UnmarshalParams(params, &member); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
 	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(member))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
 	}
 
 	return w.GetTotalBalance()
@@ -131,12 +130,12 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	var amount float64
 	var toStr string
 	if err := signer.UnmarshalParams(params, &amount, &toStr); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
 	}
 	to := core.NewRefFromBase58(toStr)
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ transferCall ] Can't get implementation: %s", err.Error())
 	}
 
 	return nil, w.Transfer(uint(amount), &to)
@@ -146,7 +145,7 @@ func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{
 	rootDomain := rootdomain.GetObject(ref)
 	var user string
 	if err := signer.UnmarshalParams(params, &user); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ dumpUserInfoCall ] Can't unmarshal params: %s", err.Error())
 	}
 	return rootDomain.DumpUserInfo(user)
 }
