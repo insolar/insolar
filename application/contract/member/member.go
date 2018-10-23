@@ -18,6 +18,7 @@ package member
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
@@ -99,7 +100,7 @@ func (m *Member) createMemberCall(ref core.RecordRef, params []byte) (interface{
 	var name string
 	var key string
 	if err := signer.UnmarshalParams(params, &name, &key); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ createMemberCall ] couldn't unmarshal params: %s", err.Error())
 	}
 	return rootDomain.CreateMember(name, key)
 }
