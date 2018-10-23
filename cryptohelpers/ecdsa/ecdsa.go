@@ -117,7 +117,7 @@ func Verify(data []byte, signatureRaw []byte, pubKey string) (bool, error) {
 		return false, errors.Wrap(err, "[ Verify ]")
 	}
 	if len(rest) != 0 {
-		return false, errors.New("[ Verify ] len of  rest must be 0")
+		return false, errors.New("[ Verify ] len of rest must be 0")
 	}
 
 	savedKey, err := ImportPublicKey(pubKey)
