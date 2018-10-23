@@ -36,15 +36,14 @@ import (
 
 // NewHostNetwork creates and returns DHT network.
 func NewHostNetwork(
-	cfg configuration.HostNetwork,
-	nn *nodenetwork.NodeNetwork,
+	cfg configuration.Configuration,
 	cascade *cascade.Cascade,
 	certificate core.Certificate,
 ) (*DHT, error) {
 
 	proxy := relay.NewProxy()
 
-	tp, err := transport.NewTransport(cfg.Transport, proxy)
+	tp, err := transport.NewTransport(cfg.Host.Transport, proxy)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create transport")
 	}
@@ -54,14 +53,15 @@ func NewHostNetwork(
 		return nil, errors.Wrap(err, "Failed to ")
 	}
 
-	encodedOriginID := nodenetwork.ResolveHostID(nn.GetID())
+	nodeID := core.NewRefFromBase58(cfg.Node.Node.ID)
+	encodedOriginID := nodenetwork.ResolveHostID(nodeID)
 	originID := id.FromBase58(encodedOriginID)
 	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create Origin")
 	}
 
-	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
+	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.Host.BootstrapHosts)}
 	sign := signhandler.NewSignHandler(certificate)
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade, sign)
 
@@ -72,10 +72,10 @@ func NewHostNetwork(
 		ncf,
 		options,
 		proxy,
-		cfg.Timeout,
-		cfg.InfinityBootstrap,
-		nn.GetID(),
-		cfg.MajorityRule,
+		cfg.Host.Timeout,
+		cfg.Host.InfinityBootstrap,
+		nodeID,
+		cfg.Host.MajorityRule,
 		certificate,
 	)
 	if err != nil {

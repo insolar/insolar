@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/nodekeeper"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/insolar/configuration"
@@ -1028,38 +1027,37 @@ func TestDHT_Getters(t *testing.T) {
 
 	host1 := host.NewHost(hostAddr)
 	//newKey, _ := ecdsa.ImportPrivateKey("asd")
-	node := nodenetwork.NewNode(ref1)
 
-	assert.False(t, dht1.HostIsAuthenticated(node.GetID().String()))
-	_, check := dht1.KeyIsReceived(node.GetID().String())
+	assert.False(t, dht1.HostIsAuthenticated(ref1.String()))
+	_, check := dht1.KeyIsReceived(ref1.String())
 	assert.False(t, check)
 
 	dht1.AddPossibleRelayID(relay1)
 	dht1.AddPossibleProxyID(proxy1)
 	dht1.AddRelayClient(host1)
-	dht1.AddReceivedKey(node.GetID().String(), host1.ID.Bytes())
-	dht1.AddAuthSentKey(node.GetID().String(), host1.ID.Bytes())
-	dht1.AddSubnetID("id", node.GetID().String())
+	dht1.AddReceivedKey(ref1.String(), host1.ID.Bytes())
+	dht1.AddAuthSentKey(ref1.String(), host1.ID.Bytes())
+	dht1.AddSubnetID("id", ref1.String())
 	dht1.AddSubnetID("id2", host1.ID.String())
 	dht1.AddProxyHost(host1.ID.String())
-	dht1.SetAuthStatus(node.GetID().String(), true)
+	dht1.SetAuthStatus(ref1.String(), true)
 	dht1.SetOuterHostsCount(outerHostCount)
-	dht1.SetHighKnownHostID(node.GetID().String())
+	dht1.SetHighKnownHostID(ref1.String())
 
-	assert.True(t, dht1.HostIsAuthenticated(node.GetID().String()))
-	_, check = dht1.KeyIsReceived(node.GetID().String())
+	assert.True(t, dht1.HostIsAuthenticated(ref1.String()))
+	_, check = dht1.KeyIsReceived(ref1.String())
 	assert.True(t, check)
-	assert.Equal(t, dht1.GetHighKnownHostID(), node.GetID().String())
+	assert.Equal(t, dht1.GetHighKnownHostID(), ref1.String())
 	assert.Equal(t, dht1.GetSelfKnownOuterHosts(), 0)
 	assert.Equal(t, dht1.GetOuterHostsCount(), outerHostCount)
 	assert.Equal(t, dht1.GetProxyHostsCount(), 1)
-	assert.True(t, dht1.EqualAuthSentKey(node.GetID().String(), host1.ID.Bytes()))
+	assert.True(t, dht1.EqualAuthSentKey(ref1.String(), host1.ID.Bytes()))
 
 	dht1.RemoveRelayClient(host1)
-	dht1.RemoveAuthSentKeys(node.GetID().String())
-	dht1.RemovePossibleProxyID(node.GetID().String())
-	dht1.RemoveProxyHost(node.GetID().String())
-	dht1.RemoveAuthHost(node.GetID().String())
+	dht1.RemoveAuthSentKeys(ref1.String())
+	dht1.RemovePossibleProxyID(ref1.String())
+	dht1.RemoveProxyHost(ref1.String())
+	dht1.RemoveAuthHost(ref1.String())
 }
 
 func TestDHT_GetHostsFromBootstrap(t *testing.T) {

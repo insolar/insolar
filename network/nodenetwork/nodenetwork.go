@@ -17,34 +17,14 @@
 package nodenetwork
 
 import (
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/jbenet/go-base58"
 	"golang.org/x/crypto/sha3"
 )
-
-// NodeNetwork is node manager.
-type NodeNetwork struct {
-	node *Node
-}
-
-// NewNodeNetwork creates a new node network.
-func NewNodeNetwork(nodeCfg configuration.Configuration) (*NodeNetwork, error) {
-	node := NewNode(core.NewRefFromBase58(nodeCfg.Node.Node.ID))
-	network := &NodeNetwork{
-		node: node,
-	}
-	return network, nil
-}
 
 // ResolveHostID returns a host found by reference.
 func ResolveHostID(ref core.RecordRef) string {
 	hash := make([]byte, 20)
 	sha3.ShakeSum128(hash, ref[:])
 	return base58.Encode(hash)
-}
-
-// GetID returns current node id
-func (network *NodeNetwork) GetID() core.RecordRef {
-	return network.node.GetID()
 }

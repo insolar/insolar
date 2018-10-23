@@ -38,7 +38,6 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
 	nodeKeeper  consensus.NodeKeeper
 	certificate core.Certificate
@@ -53,21 +52,13 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 		log.Warnf("failed to read certificate: %s", err.Error())
 	}
 
-	node, err := nodenetwork.NewNodeNetwork(conf)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create node network")
-	}
-	if node == nil {
-		return nil, errors.New("failed to create a node network")
-	}
-
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, cert)
+	dht, err := hostnetwork.NewHostNetwork(conf, cascade1, cert)
 	if err != nil {
 		return nil, err
 	}
 
-	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
+	service := &ServiceNetwork{hostNetwork: dht}
 	f := func(data core.Cascade, method string, args [][]byte) error {
 		return service.initCascadeSendMessage(data, true, method, args)
 	}
@@ -82,7 +73,7 @@ func (network *ServiceNetwork) GetAddress() string {
 
 // GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
-	return network.nodeNetwork.GetID()
+	return network.hostNetwork.GetNodeID()
 }
 
 func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
@@ -239,7 +230,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 	var err error
 
 	if findCurrentNode {
-		nodeID := network.nodeNetwork.GetID()
+		nodeID := network.hostNetwork.GetNodeID()
 		nextNodes, err = cascade.CalculateNextNodes(data, &nodeID)
 	} else {
 		nextNodes, err = cascade.CalculateNextNodes(data, nil)

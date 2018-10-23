@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/nodekeeper"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,7 +47,7 @@ func transportCfg(tr string) configuration.HostNetwork {
 func TestConfiguration_NewHostNetwork(t *testing.T) {
 
 	tests := map[string]struct {
-		cfg           configuration.HostNetwork
+		cfg           configuration.Configuration
 		expectedError bool
 	}{
 		// negative
@@ -55,7 +55,7 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 		// "InvalidTransport": {transportCfg("invalid"), true},
 
 		// positive
-		"DefaultConfiguration": {configuration.NewConfiguration().Host, false},
+		"DefaultConfiguration": {configuration.NewConfiguration(), false},
 		/*
 			"UseStun":              {stunCfg(true), false},
 			"NotUseStun":           {stunCfg(false), false},
@@ -65,12 +65,11 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 
 	cascade1 := &cascade.Cascade{}
 	cfg := configuration.NewConfiguration()
-	nodenet, err := nodenetwork.NewNodeNetwork(cfg)
-	assert.NoError(t, err)
+	nodeID := core.NewRefFromBase58(cfg.Node.Node.ID)
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			network, err := NewHostNetwork(test.cfg, nodenet, cascade1, nil)
-			network.SetNodeKeeper(nodekeeper.NewNodeKeeper(nodenet.GetID()))
+			network, err := NewHostNetwork(test.cfg, cascade1, nil)
+			network.SetNodeKeeper(nodekeeper.NewNodeKeeper(nodeID))
 			if test.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, network)

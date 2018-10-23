@@ -19,32 +19,9 @@ package nodenetwork
 import (
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestNewNodeNetwork(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	network, err := NewNodeNetwork(cfg)
-	assert.NoError(t, err)
-	assert.NotNil(t, network)
-}
-
-func TestNodenetwork_GetReferenceHostID(t *testing.T) {
-	ref := core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
-	node := NewNode(ref)
-	assert.Equal(t, node.GetID(), ref)
-}
-
-func TestNodeNetwork_GetID(t *testing.T) {
-	ref := core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")
-	node := NewNode(ref)
-	network := &NodeNetwork{
-		node: node,
-	}
-	assert.Equal(t, node.GetID(), network.GetID())
-}
 
 func TestNodeNetwork_ResolveHostID(t *testing.T) {
 	str1 := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
