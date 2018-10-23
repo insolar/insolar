@@ -149,7 +149,7 @@ func startScenario(s scenario) {
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transferring took %s \n", s.getName(), elapsed))
 	elapsedInSeconds := float64(elapsed) / float64(time.Second)
 	speed := float64(s.getOperationsNumber()) / float64(elapsedInSeconds)
-	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f tr/s \n", s.getName(), speed))
+	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f resp/s \n", s.getName(), speed))
 }
 
 func main() {
