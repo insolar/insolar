@@ -17,9 +17,8 @@
 package hostnetwork
 
 import (
-	"crypto/ecdsa"
-
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/consensus"
@@ -40,7 +39,7 @@ func NewHostNetwork(
 	cfg configuration.HostNetwork,
 	nn *nodenetwork.NodeNetwork,
 	cascade *cascade.Cascade,
-	key *ecdsa.PrivateKey,
+	certificate core.Certificate,
 ) (*DHT, error) {
 
 	proxy := relay.NewProxy()
@@ -63,7 +62,7 @@ func NewHostNetwork(
 	}
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.BootstrapHosts)}
-	sign := signhandler.NewSignHandler(key)
+	sign := signhandler.NewSignHandler(certificate)
 	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade, sign)
 
 	network, err := NewDHT(
@@ -77,7 +76,7 @@ func NewHostNetwork(
 		cfg.InfinityBootstrap,
 		nn.GetID(),
 		cfg.MajorityRule,
-		key,
+		certificate,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")

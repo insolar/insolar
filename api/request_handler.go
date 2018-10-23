@@ -27,15 +27,18 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/pkg/errors"
-
-	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 )
 
 const (
+	// REFERENCE is field for reference
 	REFERENCE = "reference"
-	SEED      = "seed"
+	// SEED is field to reference
+	SEED = "seed"
 )
 
 func extractStringResponse(data []byte) (*string, error) {
@@ -57,14 +60,14 @@ func extractStringResponse(data []byte) (*string, error) {
 func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 	var pubKey string
 	var role []core.NodeRole
-	var fErr string
-	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &fErr})
+	var ferr *foundation.Error
+	_, err := core.UnMarshalResponse(data, []interface{}{&pubKey, &role, &ferr})
 	if err != nil {
 		return "", nil, errors.Wrap(err, "[ extractAuthorizeResponse ]")
 	}
 
-	if len(fErr) != 0 {
-		return "", nil, errors.New("[ extractAuthorizeResponse ] -> " + fErr)
+	if ferr != nil {
+		return "", nil, errors.Wrap(ferr, "[ extractAuthorizeResponse ] Has error")
 	}
 
 	return pubKey, role, nil
@@ -122,7 +125,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		Arguments:        args,
 	}
 
-	res, err := rh.messageBus.Send(e)
+	res, err := rh.messageBus.Send(inscontext.TODO(), e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't send message")
 	}

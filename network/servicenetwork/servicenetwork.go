@@ -17,10 +17,11 @@
 package servicenetwork
 
 import (
-	"io/ioutil"
+	"crypto/ecdsa"
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -39,10 +40,18 @@ type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
 	nodeKeeper  consensus.NodeKeeper
+	certificate core.Certificate
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
+
+	// workaround before DI
+	cert, err := certificate.NewCertificate(conf.KeysPath)
+	if err != nil {
+		log.Warnf("failed to read certificate: %s", err.Error())
+	}
+
 	node, err := nodenetwork.NewNodeNetwork(conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create node network")
@@ -52,7 +61,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	}
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, node.GetPrivateKey())
+	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, cert)
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +95,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, errors.New("message is nil")
 	}
 	hostID := nodenetwork.ResolveHostID(nodeID)
-	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign a message")
-	}
-	buff, err := messageToBytes(msg)
+	buff, err := message.ToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
@@ -109,11 +114,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	err := message.SignMessage(msg, network.nodeNetwork.GetPrivateKey())
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a message")
-	}
-	buff, err := messageToBytes(msg)
+	buff, err := message.ToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize event")
 	}
@@ -131,6 +132,11 @@ func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hostha
 	return network.hostNetwork, createContext(network.hostNetwork)
 }
 
+// GetPrivateKey returns a private key.
+func (network *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
+	return network.hostNetwork.GetPrivateKey()
+}
+
 func getPulseManager(components core.Components) (core.PulseManager, error) {
 	if components.Ledger == nil {
 		return nil, errors.New("no core.Ledger in components")
@@ -140,6 +146,7 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
+	network.certificate = components.Certificate
 	go network.listen()
 
 	if components.ActiveNodeComponent == nil {
@@ -258,13 +265,4 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 	}
 
 	return nil
-}
-
-// ToBytes deserialize a core.Message to bytes.
-func messageToBytes(msg core.Message) ([]byte, error) {
-	reqBuff, err := message.Serialize(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
-	}
-	return ioutil.ReadAll(reqBuff)
 }

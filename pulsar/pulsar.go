@@ -25,6 +25,7 @@ import (
 	"net/rpc"
 	"sync"
 
+	"github.com/insolar/insolar/certificate"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 
@@ -62,7 +63,9 @@ type Pulsar struct {
 	CurrentSlotSenderConfirmations     map[string]core.PulseSenderConfirmation
 
 	ProcessingPulseNumber core.PulseNumber
-	LastPulse             *core.Pulse
+
+	lastPulseLock sync.RWMutex
+	lastPulse     *core.Pulse
 
 	OwnedBftRow map[string]*BftCell
 
@@ -70,39 +73,35 @@ type Pulsar struct {
 	BftGridLock sync.RWMutex
 
 	StateSwitcher StateSwitcher
+	Certificate   certificate.Certificate
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
-	configuration configuration.Configuration,
+	configuration configuration.Pulsar,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator entropygenerator.EntropyGenerator,
 	stateSwitcher StateSwitcher,
+	certificate core.Certificate,
 	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
 
 	log.Debug("[NewPulsar]")
 
 	// Listen for incoming connections.
-	listenerImpl, err := listener(configuration.Pulsar.ConnectionType.String(), configuration.Pulsar.MainListenerAddress)
+	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse private key from config
-	privateKey, err := ecdsahelper.ImportPrivateKey(configuration.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
 	pulsar := &Pulsar{
-		Sock:               listenerImpl,
-		SockConnectionType: configuration.Pulsar.ConnectionType,
-		Neighbours:         map[string]*Neighbour{},
-		PrivateKey:         privateKey,
-		Config:             configuration.Pulsar,
-		Storage:            storage,
-		EntropyGenerator:   entropyGenerator,
-		StateSwitcher:      stateSwitcher,
+		Sock:             listenerImpl,
+		Neighbours:       map[string]*Neighbour{},
+		PrivateKey:       certificate.GetEcdsaPrivateKey(),
+		Config:           configuration,
+		Storage:          storage,
+		EntropyGenerator: entropyGenerator,
+		StateSwitcher:    stateSwitcher,
 	}
 	pulsar.clearState()
 
@@ -118,12 +117,12 @@ func NewPulsar(
 		log.Fatal(err)
 		panic(err)
 	}
-	pulsar.LastPulse = lastPulse
+	pulsar.SetLastPulse(lastPulse)
 
 	// Adding other pulsars
-	for _, neighbour := range configuration.Pulsar.Neighbours {
+	for _, neighbour := range configuration.Neighbours {
 		currentMap := map[string]*BftCell{}
-		for _, gridColumn := range configuration.Pulsar.Neighbours {
+		for _, gridColumn := range configuration.Neighbours {
 			currentMap[gridColumn.PublicKey] = nil
 		}
 		pulsar.SetBftGridItem(neighbour.PublicKey, currentMap)
@@ -269,8 +268,17 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
 		currentPulsar.StartProcessLock.Unlock()
-		log.Warnf("Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.StateSwitcher.GetState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
-		return fmt.Errorf("wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v", currentPulsar.StateSwitcher.GetState().String(), pulseNumber, currentPulsar.LastPulse.PulseNumber, currentPulsar.ProcessingPulseNumber)
+		log.Warnf(
+			"Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
+			currentPulsar.StateSwitcher.GetState().String(),
+			pulseNumber,
+			currentPulsar.GetLastPulse().PulseNumber,
+			currentPulsar.ProcessingPulseNumber)
+		return fmt.Errorf(
+			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
+			currentPulsar.StateSwitcher.GetState().String(),
+			pulseNumber, currentPulsar.GetLastPulse().PulseNumber,
+			currentPulsar.ProcessingPulseNumber)
 	}
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 

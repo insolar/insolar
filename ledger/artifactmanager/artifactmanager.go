@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -74,9 +75,10 @@ func (m *LedgerArtifactManager) RegisterRequest(
 func (m *LedgerArtifactManager) GetCode(
 	ctx core.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
-	genericReact, err := m.messageBus.Send(&message.GetCode{
-		Code: code,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetCode{Code: code},
+	)
 
 	if err != nil {
 		return nil, err
@@ -102,10 +104,13 @@ func (m *LedgerArtifactManager) GetCode(
 func (m *LedgerArtifactManager) GetClass(
 	ctx core.Context, head core.RecordRef, state *core.RecordRef,
 ) (core.ClassDescriptor, error) {
-	genericReact, err := m.messageBus.Send(&message.GetClass{
-		Head:  head,
-		State: state,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetClass{
+			Head:  head,
+			State: state,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -132,10 +137,13 @@ func (m *LedgerArtifactManager) GetClass(
 func (m *LedgerArtifactManager) GetObject(
 	ctx core.Context, head core.RecordRef, state *core.RecordRef,
 ) (core.ObjectDescriptor, error) {
-	genericReact, err := m.messageBus.Send(&message.GetObject{
-		Head:  head,
-		State: state,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetObject{
+			Head:  head,
+			State: state,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -166,10 +174,13 @@ func (m *LedgerArtifactManager) GetObject(
 func (m *LedgerArtifactManager) GetDelegate(
 	ctx core.Context, head, asClass core.RecordRef,
 ) (*core.RecordRef, error) {
-	genericReact, err := m.messageBus.Send(&message.GetDelegate{
-		Head:    head,
-		AsClass: asClass,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.GetDelegate{
+			Head:    head,
+			AsClass: asClass,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -419,10 +430,13 @@ func (m *LedgerArtifactManager) UpdateObject(
 }
 
 func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordRef) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(&message.SetRecord{
-		Record:    record.SerializeRecord(rec),
-		TargetRef: target,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.SetRecord{
+			Record:    record.SerializeRecord(rec),
+			TargetRef: target,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -437,10 +451,13 @@ func (m *LedgerArtifactManager) setRecord(rec record.Record, target core.RecordR
 }
 
 func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.RecordRef) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(&message.UpdateClass{
-		Record: record.SerializeRecord(rec),
-		Class:  class,
-	})
+	genericReact, err := m.messageBus.Send(
+		inscontext.TODO(),
+		&message.UpdateClass{
+			Record: record.SerializeRecord(rec),
+			Class:  class,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -457,11 +474,13 @@ func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.Record
 func (m *LedgerArtifactManager) updateObject(
 	rec record.Record, object core.RecordRef, class *core.RecordRef,
 ) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(&message.UpdateObject{
-		Record: record.SerializeRecord(rec),
-		Object: object,
-		Class:  class,
-	})
+	genericReact, err := m.messageBus.Send(inscontext.TODO(),
+		&message.UpdateObject{
+			Record: record.SerializeRecord(rec),
+			Object: object,
+			Class:  class,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -478,12 +497,14 @@ func (m *LedgerArtifactManager) updateObject(
 func (m *LedgerArtifactManager) registerChild(
 	rec record.Record, parent, child core.RecordRef, asClass *core.RecordRef,
 ) (*core.RecordID, error) {
-	genericReact, err := m.messageBus.Send(&message.RegisterChild{
-		Record:  record.SerializeRecord(rec),
-		Parent:  parent,
-		Child:   child,
-		AsClass: asClass,
-	})
+	genericReact, err := m.messageBus.Send(inscontext.TODO(),
+		&message.RegisterChild{
+			Record:  record.SerializeRecord(rec),
+			Parent:  parent,
+			Child:   child,
+			AsClass: asClass,
+		},
+	)
 
 	if err != nil {
 		return nil, err

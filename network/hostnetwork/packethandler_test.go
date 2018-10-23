@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"crypto/ecdsa"
 	"strings"
 	"testing"
 	"time"
@@ -116,6 +117,10 @@ func (hh *mockHostHandler) Disconnect() {
 
 }
 
+func (hh *mockHostHandler) GetPrivateKey() *ecdsa.PrivateKey {
+	return nil
+}
+
 func (hh *mockHostHandler) Listen() error {
 	return nil
 }
@@ -169,10 +174,6 @@ func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
 
 func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error {
 	return nil
-}
-
-func (hh *mockHostHandler) SetNodeID(nodeID core.RecordRef) {
-
 }
 
 func (hh *mockHostHandler) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {

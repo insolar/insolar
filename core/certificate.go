@@ -14,32 +14,19 @@
  *    limitations under the License.
  */
 
-// Package pulsartestutil - test utils for pulsar package
-package pulsartestutils
+package core
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/mock"
+	"crypto/ecdsa"
 )
 
-// MockPulsarStorage mocks PulsarStorage interface
-type MockPulsarStorage struct {
-	mock.Mock
-}
+// Certificate interface provides methods to manage keys
+type Certificate interface {
+	GetPublicKey() (string, error)
 
-func (mock *MockPulsarStorage) GetLastPulse() (*core.Pulse, error) {
-	args := mock.Called()
-	return args.Get(0).(*core.Pulse), args.Error(1)
-}
+	// TODO should be removed
+	GetPrivateKey() (string, error)
 
-func (*MockPulsarStorage) SetLastPulse(pulse *core.Pulse) error {
-	return nil
-}
-
-func (*MockPulsarStorage) SavePulse(pulse *core.Pulse) error {
-	return nil
-}
-
-func (*MockPulsarStorage) Close() error {
-	panic("implement me")
+	// TODO should be removed
+	GetEcdsaPrivateKey() *ecdsa.PrivateKey
 }

@@ -25,7 +25,7 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/api/requesters"
-	"github.com/insolar/insolar/application/bootstrapcertificate"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
@@ -126,17 +126,6 @@ func writeToOutput(out io.Writer, data string) {
 
 func printDefaultConfig(out io.Writer) {
 	cfgHolder := configuration.NewHolder()
-	key, err := ecdsahelper.GeneratePrivateKey()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	keyStr, err := ecdsahelper.ExportPrivateKey(key)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	cfgHolder.Configuration.PrivateKey = keyStr
 	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
 }
 
@@ -180,7 +169,7 @@ func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 	return json.MarshalIndent(map[string]interface{}{"keys": kk}, "", "    ")
 }
 
-type certRecords = bootstrapcertificate.CertRecords
+type certRecords = certificate.CertRecords
 
 func generateCertificates(out io.Writer) {
 
@@ -197,11 +186,11 @@ func generateCertificates(out io.Writer) {
 		pubKey, err := ecdsahelper.ExportPublicKey(&privKey.PublicKey)
 		check("[ generateCertificates ]:", err)
 
-		cRecords = append(cRecords, bootstrapcertificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
+		cRecords = append(cRecords, certificate.Record{NodeRef: ref.String(), PublicKey: pubKey})
 		keys = append(keys, privKey)
 	}
 
-	cert, err := bootstrapcertificate.NewCertificateFromFields(cRecords, keys)
+	cert, err := certificate.NewCertificateFromFields(cRecords, keys)
 	check("[ generateCertificates ]:", err)
 
 	certStr, err := cert.Dump()

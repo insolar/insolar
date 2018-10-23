@@ -16,6 +16,8 @@
 
 package core
 
+import "crypto/ecdsa"
+
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
 
@@ -36,10 +38,20 @@ type Message interface {
 	TargetRole() JetRole
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
-	// SetSign sets a signature to message.
-	SetSign([]byte)
-	// GetSign returns a sign.
+}
+
+type Signature interface {
 	GetSign() []byte
+	GetSender() RecordRef
+	IsValid(key *ecdsa.PublicKey) bool
+}
+
+// SignedMessage by senders private key.
+type SignedMessage interface {
+	Message
+	Signature
+
+	Message() Message
 }
 
 // Reply for an `Message`
@@ -51,9 +63,7 @@ type Reply interface {
 // MessageBus interface
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(Message) (Reply, error)
-	// SendAsync sends an `Message` to remote host.
-	SendAsync(Message)
+	Send(Context, Message) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
@@ -61,7 +71,7 @@ type MessageBus interface {
 }
 
 // MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(Message) (Reply, error)
+type MessageHandler func(Context, Message) (Reply, error)
 
 //go:generate stringer -type=MessageType
 const (

@@ -18,9 +18,6 @@ package bootstrap
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"path/filepath"
-	"runtime"
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
@@ -33,7 +30,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 const (
@@ -77,92 +73,12 @@ func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewBootstrapper creates new Bootstrapper
-func NewBootstrapper(cfg configuration.Configuration) (*Bootstrapper, error) {
+func NewBootstrapper(cfg configuration.Bootstrap) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
-	bootstrapper.rootKeysFile = cfg.Bootstrap.RootKeys
-	bootstrapper.rootBalance = cfg.Bootstrap.RootBalance
+	bootstrapper.rootKeysFile = cfg.RootKeys
+	bootstrapper.rootBalance = cfg.RootBalance
 	bootstrapper.rootDomainRef = &core.RecordRef{}
 	return bootstrapper, nil
-}
-
-var pathToContracts = "application/contract/"
-
-func getAbsolutePath(relativePath string) (string, error) {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		return "", errors.Wrap(nil, "[ getFullPath ] couldn't find info about current file")
-	}
-	rootDir := filepath.Dir(filepath.Dir(currentFile))
-	return filepath.Join(rootDir, relativePath), nil
-}
-
-func getContractPath(name string) (string, error) {
-	contractDir, err := getAbsolutePath(pathToContracts)
-	if err != nil {
-		return "", errors.Wrap(nil, "[ getContractPath ] couldn't get absolute path to contracts")
-	}
-	contractFile := name + ".go"
-	return filepath.Join(contractDir, name, contractFile), nil
-}
-
-func getContractsMap() (map[string]string, error) {
-	contracts := make(map[string]string)
-	for _, name := range contractNames {
-		contractPath, err := getContractPath(name)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
-		}
-		code, err := ioutil.ReadFile(filepath.Clean(contractPath))
-		if err != nil {
-			return nil, errors.Wrap(err, "[ contractsMap ] couldn't read contract: ")
-		}
-		contracts[name] = string(code)
-	}
-	return contracts, nil
-}
-
-func isLightExecutor(c core.Components) (bool, error) {
-	am := c.Ledger.GetArtifactManager()
-	jc := c.Ledger.GetJetCoordinator()
-	pm := c.Ledger.GetPulseManager()
-	currentPulse, err := pm.Current()
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't get current pulse")
-	}
-
-	network := c.Network
-	nodeID := network.GetNodeID()
-
-	isLightExecutor, err := jc.IsAuthorized(core.RoleLightExecutor, *am.GenesisRef(), currentPulse.PulseNumber, nodeID)
-	if err != nil {
-		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
-	}
-	if !isLightExecutor {
-		log.Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
-		return false, nil
-	}
-	return true, nil
-}
-
-func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
-	am := c.Ledger.GetArtifactManager()
-	ctx := inscontext.TODO()
-	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
-	}
-	rootRefChildren, err := rootObj.Children(nil)
-	if err != nil {
-		return nil, err
-	}
-	if rootRefChildren.HasNext() {
-		rootDomainRef, err := rootRefChildren.Next()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get next child of GenesisRef object")
-		}
-		return rootDomainRef, nil
-	}
-	return nil, nil
 }
 
 func buildSmartContracts(cb *goplugintestutils.ContractsBuilder) error {
@@ -180,20 +96,6 @@ func buildSmartContracts(cb *goplugintestutils.ContractsBuilder) error {
 	log.Info("[ buildSmartContracts ] Stop building contracts ...")
 
 	return nil
-}
-
-func serializeInstance(contractInstance interface{}) ([]byte, error) {
-	var instanceData []byte
-
-	ch := new(codec.CborHandle)
-	err := codec.NewEncoderBytes(&instanceData, ch).Encode(
-		contractInstance,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ serializeInstance ] Problem with CBORing")
-	}
-
-	return instanceData, nil
 }
 
 func (b *Bootstrapper) activateRootDomain(
@@ -384,26 +286,6 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *goplu
 	}
 
 	return nil
-}
-
-func getRootMemberPubKey(file string) (string, error) {
-	fileWithPath, err := getAbsolutePath(file)
-	if err != nil {
-		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't find absolute path for root keys")
-	}
-	data, err := ioutil.ReadFile(filepath.Clean(fileWithPath))
-	if err != nil {
-		return "", errors.Wrap(err, "couldn't read rootkeys file "+filepath.Clean(fileWithPath))
-	}
-	var keys map[string]string
-	err = json.Unmarshal(data, &keys)
-	if err != nil {
-		return "", err
-	}
-	if keys["public_key"] == "" {
-		return "", errors.New("empty root public key")
-	}
-	return keys["public_key"], nil
 }
 
 // Start creates types and RootDomain instance

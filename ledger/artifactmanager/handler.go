@@ -64,7 +64,7 @@ func logTimeInside(start time.Time, funcName string) {
 	}
 }
 
-func (h *MessageHandler) handleSetRecord(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.SetRecord)
 
 	id, err := h.db.SetRecord(record.DeserializeRecord(msg.Record))
@@ -75,7 +75,7 @@ func (h *MessageHandler) handleSetRecord(genericMsg core.Message) (core.Reply, e
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
@@ -95,7 +95,7 @@ func (h *MessageHandler) handleGetCode(genericMsg core.Message) (core.Reply, err
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetClass)
 	headRef := record.Core2Reference(msg.Head)
@@ -124,7 +124,7 @@ func (h *MessageHandler) handleGetClass(genericMsg core.Message) (core.Reply, er
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
@@ -154,7 +154,7 @@ func (h *MessageHandler) handleGetObject(genericMsg core.Message) (core.Reply, e
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
@@ -178,7 +178,7 @@ func (h *MessageHandler) handleGetDelegate(genericMsg core.Message) (core.Reply,
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
@@ -231,7 +231,7 @@ func (h *MessageHandler) handleGetChildren(genericMsg core.Message) (core.Reply,
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.UpdateClass)
 	classCoreID := msg.Class.GetRecordID()
 	classID := record.Bytes2ID(classCoreID[:])
@@ -268,7 +268,7 @@ func (h *MessageHandler) handleUpdateClass(genericMsg core.Message) (core.Reply,
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.UpdateObject)
 	objectCoreID := msg.Object.GetRecordID()
 	objectID := record.Bytes2ID(objectCoreID[:])
@@ -311,7 +311,7 @@ func (h *MessageHandler) handleUpdateObject(genericMsg core.Message) (core.Reply
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
 	msg := genericMsg.(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
@@ -354,7 +354,7 @@ func (h *MessageHandler) handleRegisterChild(genericMsg core.Message) (core.Repl
 	return &reply.ID{ID: *child.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleJetDrop(genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	msg := genericMsg.(*message.JetDrop)
 
 	// TODO: validate

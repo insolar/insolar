@@ -36,12 +36,12 @@ type UncheckedNode struct {
 type NonceSignHandler struct {
 	// TODO: add old unchecked nodes cleaner.
 	uncheckedNodes map[string]UncheckedNode
-	privateKey     *ecdsa.PrivateKey
+	certificate    core.Certificate
 }
 
 // NewSignHandler creates a new sign handler.
-func NewSignHandler(key *ecdsa.PrivateKey) *NonceSignHandler {
-	return &NonceSignHandler{privateKey: key, uncheckedNodes: make(map[string]UncheckedNode)}
+func NewSignHandler(certificate core.Certificate) *NonceSignHandler {
+	return &NonceSignHandler{certificate: certificate, uncheckedNodes: make(map[string]UncheckedNode)}
 }
 
 // AddUncheckedNode adds a new node to authorization.
@@ -67,14 +67,14 @@ func (handler *NonceSignHandler) SignedNonceIsCorrect(coordinator core.NetworkCo
 
 // SignNonce sign a nonce.
 func (handler *NonceSignHandler) SignNonce(nonce []byte) ([]byte, error) {
-	sign, err := ecdsa2.Sign(nonce, handler.privateKey)
+	sign, err := ecdsa2.Sign(nonce, handler.certificate.GetEcdsaPrivateKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign a message")
 	}
 	return sign, nil
 }
 
-// GetPrivateKey returns a private key.
+// GetPrivateKey returns private key
 func (handler *NonceSignHandler) GetPrivateKey() *ecdsa.PrivateKey {
-	return handler.privateKey
+	return handler.certificate.GetEcdsaPrivateKey()
 }
