@@ -65,6 +65,9 @@ type LogicRunner struct {
 	consensus            map[Ref]*Consensus
 	consensusMutex       sync.Mutex
 	sock                 net.Listener
+
+	JetCoordinator core.JetCoordinator
+	NodeID         core.RecordRef
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -74,6 +77,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	}
 	res := LogicRunner{
 		ArtifactManager: nil,
+		Ledger:          nil,
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
 		Pulse:           core.Pulse{},
@@ -91,6 +95,10 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	lr.MessageBus = messageBus
 	lr.Ledger = c.Ledger
 	lr.Network = c.Network
+
+	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
+	lr.NodeID = c.Network.GetNodeID()
+
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
 		if err := lr.RegisterExecutor(core.MachineTypeBuiltin, bi); err != nil {
@@ -182,6 +190,10 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 	return lr.execution[ref]
 }
 
+func (lr *LogicRunner) GetLedger() core.Ledger {
+	return lr.Ledger
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
@@ -200,6 +212,16 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 		vb = ValidationChecker{lr: lr, cb: cb}
 	} else {
 		vb = ValidationSaver{lr: lr}
+	}
+
+	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(vb.GetRole(), ref, lr.Pulse.PulseNumber, lr.NodeID)
+
+	if err != nil {
+		return nil, errors.New("Authorization failed with error: " + err.Error())
+	}
+	if !isAuthorized {
+		return nil, errors.New("Can't execute this object")
 	}
 
 	vb.Begin(ref, core.CaseRecord{

@@ -19,19 +19,20 @@ package logicrunner
 import (
 	"testing"
 
+	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/testutils/nodekeeper"
+
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/inscontext"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
@@ -46,19 +47,29 @@ func TestBareHelloworld(t *testing.T) {
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
-	c := core.Components{LogicRunner: lr}
+
+	nk := nodekeeper.GetTestNodekeeper()
+	c := core.Components{LogicRunner: lr, ActiveNodeComponent: nk}
+
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 	am := l.GetArtifactManager()
 	assert.NoError(t, err, "Initialize runner")
 
 	mb := testmessagebus.NewTestMessageBus()
+
+	nw := network.GetTestNetwork()
+
 	assert.NoError(t, lr.Start(core.Components{
 		Ledger:     l,
 		MessageBus: mb,
+		Network:    nw,
 	}), "starting logicrunner")
+
 	MessageBusTrivialBehavior(mb, lr)
-	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
+	l.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
+	// TODO why it was doing this way ?
+	//lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 
 	hw := helloworld.NewHelloWorld()
 

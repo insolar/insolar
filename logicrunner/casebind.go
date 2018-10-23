@@ -149,7 +149,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx core.Context, inmsg core.Message) (c
 	_, err := lr.MessageBus.Send(
 		inscontext.TODO(),
 		&message.ValidationResults{
-			//Caller:           lr.Network.GetNodeID(),
+			Caller:           lr.Network.GetNodeID(),
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
 			Error:            validationError,
@@ -199,6 +199,7 @@ func (lr *LogicRunner) ExecutorResults(ctx core.Context, inmsg core.Message) (co
 type ValidationBehaviour interface {
 	Begin(refs Ref, record core.CaseRecord)
 	End(refs Ref, record core.CaseRecord)
+	GetRole() core.JetRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
 	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
