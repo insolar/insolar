@@ -19,9 +19,9 @@ ledger:
   jetcoordinator:
     rolecounts:
       1: 1
-      2: 1
+      2: 3
       3: 1
-      4: 1
+      4: 3
       5: 1
 
 log:
@@ -39,12 +39,6 @@ pulsar:
   listenaddress: 0.0.0.0:8090
   nodesaddresses: []
 bootstrap:
-  rootkeys: "scripts/insolard/bootstrap_keys.json"
+  rootkeys: "scripts/insolard/root_member_keys.json"
   rootbalance: 10000
-
-privatekey: |-
-  -----BEGIN PRIVATE KEY-----
-  MHcCAQEEID6XJHMb2aiaK1bp2GHHw0r4LrzZZ4exlcmx8GrjGsMFoAoGCCqGSM49
-  AwEHoUQDQgAE7DE4ArqxIYbY/UAyLLFBGuFu2gROPaqp4vxbEeie7mnZeqsYexmN
-  BkrXBEFO5LF4diHC7OJ3xsfebvI0moQRLw==
-  -----END PRIVATE KEY-----
+keyspath: "scripts/insolard/bootstrap_keys.json"
