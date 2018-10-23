@@ -280,6 +280,7 @@ func (t *TestArtifactManager) ActivateObject(
 	request core.RecordRef,
 	class core.RecordRef,
 	parent core.RecordRef,
+	asDelegate bool,
 	memory []byte,
 ) (*core.RecordID, error) {
 	codeRef := t.Classes[class].ACode
@@ -292,32 +293,17 @@ func (t *TestArtifactManager) ActivateObject(
 		Delegates: make(map[core.RecordRef]core.RecordRef),
 	}
 
+	if asDelegate {
+		pObj, ok := t.Objects[parent]
+		if !ok {
+			return nil, errors.New("No parent to inject delegate into")
+		}
+
+		pObj.Delegates[class] = request
+	}
+
 	id := testutils.RandomID()
 	return &id, nil
-}
-
-// ActivateObjectDelegate implementation for tests
-func (t *TestArtifactManager) ActivateObjectDelegate(
-	ctx core.Context,
-	domain core.RecordRef,
-	request core.RecordRef,
-	class core.RecordRef,
-	parent core.RecordRef,
-	memory []byte,
-) (*core.RecordID, error) {
-	id, err := t.ActivateObject(ctx, domain, request, class, parent, memory)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
-	}
-
-	pObj, ok := t.Objects[parent]
-	if !ok {
-		return nil, errors.New("No parent to inject delegate into")
-	}
-
-	pObj.Delegates[class] = request
-
-	return id, nil
 }
 
 // DeactivateObject implementation for tests

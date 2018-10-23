@@ -379,26 +379,11 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 	}
 
 	switch m.SaveAs {
-	case message.Child:
-		log.Warn()
-		log.Warnf("M = %+v", m)
+	case message.Child, message.Delegate:
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
 				insctx,
-				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
-			)
-		}
-		vb.End(m.ClassRef, core.CaseRecord{
-			Type: core.CaseRecordTypeResult,
-			Resp: &reply.CallConstructor{Object: ctx.Request},
-		})
-
-		return &reply.CallConstructor{Object: ctx.Request}, err
-	case message.Delegate:
-		if vb.NeedSave() {
-			_, err = lr.ArtifactManager.ActivateObjectDelegate(
-				insctx,
-				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, newData,
+				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{
