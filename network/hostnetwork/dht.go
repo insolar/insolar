@@ -18,6 +18,7 @@ package hostnetwork
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"math"
 	"sort"
 	"strings"
@@ -62,6 +63,7 @@ type DHT struct {
 	nodeID            core.RecordRef
 	activeNodeKeeper  consensus.NodeKeeper
 	majorityRule      int
+	certificate       core.Certificate
 }
 
 // AuthInfo collects some information about authentication.
@@ -131,6 +133,7 @@ func NewDHT(
 	infbootstrap bool,
 	nodeID core.RecordRef,
 	majorityRule int,
+	certificate core.Certificate,
 ) (dht *DHT, err error) {
 	tables, err := newTables(origin)
 	if err != nil {
@@ -152,6 +155,7 @@ func NewDHT(
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
 		majorityRule:      majorityRule,
+		certificate:       certificate,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -501,9 +505,10 @@ LOOP:
 	return nil
 }
 
-func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
 	// TODO: return nodekeeper from helper method in HostHandler and remove this func and GetActiveNodes
-	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address /*, publicKey*/)
+	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address, version /*, publicKey*/)
 }
 
 // Disconnect will trigger a Stop from the network.
@@ -901,6 +906,21 @@ func (dht *DHT) handlePackets(start, stop chan bool) {
 
 func (dht *DHT) dispatchPacketType(ctx hosthandler.Context, msg *packet.Packet, ht *routing.HashTable) {
 	packetBuilder := packet.NewBuilder().Sender(ht.Origin).Receiver(msg.Sender).Type(msg.Type)
+
+	// TODO: fix sign and check sign logic
+	// if msg.Type == packet.TypeRPC {
+	// 	data := msg.Data.(*packet.RequestDataRPC)
+	// 	signedMsg, err := message.Deserialize(bytes.NewBuffer(data.Args[0]))
+	// 	if err != nil {
+	// 		log.Error(err, "failed to parse incoming RPC")
+	// 		return
+	// 	}
+	// 	if !message.SignIsCorrect(signedMsg, dht.GetNetworkCommonFacade().GetSignHandler().GetPrivateKey()) {
+	// 		log.Warn("RPC message not signed")
+	// 		return
+	// 	}
+	// }
+
 	response, err := ParseIncomingPacket(dht, ctx, msg, packetBuilder)
 	if err != nil {
 		log.Errorln(err)
@@ -1115,6 +1135,14 @@ func (dht *DHT) FindHost(ctx hosthandler.Context, key string) (*host.Host, bool,
 // InvokeRPC - invoke a method to rpc.
 func (dht *DHT) InvokeRPC(sender *host.Host, method string, args [][]byte) ([]byte, error) {
 	return dht.ncf.GetRPC().Invoke(sender, method, args)
+}
+
+func (dht *DHT) SignMessage() {
+	// dht.certificate.
+}
+
+func (dht *DHT) GetPrivateKey() *ecdsa.PrivateKey {
+	return dht.certificate.GetEcdsaPrivateKey()
 }
 
 // AddHost adds a host into the appropriate k bucket

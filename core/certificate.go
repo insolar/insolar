@@ -14,23 +14,19 @@
  *    limitations under the License.
  */
 
-package functest
+package core
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"crypto/ecdsa"
 )
 
-func TestIsAuthorized(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "is_auth",
-	})
+// Certificate interface provides methods to manage keys
+type Certificate interface {
+	GetPublicKey() (string, error)
 
-	isAuthResponse := &isAuthorized{}
-	unmarshalResponse(t, body, isAuthResponse)
+	// TODO should be removed
+	GetPrivateKey() (string, error)
 
-	assert.Equal(t, []int{1}, isAuthResponse.Roles)
-	assert.NotEmpty(t, isAuthResponse.PublicKey)
-	assert.Equal(t, true, isAuthResponse.NetCoordCheck)
+	// TODO should be removed
+	GetEcdsaPrivateKey() *ecdsa.PrivateKey
 }

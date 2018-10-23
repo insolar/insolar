@@ -34,8 +34,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const TESTSEED = "VGVzdA=="
 const TESTREFERENCE = "222222"
+const TESTSEED = "VGVzdA=="
 
 func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
@@ -58,7 +58,7 @@ func FakeHandler(response http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	qtype := api.QTypeFromString(params.QType)
+	qtype := api.QTypeFromString(params.QueryType)
 	answer := map[string]interface{}{}
 	if qtype == api.GetSeed {
 		answer[api.SEED] = TESTSEED
@@ -95,18 +95,30 @@ func waitForStart() error {
 	return nil
 }
 
+func startServer() error {
+	server := &http.Server{}
+	listener, err := net.ListenTCP("tcp4", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 12221})
+	if err != nil {
+		return errors.Wrap(err, "error creating listener")
+	}
+	go server.Serve(listener)
+
+	return nil
+}
+
 func setup() error {
 	fh := FakeHandler
 	http.HandleFunc(LOCATION, fh)
 	http.HandleFunc(LOCATION+"/call", fh)
 	log.Info("Starting Test api server ...")
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Error("Test Httpserver: ListenAndServe() error: ", err)
-		}
-	}()
 
-	err := waitForStart()
+	err := startServer()
+	if err != nil {
+		log.Error("Problem with starting test server: ", err)
+		return errors.Wrap(err, "[ setup ]")
+	}
+
+	err = waitForStart()
 	if err != nil {
 		log.Error("Can't start api: ", err)
 		return errors.Wrap(err, "[ setup ]")

@@ -6,6 +6,12 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
+type RecordInfo struct {
+	PublicKey string
+	Roles     []core.NodeRole
+	IP        string
+}
+
 // ClassReference to class of this contract
 var ClassReference = core.NewRefFromBase58("")
 
@@ -58,10 +64,11 @@ func GetImplementationFrom(object core.RecordRef) (*NodeRecord, error) {
 }
 
 // NewNodeRecord is constructor
-func NewNodeRecord(pk string, roleS string) *ContractConstructorHolder {
-	var args [2]interface{}
-	args[0] = pk
-	args[1] = roleS
+func NewNodeRecord(publicKey string, roles []string, ip string) *ContractConstructorHolder {
+	var args [3]interface{}
+	args[0] = publicKey
+	args[1] = roles
+	args[2] = ip
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -80,6 +87,58 @@ func (r *NodeRecord) GetReference() core.RecordRef {
 // GetClass returns reference to the class
 func (r *NodeRecord) GetClass() core.RecordRef {
 	return ClassReference
+}
+
+// GetNodeInfo is proxy generated method
+func (r *NodeRecord) GetNodeInfo() (RecordInfo, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 RecordInfo
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeInfo", argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetNodeInfoNoWait is proxy generated method
+func (r *NodeRecord) GetNodeInfoNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeInfo", argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetPublicKey is proxy generated method
@@ -135,13 +194,13 @@ func (r *NodeRecord) GetPublicKeyNoWait() error {
 }
 
 // GetRole is proxy generated method
-func (r *NodeRecord) GetRole() (core.NodeRole, error) {
+func (r *NodeRecord) GetRole() ([]core.NodeRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 core.NodeRole
+	var ret0 []core.NodeRole
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -179,60 +238,6 @@ func (r *NodeRecord) GetRoleNoWait() error {
 	}
 
 	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRole", argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetRoleAndPublicKey is proxy generated method
-func (r *NodeRecord) GetRoleAndPublicKey() (core.NodeRole, string, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := [3]interface{}{}
-	var ret0 core.NodeRole
-	ret[0] = &ret0
-	var ret1 string
-	ret[1] = &ret1
-	var ret2 *foundation.Error
-	ret[2] = &ret2
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetRoleAndPublicKey", argsSerialized)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	err = proxyctx.Current.Deserialize(res, &ret)
-	if err != nil {
-		return ret0, ret1, err
-	}
-
-	if ret2 != nil {
-		return ret0, ret1, ret2
-	}
-	return ret0, ret1, nil
-}
-
-// GetRoleAndPublicKeyNoWait is proxy generated method
-func (r *NodeRecord) GetRoleAndPublicKeyNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := proxyctx.Current.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetRoleAndPublicKey", argsSerialized)
 	if err != nil {
 		return err
 	}
