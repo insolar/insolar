@@ -117,6 +117,11 @@ type TestObjectDescriptor struct {
 	ChildrenContainer []core.RecordRef
 }
 
+// ChildPointer implementation for tests
+func (t *TestObjectDescriptor) ChildPointer() *core.RecordID {
+	panic("not implemented")
+}
+
 // HeadRef implementation for tests
 func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
 	panic("not implemented")
