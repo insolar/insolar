@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -113,23 +114,30 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 			return
 		}
 
-		if !ar.seedmanager.Exists(ar.seedmanager.SeedFromBytes(params.Seed)) {
-			resp.Error = "Incorrect seed"
-			log.Error("[ CallHandler ] ", resp.Error)
+		seed := seedmanager.SeedFromBytes(params.Seed)
+		if seed == nil {
+			resp.Error = "[ CallHandler ] Bad seed param"
+			log.Error(resp.Error)
+			return
+		}
+
+		if !ar.seedmanager.Exists(*seed) {
+			resp.Error = "[ CallHandler ] Incorrect seed"
+			log.Error(resp.Error)
 			return
 		}
 
 		err = ar.verifySignature(params)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(errors.Wrap(err, "[ CallHandler ] "))
+			log.Error(errors.Wrap(err, "[ CallHandler ] Can't verify signature"))
 			return
 		}
 
 		args, err := core.MarshalArgs(*c.Bootstrapper.GetRootDomainRef(), params.Method, params.Params, params.Seed, params.Signature)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(err)
+			log.Error(errors.Wrap(err, "[ CallHandler ] Can't marshal args"))
 			return
 		}
 		res, err := ar.messageBus.Send(
@@ -142,7 +150,7 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 		)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(err)
+			log.Error(errors.Wrap(err, "[ CallHandler ] Can't send message to message bus"))
 			return
 		}
 
@@ -151,13 +159,14 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 		err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
 		if err != nil {
 			resp.Error = err.Error()
-			log.Error(err)
+			log.Error(errors.Wrap(err, "[ CallHandler ] Can't unmarshal params"))
 			return
 		}
 
 		resp.Result = result
 		if contractErr != nil {
 			resp.Error = contractErr.Error()
+			log.Error(errors.Wrap(contractErr, "[ CallHandler ] Error in called method"))
 		}
 	}
 }

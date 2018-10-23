@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/id"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,14 +47,15 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 	receiverAddress, _ := host.NewAddress("127.0.0.2:31338")
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
+	ref := testutils.RandomRef()
 
-	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{"test", [][]byte{}}).Build()
+	m := builder.Sender(sender).Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
 		Type:       TypeRPC,
-		Data:       &RequestDataRPC{"test", [][]byte{}},
+		Data:       &RequestDataRPC{ref, "test", [][]byte{}},
 		IsResponse: false,
 		Error:      nil,
 	}

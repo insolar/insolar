@@ -18,6 +18,7 @@ package hosthandler
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -144,7 +145,6 @@ type HostHandler interface {
 
 	SetHighKnownHostID(id string)
 	SetOuterHostsCount(hosts int)
-	SetNodeID(nodeID core.RecordRef)
 	SetAuthStatus(targetID string, status bool)
 	SetNodeKeeper(keeper consensus.NodeKeeper)
 
@@ -156,6 +156,7 @@ type HostHandler interface {
 	GetSelfKnownOuterHosts() int
 	GetOriginHost() *host.Origin
 	GetPacketTimeout() time.Duration
+	GetPrivateKey() *ecdsa.PrivateKey
 	GetReplicationTime() time.Duration
 	HostIsAuthenticated(targetID string) bool
 	KeyIsReceived(targetID string) ([]byte, bool)

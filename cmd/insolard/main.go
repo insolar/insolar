@@ -140,7 +140,7 @@ func main() {
 	}
 	cm.components.Network = nw
 
-	cm.components.MessageBus, err = messagebus.NewMessageBus()
+	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
 	if err != nil {
 		log.Fatalln("failed to start MessageBus: ", err.Error())
 	}

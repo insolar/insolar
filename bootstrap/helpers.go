@@ -17,6 +17,7 @@
 package bootstrap
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -120,4 +121,24 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 		return rootDomainRef, nil
 	}
 	return nil, nil
+}
+
+func getRootMemberPubKey(file string) (string, error) {
+	fileWithPath, err := getAbsolutePath(file)
+	if err != nil {
+		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't find absolute path for root keys")
+	}
+	data, err := ioutil.ReadFile(filepath.Clean(fileWithPath))
+	if err != nil {
+		return "", errors.Wrap(err, "couldn't read rootkeys file "+filepath.Clean(fileWithPath))
+	}
+	var keys map[string]string
+	err = json.Unmarshal(data, &keys)
+	if err != nil {
+		return "", errors.Wrapf(err, "[ getRootMemberPubKey ] couldn't unmarshal data from %s", file)
+	}
+	if keys["public_key"] == "" {
+		return "", errors.New("empty root public key")
+	}
+	return keys["public_key"], nil
 }

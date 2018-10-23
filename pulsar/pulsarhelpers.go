@@ -185,3 +185,18 @@ func selectByEntropy(entropy core.Entropy, values []string, count int) ([]string
 	}
 	return selected, nil
 }
+
+// GetLastPulse returns last pulse in the thread-safe mode
+func (currentPulsar *Pulsar) GetLastPulse() *core.Pulse {
+	currentPulsar.lastPulseLock.RLock()
+	defer currentPulsar.lastPulseLock.RUnlock()
+	return currentPulsar.lastPulse
+}
+
+// SetLastPulse sets last pulse in the thread-safe mode
+func (currentPulsar *Pulsar) SetLastPulse(newPulse *core.Pulse) {
+	currentPulsar.lastPulseLock.Lock()
+	defer currentPulsar.lastPulseLock.Unlock()
+	currentPulsar.lastPulse = newPulse
+
+}
