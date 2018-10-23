@@ -18,8 +18,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -31,10 +33,13 @@ import (
 const defaultStdoutPath = "-"
 
 var (
-	input       string
-	output      string
-	concurrent  int
-	repetitions int
+	input          string
+	output         string
+	concurrent     int
+	repetitions    int
+	rootmemberkeys string
+
+	rootMember []string
 )
 
 func parseInputParams() {
@@ -42,6 +47,7 @@ func parseInputParams() {
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
+	pflag.StringVarP(&rootmemberkeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
 	pflag.Parse()
 }
 
@@ -88,6 +94,23 @@ func getMembersRef(fileName string) ([][]string, error) {
 	return members, nil
 }
 
+type memberKeys struct {
+	Private string `json:"private_key"`
+	Public  string `json:"public_key"`
+}
+
+func getRootMemberInfo(fileName string) []string {
+
+	rawConf, err := ioutil.ReadFile(fileName)
+	check("problem with reading root member keys file", err)
+
+	keys := memberKeys{}
+	err = json.Unmarshal(rawConf, &keys)
+	check("problem with unmarshaling root member keys", err)
+
+	return []string{rootMemberRef, keys.Private}
+}
+
 func runScenarios(out io.Writer, members [][]string, concurrent int, repetitions int) {
 	transferDifferentMembers := &transferDifferentMembersScenario{
 		concurrent:  concurrent,
@@ -122,6 +145,8 @@ func main() {
 	check("Problems with output file:", err)
 
 	var members [][]string
+
+	rootMember = getRootMemberInfo(rootmemberkeys)
 
 	if input != "" {
 		members, err = getMembersRef(input)

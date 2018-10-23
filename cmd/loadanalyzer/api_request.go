@@ -28,7 +28,6 @@ import (
 const TestURL = "http://localhost:19191/api/v1"
 const TestCallURL = "http://localhost:19191/api/v1/call"
 const rootMemberRef = ""
-const rootMemberPrivKeyStr = ""
 
 type response struct {
 	Error  string
@@ -49,7 +48,7 @@ func sendRequest(method string, params []interface{}, member []string) []byte {
 	}
 
 	userCfg, err := requesters.CreateUserConfig(member[0], member[1])
-	check("can not read user config from file:", err)
+	check("can not create user config:", err)
 
 	seed, err := requesters.GetSeed(TestURL)
 
@@ -88,7 +87,7 @@ func createMembers(concurrent int, repetitions int) ([][]string, error) {
 		check("Problems with serialization of public key:", err)
 
 		params := []interface{}{memberName, memberPubKeyStr}
-		body := sendRequest("CreateMember", params, []string{rootMemberRef, rootMemberPrivKeyStr})
+		body := sendRequest("CreateMember", params, rootMember)
 
 		memberResponse := getResponse(body)
 		if memberResponse.Error != "" {
