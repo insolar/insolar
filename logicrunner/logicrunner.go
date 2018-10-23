@@ -252,10 +252,9 @@ func (lr *LogicRunner) ExecutorResults(inmsg core.Message) (core.Reply, error) {
 }
 
 type objectBody struct {
-	Body        []byte
-	Code        Ref
-	Class       Ref
-	MachineType core.MachineType
+	Object core.ObjectDescriptor
+	Class  core.ClassDescriptor
+	Code   core.CodeDescriptor
 }
 
 func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
@@ -284,10 +283,9 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 
 	codeDesc := classDesc.CodeDescriptor()
 	ob := &objectBody{
-		Body:        objDesc.Memory(),
-		Code:        *codeDesc.Ref(),
-		Class:       *classDesc.HeadRef(),
-		MachineType: codeDesc.MachineType(),
+		Object: objDesc,
+		Class:  classDesc,
+		Code:   codeDesc,
 	}
 	lr.addObjectCaseRecord(objref, core.CaseRecord{
 		Type:   core.CaseRecordTypeGetObject,
@@ -309,17 +307,17 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 	}
 
 	ctx.Callee = &m.ObjectRef
-	ctx.Class = &objbody.Class
+	ctx.Class = objbody.Class.HeadRef()
 	vb.ModifyContext(&ctx)
 
-	executor, err := lr.GetExecutor(objbody.MachineType)
+	executor, err := lr.GetExecutor(objbody.Code.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "no executor registered")
 	}
 
 	executer := func() (*reply.CallMethod, error) {
 		newData, result, err := executor.CallMethod(
-			&ctx, objbody.Code, objbody.Body, m.Method, m.Arguments,
+			&ctx, *objbody.Code.Ref(), objbody.Object.Memory(), m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executor error")
@@ -328,7 +326,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 		// TODO: deactivation should be handled way better here
 		if vb.NeedSave() && lr.lastObjectCaseRecord(m.ObjectRef).Type != core.CaseRecordTypeDeactivateObject {
 			_, err = lr.ArtifactManager.UpdateObject(
-				insctx, Ref{}, *ctx.Request, m.ObjectRef, newData,
+				insctx, Ref{}, *ctx.Request, objbody.Object, newData,
 			)
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
