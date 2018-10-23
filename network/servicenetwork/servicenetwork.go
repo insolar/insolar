@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -96,7 +95,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 		return nil, errors.New("message is nil")
 	}
 	hostID := nodenetwork.ResolveHostID(nodeID)
-	buff, err := messageToBytes(msg)
+	buff, err := message.ToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
@@ -115,7 +114,7 @@ func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method stri
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	buff, err := messageToBytes(msg)
+	buff, err := message.ToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize event")
 	}
@@ -266,13 +265,4 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 	}
 
 	return nil
-}
-
-// ToBytes deserialize a core.Message to bytes.
-func messageToBytes(msg core.Message) ([]byte, error) {
-	reqBuff, err := message.Serialize(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
-	}
-	return ioutil.ReadAll(reqBuff)
 }
