@@ -142,13 +142,13 @@ type ArtifactManager interface {
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(ctx Context, domain, request RecordRef, obj *ObjectDescriptor) (*RecordID, error)
+	DeactivateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor) (*RecordID, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(ctx Context, domain, request RecordRef, obj *ObjectDescriptor, memory []byte) (*RecordID, error)
+	UpdateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (*RecordID, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.

@@ -370,7 +370,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 //
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObject(
-	ctx core.Context, domain, request core.RecordRef, object *core.ObjectDescriptor,
+	ctx core.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	return m.updateObject(
 		&record.DeactivationRecord{
@@ -380,7 +380,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 			},
 			PrevState: record.Bytes2ID(object.StateID()[:]),
 		},
-		object,
+		*object.HeadRef(),
 		nil,
 	)
 }
@@ -392,7 +392,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 func (m *LedgerArtifactManager) UpdateObject(
 	ctx core.Context,
 	domain, request core.RecordRef,
-	object *core.ObjectDescriptor,
+	object core.ObjectDescriptor,
 	memory []byte,
 ) (*core.RecordID, error) {
 	return m.updateObject(
@@ -404,9 +404,9 @@ func (m *LedgerArtifactManager) UpdateObject(
 			ObjectStateRecord: record.ObjectStateRecord{
 				Memory: memory,
 			},
-			PrevState: record.Bytes2ID(state[:]),
+			PrevState: record.Bytes2ID(object.StateID()[:]),
 		},
-		object,
+		*object.HeadRef(),
 		nil,
 	)
 }

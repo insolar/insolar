@@ -389,7 +389,6 @@ func TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(t *testing.T)
 		*objRef.CoreRef(),
 		*genRefWithID(classID),
 		*genRefWithID(parentID),
-		nil,
 		false,
 		memory,
 	)
@@ -440,8 +439,7 @@ func TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord(t *testing.
 		ctx,
 		*domainRef.CoreRef(),
 		*td.requestRef.CoreRef(),
-		*genRefWithID(objID),
-		*objID.CoreID(),
+		&ObjectDescriptor{head: *genRefWithID(objID), state: *objID.CoreID()},
 	)
 	assert.Nil(t, err)
 	deactivateID := record.Bytes2ID(deactivateCoreID[:])
@@ -476,8 +474,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 		ctx,
 		*domainRef.CoreRef(),
 		*td.requestRef.CoreRef(),
-		*genRefWithID(objID),
-		*objID.CoreID(),
+		&ObjectDescriptor{head: *genRefWithID(objID), state: *objID.CoreID()},
 		memory,
 	)
 	assert.Nil(t, err)
