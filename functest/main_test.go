@@ -36,7 +36,8 @@ import (
 const HOST = "http://localhost:19191"
 const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
-const insolarRootKeys = "bootstrap_keys.json"
+const insolarNodeKeys = "bootstrap_keys.json"
+const insolarRootMemberKeys = "root_member_keys.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -45,7 +46,8 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
-var insolarRootKeysPath = filepath.Join(testdataPath(), insolarRootKeys)
+var insolarNodeKeysPath = filepath.Join(testdataPath(), insolarNodeKeys)
+var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
 
 func testdataPath() string {
 	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
@@ -93,11 +95,18 @@ func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
-func generateRootKeys() error {
+func generateNodeKeys() error {
 	out, err := exec.Command(
 		insolarPath, "-c", "gen_keys",
-		"-o", insolarRootKeysPath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateRootKeys ] could't generate root keys: %s", out)
+		"-o", insolarNodeKeysPath).CombinedOutput()
+	return errors.Wrapf(err, "[ generateNodeKeys ] could't generate node keys: %s", out)
+}
+
+func generateRootMemberKeys() error {
+	out, err := exec.Command(
+		insolarPath, "-c", "gen_keys",
+		"-o", insolarRootMemberKeysPath).CombinedOutput()
+	return errors.Wrapf(err, "[ generateRootMemberKeys ] could't generate root member keys: %s", out)
 }
 
 var insgorundPath string
@@ -239,11 +248,17 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] insolar was successfully builded")
 
-	err = generateRootKeys()
+	err = generateNodeKeys()
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate root keys: ")
+		return errors.Wrap(err, "[ setup ] could't generate node keys: ")
 	}
-	fmt.Println("[ setup ] root keys successfully generated")
+	fmt.Println("[ setup ] node keys successfully generated")
+
+	err = generateRootMemberKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't generate root member keys: ")
+	}
+	fmt.Println("[ setup ] root member keys successfully generated")
 
 	err = buildInsolard()
 	if err != nil {

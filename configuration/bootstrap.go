@@ -17,6 +17,7 @@
 package configuration
 
 type Bootstrap struct {
+	RootKeys    string
 	RootBalance uint
 }
 
