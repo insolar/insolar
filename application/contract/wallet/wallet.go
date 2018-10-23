@@ -39,7 +39,7 @@ func (w *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, erro
 	ah := allowance.New(to, amount, w.GetContext().Time.Unix()+10)
 	a, err := ah.AsChild(w.GetReference())
 	if err != nil {
-		return core.RecordRef{}, fmt.Errorf("[ Allocate ] Can't save as child" + err.Error())
+		return core.RecordRef{}, fmt.Errorf("[ Allocate ] Can't save as child: %s", err.Error())
 	}
 	return a.GetReference(), nil
 }
@@ -47,18 +47,18 @@ func (w *Wallet) Allocate(amount uint, to *core.RecordRef) (core.RecordRef, erro
 func (w *Wallet) Receive(amount uint, from *core.RecordRef) error {
 	fromWallet, err := wallet.GetImplementationFrom(*from)
 	if err != nil {
-		return fmt.Errorf("[ Receive ] Can't get implementation" + err.Error())
+		return fmt.Errorf("[ Receive ] Can't get implementation: %s", err.Error())
 	}
 
 	v := w.GetReference()
 	aRef, err := fromWallet.Allocate(amount, &v)
 	if err != nil {
-		return fmt.Errorf("[ Allocate ] Can't make new allowance" + err.Error())
+		return fmt.Errorf("[ Allocate ] Can't make new allowance: %s", err.Error())
 	}
 
 	b, err := allowance.GetObject(aRef).TakeAmount()
 	if err != nil {
-		return fmt.Errorf("[ Allocate ] Can't take amount" + err.Error())
+		return fmt.Errorf("[ Allocate ] Can't take amount: %s", err.Error())
 	}
 
 	w.Balance += b
@@ -71,7 +71,7 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 
 	toWallet, err := wallet.GetImplementationFrom(*to)
 	if err != nil {
-		return fmt.Errorf("[ Transfer ] Can't get implementation" + err.Error())
+		return fmt.Errorf("[ Transfer ] Can't get implementation: %s", err.Error())
 	}
 
 	toWalletRef := toWallet.GetReference()
@@ -79,7 +79,7 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 	ah := allowance.New(&toWalletRef, amount, w.GetContext().Time.Unix()+10)
 	a, err := ah.AsChild(w.GetReference())
 	if err != nil {
-		return fmt.Errorf("[ Transfer ] Can't save as child" + err.Error())
+		return fmt.Errorf("[ Transfer ] Can't save as child: %s", err.Error())
 	}
 
 	r := a.GetReference()
@@ -90,7 +90,7 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 func (w *Wallet) Accept(aRef *core.RecordRef) error {
 	b, err := allowance.GetObject(*aRef).TakeAmount()
 	if err != nil {
-		return fmt.Errorf("[ Accept ] Can't take amount" + err.Error())
+		return fmt.Errorf("[ Accept ] Can't take amount: %s", err.Error())
 	}
 	w.Balance += b
 	return nil
@@ -100,13 +100,13 @@ func (w *Wallet) GetTotalBalance() (uint, error) {
 	var totalAllowanced uint
 	crefs, err := w.GetChildrenTyped(allowance.GetClass())
 	if err != nil {
-		return 0, fmt.Errorf("[ GetTotalBalance ] Can't get children" + err.Error())
+		return 0, fmt.Errorf("[ GetTotalBalance ] Can't get children: %s", err.Error())
 	}
 	for _, cref := range crefs {
 		a := allowance.GetObject(cref)
 		balance, err := a.GetBalanceForOwner()
 		if err != nil {
-			return 0, fmt.Errorf("[ GetTotalBalance ] Can't get balance for owner" + err.Error())
+			return 0, fmt.Errorf("[ GetTotalBalance ] Can't get balance for owner: %s", err.Error())
 		}
 
 		totalAllowanced += balance
@@ -117,17 +117,17 @@ func (w *Wallet) GetTotalBalance() (uint, error) {
 func (w *Wallet) ReturnAndDeleteExpiredAllowances() error {
 	crefs, err := w.GetChildrenTyped(allowance.GetClass())
 	if err != nil {
-		return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't get children" + err.Error())
+		return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't get children: %s", err.Error())
 	}
 	for _, cref := range crefs {
 		Allowance := allowance.GetObject(cref)
 		balance, err := Allowance.DeleteExpiredAllowance()
 		if err != nil {
-			return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't delete allowance" + err.Error())
+			return fmt.Errorf("[ ReturnAndDeleteExpiredAllowances ] Can't delete allowance: %s", err.Error())
 		}
 		w.Balance += balance
 	}
-	return err
+	return nil
 }
 
 func New(balance uint) (*Wallet, error) {

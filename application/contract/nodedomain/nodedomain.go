@@ -48,7 +48,7 @@ func (nd *NodeDomain) makeCertificate(numberOfBootstrapNodes int, publicKey stri
 
 	bNodes, err := nd.makeBootstrapNodesConfig(numberOfBootstrapNodes)
 	if err != nil {
-		return nil, fmt.Errorf("Can't make bootstrap nodes config: " + err.Error())
+		return nil, fmt.Errorf("Can't make bootstrap nodes config: %s", err.Error())
 	}
 
 	result["bootstrap_nodes"] = bNodes
@@ -64,7 +64,7 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 
 	nodeRefs, err := nd.GetChildrenTyped(noderecord.GetClass())
 	if err != nil {
-		return nil, fmt.Errorf("[ makeBootstrapNodesConfig ] Problem with taking records: " + err.Error())
+		return nil, fmt.Errorf("[ makeBootstrapNodesConfig ] Problem with taking records: %s", err.Error())
 	}
 
 	requiredNodesNum := numberOfBootstrapNodes
@@ -79,7 +79,7 @@ func (nd *NodeDomain) makeBootstrapNodesConfig(numberOfBootstrapNodes int) ([]ma
 		nodeRecord := noderecord.GetObject(ref)
 		recordInfo, err := nodeRecord.GetNodeInfo()
 		if err != nil {
-			return nil, fmt.Errorf("[ makeBootstrapNodesConfig ] Can't get NodeInfo: " + err.Error())
+			return nil, fmt.Errorf("[ makeBootstrapNodesConfig ] Can't get NodeInfo: %s", err.Error())
 		}
 
 		bConf := map[string]string{}
@@ -108,21 +108,21 @@ func (nd *NodeDomain) RegisterNode(publicKey string, numberOfBootstrapNodes int,
 
 	result, err := nd.makeCertificate(numberOfBootstrapNodes, publicKey, majorityRule, roles)
 	if err != nil {
-		return nil, fmt.Errorf(("[ RegisterNode ] " + err.Error()))
+		return nil, fmt.Errorf("[ RegisterNode ] : %s", err.Error())
 	}
 
 	// TODO: what should be done when record already exists?
 	newRecord := noderecord.NewNodeRecord(publicKey, roles, ip)
 	record, err := newRecord.AsChild(nd.GetReference())
 	if err != nil {
-		return nil, fmt.Errorf("[ RegisterNode ] " + err.Error())
+		return nil, fmt.Errorf("[ RegisterNode ]: %s", err.Error())
 	}
 
 	result["reference"] = record.GetReference().String()
 
 	rawCert, err := json.Marshal(result)
 	if err != nil {
-		return nil, fmt.Errorf("Can't marshal certificate: " + err.Error())
+		return nil, fmt.Errorf("Can't marshal certificate: %s", err.Error())
 	}
 
 	return rawCert, nil
@@ -138,11 +138,11 @@ func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 func (nd *NodeDomain) IsAuthorized(nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (bool, error) {
 	pubKey, err := nd.getNodeRecord(nodeRef).GetPublicKey()
 	if err != nil {
-		return false, fmt.Errorf("[ IsAuthorized ] Can't get nodes" + err.Error())
+		return false, fmt.Errorf("[ IsAuthorized ] Can't get nodes: %s", err.Error())
 	}
 	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
 	if err != nil {
-		return false, fmt.Errorf("[ IsAuthorized ] Can't verify" + err.Error())
+		return false, fmt.Errorf("[ IsAuthorized ] Can't verify: %s", err.Error())
 	}
 	return ok, nil
 }
@@ -152,7 +152,7 @@ func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRa
 	nodeR := nd.getNodeRecord(nodeRef)
 	nodeInfo, err := nodeR.GetNodeInfo()
 	if err != nil {
-		return "", nil, fmt.Errorf("[ Authorize ] Problem with Getting info: " + err.Error())
+		return "", nil, fmt.Errorf("[ Authorize ] Problem with Getting info: %s", err.Error())
 	}
 
 	pubKey := nodeInfo.PublicKey
@@ -160,7 +160,7 @@ func (nd *NodeDomain) Authorize(nodeRef core.RecordRef, seed []byte, signatureRa
 
 	ok, err := ecdsa.Verify(seed, signatureRaw, pubKey)
 	if err != nil {
-		return "", nil, fmt.Errorf("[ Authorize ] Problem with verifying" + err.Error())
+		return "", nil, fmt.Errorf("[ Authorize ] Problem with verifying: %s", err.Error())
 	}
 	if !ok {
 		return "", nil, fmt.Errorf("[ Authorize ] Can't verify signature")

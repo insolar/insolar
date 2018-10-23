@@ -40,7 +40,7 @@ func Serialize(ref []byte, delegate []byte, method string, params []byte, seed [
 		seed,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("[ Serialize ]" + err.Error())
+		return nil, fmt.Errorf("[ Serialize ]: %s", err.Error())
 	}
 	return serialized, nil
 }
