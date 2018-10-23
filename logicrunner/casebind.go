@@ -109,7 +109,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return step, errors.New("step between two shores")
 		}
 
-		ret, err := lr.Execute(start.Resp.(core.Message))
+		ret, err := lr.Execute(inscontext.TODO(), start.Resp.(core.Message))
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -139,6 +139,60 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return step, errors.New("unknown result type")
 		}
 	}
+}
+func (lr *LogicRunner) ValidateCaseBind(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+	msg, ok := inmsg.(*message.ValidateCaseBind)
+	if !ok {
+		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
+	}
+	passedStepsCount, validationError := lr.Validate(msg.GetReference(), msg.GetPulse(), msg.GetCaseRecords())
+	_, err := lr.MessageBus.Send(
+		inscontext.TODO(),
+		&message.ValidationResults{
+			//Caller:           lr.Network.GetNodeID(),
+			RecordRef:        msg.GetReference(),
+			PassedStepsCount: passedStepsCount,
+			Error:            validationError,
+			// TODO: INS-663 use signatures here
+		},
+	)
+
+	return nil, err
+}
+
+func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
+	lr.consensusMutex.Lock()
+	defer lr.consensusMutex.Unlock()
+	c, ok := lr.consensus[r]
+	if !ok {
+		// arr, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.Pulse.PulseNumber)
+		//if err != nil {
+		//	panic("cannot QueryRole")
+		//}
+		c = newConsensus(nil)
+		lr.consensus[r] = c
+	}
+	return c, ok
+}
+
+func (lr *LogicRunner) ProcessValidationResults(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+	msg, ok := inmsg.(*message.ValidationResults)
+	if !ok {
+		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+	}
+	c, _ := lr.GetConsensus(msg.RecordRef)
+	c.AddValidated(msg)
+	return nil, nil
+}
+
+func (lr *LogicRunner) ExecutorResults(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+	msg, ok := inmsg.(*message.ExecutorResults)
+	if !ok {
+		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+	}
+	c, _ := lr.GetConsensus(msg.RecordRef)
+	c.AddExecutor(msg)
+	return nil, nil
 }
 
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.

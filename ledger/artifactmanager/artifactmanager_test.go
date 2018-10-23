@@ -17,13 +17,11 @@
 package artifactmanager
 
 import (
-	"fmt"
 	"math/rand"
 	"testing"
 
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/inscontext"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/core"
@@ -31,8 +29,8 @@ import (
 	"github.com/insolar/insolar/ledger/index"
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
-
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
 var (
@@ -70,56 +68,10 @@ type preparedAMTestData struct {
 	requestRef *record.Reference
 }
 
-type messageBusMock struct {
-	handlers map[core.MessageType]core.MessageHandler
-}
-
-func NewMessageBusMock() *messageBusMock {
-	return &messageBusMock{handlers: map[core.MessageType]core.MessageHandler{}}
-}
-
-func (mb *messageBusMock) Register(p core.MessageType, handler core.MessageHandler) error {
-	_, ok := mb.handlers[p]
-	if ok {
-		return errors.New("handler for this type already exists")
-	}
-
-	mb.handlers[p] = handler
-	return nil
-}
-
-func (mb *messageBusMock) MustRegister(p core.MessageType, handler core.MessageHandler) {
-	err := mb.Register(p, handler)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (mb *messageBusMock) Start(components core.Components) error {
-	panic("implement me")
-}
-
-func (mb *messageBusMock) Stop() error {
-	panic("implement me")
-}
-
-func (mb *messageBusMock) Send(m core.Message) (core.Reply, error) {
-	typ := m.Type()
-	handler, ok := mb.handlers[typ]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("no handler for this message type %s", typ))
-	}
-	return handler(m)
-}
-
-func (mb *messageBusMock) SendAsync(m core.Message) {
-	panic("implement me")
-}
-
 func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 	db, cleaner := storagetest.TmpDB(t, "")
 
-	mb := NewMessageBusMock()
+	mb := testmessagebus.NewTestMessageBus()
 	components := core.Components{MessageBus: mb}
 	handler := MessageHandler{db: db}
 	handler.Link(components)
@@ -881,9 +833,10 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 		{record.ID2Bytes(ids[2]), record.SerializeRecord(&records[2])},
 	}
 
-	rep, err := td.manager.messageBus.Send(&message.JetDrop{
-		Records: recordData,
-	})
+	rep, err := td.manager.messageBus.Send(
+		inscontext.TODO(),
+		&message.JetDrop{Records: recordData},
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 

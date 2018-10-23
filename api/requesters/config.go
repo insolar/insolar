@@ -70,7 +70,7 @@ func ReadUserConfigFromFile(path string) (*UserConfigJSON, error) {
 	return cfgJSON, nil
 }
 
-// ReadRequesterConfigFromFile read request config from file
+// ReadRequestConfigFromFile read request config from file
 func ReadRequestConfigFromFile(path string) (*RequestConfigJSON, error) {
 	rConfig := &RequestConfigJSON{}
 	err := readFile(path, rConfig)

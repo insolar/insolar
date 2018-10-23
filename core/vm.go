@@ -41,10 +41,10 @@ type MachineLogicExecutor interface {
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	Execute(Message) (res Reply, err error)
-	ValidateCaseBind(Message) (res Reply, err error)
-	ProcessValidationResults(Message) (res Reply, err error)
-	ExecutorResults(Message) (res Reply, err error)
+	Execute(Context, Message) (res Reply, err error)
+	ValidateCaseBind(Context, Message) (res Reply, err error)
+	ProcessValidationResults(Context, Message) (res Reply, err error)
+	ExecutorResults(Context, Message) (res Reply, err error)
 	Validate(ref RecordRef, p Pulse, cr []CaseRecord) (int, error) // TODO hide?
 	OnPulse(Pulse) error
 }
@@ -87,7 +87,6 @@ type CaseRecord struct {
 
 // CaseBinder is a whole result of executor efforts on every object it seen on this pulse
 type CaseBind struct {
-	Pulse   Pulse                      // pulse info for this bind
 	Records map[RecordRef][]CaseRecord // ordered cases for each object
 }
 

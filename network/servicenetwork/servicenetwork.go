@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -40,10 +41,18 @@ type ServiceNetwork struct {
 	nodeNetwork *nodenetwork.NodeNetwork
 	hostNetwork hosthandler.HostHandler
 	nodeKeeper  consensus.NodeKeeper
+	certificate core.Certificate
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
+
+	// workaround before DI
+	cert, err := certificate.NewCertificate(conf.KeysPath)
+	if err != nil {
+		log.Warnf("failed to read certificate: %s", err.Error())
+	}
+
 	node, err := nodenetwork.NewNodeNetwork(conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create node network")
@@ -53,7 +62,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	}
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, node.GetPrivateKey())
+	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, cert)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +135,7 @@ func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hostha
 
 // GetPrivateKey returns a private key.
 func (network *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
-	return network.nodeNetwork.GetPrivateKey()
+	return network.hostNetwork.GetPrivateKey()
 }
 
 func getPulseManager(components core.Components) (core.PulseManager, error) {
@@ -138,6 +147,7 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
+	network.certificate = components.Certificate
 	go network.listen()
 
 	if components.ActiveNodeComponent == nil {

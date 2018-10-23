@@ -79,11 +79,14 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	// #1
-	resp, err := lr.Execute(&message.CallMethod{
-		ObjectRef: reqref,
-		Method:    "Greet",
-		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
-	})
+	resp, err := lr.Execute(
+		inscontext.TODO(),
+		&message.CallMethod{
+			ObjectRef: reqref,
+			Method:    "Greet",
+			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
+		},
+	)
 	assert.NoError(t, err, "contract call")
 
 	d := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)
@@ -92,11 +95,14 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
 	// #2
-	resp, err = lr.Execute(&message.CallMethod{
-		ObjectRef: reqref,
-		Method:    "Greet",
-		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
-	})
+	resp, err = lr.Execute(
+		inscontext.TODO(),
+		&message.CallMethod{
+			ObjectRef: reqref,
+			Method:    "Greet",
+			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
+		},
+	)
 	assert.NoError(t, err, "contract call")
 
 	d = goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Data)

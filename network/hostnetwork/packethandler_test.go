@@ -17,6 +17,7 @@
 package hostnetwork
 
 import (
+	"crypto/ecdsa"
 	"strings"
 	"testing"
 	"time"
@@ -114,6 +115,10 @@ func (hh *mockHostHandler) RemoteProcedureCall(ctx hosthandler.Context, targetID
 
 func (hh *mockHostHandler) Disconnect() {
 
+}
+
+func (hh *mockHostHandler) GetPrivateKey() *ecdsa.PrivateKey {
+	return nil
 }
 
 func (hh *mockHostHandler) Listen() error {
@@ -324,8 +329,8 @@ func (hh *mockHostHandler) StartAuthorize() error {
 	return nil
 }
 
-func (hh *mockHostHandler) AddUnsync(nodeID core.RecordRef,
-	roles []core.NodeRole, address string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+func (hh *mockHostHandler) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
 	return nil, nil
 }
 
