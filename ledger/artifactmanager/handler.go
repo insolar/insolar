@@ -479,10 +479,10 @@ func validateState(old record.State, new record.State) error {
 		return ErrClassDeactivated
 	}
 	if old == record.StateUndefined && new != record.StateActivation {
-		return errors.New("Object is not activated.")
+		return errors.New("object is not activated")
 	}
 	if old != record.StateUndefined && new == record.StateActivation {
-		return errors.New("Object is already activated.")
+		return errors.New("object is already activated")
 	}
 	return nil
 }

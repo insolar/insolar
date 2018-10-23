@@ -94,11 +94,11 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeRouteCall != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
+			return errors.New("wrong validation type on RouteCall")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
+			return errors.New("wrong validation sig on RouteCall")
 		}
 
 		rep.Result = cr.Resp.(core.Arguments)
@@ -144,11 +144,11 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsChild != cr.Type {
-			return errors.New("Wrong validation type on SaveAsChild")
+			return errors.New("wrong validation type on SaveAsChild")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on SaveAsChild")
+			return errors.New("wrong validation sig on SaveAsChild")
 		}
 
 		rep.Reference = cr.Resp.(*core.RecordRef)
@@ -188,11 +188,11 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObjChildren != cr.Type {
-			return errors.New("Wrong validation type on GetObjChildren")
+			return errors.New("wrong validation type on GetObjChildren")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on GetObjChildren")
+			return errors.New("wrong validation sig on GetObjChildren")
 		}
 
 		rep.Children = cr.Resp.([]core.RecordRef)
@@ -236,11 +236,11 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeSaveAsDelegate != cr.Type {
-			return errors.New("Wrong validation type on SaveAsDelegate")
+			return errors.New("wrong validation type on SaveAsDelegate")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on SaveAsDelegate")
+			return errors.New("wrong validation sig on SaveAsDelegate")
 		}
 
 		rep.Reference = cr.Resp.(*core.RecordRef)
@@ -278,11 +278,11 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetDelegate != cr.Type {
-			return errors.New("Wrong validation type on RouteCall")
+			return errors.New("wrong validation type on RouteCall")
 		}
 		sig := HashInterface(req)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return errors.New("Wrong validation sig on RouteCall")
+			return errors.New("wrong validation sig on RouteCall")
 		}
 
 		rep.Object = cr.Resp.(core.RecordRef)
@@ -306,7 +306,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
 	state := gpr.lr.GetExecution(req.Object)
 	if state == nil {
-		return errors.New("No execution state, impossible, shouldn't be")
+		return errors.New("no execution state, impossible, shouldn't be")
 	}
 
 	// TODO: is it race? make sure it's not!
