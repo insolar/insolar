@@ -14,21 +14,22 @@
  *    limitations under the License.
  */
 
-package servicenetwork
+package network
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/packet"
 )
 
-// NetworkController contains network logic
-type NetworkController interface {
+// Controller contains network logic
+type Controller interface {
 	// SendMessage send message to nodeID
-	SendMessage(nodeID core.RecordRef, msg core.Message) ([]byte, error)
+	SendMessage(nodeID core.RecordRef, name string, msg core.Message) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received
-	RemoteProcedureRegister(method core.RemoteProcedure)
+	RemoteProcedureRegister(name string, method core.RemoteProcedure)
+	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes
+	SendCascadeMessage(data core.Cascade, method string, msg core.Message) error
 	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
 	Bootstrap() error
 	// AnalyzeNetwork legacy method for old DHT network (should be removed in
@@ -39,8 +40,8 @@ type NetworkController interface {
 	// GetNodeID get self node id (should be removed in far future)
 	GetNodeID() core.RecordRef
 
-	// SetNodeKeeper inject nodekeeper
-	SetNodeKeeper(keeper consensus.NodeKeeper)
+	// Inject inject components
+	Inject(components core.Components)
 }
 
 // RequestHandler handler function to process incoming requests from network.
@@ -62,3 +63,6 @@ type HostNetwork interface {
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() *packet.Builder
 }
+
+// OnPulse callback function to process new pulse from pulsar
+type OnPulse func(pulse core.Pulse)
