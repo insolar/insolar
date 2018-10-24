@@ -18,9 +18,12 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -30,17 +33,21 @@ import (
 const defaultStdoutPath = "-"
 
 var (
-	input       string
-	output      string
-	concurrent  int
-	repetitions int
+	input          string
+	output         string
+	concurrent     int
+	repetitions    int
+	rootmemberkeys string
+
+	rootMember memberInfo
 )
 
 func parseInputParams() {
-	pflag.StringVarP(&input, "input", "i", "", "path to file with initial data for loads")
+	pflag.StringVarP(&input, "input", "i", "", "path to file with initial data for benchmark")
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
+	pflag.StringVarP(&rootmemberkeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
 	pflag.Parse()
 }
 
@@ -70,8 +77,15 @@ func check(msg string, err error) {
 	}
 }
 
-func getMembersRef(fileName string) ([]string, error) {
-	var members []string
+type memberInfo struct {
+	ref        string
+	privateKey string
+}
+
+const memberInfoFieldsNumber = 2
+
+func getMembersInfo(fileName string) ([]memberInfo, error) {
+	var members []memberInfo
 
 	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
 	if err != nil {
@@ -81,13 +95,39 @@ func getMembersRef(fileName string) ([]string, error) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		members = append(members, scanner.Text())
+		info := strings.Fields(scanner.Text())
+		if len(info) != memberInfoFieldsNumber {
+			check("problem with getting member info", errors.New("not enough info for single member"))
+		}
+		members = append(members, memberInfo{ref: info[0], privateKey: info[1]})
 	}
 
 	return members, nil
 }
 
-func runScenarios(out io.Writer, members []string, concurrent int, repetitions int) {
+type memberKeys struct {
+	Private string `json:"private_key"`
+	Public  string `json:"public_key"`
+}
+
+func getRootMemberRef() string {
+	infoResp := info()
+	return infoResp.RootMember
+}
+
+func getRootMemberInfo(fileName string) memberInfo {
+
+	rawConf, err := ioutil.ReadFile(fileName)
+	check("problem with reading root member keys file", err)
+
+	keys := memberKeys{}
+	err = json.Unmarshal(rawConf, &keys)
+	check("problem with unmarshaling root member keys", err)
+
+	return memberInfo{getRootMemberRef(), keys.Private}
+}
+
+func runScenarios(out io.Writer, members []memberInfo, concurrent int, repetitions int) {
 	transferDifferentMembers := &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
@@ -108,10 +148,10 @@ func startScenario(s scenario) {
 	s.start()
 	elapsed := time.Since(start)
 
-	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transfering took %s \n", s.getName(), elapsed))
+	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transferring took %s \n", s.getName(), elapsed))
 	elapsedInSeconds := float64(elapsed) / float64(time.Second)
 	speed := float64(s.getOperationsNumber()) / float64(elapsedInSeconds)
-	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f tr/s \n", s.getName(), speed))
+	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f resp/s \n", s.getName(), speed))
 }
 
 func main() {
@@ -120,10 +160,12 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	var members []string
+	var members []memberInfo
+
+	rootMember = getRootMemberInfo(rootmemberkeys)
 
 	if input != "" {
-		members, err = getMembersRef(input)
+		members, err = getMembersInfo(input)
 		check("Problems with parsing input:", err)
 	} else {
 		members, err = createMembers(concurrent, repetitions)
