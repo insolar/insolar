@@ -19,17 +19,14 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
-}
-
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: inconsistent object index: storage object not found")
+func TestGetInfo(t *testing.T) {
+	info := getInfo(t)
+	assert.NotNil(t, info)
+	assert.NotEqual(t, "", info.RootDomain)
+	assert.NotEqual(t, "", info.RootMember)
+	assert.NotNil(t, info.Classes)
+	assert.NotEqual(t, 0, len(info.Classes))
 }
