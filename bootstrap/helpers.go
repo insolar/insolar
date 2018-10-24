@@ -124,18 +124,18 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 }
 
 func getRootMemberPubKey(file string) (string, error) {
-	fileWithPath, err := getAbsolutePath(file)
+	absPath, err := filepath.Abs(file)
 	if err != nil {
-		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't find absolute path for root keys")
+		return "", errors.Wrap(err, "couldn't get abs path")
 	}
-	data, err := ioutil.ReadFile(filepath.Clean(fileWithPath))
+	data, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't read rootkeys file "+filepath.Clean(fileWithPath))
+		return "", errors.Wrap(err, "couldn't read rootkeys file "+absPath)
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)
 	if err != nil {
-		return "", errors.Wrapf(err, "[ getRootMemberPubKey ] couldn't unmarshal data from %s", file)
+		return "", errors.Wrapf(err, "[ getRootMemberPubKey ] couldn't unmarshal data from %s", absPath)
 	}
 	if keys["public_key"] == "" {
 		return "", errors.New("empty root public key")
