@@ -19,13 +19,10 @@ package message
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/gob"
 	"io"
 	"io/ioutil"
 
-	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -59,22 +56,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &GetDelegate{}, nil
 	case core.TypeGetChildren:
 		return &GetChildren{}, nil
-	case core.TypeDeclareType:
-		return &DeclareType{}, nil
-	case core.TypeDeployCode:
-		return &DeployCode{}, nil
-	case core.TypeActivateClass:
-		return &ActivateClass{}, nil
-	case core.TypeDeactivateClass:
-		return &DeactivateClass{}, nil
 	case core.TypeUpdateClass:
 		return &UpdateClass{}, nil
-	case core.TypeActivateObject:
-		return &ActivateObject{}, nil
-	case core.TypeActivateObjectDelegate:
-		return &ActivateObjectDelegate{}, nil
-	case core.TypeDeactivateObject:
-		return &DeactivateObject{}, nil
 	case core.TypeUpdateObject:
 		return &UpdateObject{}, nil
 	case core.TypeRegisterChild:
@@ -144,38 +127,6 @@ func ToBytes(msg core.Message) ([]byte, error) {
 	return ioutil.ReadAll(reqBuff)
 }
 
-// SignMessage tries to sign a core.Message.
-func SignMessage(msg core.Message, key *ecdsa.PrivateKey) error {
-	serialized, err := ToBytes(msg)
-	if err != nil {
-		return errors.Wrap(err, "filed to serialize message")
-	}
-	sign, err := ecdsa2.Sign(serialized, key)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a message")
-	}
-	msg.SetSign(sign)
-	return nil
-}
-
-// SignIsCorrect checks if a sign is correct.
-func SignIsCorrect(msg core.Message, key *ecdsa.PrivateKey) bool {
-	sign := msg.GetSign()
-	msg.SetSign(make([]byte, 0))
-
-	serialized, err := ToBytes(msg)
-	if err != nil {
-		log.Error(err, "filed to serialize message")
-		return false
-	}
-	newSign, err := ecdsa2.Sign(serialized, key)
-	if err != nil {
-		log.Error(err, "failed to sign a message")
-		return false
-	}
-	return bytes.Equal(sign, newSign)
-}
-
 func init() {
 	// Bootstrap
 	gob.Register(&BootstrapRequest{})
@@ -192,14 +143,7 @@ func init() {
 	gob.Register(&GetClass{})
 	gob.Register(&GetObject{})
 	gob.Register(&GetDelegate{})
-	gob.Register(&DeclareType{})
-	gob.Register(&DeployCode{})
-	gob.Register(&ActivateClass{})
-	gob.Register(&DeactivateClass{})
 	gob.Register(&UpdateClass{})
-	gob.Register(&ActivateObject{})
-	gob.Register(&ActivateObjectDelegate{})
-	gob.Register(&DeactivateObject{})
 	gob.Register(&UpdateObject{})
 	gob.Register(&RegisterChild{})
 	gob.Register(&JetDrop{})

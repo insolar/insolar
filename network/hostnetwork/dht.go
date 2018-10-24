@@ -18,6 +18,7 @@ package hostnetwork
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"math"
 	"sort"
 	"strings"
@@ -62,6 +63,7 @@ type DHT struct {
 	nodeID            core.RecordRef
 	activeNodeKeeper  consensus.NodeKeeper
 	majorityRule      int
+	certificate       core.Certificate
 }
 
 // AuthInfo collects some information about authentication.
@@ -153,6 +155,7 @@ func NewDHT(
 		infinityBootstrap: infbootstrap,
 		nodeID:            nodeID,
 		majorityRule:      majorityRule,
+		certificate:       certificate,
 	}
 
 	if options.ExpirationTime == 0 {
@@ -190,6 +193,10 @@ func NewDHT(
 
 func (dht *DHT) SetNodeKeeper(keeper consensus.NodeKeeper) {
 	dht.activeNodeKeeper = keeper
+	if dht.GetNetworkCommonFacade().GetConsensus() == nil {
+		log.Warn("consensus is nil")
+		return
+	}
 	dht.GetNetworkCommonFacade().GetConsensus().SetNodeKeeper(keeper)
 }
 
@@ -1130,6 +1137,11 @@ func (dht *DHT) InvokeRPC(sender *host.Host, method string, args [][]byte) ([]by
 	return dht.ncf.GetRPC().Invoke(sender, method, args)
 }
 
+// GetPrivateKey returns a private key.
+func (dht *DHT) GetPrivateKey() *ecdsa.PrivateKey {
+	return dht.certificate.GetEcdsaPrivateKey()
+}
+
 // AddHost adds a host into the appropriate k bucket
 // we store these buckets in big-endian order so we look at the bits
 // from right to left in order to find the appropriate bucket
@@ -1291,6 +1303,7 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 		Receiver: targetHost,
 		Type:     packet.TypeRPC,
 		Data: &packet.RequestDataRPC{
+			NodeID: dht.nodeID,
 			Method: method,
 			Args:   args,
 		},
@@ -1352,10 +1365,6 @@ func (dht *DHT) RemoveAuthSentKeys(targetID string) {
 // RemoveRelayClient removes a client from relay list.
 func (dht *DHT) RemoveRelayClient(host *host.Host) error {
 	return dht.relay.RemoveClient(host)
-}
-
-func (dht *DHT) SetNodeID(nodeID core.RecordRef) {
-	dht.nodeID = nodeID
 }
 
 // SetHighKnownHostID sets a new high known host ID.

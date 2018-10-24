@@ -48,6 +48,7 @@ type Bootstrapper struct {
 	rootDomainRef *core.RecordRef
 	nodeDomainRef *core.RecordRef
 	rootMemberRef *core.RecordRef
+	rootKeysFile  string
 	rootPubKey    string
 	rootBalance   uint
 	classRefs     map[string]*core.RecordRef
@@ -74,6 +75,7 @@ func (b *Bootstrapper) GetRootDomainRef() *core.RecordRef {
 // NewBootstrapper creates new Bootstrapper
 func NewBootstrapper(cfg configuration.Bootstrap) (*Bootstrapper, error) {
 	bootstrapper := &Bootstrapper{}
+	bootstrapper.rootKeysFile = cfg.RootKeys
 	bootstrapper.rootBalance = cfg.RootBalance
 	bootstrapper.rootDomainRef = &core.RecordRef{}
 	return bootstrapper, nil
@@ -98,36 +100,37 @@ func buildSmartContracts(cb *goplugintestutils.ContractsBuilder) error {
 
 func (b *Bootstrapper) activateRootDomain(
 	am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder,
-) (*core.RecordID, error) {
+) (*core.RecordID, core.ObjectDescriptor, error) {
 	rd, err := rootdomain.NewRootDomain()
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
+		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
 	instanceData, err := serializeInstance(rd)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
+		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
 	ctx := inscontext.TODO()
 	contractID, err := am.RegisterRequest(ctx, &message.BootstrapRequest{Name: "RootDomain"})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	contract := core.ComposeRecordRef(*contractID, *contractID)
-	_, err = am.ActivateObject(
+	desc, err := am.ActivateObject(
 		ctx,
 		core.RecordRef{}, contract,
 		*cb.Classes[rootDomain],
 		*am.GenesisRef(),
+		false,
 		instanceData,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return nil, nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
 	b.rootDomainRef = &contract
 
-	return contractID, nil
+	return contractID, desc, nil
 }
 
 func (b *Bootstrapper) activateNodeDomain(
@@ -154,6 +157,7 @@ func (b *Bootstrapper) activateNodeDomain(
 		core.RecordRef{}, contract,
 		*cb.Classes[nodeDomain],
 		*b.rootDomainRef,
+		false,
 		instanceData,
 	)
 	if err != nil {
@@ -189,6 +193,7 @@ func (b *Bootstrapper) activateRootMember(
 		core.RecordRef{}, contract,
 		*cb.Classes[memberContract],
 		*b.rootDomainRef,
+		false,
 		instanceData,
 	)
 
@@ -201,7 +206,8 @@ func (b *Bootstrapper) activateRootMember(
 
 // TODO: this is not required since we refer by request id.
 func (b *Bootstrapper) updateRootDomain(
-	am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
+	am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, domainDesc core.ObjectDescriptor,
+) error {
 	ctx := inscontext.TODO()
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *b.rootMemberRef, NodeDomainRef: *b.nodeDomainRef})
 	if err != nil {
@@ -209,8 +215,10 @@ func (b *Bootstrapper) updateRootDomain(
 	}
 	_, err = am.UpdateObject(
 		ctx,
-		core.RecordRef{}, core.RecordRef{},
-		*b.rootDomainRef, updateData,
+		core.RecordRef{},
+		core.RecordRef{},
+		domainDesc,
+		updateData,
 	)
 	if err != nil {
 		return errors.Wrap(err, "[ updateRootDomain ]")
@@ -238,11 +246,12 @@ func (b *Bootstrapper) activateRootMemberWallet(
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
 	contract := core.ComposeRecordRef(*domain, *contractID)
-	_, err = am.ActivateObjectDelegate(
+	_, err = am.ActivateObject(
 		ctx,
 		core.RecordRef{}, contract,
 		*cb.Classes[walletContract],
 		*b.rootMemberRef,
+		true,
 		instanceData,
 	)
 	if err != nil {
@@ -253,7 +262,7 @@ func (b *Bootstrapper) activateRootMemberWallet(
 }
 
 func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder) error {
-	domain, err := b.activateRootDomain(am, cb)
+	domain, domainDesc, err := b.activateRootDomain(am, cb)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, errMsg)
@@ -267,7 +276,7 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *goplu
 		return errors.Wrap(err, errMsg)
 	}
 	// TODO: this is not required since we refer by request id.
-	err = b.updateRootDomain(am, cb)
+	err = b.updateRootDomain(am, cb, domainDesc)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
@@ -291,6 +300,11 @@ func (b *Bootstrapper) Start(c core.Components) error {
 		b.rootDomainRef = rootDomainRef
 		log.Info("[ Bootstrapper ] RootDomain was found in ledger. Don't do bootstrap")
 		return nil
+	}
+
+	b.rootPubKey, err = getRootMemberPubKey(b.rootKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Bootstrapper ] couldn't get root member keys")
 	}
 
 	isLightExecutor, err := isLightExecutor(c)

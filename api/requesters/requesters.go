@@ -140,7 +140,7 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 	return body, nil
 }
 
-// Send: first gets seed and after that makes target request
+// Send first gets seed and after that makes target request
 func Send(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
 	verboseInfo("Sending GETSEED request ...")
 	seed, err := GetSeed(url)

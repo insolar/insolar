@@ -16,6 +16,8 @@
 
 package core
 
+import "crypto/ecdsa"
+
 // Arguments is a dedicated type for arguments, that represented as bynary cbored blob
 type Arguments []byte
 
@@ -36,10 +38,20 @@ type Message interface {
 	TargetRole() JetRole
 	// GetCaller returns initiator of this event.
 	GetCaller() *RecordRef
-	// SetSign sets a signature to message.
-	SetSign([]byte)
-	// GetSign returns a sign.
+}
+
+type Signature interface {
 	GetSign() []byte
+	GetSender() RecordRef
+	IsValid(key *ecdsa.PublicKey) bool
+}
+
+// SignedMessage by senders private key.
+type SignedMessage interface {
+	Message
+	Signature
+
+	Message() Message
 }
 
 // Reply for an `Message`
@@ -73,7 +85,7 @@ const (
 	TypeExecutorResults
 	// TypeValidateCaseBind sends CaseBind form Executor to Validators for redo all actions
 	TypeValidateCaseBind
-	// TypeValidationResult sends from Validator to new Executor with results of validation actions of previous Executor
+	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
 	TypeValidationResults
 
 	// Ledger
@@ -90,22 +102,8 @@ const (
 	TypeGetDelegate
 	// TypeGetChildren retrieves object represented as provided class.
 	TypeGetChildren
-	// TypeDeclareType creates new type.
-	TypeDeclareType
-	// TypeDeployCode creates new code.
-	TypeDeployCode
-	// TypeActivateClass activates class.
-	TypeActivateClass
-	// TypeDeactivateClass deactivates class.
-	TypeDeactivateClass
 	// TypeUpdateClass amends class.
 	TypeUpdateClass
-	// TypeActivateObject activates object.
-	TypeActivateObject
-	// TypeActivateObjectDelegate similar to ActivateObjType but it creates object as parent's delegate of provided class.
-	TypeActivateObjectDelegate
-	// TypeDeactivateObject deactivates object.
-	TypeDeactivateObject
 	// TypeUpdateObject amends object.
 	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.

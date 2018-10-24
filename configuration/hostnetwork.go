@@ -34,6 +34,7 @@ type HostNetwork struct {
 	InfinityBootstrap bool // set true for infinity tries to bootstrap
 	Timeout           int  // bootstrap reconnect timeout
 	MajorityRule      int  // MajorityRule number
+	SignMessages      bool // signing a messages if true
 }
 
 // NewHostNetwork creates new default HostNetwork configuration
@@ -48,5 +49,6 @@ func NewHostNetwork() HostNetwork {
 		Timeout:           4,
 		InfinityBootstrap: false,
 		MajorityRule:      0,
+		SignMessages:      false,
 	}
 }

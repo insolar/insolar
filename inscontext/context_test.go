@@ -14,32 +14,25 @@
  *    limitations under the License.
  */
 
-// Package pulsartestutil - test utils for pulsar package
-package pulsartestutils
+package inscontext
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/mock"
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// MockPulsarStorage mocks PulsarStorage interface
-type MockPulsarStorage struct {
-	mock.Mock
+func TestContextWithValue(t *testing.T) {
+	ctx := NewCtxFromContext(context.Background())
+	ctx = WithValue(ctx, 0, "Zero")
+	ctx = WithTraceID(ctx, "ID")
+	assert.Equal(t, "Zero", ctx.Value(0))
+	assert.Equal(t, "ID", ctx.Value(key(0)))
+	assert.Equal(t, "ID", ctx.TraceID())
 }
 
-func (mock *MockPulsarStorage) GetLastPulse() (*core.Pulse, error) {
-	args := mock.Called()
-	return args.Get(0).(*core.Pulse), args.Error(1)
-}
-
-func (*MockPulsarStorage) SetLastPulse(pulse *core.Pulse) error {
-	return nil
-}
-
-func (*MockPulsarStorage) SavePulse(pulse *core.Pulse) error {
-	return nil
-}
-
-func (*MockPulsarStorage) Close() error {
-	panic("implement me")
+func TestContextTraceID(t *testing.T) {
+	ctx := NewCtxFromContext(context.Background())
+	assert.Equal(t, "", ctx.TraceID())
 }

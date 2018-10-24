@@ -17,6 +17,8 @@
 package signer
 
 import (
+	"fmt"
+
 	"github.com/ugorji/go/codec"
 )
 
@@ -38,7 +40,7 @@ func Serialize(ref []byte, delegate []byte, method string, params []byte, seed [
 		seed,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[ Serialize ]: %s", err.Error())
 	}
 	return serialized, nil
 }

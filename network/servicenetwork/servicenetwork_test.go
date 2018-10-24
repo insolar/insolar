@@ -86,7 +86,8 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	network.SendMessage(core.NewRefFromBase58("test"), "test", e)
+	ref := testutils.RandomRef()
+	network.SendMessage(ref, "test", e)
 }
 
 func mockServiceConfiguration(host string, bootstrapHosts []string, nodeID string) configuration.Configuration {
@@ -172,7 +173,8 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	firstNode.SendMessage(core.NewRefFromBase58(secondNodeId), "test", e)
+	ref := testutils.RandomRef()
+	firstNode.SendMessage(ref, "test", e)
 	success := waitTimeout(&wg, 20*time.Millisecond)
 
 	assert.True(t, success)
