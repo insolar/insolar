@@ -19,92 +19,54 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/api"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTransferMoney(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
 	amount := 111
 
-	// Transfer money from one member to another
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     amount,
-	})
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.NoError(t, err)
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, body, transferResponse)
-
-	assert.True(t, transferResponse.Success)
-
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
-	assert.Equal(t, oldFirstBalance+amount, newFirstBalance)
-	assert.Equal(t, oldSecondBalance-amount, newSecondBalance)
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, oldFirstBalance-amount, newFirstBalance)
+	assert.Equal(t, oldSecondBalance+amount, newSecondBalance)
 }
 
-func TestTransferNegativeAmount(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+func _TestTransferNegativeAmount(t *testing.T) {
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
 
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     -111,
-	})
+	amount := -111
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponseWithError(t, body, transferResponse)
-
-	assert.Equal(t, api.BadRequest, transferResponse.Err.Code)
-	assert.Equal(t, "Bad request", transferResponse.Err.Message)
-
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
-	assert.Equal(t, oldFirstBalance, newFirstBalance)
-	assert.Equal(t, oldSecondBalance, newSecondBalance)
-
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.Error(t, err)
 }
 
 func TestTransferAllAmount(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     oldSecondBalance,
-	})
+	amount := oldFirstBalance
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, body, transferResponse)
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.NoError(t, err)
 
-	assert.True(t, transferResponse.Success)
-
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
-	assert.Equal(t, oldFirstBalance+oldSecondBalance, newFirstBalance)
-	assert.Equal(t, 0, newSecondBalance)
-
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, 0, newFirstBalance)
+	assert.Equal(t, oldSecondBalance+oldFirstBalance, newSecondBalance)
 }
 
-func _TestTransferMoreThanAvailableAmount(t *testing.T) {
+/*func _TestTransferMoreThanAvailableAmount(t *testing.T) {
 	firstMemberRef := createMember(t)
 	secondMemberRef := createMember(t)
 	oldFirstBalance := getBalance(t, firstMemberRef)
@@ -148,39 +110,26 @@ func _TestTransferToMyself(t *testing.T) {
 	newBalance := getBalance(t, memberRef)
 
 	assert.Equal(t, oldBalance, newBalance)
-}
+}*/
 
 // TODO: test to check overflow of balance
 // TODO: check transfer zero amount
 
 func TestTransferTwoTimes(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 
-	firstBody := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     100,
-	})
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, firstBody, transferResponse)
-	assert.True(t, transferResponse.Success)
+	amount := 100
 
-	secondBody := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     100,
-	})
-	unmarshalResponse(t, secondBody, transferResponse)
-	assert.True(t, transferResponse.Success)
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.NoError(t, err)
+	_, err = signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.NoError(t, err)
 
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
-	assert.Equal(t, oldFirstBalance+200, newFirstBalance)
-	assert.Equal(t, oldSecondBalance-200, newSecondBalance)
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	assert.Equal(t, oldFirstBalance-2*amount, newFirstBalance)
+	assert.Equal(t, oldSecondBalance+2*amount, newSecondBalance)
 }
