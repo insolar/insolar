@@ -82,6 +82,8 @@ type memberInfo struct {
 	privateKey string
 }
 
+const memberInfoFieldsNumber = 2
+
 func getMembersInfo(fileName string) ([]memberInfo, error) {
 	var members []memberInfo
 
@@ -94,10 +96,10 @@ func getMembersInfo(fileName string) ([]memberInfo, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		info := strings.Fields(scanner.Text())
-		if len(info) != 2 {
+		if len(info) != memberInfoFieldsNumber {
 			check("problem with getting member info", errors.New("not enough info for single member"))
 		}
-		members = append(members, memberInfo{info[0], info[1]})
+		members = append(members, memberInfo{ref: info[0], privateKey: info[1]})
 	}
 
 	return members, nil
