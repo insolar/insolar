@@ -17,6 +17,7 @@
 package servicenetwork
 
 import (
+	"context"
 	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/certificate"
@@ -33,18 +34,23 @@ import (
 type ServiceNetwork struct {
 	hostNetwork network.HostNetwork
 	controller  network.Controller
-	nodeID      core.RecordRef
-	certificate core.Certificate
+
+	certificate         core.Certificate
+	activeNodeComponent core.ActiveNodeComponent
+	pulseManager        core.PulseManager
+	coordinator         core.NetworkCoordinator
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
+	network := &ServiceNetwork{}
+
 	// workaround before DI
 	cert, err := certificate.NewCertificate(conf.KeysPath)
 	if err != nil {
 		log.Warnf("failed to read certificate: %s", err.Error())
 	}
-	hostnetwork, err := NewHostNetwork(conf, cert)
+	hostnetwork, err := NewHostNetwork(conf, cert, network.onPulse)
 	if err != nil {
 		log.Error("failed to create hostnetwork: %s", err.Error())
 	}
@@ -52,11 +58,9 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	if err != nil {
 		log.Error("failed to create network controller: %s", err.Error())
 	}
-	network := &ServiceNetwork{
-		hostNetwork: hostnetwork,
-		controller:  controller,
-		certificate: cert,
-	}
+	network.hostNetwork = hostnetwork
+	network.controller = controller
+	network.certificate = cert
 	return network, nil
 }
 
@@ -67,7 +71,7 @@ func (network *ServiceNetwork) GetAddress() string {
 
 // GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
-	return network.nodeID
+	return network.activeNodeComponent.GetID()
 }
 
 // SendMessage sends a message from MessageBus.
@@ -100,7 +104,7 @@ func (network *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 
 // Start implements core.Component
 func (network *ServiceNetwork) Start(components core.Components) error {
-	network.certificate = components.Certificate
+	network.inject(components)
 	go network.listen()
 
 	network.controller.Inject(components)
@@ -119,6 +123,13 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 	}
 
 	return nil
+}
+
+func (network *ServiceNetwork) inject(components core.Components) {
+	network.certificate = components.Certificate
+	network.activeNodeComponent = components.ActiveNodeComponent
+	network.pulseManager = components.Ledger.GetPulseManager()
+	network.coordinator = components.NetworkCoordinator
 }
 
 // Stop implements core.Component
@@ -141,9 +152,62 @@ func (network *ServiceNetwork) listen() {
 	}
 }
 
+func (network *ServiceNetwork) onPulse(pulse core.Pulse) {
+	if network.pulseManager == nil {
+		log.Error("PulseManager is not initialized")
+		return
+	}
+	currentPulse, err := network.pulseManager.Current()
+	if err != nil {
+		log.Error(errors.Wrap(err, "Could not get current pulse"))
+		return
+	}
+	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
+		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
+		err = network.pulseManager.Set(pulse)
+		if err != nil {
+			log.Error(errors.Wrap(err, "Failed to set pulse"))
+			return
+		}
+		log.Infof("Set new current pulse number: %d", pulse.PulseNumber)
+		go network.controller.ResendPulseToKnownHosts(pulse)
+		go func(network *ServiceNetwork) {
+			if network.coordinator == nil {
+				return
+			}
+			err := network.coordinator.WriteActiveNodes(pulse.PulseNumber, network.activeNodeComponent.GetActiveNodes())
+			if err != nil {
+				log.Warn("Writing active nodes to ledger: " + err.Error())
+			}
+		}(network)
+
+		// TODO: create adequate cancelable context without dht values (after switching to new network)
+		ctx := context.WithValue(context.Background(), dhtnetwork.CtxTableIndex, dhtnetwork.DefaultHostID)
+		network.doConsensus(ctx, pulse)
+	}
+}
+
+func (network *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
+	// if hostHandler.GetNetworkCommonFacade().GetConsensus() == nil {
+	// 	log.Warn("consensus is nil")
+	// 	return
+	// }
+	// consensus := hostHandler.GetNetworkCommonFacade().GetConsensus()
+	// if consensus == nil {
+	// 	log.Warn("Consensus module is not initialized")
+	// 	return
+	// }
+	// if !consensus.IsPartOfConsensus() {
+	// 	log.Debug("Node is not active and does not participate in consensus")
+	// 	return
+	// }
+	// log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
+	// go consensus.ProcessPulse(ctx, pulse)
+}
+
 // NewHostNetwork create new HostNetwork. Certificate in new network should be removed
-func NewHostNetwork(conf configuration.Configuration, certificate core.Certificate) (network.HostNetwork, error) {
-	return dhtnetwork.NewDhtHostNetwork(conf, certificate)
+func NewHostNetwork(conf configuration.Configuration, certificate core.Certificate, pulseCallback network.OnPulse) (network.HostNetwork, error) {
+	return dhtnetwork.NewDhtHostNetwork(conf, certificate, pulseCallback)
 }
 
 // NewNetworkController create new network.Controller. In new network it should read conf

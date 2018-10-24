@@ -27,8 +27,8 @@ import (
 type ctxKey string
 
 const (
-	ctxTableIndex = ctxKey("table_index")
-	defaultHostID = 0
+	CtxTableIndex = ctxKey("table_index")
+	DefaultHostID = 0
 )
 
 // ContextBuilder allows to lazy configure and build new Context.
@@ -61,7 +61,7 @@ func (cb ContextBuilder) SetHostByID(hostID id.ID) ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx hosthandler.Context) (hosthandler.Context, error) {
 		for index, id1 := range cb.hostHandler.GetOriginHost().IDs {
 			if hostID.Equal(id1.Bytes()) {
-				return context.WithValue(ctx, ctxTableIndex, index), nil
+				return context.WithValue(ctx, CtxTableIndex, index), nil
 			}
 		}
 		return nil, errors.New("host requestID not found")
@@ -72,7 +72,7 @@ func (cb ContextBuilder) SetHostByID(hostID id.ID) ContextBuilder {
 // SetDefaultHost sets first host id in Context.
 func (cb ContextBuilder) SetDefaultHost() ContextBuilder {
 	cb.actions = append(cb.actions, func(ctx hosthandler.Context) (hosthandler.Context, error) {
-		return context.WithValue(ctx, ctxTableIndex, defaultHostID), nil
+		return context.WithValue(ctx, CtxTableIndex, DefaultHostID), nil
 	})
 	return cb
 }

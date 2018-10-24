@@ -188,7 +188,7 @@ func main() {
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
-	repl(nw)
+	repl(nw, cm.components.Ledger.GetPulseManager())
 }
 
 func initLogger(cfg configuration.Log) {

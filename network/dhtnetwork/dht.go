@@ -1055,7 +1055,7 @@ func (dht *DHT) AddActiveNodes(activeNodes []*core.Node) error {
 
 // HtFromCtx returns a routing hashtable known by ctx.
 func (dht *DHT) HtFromCtx(ctx hosthandler.Context) *routing.HashTable {
-	htIdx := ctx.Value(ctxTableIndex).(int)
+	htIdx := ctx.Value(CtxTableIndex).(int)
 	return dht.tables[htIdx]
 }
 

@@ -68,7 +68,7 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 	nodeID := core.NewRefFromBase58(cfg.Node.Node.ID)
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			network, err := NewHostNetwork(test.cfg, cascade1, nil)
+			network, err := NewHostNetwork(test.cfg, cascade1, nil, func(core.Pulse) {})
 			network.SetNodeKeeper(nodekeeper.NewNodeKeeper(nodeID))
 			if test.expectedError {
 				assert.Error(t, err)

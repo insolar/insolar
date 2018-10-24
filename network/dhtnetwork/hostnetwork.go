@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/dhtnetwork/consensus"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
@@ -40,6 +41,7 @@ func NewHostNetwork(
 	cfg configuration.Configuration,
 	cascade *cascade.Cascade,
 	certificate core.Certificate,
+	pulseCallback network.OnPulse,
 ) (*DHT, error) {
 
 	proxy := relay.NewProxy()
@@ -64,7 +66,7 @@ func NewHostNetwork(
 
 	options := &Options{BootstrapHosts: getBootstrapHosts(cfg.Host.BootstrapHosts)}
 	sign := signhandler.NewSignHandler(certificate)
-	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade, sign)
+	ncf := hosthandler.NewNetworkCommonFacade(rpc.NewRPCFactory(nil).Create(), cascade, sign, pulseCallback)
 
 	network, err := NewDHT(
 		store.NewMemoryStoreFactory().Create(),

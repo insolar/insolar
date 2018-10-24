@@ -36,6 +36,8 @@ type Controller interface {
 	AnalyzeNetwork() error
 	// Authorize start authorization process on discovery node.
 	Authorize() error
+	// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon
+	ResendPulseToKnownHosts(pulse core.Pulse)
 
 	// GetNodeID get self node id (should be removed in far future)
 	GetNodeID() core.RecordRef

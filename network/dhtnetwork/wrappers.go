@@ -187,6 +187,11 @@ func (w *Wrapper) NewRequestBuilder() *packet.Builder {
 	panic("not used in DHT implementation")
 }
 
+// ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon
+func (w *Wrapper) ResendPulseToKnownHosts(pulse core.Pulse) {
+	// requesthandler.go:326
+}
+
 func getPulseManager(components core.Components) (core.PulseManager, error) {
 	if components.Ledger == nil {
 		return nil, errors.New("no core.Ledger in components")
@@ -207,17 +212,11 @@ func (w *Wrapper) Inject(components core.Components) {
 	} else {
 		w.HostNetwork.GetNetworkCommonFacade().SetNetworkCoordinator(components.NetworkCoordinator)
 	}
-	pm, err := getPulseManager(components)
-	if err != nil {
-		log.Error(err)
-	} else {
-		w.HostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
-	}
 }
 
-func NewDhtHostNetwork(conf configuration.Configuration, certificate core.Certificate) (network.HostNetwork, error) {
+func NewDhtHostNetwork(conf configuration.Configuration, certificate core.Certificate, pulseCallback network.OnPulse) (network.HostNetwork, error) {
 	cascade1 := &cascade.Cascade{}
-	dht, err := NewHostNetwork(conf, cascade1, certificate)
+	dht, err := NewHostNetwork(conf, cascade1, certificate, pulseCallback)
 	if err != nil {
 		return nil, err
 	}

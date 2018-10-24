@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/dhtnetwork/routing"
@@ -42,28 +43,28 @@ type Context context.Context
 type NetworkCommonFacade interface {
 	GetRPC() rpc.RPC
 	GetCascade() *cascade.Cascade
-	GetPulseManager() core.PulseManager
-	SetPulseManager(manager core.PulseManager)
 	SetConsensus(insolarConsensus consensus.Processor)
 	GetConsensus() consensus.Processor
 	SetNetworkCoordinator(coordinator core.NetworkCoordinator)
 	GetNetworkCoordinator() core.NetworkCoordinator
 	GetSignHandler() signhandler.SignHandler
+	OnPulse(pulse core.Pulse)
 }
 
 // commonFacade implements a NetworkCommonFacade.
 type commonFacade struct {
-	rpcPtr      rpc.RPC
-	cascade     *cascade.Cascade
-	pm          core.PulseManager
-	ic          consensus.Processor
-	coordinator core.NetworkCoordinator
-	signHandler signhandler.SignHandler
+	rpcPtr        rpc.RPC
+	cascade       *cascade.Cascade
+	pm            core.PulseManager
+	ic            consensus.Processor
+	coordinator   core.NetworkCoordinator
+	signHandler   signhandler.SignHandler
+	pulseCallback network.OnPulse
 }
 
 // NewNetworkCommonFacade creates a NetworkCommonFacade.
-func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade, signH signhandler.SignHandler) NetworkCommonFacade {
-	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil, signHandler: signH}
+func NewNetworkCommonFacade(r rpc.RPC, casc *cascade.Cascade, signH signhandler.SignHandler, pulseCallback network.OnPulse) NetworkCommonFacade {
+	return &commonFacade{rpcPtr: r, cascade: casc, pm: nil, signHandler: signH, pulseCallback: pulseCallback}
 }
 
 // GetRPC return an RPC pointer.
@@ -74,16 +75,6 @@ func (fac *commonFacade) GetRPC() rpc.RPC {
 // GetCascade returns a cascade pointer.
 func (fac *commonFacade) GetCascade() *cascade.Cascade {
 	return fac.cascade
-}
-
-// GetPulseManager returns a pulse manager pointer.
-func (fac *commonFacade) GetPulseManager() core.PulseManager {
-	return fac.pm
-}
-
-// SetPulseManager sets a pulse manager to common facade.
-func (fac *commonFacade) SetPulseManager(manager core.PulseManager) {
-	fac.pm = manager
 }
 
 func (fac *commonFacade) SetConsensus(insolarConsensus consensus.Processor) {
@@ -104,6 +95,10 @@ func (fac *commonFacade) GetNetworkCoordinator() core.NetworkCoordinator {
 
 func (fac *commonFacade) GetSignHandler() signhandler.SignHandler {
 	return fac.signHandler
+}
+
+func (fac *commonFacade) OnPulse(pulse core.Pulse) {
+	fac.pulseCallback(pulse)
 }
 
 // HostHandler is an interface which uses for host network implementation.

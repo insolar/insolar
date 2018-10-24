@@ -44,7 +44,6 @@ import (
 
 type mockNetworkCommonFacade struct {
 	cascade *cascade.Cascade
-	pm      core.PulseManager
 }
 
 func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
@@ -54,7 +53,6 @@ func newMockNetworkCommonFacade() hosthandler.NetworkCommonFacade {
 	}
 	return &mockNetworkCommonFacade{
 		cascade: &c,
-		pm:      &MockPulseManager{},
 	}
 }
 
@@ -64,13 +62,6 @@ func (fac *mockNetworkCommonFacade) GetRPC() rpc.RPC {
 
 func (fac *mockNetworkCommonFacade) GetCascade() *cascade.Cascade {
 	return fac.cascade
-}
-
-func (fac *mockNetworkCommonFacade) GetPulseManager() core.PulseManager {
-	return fac.pm
-}
-
-func (fac *mockNetworkCommonFacade) SetPulseManager(manager core.PulseManager) {
 }
 
 func (fac *mockNetworkCommonFacade) GetConsensus() consensus.Processor {
@@ -89,6 +80,9 @@ func (fac *mockNetworkCommonFacade) SetNetworkCoordinator(core.NetworkCoordinato
 
 func (fac *mockNetworkCommonFacade) GetSignHandler() signhandler.SignHandler {
 	return nil
+}
+
+func (fac *mockNetworkCommonFacade) OnPulse(pulse core.Pulse) {
 }
 
 type mockHostHandler struct {
@@ -552,17 +546,4 @@ func TestDispatchPacketType(t *testing.T) {
 		_, err := DispatchPacketType(hh, GetDefaultCtx(hh), pckt, packet.NewBuilder(origin))
 		assert.NotNil(t, err)
 	})
-}
-
-func Test_processPulse(t *testing.T) {
-	hh := newMockHostHandler()
-	sender, receiver := mockSenderReceiver()
-	hh.GetNetworkCommonFacade().GetPulseManager().Set(core.Pulse{PulseNumber: 0, Entropy: core.Entropy{0}})
-	response, _ := processPulse(hh, GetDefaultCtx(hh),
-		packet.NewBuilder(sender).Request(packet.TypePulse).Receiver(receiver).
-			Request(&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).Build(),
-		packet.NewBuilder(sender))
-	newPulse, _ := hh.GetNetworkCommonFacade().GetPulseManager().Current()
-	assert.NotNil(t, response)
-	assert.Equal(t, core.PulseNumber(1), newPulse.PulseNumber)
 }

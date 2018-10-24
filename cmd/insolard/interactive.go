@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/network/servicenetwork"
 )
 
-func repl(service *servicenetwork.ServiceNetwork) {
+func repl(service *servicenetwork.ServiceNetwork, manager core.PulseManager) {
 	displayInteractiveHelp()
 	dhtNetwork, ctx := service.GetHostNetwork()
 
@@ -71,7 +71,7 @@ func repl(service *servicenetwork.ServiceNetwork) {
 		case "activenodes":
 			doActiveNodes(dhtNetwork)
 		case "pulse":
-			doPulse(dhtNetwork.GetNetworkCommonFacade().GetPulseManager())
+			doPulse(manager)
 		default:
 			displayInteractiveHelp()
 		}

@@ -39,7 +39,7 @@ const keysPath = "../../testdata/functional/bootstrap_keys.json"
 func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
 	cert, err := certificate.NewCertificate(keysPath)
 	assert.NoError(t, err)
-	return core.Components{Certificate: cert, ActiveNodeComponent: nodekeeper.NewNodeKeeper(nodeId)}
+	return core.Components{Certificate: cert, ActiveNodeComponent: nodekeeper.NewNodeKeeper(nodeId), Ledger: &dhtnetwork.MockLedger{}}
 }
 
 /*

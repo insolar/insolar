@@ -30,6 +30,25 @@ type MockPulseManager struct {
 	mutex        sync.Mutex
 }
 
+type MockLedger struct {
+	pm MockPulseManager
+}
+
+// GetArtifactManager returns artifact manager to work with.
+func (l *MockLedger) GetArtifactManager() core.ArtifactManager {
+	return nil
+}
+
+// GetJetCoordinator returns jet coordinator to work with.
+func (l *MockLedger) GetJetCoordinator() core.JetCoordinator {
+	return nil
+}
+
+// GetPulseManager returns pulse manager to work with.
+func (l *MockLedger) GetPulseManager() core.PulseManager {
+	return &l.pm
+}
+
 func (pm *MockPulseManager) Current() (*core.Pulse, error) {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()

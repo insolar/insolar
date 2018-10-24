@@ -213,62 +213,9 @@ func processGetRandomHosts(
 
 func processPulse(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
 	data := msg.Data.(*packet.RequestPulse)
-	pm := hostHandler.GetNetworkCommonFacade().GetPulseManager()
-	if pm == nil {
-		return pulseError(packetBuilder, errors.New("PulseManager is not initialized")), nil
-	}
-	currentPulse, err := pm.Current()
-	if err != nil {
-		return pulseError(packetBuilder, errors.Wrap(err, "Could not get current pulse")), nil
-	}
 	log.Infof("Got new pulse number: %d", data.Pulse.PulseNumber)
-	if (data.Pulse.PulseNumber > currentPulse.PulseNumber) &&
-		(data.Pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = pm.Set(data.Pulse)
-		if err != nil {
-			return pulseError(packetBuilder, errors.Wrap(err, "Failed to set pulse")), nil
-		}
-		log.Infof("Set new current pulse number: %d", data.Pulse.PulseNumber)
-
-		doConsensus(hostHandler, ctx, data.Pulse)
-
-		hosts := getActiveHostsList(hostHandler)
-		go ResendPulseToKnownHosts(hostHandler, hosts, data)
-		go func(h hosthandler.HostHandler) {
-			coordinator := hostHandler.GetNetworkCommonFacade().GetNetworkCoordinator()
-			if coordinator == nil {
-				return
-			}
-			err := coordinator.WriteActiveNodes(data.Pulse.PulseNumber, h.GetActiveNodesList())
-			if err != nil {
-				log.Warn("Writing active nodes to ledger: " + err.Error())
-			}
-		}(hostHandler)
-	}
+	go hostHandler.GetNetworkCommonFacade().OnPulse(data.Pulse)
 	return packetBuilder.Response(&packet.ResponsePulse{Success: true, Error: ""}).Build(), nil
-}
-
-func pulseError(packetBuilder packet.Builder, err error) *packet.Packet {
-	log.Warn(err)
-	return packetBuilder.Response(&packet.ResponsePulse{Success: false, Error: err.Error()}).Build()
-}
-
-func doConsensus(hostHandler hosthandler.HostHandler, ctx hosthandler.Context, pulse core.Pulse) {
-	if hostHandler.GetNetworkCommonFacade().GetConsensus() == nil {
-		log.Warn("consensus is nil")
-		return
-	}
-	consensus := hostHandler.GetNetworkCommonFacade().GetConsensus()
-	if consensus == nil {
-		log.Warn("Consensus module is not initialized")
-		return
-	}
-	if !consensus.IsPartOfConsensus() {
-		log.Debug("Node is not active and does not participate in consensus")
-		return
-	}
-	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
-	go consensus.ProcessPulse(ctx, pulse)
 }
 
 func processKnownOuterHosts(hostHandler hosthandler.HostHandler, msg *packet.Packet, packetBuilder packet.Builder) (*packet.Packet, error) {
