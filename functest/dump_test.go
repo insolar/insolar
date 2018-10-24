@@ -55,5 +55,5 @@ func TestDumpUser(t *testing.T) {
 
 func TestDumpUserWrongRef(t *testing.T) {
 	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef())
-	assert.EqualError(t, err, "on calling main API: inconsistent object index: storage object not found")
+	assert.EqualError(t, err, "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation: on calling main API: inconsistent object index: storage object not found")
 }

@@ -31,5 +31,5 @@ func TestGetBalance(t *testing.T) {
 
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "on calling main API: inconsistent object index: storage object not found")
+	assert.EqualError(t, err, "[ getBalance ] : on calling main API: inconsistent object index: storage object not found")
 }
