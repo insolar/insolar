@@ -969,7 +969,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 	keeper1 := nodekeeper.NewNodeKeeper(dht1.nodeID)
 	keeper2 := nodekeeper.NewNodeKeeper(dht2.nodeID)
 
-	keeper1.AddActiveNodes([]*core.ActiveNode{
+	keeper1.AddActiveNodes([]*core.Node{
 		{
 			dht2.nodeID,
 			5,
@@ -981,7 +981,7 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 		},
 	},
 	)
-	keeper2.AddActiveNodes([]*core.ActiveNode{
+	keeper2.AddActiveNodes([]*core.Node{
 		{
 			dht1.nodeID,
 			5,

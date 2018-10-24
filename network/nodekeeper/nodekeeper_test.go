@@ -30,9 +30,9 @@ func newActiveNode(ref byte) (core.RecordRef, []core.NodeRole, string, string) {
 	return core.RecordRef{ref}, []core.NodeRole{core.RoleUnknown}, "127.0.0.1:12345", "1.1"
 }
 
-func newSelfNode(ref core.RecordRef) *core.ActiveNode {
+func newSelfNode(ref core.RecordRef) *core.Node {
 	// key, _ := ecdsa.GeneratePrivateKey()
-	return &core.ActiveNode{
+	return &core.Node{
 		NodeID:   ref,
 		PulseNum: core.PulseNumber(0),
 		State:    core.NodeActive,
@@ -44,7 +44,7 @@ func newSelfNode(ref core.RecordRef) *core.ActiveNode {
 func newNodeKeeper() consensus.NodeKeeper {
 	id := core.RecordRef{255}
 	keeper := NewNodeKeeper(id)
-	keeper.AddActiveNodes([]*core.ActiveNode{newSelfNode(id)})
+	keeper.AddActiveNodes([]*core.Node{newSelfNode(id)})
 	return keeper
 }
 
@@ -61,7 +61,7 @@ func TestNodekeeper_AddUnsync(t *testing.T) {
 	_, err := keeper.AddUnsync(newActiveNode(0))
 	assert.Error(t, err)
 	// Add active node with NodeKeeper id, so we are now active and can add unsyncs
-	keeper.AddActiveNodes([]*core.ActiveNode{newSelfNode(id)})
+	keeper.AddActiveNodes([]*core.Node{newSelfNode(id)})
 	_, err = keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	success, list := keeper.SetPulse(core.PulseNumber(0))
@@ -268,7 +268,7 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 		ch, err := keeper.AddUnsync(newActiveNode(byte(i)))
 		assert.NoError(t, err)
 
-		go func(t *testing.T, ch chan *core.ActiveNode, ref core.RecordRef, wg *sync.WaitGroup) {
+		go func(t *testing.T, ch chan *core.Node, ref core.RecordRef, wg *sync.WaitGroup) {
 			node := <-ch
 			if nodePassesConsensus(ref) {
 				assert.NotNil(t, node)
@@ -285,7 +285,7 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 	assert.NotNil(t, list)
 	assert.Equal(t, refsCount, len(list.GetUnsync()))
 
-	syncCandidates := make([]*core.ActiveNode, 0)
+	syncCandidates := make([]*core.Node, 0)
 	for _, node := range list.GetUnsync() {
 		if nodePassesConsensus(node.NodeID) {
 			syncCandidates = append(syncCandidates, node)
@@ -296,14 +296,14 @@ func TestNodeKeeper_notifyAddUnsync(t *testing.T) {
 }
 
 func TestUnsyncList_GetUnsync(t *testing.T) {
-	unsyncNodes := []*core.ActiveNode{}
+	unsyncNodes := []*core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	assert.Empty(t, unsyncList.GetUnsync())
 	assert.Equal(t, core.PulseNumber(10), unsyncList.GetPulse())
 }
 
 func TestUnsyncList_GetHash(t *testing.T) {
-	unsyncNodes := []*core.ActiveNode{}
+	unsyncNodes := []*core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
 	h := make([]*consensus.NodeUnsyncHash, 0)
@@ -315,7 +315,7 @@ func TestUnsyncList_GetHash(t *testing.T) {
 }
 
 func TestUnsyncList_GetHash2(t *testing.T) {
-	unsyncNodes := []*core.ActiveNode{}
+	unsyncNodes := []*core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
 	h := make([]*consensus.NodeUnsyncHash, 0)
@@ -340,7 +340,7 @@ func TestUnsyncList_GetHash2(t *testing.T) {
 }
 
 func TestUnsyncList_GetHash3(t *testing.T) {
-	unsyncNodes := []*core.ActiveNode{}
+	unsyncNodes := []*core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
 	h := make([]*consensus.NodeUnsyncHash, 0)
@@ -365,7 +365,7 @@ func TestUnsyncList_GetHash3(t *testing.T) {
 
 func TestUnsyncList_AddUnsyncList(t *testing.T) {
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), nil)
-	unsyncList.AddUnsyncList(core.RecordRef{1}, []*core.ActiveNode{})
+	unsyncList.AddUnsyncList(core.RecordRef{1}, []*core.Node{})
 	_, exists := unsyncList.GetUnsyncList(core.RecordRef{1})
 	assert.True(t, exists)
 }

@@ -456,9 +456,9 @@ func (dht *DHT) StartAuthorize() error {
 	}
 
 	discoveryNodesCount := len(dht.options.BootstrapHosts)
-	ch := make(chan []*core.ActiveNode, discoveryNodesCount)
+	ch := make(chan []*core.Node, discoveryNodesCount)
 	for _, h := range dht.options.BootstrapHosts {
-		go func(ch chan []*core.ActiveNode, h *host.Host) {
+		go func(ch chan []*core.Node, h *host.Host) {
 			activeNodes, err := GetNonceRequest(dht, h.ID.String())
 			if err != nil {
 				log.Warnf("error authorizing on %s host: %s", h, err.Error())
@@ -469,7 +469,7 @@ func (dht *DHT) StartAuthorize() error {
 		}(ch, h)
 	}
 
-	receivedResults := make([][]*core.ActiveNode, 0)
+	receivedResults := make([][]*core.Node, 0)
 	i := 0
 LOOP:
 	for {
@@ -506,7 +506,7 @@ LOOP:
 }
 
 func (dht *DHT) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.Node, error) {
 	// TODO: return nodekeeper from helper method in HostHandler and remove this func and GetActiveNodes
 	return dht.activeNodeKeeper.AddUnsync(nodeID, roles, address, version /*, publicKey*/)
 }
@@ -1024,12 +1024,12 @@ func (dht *DHT) AnalyzeNetwork(ctx hosthandler.Context) error {
 }
 
 // GetActiveNodesList returns an active nodes list.
-func (dht *DHT) GetActiveNodesList() []*core.ActiveNode {
+func (dht *DHT) GetActiveNodesList() []*core.Node {
 	return dht.activeNodeKeeper.GetActiveNodes()
 }
 
 // AddActiveNodes adds an active nodes slice.
-func (dht *DHT) AddActiveNodes(activeNodes []*core.ActiveNode) error {
+func (dht *DHT) AddActiveNodes(activeNodes []*core.Node) error {
 	err := dht.checkMajorityRule(activeNodes)
 	if err != nil {
 		return err
@@ -1203,7 +1203,7 @@ func (dht *DHT) GetExpirationTime(ctx hosthandler.Context, key []byte) time.Time
 	return time.Now().Add(dur)
 }
 
-func (dht *DHT) checkMajorityRule(nodes []*core.ActiveNode) error {
+func (dht *DHT) checkMajorityRule(nodes []*core.Node) error {
 	if len(nodes) < dht.majorityRule {
 		return errors.New("failed majority role check")
 	}

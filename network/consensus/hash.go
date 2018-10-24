@@ -37,7 +37,7 @@ func hashWriteChecked(hash hash.Hash, data []byte) {
 	}
 }
 
-func calculateNodeHash(node *core.ActiveNode) []byte {
+func calculateNodeHash(node *core.Node) []byte {
 	hash := sha3.New224()
 	hashWriteChecked(hash, node.NodeID[:])
 	b := make([]byte, 8)
@@ -67,7 +67,7 @@ func calculateNodeHash(node *core.ActiveNode) []byte {
 }
 
 // CalculateHash calculates hash of active node list
-func CalculateHash(list []*core.ActiveNode) (result []byte, err error) {
+func CalculateHash(list []*core.Node) (result []byte, err error) {
 	sort.Slice(list[:], func(i, j int) bool {
 		return bytes.Compare(list[i].NodeID[:], list[j].NodeID[:]) < 0
 	})
@@ -88,7 +88,7 @@ func CalculateHash(list []*core.ActiveNode) (result []byte, err error) {
 }
 
 // CalculateNodeUnsyncHash calculates hash for a NodeUnsyncHash
-func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []*core.ActiveNode) (*NodeUnsyncHash, error) {
+func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []*core.Node) (*NodeUnsyncHash, error) {
 	hash, err := CalculateHash(list)
 	if err != nil {
 		return nil, err

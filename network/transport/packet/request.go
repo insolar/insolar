@@ -127,7 +127,7 @@ type RequestCheckSignedNonce struct {
 type RequestExchangeUnsyncLists struct {
 	SenderID   core.RecordRef
 	Pulse      core.PulseNumber
-	UnsyncList []*core.ActiveNode
+	UnsyncList []*core.Node
 }
 
 // RequestExchangeUnsyncHash is request to exchange hash of merged unsync lists during consensus

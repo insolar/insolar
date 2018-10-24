@@ -41,7 +41,7 @@ type communicatorSender struct {
 }
 
 func (c *communicatorReceiver) ExchangeData(ctx context.Context, pulse core.PulseNumber,
-	from core.RecordRef, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
+	from core.RecordRef, data []*core.Node) ([]*core.Node, error) {
 
 	// TODO: pass appropriate timeout
 	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, time.Second*5)
@@ -75,7 +75,7 @@ func (c *communicatorReceiver) ExchangeHash(ctx context.Context, pulse core.Puls
 }
 
 func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseNumber,
-	p consensus.Participant, data []*core.ActiveNode) ([]*core.ActiveNode, error) {
+	p consensus.Participant, data []*core.Node) ([]*core.Node, error) {
 
 	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, -1)
 	if err != nil {

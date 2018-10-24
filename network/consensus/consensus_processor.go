@@ -28,26 +28,26 @@ type NodeKeeper interface {
 	// GetID get current node ID
 	GetID() core.RecordRef
 	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
-	GetSelf() *core.ActiveNode
+	GetSelf() *core.Node
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref core.RecordRef) *core.ActiveNode
+	GetActiveNode(ref core.RecordRef) *core.Node
 	// GetActiveNodes get active nodes.
-	GetActiveNodes() []*core.ActiveNode
+	GetActiveNodes() []*core.Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role core.JetRole) []core.RecordRef
 	// AddActiveNodes add active nodes.
-	AddActiveNodes([]*core.ActiveNode)
+	AddActiveNodes([]*core.Node)
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
 	// or equal to internal PulseNumber. If set is successful, returns collected unsync list and starts collecting new unsync list
 	SetPulse(number core.PulseNumber) (bool, UnsyncList)
 	// Sync initiates transferring syncCandidates -> sync, sync -> active.
 	// If number is less than internal PulseNumber then ignore Sync.
-	Sync(syncCandidates []*core.ActiveNode, number core.PulseNumber)
+	Sync(syncCandidates []*core.Node, number core.PulseNumber)
 	// AddUnsync add unsync node to the unsync list. Returns channel that receives active node on successful sync.
 	// Channel will return nil node if added node has not passed the consensus.
 	// Returns error if current node is not active and cannot participate in consensus.
 	AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-		version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error)
+		version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.Node, error)
 	// GetUnsyncHolder get unsync list executed in consensus for specific pulse.
 	// 1. If pulse is less than internal NodeKeeper pulse, returns error.
 	// 2. If pulse is equal to internal NodeKeeper pulse, returns unsync list holder for currently executed consensus.
@@ -57,7 +57,7 @@ type NodeKeeper interface {
 
 type UnsyncList interface {
 	// GetUnsync returns list of local unsync nodes. This list is created
-	GetUnsync() []*core.ActiveNode
+	GetUnsync() []*core.Node
 	// GetPulse returns actual pulse for current consensus process.
 	GetPulse() core.PulseNumber
 	// SetHash sets hash of unsync lists for each node of consensus.
@@ -66,11 +66,11 @@ type UnsyncList interface {
 	// until the hash is calculated with SetHash() call
 	GetHash(blockTimeout time.Duration) ([]*NodeUnsyncHash, error)
 	// AddUnsyncList add unsync list for remote ref
-	AddUnsyncList(ref core.RecordRef, unsync []*core.ActiveNode)
+	AddUnsyncList(ref core.RecordRef, unsync []*core.Node)
 	// AddUnsyncHash add unsync hash for remote ref
 	AddUnsyncHash(ref core.RecordRef, hash []*NodeUnsyncHash)
 	// GetUnsyncList get unsync list for remote ref
-	GetUnsyncList(ref core.RecordRef) ([]*core.ActiveNode, bool)
+	GetUnsyncList(ref core.RecordRef) ([]*core.Node, bool)
 	// GetUnsyncHash get unsync hash for remote ref
 	GetUnsyncHash(ref core.RecordRef) ([]*NodeUnsyncHash, bool)
 }
@@ -78,7 +78,7 @@ type UnsyncList interface {
 // CommunicatorReceiver
 type CommunicatorReceiver interface {
 	// ExchangeData used in first consensus step to exchange data between participants
-	ExchangeData(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*core.ActiveNode) ([]*core.ActiveNode, error)
+	ExchangeData(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*core.Node) ([]*core.Node, error)
 	// ExchangeHash used in second consensus step to exchange only hashes of merged data vectors
 	ExchangeHash(ctx context.Context, pulse core.PulseNumber, from core.RecordRef, data []*NodeUnsyncHash) ([]*NodeUnsyncHash, error)
 }

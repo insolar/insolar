@@ -37,7 +37,7 @@ const (
 	NodeSuspended
 )
 
-type ActiveNode struct {
+type Node struct {
 	// NodeID is the unique identifier of the node
 	NodeID RecordRef
 	// PulseNum is the pulse number after which the new state is assigned to the node
@@ -56,11 +56,11 @@ type ActiveNode struct {
 
 type ActiveNodeComponent interface {
 	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
-	GetSelf() *ActiveNode
+	GetSelf() *Node
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref RecordRef) *ActiveNode
+	GetActiveNode(ref RecordRef) *Node
 	// GetActiveNodes get active nodes.
-	GetActiveNodes() []*ActiveNode
+	GetActiveNodes() []*Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role JetRole) []RecordRef
 }

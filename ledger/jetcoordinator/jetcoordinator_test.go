@@ -48,7 +48,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 
 	ref := func(r string) core.RecordRef { return core.NewRefFromBase58(r) }
 
-	keeper.AddActiveNodes([]*core.ActiveNode{
+	keeper.AddActiveNodes([]*core.Node{
 		{NodeID: ref("v1"), Roles: []core.NodeRole{core.RoleVirtual}},
 		{NodeID: ref("v2"), Roles: []core.NodeRole{core.RoleVirtual}},
 		{NodeID: ref("l1"), Roles: []core.NodeRole{core.RoleLightMaterial}},

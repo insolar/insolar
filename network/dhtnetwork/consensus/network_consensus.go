@@ -27,11 +27,11 @@ import (
 )
 
 type participantWrapper struct {
-	node *core.ActiveNode
+	node *core.Node
 }
 
-// GetActiveNode implements Participant interface for ActiveNode wrapper.
-func (an *participantWrapper) GetActiveNode() *core.ActiveNode {
+// GetActiveNode implements Participant interface for Node wrapper.
+func (an *participantWrapper) GetActiveNode() *core.Node {
 	return an.node
 }
 
@@ -40,7 +40,7 @@ type selfWrapper struct {
 }
 
 // GetActiveNode implements Participant interface for NodeKeeper wrapper.
-func (s *selfWrapper) GetActiveNode() *core.ActiveNode {
+func (s *selfWrapper) GetActiveNode() *core.Node {
 	return s.keeper.GetSelf()
 }
 

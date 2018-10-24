@@ -169,11 +169,11 @@ func (hh *mockHostHandler) CascadeSendMessage(data core.Cascade, targetID string
 	return nil
 }
 
-func (hh *mockHostHandler) GetActiveNodesList() []*core.ActiveNode {
+func (hh *mockHostHandler) GetActiveNodesList() []*core.Node {
 	return nil
 }
 
-func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.ActiveNode) error {
+func (hh *mockHostHandler) AddActiveNodes(activeNodes []*core.Node) error {
 	return nil
 }
 
@@ -339,7 +339,7 @@ func (hh *mockHostHandler) StartAuthorize() error {
 }
 
 func (hh *mockHostHandler) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, address string,
-	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.ActiveNode, error) {
+	version string /*, publicKey *ecdsa.PublicKey*/) (chan *core.Node, error) {
 	return nil, nil
 }
 
