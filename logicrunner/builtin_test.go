@@ -19,8 +19,10 @@ package logicrunner
 import (
 	"testing"
 
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
@@ -81,14 +83,17 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, true, contract != nil, "contract created")
 
+	msg := &message.CallMethod{
+		ObjectRef: reqref,
+		Method:    "Greet",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
+	}
+	key, _ := ecdsa.GeneratePrivateKey()
+	signed, _ := message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	// #1
 	resp, err := lr.Execute(
 		inscontext.TODO(),
-		&message.CallMethod{
-			ObjectRef: reqref,
-			Method:    "Greet",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 
@@ -97,14 +102,17 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"Greeted": uint64(1)}), d)
 
+	msg = &message.CallMethod{
+		ObjectRef: reqref,
+		Method:    "Greet",
+		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
+	}
+	key, _ = ecdsa.GeneratePrivateKey()
+	signed, _ = message.NewSignedMessage(msg, testutils.RandomRef(), key)
 	// #2
 	resp, err = lr.Execute(
 		inscontext.TODO(),
-		&message.CallMethod{
-			ObjectRef: reqref,
-			Method:    "Greet",
-			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
-		},
+		signed,
 	)
 	assert.NoError(t, err, "contract call")
 

@@ -23,6 +23,9 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/testutils"
 )
 
 type TestMessageBus struct {
@@ -69,5 +72,8 @@ func (mb *TestMessageBus) Send(ctx core.Context, m core.Message) (core.Reply, er
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
-	return handler(ctx, m)
+	key, _ := ecdsa.GeneratePrivateKey()
+	msg, _ := message.NewSignedMessage(m, testutils.RandomRef(), key)
+
+	return handler(ctx, msg)
 }

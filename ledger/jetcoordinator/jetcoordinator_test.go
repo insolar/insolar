@@ -49,11 +49,8 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	ref := func(r string) core.RecordRef { return core.NewRefFromBase58(r) }
 
 	keeper.AddActiveNodes([]*core.ActiveNode{
-		{NodeID: ref("v1"), Roles: []core.NodeRole{core.RoleVirtual}},
-		{NodeID: ref("v2"), Roles: []core.NodeRole{core.RoleVirtual}},
-		{NodeID: ref("l1"), Roles: []core.NodeRole{core.RoleLightMaterial}},
-		{NodeID: ref("l2"), Roles: []core.NodeRole{core.RoleLightMaterial}},
-		{NodeID: ref("l3"), Roles: []core.NodeRole{core.RoleLightMaterial}},
+		{NodeID: ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"), Roles: []core.NodeRole{core.RoleVirtual}},
+		{NodeID: ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"), Roles: []core.NodeRole{core.RoleLightMaterial}},
 	})
 
 	sorted := func(list []core.RecordRef) []core.RecordRef {
@@ -65,14 +62,11 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 
 	selected, err := jc.QueryRole(core.RoleVirtualExecutor, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
-	assert.Equal(t, []core.RecordRef{ref("v2")}, selected)
-
-	selected, err = jc.QueryRole(core.RoleVirtualValidator, *am.GenesisRef(), pulse.PulseNumber)
-	assert.Error(t, err)
+	assert.Equal(t, []core.RecordRef{ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf")}, selected)
 
 	selected, err = jc.QueryRole(core.RoleLightValidator, *am.GenesisRef(), pulse.PulseNumber)
 	assert.NoError(t, err)
-	assert.Equal(t, sorted([]core.RecordRef{ref("l1"), ref("l2"), ref("l3")}), sorted(selected))
+	assert.Equal(t, sorted([]core.RecordRef{ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj")}), sorted(selected))
 
 	selected, err = jc.QueryRole(core.RoleHeavyExecutor, *am.GenesisRef(), pulse.PulseNumber)
 	assert.Error(t, err)
