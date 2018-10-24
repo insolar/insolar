@@ -41,34 +41,6 @@ func HashInterface(in interface{}) []byte {
 	return sh.Sum(s)
 }
 
-func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
-	lr.caseBindMutex.Lock()
-	lr.caseBind.Records[ref] = append(lr.caseBind.Records[ref], cr)
-	lr.caseBindMutex.Unlock()
-}
-
-func (lr *LogicRunner) lastObjectCaseRecord(ref Ref) core.CaseRecord {
-	lr.caseBindMutex.Lock()
-	defer lr.caseBindMutex.Unlock()
-	list := lr.caseBind.Records[ref]
-	return list[len(list)-1]
-}
-
-func (lr *LogicRunner) getNextValidationStep(ref Ref) (*core.CaseRecord, int) {
-	lr.caseBindReplaysMutex.Lock()
-	defer lr.caseBindReplaysMutex.Unlock()
-	r, ok := lr.caseBindReplays[ref]
-	if !ok {
-		return nil, -1
-	} else if r.RecordsLen <= r.Step {
-		return nil, r.Step
-	}
-	ret := r.Records[r.Step]
-	r.Step++
-	lr.caseBindReplays[ref] = r
-	return &ret, r.Step
-}
-
 func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (int, error) {
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")

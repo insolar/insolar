@@ -157,41 +157,6 @@ func (lr *LogicRunner) Stop(ctx core.Context) error {
 	return reterr
 }
 
-// RegisterExecutor registers an executor for particular `MachineType`
-func (lr *LogicRunner) RegisterExecutor(t core.MachineType, e core.MachineLogicExecutor) error {
-	lr.Executors[int(t)] = e
-	return nil
-}
-
-// GetExecutor returns an executor for the `MachineType` if it was registered (`RegisterExecutor`),
-// returns error otherwise
-func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor, error) {
-	if res := lr.Executors[int(t)]; res != nil {
-		return res, nil
-	}
-
-	return nil, errors.Errorf("No executor registered for machine %d", int(t))
-}
-
-func (lr *LogicRunner) GetExecution(ref Ref) *ExecutionState {
-	lr.executionMutex.Lock()
-	defer lr.executionMutex.Unlock()
-	res, ok := lr.execution[ref]
-	if !ok {
-		return nil
-	}
-	return res
-}
-
-func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
-	lr.executionMutex.Lock()
-	defer lr.executionMutex.Unlock()
-	if _, ok := lr.execution[ref]; !ok {
-		lr.execution[ref] = &ExecutionState{}
-	}
-	return lr.execution[ref]
-}
-
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
@@ -441,16 +406,4 @@ func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
 	}
 
 	return nil
-}
-
-// refreshCaseBind lock CaseBind data, copy it, clean original, unlock original, return copy
-func (lr *LogicRunner) refreshCaseBind() map[Ref][]core.CaseRecord {
-	lr.caseBindMutex.Lock()
-	defer lr.caseBindMutex.Unlock()
-
-	oldObjectsRecords := lr.caseBind.Records
-
-	lr.caseBind = core.CaseBind{Records: make(map[Ref][]core.CaseRecord)}
-
-	return oldObjectsRecords
 }
