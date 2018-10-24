@@ -18,10 +18,10 @@ package storage_test
 
 import (
 	"bytes"
-	"sort"
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 
@@ -141,68 +141,26 @@ func TestDB_CreateDrop(t *testing.T) {
 		PulseNumber: pulse,
 		Entropy:     core.Entropy{1, 2, 3},
 	})
-	records := []record.ObjectActivateRecord{
-		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{1}}},
-		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{2}}},
-		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{3}}},
+	for i := 1; i < 4; i++ {
+		setRecordMessage := message.SetRecord{
+			Record: record.SerializeRecord(&record.CodeRecord{
+				Code: []byte{byte(i)},
+			}),
+		}
+		db.SetMessage(pulse, &setRecordMessage)
 	}
 
-	var (
-		expectedRecData [][2][]byte
-		expectedIdxData [][2][]byte
-	)
-	for _, rec := range records {
-		recid, err := db.SetRecord(&rec)
-		assert.NoError(t, err)
-
-		idx := &index.ObjectLifeline{LatestState: *recid}
-		err = db.SetObjectIndex(recid, idx)
-		assert.NoError(t, err)
-
-		idxbytes, _ := index.EncodeObjectLifeline(idx)
-		expectedIdxData = append(expectedIdxData, [2][]byte{
-			record.ID2Bytes(*recid), idxbytes,
-		})
-		expectedRecData = append(expectedRecData, [2][]byte{
-			record.ID2Bytes(*recid),
-			record.SerializeRecord(&rec),
-		})
-	}
-	sortrecords(true, expectedRecData)
-	sortrecords(true, expectedIdxData)
-
-	drop, recData, idxData, err := db.CreateDrop(pulse, []byte{4, 5, 6})
+	drop, messages, err := db.CreateDrop(pulse, []byte{4, 5, 6})
 	assert.NoError(t, err)
+	assert.Equal(t, 3, len(messages))
 	assert.Equal(t, pulse, drop.Pulse)
-	assert.Equal(t, "qhHkoYwhmhf1oDQscCvZKjq8BQS4ELQicJrFpp", base58.Encode(drop.Hash))
-	assert.Equal(t, expectedRecData, recData)
+	assert.Equal(t, "2aCdao6DhZSWQNTrtrxJW7QQZRb6UJ1ssRi9cg", base58.Encode(drop.Hash))
 
-	genesisPulseBytes := core.PulseNumber(core.FirstPulseNumber).Bytes()
-	// filter idxData: remove prefix and skip genesis indexes
-	idxData = func() [][2][]byte {
-		var out [][2][]byte
-		for _, pair := range idxData {
-			pair[0] = pair[0][1:]
-			if bytes.HasPrefix(pair[0], genesisPulseBytes) {
-				continue
-			}
-			out = append(out, pair)
-		}
-		return out
-	}()
-
-	assert.Equal(t, expectedIdxData, idxData)
-}
-
-func sortrecords(ascendant bool, in [][2][]byte) [][2][]byte {
-	sort.Slice(in, func(i, j int) bool {
-		res := bytes.Compare(in[i][0], in[j][0])
-		if ascendant {
-			return res < 0
-		}
-		return res > 0
-	})
-	return in
+	for _, rawMessage := range messages {
+		formatedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
+		assert.NoError(t, err)
+		assert.Equal(t, core.TypeSetRecord, formatedMessage.Type())
+	}
 }
 
 func TestDB_SetDrop(t *testing.T) {
