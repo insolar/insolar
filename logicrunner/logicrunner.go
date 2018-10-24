@@ -39,8 +39,10 @@ type Ref = core.RecordRef
 
 // Context of one contract execution
 type ExecutionState struct {
-	mutex      sync.Mutex
-	deactivate bool
+	sync.Mutex
+	mainContext core.Context
+	callContext *core.LogicCallContext
+	deactivate  bool
 }
 
 // LogicRunner is a general interface of contract executor
@@ -166,6 +168,13 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 	}
 
 	ref := msg.GetReference()
+
+	es := lr.UpsertExecution(ref)
+	ctx.Log().Warnf("LOCKING, %s", ref.String())
+	es.Lock()
+	ctx.Log().Warnf("LOCKED")
+	es.mainContext = ctx
+
 	lr.caseBindReplaysMutex.Lock()
 	cb, validate := lr.caseBindReplays[ref]
 	lr.caseBindReplaysMutex.Unlock()
@@ -192,12 +201,14 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 		Resp: msg,
 	})
 
+	es.mainContext.Log().Warnf("VALIDATE IS %b", validate)
 	reqref, err := vb.RegisterRequest(msg)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't create request")
 	}
-	logicContext := core.LogicCallContext{
+
+	es.callContext = &core.LogicCallContext{
 		Caller:  msg.GetCaller(),
 		Request: reqref,
 		Time:    time.Now(), // TODO: probably we should take it from e
@@ -206,11 +217,11 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 
 	switch m := msg.(type) {
 	case *message.CallMethod:
-		re, err := lr.executeMethodCall(logicContext, m, vb)
+		re, err := lr.executeMethodCall(es, m, vb)
 		return re, err
 
 	case *message.CallConstructor:
-		re, err := lr.executeConstructorCall(logicContext, m, vb)
+		re, err := lr.executeConstructorCall(es, m, vb)
 		return re, err
 
 	default:
@@ -270,20 +281,17 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 	return ob, nil
 }
 
-func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := inscontext.TODO()
-	executionState := lr.UpsertExecution(m.ObjectRef)
-	executionState.mutex.Lock()
-	defer executionState.mutex.Unlock()
+func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
+	insctx := es.mainContext
 
 	objbody, err := lr.getObjectMessage(m.ObjectRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	ctx.Callee = &m.ObjectRef
-	ctx.Class = objbody.Class.HeadRef()
-	vb.ModifyContext(&ctx)
+	es.callContext.Callee = &m.ObjectRef
+	es.callContext.Class = objbody.Class.HeadRef()
+	vb.ModifyContext(es.callContext)
 
 	executor, err := lr.GetExecutor(objbody.Code.MachineType())
 	if err != nil {
@@ -292,7 +300,7 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 
 	executer := func() (*reply.CallMethod, error) {
 		newData, result, err := executor.CallMethod(
-			&ctx, *objbody.Code.Ref(), objbody.Object.Memory(), m.Method, m.Arguments,
+			es.callContext, *objbody.Code.Ref(), objbody.Object.Memory(), m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executor error")
@@ -300,13 +308,13 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 
 		if vb.NeedSave() {
 			am := lr.ArtifactManager
-			if executionState.deactivate {
+			if es.deactivate {
 				_, err = am.DeactivateObject(
-					insctx, Ref{}, *ctx.Request, objbody.Object,
+					insctx, Ref{}, *es.callContext.Request, objbody.Object,
 				)
 			} else {
 				_, err = am.UpdateObject(
-					insctx, Ref{}, *ctx.Request, objbody.Object, newData,
+					insctx, Ref{}, *es.callContext.Request, objbody.Object, newData,
 				)
 			}
 			if err != nil {
@@ -320,6 +328,8 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 			Type: core.CaseRecordTypeResult,
 			Resp: re,
 		})
+		insctx.Log().Warnf("UNLOCK METHOD")
+		es.Unlock()
 		return re, nil
 	}
 
@@ -338,13 +348,13 @@ func (lr *LogicRunner) executeMethodCall(ctx core.LogicCallContext, m *message.C
 	return nil, errors.Errorf("Invalid ReturnMode #%d", m.ReturnMode)
 }
 
-func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := inscontext.TODO()
+func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
+	insctx := es.mainContext
 	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class")
 	}
-	ctx.Class = classDesc.HeadRef()
+	es.callContext.Class = classDesc.HeadRef()
 
 	codeDesc := classDesc.CodeDescriptor()
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
@@ -352,7 +362,7 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		return nil, errors.Wrap(err, "no executer registered")
 	}
 
-	newData, err := executor.CallConstructor(&ctx, *codeDesc.Ref(), m.Name, m.Arguments)
+	newData, err := executor.CallConstructor(es.callContext, *codeDesc.Ref(), m.Name, m.Arguments)
 	if err != nil {
 		return nil, errors.Wrap(err, "executer error")
 	}
@@ -362,16 +372,19 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 		if vb.NeedSave() {
 			_, err = lr.ArtifactManager.ActivateObject(
 				insctx,
-				Ref{}, *ctx.Request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
+				Ref{}, *es.callContext.Request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
 			)
 		}
 		vb.End(m.ClassRef, core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
-			Resp: &reply.CallConstructor{Object: ctx.Request},
+			Resp: &reply.CallConstructor{Object: es.callContext.Request},
 		})
-
-		return &reply.CallConstructor{Object: ctx.Request}, err
+		insctx.Log().Warnf("CONSTRUCTOR")
+		es.Unlock()
+		return &reply.CallConstructor{Object: es.callContext.Request}, err
 	default:
+		insctx.Log().Warnf("CONSTRUCTOR")
+		es.Unlock()
 		return nil, errors.New("unsupported type of save object")
 	}
 }
