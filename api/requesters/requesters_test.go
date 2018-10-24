@@ -196,32 +196,37 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
 }
 
 func TestSend(t *testing.T) {
+	ctx := inscontext.WithTraceID(context.Background(), "TestSend")
 	userConf, reqConf := readConfigs(t)
-	resp, err := Send(URL, userConf, reqConf)
+	resp, err := Send(ctx, URL, userConf, reqConf)
 	assert.NoError(t, err)
 	assert.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed(t *testing.T) {
+	ctx := inscontext.WithTraceID(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
-	resp, err := SendWithSeed(URL, userConf, reqConf, []byte(TESTSEED))
+	resp, err := SendWithSeed(ctx, URL, userConf, reqConf, []byte(TESTSEED))
 	assert.NoError(t, err)
 	assert.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
+	ctx := inscontext.WithTraceID(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
-	_, err := SendWithSeed(URL+"TTT", userConf, reqConf, []byte(TESTSEED))
+	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, []byte(TESTSEED))
 	assert.EqualError(t, err, "[ Send ] Problem with sending target request: [ getResponseBody ] Bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
-	_, err := SendWithSeed(URL, nil, nil, []byte(TESTSEED))
+	ctx := inscontext.WithTraceID(context.Background(), "TestSendWithSeed_NilConfigs")
+	_, err := SendWithSeed(ctx, URL, nil, nil, []byte(TESTSEED))
 	assert.EqualError(t, err, "[ Send ] Configs must be initialized")
 }
 
 func TestSend_BadSeedUrl(t *testing.T) {
+	ctx := inscontext.WithTraceID(context.Background(), "TestSend_BadSeedUrl")
 	userConf, reqConf := readConfigs(t)
-	_, err := Send(URL+"TTT", userConf, reqConf)
+	_, err := Send(ctx, URL+"TTT", userConf, reqConf)
 	assert.EqualError(t, err, "[ Send ] Problem with getting seed: [ getSeed ]: [ getResponseBody ] Bad http response code: 404")
 }
