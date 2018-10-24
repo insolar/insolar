@@ -43,7 +43,7 @@ var (
 )
 
 func parseInputParams() {
-	pflag.StringVarP(&input, "input", "i", "", "path to file with initial data for loads")
+	pflag.StringVarP(&input, "input", "i", "", "path to file with initial data for benchmark")
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")

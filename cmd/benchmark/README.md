@@ -1,19 +1,19 @@
-LoadAnalyzer
+Benchmark
 ===============
 
 Usage
 ----------
 #### Build
 
-    make loadanalizer
+    make benchmark
    
 #### Start insolard
 
     ./scripts/insolard/launch.sh
    
-#### Start loadanalyzer
+#### Start benchmark
 
-    ./bin/loadanalyzer -c=3 -r=1 -k=scripts/insolard/root_member_keys.json
+    ./bin/benchmark -c=3 -r=1 -k=scripts/insolard/root_member_keys.json
 
 ### Options
 
