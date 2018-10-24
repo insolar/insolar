@@ -113,7 +113,7 @@ const (
 )
 
 // WithTrace returns a copy of parent with added trace mark.
-func WithTrace(parent context.Context, trace string) *Ctx {
+func WithTraceID(parent context.Context, trace string) *Ctx {
 	ctx := NewCtxFromContext(parent)
 	return WithValue(ctx, traceKey, trace)
 }
