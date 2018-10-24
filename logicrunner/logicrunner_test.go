@@ -43,7 +43,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/ugorji/go/codec"
 )
@@ -164,66 +163,6 @@ type testResp struct {
 	err  error
 }
 
-func newTestExecutor() *testExecutor {
-	return &testExecutor{
-		constructorResponses: make([]*testResp, 0),
-		methodResponses:      make([]*testResp, 0),
-	}
-}
-
-func (r *testExecutor) CallMethod(ctx *core.LogicCallContext, code core.RecordRef, data []byte, method string, args core.Arguments) ([]byte, core.Arguments, error) {
-	if len(r.methodResponses) < 1 {
-		panic(errors.New("no expected 'CallMethod' calls"))
-	}
-
-	res := r.methodResponses[0]
-	r.methodResponses = r.methodResponses[1:]
-	return res.data, res.res, res.err
-}
-
-func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) ([]byte, error) {
-	if len(r.constructorResponses) < 1 {
-		panic(errors.New("no expected 'CallConstructor' calls"))
-	}
-
-	res := r.constructorResponses[0]
-	r.constructorResponses = r.constructorResponses[1:]
-	return res.data, res.err
-}
-
-//
-//func TestBasics(t *testing.T) {
-//	if parallel {
-//		t.Parallel()
-//	}
-//	//lr, err := NewLogicRunner(&configuration.LogicRunner{})
-//	lr, _, _, _, _ := PrepareLrAmCbPm(t)
-//
-//	lr.GetLedger().GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
-//	//lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-//
-//	mb := testmessagebus.NewTestMessageBus()
-//	comps := core.Components{
-//		Ledger:     &testLedger{am: goplugintestutils.NewTestArtifactManager()},
-//		MessageBus: mb,
-//	}
-//	assert.NoError(t, lr.Start(comps))
-//	assert.IsType(t, &LogicRunner{}, lr)
-//	MessageBusTrivialBehavior(mb, lr)
-//
-//	_, err := lr.GetExecutor(core.MachineTypeGoPlugin)
-//	assert.Error(t, err)
-//
-//	te := newTestExecutor()
-//
-//	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
-//	assert.NoError(t, err)
-//
-//	te2, err := lr.GetExecutor(core.MachineTypeGoPlugin)
-//	assert.NoError(t, err)
-//	assert.Equal(t, te, te2)
-//}
-
 func getRefFromID(id *core.RecordID) *core.RecordRef {
 	ref := core.RecordRef{}
 	ref.SetRecord(*id)
@@ -250,50 +189,6 @@ func (r *testLedger) GetArtifactManager() core.ArtifactManager { return r.am }
 func (r *testLedger) HandleMessage(core.Message) (core.Reply, error) {
 	panic("implement me")
 }
-
-//func TestExecution(t *testing.T) {
-//	if parallel {
-//		t.Parallel()
-//	}
-//	am := goplugintestutils.NewTestArtifactManager()
-//	ld := &testLedger{am: am}
-//	lr, err := NewLogicRunner(&configuration.LogicRunner{})
-//	assert.NoError(t, err)
-//	mb := testmessagebus.NewTestMessageBus()
-//	MessageBusTrivialBehavior(mb, lr)
-//	lr.Start(core.Components{
-//		Ledger:     ld,
-//		MessageBus: mb,
-//	})
-//	lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-//
-//	codeRef := core.NewRefFromBase58("someCode")
-//	dataRef := core.NewRefFromBase58("someObject")
-//	classRef := core.NewRefFromBase58("someClass")
-//	am.Objects[dataRef] = &goplugintestutils.TestObjectDescriptor{
-//		AM:    am,
-//		Data:  []byte("origData"),
-//		Code:  &codeRef,
-//		Class: &classRef,
-//	}
-//	am.Classes[classRef] = &goplugintestutils.TestClassDescriptor{AM: am, ARef: &classRef, ACode: &codeRef}
-//	am.Codes[codeRef] = &goplugintestutils.TestCodeDescriptor{ARef: codeRef, AMachineType: core.MachineTypeGoPlugin}
-//
-//	te := newTestExecutor()
-//	te.methodResponses = append(te.methodResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-//
-//	err = lr.RegisterExecutor(core.MachineTypeGoPlugin, te)
-//	assert.NoError(t, err)
-//
-//	resp, err := lr.Execute(inscontext.TODO(), &message.CallMethod{ObjectRef: dataRef})
-//	assert.NoError(t, err)
-//	assert.Equal(t, []byte("data"), resp.(*reply.CallMethod).Data)
-//	assert.Equal(t, []byte("res"), resp.(*reply.CallMethod).Result)
-//
-//	te.constructorResponses = append(te.constructorResponses, &testResp{data: []byte("data"), res: core.Arguments("res")})
-//	resp, err = lr.Execute(inscontext.TODO(), &message.CallConstructor{ClassRef: classRef})
-//	assert.NoError(t, err)
-//}
 
 func TestContractCallingContract(t *testing.T) {
 	if parallel {
