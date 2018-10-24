@@ -53,7 +53,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err, "Initialize runner")
 
 	mb := testmessagebus.NewTestMessageBus()
-	assert.NoError(t, lr.Start(core.Components{
+	assert.NoError(t, lr.Start(ctx, core.Components{
 		Ledger:     l,
 		MessageBus: mb,
 	}), "starting logicrunner")

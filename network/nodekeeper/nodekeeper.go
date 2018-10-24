@@ -110,11 +110,11 @@ type nodekeeper struct {
 	nodeWaiters map[core.RecordRef]chan *core.ActiveNode
 }
 
-func (nk *nodekeeper) Start(components core.Components) error {
+func (nk *nodekeeper) Start(ctx core.Context, components core.Components) error {
 	return nil
 }
 
-func (nk *nodekeeper) Stop() error {
+func (nk *nodekeeper) Stop(ctx core.Context) error {
 	return nil
 }
 

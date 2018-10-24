@@ -145,7 +145,7 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 }
 
 // Start implements core.Component
-func (network *ServiceNetwork) Start(components core.Components) error {
+func (network *ServiceNetwork) Start(insctx core.Context, components core.Components) error {
 	network.certificate = components.Certificate
 	go network.listen()
 
@@ -194,7 +194,7 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 }
 
 // Stop implements core.Component
-func (network *ServiceNetwork) Stop() error {
+func (network *ServiceNetwork) Stop(ctx core.Context) error {
 	log.Infoln("Stop network")
 	network.hostNetwork.Disconnect()
 	return nil

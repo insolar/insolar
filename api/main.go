@@ -207,9 +207,7 @@ func (ar *Runner) reloadMessageBus(ctx core.Context, c core.Components) {
 }
 
 // Start runs api server
-func (ar *Runner) Start(c core.Components) error {
-	ctx := inscontext.TODO()
-
+func (ar *Runner) Start(ctx core.Context, c core.Components) error {
 	ar.reloadMessageBus(ctx, c)
 
 	rootDomainReference := c.Bootstrapper.GetRootDomainRef()
@@ -232,9 +230,9 @@ func (ar *Runner) Start(c core.Components) error {
 }
 
 // Stop stops api server
-func (ar *Runner) Stop() error {
+func (ar *Runner) Stop(ctx core.Context) error {
 	const timeOut = 5
-	ctx := inscontext.TODO()
+
 	ctx.Log().Infof("Shutting down server gracefully ...(waiting for %d seconds)", timeOut)
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(timeOut)*time.Second)
 	defer cancel()

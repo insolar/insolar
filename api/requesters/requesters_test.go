@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +53,8 @@ func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 
-	params, err := api.PreprocessRequest(req)
+	ctx := inscontext.TODO()
+	params, err := api.PreprocessRequest(ctx, req)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
