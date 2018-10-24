@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -29,6 +30,8 @@ import (
 	"github.com/insolar/insolar/ledger/record"
 	"github.com/insolar/insolar/ledger/storage"
 )
+
+var handlers = map[core.MessageType]core.MessageHandler{}
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
@@ -44,19 +47,23 @@ func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 func (h *MessageHandler) Link(components core.Components) error {
 	bus := components.MessageBus
 
-	bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	bus.MustRegister(core.TypeGetClass, h.handleGetClass)
-	bus.MustRegister(core.TypeGetObject, h.handleGetObject)
-	bus.MustRegister(core.TypeGetDelegate, h.handleGetDelegate)
-	bus.MustRegister(core.TypeGetChildren, h.handleGetChildren)
-	bus.MustRegister(core.TypeActivateObject, h.handleActivateObject)
-	bus.MustRegister(core.TypeActivateObjectDelegate, h.handleActivateObjectDelegate)
-	bus.MustRegister(core.TypeDeactivateObject, h.handleDeactivateObject)
-	bus.MustRegister(core.TypeUpdateObject, h.handleUpdateObject)
-	bus.MustRegister(core.TypeRegisterChild, h.handleRegisterChild)
-	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
-	bus.MustRegister(core.TypeSetRecord, h.handleSetRecord)
-	bus.MustRegister(core.TypeUpdateClass, h.handleUpdateClass)
+	handlers[core.TypeGetCode] = h.handleGetCode
+	handlers[core.TypeGetClass] = h.handleGetClass
+	handlers[core.TypeGetObject] = h.handleGetObject
+	handlers[core.TypeGetDelegate] = h.handleGetDelegate
+	handlers[core.TypeGetChildren] = h.handleGetChildren
+	handlers[core.TypeActivateObject] = h.handleActivateObject
+	handlers[core.TypeActivateObjectDelegate] = h.handleActivateObjectDelegate
+	handlers[core.TypeDeactivateObject] = h.handleDeactivateObject
+	handlers[core.TypeUpdateObject] = h.handleUpdateObject
+	handlers[core.TypeRegisterChild] = h.handleRegisterChild
+	handlers[core.TypeJetDrop] = h.handleJetDrop
+	handlers[core.TypeSetRecord] = h.handleSetRecord
+	handlers[core.TypeUpdateClass] = h.handleUpdateClass
+
+	for handlerType, handler := range handlers {
+		bus.MustRegister(handlerType, handler)
+	}
 
 	return nil
 }
@@ -69,7 +76,7 @@ func logTimeInside(start time.Time, funcName string) {
 
 func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -87,7 +94,7 @@ func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -113,7 +120,7 @@ func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Messag
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -148,7 +155,7 @@ func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Messa
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -179,7 +186,7 @@ func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Mes
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -209,7 +216,7 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -266,7 +273,7 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 
 func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -310,7 +317,7 @@ func (h *MessageHandler) handleActivateObject(ctx core.Context, genericMsg core.
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -388,7 +395,7 @@ func (h *MessageHandler) handleActivateObjectDelegate(ctx core.Context, genericM
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -466,7 +473,7 @@ func (h *MessageHandler) handleDeactivateObject(ctx core.Context, genericMsg cor
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -518,7 +525,7 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -574,7 +581,7 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 	start := time.Now()
 
 	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -615,25 +622,14 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 }
 
 func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	//err := persistMessageToDb(h.db, genericMsg)
-	//if err != nil{
-	//	return nil, err
-	//}
-
 	msg := genericMsg.(*message.JetDrop)
 
-	// TODO: validate
-	for _, rec := range msg.Records {
-		err := h.db.SetRecordBinary(rec[0], rec[1])
+	for _, rawMessage := range msg.Messages {
+		parsedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	// temporary hack for Index passing
-	// FIXME: should be removed after proper validation has been implemented
-	for _, rec := range msg.Indexes {
-		err := h.db.Set(rec[0], rec[1])
+		_, err = handlers[parsedMessage.Type()](ctx, parsedMessage)
 		if err != nil {
 			return nil, err
 		}
