@@ -14,22 +14,25 @@
  *    limitations under the License.
  */
 
-package functest
+package inscontext
 
 import (
+	"context"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	assert.Equal(t, 1000, firstBalance)
+func TestContextWithValue(t *testing.T) {
+	ctx := NewCtxFromContext(context.Background())
+	ctx = WithValue(ctx, 0, "Zero")
+	ctx = WithTraceID(ctx, "ID")
+	assert.Equal(t, "Zero", ctx.Value(0))
+	assert.Equal(t, "ID", ctx.Value(key(0)))
+	assert.Equal(t, "ID", ctx.TraceID())
 }
 
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	assert.EqualError(t, err, "[ getBalance ] : on calling main API: inconsistent object index: storage object not found")
+func TestContextTraceID(t *testing.T) {
+	ctx := NewCtxFromContext(context.Background())
+	assert.Equal(t, "", ctx.TraceID())
 }

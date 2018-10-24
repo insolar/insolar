@@ -26,22 +26,22 @@ import (
 type GenesisRecord struct {
 }
 
+// PrevStateID returns previous state id.
+func (r *GenesisRecord) PrevStateID() *ID {
+	return nil
+}
+
+// State returns state id.
+func (r *GenesisRecord) State() State {
+	return StateActivation
+}
+
 // Type implementation of Record interface.
 func (r *GenesisRecord) Type() TypeID { return typeGenesis }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
-}
-
-// IsDeactivation determines if current state is deactivation.
-func (*GenesisRecord) IsDeactivation() bool {
-	return false
-}
-
-// IsAmend determines if current state is amend.
-func (*GenesisRecord) IsAmend() bool {
-	return false
 }
 
 // GetMemory returns state memory.
