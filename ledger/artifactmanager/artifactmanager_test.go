@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/cryptohelpers/hash"
 	"github.com/insolar/insolar/inscontext"
 	"github.com/stretchr/testify/assert"
 
@@ -817,32 +818,36 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
 
-	records := []record.ObjectActivateRecord{
-		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{1}}},
-		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{2}}},
-		{ObjectStateRecord: record.ObjectStateRecord{Memory: []byte{3}}},
+	codeRecord := record.CodeRecord{
+		Code: []byte{1,2,3,3,2,1},
 	}
-	ids := []record.ID{
-		{Hash: []byte{4}},
-		{Hash: []byte{5}},
-		{Hash: []byte{6}},
+	recHash := hash.NewIDHash()
+	_, err := codeRecord.WriteHashData(recHash)
+	assert.NoError(t, err)
+	latestPulse, err := td.db.GetLatestPulseNumber()
+	assert.NoError(t, err)
+	id := record.ID{
+		Pulse: latestPulse,
+		Hash:  recHash.Sum(nil),
 	}
-	recordData := [][2][]byte{
-		{record.ID2Bytes(ids[0]), record.SerializeRecord(&records[0])},
-		{record.ID2Bytes(ids[1]), record.SerializeRecord(&records[1])},
-		{record.ID2Bytes(ids[2]), record.SerializeRecord(&records[2])},
+
+
+	setRecordMessage := message.SetRecord{
+		Record: record.SerializeRecord(&codeRecord),
 	}
+	messageBytes, err := message.ToBytes(&setRecordMessage)
+	assert.NoError(t, err)
 
 	rep, err := td.manager.messageBus.Send(
 		inscontext.TODO(),
-		&message.JetDrop{Records: recordData},
+		&message.JetDrop{Messages: [][]byte{
+			messageBytes,
+		}},
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
 
-	for i := 0; i < len(records); i++ {
-		rec, err := td.db.GetRecord(&ids[i])
-		assert.NoError(t, err)
-		assert.Equal(t, records[i], *rec.(*record.ObjectActivateRecord))
-	}
+	rec, err := td.db.GetRecord(&id)
+	assert.NoError(t, err)
+	assert.Equal(t, codeRecord, *rec.(*record.CodeRecord))
 }
