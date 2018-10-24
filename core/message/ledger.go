@@ -342,8 +342,7 @@ type JetDrop struct {
 	ledgerMessage
 	Jet     core.RecordRef
 	Drop    []byte
-	Records [][2][]byte
-	Indexes [][2][]byte
+	Messages [][]byte
 }
 
 // Type implementation of Message interface.
