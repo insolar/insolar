@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"bytes"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/ledger/index"
@@ -32,6 +33,7 @@ import (
 )
 
 var handlers = map[core.MessageType]core.MessageHandler{}
+var handlersRWLock = sync.RWMutex{}
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
@@ -47,6 +49,7 @@ func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 func (h *MessageHandler) Link(components core.Components) error {
 	bus := components.MessageBus
 
+	handlersRWLock.Lock()
 	handlers[core.TypeGetCode] = h.handleGetCode
 	handlers[core.TypeGetClass] = h.handleGetClass
 	handlers[core.TypeGetObject] = h.handleGetObject
@@ -60,10 +63,13 @@ func (h *MessageHandler) Link(components core.Components) error {
 	handlers[core.TypeJetDrop] = h.handleJetDrop
 	handlers[core.TypeSetRecord] = h.handleSetRecord
 	handlers[core.TypeUpdateClass] = h.handleUpdateClass
+	handlersRWLock.Unlock()
 
+	handlersRWLock.RLock()
 	for handlerType, handler := range handlers {
 		bus.MustRegister(handlerType, handler)
 	}
+	handlersRWLock.RUnlock()
 
 	return nil
 }
@@ -629,7 +635,14 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message
 		if err != nil {
 			return nil, err
 		}
-		_, err = handlers[parsedMessage.Type()](ctx, parsedMessage)
+		handlersRWLock.RLock()
+		handler, ok := handlers[parsedMessage.Type()]
+		handlersRWLock.RUnlock()
+		if !ok {
+			return nil, errors.New("unknown message type")
+		}
+
+		_, err = handler(ctx, parsedMessage)
 		if err != nil {
 			return nil, err
 		}
