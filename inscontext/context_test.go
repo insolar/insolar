@@ -14,24 +14,25 @@
  *    limitations under the License.
  */
 
-package index
+package inscontext
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/record"
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// ClassLifeline represents meta information for record object
-type ClassLifeline struct {
-	LatestState record.ID // Amend or activate record
-	State       record.State
+func TestContextWithValue(t *testing.T) {
+	ctx := NewCtxFromContext(context.Background())
+	ctx = WithValue(ctx, 0, "Zero")
+	ctx = WithTraceID(ctx, "ID")
+	assert.Equal(t, "Zero", ctx.Value(0))
+	assert.Equal(t, "ID", ctx.Value(key(0)))
+	assert.Equal(t, "ID", ctx.TraceID())
 }
 
-// ObjectLifeline represents meta information for record object
-type ObjectLifeline struct {
-	ClassRef     record.Reference
-	LatestState  record.ID  // Amend or activate record
-	ChildPointer *record.ID // Meta record about child activation
-	Delegates    map[core.RecordRef]record.Reference
-	State        record.State
+func TestContextTraceID(t *testing.T) {
+	ctx := NewCtxFromContext(context.Background())
+	assert.Equal(t, "", ctx.TraceID())
 }

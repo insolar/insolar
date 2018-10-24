@@ -41,7 +41,7 @@ const (
 	_ int = 0
 	// HandlerError is error in handler
 	HandlerError int = -1
-	// HandlerError is bad formed request
+	// BadRequest is bad formed request
 	BadRequest int = -2
 )
 

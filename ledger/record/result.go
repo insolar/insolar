@@ -22,10 +22,24 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// State is a state of lifeline records.
+type State int
+
+const (
+	// StateUndefined is used for special cases.
+	StateUndefined = State(iota)
+	// StateActivation means it's an activation record.
+	StateActivation
+	// StateAmend means it's an amend record.
+	StateAmend
+	// StateDeactivation means it's a deactivation record.
+	StateDeactivation
+)
+
 // ClassState is common class state record.
 type ClassState interface {
-	// IsDeactivation determines if current state is deactivation.
-	IsDeactivation() bool
+	// State returns state id.
+	State() State
 	// GetCode returns state code.
 	GetCode() *Reference
 	// GetMachineType returns state code machine type.
@@ -34,8 +48,8 @@ type ClassState interface {
 
 // ObjectState is common object state record.
 type ObjectState interface {
-	// IsDeactivation determines if current state is deactivation.
-	IsDeactivation() bool
+	// State returns state id.
+	State() State
 	// GetMemory returns state memory.
 	GetMemory() []byte
 }
@@ -93,15 +107,15 @@ func (r *ClassStateRecord) GetCode() *Reference {
 	return &r.Code
 }
 
-// IsDeactivation determines if current state is deactivation.
-func (r *ClassStateRecord) IsDeactivation() bool {
-	return false
-}
-
 // ClassActivateRecord is produced when we "activate" new contract class.
 type ClassActivateRecord struct {
 	ResultRecord
 	ClassStateRecord
+}
+
+// State returns state id.
+func (r *ClassActivateRecord) State() State {
+	return StateActivation
 }
 
 // Type implementation of Record interface.
@@ -120,6 +134,11 @@ type ClassAmendRecord struct {
 	PrevState ID
 }
 
+// State returns state id.
+func (r *ClassAmendRecord) State() State {
+	return StateAmend
+}
+
 // Type implementation of Record interface.
 func (r *ClassAmendRecord) Type() TypeID { return typeClassAmend }
 
@@ -131,11 +150,6 @@ func (r *ClassAmendRecord) WriteHashData(w io.Writer) (int, error) {
 // ObjectStateRecord is a record containing data for an object state.
 type ObjectStateRecord struct {
 	Memory []byte
-}
-
-// IsDeactivation determines if current state is deactivation.
-func (r *ObjectStateRecord) IsDeactivation() bool {
-	return false
 }
 
 // GetMemory returns state memory.
@@ -151,6 +165,11 @@ type ObjectActivateRecord struct {
 	Class    Reference
 	Parent   Reference
 	Delegate bool
+}
+
+// State returns state id.
+func (r *ObjectActivateRecord) State() State {
+	return StateActivation
 }
 
 // Type implementation of Record interface.
@@ -169,6 +188,11 @@ type ObjectAmendRecord struct {
 	PrevState ID
 }
 
+// State returns state id.
+func (r *ObjectAmendRecord) State() State {
+	return StateAmend
+}
+
 // Type implementation of Record interface.
 func (r *ObjectAmendRecord) Type() TypeID { return typeObjectAmend }
 
@@ -183,6 +207,11 @@ type DeactivationRecord struct {
 	PrevState ID
 }
 
+// State returns state id.
+func (r *DeactivationRecord) State() State {
+	return StateDeactivation
+}
+
 // Type implementation of Record interface.
 func (r *DeactivationRecord) Type() TypeID { return typeDeactivate }
 
@@ -194,16 +223,6 @@ func (r *DeactivationRecord) WriteHashData(w io.Writer) (int, error) {
 // GetMachineType returns state code machine type.
 func (*DeactivationRecord) GetMachineType() core.MachineType {
 	return core.MachineTypeNotExist
-}
-
-// IsDeactivation determines if current state is deactivation.
-func (*DeactivationRecord) IsDeactivation() bool {
-	return true
-}
-
-// IsAmend determines if current state is amend.
-func (*DeactivationRecord) IsAmend() bool {
-	return false
 }
 
 // GetMemory returns state memory.
