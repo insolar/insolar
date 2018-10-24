@@ -29,9 +29,9 @@ import (
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/insolar/insolar/network/dhtnetwork"
+	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
+	"github.com/insolar/insolar/network/dhtnetwork/resolver"
 	"github.com/pkg/errors"
 )
 
@@ -52,7 +52,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	}
 
 	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf, cascade1, cert)
+	dht, err := dhtnetwork.NewHostNetwork(conf, cascade1, cert)
 	if err != nil {
 		return nil, err
 	}
@@ -75,10 +75,6 @@ func (network *ServiceNetwork) GetNodeID() core.RecordRef {
 	return network.hostNetwork.GetNodeID()
 }
 
-func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
-	return network.nodeKeeper
-}
-
 // SendMessage sends a message from MessageBus.
 func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
 	start := time.Now()
@@ -96,7 +92,8 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 
 	metrics.NetworkMessageSentTotal.Inc()
 	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
-	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s", msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
+	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
+		msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
 	return res, err
 }
 
@@ -209,7 +206,7 @@ func (network *ServiceNetwork) listen() {
 }
 
 func createContext(handler hosthandler.HostHandler) hosthandler.Context {
-	ctx, err := hostnetwork.NewContextBuilder(handler).SetDefaultHost().Build()
+	ctx, err := dhtnetwork.NewContextBuilder(handler).SetDefaultHost().Build()
 	if err != nil {
 		log.Fatalln("Failed to create context:", err.Error())
 	}

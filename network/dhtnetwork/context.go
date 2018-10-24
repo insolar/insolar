@@ -14,12 +14,12 @@
  *    limitations under the License.
  */
 
-package hostnetwork
+package dhtnetwork
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 	"github.com/insolar/insolar/network/transport/id"
 	"github.com/pkg/errors"
 )

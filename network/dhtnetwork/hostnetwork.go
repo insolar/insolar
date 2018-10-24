@@ -14,19 +14,19 @@
  *    limitations under the License.
  */
 
-package hostnetwork
+package dhtnetwork
 
 import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/cascade"
-	"github.com/insolar/insolar/network/hostnetwork/consensus"
-	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
-	"github.com/insolar/insolar/network/hostnetwork/rpc"
-	"github.com/insolar/insolar/network/hostnetwork/signhandler"
-	"github.com/insolar/insolar/network/hostnetwork/store"
+	"github.com/insolar/insolar/network/dhtnetwork/consensus"
+	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
+	"github.com/insolar/insolar/network/dhtnetwork/resolver"
+	"github.com/insolar/insolar/network/dhtnetwork/rpc"
+	"github.com/insolar/insolar/network/dhtnetwork/signhandler"
+	"github.com/insolar/insolar/network/dhtnetwork/store"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"

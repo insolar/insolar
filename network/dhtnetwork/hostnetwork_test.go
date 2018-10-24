@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package hostnetwork
+package dhtnetwork
 
 import (
 	"testing"

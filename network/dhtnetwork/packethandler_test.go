@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package hostnetwork
+package dhtnetwork
 
 import (
 	"crypto/ecdsa"
@@ -25,11 +25,11 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/hostnetwork/routing"
-	"github.com/insolar/insolar/network/hostnetwork/rpc"
-	"github.com/insolar/insolar/network/hostnetwork/signhandler"
-	"github.com/insolar/insolar/network/hostnetwork/store"
+	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
+	"github.com/insolar/insolar/network/dhtnetwork/routing"
+	"github.com/insolar/insolar/network/dhtnetwork/rpc"
+	"github.com/insolar/insolar/network/dhtnetwork/signhandler"
+	"github.com/insolar/insolar/network/dhtnetwork/store"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"

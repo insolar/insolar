@@ -14,13 +14,13 @@
  *    limitations under the License.
  */
 
-package hostnetwork
+package dhtnetwork
 
 import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 )
 
 // MockPulseManager mock struct to read and write pulse that implements core.PulseManager interface.

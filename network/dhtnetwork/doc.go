@@ -40,4 +40,4 @@ Usage:
 	}
 
 */
-package hostnetwork
+package dhtnetwork

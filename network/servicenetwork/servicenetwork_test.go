@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/testutils"
@@ -337,8 +337,8 @@ func Test_processPulse(t *testing.T) {
 		"127.0.0.1:10001",
 		nil,
 		secondNodeId))
-	firstLedger := &mockLedger{PM: &hostnetwork.MockPulseManager{}}
-	mpm := hostnetwork.MockPulseManager{}
+	firstLedger := &mockLedger{PM: &dhtnetwork.MockPulseManager{}}
+	mpm := dhtnetwork.MockPulseManager{}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	mpm.SetCallback(func(pulse core.Pulse) {
@@ -365,8 +365,8 @@ func Test_processPulse(t *testing.T) {
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar
-	ctx := hostnetwork.GetDefaultCtx(hh)
-	hostnetwork.DispatchPacketType(hh, ctx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
+	ctx := dhtnetwork.GetDefaultCtx(hh)
+	dhtnetwork.DispatchPacketType(hh, ctx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = firstLedger.GetPulseManager().Current()
@@ -414,7 +414,7 @@ func Test_processPulse2(t *testing.T) {
 
 	// init node and register test function
 	initService := func(node string, bHosts []string) (host string) {
-		mpm := hostnetwork.MockPulseManager{}
+		mpm := dhtnetwork.MockPulseManager{}
 		mpm.SetCallback(func(pulse core.Pulse) {
 			if pulse.PulseNumber == core.PulseNumber(1) {
 				wg.Done()
@@ -454,8 +454,8 @@ func Test_processPulse2(t *testing.T) {
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar on the last started service
-	ctx := hostnetwork.GetDefaultCtx(hh)
-	hostnetwork.DispatchPacketType(hh, ctx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
+	ctx := dhtnetwork.GetDefaultCtx(hh)
+	dhtnetwork.DispatchPacketType(hh, ctx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = ll.GetPulseManager().Current()
