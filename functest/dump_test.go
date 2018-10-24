@@ -17,52 +17,43 @@
 package functest
 
 import (
-	"fmt"
+	"encoding/base64"
+	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDumpAllUsers(t *testing.T) {
-	createMember(t)
+// todo fix this dead lock
+func _TestDumpAllUsers(t *testing.T) {
+	_ = createMember(t, "Member")
 
-	body := getResponseBody(t, postParams{
-		"query_type": "dump_all_users",
-	})
-
-	response := &dumpAllUsersResponse{}
-	unmarshalResponse(t, body, response)
-
-	assert.NotEqual(t, []userInfo{}, response.DumpInfo)
+	result, err := signedRequest(&root, "DumpAllUsers")
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
 }
 
 func TestDumpUser(t *testing.T) {
-	memberRef := createMember(t)
+	member := createMember(t, "Member")
 
-	body := getResponseBody(t, postParams{
-		"query_type": "dump_user_info",
-		"reference":  memberRef,
-	})
+	resp, err := signedRequest(&root, "DumpUserInfo", member.ref)
+	assert.NoError(t, err)
 
-	response := &dumpUserInfoResponse{}
-	unmarshalResponse(t, body, response)
-	fmt.Println(response)
+	data, err := base64.StdEncoding.DecodeString(resp.(string))
+	assert.NoError(t, err)
 
-	assert.NotEmpty(t, response.DumpInfo.Member)
-	assert.Equal(t, getBalance(t, memberRef), int(response.DumpInfo.Wallet))
+	result := struct {
+		Member string
+		Wallet int
+	}{}
+	err = json.Unmarshal(data, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, "Member", result.Member)
+	assert.Equal(t, 1000, result.Wallet)
 }
 
 func TestDumpUserWrongRef(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "dump_user_info",
-		"reference":  testutils.RandomRef(),
-	})
-
-	response := &dumpUserInfoResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Message)
+	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef())
+	assert.EqualError(t, err, "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation: on calling main API: inconsistent object index: storage object not found")
 }
