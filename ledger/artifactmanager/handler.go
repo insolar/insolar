@@ -615,10 +615,10 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 }
 
 func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil{
-		return nil, err
-	}
+	//err := persistMessageToDb(h.db, genericMsg)
+	//if err != nil{
+	//	return nil, err
+	//}
 
 	msg := genericMsg.(*message.JetDrop)
 
