@@ -251,6 +251,11 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 		if err = validateState(idx.State, state.State()); err != nil {
 			return err
 		}
+		// Index exists and latest record id does not match (preserving chain consistency).
+		if idx.State != record.StateUndefined && !state.PrevStateID().IsEqual(&idx.LatestState) {
+			return errors.New("invalid state record")
+		}
+
 		id, err = tx.SetRecord(rec)
 		if err != nil {
 			return err
@@ -288,6 +293,11 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 		if err = validateState(idx.State, state.State()); err != nil {
 			return err
 		}
+		// Index exists and latest record id does not match (preserving chain consistency).
+		if idx.State != record.StateUndefined && !state.PrevStateID().IsEqual(&idx.LatestState) {
+			return errors.New("invalid state record")
+		}
+
 		id, err = tx.SetRecord(rec)
 		if err != nil {
 			return err
@@ -329,6 +339,11 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 		if err != nil {
 			return err
 		}
+		// Children exist and pointer does not match (preserving chain consistency).
+		if idx.ChildPointer != nil && !childRec.PrevChild.IsEqual(idx.ChildPointer) {
+			return errors.New("invalid child record")
+		}
+
 		child, err = tx.SetRecord(childRec)
 		if err != nil {
 			return err

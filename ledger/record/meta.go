@@ -26,6 +26,11 @@ import (
 type GenesisRecord struct {
 }
 
+// PrevStateID returns previous state id.
+func (r *GenesisRecord) PrevStateID() *ID {
+	return nil
+}
+
 // State returns state id.
 func (r *GenesisRecord) State() State {
 	return StateActivation
