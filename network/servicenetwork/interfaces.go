@@ -23,32 +23,42 @@ import (
 	"github.com/insolar/insolar/network/transport/packet"
 )
 
+// NetworkController contains network logic
 type NetworkController interface {
-	RemoteProcedureRegister(name string, method core.RemoteProcedure)
-	SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error)
+	// SendMessage send message to nodeID
+	SendMessage(nodeID core.RecordRef, msg core.Message) ([]byte, error)
+	// RemoteProcedureRegister register remote procedure that will be executed when message is received
+	RemoteProcedureRegister(method core.RemoteProcedure)
+	// Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
 	Bootstrap() error
+	// AnalyzeNetwork legacy method for old DHT network (should be removed in
 	AnalyzeNetwork() error
+	// Authorize start authorization process on discovery node.
 	Authorize() error
 
+	// GetNodeID get self node id (should be removed in far future)
+	GetNodeID() core.RecordRef
+
+	// SetNodeKeeper inject nodekeeper
 	SetNodeKeeper(keeper consensus.NodeKeeper)
 }
 
-// RequestHandler handler function to process incoming requests from network
+// RequestHandler handler function to process incoming requests from network.
 type RequestHandler func(request *packet.Packet) (response *packet.Packet, err error)
 
-// HostNetwork simple interface to send network requests and process network responses
+// HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
-	// Listen start listening to network requests, should be started in goroutine
+	// Listen start listening to network requests, should be started in goroutine.
 	Listen() error
-	// Disconnect stop listening to network requests
+	// Disconnect stop listening to network requests.
 	Disconnect() error
-	// PublicAddress returns public address that can be published for all nodes
+	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 
-	// SendRequest send request to a remote node
+	// SendRequest send request to a remote node.
 	SendRequest(*packet.Packet) (transport.Future, error)
-	// RegisterRequestHandler register a handler function to process incoming requests of a specific type
+	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t packet.PacketType, handler RequestHandler)
-	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node
+	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() *packet.Builder
 }
