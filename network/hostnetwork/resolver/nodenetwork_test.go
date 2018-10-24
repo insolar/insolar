@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package nodenetwork
+package resolver
 
 import (
 	"testing"

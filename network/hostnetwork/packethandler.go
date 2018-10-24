@@ -23,9 +23,9 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -190,7 +190,7 @@ func getActiveHostsList(hostHandler hosthandler.HostHandler) []host.Host {
 			log.Warnf("Error resolving address %s for node %s", node.Address, node.NodeID)
 			continue
 		}
-		idd := nodenetwork.ResolveHostID(node.NodeID)
+		idd := resolver.ResolveHostID(node.NodeID)
 		hosts = append(hosts, host.Host{ID: id.FromBase58(idd), Address: address})
 	}
 	return hosts

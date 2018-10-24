@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/pkg/errors"
 )
 
@@ -85,7 +85,7 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
-	hostID := nodenetwork.ResolveHostID(nodeID)
+	hostID := resolver.ResolveHostID(nodeID)
 	buff, err := message.ToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
@@ -243,7 +243,7 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 
 	var failedNodes []string
 	for _, nextNode := range nextNodes {
-		hostID := nodenetwork.ResolveHostID(nextNode)
+		hostID := resolver.ResolveHostID(nextNode)
 		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
 		if err != nil {
 			log.Debugln("failed to send cascade message: ", err)

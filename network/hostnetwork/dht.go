@@ -32,9 +32,9 @@ import (
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/hostnetwork/routing"
 	"github.com/insolar/insolar/network/hostnetwork/store"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
@@ -1211,7 +1211,7 @@ func (dht *DHT) checkMajorityRule(nodes []*core.ActiveNode) error {
 	count := 0
 	for _, activeNode := range nodes {
 		for _, bootstrapNode := range dht.options.BootstrapHosts {
-			if strings.EqualFold(bootstrapNode.ID.String(), nodenetwork.ResolveHostID(activeNode.NodeID)) {
+			if strings.EqualFold(bootstrapNode.ID.String(), resolver.ResolveHostID(activeNode.NodeID)) {
 				count++
 			}
 		}

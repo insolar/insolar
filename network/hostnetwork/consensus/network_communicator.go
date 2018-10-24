@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/pkg/errors"
@@ -149,7 +149,7 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseN
 func (c *communicatorSender) getSenderAndReceiver(ctx context.Context, p consensus.Participant) (*host.Host, *host.Host, error) {
 	ht := c.handler.HtFromCtx(ctx)
 	sender := ht.Origin
-	receiverID := nodenetwork.ResolveHostID(p.GetActiveNode().NodeID)
+	receiverID := resolver.ResolveHostID(p.GetActiveNode().NodeID)
 	receiver, exists, err := c.handler.FindHost(ctx, receiverID)
 	if err != nil || !exists {
 		return nil, nil, errors.Wrap(err, "Error resolving receiver HostID -> Address")

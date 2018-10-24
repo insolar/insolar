@@ -23,10 +23,10 @@ import (
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/hostnetwork/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/hostnetwork/rpc"
 	"github.com/insolar/insolar/network/hostnetwork/signhandler"
 	"github.com/insolar/insolar/network/hostnetwork/store"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
@@ -55,7 +55,7 @@ func NewHostNetwork(
 	}
 
 	nodeID := core.NewRefFromBase58(cfg.Node.Node.ID)
-	encodedOriginID := nodenetwork.ResolveHostID(nodeID)
+	encodedOriginID := resolver.ResolveHostID(nodeID)
 	originID := id.FromBase58(encodedOriginID)
 	origin, err := host.NewOrigin([]id.ID{originID}, originAddress)
 	if err != nil {
