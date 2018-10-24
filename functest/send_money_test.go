@@ -66,51 +66,29 @@ func TestTransferAllAmount(t *testing.T) {
 	assert.Equal(t, oldSecondBalance+oldFirstBalance, newSecondBalance)
 }
 
-/*func _TestTransferMoreThanAvailableAmount(t *testing.T) {
-	firstMemberRef := createMember(t)
-	secondMemberRef := createMember(t)
-	oldFirstBalance := getBalance(t, firstMemberRef)
-	oldSecondBalance := getBalance(t, secondMemberRef)
+func _TestTransferMoreThanAvailableAmount(t *testing.T) {
+	firstMember := createMember(t, "Member1")
+	secondMember := createMember(t, "Member2")
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       secondMemberRef,
-		"to":         firstMemberRef,
-		"amount":     10000000000,
-	})
+	amount := oldFirstBalance + 100
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, body, transferResponse)
-
-	// Add checking than contract gives specific error
-
-	newFirstBalance := getBalance(t, firstMemberRef)
-	newSecondBalance := getBalance(t, secondMemberRef)
-
-	assert.Equal(t, oldFirstBalance, newFirstBalance)
-	assert.Equal(t, oldSecondBalance, newSecondBalance)
+	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
+	assert.Error(t, err)
 }
 
 func _TestTransferToMyself(t *testing.T) {
-	memberRef := createMember(t)
-	oldBalance := getBalance(t, memberRef)
+	member := createMember(t, "Member1")
+	oldBalance := getBalanceNoErr(t, member, member.ref)
 
-	body := getResponseBody(t, postParams{
-		"query_type": "send_money",
-		"from":       memberRef,
-		"to":         memberRef,
-		"amount":     oldBalance - 1,
-	})
+	amount := 100
 
-	transferResponse := &sendMoneyResponse{}
-	unmarshalResponse(t, body, transferResponse)
+	_, err := signedRequest(member, "Transfer", amount, member.ref)
+	assert.NoError(t, err)
 
-	assert.True(t, transferResponse.Success)
-
-	newBalance := getBalance(t, memberRef)
-
+	newBalance := getBalanceNoErr(t, member, member.ref)
 	assert.Equal(t, oldBalance, newBalance)
-}*/
+}
 
 // TODO: test to check overflow of balance
 // TODO: check transfer zero amount

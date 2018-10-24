@@ -139,20 +139,19 @@ func loadRootKeys() error {
 	return nil
 }
 
-func getInfoAndRootRef() error {
+func setInfo() error {
 	resp, err := http.Get(TestURL + "/info")
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/info")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "[ setInfo ] couldn't read answer")
 	}
 	err = json.Unmarshal(body, &info)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "[ setInfo ] couldn't unmarshall answer")
 	}
-	root.ref = info.RootMember
 	return nil
 }
 
@@ -330,11 +329,12 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't start insolard: ")
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
-	err = getInfoAndRootRef()
+	err = setInfo()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't receive root reference ")
 	}
 	fmt.Println("[ setup ] root reference successfully received")
+	root.ref = info.RootMember
 
 	return nil
 }
