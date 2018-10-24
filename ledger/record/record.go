@@ -46,7 +46,11 @@ type Record interface {
 }
 
 // IsEqual checks equality of IDs.
-func (id ID) IsEqual(id2 ID) bool {
+func (id *ID) IsEqual(id2 *ID) bool {
+	if id == nil || id2 == nil {
+		return false
+	}
+
 	if (id.Hash == nil) != (id2.Hash == nil) {
 		return false
 	}
@@ -93,10 +97,10 @@ func (ref *Reference) CoreRef() *core.RecordRef {
 
 // IsEqual checks equality of References.
 func (ref Reference) IsEqual(ref2 Reference) bool {
-	if !ref.Domain.IsEqual(ref2.Domain) {
+	if !ref.Domain.IsEqual(&ref2.Domain) {
 		return false
 	}
-	return ref.Record.IsEqual(ref2.Record)
+	return ref.Record.IsEqual(&ref2.Record)
 }
 
 // IsNotEqual checks non equality of References.

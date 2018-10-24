@@ -44,6 +44,8 @@ type ClassState interface {
 	GetCode() *Reference
 	// GetMachineType returns state code machine type.
 	GetMachineType() core.MachineType
+	// PrevStateID returns previous state id.
+	PrevStateID() *ID
 }
 
 // ObjectState is common object state record.
@@ -52,6 +54,8 @@ type ObjectState interface {
 	State() State
 	// GetMemory returns state memory.
 	GetMemory() []byte
+	// PrevStateID returns previous state id.
+	PrevStateID() *ID
 }
 
 // ResultRecord is a record which is created in response to a request.
@@ -113,6 +117,11 @@ type ClassActivateRecord struct {
 	ClassStateRecord
 }
 
+// PrevStateID returns previous state id.
+func (r *ClassActivateRecord) PrevStateID() *ID {
+	return nil
+}
+
 // State returns state id.
 func (r *ClassActivateRecord) State() State {
 	return StateActivation
@@ -132,6 +141,11 @@ type ClassAmendRecord struct {
 	ClassStateRecord
 
 	PrevState ID
+}
+
+// PrevStateID returns previous state id.
+func (r *ClassAmendRecord) PrevStateID() *ID {
+	return &r.PrevState
 }
 
 // State returns state id.
@@ -167,6 +181,11 @@ type ObjectActivateRecord struct {
 	Delegate bool
 }
 
+// PrevStateID returns previous state id.
+func (r *ObjectActivateRecord) PrevStateID() *ID {
+	return nil
+}
+
 // State returns state id.
 func (r *ObjectActivateRecord) State() State {
 	return StateActivation
@@ -188,6 +207,11 @@ type ObjectAmendRecord struct {
 	PrevState ID
 }
 
+// PrevStateID returns previous state id.
+func (r *ObjectAmendRecord) PrevStateID() *ID {
+	return &r.PrevState
+}
+
 // State returns state id.
 func (r *ObjectAmendRecord) State() State {
 	return StateAmend
@@ -205,6 +229,11 @@ func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
 type DeactivationRecord struct {
 	ResultRecord
 	PrevState ID
+}
+
+// PrevStateID returns previous state id.
+func (r *DeactivationRecord) PrevStateID() *ID {
+	return &r.PrevState
 }
 
 // State returns state id.
