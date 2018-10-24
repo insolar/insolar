@@ -68,6 +68,11 @@ func logTimeInside(start time.Time, funcName string) {
 }
 
 func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.SetRecord)
 
 	id, err := h.db.SetRecord(record.DeserializeRecord(msg.Record))
@@ -80,6 +85,12 @@ func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Messa
 
 func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
 
@@ -100,6 +111,12 @@ func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message
 
 func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.GetClass)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -129,6 +146,12 @@ func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Messag
 
 func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -154,6 +177,12 @@ func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Messa
 
 func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
 
@@ -178,6 +207,12 @@ func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Mes
 
 func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
 
@@ -230,6 +265,11 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 }
 
 func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.UpdateClass)
 	classCoreID := msg.Class.GetRecordID()
 	classID := record.Bytes2ID(classCoreID[:])
@@ -241,7 +281,7 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 	}
 
 	var id *record.ID
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, err := getClassIndex(tx, &classID, true)
 		if err != nil {
 			return err
@@ -268,6 +308,12 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 
 func (h *MessageHandler) handleActivateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.ActivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -275,7 +321,6 @@ func (h *MessageHandler) handleActivateObject(ctx core.Context, genericMsg core.
 	classRef := record.Core2Reference(msg.Class)
 	parentRef := record.Core2Reference(msg.Parent)
 
-	var err error
 	_, _, _, err = getClass(h.db, &classRef.Record, nil)
 	if err != nil {
 		return nil, err
@@ -341,6 +386,12 @@ func (h *MessageHandler) handleActivateObject(ctx core.Context, genericMsg core.
 
 func (h *MessageHandler) handleActivateObjectDelegate(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.ActivateObjectDelegate)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -348,7 +399,6 @@ func (h *MessageHandler) handleActivateObjectDelegate(ctx core.Context, genericM
 	classRef := record.Core2Reference(msg.Class)
 	parentRef := record.Core2Reference(msg.Parent)
 
-	var err error
 	_, _, _, err = getClass(h.db, &classRef.Record, nil)
 	if err != nil {
 		return nil, err
@@ -414,6 +464,12 @@ func (h *MessageHandler) handleActivateObjectDelegate(ctx core.Context, genericM
 
 func (h *MessageHandler) handleDeactivateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.DeactivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -421,7 +477,6 @@ func (h *MessageHandler) handleDeactivateObject(ctx core.Context, genericMsg cor
 	objRef := record.Core2Reference(msg.Object)
 
 	var (
-		err            error
 		deactivationID *record.ID
 	)
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
@@ -461,6 +516,12 @@ func (h *MessageHandler) handleDeactivateObject(ctx core.Context, genericMsg cor
 
 func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.UpdateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
@@ -468,7 +529,6 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 	objRef := record.Core2Reference(msg.Object)
 
 	var (
-		err     error
 		amendID *record.ID
 	)
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
@@ -512,11 +572,17 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 
 func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
+
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
 
 	var child *record.ID
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, _, _, err := getObject(tx, &parentRef.Record, nil)
 		if err != nil {
 			return err
@@ -549,6 +615,11 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 }
 
 func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+	err := persistMessageToDb(h.db, genericMsg)
+	if err != nil{
+		return nil, err
+	}
+
 	msg := genericMsg.(*message.JetDrop)
 
 	// TODO: validate
@@ -569,6 +640,19 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message
 	}
 
 	return &reply.OK{}, nil
+}
+
+func persistMessageToDb(db *storage.DB, genericMsg core.Message) error {
+	lastPulse, err := db.GetLatestPulseNumber()
+	if err != nil {
+		return err
+	}
+	err = db.SetMessage(lastPulse, genericMsg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {

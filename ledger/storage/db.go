@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/core/message"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
@@ -40,6 +41,7 @@ const (
 	scopeIDJetDrop  byte = 3
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
+	scopeIDMessage  byte = 6
 
 	sysGenesis     byte = 1
 	sysLatestPulse byte = 2
@@ -481,4 +483,26 @@ func (db *DB) Update(fn func(*TransactionManager) error) error {
 // GetBadgerDB return badger.DB instance (for internal usage, like tests)
 func (db *DB) GetBadgerDB() *badger.DB {
 	return db.db
+}
+
+// SetMessage persists message to the database
+func (db *DB) SetMessage(pulseNumber core.PulseNumber, genericMessage core.Message) error {
+	return db.Update(func(tx *TransactionManager) error {
+		messageBytes, err := message.ToBytes(genericMessage)
+		if err != nil {
+			return err
+		}
+
+		hw := hash.NewIDHash()
+		_, err = hw.Write(messageBytes)
+		if err != nil {
+			return err
+		}
+		hw.Sum(nil)
+
+		return tx.Set(
+			prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
+			messageBytes,
+		)
+	})
 }
