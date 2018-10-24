@@ -131,7 +131,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			}
 		case *reply.CallConstructor:
 			if got, ok := ret.(*reply.CallConstructor); !ok {
-				return step, errors.New("not result type callmethod")
+				return step, errors.New("not result type callconstructor")
 			} else if !got.Object.Equal(*need.Object) {
 				return step, errors.New("constructed refs mismatch mismatch")
 			}

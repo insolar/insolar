@@ -65,9 +65,6 @@ type LogicRunner struct {
 	consensus            map[Ref]*Consensus
 	consensusMutex       sync.Mutex
 	sock                 net.Listener
-
-	JetCoordinator core.JetCoordinator
-	NodeID         core.RecordRef
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -95,9 +92,6 @@ func (lr *LogicRunner) Start(c core.Components) error {
 	lr.MessageBus = messageBus
 	lr.Ledger = c.Ledger
 	lr.Network = c.Network
-
-	lr.JetCoordinator = c.Ledger.GetJetCoordinator()
-	lr.NodeID = c.Network.GetNodeID()
 
 	if lr.Cfg.BuiltIn != nil {
 		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
@@ -215,7 +209,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 	}
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	isAuthorized, err := lr.JetCoordinator.IsAuthorized(vb.GetRole(), ref, lr.Pulse.PulseNumber, lr.NodeID)
+	isAuthorized, err := lr.GetLedger().GetJetCoordinator().IsAuthorized(vb.GetRole(), ref, lr.Pulse.PulseNumber, lr.Network.GetNodeID())
 
 	if err != nil {
 		return nil, errors.New("Authorization failed with error: " + err.Error())
