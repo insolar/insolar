@@ -41,10 +41,10 @@ type MachineLogicExecutor interface {
 
 // LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
-	Execute(Context, Message) (res Reply, err error)
-	ValidateCaseBind(Context, Message) (res Reply, err error)
-	ProcessValidationResults(Context, Message) (res Reply, err error)
-	ExecutorResults(Context, Message) (res Reply, err error)
+	Execute(Context, SignedMessage) (res Reply, err error)
+	ValidateCaseBind(Context, SignedMessage) (res Reply, err error)
+	ProcessValidationResults(Context, SignedMessage) (res Reply, err error)
+	ExecutorResults(Context, SignedMessage) (res Reply, err error)
 	Validate(ref RecordRef, p Pulse, cr []CaseRecord) (int, error) // TODO hide?
 	OnPulse(Pulse) error
 }

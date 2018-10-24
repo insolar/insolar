@@ -67,8 +67,8 @@ func logTimeInside(start time.Time, funcName string) {
 	}
 }
 
-func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.SetRecord)
+func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.SetRecord)
 
 	id, err := h.db.SetRecord(record.DeserializeRecord(msg.Record))
 	if err != nil {
@@ -78,9 +78,9 @@ func (h *MessageHandler) handleSetRecord(ctx core.Context, genericMsg core.Messa
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetCode)
+	msg := genericMsg.Message().(*message.GetCode)
 	codeRef := record.Core2Reference(msg.Code)
 
 	codeRec, err := getCode(h.db, codeRef.Record)
@@ -98,9 +98,9 @@ func (h *MessageHandler) handleGetCode(ctx core.Context, genericMsg core.Message
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetClass)
+	msg := genericMsg.Message().(*message.GetClass)
 	headRef := record.Core2Reference(msg.Head)
 
 	_, stateID, state, err := getClass(h.db, &headRef.Record, msg.State)
@@ -127,9 +127,9 @@ func (h *MessageHandler) handleGetClass(ctx core.Context, genericMsg core.Messag
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetObject)
+	msg := genericMsg.Message().(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
 
 	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State)
@@ -152,9 +152,9 @@ func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Messa
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetDelegate)
+	msg := genericMsg.Message().(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
 
 	idx, _, _, err := getObject(h.db, &headRef.Record, nil)
@@ -176,9 +176,9 @@ func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Mes
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.GetChildren)
+	msg := genericMsg.Message().(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
 
 	idx, _, _, err := getObject(h.db, &parentRef.Record, nil)
@@ -229,8 +229,8 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.UpdateClass)
+func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.UpdateClass)
 	classCoreID := msg.Class.GetRecordID()
 	classID := record.Bytes2ID(classCoreID[:])
 
@@ -266,9 +266,9 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleActivateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleActivateObject(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.ActivateObject)
+	msg := genericMsg.Message().(*message.ActivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
 	requestRef := record.Core2Reference(msg.Request)
@@ -339,9 +339,9 @@ func (h *MessageHandler) handleActivateObject(ctx core.Context, genericMsg core.
 	return &reply.ID{ID: *activateID.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleActivateObjectDelegate(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleActivateObjectDelegate(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.ActivateObjectDelegate)
+	msg := genericMsg.Message().(*message.ActivateObjectDelegate)
 
 	domainRef := record.Core2Reference(msg.Domain)
 	requestRef := record.Core2Reference(msg.Request)
@@ -412,9 +412,9 @@ func (h *MessageHandler) handleActivateObjectDelegate(ctx core.Context, genericM
 	return &reply.ID{ID: *activationID.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleDeactivateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleDeactivateObject(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.DeactivateObject)
+	msg := genericMsg.Message().(*message.DeactivateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
 	requestRef := record.Core2Reference(msg.Request)
@@ -459,9 +459,9 @@ func (h *MessageHandler) handleDeactivateObject(ctx core.Context, genericMsg cor
 	return &reply.ID{ID: *deactivationID.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.UpdateObject)
+	msg := genericMsg.Message().(*message.UpdateObject)
 
 	domainRef := record.Core2Reference(msg.Domain)
 	requestRef := record.Core2Reference(msg.Request)
@@ -510,9 +510,9 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 	return &reply.ID{ID: *amendID.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
 	start := time.Now()
-	msg := genericMsg.(*message.RegisterChild)
+	msg := genericMsg.Message().(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
 
 	var child *record.ID
@@ -548,8 +548,8 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 	return &reply.ID{ID: *child.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	msg := genericMsg.(*message.JetDrop)
+func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.SignedMessage) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.JetDrop)
 
 	// TODO: validate
 	for _, rec := range msg.Records {

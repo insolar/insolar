@@ -183,7 +183,7 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply, error) {
+func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.SignedMessage) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
 	msg, ok := inmsg.(message.IBaseLogicMessage)
 	if !ok {

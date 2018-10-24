@@ -55,8 +55,8 @@ func NewLedger() Ledger {
 				int(core.RoleVirtualExecutor):  1,
 				int(core.RoleHeavyExecutor):    1,
 				int(core.RoleLightExecutor):    1,
-				int(core.RoleVirtualValidator): 3,
-				int(core.RoleLightValidator):   3,
+				int(core.RoleVirtualValidator): 1,
+				int(core.RoleLightValidator):   1,
 			},
 		},
 	}

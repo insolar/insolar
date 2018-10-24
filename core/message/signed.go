@@ -27,22 +27,25 @@ import (
 
 // SignedMessage is a message signed by senders private key.
 type SignedMessage struct {
-	sender    core.RecordRef
-	msg       core.Message
-	signature []byte
+	Sender    core.RecordRef
+	Msg       core.Message
+	Signature []byte
 }
 
 func (sm *SignedMessage) Message() core.Message {
-	return sm.msg
+	return sm.Msg
 }
 
 // NewSignedMessage creates and return a signed message.
 func NewSignedMessage(msg core.Message, sender core.RecordRef, key *ecdsa.PrivateKey) (*SignedMessage, error) {
+	if key == nil {
+		return nil, errors.New("failed to sign a message: private key == nil")
+	}
 	sign, err := signMessage(msg, key)
 	if err != nil {
 		return nil, err
 	}
-	return &SignedMessage{sender: sender, msg: msg, signature: sign}, nil
+	return &SignedMessage{Sender: sender, Msg: msg, Signature: sign}, nil
 }
 
 // SignMessage tries to sign a core.Message.
@@ -60,7 +63,7 @@ func signMessage(msg core.Message, key *ecdsa.PrivateKey) ([]byte, error) {
 
 // IsValid checks if a sign is correct.
 func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
-	serialized, err := ToBytes(sm.msg)
+	serialized, err := ToBytes(sm.Msg)
 	if err != nil {
 		log.Error(err, "filed to serialize message")
 		return false
@@ -70,7 +73,7 @@ func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
 		log.Error("failed to export a public key")
 		return false
 	}
-	verified, err := ecdsa2.Verify(serialized, sm.signature, exportedKey)
+	verified, err := ecdsa2.Verify(serialized, sm.Signature, exportedKey)
 	if err != nil {
 		log.Error(err, "failed to verify a message")
 		return false
@@ -80,29 +83,29 @@ func (sm *SignedMessage) IsValid(key *ecdsa.PublicKey) bool {
 
 // Type returns message type.
 func (sm *SignedMessage) Type() core.MessageType {
-	return sm.msg.Type()
+	return sm.Msg.Type()
 }
 
 // Target returns target for this message. If nil, Message will be sent for all actors for the role returned by
 // Role method.
 func (sm *SignedMessage) Target() *core.RecordRef {
-	return sm.msg.Target()
+	return sm.Msg.Target()
 }
 
 // TargetRole returns jet role to actors of which Message should be sent.
 func (sm *SignedMessage) TargetRole() core.JetRole {
-	return sm.msg.TargetRole()
+	return sm.Msg.TargetRole()
 }
 
 // GetCaller returns initiator of this event.
 func (sm *SignedMessage) GetCaller() *core.RecordRef {
-	return sm.msg.GetCaller()
+	return sm.Msg.GetCaller()
 }
 
 func (sm *SignedMessage) GetSign() []byte {
-	return sm.signature
+	return sm.Signature
 }
 
 func (sm *SignedMessage) GetSender() core.RecordRef {
-	return sm.sender
+	return sm.Sender
 }

@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -90,13 +89,16 @@ func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent
 }
 
 // SendMessage sends a message from MessageBus.
-func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.SignedMessage) ([]byte, error) {
 	start := time.Now()
 	if msg == nil {
 		return nil, errors.New("message is nil")
 	}
+	if msg.GetCaller() == nil {
+		return nil, errors.New("Failed to send a message: caller is nil.")
+	}
 	hostID := nodenetwork.ResolveHostID(nodeID)
-	buff, err := messageToBytes(msg)
+	buff, err := message.SignedToBytes(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
 	}
@@ -111,11 +113,11 @@ func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string,
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes. Message reference is ignored
-func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
+func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.SignedMessage) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	buff, err := messageToBytes(msg)
+	buff, err := message.SignedToBytes(msg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize event")
 	}
@@ -266,13 +268,4 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 	}
 
 	return nil
-}
-
-// ToBytes deserialize a core.Message to bytes.
-func messageToBytes(msg core.Message) ([]byte, error) {
-	reqBuff, err := message.Serialize(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
-	}
-	return ioutil.ReadAll(reqBuff)
 }

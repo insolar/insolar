@@ -116,7 +116,7 @@ func Serialize(msg core.Message) (io.Reader, error) {
 }
 
 // Deserialize returns decoded message.
-func Deserialize(buff io.Reader) (core.Message, error) {
+func Deserialize(buff io.Reader) (core.SignedMessage, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
@@ -127,13 +127,23 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 	if err != nil {
 		return nil, err
 	}
+	signed, err := NewSignedMessage(msg, core.RecordRef{}, nil)
 	enc := gob.NewDecoder(buff)
 	err = enc.Decode(msg)
-	return msg, err
+	return signed, err
 }
 
 // ToBytes deserialize a core.Message to bytes.
 func ToBytes(msg core.Message) ([]byte, error) {
+	reqBuff, err := Serialize(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to serialize event")
+	}
+	return ioutil.ReadAll(reqBuff)
+}
+
+// SignedToBytes deserialize a core.SignedMessage to bytes.
+func SignedToBytes(msg core.SignedMessage) ([]byte, error) {
 	reqBuff, err := Serialize(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize event")
