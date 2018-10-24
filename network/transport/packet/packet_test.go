@@ -63,7 +63,7 @@ func TestPacket_IsValid_Ok(t *testing.T) {
 	ref := testutils.RandomRef()
 	tests := []struct {
 		name       string
-		packetType packetType
+		packetType PacketType
 		data       interface{}
 	}{
 		{"TypePing", TypePing, nil},
@@ -95,11 +95,11 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 	ref := testutils.RandomRef()
 	tests := []struct {
 		name       string
-		packetType packetType
+		packetType PacketType
 		data       interface{}
 	}{
 		{"incorrect request", TypeStore, &RequestDataRPC{ref, "test", [][]byte{}}},
-		{"incorrect type", packetType(1337), &RequestDataFindHost{}},
+		{"incorrect type", PacketType(1337), &RequestDataFindHost{}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

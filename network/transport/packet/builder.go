@@ -53,7 +53,7 @@ func (cb Builder) Receiver(host *host.Host) Builder {
 }
 
 // Type sets packet type.
-func (cb Builder) Type(packetType packetType) Builder {
+func (cb Builder) Type(packetType PacketType) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.Type = packetType
 	})

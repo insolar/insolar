@@ -28,12 +28,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate stringer -type=packetType
-type packetType int
+//go:generate stringer -type=PacketType
+type PacketType int
 
 const (
 	// TypePing is packet type for ping method.
-	TypePing packetType = iota + 1
+	TypePing PacketType = iota + 1
 	// TypeStore is packet type for store method.
 	TypeStore
 	// TypeFindHost is packet type for FindHost method.
@@ -81,7 +81,7 @@ type RequestID uint64
 type Packet struct {
 	Sender        *host.Host
 	Receiver      *host.Host
-	Type          packetType
+	Type          PacketType
 	RequestID     RequestID
 	RemoteAddress string
 
