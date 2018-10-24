@@ -360,7 +360,7 @@ func Test_processPulse(t *testing.T) {
 	firstStoredPulse, _ := firstLedger.GetPulseManager().Current()
 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
 
-	hh := firstNode.hostNetwork
+	hh := firstNode.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
 	pckt := packet.NewBuilder(nil).Type(packet.TypePulse).Request(
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
@@ -449,7 +449,7 @@ func Test_processPulse2(t *testing.T) {
 
 	// time.Sleep(time.Millisecond * 100)
 
-	hh := services[lastIndex].hostNetwork
+	hh := services[lastIndex].hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
 	pckt := packet.NewBuilder(nil).Type(packet.TypePulse).Request(
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
