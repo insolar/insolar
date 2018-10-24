@@ -21,17 +21,6 @@ import (
 )
 
 type ledgerMessage struct {
-	sign []byte
-}
-
-// SetSign sets a signature to message.
-func (l *ledgerMessage) SetSign(sign []byte) {
-	l.sign = sign
-}
-
-// GetSign returns a sign.
-func (l *ledgerMessage) GetSign() []byte {
-	return l.sign
 }
 
 // GetCaller implementation of Message interface.
@@ -281,10 +270,10 @@ func (e *DeactivateObject) Target() *core.RecordRef {
 // UpdateObject amends object.
 type UpdateObject struct {
 	ledgerMessage
-	Domain  core.RecordRef
-	Request core.RecordRef
-	Object  core.RecordRef
-	Memory  []byte
+
+	Record []byte
+	Class  *core.RecordRef // Only used for activation.
+	Object core.RecordRef
 }
 
 // Type implementation of Message interface.
@@ -300,8 +289,10 @@ func (e *UpdateObject) Target() *core.RecordRef {
 // RegisterChild amends object.
 type RegisterChild struct {
 	ledgerMessage
-	Parent core.RecordRef
-	Child  core.RecordRef
+	Record  []byte
+	Parent  core.RecordRef
+	Child   core.RecordRef
+	AsClass *core.RecordRef // If not nil, considered as delegate.
 }
 
 // Type implementation of Message interface.
