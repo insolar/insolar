@@ -66,7 +66,6 @@ type Params struct {
 	Method                 string   `json:"method"`
 	Requester              string   `json:"requester"`
 	Target                 string   `json:"target"`
-	QID                    string   `json:"qid"`
 	Amount                 uint     `json:"amount"`
 	PublicKey              string   `json:"public_key"`
 	Roles                  []string `json:"roles"`

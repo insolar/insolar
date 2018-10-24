@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/satori/go.uuid"
 )
 
 // Ctx is extension of common Context with added Logger.
@@ -138,4 +139,15 @@ func WithLog(parent context.Context, clog core.Logger) *Ctx {
 // Log returns core.Logger provided by *Ctx.
 func (ctx *Ctx) Log() core.Logger {
 	return ctx.log.WithField("traceid", ctx.TraceID())
+}
+
+// WithRandomTraceID returns *Ctx with random traceID (uuid format)
+func WithRandomTraceID() *Ctx {
+	traceID := ""
+	qid, err := uuid.NewV4()
+	if err == nil {
+		traceID = qid.String()
+	}
+	ctx := context.Background()
+	return WithTraceID(ctx, traceID)
 }
