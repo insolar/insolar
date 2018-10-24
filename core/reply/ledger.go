@@ -68,16 +68,6 @@ func (e *Delegate) Type() core.ReplyType {
 	return TypeDelegate
 }
 
-// Reference is common reaction for methods returning reference to created records.
-type Reference struct {
-	Ref core.RecordRef
-}
-
-// Type implementation of Reply interface.
-func (e *Reference) Type() core.ReplyType {
-	return TypeReference
-}
-
 // ID is common reaction for methods returning id to lifeline states.
 type ID struct {
 	ID core.RecordID
