@@ -309,7 +309,7 @@ func (db *DB) CreateDrop(pulse core.PulseNumber, prevHash []byte) (
 		defer it.Close()
 
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			val, err := it.Item().Value()
+			val, err := it.Item().ValueCopy(nil)
 			if err != nil {
 				return err
 			}
