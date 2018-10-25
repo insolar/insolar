@@ -55,9 +55,6 @@ func (h *MessageHandler) Link(components core.Components) error {
 	handlers[core.TypeGetObject] = h.handleGetObject
 	handlers[core.TypeGetDelegate] = h.handleGetDelegate
 	handlers[core.TypeGetChildren] = h.handleGetChildren
-	handlers[core.TypeActivateObject] = h.handleActivateObject
-	handlers[core.TypeActivateObjectDelegate] = h.handleActivateObjectDelegate
-	handlers[core.TypeDeactivateObject] = h.handleDeactivateObject
 	handlers[core.TypeUpdateObject] = h.handleUpdateObject
 	handlers[core.TypeRegisterChild] = h.handleRegisterChild
 	handlers[core.TypeJetDrop] = h.handleJetDrop
@@ -176,11 +173,16 @@ func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Messa
 		return nil, err
 	}
 
+	var childPointer *core.RecordID
+	if idx.ChildPointer != nil {
+		childPointer = idx.ChildPointer.CoreID()
+	}
 	rep := reply.Object{
-		Head:   msg.Head,
-		State:  *stateID,
-		Class:  *idx.ClassRef.CoreRef(),
-		Memory: state.GetMemory(),
+		Head:         msg.Head,
+		State:        *stateID,
+		Class:        *idx.ClassRef.CoreRef(),
+		ChildPointer: childPointer,
+		Memory:       state.GetMemory(),
 	}
 
 	logTimeInside(start, "handleGetObject")
@@ -244,7 +246,7 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 		id := record.Bytes2ID(msg.FromChild[:])
 		currentChild = &id
 	} else {
-		currentChild = idx.LatestChild
+		currentChild = idx.ChildPointer
 	}
 
 	counter := 0
@@ -299,15 +301,20 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 		if err != nil {
 			return err
 		}
-		if idx.Deactivated {
-			return ErrClassDeactivated
+		if err = validateState(idx.State, state.State()); err != nil {
+			return err
 		}
+		// Index exists and latest record id does not match (preserving chain consistency).
+		if idx.State != record.StateUndefined && !state.PrevStateID().IsEqual(&idx.LatestState) {
+			return errors.New("invalid state record")
+		}
+
 		id, err = tx.SetRecord(rec)
 		if err != nil {
 			return err
 		}
 		idx.LatestState = *id
-		idx.Deactivated = state.IsDeactivation()
+		idx.State = state.State()
 		return tx.SetClassIndex(&classID, idx)
 	})
 	if err != nil {
@@ -319,268 +326,57 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
-func (h *MessageHandler) handleActivateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-
-	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil {
-		return nil, err
-	}
-
-	msg := genericMsg.(*message.ActivateObject)
-
-	domainRef := record.Core2Reference(msg.Domain)
-	requestRef := record.Core2Reference(msg.Request)
-	classRef := record.Core2Reference(msg.Class)
-	parentRef := record.Core2Reference(msg.Parent)
-
-	_, _, _, err = getClass(h.db, &classRef.Record, nil)
-	if err != nil {
-		return nil, err
-	}
-	_, _, _, err = getObject(h.db, &parentRef.Record, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var activateID *record.ID
-	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		rec := record.ObjectActivateRecord{
-			ResultRecord: record.ResultRecord{
-				Domain:  domainRef,
-				Request: requestRef,
-			},
-			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: msg.Memory,
-			},
-			Class:    classRef,
-			Parent:   parentRef,
-			Delegate: false,
-		}
-
-		// save new record and it's index
-		activateID, err = tx.SetRecord(&rec)
-		if err != nil {
-			return errors.Wrap(err, "failed to store record")
-		}
-		err = tx.SetObjectIndex(&requestRef.Record, &index.ObjectLifeline{
-			ClassRef:    classRef,
-			LatestState: *activateID,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to store lifeline index")
-		}
-
-		// append new record parent's children
-		parentIdx, err := tx.GetObjectIndex(&parentRef.Record, true)
-		if err != nil {
-			if err == ErrNotFound {
-				parentIdx = &index.ObjectLifeline{}
-			} else {
-				return errors.Wrap(err, "inconsistent index")
-			}
-		}
-		err = tx.SetObjectIndex(&parentRef.Record, parentIdx)
-		if err != nil {
-			return errors.Wrap(err, "failed to store lifeline index")
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	logTimeInside(start, "handleActivateObject")
-
-	return &reply.ID{ID: *activateID.CoreID()}, nil
-}
-
-func (h *MessageHandler) handleActivateObjectDelegate(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-
-	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil {
-		return nil, err
-	}
-
-	msg := genericMsg.(*message.ActivateObjectDelegate)
-
-	domainRef := record.Core2Reference(msg.Domain)
-	requestRef := record.Core2Reference(msg.Request)
-	classRef := record.Core2Reference(msg.Class)
-	parentRef := record.Core2Reference(msg.Parent)
-
-	_, _, _, err = getClass(h.db, &classRef.Record, nil)
-	if err != nil {
-		return nil, err
-	}
-	_, _, _, err = getObject(h.db, &parentRef.Record, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var activationID *record.ID
-	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		rec := record.ObjectActivateRecord{
-			ResultRecord: record.ResultRecord{
-				Domain:  domainRef,
-				Request: requestRef,
-			},
-			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: msg.Memory,
-			},
-			Class:    classRef,
-			Parent:   parentRef,
-			Delegate: true,
-		}
-
-		// save new record and it's index
-		activationID, err = tx.SetRecord(&rec)
-		if err != nil {
-			return errors.Wrap(err, "failed to store record")
-		}
-		err = tx.SetObjectIndex(&requestRef.Record, &index.ObjectLifeline{
-			ClassRef:    classRef,
-			LatestState: *activationID,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to store lifeline index")
-		}
-
-		// append new record parent's delegates
-		parentIdx, err := tx.GetObjectIndex(&parentRef.Record, true)
-		if err != nil {
-			return errors.Wrap(err, "inconsistent index")
-		}
-		if _, ok := parentIdx.Delegates[msg.Class]; ok {
-			return ErrClassDelegateAlreadyExists
-		}
-		parentIdx.Delegates[msg.Class] = requestRef
-		err = tx.SetObjectIndex(&parentRef.Record, parentIdx)
-		if err != nil {
-			return errors.Wrap(err, "failed to store lifeline index")
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	logTimeInside(start, "handleActivateObjectDelegate")
-
-	return &reply.ID{ID: *activationID.CoreID()}, nil
-}
-
-func (h *MessageHandler) handleDeactivateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-
-	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil {
-		return nil, err
-	}
-
-	msg := genericMsg.(*message.DeactivateObject)
-
-	domainRef := record.Core2Reference(msg.Domain)
-	requestRef := record.Core2Reference(msg.Request)
-	objRef := record.Core2Reference(msg.Object)
-
-	var (
-		deactivationID *record.ID
-	)
-	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &objRef.Record, nil)
-		if err != nil {
-			return err
-		}
-
-		rec := record.DeactivationRecord{
-			ResultRecord: record.ResultRecord{
-				Domain:  domainRef,
-				Request: requestRef,
-			},
-			PrevState: idx.LatestState,
-		}
-		deactivationID, err = tx.SetRecord(&rec)
-		if err != nil {
-			return errors.Wrap(err, "failed to store record")
-		}
-		idx.LatestState = *deactivationID
-		err = tx.SetObjectIndex(&objRef.Record, idx)
-		if err != nil {
-			return errors.Wrap(err, "failed to store lifeline index")
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	logTimeInside(start, "handleDeactivateObject")
-
-	return &reply.ID{ID: *deactivationID.CoreID()}, nil
-}
-
 func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	start := time.Now()
-
 	err := persistMessageToDb(h.db, genericMsg)
 	if err != nil {
 		return nil, err
 	}
 
 	msg := genericMsg.(*message.UpdateObject)
+	objectCoreID := msg.Object.GetRecordID()
+	objectID := record.Bytes2ID(objectCoreID[:])
 
-	domainRef := record.Core2Reference(msg.Domain)
-	requestRef := record.Core2Reference(msg.Request)
-	objRef := record.Core2Reference(msg.Object)
+	rec := record.DeserializeRecord(msg.Record)
+	state, ok := rec.(record.ObjectState)
+	if !ok {
+		return nil, errors.New("wrong class state record")
+	}
 
-	var (
-		amendID *record.ID
-	)
-	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &objRef.Record, nil)
+	var id *record.ID
+	err := h.db.Update(func(tx *storage.TransactionManager) error {
+		idx, err := getObjectIndex(tx, &objectID, true)
 		if err != nil {
 			return err
 		}
-
-		rec := record.ObjectAmendRecord{
-			ResultRecord: record.ResultRecord{
-				Domain:  domainRef,
-				Request: requestRef,
-			},
-			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: msg.Memory,
-			},
-			PrevState: idx.LatestState,
+		if err = validateState(idx.State, state.State()); err != nil {
+			return err
+		}
+		// Index exists and latest record id does not match (preserving chain consistency).
+		if idx.State != record.StateUndefined && !state.PrevStateID().IsEqual(&idx.LatestState) {
+			return errors.New("invalid state record")
 		}
 
-		amendID, err = tx.SetRecord(&rec)
+		id, err = tx.SetRecord(rec)
 		if err != nil {
-			return errors.Wrap(err, "failed to store record")
+			return err
 		}
-		idx.LatestState = *amendID
-		err = tx.SetObjectIndex(&objRef.Record, idx)
-		if err != nil {
-			return errors.Wrap(err, "failed to store lifeline index")
+		idx.LatestState = *id
+		idx.State = state.State()
+		if state.State() == record.StateActivation {
+			if msg.Class == nil {
+				return errors.New("not enough data for activation provided")
+			}
+			idx.ClassRef = record.Core2Reference(*msg.Class)
 		}
-
-		return nil
+		return tx.SetObjectIndex(&objectID, idx)
 	})
-
 	if err != nil {
+		if err == ErrObjectDeactivated {
+			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+		}
 		return nil, err
 	}
-
-	logTimeInside(start, "handleUpdateObject")
-
-	return &reply.ID{ID: *amendID.CoreID()}, nil
+	return &reply.ID{ID: *id.CoreID()}, nil
 }
 
 func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
@@ -593,6 +389,13 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 
 	msg := genericMsg.(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
+	childRef := record.Core2Reference(msg.Child)
+
+	rec := record.DeserializeRecord(msg.Record)
+	childRec, ok := rec.(*record.ChildRecord)
+	if !ok {
+		return nil, errors.New("wrong child record")
+	}
 
 	var child *record.ID
 	err = h.db.Update(func(tx *storage.TransactionManager) error {
@@ -600,16 +403,19 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 		if err != nil {
 			return err
 		}
-
-		rec := record.ChildRecord{
-			PrevChild: idx.LatestChild,
-			Ref:       record.Core2Reference(msg.Child),
+		// Children exist and pointer does not match (preserving chain consistency).
+		if idx.ChildPointer != nil && !childRec.PrevChild.IsEqual(idx.ChildPointer) {
+			return errors.New("invalid child record")
 		}
-		child, err = tx.SetRecord(&rec)
+
+		child, err = tx.SetRecord(childRec)
 		if err != nil {
 			return err
 		}
-		idx.LatestChild = child
+		idx.ChildPointer = child
+		if msg.AsClass != nil {
+			idx.Delegates[*msg.AsClass] = childRef
+		}
 		err = tx.SetObjectIndex(&parentRef.Record, idx)
 		if err != nil {
 			return err
@@ -708,7 +514,7 @@ func getClass(
 	if !ok {
 		return nil, nil, nil, errors.New("invalid class record")
 	}
-	if stateRec.IsDeactivation() {
+	if stateRec.State() == record.StateDeactivation {
 		return nil, nil, nil, ErrClassDeactivated
 	}
 
@@ -738,7 +544,7 @@ func getObject(
 	if !ok {
 		return nil, nil, nil, errors.New("invalid object record")
 	}
-	if stateRec.IsDeactivation() {
+	if stateRec.State() == record.StateDeactivation {
 		return nil, nil, nil, ErrObjectDeactivated
 	}
 
@@ -748,7 +554,28 @@ func getObject(
 func getClassIndex(s storage.Store, head *record.ID, forupdate bool) (*index.ClassLifeline, error) {
 	idx, err := s.GetClassIndex(head, forupdate)
 	if err == storage.ErrNotFound {
-		return &index.ClassLifeline{}, nil
+		return &index.ClassLifeline{State: record.StateUndefined}, nil
 	}
 	return idx, err
+}
+
+func getObjectIndex(s storage.Store, head *record.ID, forupdate bool) (*index.ObjectLifeline, error) {
+	idx, err := s.GetObjectIndex(head, forupdate)
+	if err == storage.ErrNotFound {
+		return &index.ObjectLifeline{State: record.StateUndefined}, nil
+	}
+	return idx, err
+}
+
+func validateState(old record.State, new record.State) error {
+	if old == record.StateDeactivation {
+		return ErrClassDeactivated
+	}
+	if old == record.StateUndefined && new != record.StateActivation {
+		return errors.New("object is not activated")
+	}
+	if old != record.StateUndefined && new == record.StateActivation {
+		return errors.New("object is already activated")
+	}
+	return nil
 }

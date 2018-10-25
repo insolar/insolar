@@ -109,21 +109,28 @@ func (t *TestClassDescriptor) CodeDescriptor() core.CodeDescriptor {
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
 	AM                *TestArtifactManager
+	ARef              *core.RecordRef
 	Data              []byte
+	State             *core.RecordID
 	Code              *core.RecordRef
-	Class             *core.RecordRef
+	AClass            *core.RecordRef
 	Delegates         map[core.RecordRef]core.RecordRef
 	ChildrenContainer []core.RecordRef
 }
 
+// ChildPointer implementation for tests
+func (t *TestObjectDescriptor) ChildPointer() *core.RecordID {
+	panic("not implemented")
+}
+
 // HeadRef implementation for tests
 func (t *TestObjectDescriptor) HeadRef() *core.RecordRef {
-	panic("not implemented")
+	return t.ARef
 }
 
 // StateID implementation for tests
 func (t *TestObjectDescriptor) StateID() *core.RecordID {
-	panic("not implemented")
+	return t.State
 }
 
 // Memory implementation for tests
@@ -136,17 +143,12 @@ func (t *TestObjectDescriptor) Children(pulse *core.PulseNumber) (core.RefIterat
 	panic("not implemented")
 }
 
-// ClassDescriptor implementation for tests
-func (t *TestObjectDescriptor) ClassDescriptor(state *core.RecordRef) (core.ClassDescriptor, error) {
-	if t.Class == nil {
-		return nil, errors.New("No class")
+// Class implementation for tests
+func (t *TestObjectDescriptor) Class() *core.RecordRef {
+	if t.AClass == nil {
+		panic("No class")
 	}
-
-	res, ok := t.AM.Classes[*t.Class]
-	if !ok {
-		return nil, errors.New("No class")
-	}
-	return res, nil
+	return t.AClass
 }
 
 // TestArtifactManager implementation for tests
@@ -280,50 +282,39 @@ func (t *TestArtifactManager) ActivateObject(
 	request core.RecordRef,
 	class core.RecordRef,
 	parent core.RecordRef,
+	asDelegate bool,
 	memory []byte,
-) (*core.RecordID, error) {
+) (core.ObjectDescriptor, error) {
 	codeRef := t.Classes[class].ACode
+
+	id := testutils.RandomID()
 
 	t.Objects[request] = &TestObjectDescriptor{
 		AM:        t,
+		ARef:      &request,
 		Data:      memory,
+		State:     &id,
 		Code:      codeRef,
-		Class:     &class,
+		AClass:    &class,
 		Delegates: make(map[core.RecordRef]core.RecordRef),
 	}
 
-	id := testutils.RandomID()
-	return &id, nil
-}
+	if asDelegate {
+		pObj, ok := t.Objects[parent]
+		if !ok {
+			return nil, errors.New("No parent to inject delegate into")
+		}
 
-// ActivateObjectDelegate implementation for tests
-func (t *TestArtifactManager) ActivateObjectDelegate(
-	ctx core.Context,
-	domain core.RecordRef,
-	request core.RecordRef,
-	class core.RecordRef,
-	parent core.RecordRef,
-	memory []byte,
-) (*core.RecordID, error) {
-	id, err := t.ActivateObject(ctx, domain, request, class, parent, memory)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to generate ref")
+		pObj.Delegates[class] = request
 	}
 
-	pObj, ok := t.Objects[parent]
-	if !ok {
-		return nil, errors.New("No parent to inject delegate into")
-	}
-
-	pObj.Delegates[class] = request
-
-	return id, nil
+	return t.Objects[request], nil
 }
 
 // DeactivateObject implementation for tests
 func (t *TestArtifactManager) DeactivateObject(
 	ctx core.Context,
-	domain core.RecordRef, request core.RecordRef, obj core.RecordRef,
+	domain core.RecordRef, request core.RecordRef, obj core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	panic("not implemented")
 }
@@ -333,10 +324,10 @@ func (t *TestArtifactManager) UpdateObject(
 	ctx core.Context,
 	domain core.RecordRef,
 	request core.RecordRef,
-	object core.RecordRef,
+	object core.ObjectDescriptor,
 	memory []byte,
 ) (*core.RecordID, error) {
-	objDesc, ok := t.Objects[object]
+	objDesc, ok := t.Objects[*object.HeadRef()]
 	if !ok {
 		return nil, errors.New("No object to update")
 	}
