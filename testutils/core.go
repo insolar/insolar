@@ -51,3 +51,13 @@ func RandomID() core.RecordID {
 	}
 	return id
 }
+
+func TestNode(ref core.RecordRef) *core.Node {
+	return &core.Node{
+		NodeID:   ref,
+		PulseNum: core.PulseNumber(0),
+		State:    core.NodeActive,
+		Roles:    []core.NodeRole{core.RoleUnknown},
+		// PublicKey: &key.PublicKey,
+	}
+}
