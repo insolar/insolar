@@ -119,7 +119,8 @@ func isValidPublicKey(publicKey string, privateKey *ecdsa.PrivateKey) (bool, err
 	validPublicKeyString, err := ecdsahelper.ExportPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		return false, errors.Wrap(err, "[ isValidPublicKey ]")
-	} else if validPublicKeyString != publicKey {
+	}
+	if validPublicKeyString != publicKey {
 		return false, errors.New("[ isValidPublicKey ] invalid public key in config")
 	}
 	return true, nil
