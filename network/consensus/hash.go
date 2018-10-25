@@ -24,6 +24,7 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -88,10 +89,10 @@ func CalculateHash(list []*core.Node) (result []byte, err error) {
 }
 
 // CalculateNodeUnsyncHash calculates hash for a NodeUnsyncHash
-func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []*core.Node) (*NodeUnsyncHash, error) {
+func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []*core.Node) (*network.NodeUnsyncHash, error) {
 	hash, err := CalculateHash(list)
 	if err != nil {
 		return nil, err
 	}
-	return &NodeUnsyncHash{nodeID, hash}, nil
+	return &network.NodeUnsyncHash{nodeID, hash}, nil
 }

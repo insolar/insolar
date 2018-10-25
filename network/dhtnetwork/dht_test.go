@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/network/dhtnetwork/signhandler"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/insolar/configuration"
@@ -629,10 +630,10 @@ func TestStoreReplication(t *testing.T) {
 			}
 
 			switch request.Type {
-			case packet.TypeFindHost:
+			case types.TypeFindHost:
 				res := mockFindHostResponseEmpty(request)
 				mockTp.send <- res
-			case packet.TypeStore:
+			case types.TypeStore:
 				stores++
 				d := request.Data.(*packet.RequestDataStore)
 				assert.Equal(t, []byte("foo"), d.Data)

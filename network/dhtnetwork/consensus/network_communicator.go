@@ -22,22 +22,24 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 	"github.com/insolar/insolar/network/dhtnetwork/resolver"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
 
 type communicatorReceiver struct {
 	handler hosthandler.HostHandler
-	keeper  consensus.NodeKeeper
+	keeper  network.NodeKeeper
 }
 
 type communicatorSender struct {
 	handler hosthandler.HostHandler
-	keeper  consensus.NodeKeeper
+	keeper  network.NodeKeeper
 }
 
 func (c *communicatorReceiver) ExchangeData(ctx context.Context, pulse core.PulseNumber,
@@ -58,7 +60,7 @@ func (c *communicatorReceiver) ExchangeData(ctx context.Context, pulse core.Puls
 }
 
 func (c *communicatorReceiver) ExchangeHash(ctx context.Context, pulse core.PulseNumber,
-	from core.RecordRef, data []*consensus.NodeUnsyncHash) ([]*consensus.NodeUnsyncHash, error) {
+	from core.RecordRef, data []*network.NodeUnsyncHash) ([]*network.NodeUnsyncHash, error) {
 
 	// TODO: pass appropriate timeout
 	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, time.Second*5)
@@ -89,7 +91,7 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseN
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
 	}
-	request := packet.NewBuilder(sender).Type(packet.TypeExchangeUnsyncLists).Receiver(receiver).
+	request := packet.NewBuilder(sender).Type(types.TypeExchangeUnsyncLists).Receiver(receiver).
 		Request(&packet.RequestExchangeUnsyncLists{SenderID: c.keeper.GetID(), Pulse: pulse, UnsyncList: data}).Build()
 	f, err := c.handler.SendRequest(request)
 	if err != nil {
@@ -111,7 +113,7 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseN
 }
 
 func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseNumber,
-	p consensus.Participant, data []*consensus.NodeUnsyncHash) ([]*consensus.NodeUnsyncHash, error) {
+	p consensus.Participant, data []*network.NodeUnsyncHash) ([]*network.NodeUnsyncHash, error) {
 
 	unsyncHolder, err := c.keeper.GetUnsyncHolder(pulse, -1)
 	if err != nil {
@@ -125,7 +127,7 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseN
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
 	}
-	request := packet.NewBuilder(sender).Type(packet.TypeExchangeUnsyncHash).Receiver(receiver).
+	request := packet.NewBuilder(sender).Type(types.TypeExchangeUnsyncHash).Receiver(receiver).
 		Request(&packet.RequestExchangeUnsyncHash{SenderID: c.keeper.GetID(), Pulse: pulse, UnsyncHash: data}).Build()
 	f, err := c.handler.SendRequest(request)
 	if err != nil {

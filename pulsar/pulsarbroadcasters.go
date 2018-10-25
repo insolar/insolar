@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 
 	"github.com/insolar/insolar/network/transport/relay"
 )
@@ -308,7 +309,7 @@ func (currentPulsar *Pulsar) sendPulseToNetwork(pulsarHost *host.Host, t transpo
 		receiverHost.ID = pingResult.Sender.ID
 
 		b = packet.NewBuilder(pulsarHost)
-		request := b.Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(packet.TypeGetRandomHosts).Build()
+		request := b.Receiver(receiverHost).Request(&packet.RequestGetRandomHosts{HostsNumber: 5}).Type(types.TypeGetRandomHosts).Build()
 
 		call, err := t.SendRequest(request)
 		if err != nil {
@@ -345,7 +346,7 @@ func sendPulseToHost(sender *host.Host, t transport.Transport, pulseReceiver *ho
 		}
 	}()
 	pb := packet.NewBuilder(sender)
-	pulseRequest := pb.Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(packet.TypePulse).Build()
+	pulseRequest := pb.Receiver(pulseReceiver).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.TypePulse).Build()
 	call, err := t.SendRequest(pulseRequest)
 	if err != nil {
 		return err

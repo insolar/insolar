@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
 
 	"github.com/insolar/insolar/version"
@@ -72,7 +72,7 @@ func resolveAddress(configuration configuration.Configuration) (string, error) {
 }
 
 // NewNodeKeeper create new NodeKeeper
-func NewNodeKeeper(nodeID core.RecordRef) consensus.NodeKeeper {
+func NewNodeKeeper(nodeID core.RecordRef) network.NodeKeeper {
 	return &nodekeeper{
 		nodeID:      nodeID,
 		state:       undefined,
@@ -192,7 +192,7 @@ func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) *core.Node {
 	return nk.active[ref]
 }
 
-func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, consensus.UnsyncList) {
+func (nk *nodekeeper) SetPulse(number core.PulseNumber) (bool, network.UnsyncList) {
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
@@ -270,7 +270,7 @@ func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, ad
 	return ch, nil
 }
 
-func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (consensus.UnsyncList, error) {
+func (nk *nodekeeper) GetUnsyncHolder(pulse core.PulseNumber, duration time.Duration) (network.UnsyncList, error) {
 	nk.unsyncLock.Lock()
 	currentPulse := nk.pulse
 
@@ -332,7 +332,7 @@ func (nk *nodekeeper) syncUnsafe(syncCandidates []*core.Node) {
 	log.Infof("Sync success for pulse %d", nk.pulse)
 }
 
-func (nk *nodekeeper) collectUnsync(number core.PulseNumber) consensus.UnsyncList {
+func (nk *nodekeeper) collectUnsync(number core.PulseNumber) network.UnsyncList {
 	nk.pulse = number
 	nk.state = pulseSet
 

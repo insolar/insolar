@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +42,7 @@ func TestNewPingPacket(t *testing.T) {
 	expectedPacket := &Packet{
 		Sender:   sender,
 		Receiver: receiver,
-		Type:     TypePing,
+		Type:     types.TypePing,
 	}
 	assert.Equal(t, expectedPacket, m)
 }
@@ -50,10 +51,10 @@ func TestPacket_IsValid(t *testing.T) {
 	builder := NewBuilder(nil)
 	ref := testutils.RandomRef()
 
-	correctPacket := builder.Type(TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
+	correctPacket := builder.Type(types.TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
 	assert.True(t, correctPacket.IsValid())
 
-	badtPacket := builder.Type(TypeStore).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
+	badtPacket := builder.Type(types.TypeStore).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
 	assert.False(t, badtPacket.IsValid())
 }
 
@@ -63,24 +64,24 @@ func TestPacket_IsValid_Ok(t *testing.T) {
 	ref := testutils.RandomRef()
 	tests := []struct {
 		name       string
-		packetType PacketType
+		packetType types.PacketType
 		data       interface{}
 	}{
-		{"TypePing", TypePing, nil},
-		{"TypeFindHost", TypeFindHost, &RequestDataFindHost{}},
-		{"TypeFindValue", TypeFindValue, &RequestDataFindValue{}},
-		{"TypeStore", TypeStore, &RequestDataStore{}},
-		{"TypeRPC", TypeRPC, &RequestDataRPC{ref, "test", [][]byte{}}},
-		{"TypeRelay", TypeRelay, &RequestRelay{Unknown}},
-		{"TypeAuthentication", TypeAuthentication, &RequestAuthentication{Unknown}},
-		{"TypeCheckOrigin", TypeCheckOrigin, &RequestCheckOrigin{}},
-		{"TypeObtainIP", TypeObtainIP, &RequestObtainIP{}},
-		{"TypeRelayOwnership", TypeRelayOwnership, &RequestRelayOwnership{true}},
-		{"TypeKnownOuterHosts", TypeKnownOuterHosts, &RequestKnownOuterHosts{"test", 1}},
-		{"TypeCheckNodePriv", TypeCheckNodePriv, &RequestCheckNodePriv{"test"}},
-		{"TypeCascadeSend", TypeCascadeSend, &RequestCascadeSend{rpcData, cascade}},
-		{"TypePulse", TypePulse, &RequestPulse{Pulse: core.Pulse{}}},
-		{"TypeGetRandomHosts", TypeGetRandomHosts, &RequestGetRandomHosts{HostsNumber: 2}},
+		{"TypePing", types.TypePing, nil},
+		{"TypeFindHost", types.TypeFindHost, &RequestDataFindHost{}},
+		{"TypeFindValue", types.TypeFindValue, &RequestDataFindValue{}},
+		{"TypeStore", types.TypeStore, &RequestDataStore{}},
+		{"TypeRPC", types.TypeRPC, &RequestDataRPC{ref, "test", [][]byte{}}},
+		{"TypeRelay", types.TypeRelay, &RequestRelay{Unknown}},
+		{"TypeAuthentication", types.TypeAuthentication, &RequestAuthentication{Unknown}},
+		{"TypeCheckOrigin", types.TypeCheckOrigin, &RequestCheckOrigin{}},
+		{"TypeObtainIP", types.TypeObtainIP, &RequestObtainIP{}},
+		{"TypeRelayOwnership", types.TypeRelayOwnership, &RequestRelayOwnership{true}},
+		{"TypeKnownOuterHosts", types.TypeKnownOuterHosts, &RequestKnownOuterHosts{"test", 1}},
+		{"TypeCheckNodePriv", types.TypeCheckNodePriv, &RequestCheckNodePriv{"test"}},
+		{"TypeCascadeSend", types.TypeCascadeSend, &RequestCascadeSend{rpcData, cascade}},
+		{"TypePulse", types.TypePulse, &RequestPulse{Pulse: core.Pulse{}}},
+		{"TypeGetRandomHosts", types.TypeGetRandomHosts, &RequestGetRandomHosts{HostsNumber: 2}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -95,11 +96,11 @@ func TestPacket_IsValid_Fail(t *testing.T) {
 	ref := testutils.RandomRef()
 	tests := []struct {
 		name       string
-		packetType PacketType
+		packetType types.PacketType
 		data       interface{}
 	}{
-		{"incorrect request", TypeStore, &RequestDataRPC{ref, "test", [][]byte{}}},
-		{"incorrect type", PacketType(1337), &RequestDataFindHost{}},
+		{"incorrect request", types.TypeStore, &RequestDataRPC{ref, "test", [][]byte{}}},
+		{"incorrect type", types.PacketType(1337), &RequestDataFindHost{}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -135,7 +136,7 @@ func TestSerializePacket(t *testing.T) {
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 	builder := NewBuilder(sender)
-	msg := builder.Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
+	msg := builder.Receiver(receiver).Type(types.TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
 
 	_, err := SerializePacket(msg)
 
@@ -150,7 +151,7 @@ func TestDeserializePacket(t *testing.T) {
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 	builder := NewBuilder(sender)
-	msg := builder.Receiver(receiver).Type(TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
+	msg := builder.Receiver(receiver).Type(types.TypeFindHost).Request(&RequestDataFindHost{receiver.ID.Bytes()}).Build()
 
 	serialized, _ := SerializePacket(msg)
 
@@ -172,7 +173,7 @@ func TestDeserializeBigPacket(t *testing.T) {
 	rand.Read(data)
 
 	builder := NewBuilder(hostOne)
-	msg := builder.Receiver(hostOne).Type(TypeStore).Request(&RequestDataStore{data, true}).Build()
+	msg := builder.Receiver(hostOne).Type(types.TypeStore).Request(&RequestDataStore{data, true}).Build()
 	assert.True(t, msg.IsValid())
 
 	serialized, err := SerializePacket(msg)

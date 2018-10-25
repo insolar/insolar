@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 )
@@ -41,45 +42,45 @@ func DispatchPacketType(
 	packetBuilder packet.Builder,
 ) (*packet.Packet, error) { // nolint: gocyclo
 	switch msg.Type {
-	case packet.TypeFindHost:
+	case types.TypeFindHost:
 		return processFindHost(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeFindValue:
+	case types.TypeFindValue:
 		return processFindValue(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeStore:
+	case types.TypeStore:
 		return processStore(hostHandler, ctx, msg)
-	case packet.TypePing:
+	case types.TypePing:
 		return processPing(msg, packetBuilder)
-	case packet.TypeRPC:
+	case types.TypeRPC:
 		return processRPC(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeRelay:
+	case types.TypeRelay:
 		return processRelay(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeCheckOrigin:
+	case types.TypeCheckOrigin:
 		return processCheckOriginRequest(hostHandler, msg, packetBuilder)
-	case packet.TypeAuthentication:
+	case types.TypeAuthentication:
 		return processAuthentication(hostHandler, msg, packetBuilder)
-	case packet.TypeObtainIP:
+	case types.TypeObtainIP:
 		return processObtainIPRequest(msg, packetBuilder)
-	case packet.TypeRelayOwnership:
+	case types.TypeRelayOwnership:
 		return processRelayOwnership(hostHandler, msg, packetBuilder)
-	case packet.TypeKnownOuterHosts:
+	case types.TypeKnownOuterHosts:
 		return processKnownOuterHosts(hostHandler, msg, packetBuilder)
-	case packet.TypeCheckNodePriv:
+	case types.TypeCheckNodePriv:
 		return processCheckNodePriv(hostHandler, msg, packetBuilder)
-	case packet.TypeCascadeSend:
+	case types.TypeCascadeSend:
 		return processCascadeSend(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypePulse:
+	case types.TypePulse:
 		return processPulse(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeGetRandomHosts:
+	case types.TypeGetRandomHosts:
 		return processGetRandomHosts(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeCheckSignedNonce:
+	case types.TypeCheckSignedNonce:
 		return processCheckSignedNonce(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeGetNonce:
+	case types.TypeGetNonce:
 		return processGetNonce(hostHandler, msg, packetBuilder)
-	case packet.TypeDisconnect:
+	case types.TypeDisconnect:
 		return processDisconnect(hostHandler, packetBuilder)
-	case packet.TypeExchangeUnsyncLists:
+	case types.TypeExchangeUnsyncLists:
 		return processExchangeUnsyncLists(hostHandler, ctx, msg, packetBuilder)
-	case packet.TypeExchangeUnsyncHash:
+	case types.TypeExchangeUnsyncHash:
 		return processExchangeUnsyncHash(hostHandler, ctx, msg, packetBuilder)
 	default:
 		return nil, errors.New("unknown request type")

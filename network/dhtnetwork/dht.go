@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/core/dns"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 	"github.com/insolar/insolar/network/dhtnetwork/resolver"
@@ -39,6 +40,7 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
@@ -61,7 +63,7 @@ type DHT struct {
 	timeout           int // bootstrap reconnect timeout
 	infinityBootstrap bool
 	nodeID            core.RecordRef
-	activeNodeKeeper  consensus.NodeKeeper
+	activeNodeKeeper  network.NodeKeeper
 	majorityRule      int
 	certificate       core.Certificate
 }
@@ -191,7 +193,7 @@ func NewDHT(
 	return dht, nil
 }
 
-func (dht *DHT) SetNodeKeeper(keeper consensus.NodeKeeper) {
+func (dht *DHT) SetNodeKeeper(keeper network.NodeKeeper) {
 	dht.activeNodeKeeper = keeper
 	if dht.GetNetworkCommonFacade().GetConsensus() == nil {
 		log.Warn("consensus is nil")
@@ -325,7 +327,7 @@ func (dht *DHT) iterateHtGetNearestHosts(ht *routing.HashTable, cb ContextBuilde
 	futures := make([]transport.Future, 0)
 
 	for _, host := range dht.options.BootstrapHosts {
-		p := packet.NewBuilder(ht.Origin).Type(packet.TypeFindHost).Receiver(host).
+		p := packet.NewBuilder(ht.Origin).Type(types.TypeFindHost).Receiver(host).
 			Request(&packet.RequestDataFindHost{Target: ht.Origin.ID}).Build()
 		f, err := dht.transport.SendRequest(p)
 		if err != nil {
@@ -606,7 +608,7 @@ func (dht *DHT) iterateIsDone(
 					return nil, nil, nil, nil
 				}
 
-				msg := packet.NewBuilder(ht.Origin).Receiver(receiver).Type(packet.TypeStore).Request(
+				msg := packet.NewBuilder(ht.Origin).Receiver(receiver).Type(types.TypeStore).Request(
 					&packet.RequestDataStore{
 						Data: data,
 					}).Build()
@@ -787,11 +789,11 @@ func (dht *DHT) sendPacketToAlphaHosts(
 func getPacketBuilder(t routing.IterateType, packetBuilder packet.Builder, target []byte) packet.Builder {
 	switch t {
 	case routing.IterateBootstrap, routing.IterateFindHost:
-		return packetBuilder.Type(packet.TypeFindHost).Request(&packet.RequestDataFindHost{Target: target})
+		return packetBuilder.Type(types.TypeFindHost).Request(&packet.RequestDataFindHost{Target: target})
 	case routing.IterateFindValue:
-		return packetBuilder.Type(packet.TypeFindValue).Request(&packet.RequestDataFindValue{Target: target})
+		return packetBuilder.Type(types.TypeFindValue).Request(&packet.RequestDataFindValue{Target: target})
 	case routing.IterateStore:
-		return packetBuilder.Type(packet.TypeFindHost).Request(&packet.RequestDataFindHost{Target: target})
+		return packetBuilder.Type(types.TypeFindHost).Request(&packet.RequestDataFindHost{Target: target})
 	default:
 		panic("Unknown iterate type")
 	}
@@ -1287,7 +1289,7 @@ func (dht *DHT) RemoteProcedureCall(ctx hosthandler.Context, targetID string, me
 	request := &packet.Packet{
 		Sender:   ht.Origin,
 		Receiver: targetHost,
-		Type:     packet.TypeRPC,
+		Type:     types.TypeRPC,
 		Data: &packet.RequestDataRPC{
 			NodeID: dht.nodeID,
 			Method: method,

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 	"github.com/pkg/errors"
@@ -34,6 +35,7 @@ import (
 type ServiceNetwork struct {
 	hostNetwork network.HostNetwork
 	controller  network.Controller
+	consensus   consensus.Processor
 
 	certificate         core.Certificate
 	activeNodeComponent core.ActiveNodeComponent
@@ -61,6 +63,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	network.hostNetwork = hostnetwork
 	network.controller = controller
 	network.certificate = cert
+	network.consensus = NewConsensus(network.hostNetwork)
 	return network, nil
 }
 
@@ -188,29 +191,24 @@ func (network *ServiceNetwork) onPulse(pulse core.Pulse) {
 }
 
 func (network *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
-	if network.controller.GetConsensus() == nil {
-		log.Warn("consensus is nil")
-		return
-	}
-	consensus := network.controller.GetConsensus()
-	if consensus == nil {
-		log.Warn("Consensus module is not initialized")
-		return
-	}
-	if !consensus.IsPartOfConsensus() {
+	if !network.consensus.IsPartOfConsensus() {
 		log.Debug("Node is not active and does not participate in consensus")
 		return
 	}
 	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
-	go consensus.ProcessPulse(ctx, pulse)
+	go network.consensus.ProcessPulse(ctx, pulse)
 }
 
-// NewHostNetwork create new HostNetwork. Certificate in new network should be removed
+// NewHostNetwork create new HostNetwork. Certificate in new network should be removed and pulseCallback should be passed to NewNetworkController.
 func NewHostNetwork(conf configuration.Configuration, certificate core.Certificate, pulseCallback network.OnPulse) (network.HostNetwork, error) {
 	return dhtnetwork.NewDhtHostNetwork(conf, certificate, pulseCallback)
 }
 
-// NewNetworkController create new network.Controller. In new network it should read conf
+// NewNetworkController create new network.Controller. In new network it should read conf.
 func NewNetworkController(conf configuration.Configuration, network network.HostNetwork) (network.Controller, error) {
 	return dhtnetwork.NewDhtNetworkController(network)
+}
+
+func NewConsensus(network network.HostNetwork) consensus.Processor {
+	return dhtnetwork.NewNetworkConsensus(network)
 }

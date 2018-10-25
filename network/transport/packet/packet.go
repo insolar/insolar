@@ -25,53 +25,8 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
-)
-
-//go:generate stringer -type=PacketType
-type PacketType int
-
-const (
-	// TypePing is packet type for ping method.
-	TypePing PacketType = iota + 1
-	// TypeStore is packet type for store method.
-	TypeStore
-	// TypeFindHost is packet type for FindHost method.
-	TypeFindHost
-	// TypeFindValue is packet type for FindValue method.
-	TypeFindValue
-	// TypeRPC is packet type for RPC method.
-	TypeRPC
-	// TypeRelay is packet type for request target to be a relay.
-	TypeRelay
-	// TypeAuthentication is packet type for authentication between hosts.
-	TypeAuthentication
-	// TypeCheckOrigin is packet to check originality of some host.
-	TypeCheckOrigin
-	// TypeObtainIP is packet to get itself IP from another host.
-	TypeObtainIP
-	// TypeRelayOwnership is packet to say all other hosts that current host have a static IP.
-	TypeRelayOwnership
-	// TypeKnownOuterHosts is packet to say how much outer hosts current host know.
-	TypeKnownOuterHosts
-	// TypeCheckNodePriv is packet to check preset node privileges.
-	TypeCheckNodePriv
-	// TypeCascadeSend is the packet type for the cascade send message feature.
-	TypeCascadeSend
-	// TypePulse is packet type for the messages received from pulsars.
-	TypePulse
-	// TypeGetRandomHosts is packet type for the call to get random hosts of the DHT network.
-	TypeGetRandomHosts
-	// TypeGetNonce is packet to request a nonce to sign it.
-	TypeGetNonce
-	// TypeCheckSignedNonce is packet to check a signed nonce.
-	TypeCheckSignedNonce
-	// TypeExchangeUnsyncLists is packet type to exchange unsync lists during consensus
-	TypeExchangeUnsyncLists
-	// TypeExchangeUnsyncHash is packet type to exchange hash of merged unsync lists during consensus
-	TypeExchangeUnsyncHash
-	// TypeDisconnect is packet to disconnect from active list.
-	TypeDisconnect
 )
 
 // RequestID is 64 bit unsigned int request id.
@@ -81,7 +36,7 @@ type RequestID uint64
 type Packet struct {
 	Sender        *host.Host
 	Receiver      *host.Host
-	Type          PacketType
+	Type          types.PacketType
 	RequestID     RequestID
 	RemoteAddress string
 
@@ -95,52 +50,52 @@ func NewPingPacket(sender, receiver *host.Host) *Packet {
 	return &Packet{
 		Sender:   sender,
 		Receiver: receiver,
-		Type:     TypePing,
+		Type:     types.TypePing,
 	}
 }
 
 // IsValid checks if packet data is a valid structure for current packet type.
 func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 	switch m.Type {
-	case TypePing:
+	case types.TypePing:
 		valid = true
-	case TypeFindHost:
+	case types.TypeFindHost:
 		_, valid = m.Data.(*RequestDataFindHost)
-	case TypeFindValue:
+	case types.TypeFindValue:
 		_, valid = m.Data.(*RequestDataFindValue)
-	case TypeStore:
+	case types.TypeStore:
 		_, valid = m.Data.(*RequestDataStore)
-	case TypeRPC:
+	case types.TypeRPC:
 		_, valid = m.Data.(*RequestDataRPC)
-	case TypeRelay:
+	case types.TypeRelay:
 		_, valid = m.Data.(*RequestRelay)
-	case TypeAuthentication:
+	case types.TypeAuthentication:
 		_, valid = m.Data.(*RequestAuthentication)
-	case TypeCheckOrigin:
+	case types.TypeCheckOrigin:
 		_, valid = m.Data.(*RequestCheckOrigin)
-	case TypeObtainIP:
+	case types.TypeObtainIP:
 		_, valid = m.Data.(*RequestObtainIP)
-	case TypeRelayOwnership:
+	case types.TypeRelayOwnership:
 		_, valid = m.Data.(*RequestRelayOwnership)
-	case TypeKnownOuterHosts:
+	case types.TypeKnownOuterHosts:
 		_, valid = m.Data.(*RequestKnownOuterHosts)
-	case TypeCheckNodePriv:
+	case types.TypeCheckNodePriv:
 		_, valid = m.Data.(*RequestCheckNodePriv)
-	case TypeCascadeSend:
+	case types.TypeCascadeSend:
 		_, valid = m.Data.(*RequestCascadeSend)
-	case TypePulse:
+	case types.TypePulse:
 		_, valid = m.Data.(*RequestPulse)
-	case TypeGetRandomHosts:
+	case types.TypeGetRandomHosts:
 		_, valid = m.Data.(*RequestGetRandomHosts)
-	case TypeGetNonce:
+	case types.TypeGetNonce:
 		_, valid = m.Data.(*RequestGetNonce)
-	case TypeCheckSignedNonce:
+	case types.TypeCheckSignedNonce:
 		_, valid = m.Data.(*RequestCheckSignedNonce)
-	case TypeExchangeUnsyncLists:
+	case types.TypeExchangeUnsyncLists:
 		_, valid = m.Data.(*RequestExchangeUnsyncLists)
-	case TypeExchangeUnsyncHash:
+	case types.TypeExchangeUnsyncHash:
 		_, valid = m.Data.(*RequestExchangeUnsyncHash)
-	case TypeDisconnect:
+	case types.TypeDisconnect:
 		_, valid = m.Data.(*RequestDisconnect)
 	default:
 		valid = false
@@ -151,7 +106,7 @@ func (m *Packet) IsValid() (valid bool) { // nolint: gocyclo
 
 // IsForMe checks if packet is addressed to our host.
 func (m *Packet) IsForMe(origin host.Origin) bool {
-	return origin.Contains(m.Receiver) || m.Type == TypePing
+	return origin.Contains(m.Receiver) || m.Type == types.TypePing
 }
 
 // SerializePacket converts packet to byte slice.

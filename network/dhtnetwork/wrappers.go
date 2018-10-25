@@ -17,10 +17,13 @@
 package dhtnetwork
 
 import (
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/id"
 	"strings"
 	"time"
+
+	consensus2 "github.com/insolar/insolar/network/dhtnetwork/consensus"
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/network/transport/packet/types"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -32,7 +35,6 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 	"github.com/insolar/insolar/network/dhtnetwork/resolver"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/pkg/errors"
 )
@@ -175,17 +177,17 @@ func (w *Wrapper) PublicAddress() string {
 }
 
 // SendRequest send request to a remote node.
-func (w *Wrapper) SendRequest(*packet.Packet) (transport.Future, error) {
+func (w *Wrapper) SendRequest(network.Request) (network.Future, error) {
 	panic("not used in DHT implementation")
 }
 
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
-func (w *Wrapper) RegisterRequestHandler(t packet.PacketType, handler network.RequestHandler) {
+func (w *Wrapper) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
 	panic("not used in DHT implementation")
 }
 
 // NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
-func (w *Wrapper) NewRequestBuilder() *packet.Builder {
+func (w *Wrapper) NewRequestBuilder() network.RequestBuilder {
 	panic("not used in DHT implementation")
 }
 
@@ -218,7 +220,7 @@ func (w *Wrapper) Inject(components core.Components) {
 	if components.ActiveNodeComponent == nil {
 		log.Error("active node component is nil")
 	} else {
-		nodeKeeper := components.ActiveNodeComponent.(consensus.NodeKeeper)
+		nodeKeeper := components.ActiveNodeComponent.(network.NodeKeeper)
 		w.HostNetwork.SetNodeKeeper(nodeKeeper)
 	}
 	if components.NetworkCoordinator == nil {
@@ -259,4 +261,9 @@ func CreateDHTContext(handler hosthandler.HostHandler) hosthandler.Context {
 		log.Fatalln("Failed to create context:", err.Error())
 	}
 	return ctx
+}
+
+func NewNetworkConsensus(network network.HostNetwork) consensus.Processor {
+	handler := network.(*Wrapper).HostNetwork
+	return consensus2.NewNetworkConsensus(handler)
 }

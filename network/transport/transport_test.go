@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/stretchr/testify/suite"
 )
@@ -95,23 +96,23 @@ func (t *transportSuite) TestPingPong() {
 
 	requestMsg := <-t.node2.transport.Packets()
 	t.Assert().True(requestMsg.IsValid())
-	t.Assert().Equal(packet.TypePing, requestMsg.Type)
+	t.Assert().Equal(types.TypePing, requestMsg.Type)
 	t.Assert().Equal(t.node2.host, future.Actor())
 	t.Assert().False(requestMsg.IsResponse)
 
-	builder := packet.NewBuilder(t.node2.host).Receiver(requestMsg.Sender).Type(packet.TypePing)
+	builder := packet.NewBuilder(t.node2.host).Receiver(requestMsg.Sender).Type(types.TypePing)
 	err = t.node2.transport.SendResponse(requestMsg.RequestID, builder.Response(nil).Build())
 	t.Assert().NoError(err)
 
 	responseMsg := <-future.Result()
 	t.Assert().True(responseMsg.IsValid())
-	t.Assert().Equal(packet.TypePing, responseMsg.Type)
+	t.Assert().Equal(types.TypePing, responseMsg.Type)
 	t.Assert().True(responseMsg.IsResponse)
 }
 
 func (t *transportSuite) TestSendBigPacket() {
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
-	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TypeStore)
+	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.TypeStore)
 	requestMsg := builder.Request(&packet.RequestDataStore{data, true}).Build()
 	t.Assert().True(requestMsg.IsValid())
 
@@ -120,13 +121,13 @@ func (t *transportSuite) TestSendBigPacket() {
 
 	msg := <-t.node2.transport.Packets()
 	t.Assert().True(requestMsg.IsValid())
-	t.Assert().Equal(packet.TypeStore, requestMsg.Type)
+	t.Assert().Equal(types.TypeStore, requestMsg.Type)
 	receivedData := msg.Data.(*packet.RequestDataStore).Data
 	t.Assert().Equal(data, receivedData)
 }
 
 func (t *transportSuite) TestSendInvalidPacket() {
-	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TypeRPC)
+	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.TypeRPC)
 	msg := builder.Build()
 	t.Assert().False(msg.IsValid())
 

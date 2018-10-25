@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +42,7 @@ func newSelfNode(ref core.RecordRef) *core.Node {
 	}
 }
 
-func newNodeKeeper() consensus.NodeKeeper {
+func newNodeKeeper() network.NodeKeeper {
 	id := core.RecordRef{255}
 	keeper := NewNodeKeeper(id)
 	keeper.AddActiveNodes([]*core.Node{newSelfNode(id)})
@@ -145,7 +146,7 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 	wg.Add(num)
 	for i := 0; i < num; i++ {
 		time.Sleep(100 * time.Millisecond)
-		go func(k consensus.NodeKeeper, i int) {
+		go func(k network.NodeKeeper, i int) {
 			_, _ = k.AddUnsync(newActiveNode(byte(2 * i)))
 			_, _ = k.AddUnsync(newActiveNode(byte(2*i + 1)))
 			pulse := core.PulseNumber(i)
@@ -243,7 +244,7 @@ func TestNodekeeper_GetUnsyncHolder3(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func(keeper consensus.NodeKeeper, wg *sync.WaitGroup) {
+	go func(keeper network.NodeKeeper, wg *sync.WaitGroup) {
 		_, err := keeper.GetUnsyncHolder(nextPulse, time.Millisecond)
 		assert.Error(t, err)
 		wg.Done()
@@ -306,8 +307,8 @@ func TestUnsyncList_GetHash(t *testing.T) {
 	unsyncNodes := []*core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
-	h := make([]*consensus.NodeUnsyncHash, 0)
-	h = append(h, &consensus.NodeUnsyncHash{core.RecordRef{1}, hash})
+	h := make([]*network.NodeUnsyncHash, 0)
+	h = append(h, &network.NodeUnsyncHash{core.RecordRef{1}, hash})
 	unsyncList.SetHash(h)
 	h2, err := unsyncList.GetHash(0)
 	assert.NoError(t, err)
@@ -318,8 +319,8 @@ func TestUnsyncList_GetHash2(t *testing.T) {
 	unsyncNodes := []*core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
-	h := make([]*consensus.NodeUnsyncHash, 0)
-	h = append(h, &consensus.NodeUnsyncHash{core.RecordRef{1}, hash})
+	h := make([]*network.NodeUnsyncHash, 0)
+	h = append(h, &network.NodeUnsyncHash{core.RecordRef{1}, hash})
 
 	wg := sync.WaitGroup{}
 	waiters := 10
@@ -343,8 +344,8 @@ func TestUnsyncList_GetHash3(t *testing.T) {
 	unsyncNodes := []*core.Node{}
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), unsyncNodes)
 	hash := []byte{'a', 'b', 'c'}
-	h := make([]*consensus.NodeUnsyncHash, 0)
-	h = append(h, &consensus.NodeUnsyncHash{core.RecordRef{1}, hash})
+	h := make([]*network.NodeUnsyncHash, 0)
+	h = append(h, &network.NodeUnsyncHash{core.RecordRef{1}, hash})
 
 	wg := sync.WaitGroup{}
 	waiters := 10
@@ -372,7 +373,7 @@ func TestUnsyncList_AddUnsyncList(t *testing.T) {
 
 func TestUnsyncList_AddUnsyncHash(t *testing.T) {
 	unsyncList := NewUnsyncHolder(core.PulseNumber(10), nil)
-	unsyncList.AddUnsyncHash(core.RecordRef{1}, []*consensus.NodeUnsyncHash{})
+	unsyncList.AddUnsyncHash(core.RecordRef{1}, []*network.NodeUnsyncHash{})
 	_, exists := unsyncList.GetUnsyncHash(core.RecordRef{1})
 	assert.True(t, exists)
 }

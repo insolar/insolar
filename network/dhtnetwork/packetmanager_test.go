@@ -22,13 +22,14 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
 func TestParseIncomingPacket(t *testing.T) {
 	hh := newMockHostHandler()
 	builder := packet.NewBuilder(getOriginHost(hh))
 
-	pckt := builder.Type(packet.TypeStore).Request(&packet.RequestDataStore{}).Build()
+	pckt := builder.Type(types.TypeStore).Request(&packet.RequestDataStore{}).Build()
 	ParseIncomingPacket(hh, GetDefaultCtx(hh), pckt, builder)
 }
 
@@ -41,14 +42,14 @@ func TestBuildContext(t *testing.T) {
 	receiverAddress, _ := host.NewAddress("0.0.0.0:0")
 	receiver := host.NewHost(receiverAddress)
 	builder := packet.NewBuilder(sender)
-	pckt := builder.Type(packet.TypeAuthentication).
+	pckt := builder.Type(types.TypeAuthentication).
 		Receiver(receiver).
 		Request(&packet.RequestAuthentication{Command: packet.BeginAuthentication}).
 		Build()
 	_ = BuildContext(cb, pckt)
 
 	receiver.ID, _ = id.NewID()
-	pckt = builder.Type(packet.TypeAuthentication).
+	pckt = builder.Type(types.TypeAuthentication).
 		Receiver(receiver).
 		Request(&packet.RequestAuthentication{Command: packet.BeginAuthentication}).
 		Build()

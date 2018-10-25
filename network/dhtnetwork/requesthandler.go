@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 
 	"github.com/insolar/insolar/version"
 	"github.com/jbenet/go-base58"
@@ -57,7 +58,7 @@ func RelayRequest(hostHandler hosthandler.HostHandler, command, targetID string)
 		return err
 	}
 	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
-	request := builder.Type(packet.TypeRelay).
+	request := builder.Type(types.TypeRelay).
 		Receiver(targetHost).
 		Request(&packet.RequestRelay{Command: typedCommand}).
 		Build()
@@ -86,7 +87,7 @@ func CheckOriginRequest(hostHandler hosthandler.HostHandler, targetID string) er
 	}
 
 	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
-	request := builder.Type(packet.TypeCheckOrigin).
+	request := builder.Type(types.TypeCheckOrigin).
 		Receiver(targetHost).
 		Request(&packet.RequestCheckOrigin{}).
 		Build()
@@ -127,7 +128,7 @@ func AuthenticationRequest(hostHandler hosthandler.HostHandler, command, targetI
 		return err
 	}
 	builder := packet.NewBuilder(origin)
-	request := builder.Type(packet.TypeAuthentication).
+	request := builder.Type(types.TypeAuthentication).
 		Receiver(targetHost).
 		Request(&packet.RequestAuthentication{Command: authCommand}).
 		Build()
@@ -158,7 +159,7 @@ func ObtainIPRequest(hostHandler hosthandler.HostHandler, targetID string) error
 
 	origin := hostHandler.HtFromCtx(ctx).Origin
 	builder := packet.NewBuilder(origin)
-	request := builder.Type(packet.TypeObtainIP).
+	request := builder.Type(types.TypeObtainIP).
 		Receiver(targetHost).
 		Request(&packet.RequestObtainIP{}).
 		Build()
@@ -189,7 +190,7 @@ func RelayOwnershipRequest(hostHandler hosthandler.HostHandler, targetID string)
 	}
 
 	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
-	request := builder.Type(packet.TypeRelayOwnership).
+	request := builder.Type(types.TypeRelayOwnership).
 		Receiver(targetHost).
 		Request(&packet.RequestRelayOwnership{Ready: true}).
 		Build()
@@ -216,7 +217,7 @@ func CascadeSendMessage(hostHandler hosthandler.HostHandler, data core.Cascade, 
 		return errors.New("cascadeSendMessage: couldn't find a target host")
 	}
 
-	request := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin).Receiver(targetHost).Type(packet.TypeCascadeSend).
+	request := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin).Receiver(targetHost).Type(types.TypeCascadeSend).
 		Request(&packet.RequestCascadeSend{
 			Data: data,
 			RPC: packet.RequestDataRPC{
@@ -268,7 +269,7 @@ func sendNonceRequest(hostHandler hosthandler.HostHandler, sender *host.Host, re
 	log.Debug("Started getting nonce request to discovery node")
 
 	request := packet.NewBuilder(sender).
-		Receiver(receiver).Type(packet.TypeGetNonce).
+		Receiver(receiver).Type(types.TypeGetNonce).
 		Request(&packet.RequestGetNonce{NodeID: hostHandler.GetNodeID()}).
 		Build()
 
@@ -295,7 +296,7 @@ func sendCheckSignedNonceRequest(hostHandler hosthandler.HostHandler, sender *ho
 
 	// TODO: get role from certificate
 	// TODO: get public key from certificate
-	request := packet.NewBuilder(sender).Type(packet.TypeCheckSignedNonce).
+	request := packet.NewBuilder(sender).Type(types.TypeCheckSignedNonce).
 		Receiver(receiver).
 		Request(&packet.RequestCheckSignedNonce{
 			Signed:    nonce,
@@ -338,7 +339,7 @@ func sendPulse(hostHandler hosthandler.HostHandler, host *host.Host, pulse *pack
 		return errors.Wrap(err, "failed to send pulse")
 	}
 	request := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin).Receiver(host).
-		Type(packet.TypePulse).Request(pulse).Build()
+		Type(types.TypePulse).Request(pulse).Build()
 
 	future, err := hostHandler.SendRequest(request)
 	if err != nil {
@@ -363,7 +364,7 @@ func checkNodePrivRequest(hostHandler hosthandler.HostHandler, targetID string) 
 
 	origin := hostHandler.HtFromCtx(ctx).Origin
 	builder := packet.NewBuilder(origin)
-	request := builder.Type(packet.TypeCheckNodePriv).Receiver(targetHost).Request(&packet.RequestCheckNodePriv{RoleKey: "test string"}).Build()
+	request := builder.Type(types.TypeCheckNodePriv).Receiver(targetHost).Request(&packet.RequestCheckNodePriv{RoleKey: "test string"}).Build()
 	future, err := hostHandler.SendRequest(request)
 
 	if err != nil {
@@ -388,7 +389,7 @@ func knownOuterHostsRequest(hostHandler hosthandler.HostHandler, targetID string
 	}
 
 	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
-	request := builder.Type(packet.TypeKnownOuterHosts).
+	request := builder.Type(types.TypeKnownOuterHosts).
 		Receiver(targetHost).
 		Request(&packet.RequestKnownOuterHosts{
 			ID:         hostHandler.HtFromCtx(ctx).Origin.ID.String(),
@@ -426,7 +427,7 @@ func sendDisconnectRequest(hostHandler hosthandler.HostHandler, target *host.Hos
 	}
 
 	builder := packet.NewBuilder(hostHandler.HtFromCtx(ctx).Origin)
-	request := builder.Type(packet.TypeDisconnect).
+	request := builder.Type(types.TypeDisconnect).
 		Receiver(target).
 		Request(&packet.RequestDisconnect{}).
 		Build()
@@ -447,38 +448,38 @@ func checkResponse(hostHandler hosthandler.HostHandler, future transport.Future,
 		return errors.Wrap(err, "checkResponse error")
 	}
 	switch request.Type {
-	case packet.TypeKnownOuterHosts:
+	case types.TypeKnownOuterHosts:
 		response := rsp.Data.(*packet.ResponseKnownOuterHosts)
 		err = handleKnownOuterHosts(hostHandler, response, targetID)
-	case packet.TypeCheckOrigin:
+	case types.TypeCheckOrigin:
 		response := rsp.Data.(*packet.ResponseCheckOrigin)
 		handleCheckOriginResponse(hostHandler, response, targetID)
-	case packet.TypeAuthentication:
+	case types.TypeAuthentication:
 		response := rsp.Data.(*packet.ResponseAuthentication)
 		err = handleAuthResponse(hostHandler, response, targetID)
-	case packet.TypeObtainIP:
+	case types.TypeObtainIP:
 		response := rsp.Data.(*packet.ResponseObtainIP)
 		err = handleObtainIPResponse(hostHandler, response, targetID)
-	case packet.TypeRelayOwnership:
+	case types.TypeRelayOwnership:
 		response := rsp.Data.(*packet.ResponseRelayOwnership)
 		handleRelayOwnership(hostHandler, response, targetID)
-	case packet.TypeCheckNodePriv:
+	case types.TypeCheckNodePriv:
 		response := rsp.Data.(*packet.ResponseCheckNodePriv)
 		err = handleCheckNodePrivResponse(hostHandler, response)
-	case packet.TypeRelay:
+	case types.TypeRelay:
 		response := rsp.Data.(*packet.ResponseRelay)
 		err = handleRelayResponse(hostHandler, response, targetID)
-	case packet.TypeCascadeSend:
+	case types.TypeCascadeSend:
 		response := rsp.Data.(*packet.ResponseCascadeSend)
 		if !response.Success {
 			err = errors.New(response.Error)
 		}
-	case packet.TypePulse:
+	case types.TypePulse:
 		response := rsp.Data.(*packet.ResponsePulse)
 		if !response.Success {
 			err = errors.New(response.Error)
 		}
-	case packet.TypeDisconnect:
+	case types.TypeDisconnect:
 		response := rsp.Data.(*packet.ResponseDisconnect)
 		if (response.Error == nil) && response.Disconnected {
 			// TODO: be a disconnected sad node

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
 )
@@ -190,7 +191,7 @@ func (t *baseTransport) sendPacket(p *packet.Packet) error {
 }
 
 func shouldProcessPacket(future Future, msg *packet.Packet) bool {
-	return !future.Actor().Equal(*msg.Sender) && msg.Type != packet.TypePing || msg.Type != future.Request().Type
+	return !future.Actor().Equal(*msg.Sender) && msg.Type != types.TypePing || msg.Type != future.Request().Type
 }
 
 // AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.

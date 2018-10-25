@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/id"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,12 +43,12 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 	receiver.ID, _ = id.NewID()
 	ref := testutils.RandomRef()
 
-	m := builder.Receiver(receiver).Type(TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
+	m := builder.Receiver(receiver).Type(types.TypeRPC).Request(&RequestDataRPC{ref, "test", [][]byte{}}).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
-		Type:       TypeRPC,
+		Type:       types.TypeRPC,
 		Data:       &RequestDataRPC{ref, "test", [][]byte{}},
 		IsResponse: false,
 		Error:      nil,
@@ -64,12 +65,12 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 
-	m := builder.Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
+	m := builder.Receiver(receiver).Type(types.TypeRPC).Response(&ResponseDataRPC{true, []byte("ok"), ""}).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
-		Type:       TypeRPC,
+		Type:       types.TypeRPC,
 		Data:       &ResponseDataRPC{true, []byte("ok"), ""},
 		IsResponse: true,
 		Error:      nil,
@@ -86,12 +87,12 @@ func TestBuilder_Build_ErrorPacket(t *testing.T) {
 	receiver := host.NewHost(receiverAddress)
 	receiver.ID, _ = id.NewID()
 
-	m := builder.Receiver(receiver).Type(TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
+	m := builder.Receiver(receiver).Type(types.TypeRPC).Response(&ResponseDataRPC{}).Error(errors.New("test error")).Build()
 
 	expectedPacket := &Packet{
 		Sender:     sender,
 		Receiver:   receiver,
-		Type:       TypeRPC,
+		Type:       types.TypeRPC,
 		Data:       &ResponseDataRPC{},
 		IsResponse: true,
 		Error:      errors.New("test error"),

@@ -18,6 +18,7 @@ package packet
 
 import (
 	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
 // Builder allows lazy building of packets.
@@ -53,7 +54,7 @@ func (cb Builder) Receiver(host *host.Host) Builder {
 }
 
 // Type sets packet type.
-func (cb Builder) Type(packetType PacketType) Builder {
+func (cb Builder) Type(packetType types.PacketType) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.Type = packetType
 	})

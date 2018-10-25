@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 )
@@ -36,7 +37,7 @@ func (an *participantWrapper) GetActiveNode() *core.Node {
 }
 
 type selfWrapper struct {
-	keeper consensus.NodeKeeper
+	keeper network.NodeKeeper
 }
 
 // GetActiveNode implements Participant interface for NodeKeeper wrapper.
@@ -49,7 +50,7 @@ type NetworkConsensus struct {
 	consensus       consensus.Consensus
 	communicatorSnd *communicatorSender
 	communicatorRcv *communicatorReceiver
-	keeper          consensus.NodeKeeper
+	keeper          network.NodeKeeper
 	self            *selfWrapper
 }
 
@@ -101,7 +102,7 @@ func (ic *NetworkConsensus) ReceiverHandler() consensus.CommunicatorReceiver {
 }
 
 // SetNodeKeeper set NodeKeeper for the processor to integrate Processor with unsync -> sync -> active pipeline
-func (ic *NetworkConsensus) SetNodeKeeper(keeper consensus.NodeKeeper) {
+func (ic *NetworkConsensus) SetNodeKeeper(keeper network.NodeKeeper) {
 	ic.keeper = keeper
 	ic.self = &selfWrapper{keeper}
 	ic.communicatorSnd.keeper = keeper

@@ -18,7 +18,7 @@ package packet
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/relay"
 )
@@ -133,7 +133,7 @@ type ResponseExchangeUnsyncLists struct {
 
 // RequestExchangeUnsyncHash is request to exchange hash of merged unsync lists during consensus
 type ResponseExchangeUnsyncHash struct {
-	UnsyncHash []*consensus.NodeUnsyncHash
+	UnsyncHash []*network.NodeUnsyncHash
 	Error      string
 }
 

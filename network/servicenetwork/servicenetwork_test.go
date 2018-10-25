@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -361,7 +362,7 @@ func Test_processPulse(t *testing.T) {
 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
 
 	hh := firstNode.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
-	pckt := packet.NewBuilder(nil).Type(packet.TypePulse).Request(
+	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar
@@ -450,7 +451,7 @@ func Test_processPulse2(t *testing.T) {
 	// time.Sleep(time.Millisecond * 100)
 
 	hh := services[lastIndex].hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
-	pckt := packet.NewBuilder(nil).Type(packet.TypePulse).Request(
+	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar on the last started service

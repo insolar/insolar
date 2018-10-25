@@ -18,7 +18,7 @@ package packet
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network"
 )
 
 // CommandType - type for commands.
@@ -134,7 +134,7 @@ type RequestExchangeUnsyncLists struct {
 type RequestExchangeUnsyncHash struct {
 	SenderID   core.RecordRef
 	Pulse      core.PulseNumber
-	UnsyncHash []*consensus.NodeUnsyncHash
+	UnsyncHash []*network.NodeUnsyncHash
 }
 
 // RequestDisconnect is request to disconnect from active list.
