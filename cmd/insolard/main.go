@@ -102,20 +102,13 @@ func registerCurrentNode(cfgHolder *configuration.Holder, cert *certificate.Cert
 	roles := []string{"virtual", "heavy_material", "light_material"}
 	host := cfgHolder.Configuration.Host.Transport.Address
 	publicKey, err := cert.GetPublicKey()
-	if err != nil {
-		log.Fatalln("failed to get public key: ", err.Error())
-	}
+	checkError("failed to get public key: ", err)
 
 	rawCertificate, err := nc.RegisterNode(publicKey, 0, 0, roles, host)
-	if err != nil {
-		log.Fatalln("Can't register node: ", err.Error())
-	}
+	checkError("Can't register node: ", err)
 
 	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
-	if err != nil {
-		log.Fatalln("Can't write certificate: ", err.Error())
-	}
-
+	checkError("Can't write certificate: ", err)
 }
 
 func checkError(msg string, err error) {
