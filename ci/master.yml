@@ -8,7 +8,7 @@ resources:
   type: git
   source:
     uri: https://github.com/insolar/insolar.git
-    branch: devops
+    branch: INS-703-key-for-boostrap-launch-of-insolar
 
 - name: insolard
   type: docker-image
