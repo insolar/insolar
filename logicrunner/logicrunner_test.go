@@ -1293,7 +1293,7 @@ func TestRootDomainContract(t *testing.T) {
 }
 
 func TestFullValidationCycle(t *testing.T) {
-	t.Skip()
+	t.Skip("test is terribly wrong")
 	if parallel {
 		t.Parallel()
 	}
