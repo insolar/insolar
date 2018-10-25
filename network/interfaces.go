@@ -67,6 +67,7 @@ type HostNetwork interface {
 	NewRequestBuilder() RequestBuilder
 }
 
+// Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() core.RecordRef
 	GetReceiver() core.RecordRef
@@ -74,14 +75,19 @@ type Packet interface {
 	GetData() interface{}
 }
 
+// Request is a packet that is sent from the current node.
 type Request Packet
+
+// Response is a packet that is received in response to a previously sent Request.
 type Response Packet
 
+// Future allows to handle responses to a previously sent request.
 type Future interface {
 	Result() <-chan Response
 	GetResult(duration time.Duration) Response
 }
 
+// RequestBuilder allows to build a Request.
 type RequestBuilder interface {
 	Receiver(ref core.RecordRef) RequestBuilder
 	Type(packetType types.PacketType) RequestBuilder
