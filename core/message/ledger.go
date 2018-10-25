@@ -71,7 +71,7 @@ func (e *GetCode) Target() *core.RecordRef {
 type GetClass struct {
 	ledgerMessage
 	Head  core.RecordRef
-	State *core.RecordRef // If nil, will fetch the latest state.
+	State *core.RecordID // If nil, will fetch the latest state.
 }
 
 // Type implementation of Message interface.
@@ -87,8 +87,9 @@ func (e *GetClass) Target() *core.RecordRef {
 // GetObject retrieves object from storage.
 type GetObject struct {
 	ledgerMessage
-	Head  core.RecordRef
-	State *core.RecordRef // If nil, will fetch the latest state.
+	Head     core.RecordRef
+	State    *core.RecordID // If nil, will fetch the latest state.
+	Approved bool
 }
 
 // Type implementation of Message interface.
