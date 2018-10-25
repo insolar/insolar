@@ -80,7 +80,7 @@ func TestDB_SetClassIndex_StoresCorrectDataInStorage(t *testing.T) {
 	}
 	latestRef := idgen()
 	idx := index.ClassLifeline{
-		LatestState: latestRef,
+		LatestState: &latestRef,
 	}
 	zeroID := record.ID{
 		Hash: hexhash("122444"),
@@ -110,7 +110,7 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 
 	idx := index.ObjectLifeline{
 		ClassRef:    referenceWithHashes("50", "60"),
-		LatestState: record.ID{Hash: hexhash("20")},
+		LatestState: &record.ID{Hash: hexhash("20")},
 	}
 	zeroid := record.ID{Hash: hexhash("")}
 	err := db.SetObjectIndex(&zeroid, &idx)
@@ -155,7 +155,7 @@ func TestDB_CreateDrop(t *testing.T) {
 		recid, err := db.SetRecord(&rec)
 		assert.NoError(t, err)
 
-		idx := &index.ObjectLifeline{LatestState: *recid}
+		idx := &index.ObjectLifeline{LatestState: recid}
 		err = db.SetObjectIndex(recid, idx)
 		assert.NoError(t, err)
 
