@@ -28,6 +28,8 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/inscontext"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
 
@@ -158,7 +160,7 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 		}
 
 		var result interface{}
-		var contractErr error
+		var contractErr *foundation.Error
 		err = signer.UnmarshalParams(res.(*reply.CallMethod).Result, &result, &contractErr)
 		if err != nil {
 			resp.Error = err.Error()
@@ -168,8 +170,8 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 
 		resp.Result = result
 		if contractErr != nil {
-			resp.Error = contractErr.Error()
-			ctx.Log().Error(errors.Wrap(contractErr, "[ CallHandler ] Error in called method"))
+			resp.Error = contractErr.S
+			ctx.Log().Error(errors.Wrap(errors.New(contractErr.S), "[ CallHandler ] Error in called method"))
 		}
 	}
 }
