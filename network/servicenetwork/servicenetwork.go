@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
@@ -157,6 +158,7 @@ func (n *ServiceNetwork) listen() {
 }
 
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
+	ctx := inscontext.TODO()
 	if n.pulseManager == nil {
 		log.Error("PulseManager is not initialized")
 		return
@@ -179,7 +181,7 @@ func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
 			if network.coordinator == nil {
 				return
 			}
-			err := network.coordinator.WriteActiveNodes(pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
+			err := network.coordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
 			if err != nil {
 				log.Warn("Writing active nodes to ledger: " + err.Error())
 			}
