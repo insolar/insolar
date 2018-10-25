@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +32,8 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	cfg := configuration.NewMetrics()
 	m, err := NewMetrics(cfg)
 	assert.NoError(t, err)
-	err = m.Start(core.Components{})
+	ctx := inscontext.TODO()
+	err = m.Start(ctx, core.Components{})
 	assert.NoError(t, err)
 
 	NetworkMessageSentTotal.Inc()
@@ -47,5 +49,5 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	assert.True(t, strings.Contains(contentText, "insolar_network_message_sent_total 1"))
 	assert.True(t, strings.Contains(contentText, `insolar_network_packet_sent_total{packetType="ping"} 55`))
 
-	assert.NoError(t, m.Stop())
+	assert.NoError(t, m.Stop(ctx))
 }

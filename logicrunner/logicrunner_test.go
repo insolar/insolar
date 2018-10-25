@@ -72,6 +72,7 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicR
 }
 
 func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
+	ctx := inscontext.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
@@ -91,7 +92,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	c := core.Components{LogicRunner: lr}
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	mb := testmessagebus.NewTestMessageBus()
-	assert.NoError(t, lr.Start(core.Components{
+	assert.NoError(t, lr.Start(ctx, core.Components{
 		Ledger:     l,
 		MessageBus: mb,
 	}), "starting logicrunner")
@@ -107,7 +108,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 
 	return lr, am, cb, pm, func() {
 		cb.Clean()
-		lr.Stop()
+		lr.Stop(ctx)
 		cleaner()
 		rundCleaner()
 	}
@@ -183,6 +184,7 @@ func (r *testExecutor) CallConstructor(ctx *core.LogicCallContext, code core.Rec
 }
 
 func TestBasics(t *testing.T) {
+	ctx := inscontext.TODO()
 	if parallel {
 		t.Parallel()
 	}
@@ -195,7 +197,7 @@ func TestBasics(t *testing.T) {
 		Ledger:     &testLedger{am: goplugintestutils.NewTestArtifactManager()},
 		MessageBus: mb,
 	}
-	assert.NoError(t, lr.Start(comps))
+	assert.NoError(t, lr.Start(ctx, comps))
 	assert.IsType(t, &LogicRunner{}, lr)
 	MessageBusTrivialBehavior(mb, lr)
 
@@ -239,6 +241,7 @@ func (r *testLedger) HandleMessage(core.Message) (core.Reply, error) {
 }
 
 func TestExecution(t *testing.T) {
+	ctx := inscontext.TODO()
 	if parallel {
 		t.Parallel()
 	}
@@ -248,7 +251,7 @@ func TestExecution(t *testing.T) {
 	assert.NoError(t, err)
 	mb := testmessagebus.NewTestMessageBus()
 	MessageBusTrivialBehavior(mb, lr)
-	lr.Start(core.Components{
+	lr.Start(ctx, core.Components{
 		Ledger:     ld,
 		MessageBus: mb,
 	})

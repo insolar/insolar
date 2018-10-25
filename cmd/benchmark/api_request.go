@@ -17,10 +17,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/insolar/insolar/api/requesters"
+	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
@@ -41,7 +45,7 @@ func getResponse(body []byte) *response {
 	return res
 }
 
-func sendRequest(method string, params []interface{}, member memberInfo) []byte {
+func sendRequest(ctx core.Context, method string, params []interface{}, member memberInfo) []byte {
 	reqCfg := &requesters.RequestConfigJSON{
 		Params: params,
 		Method: method,
@@ -53,15 +57,15 @@ func sendRequest(method string, params []interface{}, member memberInfo) []byte 
 	seed, err := requesters.GetSeed(URL)
 	check("can not get seed:", err)
 
-	body, err := requesters.SendWithSeed(callURL, userCfg, reqCfg, seed)
+	body, err := requesters.SendWithSeed(ctx, callURL, userCfg, reqCfg, seed)
 	check("can not send request:", err)
 
 	return body
 }
 
-func transfer(amount float64, from memberInfo, to memberInfo) string {
+func transfer(ctx core.Context, amount float64, from memberInfo, to memberInfo) string {
 	params := []interface{}{amount, to.ref}
-	body := sendRequest("Transfer", params, from)
+	body := sendRequest(ctx, "Transfer", params, from)
 	transferResponse := getResponse(body)
 
 	if transferResponse.Error != "" {
@@ -86,7 +90,9 @@ func createMembers(concurrent int, repetitions int) ([]memberInfo, error) {
 		check("Problems with serialization of public key:", err)
 
 		params := []interface{}{memberName, memberPubKeyStr}
-		body := sendRequest("CreateMember", params, rootMember)
+		ctx := inscontext.WithTraceID(context.Background(), fmt.Sprintf("createMemberNumber%d", i))
+
+		body := sendRequest(ctx, "CreateMember", params, rootMember)
 
 		memberResponse := getResponse(body)
 		if memberResponse.Error != "" {
