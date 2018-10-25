@@ -208,13 +208,6 @@ func (w *Wrapper) ResendPulseToKnownHosts(pulse core.Pulse) {
 	ResendPulseToKnownHosts(w.HostNetwork, hosts, p)
 }
 
-func getPulseManager(components core.Components) (core.PulseManager, error) {
-	if components.Ledger == nil {
-		return nil, errors.New("no core.Ledger in components")
-	}
-	return components.Ledger.GetPulseManager(), nil
-}
-
 // Inject inject components
 func (w *Wrapper) Inject(components core.Components) {
 	if components.NodeNetwork == nil {
