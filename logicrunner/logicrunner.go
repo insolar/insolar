@@ -55,8 +55,6 @@ type LogicRunner struct {
 	execution       map[Ref]*ExecutionState // if object exists, we are validating or executing it right now
 	executionMutex  sync.Mutex
 
-	Pulse core.Pulse // pulse info for this bind
-
 	// TODO move caseBind to context
 	caseBind      core.CaseBind
 	caseBindMutex sync.Mutex
@@ -78,7 +76,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		Ledger:          nil,
 		Cfg:             cfg,
 		execution:       make(map[Ref]*ExecutionState),
-		Pulse:           core.Pulse{},
 		caseBind:        core.CaseBind{Records: make(map[Ref][]core.CaseRecord)},
 		caseBindReplays: make(map[Ref]core.CaseBindReplay),
 	}
@@ -220,7 +217,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 	}
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	isAuthorized, err := lr.GetLedger().GetJetCoordinator().IsAuthorized(vb.GetRole(), ref, lr.Pulse.PulseNumber, lr.Network.GetNodeID())
+	isAuthorized, err := lr.GetLedger().GetJetCoordinator().IsAuthorized(vb.GetRole(), *msg.Target(), lr.pulse().PulseNumber, lr.Network.GetNodeID())
 
 	if err != nil {
 		return nil, errors.New("Authorization failed with error: " + err.Error())
@@ -243,7 +240,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 		Caller:  msg.GetCaller(),
 		Request: reqref,
 		Time:    time.Now(), // TODO: probably we should take it from e
-		Pulse:   lr.Pulse,
+		Pulse:   *lr.pulse(),
 	}
 
 	switch m := msg.(type) {
@@ -258,6 +255,14 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 	default:
 		panic("Unknown e type")
 	}
+}
+
+func (lr *LogicRunner) pulse() *core.Pulse {
+	pulse, err := lr.GetLedger().GetPulseManager().Current()
+	if err != nil {
+		panic(err)
+	}
+	return pulse
 }
 
 type objectBody struct {
@@ -411,7 +416,6 @@ func (lr *LogicRunner) executeConstructorCall(ctx core.LogicCallContext, m *mess
 }
 
 func (lr *LogicRunner) OnPulse(pulse core.Pulse) error {
-	lr.Pulse = pulse
 	lr.consensus = make(map[Ref]*Consensus)
 	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
 	objectsRecords := lr.refreshCaseBind()

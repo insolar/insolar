@@ -36,8 +36,6 @@ import (
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/networkcoordinator"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -165,10 +163,6 @@ func main() {
 	}
 
 	cm.linkAll()
-	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(cfgHolder.Configuration.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	if err != nil {
-		log.Fatalln("failed init pulse for LogicRunner: ", err.Error())
-	}
 
 	defer func() {
 		cm.stopAll()

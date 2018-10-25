@@ -133,7 +133,7 @@ func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.Reco
 	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
-		vstep, err := lr.Validate(ref, rlr.Pulse, cr)
+		vstep, err := lr.Validate(ref, *rlr.pulse(), cr)
 		if _, ok := failmap[ref]; ok {
 			assert.Error(t, err, "validation")
 			assert.True(t, len(cr) > vstep, "Validation failed before end")
