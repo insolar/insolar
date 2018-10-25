@@ -210,6 +210,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 
 	es.callContext = &core.LogicCallContext{
 		Caller:  msg.GetCaller(),
+		Callee:  &ref,
 		Request: reqref,
 		Time:    time.Now(), // TODO: probably we should take it from e
 		Pulse:   *lr.pulse(),
@@ -289,7 +290,6 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	es.callContext.Callee = &m.ObjectRef
 	es.callContext.Class = objbody.Class.HeadRef()
 	vb.ModifyContext(es.callContext)
 
