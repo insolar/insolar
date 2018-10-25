@@ -459,22 +459,20 @@ func (db *DB) GetBadgerDB() *badger.DB {
 
 // SetMessage persists message to the database
 func (db *DB) SetMessage(pulseNumber core.PulseNumber, genericMessage core.Message) error {
-	return db.Update(func(tx *TransactionManager) error {
-		messageBytes, err := message.ToBytes(genericMessage)
-		if err != nil {
-			return err
-		}
+	messageBytes, err := message.ToBytes(genericMessage)
+	if err != nil {
+		return err
+	}
 
-		hw := hash.NewIDHash()
-		_, err = hw.Write(messageBytes)
-		if err != nil {
-			return err
-		}
-		hw.Sum(nil)
+	hw := hash.NewIDHash()
+	_, err = hw.Write(messageBytes)
+	if err != nil {
+		return err
+	}
+	hw.Sum(nil)
 
-		return tx.Set(
-			prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
-			messageBytes,
-		)
-	})
+	return db.Set(
+		prefixkey(scopeIDMessage, bytes.Join([][]byte{pulseNumber.Bytes(), hw.Sum(nil)}, nil)),
+		messageBytes,
+	)
 }
