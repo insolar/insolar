@@ -440,6 +440,7 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message
 
 	for _, rawMessage := range msg.Messages {
 		parsedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
+		log.Infof("parsed message - %v", parsedMessage)
 		if err != nil {
 			return nil, err
 		}

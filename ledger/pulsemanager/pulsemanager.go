@@ -72,11 +72,6 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 		return err
 	}
 
-	err = m.db.AddPulse(pulse)
-	if err != nil {
-		return err
-	}
-
 	dropSerialized, err := jetdrop.Encode(drop)
 	if err != nil {
 		return err
@@ -85,6 +80,11 @@ func (m *PulseManager) Set(pulse core.Pulse) error {
 		Drop:     dropSerialized,
 		Messages: messages,
 	})
+	if err != nil {
+		return err
+	}
+
+	err = m.db.AddPulse(pulse)
 	if err != nil {
 		return err
 	}

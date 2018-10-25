@@ -74,7 +74,7 @@ func prepareAMTestData(t *testing.T) (preparedAMTestData, func()) {
 
 	mb := testmessagebus.NewTestMessageBus()
 	components := core.Components{MessageBus: mb}
-	handler := MessageHandler{db: db}
+	handler := MessageHandler{db: db, handlers: map[core.MessageType]core.MessageHandler{}}
 	handler.Link(components)
 
 	return preparedAMTestData{
@@ -683,7 +683,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	defer cleaner()
 
 	codeRecord := record.CodeRecord{
-		Code: []byte{1,2,3,3,2,1},
+		Code: []byte{1, 2, 3, 3, 2, 1},
 	}
 	recHash := hash.NewIDHash()
 	_, err := codeRecord.WriteHashData(recHash)
@@ -694,7 +694,6 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 		Pulse: latestPulse,
 		Hash:  recHash.Sum(nil),
 	}
-
 
 	setRecordMessage := message.SetRecord{
 		Record: record.SerializeRecord(&codeRecord),

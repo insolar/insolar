@@ -1410,8 +1410,10 @@ func New(n int) (*Child, error) {
 		toCheckValidate = append(toCheckValidate, m)
 		return nil, nil
 	})
+	current, err := pm.Current()
+	assert.NoError(t, err)
 	// end of pulse, now send everything to right places
-	err = pm.Set(*pulsar.NewPulse(10, 10, &entropygenerator.StandardEntropyGenerator{}))
+	err = pm.Set(*pulsar.NewPulse(10, current.PulseNumber, &entropygenerator.StandardEntropyGenerator{}))
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {
