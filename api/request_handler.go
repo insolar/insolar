@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
@@ -106,16 +105,13 @@ func (rh *RequestHandler) sendRequest(ctx core.Context, method string, argsIn []
 	return routResult, nil
 }
 
-// TODO: make it ok
-var serial uint64 = 1
-
 func (rh *RequestHandler) routeCall(ctx core.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if rh.messageBus == nil {
 		return nil, errors.New("[ RouteCall ] message bus was not set during initialization")
 	}
 
 	e := &message.CallMethod{
-		BaseLogicMessage: message.BaseLogicMessage{Nonce: atomicLoadAndIncrementUint64(&serial)},
+		BaseLogicMessage: message.BaseLogicMessage{Nonce: networkcoordinator.RandomUint64()},
 		ObjectRef:        ref,
 		Method:           method,
 		Arguments:        args,
@@ -242,14 +238,4 @@ func (rh *RequestHandler) ProcessGetSeed(ctx core.Context) (map[string]interface
 	result[SEED] = seed[:]
 
 	return result, nil
-}
-
-// atomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
 }

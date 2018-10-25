@@ -126,11 +126,11 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 func getRootMemberPubKey(file string) (string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't get abs path")
+		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't get abs path")
 	}
 	data, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't read rootkeys file "+absPath)
+		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't read rootkeys file "+absPath)
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)
