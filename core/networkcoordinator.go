@@ -19,9 +19,9 @@ package core
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator interface {
 	// Authorize authorizes node by verifying it's signature
-	Authorize(nodeRef RecordRef, seed []byte, signatureRaw []byte) (string, []NodeRole, error)
+	Authorize(ctx Context, nodeRef RecordRef, seed []byte, signatureRaw []byte) (string, []NodeRole, error)
 	// RegisterNode registers node in nodedomain
-	RegisterNode(publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error)
+	RegisterNode(ctx Context, publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error)
 	// WriteActiveNodes write active nodes to ledger
-	WriteActiveNodes(number PulseNumber, activeNodes []*Node) error
+	WriteActiveNodes(ctx Context, number PulseNumber, activeNodes []*Node) error
 }
