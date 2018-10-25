@@ -193,7 +193,7 @@ func (w *Wrapper) NewRequestBuilder() network.RequestBuilder {
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon
 func (w *Wrapper) ResendPulseToKnownHosts(pulse core.Pulse) {
-	p := &packet.RequestPulse{pulse}
+	p := &packet.RequestPulse{Pulse: pulse}
 	activeNodes := w.HostNetwork.GetActiveNodesList()
 	hosts := make([]host.Host, 0)
 	for _, node := range activeNodes {

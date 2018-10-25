@@ -68,41 +68,41 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 }
 
 // GetAddress returns host public address.
-func (network *ServiceNetwork) GetAddress() string {
-	return network.hostNetwork.PublicAddress()
+func (n *ServiceNetwork) GetAddress() string {
+	return n.hostNetwork.PublicAddress()
 }
 
 // GetNodeID returns current node id.
-func (network *ServiceNetwork) GetNodeID() core.RecordRef {
-	return network.nodeNetwork.GetOrigin().NodeID
+func (n *ServiceNetwork) GetNodeID() core.RecordRef {
+	return n.nodeNetwork.GetOrigin().NodeID
 }
 
 // SendMessage sends a message from MessageBus.
-func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
-	return network.controller.SendMessage(nodeID, method, msg)
+func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+	return n.controller.SendMessage(nodeID, method, msg)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes
-func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
-	return network.controller.SendCascadeMessage(data, method, msg)
+func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
+	return n.controller.SendCascadeMessage(data, method, msg)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
-func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
-	network.controller.RemoteProcedureRegister(name, method)
+func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+	n.controller.RemoteProcedureRegister(name, method)
 }
 
 // GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
 // TODO: replace with GetNetworkHelper that returns a component with all needed data for interactive/rest API
-func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
-	n := network.hostNetwork.(*dhtnetwork.Wrapper)
-	return n.HostNetwork, dhtnetwork.CreateDHTContext(n.HostNetwork)
+func (n *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
+	hostNetwork := n.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
+	return hostNetwork, dhtnetwork.CreateDHTContext(hostNetwork)
 }
 
 // GetPrivateKey returns a private key.
 // TODO: remove, use helper functions from certificate instead
-func (network *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
-	return network.certificate.GetEcdsaPrivateKey()
+func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
+	return n.certificate.GetEcdsaPrivateKey()
 }
 
 // Start implements core.Component
@@ -129,46 +129,46 @@ func (n *ServiceNetwork) Start(components core.Components) error {
 	return nil
 }
 
-func (network *ServiceNetwork) inject(components core.Components) {
-	network.certificate = components.Certificate
-	network.nodeNetwork = components.NodeNetwork
-	network.pulseManager = components.Ledger.GetPulseManager()
-	network.coordinator = components.NetworkCoordinator
+func (n *ServiceNetwork) inject(components core.Components) {
+	n.certificate = components.Certificate
+	n.nodeNetwork = components.NodeNetwork
+	n.pulseManager = components.Ledger.GetPulseManager()
+	n.coordinator = components.NetworkCoordinator
 }
 
 // Stop implements core.Component
-func (network *ServiceNetwork) Stop() error {
-	return network.hostNetwork.Disconnect()
+func (n *ServiceNetwork) Stop() error {
+	return n.hostNetwork.Disconnect()
 }
 
-func (network *ServiceNetwork) bootstrap() {
-	err := network.controller.Bootstrap()
+func (n *ServiceNetwork) bootstrap() {
+	err := n.controller.Bootstrap()
 	if err != nil {
-		log.Errorln("Failed to bootstrap network", err.Error())
+		log.Errorln("Failed to bootstrap n", err.Error())
 	}
 }
 
-func (network *ServiceNetwork) listen() {
+func (n *ServiceNetwork) listen() {
 	log.Infoln("Network starts listening")
-	err := network.hostNetwork.Listen()
+	err := n.hostNetwork.Listen()
 	if err != nil {
 		log.Errorln("Listen failed:", err.Error())
 	}
 }
 
-func (network *ServiceNetwork) onPulse(pulse core.Pulse) {
-	if network.pulseManager == nil {
+func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
+	if n.pulseManager == nil {
 		log.Error("PulseManager is not initialized")
 		return
 	}
-	currentPulse, err := network.pulseManager.Current()
+	currentPulse, err := n.pulseManager.Current()
 	if err != nil {
 		log.Error(errors.Wrap(err, "Could not get current pulse"))
 		return
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = network.pulseManager.Set(pulse)
+		err = n.pulseManager.Set(pulse)
 		if err != nil {
 			log.Error(errors.Wrap(err, "Failed to set pulse"))
 			return
@@ -183,21 +183,21 @@ func (network *ServiceNetwork) onPulse(pulse core.Pulse) {
 			if err != nil {
 				log.Warn("Writing active nodes to ledger: " + err.Error())
 			}
-		}(network)
+		}(n)
 
-		// TODO: create adequate cancelable context without dht values (after switching to new network)
+		// TODO: create adequate cancelable context without dht values (after switching to new n)
 		ctx := context.WithValue(context.Background(), dhtnetwork.CtxTableIndex, dhtnetwork.DefaultHostID)
-		network.doConsensus(ctx, pulse)
+		n.doConsensus(ctx, pulse)
 	}
 }
 
-func (network *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
-	if !network.consensus.IsPartOfConsensus() {
+func (n *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
+	if !n.consensus.IsPartOfConsensus() {
 		log.Debug("Node is not active and does not participate in consensus")
 		return
 	}
 	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
-	go network.consensus.ProcessPulse(ctx, pulse)
+	go n.consensus.ProcessPulse(ctx, pulse)
 }
 
 // NewHostNetwork create new HostNetwork. Certificate in new network should be removed and pulseCallback should be passed to NewNetworkController.

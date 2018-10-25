@@ -94,5 +94,5 @@ func CalculateNodeUnsyncHash(nodeID core.RecordRef, list []*core.Node) (*network
 	if err != nil {
 		return nil, err
 	}
-	return &network.NodeUnsyncHash{nodeID, hash}, nil
+	return &network.NodeUnsyncHash{NodeID: nodeID, Hash: hash}, nil
 }
