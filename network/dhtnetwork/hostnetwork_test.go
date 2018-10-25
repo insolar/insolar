@@ -23,26 +23,9 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
-
-func addressCfg(address string) configuration.HostNetwork {
-	cfg := configuration.NewConfiguration().Host
-	cfg.Transport.Address = address
-	return cfg
-}
-
-func stunCfg(useStun bool) configuration.HostNetwork {
-	cfg := configuration.NewConfiguration().Host
-	cfg.Transport.BehindNAT = useStun
-	return cfg
-}
-
-func transportCfg(tr string) configuration.HostNetwork {
-	cfg := configuration.NewConfiguration().Host
-	cfg.Transport.Protocol = tr
-	return cfg
-}
 
 func TestConfiguration_NewHostNetwork(t *testing.T) {
 
@@ -69,7 +52,7 @@ func TestConfiguration_NewHostNetwork(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			network, err := NewHostNetwork(test.cfg, cascade1, nil, func(core.Pulse) {})
-			network.SetNodeKeeper(nodekeeper.NewNodeKeeper(nodeID))
+			network.SetNodeKeeper(nodekeeper.NewNodeKeeper(testutils.TestNode(nodeID)))
 			if test.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, network)

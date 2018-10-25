@@ -35,28 +35,41 @@ import (
 
 // NewActiveNodeComponent create active node component
 func NewActiveNodeComponent(configuration configuration.Configuration) (core.ActiveNodeComponent, error) {
+	origin, err := createOrigin(configuration)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to create origin node")
+	}
+
+	nodeKeeper := NewNodeKeeper(origin)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to create active node component")
+	}
+
+	if len(configuration.Host.BootstrapHosts) == 0 {
+		log.Info("Bootstrap nodes is not set. Init zeronet.")
+		nodeKeeper.AddActiveNodes([]*core.Node{origin})
+	}
+
+	return nodeKeeper, nil
+}
+
+func createOrigin(configuration configuration.Configuration) (*core.Node, error) {
 	nodeID := core.NewRefFromBase58(configuration.Node.Node.ID)
-	nodeKeeper := NewNodeKeeper(nodeID)
+	publicAddress, err := resolveAddress(configuration)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to resolve public address")
+	}
 	// TODO: get roles from certificate
 	// TODO: pass public key
-	if len(configuration.Host.BootstrapHosts) == 0 {
-		publicAddress, err := resolveAddress(configuration)
-		if err != nil {
-			return nil, errors.Wrap(err, "Failed to create active node component")
-		}
-
-		log.Info("Bootstrap nodes is not set. Init zeronet.")
-		nodeKeeper.AddActiveNodes([]*core.Node{&core.Node{
-			NodeID:   nodeID,
-			PulseNum: 0,
-			State:    core.NodeActive,
-			Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
-			Address:  publicAddress,
-			Version:  version.Version,
-			// PublicKey: ???
-		}})
-	}
-	return nodeKeeper, nil
+	return &core.Node{
+		NodeID:   nodeID,
+		PulseNum: 0,
+		State:    core.NodeActive,
+		Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
+		Address:  publicAddress,
+		Version:  version.Version,
+		// PublicKey: ???
+	}, nil
 }
 
 func resolveAddress(configuration configuration.Configuration) (string, error) {
@@ -72,9 +85,9 @@ func resolveAddress(configuration configuration.Configuration) (string, error) {
 }
 
 // NewNodeKeeper create new NodeKeeper
-func NewNodeKeeper(nodeID core.RecordRef) network.NodeKeeper {
+func NewNodeKeeper(origin *core.Node) network.NodeKeeper {
 	return &nodekeeper{
-		nodeID:      nodeID,
+		origin:      origin,
 		state:       undefined,
 		active:      make(map[core.RecordRef]*core.Node),
 		sync:        make([]*core.Node, 0),
@@ -94,8 +107,7 @@ const (
 )
 
 type nodekeeper struct {
-	nodeID core.RecordRef
-	self   *core.Node
+	origin *core.Node
 	state  nodekeeperState
 	pulse  core.PulseNumber
 
@@ -119,15 +131,11 @@ func (nk *nodekeeper) Stop() error {
 	return nil
 }
 
-func (nk *nodekeeper) GetID() core.RecordRef {
-	return nk.nodeID
-}
-
-func (nk *nodekeeper) GetSelf() *core.Node {
+func (nk *nodekeeper) GetOrigin() *core.Node {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
-	return nk.self
+	return nk.origin
 }
 
 func (nk *nodekeeper) GetActiveNodes() []*core.Node {
@@ -151,7 +159,7 @@ func (nk *nodekeeper) GetActiveNodesByRole(role core.JetRole) []core.RecordRef {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
-	list, exists := nk.index[calculateJetRole(role)]
+	list, exists := nk.index[jetRoleToNodeRole(role)]
 	if !exists {
 		return nil
 	}
@@ -166,9 +174,9 @@ func (nk *nodekeeper) AddActiveNodes(nodes []*core.Node) {
 
 	activeNodes := make([]string, len(nodes))
 	for i, node := range nodes {
-		if node.NodeID.Equal(nk.nodeID) {
-			nk.self = node
-			log.Infof("Added self node %s to active list", nk.nodeID)
+		if node.NodeID.Equal(nk.origin.NodeID) {
+			nk.origin = node
+			log.Infof("Added origin node %s to active list", nk.origin.NodeID)
 		}
 		nk.active[node.NodeID] = node
 		activeNodes[i] = node.NodeID.String()
@@ -250,7 +258,7 @@ func (nk *nodekeeper) AddUnsync(nodeID core.RecordRef, roles []core.NodeRole, ad
 	nk.unsyncLock.Lock()
 	defer nk.unsyncLock.Unlock()
 
-	if nk.self == nil {
+	if nk.origin.State != core.NodeActive {
 		return nil, errors.New("cannot add node to unsync list: current node is not active")
 	}
 
@@ -354,7 +362,7 @@ func (nk *nodekeeper) collectUnsync(number core.PulseNumber) network.UnsyncList 
 	return nk.unsyncList
 }
 
-func calculateJetRole(role core.JetRole) core.NodeRole {
+func jetRoleToNodeRole(role core.JetRole) core.NodeRole {
 	switch role {
 	case core.RoleVirtualExecutor:
 		return core.RoleVirtual

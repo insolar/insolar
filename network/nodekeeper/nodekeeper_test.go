@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,38 +32,33 @@ func newActiveNode(ref byte) (core.RecordRef, []core.NodeRole, string, string) {
 	return core.RecordRef{ref}, []core.NodeRole{core.RoleUnknown}, "127.0.0.1:12345", "1.1"
 }
 
-func newSelfNode(ref core.RecordRef) *core.Node {
-	// key, _ := ecdsa.GeneratePrivateKey()
-	return &core.Node{
-		NodeID:   ref,
-		PulseNum: core.PulseNumber(0),
-		State:    core.NodeActive,
-		Roles:    []core.NodeRole{core.RoleUnknown},
-		// PublicKey: &key.PublicKey,
-	}
-}
-
 func newNodeKeeper() network.NodeKeeper {
 	id := core.RecordRef{255}
-	keeper := NewNodeKeeper(id)
-	keeper.AddActiveNodes([]*core.Node{newSelfNode(id)})
+	n := testutils.TestNode(id)
+	keeper := NewNodeKeeper(n)
+	keeper.AddActiveNodes([]*core.Node{testutils.TestNode(id)})
 	return keeper
 }
 
-func TestNodekeeper_GetID(t *testing.T) {
+func TestNodekeeper_GetOrigin(t *testing.T) {
 	id := core.RecordRef{255}
-	keeper := NewNodeKeeper(id)
-	assert.Equal(t, id, keeper.GetID())
+	n := testutils.TestNode(id)
+	keeper := NewNodeKeeper(n)
+	assert.Equal(t, n, keeper.GetOrigin())
 }
 
 func TestNodekeeper_AddUnsync(t *testing.T) {
 	id := core.RecordRef{}
-	keeper := NewNodeKeeper(id)
+	n := testutils.TestNode(id)
+	keeper := NewNodeKeeper(n)
+
 	// AddUnsync should return error if we are not an active node
+	n.State = core.NodeJoined
 	_, err := keeper.AddUnsync(newActiveNode(0))
+
 	assert.Error(t, err)
 	// Add active node with NodeKeeper id, so we are now active and can add unsyncs
-	keeper.AddActiveNodes([]*core.Node{newSelfNode(id)})
+	keeper.AddActiveNodes([]*core.Node{testutils.TestNode(id)})
 	_, err = keeper.AddUnsync(newActiveNode(0))
 	assert.NoError(t, err)
 	success, list := keeper.SetPulse(core.PulseNumber(0))
@@ -102,7 +98,7 @@ func TestNodekeeper_pipeline(t *testing.T) {
 		keeper.Sync(list.GetUnsync(), pulse)
 	}
 	// 3 nodes should not advance to join active list
-	// 5 nodes should advance + 1 self node
+	// 5 nodes should advance + 1 origin node
 	assert.Equal(t, 6, len(keeper.GetActiveNodes()))
 	for i := 0; i < 5; i++ {
 		assert.NotNil(t, keeper.GetActiveNode(core.RecordRef{byte(i)}))
@@ -120,9 +116,9 @@ func TestNodekeeper_doubleSync(t *testing.T) {
 	keeper.Sync(list.GetUnsync(), pulse)
 	// second sync should be ignored because pulse has not changed
 	keeper.Sync(list.GetUnsync(), pulse)
-	// and added unsync node should not advance to active list (only one self node would be in the list)
+	// and added unsync node should not advance to active list (only one origin node would be in the list)
 	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
-	assert.Equal(t, keeper.GetSelf().NodeID, keeper.GetActiveNodes()[0].NodeID)
+	assert.Equal(t, keeper.GetOrigin().NodeID, keeper.GetActiveNodes()[0].NodeID)
 }
 
 func TestNodekeeper_doubleSetPulse(t *testing.T) {
@@ -160,7 +156,7 @@ func TestNodekeeper_outdatedSync(t *testing.T) {
 	}
 	wg.Wait()
 	// All Syncs calls are executed out of date
-	// So, no nodes should advance to active list (we should have only 1 self node in active)
+	// So, no nodes should advance to active list (we should have only 1 origin node in active)
 	assert.Equal(t, 1, len(keeper.GetActiveNodes()))
 }
 
