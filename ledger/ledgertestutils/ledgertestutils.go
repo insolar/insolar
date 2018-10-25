@@ -51,8 +51,8 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 
 	// Init components.
 	c.MessageBus = testmessagebus.NewTestMessageBus()
-	if c.ActiveNodeComponent == nil {
-		c.ActiveNodeComponent = nodekeeper.NewNodeKeeper(testutils.TestNode(core.RecordRef{}))
+	if c.NodeNetwork == nil {
+		c.NodeNetwork = nodekeeper.NewNodeKeeper(testutils.TestNode(core.RecordRef{}))
 	}
 
 	// Create ledger.

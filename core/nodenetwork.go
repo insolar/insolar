@@ -54,7 +54,7 @@ type Node struct {
 	Version string
 }
 
-type ActiveNodeComponent interface {
+type NodeNetwork interface {
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetOrigin() *Node
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.

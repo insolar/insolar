@@ -33,8 +33,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewActiveNodeComponent create active node component
-func NewActiveNodeComponent(configuration configuration.Configuration) (core.ActiveNodeComponent, error) {
+// NewNodeNetwork create active node component
+func NewNodeNetwork(configuration configuration.Configuration) (core.NodeNetwork, error) {
 	origin, err := createOrigin(configuration)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create origin node")
@@ -46,6 +46,7 @@ func NewActiveNodeComponent(configuration configuration.Configuration) (core.Act
 	}
 
 	if len(configuration.Host.BootstrapHosts) == 0 {
+		origin.State = core.NodeActive
 		log.Info("Bootstrap nodes is not set. Init zeronet.")
 		nodeKeeper.AddActiveNodes([]*core.Node{origin})
 	}
@@ -59,12 +60,13 @@ func createOrigin(configuration configuration.Configuration) (*core.Node, error)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to resolve public address")
 	}
+
 	// TODO: get roles from certificate
 	// TODO: pass public key
 	return &core.Node{
 		NodeID:   nodeID,
 		PulseNum: 0,
-		State:    core.NodeActive,
+		State:    core.NodeJoined,
 		Roles:    []core.NodeRole{core.RoleVirtual, core.RoleHeavyMaterial, core.RoleLightMaterial},
 		Address:  publicAddress,
 		Version:  version.Version,

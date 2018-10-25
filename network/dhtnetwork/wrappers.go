@@ -217,10 +217,10 @@ func getPulseManager(components core.Components) (core.PulseManager, error) {
 
 // Inject inject components
 func (w *Wrapper) Inject(components core.Components) {
-	if components.ActiveNodeComponent == nil {
+	if components.NodeNetwork == nil {
 		log.Error("active node component is nil")
 	} else {
-		nodeKeeper := components.ActiveNodeComponent.(network.NodeKeeper)
+		nodeKeeper := components.NodeNetwork.(network.NodeKeeper)
 		w.HostNetwork.SetNodeKeeper(nodeKeeper)
 	}
 	if components.NetworkCoordinator == nil {

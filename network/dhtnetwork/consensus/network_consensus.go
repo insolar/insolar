@@ -93,7 +93,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 
 // IsPartOfConsensus returns whether we should perform all consensus interactions or not
 func (ic *NetworkConsensus) IsPartOfConsensus() bool {
-	return ic.keeper.GetOrigin() != nil
+	return ic.keeper.GetOrigin().State == core.NodeActive
 }
 
 // ReceiverHandler return handler that is responsible to handle consensus network requests

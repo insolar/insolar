@@ -36,7 +36,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	keeper := nodekeeper.NewNodeKeeper(testutils.TestNode(core.RecordRef{}))
-	c := core.Components{LogicRunner: lr, ActiveNodeComponent: keeper}
+	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 

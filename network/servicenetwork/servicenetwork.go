@@ -37,10 +37,10 @@ type ServiceNetwork struct {
 	controller  network.Controller
 	consensus   consensus.Processor
 
-	certificate         core.Certificate
-	activeNodeComponent core.ActiveNodeComponent
-	pulseManager        core.PulseManager
-	coordinator         core.NetworkCoordinator
+	certificate  core.Certificate
+	nodeNetwork  core.NodeNetwork
+	pulseManager core.PulseManager
+	coordinator  core.NetworkCoordinator
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -74,7 +74,7 @@ func (network *ServiceNetwork) GetAddress() string {
 
 // GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
-	return network.activeNodeComponent.GetOrigin().NodeID
+	return network.nodeNetwork.GetOrigin().NodeID
 }
 
 // SendMessage sends a message from MessageBus.
@@ -106,21 +106,22 @@ func (network *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 }
 
 // Start implements core.Component
-func (network *ServiceNetwork) Start(components core.Components) error {
-	network.inject(components)
-	go network.listen()
+func (n *ServiceNetwork) Start(components core.Components) error {
+	n.inject(components)
+	go n.listen()
 
-	network.controller.Inject(components)
+	n.controller.Inject(components)
+	n.consensus.SetNodeKeeper(components.NodeNetwork.(network.NodeKeeper))
 
 	log.Infoln("Bootstrapping network...")
-	network.bootstrap()
+	n.bootstrap()
 
-	err := network.controller.AnalyzeNetwork()
+	err := n.controller.AnalyzeNetwork()
 	if err != nil {
 		log.Error(err)
 	}
 
-	err = network.controller.Authorize()
+	err = n.controller.Authorize()
 	if err != nil {
 		return errors.Wrap(err, "error authorizing node")
 	}
@@ -130,7 +131,7 @@ func (network *ServiceNetwork) Start(components core.Components) error {
 
 func (network *ServiceNetwork) inject(components core.Components) {
 	network.certificate = components.Certificate
-	network.activeNodeComponent = components.ActiveNodeComponent
+	network.nodeNetwork = components.NodeNetwork
 	network.pulseManager = components.Ledger.GetPulseManager()
 	network.coordinator = components.NetworkCoordinator
 }
@@ -178,7 +179,7 @@ func (network *ServiceNetwork) onPulse(pulse core.Pulse) {
 			if network.coordinator == nil {
 				return
 			}
-			err := network.coordinator.WriteActiveNodes(pulse.PulseNumber, network.activeNodeComponent.GetActiveNodes())
+			err := network.coordinator.WriteActiveNodes(pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
 			if err != nil {
 				log.Warn("Writing active nodes to ledger: " + err.Error())
 			}

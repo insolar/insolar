@@ -118,9 +118,9 @@ func main() {
 	}
 	cm.components.Certificate = cert
 
-	cm.components.ActiveNodeComponent, err = nodekeeper.NewActiveNodeComponent(cfgHolder.Configuration)
+	cm.components.NodeNetwork, err = nodekeeper.NewNodeNetwork(cfgHolder.Configuration)
 	if err != nil {
-		log.Fatalln("failed to start ActiveNodeComponent: ", err.Error())
+		log.Fatalln("failed to start NodeNetwork: ", err.Error())
 	}
 
 	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)

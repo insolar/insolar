@@ -100,14 +100,7 @@ type OnPulse func(pulse core.Pulse)
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
-	// GetOrigin get active node for the current insolard.
-	GetOrigin() *core.Node
-	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref core.RecordRef) *core.Node
-	// GetActiveNodes get active nodes.
-	GetActiveNodes() []*core.Node
-	// GetActiveNodesByRole get active nodes by role.
-	GetActiveNodesByRole(role core.JetRole) []core.RecordRef
+	core.NodeNetwork
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]*core.Node)
 	// SetPulse sets internal PulseNumber to number. Returns true if set was successful, false if number is less
