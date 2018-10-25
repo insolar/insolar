@@ -966,8 +966,9 @@ func TestDHT_RemoteProcedureCall(t *testing.T) {
 
 	key1, _ := ecdsa.GeneratePrivateKey()
 	key2, _ := ecdsa.GeneratePrivateKey()
-	keeper1 := nodekeeper.NewNodeKeeper(dht1.nodeID)
-	keeper2 := nodekeeper.NewNodeKeeper(dht2.nodeID)
+
+	keeper1 := nodekeeper.NewNodeKeeper(testutils.TestNode(dht1.nodeID))
+	keeper2 := nodekeeper.NewNodeKeeper(testutils.TestNode(dht2.nodeID))
 
 	keeper1.AddActiveNodes([]*core.Node{
 		{

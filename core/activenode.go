@@ -55,10 +55,8 @@ type Node struct {
 }
 
 type ActiveNodeComponent interface {
-	// GetID get self node ID
-	GetID() RecordRef
-	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
-	GetSelf() *Node
+	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
+	GetOrigin() *Node
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
 	GetActiveNode(ref RecordRef) *Node
 	// GetActiveNodes get active nodes.

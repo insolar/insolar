@@ -25,10 +25,8 @@ import (
 
 // NodeKeeper manages unsync, sync and active lists
 type NodeKeeper interface {
-	// GetID get current node ID
-	GetID() core.RecordRef
-	// GetSelf get active node for the current insolard. Returns nil if the current insolard is not an active node.
-	GetSelf() *core.Node
+	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
+	GetOrigin() *core.Node
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.
 	GetActiveNode(ref core.RecordRef) *core.Node
 	// GetActiveNodes get active nodes.

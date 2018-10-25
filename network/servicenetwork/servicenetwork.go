@@ -71,7 +71,7 @@ func (network *ServiceNetwork) GetAddress() string {
 
 // GetNodeID returns current node id.
 func (network *ServiceNetwork) GetNodeID() core.RecordRef {
-	return network.activeNodeComponent.GetID()
+	return network.activeNodeComponent.GetOrigin().NodeID
 }
 
 // SendMessage sends a message from MessageBus.

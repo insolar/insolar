@@ -41,7 +41,7 @@ type selfWrapper struct {
 
 // GetActiveNode implements Participant interface for NodeKeeper wrapper.
 func (s *selfWrapper) GetActiveNode() *core.Node {
-	return s.keeper.GetSelf()
+	return s.keeper.GetOrigin()
 }
 
 // NetworkConsensus binds all functionality related to consensus with the network layer
@@ -92,7 +92,7 @@ func (ic *NetworkConsensus) ProcessPulse(ctx context.Context, pulse core.Pulse) 
 
 // IsPartOfConsensus returns whether we should perform all consensus interactions or not
 func (ic *NetworkConsensus) IsPartOfConsensus() bool {
-	return ic.keeper.GetSelf() != nil
+	return ic.keeper.GetOrigin() != nil
 }
 
 // ReceiverHandler return handler that is responsible to handle consensus network requests

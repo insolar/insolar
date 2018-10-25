@@ -89,8 +89,15 @@ func (c *communicatorSender) ExchangeData(ctx context.Context, pulse core.PulseN
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
 	}
-	request := packet.NewBuilder(sender).Type(packet.TypeExchangeUnsyncLists).Receiver(receiver).
-		Request(&packet.RequestExchangeUnsyncLists{SenderID: c.keeper.GetID(), Pulse: pulse, UnsyncList: data}).Build()
+	request := packet.NewBuilder(sender).
+		Type(packet.TypeExchangeUnsyncLists).
+		Receiver(receiver).
+		Request(&packet.RequestExchangeUnsyncLists{
+			SenderID:   c.keeper.GetOrigin().NodeID,
+			Pulse:      pulse,
+			UnsyncList: data,
+		}).
+		Build()
 	f, err := c.handler.SendRequest(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeData: error sending data to remote party")
@@ -125,8 +132,15 @@ func (c *communicatorSender) ExchangeHash(ctx context.Context, pulse core.PulseN
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
 	}
-	request := packet.NewBuilder(sender).Type(packet.TypeExchangeUnsyncHash).Receiver(receiver).
-		Request(&packet.RequestExchangeUnsyncHash{SenderID: c.keeper.GetID(), Pulse: pulse, UnsyncHash: data}).Build()
+	request := packet.NewBuilder(sender).
+		Type(packet.TypeExchangeUnsyncHash).
+		Receiver(receiver).
+		Request(&packet.RequestExchangeUnsyncHash{
+			SenderID:   c.keeper.GetOrigin().NodeID,
+			Pulse:      pulse,
+			UnsyncHash: data,
+		}).
+		Build()
 	f, err := c.handler.SendRequest(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "ExchangeHash: error sending data to remote party")
