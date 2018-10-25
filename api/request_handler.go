@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
@@ -119,7 +118,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 	}
 
 	e := &message.CallMethod{
-		BaseLogicMessage: message.BaseLogicMessage{Nonce: atomicLoadAndIncrementUint64(&serial)},
+		BaseLogicMessage: message.BaseLogicMessage{Nonce: networkcoordinator.RandomUint64()},
 		ObjectRef:        ref,
 		Method:           method,
 		Arguments:        args,
@@ -411,14 +410,4 @@ func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
 	result[SEED] = seed[:]
 
 	return result, nil
-}
-
-// atomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
 }
