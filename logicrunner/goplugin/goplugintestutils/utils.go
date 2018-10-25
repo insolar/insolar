@@ -326,7 +326,7 @@ func (t *TestArtifactManager) UpdateObject(
 	request core.RecordRef,
 	object core.ObjectDescriptor,
 	memory []byte,
-) (*core.RecordID, error) {
+) (core.ObjectDescriptor, error) {
 	objDesc, ok := t.Objects[*object.HeadRef()]
 	if !ok {
 		return nil, errors.New("No object to update")
@@ -335,7 +335,7 @@ func (t *TestArtifactManager) UpdateObject(
 	objDesc.Data = memory
 
 	// TODO: return real exact "ref"
-	return &core.RecordID{}, nil
+	return objDesc, nil
 }
 
 // RegisterValidation implementation for tests
