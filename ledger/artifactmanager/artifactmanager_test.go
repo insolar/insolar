@@ -422,7 +422,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 		LatestState: objID,
 	})
 	memory := []byte{1, 2, 3}
-	updateCoreID, err := td.manager.UpdateObject(
+	obj, err := td.manager.UpdateObject(
 		ctx,
 		*domainRef.CoreRef(),
 		*td.requestRef.CoreRef(),
@@ -430,7 +430,7 @@ func TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord(t *testing.T) {
 		memory,
 	)
 	assert.Nil(t, err)
-	updateID := record.Bytes2ID(updateCoreID[:])
+	updateID := record.Bytes2ID(obj.StateID()[:])
 	updateRec, err := td.db.GetRecord(&updateID)
 	assert.Nil(t, err)
 	assert.Equal(t, updateRec, &record.ObjectAmendRecord{
@@ -741,7 +741,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	_, err = td.manager.GetObject(ctx, *objRef, nil, true)
 	assert.Equal(t, err, core.ErrStateNotAvailable)
 
-	stateID2, err := td.manager.UpdateObject(
+	desc, err = td.manager.UpdateObject(
 		ctx,
 		*domainRef.CoreRef(),
 		*genRandomRef(0).CoreRef(),
@@ -749,10 +749,11 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		[]byte{2},
 	)
 	assert.NoError(t, err)
+	stateID2 := desc.StateID()
 
 	desc, err = td.manager.GetObject(ctx, *objRef, nil, false)
 	assert.NoError(t, err)
-	stateID3, err := td.manager.UpdateObject(
+	desc, err = td.manager.UpdateObject(
 		ctx,
 		*domainRef.CoreRef(),
 		*genRandomRef(0).CoreRef(),
@@ -760,6 +761,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		[]byte{3},
 	)
 	assert.NoError(t, err)
+	stateID3 := desc.StateID()
 	err = td.manager.RegisterValidation(ctx, *objRef, *stateID2, true, nil)
 	assert.NoError(t, err)
 
