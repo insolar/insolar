@@ -304,7 +304,7 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
-	state := gpr.lr.GetExecution(req.Object)
+	state := gpr.lr.GetExecution(req.Callee)
 	if state == nil {
 		return errors.New("no execution state, impossible, shouldn't be")
 	}
