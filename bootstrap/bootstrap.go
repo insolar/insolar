@@ -289,7 +289,7 @@ func (b *Bootstrapper) activateSmartContracts(am core.ArtifactManager, cb *goplu
 }
 
 // Start creates types and RootDomain instance
-func (b *Bootstrapper) Start(c core.Components) error {
+func (b *Bootstrapper) Start(ctx core.Context, c core.Components) error {
 	log.Info("[ Bootstrapper ] Starting Bootstrap ...")
 
 	rootDomainRef, err := getRootDomainRef(c)
@@ -340,6 +340,6 @@ func (b *Bootstrapper) Start(c core.Components) error {
 }
 
 // Stop implements core.Component method
-func (b *Bootstrapper) Stop() error {
+func (b *Bootstrapper) Stop(ctx core.Context) error {
 	return nil
 }

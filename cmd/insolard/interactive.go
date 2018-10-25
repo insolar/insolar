@@ -24,12 +24,12 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
+	"github.com/insolar/insolar/network/dhtnetwork"
+	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 	"github.com/insolar/insolar/network/servicenetwork"
 )
 
-func repl(service *servicenetwork.ServiceNetwork) {
+func repl(service *servicenetwork.ServiceNetwork, manager core.PulseManager) {
 	displayInteractiveHelp()
 	dhtNetwork, ctx := service.GetHostNetwork()
 
@@ -71,7 +71,7 @@ func repl(service *servicenetwork.ServiceNetwork) {
 		case "activenodes":
 			doActiveNodes(dhtNetwork)
 		case "pulse":
-			doPulse(dhtNetwork.GetNetworkCommonFacade().GetPulseManager())
+			doPulse(manager)
 		default:
 			displayInteractiveHelp()
 		}
@@ -123,7 +123,7 @@ func doInfo(service core.Network, dhtNetwork hosthandler.HostHandler, ctx hostha
 }
 
 func doSendRelay(command, relayAddr string, dhtNetwork hosthandler.HostHandler, ctx hosthandler.Context) {
-	err := hostnetwork.RelayRequest(dhtNetwork, command, relayAddr)
+	err := dhtnetwork.RelayRequest(dhtNetwork, command, relayAddr)
 	if err != nil {
 		log.Println(err)
 	}

@@ -209,7 +209,7 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 		if err != nil {
 			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
 		}
-		o, err := am.GetObject(ctx, *r, nil)
+		o, err := am.GetObject(ctx, *r, nil, false)
 		if err != nil {
 			// TODO: we should detect deactivated objects
 			continue

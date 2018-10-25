@@ -52,7 +52,7 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	classid := &record.ID{Pulse: 100500}
 	idxid := &record.ID{}
 	classvalue0 := &index.ClassLifeline{
-		LatestState: *classid,
+		LatestState: classid,
 	}
 	db.SetClassIndex(idxid, classvalue0)
 
@@ -124,13 +124,13 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	t.Run("with lock", func(t *testing.T) {
 		idxlife := lockfn(t, true)
 		assert.Equal(t, &index.ClassLifeline{
-			LatestState: *classid,
+			LatestState: classid,
 		}, idxlife)
 	})
 	t.Run("no lock", func(t *testing.T) {
 		idxlife := lockfn(t, false)
 		assert.Equal(t, &index.ClassLifeline{
-			LatestState: *classid,
+			LatestState: classid,
 		}, idxlife)
 	})
 }

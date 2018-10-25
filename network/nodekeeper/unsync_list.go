@@ -22,36 +22,36 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network"
 )
 
 type UnsyncList struct {
-	unsync []*core.ActiveNode
+	unsync []*core.Node
 	pulse  core.PulseNumber
-	hash   []*consensus.NodeUnsyncHash
+	hash   []*network.NodeUnsyncHash
 
-	waiters     []chan []*consensus.NodeUnsyncHash
+	waiters     []chan []*network.NodeUnsyncHash
 	waitersLock sync.Mutex
 
-	unsyncListCache map[core.RecordRef][]*core.ActiveNode
+	unsyncListCache map[core.RecordRef][]*core.Node
 	unsyncListLock  sync.Mutex
-	unsyncHashCache map[core.RecordRef][]*consensus.NodeUnsyncHash
+	unsyncHashCache map[core.RecordRef][]*network.NodeUnsyncHash
 	unsyncHashLock  sync.Mutex
 }
 
 // NewUnsyncHolder create new object to hold data for consensus
-func NewUnsyncHolder(pulse core.PulseNumber, unsync []*core.ActiveNode) *UnsyncList {
+func NewUnsyncHolder(pulse core.PulseNumber, unsync []*core.Node) *UnsyncList {
 	return &UnsyncList{
 		pulse:           pulse,
 		unsync:          unsync,
-		waiters:         make([]chan []*consensus.NodeUnsyncHash, 0),
-		unsyncListCache: make(map[core.RecordRef][]*core.ActiveNode),
-		unsyncHashCache: make(map[core.RecordRef][]*consensus.NodeUnsyncHash),
+		waiters:         make([]chan []*network.NodeUnsyncHash, 0),
+		unsyncListCache: make(map[core.RecordRef][]*core.Node),
+		unsyncHashCache: make(map[core.RecordRef][]*network.NodeUnsyncHash),
 	}
 }
 
 // GetUnsync returns list of local unsync nodes. This list is created
-func (u *UnsyncList) GetUnsync() []*core.ActiveNode {
+func (u *UnsyncList) GetUnsync() []*core.Node {
 	return u.unsync
 }
 
@@ -61,7 +61,7 @@ func (u *UnsyncList) GetPulse() core.PulseNumber {
 }
 
 // SetHash sets hash of unsync lists for each node of consensus.
-func (u *UnsyncList) SetHash(hash []*consensus.NodeUnsyncHash) {
+func (u *UnsyncList) SetHash(hash []*network.NodeUnsyncHash) {
 	u.waitersLock.Lock()
 	defer u.waitersLock.Unlock()
 
@@ -73,22 +73,22 @@ func (u *UnsyncList) SetHash(hash []*consensus.NodeUnsyncHash) {
 		ch <- u.hash
 		close(ch)
 	}
-	u.waiters = make([]chan []*consensus.NodeUnsyncHash, 0)
+	u.waiters = make([]chan []*network.NodeUnsyncHash, 0)
 }
 
 // GetHash get hash of unsync lists for each node of consensus. If hash is not calculated yet, then this call blocks
 // until the hash is calculated with SetHash() call
-func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*consensus.NodeUnsyncHash, error) {
+func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*network.NodeUnsyncHash, error) {
 	u.waitersLock.Lock()
 	if u.hash != nil {
 		result := u.hash
 		u.waitersLock.Unlock()
 		return result, nil
 	}
-	ch := make(chan []*consensus.NodeUnsyncHash, 1)
+	ch := make(chan []*network.NodeUnsyncHash, 1)
 	u.waiters = append(u.waiters, ch)
 	u.waitersLock.Unlock()
-	var result []*consensus.NodeUnsyncHash
+	var result []*network.NodeUnsyncHash
 	select {
 	case data := <-ch:
 		if data == nil {
@@ -102,7 +102,7 @@ func (u *UnsyncList) GetHash(blockTimeout time.Duration) ([]*consensus.NodeUnsyn
 }
 
 // AddUnsyncList add unsync list for remote ref
-func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []*core.ActiveNode) {
+func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []*core.Node) {
 	u.unsyncListLock.Lock()
 	defer u.unsyncListLock.Unlock()
 
@@ -110,7 +110,7 @@ func (u *UnsyncList) AddUnsyncList(ref core.RecordRef, unsync []*core.ActiveNode
 }
 
 // AddUnsyncHash add unsync hash for remote ref
-func (u *UnsyncList) AddUnsyncHash(ref core.RecordRef, hash []*consensus.NodeUnsyncHash) {
+func (u *UnsyncList) AddUnsyncHash(ref core.RecordRef, hash []*network.NodeUnsyncHash) {
 	u.unsyncHashLock.Lock()
 	defer u.unsyncHashLock.Unlock()
 
@@ -118,7 +118,7 @@ func (u *UnsyncList) AddUnsyncHash(ref core.RecordRef, hash []*consensus.NodeUns
 }
 
 // GetUnsyncList get unsync list for remote ref
-func (u *UnsyncList) GetUnsyncList(ref core.RecordRef) ([]*core.ActiveNode, bool) {
+func (u *UnsyncList) GetUnsyncList(ref core.RecordRef) ([]*core.Node, bool) {
 	u.unsyncListLock.Lock()
 	defer u.unsyncListLock.Unlock()
 
@@ -127,7 +127,7 @@ func (u *UnsyncList) GetUnsyncList(ref core.RecordRef) ([]*core.ActiveNode, bool
 }
 
 // GetUnsyncHash get unsync hash for remote ref
-func (u *UnsyncList) GetUnsyncHash(ref core.RecordRef) ([]*consensus.NodeUnsyncHash, bool) {
+func (u *UnsyncList) GetUnsyncHash(ref core.RecordRef) ([]*network.NodeUnsyncHash, bool) {
 	u.unsyncHashLock.Lock()
 	defer u.unsyncHashLock.Unlock()
 

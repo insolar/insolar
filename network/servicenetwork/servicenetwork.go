@@ -17,252 +17,199 @@
 package servicenetwork
 
 import (
+	"context"
 	"crypto/ecdsa"
-	"strings"
-	"time"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/cascade"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/hosthandler"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/dhtnetwork"
+	"github.com/insolar/insolar/network/dhtnetwork/hosthandler"
 	"github.com/pkg/errors"
 )
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	nodeNetwork *nodenetwork.NodeNetwork
-	hostNetwork hosthandler.HostHandler
-	nodeKeeper  consensus.NodeKeeper
-	certificate core.Certificate
+	hostNetwork network.HostNetwork
+	controller  network.Controller
+	consensus   consensus.Processor
+
+	certificate  core.Certificate
+	nodeNetwork  core.NodeNetwork
+	pulseManager core.PulseManager
+	coordinator  core.NetworkCoordinator
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error) {
+	network := &ServiceNetwork{}
 
 	// workaround before DI
 	cert, err := certificate.NewCertificate(conf.KeysPath)
 	if err != nil {
 		log.Warnf("failed to read certificate: %s", err.Error())
 	}
-
-	node, err := nodenetwork.NewNodeNetwork(conf)
+	hostnetwork, err := NewHostNetwork(conf, cert, network.onPulse)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create node network")
+		log.Error("failed to create hostnetwork: %s", err.Error())
 	}
-	if node == nil {
-		return nil, errors.New("failed to create a node network")
-	}
-
-	cascade1 := &cascade.Cascade{}
-	dht, err := hostnetwork.NewHostNetwork(conf.Host, node, cascade1, cert)
+	controller, err := NewNetworkController(conf, hostnetwork)
 	if err != nil {
-		return nil, err
+		log.Error("failed to create network controller: %s", err.Error())
 	}
-
-	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
-	f := func(data core.Cascade, method string, args [][]byte) error {
-		return service.initCascadeSendMessage(data, true, method, args)
-	}
-	cascade1.SendMessage = f
-	return service, nil
+	network.hostNetwork = hostnetwork
+	network.controller = controller
+	network.certificate = cert
+	network.consensus = NewConsensus(network.hostNetwork)
+	return network, nil
 }
 
 // GetAddress returns host public address.
-func (network *ServiceNetwork) GetAddress() string {
-	return network.hostNetwork.GetOriginHost().Address.String()
+func (n *ServiceNetwork) GetAddress() string {
+	return n.hostNetwork.PublicAddress()
 }
 
 // GetNodeID returns current node id.
-func (network *ServiceNetwork) GetNodeID() core.RecordRef {
-	return network.nodeNetwork.GetID()
-}
-
-func (network *ServiceNetwork) GetActiveNodeComponent() core.ActiveNodeComponent {
-	return network.nodeKeeper
+func (n *ServiceNetwork) GetNodeID() core.RecordRef {
+	return n.nodeNetwork.GetOrigin().NodeID
 }
 
 // SendMessage sends a message from MessageBus.
-func (network *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
-	start := time.Now()
-	if msg == nil {
-		return nil, errors.New("message is nil")
-	}
-	hostID := nodenetwork.ResolveHostID(nodeID)
-	buff, err := message.ToBytes(msg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize event")
-	}
-
-	log.Debugf("SendMessage with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		method, msg.Target().String())
-
-	metrics.NetworkMessageSentTotal.Inc()
-	res, err := network.hostNetwork.RemoteProcedureCall(createContext(network.hostNetwork), hostID, method, [][]byte{buff})
-	log.Debugf("Inside SendMessage: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s", msg.Type(), msg.Target(), msg.GetCaller(), msg.TargetRole(), time.Since(start))
-	return res, err
+func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Message) ([]byte, error) {
+	return n.controller.SendMessage(nodeID, method, msg)
 }
 
-// SendCascadeMessage sends a message from MessageBus to a cascade of nodes. Message reference is ignored
-func (network *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
-	if msg == nil {
-		return errors.New("message is nil")
-	}
-	buff, err := message.ToBytes(msg)
-	if err != nil {
-		return errors.Wrap(err, "Failed to serialize event")
-	}
-
-	return network.initCascadeSendMessage(data, false, method, [][]byte{buff})
+// SendCascadeMessage sends a message from MessageBus to a cascade of nodes
+func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Message) error {
+	return n.controller.SendCascadeMessage(data, method, msg)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
-func (network *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
-	network.hostNetwork.RemoteProcedureRegister(name, method)
+func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+	n.controller.RemoteProcedureRegister(name, method)
 }
 
 // GetHostNetwork returns pointer to host network layer(DHT), temp method, refactoring needed
-func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
-	return network.hostNetwork, createContext(network.hostNetwork)
+// TODO: replace with GetNetworkHelper that returns a component with all needed data for interactive/rest API
+func (n *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hosthandler.Context) {
+	hostNetwork := n.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
+	return hostNetwork, dhtnetwork.CreateDHTContext(hostNetwork)
 }
 
 // GetPrivateKey returns a private key.
-func (network *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
-	return network.hostNetwork.GetPrivateKey()
-}
-
-func getPulseManager(components core.Components) (core.PulseManager, error) {
-	if components.Ledger == nil {
-		return nil, errors.New("no core.Ledger in components")
-	}
-	return components.Ledger.GetPulseManager(), nil
+// TODO: remove, use helper functions from certificate instead
+func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
+	return n.certificate.GetEcdsaPrivateKey()
 }
 
 // Start implements core.Component
-func (network *ServiceNetwork) Start(components core.Components) error {
-	network.certificate = components.Certificate
-	go network.listen()
+func (n *ServiceNetwork) Start(insctx core.Context, components core.Components) error {
+	n.inject(components)
+	go n.listen()
 
-	if components.ActiveNodeComponent == nil {
-		log.Error("active node component is nil")
-	} else {
-		nodeKeeper := components.ActiveNodeComponent.(consensus.NodeKeeper)
-		network.nodeKeeper = nodeKeeper
-		network.hostNetwork.SetNodeKeeper(nodeKeeper)
-	}
-
-	if components.NetworkCoordinator == nil {
-		log.Error("network coordinator is nil")
-	} else {
-		network.hostNetwork.GetNetworkCommonFacade().SetNetworkCoordinator(components.NetworkCoordinator)
-	}
+	n.controller.Inject(components)
+	n.consensus.SetNodeKeeper(components.NodeNetwork.(network.NodeKeeper))
 
 	log.Infoln("Bootstrapping network...")
-	network.bootstrap()
+	n.bootstrap()
 
-	pm, err := getPulseManager(components)
+	err := n.controller.AnalyzeNetwork()
 	if err != nil {
 		log.Error(err)
-	} else {
-		network.hostNetwork.GetNetworkCommonFacade().SetPulseManager(pm)
 	}
 
-	ctx := createContext(network.hostNetwork)
-	err = network.hostNetwork.ObtainIP()
-	if err != nil {
-		return errors.Wrap(err, "Failed to ObtainIP")
-	}
-
-	err = network.hostNetwork.AnalyzeNetwork(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Failed to AnalyzeNetwork")
-	}
-
-	err = network.hostNetwork.StartAuthorize()
+	err = n.controller.Authorize()
 	if err != nil {
 		return errors.Wrap(err, "error authorizing node")
-		// log.Errorln(err.Error())
 	}
 
 	return nil
+}
+
+func (n *ServiceNetwork) inject(components core.Components) {
+	n.certificate = components.Certificate
+	n.nodeNetwork = components.NodeNetwork
+	n.pulseManager = components.Ledger.GetPulseManager()
+	n.coordinator = components.NetworkCoordinator
 }
 
 // Stop implements core.Component
-func (network *ServiceNetwork) Stop() error {
-	log.Infoln("Stop network")
-	network.hostNetwork.Disconnect()
-	return nil
+func (n *ServiceNetwork) Stop(insctx core.Context) error {
+	return n.hostNetwork.Disconnect()
 }
 
-func (network *ServiceNetwork) bootstrap() {
-	err := network.hostNetwork.Bootstrap()
+func (n *ServiceNetwork) bootstrap() {
+	err := n.controller.Bootstrap()
 	if err != nil {
-		log.Errorln("Failed to bootstrap network", err.Error())
-		return
+		log.Errorln("Failed to bootstrap n", err.Error())
 	}
-	network.hostNetwork.GetHostsFromBootstrap()
 }
 
-func (network *ServiceNetwork) listen() {
+func (n *ServiceNetwork) listen() {
 	log.Infoln("Network starts listening")
-	err := network.hostNetwork.Listen()
+	err := n.hostNetwork.Listen()
 	if err != nil {
 		log.Errorln("Listen failed:", err.Error())
 	}
 }
 
-func createContext(handler hosthandler.HostHandler) hosthandler.Context {
-	ctx, err := hostnetwork.NewContextBuilder(handler).SetDefaultHost().Build()
-	if err != nil {
-		log.Fatalln("Failed to create context:", err.Error())
+func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
+	if n.pulseManager == nil {
+		log.Error("PulseManager is not initialized")
+		return
 	}
-	return ctx
+	currentPulse, err := n.pulseManager.Current()
+	if err != nil {
+		log.Error(errors.Wrap(err, "Could not get current pulse"))
+		return
+	}
+	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
+		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
+		err = n.pulseManager.Set(pulse)
+		if err != nil {
+			log.Error(errors.Wrap(err, "Failed to set pulse"))
+			return
+		}
+		log.Infof("Set new current pulse number: %d", pulse.PulseNumber)
+		go func(network *ServiceNetwork) {
+			network.controller.ResendPulseToKnownHosts(pulse)
+			if network.coordinator == nil {
+				return
+			}
+			err := network.coordinator.WriteActiveNodes(pulse.PulseNumber, network.nodeNetwork.GetActiveNodes())
+			if err != nil {
+				log.Warn("Writing active nodes to ledger: " + err.Error())
+			}
+		}(n)
+
+		// TODO: create adequate cancelable context without dht values (after switching to new n)
+		ctx := context.WithValue(context.Background(), dhtnetwork.CtxTableIndex, dhtnetwork.DefaultHostID)
+		n.doConsensus(ctx, pulse)
+	}
 }
 
-// initCascadeSendMessage initiates the RPC call on target host and sends messages to next cascade layers
-func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCurrentNode bool, method string, args [][]byte) error {
-	if len(data.NodeIds) == 0 {
-		return errors.New("node IDs list should not be empty")
+func (n *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
+	if !n.consensus.IsPartOfConsensus() {
+		log.Debug("Node is not active and does not participate in consensus")
+		return
 	}
-	if data.ReplicationFactor == 0 {
-		return errors.New("replication factor should not be zero")
-	}
+	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
+	go n.consensus.ProcessPulse(ctx, pulse)
+}
 
-	var nextNodes []core.RecordRef
-	var err error
+// NewHostNetwork create new HostNetwork. Certificate in new network should be removed and pulseCallback should be passed to NewNetworkController.
+func NewHostNetwork(conf configuration.Configuration, certificate core.Certificate, pulseCallback network.OnPulse) (network.HostNetwork, error) {
+	return dhtnetwork.NewDhtHostNetwork(conf, certificate, pulseCallback)
+}
 
-	if findCurrentNode {
-		nodeID := network.nodeNetwork.GetID()
-		nextNodes, err = cascade.CalculateNextNodes(data, &nodeID)
-	} else {
-		nextNodes, err = cascade.CalculateNextNodes(data, nil)
-	}
-	if err != nil {
-		return errors.Wrap(err, "Failed to CalculateNextNodes")
-	}
-	if len(nextNodes) == 0 {
-		return nil
-	}
+// NewNetworkController create new network.Controller. In new network it should read conf.
+func NewNetworkController(conf configuration.Configuration, network network.HostNetwork) (network.Controller, error) {
+	return dhtnetwork.NewDhtNetworkController(network)
+}
 
-	var failedNodes []string
-	for _, nextNode := range nextNodes {
-		hostID := nodenetwork.ResolveHostID(nextNode)
-		err = network.hostNetwork.CascadeSendMessage(data, hostID, method, args)
-		if err != nil {
-			log.Debugln("failed to send cascade message: ", err)
-			failedNodes = append(failedNodes, nextNode.String())
-		}
-	}
-
-	if len(failedNodes) > 0 {
-		return errors.New("failed to send cascade message to nodes: " + strings.Join(failedNodes, ", "))
-	}
-
-	return nil
+func NewConsensus(network network.HostNetwork) consensus.Processor {
+	return dhtnetwork.NewNetworkConsensus(network)
 }
