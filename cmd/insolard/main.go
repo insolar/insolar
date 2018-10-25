@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"reflect"
@@ -75,16 +76,44 @@ func (cm *componentManager) stopAll() {
 }
 
 var (
-	configPath string
+	configPath               string
+	isBootstrap              bool
+	bootstrapCertificatePath string
 )
 
 func parseInputParams() {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().BoolVarP(&isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
+	rootCmd.Flags().StringVarP(&bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
 	}
+
+	if isBootstrap && len(bootstrapCertificatePath) == 0 {
+		log.Fatal("flag '--cert_out|-r' must not be empty, if '--bootstrap|-b' exists")
+	}
+}
+
+func RegisterCurrentNode(cfgHolder *configuration.Holder, cert *certificate.Certificate, nc core.NetworkCoordinator) {
+	roles := []string{"virtual", "heavy_material", "light_material"}
+	host := cfgHolder.Configuration.Host.Transport.Address
+	publicKey, err := cert.GetPublicKey()
+	if err != nil {
+		log.Fatalln("failed to get public key: ", err.Error())
+	}
+
+	rawCertificate, err := nc.RegisterNode(publicKey, 0, 0, roles, host)
+	if err != nil {
+		log.Fatalln("Can't register node: ", err.Error())
+	}
+
+	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
+	if err != nil {
+		log.Fatalln("Can't write certificate: ", err.Error())
+	}
+
 }
 
 func main() {
@@ -185,6 +214,12 @@ func main() {
 		cm.stopAll()
 		os.Exit(0)
 	}()
+
+	if isBootstrap {
+		RegisterCurrentNode(cfgHolder, cert, cm.components.NetworkCoordinator)
+		log.Info("It's bootstrap mode, that is why gracefully stop daemon by sending SIGINT")
+		gracefulStop <- syscall.SIGINT
+	}
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")
