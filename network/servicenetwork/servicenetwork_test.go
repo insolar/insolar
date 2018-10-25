@@ -28,9 +28,10 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/inscontext"
-	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,7 +41,7 @@ const keysPath = "../../testdata/functional/bootstrap_keys.json"
 func initComponents(t *testing.T, nodeId core.RecordRef) core.Components {
 	cert, err := certificate.NewCertificate(keysPath)
 	assert.NoError(t, err)
-	return core.Components{Certificate: cert, ActiveNodeComponent: nodekeeper.NewNodeKeeper(nodeId)}
+	return core.Components{Certificate: cert, NodeNetwork: nodekeeper.NewNodeKeeper(testutils.TestNode(nodeId)), Ledger: &dhtnetwork.MockLedger{}}
 }
 
 /*
@@ -343,8 +344,8 @@ func Test_processPulse(t *testing.T) {
 		"127.0.0.1:10001",
 		nil,
 		secondNodeId))
-	firstLedger := &mockLedger{PM: &hostnetwork.MockPulseManager{}}
-	mpm := hostnetwork.MockPulseManager{}
+	firstLedger := &mockLedger{PM: &dhtnetwork.MockPulseManager{}}
+	mpm := dhtnetwork.MockPulseManager{}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	mpm.SetCallback(func(pulse core.Pulse) {
@@ -366,12 +367,13 @@ func Test_processPulse(t *testing.T) {
 	firstStoredPulse, _ := firstLedger.GetPulseManager().Current()
 	assert.Equal(t, core.PulseNumber(0), firstStoredPulse.PulseNumber)
 
-	hh := firstNode.hostNetwork
-	pckt := packet.NewBuilder().Type(packet.TypePulse).Request(
+	hh := firstNode.hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
+	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar
-	hostnetwork.DispatchPacketType(hh, hostnetwork.GetDefaultCtx(hh), pckt, packet.NewBuilder())
+	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
+	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = firstLedger.GetPulseManager().Current()
@@ -420,7 +422,7 @@ func Test_processPulse2(t *testing.T) {
 
 	// init node and register test function
 	initService := func(node string, bHosts []string) (host string) {
-		mpm := hostnetwork.MockPulseManager{}
+		mpm := dhtnetwork.MockPulseManager{}
 		mpm.SetCallback(func(pulse core.Pulse) {
 			if pulse.PulseNumber == core.PulseNumber(1) {
 				wg.Done()
@@ -455,12 +457,13 @@ func Test_processPulse2(t *testing.T) {
 
 	// time.Sleep(time.Millisecond * 100)
 
-	hh := services[lastIndex].hostNetwork
-	pckt := packet.NewBuilder().Type(packet.TypePulse).Request(
+	hh := services[lastIndex].hostNetwork.(*dhtnetwork.Wrapper).HostNetwork
+	pckt := packet.NewBuilder(nil).Type(types.TypePulse).Request(
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar on the last started service
-	hostnetwork.DispatchPacketType(hh, hostnetwork.GetDefaultCtx(hh), pckt, packet.NewBuilder())
+	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
+	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = ll.GetPulseManager().Current()

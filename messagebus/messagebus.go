@@ -35,7 +35,7 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 type MessageBus struct {
 	service      core.Network
 	ledger       core.Ledger
-	activeNodes  core.ActiveNodeComponent
+	activeNodes  core.NodeNetwork
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
 }
@@ -53,7 +53,7 @@ func (mb *MessageBus) Start(ctx core.Context, c core.Components) error {
 	mb.service = c.Network
 	mb.service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 	mb.ledger = c.Ledger
-	mb.activeNodes = c.ActiveNodeComponent
+	mb.activeNodes = c.NodeNetwork
 
 	return nil
 }
