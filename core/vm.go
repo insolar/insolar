@@ -47,7 +47,6 @@ type LogicRunner interface {
 	ExecutorResults(Context, Message) (res Reply, err error)
 	Validate(ref RecordRef, p Pulse, cr []CaseRecord) (int, error)
 	OnPulse(Pulse) error
-	GetLedger() Ledger
 }
 
 // LogicCallContext is a context of contract execution

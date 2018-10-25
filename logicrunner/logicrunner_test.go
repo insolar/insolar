@@ -1320,7 +1320,7 @@ func New(n int) (*Child, error) {
 		return nil, nil
 	})
 
-	err = lr.GetLedger().GetPulseManager().Set(core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}})
+	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}})
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {

@@ -192,10 +192,6 @@ func (lr *LogicRunner) UpsertExecution(ref Ref) *ExecutionState {
 	return lr.execution[ref]
 }
 
-func (lr *LogicRunner) GetLedger() core.Ledger {
-	return lr.Ledger
-}
-
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply, error) {
 	// TODO do not pass here message.ValidateCaseBind and message.ExecutorResults
@@ -217,7 +213,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 	}
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	isAuthorized, err := lr.GetLedger().GetJetCoordinator().IsAuthorized(vb.GetRole(), *msg.Target(), lr.pulse().PulseNumber, lr.Network.GetNodeID())
+	isAuthorized, err := lr.Ledger.GetJetCoordinator().IsAuthorized(vb.GetRole(), *msg.Target(), lr.pulse().PulseNumber, lr.Network.GetNodeID())
 
 	if err != nil {
 		return nil, errors.New("Authorization failed with error: " + err.Error())
@@ -258,7 +254,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 }
 
 func (lr *LogicRunner) pulse() *core.Pulse {
-	pulse, err := lr.GetLedger().GetPulseManager().Current()
+	pulse, err := lr.Ledger.GetPulseManager().Current()
 	if err != nil {
 		panic(err)
 	}
