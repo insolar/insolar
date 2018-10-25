@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -36,7 +37,7 @@ const HOST = "http://localhost:19191"
 const TestUrl = HOST + "/api/v1?query_type=LOL"
 
 func TestMain(m *testing.M) {
-	ctx := inscontext.TODO()
+	ctx := inscontext.WithTraceID(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
 	bootstrapCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)

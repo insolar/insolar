@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/inscontext"
-
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )

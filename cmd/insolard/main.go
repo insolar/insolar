@@ -112,7 +112,7 @@ func main() {
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	ctx := inscontext.TODO()
+	ctx := inscontext.WithRandomTraceID()
 
 	cm := componentManager{}
 	cert, err := certificate.NewCertificate(cfgHolder.Configuration.KeysPath)

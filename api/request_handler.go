@@ -74,7 +74,6 @@ func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 
 // RequestHandler encapsulate processing of request
 type RequestHandler struct {
-	traceID             string
 	params              *Params
 	messageBus          core.MessageBus
 	rootDomainReference core.RecordRef

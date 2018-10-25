@@ -53,7 +53,7 @@ func writeReponse(response http.ResponseWriter, answer map[string]interface{}) {
 func FakeHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 
-	ctx := inscontext.TODO()
+	ctx := inscontext.WithTraceID(context.Background(), "FakeHandler")
 	params, err := api.PreprocessRequest(ctx, req)
 	if err != nil {
 		log.Errorf("Can't read request\n")
