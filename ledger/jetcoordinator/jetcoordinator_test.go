@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/network/nodekeeper"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,8 +35,8 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		BuiltIn: &configuration.BuiltIn{},
 	})
 	assert.NoError(t, err)
-	keeper := nodekeeper.NewNodeKeeper(core.RecordRef{})
-	c := core.Components{LogicRunner: lr, ActiveNodeComponent: keeper}
+	keeper := nodekeeper.NewNodeKeeper(testutils.TestNode(core.RecordRef{}))
+	c := core.Components{LogicRunner: lr, NodeNetwork: keeper}
 	ledger, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()
 
@@ -48,7 +49,7 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 
 	ref := func(r string) core.RecordRef { return core.NewRefFromBase58(r) }
 
-	keeper.AddActiveNodes([]*core.ActiveNode{
+	keeper.AddActiveNodes([]*core.Node{
 		{NodeID: ref("53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"), Roles: []core.NodeRole{core.RoleVirtual}},
 		{NodeID: ref("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"), Roles: []core.NodeRole{core.RoleLightMaterial}},
 	})

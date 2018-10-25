@@ -109,7 +109,7 @@ func NewTestLedger(
 }
 
 // Start initializes external ledger dependencies.
-func (l *Ledger) Start(c core.Components) error {
+func (l *Ledger) Start(ctx core.Context, c core.Components) error {
 	var err error
 	if err = l.am.Link(c); err != nil {
 		return err
@@ -128,6 +128,6 @@ func (l *Ledger) Start(c core.Components) error {
 }
 
 // Stop stops Ledger gracefully.
-func (l *Ledger) Stop() error {
+func (l *Ledger) Stop(ctx core.Context) error {
 	return l.db.Close()
 }

@@ -112,6 +112,8 @@ const (
 	TypeJetDrop
 	// TypeSetRecord saves record in storage.
 	TypeSetRecord
+	// TypeValidateRecord saves record in storage.
+	TypeValidateRecord
 
 	// Bootstrap
 

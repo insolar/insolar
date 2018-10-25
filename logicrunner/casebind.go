@@ -136,7 +136,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			}
 		case *reply.CallConstructor:
 			if got, ok := ret.(*reply.CallConstructor); !ok {
-				return step, errors.New("not result type callmethod")
+				return step, errors.New("not result type callconstructor")
 			} else if !got.Object.Equal(*need.Object) {
 				return step, errors.New("constructed refs mismatch mismatch")
 			}
@@ -154,7 +154,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx core.Context, inmsg core.SignedMessa
 	_, err := lr.MessageBus.Send(
 		inscontext.TODO(),
 		&message.ValidationResults{
-			//Caller:           lr.Network.GetNodeID(),
+			Caller:           lr.Network.GetNodeID(),
 			RecordRef:        msg.GetReference(),
 			PassedStepsCount: passedStepsCount,
 			Error:            validationError,
@@ -204,6 +204,7 @@ func (lr *LogicRunner) ExecutorResults(ctx core.Context, inmsg core.SignedMessag
 type ValidationBehaviour interface {
 	Begin(refs Ref, record core.CaseRecord)
 	End(refs Ref, record core.CaseRecord)
+	GetRole() core.JetRole
 	ModifyContext(ctx *core.LogicCallContext)
 	NeedSave() bool
 	RegisterRequest(m message.IBaseLogicMessage) (*Ref, error)
@@ -247,6 +248,10 @@ func (vb ValidationSaver) End(refs Ref, record core.CaseRecord) {
 	vb.lr.addObjectCaseRecord(refs, record)
 }
 
+func (vb ValidationSaver) GetRole() core.JetRole {
+	return core.RoleVirtualExecutor
+}
+
 type ValidationChecker struct {
 	lr *LogicRunner
 	cb core.CaseBindReplay
@@ -281,4 +286,8 @@ func (vb ValidationChecker) Begin(refs Ref, record core.CaseRecord) {
 
 func (vb ValidationChecker) End(refs Ref, record core.CaseRecord) {
 	// do nothing, everything done in lr.Validate
+}
+
+func (vb ValidationChecker) GetRole() core.JetRole {
+	return core.RoleVirtualValidator
 }

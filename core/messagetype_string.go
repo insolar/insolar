@@ -4,9 +4,9 @@ package core
 
 import "strconv"
 
-const _MessageType_name = "TypeCallMethodTypeCallConstructorTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypeRequestCallTypeGetCodeTypeGetClassTypeGetObjectTypeGetDelegateTypeGetChildrenTypeDeclareTypeTypeDeployCodeTypeActivateClassTypeDeactivateClassTypeUpdateClassTypeActivateObjectTypeActivateObjectDelegateTypeDeactivateObjectTypeUpdateObjectTypeRegisterChildTypeJetDropTypeSetRecordTypeBootstrapRequest"
+const _MessageType_name = "TypeCallMethodTypeCallConstructorTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypeRequestCallTypeGetCodeTypeGetClassTypeGetObjectTypeGetDelegateTypeGetChildrenTypeDeclareTypeTypeDeployCodeTypeActivateClassTypeDeactivateClassTypeUpdateClassTypeActivateObjectTypeActivateObjectDelegateTypeDeactivateObjectTypeUpdateObjectTypeRegisterChildTypeBootstrapRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 33, 52, 72, 93, 108, 119, 131, 144, 159, 174, 189, 203, 220, 239, 254, 272, 298, 318, 334, 351, 362, 375, 395}
+var _MessageType_index = [...]uint16{0, 14, 33, 52, 72, 93, 108, 119, 131, 144, 159, 174, 189, 203, 220, 239, 254, 272, 298, 318, 334, 351, 371}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {
