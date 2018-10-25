@@ -104,7 +104,8 @@ func registerCurrentNode(cfgHolder *configuration.Holder, cert *certificate.Cert
 	publicKey, err := cert.GetPublicKey()
 	checkError("failed to get public key: ", err)
 
-	rawCertificate, err := nc.RegisterNode(publicKey, 0, 0, roles, host)
+	ctx := inscontext.TODO()
+	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
 	checkError("Can't register node: ", err)
 
 	err = ioutil.WriteFile(bootstrapCertificatePath, rawCertificate, 0644)
