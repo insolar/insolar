@@ -23,8 +23,6 @@ import (
 	"runtime"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -79,7 +77,7 @@ func getContractsMap() (map[string]string, error) {
 	return contracts, nil
 }
 
-func isLightExecutor(c core.Components) (bool, error) {
+func isLightExecutor(ctx core.Context, c core.Components) (bool, error) {
 	am := c.Ledger.GetArtifactManager()
 	jc := c.Ledger.GetJetCoordinator()
 	pm := c.Ledger.GetPulseManager()
@@ -96,15 +94,14 @@ func isLightExecutor(c core.Components) (bool, error) {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
 	}
 	if !isLightExecutor {
-		log.Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
+		ctx.Log().Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
 		return false, nil
 	}
 	return true, nil
 }
 
-func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
+func getRootDomainRef(ctx core.Context, c core.Components) (*core.RecordRef, error) {
 	am := c.Ledger.GetArtifactManager()
-	ctx := inscontext.TODO()
 	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
@@ -123,7 +120,7 @@ func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	return nil, nil
 }
 
-func getRootMemberPubKey(file string) (string, error) {
+func getRootMemberPubKey(ctx core.Context, file string) (string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
 		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't get abs path")
