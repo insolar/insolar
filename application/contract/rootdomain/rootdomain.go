@@ -125,28 +125,6 @@ func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 	return m.GetReference().String(), nil
 }
 
-// GetBalance processes get balance request
-func (rd *RootDomain) GetBalance(reference string) (uint, error) {
-	w, err := wallet.GetImplementationFrom(core.NewRefFromBase58(reference))
-	if err != nil {
-		return 0, fmt.Errorf("[ GetBalance ] Can't get implementation: %s", err.Error())
-	}
-
-	return w.GetTotalBalance()
-}
-
-// SendMoney processes send money request
-func (rd *RootDomain) SendMoney(from string, to string, amount uint) (bool, error) {
-	walletFrom, err := wallet.GetImplementationFrom(core.NewRefFromBase58(from))
-	if err != nil {
-		return false, fmt.Errorf("[ SendMoney ] Can't get implementation: %s", err.Error())
-	}
-
-	v := core.NewRefFromBase58(to)
-	walletFrom.Transfer(amount, &v)
-	return true, nil
-}
-
 func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, error) {
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
