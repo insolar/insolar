@@ -202,7 +202,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]inte
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with exporting pubKey")
 	}
 
-	rawCertificate, err := rh.netCoordinator.RegisterNode(pubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
+	rawCertificate, err := rh.netCoordinator.RegisterNode(ctx, pubKey, 0, 0, []string{"virtual"}, "127.0.0.1")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
@@ -212,7 +212,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]inte
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::RegisterNode")
 	}
 
-	regPubKey, _, err := rh.netCoordinator.Authorize(core.NewRefFromBase58(nodeRef), seed, signature)
+	regPubKey, _, err := rh.netCoordinator.Authorize(ctx, core.NewRefFromBase58(nodeRef), seed, signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ] Problem with netcoordinator::Authorize")
 	}
