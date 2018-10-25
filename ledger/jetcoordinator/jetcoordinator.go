@@ -28,7 +28,7 @@ type JetCoordinator struct {
 	db          *storage.DB
 	rootJetNode *JetNode
 	roleCounts  map[core.JetRole]int
-	activeNodes core.ActiveNodeComponent
+	activeNodes core.NodeNetwork
 }
 
 // NewJetCoordinator creates new coordinator instance.
@@ -103,10 +103,10 @@ func (jc *JetCoordinator) QueryRole(
 }
 
 func (jc *JetCoordinator) Link(components core.Components) error {
-	if components.ActiveNodeComponent == nil {
-		return errors.New("core.ActiveNodeComponent is nil")
+	if components.NodeNetwork == nil {
+		return errors.New("core.NodeNetwork is nil")
 	}
-	jc.activeNodes = components.ActiveNodeComponent
+	jc.activeNodes = components.NodeNetwork
 	return nil
 }
 

@@ -38,7 +38,7 @@ func New() (*NetworkCoordinator, error) {
 }
 
 // Start implements interface of Component
-func (nc *NetworkCoordinator) Start(c core.Components) error {
+func (nc *NetworkCoordinator) Start(ctx core.Context, c core.Components) error {
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
 	nc.rootDomainRef = c.Bootstrapper.GetRootDomainRef()
@@ -47,7 +47,7 @@ func (nc *NetworkCoordinator) Start(c core.Components) error {
 }
 
 // Stop implements interface of Component
-func (nc *NetworkCoordinator) Stop() error {
+func (nc *NetworkCoordinator) Stop(ctx core.Context) error {
 	return nil
 }
 
@@ -110,7 +110,7 @@ func (nc *NetworkCoordinator) fetchNodeDomainRef() (*core.RecordRef, error) {
 }
 
 // WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) WriteActiveNodes(number core.PulseNumber, activeNodes []*core.ActiveNode) error {
+func (nc *NetworkCoordinator) WriteActiveNodes(number core.PulseNumber, activeNodes []*core.Node) error {
 	return errors.New("not implemented")
 }
 

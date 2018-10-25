@@ -105,7 +105,7 @@ func isLightExecutor(c core.Components) (bool, error) {
 func getRootDomainRef(c core.Components) (*core.RecordRef, error) {
 	am := c.Ledger.GetArtifactManager()
 	ctx := inscontext.TODO()
-	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil)
+	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getRootDomainRef ] couldn't get children of GenesisRef object")
 	}

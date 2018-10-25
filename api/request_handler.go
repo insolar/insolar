@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/pkg/errors"
@@ -74,7 +73,6 @@ func extractAuthorizeResponse(data []byte) (string, []core.NodeRole, error) {
 
 // RequestHandler encapsulate processing of request
 type RequestHandler struct {
-	qid                 string
 	params              *Params
 	messageBus          core.MessageBus
 	rootDomainReference core.RecordRef
@@ -86,7 +84,6 @@ type RequestHandler struct {
 // NewRequestHandler creates new query handler
 func NewRequestHandler(params *Params, messageBus core.MessageBus, nc core.NetworkCoordinator, rootDomainReference core.RecordRef, smanager *seedmanager.SeedManager) *RequestHandler {
 	return &RequestHandler{
-		qid:                 params.QID,
 		params:              params,
 		messageBus:          messageBus,
 		rootDomainReference: rootDomainReference,
@@ -95,13 +92,13 @@ func NewRequestHandler(params *Params, messageBus core.MessageBus, nc core.Netwo
 	}
 }
 
-func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core.Reply, error) {
+func (rh *RequestHandler) sendRequest(ctx core.Context, method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
 	}
 
-	routResult, err := rh.routeCall(rh.rootDomainReference, method, args)
+	routResult, err := rh.routeCall(ctx, rh.rootDomainReference, method, args)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
 	}
@@ -112,7 +109,7 @@ func (rh *RequestHandler) sendRequest(method string, argsIn []interface{}) (core
 // TODO: make it ok
 var serial uint64 = 1
 
-func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
+func (rh *RequestHandler) routeCall(ctx core.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if rh.messageBus == nil {
 		return nil, errors.New("[ RouteCall ] message bus was not set during initialization")
 	}
@@ -124,7 +121,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 		Arguments:        args,
 	}
 
-	res, err := rh.messageBus.Send(inscontext.TODO(), e)
+	res, err := rh.messageBus.Send(ctx, e)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RouteCall ] couldn't send message")
 	}
@@ -133,7 +130,7 @@ func (rh *RequestHandler) routeCall(ref core.RecordRef, method string, args core
 }
 
 // ProcessRegisterNode process register node response
-func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessRegisterNode(ctx core.Context) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	if len(rh.params.PublicKey) == 0 {
@@ -148,7 +145,7 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 		return nil, errors.New("field 'host' is required")
 	}
 
-	routResult, err := rh.sendRequest("RegisterNode",
+	routResult, err := rh.sendRequest(ctx, "RegisterNode",
 		[]interface{}{rh.params.PublicKey, rh.params.NumberOfBootstrapNodes,
 			rh.params.MajorityRule, rh.params.Roles, rh.params.Host})
 	if err != nil {
@@ -173,11 +170,11 @@ func (rh *RequestHandler) ProcessRegisterNode() (map[string]interface{}, error) 
 }
 
 // ProcessIsAuthorized processes is_auth query type
-func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]interface{}, error) {
 
 	// Check calling smart contract
 	result := make(map[string]interface{})
-	routResult, err := rh.sendRequest("Authorize", []interface{}{})
+	routResult, err := rh.sendRequest(ctx, "Authorize", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ProcessIsAuthorized ]")
 	}
@@ -234,7 +231,7 @@ func (rh *RequestHandler) ProcessIsAuthorized() (map[string]interface{}, error) 
 }
 
 // ProcessGetSeed processes get seed request
-func (rh *RequestHandler) ProcessGetSeed() (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessGetSeed(ctx core.Context) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	seed, err := rh.seedGenerator.Next()
 	if err != nil {
