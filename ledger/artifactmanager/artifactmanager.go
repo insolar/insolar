@@ -330,7 +330,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 		return nil, err
 	}
 
-	objID, err := m.updateObject(
+	obj, err := m.updateObject(
 		&record.ObjectActivateRecord{
 			ResultRecord: record.ResultRecord{
 				Domain:  record.Core2Reference(domain),
@@ -376,10 +376,10 @@ func (m *LedgerArtifactManager) ActivateObject(
 
 	return &ObjectDescriptor{
 		am:           m,
-		head:         object,
-		state:        *objID,
-		class:        class,
-		childPointer: nil,
+		head:         obj.Head,
+		state:        obj.State,
+		class:        obj.Class,
+		childPointer: obj.ChildPointer,
 		memory:       memory,
 	}, nil
 }
@@ -391,7 +391,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 func (m *LedgerArtifactManager) DeactivateObject(
 	ctx core.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
-	return m.updateObject(
+	desc, err := m.updateObject(
 		&record.DeactivationRecord{
 			ResultRecord: record.ResultRecord{
 				Domain:  record.Core2Reference(domain),
@@ -402,6 +402,10 @@ func (m *LedgerArtifactManager) DeactivateObject(
 		*object.HeadRef(),
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return &desc.State, nil
 }
 
 // UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -413,8 +417,8 @@ func (m *LedgerArtifactManager) UpdateObject(
 	domain, request core.RecordRef,
 	object core.ObjectDescriptor,
 	memory []byte,
-) (*core.RecordID, error) {
-	return m.updateObject(
+) (core.ObjectDescriptor, error) {
+	obj, err := m.updateObject(
 		&record.ObjectAmendRecord{
 			ResultRecord: record.ResultRecord{
 				Domain:  record.Core2Reference(domain),
@@ -428,6 +432,18 @@ func (m *LedgerArtifactManager) UpdateObject(
 		*object.HeadRef(),
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ObjectDescriptor{
+		am:           m,
+		head:         obj.Head,
+		state:        obj.State,
+		class:        obj.Class,
+		childPointer: obj.ChildPointer,
+		memory:       memory,
+	}, nil
 }
 
 // RegisterValidation marks provided object state as approved or disapproved.
@@ -494,7 +510,7 @@ func (m *LedgerArtifactManager) updateClass(rec record.Record, class core.Record
 
 func (m *LedgerArtifactManager) updateObject(
 	rec record.Record, object core.RecordRef, class *core.RecordRef,
-) (*core.RecordID, error) {
+) (*reply.Object, error) {
 	genericReact, err := m.messageBus.Send(
 		inscontext.TODO(),
 		&message.UpdateObject{
@@ -508,12 +524,12 @@ func (m *LedgerArtifactManager) updateObject(
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.ID)
+	rep, ok := genericReact.(*reply.Object)
 	if !ok {
 		return nil, ErrUnexpectedReply
 	}
 
-	return &react.ID, nil
+	return rep, nil
 }
 
 func (m *LedgerArtifactManager) registerChild(
