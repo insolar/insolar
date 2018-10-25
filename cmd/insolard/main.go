@@ -200,9 +200,10 @@ func main() {
 	cm.components.NetworkCoordinator, err = networkcoordinator.New()
 	checkError("failed to start NetworkCoordinator: ", err)
 
-	cm.linkAll(ctx)
 	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(cfgHolder.Configuration.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError("failed init pulse for LogicRunner: ", err)
+
+	cm.linkAll(ctx)
 
 	defer func() {
 		cm.stopAll(ctx)
