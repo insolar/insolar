@@ -106,7 +106,7 @@ func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 }
 
 // Start implements core.Component
-func (n *ServiceNetwork) Start(components core.Components) error {
+func (n *ServiceNetwork) Start(insctx core.Context, components core.Components) error {
 	n.inject(components)
 	go n.listen()
 
@@ -137,7 +137,7 @@ func (n *ServiceNetwork) inject(components core.Components) {
 }
 
 // Stop implements core.Component
-func (n *ServiceNetwork) Stop() error {
+func (n *ServiceNetwork) Stop(insctx core.Context) error {
 	return n.hostNetwork.Disconnect()
 }
 

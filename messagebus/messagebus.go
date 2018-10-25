@@ -49,7 +49,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 }
 
 // Start initializes message bus
-func (mb *MessageBus) Start(c core.Components) error {
+func (mb *MessageBus) Start(ctx core.Context, c core.Components) error {
 	mb.service = c.Network
 	mb.service.RemoteProcedureRegister(deliverRPCMethodName, mb.deliver)
 	mb.ledger = c.Ledger
@@ -59,7 +59,7 @@ func (mb *MessageBus) Start(c core.Components) error {
 }
 
 // Stop releases resources and stops the bus
-func (mb *MessageBus) Stop() error { return nil }
+func (mb *MessageBus) Stop(ctx core.Context) error { return nil }
 
 // Register sets a function as a hadler for particular message type,
 // only one handler per type is allowed

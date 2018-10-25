@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/network/dhtnetwork"
 	"github.com/insolar/insolar/network/nodekeeper"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -78,7 +79,8 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 	network, err := NewServiceNetwork(cfg)
 	assert.NoError(t, err)
 
-	err = network.Start(initComponents(t, testutils.RandomRef()))
+	ctx := inscontext.TODO()
+	err = network.Start(ctx, initComponents(t, testutils.RandomRef()))
 	assert.NoError(t, err)
 
 	e := &message.CallMethod{
@@ -139,6 +141,7 @@ func (l *mockLedger) GetPulseManager() core.PulseManager {
 }
 
 func TestServiceNetwork_SendMessage2(t *testing.T) {
+	ctx := inscontext.TODO()
 	t.Skip("awaiting for big service network mock")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -152,12 +155,12 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 		nil,
 		secondNodeId))
 
-	secondNode.Start(core.Components{})
-	firstNode.Start(core.Components{})
+	secondNode.Start(ctx, core.Components{})
+	firstNode.Start(ctx, core.Components{})
 
 	defer func() {
-		firstNode.Stop()
-		secondNode.Stop()
+		firstNode.Stop(ctx)
+		secondNode.Stop(ctx)
 	}()
 
 	var wg sync.WaitGroup
@@ -182,6 +185,7 @@ func TestServiceNetwork_SendMessage2(t *testing.T) {
 }
 
 func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
+	ctx := inscontext.TODO()
 	t.Skip("wait for DI and network refactoring")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -198,15 +202,15 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 	assert.NoError(t, err)
 
 	// TODO: initComponents
-	err = secondNode.Start(initComponents(t, core.NewRefFromBase58(secondNodeId)))
+	err = secondNode.Start(ctx, initComponents(t, core.NewRefFromBase58(secondNodeId)))
 	assert.NoError(t, err)
 
-	err = firstNode.Start(initComponents(t, core.NewRefFromBase58(firstNodeId)))
+	err = firstNode.Start(ctx, initComponents(t, core.NewRefFromBase58(firstNodeId)))
 	assert.NoError(t, err)
 
 	defer func() {
-		firstNode.Stop()
-		secondNode.Stop()
+		firstNode.Stop(ctx)
+		secondNode.Stop(ctx)
 	}()
 
 	var wg sync.WaitGroup
@@ -246,6 +250,7 @@ func TestServiceNetwork_SendCascadeMessage(t *testing.T) {
 }
 
 func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
+	insctx := inscontext.TODO()
 	t.Skip("fix data race INS-534")
 	nodeIds := []core.RecordRef{
 		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
@@ -272,7 +277,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 
 	defer func() {
 		for _, service := range services {
-			service.Stop()
+			service.Stop(insctx)
 		}
 	}()
 
@@ -280,7 +285,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 	initService := func(node string, bHosts []string) (service *ServiceNetwork, host string) {
 		host = prefix + strconv.Itoa(port)
 		service, _ = NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
-		service.Start(core.Components{})
+		service.Start(insctx, core.Components{})
 		service.RemoteProcedureRegister("test", func(args [][]byte) ([]byte, error) {
 			wg.Done()
 			return nil, nil
@@ -326,6 +331,7 @@ func TestServiceNetwork_SendCascadeMessage2(t *testing.T) {
 }
 
 func Test_processPulse(t *testing.T) {
+	ctx := inscontext.TODO()
 	t.Skip("rewrite test with multiple pulses and respecting logic of adding active nodes")
 	firstNodeId := "4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"
 	secondNodeId := "53jNWvey7Nzyh4ZaLdJDf3SRgoD4GpWuwHgrgvVVGLbDkk3A7cwStSmBU2X7s4fm6cZtemEyJbce9dM9SwNxbsxf"
@@ -349,12 +355,12 @@ func Test_processPulse(t *testing.T) {
 	})
 	secondLedger := &mockLedger{PM: &mpm}
 
-	secondNode.Start(core.Components{Ledger: secondLedger})
-	firstNode.Start(core.Components{Ledger: firstLedger})
+	secondNode.Start(ctx, core.Components{Ledger: secondLedger})
+	firstNode.Start(ctx, core.Components{Ledger: firstLedger})
 
 	defer func() {
-		firstNode.Stop()
-		secondNode.Stop()
+		firstNode.Stop(ctx)
+		secondNode.Stop(ctx)
 	}()
 
 	// pulse number is zero in MockPulseManager before receiving any pulses (default)
@@ -366,8 +372,8 @@ func Test_processPulse(t *testing.T) {
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar
-	ctx := dhtnetwork.GetDefaultCtx(hh)
-	dhtnetwork.DispatchPacketType(hh, ctx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
+	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
+	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = firstLedger.GetPulseManager().Current()
@@ -381,6 +387,7 @@ func Test_processPulse(t *testing.T) {
 }
 
 func Test_processPulse2(t *testing.T) {
+	ctx := inscontext.TODO()
 	t.Skip("fix data race INS-534")
 	nodeIds := []core.RecordRef{
 		core.NewRefFromBase58("4gU79K6woTZDvn4YUFHauNKfcHW69X42uyk8ZvRevCiMv3PLS24eM1vcA9mhKPv8b2jWj9J5RgGN9CB7PUzCtBsj"),
@@ -409,7 +416,7 @@ func Test_processPulse2(t *testing.T) {
 
 	defer func() {
 		for _, service := range services {
-			service.Stop()
+			service.Stop(ctx)
 		}
 	}()
 
@@ -426,7 +433,7 @@ func Test_processPulse2(t *testing.T) {
 
 		host = prefix + strconv.Itoa(port)
 		service, _ := NewServiceNetwork(mockServiceConfiguration(host, bHosts, node))
-		service.Start(core.Components{Ledger: ledger})
+		service.Start(ctx, core.Components{Ledger: ledger})
 		port++
 		services = append(services, service)
 		return
@@ -455,8 +462,8 @@ func Test_processPulse2(t *testing.T) {
 		&packet.RequestPulse{Pulse: core.Pulse{PulseNumber: 1, Entropy: core.Entropy{0}}}).
 		Build()
 	// imitate receiving pulse from the pulsar on the last started service
-	ctx := dhtnetwork.GetDefaultCtx(hh)
-	dhtnetwork.DispatchPacketType(hh, ctx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
+	dhtCtx := dhtnetwork.GetDefaultCtx(hh)
+	dhtnetwork.DispatchPacketType(hh, dhtCtx, pckt, packet.NewBuilder(hh.HtFromCtx(ctx).Origin))
 
 	// pulse is stored on the first node
 	firstStoredPulse, _ = ll.GetPulseManager().Current()

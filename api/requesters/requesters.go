@@ -25,16 +25,15 @@ import (
 
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
 // verbose switches on verbose mode
 var verbose = false
 
-func verboseInfo(msg string) {
+func verboseInfo(ctx core.Context, msg string) {
 	if verbose {
-		log.Infoln(msg)
+		ctx.Log().Infoln(msg)
 	}
 }
 
@@ -99,7 +98,7 @@ func constructParams(params []interface{}) ([]byte, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
+func SendWithSeed(ctx core.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
 	}
@@ -118,12 +117,12 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
 	}
 
-	verboseInfo("Signing request ...")
+	verboseInfo(ctx, "Signing request ...")
 	signature, err := ecdsahelper.Sign(serRequest, userCfg.privateKeyObject)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
-	verboseInfo("Signing request completed")
+	verboseInfo(ctx, "Signing request completed")
 
 	body, err := GetResponseBody(url, PostParams{
 		"params":    params,
@@ -141,15 +140,15 @@ func SendWithSeed(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON
 }
 
 // Send first gets seed and after that makes target request
-func Send(url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
-	verboseInfo("Sending GETSEED request ...")
+func Send(ctx core.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
+	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with getting seed")
 	}
-	verboseInfo("GETSEED request completed. seed: " + string(seed))
+	verboseInfo(ctx, "GETSEED request completed. seed: "+string(seed))
 
-	response, err := SendWithSeed(url+"/call", userCfg, reqCfg, seed)
+	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
