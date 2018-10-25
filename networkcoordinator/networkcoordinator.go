@@ -56,7 +56,11 @@ func (nc *NetworkCoordinator) Stop() error {
 
 func RandomUint64() uint64 {
 	buf := make([]byte, 8)
-	rand.Read(buf)
+	_, err := rand.Read(buf)
+	if err != nil {
+		panic(err)
+	}
+
 	return binary.LittleEndian.Uint64(buf)
 }
 

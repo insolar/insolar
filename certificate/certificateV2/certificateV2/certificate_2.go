@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package certificate_v2
+package certificateV2
 
 import (
 	"crypto/ecdsa"
@@ -58,12 +58,12 @@ func (cert *Certificate) GetEcdsaPrivateKey() *ecdsa.PrivateKey {
 }
 
 // Start is method from Component interface and it do nothing
-func (c *Certificate) Start(components core.Components) error {
+func (cert *Certificate) Start(components core.Components) error {
 	return nil
 }
 
 // Stop is method from Component interface and it do nothing
-func (c *Certificate) Stop() error {
+func (cert *Certificate) Stop() error {
 	return nil
 }
 
