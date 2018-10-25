@@ -32,41 +32,43 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-var handlers = map[core.MessageType]core.MessageHandler{}
-var handlersRWLock = sync.RWMutex{}
-
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	db *storage.DB
+	db             *storage.DB
+	handlers       map[core.MessageType]core.MessageHandler
+	handlersRWLock sync.RWMutex
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
-	return &MessageHandler{db: db}, nil
+	return &MessageHandler{
+		db:       db,
+		handlers: map[core.MessageType]core.MessageHandler{},
+	}, nil
 }
 
 // Link links external components.
 func (h *MessageHandler) Link(components core.Components) error {
 	bus := components.MessageBus
 
-	handlersRWLock.Lock()
-	handlers[core.TypeGetCode] = h.handleGetCode
-	handlers[core.TypeGetClass] = h.handleGetClass
-	handlers[core.TypeGetObject] = h.handleGetObject
-	handlers[core.TypeGetDelegate] = h.handleGetDelegate
-	handlers[core.TypeGetChildren] = h.handleGetChildren
-	handlers[core.TypeUpdateObject] = h.handleUpdateObject
-	handlers[core.TypeRegisterChild] = h.handleRegisterChild
-	handlers[core.TypeJetDrop] = h.handleJetDrop
-	handlers[core.TypeSetRecord] = h.handleSetRecord
-	handlers[core.TypeUpdateClass] = h.handleUpdateClass
-	handlersRWLock.Unlock()
+	h.handlersRWLock.Lock()
+	h.handlers[core.TypeGetCode] = h.handleGetCode
+	h.handlers[core.TypeGetClass] = h.handleGetClass
+	h.handlers[core.TypeGetObject] = h.handleGetObject
+	h.handlers[core.TypeGetDelegate] = h.handleGetDelegate
+	h.handlers[core.TypeGetChildren] = h.handleGetChildren
+	h.handlers[core.TypeUpdateObject] = h.handleUpdateObject
+	h.handlers[core.TypeRegisterChild] = h.handleRegisterChild
+	h.handlers[core.TypeJetDrop] = h.handleJetDrop
+	h.handlers[core.TypeSetRecord] = h.handleSetRecord
+	h.handlers[core.TypeUpdateClass] = h.handleUpdateClass
+	h.handlersRWLock.Unlock()
 
-	handlersRWLock.RLock()
-	for handlerType, handler := range handlers {
+	h.handlersRWLock.RLock()
+	for handlerType, handler := range h.handlers {
 		bus.MustRegister(handlerType, handler)
 	}
-	handlersRWLock.RUnlock()
+	h.handlersRWLock.RUnlock()
 
 	return nil
 }
@@ -343,7 +345,7 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 	}
 
 	var id *record.ID
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
+	err = h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, err := getObjectIndex(tx, &objectID, true)
 		if err != nil {
 			return err
@@ -441,9 +443,9 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message
 		if err != nil {
 			return nil, err
 		}
-		handlersRWLock.RLock()
-		handler, ok := handlers[parsedMessage.Type()]
-		handlersRWLock.RUnlock()
+		h.handlersRWLock.RLock()
+		handler, ok := h.handlers[parsedMessage.Type()]
+		h.handlersRWLock.RUnlock()
 		if !ok {
 			return nil, errors.New("unknown message type")
 		}
