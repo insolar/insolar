@@ -27,11 +27,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+// BootstrapNode holds info about bootstrap nodes
 type BootstrapNode struct {
 	PublicKey string `json:"public_key"`
 	Host      string `json:"host"`
 }
 
+// Certificate holds info about certificate
 type Certificate struct {
 	MajorityRule   int             `json:"majority_rule"`
 	PublicKey      string          `json:"public_key"`
@@ -67,7 +69,7 @@ func (cert *Certificate) Stop() error {
 	return nil
 }
 
-func readKeys(keysPath string, certPublicKey string) (*ecdsa.PrivateKey, error) {
+func readPrivateKey(keysPath string, certPublicKey string) (*ecdsa.PrivateKey, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(keysPath))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readKeys ] couldn't read keys from: "+keysPath)
@@ -107,7 +109,7 @@ func NewCertificate(keysPath string, certPath string) (*Certificate, error) {
 		return nil, errors.Wrap(err, "[ NewCertificate ] failed to parse certificate json")
 	}
 
-	private, err := readKeys(keysPath, cert.PublicKey)
+	private, err := readPrivateKey(keysPath, cert.PublicKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewCertificate ] failed to read keys")
 	}
