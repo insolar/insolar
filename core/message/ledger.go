@@ -232,3 +232,28 @@ func (e *JetDrop) Target() *core.RecordRef {
 func (JetDrop) TargetRole() core.JetRole {
 	return core.RoleLightValidator
 }
+
+// ValidateRecord creates VM validation for specific object record.
+type ValidateRecord struct {
+	ledgerMessage
+
+	Object             core.RecordRef
+	State              core.RecordID
+	IsValid            bool
+	ValidationMessages []core.Message
+}
+
+// Type implementation of Message interface.
+func (*ValidateRecord) Type() core.MessageType {
+	return core.TypeValidateRecord
+}
+
+// Target implementation of Message interface.
+func (m *ValidateRecord) Target() *core.RecordRef {
+	return &m.Object
+}
+
+// TargetRole implementation of Message interface.
+func (*ValidateRecord) TargetRole() core.JetRole {
+	return core.RoleLightExecutor
+}
