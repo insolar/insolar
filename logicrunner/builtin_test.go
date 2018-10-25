@@ -49,7 +49,7 @@ func TestBareHelloworld(t *testing.T) {
 	})
 
 	nk := nodekeeper.GetTestNodekeeper()
-	c := core.Components{LogicRunner: lr, ActiveNodeComponent: nk}
+	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	defer cleaner()

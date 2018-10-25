@@ -91,7 +91,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 	assert.NoError(t, err, "Initialize runner")
 
 	nk := nodekeeper.GetTestNodekeeper()
-	c := core.Components{LogicRunner: lr, ActiveNodeComponent: nk}
+	c := core.Components{LogicRunner: lr, NodeNetwork: nk}
 
 	l, cleaner := ledgertestutils.TmpLedger(t, "", c)
 	mb := testmessagebus.NewTestMessageBus()
