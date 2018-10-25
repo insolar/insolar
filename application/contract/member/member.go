@@ -48,11 +48,7 @@ func New(name string, key string) (*Member, error) {
 }
 
 func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byte) error {
-	args, err := core.MarshalArgs(
-		m.GetReference(),
-		method,
-		params,
-		seed)
+	args, err := core.MarshalArgs(m.GetReference(), method, params, seed)
 	if err != nil {
 		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
 	}

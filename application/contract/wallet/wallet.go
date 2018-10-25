@@ -67,6 +67,9 @@ func (w *Wallet) Receive(amount uint, from *core.RecordRef) error {
 }
 
 func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
+	if amount > w.Balance {
+		return fmt.Errorf("[ Transfer ] Not enough balance for transfer")
+	}
 	w.Balance -= amount
 
 	toWallet, err := wallet.GetImplementationFrom(*to)
