@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/certificate/certificateV2/certificateV2"
+	"github.com/insolar/insolar/certificate/certificatev2/certificatev2"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger"
@@ -129,7 +129,7 @@ func mergeConfigAndCertificate(cfg *configuration.Configuration) {
 		log.Info("[ mergeConfigAndCertificate ] No certificate path - No merge")
 		return
 	}
-	cert, err := certificateV2.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
+	cert, err := certificatev2.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
 	checkError("[ mergeConfigAndCertificate ] Can't create certificate", err)
 
 	cfg.Host.BootstrapHosts = []string{}

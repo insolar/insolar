@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package certificateV2
+package certificatev2
 
 import (
 	"crypto/ecdsa"
