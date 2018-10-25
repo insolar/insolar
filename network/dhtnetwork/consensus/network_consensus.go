@@ -108,8 +108,8 @@ func (ic *NetworkConsensus) SetNodeKeeper(keeper consensus.NodeKeeper) {
 	ic.communicatorRcv.keeper = keeper
 }
 
-// NewInsolarConsensus creates new object to handle all consensus events
-func NewInsolarConsensus(handler hosthandler.HostHandler) consensus.Processor {
+// NewNetworkConsensus creates new object to handle all consensus events
+func NewNetworkConsensus(handler hosthandler.HostHandler) consensus.Processor {
 	communicatorSnd := &communicatorSender{handler: handler}
 	communicatorRcv := &communicatorReceiver{handler: handler}
 	return &NetworkConsensus{

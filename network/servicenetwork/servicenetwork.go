@@ -170,8 +170,8 @@ func (network *ServiceNetwork) onPulse(pulse core.Pulse) {
 			return
 		}
 		log.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		go network.controller.ResendPulseToKnownHosts(pulse)
 		go func(network *ServiceNetwork) {
+			network.controller.ResendPulseToKnownHosts(pulse)
 			if network.coordinator == nil {
 				return
 			}
@@ -188,21 +188,21 @@ func (network *ServiceNetwork) onPulse(pulse core.Pulse) {
 }
 
 func (network *ServiceNetwork) doConsensus(ctx hosthandler.Context, pulse core.Pulse) {
-	// if hostHandler.GetNetworkCommonFacade().GetConsensus() == nil {
-	// 	log.Warn("consensus is nil")
-	// 	return
-	// }
-	// consensus := hostHandler.GetNetworkCommonFacade().GetConsensus()
-	// if consensus == nil {
-	// 	log.Warn("Consensus module is not initialized")
-	// 	return
-	// }
-	// if !consensus.IsPartOfConsensus() {
-	// 	log.Debug("Node is not active and does not participate in consensus")
-	// 	return
-	// }
-	// log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
-	// go consensus.ProcessPulse(ctx, pulse)
+	if network.controller.GetConsensus() == nil {
+		log.Warn("consensus is nil")
+		return
+	}
+	consensus := network.controller.GetConsensus()
+	if consensus == nil {
+		log.Warn("Consensus module is not initialized")
+		return
+	}
+	if !consensus.IsPartOfConsensus() {
+		log.Debug("Node is not active and does not participate in consensus")
+		return
+	}
+	log.Debugf("Initiating consensus for pulse %d", pulse.PulseNumber)
+	go consensus.ProcessPulse(ctx, pulse)
 }
 
 // NewHostNetwork create new HostNetwork. Certificate in new network should be removed

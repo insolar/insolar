@@ -84,7 +84,7 @@ func NewHostNetwork(
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create DHT")
 	}
-	networkConsensus := consensus.NewInsolarConsensus(network)
+	networkConsensus := consensus.NewNetworkConsensus(network)
 	network.GetNetworkCommonFacade().SetConsensus(networkConsensus)
 	return network, nil
 }

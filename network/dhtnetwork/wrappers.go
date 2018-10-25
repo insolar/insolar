@@ -17,6 +17,8 @@
 package dhtnetwork
 
 import (
+	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/transport/id"
 	"strings"
 	"time"
 
@@ -189,7 +191,19 @@ func (w *Wrapper) NewRequestBuilder() *packet.Builder {
 
 // ResendPulseToKnownHosts resend pulse when we receive pulse from pulsar daemon
 func (w *Wrapper) ResendPulseToKnownHosts(pulse core.Pulse) {
-	// requesthandler.go:326
+	p := &packet.RequestPulse{pulse}
+	activeNodes := w.HostNetwork.GetActiveNodesList()
+	hosts := make([]host.Host, 0)
+	for _, node := range activeNodes {
+		address, err := host.NewAddress(node.Address)
+		if err != nil {
+			log.Error("error resolving address while resending pulse: " + node.Address)
+			continue
+		}
+		id := id.FromBase58(resolver.ResolveHostID(node.NodeID))
+		hosts = append(hosts, host.Host{ID: id, Address: address})
+	}
+	ResendPulseToKnownHosts(w.HostNetwork, hosts, p)
 }
 
 func getPulseManager(components core.Components) (core.PulseManager, error) {
@@ -212,6 +226,10 @@ func (w *Wrapper) Inject(components core.Components) {
 	} else {
 		w.HostNetwork.GetNetworkCommonFacade().SetNetworkCoordinator(components.NetworkCoordinator)
 	}
+}
+
+func (w *Wrapper) GetConsensus() consensus.Processor {
+	return w.HostNetwork.GetNetworkCommonFacade().GetConsensus()
 }
 
 func NewDhtHostNetwork(conf configuration.Configuration, certificate core.Certificate, pulseCallback network.OnPulse) (network.HostNetwork, error) {

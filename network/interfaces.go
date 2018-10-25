@@ -18,6 +18,7 @@ package network
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/packet"
 )
@@ -44,6 +45,9 @@ type Controller interface {
 
 	// Inject inject components
 	Inject(components core.Components)
+
+	// GetConsensus get consensus processor. Should be deleted and implemented on the same level as network.Controller
+	GetConsensus() consensus.Processor
 }
 
 // RequestHandler handler function to process incoming requests from network.
