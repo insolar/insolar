@@ -202,12 +202,12 @@ func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.U
 	am := gpr.lr.ArtifactManager
 	i, err := am.GetChildren(ctx, req.Obj, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ GetObjChildren ] Can't get children")
 	}
 	for i.HasNext() {
 		r, err := i.Next()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "[ GetObjChildren ] Can't get Next")
 		}
 		o, err := am.GetObject(ctx, *r, nil)
 		if err != nil {
