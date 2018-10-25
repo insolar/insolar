@@ -131,7 +131,10 @@ func (db *DB) Bootstrap() error {
 		if err != nil {
 			return nil, err
 		}
-		err = db.SetObjectIndex(genesisID, &index.ObjectLifeline{LatestState: *genesisID})
+		err = db.SetObjectIndex(
+			genesisID,
+			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+		)
 		if err != nil {
 			return nil, err
 		}
