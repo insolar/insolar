@@ -35,16 +35,6 @@ const (
 // QTypeFromString converts string representation to enum
 func QTypeFromString(strQType string) QueryType {
 	switch strQType {
-	case "create_member":
-		return CreateMember
-	case "dump_user_info":
-		return DumpUserInfo
-	case "get_balance":
-		return GetBalance
-	case "send_money":
-		return SendMoney
-	case "dump_all_users":
-		return DumpAllUsers
 	case "register_node":
 		return RegisterNode
 	case "is_auth":
