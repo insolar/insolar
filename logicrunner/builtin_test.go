@@ -67,8 +67,6 @@ func TestBareHelloworld(t *testing.T) {
 
 	MessageBusTrivialBehavior(mb, lr)
 	l.GetPulseManager().Set(core.Pulse{PulseNumber: 123123, Entropy: core.Entropy{}})
-	// TODO why it was doing this way ?
-	//lr.OnPulse(*pulsar.NewPulse(configuration.NewPulsar().NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 
 	hw := helloworld.NewHelloWorld()
 
