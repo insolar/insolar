@@ -66,14 +66,13 @@ func (mb *TestMessageBus) Stop() error {
 }
 
 func (mb *TestMessageBus) Send(ctx core.Context, m core.Message) (core.Reply, error) {
-	t := m.Type()
+	key, _ := ecdsa.GeneratePrivateKey()
+	signedMsg, _ := message.NewSignedMessage(m, testutils.RandomRef(), key)
+	t := signedMsg.Message().Type()
 	handler, ok := mb.handlers[t]
 	if !ok {
 		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
 	}
 
-	key, _ := ecdsa.GeneratePrivateKey()
-	msg, _ := message.NewSignedMessage(m, testutils.RandomRef(), key)
-
-	return handler(ctx, msg)
+	return handler(ctx, signedMsg)
 }

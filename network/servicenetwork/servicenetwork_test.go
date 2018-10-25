@@ -17,6 +17,7 @@
 package servicenetwork
 
 import (
+	ecdsa2 "crypto/ecdsa"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +28,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/cryptohelpers/ecdsa"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/nodekeeper"
@@ -75,6 +77,8 @@ func TestServiceNetwork_GetHostNetwork(t *testing.T) {
 func TestServiceNetwork_SendMessage(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	network, err := NewServiceNetwork(cfg)
+	key, _ := ecdsa.GeneratePrivateKey()
+	network.certificate, _ = certificate.NewCertificateFromFields(certificate.CertRecords{}, []*ecdsa2.PrivateKey{key})
 	assert.NoError(t, err)
 
 	err = network.Start(initComponents(t, testutils.RandomRef()))
@@ -86,7 +90,7 @@ func TestServiceNetwork_SendMessage(t *testing.T) {
 		Arguments: []byte("test"),
 	}
 
-	signed, _ := message.NewSignedMessage(e, network.GetNodeID(), network.GetPrivateKey())
+	signed, _ := message.NewSignedMessage(e, network.GetNodeID(), key)
 
 	ref := testutils.RandomRef()
 	network.SendMessage(ref, "test", signed)

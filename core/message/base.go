@@ -161,4 +161,5 @@ func init() {
 
 	// Bootstrap
 	gob.Register(&BootstrapRequest{})
+	gob.Register(&SignedMessage{})
 }

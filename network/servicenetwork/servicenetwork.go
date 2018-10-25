@@ -66,7 +66,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 		return nil, err
 	}
 
-	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht}
+	service := &ServiceNetwork{nodeNetwork: node, hostNetwork: dht, certificate: cert}
 	f := func(data core.Cascade, method string, args [][]byte) error {
 		return service.initCascadeSendMessage(data, true, method, args)
 	}
@@ -137,7 +137,7 @@ func (network *ServiceNetwork) GetHostNetwork() (hosthandler.HostHandler, hostha
 
 // GetPrivateKey returns a private key.
 func (network *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
-	return network.hostNetwork.GetPrivateKey()
+	return network.certificate.GetEcdsaPrivateKey()
 }
 
 func getPulseManager(components core.Components) (core.PulseManager, error) {
@@ -268,4 +268,8 @@ func (network *ServiceNetwork) initCascadeSendMessage(data core.Cascade, findCur
 	}
 
 	return nil
+}
+
+func (network *ServiceNetwork) SetCert(cert core.Certificate) {
+	network.certificate = cert
 }

@@ -109,7 +109,12 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 			return step, errors.New("step between two shores")
 		}
 
-		ret, err := lr.Execute(inscontext.TODO(), start.Resp.(core.SignedMessage))
+		msg := start.Resp.(core.Message)
+		signed, err := message.NewSignedMessage(msg, ref, lr.Network.GetPrivateKey())
+		if err != nil {
+			return 0, errors.New("failed to create a signed message")
+		}
+		ret, err := lr.Execute(inscontext.TODO(), signed)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
