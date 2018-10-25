@@ -40,9 +40,11 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
-	mainContext core.Context
+	insContext  core.Context
 	callContext *core.LogicCallContext
 	deactivate  bool
+
+	objectbody *objectBody
 }
 
 // LogicRunner is a general interface of contract executor
@@ -171,7 +173,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 
 	es := lr.UpsertExecution(ref)
 	es.Lock()
-	es.mainContext = ctx
+	es.insContext = ctx
 
 	lr.caseBindReplaysMutex.Lock()
 	cb, validate := lr.caseBindReplays[ref]
@@ -241,32 +243,57 @@ type objectBody struct {
 	Code   core.CodeDescriptor
 }
 
-func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
-	ctx := inscontext.TODO()
+func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
+	ctx := es.insContext
 	cr, step := lr.nextValidationStep(objref)
+
+	// TODO: move this to vb, when vb become a part of es
+	if es.objectbody != nil { // already have something
+		if step > 0 { // check signature
+			if core.CaseRecordTypeSignObject != cr.Type {
+				return errors.New("Wrong validation type on CaseRecordTypeSignObject")
+			}
+			if !bytes.Equal(cr.ReqSig, HashInterface(objref)) {
+				return errors.New("Wrong validation sig on CaseRecordTypeSignObject")
+			}
+			if !bytes.Equal(cr.Resp.([]byte), HashInterface(es.objectbody)) {
+				return errors.New("Wrong validation comparision on CaseRecordTypeSignObject")
+			}
+
+		} else {
+			lr.addObjectCaseRecord(objref, core.CaseRecord{
+				Type:   core.CaseRecordTypeSignObject,
+				ReqSig: HashInterface(objref),
+				Resp:   HashInterface(es.objectbody),
+			})
+		}
+		return nil
+	}
+
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObject != cr.Type {
-			return nil, errors.New("Wrong validation type on RouteCall")
+			return errors.New("Wrong validation type on CaseRecordTypeGetObject")
 		}
 		sig := HashInterface(objref)
 		if !bytes.Equal(cr.ReqSig, sig) {
-			return nil, errors.New("Wrong validation sig on RouteCall")
+			return errors.New("Wrong validation sig on CaseRecordTypeGetObject")
 		}
-		return cr.Resp.(*objectBody), nil
+		es.objectbody = cr.Resp.(*objectBody)
+		return nil
 	}
 
 	objDesc, err := lr.ArtifactManager.GetObject(ctx, objref, nil, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object")
+		return errors.Wrap(err, "couldn't get object")
 	}
 
 	classDesc, err := lr.ArtifactManager.GetClass(ctx, *objDesc.Class(), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get object's class")
+		return errors.Wrap(err, "couldn't get object's class")
 	}
 
 	codeDesc := classDesc.CodeDescriptor()
-	ob := &objectBody{
+	es.objectbody = &objectBody{
 		Object: objDesc,
 		Class:  classDesc,
 		Code:   codeDesc,
@@ -274,23 +301,23 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 	lr.addObjectCaseRecord(objref, core.CaseRecord{
 		Type:   core.CaseRecordTypeGetObject,
 		ReqSig: HashInterface(objref),
-		Resp:   ob,
+		Resp:   es.objectbody,
 	})
-	return ob, nil
+	return nil
 }
 
 func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMethod, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := es.mainContext
+	insctx := es.insContext
 
-	objbody, err := lr.getObjectMessage(m.ObjectRef)
+	err := lr.getObjectMessage(es, m.ObjectRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	es.callContext.Class = objbody.Class.HeadRef()
+	es.callContext.Class = es.objectbody.Class.HeadRef()
 	vb.ModifyContext(es.callContext)
 
-	executor, err := lr.GetExecutor(objbody.Code.MachineType())
+	executor, err := lr.GetExecutor(es.objectbody.Code.MachineType())
 	if err != nil {
 		return nil, errors.Wrap(err, "no executor registered")
 	}
@@ -298,7 +325,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	executer := func() (*reply.CallMethod, error) {
 		defer es.Unlock()
 		newData, result, err := executor.CallMethod(
-			es.callContext, *objbody.Code.Ref(), objbody.Object.Memory(), m.Method, m.Arguments,
+			es.callContext, *es.objectbody.Code.Ref(), es.objectbody.Object.Memory(), m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executor error")
@@ -308,18 +335,18 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			am := lr.ArtifactManager
 			if es.deactivate {
 				_, err = am.DeactivateObject(
-					insctx, Ref{}, *es.callContext.Request, objbody.Object,
+					insctx, Ref{}, *es.callContext.Request, es.objectbody.Object,
 				)
 			} else {
+				// TODO: Here must be an object descriptor, then store new objbody
 				_, err = am.UpdateObject(
-					insctx, Ref{}, *es.callContext.Request, objbody.Object, newData,
+					insctx, Ref{}, *es.callContext.Request, es.objectbody.Object, newData,
 				)
 			}
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
 			}
 		}
-
 		re := &reply.CallMethod{Data: newData, Result: result}
 
 		vb.End(m.ObjectRef, core.CaseRecord{
@@ -345,7 +372,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 }
 
 func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.CallConstructor, vb ValidationBehaviour) (core.Reply, error) {
-	insctx := es.mainContext
+	insctx := es.insContext
 	classDesc, err := lr.ArtifactManager.GetClass(insctx, m.ClassRef, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get class")

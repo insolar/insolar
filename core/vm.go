@@ -70,6 +70,7 @@ const (
 	CaseRecordTypeResult
 	CaseRecordTypeRequest
 	CaseRecordTypeGetObject
+	CaseRecordTypeSignObject
 	CaseRecordTypeRouteCall
 	CaseRecordTypeSaveAsChild
 	CaseRecordTypeGetObjChildren
