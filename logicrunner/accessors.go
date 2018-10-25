@@ -83,7 +83,7 @@ func (lr *LogicRunner) lastObjectCaseRecord(ref Ref) core.CaseRecord {
 	return list[len(list)-1]
 }
 
-func (lr *LogicRunner) getNextValidationStep(ref Ref) (*core.CaseRecord, int) {
+func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	lr.caseBindReplaysMutex.Lock()
 	defer lr.caseBindReplaysMutex.Unlock()
 	r, ok := lr.caseBindReplays[ref]

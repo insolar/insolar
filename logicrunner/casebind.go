@@ -71,7 +71,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 	}()
 
 	for {
-		start, step := lr.getNextValidationStep(ref)
+		start, step := lr.nextValidationStep(ref)
 		if step < 0 {
 			return step, errors.New("no validation data")
 		} else if start == nil { // finish
@@ -85,7 +85,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
-		stop, step := lr.getNextValidationStep(ref)
+		stop, step := lr.nextValidationStep(ref)
 		if step < 0 {
 			return 0, errors.New("validation container broken")
 		} else if stop.Type != core.CaseRecordTypeResult {
@@ -225,7 +225,7 @@ type ValidationChecker struct {
 }
 
 func (vb ValidationChecker) RegisterRequest(m message.IBaseLogicMessage) (*Ref, error) {
-	cr, _ := vb.lr.getNextValidationStep(m.GetReference())
+	cr, _ := vb.lr.nextValidationStep(m.GetReference())
 	if core.CaseRecordTypeRequest != cr.Type {
 		return nil, errors.New("Wrong validation type on Request")
 	}

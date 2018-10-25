@@ -170,9 +170,7 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 	ref := msg.GetReference()
 
 	es := lr.UpsertExecution(ref)
-	ctx.Log().Warnf("LOCKING, %s", ref.String())
 	es.Lock()
-	ctx.Log().Warnf("LOCKED")
 	es.mainContext = ctx
 
 	lr.caseBindReplaysMutex.Lock()
@@ -201,7 +199,6 @@ func (lr *LogicRunner) Execute(ctx core.Context, inmsg core.Message) (core.Reply
 		Resp: msg,
 	})
 
-	es.mainContext.Log().Warnf("VALIDATE IS %b", validate)
 	reqref, err := vb.RegisterRequest(msg)
 
 	if err != nil {
@@ -246,7 +243,7 @@ type objectBody struct {
 
 func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 	ctx := inscontext.TODO()
-	cr, step := lr.getNextValidationStep(objref)
+	cr, step := lr.nextValidationStep(objref)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObject != cr.Type {
 			return nil, errors.New("Wrong validation type on RouteCall")
@@ -299,6 +296,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 	}
 
 	executer := func() (*reply.CallMethod, error) {
+		defer es.Unlock()
 		newData, result, err := executor.CallMethod(
 			es.callContext, *objbody.Code.Ref(), objbody.Object.Memory(), m.Method, m.Arguments,
 		)
@@ -328,8 +326,6 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			Type: core.CaseRecordTypeResult,
 			Resp: re,
 		})
-		insctx.Log().Warnf("UNLOCK METHOD")
-		es.Unlock()
 		return re, nil
 	}
 
@@ -375,15 +371,13 @@ func (lr *LogicRunner) executeConstructorCall(es *ExecutionState, m *message.Cal
 				Ref{}, *es.callContext.Request, m.ClassRef, m.ParentRef, m.SaveAs == message.Delegate, newData,
 			)
 		}
-		vb.End(m.ClassRef, core.CaseRecord{
+		vb.End(m.GetReference(), core.CaseRecord{
 			Type: core.CaseRecordTypeResult,
 			Resp: &reply.CallConstructor{Object: es.callContext.Request},
 		})
-		insctx.Log().Warnf("CONSTRUCTOR")
 		es.Unlock()
 		return &reply.CallConstructor{Object: es.callContext.Request}, err
 	default:
-		insctx.Log().Warnf("CONSTRUCTOR")
 		es.Unlock()
 		return nil, errors.New("unsupported type of save object")
 	}
