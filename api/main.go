@@ -101,7 +101,7 @@ func processQueryType(ctx core.Context, rh *RequestHandler, qTypeStr string) map
 	return answer
 }
 
-const TraceIDQueryParam = "TraceID"
+const TraceIDQueryParam = "traceID"
 
 // PreprocessRequest extracts params from requests
 func PreprocessRequest(ctx core.Context, req *http.Request) (*Params, error) {
