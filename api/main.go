@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/inscontext"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -126,7 +127,7 @@ func PreprocessRequest(ctx core.Context, req *http.Request) (*Params, error) {
 
 func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w http.ResponseWriter, r *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
-		ctx := inscontext.WithRandomTraceID()
+		ctx := inscontext.WithTraceID(inscontext.Background(), RandTraceID())
 
 		startTime := time.Now()
 		answer := make(map[string]interface{})
@@ -280,4 +281,12 @@ func (ar *Runner) getMemberPubKey(ctx core.Context, ref string) (string, error) 
 	ar.keyCache[ref] = key
 	ar.cacheLock.Unlock()
 	return key, nil
+}
+
+func RandTraceID() string {
+	qid, err := uuid.NewV4()
+	if err != nil {
+		return "createRandomTraceIDFailed:" + err.Error()
+	}
+	return qid.String()
 }

@@ -27,7 +27,7 @@ import (
 func (ar *Runner) infoHandler(c core.Components) func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 
-		ctx := inscontext.WithRandomTraceID()
+		ctx := inscontext.WithTraceID(inscontext.Background(), RandTraceID())
 
 		data, err := c.Bootstrapper.Info()
 		if err != nil {

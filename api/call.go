@@ -96,7 +96,7 @@ func (ar *Runner) callHandler(c core.Components) func(http.ResponseWriter, *http
 		params := request{}
 		resp := answer{}
 
-		ctx := inscontext.WithRandomTraceID()
+		ctx := inscontext.WithTraceID(inscontext.Background(), RandTraceID())
 		resp.TraceID = ctx.TraceID()
 
 		defer func() {
