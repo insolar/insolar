@@ -62,7 +62,7 @@ func TestWrongQueryParam(t *testing.T) {
 }
 
 func TestHandlerError(t *testing.T) {
-	postParams := map[string]string{"query_type": "get_balance", "reference": "test"}
+	postParams := map[string]string{"query_type": "register_node", "public_key": "test"}
 	jsonValue, _ := json.Marshal(postParams)
 	postResp, err := http.Post(TestUrl, "application/json", bytes.NewBuffer(jsonValue))
 	assert.NoError(t, err)
@@ -70,7 +70,7 @@ func TestHandlerError(t *testing.T) {
 	assert.NoError(t, err)
 	a := string(body[:])
 	_ = a
-	assert.Contains(t, string(body[:]), `"message": "Handler error: [ ProcessGetBalance ]: [ SendRequest ]: [ RouteCall ] message`)
+	assert.Contains(t, string(body[:]), `"message": "Handler error: field 'roles' is required"`)
 }
 
 func TestBadRequest(t *testing.T) {
