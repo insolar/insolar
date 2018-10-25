@@ -54,6 +54,7 @@ func (nc *NetworkCoordinator) Stop(ctx core.Context) error {
 	return nil
 }
 
+// RandomUint64 generates random uint64
 func RandomUint64() uint64 {
 	buf := make([]byte, 8)
 	_, err := rand.Read(buf)
