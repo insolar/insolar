@@ -71,16 +71,6 @@ func processQueryType(ctx core.Context, rh *RequestHandler, qTypeStr string) map
 
 	var hError error
 	switch qtype {
-	case CreateMember:
-		answer, hError = rh.ProcessCreateMember(ctx)
-	case DumpUserInfo:
-		answer, hError = rh.ProcessDumpUsers(ctx, false)
-	case DumpAllUsers:
-		answer, hError = rh.ProcessDumpUsers(ctx, true)
-	case GetBalance:
-		answer, hError = rh.ProcessGetBalance(ctx)
-	case SendMoney:
-		answer, hError = rh.ProcessSendMoney(ctx)
 	case RegisterNode:
 		answer, hError = rh.ProcessRegisterNode(ctx)
 	case IsAuth:
