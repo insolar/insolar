@@ -273,6 +273,7 @@ func (ar *Runner) getMemberPubKey(ctx core.Context, ref string) (string, error) 
 	return key, nil
 }
 
+// RandTraceID returns random traceID in uuid format
 func RandTraceID() string {
 	qid, err := uuid.NewV4()
 	if err != nil {
