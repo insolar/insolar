@@ -17,6 +17,9 @@
 package networkcoordinator
 
 import (
+	"crypto/rand"
+	"encoding/binary"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -51,15 +54,22 @@ func (nc *NetworkCoordinator) Stop() error {
 	return nil
 }
 
+func RandomUint64() uint64 {
+	buf := make([]byte, 8)
+	rand.Read(buf)
+	return binary.LittleEndian.Uint64(buf)
+}
+
 func (nc *NetworkCoordinator) routeCall(ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if nc.messageBus == nil {
 		return nil, errors.New("[ NetworkCoordinator::routeCall ] message bus was not set during initialization")
 	}
 
 	e := &message.CallMethod{
-		ObjectRef: ref,
-		Method:    method,
-		Arguments: args,
+		BaseLogicMessage: message.BaseLogicMessage{Nonce: RandomUint64()},
+		ObjectRef:        ref,
+		Method:           method,
+		Arguments:        args,
 	}
 
 	res, err := nc.messageBus.Send(inscontext.TODO(), e)
