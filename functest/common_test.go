@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -90,36 +89,21 @@ func TestWithoutQueryType(t *testing.T) {
 
 func TestTooMuchParams(t *testing.T) {
 	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
+		"query_type": "is_auth",
 		"some_param": "irrelevant info",
-		"name":       testutils.RandomString(),
-		"public_key": "000",
 	})
 
-	firstMemberResponse := &createMemberResponse{}
-	unmarshalResponse(t, body, firstMemberResponse)
+	isAuthResponse := &isAuthorized{}
+	unmarshalResponse(t, body, isAuthResponse)
 
-	firstMemberRef := firstMemberResponse.Reference
-	assert.NotEqual(t, "", firstMemberRef)
+	assert.Equal(t, []int{1}, isAuthResponse.Roles)
+	assert.NotEmpty(t, isAuthResponse.PublicKey)
+	assert.Equal(t, true, isAuthResponse.NetCoordCheck)
 }
 
 func TestQueryTypeAsIntParams(t *testing.T) {
 	body := getResponseBody(t, postParams{
 		"query_type": 100,
-	})
-
-	response := &baseResponse{}
-	unmarshalResponseWithError(t, body, response)
-
-	assert.Equal(t, api.BadRequest, response.Err.Code)
-	assert.Equal(t, "Bad request", response.Err.Message)
-}
-
-func TestWrongTypeInParams(t *testing.T) {
-	body := getResponseBody(t, postParams{
-		"query_type": "create_member",
-		"name":       128182187,
-		"public_key": "000",
 	})
 
 	response := &baseResponse{}

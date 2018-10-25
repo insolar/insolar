@@ -81,12 +81,12 @@ type Certificate struct {
 }
 
 // Start is method from Component interface and it do nothing
-func (c *Certificate) Start(components core.Components) error {
+func (c *Certificate) Start(ctx core.Context, components core.Components) error {
 	return nil
 }
 
 // Stop is method from Component interface and it do nothing
-func (c *Certificate) Stop() error {
+func (c *Certificate) Stop(ctx core.Context) error {
 	return nil
 }
 

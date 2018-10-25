@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
@@ -46,12 +47,12 @@ type componentManager struct {
 }
 
 // linkAll - link dependency for all components
-func (cm *componentManager) linkAll() {
+func (cm *componentManager) linkAll(ctx core.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
 		componentName := v.Field(i).String()
 		log.Infof("Starting component `%s` ...", componentName)
-		err := v.Field(i).Interface().(core.Component).Start(cm.components)
+		err := v.Field(i).Interface().(core.Component).Start(ctx, cm.components)
 		if err != nil {
 			log.Fatalf("failed to start component %s : %s", componentName, err.Error())
 		}
@@ -61,10 +62,10 @@ func (cm *componentManager) linkAll() {
 }
 
 // stopAll - reverse order stop all components
-func (cm *componentManager) stopAll() {
+func (cm *componentManager) stopAll(ctx core.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := v.NumField() - 1; i >= 0; i-- {
-		err := v.Field(i).Interface().(core.Component).Stop()
+		err := v.Field(i).Interface().(core.Component).Stop(ctx)
 		log.Infoln("Stop component: ", v.String())
 		if err != nil {
 			log.Errorf("failed to stop component %s : %s", v.String(), err.Error())
@@ -108,6 +109,8 @@ func main() {
 	initLogger(cfgHolder.Configuration.Log)
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+
+	ctx := inscontext.WithTraceID(inscontext.Background(), api.RandTraceID())
 
 	cm := componentManager{}
 	cert, err := certificate.NewCertificate(cfgHolder.Configuration.KeysPath)
@@ -162,10 +165,10 @@ func main() {
 		log.Fatalln("failed to start NetworkCoordinator: ", err.Error())
 	}
 
-	cm.linkAll()
+	cm.linkAll(ctx)
 
 	defer func() {
-		cm.stopAll()
+		cm.stopAll(ctx)
 	}()
 
 	var gracefulStop = make(chan os.Signal)
@@ -176,7 +179,7 @@ func main() {
 		sig := <-gracefulStop
 		log.Debugln("caught sig: ", sig)
 
-		cm.stopAll()
+		cm.stopAll(ctx)
 		os.Exit(0)
 	}()
 

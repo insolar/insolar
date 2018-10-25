@@ -73,6 +73,7 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicR
 }
 
 func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
+	ctx := inscontext.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
@@ -97,7 +98,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 
 	nw := network.GetTestNetwork()
 
-	assert.NoError(t, lr.Start(core.Components{
+	assert.NoError(t, lr.Start(ctx, core.Components{
 		Ledger:     l,
 		MessageBus: mb,
 		Network:    nw,
@@ -116,7 +117,7 @@ func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *gop
 
 	return lr, am, cb, pm, func() {
 		cb.Clean()
-		lr.Stop()
+		lr.Stop(ctx)
 		cleaner()
 		rundCleaner()
 	}
@@ -1318,10 +1319,8 @@ func New(n int) (*Child, error) {
 		toCheckValidate = append(toCheckValidate, m)
 		return nil, nil
 	})
-	// end of pulse, now send everything to right places
+
 	err = lr.GetLedger().GetPulseManager().Set(core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}})
-	//err = lr.GetLedger().GetPulseManager().Set(core.Pulse{PulseNumber: 123123123123, Entropy: core.Entropy{}})
-	//err = pm.Set(*pulsar.NewPulse(10, 10, &entropygenerator.StandardEntropyGenerator{}))
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {

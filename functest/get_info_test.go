@@ -14,15 +14,19 @@
  *    limitations under the License.
  */
 
-package core
+package functest
 
-import "github.com/pkg/errors"
+import (
+	"testing"
 
-var (
-	// ErrUnknown returned when error type cannot be defined.
-	ErrUnknown = errors.New("unknown error")
-	// ErrDeactivated returned when requested object is deactivated.
-	ErrDeactivated = errors.New("object is deactivated")
-	// ErrStateNotAvailable returned when requested object is deactivated.
-	ErrStateNotAvailable = errors.New("object state is not available")
+	"github.com/stretchr/testify/assert"
 )
+
+func TestGetInfo(t *testing.T) {
+	info := getInfo(t)
+	assert.NotNil(t, info)
+	assert.NotEqual(t, "", info.RootDomain)
+	assert.NotEqual(t, "", info.RootMember)
+	assert.NotNil(t, info.Classes)
+	assert.NotEqual(t, 0, len(info.Classes))
+}

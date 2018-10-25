@@ -54,6 +54,7 @@ func (h *MessageHandler) Link(components core.Components) error {
 	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
 	bus.MustRegister(core.TypeSetRecord, h.handleSetRecord)
 	bus.MustRegister(core.TypeUpdateClass, h.handleUpdateClass)
+	bus.MustRegister(core.TypeValidateRecord, h.handleValidateRecord)
 
 	return nil
 }
@@ -129,12 +130,16 @@ func (h *MessageHandler) handleGetObject(ctx core.Context, genericMsg core.Messa
 	msg := genericMsg.(*message.GetObject)
 	headRef := record.Core2Reference(msg.Head)
 
-	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State)
+	idx, stateID, state, err := getObject(h.db, &headRef.Record, msg.State, msg.Approved)
 	if err != nil {
-		if err == ErrObjectDeactivated {
+		switch err {
+		case ErrObjectDeactivated:
 			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+		case ErrStateNotAvailable:
+			return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
+		default:
+			return nil, err
 		}
-		return nil, err
 	}
 
 	var childPointer *core.RecordID
@@ -159,7 +164,7 @@ func (h *MessageHandler) handleGetDelegate(ctx core.Context, genericMsg core.Mes
 	msg := genericMsg.(*message.GetDelegate)
 	headRef := record.Core2Reference(msg.Head)
 
-	idx, _, _, err := getObject(h.db, &headRef.Record, nil)
+	idx, _, _, err := getObject(h.db, &headRef.Record, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +188,7 @@ func (h *MessageHandler) handleGetChildren(ctx core.Context, genericMsg core.Mes
 	msg := genericMsg.(*message.GetChildren)
 	parentRef := record.Core2Reference(msg.Parent)
 
-	idx, _, _, err := getObject(h.db, &parentRef.Record, nil)
+	idx, _, _, err := getObject(h.db, &parentRef.Record, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -251,11 +256,16 @@ func (h *MessageHandler) handleUpdateClass(ctx core.Context, genericMsg core.Mes
 		if err = validateState(idx.State, state.State()); err != nil {
 			return err
 		}
+		// Index exists and latest record id does not match (preserving chain consistency).
+		if idx.LatestState != nil && !state.PrevStateID().IsEqual(idx.LatestState) {
+			return errors.New("invalid state record")
+		}
+
 		id, err = tx.SetRecord(rec)
 		if err != nil {
 			return err
 		}
-		idx.LatestState = *id
+		idx.LatestState = id
 		idx.State = state.State()
 		return tx.SetClassIndex(&classID, idx)
 	})
@@ -288,11 +298,16 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 		if err = validateState(idx.State, state.State()); err != nil {
 			return err
 		}
+		// Index exists and latest record id does not match (preserving chain consistency).
+		if idx.LatestState != nil && !state.PrevStateID().IsEqual(idx.LatestState) {
+			return errors.New("invalid state record")
+		}
+
 		id, err = tx.SetRecord(rec)
 		if err != nil {
 			return err
 		}
-		idx.LatestState = *id
+		idx.LatestState = id
 		idx.State = state.State()
 		if state.State() == record.StateActivation {
 			if msg.Class == nil {
@@ -325,10 +340,15 @@ func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.M
 
 	var child *record.ID
 	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, _, _, err := getObject(tx, &parentRef.Record, nil)
+		idx, _, _, err := getObject(tx, &parentRef.Record, nil, false)
 		if err != nil {
 			return err
 		}
+		// Children exist and pointer does not match (preserving chain consistency).
+		if idx.ChildPointer != nil && !childRec.PrevChild.IsEqual(idx.ChildPointer) {
+			return errors.New("invalid child record")
+		}
+
 		child, err = tx.SetRecord(childRec)
 		if err != nil {
 			return err
@@ -377,6 +397,64 @@ func (h *MessageHandler) handleJetDrop(ctx core.Context, genericMsg core.Message
 	return &reply.OK{}, nil
 }
 
+func (h *MessageHandler) handleValidateRecord(ctx core.Context, genericMsg core.Message) (core.Reply, error) {
+	msg := genericMsg.(*message.ValidateRecord)
+	objID := record.Core2Reference(msg.Object).Record
+	validatedStateID := record.Bytes2ID(msg.State[:])
+
+	// TODO: store validation record for fishers.
+
+	err := h.db.Update(func(tx *storage.TransactionManager) error {
+		idx, err := tx.GetObjectIndex(&objID, true)
+		if err != nil {
+			return errors.Wrap(err, "inconsistent object index")
+		}
+
+		// Rewinding to validated record.
+		currentID := idx.LatestState
+		for currentID != nil {
+			// We have passed an approved record.
+			if currentID.IsEqual(idx.LatestStateApproved) {
+				return errors.New("changing approved records is not allowed")
+			}
+
+			// Fetching actual record.
+			rec, err := tx.GetRecord(currentID)
+			if err != nil {
+				return nil
+			}
+			currentState, ok := rec.(record.ObjectState)
+			if !ok {
+				return errors.New("invalid object record")
+			}
+
+			// Validated record found.
+			if currentID.IsEqual(&validatedStateID) {
+				if msg.IsValid {
+					idx.LatestStateApproved = currentID
+				} else {
+					idx.LatestState = currentState.PrevStateID()
+				}
+				err := tx.SetObjectIndex(&objID, idx)
+				if err != nil {
+					return err
+				}
+				break
+			}
+
+			currentID = currentState.PrevStateID()
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &reply.OK{}, nil
+}
+
 func getReference(request *core.RecordRef, id *record.ID) *core.RecordRef {
 	ref := record.Reference{
 		Record: *id,
@@ -399,21 +477,22 @@ func getCode(s storage.Store, id record.ID) (*record.CodeRecord, error) {
 }
 
 func getClass(
-	s storage.Store, head *record.ID, state *core.RecordRef,
+	s storage.Store, head *record.ID, state *core.RecordID,
 ) (*index.ClassLifeline, *core.RecordID, record.ClassState, error) {
 	idx, err := s.GetClassIndex(head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent class index")
 	}
 
-	var stateID record.ID
+	var stateID *record.ID
 	if state != nil {
-		stateID = record.Core2Reference(*state).Record
+		s := record.Bytes2ID(state[:])
+		stateID = &s
 	} else {
 		stateID = idx.LatestState
 	}
 
-	rec, err := s.GetRecord(&stateID)
+	rec, err := s.GetRecord(stateID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -429,21 +508,30 @@ func getClass(
 }
 
 func getObject(
-	s storage.Store, head *record.ID, state *core.RecordRef,
+	s storage.Store, head *record.ID, state *core.RecordID, approved bool,
 ) (*index.ObjectLifeline, *core.RecordID, record.ObjectState, error) {
 	idx, err := s.GetObjectIndex(head, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "inconsistent object index")
 	}
 
-	var stateID record.ID
+	var stateID *record.ID
 	if state != nil {
-		stateID = record.Core2Reference(*state).Record
+		s := record.Bytes2ID(state[:])
+		stateID = &s
 	} else {
-		stateID = idx.LatestState
+		if approved {
+			stateID = idx.LatestStateApproved
+		} else {
+			stateID = idx.LatestState
+		}
 	}
 
-	rec, err := s.GetRecord(&stateID)
+	if stateID == nil {
+		return nil, nil, nil, ErrStateNotAvailable
+	}
+
+	rec, err := s.GetRecord(stateID)
 	if err != nil {
 		return nil, nil, nil, err
 	}

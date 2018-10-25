@@ -18,9 +18,12 @@ package functest
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go/build"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,6 +51,15 @@ var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
 var insolarNodeKeysPath = filepath.Join(testdataPath(), insolarNodeKeys)
 var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
+
+var info infoResponse
+var root user
+
+type user struct {
+	ref     string
+	privKey string
+	pubKey  string
+}
 
 func testdataPath() string {
 	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
@@ -107,6 +119,40 @@ func generateRootMemberKeys() error {
 		insolarPath, "-c", "gen_keys",
 		"-o", insolarRootMemberKeysPath).CombinedOutput()
 	return errors.Wrapf(err, "[ generateRootMemberKeys ] could't generate root member keys: %s", out)
+}
+
+func loadRootKeys() error {
+	text, err := ioutil.ReadFile(insolarRootMemberKeysPath)
+	if err != nil {
+		return errors.Wrapf(err, "[ loadRootKeys ] could't load root keys")
+	}
+	var data map[string]string
+	err = json.Unmarshal(text, &data)
+	if err != nil {
+		return errors.Wrapf(err, "[ loadRootKeys ] could't unmarshal root keys")
+	}
+	if data["private_key"] == "" || data["public_key"] == "" {
+		return errors.New("[ loadRootKeys ] could't find any keys")
+	}
+	root.privKey = data["private_key"]
+	root.pubKey = data["public_key"]
+	return nil
+}
+
+func setInfo() error {
+	resp, err := http.Get(TestURL + "/info")
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't request %s", TestURL+"/info")
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't read answer")
+	}
+	err = json.Unmarshal(body, &info)
+	if err != nil {
+		return errors.Wrapf(err, "[ setInfo ] couldn't unmarshall answer")
+	}
+	return nil
 }
 
 var insgorundPath string
@@ -260,6 +306,12 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] root member keys successfully generated")
 
+	err = loadRootKeys()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't load root keys: ")
+	}
+	fmt.Println("[ setup ] root keys successfully loaded")
+
 	err = buildInsolard()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't build insolard: ")
@@ -277,6 +329,12 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't start insolard: ")
 	}
 	fmt.Println("[ setup ] insolard was successfully started")
+	err = setInfo()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't receive root reference ")
+	}
+	fmt.Println("[ setup ] root reference successfully received")
+	root.ref = info.RootMember
 
 	return nil
 }

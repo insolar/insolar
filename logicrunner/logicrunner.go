@@ -83,7 +83,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 // Start starts logic runner component
-func (lr *LogicRunner) Start(c core.Components) error {
+func (lr *LogicRunner) Start(ctx core.Context, c core.Components) error {
 	am := c.Ledger.GetArtifactManager()
 	lr.ArtifactManager = am
 	messageBus := c.MessageBus
@@ -136,7 +136,7 @@ func (lr *LogicRunner) Start(c core.Components) error {
 }
 
 // Stop stops logic runner component and its executors
-func (lr *LogicRunner) Stop() error {
+func (lr *LogicRunner) Stop(ctx core.Context) error {
 	reterr := error(nil)
 	for _, e := range lr.Executors {
 		if e == nil {
@@ -285,7 +285,7 @@ func (lr *LogicRunner) getObjectMessage(objref Ref) (*objectBody, error) {
 		return cr.Resp.(*objectBody), nil
 	}
 
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, objref, nil)
+	objDesc, err := lr.ArtifactManager.GetObject(ctx, objref, nil, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}

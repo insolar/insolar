@@ -61,7 +61,7 @@ func NewMetrics(cfg configuration.Metrics) (*Metrics, error) {
 }
 
 // Start is implementation of core.Component interface.
-func (m *Metrics) Start(components core.Components) error {
+func (m *Metrics) Start(ctx core.Context, components core.Components) error {
 	log.Infoln("Starting metrics server")
 	http.Handle("/metrics", m.httpHandler)
 
@@ -82,12 +82,12 @@ func (m *Metrics) Start(components core.Components) error {
 }
 
 // Stop is implementation of core.Component interface.
-func (m *Metrics) Stop() error {
+func (m *Metrics) Stop(ctx core.Context) error {
 	const timeOut = 3
 	log.Infoln("Shutting down metrics server")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeOut)*time.Second)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(timeOut)*time.Second)
 	defer cancel()
-	err := m.server.Shutdown(ctx)
+	err := m.server.Shutdown(ctxWithTimeout)
 	if err != nil {
 		return errors.Wrap(err, "Can't gracefully stop metrics server")
 	}
