@@ -135,21 +135,6 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Message)
 	return nil, err
 }
 
-func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
-	lr.consensusMutex.Lock()
-	defer lr.consensusMutex.Unlock()
-	c, ok := lr.consensus[r]
-	if !ok {
-		// arr, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.Pulse.PulseNumber)
-		//if err != nil {
-		//	panic("cannot QueryRole")
-		//}
-		c = newConsensus(nil)
-		lr.consensus[r] = c
-	}
-	return c, ok
-}
-
 func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Message) (core.Reply, error) {
 	msg, ok := inmsg.(*message.ValidationResults)
 	if !ok {

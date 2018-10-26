@@ -76,13 +76,6 @@ func (lr *LogicRunner) addObjectCaseRecord(ref Ref, cr core.CaseRecord) {
 	lr.caseBindMutex.Unlock()
 }
 
-func (lr *LogicRunner) lastObjectCaseRecord(ref Ref) core.CaseRecord {
-	lr.caseBindMutex.Lock()
-	defer lr.caseBindMutex.Unlock()
-	list := lr.caseBind.Records[ref]
-	return list[len(list)-1]
-}
-
 func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	lr.caseBindReplaysMutex.Lock()
 	defer lr.caseBindReplaysMutex.Unlock()
@@ -96,4 +89,27 @@ func (lr *LogicRunner) nextValidationStep(ref Ref) (*core.CaseRecord, int) {
 	r.Step++
 	lr.caseBindReplays[ref] = r
 	return &ret, r.Step
+}
+
+func (lr *LogicRunner) pulse() *core.Pulse {
+	pulse, err := lr.Ledger.GetPulseManager().Current()
+	if err != nil {
+		panic(err)
+	}
+	return pulse
+}
+
+func (lr *LogicRunner) GetConsensus(r Ref) (*Consensus, bool) {
+	lr.consensusMutex.Lock()
+	defer lr.consensusMutex.Unlock()
+	c, ok := lr.consensus[r]
+	if !ok {
+		// arr, err := lr.Ledger.GetJetCoordinator().QueryRole(core.RoleVirtualValidator, r, lr.Pulse.PulseNumber)
+		//if err != nil {
+		//	panic("cannot QueryRole")
+		//}
+		c = newConsensus(nil)
+		lr.consensus[r] = c
+	}
+	return c, ok
 }

@@ -230,14 +230,6 @@ func (lr *LogicRunner) Execute(ctx context.Context, inmsg core.Message) (core.Re
 	}
 }
 
-func (lr *LogicRunner) pulse() *core.Pulse {
-	pulse, err := lr.Ledger.GetPulseManager().Current()
-	if err != nil {
-		panic(err)
-	}
-	return pulse
-}
-
 type objectBody struct {
 	objDescriptor   core.ObjectDescriptor
 	Object          []byte
