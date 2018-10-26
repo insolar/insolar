@@ -48,7 +48,7 @@ func NewServiceNetwork(conf configuration.Configuration) (*ServiceNetwork, error
 	network := &ServiceNetwork{}
 
 	// workaround before DI
-	cert, err := certificate.NewCertificate(conf.KeysPath)
+	cert, err := certificate.NewCertificate(conf.KeysPath, conf.CertificatePath)
 	if err != nil {
 		log.Warnf("failed to read certificate: %s", err.Error())
 	}
