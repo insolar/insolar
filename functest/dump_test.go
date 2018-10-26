@@ -25,8 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// todo fix this dead lock
-func _TestDumpAllUsers(t *testing.T) {
+func TestDumpAllUsers(t *testing.T) {
 	_ = createMember(t, "Member")
 
 	result, err := signedRequest(&root, "DumpAllUsers")
@@ -56,4 +55,26 @@ func TestDumpUser(t *testing.T) {
 func TestDumpUserWrongRef(t *testing.T) {
 	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef())
 	assert.EqualError(t, err, "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation: on calling main API: inconsistent object index: storage object not found")
+}
+
+func TestDumpAllUsersNoRoot(t *testing.T) {
+	member := createMember(t, "Member")
+
+	_, err := signedRequest(member, "DumpAllUsers")
+	assert.EqualError(t, err, "[ DumpUserInfo ] Only root can call this method")
+}
+
+func TestDumpUserYourself(t *testing.T) {
+	member := createMember(t, "Member")
+
+	_, err := signedRequest(member, "DumpUserInfo", member.ref)
+	assert.NoError(t, err)
+}
+
+func TestDumpUserOther(t *testing.T) {
+	member1 := createMember(t, "Member1")
+	member2 := createMember(t, "Member2")
+
+	_, err := signedRequest(member1, "DumpUserInfo", member2.ref)
+	assert.EqualError(t, err, "[ DumpUserInfo ] You can dump only yourself")
 }
