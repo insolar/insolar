@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/certificate/certificatev2/certificatev2"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/inscontext"
@@ -123,7 +122,7 @@ func mergeConfigAndCertificate(cfg *configuration.Configuration) {
 		log.Info("[ mergeConfigAndCertificate ] No certificate path - No merge")
 		return
 	}
-	cert, err := certificatev2.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
+	cert, err := certificate.NewCertificate(cfg.KeysPath, cfg.CertificatePath)
 	checkError("[ mergeConfigAndCertificate ] Can't create certificate", err)
 
 	cfg.Host.BootstrapHosts = []string{}
@@ -157,50 +156,52 @@ func main() {
 		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
+	config := &cfgHolder.Configuration
+
 	if !isBootstrap {
-		mergeConfigAndCertificate(&cfgHolder.Configuration)
+		mergeConfigAndCertificate(config)
 	}
 
-	initLogger(cfgHolder.Configuration.Log)
+	initLogger(config.Log)
 
-	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+	fmt.Print("Starts with configuration:\n", configuration.ToString(config))
 
 	ctx := inscontext.WithTraceID(inscontext.Background(), api.RandTraceID())
 
 	cm := componentManager{}
-	cert, err := certificate.NewCertificate(cfgHolder.Configuration.KeysPath)
+	cert, err := certificate.NewCertificate(config.KeysPath, config.CertificatePath)
 	checkError("failed to start Certificate: ", err)
 	cm.components.Certificate = cert
 
-	cm.components.NodeNetwork, err = nodekeeper.NewNodeNetwork(cfgHolder.Configuration)
+	cm.components.NodeNetwork, err = nodekeeper.NewNodeNetwork(*config)
 	checkError("failed to start NodeNetwork: ", err)
 
-	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&cfgHolder.Configuration.LogicRunner)
+	cm.components.LogicRunner, err = logicrunner.NewLogicRunner(&config.LogicRunner)
 	checkError("failed to start LogicRunner: ", err)
 
-	cm.components.Ledger, err = ledger.NewLedger(cfgHolder.Configuration.Ledger)
+	cm.components.Ledger, err = ledger.NewLedger(config.Ledger)
 	checkError("failed to start Ledger: ", err)
 
-	nw, err := servicenetwork.NewServiceNetwork(cfgHolder.Configuration)
+	nw, err := servicenetwork.NewServiceNetwork(*config)
 	checkError("failed to start Network: ", err)
 	cm.components.Network = nw
 
-	cm.components.MessageBus, err = messagebus.NewMessageBus(cfgHolder.Configuration)
+	cm.components.MessageBus, err = messagebus.NewMessageBus(*config)
 	checkError("failed to start MessageBus: ", err)
 
-	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(cfgHolder.Configuration.Bootstrap)
+	cm.components.Bootstrapper, err = bootstrap.NewBootstrapper(config.Bootstrap)
 	checkError("failed to start Bootstrapper: ", err)
 
-	cm.components.APIRunner, err = api.NewRunner(&cfgHolder.Configuration.APIRunner)
+	cm.components.APIRunner, err = api.NewRunner(&config.APIRunner)
 	checkError("failed to start ApiRunner: ", err)
 
-	cm.components.Metrics, err = metrics.NewMetrics(cfgHolder.Configuration.Metrics)
+	cm.components.Metrics, err = metrics.NewMetrics(config.Metrics)
 	checkError("failed to start Metrics: ", err)
 
 	cm.components.NetworkCoordinator, err = networkcoordinator.New()
 	checkError("failed to start NetworkCoordinator: ", err)
 
-	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(cfgHolder.Configuration.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
+	err = cm.components.LogicRunner.OnPulse(*pulsar.NewPulse(config.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError("failed init pulse for LogicRunner: ", err)
 
 	cm.linkAll(ctx)
