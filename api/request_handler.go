@@ -17,6 +17,7 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -91,7 +92,7 @@ func NewRequestHandler(params *Params, messageBus core.MessageBus, nc core.Netwo
 	}
 }
 
-func (rh *RequestHandler) sendRequest(ctx core.Context, method string, argsIn []interface{}) (core.Reply, error) {
+func (rh *RequestHandler) sendRequest(ctx context.Context, method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendRequest ]")
@@ -105,7 +106,7 @@ func (rh *RequestHandler) sendRequest(ctx core.Context, method string, argsIn []
 	return routResult, nil
 }
 
-func (rh *RequestHandler) routeCall(ctx core.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
+func (rh *RequestHandler) routeCall(ctx context.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if rh.messageBus == nil {
 		return nil, errors.New("[ RouteCall ] message bus was not set during initialization")
 	}
@@ -126,7 +127,7 @@ func (rh *RequestHandler) routeCall(ctx core.Context, ref core.RecordRef, method
 }
 
 // ProcessRegisterNode process register node response
-func (rh *RequestHandler) ProcessRegisterNode(ctx core.Context) (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessRegisterNode(ctx context.Context) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	if len(rh.params.PublicKey) == 0 {
@@ -166,7 +167,7 @@ func (rh *RequestHandler) ProcessRegisterNode(ctx core.Context) (map[string]inte
 }
 
 // ProcessIsAuthorized processes is_auth query type
-func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessIsAuthorized(ctx context.Context) (map[string]interface{}, error) {
 
 	// Check calling smart contract
 	result := make(map[string]interface{})
@@ -227,7 +228,7 @@ func (rh *RequestHandler) ProcessIsAuthorized(ctx core.Context) (map[string]inte
 }
 
 // ProcessGetSeed processes get seed request
-func (rh *RequestHandler) ProcessGetSeed(ctx core.Context) (map[string]interface{}, error) {
+func (rh *RequestHandler) ProcessGetSeed(ctx context.Context) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	seed, err := rh.seedGenerator.Next()
 	if err != nil {

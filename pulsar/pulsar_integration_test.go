@@ -17,6 +17,7 @@
 package pulsar
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
@@ -24,7 +25,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/logicrunner"
@@ -101,7 +101,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 }
 
 func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(), *servicenetwork.ServiceNetwork, string) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, err := logicrunner.NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -121,7 +121,7 @@ func initNetwork(t *testing.T, bootstrapHosts []string) (*ledger.Ledger, func(),
 }
 
 func TestPulsar_SendPulseToNode(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
@@ -184,7 +184,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 }
 
 func TestTwoPulsars_Full_Consensus(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)
@@ -293,7 +293,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 }
 
 func TestSevenPulsars_Full_Consensus(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	t.Skip("rewrite pulsar tests respecting new active node managing logic")
 	// Arrange
 	_, bootstrapLedgerCleaner, bootstrapNodeNetwork, bootstrapAddress := initNetwork(t, nil)

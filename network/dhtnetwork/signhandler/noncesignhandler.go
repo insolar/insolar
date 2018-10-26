@@ -17,11 +17,11 @@
 package signhandler
 
 import (
+	"context"
 	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/core"
 	ecdsa2 "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/id"
 	"github.com/pkg/errors"
@@ -53,7 +53,7 @@ func (handler *NonceSignHandler) AddUncheckedNode(hostID id.ID, nonce []byte, re
 
 // SignedNonceIsCorrect checks a nonce sign.
 func (handler *NonceSignHandler) SignedNonceIsCorrect(coordinator core.NetworkCoordinator, hostID id.ID, signedNonce []byte) bool {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	if unchecked, ok := handler.uncheckedNodes[hostID.String()]; ok {
 		key, _, err := coordinator.Authorize(ctx, unchecked.Ref, unchecked.Nonce, signedNonce)
 		if err != nil {

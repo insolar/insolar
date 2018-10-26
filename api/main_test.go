@@ -26,18 +26,19 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const HOST = "http://localhost:19191"
 const TestUrl = HOST + "/api/v1?query_type=LOL"
 
 func TestMain(m *testing.M) {
-	ctx := inscontext.WithTraceID(context.Background(), "APItests")
+	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
 	bootstrapCfg := configuration.NewConfiguration()
 	api, _ := NewRunner(&cfg)

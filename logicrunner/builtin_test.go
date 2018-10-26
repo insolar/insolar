@@ -17,13 +17,13 @@
 package logicrunner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
@@ -43,7 +43,7 @@ func byteRecorRef(b byte) core.RecordRef {
 }
 
 func TestBareHelloworld(t *testing.T) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
 	})
@@ -91,7 +91,7 @@ func TestBareHelloworld(t *testing.T) {
 
 	// #1
 	resp, err := lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: reqref,
 			Method:    "Greet",
@@ -107,7 +107,7 @@ func TestBareHelloworld(t *testing.T) {
 
 	// #2
 	resp, err = lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: reqref,
 			Method:    "Greet",
