@@ -41,6 +41,7 @@ const TestURL = HOST + "/api/v1"
 const insolarImportPath = "github.com/insolar/insolar"
 const insolarNodeKeys = "bootstrap_keys.json"
 const insolarRootMemberKeys = "root_member_keys.json"
+const insolarCertificate = "certificate.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -51,6 +52,7 @@ var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
 var insolarNodeKeysPath = filepath.Join(testdataPath(), insolarNodeKeys)
 var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
+var insolarCertificatePath = filepath.Join(testdataPath(), insolarCertificate)
 
 var info infoResponse
 var root user
@@ -119,6 +121,13 @@ func generateRootMemberKeys() error {
 		insolarPath, "-c", "gen_keys",
 		"-o", insolarRootMemberKeysPath).CombinedOutput()
 	return errors.Wrapf(err, "[ generateRootMemberKeys ] could't generate root member keys: %s", out)
+}
+
+func generateCertificate() error {
+	out, err := exec.Command(
+		insolarPath, "-c", "gen_certificate", "-g", insolarNodeKeysPath,
+		"-o", insolarCertificatePath).CombinedOutput()
+	return errors.Wrapf(err, "[ generateCertificate ] could't generate certificate: %s", out)
 }
 
 func loadRootKeys() error {
@@ -299,6 +308,12 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't generate node keys: ")
 	}
 	fmt.Println("[ setup ] node keys successfully generated")
+
+	err = generateCertificate()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't generate certificate: ")
+	}
+	fmt.Println("[ setup ] certificate successfully generated")
 
 	err = generateRootMemberKeys()
 	if err != nil {
