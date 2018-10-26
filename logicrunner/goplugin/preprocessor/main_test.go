@@ -27,6 +27,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sync"
+
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 )
 
@@ -110,6 +112,7 @@ func TestBasicGeneration(t *testing.T) {
 	err = goplugintestutils.WriteFile(tmpDir, "main.go", randomTestCode)
 	assert.NoError(t, err)
 
+	parsedMutex := sync.Mutex{}
 	parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
 	assert.NoError(t, err)
 	assert.NotNil(t, parsed)
@@ -118,7 +121,9 @@ func TestBasicGeneration(t *testing.T) {
 		t.Parallel()
 
 		buf := bytes.Buffer{}
+		parsedMutex.Lock()
 		err = parsed.WriteWrapper(&buf)
+		parsedMutex.Unlock()
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -130,7 +135,9 @@ func TestBasicGeneration(t *testing.T) {
 		t.Parallel()
 
 		buf := bytes.Buffer{}
+		parsedMutex.Lock()
 		err = parsed.WriteProxy("testRef", &buf)
+		parsedMutex.Unlock()
 		assert.NoError(t, err)
 
 		code, err := ioutil.ReadAll(&buf)
