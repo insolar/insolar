@@ -27,17 +27,37 @@ import (
 type State int
 
 const (
+	// Failed means that current iteration is broken
 	Failed State = iota
+
+	// WaitingForStart means that state machine is waiting for the start
 	WaitingForStart
+
+	// GenerateEntropy means that state machine is generating entropy for a current slot
 	GenerateEntropy
+
+	// WaitingForEntropySigns means that state machine is waiting for other pulsars' signs of entropy
 	WaitingForEntropySigns
+
+	// SendingEntropy means that state machine is sending entropy to other pulsars
 	SendingEntropy
+
+	// WaitingForEntropy means that state machine is waiting for the entropy for other pulsars
 	WaitingForEntropy
-	SendingVector
+
+	// WaitingForVectors means that state machine is waiting for other pulsars' vectors
 	WaitingForVectors
+
+	// Verifying means that state machine is verifying bft-table
 	Verifying
+
+	// SendingPulseSign means that state machine is sending sign to chosen pulsar
 	SendingPulseSign
+
+	// WaitingForPulseSigns means that state machine is waiting for signs to chosen pulsar
 	WaitingForPulseSigns
+
+	// SendingPulseSign means that state machine is sending pulse to network
 	SendingPulse
 )
 
