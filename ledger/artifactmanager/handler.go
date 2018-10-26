@@ -289,9 +289,12 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 		return nil, errors.New("wrong class state record")
 	}
 
-	var id *record.ID
-	err := h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err := getObjectIndex(tx, &objectID, true)
+	var (
+		err error
+		idx *index.ObjectLifeline
+	)
+	err = h.db.Update(func(tx *storage.TransactionManager) error {
+		idx, err = getObjectIndex(tx, &objectID, true)
 		if err != nil {
 			return err
 		}
@@ -303,7 +306,7 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 			return errors.New("invalid state record")
 		}
 
-		id, err = tx.SetRecord(rec)
+		id, err := tx.SetRecord(rec)
 		if err != nil {
 			return err
 		}
@@ -323,7 +326,14 @@ func (h *MessageHandler) handleUpdateObject(ctx core.Context, genericMsg core.Me
 		}
 		return nil, err
 	}
-	return &reply.ID{ID: *id.CoreID()}, nil
+
+	rep := reply.Object{
+		Head:         msg.Object,
+		State:        *idx.LatestState.CoreID(),
+		Class:        *idx.ClassRef.CoreRef(),
+		ChildPointer: idx.ChildPointer.CoreID(),
+	}
+	return &rep, nil
 }
 
 func (h *MessageHandler) handleRegisterChild(ctx core.Context, genericMsg core.Message) (core.Reply, error) {

@@ -148,7 +148,7 @@ type ArtifactManager interface {
 	// object. Provided memory well be the new object memory.
 	//
 	// Returned reference will be the latest object state (exact) reference.
-	UpdateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (*RecordID, error)
+	UpdateObject(ctx Context, domain, request RecordRef, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//

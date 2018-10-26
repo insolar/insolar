@@ -75,6 +75,9 @@ func (id TypeID) WriteHash(w io.Writer) {
 
 // CoreID generates Reference byte representation (key without prefix).
 func (id *ID) CoreID() *core.RecordID {
+	if id == nil {
+		return nil
+	}
 	var b core.RecordID
 	_ = copy(b[:], ID2Bytes(*id))
 	return &b
