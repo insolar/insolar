@@ -158,13 +158,13 @@ func NewPulsar(
 }
 
 // StartServer starts listening of the rpc-server
-func (currentPulsar *Pulsar) StartServer() {
-	log.Debugf("[StartServer] address - %v", currentPulsar.Config.MainListenerAddress)
+func (currentPulsar *Pulsar) StartServer(ctx context.Context) {
+	inslogger.FromContext(ctx).Debugf("[StartServer] address - %v", currentPulsar.Config.MainListenerAddress)
 	server := rpc.NewServer()
 
 	err := server.RegisterName("Pulsar", &Handler{Pulsar: currentPulsar})
 	if err != nil {
-		log.Fatal(err)
+		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
 	currentPulsar.RPCServer = server
