@@ -188,6 +188,13 @@ func (t *TestArtifactManager) RegisterRequest(ctx core.Context, message core.Mes
 	return &nonce, nil
 }
 
+// RegisterResult saves VM method call result.
+func (t *TestArtifactManager) RegisterResult(
+	ctx core.Context, request core.RecordRef, payload []byte,
+) (*core.RecordID, error) {
+	panic("implement me")
+}
+
 // GetClass implementation for tests
 func (t *TestArtifactManager) GetClass(ctx core.Context, object core.RecordRef, state *core.RecordID) (core.ClassDescriptor, error) {
 	res, ok := t.Classes[object]
