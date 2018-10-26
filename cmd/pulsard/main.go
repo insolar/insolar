@@ -53,7 +53,7 @@ func main() {
 
 	server, storage := initPulsar(ctx, cfgHolder.Configuration)
 
-	go server.StartServer()
+	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
 	fmt.Println("Press any button to exit")
