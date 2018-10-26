@@ -17,11 +17,11 @@
 package ledgertestutils
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -58,7 +58,7 @@ func TmpLedger(t testing.TB, dir string, c core.Components) (*ledger.Ledger, fun
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, handler)
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	err = l.Start(ctx, c)
 	assert.NoError(t, err)
 

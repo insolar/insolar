@@ -17,6 +17,7 @@
 package networkcoordinator
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/binary"
 
@@ -40,7 +41,7 @@ func New() (*NetworkCoordinator, error) {
 }
 
 // Start implements interface of Component
-func (nc *NetworkCoordinator) Start(ctx core.Context, c core.Components) error {
+func (nc *NetworkCoordinator) Start(ctx context.Context, c core.Components) error {
 	nc.logicRunner = c.LogicRunner
 	nc.messageBus = c.MessageBus
 	nc.rootDomainRef = c.Bootstrapper.GetRootDomainRef()
@@ -49,7 +50,7 @@ func (nc *NetworkCoordinator) Start(ctx core.Context, c core.Components) error {
 }
 
 // Stop implements interface of Component
-func (nc *NetworkCoordinator) Stop(ctx core.Context) error {
+func (nc *NetworkCoordinator) Stop(ctx context.Context) error {
 	return nil
 }
 
@@ -64,7 +65,7 @@ func RandomUint64() uint64 {
 	return binary.LittleEndian.Uint64(buf)
 }
 
-func (nc *NetworkCoordinator) routeCall(ctx core.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
+func (nc *NetworkCoordinator) routeCall(ctx context.Context, ref core.RecordRef, method string, args core.Arguments) (core.Reply, error) {
 	if nc.messageBus == nil {
 		return nil, errors.New("[ NetworkCoordinator::routeCall ] message bus was not set during initialization")
 	}
@@ -84,7 +85,7 @@ func (nc *NetworkCoordinator) routeCall(ctx core.Context, ref core.RecordRef, me
 	return res, nil
 }
 
-func (nc *NetworkCoordinator) sendRequest(ctx core.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
+func (nc *NetworkCoordinator) sendRequest(ctx context.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NetworkCoordinator::sendRequest ]")
@@ -98,7 +99,7 @@ func (nc *NetworkCoordinator) sendRequest(ctx core.Context, ref *core.RecordRef,
 	return routResult, nil
 }
 
-func (nc *NetworkCoordinator) getNodeDomainRef(ctx core.Context) (*core.RecordRef, error) {
+func (nc *NetworkCoordinator) getNodeDomainRef(ctx context.Context) (*core.RecordRef, error) {
 	if nc.nodeDomainRef == nil {
 		nodeDomainRef, err := nc.fetchNodeDomainRef(ctx)
 		if err != nil {
@@ -109,7 +110,7 @@ func (nc *NetworkCoordinator) getNodeDomainRef(ctx core.Context) (*core.RecordRe
 	return nc.nodeDomainRef, nil
 }
 
-func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx core.Context) (*core.RecordRef, error) {
+func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx context.Context) (*core.RecordRef, error) {
 	routResult, err := nc.sendRequest(ctx, nc.rootDomainRef, "GetNodeDomainRef", []interface{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ fetchNodeDomainRef ] Can't send request")
@@ -124,12 +125,12 @@ func (nc *NetworkCoordinator) fetchNodeDomainRef(ctx core.Context) (*core.Record
 }
 
 // WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) WriteActiveNodes(ctx core.Context, number core.PulseNumber, activeNodes []*core.Node) error {
+func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []*core.Node) error {
 	return errors.New("not implemented")
 }
 
 // Authorize authorizes node by verifying it's signature
-func (nc *NetworkCoordinator) Authorize(ctx core.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
+func (nc *NetworkCoordinator) Authorize(ctx context.Context, nodeRef core.RecordRef, seed []byte, signatureRaw []byte) (string, []core.NodeRole, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "[ Authorize ] Can't get nodeDomainRef")
@@ -150,7 +151,7 @@ func (nc *NetworkCoordinator) Authorize(ctx core.Context, nodeRef core.RecordRef
 }
 
 // RegisterNode registers node in nodedomain
-func (nc *NetworkCoordinator) RegisterNode(ctx core.Context, publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
+func (nc *NetworkCoordinator) RegisterNode(ctx context.Context, publicKey string, numberOfBootstrapNodes int, majorityRule int, roles []string, ip string) ([]byte, error) {
 	nodeDomainRef, err := nc.getNodeDomainRef(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ RegisterNode ] Can't get nodeDomainRef")

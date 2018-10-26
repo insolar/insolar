@@ -18,6 +18,7 @@ package requesters
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -25,15 +26,16 @@ import (
 
 	"github.com/insolar/insolar/core"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
 // verbose switches on verbose mode
 var verbose = false
 
-func verboseInfo(ctx core.Context, msg string) {
+func verboseInfo(ctx context.Context, msg string) {
 	if verbose {
-		ctx.Log().Infoln(msg)
+		inslogger.FromContext(ctx).Infoln(msg)
 	}
 }
 
@@ -98,7 +100,7 @@ func constructParams(params []interface{}) ([]byte, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(ctx core.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON, seed []byte) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ Send ] Configs must be initialized")
 	}
@@ -140,7 +142,7 @@ func SendWithSeed(ctx core.Context, url string, userCfg *UserConfigJSON, reqCfg 
 }
 
 // Send first gets seed and after that makes target request
-func Send(ctx core.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
+func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *RequestConfigJSON) ([]byte, error) {
 	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {

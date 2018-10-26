@@ -18,6 +18,7 @@ package nodekeeper
 
 import (
 	"bytes"
+	"context"
 	"sort"
 	"strings"
 	"sync"
@@ -125,11 +126,11 @@ type nodekeeper struct {
 	nodeWaiters map[core.RecordRef]chan *core.Node
 }
 
-func (nk *nodekeeper) Start(ctx core.Context, components core.Components) error {
+func (nk *nodekeeper) Start(ctx context.Context, components core.Components) error {
 	return nil
 }
 
-func (nk *nodekeeper) Stop(ctx core.Context) error {
+func (nk *nodekeeper) Stop(ctx context.Context) error {
 	return nil
 }
 

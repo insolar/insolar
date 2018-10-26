@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus"
@@ -107,7 +106,7 @@ func (n *ServiceNetwork) GetPrivateKey() *ecdsa.PrivateKey {
 }
 
 // Start implements core.Component
-func (n *ServiceNetwork) Start(insctx core.Context, components core.Components) error {
+func (n *ServiceNetwork) Start(ctx context.Context, components core.Components) error {
 	n.inject(components)
 	go n.listen()
 
@@ -138,7 +137,7 @@ func (n *ServiceNetwork) inject(components core.Components) {
 }
 
 // Stop implements core.Component
-func (n *ServiceNetwork) Stop(insctx core.Context) error {
+func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return n.hostNetwork.Disconnect()
 }
 
@@ -158,7 +157,7 @@ func (n *ServiceNetwork) listen() {
 }
 
 func (n *ServiceNetwork) onPulse(pulse core.Pulse) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	if n.pulseManager == nil {
 		log.Error("PulseManager is not initialized")
 		return

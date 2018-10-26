@@ -17,12 +17,14 @@
 package bootstrap
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -77,7 +79,7 @@ func getContractsMap() (map[string]string, error) {
 	return contracts, nil
 }
 
-func isLightExecutor(ctx core.Context, c core.Components) (bool, error) {
+func isLightExecutor(ctx context.Context, c core.Components) (bool, error) {
 	am := c.Ledger.GetArtifactManager()
 	jc := c.Ledger.GetJetCoordinator()
 	pm := c.Ledger.GetPulseManager()
@@ -94,13 +96,13 @@ func isLightExecutor(ctx core.Context, c core.Components) (bool, error) {
 		return false, errors.Wrap(err, "[ isLightExecutor ] couldn't authorized node")
 	}
 	if !isLightExecutor {
-		ctx.Log().Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
+		inslogger.FromContext(ctx).Info("[ isLightExecutor ] Is not light executor. Don't build contracts")
 		return false, nil
 	}
 	return true, nil
 }
 
-func getRootDomainRef(ctx core.Context, c core.Components) (*core.RecordRef, error) {
+func getRootDomainRef(ctx context.Context, c core.Components) (*core.RecordRef, error) {
 	am := c.Ledger.GetArtifactManager()
 	rootObj, err := am.GetObject(ctx, *am.GenesisRef(), nil, true)
 	if err != nil {
@@ -120,7 +122,7 @@ func getRootDomainRef(ctx core.Context, c core.Components) (*core.RecordRef, err
 	return nil, nil
 }
 
-func getRootMemberPubKey(ctx core.Context, file string) (string, error) {
+func getRootMemberPubKey(ctx context.Context, file string) (string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
 		return "", errors.Wrap(err, "[ getRootMemberPubKey ] couldn't get abs path")

@@ -35,10 +35,21 @@ func SetLogger(ctx context.Context, l core.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, l)
 }
 
-// WithField returns logger with provided field's key value and context with new logger.
+// WithField returns context with logger initialized with provided field's key value and logger itself.
 func WithField(ctx context.Context, key string, value string) (context.Context, core.Logger) {
 	l := getLogger(ctx).WithField(key, value)
 	return SetLogger(ctx, l), l
+}
+
+// WithTraceField returns context with logger initialized with provided traceid value and logger itself.
+func WithTraceField(ctx context.Context, traceid string) (context.Context, core.Logger) {
+	return WithField(ctx, "traceid", traceid)
+}
+
+// ContextWithTrace returns only with logger initialized with provided traceid.
+func ContextWithTrace(ctx context.Context, traceid string) context.Context {
+	ctx, _ = WithTraceField(ctx, traceid)
+	return ctx
 }
 
 func getLogger(ctx context.Context) core.Logger {

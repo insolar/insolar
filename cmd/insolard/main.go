@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,7 +31,7 @@ import (
 	"github.com/insolar/insolar/certificate/certificatev2/certificatev2"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/inscontext"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
@@ -51,7 +52,7 @@ type componentManager struct {
 }
 
 // linkAll - link dependency for all components
-func (cm *componentManager) linkAll(ctx core.Context) {
+func (cm *componentManager) linkAll(ctx context.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := 0; i < v.NumField(); i++ {
 		componentName := v.Field(i).String()
@@ -66,7 +67,7 @@ func (cm *componentManager) linkAll(ctx core.Context) {
 }
 
 // stopAll - reverse order stop all components
-func (cm *componentManager) stopAll(ctx core.Context) {
+func (cm *componentManager) stopAll(ctx context.Context) {
 	v := reflect.ValueOf(cm.components)
 	for i := v.NumField() - 1; i >= 0; i-- {
 		err := v.Field(i).Interface().(core.Component).Stop(ctx)
@@ -104,7 +105,7 @@ func registerCurrentNode(cfgHolder *configuration.Holder, cert *certificate.Cert
 	publicKey, err := cert.GetPublicKey()
 	checkError("failed to get public key: ", err)
 
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	rawCertificate, err := nc.RegisterNode(ctx, publicKey, 0, 0, roles, host)
 	checkError("Can't register node: ", err)
 
@@ -166,7 +167,7 @@ func main() {
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	ctx := inscontext.WithTraceID(inscontext.Background(), api.RandTraceID())
+	ctx := inslogger.ContextWithTrace(context.Background(), api.RandTraceID())
 
 	cm := componentManager{}
 	cert, err := certificate.NewCertificate(cfgHolder.Configuration.KeysPath)
