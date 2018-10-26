@@ -260,8 +260,8 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 }
 
 // StartConsensusProcess starts process of calculating consensus between pulsars
-func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber) error {
-	log.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
+func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber core.PulseNumber) error {
+	inslogger.FromContext(ctx).Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
 	currentPulsar.StartProcessLock.Lock()
 
 	if pulseNumber == currentPulsar.ProcessingPulseNumber {
@@ -270,7 +270,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(pulseNumber core.PulseNumber)
 
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
 		currentPulsar.StartProcessLock.Unlock()
-		log.Warnf(
+		inslogger.FromContext(ctx).Warnf(
 			"Wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
 			currentPulsar.StateSwitcher.GetState().String(),
 			pulseNumber,
