@@ -17,6 +17,7 @@
 package logicrunner
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
@@ -36,7 +37,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	cryptoHelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -73,7 +73,7 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicR
 }
 
 func PrepareLrAmCbPm(t testing.TB) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
@@ -260,7 +260,7 @@ func (r *Two) Hello(s string) (string, error) {
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
@@ -282,7 +282,7 @@ func (r *Two) Hello(s string) (string, error) {
 	assert.NoError(t, err)
 
 	resp, err := lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *obj,
 			Method:    "Hello",
@@ -296,7 +296,7 @@ func (r *Two) Hello(s string) (string, error) {
 
 	for i := 2; i <= 5; i++ {
 		resp, err := lr.Execute(
-			inscontext.TODO(),
+			context.TODO(),
 			&message.CallMethod{
 				ObjectRef:        *obj,
 				Method:           "Again",
@@ -311,7 +311,7 @@ func (r *Two) Hello(s string) (string, error) {
 	}
 
 	resp, err = lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *obj,
 			Method:    "GetFriend",
@@ -328,7 +328,7 @@ func (r *Two) Hello(s string) (string, error) {
 
 	for i := 6; i <= 9; i++ {
 		resp, err := lr.Execute(
-			inscontext.TODO(),
+			context.TODO(),
 			&message.CallMethod{
 				ObjectRef:        two,
 				Method:           "Hello",
@@ -407,7 +407,7 @@ func (r *Two) Hello(s string) (string, error) {
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -430,7 +430,7 @@ func (r *Two) Hello(s string) (string, error) {
 	assert.NoError(t, err)
 
 	resp, err := lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *obj,
 			Method:    "Hello",
@@ -443,7 +443,7 @@ func (r *Two) Hello(s string) (string, error) {
 	assert.Equal(t, []interface{}{"Hi, ins! Two said: Hello you too, ins. 644 times!", nil}, r)
 
 	resp, err = lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *obj,
 			Method:    "HelloFromDelegate",
@@ -511,7 +511,7 @@ func (r *Two) Hello() (string, error) {
 	return fmt.Sprintf("Hello %d times!", r.X), nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	// TODO: use am := testutil.NewTestArtifactManager() here
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
@@ -534,7 +534,7 @@ func (r *Two) Hello() (string, error) {
 	assert.NoError(t, err)
 
 	_, err = lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *obj,
 			Method:    "Hello",
@@ -600,7 +600,7 @@ func (r *One) Kill() error {
 	return nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -621,7 +621,7 @@ func (r *One) Kill() error {
 	assert.NoError(t, err)
 
 	_, err = lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *obj,
 			Method:    "Kill",
@@ -652,7 +652,7 @@ func (r *One) NotPanic() error {
 	return nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -672,7 +672,7 @@ func (r *One) NotPanic() error {
 	)
 	assert.NoError(t, err)
 
-	_, err = lr.Execute(inscontext.TODO(),
+	_, err = lr.Execute(context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *obj,
 			Method:    "Panic",
@@ -681,7 +681,7 @@ func (r *One) NotPanic() error {
 	)
 	assert.Error(t, err)
 
-	_, err = lr.Execute(inscontext.TODO(),
+	_, err = lr.Execute(context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *obj,
 			Method:    "NotPanic",
@@ -763,7 +763,7 @@ func New(n int) (*Child, error) {
 	return &Child{Num: n}, nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -781,7 +781,7 @@ func New(n int) (*Child, error) {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *contract,
 			Method:    "NewChilds",
@@ -793,7 +793,7 @@ func New(n int) (*Child, error) {
 	assert.Equal(t, []interface{}{uint64(45), nil}, r)
 
 	resp, err = lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *contract,
 			Method:    "SumChilds",
@@ -831,7 +831,7 @@ func (c *Contract) Rand() (int, error) {
 	return rand.Intn(77), nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -851,7 +851,7 @@ func (c *Contract) Rand() (int, error) {
 
 	for i := 0; i < 5; i++ {
 		_, err = lr.Execute(
-			inscontext.TODO(),
+			context.TODO(),
 			&message.CallMethod{
 				ObjectRef:        *contract,
 				Method:           "Rand",
@@ -924,7 +924,7 @@ func (r *Two) NoError() error {
 	return nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -946,7 +946,7 @@ func (r *Two) NoError() error {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *contract,
 			Method:    "AnError",
@@ -964,7 +964,7 @@ func (r *Two) NoError() error {
 	assert.Equal(t, &foundation.Error{S: "an error"}, res[0])
 
 	resp, err = lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *contract,
 			Method:    "NoError",
@@ -1023,7 +1023,7 @@ func (r *Two) Hello() (*string, error) {
 	return nil, nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -1045,7 +1045,7 @@ func (r *Two) Hello() (*string, error) {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *contract,
 			Method:    "Hello",
@@ -1086,7 +1086,7 @@ func (s *Caller) SignedCall(rootDomain core.RecordRef, method string, params []i
 	assert.NoError(s.t, err)
 
 	res, err := s.lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: core.NewRefFromBase58(s.member),
 			Method:    "Call",
@@ -1126,7 +1126,7 @@ func TestRootDomainContract(t *testing.T) {
 		fmt.Print(err)
 	}
 
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 	err = cb.Build(map[string]string{"member": string(memberCode), "allowance": string(allowanceCode), "wallet": string(walletCode), "rootdomain": string(rootDomainCode)})
@@ -1273,7 +1273,7 @@ func New(n int) (*Child, error) {
 	return &Child{Num: n}, nil
 }
 `
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
@@ -1292,7 +1292,7 @@ func New(n int) (*Child, error) {
 	assert.NotEqual(t, contract, nil, "contract created")
 
 	resp, err := lr.Execute(
-		inscontext.TODO(),
+		context.TODO(),
 		&message.CallMethod{
 			ObjectRef: *contract,
 			Method:    "NewChilds",
@@ -1305,17 +1305,17 @@ func New(n int) (*Child, error) {
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
 	var toValidate []core.Message
-	mb.ReRegister(core.TypeValidateCaseBind, func(ctx core.Context, m core.Message) (core.Reply, error) {
+	mb.ReRegister(core.TypeValidateCaseBind, func(ctx context.Context, m core.Message) (core.Reply, error) {
 		toValidate = append(toValidate, m)
 		return nil, nil
 	})
 	var toExecute []core.Message
-	mb.ReRegister(core.TypeExecutorResults, func(ctx core.Context, m core.Message) (core.Reply, error) {
+	mb.ReRegister(core.TypeExecutorResults, func(ctx context.Context, m core.Message) (core.Reply, error) {
 		toExecute = append(toExecute, m)
 		return nil, nil
 	})
 	var toCheckValidate []core.Message
-	mb.ReRegister(core.TypeValidationResults, func(ctx core.Context, m core.Message) (core.Reply, error) {
+	mb.ReRegister(core.TypeValidationResults, func(ctx context.Context, m core.Message) (core.Reply, error) {
 		toCheckValidate = append(toCheckValidate, m)
 		return nil, nil
 	})
@@ -1324,14 +1324,14 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {
-		lr.ValidateCaseBind(inscontext.TODO(), m)
+		lr.ValidateCaseBind(context.TODO(), m)
 	}
 
 	for _, m := range toExecute {
-		lr.ExecutorResults(inscontext.TODO(), m)
+		lr.ExecutorResults(context.TODO(), m)
 	}
 
 	for _, m := range toCheckValidate {
-		lr.ProcessValidationResults(inscontext.TODO(), m)
+		lr.ProcessValidationResults(context.TODO(), m)
 	}
 }

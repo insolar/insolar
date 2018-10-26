@@ -20,6 +20,7 @@ package logicrunner
 
 import (
 	"bytes"
+	"context"
 	"net"
 	"net/rpc"
 	"sync/atomic"
@@ -27,7 +28,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/inscontext"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/pkg/errors"
@@ -66,7 +66,7 @@ type RPC struct {
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
 	am := gpr.lr.ArtifactManager
-	insctx := inscontext.TODO()
+	insctx := context.TODO()
 	codeDescriptor, err := am.GetCode(insctx, req.Code)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 		Arguments:        req.Arguments,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(inscontext.TODO(), msg)
+	res, err := gpr.lr.MessageBus.Send(context.TODO(), msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -164,7 +164,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 		SaveAs:           message.Child,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(inscontext.TODO(), msg)
+	res, err := gpr.lr.MessageBus.Send(context.TODO(), msg)
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as child")
 	}
@@ -182,7 +182,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 
 // GetObjChildren is an RPC returns set of object children
 func (gpr *RPC) GetObjChildren(req rpctypes.UpGetObjChildrenReq, rep *rpctypes.UpGetObjChildrenResp) error {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	// TODO: INS-408
 
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
@@ -256,7 +256,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 		SaveAs:           message.Delegate,
 	}
 
-	res, err := gpr.lr.MessageBus.Send(inscontext.TODO(), msg)
+	res, err := gpr.lr.MessageBus.Send(context.TODO(), msg)
 
 	if err != nil {
 		return errors.Wrap(err, "couldn't save new object as delegate")
@@ -274,7 +274,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 	cr, step := gpr.lr.getNextValidationStep(req.Callee)
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetDelegate != cr.Type {
