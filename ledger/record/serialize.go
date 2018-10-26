@@ -61,13 +61,14 @@ const (
 	typeCallRequest TypeID = 20
 
 	// result
-	typeType           TypeID = 30
-	typeCode           TypeID = 31
-	typeClassActivate  TypeID = 32
-	typeClassAmend     TypeID = 33
-	typeObjectActivate TypeID = 34
-	typeObjectAmend    TypeID = 35
-	typeDeactivate     TypeID = 36
+	typeResult         TypeID = 30
+	typeType           TypeID = 31
+	typeCode           TypeID = 32
+	typeClassActivate  TypeID = 33
+	typeClassAmend     TypeID = 34
+	typeObjectActivate TypeID = 35
+	typeObjectAmend    TypeID = 36
+	typeDeactivate     TypeID = 37
 )
 
 // getRecordByTypeID returns Record interface with concrete record type under the hood.
@@ -95,6 +96,8 @@ func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
 		return &ChildRecord{}
 	case typeGenesis:
 		return &GenesisRecord{}
+	case typeResult:
+		return &ResultRecord{}
 	default:
 		panic(fmt.Errorf("unknown record type id %v", id))
 	}
