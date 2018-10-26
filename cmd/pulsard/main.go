@@ -142,7 +142,7 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 	refreshTicker = time.NewTicker(1 * time.Second)
 	go func() {
 		for range refreshTicker.C {
-			server.CheckConnectionsToPulsars()
+			server.CheckConnectionsToPulsars(ctx)
 		}
 	}()
 

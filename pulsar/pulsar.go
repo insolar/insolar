@@ -17,6 +17,7 @@
 package pulsar
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/gob"
 	"errors"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 	ecdsahelper "github.com/insolar/insolar/cryptohelpers/ecdsa"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 
 	"github.com/insolar/insolar/configuration"
@@ -231,13 +233,13 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(pubKey string) error {
 }
 
 // CheckConnectionsToPulsars is a method refreshing connections between pulsars
-func (currentPulsar *Pulsar) CheckConnectionsToPulsars() {
+func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 	for pubKey, neighbour := range currentPulsar.Neighbours {
 		log.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
 		if neighbour.OutgoingClient == nil || !neighbour.OutgoingClient.IsInitialised() {
 			err := currentPulsar.EstablishConnectionToPulsar(pubKey)
 			if err != nil {
-				log.Error(err)
+				inslogger.FromContext(ctx).Error(err)
 				continue
 			}
 		}
@@ -249,7 +251,7 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars() {
 			neighbour.OutgoingClient.ResetClient()
 			err := currentPulsar.EstablishConnectionToPulsar(pubKey)
 			if err != nil {
-				log.Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
+				inslogger.FromContext(ctx).Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
 				neighbour.OutgoingClient.ResetClient()
 				continue
 			}
