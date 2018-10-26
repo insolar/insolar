@@ -35,7 +35,7 @@ import (
 )
 
 func newCertificate(t *testing.T) *certificate.Certificate {
-	cert, err := certificate.NewCertificate("../testdata/functional/bootstrap_keys.json")
+	cert, err := certificate.NewCertificatesWithKeys("../testdata/functional/bootstrap_keys.json")
 	assert.NoError(t, err)
 	err = cert.GenerateKeys()
 	assert.NoError(t, err)
