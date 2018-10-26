@@ -39,14 +39,14 @@ func TestTransferMoney(t *testing.T) {
 	assert.Equal(t, oldSecondBalance+amount, newSecondBalance)
 }
 
-func _TestTransferNegativeAmount(t *testing.T) {
+func TestTransferNegativeAmount(t *testing.T) {
 	firstMember := createMember(t, "Member1")
 	secondMember := createMember(t, "Member2")
 
 	amount := -111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.Error(t, err)
+	assert.EqualError(t, err, "[ transferCall ] Amount must be positive")
 }
 
 func TestTransferAllAmount(t *testing.T) {
@@ -66,7 +66,7 @@ func TestTransferAllAmount(t *testing.T) {
 	assert.Equal(t, oldSecondBalance+oldFirstBalance, newSecondBalance)
 }
 
-func _TestTransferMoreThanAvailableAmount(t *testing.T) {
+func TestTransferMoreThanAvailableAmount(t *testing.T) {
 	firstMember := createMember(t, "Member1")
 	secondMember := createMember(t, "Member2")
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -74,20 +74,16 @@ func _TestTransferMoreThanAvailableAmount(t *testing.T) {
 	amount := oldFirstBalance + 100
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	assert.Error(t, err)
+	assert.EqualError(t, err, "[ Transfer ] Not enough balance for transfer")
 }
 
-func _TestTransferToMyself(t *testing.T) {
+func TestTransferToMyself(t *testing.T) {
 	member := createMember(t, "Member1")
-	oldBalance := getBalanceNoErr(t, member, member.ref)
 
 	amount := 100
 
 	_, err := signedRequest(member, "Transfer", amount, member.ref)
-	assert.NoError(t, err)
-
-	newBalance := getBalanceNoErr(t, member, member.ref)
-	assert.Equal(t, oldBalance, newBalance)
+	assert.EqualError(t, err, "[ transferCall ] Recipient must be different from the sender")
 }
 
 // TODO: test to check overflow of balance

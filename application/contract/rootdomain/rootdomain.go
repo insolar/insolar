@@ -110,6 +110,9 @@ func (rd *RootDomain) Authorize() (string, []core.NodeRole, error) {
 
 // CreateMember processes create member request
 func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
+	if *rd.GetContext().Caller != rd.RootMember {
+		return "", fmt.Errorf("[ CreateMember ] Only Root member can create members")
+	}
 	memberHolder := member.New(name, key)
 	m, err := memberHolder.AsChild(rd.GetReference())
 	if err != nil {
@@ -148,7 +151,12 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, 
 
 // DumpUserInfo processes dump user info request
 func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
-	m := member.GetObject(core.NewRefFromBase58(reference))
+	caller := *rd.GetContext().Caller
+	ref := core.NewRefFromBase58(reference)
+	if ref != caller && caller != rd.RootMember {
+		return nil, fmt.Errorf("[ DumpUserInfo ] You can dump only yourself")
+	}
+	m := member.GetObject(ref)
 
 	res, err := rd.getUserInfoMap(m)
 	if err != nil {
@@ -160,12 +168,18 @@ func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 
 // DumpAllUsers processes dump all users request
 func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
+	if *rd.GetContext().Caller != rd.RootMember {
+		return nil, fmt.Errorf("[ DumpUserInfo ] Only root can call this method")
+	}
 	res := []map[string]interface{}{}
 	crefs, err := rd.GetChildrenTyped(member.ClassReference)
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get children: %s", err.Error())
 	}
 	for _, cref := range crefs {
+		if cref == rd.RootMember {
+			continue
+		}
 		m := member.GetObject(cref)
 		userInfo, err := rd.getUserInfoMap(m)
 		if err != nil {
