@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
@@ -62,6 +63,7 @@ type inputParams struct {
 	configPath               string
 	isBootstrap              bool
 	bootstrapCertificatePath string
+	traceEnabled             bool
 }
 
 func parseInputParams() inputParams {
@@ -70,6 +72,7 @@ func parseInputParams() inputParams {
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
 	rootCmd.Flags().BoolVarP(&result.isBootstrap, "bootstrap", "b", false, "is bootstrap mode")
 	rootCmd.Flags().StringVarP(&result.bootstrapCertificatePath, "cert_out", "r", "", "path to write bootstrap certificate")
+	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
@@ -148,7 +151,15 @@ func main() {
 
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	ctx := inslogger.ContextWithTrace(context.Background(), api.RandTraceID())
+	// instrumentation
+	traceid := api.RandTraceID()
+	ctx := inslogger.ContextWithTrace(context.Background(), traceid)
+	jaegerflush := func() {}
+	if traceEnabled {
+		jconf := cfgHolder.Configuration.Tracer.Jaeger
+		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
+	}
+	defer jaegerflush()
 
 	cm, cmOld, repl, err := InitComponents(cfgHolder.Configuration, params.isBootstrap)
 	checkError("failed to init components", err)
@@ -174,6 +185,7 @@ func main() {
 
 		log.Warn("GRACEFULL STOP APP")
 		err = cm.Stop(ctx)
+		jaegerflush()
 		checkError("Failed to graceful stop components", err)
 		os.Exit(0)
 	}()
