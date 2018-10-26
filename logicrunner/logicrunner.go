@@ -40,6 +40,7 @@ type Ref = core.RecordRef
 // Context of one contract execution
 type ExecutionState struct {
 	sync.Mutex
+	validate    bool
 	insContext  core.Context
 	callContext *core.LogicCallContext
 	deactivate  bool
@@ -238,20 +239,21 @@ func (lr *LogicRunner) pulse() *core.Pulse {
 }
 
 type objectBody struct {
-	Object core.ObjectDescriptor
-	Class  core.ClassDescriptor
-	Code   core.CodeDescriptor
+	objDescriptor   core.ObjectDescriptor
+	Object          []byte
+	ClassHeadRef    *Ref
+	CodeMachineType core.MachineType
+	CodeRef         *Ref
 }
 
 func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	ctx := es.insContext
 	cr, step := lr.nextValidationStep(objref)
-
 	// TODO: move this to vb, when vb become a part of es
 	if es.objectbody != nil { // already have something
 		if step > 0 { // check signature
 			if core.CaseRecordTypeSignObject != cr.Type {
-				return errors.New("Wrong validation type on CaseRecordTypeSignObject")
+				return errors.Errorf("Wrong validation type on CaseRecordTypeSignObject %d, ", cr.Type)
 			}
 			if !bytes.Equal(cr.ReqSig, HashInterface(objref)) {
 				return errors.New("Wrong validation sig on CaseRecordTypeSignObject")
@@ -272,7 +274,7 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 
 	if step >= 0 { // validate
 		if core.CaseRecordTypeGetObject != cr.Type {
-			return errors.New("Wrong validation type on CaseRecordTypeGetObject")
+			return errors.Errorf("Wrong validation type on CaseRecordTypeGetObject %d", cr.Type)
 		}
 		sig := HashInterface(objref)
 		if !bytes.Equal(cr.ReqSig, sig) {
@@ -293,15 +295,20 @@ func (lr *LogicRunner) getObjectMessage(es *ExecutionState, objref Ref) error {
 	}
 
 	codeDesc := classDesc.CodeDescriptor()
+
 	es.objectbody = &objectBody{
-		Object: objDesc,
-		Class:  classDesc,
-		Code:   codeDesc,
+		objDescriptor:   objDesc,
+		Object:          objDesc.Memory(),
+		ClassHeadRef:    classDesc.HeadRef(),
+		CodeMachineType: codeDesc.MachineType(),
+		CodeRef:         codeDesc.Ref(),
 	}
+	bcopy := *es.objectbody
+	copy(bcopy.Object, es.objectbody.Object)
 	lr.addObjectCaseRecord(objref, core.CaseRecord{
 		Type:   core.CaseRecordTypeGetObject,
 		ReqSig: HashInterface(objref),
-		Resp:   es.objectbody,
+		Resp:   &bcopy,
 	})
 	return nil
 }
@@ -311,21 +318,23 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 
 	err := lr.getObjectMessage(es, m.ObjectRef)
 	if err != nil {
+		es.Unlock()
 		return nil, errors.Wrap(err, "couldn't get object message")
 	}
 
-	es.callContext.Class = es.objectbody.Class.HeadRef()
+	es.callContext.Class = es.objectbody.ClassHeadRef
 	vb.ModifyContext(es.callContext)
 
-	executor, err := lr.GetExecutor(es.objectbody.Code.MachineType())
+	executor, err := lr.GetExecutor(es.objectbody.CodeMachineType)
 	if err != nil {
+		es.Unlock()
 		return nil, errors.Wrap(err, "no executor registered")
 	}
 
 	executer := func() (*reply.CallMethod, error) {
 		defer es.Unlock()
 		newData, result, err := executor.CallMethod(
-			es.callContext, *es.objectbody.Code.Ref(), es.objectbody.Object.Memory(), m.Method, m.Arguments,
+			es.callContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "executor error")
@@ -335,18 +344,19 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 			am := lr.ArtifactManager
 			if es.deactivate {
 				_, err = am.DeactivateObject(
-					insctx, Ref{}, *es.callContext.Request, es.objectbody.Object,
+					insctx, Ref{}, *es.callContext.Request, es.objectbody.objDescriptor,
 				)
 			} else {
-				// TODO: Here must be an object descriptor, then store new objbody
-				_, err = am.UpdateObject(
-					insctx, Ref{}, *es.callContext.Request, es.objectbody.Object, newData,
+				es.objectbody.objDescriptor, err = am.UpdateObject(
+					insctx, Ref{}, *es.callContext.Request, es.objectbody.objDescriptor, newData,
 				)
 			}
 			if err != nil {
 				return nil, errors.Wrap(err, "couldn't update object")
 			}
 		}
+
+		es.objectbody.Object = newData
 		re := &reply.CallMethod{Data: newData, Result: result}
 
 		vb.End(m.ObjectRef, core.CaseRecord{
@@ -368,6 +378,7 @@ func (lr *LogicRunner) executeMethodCall(es *ExecutionState, m *message.CallMeth
 		}()
 		return &reply.CallMethod{}, nil
 	}
+	es.Unlock()
 	return nil, errors.Errorf("Invalid ReturnMode #%d", m.ReturnMode)
 }
 

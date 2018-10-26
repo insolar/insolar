@@ -45,7 +45,10 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 	if len(cr) < 1 {
 		return 0, errors.New("casebind is empty")
 	}
-
+	es := lr.UpsertExecution(ref)
+	es.insContext = inscontext.TODO()
+	es.validate = true
+	es.objectbody = nil
 	err := func() error {
 		lr.caseBindReplaysMutex.Lock()
 		defer lr.caseBindReplaysMutex.Unlock()
@@ -80,8 +83,7 @@ func (lr *LogicRunner) Validate(ref Ref, p core.Pulse, cr []core.CaseRecord) (in
 		if start.Type != core.CaseRecordTypeStart {
 			return step, errors.New("step between two shores")
 		}
-
-		ret, err := lr.Execute(inscontext.TODO(), start.Resp.(core.Message))
+		ret, err := lr.Execute(es.insContext, start.Resp.(core.Message))
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}

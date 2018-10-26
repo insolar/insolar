@@ -49,7 +49,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
-var parallel = true
+var parallel = false
 
 func TestMain(m *testing.M) {
 	var err error
@@ -134,13 +134,14 @@ func ValidateAllResults(t testing.TB, lr core.LogicRunner, mustfail ...core.Reco
 	rlr.caseBind.Records = make(map[core.RecordRef][]core.CaseRecord)
 	rlr.caseBindMutex.Unlock()
 	for ref, cr := range rlrcbr {
+		log.Debugf("TEST validating: %s", ref)
 		vstep, err := lr.Validate(ref, *rlr.pulse(), cr)
 		if _, ok := failmap[ref]; ok {
-			assert.Error(t, err, "validation")
-			assert.True(t, len(cr) > vstep, "Validation failed before end")
+			assert.Error(t, err, "validation %s", ref)
+			assert.True(t, len(cr) > vstep, "Validation failed before end %s", ref)
 		} else {
-			assert.NoError(t, err, "validation")
-			assert.Equal(t, len(cr), vstep, "Validation passed to the end")
+			assert.NoError(t, err, "validation %s", ref)
+			assert.Equal(t, len(cr), vstep, "Validation passed to the end %s", ref)
 		}
 	}
 }
@@ -257,6 +258,7 @@ func New() (*Two, error) {
 
 func (r *Two) Hello(s string) (string, error) {
 	r.X ++
+//	return fmt.Sprintf("%d",r.X), nil
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
 }
 `
@@ -954,8 +956,6 @@ func (r *Two) NoError() error {
 		},
 	)
 	assert.NoError(t, err, "contract call")
-
-	ValidateAllResults(t, lr)
 
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
