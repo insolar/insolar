@@ -119,8 +119,9 @@ func wrapAPIV1Handler(runner *Runner, rootDomainReference core.RecordRef) func(w
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceid := RandTraceID()
 		ctx, inslog := inslogger.WithTraceField(context.Background(), traceid)
+		inslog,
 
-		startTime := time.Now()
+			startTime := time.Now()
 		answer := make(map[string]interface{})
 		var params *Params
 		defer func() {

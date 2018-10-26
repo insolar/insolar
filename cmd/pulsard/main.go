@@ -17,52 +17,54 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
+	"github.com/satori/go.uuid"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
 // Need to fix problem with start pulsar
 func main() {
+	ctx, inslog := inslogger.WithTraceField(context.Background(), RandTraceID())
+
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
 	err := cfgHolder.Load()
 	if err != nil {
-		log.Warnln("failed to load configuration from file: ", err.Error())
+		inslog.Warnln("failed to load configuration from file: ", err.Error())
 	}
 
-	cfgHolder.Configuration.Log.Level = "Debug"
 	err = cfgHolder.LoadEnv()
 	if err != nil {
-		log.Warnln("failed to load configuration from env:", err.Error())
+		inslog.Warnln("failed to load configuration from env:", err.Error())
 	}
-	initLogger(cfgHolder.Configuration.Log)
-	server, storage := initPulsar(cfgHolder.Configuration)
+
+	server, storage := initPulsar(ctx, cfgHolder.Configuration)
 
 	go server.StartServer()
-	pulseTicker, refreshTicker := runPulsar(server, cfgHolder.Configuration.Pulsar)
+	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
 	fmt.Println("Press any button to exit")
 	rl, err := readline.New("")
 	if err != nil {
-		log.Error(err)
+		inslog.Error(err)
 		panic(err)
 	}
 	_, err = rl.Readline()
 	if err != nil {
-		log.Warn(err)
+		inslog.Warn(err)
 	}
 
 	defer func() {
@@ -70,33 +72,26 @@ func main() {
 		refreshTicker.Stop()
 		err := storage.Close()
 		if err != nil {
-			log.Error(err)
+			inslog.Error(err)
 		}
 		server.StopServer()
 	}()
 
 }
 
-func initLogger(cfg configuration.Log) {
-	err := log.SetLevel(strings.ToLower(cfg.Level))
-	if err != nil {
-		log.Errorln(err.Error())
-	}
-}
-
-func initPulsar(cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
+func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
 	cert, err := certificate.NewCertificate(cfg.KeysPath)
 	if err != nil {
-		log.Fatal(err)
+		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
 
 	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
 	if err != nil {
-		log.Fatal(err)
+		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
 	switcher := &pulsar.StateSwitcherImpl{}
@@ -110,7 +105,7 @@ func initPulsar(cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
 	switcher.SetPulsar(server)
@@ -118,7 +113,7 @@ func initPulsar(cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.
 	return server, storage
 }
 
-func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
+func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
 	server.CheckConnectionsToPulsars()
 
 	var nextPulseNumber core.PulseNumber
@@ -130,7 +125,7 @@ func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *ti
 
 	err := server.StartConsensusProcess(nextPulseNumber)
 	if err != nil {
-		log.Fatal(err)
+		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
 	pulseTicker = time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
@@ -138,7 +133,7 @@ func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *ti
 		for range pulseTicker.C {
 			err = server.StartConsensusProcess(core.PulseNumber(server.GetLastPulse().PulseNumber + 10))
 			if err != nil {
-				log.Fatal(err)
+				inslogger.FromContext(ctx).Fatal(err)
 				panic(err)
 			}
 		}
@@ -152,4 +147,13 @@ func runPulsar(server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *ti
 	}()
 
 	return
+}
+
+// RandTraceID returns random traceID in uuid format
+func RandTraceID() string {
+	qid, err := uuid.NewV4()
+	if err != nil {
+		return "createRandomTraceIDFailed:" + err.Error()
+	}
+	return qid.String()
 }
