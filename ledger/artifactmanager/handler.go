@@ -36,15 +36,14 @@ type internalHandler func(pulseNumber core.PulseNumber, ctx core.Context, generi
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
 	db              *storage.DB
-	handlers        map[core.MessageType]core.MessageHandler
 	jetDropHandlers map[core.MessageType]internalHandler
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 	return &MessageHandler{
-		db:       db,
-		handlers: map[core.MessageType]core.MessageHandler{},
+		db:              db,
+		jetDropHandlers: map[core.MessageType]internalHandler{},
 	}, nil
 }
 
@@ -52,17 +51,17 @@ func NewMessageHandler(db *storage.DB) (*MessageHandler, error) {
 func (h *MessageHandler) Link(components core.Components) error {
 	bus := components.MessageBus
 
-	h.handlers[core.TypeGetCode] = h.handlerWithSavingMessages(h.handleGetCode)
-	h.handlers[core.TypeGetClass] = h.handlerWithSavingMessages(h.handleGetClass)
-	h.handlers[core.TypeGetObject] = h.handlerWithSavingMessages(h.handleGetObject)
-	h.handlers[core.TypeGetDelegate] = h.handlerWithSavingMessages(h.handleGetDelegate)
-	h.handlers[core.TypeGetChildren] = h.handlerWithSavingMessages(h.handleGetChildren)
-	h.handlers[core.TypeUpdateObject] = h.handlerWithSavingMessages(h.handleUpdateObject)
-	h.handlers[core.TypeRegisterChild] = h.handlerWithSavingMessages(h.handleRegisterChild)
-	h.handlers[core.TypeJetDrop] = h.handleJetDrop
-	h.handlers[core.TypeSetRecord] = h.handlerWithSavingMessages(h.handleSetRecord)
-	h.handlers[core.TypeUpdateClass] = h.handlerWithSavingMessages(h.handleUpdateClass)
-	h.handlers[core.TypeValidateRecord] = h.handlerWithSavingMessages(h.handleValidateRecord)
+	bus.MustRegister(core.TypeGetCode, h.messagePersistingWrapper(h.handleGetCode))
+	bus.MustRegister(core.TypeGetClass, h.messagePersistingWrapper(h.handleGetClass))
+	bus.MustRegister(core.TypeGetObject, h.messagePersistingWrapper(h.handleGetObject))
+	bus.MustRegister(core.TypeGetDelegate, h.messagePersistingWrapper(h.handleGetDelegate))
+	bus.MustRegister(core.TypeGetChildren, h.messagePersistingWrapper(h.handleGetChildren))
+	bus.MustRegister(core.TypeUpdateObject, h.messagePersistingWrapper(h.handleUpdateObject))
+	bus.MustRegister(core.TypeRegisterChild, h.messagePersistingWrapper(h.handleRegisterChild))
+	bus.MustRegister(core.TypeJetDrop, h.handleJetDrop)
+	bus.MustRegister(core.TypeSetRecord, h.messagePersistingWrapper(h.handleSetRecord))
+	bus.MustRegister(core.TypeUpdateClass, h.messagePersistingWrapper(h.handleUpdateClass))
+	bus.MustRegister(core.TypeValidateRecord, h.messagePersistingWrapper(h.handleValidateRecord))
 
 	h.jetDropHandlers[core.TypeGetCode] = h.handleGetCode
 	h.jetDropHandlers[core.TypeGetClass] = h.handleGetClass
@@ -75,10 +74,6 @@ func (h *MessageHandler) Link(components core.Components) error {
 	h.jetDropHandlers[core.TypeUpdateClass] = h.handleUpdateClass
 	h.jetDropHandlers[core.TypeValidateRecord] = h.handleValidateRecord
 
-	for handlerType, handler := range h.handlers {
-		bus.MustRegister(handlerType, handler)
-	}
-
 	return nil
 }
 
@@ -88,7 +83,7 @@ func logTimeInside(start time.Time, funcName string) {
 	}
 }
 
-func (h *MessageHandler) handlerWithSavingMessages(handler internalHandler) core.MessageHandler {
+func (h *MessageHandler) messagePersistingWrapper(handler internalHandler) core.MessageHandler {
 	return func(context core.Context, genericMsg core.Message) (core.Reply, error) {
 		err := persistMessageToDb(h.db, genericMsg)
 		if err != nil {
@@ -276,11 +271,6 @@ func (h *MessageHandler) handleGetChildren(pulseNumber core.PulseNumber, ctx cor
 }
 
 func (h *MessageHandler) handleUpdateClass(pulseNumber core.PulseNumber, ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil {
-		return nil, err
-	}
-
 	msg := genericMsg.(*message.UpdateClass)
 	classCoreID := msg.Class.GetRecordID()
 	classID := record.Bytes2ID(classCoreID[:])
@@ -292,7 +282,7 @@ func (h *MessageHandler) handleUpdateClass(pulseNumber core.PulseNumber, ctx cor
 	}
 
 	var id *record.ID
-	err = h.db.Update(func(tx *storage.TransactionManager) error {
+	err := h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, err := getClassIndex(tx, &classID, true)
 		if err != nil {
 			return err
@@ -323,11 +313,6 @@ func (h *MessageHandler) handleUpdateClass(pulseNumber core.PulseNumber, ctx cor
 }
 
 func (h *MessageHandler) handleUpdateObject(pulseNumber core.PulseNumber, ctx core.Context, genericMsg core.Message) (core.Reply, error) {
-	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil {
-		return nil, err
-	}
-
 	msg := genericMsg.(*message.UpdateObject)
 	objectCoreID := msg.Object.GetRecordID()
 	objectID := record.Bytes2ID(objectCoreID[:])
@@ -339,8 +324,8 @@ func (h *MessageHandler) handleUpdateObject(pulseNumber core.PulseNumber, ctx co
 	}
 
 	var idx *index.ObjectLifeline
-	err = h.db.Update(func(tx *storage.TransactionManager) error {
-		idx, err = getObjectIndex(tx, &objectID, true)
+	err := h.db.Update(func(tx *storage.TransactionManager) error {
+		idx, err := getObjectIndex(tx, &objectID, true)
 		if err != nil {
 			return err
 		}
@@ -384,12 +369,6 @@ func (h *MessageHandler) handleUpdateObject(pulseNumber core.PulseNumber, ctx co
 
 func (h *MessageHandler) handleRegisterChild(pulseNumber core.PulseNumber, ctx core.Context, genericMsg core.Message) (core.Reply, error) {
 	start := time.Now()
-
-	err := persistMessageToDb(h.db, genericMsg)
-	if err != nil {
-		return nil, err
-	}
-
 	msg := genericMsg.(*message.RegisterChild)
 	parentRef := record.Core2Reference(msg.Parent)
 	childRef := record.Core2Reference(msg.Child)
@@ -401,7 +380,7 @@ func (h *MessageHandler) handleRegisterChild(pulseNumber core.PulseNumber, ctx c
 	}
 
 	var child *record.ID
-	err = h.db.Update(func(tx *storage.TransactionManager) error {
+	err := h.db.Update(func(tx *storage.TransactionManager) error {
 		idx, _, _, err := getObject(tx, &parentRef.Record, nil, false)
 		if err != nil {
 			return err
