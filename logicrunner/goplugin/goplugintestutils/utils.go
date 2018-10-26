@@ -190,7 +190,7 @@ func (t *TestArtifactManager) RegisterRequest(ctx context.Context, message core.
 
 // RegisterResult saves VM method call result.
 func (t *TestArtifactManager) RegisterResult(
-	ctx core.Context, request core.RecordRef, payload []byte,
+	ctx context.Context, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	panic("implement me")
 }

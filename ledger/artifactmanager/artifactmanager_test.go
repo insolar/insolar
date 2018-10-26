@@ -777,7 +777,7 @@ func TestLedgerArtifactManager_RegisterResult(t *testing.T) {
 	t.Parallel()
 	td, cleaner := prepareAMTestData(t)
 	defer cleaner()
-	ctx := inscontext.TODO()
+	ctx := context.TODO()
 
 	request := genRandomRef(0)
 	requestCoreID, err := td.manager.RegisterResult(ctx, *request.CoreRef(), []byte{1, 2, 3})

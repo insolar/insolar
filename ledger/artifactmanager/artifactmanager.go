@@ -469,7 +469,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 
 // RegisterResult saves VM method call result.
 func (m *LedgerArtifactManager) RegisterResult(
-	ctx core.Context, request core.RecordRef, payload []byte,
+	ctx context.Context, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	return m.setRecord(
 		&record.ResultRecord{
