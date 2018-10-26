@@ -74,7 +74,7 @@ func main() {
 		if err != nil {
 			inslog.Error(err)
 		}
-		server.StopServer()
+		server.StopServer(ctx)
 	}()
 
 }

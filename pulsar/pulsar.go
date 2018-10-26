@@ -172,20 +172,20 @@ func (currentPulsar *Pulsar) StartServer() {
 }
 
 // StopServer stops listening of the rpc-server
-func (currentPulsar *Pulsar) StopServer() {
-	log.Debugf("[StopServer] address - %v", currentPulsar.Config.MainListenerAddress)
+func (currentPulsar *Pulsar) StopServer(ctx context.Context) {
+	inslogger.FromContext(ctx).Debugf("[StopServer] address - %v", currentPulsar.Config.MainListenerAddress)
 	for _, neighbour := range currentPulsar.Neighbours {
 		if neighbour.OutgoingClient != nil && neighbour.OutgoingClient.IsInitialised() {
 			err := neighbour.OutgoingClient.Close()
 			if err != nil {
-				log.Error(err)
+				inslogger.FromContext(ctx).Error(err)
 			}
 		}
 	}
 
 	err := currentPulsar.Sock.Close()
 	if err != nil {
-		log.Error(err)
+		inslogger.FromContext(ctx).Error(err)
 	}
 }
 
