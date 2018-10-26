@@ -128,7 +128,13 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	if err := signer.UnmarshalParams(params, &amount, &toStr); err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
 	}
+	if amount <= 0 {
+		return nil, fmt.Errorf("[ transferCall ] Amount must be positive")
+	}
 	to := core.NewRefFromBase58(toStr)
+	if m.GetReference() == to {
+		return nil, fmt.Errorf("[ transferCall ] Recipient must be different from the sender")
+	}
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't get implementation: %s", err.Error())
