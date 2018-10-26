@@ -17,6 +17,7 @@
 package signhandler
 
 import (
+	"context"
 	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/core"
@@ -52,8 +53,9 @@ func (handler *NonceSignHandler) AddUncheckedNode(hostID id.ID, nonce []byte, re
 
 // SignedNonceIsCorrect checks a nonce sign.
 func (handler *NonceSignHandler) SignedNonceIsCorrect(coordinator core.NetworkCoordinator, hostID id.ID, signedNonce []byte) bool {
+	ctx := context.TODO()
 	if unchecked, ok := handler.uncheckedNodes[hostID.String()]; ok {
-		key, _, err := coordinator.Authorize(unchecked.Ref, unchecked.Nonce, signedNonce)
+		key, _, err := coordinator.Authorize(ctx, unchecked.Ref, unchecked.Nonce, signedNonce)
 		if err != nil {
 			log.Error(err)
 			log.Debug(hostID.String() + " failed to authorize")
