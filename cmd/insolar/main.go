@@ -170,12 +170,12 @@ func makeKeysJSON(keys []*ecdsa.PrivateKey) ([]byte, error) {
 	return json.MarshalIndent(map[string]interface{}{"keys": kk}, "", "    ")
 }
 
-func generateCertificates(out io.Writer) {
+func generateCertificate(out io.Writer) {
 	cert, err := certificate.NewCertificatesWithKeys(configPath)
-	check("[ generateCertificates ] Can't create certificate", err)
+	check("[ generateCertificate ] Can't create certificate", err)
 
 	data, err := cert.Dump()
-	check("[ generateCertificates ] Can't dump certificate", err)
+	check("[ generateCertificate ] Can't dump certificate", err)
 	writeToOutput(out, data)
 }
 
@@ -231,7 +231,7 @@ func main() {
 	case "gen_keys":
 		generateKeysPair(out)
 	case "gen_certificate":
-		generateCertificates(out)
+		generateCertificate(out)
 	case "send_request":
 		sendRequest(out)
 	case "gen_send_configs":
